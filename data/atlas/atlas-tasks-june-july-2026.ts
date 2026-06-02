@@ -1,19 +1,33 @@
-import type { AtlasTask } from "./field-types";
+import type { AtlasEffect, AtlasTask } from "./field-types";
 
-const germinationFollowup = (objectId: string, crop: string) =>
-  ({
-    type: "create_followup_task",
-    daysAfter: 4,
-    title: `Check ${objectId} for ${crop} germination, washout, or bird disturbance`,
-    actionType: "field_check",
-  } as const);
+const germinationFollowup = (objectId: string, crop: string): AtlasEffect => ({
+  type: "create_followup_task",
+  daysAfter: 4,
+  title: `Check ${objectId} for ${crop} germination, washout, or bird disturbance`,
+  actionType: "field_check",
+});
 
-const seededEffects = (objectId: string, crop: string) =>
-  [
-    { type: "set_object_state", objectId, nextState: "seeded" as const },
-    { type: "start_timer", objectId, timerName: "germination" as const, days: 4 },
-    germinationFollowup(objectId, crop),
-  ];
+const retryFollowup = (title: string): AtlasEffect => ({
+  type: "create_followup_task",
+  daysAfter: 1,
+  title,
+  actionType: "direct_sow",
+});
+
+const seededEffects = (objectId: string, crop: string): AtlasEffect[] => [
+  {
+    type: "set_object_state",
+    objectId,
+    nextState: "seeded",
+  },
+  {
+    type: "start_timer",
+    objectId,
+    timerName: "germination",
+    days: 4,
+  },
+  germinationFollowup(objectId, crop),
+];
 
 export const atlasTasksJuneJuly2026: AtlasTask[] = [
   {
@@ -22,7 +36,8 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     title: "Sort starts and choose first Field Row section",
     areaId: "field_rows",
     actionType: "move",
-    instructions: "Mark Field Rows as one-bed-at-a-time. Choose the first workable section.",
+    instructions:
+      "Mark Field Rows as one-bed-at-a-time. Choose the first workable section.",
     unlockText: "Field work becomes actionable.",
     status: "open",
   },
@@ -47,14 +62,7 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
         unlockText: "August bloom + readable lane.",
       },
     ],
-    ifSkipped: [
-      {
-        type: "create_followup_task",
-        daysAfter: 1,
-        title: "Try again: sow Field Row bed 1",
-        actionType: "direct_sow",
-      },
-    ],
+    ifSkipped: [retryFollowup("Try again: sow Field Row bed 1")],
   },
   {
     id: "2026-06-03-grow-room-trials",
@@ -88,6 +96,7 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     unlockText: "August zinnia bloom.",
     status: "open",
     ifDone: seededEffects("FR2", "zinnia"),
+    ifSkipped: [retryFollowup("Try again: sow Field Row bed 2")],
   },
   {
     id: "2026-06-05-tray-field-check",
@@ -114,6 +123,7 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     unlockText: "Summer food row.",
     status: "open",
     ifDone: seededEffects("FR3", "bush bean"),
+    ifSkipped: [retryFollowup("Try again: sow Field Row bed 3")],
   },
   {
     id: "2026-06-07-water-check",
@@ -137,18 +147,19 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     status: "open",
   },
   {
-    id: "2026-06-09-field-row-4-brassicas",
+    id: "2026-06-09-field-row-4",
     date: "2026-06-09",
-    title: "Earthway sow Field Row bed 4 and start fall brassica tray group A",
+    title: "Earthway sow Field Row bed 4",
     areaId: "field_rows",
     objectId: "FR4",
     actionType: "direct_sow",
-    packet: "Black oil sunflower + brassica tray group A",
+    packet: "Black oil sunflower",
     instructions:
-      "Sow Field Row bed 4 with black oil sunflower. Start fall brassica tray group A: broccoli, cabbage, cauliflower, kale, collards, kohlrabi.",
+      "Sow Field Row bed 4 with black oil sunflower. Start fall brassica tray group A if capacity allows.",
     unlockText: "August bloom + September fall garden.",
     status: "open",
     ifDone: seededEffects("FR4", "sunflower"),
+    ifSkipped: [retryFollowup("Try again: sow Field Row bed 4")],
   },
   {
     id: "2026-06-10-pot-up-prep",
@@ -156,23 +167,25 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     title: "Pot up chives / basil / Snow in Summer / creeping thyme",
     areaId: "seed_room",
     actionType: "pot_up",
-    instructions: "Pot up chives, basil, Snow in Summer, and creeping thyme. Rake next Field Row bed top.",
+    instructions:
+      "Pot up chives, basil, Snow in Summer, and creeping thyme. Rake next Field Row bed top.",
     unlockText: "Next sowing day is ready.",
     status: "open",
   },
   {
-    id: "2026-06-11-field-row-5-garlic",
+    id: "2026-06-11-field-row-5",
     date: "2026-06-11",
-    title: "Earthway sow Field Row bed 5 and transplant separated garlic",
+    title: "Earthway sow Field Row bed 5",
     areaId: "field_rows",
     objectId: "FR5",
     actionType: "direct_sow",
     packet: "Italian White sunflower if visible/priority; otherwise black oil sunflower",
     instructions:
-      "Sow Field Row bed 5. Use Italian White sunflower if visible/priority; otherwise black oil sunflower. Transplant separated garlic.",
+      "Sow Field Row bed 5. Use Italian White sunflower if visible/priority; otherwise black oil sunflower.",
     unlockText: "Visible sunflower crop + saved garlic line.",
     status: "open",
     ifDone: seededEffects("FR5", "sunflower"),
+    ifSkipped: [retryFollowup("Try again: sow Field Row bed 5")],
   },
   {
     id: "2026-06-12-tray-root-check",
@@ -198,6 +211,7 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     unlockText: "August cutting color.",
     status: "open",
     ifDone: seededEffects("FR6", "zinnia"),
+    ifSkipped: [retryFollowup("Try again: sow Field Row bed 6")],
   },
   {
     id: "2026-06-14-water-reset",
@@ -215,7 +229,8 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     title: "Continue garlic transplant if unfinished",
     areaId: "field_rows",
     actionType: "transplant",
-    instructions: "Continue garlic transplant if unfinished. Move sturdy trays to holding/hardening.",
+    instructions:
+      "Continue garlic transplant if unfinished. Move sturdy trays to holding/hardening.",
     unlockText: "July handoff begins from a live system.",
     status: "open",
   },
@@ -231,6 +246,7 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     unlockText: "Summer food row + momentum.",
     status: "open",
     ifDone: seededEffects("FR7", "bush bean"),
+    ifSkipped: [retryFollowup("Try again: sow Field Row bed 7")],
   },
   {
     id: "2026-06-17-pot-up-brassicas",
@@ -257,6 +273,7 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     unlockText: "August field bloom + herb structure.",
     status: "open",
     ifDone: seededEffects("FR8", "sunflower"),
+    ifSkipped: [retryFollowup("Try again: sow Field Row bed 8")],
   },
   {
     id: "2026-06-19-record",
@@ -282,6 +299,7 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     unlockText: "Late summer color + walkability.",
     status: "open",
     ifDone: seededEffects("FR9", "zinnia"),
+    ifSkipped: [retryFollowup("Try again: sow Field Row bed 9")],
   },
   {
     id: "2026-06-21-water-germination",
@@ -320,6 +338,7 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     unlockText: "More bloom + fall garden backup.",
     status: "open",
     ifDone: seededEffects("FR10", "sunflower"),
+    ifSkipped: [retryFollowup("Try again: sow Field Row bed 10")],
   },
   {
     id: "2026-06-24-gap-check",
@@ -327,7 +346,8 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     title: "Pot up fall starts and fill obvious missed seed gaps",
     areaId: "seed_room",
     actionType: "pot_up",
-    instructions: "Pot up fall starts, basil, chives, perennial trays. Fill obvious missed seed gaps.",
+    instructions:
+      "Pot up fall starts, basil, chives, perennial trays. Fill obvious missed seed gaps.",
     unlockText: "Fewer July failures.",
     status: "open",
   },
@@ -344,6 +364,7 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     unlockText: "Food crop + seed-room pressure relief.",
     status: "open",
     ifDone: seededEffects("FR11", "bush bean"),
+    ifSkipped: [retryFollowup("Try again: sow Field Row bed 11")],
   },
   {
     id: "2026-06-26-trial-plants",
@@ -351,7 +372,8 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     title: "Pot up Snow in Summer and creeping thyme trial",
     areaId: "seed_room",
     actionType: "pot_up",
-    instructions: "Pot up Snow in Summer and creeping thyme trial. Do not plant thyme into dirty/weedy paths.",
+    instructions:
+      "Pot up Snow in Summer and creeping thyme trial. Do not plant thyme into dirty/weedy paths.",
     unlockText: "April path-pocket transplants.",
     status: "open",
   },
@@ -369,6 +391,7 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     unlockText: "Late summer structure + walkable lanes.",
     status: "open",
     ifDone: seededEffects("FR12", "sunflower"),
+    ifSkipped: [retryFollowup("Try again: sow Field Row bed 12")],
   },
   {
     id: "2026-06-28-water-note",
@@ -386,7 +409,8 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     title: "Harden or hold fall starts and check transplanted garlic",
     areaId: "seed_room",
     actionType: "field_check",
-    instructions: "Harden or hold fall starts as needed. Check transplanted garlic survival.",
+    instructions:
+      "Harden or hold fall starts as needed. Check transplanted garlic survival.",
     unlockText: "October garlic stock stays alive.",
     status: "open",
   },
@@ -408,7 +432,8 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     title: "Pot up fall brassicas if ready and update Field Rows tracker",
     areaId: "seed_room",
     actionType: "record",
-    instructions: "Pot up fall brassica tray group A if ready. Update Field Rows tracker from June.",
+    instructions:
+      "Pot up fall brassicas if ready. Update Field Rows tracker from June.",
     unlockText: "Clean handoff records.",
     status: "open",
   },
@@ -418,9 +443,9 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     title: "Fill Field Row gaps",
     areaId: "field_rows",
     actionType: "direct_sow",
-    packet: "Black oil sunflower, Italian White sunflower, California Giant zinnia, or 2 lb bush beans",
-    instructions:
-      "Fill Field Row gaps. Move sturdy starts to holding/hardening.",
+    packet:
+      "Black oil sunflower, Italian White sunflower, California Giant zinnia, or 2 lb bush beans",
+    instructions: "Fill Field Row gaps. Move sturdy starts to holding/hardening.",
     unlockText: "No empty beds drift into July.",
     status: "open",
   },
@@ -442,7 +467,7 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     areaId: "field_rows",
     actionType: "direct_sow",
     instructions:
-      "Continue Field Rows if any remain open. Start fall tray group B if needed: broccoli, cabbage, cauliflower, kale, collards, kohlrabi.",
+      "Continue Field Rows if any remain open. Start fall tray group B if needed.",
     unlockText: "Field completion + fall backup.",
     status: "open",
   },
@@ -477,250 +502,6 @@ export const atlasTasksJuneJuly2026: AtlasTask[] = [
     instructions:
       "Start hardy annual tray group A: snapdragon, dianthus, feverfew, rudbeckia, scabiosa, stock.",
     unlockText: "Fall plugs / overwintered spring flowers.",
-    status: "open",
-  },
-  {
-    id: "2026-07-08-pot-up-label",
-    date: "2026-07-08",
-    title: "Pot up fall brassicas if ready and label all trays",
-    areaId: "seed_room",
-    actionType: "pot_up",
-    instructions: "Pot up fall brassicas if ready. Label all trays clearly.",
-    unlockText: "Trays become manageable by anyone.",
-    status: "open",
-  },
-  {
-    id: "2026-07-09-perennial-biennial-a",
-    date: "2026-07-09",
-    title: "Start perennial / biennial tray group A",
-    areaId: "seed_room",
-    actionType: "seed",
-    packet: "Foxglove, Canterbury bells, Sweet William, selected perennial nursery starts",
-    instructions:
-      "Start perennial / biennial tray group A. Move sturdy seedlings to holding/hardening.",
-    unlockText: "2027 perennial nursery begins.",
-    status: "open",
-  },
-  {
-    id: "2026-07-10-field-germination",
-    date: "2026-07-10",
-    title: "Check hardy annual trays and mark Field Row germination/failures",
-    areaId: "field_rows",
-    actionType: "field_check",
-    instructions: "Pot up / check hardy annual trays. Mark Field Row germination and failed rows.",
-    unlockText: "Failures get caught early.",
-    status: "open",
-  },
-  {
-    id: "2026-07-11-proof-of-life",
-    date: "2026-07-11",
-    title: "Late proof-of-life crop only where needed",
-    areaId: "field_rows",
-    actionType: "direct_sow",
-    packet: "Sunflower, zinnia, beans, cucumber, zucchini",
-    instructions:
-      "Late proof-of-life crop only where needed. Do not scatter seed into unprepared areas.",
-    unlockText: "Visible late-summer gaps fill intentionally.",
-    status: "open",
-  },
-  {
-    id: "2026-07-12-water-review",
-    date: "2026-07-12",
-    title: "Water check and review first Anna week",
-    areaId: "field_rows",
-    actionType: "water_check",
-    instructions: "Water check. Review first Anna week.",
-    unlockText: "Rhythm correction before week two.",
-    status: "open",
-  },
-  {
-    id: "2026-07-13-harden-brassicas",
-    date: "2026-07-13",
-    title: "Harden strong fall brassicas",
-    areaId: "seed_room",
-    actionType: "move",
-    instructions:
-      "Harden strong fall brassicas. Move seedlings into holding trays if location is not ready.",
-    unlockText: "September planting stock keeps moving.",
-    status: "open",
-  },
-  {
-    id: "2026-07-14-fall-food",
-    date: "2026-07-14",
-    title: "Fall food tray or direct-sow prep",
-    areaId: "seed_room",
-    actionType: "seed",
-    packet: "Kale, collards, chard, lettuce if heat-protected",
-    instructions: "Fall food tray or direct-sow prep: kale, collards, chard, lettuce if heat-protected.",
-    unlockText: "September/October fall garden.",
-    status: "open",
-  },
-  {
-    id: "2026-07-15-pot-up-hardy-annuals",
-    date: "2026-07-15",
-    title: "Pot up hardy annual tray group A",
-    areaId: "seed_room",
-    actionType: "pot_up",
-    instructions: "Pot up hardy annual tray group A. Record failures early.",
-    unlockText: "Spring flower plugs do not stall.",
-    status: "open",
-  },
-  {
-    id: "2026-07-16-direct-sow-fall-food",
-    date: "2026-07-16",
-    title: "Direct sow fall food where beds are ready",
-    areaId: "main_garden",
-    actionType: "direct_sow",
-    packet: "Carrots, beets, radish, turnips, cilantro, dill, chard, kale, collards",
-    instructions:
-      "Direct sow fall food where beds are ready. Check holding area.",
-    unlockText: "September/October fall garden.",
-    status: "open",
-  },
-  {
-    id: "2026-07-17-pot-up-water-check",
-    date: "2026-07-17",
-    title: "Pot up fall brassicas and hardy annuals",
-    areaId: "seed_room",
-    actionType: "pot_up",
-    instructions: "Pot up fall brassicas and hardy annuals. Check watering consistency.",
-    unlockText: "Stronger transplants for August.",
-    status: "open",
-  },
-  {
-    id: "2026-07-18-second-fall-sowing",
-    date: "2026-07-18",
-    title: "Second contained fall sowing",
-    areaId: "main_garden",
-    actionType: "direct_sow",
-    packet: "Carrots, beets, radish, turnips",
-    instructions: "Second contained fall sowing: carrots, beets, radish, turnips. Keep rows labeled.",
-    unlockText: "Staggered fall harvest.",
-    status: "open",
-  },
-  {
-    id: "2026-07-19-water-review",
-    date: "2026-07-19",
-    title: "Water check and review Field Rows and fall trays",
-    areaId: "field_rows",
-    actionType: "water_check",
-    instructions: "Water check. Review Field Rows and fall trays.",
-    unlockText: "August decisions stay visible.",
-    status: "open",
-  },
-  {
-    id: "2026-07-20-holding-hardening",
-    date: "2026-07-20",
-    title: "Move strong fall seedlings to holding/hardening",
-    areaId: "seed_room",
-    actionType: "move",
-    instructions:
-      "Move strong fall seedlings to holding/hardening. Do not force planting into unready beds.",
-    unlockText: "Seedlings progress without wasting beds.",
-    status: "open",
-  },
-  {
-    id: "2026-07-21-hardy-annuals-b",
-    date: "2026-07-21",
-    title: "Hardy annual tray group B if needed",
-    areaId: "seed_room",
-    actionType: "seed",
-    packet: "Alyssum, calendula, stock, scabiosa, rudbeckia, feverfew",
-    instructions:
-      "Start hardy annual tray group B if needed.",
-    unlockText: "Backup fall/spring flower plugs.",
-    status: "open",
-  },
-  {
-    id: "2026-07-22-pot-up-clean",
-    date: "2026-07-22",
-    title: "Pot up tray group A",
-    areaId: "seed_room",
-    actionType: "pot_up",
-    instructions: "Pot up tray group A. Remove weak starts only if clearly failed.",
-    unlockText: "Trays stay strong and uncluttered.",
-    status: "open",
-  },
-  {
-    id: "2026-07-23-direct-sow-greens",
-    date: "2026-07-23",
-    title: "Direct sow chard/kale/collards if bed is ready",
-    areaId: "main_garden",
-    actionType: "direct_sow",
-    instructions: "Direct sow chard/kale/collards if bed is ready. Move/harden brassica trays.",
-    unlockText: "Fall greens in real soil.",
-    status: "open",
-  },
-  {
-    id: "2026-07-24-pot-up-perennials",
-    date: "2026-07-24",
-    title: "Pot up perennial / biennial starts",
-    areaId: "seed_room",
-    actionType: "pot_up",
-    instructions: "Pot up perennial / biennial starts. Check labels.",
-    unlockText: "2027 nursery stays organized.",
-    status: "open",
-  },
-  {
-    id: "2026-07-25-final-gap-fill",
-    date: "2026-07-25",
-    title: "Final July late summer field gap fill",
-    areaId: "field_rows",
-    actionType: "direct_sow",
-    packet: "Sunflowers, zinnias, beans",
-    instructions:
-      "Final July late summer field gap fill. Stop sowing where the season window no longer makes sense.",
-    unlockText: "Final late-summer color without overextending.",
-    status: "open",
-  },
-  {
-    id: "2026-07-26-water-field-check",
-    date: "2026-07-26",
-    title: "Water check and mark what is growing",
-    areaId: "field_rows",
-    actionType: "water_check",
-    instructions: "Water check. Mark what is growing.",
-    unlockText: "August field maintenance begins from truth.",
-    status: "open",
-  },
-  {
-    id: "2026-07-27-holding-check",
-    date: "2026-07-27",
-    title: "Holding/hardening check",
-    areaId: "seed_room",
-    actionType: "move",
-    instructions: "Holding/hardening check. Move any sturdy seedlings forward one stage.",
-    unlockText: "No seedlings stall in trays.",
-    status: "open",
-  },
-  {
-    id: "2026-07-28-backup-only",
-    date: "2026-07-28",
-    title: "Only if needed: fall garden backup or hardy annual backup",
-    areaId: "seed_room",
-    actionType: "seed",
-    instructions: "Only if needed: fall garden backup or hardy annual backup.",
-    unlockText: "Backup plants before the window closes.",
-    status: "open",
-  },
-  {
-    id: "2026-07-29-pot-up-all",
-    date: "2026-07-29",
-    title: "Pot up all trays and prepare August pot-up list",
-    areaId: "seed_room",
-    actionType: "pot_up",
-    instructions: "Pot up all trays. Prepare August pot-up list.",
-    unlockText: "Anna’s August work is visible.",
-    status: "open",
-  },
-  {
-    id: "2026-07-30-prepared-spaces-only",
-    date: "2026-07-30",
-    title: "Move or transplant only into prepared spaces",
-    areaId: "main_garden",
-    actionType: "transplant",
-    instructions: "Move or transplant only into prepared spaces. Garlic: July/August garlic watch note.",
-    unlockText: "October garlic plan stays alive.",
     status: "open",
   },
   {
