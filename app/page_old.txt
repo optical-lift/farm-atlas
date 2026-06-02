@@ -1,0 +1,527 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+type Tone = "danger" | "watch" | "good" | "info";
+
+type Deliverable = {
+  id: string;
+  title: string;
+  state: string;
+  tone: Tone;
+};
+
+type ProgressItem = {
+  id: string;
+  title: string;
+  state: string;
+  tone: Tone;
+  icon: "field" | "seed" | "edge" | "pollinator";
+};
+
+type RowState = "ready" | "growing" | "planned" | "blocked" | "nursery";
+
+type MapRow = {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label: string;
+  crop: string;
+  state: RowState;
+};
+
+function toneClasses(tone: Tone) {
+  switch (tone) {
+    case "danger":
+      return "bg-[#efe3dc] text-[#7a4f41]";
+    case "watch":
+      return "bg-[#ece9da] text-[#6f6848]";
+    case "good":
+      return "bg-[#e5efdf] text-[#4d6847]";
+    case "info":
+      return "bg-[#dfece7] text-[#48665a]";
+    default:
+      return "bg-[#f3eee5] text-[#6d685f]";
+  }
+}
+
+function rowFill(state: RowState) {
+  switch (state) {
+    case "ready":
+      return "#cfe6c8";
+    case "growing":
+      return "#dce8cf";
+    case "planned":
+      return "#efe8d6";
+    case "blocked":
+      return "#eddad2";
+    case "nursery":
+      return "#dbe4f0";
+    default:
+      return "#e8eadf";
+  }
+}
+
+function rowStroke(state: RowState) {
+  switch (state) {
+    case "ready":
+      return "#7fa36e";
+    case "growing":
+      return "#91a77b";
+    case "planned":
+      return "#b7ab8f";
+    case "blocked":
+      return "#b78577";
+    case "nursery":
+      return "#7f98b8";
+    default:
+      return "#9aaa95";
+  }
+}
+
+function FarmIcon({ icon }: { icon: ProgressItem["icon"] }) {
+  if (icon === "field") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M3 18c3-3 6-4 9-4s6 1 9 4" />
+        <path d="M3 12c3-3 6-4 9-4s6 1 9 4" />
+        <path d="M3 6c3-3 6-4 9-4s6 1 9 4" />
+      </svg>
+    );
+  }
+
+  if (icon === "seed") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M12 20c0-5 2-9 7-12 1 7-2 12-7 12Z" />
+        <path d="M12 20c0-5-2-9-7-12-1 7 2 12 7 12Z" />
+        <path d="M12 20v-6" />
+      </svg>
+    );
+  }
+
+  if (icon === "edge") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M4 18h16" />
+        <path d="M6 18c2-5 4-8 6-8s4 3 6 8" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 4v16" />
+      <path d="M4 12h16" />
+      <circle cx="12" cy="12" r="7" />
+    </svg>
+  );
+}
+
+export default function Home() {
+  const deliverables: Deliverable[] = [
+    { id: "bouquet-path", title: "Bouquet Path", state: "Blocked", tone: "danger" },
+    { id: "florist-bucket", title: "Florist Bucket", state: "Assembling", tone: "watch" },
+    { id: "photo-route", title: "Photo Route", state: "Possible Soon", tone: "good" },
+    { id: "hospitality-scene", title: "Hospitality Scene", state: "Concept Only", tone: "info" },
+  ];
+
+  const visibleDeliverables = deliverables.slice(0, 2);
+  const queuedDeliverables = deliverables.slice(2);
+
+  const progressItems: ProgressItem[] = [
+    {
+      id: "main-field-unlock",
+      title: "Main Field",
+      state: "Blocked",
+      tone: "danger",
+      icon: "field",
+    },
+    {
+      id: "nursery-setup",
+      title: "Nursery",
+      state: "Open",
+      tone: "good",
+      icon: "seed",
+    },
+    {
+      id: "beauty-pass",
+      title: "Beauty Pass",
+      state: "Ready",
+      tone: "watch",
+      icon: "edge",
+    },
+    {
+      id: "pollinator-lane",
+      title: "Pollinator",
+      state: "Active",
+      tone: "info",
+      icon: "pollinator",
+    },
+  ];
+
+  const flowerFieldRows: MapRow[] = [
+    { id: "f1", x: 260, y: 290, width: 250, height: 18, label: "F1", crop: "Snapdragons", state: "ready" },
+    { id: "f2", x: 260, y: 314, width: 250, height: 18, label: "F2", crop: "Scabiosa", state: "growing" },
+    { id: "f3", x: 260, y: 338, width: 250, height: 18, label: "F3", crop: "Strawflower", state: "growing" },
+    { id: "f4", x: 260, y: 362, width: 250, height: 18, label: "F4", crop: "Gomphrena", state: "ready" },
+    { id: "f5", x: 260, y: 386, width: 250, height: 18, label: "F5", crop: "Statice", state: "planned" },
+    { id: "f6", x: 260, y: 410, width: 250, height: 18, label: "F6", crop: "Bupleurum", state: "planned" },
+    { id: "f7", x: 260, y: 434, width: 250, height: 18, label: "F7", crop: "Lisianthus", state: "blocked" },
+    { id: "f8", x: 260, y: 458, width: 250, height: 18, label: "F8", crop: "Sweet Pea", state: "growing" },
+  ];
+
+  const nurseryRows: MapRow[] = [
+    { id: "n1", x: 625, y: 170, width: 160, height: 16, label: "N1", crop: "Delphinium", state: "nursery" },
+    { id: "n2", x: 625, y: 192, width: 160, height: 16, label: "N2", crop: "Foxglove", state: "nursery" },
+    { id: "n3", x: 625, y: 214, width: 160, height: 16, label: "N3", crop: "Heuchera", state: "nursery" },
+    { id: "n4", x: 625, y: 236, width: 160, height: 16, label: "N4", crop: "Salvia", state: "nursery" },
+  ];
+
+  const [selectedZone, setSelectedZone] = useState("main-field");
+  const [selectedProgressId, setSelectedProgressId] = useState("pollinator-lane");
+
+  const blockerCount = 2;
+
+  const selectedSummary = useMemo(() => {
+    if (selectedZone === "main-field") {
+      return "8 production rows visible";
+    }
+    if (selectedZone === "nursery") {
+      return "4 nursery rows visible";
+    }
+    if (selectedZone === "pollinator") {
+      return "Long edge strip active";
+    }
+    if (selectedZone === "hospitality") {
+      return "Court footprint visible";
+    }
+    return "House ring selected";
+  }, [selectedZone]);
+
+  return (
+    <main className="h-screen overflow-hidden bg-[#f4f0e7] p-4 text-[#2f3a32] md:p-5">
+      <section className="relative h-full overflow-hidden rounded-[34px] border border-[#d8d0c1] bg-[#fbf8f2] shadow-[0_10px_30px_rgba(91,84,62,0.08)]">
+        <div className="absolute left-5 top-5 z-20 w-[110px] rounded-[24px] border border-[#e1d9cc] bg-[#fbf8f2]/94 p-3 backdrop-blur-sm shadow-sm">
+          <div className="grid gap-2">
+            <div className="rounded-2xl bg-[#eef3e7] px-3 py-3 text-center">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#78856f]">Temp</p>
+              <p className="mt-1 text-xl font-semibold">61°</p>
+            </div>
+            <div className="rounded-2xl bg-[#f3efe7] px-3 py-3 text-center">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#8a8376]">Moon</p>
+              <p className="mt-1 text-lg font-semibold">Wax</p>
+            </div>
+            <div className="rounded-2xl bg-[#f5f1e9] px-3 py-3 text-center">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#8a8376]">Wind</p>
+              <p className="mt-1 text-lg font-semibold">4</p>
+            </div>
+            <div className="rounded-2xl bg-[#edf3e7] px-3 py-3 text-center">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#78856f]">Read</p>
+              <p className="mt-1 text-lg font-semibold">Setup</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute left-[140px] right-5 top-5 z-20 flex items-center gap-3">
+          {visibleDeliverables.map((item) => (
+            <button
+              key={item.id}
+              className="flex items-center gap-3 rounded-full border border-[#ddd4c5] bg-[#fbf7f0]/95 px-5 py-3 text-sm shadow-sm transition hover:bg-white"
+            >
+              <div className="text-left">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[#8c8578]">Next level</p>
+                <p className="text-lg font-semibold text-[#3b4539]">{item.title}</p>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-xs ${toneClasses(item.tone)}`}>
+                {item.state}
+              </span>
+            </button>
+          ))}
+
+          <button className="flex items-center gap-3 rounded-full border border-[#ddd4c5] bg-[#fbf7f0]/95 px-4 py-3 text-sm shadow-sm transition hover:bg-white">
+            <div className="text-left">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[#8c8578]">Queued</p>
+              <p className="text-base font-semibold text-[#3b4539]">
+                {queuedDeliverables.length} upcoming
+              </p>
+            </div>
+            <div className="flex gap-1">
+              {queuedDeliverables.map((item) => (
+                <span
+                  key={item.id}
+                  className={`rounded-full px-2.5 py-1 text-[11px] ${toneClasses(item.tone)}`}
+                >
+                  {item.title}
+                </span>
+              ))}
+            </div>
+          </button>
+        </div>
+
+        <div className="absolute right-5 top-[92px] z-20 flex gap-2">
+          <div className="rounded-full border border-[#ddd4c5] bg-[#fbf7f0]/95 px-3 py-1.5 text-xs text-[#6f695e] shadow-sm">
+            5 zones
+          </div>
+          <div className="rounded-full border border-[#ddd4c5] bg-[#fbf7f0]/95 px-3 py-1.5 text-xs text-[#6f695e] shadow-sm">
+            {blockerCount} blockers
+          </div>
+          <div className="rounded-full border border-[#ddd4c5] bg-[#fbf7f0]/95 px-3 py-1.5 text-xs text-[#6f695e] shadow-sm">
+            {selectedSummary}
+          </div>
+        </div>
+
+        <div className="absolute inset-[18px] overflow-hidden rounded-[28px] border border-[#e5ded1] bg-[linear-gradient(180deg,#eef4ea_0%,#e6eedf_42%,#d6e2cc_100%)]">
+          <div className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,rgba(248,244,235,0.75),rgba(248,244,235,0))]" />
+
+          <div className="absolute left-[140px] top-[98px] z-10 flex flex-wrap gap-2">
+            <div className="rounded-full border border-[#ddd4c5] bg-[#fbf7f0]/95 px-3 py-1.5 text-xs text-[#6f695e] shadow-sm">
+              Waxing Crescent
+            </div>
+            <div className="rounded-full border border-[#d4dccb] bg-[#f5faef]/95 px-3 py-1.5 text-xs text-[#5d6b59] shadow-sm">
+              Good mapping day
+            </div>
+            <div className="rounded-full border border-[#ddd4c5] bg-[#fbf7f0]/95 px-3 py-1.5 text-xs text-[#6f695e] shadow-sm">
+              Frost low
+            </div>
+          </div>
+
+          <svg
+            viewBox="0 0 1200 760"
+            className="absolute inset-0 h-full w-full"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="8" stdDeviation="10" floodColor="#8c9d86" floodOpacity="0.12" />
+              </filter>
+            </defs>
+
+            <g opacity="0.9">
+              <ellipse cx="1010" cy="165" rx="82" ry="58" fill="#c8d8b6" opacity="0.58" />
+              <ellipse cx="1065" cy="168" rx="46" ry="42" fill="#b9cda6" opacity="0.5" />
+              <ellipse cx="1035" cy="420" rx="90" ry="56" fill="#d6e2cb" opacity="0.3" />
+            </g>
+
+            <g>
+              <path
+                d="M90 130 L260 130 L305 178 L292 255 L150 255 L95 210 Z"
+                fill={selectedZone === "house-ring" ? "#fbfdf8" : "#f4ecdf"}
+                stroke={selectedZone === "house-ring" ? "#5b7d55" : "#cdbfa8"}
+                strokeWidth={selectedZone === "house-ring" ? 3 : 2}
+                filter="url(#softShadow)"
+                onClick={() => setSelectedZone("house-ring")}
+                style={{ cursor: "pointer" }}
+              />
+              <rect
+                x="155"
+                y="168"
+                width="64"
+                height="88"
+                rx="16"
+                fill="#e9dfd2"
+                stroke="#b7aa97"
+                strokeWidth="1.6"
+              />
+              <text x="122" y="152" fontSize="14" fill="#6c675d" fontFamily="sans-serif">
+                House + work area
+              </text>
+            </g>
+
+            <g>
+              <path
+                d="M650 165 L885 165 L935 205 L922 288 L692 288 L645 235 Z"
+                fill={selectedZone === "nursery" ? "#fbfdf8" : "#f7faf4"}
+                stroke={selectedZone === "nursery" ? "#5b7d55" : "#95a884"}
+                strokeWidth={selectedZone === "nursery" ? 3 : 2}
+                filter="url(#softShadow)"
+                onClick={() => setSelectedZone("nursery")}
+                style={{ cursor: "pointer" }}
+              />
+              <text x="684" y="196" fontSize="15" letterSpacing="4" fill="#7e8877" fontFamily="sans-serif">
+                ZONE
+              </text>
+              <text x="684" y="232" fontSize="24" fontWeight="700" fill="#31422f" fontFamily="sans-serif">
+                Perennial Nursery
+              </text>
+              <rect x="690" y="246" rx="12" ry="12" width="102" height="28" fill="#ece9da" />
+              <text x="707" y="265" fontSize="16" fill="#6f6848" fontFamily="sans-serif">
+                Establishing
+              </text>
+
+              {nurseryRows.map((row) => (
+                <g key={row.id}>
+                  <rect
+                    x={row.x}
+                    y={row.y}
+                    width={row.width}
+                    height={row.height}
+                    rx="6"
+                    fill={rowFill(row.state)}
+                    stroke={rowStroke(row.state)}
+                    strokeWidth="1.2"
+                    opacity="0.92"
+                  />
+                </g>
+              ))}
+            </g>
+
+            <g>
+              <path
+                d="M235 275 L730 275 L770 315 L755 535 L250 535 L220 500 L220 315 Z"
+                fill={selectedZone === "main-field" ? "#fbfdf8" : "#f7faf4"}
+                stroke={selectedZone === "main-field" ? "#5b7d55" : "#95a884"}
+                strokeWidth={selectedZone === "main-field" ? 3 : 2}
+                filter="url(#softShadow)"
+                onClick={() => setSelectedZone("main-field")}
+                style={{ cursor: "pointer" }}
+              />
+              <text x="255" y="315" fontSize="15" letterSpacing="4" fill="#7e8877" fontFamily="sans-serif">
+                ZONE
+              </text>
+              <text x="255" y="350" fontSize="24" fontWeight="700" fill="#31422f" fontFamily="sans-serif">
+                Main Flower Field
+              </text>
+              <rect x="255" y="365" rx="12" ry="12" width="82" height="28" fill="#efe3dc" />
+              <text x="272" y="384" fontSize="16" fill="#7a4f41" fontFamily="sans-serif">
+                Blocked
+              </text>
+
+              {flowerFieldRows.map((row) => (
+                <g key={row.id}>
+                  <rect
+                    x={row.x}
+                    y={row.y}
+                    width={row.width}
+                    height={row.height}
+                    rx="5"
+                    fill={rowFill(row.state)}
+                    stroke={rowStroke(row.state)}
+                    strokeWidth="1.1"
+                  />
+                  <text
+                    x={row.x - 34}
+                    y={row.y + 13}
+                    fontSize="11"
+                    fill="#7c8177"
+                    fontFamily="sans-serif"
+                  >
+                    {row.label}
+                  </text>
+                </g>
+              ))}
+
+              <text x="535" y="308" fontSize="11" fill="#7f857a" fontFamily="sans-serif">
+                N
+              </text>
+              <path d="M538 317 L538 292" stroke="#76806f" strokeWidth="1.6" />
+              <path d="M538 292 L534 298" stroke="#76806f" strokeWidth="1.6" />
+              <path d="M538 292 L542 298" stroke="#76806f" strokeWidth="1.6" />
+            </g>
+
+            <g>
+              <path
+                d="M822 364 L1010 364 L1012 480 L830 480 L806 450 L806 392 Z"
+                fill={selectedZone === "hospitality" ? "#fbfdf8" : "#f7faf4"}
+                stroke={selectedZone === "hospitality" ? "#5b7d55" : "#95a884"}
+                strokeWidth={selectedZone === "hospitality" ? 3 : 2}
+                filter="url(#softShadow)"
+                onClick={() => setSelectedZone("hospitality")}
+                style={{ cursor: "pointer" }}
+              />
+              <text x="842" y="392" fontSize="15" letterSpacing="4" fill="#7e8877" fontFamily="sans-serif">
+                ZONE
+              </text>
+              <text x="842" y="428" fontSize="24" fontWeight="700" fill="#31422f" fontFamily="sans-serif">
+                Hospitality Court
+              </text>
+              <rect x="842" y="443" rx="12" ry="12" width="62" height="28" fill="#efe3dc" />
+              <text x="858" y="462" fontSize="16" fill="#7a4f41" fontFamily="sans-serif">
+                Raw
+              </text>
+            </g>
+
+            <g>
+              <path
+                d="M170 560 L980 560 L1012 596 L995 648 L200 648 L170 614 Z"
+                fill={selectedZone === "pollinator" ? "#fbfdf8" : "#f2f7ee"}
+                stroke={selectedZone === "pollinator" ? "#4f78d4" : "#9cb191"}
+                strokeWidth={selectedZone === "pollinator" ? 3 : 2}
+                strokeDasharray="4 4"
+                filter="url(#softShadow)"
+                onClick={() => setSelectedZone("pollinator")}
+                style={{ cursor: "pointer" }}
+              />
+              <text x="190" y="595" fontSize="15" letterSpacing="4" fill="#7e8877" fontFamily="sans-serif">
+                ZONE
+              </text>
+              <text x="190" y="632" fontSize="22" fontWeight="700" fill="#31422f" fontFamily="sans-serif">
+                Pollinator Strip
+              </text>
+              <rect x="190" y="646" rx="12" ry="12" width="70" height="28" fill="#dfece7" />
+              <text x="206" y="665" fontSize="16" fill="#48665a" fontFamily="sans-serif">
+                Active
+              </text>
+
+              <g opacity="0.9">
+                <circle cx="362" cy="603" r="5" fill="#d5af69" />
+                <circle cx="392" cy="611" r="5" fill="#c98e5f" />
+                <circle cx="422" cy="603" r="5" fill="#b67bb0" />
+                <circle cx="452" cy="612" r="5" fill="#d5af69" />
+                <circle cx="482" cy="603" r="5" fill="#86a96f" />
+                <circle cx="512" cy="611" r="5" fill="#c98e5f" />
+                <circle cx="542" cy="603" r="5" fill="#b67bb0" />
+              </g>
+            </g>
+
+            <g opacity="0.72">
+              <path d="M108 612 L1066 612" stroke="#a7b59a" strokeWidth="2" strokeDasharray="6 4" />
+              <text x="128" y="628" fontSize="14" fill="#72806d" fontFamily="sans-serif">
+                guest / beauty corridor
+              </text>
+            </g>
+
+            <g opacity="0.85">
+              <rect x="966" y="492" width="172" height="128" rx="28" fill="#efe8dc" stroke="#cdc6b9" strokeWidth="2" />
+            </g>
+          </svg>
+
+          <div className="absolute bottom-4 right-4 z-20 flex max-w-[72%] flex-wrap justify-end gap-2">
+            {progressItems.map((item, index) => {
+              const active = item.id === selectedProgressId;
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setSelectedProgressId(item.id)}
+                  className={`flex items-center gap-3 rounded-[22px] border px-4 py-3 text-left shadow-sm transition ${
+                    active
+                      ? "border-[#4f78d4] bg-[#fcfdf9] ring-2 ring-[#d7e3fb]"
+                      : "border-[#d8d0c1] bg-[#fbf7f0]/95 hover:bg-white"
+                  }`}
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#dbe7cf] text-[#3f503d]">
+                    <FarmIcon icon={item.icon} />
+                  </span>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[#374236]">{item.title}</p>
+                    <p className="mt-0.5 text-[11px] uppercase tracking-[0.12em] text-[#807a6f]">
+                      Round {index + 1}
+                    </p>
+                  </div>
+
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs ${toneClasses(item.tone)}`}>
+                    {item.state}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
