@@ -31,6 +31,39 @@ export type BedRecord = {
   guestVisible: boolean;
 };
 
+const MAIN_FIELD_WEST_STATES: BedState[] = [
+  "harvest_watch",
+  "germinated",
+  "seeded",
+  "planned",
+  "planned",
+  "planned",
+  "planned",
+  "planned",
+];
+
+const MAIN_FIELD_EAST_STATES: BedState[] = [
+  "seeded",
+  "planned",
+  "planned",
+  "planned",
+  "planned",
+  "planned",
+  "planned",
+  "planned",
+];
+
+const NURSERY_STATES: BedState[] = [
+  "establishing",
+  "establishing",
+  "establishing",
+  "establishing",
+  "planned",
+  "planned",
+  "planned",
+  "planned",
+];
+
 function getZoneBounds(zoneId: string) {
   const zone = atlasZones.find((item) => item.id === zoneId);
 
@@ -84,7 +117,9 @@ const nurseryBedWidth = nursery.width - nurseryPadX * 2;
 const nurseryX = nursery.minX + nurseryPadX;
 const nurseryStartY = nursery.minY + nurseryTopPad;
 
-const mainFieldWestBeds: BedRecord[] = Array.from({ length: 8 }, (_, index) => ({
+const mainFieldWestBeds: BedRecord[] = Array.from(
+  { length: 8 },
+  (_, index): BedRecord => ({
   id: `MW${index + 1}`,
   zoneId: "main-field",
   label: `MW${index + 1}`,
@@ -100,25 +135,18 @@ const mainFieldWestBeds: BedRecord[] = Array.from({ length: 8 }, (_, index) => (
       "Lisianthus",
       "Sweet Pea",
     ][index] ?? "Open",
-  state:
-    [
-      "harvest_watch",
-      "germinated",
-      "germinated",
-      "harvest_watch",
-      "planned",
-      "planned",
-      "blocked",
-      "germinated",
-    ][index] ?? "planned",
+state: MAIN_FIELD_WEST_STATES[index] ?? "planned",
   x: westX,
   y: mainStartY + index * (mainBedHeight + mainBedGap),
   width: mainBankWidth,
   height: mainBedHeight,
   guestVisible: true,
-}));
+  })
+);
 
-const mainFieldEastBeds: BedRecord[] = Array.from({ length: 8 }, (_, index) => ({
+const mainFieldEastBeds: BedRecord[] = Array.from(
+  { length: 8 },
+  (_, index): BedRecord => ({
   id: `ME${index + 1}`,
   zoneId: "main-field",
   label: `ME${index + 1}`,
@@ -134,25 +162,18 @@ const mainFieldEastBeds: BedRecord[] = Array.from({ length: 8 }, (_, index) => (
       "Lisianthus",
       "Sweet Pea",
     ][index] ?? "Open",
-  state:
-    [
-      "planned",
-      "planned",
-      "germinated",
-      "harvest_watch",
-      "planned",
-      "blocked",
-      "planned",
-      "germinated",
-    ][index] ?? "planned",
+state: MAIN_FIELD_EAST_STATES[index] ?? "planned",
   x: eastX,
   y: mainStartY + index * (mainBedHeight + mainBedGap),
   width: mainBankWidth,
   height: mainBedHeight,
   guestVisible: true,
-}));
+  })
+);
 
-const nurseryBeds: BedRecord[] = Array.from({ length: 8 }, (_, index) => ({
+const nurseryBeds: BedRecord[] = Array.from(
+  { length: 8 },
+  (_, index): BedRecord => ({
   id: `N${index + 1}`,
   zoneId: "nursery",
   label: `N${index + 1}`,
@@ -168,23 +189,14 @@ const nurseryBeds: BedRecord[] = Array.from({ length: 8 }, (_, index) => ({
       "Verbascum",
       "Coreopsis",
     ][index] ?? "Open",
-  state:
-    [
-      "establishing",
-      "establishing",
-      "establishing",
-      "establishing",
-      "planned",
-      "planned",
-      "planned",
-      "planned",
-    ][index] ?? "planned",
+state: NURSERY_STATES[index] ?? "planned",
   x: nurseryX,
   y: nurseryStartY + index * (nurseryBedHeight + nurseryGap),
   width: nurseryBedWidth,
   height: nurseryBedHeight,
   guestVisible: false,
-}));
+  })
+);
 
 export const rows: BedRecord[] = [
   ...mainFieldWestBeds,
