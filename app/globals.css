@@ -708,6 +708,7 @@ body {
   }
 }
 
+
 /* ================================
    ATLAS SOFT MOBILE FIELD APP
    ================================ */
@@ -734,6 +735,9 @@ body {
 }
 
 .atlas-phone-top {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   height: 64px;
   padding: 12px 14px;
   display: flex;
@@ -742,6 +746,7 @@ body {
   gap: 8px;
   border-bottom: 1px solid rgba(224, 216, 204, 0.8);
   background: rgba(255, 253, 248, 0.95);
+  backdrop-filter: blur(12px);
 }
 
 .atlas-phone-brand {
@@ -818,384 +823,13 @@ body {
   gap: 12px;
 }
 
-.atlas-today-card {
-  border-radius: 28px;
-  padding: 16px;
-  background:
-    linear-gradient(145deg, rgba(131, 137, 188, 0.94), rgba(111, 116, 168, 0.94));
-  color: white;
-  box-shadow: 0 18px 34px rgba(87, 91, 142, 0.24);
-}
-
-.atlas-today-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.atlas-today-title {
-  font-size: 30px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: -0.06em;
-}
-
-.atlas-soft-date {
-  height: 38px;
-  border: 0;
-  border-radius: 16px;
-  background: rgba(255, 250, 242, 0.96);
-  color: #303243;
-  padding: 0 10px;
-  font-size: 12px;
-  font-weight: 950;
-}
-
-.atlas-today-task {
-  margin-top: 14px;
-  border-radius: 24px;
-  padding: 14px;
-  background: rgba(77, 83, 128, 0.36);
-}
-
-.atlas-today-task span,
-.atlas-mini-stat span,
-.atlas-soft-label {
-  display: block;
-  font-size: 9px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  opacity: 0.72;
-}
-
-.atlas-today-task strong {
-  display: block;
-  margin-top: 6px;
-  font-size: 18px;
-  line-height: 1.16;
-  font-weight: 950;
-}
-
-.atlas-today-task em {
-  display: block;
-  margin-top: 5px;
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 750;
-  opacity: 0.74;
-}
-
-.atlas-mini-stats {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-}
-
-.atlas-mini-stat {
-  border: 1px solid rgba(255,255,255,0.18);
-  border-radius: 18px;
-  padding: 8px;
-  background: rgba(255,255,255,0.12);
-}
-
-.atlas-mini-stat strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 16px;
-  font-weight: 950;
-}
-
-.atlas-soft-card {
-  border: 1px solid #ded5c7;
-  border-radius: 26px;
-  background: white;
-  padding: 14px;
-  box-shadow: 0 10px 28px rgba(58, 46, 30, 0.07);
-}
-
-.atlas-soft-card.compact {
-  padding: 11px;
-  border-radius: 22px;
-}
-
-.atlas-soft-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.atlas-soft-heading {
-  font-size: 18px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: -0.03em;
-}
-
-.atlas-soft-badge {
-  border: 1px solid #ded5c7;
-  border-radius: 999px;
-  background: #fffaf2;
-  padding: 5px 9px;
-  font-size: 10px;
-  font-weight: 900;
-  color: #656252;
-}
-
-.atlas-primary-title {
-  margin-top: 8px;
-  font-size: 22px;
-  line-height: 1.12;
-  font-weight: 950;
-  letter-spacing: -0.045em;
-}
-
-.atlas-primary-text {
-  margin-top: 7px;
-  font-size: 13px;
-  line-height: 1.45;
-  font-weight: 650;
-  color: #696d63;
-}
-
-.atlas-soft-actions {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-}
-
-.atlas-soft-actions button,
-.atlas-task-row-actions button {
-  height: 38px;
-  border: 0;
-  border-radius: 15px;
-  color: white;
-  font-size: 12px;
-  font-weight: 950;
-}
-
-.atlas-soft-done { background: #4d9b78; }
-.atlas-soft-block { background: #c46a60; }
-.atlas-soft-seen { background: #cfa745; }
-.atlas-soft-skip { background: #798094; }
-
-.atlas-tab-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-
-.atlas-tab {
-  height: 36px;
-  border: 1px solid #ded5c7;
-  border-radius: 999px;
-  background: white;
-  color: #6d6a5f;
-  font-size: 12px;
-  font-weight: 950;
-}
-
-.atlas-tab.active {
-  background: #e9e9ff;
-  border-color: #c8cbea;
-  color: #575d96;
-}
-
-.atlas-task-list {
-  display: grid;
-  gap: 8px;
-}
-
-.atlas-task-row {
-  border: 1px solid #e3dacd;
-  border-radius: 22px;
-  background: #fffdf8;
-  padding: 11px;
-}
-
-.atlas-task-row strong {
-  display: block;
-  margin-top: 5px;
-  font-size: 14px;
-  line-height: 1.2;
-  font-weight: 950;
-}
-
-.atlas-task-row small {
-  display: block;
-  margin-top: 4px;
-  font-size: 11px;
-  line-height: 1.25;
-  font-weight: 750;
-  color: #767165;
-}
-
-.atlas-task-row-actions {
-  margin-top: 9px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 5px;
-}
-
-.atlas-add-form {
-  display: grid;
-  gap: 8px;
-}
-
-.atlas-add-form label {
-  display: grid;
-  gap: 4px;
-}
-
-.atlas-add-form input,
-.atlas-add-form select,
-.atlas-add-form textarea {
-  width: 100%;
-  min-height: 38px;
-  border: 1px solid #ded5c7;
-  border-radius: 16px;
-  background: #fffdf8;
-  padding: 9px 11px;
-  font-size: 13px;
-  font-weight: 750;
-  color: #303243;
-  outline: none;
-}
-
-.atlas-add-form textarea {
-  min-height: 72px;
-  resize: vertical;
-}
-
-.atlas-empty {
-  border: 1px dashed #ded5c7;
-  border-radius: 20px;
-  padding: 14px;
-  color: #8a8376;
-  font-size: 12px;
-  font-weight: 800;
-  text-align: center;
-}
-
-@media (min-width: 900px) {
-  .atlas-phone {
-    margin-top: 8px;
-  }
-}
-
-/* ================================
-   ATLAS SOFT MOBILE FIELD APP
-   ================================ */
-
-.atlas-phone-shell {
-  min-height: 100svh;
-  background:
-    radial-gradient(circle at 12% 0%, rgba(191, 198, 229, 0.34), transparent 28%),
-    radial-gradient(circle at 88% 10%, rgba(214, 214, 87, 0.18), transparent 24%),
-    #f7f4ee;
-  color: #2f3345;
-  padding: 12px;
-}
-
-.atlas-phone {
-  width: min(100%, 430px);
-  min-height: calc(100svh - 24px);
-  margin: 0 auto;
-  border: 1px solid rgba(218, 207, 190, 0.9);
-  border-radius: 34px;
-  background: rgba(255, 253, 248, 0.96);
-  box-shadow: 0 22px 70px rgba(54, 45, 32, 0.14);
-  overflow: hidden;
-}
-
-.atlas-phone-top {
-  height: 64px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  border-bottom: 1px solid rgba(224, 216, 204, 0.8);
-  background: rgba(255, 253, 248, 0.95);
-}
-
-.atlas-phone-brand {
-  min-width: 0;
-}
-
-.atlas-phone-kicker {
-  display: block;
-  font-size: 9px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: #858bb8;
-}
-
-.atlas-phone-title {
-  display: block;
-  margin-top: 4px;
-  font-size: 19px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: -0.04em;
-  color: #303243;
-  white-space: nowrap;
-}
-
-.atlas-phone-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.atlas-phone-icon,
-.atlas-phone-pill,
-.atlas-phone-select {
-  height: 36px;
-  border: 1px solid #ded5c7;
-  border-radius: 999px;
-  background: #fffaf2;
-  color: #303243;
-  font-size: 12px;
-  font-weight: 900;
-  box-shadow: 0 5px 14px rgba(58, 46, 30, 0.07);
-}
-
-.atlas-phone-icon {
-  width: 36px;
-  display: grid;
-  place-items: center;
-  text-decoration: none;
-}
-
-.atlas-phone-pill {
-  padding: 0 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.atlas-phone-pill.primary {
-  border-color: #c8c85a;
-  background: #dddd64;
-}
-
-.atlas-phone-select {
-  max-width: 118px;
-  padding: 0 10px;
-}
-
 .atlas-phone-body {
-  padding: 14px;
-  display: grid;
-  gap: 12px;
+  scroll-padding-top: 96px;
+}
+
+#atlas-claim-planting-form,
+#atlas-add-task-form {
+  scroll-margin-top: 96px;
 }
 
 .atlas-today-card {
@@ -1956,6 +1590,41 @@ body {
   box-shadow: 0 8px 18px rgba(58, 46, 30, 0.08);
 }
 
+.atlas-action-stack {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.atlas-top-action {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  border: 2px solid transparent;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.atlas-top-action-task {
+  background: #9b9bd2;
+  border-color: #8585c2;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.atlas-top-action-planting {
+  background: #dfdf55;
+  border-color: #cfcf42;
+  color: #2f3145;
+  box-shadow: none;
+}
 
 
 /* ================================
@@ -2626,4 +2295,620 @@ body {
   .atlas-zone-action {
     width: 100%;
   }
+}
+
+
+
+/* ================================
+   ATLAS SCROLL RESTORE FINAL
+   Use normal page scrolling again.
+   Header stays sticky.
+   Buttons match the main page green button shape.
+   ================================ */
+
+html,
+body {
+  min-height: 100%;
+  height: auto !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+.atlas-shell,
+.atlas-phone-shell {
+  min-height: 100svh !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.atlas-phone {
+  width: min(100%, 430px);
+  min-height: calc(100svh - 24px) !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  margin: 0 auto;
+}
+
+.atlas-phone-top {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 999 !important;
+  background: rgba(255, 253, 248, 0.98) !important;
+  backdrop-filter: blur(12px);
+}
+
+.atlas-phone-top.with-weather {
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  align-items: center;
+}
+
+.atlas-action-stack {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  width: auto !important;
+}
+
+.atlas-top-action {
+  width: 48px !important;
+  height: 42px !important;
+  border-radius: 18px !important;
+  border: 1px solid transparent !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: 24px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(58, 46, 30, 0.08) !important;
+}
+
+.atlas-top-action-task {
+  background: #9b9bd2 !important;
+  border-color: #8585c2 !important;
+  color: #ffffff !important;
+}
+
+.atlas-top-action-planting {
+  background: #dddd64 !important;
+  border-color: #d8d057 !important;
+  color: #303243 !important;
+}
+
+#atlas-claim-planting-form,
+#atlas-add-task-form {
+  scroll-margin-top: 82px !important;
+}
+
+
+/* ================================
+   ATLAS FIXED TOP BAR + RESTORED SCROLL
+   Final field/mobile override
+   ================================ */
+
+html,
+body {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+.atlas-shell,
+.atlas-phone-shell {
+  min-height: 100svh !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.atlas-phone {
+  width: min(100%, 430px) !important;
+  min-height: calc(100svh - 24px) !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 auto !important;
+  overflow: visible !important;
+  border-radius: 34px !important;
+  background: rgba(255, 253, 248, 0.96) !important;
+  border: 1px solid rgba(218, 207, 190, 0.9) !important;
+  box-shadow: 0 22px 70px rgba(54, 45, 32, 0.14) !important;
+}
+
+/* Fixed instead of sticky because the page has multiple competing scroll contexts. */
+.atlas-phone-top {
+  position: fixed !important;
+  top: 12px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: min(calc(100% - 24px), 430px) !important;
+  height: 64px !important;
+  z-index: 9999 !important;
+  border-radius: 34px 34px 0 0 !important;
+  background: rgba(255, 253, 248, 0.98) !important;
+  border: 1px solid rgba(218, 207, 190, 0.9) !important;
+  border-bottom: 1px solid rgba(224, 216, 204, 0.9) !important;
+  box-shadow: 0 8px 26px rgba(54, 45, 32, 0.1) !important;
+  backdrop-filter: blur(12px);
+}
+
+.atlas-phone-top.with-weather {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Since the header is fixed, give the content its own top room. */
+.atlas-phone-body {
+  padding-top: 86px !important;
+}
+
+/* Matching top action buttons: same shape, only color changes. */
+.atlas-action-stack {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  width: auto !important;
+}
+
+.atlas-top-action {
+  width: 48px !important;
+  height: 42px !important;
+  border-radius: 18px !important;
+  border: 1px solid transparent !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: 24px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(58, 46, 30, 0.08) !important;
+}
+
+.atlas-top-action-task {
+  background: #9b9bd2 !important;
+  border-color: #8585c2 !important;
+  color: #ffffff !important;
+}
+
+.atlas-top-action-planting {
+  background: #dddd64 !important;
+  border-color: #d8d057 !important;
+  color: #303243 !important;
+}
+
+#atlas-claim-planting-form,
+#atlas-add-task-form {
+  scroll-margin-top: 92px !important;
+}
+
+/* ================================
+   ATLAS UN-FLOAT HEADER FIX
+   Restores header into the card.
+   Keeps page scrolling.
+   Makes header sticky without fixed overlay.
+   ================================ */
+
+html,
+body {
+  min-height: 100%;
+  height: auto !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+.atlas-shell,
+.atlas-phone-shell {
+  min-height: 100svh !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.atlas-phone {
+  width: min(100%, 430px) !important;
+  min-height: calc(100svh - 24px) !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 auto !important;
+  overflow: visible !important;
+  border-radius: 34px !important;
+  background: rgba(255, 253, 248, 0.96) !important;
+  border: 1px solid rgba(218, 207, 190, 0.9) !important;
+  box-shadow: 0 22px 70px rgba(54, 45, 32, 0.14) !important;
+}
+
+/* Undo the fixed floating header completely. */
+.atlas-phone-top {
+  position: sticky !important;
+  top: 0 !important;
+  left: auto !important;
+  transform: none !important;
+  width: auto !important;
+  height: 64px !important;
+  z-index: 9999 !important;
+
+  border-radius: 34px 34px 0 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid rgba(224, 216, 204, 0.9) !important;
+
+  background: rgba(255, 253, 248, 0.98) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(12px);
+}
+
+.atlas-phone-top.with-weather {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Undo the extra top padding from the fixed-header experiment. */
+.atlas-phone-body {
+  padding-top: 14px !important;
+}
+
+/* Keep the matching top buttons. */
+.atlas-action-stack {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  width: auto !important;
+}
+
+.atlas-top-action {
+  width: 48px !important;
+  height: 42px !important;
+  border-radius: 18px !important;
+  border: 1px solid transparent !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: 24px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(58, 46, 30, 0.08) !important;
+}
+
+.atlas-top-action-task {
+  background: #9b9bd2 !important;
+  border-color: #8585c2 !important;
+  color: #ffffff !important;
+}
+
+.atlas-top-action-planting {
+  background: #dddd64 !important;
+  border-color: #d8d057 !important;
+  color: #303243 !important;
+}
+
+#atlas-claim-planting-form,
+#atlas-add-task-form {
+  scroll-margin-top: 82px !important;
+}
+
+
+/* ================================
+   ATLAS RECENT LOCAL RECORDS
+   cleaned compact cards
+   ================================ */
+
+.atlas-recent-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-recent-item {
+  position: relative;
+  border: 1px solid #e3dacd;
+  border-radius: 18px;
+  background: #fffdf8;
+  padding: 11px 42px 11px 11px;
+  display: grid;
+  gap: 8px;
+  box-shadow: 0 4px 10px rgba(58, 46, 30, 0.035);
+}
+
+.atlas-recent-main {
+  min-width: 0;
+}
+
+.atlas-recent-main strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.12;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+  color: #303243;
+  overflow-wrap: anywhere;
+}
+
+.atlas-recent-main span {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 800;
+  color: #686c63;
+  overflow-wrap: anywhere;
+}
+
+.atlas-recent-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.atlas-recent-meta span {
+  min-height: 25px;
+  border: 1px solid #e1d8ca;
+  border-radius: 999px;
+  background: #fffaf2;
+  color: #666252;
+  padding: 6px 8px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 900;
+  max-width: 100%;
+}
+
+.atlas-recent-x {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #ded5c7;
+  border-radius: 999px;
+  background: #fffaf2;
+  color: #80786c;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.atlas-recent-x:hover {
+  background: #fff0d5;
+  border-color: #e4c69c;
+  color: #76552e;
+}
+
+.atlas-recent-seed {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  min-height: 26px;
+  border: 1px solid #ded5c7;
+  border-radius: 999px;
+  background: #fffaf2;
+  color: #8a8376;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+
+
+/* ================================
+   ATLAS LIVE OBJECT STATE
+   ================================ */
+
+.atlas-live-object-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-live-object {
+  border: 1px solid #e3dacd;
+  border-radius: 18px;
+  background: #fffdf8;
+  padding: 11px;
+  display: grid;
+  gap: 7px;
+}
+
+.atlas-live-object.claimed {
+  background: #fbfbec;
+  border-color: #d8d98a;
+}
+
+.atlas-live-object-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.atlas-live-object-head strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.15;
+  font-weight: 950;
+  color: #303243;
+}
+
+.atlas-live-object-head span {
+  border: 1px solid #ded5c7;
+  border-radius: 999px;
+  background: #fffaf2;
+  color: #666252;
+  padding: 5px 8px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.atlas-live-object p {
+  margin: 0;
+  color: #686c63;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
+.atlas-live-object-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.atlas-live-object-meta span {
+  min-height: 24px;
+  border: 1px solid #e1d8ca;
+  border-radius: 999px;
+  background: #fffaf2;
+  color: #666252;
+  padding: 6px 8px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+
+/* ================================
+   ATLAS FIELD LOG FINAL OVERRIDE
+   compact + consistent with recent cards
+   ================================ */
+
+.atlas-field-log-list {
+  margin-top: 10px !important;
+  display: grid !important;
+  gap: 8px !important;
+}
+
+.atlas-field-log-item {
+  border: 1px solid #e3dacd !important;
+  border-radius: 18px !important;
+  background: #fffdf8 !important;
+  padding: 11px !important;
+  display: grid !important;
+  gap: 8px !important;
+  box-shadow: 0 4px 10px rgba(58, 46, 30, 0.035) !important;
+}
+
+.atlas-field-log-main {
+  min-width: 0 !important;
+}
+
+.atlas-field-log-main strong {
+  display: block !important;
+  font-size: 15px !important;
+  line-height: 1.12 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.03em !important;
+  color: #303243 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.atlas-field-log-main span {
+  display: block !important;
+  margin-top: 4px !important;
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+  font-weight: 800 !important;
+  color: #686c63 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.atlas-field-log-meta {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 5px !important;
+}
+
+.atlas-field-log-meta span {
+  min-height: 25px !important;
+  border: 1px solid #e1d8ca !important;
+  border-radius: 999px !important;
+  background: #fffaf2 !important;
+  color: #666252 !important;
+  padding: 6px 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  max-width: 100% !important;
+}
+
+.atlas-field-log-item-claim_added {
+  background: #fbfbec !important;
+  border-color: #d8d98a !important;
+}
+
+.atlas-field-log-item-task_done {
+  background: #f7fcf9 !important;
+  border-color: #bfd8ca !important;
+}
+
+.atlas-field-log-item-generated_task {
+  background: #fafaff !important;
+  border-color: #d6d8ee !important;
+}
+
+.atlas-field-log-item-task_blocked,
+.atlas-field-log-item-task_skipped,
+.atlas-field-log-item-task_deleted,
+.atlas-field-log-item-claim_deleted {
+  background: #fdfaf7 !important;
+}
+
+
+
+/* ================================
+   ATLAS OVERDUE HERO STATE
+   ================================ */
+
+.atlas-hero-tile-overdue {
+  background: rgba(124, 93, 120, 0.28) !important;
+  border: 1px solid rgba(255, 250, 242, 0.2) !important;
+}
+
+.atlas-hero-tile-overdue .atlas-soft-label {
+  color: #fff8d8 !important;
+}
+
+.atlas-hero-tile-overdue strong,
+.atlas-hero-tile-overdue em {
+  color: #ffffff !important;
+}
+
+
+.atlas-field-log-item-work_claimed {
+  background: #f7fcf9 !important;
+  border-color: #bfd8ca !important;
 }

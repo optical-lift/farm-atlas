@@ -1,5 +1,6 @@
 "use client";
 
+import { getAreaInventorySummary } from "../data/atlas/claim-automation";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { atlasAreas2026 } from "../data/atlas/atlas-areas-2026";
@@ -19,12 +20,6 @@ type ZoneCard = {
   weed: string;
   state: string;
   nextMove: string;
-  inventory: {
-    plantedBeds: string;
-    crops: string;
-    harvestCountdown: string;
-    revenue: string;
-  };
 };
 
 const zoneCards: ZoneCard[] = [
@@ -39,12 +34,6 @@ const zoneCards: ZoneCard[] = [
     weed: "low",
     state: "plant",
     nextMove: "sow",
-    inventory: {
-      plantedBeds: "5 / 20",
-      crops: "sunflowers · zinnias · beans · garlic",
-      harvestCountdown: "52–70 days",
-      revenue: "$1.4k–$2.8k",
-    },
   },
   {
     id: "main_garden",
@@ -57,12 +46,6 @@ const zoneCards: ZoneCard[] = [
     weed: "mud",
     state: "layout",
     nextMove: "stones",
-    inventory: {
-      plantedBeds: "0 / path grid",
-      crops: "chives · basil · okra · cucumbers · zinnias",
-      harvestCountdown: "45–75 days",
-      revenue: "$300–$900",
-    },
   },
   {
     id: "follow_me_to_flowers",
@@ -75,12 +58,6 @@ const zoneCards: ZoneCard[] = [
     weed: "lawn",
     state: "raw",
     nextMove: "clear",
-    inventory: {
-      plantedBeds: "0 / 4 arches",
-      crops: "hyacinth bean · squash · cucumber · alyssum",
-      harvestCountdown: "50–80 days",
-      revenue: "$200–$700",
-    },
   },
   {
     id: "entry_billboard_garden",
@@ -93,12 +70,6 @@ const zoneCards: ZoneCard[] = [
     weed: "mixed",
     state: "reset",
     nextMove: "clean",
-    inventory: {
-      plantedBeds: "0 / open blocks",
-      crops: "sunflowers · garlic · zinnias · alyssum",
-      harvestCountdown: "55–80 days",
-      revenue: "$250–$800",
-    },
   },
   {
     id: "curve_garden",
@@ -111,12 +82,6 @@ const zoneCards: ZoneCard[] = [
     weed: "normal",
     state: "started",
     nextMove: "weed",
-    inventory: {
-      plantedBeds: "mostly set",
-      crops: "squash · hyacinth bean · basil · chives",
-      harvestCountdown: "45–75 days",
-      revenue: "$150–$500",
-    },
   },
   {
     id: "barn_beds",
@@ -129,12 +94,6 @@ const zoneCards: ZoneCard[] = [
     weed: "high",
     state: "suppress",
     nextMove: "sun",
-    inventory: {
-      plantedBeds: "0 / 9",
-      crops: "black oil sunflowers only",
-      harvestCountdown: "65–85 days",
-      revenue: "$0–$300",
-    },
   },
   {
     id: "berry_walk_flower_rows",
@@ -147,12 +106,6 @@ const zoneCards: ZoneCard[] = [
     weed: "high",
     state: "watch",
     nextMove: "sun",
-    inventory: {
-      plantedBeds: "0 / 8",
-      crops: "sunflowers · maybe zinnias",
-      harvestCountdown: "65–85 days",
-      revenue: "$200–$900",
-    },
   },
   {
     id: "berry_walk_original",
@@ -165,12 +118,6 @@ const zoneCards: ZoneCard[] = [
     weed: "unk",
     state: "save",
     nextMove: "mark",
-    inventory: {
-      plantedBeds: "survivors only",
-      crops: "poppies · catmint · lambs ear · lemon balm",
-      harvestCountdown: "seed-save first",
-      revenue: "$0–$250",
-    },
   },
 ];
 
@@ -199,6 +146,8 @@ export default function ElmFarmZonePicker() {
 
   const selectedZone = zoneCards.find((zone) => zone.id === selectedZoneId) ?? zoneCards[0];
   const selectedArea = getArea(selectedZone.id);
+
+const inventorySummary = getAreaInventorySummary(selectedZone.id);
 
   const selectedTasks = useMemo(() => {
     return atlasTasksJuneJuly2026
@@ -334,27 +283,29 @@ export default function ElmFarmZonePicker() {
               <span className="atlas-primary-status">{openCount} open</span>
             </div>
 
-            <div className="atlas-inventory-grid">
-              <div className="atlas-inventory-row">
-                <span>Beds planted</span>
-                <strong>{selectedZone.inventory.plantedBeds}</strong>
-              </div>
+<div className="atlas-inventory-grid">
+  <div className="atlas-inventory-row">
+    <span>Beds planted</span>
+    <strong>
+      {inventorySummary.plantedBeds} / {selectedZone.beds}
+    </strong>
+  </div>
 
-              <div className="atlas-inventory-row">
-                <span>Crops claimed</span>
-                <strong>{selectedZone.inventory.crops}</strong>
-              </div>
+  <div className="atlas-inventory-row">
+    <span>Crops claimed</span>
+    <strong>{inventorySummary.cropsLabel}</strong>
+  </div>
 
-              <div className="atlas-inventory-row">
-                <span>Harvest countdown</span>
-                <strong>{selectedZone.inventory.harvestCountdown}</strong>
-              </div>
+  <div className="atlas-inventory-row">
+    <span>Next harvest watch</span>
+    <strong>{inventorySummary.nextHarvest}</strong>
+  </div>
 
-              <div className="atlas-inventory-row money">
-                <span>Potential revenue</span>
-                <strong>{selectedZone.inventory.revenue}</strong>
-              </div>
-            </div>
+  <div className="atlas-inventory-row money">
+    <span>Potential revenue</span>
+    <strong>{inventorySummary.revenueLabel}</strong>
+  </div>
+</div>
 
             <div className="atlas-zone-mini-stats">
               <span>Open {openCount}</span>
