@@ -8,6 +8,21 @@ import {
 } from "@/lib/atlas/dashboard-client";
 import { createAtlasFieldLog } from "@/lib/atlas/field-log-client";
 
+import {
+  fetchAtlasTaskCards,
+  type AtlasTaskCard,
+} from "@/lib/atlas/task-cards-client";
+
+import {
+  fetchAtlasProjects,
+  type AtlasProjectCard,
+} from "@/lib/atlas/projects-client";
+
+import {
+  saveAtlasTaskResult,
+  type AtlasTaskResult,
+} from "@/lib/atlas/task-result-client";
+
 import { atlasTasksJuneJuly2026 } from "../data/atlas/atlas-tasks-june-july-2026";
 import {
   atlasAreas2026,
@@ -430,7 +445,7 @@ const [operationsAreaId, setOperationsAreaId] = useState<AtlasAreaId>("field_row
   const [localClaims, setLocalClaims] = useState<PlantingClaim[]>([]);
   const [fieldLog, setFieldLog] = useState<FieldLogEntry[]>([]);
 const [showLedger, setShowLedger] = useState(false);
-const [openHeroTaskId, setOpenHeroTaskId] = useState<string | null>(null);
+const [focusedLocalTaskId, setFocusedLocalTaskId] = useState<string | null>(null);
 
 const [quickStep, setQuickStep] = useState<1 | 2 | 3 | 4>(1);
 
@@ -459,6 +474,30 @@ const [quickPlantSourceType, setQuickPlantSourceType] = useState<
 
 const [quickPlantItems, setQuickPlantItems] = useState<QuickPlantItem[]>([]);
 
+const [selectedTaskCardId, setSelectedTaskCardId] = useState<string | null>(null);
+const [showTaskCardDrawer, setShowTaskCardDrawer] = useState(false);
+
+const [openHeroTaskId, setOpenHeroTaskId] = useState<string | null>(null);
+const [focusedProjectStep, setFocusedProjectStep] =
+  useState<AtlasProjectCard["steps"][number] | null>(null);
+
+const [selectedTaskCard, setSelectedTaskCard] = useState<AtlasTaskCard | null>(
+  null,
+);
+const [taskCardLoading, setTaskCardLoading] = useState(false);
+const [taskCardError, setTaskCardError] = useState<string | null>(null);
+
+const [projectCards, setProjectCards] = useState<AtlasProjectCard[]>([]);
+const [projectsLoading, setProjectsLoading] = useState(true);
+const [projectsError, setProjectsError] = useState<string | null>(null);
+const [showProjectsDrawer, setShowProjectsDrawer] = useState(false);
+const [selectedProjectKey, setSelectedProjectKey] = useState<string | null>(null);
+
+const [taskResultSaving, setTaskResultSaving] = useState<AtlasTaskResult | null>(
+  null,
+);
+const [taskResultMessage, setTaskResultMessage] = useState<string | null>(null);
+
   const [quickSelectedActions, setQuickSelectedActions] = useState<WorkAction[]>(["weeded"]);
   const [quickSelectedAreas, setQuickSelectedAreas] = useState<AtlasAreaId[]>(["field_rows"]);
   const [quickSelectedObjects, setQuickSelectedObjects] = useState<string[]>([]);
@@ -478,6 +517,66 @@ const [quickPlantItems, setQuickPlantItems] = useState<QuickPlantItem[]>([]);
     setLocalBedRecords(loadJson<BedRecord[]>(BED_RECORDS_KEY, bedRecords));
     setCustomTasks(loadJson<AtlasTask[]>(CUSTOM_TASKS_KEY, []));
   }, []);
+
+
+async function handleTaskResult(result: AtlasTaskResult) {
+  if (!selectedTaskCard) return;
+
+  try {
+    setTaskResultSaving(result);
+    setTaskResultMessage(null);
+
+    await saveAtlasTaskResult({
+      taskId: selectedTaskCard.task_id,
+      result,
+      createdBy: "lex",
+    });
+
+    setTaskResultMessage(
+      result === "done"
+        ? "Task completed."
+        : result === "partial"
+          ? "Progress logged."
+          : result === "blocked"
+            ? "Task blocked."
+            : "Supply follow-up created.",
+    );
+
+    await reloadProjects();
+    await reloadDashboard();
+
+    const refreshed = await fetchAtlasTaskCards(selectedTaskCard.task_id);
+    setSelectedTaskCard(refreshed.taskCards[0] ?? null);
+  } catch (error) {
+    setTaskResultMessage(
+      error instanceof Error ? error.message : "Failed to save task result.",
+    );
+  } finally {
+    setTaskResultSaving(null);
+  }
+}
+
+async function reloadProjects() {
+  try {
+    setProjectsLoading(true);
+    setProjectsError(null);
+
+    const response = await fetchAtlasProjects();
+    const projects = response.projects ?? [];
+
+    setProjectCards(projects);
+
+    if (!selectedProjectKey && projects.length > 0) {
+      setSelectedProjectKey(projects[0].project_key);
+    }
+  } catch (error) {
+    setProjectsError(
+      error instanceof Error ? error.message : "Failed to load Atlas projects.",
+    );
+  } finally {
+    setProjectsLoading(false);
+  }
+}
 
    async function reloadDashboard() {
     try {
@@ -532,6 +631,93 @@ const [quickPlantItems, setQuickPlantItems] = useState<QuickPlantItem[]>([]);
     };
   }, []);
 
+useEffect(() => {
+  let isMounted = true;
+
+  async function loadProjects() {
+    try {
+      setProjectsLoading(true);
+      setProjectsError(null);
+
+      const response = await fetchAtlasProjects();
+      const projects = response.projects ?? [];
+
+      if (!isMounted) return;
+
+      setProjectCards(projects);
+
+      if (projects.length > 0) {
+        setSelectedProjectKey((current) => current ?? projects[0].project_key);
+      }
+    } catch (error) {
+      if (!isMounted) return;
+
+      setProjectsError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load Atlas projects.",
+      );
+    } finally {
+      if (isMounted) {
+        setProjectsLoading(false);
+      }
+    }
+  }
+
+  loadProjects();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
+
+useEffect(() => {
+  if (!selectedTaskCardId || !showTaskCardDrawer) return;
+
+  const taskCardId = selectedTaskCardId;
+  let isMounted = true;
+
+  async function loadTaskCard() {
+    try {
+      setTaskCardLoading(true);
+      setTaskCardError(null);
+
+      const response = await fetchAtlasTaskCards(taskCardId);
+      const taskCard = response.taskCards[0] ?? null;
+
+      if (!isMounted) return;
+
+      setSelectedTaskCard(taskCard);
+    } catch (error) {
+      if (!isMounted) return;
+
+      setTaskCardError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load Atlas task card.",
+      );
+    } finally {
+      if (isMounted) {
+        setTaskCardLoading(false);
+      }
+    }
+  }
+
+  void loadTaskCard();
+
+  return () => {
+    isMounted = false;
+  };
+}, [selectedTaskCardId, showTaskCardDrawer]);
+
+
+const selectedProject = useMemo(() => {
+  return (
+    projectCards.find((project) => project.project_key === selectedProjectKey) ??
+    projectCards[0] ??
+    null
+  );
+}, [projectCards, selectedProjectKey]);
 
   const dashboardZoneByKey = useMemo(() => {
     return new Map(dashboardZones.map((zone) => [zone.zone_key, zone]));
@@ -580,36 +766,110 @@ const [quickPlantItems, setQuickPlantItems] = useState<QuickPlantItem[]>([]);
     [customTasks, taskState],
   );
 
-  const selectedAreaTasks = useMemo(
-    () => sortTasks(tasks.filter((task) => task.areaId === selectedAreaId)),
-    [tasks, selectedAreaId],
-  );
+const selectedAreaTasks = useMemo(
+  () => sortTasks(tasks.filter((task) => task.areaId === selectedAreaId)),
+  [tasks, selectedAreaId],
+);
 
-  const openTasks = useMemo(
-    () => sortTasks(tasks.filter((task) => task.status === "open")),
-    [tasks],
-  );
+const selectedAreaOpenTasks = useMemo(
+  () => selectedAreaTasks.filter((task) => task.status === "open"),
+  [selectedAreaTasks],
+);
 
-  const overdueTasks = useMemo(
-    () => openTasks.filter((task) => task.date < today),
-    [openTasks, today],
-  );
+const selectedAreaOverdueTasks = useMemo(
+  () => selectedAreaOpenTasks.filter((task) => task.date < today),
+  [selectedAreaOpenTasks, today],
+);
 
-  const todayTasks = useMemo(
-    () => openTasks.filter((task) => task.date === today),
-    [openTasks, today],
-  );
+const selectedAreaTodayTasks = useMemo(
+  () => selectedAreaOpenTasks.filter((task) => task.date === today),
+  [selectedAreaOpenTasks, today],
+);
 
-  const nextTasks = useMemo(
-    () => openTasks.filter((task) => task.date > today),
-    [openTasks, today],
-  );
+const selectedAreaNextTasks = useMemo(
+  () => selectedAreaOpenTasks.filter((task) => task.date > today),
+  [selectedAreaOpenTasks, today],
+);
 
-  const heroPrimaryTask = overdueTasks[0] ?? todayTasks[0] ?? nextTasks[0] ?? openTasks[0] ?? null;
-  const heroWatchTask = todayTasks.find((task) => task.id !== heroPrimaryTask?.id) ?? nextTasks[0] ?? null;
-const openHeroTask =
-  tasks.find((task) => task.id === openHeroTaskId) ?? null;
+const openTasks = useMemo(
+  () => sortTasks(tasks.filter((task) => task.status === "open")),
+  [tasks],
+);
 
+const overdueTasks = useMemo(
+  () => openTasks.filter((task) => task.date < today),
+  [openTasks, today],
+);
+
+const todayTasks = useMemo(
+  () => openTasks.filter((task) => task.date === today),
+  [openTasks, today],
+);
+
+const nextTasks = useMemo(
+  () => openTasks.filter((task) => task.date > today),
+  [openTasks, today],
+);
+
+const heroPrimaryTask =
+  selectedAreaOverdueTasks[0] ??
+  selectedAreaTodayTasks[0] ??
+  selectedAreaNextTasks[0] ??
+  overdueTasks[0] ??
+  todayTasks[0] ??
+  nextTasks[0] ??
+  openTasks[0] ??
+  null;
+
+const heroWatchTask =
+  selectedAreaTodayTasks.find((task) => task.id !== heroPrimaryTask?.id) ??
+  selectedAreaNextTasks.find((task) => task.id !== heroPrimaryTask?.id) ??
+  todayTasks.find((task) => task.id !== heroPrimaryTask?.id) ??
+  nextTasks.find((task) => task.id !== heroPrimaryTask?.id) ??
+  null;
+
+const openHeroTask = tasks.find((task) => task.id === openHeroTaskId) ?? null;
+
+const taskDeck = useMemo(() => {
+  const seen = new Set<string>();
+
+  return [
+    ...selectedAreaOverdueTasks,
+    ...selectedAreaTodayTasks,
+    ...selectedAreaNextTasks,
+    ...overdueTasks,
+    ...todayTasks,
+    ...nextTasks,
+    ...openTasks,
+  ].filter((task) => {
+    if (seen.has(task.id)) return false;
+    seen.add(task.id);
+    return task.status === "open";
+  });
+}, [
+  selectedAreaOverdueTasks,
+  selectedAreaTodayTasks,
+  selectedAreaNextTasks,
+  overdueTasks,
+  todayTasks,
+  nextTasks,
+  openTasks,
+]);
+
+const focusedLocalTask =
+  tasks.find((task) => task.id === focusedLocalTaskId) ?? null;
+
+const focusedTaskIndex = focusedLocalTask
+  ? taskDeck.findIndex((task) => task.id === focusedLocalTask.id)
+  : -1;
+
+const previousFocusedTask =
+  focusedTaskIndex > 0 ? taskDeck[focusedTaskIndex - 1] : null;
+
+const nextFocusedTask =
+  focusedTaskIndex >= 0 && focusedTaskIndex < taskDeck.length - 1
+    ? taskDeck[focusedTaskIndex + 1]
+    : null;
   const doneCount = tasks.filter((task) => task.status === "done").length;
   const blockedCount = tasks.filter((task) => task.status === "blocked").length;
 
@@ -646,12 +906,9 @@ const operationsOverdueTasks = operationsOpenTasks.filter(
   (task) => task.date < today,
 );
 
-  const selectedAreaOpenTasks = selectedAreaTasks.filter((task) => task.status === "open");
-
 const selectedAreaBedRecords = localBedRecords.filter(
   (record) => record.zoneId === selectedAreaId,
 );
-  const selectedAreaOverdue = selectedAreaOpenTasks.filter((task) => task.date < today);
 
   const quickObjects = useMemo(() => {
     return quickSelectedAreas.flatMap((areaId) => getTaskObjectsForArea(areaId));
@@ -1056,6 +1313,72 @@ function scrollToAtlasForm(id: string) {
     setClaimObjectId(getDefaultGrowingObjectForArea(nextAreaId)?.id ?? "");
   }
 
+
+
+function openLocalTaskCard(task: AtlasTask) {
+  setFocusedLocalTaskId(task.id);
+  setSelectedAreaId(task.areaId);
+  setOpenHeroTaskId(null);
+
+  setFocusedProjectStep(null);
+  setShowTaskCardDrawer(false);
+  setSelectedTaskCardId(null);
+  setSelectedTaskCard(null);
+  setTaskCardError(null);
+}
+
+function closeLocalTaskCard() {
+  setFocusedLocalTaskId(null);
+}
+
+function moveLocalTaskFocus(nextTask: AtlasTask | null) {
+  if (!nextTask) return;
+
+  setFocusedLocalTaskId(nextTask.id);
+  setSelectedAreaId(nextTask.areaId);
+}
+
+function openSupabaseTaskCard(taskId: string | null) {
+  if (!taskId) return;
+
+  setSelectedTaskCardId(taskId);
+  setShowTaskCardDrawer(true);
+
+  setFocusedLocalTaskId(null);
+  setFocusedProjectStep(null);
+  setTaskCardError(null);
+  setTaskResultMessage(null);
+}
+
+function openProjectStepCard(step: AtlasProjectCard["steps"][number]) {
+  if (step.task_id) {
+    openSupabaseTaskCard(step.task_id);
+    return;
+  }
+
+  setFocusedProjectStep(step);
+  setFocusedLocalTaskId(null);
+  setShowTaskCardDrawer(false);
+  setSelectedTaskCardId(null);
+  setSelectedTaskCard(null);
+  setTaskCardError(null);
+  setTaskResultMessage(null);
+}
+
+function closeSupabaseTaskCard() {
+  setShowTaskCardDrawer(false);
+  setSelectedTaskCardId(null);
+  setSelectedTaskCard(null);
+  setTaskCardError(null);
+  setTaskResultMessage(null);
+}
+
+function closeAnyTaskFocus() {
+  setFocusedLocalTaskId(null);
+  setFocusedProjectStep(null);
+  closeSupabaseTaskCard();
+}
+
   function ProjectCard({ project }: { project: AtlasProject }) {
     const complete = project.steps.filter((step) => step.done).length;
     const total = project.steps.length;
@@ -1130,55 +1453,66 @@ function statusClass(status: AtlasTaskStatus) {
 
   function TaskCard({ task }: { task: AtlasTask }) {
     return (
-      <article className={`atlas-task-row ${statusClass(task.status)}`}>
-        <div className="atlas-task-row-head">
-          <div>
-            <span className="atlas-soft-label">{prettyDate(task.date)}</span>
-            <strong>{task.title}</strong>
-            <small>{getAtlasAreaLabel(task.areaId)} · {task.unlockText}</small>
+      <article className={`atlas-task-row atlas-task-row-playable ${statusClass(task.status)}`}>
+        <button
+          type="button"
+          className="atlas-task-row-main"
+          onClick={() => openLocalTaskCard(task)}
+        >
+          <div className="atlas-task-row-head">
+            <div>
+              <span className="atlas-soft-label">{prettyDate(task.date)}</span>
+              <strong>{task.title}</strong>
+              <small>
+                {getAtlasAreaLabel(task.areaId)} · {task.unlockText}
+              </small>
+            </div>
+
+            <span className="atlas-primary-status">{task.status}</span>
           </div>
-          <span className="atlas-primary-status">{task.status}</span>
-        </div>
 
-        <div className="atlas-cue-row compact">
-          <span className="atlas-cue">
-            <span className="atlas-cue-label">{task.actionType.replaceAll("_", " ")}</span>
-          </span>
-          {task.objectId ? (
+          <div className="atlas-cue-row compact">
             <span className="atlas-cue">
-              <span className="atlas-cue-label">{getGrowingObjectLabel(task.objectId)}</span>
+              {task.actionType.replaceAll("_", " ")}
             </span>
-          ) : null}
-          {task.packet ? (
-            <span className="atlas-cue">
-              <span className="atlas-cue-label">{task.packet}</span>
-            </span>
-          ) : null}
-        </div>
 
-<div className="atlas-icon-actions">
-  <button
-    className="atlas-icon-tap"
-    onClick={() => updateTaskStatus(task, "done")}
-    aria-label="Mark done"
-  >
-    ✓
-  </button>
-  <button
-    className="atlas-icon-tap"
-    onClick={() => updateTaskStatus(task, "blocked")}
-    aria-label="Mark blocked"
-  >
-    ×
-  </button>
-  <button
-    className="atlas-icon-tap"
-    onClick={() => updateTaskStatus(task, "skipped")}
-    aria-label="Skip"
-  >
-    ↱
-  </button>
-</div>
+            {task.objectId ? (
+              <span className="atlas-cue">
+                {getGrowingObjectLabel(task.objectId)}
+              </span>
+            ) : null}
+
+            {task.packet ? (
+              <span className="atlas-cue">{task.packet}</span>
+            ) : null}
+          </div>
+        </button>
+
+        <div className="atlas-icon-actions">
+          <button
+            className="atlas-icon-tap"
+            onClick={() => updateTaskStatus(task, "done")}
+            aria-label="Mark done"
+          >
+            ✓
+          </button>
+
+          <button
+            className="atlas-icon-tap"
+            onClick={() => updateTaskStatus(task, "blocked")}
+            aria-label="Mark blocked"
+          >
+            ×
+          </button>
+
+          <button
+            className="atlas-icon-tap"
+            onClick={() => updateTaskStatus(task, "skipped")}
+            aria-label="Skip"
+          >
+            ↱
+          </button>
+        </div>
       </article>
     );
   }
@@ -1228,161 +1562,203 @@ function statusClass(status: AtlasTaskStatus) {
         </header>
 
         <div className="atlas-phone-body">
-          <section className="atlas-hero-compact">
-            <div className="atlas-zone-hero">
-              <div className="atlas-zone-hero-mainline">
-                <div className="atlas-zone-title-block">
-                  <span className="atlas-phone-kicker" style={{ color: "rgba(255,255,255,.72)" }}>
-                    Today
-                  </span>
-                  <div className="atlas-zone-name-row">
-                    <h1 className="atlas-zone-name">{getAtlasAreaLabel(selectedAreaId)}</h1>
-                    <select
-                      className="atlas-zone-name-select"
-                      value={selectedAreaId}
-                      onChange={(event) => setSelectedAreaId(event.target.value as AtlasAreaId)}
-                      aria-label="Select zone"
-                    >
-                      {atlasAreas2026.map((area) => (
-                        <option key={area.id} value={area.id}>
-                          {getAtlasAreaLabel(area.id)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+<section className="atlas-hero-compact atlas-hero-restored">
+  <div className="atlas-zone-hero">
+    <div className="atlas-zone-hero-mainline">
+      <div className="atlas-zone-title-block">
+        <span
+          className="atlas-phone-kicker"
+          style={{ color: "rgba(255,255,255,.72)" }}
+        >
+          Today
+        </span>
 
-                <button className="atlas-soft-date">{prettyDate(today)}</button>
-              </div>
+        <label className="atlas-zone-name-row atlas-zone-name-row-working">
+          <h1 className="atlas-zone-name">{getAtlasAreaLabel(selectedAreaId)}</h1>
 
-              <div className="atlas-hero-grid">
-{heroPrimaryTask ? (
-  <button
-    className={`atlas-hero-tile atlas-hero-tile-button ${
-      heroPrimaryTask.date < today ? "atlas-hero-tile-overdue" : ""
-    }`}
-    onClick={() => {
-      setSelectedAreaId(heroPrimaryTask.areaId);
-      setOpenHeroTaskId(
-        openHeroTaskId === heroPrimaryTask.id ? null : heroPrimaryTask.id,
-      );
-    }}
-  >
-    <span className="atlas-soft-label">
-      {heroPrimaryTask.date < today ? "Overdue" : "Do"}
-    </span>
-    <strong>{heroPrimaryTask.title}</strong>
-    <em>{prettyDate(heroPrimaryTask.date)} · {getAtlasAreaLabel(heroPrimaryTask.areaId)}</em>
-  </button>
-) : (
-  <div className="atlas-hero-tile">
-    <span className="atlas-soft-label">Clear</span>
-    <strong>No open task</strong>
-    <em>Use Quick Log to claim field work.</em>
-  </div>
-)}
-{heroWatchTask ? (
-  <button
-    className="atlas-hero-tile atlas-hero-tile-button"
-    onClick={() => {
-      setSelectedAreaId(heroWatchTask.areaId);
-      setOpenHeroTaskId(
-        openHeroTaskId === heroWatchTask.id ? null : heroWatchTask.id,
-      );
-    }}
-  >
-    <span className="atlas-soft-label">Watch</span>
-    <strong>{heroWatchTask.title}</strong>
-    <em>{prettyDate(heroWatchTask.date)} · {getAtlasAreaLabel(heroWatchTask.areaId)}</em>
-  </button>
-) : (
-  <div className="atlas-hero-tile">
-    <span className="atlas-soft-label">Watch</span>
-    <strong>Nothing queued</strong>
-    <em>Next project step will surface here later.</em>
-  </div>
-)}
+          <select
+            className="atlas-zone-name-select-working"
+            value={selectedAreaId}
+            onChange={(event) => {
+              setSelectedAreaId(event.target.value as AtlasAreaId);
+              setOpenHeroTaskId(null);
+            }}
+            aria-label="Select zone"
+          >
+            {atlasAreas2026.map((area) => (
+              <option key={area.id} value={area.id}>
+                {getAtlasAreaLabel(area.id)}
+              </option>
+            ))}
+          </select>
 
-{openHeroTask ? (
-  <div
-  className="atlas-hero-detail"
-  style={{
-    gridColumn: "1 / -1",
-    width: "100%",
-  }}
->
-    <div
-  className="atlas-hero-detail-title"
-  style={{
-    maxWidth: "100%",
-  }}
->
-  {openHeroTask.title}
-</div>
+          <span className="atlas-zone-dropdown-mark">⌄</span>
+        </label>
+      </div>
 
-    <div className="atlas-cue-row compact">
-      <span className="atlas-cue">{openHeroTask.actionType.replaceAll("_", " ")}</span>
-      {openHeroTask.objectId ? (
-        <span className="atlas-cue">{getGrowingObjectLabel(openHeroTask.objectId)}</span>
-      ) : null}
-      {openHeroTask.packet ? (
-        <span className="atlas-cue">{openHeroTask.packet}</span>
-      ) : null}
+      <button className="atlas-soft-date">{prettyDate(today)}</button>
     </div>
 
-    <p style={{ marginTop: 10, fontSize: 13, lineHeight: 1.45, fontWeight: 800 }}>
-      {openHeroTask.unlockText}
-    </p>
+    <div className="atlas-hero-grid">
+      {heroPrimaryTask ? (
+        <button
+          type="button"
+          className={`atlas-hero-tile atlas-hero-tile-button ${
+            heroPrimaryTask.date < today ? "atlas-hero-tile-overdue" : ""
+          }`}
+          onClick={() => {
+            setSelectedAreaId(heroPrimaryTask.areaId);
+            setOpenHeroTaskId(
+              openHeroTaskId === heroPrimaryTask.id ? null : heroPrimaryTask.id,
+            );
+          }}
+        >
+          <span className="atlas-soft-label">
+            {heroPrimaryTask.date < today ? "Overdue" : "Do"}
+          </span>
 
-    <div className="atlas-hero-icon-actions">
-      <button
-        className="atlas-hero-icon-tap"
-        onClick={() => updateTaskStatus(openHeroTask, "done")}
-        aria-label="Mark done"
-      >
-        ✓
-      </button>
-      <button
-        className="atlas-hero-icon-tap"
-        onClick={() => updateTaskStatus(openHeroTask, "blocked")}
-        aria-label="Mark blocked"
-      >
-        ×
-      </button>
-      <button
-        className="atlas-hero-icon-tap"
-        onClick={() => updateTaskStatus(openHeroTask, "skipped")}
-        aria-label="Skip"
-      >
-        ↱
-      </button>
-      <button
-        className="atlas-hero-close"
-        onClick={() => setOpenHeroTaskId(null)}
-      >
-        Close
-      </button>
+          <strong>{heroPrimaryTask.title}</strong>
+
+          <em>
+            {prettyDate(heroPrimaryTask.date)} ·{" "}
+            {getAtlasAreaLabel(heroPrimaryTask.areaId)}
+          </em>
+        </button>
+      ) : (
+        <div className="atlas-hero-tile">
+          <span className="atlas-soft-label">Clear</span>
+          <strong>No open task</strong>
+          <em>Use Quick Log to claim field work.</em>
+        </div>
+      )}
+
+      {heroWatchTask ? (
+        <button
+          type="button"
+          className="atlas-hero-tile atlas-hero-tile-button"
+          onClick={() => {
+            setSelectedAreaId(heroWatchTask.areaId);
+            setOpenHeroTaskId(
+              openHeroTaskId === heroWatchTask.id ? null : heroWatchTask.id,
+            );
+          }}
+        >
+          <span className="atlas-soft-label">Watch</span>
+
+          <strong>{heroWatchTask.title}</strong>
+
+          <em>
+            {prettyDate(heroWatchTask.date)} ·{" "}
+            {getAtlasAreaLabel(heroWatchTask.areaId)}
+          </em>
+        </button>
+      ) : (
+        <div className="atlas-hero-tile">
+          <span className="atlas-soft-label">Watch</span>
+          <strong>Nothing queued</strong>
+          <em>This zone has no second task queued.</em>
+        </div>
+      )}
+
+      {openHeroTask ? (
+        <div className="atlas-hero-detail atlas-hero-task-peek">
+          <div className="atlas-hero-detail-title">{openHeroTask.title}</div>
+
+          <div className="atlas-cue-row compact">
+            <span className="atlas-cue">
+              {openHeroTask.actionType.replaceAll("_", " ")}
+            </span>
+
+            {openHeroTask.objectId ? (
+              <span className="atlas-cue">
+                {getGrowingObjectLabel(openHeroTask.objectId)}
+              </span>
+            ) : null}
+
+            {openHeroTask.packet ? (
+              <span className="atlas-cue">{openHeroTask.packet}</span>
+            ) : null}
+          </div>
+
+          <p>{openHeroTask.unlockText}</p>
+
+          <div className="atlas-hero-icon-actions">
+            <button
+              type="button"
+              className="atlas-hero-icon-tap"
+              onClick={() => updateTaskStatus(openHeroTask, "done")}
+              aria-label="Mark done"
+            >
+              ✓
+            </button>
+
+            <button
+              type="button"
+              className="atlas-hero-icon-tap"
+              onClick={() => updateTaskStatus(openHeroTask, "blocked")}
+              aria-label="Mark blocked"
+            >
+              ×
+            </button>
+
+            <button
+              type="button"
+              className="atlas-hero-icon-tap"
+              onClick={() => updateTaskStatus(openHeroTask, "skipped")}
+              aria-label="Skip"
+            >
+              ↱
+            </button>
+
+            <button
+              type="button"
+              className="atlas-hero-go-in-button"
+              onClick={() => openLocalTaskCard(openHeroTask)}
+            >
+              Go in
+            </button>
+
+            <button
+              type="button"
+              className="atlas-hero-close"
+              onClick={() => setOpenHeroTaskId(null)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="atlas-hero-stats">
+        <div className="atlas-hero-stat">
+          <span>Open</span>
+          <strong>{selectedAreaOpenTasks.length}</strong>
+        </div>
+
+        <div className="atlas-hero-stat">
+          <span>Done</span>
+          <strong>
+            {
+              selectedAreaTasks.filter((task) => task.status === "done")
+                .length
+            }
+          </strong>
+        </div>
+
+        <div className="atlas-hero-stat">
+          <span>Block</span>
+          <strong>
+            {
+              selectedAreaTasks.filter((task) => task.status === "blocked")
+                .length
+            }
+          </strong>
+        </div>
+      </div>
     </div>
   </div>
-) : null}
-              </div>
-
-              <div className="atlas-hero-stats">
-                <div className="atlas-hero-stat">
-                  <span>Open</span>
-                  <strong>{openTasks.length}</strong>
-                </div>
-                <div className="atlas-hero-stat">
-                  <span>Done</span>
-                  <strong>{doneCount}</strong>
-                </div>
-                <div className="atlas-hero-stat">
-                  <span>Block</span>
-                  <strong>{blockedCount}</strong>
-                </div>
-              </div>
-            </div>
 </section>
+
 
 {showAddTask ? (
   <section className="atlas-soft-card" id="atlas-add-task-form">
@@ -1973,19 +2349,179 @@ quickSelectedActions.includes("sowed") ? (
   </section>
 ) : null}
 
- <section className="atlas-soft-card">
+
+<section className="atlas-soft-card atlas-closed-drawer-card">
   <button
     type="button"
-    className="atlas-soft-head"
+    className="atlas-soft-head atlas-drawer-trigger"
+    onClick={() => setShowProjectsDrawer((current) => !current)}
+  >
+    <div>
+      <span className="atlas-soft-label">Goal Chains</span>
+      <h2 className="atlas-soft-heading">Projects</h2>
+    </div>
+
+    <span className="atlas-soft-badge">
+      {projectsLoading
+        ? "Loading"
+        : showProjectsDrawer
+          ? "Close"
+          : selectedProject
+            ? `${selectedProject.done_step_count ?? 0}/${
+                selectedProject.step_count ?? 0
+              } steps`
+            : `${projectCards.length} active`}
+    </span>
+  </button>
+
+  {projectsError ? (
+    <div className="atlas-empty" style={{ marginTop: 10 }}>
+      {projectsError}
+    </div>
+  ) : showProjectsDrawer ? (
+    <div className="atlas-open-drawer-body">
+      <label className="atlas-compact-select-label">
+        <span className="atlas-soft-label">Selected project</span>
+        <select
+          value={selectedProject?.project_key ?? ""}
+          onChange={(event) => setSelectedProjectKey(event.target.value)}
+        >
+          {projectCards.map((project) => (
+            <option key={project.project_key} value={project.project_key}>
+              {project.project_title}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {selectedProject ? (
+        <div className="atlas-drawer-detail atlas-project-focus-panel">
+          <div className="atlas-soft-head">
+            <div>
+              <span className="atlas-soft-label">
+                {selectedProject.target_window_label ?? "Project"}
+              </span>
+
+              <h3 className="atlas-soft-heading">
+                {selectedProject.project_title}
+              </h3>
+            </div>
+
+            <button
+              type="button"
+              className="atlas-soft-badge"
+              onClick={() => setShowProjectsDrawer(false)}
+              style={{ border: 0, cursor: "pointer" }}
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="atlas-zone-mini-stats" style={{ marginTop: 12 }}>
+            <span>{selectedProject.zone_label ?? "Whole farm"}</span>
+            <span>
+              {selectedProject.done_step_count ?? 0}/
+              {selectedProject.step_count ?? 0} steps
+            </span>
+            <span>{selectedProject.open_task_count ?? 0} open tasks</span>
+            <span>
+              Next due:{" "}
+              {selectedProject.next_due_date
+                ? prettyDate(selectedProject.next_due_date)
+                : "none"}
+            </span>
+          </div>
+
+          {selectedProject.goal_label ? (
+            <p className="atlas-project-focus-note">
+              {selectedProject.goal_label}
+            </p>
+          ) : null}
+
+          {selectedProject.success_definition ? (
+            <p className="atlas-project-focus-note">
+              {selectedProject.success_definition}
+            </p>
+          ) : null}
+
+
+<div className="atlas-project-step-stack">
+  {selectedProject.steps
+    .slice()
+    .sort((a, b) => a.step_order - b.step_order)
+    .map((step) => {
+      const isSelected =
+        (step.task_id &&
+          selectedTaskCardId === step.task_id &&
+          showTaskCardDrawer) ||
+        focusedProjectStep?.step_id === step.step_id;
+
+      return (
+        <button
+          key={step.step_id}
+          type="button"
+          className={`atlas-project-step-card ${isSelected ? "active" : ""}`}
+          onClick={() => openProjectStepCard(step)}
+        >
+          <div className="atlas-project-step-header">
+            <span className="atlas-soft-label">Step {step.step_order}</span>
+
+            <div className="atlas-project-step-pills">
+              {step.task_due_date ? (
+                <span>{prettyDate(step.task_due_date)}</span>
+              ) : null}
+
+              {step.task_priority ? <span>{step.task_priority}</span> : null}
+
+              {step.task_status ? (
+                <span>{step.task_status}</span>
+              ) : (
+                <span>{step.step_status ?? "step"}</span>
+              )}
+            </div>
+          </div>
+
+          <strong>{step.task_title ?? step.step_title}</strong>
+
+          {step.unlock_text ? (
+            <p>{step.unlock_text}</p>
+          ) : step.step_note ? (
+            <p>{step.step_note}</p>
+          ) : null}
+
+          <span className="atlas-go-in-hint">
+            {step.task_id ? "Tap to open task card" : "Tap to open project step"}
+          </span>
+        </button>
+      );
+    })}
+</div>
+        </div>
+      ) : (
+        <div className="atlas-empty">No project loaded yet.</div>
+      )}
+    </div>
+  ) : selectedProject ? (
+    <div className="atlas-closed-drawer-summary">
+      <span>{selectedProject.project_title}</span>
+      <span>
+        {selectedProject.done_step_count ?? 0}/
+        {selectedProject.step_count ?? 0} steps
+      </span>
+      <span>{selectedProject.open_task_count ?? 0} open</span>
+    </div>
+  ) : null}
+</section>
+
+
+
+
+
+<section className="atlas-soft-card atlas-closed-drawer-card">
+  <button
+    type="button"
+    className="atlas-soft-head atlas-drawer-trigger"
     onClick={() => setShowInventoryDrawer((current) => !current)}
-    style={{
-      width: "100%",
-      border: 0,
-      background: "transparent",
-      padding: 0,
-      textAlign: "left",
-      cursor: "pointer",
-    }}
   >
     <div>
       <span className="atlas-soft-label">Inventory</span>
@@ -1998,23 +2534,24 @@ quickSelectedActions.includes("sowed") ? (
   </button>
 
   {showInventoryDrawer ? (
-    <div style={{ marginTop: 14 }}>
-      <div className="atlas-zone-mini-stats">
-        {atlasAreas2026.map((area) => (
-          <button
-            key={area.id}
-            type="button"
-            className={`atlas-mini-pill ${
-              inventoryAreaId === area.id ? "active" : ""
-            }`}
-            onClick={() => setInventoryAreaId(area.id)}
-          >
-            {getAtlasAreaLabel(area.id)}
-          </button>
-        ))}
-      </div>
+    <div className="atlas-open-drawer-body">
+      <label className="atlas-compact-select-label">
+        <span className="atlas-soft-label">Selected zone</span>
+        <select
+          value={inventoryAreaId}
+          onChange={(event) =>
+            setInventoryAreaId(event.target.value as AtlasAreaId)
+          }
+        >
+          {atlasAreas2026.map((area) => (
+            <option key={area.id} value={area.id}>
+              {getAtlasAreaLabel(area.id)}
+            </option>
+          ))}
+        </select>
+      </label>
 
-      <div className="atlas-drawer-detail" style={{ marginTop: 14 }}>
+      <div className="atlas-drawer-detail">
         <div className="atlas-soft-head">
           <div>
             <span className="atlas-soft-label">Open View</span>
@@ -2048,7 +2585,7 @@ quickSelectedActions.includes("sowed") ? (
       </div>
     </div>
   ) : (
-    <div className="atlas-zone-mini-stats" style={{ marginTop: 12 }}>
+    <div className="atlas-closed-drawer-summary">
       <span>{getAtlasAreaLabel(inventoryAreaId)}</span>
       <span>
         {inventoryDrawerSummary.claimedPlantingObjectCount}/
@@ -2059,19 +2596,14 @@ quickSelectedActions.includes("sowed") ? (
   )}
 </section>
 
-<section className="atlas-soft-card">
+
+
+
+<section className="atlas-soft-card atlas-closed-drawer-card">
   <button
     type="button"
-    className="atlas-soft-head"
+    className="atlas-soft-head atlas-drawer-trigger"
     onClick={() => setShowOperationsDrawer((current) => !current)}
-    style={{
-      width: "100%",
-      border: 0,
-      background: "transparent",
-      padding: 0,
-      textAlign: "left",
-      cursor: "pointer",
-    }}
   >
     <div>
       <span className="atlas-soft-label">Growing Zone</span>
@@ -2079,30 +2611,29 @@ quickSelectedActions.includes("sowed") ? (
     </div>
 
     <span className="atlas-soft-badge">
-      {showOperationsDrawer
-        ? "Close"
-        : `${operationsOpenTasks.length} open`}
+      {showOperationsDrawer ? "Close" : `${operationsOpenTasks.length} open`}
     </span>
   </button>
 
   {showOperationsDrawer ? (
-    <div style={{ marginTop: 14 }}>
-      <div className="atlas-zone-mini-stats">
-        {atlasAreas2026.map((area) => (
-          <button
-            key={area.id}
-            type="button"
-            className={`atlas-mini-pill ${
-              operationsAreaId === area.id ? "active" : ""
-            }`}
-            onClick={() => setOperationsAreaId(area.id)}
-          >
-            {getAtlasAreaLabel(area.id)}
-          </button>
-        ))}
-      </div>
+    <div className="atlas-open-drawer-body">
+      <label className="atlas-compact-select-label">
+        <span className="atlas-soft-label">Selected zone</span>
+        <select
+          value={operationsAreaId}
+          onChange={(event) =>
+            setOperationsAreaId(event.target.value as AtlasAreaId)
+          }
+        >
+          {atlasAreas2026.map((area) => (
+            <option key={area.id} value={area.id}>
+              {getAtlasAreaLabel(area.id)}
+            </option>
+          ))}
+        </select>
+      </label>
 
-      <div className="atlas-drawer-detail" style={{ marginTop: 14 }}>
+      <div className="atlas-drawer-detail">
         <div className="atlas-soft-head">
           <div>
             <span className="atlas-soft-label">Open Work</span>
@@ -2123,12 +2654,12 @@ quickSelectedActions.includes("sowed") ? (
 
         <div className="atlas-task-list" style={{ marginTop: 10 }}>
           {operationsOverdueTasks.length > 0
-            ? operationsOverdueTasks.slice(0, 4).map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))
-            : operationsOpenTasks.slice(0, 4).map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))}
+            ? operationsOverdueTasks
+                .slice(0, 4)
+                .map((task) => <TaskCard key={task.id} task={task} />)
+            : operationsOpenTasks
+                .slice(0, 4)
+                .map((task) => <TaskCard key={task.id} task={task} />)}
 
           {operationsOpenTasks.length === 0 ? (
             <div className="atlas-empty">No open work in this zone.</div>
@@ -2137,13 +2668,15 @@ quickSelectedActions.includes("sowed") ? (
       </div>
     </div>
   ) : (
-    <div className="atlas-zone-mini-stats" style={{ marginTop: 12 }}>
+    <div className="atlas-closed-drawer-summary">
       <span>{getAtlasAreaLabel(operationsAreaId)}</span>
       <span>{operationsOpenTasks.length} open</span>
       <span>{operationsOverdueTasks.length} overdue</span>
     </div>
   )}
 </section>
+
+
 
           {tab === "zones" ? (
             <section className="atlas-soft-card">
@@ -2209,6 +2742,8 @@ quickSelectedActions.includes("sowed") ? (
             </section>
           ) : null}
 
+
+
 <section className="atlas-soft-card">
   <button
     type="button"
@@ -2237,7 +2772,7 @@ quickSelectedActions.includes("sowed") ? (
     <div className="atlas-field-log-list" style={{ marginTop: 12 }}>
       {fieldLog.length === 0 ? (
         <div className="atlas-empty">
-          No local field logs yet. Use the purple + to claim what you touched.
+          No local field logs yet. Use the green + to claim what you touched.
         </div>
       ) : (
         fieldLog.slice(0, 8).map((entry) => (
@@ -2268,6 +2803,334 @@ quickSelectedActions.includes("sowed") ? (
 
         </div>
       </section>
+
+
+{focusedLocalTask ? (
+  <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true">
+    <div className="atlas-task-focus-phone">
+      <div className="atlas-task-focus-topbar">
+        <div>
+          <span className="atlas-phone-kicker">Atlas task</span>
+          <strong>{getAtlasAreaLabel(focusedLocalTask.areaId)}</strong>
+        </div>
+
+        <button type="button" onClick={closeLocalTaskCard}>
+          Close
+        </button>
+      </div>
+
+      <div className="atlas-task-focus-body">
+        <section className="atlas-task-focus-purple">
+          <div className="atlas-task-focus-kicker">
+            <span>{prettyDate(focusedLocalTask.date)}</span>
+            <span>{getAtlasAreaLabel(focusedLocalTask.areaId)}</span>
+            <span>{focusedLocalTask.status}</span>
+          </div>
+
+          <h2>{focusedLocalTask.title}</h2>
+
+          <p>{focusedLocalTask.unlockText}</p>
+        </section>
+
+        <section className="atlas-task-focus-section">
+          <span className="atlas-soft-label">Where</span>
+
+          <div className="atlas-zone-mini-stats">
+            <span>{getAtlasAreaLabel(focusedLocalTask.areaId)}</span>
+
+            {focusedLocalTask.objectId ? (
+              <span>{getGrowingObjectLabel(focusedLocalTask.objectId)}</span>
+            ) : (
+              <span>Whole zone</span>
+            )}
+
+            <span>{focusedLocalTask.actionType.replaceAll("_", " ")}</span>
+
+            {focusedLocalTask.packet ? (
+              <span>{focusedLocalTask.packet}</span>
+            ) : null}
+          </div>
+        </section>
+
+        {focusedLocalTask.instructions ? (
+          <section className="atlas-task-focus-section">
+            <span className="atlas-soft-label">How to play it</span>
+            <p>{focusedLocalTask.instructions}</p>
+          </section>
+        ) : null}
+
+        <section className="atlas-task-focus-section">
+          <span className="atlas-soft-label">How I played this card</span>
+
+          <div className="atlas-task-play-actions">
+            <button
+              type="button"
+              aria-label="Done"
+              onClick={() => {
+                updateTaskStatus(focusedLocalTask, "done");
+                closeLocalTaskCard();
+              }}
+            >
+              ✓
+            </button>
+
+            <button
+              type="button"
+              aria-label="Progress"
+              onClick={() => {
+                updateTaskStatus(focusedLocalTask, "open");
+                closeLocalTaskCard();
+              }}
+            >
+              ↗
+            </button>
+
+            <button
+              type="button"
+              aria-label="Blocked"
+              onClick={() => {
+                updateTaskStatus(focusedLocalTask, "blocked");
+                closeLocalTaskCard();
+              }}
+            >
+              ×
+            </button>
+
+            <button
+              type="button"
+              aria-label="Add field note"
+              onClick={() => {
+                setQuickSelectedActions([
+                  taskActionToWorkAction(focusedLocalTask.actionType),
+                ]);
+                setQuickSelectedAreas([focusedLocalTask.areaId]);
+                setQuickSelectedObjects(
+                  focusedLocalTask.objectId ? [focusedLocalTask.objectId] : [],
+                );
+                setQuickStep(4);
+                setShowQuickLog(true);
+                closeLocalTaskCard();
+
+                window.setTimeout(() => {
+                  document
+                    .getElementById("atlas-quick-log-form")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }, 50);
+              }}
+            >
+              +
+            </button>
+          </div>
+        </section>
+
+        <div className="atlas-task-focus-nav">
+          <button
+            type="button"
+            disabled={!previousFocusedTask}
+            onClick={() => moveLocalTaskFocus(previousFocusedTask)}
+          >
+            ← Previous
+          </button>
+
+          <button
+            type="button"
+            disabled={!nextFocusedTask}
+            onClick={() => moveLocalTaskFocus(nextFocusedTask)}
+          >
+            Next →
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+) : null}
+
+{showTaskCardDrawer ? (
+  <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true">
+    <div className="atlas-task-focus-phone">
+      <div className="atlas-task-focus-topbar">
+        <div>
+          <span className="atlas-phone-kicker">Project task</span>
+          <strong>{selectedTaskCard?.zone_label ?? "Atlas"}</strong>
+        </div>
+
+        <button type="button" onClick={closeSupabaseTaskCard}>
+          Close
+        </button>
+      </div>
+
+      <div className="atlas-task-focus-body">
+        {taskCardLoading ? (
+          <div className="atlas-empty">Loading task card...</div>
+        ) : taskCardError ? (
+          <div className="atlas-empty">{taskCardError}</div>
+        ) : selectedTaskCard ? (
+          <>
+            <section className="atlas-task-focus-purple">
+              <div className="atlas-task-focus-kicker">
+                <span>{selectedTaskCard.zone_label ?? "Whole farm"}</span>
+                <span>{selectedTaskCard.priority}</span>
+                <span>{selectedTaskCard.status}</span>
+
+                {selectedTaskCard.due_date ? (
+                  <span>Due {prettyDate(selectedTaskCard.due_date)}</span>
+                ) : null}
+              </div>
+
+              <h2>{selectedTaskCard.title}</h2>
+
+              {selectedTaskCard.unlock_text ? (
+                <p>{selectedTaskCard.unlock_text}</p>
+              ) : null}
+            </section>
+
+            {selectedTaskCard.objects.length > 0 ? (
+              <section className="atlas-task-focus-section">
+                <span className="atlas-soft-label">Where</span>
+
+                <div className="atlas-zone-mini-stats">
+                  {selectedTaskCard.objects.map((object) => (
+                    <span key={object.object_id}>{object.object_label}</span>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {selectedTaskCard.resource_requirements.length > 0 ? (
+              <section className="atlas-task-focus-section">
+                <span className="atlas-soft-label">Bring Outside</span>
+
+                <div className="atlas-zone-mini-stats">
+                  {selectedTaskCard.resource_requirements
+                    .filter((requirement) => requirement.resource_label)
+                    .map((requirement) => (
+                      <span key={requirement.requirement_id}>
+                        {requirement.resource_label}
+                      </span>
+                    ))}
+                </div>
+              </section>
+            ) : null}
+
+            <section className="atlas-task-focus-section">
+              <span className="atlas-soft-label">How I played this card</span>
+
+              <div className="atlas-task-play-actions">
+                <button
+                  type="button"
+                  onClick={() => void handleTaskResult("done")}
+                  disabled={taskResultSaving !== null}
+                >
+                  {taskResultSaving === "done" ? "…" : "✓"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void handleTaskResult("partial")}
+                  disabled={taskResultSaving !== null}
+                >
+                  {taskResultSaving === "partial" ? "…" : "↗"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void handleTaskResult("blocked")}
+                  disabled={taskResultSaving !== null}
+                >
+                  {taskResultSaving === "blocked" ? "…" : "×"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void handleTaskResult("needs_supplies")}
+                  disabled={taskResultSaving !== null}
+                >
+                  {taskResultSaving === "needs_supplies" ? "…" : "+"}
+                </button>
+              </div>
+
+              {taskResultMessage ? (
+                <p className="atlas-task-result-message">
+                  {taskResultMessage}
+                </p>
+              ) : null}
+            </section>
+
+            {selectedTaskCard.task_logs.length > 0 ? (
+              <section className="atlas-task-focus-section">
+                <span className="atlas-soft-label">Progress Log</span>
+
+                <div className="atlas-field-log-list">
+                  {selectedTaskCard.task_logs.slice(0, 4).map((log) => (
+                    <article key={log.field_log_id} className="atlas-field-log-item">
+                      <div className="atlas-field-log-main">
+                        <strong>{prettyDate(log.log_date)}</strong>
+                        <span>{log.summary_sentence}</span>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </>
+        ) : (
+          <div className="atlas-empty">No task card loaded.</div>
+        )}
+      </div>
+    </div>
+  </section>
+) : null}
+
+{focusedProjectStep ? (
+  <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true">
+    <div className="atlas-task-focus-phone">
+      <div className="atlas-task-focus-topbar">
+        <div>
+          <span className="atlas-phone-kicker">Project step</span>
+          <strong>Atlas</strong>
+        </div>
+
+        <button type="button" onClick={() => setFocusedProjectStep(null)}>
+          Close
+        </button>
+      </div>
+
+      <div className="atlas-task-focus-body">
+        <section className="atlas-task-focus-purple">
+          <div className="atlas-task-focus-kicker">
+            <span>Step {focusedProjectStep.step_order}</span>
+
+            {focusedProjectStep.task_due_date ? (
+              <span>{prettyDate(focusedProjectStep.task_due_date)}</span>
+            ) : null}
+
+            <span>{focusedProjectStep.step_status ?? "step"}</span>
+          </div>
+
+          <h2>{focusedProjectStep.step_title}</h2>
+
+          {focusedProjectStep.unlock_text ? (
+            <p>{focusedProjectStep.unlock_text}</p>
+          ) : focusedProjectStep.step_note ? (
+            <p>{focusedProjectStep.step_note}</p>
+          ) : (
+            <p>This project step exists, but it is not linked to a full task card yet.</p>
+          )}
+        </section>
+
+        <section className="atlas-task-focus-section">
+          <span className="atlas-soft-label">Why this opened differently</span>
+          <p>
+            This step is part of the project chain, but it does not have a linked
+            Supabase task record yet. It can still be viewed here without feeling
+            broken.
+          </p>
+        </section>
+      </div>
+    </div>
+  </section>
+) : null}
+
     </main>
   );
 }
