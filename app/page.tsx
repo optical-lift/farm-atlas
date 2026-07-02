@@ -13,6 +13,7 @@ import {
 import { saveAtlasInboxItem } from "@/lib/atlas/inbox-client";
 import {
   fetchAtlasZoneRegistry,
+  type AtlasObjectInspection,
   type AtlasRegistryObject,
   type AtlasRegistryZone,
 } from "@/lib/atlas/zone-registry-client";
@@ -72,7 +73,7 @@ const priorityRank: Record<string, number> = {
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
 function prettyDate(dateIso: string | null | undefined) {
-  if (!dateIso) return "No date";
+  if (!dateIso) return "unknown";
 
   const date = new Date(`${dateIso}T12:00:00`);
 
@@ -80,6 +81,26 @@ function prettyDate(dateIso: string | null | undefined) {
     month: "short",
     day: "numeric",
   });
+}
+
+function prettyDateList(dates: string[]) {
+  return dates.length > 0 ? dates.map((date) => prettyDate(date)).join(", ") : "unknown";
+}
+
+function prettyRange(start: string | null | undefined, end: string | null | undefined) {
+  if (!start && !end) return "unknown";
+  if (start && end && start !== end) return `${prettyDate(start)}–${prettyDate(end)}`;
+  return prettyDate(start ?? end);
+}
+
+function yesNo(value: boolean | null | undefined) {
+  if (value === true) return "yes";
+  if (value === false) return "no";
+  return "unknown";
+}
+
+function stageLabel(stage: string | null | undefined) {
+  return (stage ?? "unknown").replaceAll("_", " ");
 }
 
 function statusLabel(status: string) {
@@ -130,12 +151,72 @@ function nextCalendarEntries(today: string) {
   return calendarEntries.filter((entry) => entry.date >= today).slice(0, 6);
 }
 
-function objectSummary(object: AtlasRegistryObject) {
-  const content = object.contents[0];
+function cropLine(object: AtlasRegistryObject) {
+  const inspection = object.inspection_summary;
+  if (!inspection) return "No current crop logged";
+  return `${inspection.crop_label} · ${stageLabel(inspection.stage)}`;
+}
 
-  if (!content) return "Open / not logged yet";
+function inspectionRows(inspection: AtlasObjectInspection) {
+  return [
+    ["Seeded", prettyDate(inspection.seeded_date)],
+    ["Variety", inspection.variety ?? "unknown"],
+    ["Germinated", prettyDate(inspection.germinated_date)],
+    ["Weeded", prettyDateList(inspection.weeded_dates)],
+    ["Pinch", yesNo(inspection.pinch_required)],
+    ["Bloom", inspection.bloom_date ? prettyDate(inspection.bloom_date) : "unknown"],
+    [
+      "Harvest",
+      inspection.harvest_dates.length > 0
+        ? prettyDateList(inspection.harvest_dates)
+        : prettyRange(inspection.expected_harvest_watch_start, inspection.expected_harvest_watch_end),
+    ],
+    ["Clear bed", prettyDate(inspection.clear_bed_date)],
+    ["Next crop", inspection.next_crop_planned ?? "unknown"],
+  ];
+}
 
-  return `${content.content_label} · ${content.status.replaceAll("_", " ")}`;
+function InspectionCard({ object }: { object: AtlasRegistryObject }) {
+  return (
+    <article className={`atlas-inspection-card ${object.inspection_summary?.unknown_count ? "needs-decisions" : ""}`}>
+      <div className="atlas-inspection-card-head">
+        <div>
+          <strong>{object.label}</strong>
+          <span>{cropLine(object)}</span>
+        </div>
+        <em>{object.object_type}</em>
+      </div>
+
+      {object.contents.length === 0 ? (
+        <div className="atlas-inspection-empty">No current crop cycle logged.</div>
+      ) : null}
+
+      {object.contents.map((content) => (
+        <section key={content.id} className="atlas-crop-cycle-sheet">
+          {object.contents.length > 1 ? (
+            <div className="atlas-crop-cycle-title">{content.content_label}</div>
+          ) : null}
+
+          <div className="atlas-inspection-grid">
+            {inspectionRows(content.inspection).map(([label, value]) => (
+              <div key={label} className={value === "unknown" ? "unknown" : ""}>
+                <span>{label}</span>
+                <strong>{value}</strong>
+              </div>
+            ))}
+          </div>
+
+          {content.inspection.unknown_fields.length > 0 ? (
+            <p className="atlas-unknown-line">
+              Unknown: {content.inspection.unknown_fields.join(", ")}
+            </p>
+          ) : null}
+
+          {content.inspection.note ? <p className="atlas-inspection-note">{content.inspection.note}</p> : null}
+        </section>
+      ))}
+    </article>
+  );
 }
 
 export default function AtlasHomePage() {
@@ -182,9 +263,7 @@ export default function AtlasHomePage() {
     try {
       setRegistryLoading(true);
       const response = await fetchAtlasZoneRegistry();
-      const zones = response.zones ?? [];
-      setRegistryZones(zones);
-      setSelectedZoneKey((current) => current ?? zones[0]?.stable_key ?? null);
+      setRegistryZones(response.zones ?? []);
     } catch (registryError) {
       setError(
         registryError instanceof Error
@@ -216,17 +295,19 @@ export default function AtlasHomePage() {
     [cards],
   );
 
+  const unknownCount = useMemo(
+    () => registryZones.reduce((sum, zone) => sum + (zone.unknown_count ?? 0), 0),
+    [registryZones],
+  );
+
   const primaryTask = openCards[0] ?? null;
   const nextTasks = openCards.slice(1, 4);
   const calendarEntry = currentOrNextCalendarEntry(today);
   const upcomingCalendar = nextCalendarEntries(today);
 
   const selectedRegistryZone = useMemo(() => {
-    return (
-      registryZones.find((zone) => zone.stable_key === selectedZoneKey) ??
-      registryZones[0] ??
-      null
-    );
+    if (!selectedZoneKey) return null;
+    return registryZones.find((zone) => zone.stable_key === selectedZoneKey) ?? null;
   }, [registryZones, selectedZoneKey]);
 
   const homeZones = useMemo(() => {
@@ -384,8 +465,12 @@ export default function AtlasHomePage() {
             onClick={() => setOpenPanel("zones")}
           >
             <span className="atlas-home-kicker">Zones</span>
-            <strong>Bed registry</strong>
-            <em>{registryLoading ? "Loading zones..." : `${registryZones.length} zones · ${blockedCount} blocked · ${doneCount} done`}</em>
+            <strong>Bed inspector</strong>
+            <em>
+              {registryLoading
+                ? "Loading zones..."
+                : `${registryZones.length} zones · ${unknownCount} unknown · ${blockedCount} blocked · ${doneCount} done`}
+            </em>
             <div className="atlas-home-zone-list">
               {homeZones.map((zone) => (
                 <span key={zone.id}>{zone.label}: {zone.active_object_count}/{zone.object_count}</span>
@@ -511,8 +596,8 @@ export default function AtlasHomePage() {
               ) : null}
 
               {openPanel === "zones" ? (
-                <section className="atlas-task-focus-section">
-                  <span className="atlas-soft-label">Tap a zone to open its beds</span>
+                <section className="atlas-task-focus-section atlas-inspector-section">
+                  <span className="atlas-soft-label">Tap one zone. Inspect one place.</span>
                   <div className="atlas-zone-list atlas-zone-accordion-list">
                     {registryZones.map((zone) => {
                       const isOpen = selectedRegistryZone?.id === zone.id;
@@ -527,7 +612,7 @@ export default function AtlasHomePage() {
                             <div>
                               <span>{zone.mode_bias ?? zone.zone_type ?? "zone"}</span>
                               <strong>{zone.label}</strong>
-                              <small>{zone.goal_text ?? "Open zone registry."}</small>
+                              <small>{zone.active_object_count} active · {zone.object_count} total · {zone.unknown_count ?? 0} unknown</small>
                             </div>
                             <div className="atlas-zone-row-counts">
                               <b>{zone.active_object_count}</b>
@@ -536,17 +621,10 @@ export default function AtlasHomePage() {
                           </button>
 
                           {isOpen ? (
-                            <div className="atlas-zone-inline-object-list">
+                            <div className="atlas-zone-inline-object-list atlas-inspection-list">
                               {zone.objects.length === 0 ? <div className="atlas-empty">No beds logged here yet.</div> : null}
                               {zone.objects.map((object) => (
-                                <article key={object.id} className={`atlas-live-object ${object.contents.length ? "claimed" : ""}`}>
-                                  <div className="atlas-live-object-head">
-                                    <strong>{object.label}</strong>
-                                    <span>{object.object_type}</span>
-                                  </div>
-                                  <p>{objectSummary(object)}</p>
-                                  {object.contents[0]?.note ? <p>{object.contents[0].note}</p> : null}
-                                </article>
+                                <InspectionCard key={object.id} object={object} />
                               ))}
                             </div>
                           ) : null}
