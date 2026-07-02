@@ -37,6 +37,10 @@ function cropLine(object: AtlasRegistryObject) {
     .join(" · ");
 }
 
+function cropName(object: AtlasRegistryObject) {
+  return object.contents[0]?.content_label ?? null;
+}
+
 function timelineLines(object: AtlasRegistryObject) {
   const inspection = object.contents[0]?.inspection;
   if (!inspection) return [];
@@ -78,8 +82,11 @@ export function taskObjectTitle(task: AtlasTaskCard, zones: AtlasRegistryZone[])
   if (matches.length === 1) return matches[0].object.label;
   if (matches.length > 1) {
     const zoneIds = new Set(matches.map((match) => match.zone.id));
-    if (zoneIds.size === 1) return `${matches[0].zone.label} · ${matches.length}`;
-    return `${matches[0].object.label} + ${matches.length - 1}`;
+    if (zoneIds.size === 1) {
+      if (matches.length <= 3) return matches.map((match) => match.object.label).join(" · ");
+      return `${matches[0].zone.label} · ${matches.length}`;
+    }
+    return task.title;
   }
 
   return task.zone_label ?? task.title;
@@ -87,11 +94,17 @@ export function taskObjectTitle(task: AtlasTaskCard, zones: AtlasRegistryZone[])
 
 export function taskObjectDetailLine(task: AtlasTaskCard, zones: AtlasRegistryZone[]) {
   const matches = taskObjectMatches(task, zones);
+
+  if (matches.length > 1) {
+    const crops = Array.from(new Set(matches.map((match) => cropName(match.object)).filter(Boolean))) as string[];
+    if (crops.length > 0) return crops.slice(0, 3).join(" · ");
+    return Array.from(new Set(matches.map((match) => match.zone.label))).join(" · ");
+  }
+
   const primaryObject = matches[0]?.object;
   const crop = primaryObject ? cropLine(primaryObject) : null;
 
   if (crop) return crop;
-  if (matches.length > 1) return Array.from(new Set(matches.map((match) => match.zone.label))).join(" · ");
   return task.zone_label ?? null;
 }
 
