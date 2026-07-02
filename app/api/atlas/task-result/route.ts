@@ -4,284 +4,216 @@ import { atlasSupabase } from "@/lib/atlas/supabase-server";
 export const dynamic = "force-dynamic";
 
 type TaskResult = "done" | "partial" | "changed" | "blocked" | "needs_supplies";
+type Capture = Record<string, string | undefined> & { kind?: string };
+type Payload = { taskId?: string; result?: TaskResult; note?: string; createdBy?: string; objectId?: string; capture?: Capture };
+type AnyObj = Record<string, unknown>;
 
-type TaskResultPayload = {
-  taskId?: string;
-  result?: TaskResult;
-  note?: string;
-  createdBy?: string;
-};
-
-function resultLabel(result: TaskResult) {
-  switch (result) {
-    case "done":
-      return "completed";
-    case "partial":
-      return "made progress on";
-    case "changed":
-      return "changed plan/data for";
-    case "blocked":
-      return "blocked";
-    case "needs_supplies":
-      return "needs supplies for";
-    default:
-      return "updated";
-  }
+function obj(value: unknown): AnyObj {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as AnyObj) : {};
 }
 
-function actionTypesForResult(result: TaskResult) {
-  switch (result) {
-    case "done":
-      return ["completed"];
-    case "partial":
-      return ["observed"];
-    case "changed":
-      return ["observed", "changed_plan"];
-    case "blocked":
-      return ["blocked"];
-    case "needs_supplies":
-      return ["blocked", "observed"];
-    default:
-      return ["observed"];
+function actionTypes(result: TaskResult, capture?: Capture | null) {
+  const set = new Set<string>();
+  if (capture?.kind === "germination") set.add("germination_checked");
+  if (capture?.kind === "weed") set.add("weeded");
+  if (capture?.kind === "harvest") set.add("harvested");
+  if (capture?.kind === "bed_audit") set.add("bed_audit");
+  if (result === "done") set.add("completed");
+  if (result === "partial") set.add("observed");
+  if (result === "changed") { set.add("observed"); set.add("changed_plan"); }
+  if (result === "blocked") set.add("blocked");
+  if (result === "needs_supplies") { set.add("blocked"); set.add("observed"); }
+  return Array.from(set);
+}
+
+function resultWord(result: TaskResult) {
+  if (result === "done") return "completed";
+  if (result === "partial") return "partly completed";
+  if (result === "changed") return "changed";
+  if (result === "blocked") return "blocked";
+  return "needs supplies for";
+}
+
+function percent(value?: string) {
+  const match = value?.match(/\d+/);
+  return match ? Number(match[0]) : null;
+}
+
+function germinationStatus(capture: Capture) {
+  if (capture.standQuality === "failed") return "failed";
+  if (capture.standQuality === "none") return "germination_check";
+  return "germinating";
+}
+
+async function linkedObjects(taskId: string) {
+  const { data, error } = await atlasSupabase.schema("atlas").from("task_objects").select("object_id").eq("task_id", taskId);
+  if (error) throw error;
+  return (data ?? []).map((row) => row.object_id as string).filter(Boolean);
+}
+
+async function createLinkedTask(args: { farmId: string; zoneId: string | null; objectId: string | null; sourceTaskId: string; title: string; taskType: string; dueDate: string; note: string | null; metadata: AnyObj }) {
+  const { data, error } = await atlasSupabase.schema("atlas").from("tasks").insert({
+    farm_id: args.farmId,
+    zone_id: args.zoneId,
+    title: args.title,
+    task_type: args.taskType,
+    status: "open",
+    priority: "high",
+    due_date: args.dueDate,
+    generated_from: "task_result",
+    generated_from_id: args.sourceTaskId,
+    note: args.note,
+    metadata: args.metadata,
+  }).select("id").single();
+  if (error) throw error;
+  if (args.objectId) {
+    const { error: linkError } = await atlasSupabase.schema("atlas").from("task_objects").insert({ task_id: data.id, object_id: args.objectId, role: "target" });
+    if (linkError) throw linkError;
   }
+  return data.id as string;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as TaskResultPayload;
-
+    const body = (await request.json()) as Payload;
     const taskId = body.taskId;
     const result = body.result;
     const note = body.note?.trim() || null;
     const createdBy = body.createdBy?.trim() || "anna";
+    const objectId = body.objectId || null;
+    const capture = body.capture || null;
 
-    if (!taskId || !result) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "Missing taskId or result.",
-        },
-        { status: 400 },
-      );
-    }
+    if (!taskId || !result) return NextResponse.json({ ok: false, error: "Missing taskId or result." }, { status: 400 });
 
-    const { data: task, error: taskError } = await atlasSupabase
-      .schema("atlas")
-      .from("tasks")
-      .select(
-        `
-        id,
-        farm_id,
-        zone_id,
-        title,
-        task_type,
-        status,
-        due_date,
-        unlock_text,
-        note
-      `,
-      )
-      .eq("id", taskId)
-      .single();
-
-    if (taskError || !task) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "Atlas task not found.",
-          details: taskError?.message,
-        },
-        { status: 404 },
-      );
-    }
+    const { data: task, error: taskError } = await atlasSupabase.schema("atlas").from("tasks").select("id, farm_id, zone_id, title, task_type, metadata").eq("id", taskId).single();
+    if (taskError || !task) return NextResponse.json({ ok: false, error: "Atlas task not found.", details: taskError?.message }, { status: 404 });
 
     const nowIso = new Date().toISOString();
     const todayIso = nowIso.slice(0, 10);
+    const taskObjectIds = await linkedObjects(taskId);
+    const targetObjectId = objectId || taskObjectIds[0] || null;
 
-    if (result === "done") {
-      const { error } = await atlasSupabase
-        .schema("atlas")
-        .from("tasks")
-        .update({
-          status: "done",
-          completed_at: nowIso,
-          completed_by: createdBy,
-          updated_at: nowIso,
-        })
-        .eq("id", taskId);
+    let objectLabel: string | null = null;
+    let objectZoneId: string | null = task.zone_id ?? null;
+    let contentId: string | null = null;
+    let contentLabel: string | null = null;
+    let followUpTaskId: string | null = null;
 
-      if (error) throw error;
+    if (capture && targetObjectId) {
+      const { data: growingObject, error: objectError } = await atlasSupabase.schema("atlas").from("growing_objects").select("id, label, zone_id").eq("id", targetObjectId).single();
+      if (objectError || !growingObject) throw objectError ?? new Error("Object not found.");
+      objectLabel = growingObject.label;
+      objectZoneId = growingObject.zone_id;
 
-      const { error: stepError } = await atlasSupabase
-        .schema("atlas")
-        .from("project_steps")
-        .update({
-          status: "done",
-          completed_at: nowIso,
-          updated_at: nowIso,
-        })
-        .eq("linked_task_id", taskId);
+      const { data: content, error: contentError } = await atlasSupabase.schema("atlas").from("object_contents").select("id, content_label, status, germinated_date, metadata").eq("object_id", targetObjectId).order("planted_date", { ascending: false }).limit(1).maybeSingle();
+      if (contentError) throw contentError;
+      contentId = content?.id ?? null;
+      contentLabel = content?.content_label ?? null;
 
-      if (stepError) throw stepError;
-    }
+      if (content) {
+        const oldMetadata = obj(content.metadata);
+        const stateChecks = obj(oldMetadata.state_checks);
+        const nextMetadata = { ...oldMetadata, state_checks: { ...stateChecks, [capture.kind || "task_capture"]: { ...capture, checked_date: todayIso, created_by: createdBy, note, task_id: taskId } } };
+        const update: AnyObj = { confidence: "observed", metadata: nextMetadata, updated_at: nowIso };
+        if (capture.kind === "germination") {
+          update.status = germinationStatus(capture);
+          if (capture.standQuality !== "failed" && !content.germinated_date) update.germinated_date = todayIso;
+        }
+        if (capture.kind === "bed_audit" && capture.heading) update.next_crop_planned = capture.heading;
+        const { error: updateError } = await atlasSupabase.schema("atlas").from("object_contents").update(update).eq("id", content.id);
+        if (updateError) throw updateError;
+      }
 
-    if (result === "blocked" || result === "needs_supplies") {
-      const { error } = await atlasSupabase
-        .schema("atlas")
-        .from("tasks")
-        .update({
-          status: "blocked",
-          blocker_text:
-            result === "needs_supplies"
-              ? note || "Needs supplies before this task can be completed."
-              : note || "Blocked from task card.",
-          updated_at: nowIso,
-        })
-        .eq("id", taskId);
+      const quantity = capture.kind === "harvest" ? percent(capture.stems) : percent(capture.standPercent);
+      const { error: eventError } = await atlasSupabase.schema("atlas").from("object_activity_events").insert({
+        farm_id: task.farm_id,
+        object_id: targetObjectId,
+        object_content_id: contentId,
+        event_type: capture.kind === "germination" ? "germination_checked" : capture.kind || "task_capture",
+        event_date: todayIso,
+        note,
+        quantity,
+        unit: quantity === null ? null : capture.kind === "harvest" ? "stems" : "percent",
+        created_by: createdBy,
+        source: "atlas_task_card",
+        metadata: { ...capture, task_id: taskId },
+      });
+      if (eventError) throw eventError;
 
-      if (error) throw error;
-
-      const { error: stepError } = await atlasSupabase
-        .schema("atlas")
-        .from("project_steps")
-        .update({
-          status: "blocked",
-          note:
-            result === "needs_supplies"
-              ? note || "Needs supplies before this step can continue."
-              : note || "Blocked from task card.",
-          updated_at: nowIso,
-        })
-        .eq("linked_task_id", taskId);
-
-      if (stepError) throw stepError;
-    }
-
-    if (result === "partial" || result === "changed") {
-      const { error } = await atlasSupabase
-        .schema("atlas")
-        .from("tasks")
-        .update({
-          updated_at: nowIso,
-        })
-        .eq("id", taskId);
-
-      if (error) throw error;
+      if (capture.kind === "germination" && (["patch_sow", "resow"].includes(capture.nextAction || "") || ["patchy", "poor"].includes(capture.standQuality || ""))) {
+        followUpTaskId = await createLinkedTask({
+          farmId: task.farm_id,
+          zoneId: objectZoneId,
+          objectId: targetObjectId,
+          sourceTaskId: taskId,
+          title: `${objectLabel} — patch ${contentLabel || "crop"}`,
+          taskType: "patch_sow",
+          dueDate: todayIso,
+          note,
+          metadata: { source_object_id: targetObjectId, source_content_id: contentId, reason: "germination_patch_needed", capture },
+        });
+      }
     }
 
     let supplyTaskId: string | null = null;
-
     if (result === "needs_supplies") {
-      const { data: supplyTask, error: supplyTaskError } = await atlasSupabase
-        .schema("atlas")
-        .from("tasks")
-        .insert({
-          farm_id: task.farm_id,
-          zone_id: task.zone_id,
-          title: `Get supplies for: ${task.title}`,
-          task_type: "resource_check",
-          status: "open",
-          priority: "high",
-          due_date: todayIso,
-          unlock_text: `Unblocks: ${task.title}`,
-          generated_from: "task_result",
-          generated_from_id: taskId,
-          note: note || "Created from Need supplies on a task card.",
-          metadata: {
-            source_task_id: taskId,
-            source_task_title: task.title,
-            task_result: result,
-          },
-        })
-        .select("id")
-        .single();
-
-      if (supplyTaskError) throw supplyTaskError;
-
-      supplyTaskId = supplyTask.id;
+      supplyTaskId = await createLinkedTask({
+        farmId: task.farm_id,
+        zoneId: objectZoneId,
+        objectId: targetObjectId,
+        sourceTaskId: taskId,
+        title: objectLabel ? `${objectLabel} — get supplies` : `Get supplies for: ${task.title}`,
+        taskType: "resource_check",
+        dueDate: todayIso,
+        note,
+        metadata: { source_object_id: targetObjectId, reason: "needs_supplies", capture },
+      });
     }
 
-    const summarySentence = `${todayIso} · ${createdBy} ${resultLabel(result)} "${task.title}"${
-      note ? ` · ${note}` : ""
-    }.`;
-
-    const { data: fieldLog, error: logError } = await atlasSupabase
-      .schema("atlas")
-      .from("field_logs")
-      .insert({
-        farm_id: task.farm_id,
-        log_date: todayIso,
-        action_types: actionTypesForResult(result),
-        summary_sentence: summarySentence,
-        note,
-        created_by: createdBy,
-        source: "atlas_task_card",
-        metadata: {
-          task_id: taskId,
-          task_title: task.title,
-          task_result: result,
-          generated_supply_task_id: supplyTaskId,
-        },
-      })
-      .select("id")
-      .single();
-
+    const subject = objectLabel ? `${objectLabel} · ${task.title}` : task.title;
+    const { data: fieldLog, error: logError } = await atlasSupabase.schema("atlas").from("field_logs").insert({
+      farm_id: task.farm_id,
+      log_date: todayIso,
+      action_types: actionTypes(result, capture),
+      summary_sentence: `${todayIso} · ${createdBy} ${capture ? "recorded state for" : resultWord(result)} "${subject}"${note ? ` · ${note}` : ""}.`,
+      note,
+      created_by: createdBy,
+      source: "atlas_task_card",
+      metadata: { task_id: taskId, task_title: task.title, task_result: result, object_id: targetObjectId, capture, generated_supply_task_id: supplyTaskId, generated_follow_up_task_id: followUpTaskId },
+    }).select("id").single();
     if (logError) throw logError;
 
-    const { data: taskObjects, error: taskObjectsError } = await atlasSupabase
-      .schema("atlas")
-      .from("task_objects")
-      .select("object_id")
-      .eq("task_id", taskId);
+    const oldTaskMetadata = obj(task.metadata);
+    const oldCaptureMap = obj(oldTaskMetadata.capture_by_object);
+    const nextTaskMetadata = targetObjectId ? { ...oldTaskMetadata, capture_by_object: { ...oldCaptureMap, [targetObjectId]: { result, capture_kind: capture?.kind || "task_capture", completed_at: nowIso, field_log_id: fieldLog.id, capture } } } : oldTaskMetadata;
+    const captureMap = obj(nextTaskMetadata.capture_by_object);
+    const completeAllObjects = result === "done" && targetObjectId && taskObjectIds.length > 0 && taskObjectIds.every((id) => Boolean(obj(captureMap[id]).completed_at));
+    const shouldBlock = result === "blocked" || (result === "needs_supplies" && taskObjectIds.length <= 1);
+    const shouldComplete = capture ? completeAllObjects : result === "done";
 
-    if (taskObjectsError) throw taskObjectsError;
+    const taskUpdate: AnyObj = { metadata: nextTaskMetadata, updated_at: nowIso };
+    if (shouldBlock) { taskUpdate.status = "blocked"; taskUpdate.blocker_text = note || "Blocked."; }
+    if (shouldComplete) { taskUpdate.status = "done"; taskUpdate.completed_at = nowIso; taskUpdate.completed_by = createdBy; }
+    const { error: taskUpdateError } = await atlasSupabase.schema("atlas").from("tasks").update(taskUpdate).eq("id", taskId);
+    if (taskUpdateError) throw taskUpdateError;
 
-    const fieldLogLinks = [
-      ...(task.zone_id
-        ? [
-            {
-              field_log_id: fieldLog.id,
-              zone_id: task.zone_id,
-              object_id: null,
-              role: "task_zone",
-            },
-          ]
-        : []),
-      ...(taskObjects ?? []).map((object) => ({
-        field_log_id: fieldLog.id,
-        zone_id: task.zone_id,
-        object_id: object.object_id,
-        role: "task_object",
-      })),
+    if (shouldComplete) {
+      const { error: stepError } = await atlasSupabase.schema("atlas").from("project_steps").update({ status: "done", completed_at: nowIso, updated_at: nowIso }).eq("linked_task_id", taskId);
+      if (stepError) throw stepError;
+    }
+
+    const links = [
+      ...(task.zone_id ? [{ field_log_id: fieldLog.id, zone_id: task.zone_id, object_id: null, role: "task_zone" }] : []),
+      ...(targetObjectId ? [{ field_log_id: fieldLog.id, zone_id: objectZoneId, object_id: targetObjectId, role: "task_object" }] : taskObjectIds.map((id) => ({ field_log_id: fieldLog.id, zone_id: task.zone_id, object_id: id, role: "task_object" }))),
     ];
-
-    if (fieldLogLinks.length > 0) {
-      const { error: linkError } = await atlasSupabase
-        .schema("atlas")
-        .from("field_log_objects")
-        .insert(fieldLogLinks);
-
+    if (links.length) {
+      const { error: linkError } = await atlasSupabase.schema("atlas").from("field_log_objects").insert(links);
       if (linkError) throw linkError;
     }
 
-    return NextResponse.json({
-      ok: true,
-      taskId,
-      result,
-      fieldLogId: fieldLog.id,
-      generatedSupplyTaskId: supplyTaskId,
-    });
+    return NextResponse.json({ ok: true, taskId, result, fieldLogId: fieldLog.id, generatedSupplyTaskId: supplyTaskId, generatedFollowUpTaskId: followUpTaskId });
   } catch (error) {
     console.error("Atlas task result failed:", error);
-
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Atlas task result failed.",
-        details:
-          error instanceof Error ? error.message : "Unknown task-result error.",
-      },
-      { status: 500 },
-    );
+    return NextResponse.json({ ok: false, error: "Atlas task result failed.", details: error instanceof Error ? error.message : "Unknown task-result error." }, { status: 500 });
   }
 }
