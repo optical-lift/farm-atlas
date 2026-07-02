@@ -3,14 +3,38 @@
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 
-import { fetchAtlasTaskCards, type AtlasTaskCard, type AtlasTaskCardObject } from "@/lib/atlas/task-cards-client";
-import { saveAtlasTaskResult, type AtlasTaskCapture, type AtlasTaskResult } from "@/lib/atlas/task-result-client";
+import {
+  fetchAtlasCloseout,
+  saveAtlasCloseout,
+  type AtlasCloseoutPeriod,
+  type AtlasCloseoutSummary,
+} from "@/lib/atlas/closeout-client";
+import {
+  fetchAtlasTaskCards,
+  type AtlasTaskCard,
+  type AtlasTaskCardObject,
+} from "@/lib/atlas/task-cards-client";
+import {
+  saveAtlasTaskResult,
+  type AtlasTaskCapture,
+  type AtlasTaskResult,
+} from "@/lib/atlas/task-result-client";
 import { saveAtlasInboxItem } from "@/lib/atlas/inbox-client";
-import { fetchAtlasZoneRegistry, type AtlasRegistryObject, type AtlasRegistryZone } from "@/lib/atlas/zone-registry-client";
+import {
+  fetchAtlasZoneRegistry,
+  type AtlasRegistryObject,
+  type AtlasRegistryZone,
+} from "@/lib/atlas/zone-registry-client";
 
 type HomePanel = "tasks" | "calendar" | "inbox" | null;
 type CalendarEntry = { date: string; title: string; dayKind: string; items: string[] };
-type TaskUnit = { id: string; card: AtlasTaskCard; object: AtlasTaskCardObject | null; registryObject: AtlasRegistryObject | null; zone: AtlasRegistryZone | null };
+type TaskUnit = {
+  id: string;
+  card: AtlasTaskCard;
+  object: AtlasTaskCardObject | null;
+  registryObject: AtlasRegistryObject | null;
+  zone: AtlasRegistryZone | null;
+};
 
 const calendarEntries: CalendarEntry[] = [
   { date: "2026-07-04", dayKind: "Succession / check", title: "Check field germination", items: ["CHECK: Field Rows germination", "CHECK: Barn Beds Teddy status"] },
@@ -113,6 +137,50 @@ function defaultCapture(kind: string): AtlasTaskCapture {
   return { kind, standQuality: "", standPercent: "", plantCount: "", gaps: "", nextAction: "", finished: "", pressure: "", stems: "", quality: "", destination: "", actualContents: "", heading: "" };
 }
 
+function resultLabel(result: AtlasTaskResult) {
+  if (result === "needs_supplies") return "Need supplies";
+  return result[0].toUpperCase() + result.slice(1);
+}
+
+function CloseoutCard({ summary }: { summary: AtlasCloseoutSummary }) {
+  const count = summary.counts;
+  const facts = [
+    `${count.logs} logs`,
+    `${count.objectEvents} object updates`,
+    `${count.tasksDone} done`,
+    count.openTasks ? `${count.openTasks} open` : null,
+    count.tasksBlocked ? `${count.tasksBlocked} blocked` : null,
+    count.followUps ? `${count.followUps} follow-ups` : null,
+  ].filter(Boolean);
+
+  const lanes = [
+    count.seeded ? `Seeded ${count.seeded}` : null,
+    count.germination ? `Germination ${count.germination}` : null,
+    count.weeded ? `Weeded ${count.weeded}` : null,
+    count.harvested ? `Harvested ${count.harvested}` : null,
+    count.changed ? `Changed ${count.changed}` : null,
+    count.closeouts ? `Closeouts ${count.closeouts}` : null,
+  ].filter(Boolean);
+
+  return (
+    <article className="atlas-closeout-card">
+      <div className="atlas-closeout-card-head">
+        <strong>{summary.label}</strong>
+        <span>{prettyDate(summary.startDate)}–{prettyDate(summary.endDate)}</span>
+      </div>
+      <div className="atlas-closeout-pill-row">
+        {facts.map((fact) => <span key={fact}>{fact}</span>)}
+      </div>
+      {lanes.length > 0 ? <div className="atlas-closeout-pill-row soft">{lanes.map((lane) => <span key={lane}>{lane}</span>)}</div> : null}
+      {summary.recent.length > 0 ? (
+        <div className="atlas-closeout-recent">
+          {summary.recent.map((line) => <p key={line}>{line}</p>)}
+        </div>
+      ) : <p className="atlas-empty">No field truth yet.</p>}
+    </article>
+  );
+}
+
 export default function AtlasHomePage() {
   const [cards, setCards] = useState<AtlasTaskCard[]>([]);
   const [registryZones, setRegistryZones] = useState<AtlasRegistryZone[]>([]);
@@ -130,6 +198,14 @@ export default function AtlasHomePage() {
   const [inboxZoneKey, setInboxZoneKey] = useState("");
   const [inboxSaving, setInboxSaving] = useState(false);
   const [inboxMessage, setInboxMessage] = useState<string | null>(null);
+  const [closeoutSummaries, setCloseoutSummaries] = useState<AtlasCloseoutSummary[]>([]);
+  const [closeoutLoading, setCloseoutLoading] = useState(true);
+  const [closeoutPeriod, setCloseoutPeriod] = useState<AtlasCloseoutPeriod>("day");
+  const [closeoutNote, setCloseoutNote] = useState("");
+  const [closeoutCarry, setCloseoutCarry] = useState("");
+  const [closeoutNext, setCloseoutNext] = useState("");
+  const [closeoutSaving, setCloseoutSaving] = useState(false);
+  const [closeoutMessage, setCloseoutMessage] = useState<string | null>(null);
 
   const today = todayIso();
 
@@ -160,7 +236,23 @@ export default function AtlasHomePage() {
     }
   }
 
-  useEffect(() => { void loadCards(); void loadRegistry(); }, []);
+  async function loadCloseout() {
+    try {
+      setCloseoutLoading(true);
+      const response = await fetchAtlasCloseout();
+      setCloseoutSummaries(response.summaries ?? []);
+    } catch (closeoutError) {
+      setCloseoutMessage(closeoutError instanceof Error ? closeoutError.message : "Closeout failed.");
+    } finally {
+      setCloseoutLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadCards();
+    void loadRegistry();
+    void loadCloseout();
+  }, []);
 
   const openCards = useMemo(() => cards.filter((card) => card.status === "open").sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b))), [cards]);
   const units = useMemo(() => taskUnits(openCards, registryZones), [openCards, registryZones]);
@@ -168,6 +260,7 @@ export default function AtlasHomePage() {
   const nextUnits = units.slice(1, 4);
   const calendarEntry = currentOrNextCalendarEntry(today);
   const upcomingCalendar = nextCalendarEntries(today);
+  const monthSummary = closeoutSummaries.find((summary) => summary.period === "month");
 
   const homeZones = useMemo(() => {
     const important = ["field_rows", "berry_walk_flower_rows", "barn_beds", "grow_room"];
@@ -194,9 +287,17 @@ export default function AtlasHomePage() {
     try {
       setSavingResult(result);
       setResultMessage(null);
-      await saveAtlasTaskResult({ taskId: selectedUnit.card.task_id, result, objectId: selectedUnit.object?.object_id, capture: useCapture ? capture : undefined, note: resultNote.trim() || undefined, createdBy: createdBy.trim() || "anna" });
+      await saveAtlasTaskResult({
+        taskId: selectedUnit.card.task_id,
+        result,
+        objectId: selectedUnit.object?.object_id,
+        capture: useCapture ? capture : undefined,
+        note: resultNote.trim() || undefined,
+        createdBy: createdBy.trim() || "anna",
+      });
       await loadCards();
       await loadRegistry();
+      await loadCloseout();
       setSelectedUnit(null);
       setResultNote("");
     } catch (saveError) {
@@ -208,7 +309,10 @@ export default function AtlasHomePage() {
 
   async function submitInbox() {
     const cleanBody = inboxBody.trim();
-    if (!cleanBody) { setInboxMessage("Note required."); return; }
+    if (!cleanBody) {
+      setInboxMessage("Note required.");
+      return;
+    }
     try {
       setInboxSaving(true);
       setInboxMessage(null);
@@ -223,27 +327,187 @@ export default function AtlasHomePage() {
     }
   }
 
+  async function submitCloseout() {
+    const cleanNote = closeoutNote.trim();
+    if (!cleanNote) {
+      setCloseoutMessage("Closeout note required.");
+      return;
+    }
+    try {
+      setCloseoutSaving(true);
+      setCloseoutMessage(null);
+      await saveAtlasCloseout({
+        period: closeoutPeriod,
+        note: cleanNote,
+        carryForward: closeoutCarry.trim() || undefined,
+        nextFocus: closeoutNext.trim() || undefined,
+        createdBy: createdBy.trim() || "anna",
+      });
+      setCloseoutNote("");
+      setCloseoutCarry("");
+      setCloseoutNext("");
+      setCloseoutMessage("Closeout saved.");
+      await loadCloseout();
+    } catch (closeoutError) {
+      setCloseoutMessage(closeoutError instanceof Error ? closeoutError.message : "Closeout save failed.");
+    } finally {
+      setCloseoutSaving(false);
+    }
+  }
+
   return (
     <main className="atlas-phone-shell atlas-home-shell">
       <section className="atlas-phone atlas-dashboard-phone">
-        <header className="atlas-phone-top atlas-dashboard-top"><div className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></div><button type="button" className="atlas-soft-badge" onClick={() => { void loadCards(); void loadRegistry(); }}>Refresh</button></header>
+        <header className="atlas-phone-top atlas-dashboard-top">
+          <div className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></div>
+          <button type="button" className="atlas-soft-badge" onClick={() => { void loadCards(); void loadRegistry(); void loadCloseout(); }}>Refresh</button>
+        </header>
+
         <div className="atlas-home-grid">
-          <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero"><button type="button" className="atlas-home-primary-task" onClick={() => primaryUnit ? openUnit(primaryUnit) : setOpenPanel("tasks")}><strong>{primaryUnit?.object?.object_label ?? primaryUnit?.card.zone_label ?? (loading ? "Loading" : "Clear")}</strong>{primaryUnit ? <em>{actionLabel(primaryUnit)}</em> : null}{primaryUnit ? <span className="atlas-home-task-title">{unitMeta(primaryUnit)}</span> : null}</button><div className="atlas-home-mini-list atlas-home-task-buttons">{nextUnits.length > 0 ? nextUnits.map((unit) => <button type="button" key={unit.id} onClick={() => openUnit(unit)}><span>{unit.object?.object_label ?? unit.card.zone_label ?? unit.card.title}</span><small>{actionLabel(unit)}</small></button>) : <button type="button" onClick={() => setOpenPanel("tasks")}>Tasks</button>}</div></article>
-          <button type="button" className="atlas-home-box atlas-home-box-white" onClick={() => setOpenPanel("calendar")}><strong>{calendarEntry.date === today ? "Today" : prettyDate(calendarEntry.date)}</strong><em>{calendarEntry.title}</em><div className="atlas-home-mini-list">{calendarEntry.items.slice(0, 3).map((item) => <span key={item}>{item}</span>)}</div></button>
+          <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero">
+            <button type="button" className="atlas-home-primary-task" onClick={() => primaryUnit ? openUnit(primaryUnit) : setOpenPanel("tasks")}>
+              <strong>{primaryUnit?.object?.object_label ?? primaryUnit?.card.zone_label ?? (loading ? "Loading" : "Clear")}</strong>
+              {primaryUnit ? <em>{actionLabel(primaryUnit)}</em> : null}
+              {primaryUnit ? <span className="atlas-home-task-title">{unitMeta(primaryUnit)}</span> : null}
+            </button>
+            <div className="atlas-home-mini-list atlas-home-task-buttons">
+              {nextUnits.length > 0 ? nextUnits.map((unit) => (
+                <button type="button" key={unit.id} onClick={() => openUnit(unit)}>
+                  <span>{unit.object?.object_label ?? unit.card.zone_label ?? unit.card.title}</span>
+                  <small>{actionLabel(unit)}</small>
+                </button>
+              )) : <button type="button" onClick={() => setOpenPanel("tasks")}>Tasks</button>}
+            </div>
+          </article>
+
+          <button type="button" className="atlas-home-box atlas-home-box-white" onClick={() => setOpenPanel("calendar")}>
+            <strong>Closeout</strong>
+            <em>{monthSummary ? `${monthSummary.counts.logs} logs · ${monthSummary.counts.objectEvents} updates` : calendarEntry.title}</em>
+            <div className="atlas-home-mini-list">
+              <span>{calendarEntry.date === today ? "Today" : prettyDate(calendarEntry.date)} · {calendarEntry.dayKind}</span>
+              <span>{calendarEntry.title}</span>
+            </div>
+          </button>
+
           <button type="button" className="atlas-home-box atlas-home-box-white atlas-home-note-box" onClick={() => setOpenPanel("inbox")}><strong>Note</strong><em>+</em></button>
-          <Link href="/zones" className="atlas-home-box atlas-home-box-white atlas-home-box-link"><strong>{registryLoading ? "Zones" : "Zones"}</strong><div className="atlas-home-zone-list">{homeZones.map((zone) => <span key={zone.id}>{zone.label}: {zone.active_object_count}/{zone.object_count}</span>)}</div></Link>
+
+          <Link href="/zones" className="atlas-home-box atlas-home-box-white atlas-home-box-link">
+            <strong>{registryLoading ? "Zones" : "Zones"}</strong>
+            <div className="atlas-home-zone-list">{homeZones.map((zone) => <span key={zone.id}>{zone.label}: {zone.active_object_count}/{zone.object_count}</span>)}</div>
+          </Link>
         </div>
       </section>
 
-      {openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{openPanel === "calendar" ? prettyDate(calendarEntry.date) : openPanel === "inbox" ? "Note" : "Tasks"}</strong></div><button type="button" onClick={() => setOpenPanel(null)}>Close</button></div><div className="atlas-task-focus-body">
-        {openPanel === "tasks" ? <section className="atlas-task-list">{error ? <div className="atlas-empty">{error}</div> : null}{units.length === 0 ? <div className="atlas-empty">Clear.</div> : null}{units.map((unit) => <article key={unit.id} className="atlas-task-row"><button type="button" className="atlas-task-row-main" onClick={() => openUnit(unit)}><div className="atlas-task-row-head atlas-task-object-row"><div><strong>{unit.object?.object_label ?? unit.card.zone_label ?? unit.card.title}</strong><span>{actionLabel(unit)}</span><small>{unitMeta(unit)}</small></div></div></button></article>)}</section> : null}
-        {openPanel === "calendar" ? <><section className="atlas-task-focus-purple"><div className="atlas-task-focus-kicker"><span>{calendarEntry.dayKind}</span></div><h2>{calendarEntry.title}</h2><p>{calendarEntry.items.join(" · ")}</p></section><section className="atlas-field-log-list">{upcomingCalendar.map((entry) => <article className="atlas-field-log-item" key={entry.date}><div className="atlas-field-log-main atlas-calendar-row"><strong>{prettyDate(entry.date)}</strong><span>{entry.title}</span><small>{entry.items.join(" · ")}</small></div></article>)}</section></> : null}
-        {openPanel === "inbox" ? <section className="atlas-task-focus-section"><div className="atlas-add-form"><select aria-label="Zone" value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">Whole farm</option>{registryZones.map((zone) => <option key={zone.id} value={zone.stable_key}>{zone.label}</option>)}</select><textarea aria-label="Note" value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Note" /></div><button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving" : "Save"}</button>{inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}</section> : null}
-      </div></div></section> : null}
+      {openPanel ? (
+        <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true">
+          <div className="atlas-task-focus-phone">
+            <div className="atlas-task-focus-topbar">
+              <div><strong>{openPanel === "calendar" ? "Closeout" : openPanel === "inbox" ? "Note" : "Tasks"}</strong></div>
+              <button type="button" onClick={() => setOpenPanel(null)}>Close</button>
+            </div>
+            <div className="atlas-task-focus-body">
+              {openPanel === "tasks" ? (
+                <section className="atlas-task-list">
+                  {error ? <div className="atlas-empty">{error}</div> : null}
+                  {units.length === 0 ? <div className="atlas-empty">Clear.</div> : null}
+                  {units.map((unit) => (
+                    <article key={unit.id} className="atlas-task-row">
+                      <button type="button" className="atlas-task-row-main" onClick={() => openUnit(unit)}>
+                        <div className="atlas-task-row-head atlas-task-object-row"><div><strong>{unit.object?.object_label ?? unit.card.zone_label ?? unit.card.title}</strong><span>{actionLabel(unit)}</span><small>{unitMeta(unit)}</small></div></div>
+                      </button>
+                    </article>
+                  ))}
+                </section>
+              ) : null}
 
-      {selectedUnit ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{selectedUnit.object?.object_label ?? selectedUnit.card.zone_label ?? selectedUnit.card.title}</strong>{contentLine(selectedUnit.registryObject) ? <span>{contentLine(selectedUnit.registryObject)}</span> : null}</div><button type="button" onClick={() => setSelectedUnit(null)}>Close</button></div><div className="atlas-task-focus-body"><section className="atlas-task-focus-purple atlas-work-card"><div className="atlas-task-focus-kicker"><span>{prettyDate(selectedUnit.card.due_date)}</span></div><h2>{actionLabel(selectedUnit)}</h2>{sizeLine(selectedUnit.registryObject) ? <p>{sizeLine(selectedUnit.registryObject)}</p> : null}</section>
-        {captureKind(selectedUnit.card) === "germination" ? <section className="atlas-task-focus-section atlas-capture-form"><div className="atlas-add-form"><select value={capture.standQuality ?? ""} onChange={(event) => setCapture({ ...capture, standQuality: event.target.value })} aria-label="Stand"><option value="">Stand</option><option value="good">Good stand</option><option value="patchy">Patchy</option><option value="poor">Poor</option><option value="failed">Failed</option></select><select value={capture.standPercent ?? ""} onChange={(event) => setCapture({ ...capture, standPercent: event.target.value })} aria-label="Percent"><option value="">Percent</option><option value="90">90%+</option><option value="75">75%</option><option value="50">50%</option><option value="25">Under 25%</option></select><input value={capture.plantCount ?? ""} onChange={(event) => setCapture({ ...capture, plantCount: event.target.value })} placeholder="Approx plants" /><select value={capture.gaps ?? ""} onChange={(event) => setCapture({ ...capture, gaps: event.target.value })} aria-label="Gaps"><option value="">Gaps</option><option value="none">None</option><option value="small">Small gaps</option><option value="big">Big gaps</option><option value="section_missing">Section missing</option></select><select value={capture.nextAction ?? ""} onChange={(event) => setCapture({ ...capture, nextAction: event.target.value })} aria-label="Next"><option value="">Next</option><option value="leave">Leave it</option><option value="patch_sow">Patch sow</option><option value="resow">Resow</option><option value="convert">Convert bed</option></select><textarea value={resultNote} onChange={(event) => setResultNote(event.target.value)} placeholder="Note" /></div><button type="button" className="atlas-zone-action" style={{ width: "100%", marginTop: 12 }} disabled={savingResult !== null} onClick={() => void saveUnit("done")}>{savingResult ? "Saving" : "Save bed truth"}</button><div className="atlas-task-play-actions" style={{ marginTop: 8 }}><button type="button" disabled={savingResult !== null} onClick={() => void saveUnit("blocked", false)}>Blocked</button><button type="button" disabled={savingResult !== null} onClick={() => void saveUnit("needs_supplies", false)}>Need supplies</button></div>{resultMessage ? <p className="atlas-task-result-message">{resultMessage}</p> : null}</section> : <section className="atlas-task-focus-section"><div className="atlas-add-form"><input aria-label="Who" value={createdBy} onChange={(event) => setCreatedBy(event.target.value)} placeholder="anna" /><textarea value={resultNote} onChange={(event) => setResultNote(event.target.value)} placeholder="What changed?" rows={4} /></div><div className="atlas-task-play-actions atlas-task-play-actions-wide" style={{ marginTop: 12 }}>{(["done", "partial", "changed", "blocked", "needs_supplies"] as AtlasTaskResult[]).map((result) => <button key={result} type="button" onClick={() => void saveUnit(result, false)} disabled={savingResult !== null}>{savingResult === result ? "Saving" : result === "needs_supplies" ? "Need supplies" : result[0].toUpperCase() + result.slice(1)}</button>)}</div>{resultMessage ? <p className="atlas-task-result-message">{resultMessage}</p> : null}</section>}
-      </div></div></section> : null}
+              {openPanel === "calendar" ? (
+                <>
+                  <section className="atlas-task-focus-purple atlas-closeout-hero">
+                    <div className="atlas-task-focus-kicker"><span>{calendarEntry.dayKind}</span></div>
+                    <h2>Month truth</h2>
+                    <p>{calendarEntry.title}</p>
+                  </section>
+
+                  {closeoutLoading ? <div className="atlas-empty">Loading closeout.</div> : null}
+                  <section className="atlas-closeout-grid">
+                    {closeoutSummaries.map((summary) => <CloseoutCard key={summary.period} summary={summary} />)}
+                  </section>
+
+                  <section className="atlas-task-focus-section atlas-closeout-form">
+                    <div className="atlas-add-form">
+                      <select aria-label="Closeout period" value={closeoutPeriod} onChange={(event) => setCloseoutPeriod(event.target.value as AtlasCloseoutPeriod)}>
+                        <option value="day">Today</option>
+                        <option value="week">This week</option>
+                        <option value="month">This month</option>
+                      </select>
+                      <textarea value={closeoutNote} onChange={(event) => setCloseoutNote(event.target.value)} placeholder="What changed?" />
+                      <textarea value={closeoutCarry} onChange={(event) => setCloseoutCarry(event.target.value)} placeholder="Carry forward" />
+                      <textarea value={closeoutNext} onChange={(event) => setCloseoutNext(event.target.value)} placeholder="Next focus" />
+                    </div>
+                    <button type="button" className="atlas-zone-action" style={{ width: "100%", marginTop: 12 }} disabled={closeoutSaving} onClick={() => void submitCloseout()}>{closeoutSaving ? "Saving" : "Save closeout"}</button>
+                    {closeoutMessage ? <p className="atlas-task-result-message">{closeoutMessage}</p> : null}
+                  </section>
+
+                  <section className="atlas-field-log-list">
+                    {upcomingCalendar.map((entry) => (
+                      <article className="atlas-field-log-item" key={entry.date}>
+                        <div className="atlas-field-log-main atlas-calendar-row"><strong>{prettyDate(entry.date)}</strong><span>{entry.title}</span><small>{entry.items.join(" · ")}</small></div>
+                      </article>
+                    ))}
+                  </section>
+                </>
+              ) : null}
+
+              {openPanel === "inbox" ? (
+                <section className="atlas-task-focus-section">
+                  <div className="atlas-add-form">
+                    <select aria-label="Zone" value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">Whole farm</option>{registryZones.map((zone) => <option key={zone.id} value={zone.stable_key}>{zone.label}</option>)}</select>
+                    <textarea aria-label="Note" value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Note" />
+                  </div>
+                  <button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving" : "Save"}</button>
+                  {inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}
+                </section>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {selectedUnit ? (
+        <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true">
+          <div className="atlas-task-focus-phone">
+            <div className="atlas-task-focus-topbar">
+              <div><strong>{selectedUnit.object?.object_label ?? selectedUnit.card.zone_label ?? selectedUnit.card.title}</strong>{contentLine(selectedUnit.registryObject) ? <span>{contentLine(selectedUnit.registryObject)}</span> : null}</div>
+              <button type="button" onClick={() => setSelectedUnit(null)}>Close</button>
+            </div>
+            <div className="atlas-task-focus-body">
+              <section className="atlas-task-focus-purple atlas-work-card"><div className="atlas-task-focus-kicker"><span>{prettyDate(selectedUnit.card.due_date)}</span></div><h2>{actionLabel(selectedUnit)}</h2>{sizeLine(selectedUnit.registryObject) ? <p>{sizeLine(selectedUnit.registryObject)}</p> : null}</section>
+
+              {captureKind(selectedUnit.card) === "germination" ? (
+                <section className="atlas-task-focus-section atlas-capture-form">
+                  <div className="atlas-add-form">
+                    <select value={capture.standQuality ?? ""} onChange={(event) => setCapture({ ...capture, standQuality: event.target.value })} aria-label="Stand"><option value="">Stand</option><option value="good">Good stand</option><option value="patchy">Patchy</option><option value="poor">Poor</option><option value="failed">Failed</option></select>
+                    <select value={capture.standPercent ?? ""} onChange={(event) => setCapture({ ...capture, standPercent: event.target.value })} aria-label="Percent"><option value="">Percent</option><option value="90">90%+</option><option value="75">75%</option><option value="50">50%</option><option value="25">Under 25%</option></select>
+                    <input value={capture.plantCount ?? ""} onChange={(event) => setCapture({ ...capture, plantCount: event.target.value })} placeholder="Approx plants" />
+                    <select value={capture.gaps ?? ""} onChange={(event) => setCapture({ ...capture, gaps: event.target.value })} aria-label="Gaps"><option value="">Gaps</option><option value="none">None</option><option value="small">Small gaps</option><option value="big">Big gaps</option><option value="section_missing">Section missing</option></select>
+                    <select value={capture.nextAction ?? ""} onChange={(event) => setCapture({ ...capture, nextAction: event.target.value })} aria-label="Next"><option value="">Next</option><option value="leave">Leave it</option><option value="patch_sow">Patch sow</option><option value="resow">Resow</option><option value="convert">Convert bed</option></select>
+                    <textarea value={resultNote} onChange={(event) => setResultNote(event.target.value)} placeholder="Note" />
+                  </div>
+                  <button type="button" className="atlas-zone-action" style={{ width: "100%", marginTop: 12 }} disabled={savingResult !== null} onClick={() => void saveUnit("done")}>{savingResult ? "Saving" : "Save bed truth"}</button>
+                  <div className="atlas-task-play-actions" style={{ marginTop: 8 }}><button type="button" disabled={savingResult !== null} onClick={() => void saveUnit("blocked", false)}>Blocked</button><button type="button" disabled={savingResult !== null} onClick={() => void saveUnit("needs_supplies", false)}>Need supplies</button></div>
+                  {resultMessage ? <p className="atlas-task-result-message">{resultMessage}</p> : null}
+                </section>
+              ) : (
+                <section className="atlas-task-focus-section">
+                  <div className="atlas-add-form"><input aria-label="Who" value={createdBy} onChange={(event) => setCreatedBy(event.target.value)} placeholder="anna" /><textarea value={resultNote} onChange={(event) => setResultNote(event.target.value)} placeholder="What changed?" rows={4} /></div>
+                  <div className="atlas-task-play-actions atlas-task-play-actions-wide" style={{ marginTop: 12 }}>{(["done", "partial", "changed", "blocked", "needs_supplies"] as AtlasTaskResult[]).map((result) => <button key={result} type="button" onClick={() => void saveUnit(result, false)} disabled={savingResult !== null}>{savingResult === result ? "Saving" : resultLabel(result)}</button>)}</div>
+                  {resultMessage ? <p className="atlas-task-result-message">{resultMessage}</p> : null}
+                </section>
+              )}
+            </div>
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }
