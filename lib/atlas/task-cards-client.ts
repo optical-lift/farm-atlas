@@ -49,6 +49,22 @@ export type AtlasTaskCardLog = {
   created_at: string;
 };
 
+export type AtlasTaskCaptureByObject = Record<
+  string,
+  {
+    result?: string;
+    capture_kind?: string;
+    completed_at?: string;
+    field_log_id?: string;
+    capture?: Record<string, unknown>;
+  }
+>;
+
+export type AtlasTaskCardMetadata = {
+  capture_by_object?: AtlasTaskCaptureByObject;
+  [key: string]: unknown;
+};
+
 export type AtlasTaskCard = {
   farm_key: string;
 
@@ -65,13 +81,13 @@ export type AtlasTaskCard = {
   generated_from_id: string | null;
   created_at: string;
   updated_at: string;
-
+  metadata: AtlasTaskCardMetadata | null;
 
   zone_id: string | null;
   zone_key: string | null;
   zone_label: string | null;
 
-task_logs: AtlasTaskCardLog[];
+  task_logs: AtlasTaskCardLog[];
 
   objects: AtlasTaskCardObject[];
   resource_requirements: AtlasTaskCardResourceRequirement[];
