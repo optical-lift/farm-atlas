@@ -1,4 +1,29 @@
+export type AtlasObjectInspection = {
+  crop_label: string;
+  variety: string | null;
+  stage: string;
+  confidence: string;
+  start_method: string | null;
+  seeded_date: string | null;
+  germinated_date: string | null;
+  expected_germination_start: string | null;
+  expected_germination_end: string | null;
+  weeded_dates: string[];
+  pinch_required: boolean | null;
+  pinch_note: string | null;
+  pinched_dates: string[];
+  bloom_date: string | null;
+  harvest_dates: string[];
+  expected_harvest_watch_start: string | null;
+  expected_harvest_watch_end: string | null;
+  clear_bed_date: string | null;
+  next_crop_planned: string | null;
+  note: string | null;
+  unknown_fields: string[];
+};
+
 export type AtlasObjectContent = {
+  id: string;
   object_id: string;
   content_label: string;
   content_type: string;
@@ -6,7 +31,23 @@ export type AtlasObjectContent = {
   planted_date: string | null;
   status: string;
   confidence: string;
+  start_method: string | null;
+  germinated_date: string | null;
+  pinch_required: boolean | null;
+  pinch_note: string | null;
+  bloom_start_date: string | null;
+  clear_bed_date: string | null;
+  next_crop_planned: string | null;
   note: string | null;
+  inspection: AtlasObjectInspection;
+};
+
+export type AtlasInspectionSummary = {
+  crop_label: string;
+  stage: string;
+  unknown_count: number;
+  seeded_date: string | null;
+  variety: string | null;
 };
 
 export type AtlasRegistryObject = {
@@ -19,6 +60,7 @@ export type AtlasRegistryObject = {
   length_ft: number | null;
   width_ft: number | null;
   sort_order: number | null;
+  inspection_summary: AtlasInspectionSummary | null;
   contents: AtlasObjectContent[];
 };
 
@@ -32,6 +74,7 @@ export type AtlasRegistryZone = {
   sort_order: number | null;
   object_count: number;
   active_object_count: number;
+  unknown_count: number;
   objects: AtlasRegistryObject[];
 };
 
