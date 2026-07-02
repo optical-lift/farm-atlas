@@ -147,13 +147,23 @@
   letter-spacing: -0.05em;
 }
 
-.atlas-zone-landing-card p {
+.atlas-zone-space-summary {
+  display: grid;
+  gap: 3px;
+}
+
+.atlas-zone-landing-card p,
+.atlas-zone-space-summary p {
   margin: 0;
-  font-size: 11px;
-  line-height: 1.15;
+  font-size: 10.5px;
+  line-height: 1.18;
   font-weight: 900;
   color: var(--atlas-muted);
   font-style: normal;
+}
+
+.atlas-zone-space-summary p:last-child {
+  color: var(--atlas-text);
 }
 
 .atlas-zone-landing-card em,
@@ -401,6 +411,11 @@
     font-size: 17px;
   }
 
+  .atlas-zone-space-summary p {
+    font-size: 9.5px;
+    line-height: 1.18;
+  }
+
   .atlas-inspection-list-sheet div {
     grid-template-columns: 86px minmax(0, 1fr);
     gap: 8px;
@@ -410,6 +425,10 @@
 @media (max-width: 360px) {
   .atlas-zone-landing-card strong {
     font-size: 15px;
+  }
+
+  .atlas-zone-space-summary p {
+    font-size: 9px;
   }
 
   .atlas-inspection-list-sheet div {
