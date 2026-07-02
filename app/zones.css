@@ -8,6 +8,40 @@
   display: none;
 }
 
+.atlas-home-task-hero {
+  cursor: default;
+}
+
+.atlas-home-primary-task,
+.atlas-home-task-buttons button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0;
+}
+
+.atlas-home-primary-task {
+  display: grid;
+  gap: 7px;
+}
+
+.atlas-home-task-buttons button {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 5px 7px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 900;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.94);
+}
+
 .atlas-home-box-purple {
   border-color: rgba(139, 145, 194, 0.42);
   background: linear-gradient(145deg, rgba(174, 179, 212, 0.96), rgba(139, 145, 194, 0.94));
@@ -178,7 +212,7 @@
 
 .atlas-zone-detail-metrics {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
 }
 
@@ -315,6 +349,57 @@
   line-height: 1.25;
   font-weight: 900;
   overflow-wrap: anywhere;
+}
+
+.atlas-bed-task-list,
+.atlas-task-space-list {
+  display: grid;
+  gap: 7px;
+}
+
+.atlas-bed-task-list button,
+.atlas-task-space-card {
+  width: 100%;
+  border: 1px solid var(--atlas-border-soft);
+  border-radius: 15px;
+  background: rgba(246, 242, 230, 0.72);
+  padding: 9px;
+  text-align: left;
+  color: var(--atlas-text);
+  display: grid;
+  gap: 4px;
+}
+
+.atlas-bed-task-list strong,
+.atlas-task-space-card strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+}
+
+.atlas-bed-task-list small,
+.atlas-task-space-card span,
+.atlas-task-space-card p,
+.atlas-task-space-empty {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.atlas-task-space-card a {
+  width: fit-content;
+  color: var(--atlas-text);
+  text-decoration: none;
+  border: 1px solid var(--atlas-border);
+  border-radius: 999px;
+  background: var(--atlas-cream);
+  padding: 6px 9px;
+  font-size: 11px;
+  font-weight: 950;
 }
 
 .atlas-zone-detail-footer {
