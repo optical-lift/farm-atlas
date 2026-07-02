@@ -78,17 +78,16 @@ export default function AtlasZoneDetailPage() {
 
           {zone ? (
             <>
-              <section className="atlas-zone-detail-hero">
+              <section className="atlas-zone-detail-hero compact">
                 <div>
                   <span className="atlas-home-kicker">{zoneShortMode(zone)}</span>
                   <h1>{zone.label}</h1>
                   <p>{zone.goal_text ?? "Inspect the place in front of you."}</p>
                 </div>
 
-                <div className="atlas-zone-detail-metrics">
+                <div className="atlas-zone-detail-metrics two-only">
                   <span>{zone.active_object_count} active</span>
                   <span>{zone.object_count} total</span>
-                  <span>{zone.unknown_count ?? 0} unknown</span>
                 </div>
               </section>
 
