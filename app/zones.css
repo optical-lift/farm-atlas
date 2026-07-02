@@ -9,7 +9,14 @@
 }
 
 .atlas-home-task-hero {
-  cursor: default;
+  position: relative;
+  cursor: pointer;
+}
+
+.atlas-home-task-hero > .atlas-home-kicker {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .atlas-home-primary-task,
@@ -19,11 +26,33 @@
   color: inherit;
   text-align: left;
   padding: 0;
+  touch-action: manipulation;
 }
 
 .atlas-home-primary-task {
-  display: grid;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
   gap: 7px;
+  padding: 39px 13px 86px;
+  cursor: pointer;
+}
+
+.atlas-home-primary-task:focus-visible,
+.atlas-home-task-buttons button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.82);
+  outline-offset: 3px;
+}
+
+.atlas-home-task-buttons {
+  position: relative;
+  z-index: 3;
 }
 
 .atlas-home-task-buttons button {
@@ -40,6 +69,7 @@
   border: 1px solid rgba(255, 255, 255, 0.24);
   background: rgba(255, 255, 255, 0.14);
   color: rgba(255, 255, 255, 0.94);
+  cursor: pointer;
 }
 
 .atlas-home-box-purple {
@@ -447,6 +477,10 @@
 }
 
 @media (max-width: 430px) {
+  .atlas-home-primary-task {
+    padding: 36px 11px 80px;
+  }
+
   .atlas-route-shell {
     padding: 0;
   }
@@ -508,6 +542,10 @@
 }
 
 @media (max-width: 360px) {
+  .atlas-home-primary-task {
+    padding: 34px 10px 76px;
+  }
+
   .atlas-zone-landing-card strong {
     font-size: 15px;
   }
