@@ -9,28 +9,54 @@ type Match = {
 };
 
 function feet(value: number | null | undefined) {
-  return typeof value === "number" ? `${value} ft` : "not logged";
+  return typeof value === "number" ? `${value} ft` : null;
 }
 
 function dateLabel(value: string | null | undefined) {
-  if (!value) return "not logged";
+  if (!value) return null;
   return new Date(`${value}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function readableStatus(value: string | null | undefined) {
+  return value ? value.replaceAll("_", " ") : null;
+}
+
+function dimensionLine(object: AtlasRegistryObject) {
+  const width = feet(object.width_ft);
+  const length = feet(object.length_ft);
+  if (width && length) return `${width} × ${length}`;
+  return width ?? length;
 }
 
 function cropLine(object: AtlasRegistryObject) {
   const content = object.contents[0];
-  if (!content) return "No crop cycle logged.";
-  return `${content.content_label} · ${content.status.replaceAll("_", " ")}`;
+  if (!content) return null;
+
+  return [content.content_label, content.variety, readableStatus(content.status)]
+    .filter(Boolean)
+    .join(" · ");
 }
 
-function timelineLine(object: AtlasRegistryObject) {
+function timelineLines(object: AtlasRegistryObject) {
   const inspection = object.contents[0]?.inspection;
-  if (!inspection) return "Seeded not logged · pinch not logged";
-  const pinch = inspection.pinch_required === true ? "yes" : inspection.pinch_required === false ? "no" : "not logged";
-  return `Seeded ${dateLabel(inspection.seeded_date)} · pinch ${pinch}`;
+  if (!inspection) return [];
+
+  const lines = [
+    inspection.seeded_date ? `Sown ${dateLabel(inspection.seeded_date)}` : null,
+    inspection.germinated_date ? `Germinated ${dateLabel(inspection.germinated_date)}` : null,
+    inspection.expected_germination_start || inspection.expected_germination_end
+      ? `Germination ${dateLabel(inspection.expected_germination_start) ?? ""}${inspection.expected_germination_end ? `–${dateLabel(inspection.expected_germination_end)}` : ""}`
+      : null,
+    inspection.pinch_required === true ? "Pinch" : inspection.pinch_required === false ? "No pinch" : null,
+    inspection.bloom_date ? `Bloom ${dateLabel(inspection.bloom_date)}` : null,
+    inspection.clear_bed_date ? `Clear ${dateLabel(inspection.clear_bed_date)}` : null,
+    inspection.next_crop_planned ? `Next ${inspection.next_crop_planned}` : null,
+  ];
+
+  return lines.filter(Boolean) as string[];
 }
 
-function matchesForTask(task: AtlasTaskCard, zones: AtlasRegistryZone[]) {
+export function taskObjectMatches(task: AtlasTaskCard, zones: AtlasRegistryZone[]) {
   const matches: Match[] = [];
 
   task.objects.forEach((taskObject) => {
@@ -46,35 +72,54 @@ function matchesForTask(task: AtlasTaskCard, zones: AtlasRegistryZone[]) {
   return matches;
 }
 
-export function TaskPhysicalSpaces({ task, zones }: { task: AtlasTaskCard; zones: AtlasRegistryZone[] }) {
-  const matches = matchesForTask(task, zones);
+export function taskObjectTitle(task: AtlasTaskCard, zones: AtlasRegistryZone[]) {
+  const matches = taskObjectMatches(task, zones);
 
-  if (matches.length === 0) {
-    return (
-      <section className="atlas-task-focus-section">
-        <span className="atlas-soft-label">Physical space</span>
-        <p className="atlas-task-space-empty">No specific bed or object is tagged yet.</p>
-      </section>
-    );
+  if (matches.length === 1) return matches[0].object.label;
+  if (matches.length > 1) {
+    const zoneIds = new Set(matches.map((match) => match.zone.id));
+    if (zoneIds.size === 1) return `${matches[0].zone.label} · ${matches.length}`;
+    return `${matches[0].object.label} + ${matches.length - 1}`;
   }
 
+  return task.zone_label ?? task.title;
+}
+
+export function taskObjectDetailLine(task: AtlasTaskCard, zones: AtlasRegistryZone[]) {
+  const matches = taskObjectMatches(task, zones);
+  const primaryObject = matches[0]?.object;
+  const crop = primaryObject ? cropLine(primaryObject) : null;
+
+  if (crop) return crop;
+  if (matches.length > 1) return Array.from(new Set(matches.map((match) => match.zone.label))).join(" · ");
+  return task.zone_label ?? null;
+}
+
+export function TaskPhysicalSpaces({ task, zones }: { task: AtlasTaskCard; zones: AtlasRegistryZone[] }) {
+  const matches = taskObjectMatches(task, zones);
+
+  if (matches.length === 0) return null;
+
   return (
-    <section className="atlas-task-focus-section">
-      <span className="atlas-soft-label">Physical space</span>
-      <div className="atlas-task-space-list">
-        {matches.map(({ zone, object }) => (
-          <article className="atlas-task-space-card" key={object.id}>
+    <section className="atlas-task-space-list atlas-object-stack">
+      {matches.map(({ zone, object }) => {
+        const dimensions = dimensionLine(object);
+        const crop = cropLine(object);
+        const timeline = timelineLines(object);
+
+        return (
+          <article className="atlas-task-space-card atlas-object-card" key={object.id}>
             <div>
-              <span>{zone.label}</span>
               <strong>{object.label}</strong>
+              <span>{zone.label}</span>
             </div>
-            <p>{feet(object.width_ft)} wide · {feet(object.length_ft)} long</p>
-            <p>{cropLine(object)}</p>
-            <p>{timelineLine(object)}</p>
-            <Link href={`/zones/${zone.stable_key}`}>Open zone registry</Link>
+            {dimensions ? <p>{dimensions}</p> : null}
+            {crop ? <p>{crop}</p> : null}
+            {timeline.map((line) => <p key={line}>{line}</p>)}
+            <Link href={`/zones/${zone.stable_key}`}>{zone.label}</Link>
           </article>
-        ))}
-      </div>
+        );
+      })}
     </section>
   );
 }
