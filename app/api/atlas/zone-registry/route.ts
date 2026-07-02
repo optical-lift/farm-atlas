@@ -3,6 +3,24 @@ import { atlasSupabase } from "@/lib/atlas/supabase-server";
 
 export const dynamic = "force-dynamic";
 
+const FINAL_ZONE_KEYS = [
+  "field_rows",
+  "berry_walk_flower_rows",
+  "barn_beds",
+  "main_garden",
+  "entry_billboard",
+  "follow_me",
+  "curve_garden",
+  "u_pick",
+  "original_berry_walk",
+  "asparagus_row",
+  "grow_room",
+  "lilac_haven",
+  "redbud_islands",
+  "memorial_garden",
+  "chicken_coop",
+];
+
 type ZoneRow = {
   id: string;
   stable_key: string;
@@ -63,6 +81,7 @@ export async function GET() {
     .from("zones")
     .select("id, stable_key, label, zone_type, mode_bias, goal_text, current_state, sort_order, metadata")
     .eq("farm_id", farm.id)
+    .in("stable_key", FINAL_ZONE_KEYS)
     .order("sort_order", { ascending: true });
 
   if (zonesError) {
