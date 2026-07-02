@@ -3,7 +3,11 @@
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 
-import { TaskPhysicalSpaces } from "@/components/atlas/task-physical-spaces";
+import {
+  TaskPhysicalSpaces,
+  taskObjectDetailLine,
+  taskObjectTitle,
+} from "@/components/atlas/task-physical-spaces";
 import {
   fetchAtlasTaskCards,
   type AtlasTaskCard,
@@ -72,27 +76,20 @@ function prettyDate(dateIso: string | null | undefined) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function statusLabel(status: string) {
-  if (status === "done") return "Done";
-  if (status === "blocked") return "Blocked";
-  if (status === "skipped") return "Skipped";
-  return "Open";
-}
-
 function resultButtonLabel(result: AtlasTaskResult) {
   if (result === "done") return "Done";
-  if (result === "partial") return "Partly done";
-  if (result === "changed") return "Changed plan/data";
-  if (result === "blocked") return "Could not do";
+  if (result === "partial") return "Partial";
+  if (result === "changed") return "Changed";
+  if (result === "blocked") return "Blocked";
   return "Need supplies";
 }
 
 function resultSuccessMessage(result: AtlasTaskResult) {
-  if (result === "done") return "Saved as done.";
-  if (result === "partial") return "Saved partial progress. The task stays open.";
-  if (result === "changed") return "Saved the changed field truth. The task stays open.";
-  if (result === "blocked") return "Saved as blocked.";
-  return "Saved supply need and created a follow-up task.";
+  if (result === "done") return "Done.";
+  if (result === "partial") return "Partial saved.";
+  if (result === "changed") return "Changed saved.";
+  if (result === "blocked") return "Blocked.";
+  return "Supply need saved.";
 }
 
 function taskSortValue(card: AtlasTaskCard) {
@@ -111,6 +108,16 @@ function currentOrNextCalendarEntry(today: string) {
 
 function nextCalendarEntries(today: string) {
   return calendarEntries.filter((entry) => entry.date >= today).slice(0, 6);
+}
+
+function panelTitle(panel: Exclude<HomePanel, null>, calendarEntry: CalendarEntry) {
+  if (panel === "calendar") return prettyDate(calendarEntry.date);
+  if (panel === "inbox") return "Note";
+  return "Tasks";
+}
+
+function taskMetaLine(card: AtlasTaskCard, zones: AtlasRegistryZone[]) {
+  return [taskObjectDetailLine(card, zones), prettyDate(card.due_date)].filter(Boolean).join(" · ");
 }
 
 export default function AtlasHomePage() {
@@ -141,7 +148,7 @@ export default function AtlasHomePage() {
       setCards(nextCards);
       return nextCards;
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Atlas could not load tasks.");
+      setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
       return [];
     } finally {
       setLoading(false);
@@ -154,7 +161,7 @@ export default function AtlasHomePage() {
       const response = await fetchAtlasZoneRegistry();
       setRegistryZones(response.zones ?? []);
     } catch (registryError) {
-      setError(registryError instanceof Error ? registryError.message : "Atlas could not load the zone registry.");
+      setError(registryError instanceof Error ? registryError.message : "Zones failed.");
     } finally {
       setRegistryLoading(false);
     }
@@ -166,8 +173,6 @@ export default function AtlasHomePage() {
   }, []);
 
   const openCards = useMemo(() => cards.filter((card) => card.status === "open").sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b))), [cards]);
-  const blockedCount = useMemo(() => cards.filter((card) => card.status === "blocked").length, [cards]);
-  const doneCount = useMemo(() => cards.filter((card) => card.status === "done").length, [cards]);
   const primaryTask = openCards[0] ?? null;
   const nextTasks = openCards.slice(1, 4);
   const calendarEntry = currentOrNextCalendarEntry(today);
@@ -190,7 +195,7 @@ export default function AtlasHomePage() {
     if (!selectedCard) return;
     const cleanNote = resultNote.trim();
     if (result !== "done" && !cleanNote) {
-      setResultMessage("Add one sentence about what happened so the farm truth is not lost.");
+      setResultMessage("Note required.");
       return;
     }
 
@@ -204,7 +209,7 @@ export default function AtlasHomePage() {
       setResultNote("");
       setResultMessage(resultSuccessMessage(result));
     } catch (saveError) {
-      setResultMessage(saveError instanceof Error ? saveError.message : "Atlas could not save that result.");
+      setResultMessage(saveError instanceof Error ? saveError.message : "Save failed.");
     } finally {
       setSavingResult(null);
     }
@@ -213,7 +218,7 @@ export default function AtlasHomePage() {
   async function submitInbox() {
     const cleanBody = inboxBody.trim();
     if (!cleanBody) {
-      setInboxMessage("Write the note first, then send it to the inbox.");
+      setInboxMessage("Note required.");
       return;
     }
 
@@ -223,9 +228,9 @@ export default function AtlasHomePage() {
       await saveAtlasInboxItem({ body: cleanBody, zoneKey: inboxZoneKey || null, createdBy: createdBy.trim() || "anna" });
       setInboxBody("");
       setInboxZoneKey("");
-      setInboxMessage("Saved to the Atlas inbox for Lex/Noel review.");
+      setInboxMessage("Saved.");
     } catch (inboxError) {
-      setInboxMessage(inboxError instanceof Error ? inboxError.message : "Atlas inbox note failed to save.");
+      setInboxMessage(inboxError instanceof Error ? inboxError.message : "Save failed.");
     } finally {
       setInboxSaving(false);
     }
@@ -246,41 +251,36 @@ export default function AtlasHomePage() {
 
         <div className="atlas-home-grid">
           <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero">
-            <span className="atlas-home-kicker">Today Tasks</span>
             <button type="button" className="atlas-home-primary-task" onClick={() => primaryTask ? openTask(primaryTask) : setOpenPanel("tasks")}>
-              <strong>{primaryTask?.title ?? (loading ? "Loading tasks..." : "No open task")}</strong>
-              <em>{primaryTask ? `${prettyDate(primaryTask.due_date)} · ${primaryTask.zone_label ?? "Atlas"}` : "Tap to refresh or add work."}</em>
+              <strong>{primaryTask ? taskObjectTitle(primaryTask, registryZones) : (loading ? "Loading" : "Clear")}</strong>
+              {primaryTask ? <em>{taskMetaLine(primaryTask, registryZones)}</em> : null}
+              {primaryTask ? <span className="atlas-home-task-title">{primaryTask.title}</span> : null}
             </button>
             <div className="atlas-home-mini-list atlas-home-task-buttons">
               {nextTasks.length > 0 ? nextTasks.map((task) => (
-                <button type="button" key={task.task_id} onClick={() => openTask(task)}>{task.title}</button>
-              )) : <button type="button" onClick={() => setOpenPanel("tasks")}>Open task list</button>}
+                <button type="button" key={task.task_id} onClick={() => openTask(task)}>
+                  <span className="atlas-home-mini-object">{taskObjectTitle(task, registryZones)}</span>
+                  <small className="atlas-home-mini-action">{task.title}</small>
+                </button>
+              )) : <button type="button" onClick={() => setOpenPanel("tasks")}>Tasks</button>}
             </div>
           </article>
 
           <button type="button" className="atlas-home-box atlas-home-box-white" onClick={() => setOpenPanel("calendar")}>
-            <span className="atlas-home-kicker">Calendar</span>
-            <strong>{calendarEntry.title}</strong>
-            <em>{calendarEntry.date === today ? "Today" : `Next: ${prettyDate(calendarEntry.date)}`} · {calendarEntry.dayKind}</em>
+            <strong>{calendarEntry.date === today ? "Today" : prettyDate(calendarEntry.date)}</strong>
+            <em>{calendarEntry.title}</em>
             <div className="atlas-home-mini-list">
               {calendarEntry.items.slice(0, 3).map((item) => <span key={item}>{item}</span>)}
             </div>
           </button>
 
-          <button type="button" className="atlas-home-box atlas-home-box-white" onClick={() => setOpenPanel("inbox")}>
-            <span className="atlas-home-kicker">Inbox</span>
-            <strong>Add task / note</strong>
-            <em>Send field truth here instead of texting it loose.</em>
-            <div className="atlas-home-mini-list">
-              <span>Optional zone picker</span>
-              <span>Saved for Lex/Noel task-making</span>
-            </div>
+          <button type="button" className="atlas-home-box atlas-home-box-white atlas-home-note-box" onClick={() => setOpenPanel("inbox")}>
+            <strong>Note</strong>
+            <em>+</em>
           </button>
 
           <Link href="/zones" className="atlas-home-box atlas-home-box-white atlas-home-box-link">
-            <span className="atlas-home-kicker">Zones</span>
-            <strong>Bed inspector</strong>
-            <em>{registryLoading ? "Loading zones..." : `${registryZones.length} zones · ${blockedCount} blocked · ${doneCount} done`}</em>
+            <strong>{registryLoading ? "Zones" : "Zones"}</strong>
             <div className="atlas-home-zone-list">
               {homeZones.map((zone) => <span key={zone.id}>{zone.label}: {zone.active_object_count}/{zone.object_count}</span>)}
             </div>
@@ -293,70 +293,60 @@ export default function AtlasHomePage() {
           <div className="atlas-task-focus-phone">
             <div className="atlas-task-focus-topbar">
               <div>
-                <span className="atlas-phone-kicker">{openPanel}</span>
-                <strong>{openPanel === "tasks" ? "Today Tasks" : openPanel === "calendar" ? "Calendar" : "Inbox"}</strong>
+                <strong>{panelTitle(openPanel, calendarEntry)}</strong>
               </div>
               <button type="button" onClick={() => setOpenPanel(null)}>Close</button>
             </div>
 
             <div className="atlas-task-focus-body">
               {openPanel === "tasks" ? (
-                <section className="atlas-task-focus-section">
-                  <span className="atlas-soft-label">Open task hand</span>
-                  <div className="atlas-task-list" style={{ marginTop: 10 }}>
-                    {error ? <div className="atlas-empty">{error}</div> : null}
-                    {openCards.length === 0 ? <div className="atlas-empty">No open tasks.</div> : null}
-                    {openCards.map((card) => (
-                      <article key={card.task_id} className="atlas-task-row atlas-task-row-playable">
-                        <button type="button" className="atlas-task-row-main" onClick={() => openTask(card)}>
-                          <div className="atlas-task-row-head">
-                            <div>
-                              <span className="atlas-soft-label">{prettyDate(card.due_date)} · {card.zone_label ?? "Whole farm"}</span>
-                              <strong>{card.title}</strong>
-                              <small>{card.unlock_text ?? card.note ?? "Open card for details."}</small>
-                            </div>
-                            <span className="atlas-primary-status">{statusLabel(card.status)}</span>
+                <section className="atlas-task-list">
+                  {error ? <div className="atlas-empty">{error}</div> : null}
+                  {openCards.length === 0 ? <div className="atlas-empty">Clear.</div> : null}
+                  {openCards.map((card) => (
+                    <article key={card.task_id} className="atlas-task-row atlas-task-row-playable">
+                      <button type="button" className="atlas-task-row-main" onClick={() => openTask(card)}>
+                        <div className="atlas-task-row-head atlas-task-object-row">
+                          <div>
+                            <strong>{taskObjectTitle(card, registryZones)}</strong>
+                            <span>{taskMetaLine(card, registryZones)}</span>
+                            <small>{card.title}</small>
                           </div>
-                        </button>
-                      </article>
-                    ))}
-                  </div>
+                        </div>
+                      </button>
+                    </article>
+                  ))}
                 </section>
               ) : null}
 
               {openPanel === "calendar" ? (
                 <>
                   <section className="atlas-task-focus-purple">
-                    <div className="atlas-task-focus-kicker"><span>{prettyDate(calendarEntry.date)}</span><span>{calendarEntry.dayKind}</span></div>
+                    <div className="atlas-task-focus-kicker"><span>{calendarEntry.dayKind}</span></div>
                     <h2>{calendarEntry.title}</h2>
                     <p>{calendarEntry.items.join(" · ")}</p>
                   </section>
-                  <section className="atlas-task-focus-section">
-                    <span className="atlas-soft-label">Upcoming dated entries</span>
-                    <div className="atlas-field-log-list">
-                      {upcomingCalendar.map((entry) => (
-                        <article className="atlas-field-log-item" key={entry.date}>
-                          <div className="atlas-field-log-main">
-                            <strong>{prettyDate(entry.date)} · {entry.dayKind}</strong>
-                            <span>{entry.title}</span>
-                            <small>{entry.items.join(" · ")}</small>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
+                  <section className="atlas-field-log-list">
+                    {upcomingCalendar.map((entry) => (
+                      <article className="atlas-field-log-item" key={entry.date}>
+                        <div className="atlas-field-log-main atlas-calendar-row">
+                          <strong>{prettyDate(entry.date)}</strong>
+                          <span>{entry.title}</span>
+                          <small>{entry.items.join(" · ")}</small>
+                        </div>
+                      </article>
+                    ))}
                   </section>
                 </>
               ) : null}
 
               {openPanel === "inbox" ? (
                 <section className="atlas-task-focus-section">
-                  <span className="atlas-soft-label">Add to inbox</span>
-                  <p>This does not have to be polished. It just needs the real field truth.</p>
-                  <div className="atlas-add-form" style={{ marginTop: 12 }}>
-                    <label><span className="atlas-soft-label">Optional zone</span><select value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">No zone / whole farm</option>{registryZones.map((zone) => <option key={zone.id} value={zone.stable_key}>{zone.label}</option>)}</select></label>
-                    <label><span className="atlas-soft-label">Note</span><textarea value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Example: I planted BW9 but ran out of White Lite before BW10." /></label>
+                  <div className="atlas-add-form">
+                    <select aria-label="Zone" value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">Whole farm</option>{registryZones.map((zone) => <option key={zone.id} value={zone.stable_key}>{zone.label}</option>)}</select>
+                    <textarea aria-label="Note" value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Note" />
                   </div>
-                  <button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving..." : "Send to Inbox"}</button>
+                  <button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving" : "Save"}</button>
                   {inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}
                 </section>
               ) : null}
@@ -369,46 +359,40 @@ export default function AtlasHomePage() {
         <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true">
           <div className="atlas-task-focus-phone">
             <div className="atlas-task-focus-topbar">
-              <div><span className="atlas-phone-kicker">Task card</span><strong>{selectedCard.zone_label ?? "Atlas"}</strong></div>
+              <div>
+                <strong>{taskObjectTitle(selectedCard, registryZones)}</strong>
+                {taskObjectDetailLine(selectedCard, registryZones) ? <span>{taskObjectDetailLine(selectedCard, registryZones)}</span> : null}
+              </div>
               <button type="button" onClick={() => setSelectedCard(null)}>Close</button>
             </div>
 
             <div className="atlas-task-focus-body">
-              <section className="atlas-task-focus-purple">
-                <div className="atlas-task-focus-kicker"><span>{statusLabel(selectedCard.status)}</span><span>{selectedCard.priority}</span><span>{prettyDate(selectedCard.due_date)}</span></div>
-                <h2>{selectedCard.title}</h2>
-                {selectedCard.unlock_text ? <p>{selectedCard.unlock_text}</p> : null}
-              </section>
-
               <TaskPhysicalSpaces task={selectedCard} zones={registryZones} />
 
-              {selectedCard.note ? (
-                <section className="atlas-task-focus-section">
-                  <span className="atlas-soft-label">Instructions / data</span>
-                  <div style={{ display: "grid", gap: 8, marginTop: 8 }}>{noteLines(selectedCard.note).map((line) => <p key={line} style={{ margin: 0 }}>{line}</p>)}</div>
-                </section>
-              ) : null}
+              <section className="atlas-task-focus-purple atlas-work-card">
+                <div className="atlas-task-focus-kicker"><span>{prettyDate(selectedCard.due_date)}</span></div>
+                <h2>{selectedCard.title}</h2>
+                {noteLines(selectedCard.note).map((line) => <p key={line}>{line}</p>)}
+              </section>
 
               <section className="atlas-task-focus-section">
-                <span className="atlas-soft-label">Log what actually happened</span>
-                <label style={{ display: "grid", gap: 6, marginTop: 10 }}><span className="atlas-soft-label">Who did it?</span><input value={createdBy} onChange={(event) => setCreatedBy(event.target.value)} placeholder="anna" /></label>
-                <label style={{ display: "grid", gap: 6, marginTop: 10 }}><span className="atlas-soft-label">Result note</span><textarea value={resultNote} onChange={(event) => setResultNote(event.target.value)} placeholder="Example: I planted, but only BW9 because I ran out of seed. BW10 still needs finished." rows={4} /></label>
+                <div className="atlas-add-form">
+                  <input aria-label="Who" value={createdBy} onChange={(event) => setCreatedBy(event.target.value)} placeholder="anna" />
+                  <textarea aria-label="Result note" value={resultNote} onChange={(event) => setResultNote(event.target.value)} placeholder="What changed?" rows={4} />
+                </div>
                 <div className="atlas-task-play-actions atlas-task-play-actions-wide" style={{ marginTop: 12 }}>
                   {(["done", "partial", "changed", "blocked", "needs_supplies"] as AtlasTaskResult[]).map((result) => (
-                    <button key={result} type="button" onClick={() => void handleTaskResult(result)} disabled={savingResult !== null} title={resultButtonLabel(result)}>{savingResult === result ? "Saving..." : resultButtonLabel(result)}</button>
+                    <button key={result} type="button" onClick={() => void handleTaskResult(result)} disabled={savingResult !== null} title={resultButtonLabel(result)}>{savingResult === result ? "Saving" : resultButtonLabel(result)}</button>
                   ))}
                 </div>
                 {resultMessage ? <p className="atlas-task-result-message">{resultMessage}</p> : null}
               </section>
 
               {selectedCard.task_logs.length > 0 ? (
-                <section className="atlas-task-focus-section">
-                  <span className="atlas-soft-label">Progress log</span>
-                  <div className="atlas-field-log-list">
-                    {selectedCard.task_logs.slice(0, 6).map((log) => (
-                      <article key={log.field_log_id} className="atlas-field-log-item"><div className="atlas-field-log-main"><strong>{prettyDate(log.log_date)}</strong><span>{log.summary_sentence}</span>{log.note ? <small>{log.note}</small> : null}</div></article>
-                    ))}
-                  </div>
+                <section className="atlas-field-log-list">
+                  {selectedCard.task_logs.slice(0, 6).map((log) => (
+                    <article key={log.field_log_id} className="atlas-field-log-item"><div className="atlas-field-log-main"><strong>{prettyDate(log.log_date)}</strong><span>{log.summary_sentence}</span>{log.note ? <small>{log.note}</small> : null}</div></article>
+                  ))}
                 </section>
               ) : null}
             </div>
