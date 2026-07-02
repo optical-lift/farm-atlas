@@ -511,50 +511,50 @@ export default function AtlasHomePage() {
               ) : null}
 
               {openPanel === "zones" ? (
-                <>
-                  <section className="atlas-task-focus-section">
-                    <span className="atlas-soft-label">Zones</span>
-                    <div className="atlas-zone-list">
-                      {registryZones.map((zone) => (
-                        <button
-                          type="button"
-                          key={zone.id}
-                          className={`atlas-zone-row ${selectedRegistryZone?.id === zone.id ? "active" : ""}`}
-                          onClick={() => setSelectedZoneKey(zone.stable_key)}
-                        >
-                          <div>
-                            <span>{zone.mode_bias ?? zone.zone_type ?? "zone"}</span>
-                            <strong>{zone.label}</strong>
-                            <small>{zone.goal_text ?? "Open zone registry."}</small>
-                          </div>
-                          <div className="atlas-zone-row-counts">
-                            <b>{zone.active_object_count}</b>
-                            <em>of {zone.object_count}</em>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </section>
+                <section className="atlas-task-focus-section">
+                  <span className="atlas-soft-label">Tap a zone to open its beds</span>
+                  <div className="atlas-zone-list atlas-zone-accordion-list">
+                    {registryZones.map((zone) => {
+                      const isOpen = selectedRegistryZone?.id === zone.id;
 
-                  {selectedRegistryZone ? (
-                    <section className="atlas-task-focus-section">
-                      <span className="atlas-soft-label">Beds / objects</span>
-                      <h3 className="atlas-soft-heading">{selectedRegistryZone.label}</h3>
-                      <div className="atlas-live-object-list">
-                        {selectedRegistryZone.objects.map((object) => (
-                          <article key={object.id} className={`atlas-live-object ${object.contents.length ? "claimed" : ""}`}>
-                            <div className="atlas-live-object-head">
-                              <strong>{object.label}</strong>
-                              <span>{object.object_type}</span>
+                      return (
+                        <article key={zone.id} className="atlas-zone-accordion-item">
+                          <button
+                            type="button"
+                            className={`atlas-zone-row ${isOpen ? "active" : ""}`}
+                            onClick={() => setSelectedZoneKey(isOpen ? null : zone.stable_key)}
+                          >
+                            <div>
+                              <span>{zone.mode_bias ?? zone.zone_type ?? "zone"}</span>
+                              <strong>{zone.label}</strong>
+                              <small>{zone.goal_text ?? "Open zone registry."}</small>
                             </div>
-                            <p>{objectSummary(object)}</p>
-                            {object.contents[0]?.note ? <p>{object.contents[0].note}</p> : null}
-                          </article>
-                        ))}
-                      </div>
-                    </section>
-                  ) : null}
-                </>
+                            <div className="atlas-zone-row-counts">
+                              <b>{zone.active_object_count}</b>
+                              <em>of {zone.object_count}</em>
+                            </div>
+                          </button>
+
+                          {isOpen ? (
+                            <div className="atlas-zone-inline-object-list">
+                              {zone.objects.length === 0 ? <div className="atlas-empty">No beds logged here yet.</div> : null}
+                              {zone.objects.map((object) => (
+                                <article key={object.id} className={`atlas-live-object ${object.contents.length ? "claimed" : ""}`}>
+                                  <div className="atlas-live-object-head">
+                                    <strong>{object.label}</strong>
+                                    <span>{object.object_type}</span>
+                                  </div>
+                                  <p>{objectSummary(object)}</p>
+                                  {object.contents[0]?.note ? <p>{object.contents[0].note}</p> : null}
+                                </article>
+                              ))}
+                            </div>
+                          ) : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
               ) : null}
             </div>
           </div>
