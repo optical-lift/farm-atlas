@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 
+import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import type {
   AtlasObjectInspection,
   AtlasRegistryObject,
@@ -117,6 +118,12 @@ function zoneSpaceSummary(zone: AtlasRegistryZone) {
   return lines;
 }
 
+function taskLabel(count: number) {
+  if (count === 0) return "No tasks attached";
+  if (count === 1) return "1 task attached";
+  return `${count} tasks attached`;
+}
+
 export function ZoneLandingCard({ zone }: { zone: AtlasRegistryZone }) {
   return (
     <article className="atlas-zone-landing-card">
@@ -133,7 +140,37 @@ export function ZoneLandingCard({ zone }: { zone: AtlasRegistryZone }) {
   );
 }
 
-function InspectionSheet({ object }: { object: AtlasRegistryObject }) {
+function BedTaskList({
+  tasks,
+  onTaskSelect,
+}: {
+  tasks: AtlasTaskCard[];
+  onTaskSelect?: (task: AtlasTaskCard) => void;
+}) {
+  if (tasks.length === 0) return null;
+
+  return (
+    <section className="atlas-bed-task-list">
+      <span className="atlas-soft-label">Attached tasks</span>
+      {tasks.map((task) => (
+        <button type="button" key={task.task_id} onClick={() => onTaskSelect?.(task)}>
+          <strong>{task.title}</strong>
+          <small>{prettyDate(task.due_date)} · {task.status.replaceAll("_", " ")}</small>
+        </button>
+      ))}
+    </section>
+  );
+}
+
+function InspectionSheet({
+  object,
+  tasks,
+  onTaskSelect,
+}: {
+  object: AtlasRegistryObject;
+  tasks: AtlasTaskCard[];
+  onTaskSelect?: (task: AtlasTaskCard) => void;
+}) {
   return (
     <div className="atlas-bed-inspection-sheet">
       {object.contents.length === 0 ? <div className="atlas-inspection-empty">No current crop cycle logged.</div> : null}
@@ -151,11 +188,20 @@ function InspectionSheet({ object }: { object: AtlasRegistryObject }) {
           {content.inspection.note ? <p className="atlas-inspection-note">{content.inspection.note}</p> : null}
         </section>
       ))}
+      <BedTaskList tasks={tasks} onTaskSelect={onTaskSelect} />
     </div>
   );
 }
 
-export function BedInspectorRow({ object }: { object: AtlasRegistryObject }) {
+export function BedInspectorRow({
+  object,
+  tasks = [],
+  onTaskSelect,
+}: {
+  object: AtlasRegistryObject;
+  tasks?: AtlasTaskCard[];
+  onTaskSelect?: (task: AtlasTaskCard) => void;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const first = object.contents[0]?.inspection;
 
@@ -165,11 +211,11 @@ export function BedInspectorRow({ object }: { object: AtlasRegistryObject }) {
         <div>
           <strong>{object.label}</strong>
           <span>{cropLine(object)}</span>
-          <small>Seeded {prettyDate(object.inspection_summary?.seeded_date)} · Pinch {first ? yesNo(first.pinch_required) : EMPTY}</small>
+          <small>Seeded {prettyDate(object.inspection_summary?.seeded_date)} · Pinch {first ? yesNo(first.pinch_required) : EMPTY} · {taskLabel(tasks.length)}</small>
         </div>
         <em>{isOpen ? "close" : "open"}</em>
       </button>
-      {isOpen ? <InspectionSheet object={object} /> : null}
+      {isOpen ? <InspectionSheet object={object} tasks={tasks} onTaskSelect={onTaskSelect} /> : null}
     </article>
   );
 }
