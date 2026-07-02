@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 
 import {
@@ -13,12 +14,10 @@ import {
 import { saveAtlasInboxItem } from "@/lib/atlas/inbox-client";
 import {
   fetchAtlasZoneRegistry,
-  type AtlasObjectInspection,
-  type AtlasRegistryObject,
   type AtlasRegistryZone,
 } from "@/lib/atlas/zone-registry-client";
 
-type HomePanel = "tasks" | "calendar" | "inbox" | "zones" | null;
+type HomePanel = "tasks" | "calendar" | "inbox" | null;
 
 type CalendarEntry = {
   date: string;
@@ -83,26 +82,6 @@ function prettyDate(dateIso: string | null | undefined) {
   });
 }
 
-function prettyDateList(dates: string[]) {
-  return dates.length > 0 ? dates.map((date) => prettyDate(date)).join(", ") : "unknown";
-}
-
-function prettyRange(start: string | null | undefined, end: string | null | undefined) {
-  if (!start && !end) return "unknown";
-  if (start && end && start !== end) return `${prettyDate(start)}–${prettyDate(end)}`;
-  return prettyDate(start ?? end);
-}
-
-function yesNo(value: boolean | null | undefined) {
-  if (value === true) return "yes";
-  if (value === false) return "no";
-  return "unknown";
-}
-
-function stageLabel(stage: string | null | undefined) {
-  return (stage ?? "unknown").replaceAll("_", " ");
-}
-
 function statusLabel(status: string) {
   if (status === "done") return "Done";
   if (status === "blocked") return "Blocked";
@@ -151,74 +130,6 @@ function nextCalendarEntries(today: string) {
   return calendarEntries.filter((entry) => entry.date >= today).slice(0, 6);
 }
 
-function cropLine(object: AtlasRegistryObject) {
-  const inspection = object.inspection_summary;
-  if (!inspection) return "No current crop logged";
-  return `${inspection.crop_label} · ${stageLabel(inspection.stage)}`;
-}
-
-function inspectionRows(inspection: AtlasObjectInspection) {
-  return [
-    ["Seeded", prettyDate(inspection.seeded_date)],
-    ["Variety", inspection.variety ?? "unknown"],
-    ["Germinated", prettyDate(inspection.germinated_date)],
-    ["Weeded", prettyDateList(inspection.weeded_dates)],
-    ["Pinch", yesNo(inspection.pinch_required)],
-    ["Bloom", inspection.bloom_date ? prettyDate(inspection.bloom_date) : "unknown"],
-    [
-      "Harvest",
-      inspection.harvest_dates.length > 0
-        ? prettyDateList(inspection.harvest_dates)
-        : prettyRange(inspection.expected_harvest_watch_start, inspection.expected_harvest_watch_end),
-    ],
-    ["Clear bed", prettyDate(inspection.clear_bed_date)],
-    ["Next crop", inspection.next_crop_planned ?? "unknown"],
-  ];
-}
-
-function InspectionCard({ object }: { object: AtlasRegistryObject }) {
-  return (
-    <article className={`atlas-inspection-card ${object.inspection_summary?.unknown_count ? "needs-decisions" : ""}`}>
-      <div className="atlas-inspection-card-head">
-        <div>
-          <strong>{object.label}</strong>
-          <span>{cropLine(object)}</span>
-        </div>
-        <em>{object.object_type}</em>
-      </div>
-
-      {object.contents.length === 0 ? (
-        <div className="atlas-inspection-empty">No current crop cycle logged.</div>
-      ) : null}
-
-      {object.contents.map((content) => (
-        <section key={content.id} className="atlas-crop-cycle-sheet">
-          {object.contents.length > 1 ? (
-            <div className="atlas-crop-cycle-title">{content.content_label}</div>
-          ) : null}
-
-          <div className="atlas-inspection-grid">
-            {inspectionRows(content.inspection).map(([label, value]) => (
-              <div key={label} className={value === "unknown" ? "unknown" : ""}>
-                <span>{label}</span>
-                <strong>{value}</strong>
-              </div>
-            ))}
-          </div>
-
-          {content.inspection.unknown_fields.length > 0 ? (
-            <p className="atlas-unknown-line">
-              Unknown: {content.inspection.unknown_fields.join(", ")}
-            </p>
-          ) : null}
-
-          {content.inspection.note ? <p className="atlas-inspection-note">{content.inspection.note}</p> : null}
-        </section>
-      ))}
-    </article>
-  );
-}
-
 export default function AtlasHomePage() {
   const [cards, setCards] = useState<AtlasTaskCard[]>([]);
   const [registryZones, setRegistryZones] = useState<AtlasRegistryZone[]>([]);
@@ -227,7 +138,6 @@ export default function AtlasHomePage() {
   const [error, setError] = useState<string | null>(null);
   const [openPanel, setOpenPanel] = useState<HomePanel>(null);
   const [selectedCard, setSelectedCard] = useState<AtlasTaskCard | null>(null);
-  const [selectedZoneKey, setSelectedZoneKey] = useState<string | null>(null);
   const [resultNote, setResultNote] = useState("");
   const [createdBy, setCreatedBy] = useState("anna");
   const [savingResult, setSavingResult] = useState<AtlasTaskResult | null>(null);
@@ -304,11 +214,6 @@ export default function AtlasHomePage() {
   const nextTasks = openCards.slice(1, 4);
   const calendarEntry = currentOrNextCalendarEntry(today);
   const upcomingCalendar = nextCalendarEntries(today);
-
-  const selectedRegistryZone = useMemo(() => {
-    if (!selectedZoneKey) return null;
-    return registryZones.find((zone) => zone.stable_key === selectedZoneKey) ?? null;
-  }, [registryZones, selectedZoneKey]);
 
   const homeZones = useMemo(() => {
     const important = ["field_rows", "berry_walk_flower_rows", "barn_beds", "grow_room"];
@@ -459,11 +364,7 @@ export default function AtlasHomePage() {
             </div>
           </button>
 
-          <button
-            type="button"
-            className="atlas-home-box atlas-home-box-white"
-            onClick={() => setOpenPanel("zones")}
-          >
+          <Link href="/zones" className="atlas-home-box atlas-home-box-white atlas-home-box-link">
             <span className="atlas-home-kicker">Zones</span>
             <strong>Bed inspector</strong>
             <em>
@@ -476,7 +377,7 @@ export default function AtlasHomePage() {
                 <span key={zone.id}>{zone.label}: {zone.active_object_count}/{zone.object_count}</span>
               ))}
             </div>
-          </button>
+          </Link>
         </div>
       </section>
 
@@ -491,9 +392,7 @@ export default function AtlasHomePage() {
                     ? "Today Tasks"
                     : openPanel === "calendar"
                       ? "Calendar"
-                      : openPanel === "inbox"
-                        ? "Inbox"
-                        : "Zone Registry"}
+                      : "Inbox"}
                 </strong>
               </div>
 
@@ -592,46 +491,6 @@ export default function AtlasHomePage() {
                   </button>
 
                   {inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}
-                </section>
-              ) : null}
-
-              {openPanel === "zones" ? (
-                <section className="atlas-task-focus-section atlas-inspector-section">
-                  <span className="atlas-soft-label">Tap one zone. Inspect one place.</span>
-                  <div className="atlas-zone-list atlas-zone-accordion-list">
-                    {registryZones.map((zone) => {
-                      const isOpen = selectedRegistryZone?.id === zone.id;
-
-                      return (
-                        <article key={zone.id} className="atlas-zone-accordion-item">
-                          <button
-                            type="button"
-                            className={`atlas-zone-row ${isOpen ? "active" : ""}`}
-                            onClick={() => setSelectedZoneKey(isOpen ? null : zone.stable_key)}
-                          >
-                            <div>
-                              <span>{zone.mode_bias ?? zone.zone_type ?? "zone"}</span>
-                              <strong>{zone.label}</strong>
-                              <small>{zone.active_object_count} active · {zone.object_count} total · {zone.unknown_count ?? 0} unknown</small>
-                            </div>
-                            <div className="atlas-zone-row-counts">
-                              <b>{zone.active_object_count}</b>
-                              <em>of {zone.object_count}</em>
-                            </div>
-                          </button>
-
-                          {isOpen ? (
-                            <div className="atlas-zone-inline-object-list atlas-inspection-list">
-                              {zone.objects.length === 0 ? <div className="atlas-empty">No beds logged here yet.</div> : null}
-                              {zone.objects.map((object) => (
-                                <InspectionCard key={object.id} object={object} />
-                              ))}
-                            </div>
-                          ) : null}
-                        </article>
-                      );
-                    })}
-                  </div>
                 </section>
               ) : null}
             </div>
