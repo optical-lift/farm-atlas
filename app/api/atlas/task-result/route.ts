@@ -3,7 +3,7 @@ import { atlasSupabase } from "@/lib/atlas/supabase-server";
 
 export const dynamic = "force-dynamic";
 
-type TaskResult = "done" | "partial" | "blocked" | "needs_supplies";
+type TaskResult = "done" | "partial" | "changed" | "blocked" | "needs_supplies";
 
 type TaskResultPayload = {
   taskId?: string;
@@ -18,6 +18,8 @@ function resultLabel(result: TaskResult) {
       return "completed";
     case "partial":
       return "made progress on";
+    case "changed":
+      return "changed plan/data for";
     case "blocked":
       return "blocked";
     case "needs_supplies":
@@ -33,6 +35,8 @@ function actionTypesForResult(result: TaskResult) {
       return ["completed"];
     case "partial":
       return ["observed"];
+    case "changed":
+      return ["observed", "changed_plan"];
     case "blocked":
       return ["blocked"];
     case "needs_supplies":
@@ -49,7 +53,7 @@ export async function POST(request: NextRequest) {
     const taskId = body.taskId;
     const result = body.result;
     const note = body.note?.trim() || null;
-    const createdBy = body.createdBy?.trim() || "lex";
+    const createdBy = body.createdBy?.trim() || "anna";
 
     if (!taskId || !result) {
       return NextResponse.json(
@@ -73,7 +77,8 @@ export async function POST(request: NextRequest) {
         task_type,
         status,
         due_date,
-        unlock_text
+        unlock_text,
+        note
       `,
       )
       .eq("id", taskId)
@@ -152,6 +157,18 @@ export async function POST(request: NextRequest) {
       if (stepError) throw stepError;
     }
 
+    if (result === "partial" || result === "changed") {
+      const { error } = await atlasSupabase
+        .schema("atlas")
+        .from("tasks")
+        .update({
+          updated_at: nowIso,
+        })
+        .eq("id", taskId);
+
+      if (error) throw error;
+    }
+
     let supplyTaskId: string | null = null;
 
     if (result === "needs_supplies") {
@@ -184,7 +201,7 @@ export async function POST(request: NextRequest) {
       supplyTaskId = supplyTask.id;
     }
 
-    const summarySentence = `${todayIso} · I ${resultLabel(result)} "${task.title}"${
+    const summarySentence = `${todayIso} · ${createdBy} ${resultLabel(result)} "${task.title}"${
       note ? ` · ${note}` : ""
     }.`;
 
