@@ -409,7 +409,7 @@
   background: rgba(251, 250, 244, 0.98);
   box-shadow: 0 22px 70px rgba(54, 45, 32, 0.18);
   display: grid;
-  grid-template-rows: 58px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .atlas-task-focus-topbar {
@@ -647,6 +647,102 @@
   font-size: 12px;
   line-height: 1.25;
   font-weight: 900;
+}
+
+.atlas-home-task-hero {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.atlas-home-primary-task {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+}
+
+.atlas-home-primary-task strong {
+  font-size: clamp(23px, 5vw, 32px);
+}
+
+.atlas-home-task-title {
+  display: block;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 12px;
+  line-height: 1.18;
+  font-weight: 900;
+}
+
+.atlas-home-task-buttons {
+  position: static;
+  z-index: auto;
+  margin-top: 0;
+}
+
+.atlas-home-task-buttons button {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  border-radius: 14px;
+  padding: 6px 7px;
+}
+
+.atlas-home-task-buttons button span,
+.atlas-home-task-buttons button small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.atlas-home-task-buttons button small {
+  opacity: 0.78;
+  font-size: 9px;
+  line-height: 1.1;
+}
+
+.atlas-task-focus-topbar span,
+.atlas-task-object-row span {
+  display: block;
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.atlas-task-object-row,
+.atlas-calendar-row,
+.atlas-field-log-main {
+  display: grid;
+  justify-content: stretch;
+}
+
+.atlas-object-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-object-card strong {
+  font-size: 16px;
+}
+
+.atlas-home-note-box {
+  justify-content: space-between;
+}
+
+.atlas-home-note-box strong {
+  font-size: clamp(28px, 8vw, 44px);
 }
 
 @media (max-width: 430px) {
