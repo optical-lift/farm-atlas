@@ -10,7 +10,9 @@ type ZoneRow = {
   zone_type: string | null;
   mode_bias: string | null;
   goal_text: string | null;
+  current_state: string | null;
   sort_order: number | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 type ObjectRow = {
@@ -23,6 +25,7 @@ type ObjectRow = {
   length_ft: number | null;
   width_ft: number | null;
   sort_order: number | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 type ContentRow = {
@@ -35,6 +38,10 @@ type ContentRow = {
   confidence: string;
   note: string | null;
 };
+
+function isRegistryHidden(row: { current_state?: string | null; metadata?: Record<string, unknown> | null }) {
+  return row.current_state === "archived" || row.metadata?.registry_hidden === true;
+}
 
 export async function GET() {
   const { data: farm, error: farmError } = await atlasSupabase
@@ -54,7 +61,7 @@ export async function GET() {
   const { data: zones, error: zonesError } = await atlasSupabase
     .schema("atlas")
     .from("zones")
-    .select("id, stable_key, label, zone_type, mode_bias, goal_text, sort_order")
+    .select("id, stable_key, label, zone_type, mode_bias, goal_text, current_state, sort_order, metadata")
     .eq("farm_id", farm.id)
     .order("sort_order", { ascending: true });
 
@@ -65,10 +72,13 @@ export async function GET() {
     );
   }
 
+  const visibleZones = ((zones ?? []) as ZoneRow[]).filter((zone) => !isRegistryHidden(zone));
+  const visibleZoneIds = new Set(visibleZones.map((zone) => zone.id));
+
   const { data: objects, error: objectsError } = await atlasSupabase
     .schema("atlas")
     .from("growing_objects")
-    .select("id, zone_id, stable_key, label, object_type, object_mode, length_ft, width_ft, sort_order")
+    .select("id, zone_id, stable_key, label, object_type, object_mode, length_ft, width_ft, sort_order, metadata")
     .eq("farm_id", farm.id)
     .order("sort_order", { ascending: true });
 
@@ -79,7 +89,12 @@ export async function GET() {
     );
   }
 
-  const objectIds = (objects ?? []).map((object) => object.id);
+  const visibleObjects = ((objects ?? []) as ObjectRow[]).filter((object) => {
+    if (!object.zone_id || !visibleZoneIds.has(object.zone_id)) return false;
+    return object.metadata?.registry_hidden !== true;
+  });
+
+  const objectIds = visibleObjects.map((object) => object.id);
 
   const { data: contents, error: contentsError } = objectIds.length
     ? await atlasSupabase
@@ -107,14 +122,14 @@ export async function GET() {
 
   const objectsByZone = new Map<string, ObjectRow[]>();
 
-  ((objects ?? []) as ObjectRow[]).forEach((object) => {
+  visibleObjects.forEach((object) => {
     if (!object.zone_id) return;
     const list = objectsByZone.get(object.zone_id) ?? [];
     list.push(object);
     objectsByZone.set(object.zone_id, list);
   });
 
-  const registry = ((zones ?? []) as ZoneRow[]).map((zone) => {
+  const registry = visibleZones.map((zone) => {
     const zoneObjects = objectsByZone.get(zone.id) ?? [];
     const objectsWithContents = zoneObjects.map((object) => ({
       ...object,
