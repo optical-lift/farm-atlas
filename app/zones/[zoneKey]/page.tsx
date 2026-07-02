@@ -4,30 +4,54 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 
+import { TaskPhysicalSpaces } from "@/components/atlas/task-physical-spaces";
 import {
   BedInspectorRow,
+  prettyDate,
   stageLabel,
   zoneShortMode,
 } from "@/components/atlas/zone-inspection";
 import {
+  fetchAtlasTaskCards,
+  type AtlasTaskCard,
+} from "@/lib/atlas/task-cards-client";
+import {
   fetchAtlasZoneRegistry,
+  type AtlasRegistryObject,
   type AtlasRegistryZone,
 } from "@/lib/atlas/zone-registry-client";
+
+function statusLabel(status: string) {
+  if (status === "done") return "Done";
+  if (status === "blocked") return "Blocked";
+  if (status === "skipped") return "Skipped";
+  return "Open";
+}
+
+function objectTasks(object: AtlasRegistryObject, tasks: AtlasTaskCard[]) {
+  return tasks.filter((task) => task.objects.some((taskObject) => taskObject.object_id === object.id));
+}
 
 export default function AtlasZoneDetailPage() {
   const params = useParams<{ zoneKey: string }>();
   const zoneKey = params.zoneKey;
 
   const [zones, setZones] = useState<AtlasRegistryZone[]>([]);
+  const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<AtlasTaskCard | null>(null);
 
-  async function loadZones() {
+  async function loadZoneData() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetchAtlasZoneRegistry();
-      setZones(response.zones ?? []);
+      const [zoneResponse, taskResponse] = await Promise.all([
+        fetchAtlasZoneRegistry(),
+        fetchAtlasTaskCards(),
+      ]);
+      setZones(zoneResponse.zones ?? []);
+      setTasks((taskResponse.taskCards ?? []).filter((task) => task.status !== "archived"));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Atlas could not load this zone.");
     } finally {
@@ -36,7 +60,7 @@ export default function AtlasZoneDetailPage() {
   }
 
   useEffect(() => {
-    void loadZones();
+    void loadZoneData();
   }, []);
 
   const zone = useMemo(
@@ -49,6 +73,12 @@ export default function AtlasZoneDetailPage() {
     const index = zones.findIndex((candidate) => candidate.id === zone.id);
     return zones[(index + 1) % zones.length] ?? null;
   }, [zone, zones]);
+
+  const zoneTasks = useMemo(() => {
+    if (!zone) return [];
+    const objectIds = new Set(zone.objects.map((object) => object.id));
+    return tasks.filter((task) => task.objects.some((object) => objectIds.has(object.object_id)));
+  }, [tasks, zone]);
 
   return (
     <main className="atlas-phone-shell atlas-route-shell">
@@ -88,13 +118,14 @@ export default function AtlasZoneDetailPage() {
                 <div className="atlas-zone-detail-metrics two-only">
                   <span>{zone.active_object_count} active</span>
                   <span>{zone.object_count} total</span>
+                  <span>{zoneTasks.length} {zoneTasks.length === 1 ? "task" : "tasks"}</span>
                 </div>
               </section>
 
               <section className="atlas-zone-bed-list">
                 <div className="atlas-zone-bed-list-head">
                   <span className="atlas-home-kicker">Beds / objects</span>
-                  <p>Tap one bed to open its inspection sheet.</p>
+                  <p>Tap one bed to open its crop record and attached tasks.</p>
                 </div>
 
                 {zone.objects.length === 0 ? (
@@ -102,7 +133,12 @@ export default function AtlasZoneDetailPage() {
                 ) : null}
 
                 {zone.objects.map((object) => (
-                  <BedInspectorRow key={object.id} object={object} />
+                  <BedInspectorRow
+                    key={object.id}
+                    object={object}
+                    tasks={objectTasks(object, tasks)}
+                    onTaskSelect={setSelectedTask}
+                  />
                 ))}
               </section>
 
@@ -115,6 +151,44 @@ export default function AtlasZoneDetailPage() {
           ) : null}
         </div>
       </section>
+
+      {selectedTask ? (
+        <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true">
+          <div className="atlas-task-focus-phone">
+            <div className="atlas-task-focus-topbar">
+              <div>
+                <span className="atlas-phone-kicker">Task</span>
+                <strong>{selectedTask.zone_label ?? "Atlas"}</strong>
+              </div>
+
+              <button type="button" onClick={() => setSelectedTask(null)}>
+                Close
+              </button>
+            </div>
+
+            <div className="atlas-task-focus-body">
+              <section className="atlas-task-focus-purple">
+                <div className="atlas-task-focus-kicker">
+                  <span>{statusLabel(selectedTask.status)}</span>
+                  <span>{selectedTask.priority}</span>
+                  <span>{prettyDate(selectedTask.due_date)}</span>
+                </div>
+                <h2>{selectedTask.title}</h2>
+                {selectedTask.unlock_text ? <p>{selectedTask.unlock_text}</p> : null}
+              </section>
+
+              <TaskPhysicalSpaces task={selectedTask} zones={zones} />
+
+              {selectedTask.note ? (
+                <section className="atlas-task-focus-section">
+                  <span className="atlas-soft-label">Instructions / data</span>
+                  <p>{selectedTask.note}</p>
+                </section>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }
