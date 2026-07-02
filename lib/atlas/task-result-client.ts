@@ -1,4 +1,4 @@
-export type AtlasTaskResult = "done" | "partial" | "blocked" | "needs_supplies";
+export type AtlasTaskResult = "done" | "partial" | "changed" | "blocked" | "needs_supplies";
 
 export type AtlasTaskResultResponse = {
   ok: boolean;
