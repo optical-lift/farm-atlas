@@ -107,6 +107,89 @@
   opacity: 0.78;
 }
 
+.atlas-closeout-hero h2 {
+  font-size: 28px !important;
+}
+
+.atlas-closeout-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-closeout-card {
+  border: 1px solid var(--atlas-border);
+  border-radius: 19px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 11px;
+  display: grid;
+  gap: 8px;
+  box-shadow: 0 8px 18px rgba(58, 46, 30, 0.045);
+}
+
+.atlas-closeout-card-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.atlas-closeout-card-head strong {
+  display: block;
+  color: var(--atlas-text);
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.atlas-closeout-card-head span {
+  color: var(--atlas-muted);
+  font-size: 11px;
+  line-height: 1.1;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.atlas-closeout-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.atlas-closeout-pill-row span {
+  border: 1px solid var(--atlas-border-soft);
+  border-radius: 999px;
+  background: var(--atlas-cream);
+  color: var(--atlas-muted);
+  padding: 5px 7px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-closeout-pill-row.soft span {
+  background: rgba(246, 242, 230, 0.58);
+}
+
+.atlas-closeout-recent {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid rgba(219, 210, 197, 0.72);
+  padding-top: 8px;
+}
+
+.atlas-closeout-recent p {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1.28;
+  font-weight: 850;
+}
+
+.atlas-closeout-form textarea {
+  min-height: 72px !important;
+}
+
 @media (max-width: 700px) {
   .atlas-home-task-hero {
     padding: 13px !important;
