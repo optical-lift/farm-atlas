@@ -129,6 +129,31 @@
   color: rgba(255, 255, 255, 0.93);
 }
 
+.atlas-zone-accordion-list {
+  gap: 10px;
+}
+
+.atlas-zone-accordion-item {
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-zone-accordion-item .atlas-zone-row {
+  margin: 0;
+}
+
+.atlas-zone-inline-object-list {
+  margin-left: 10px;
+  border-left: 3px solid rgba(207, 209, 238, 0.9);
+  padding-left: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-zone-inline-object-list .atlas-live-object {
+  box-shadow: none;
+}
+
 .atlas-task-play-actions-wide {
   display: grid !important;
   grid-template-columns: repeat(2, minmax(0, 1fr));
