@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
     .from("v_task_cards")
     .select("*")
     .eq("farm_key", "elm_farm")
+    .neq("status", "archived")
     .order("due_date", { ascending: true });
 
   if (taskId) {
