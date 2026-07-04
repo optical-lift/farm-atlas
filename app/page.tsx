@@ -11,27 +11,12 @@ import {
   type AtlasCloseoutSummary,
 } from "@/lib/atlas/closeout-client";
 import { createAtlasFieldLog } from "@/lib/atlas/field-log-client";
-import {
-  fetchAtlasFarmSnapshot,
-  type AtlasFarmSnapshot,
-} from "@/lib/atlas/farm-snapshot-client";
+import { fetchAtlasFarmSnapshot, type AtlasFarmSnapshot } from "@/lib/atlas/farm-snapshot-client";
 import { fetchAtlasProjects, type AtlasProjectCard } from "@/lib/atlas/projects-client";
-import {
-  fetchAtlasTodayRhythm,
-  type AtlasRhythmBlock,
-  type AtlasWorkKey,
-} from "@/lib/atlas/rhythm-client";
-import {
-  fetchAtlasTaskCards,
-  type AtlasTaskCard,
-  type AtlasTaskCardObject,
-} from "@/lib/atlas/task-cards-client";
+import { fetchAtlasTodayRhythm, type AtlasRhythmBlock, type AtlasWorkKey } from "@/lib/atlas/rhythm-client";
+import { fetchAtlasTaskCards, type AtlasTaskCard, type AtlasTaskCardObject } from "@/lib/atlas/task-cards-client";
 import { saveAtlasInboxItem } from "@/lib/atlas/inbox-client";
-import {
-  fetchAtlasZoneRegistry,
-  type AtlasRegistryObject,
-  type AtlasRegistryZone,
-} from "@/lib/atlas/zone-registry-client";
+import { fetchAtlasZoneRegistry, type AtlasRegistryObject, type AtlasRegistryZone } from "@/lib/atlas/zone-registry-client";
 
 type HomePanel = "tasks" | "calendar" | "inbox" | "projects" | null;
 type TaskUnit = { id: string; card: AtlasTaskCard; object: AtlasTaskCardObject | null; registryObject: AtlasRegistryObject | null; zone: AtlasRegistryZone | null };
@@ -39,7 +24,6 @@ type CloseoutCardRecord = AtlasCloseoutRecord & { sourceLine?: string };
 type WeatherResponse = { ok: boolean; label?: string; rainAge?: string; daysSinceRain?: number | null; error?: string };
 type LogSeed = { workKey: AtlasWorkKey; zoneKeys: string[]; objectKeys: string[] };
 type WorkConfig = { key: AtlasWorkKey; label: string; actionTypes: string[]; defaultZoneKeys: string[]; shortZones: string };
-
 type CalendarEntry = { date: string; title: string; dayKind: string; items: string[] };
 
 const calendarEntries: CalendarEntry[] = [
@@ -143,11 +127,7 @@ function locationLine(unit: TaskUnit | null) {
 
 function completedObjectIds(card: AtlasTaskCard) {
   const captureMap = card.metadata?.capture_by_object ?? {};
-  return new Set(
-    Object.entries(captureMap)
-      .filter(([, value]) => Boolean((value as { completed_at?: unknown }).completed_at))
-      .map(([id]) => id),
-  );
+  return new Set(Object.entries(captureMap).filter(([, value]) => Boolean((value as { completed_at?: unknown }).completed_at)).map(([id]) => id));
 }
 
 function taskUnits(cards: AtlasTaskCard[], zones: AtlasRegistryZone[]) {
@@ -262,8 +242,13 @@ function unitsForBlock(block: AtlasRhythmBlock, units: TaskUnit[]) {
   });
 }
 
-function zonePreview(block: AtlasRhythmBlock, zones: AtlasRegistryZone[]) {
-  const labels = labelsForZoneKeys(zones, block.default_zone_keys).slice(0, 3);
+function suggestedUnitsForBlock(block: AtlasRhythmBlock, units: TaskUnit[], limit = 4) {
+  return unitsForBlock(block, units).slice(0, limit);
+}
+
+function zonePreview(block: AtlasRhythmBlock, zones: AtlasRegistryZone[], zoneKeys?: string[]) {
+  const keys = zoneKeys && zoneKeys.length > 0 ? zoneKeys : block.default_zone_keys;
+  const labels = labelsForZoneKeys(zones, keys).slice(0, 3);
   return labels.length ? labels.join(" · ") : workConfig(block.work_key).shortZones;
 }
 
@@ -294,10 +279,9 @@ function CloseoutCard({ summary }: { summary: AtlasCloseoutSummary }) {
 function RhythmController({ blocks, units, loading, zones, weatherLabel, seasonLabel, openLog, openTasks }: { blocks: AtlasRhythmBlock[]; units: TaskUnit[]; loading: boolean; zones: AtlasRegistryZone[]; weatherLabel: string; seasonLabel: string | null; openTasks: () => void; openLog: (seed: LogSeed) => void }) {
   const visibleBlocks = orderedRhythmBlocks(blocks, weatherLabel).slice(0, 3);
   const primary = visibleBlocks[0];
-  const primaryUnits = primary ? unitsForBlock(primary, units) : [];
-  const primaryObjectKeys = objectKeysFromUnits(primaryUnits);
-  const primaryZoneKeys = zoneKeysFromUnits(primaryUnits);
-  const primaryZones = primaryZoneKeys.length > 0 ? primaryZoneKeys : primary?.default_zone_keys ?? [];
+  const primarySuggestedUnits = primary ? suggestedUnitsForBlock(primary, units, 4) : [];
+  const primaryObjectKeys = objectKeysFromUnits(primarySuggestedUnits);
+  const primaryZoneKeys = zoneKeysFromUnits(primarySuggestedUnits);
   const rainAge = extractRainAge(weatherLabel);
 
   if (loading && units.length === 0 && blocks.length === 0) {
@@ -309,15 +293,15 @@ function RhythmController({ blocks, units, loading, zones, weatherLabel, seasonL
       <div className="atlas-task-controller-head"><div><span className="atlas-task-kicker">Today</span>{seasonLabel ? <em className="atlas-season-label">{seasonLabel}</em> : null}</div><span className="atlas-task-date">{prettyDate(todayIso())}</span></div>
       <div className="atlas-day-schedule">
         {visibleBlocks.map((block, index) => {
-          const blockUnits = unitsForBlock(block, units);
-          const objectKeys = objectKeysFromUnits(blockUnits);
-          const liveZoneKeys = zoneKeysFromUnits(blockUnits);
+          const suggestedUnits = suggestedUnitsForBlock(block, units, index === 0 ? 4 : 3);
+          const objectKeys = objectKeysFromUnits(suggestedUnits);
+          const liveZoneKeys = zoneKeysFromUnits(suggestedUnits);
           const zoneKeys = liveZoneKeys.length > 0 ? liveZoneKeys : block.default_zone_keys;
           return (
             <button type="button" key={block.id} className={index === 0 ? "atlas-day-row primary" : "atlas-day-row"} onClick={() => openLog({ workKey: block.work_key, zoneKeys, objectKeys })}>
               <small>{index + 1}</small>
               <strong>{block.display_label}</strong>
-              <span>{zonePreview(block, zones)}</span>
+              <span>{zonePreview(block, zones, zoneKeys)}</span>
               <em>{blockCue(block, weatherLabel)}</em>
               {index === 0 ? <b>log →</b> : null}
             </button>
@@ -336,15 +320,23 @@ function RhythmController({ blocks, units, loading, zones, weatherLabel, seasonL
 function FieldLogBuilder({ seed, zones, onClose, onSaved }: { seed: LogSeed; zones: AtlasRegistryZone[]; onClose: () => void; onSaved: () => void }) {
   const [workKey, setWorkKey] = useState<AtlasWorkKey>(seed.workKey);
   const [zoneKeys, setZoneKeys] = useState<string[]>(seed.zoneKeys.length > 0 ? seed.zoneKeys : workConfig(seed.workKey).defaultZoneKeys.filter((key) => zones.some((zone) => zone.stable_key === key)));
-  const [objectKeys, setObjectKeys] = useState<string[]>(seed.objectKeys);
+  const [objectKeys, setObjectKeys] = useState<string[]>(seed.objectKeys.slice(0, 4));
+  const [showMoreZones, setShowMoreZones] = useState(false);
+  const [showMoreBeds, setShowMoreBeds] = useState(false);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const selectedWork = workConfig(workKey);
   const visibleObjects = zones.flatMap((zone) => zoneKeys.includes(zone.stable_key) ? zone.objects : []);
+  const selectedZones = zones.filter((zone) => zoneKeys.includes(zone.stable_key));
+  const zoneOptions = showMoreZones ? zones : selectedZones;
+  const selectedObjects = visibleObjects.filter((object) => objectKeys.includes(object.stable_key));
+  const bedOptions = showMoreBeds ? visibleObjects : selectedObjects;
   const zoneLabels = labelsForZoneKeys(zones, zoneKeys);
   const objectLabels = labelsForObjectKeys(zones, objectKeys);
-  const summaryParts = [prettyDate(todayIso()), "I", selectedWork.label, ...zoneLabels, ...objectLabels.map(compactSpot)];
+  const summaryObjectLabels = objectLabels.slice(0, 6).map(compactSpot);
+  const summaryExtra = objectLabels.length > 6 ? [`+${objectLabels.length - 6}`] : [];
+  const summaryParts = [prettyDate(todayIso()), "I", selectedWork.label, ...zoneLabels, ...summaryObjectLabels, ...summaryExtra];
   const summarySentence = summaryParts.filter(Boolean).join(" · ");
 
   function toggleZone(key: string) {
@@ -390,8 +382,8 @@ function FieldLogBuilder({ seed, zones, onClose, onSaved }: { seed: LogSeed; zon
           <section className="atlas-task-focus-section atlas-log-compose">
             <div className="atlas-log-sentence">{summarySentence}</div>
             <div className="atlas-log-step"><span>Work</span><div className="atlas-log-chip-grid">{workConfigs.map((work) => <button key={work.key} type="button" className={work.key === workKey ? "selected" : ""} onClick={() => { setWorkKey(work.key); if (zoneKeys.length === 0) setZoneKeys(work.defaultZoneKeys.filter((key) => zones.some((zone) => zone.stable_key === key))); }}>{work.label}</button>)}</div></div>
-            <div className="atlas-log-step"><span>Zone</span><div className="atlas-log-chip-grid">{zones.map((zone) => <button key={zone.id} type="button" className={zoneKeys.includes(zone.stable_key) ? "selected" : ""} onClick={() => toggleZone(zone.stable_key)}>{zone.label}</button>)}</div></div>
-            <div className="atlas-log-step"><span>Beds</span>{visibleObjects.length === 0 ? <p className="atlas-log-muted">Choose a zone first.</p> : <div className="atlas-log-chip-grid compact">{visibleObjects.map((object) => <button key={object.id} type="button" className={objectKeys.includes(object.stable_key) ? "selected" : ""} onClick={() => toggleObject(object.stable_key)}>{compactSpot(object.label)}</button>)}</div>}</div>
+            <div className="atlas-log-step"><div className="atlas-log-step-head"><span>Zone</span><button type="button" onClick={() => setShowMoreZones((current) => !current)}>{showMoreZones ? "show less" : "add zone"}</button></div><div className="atlas-log-chip-grid">{zoneOptions.map((zone) => <button key={zone.id} type="button" className={zoneKeys.includes(zone.stable_key) ? "selected" : ""} onClick={() => toggleZone(zone.stable_key)}>{zone.label}</button>)}</div></div>
+            <div className="atlas-log-step"><div className="atlas-log-step-head"><span>Beds</span><button type="button" onClick={() => setShowMoreBeds((current) => !current)}>{showMoreBeds ? "show less" : "add more"}</button></div>{visibleObjects.length === 0 ? <p className="atlas-log-muted">Choose a zone first.</p> : bedOptions.length === 0 ? <p className="atlas-log-muted">No beds selected.</p> : <div className={`atlas-log-chip-grid compact ${showMoreBeds ? "expanded" : "suggested"}`}>{bedOptions.map((object) => <button key={object.id} type="button" className={objectKeys.includes(object.stable_key) ? "selected" : ""} onClick={() => toggleObject(object.stable_key)}>{compactSpot(object.label)}</button>)}</div>}</div>
             <div className="atlas-add-form"><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Note" /></div>
             <button type="button" className="atlas-zone-action" style={{ width: "100%", marginTop: 12 }} disabled={saving} onClick={() => void saveLog()}>{saving ? "Saving" : "Save field log"}</button>
             {message ? <p className="atlas-task-result-message">{message}</p> : null}
