@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
@@ -186,6 +186,7 @@ export default function AtlasTaskPage() {
   const [error, setError] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const [message, setMessage] = useState<string | null>(null);
+  const activeTaskAnchorRef = useRef<HTMLDivElement | null>(null);
   const today = todayIso();
   const nextWeek = addDaysIso(today, 7);
 
@@ -232,6 +233,23 @@ export default function AtlasTaskPage() {
     return todayTasks[0] ?? nextTasks[0] ?? openTasks[0] ?? null;
   }, [matchingLane, nextTasks, openTasks, selectedTaskId, tasks, todayTasks]);
 
+  function scrollToActiveTask() {
+    window.setTimeout(() => {
+      activeTaskAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  }
+
+  function selectTask(taskId: string) {
+    setSelectedTaskId(taskId);
+    scrollToActiveTask();
+  }
+
+  function selectLane(lane: LaneKey) {
+    setSelectedLane(lane);
+    setSelectedTaskId(null);
+    scrollToActiveTask();
+  }
+
   async function handleTaskChanged() {
     await loadTasks();
     setSelectedTaskId(null);
@@ -271,7 +289,7 @@ export default function AtlasTaskPage() {
             <div className="atlas-task-page-lanes">
               {(Object.keys(laneLabels) as LaneKey[]).map((lane) => {
                 const count = openTasks.filter((task) => laneForTask(task) === lane).length;
-                return <button key={lane} type="button" className={selectedLane === lane ? "selected" : ""} onClick={() => { setSelectedLane(lane); setSelectedTaskId(null); }}>{laneLabels[lane]} <b>{count}</b></button>;
+                return <button key={lane} type="button" className={selectedLane === lane ? "selected" : ""} onClick={() => selectLane(lane)}>{laneLabels[lane]} <b>{count}</b></button>;
               })}
             </div>
           </section>
@@ -280,16 +298,16 @@ export default function AtlasTaskPage() {
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
           {message ? <div className="atlas-task-page-empty">{message}</div> : null}
           {!loading && !selectedTask ? <div className="atlas-task-page-empty">No open tasks.</div> : null}
-          {selectedTask ? <ActiveTaskCard task={selectedTask} onChange={handleTaskChanged} /> : null}
+          {selectedTask ? <div ref={activeTaskAnchorRef} className="atlas-task-page-active-anchor"><ActiveTaskCard task={selectedTask} onChange={handleTaskChanged} /></div> : null}
 
           <section className="atlas-task-page-section">
             <div className="atlas-task-page-section-head"><span>Today</span><small>{todayTasks.length}</small></div>
-            {todayTasks.length === 0 ? <p className="atlas-task-page-muted">No open tasks due today.</p> : todayTasks.map((task) => <TaskSummaryButton key={task.task_id} task={task} selected={task.task_id === selectedTask?.task_id} onSelect={() => setSelectedTaskId(task.task_id)} />)}
+            {todayTasks.length === 0 ? <p className="atlas-task-page-muted">No open tasks due today.</p> : todayTasks.map((task) => <TaskSummaryButton key={task.task_id} task={task} selected={task.task_id === selectedTask?.task_id} onSelect={() => selectTask(task.task_id)} />)}
           </section>
 
           <section className="atlas-task-page-section">
             <div className="atlas-task-page-section-head"><span>Next 7 Days</span><small>{nextTasks.length}</small></div>
-            {nextTasks.length === 0 ? <p className="atlas-task-page-muted">No scheduled tasks in the next week.</p> : nextTasks.map((task) => <TaskSummaryButton key={task.task_id} task={task} selected={task.task_id === selectedTask?.task_id} onSelect={() => setSelectedTaskId(task.task_id)} />)}
+            {nextTasks.length === 0 ? <p className="atlas-task-page-muted">No scheduled tasks in the next week.</p> : nextTasks.map((task) => <TaskSummaryButton key={task.task_id} task={task} selected={task.task_id === selectedTask?.task_id} onSelect={() => selectTask(task.task_id)} />)}
           </section>
         </div>
       </section>
