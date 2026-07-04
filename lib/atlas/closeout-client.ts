@@ -15,6 +15,21 @@ export type AtlasCloseoutCounts = {
   closeouts: number;
 };
 
+export type AtlasCloseoutRecord = {
+  id: string;
+  date: string;
+  zone: string | null;
+  spot: string | null;
+  label: string;
+  action: string | null;
+  crop: string | null;
+  variety: string | null;
+  status: string | null;
+  note: string | null;
+  next: string | null;
+  kind: string | null;
+};
+
 export type AtlasCloseoutSummary = {
   period: AtlasCloseoutPeriod;
   label: string;
@@ -23,6 +38,7 @@ export type AtlasCloseoutSummary = {
   counts: AtlasCloseoutCounts;
   recent: string[];
   carryForward: string[];
+  records: AtlasCloseoutRecord[];
 };
 
 export type AtlasCloseoutResponse = {
@@ -57,7 +73,6 @@ export async function saveAtlasCloseout(payload: {
   note: string;
   carryForward?: string;
   nextFocus?: string;
-  createdBy?: string;
 }): Promise<AtlasCloseoutSaveResponse> {
   const response = await fetch("/api/atlas/closeout", {
     method: "POST",
