@@ -1,0 +1,307 @@
+.atlas-task-page-shell {
+  min-height: 100vh;
+  background: #f7f1e7;
+  color: var(--atlas-text);
+  display: flex;
+  justify-content: center;
+  padding: 18px 12px 44px;
+}
+
+.atlas-task-page-phone {
+  width: min(100%, 520px);
+  display: grid;
+  gap: 14px;
+}
+
+.atlas-task-page-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 2px 0;
+}
+
+.atlas-task-page-top div {
+  display: grid;
+  gap: 1px;
+}
+
+.atlas-task-page-top span,
+.atlas-task-page-kicker span,
+.atlas-task-page-section-head span {
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.atlas-task-page-top strong {
+  color: var(--atlas-text);
+  font-size: 26px;
+  line-height: 0.95;
+  font-weight: 950;
+  letter-spacing: -0.055em;
+}
+
+.atlas-task-page-top a {
+  border: 1px solid var(--atlas-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--atlas-muted);
+  padding: 8px 11px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.atlas-task-page-hero,
+.atlas-task-page-active,
+.atlas-task-page-section {
+  border: 1px solid var(--atlas-border);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 14px 28px rgba(58, 46, 30, 0.055);
+}
+
+.atlas-task-page-hero {
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.atlas-task-page-hero > span {
+  color: #858bb8;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.atlas-task-page-hero h2 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: clamp(40px, 12vw, 64px);
+  line-height: 0.86;
+  font-weight: 950;
+  letter-spacing: -0.075em;
+}
+
+.atlas-task-page-hero p,
+.atlas-task-page-active > p,
+.atlas-task-page-row span,
+.atlas-task-page-muted,
+.atlas-task-page-message {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.atlas-task-page-lanes {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 1px;
+}
+
+.atlas-task-page-lanes button {
+  border: 1px solid rgba(139, 145, 194, 0.24);
+  border-radius: 999px;
+  background: rgba(167, 171, 214, 0.14);
+  color: var(--atlas-text);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 10px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.atlas-task-page-lanes button.selected {
+  background: rgba(167, 171, 214, 0.34);
+}
+
+.atlas-task-page-lanes b {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  padding: 3px 6px;
+  font-size: 11px;
+}
+
+.atlas-task-page-active {
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.atlas-task-page-kicker,
+.atlas-task-page-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.atlas-task-page-kicker small,
+.atlas-task-page-section-head small {
+  border-radius: 999px;
+  background: rgba(167, 171, 214, 0.2);
+  color: var(--atlas-text);
+  padding: 6px 9px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-task-page-active h1 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: clamp(32px, 9vw, 48px);
+  line-height: 0.94;
+  font-weight: 950;
+  letter-spacing: -0.065em;
+}
+
+.atlas-task-page-context-grid {
+  display: grid;
+  gap: 9px;
+}
+
+.atlas-task-page-context-grid section {
+  border: 1px solid var(--atlas-border-soft);
+  border-radius: 18px;
+  background: rgba(246, 242, 230, 0.54);
+  padding: 12px;
+  display: grid;
+  gap: 5px;
+}
+
+.atlas-task-page-context-grid span {
+  color: #858bb8;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.atlas-task-page-context-grid p {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 13px;
+  line-height: 1.22;
+  font-weight: 850;
+}
+
+.atlas-task-page-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.atlas-task-page-actions button {
+  border: 1px solid var(--atlas-border);
+  border-radius: 18px;
+  background: rgba(246, 242, 230, 0.72);
+  color: var(--atlas-muted);
+  padding: 13px 10px;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-task-page-actions button.done {
+  background: rgba(214, 225, 177, 0.62);
+  color: #515b34;
+}
+
+.atlas-task-page-actions button.blocked {
+  background: rgba(225, 181, 165, 0.42);
+  color: #835345;
+}
+
+.atlas-task-page-section {
+  padding: 15px;
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-task-page-row {
+  width: 100%;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.76);
+  padding: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  text-align: left;
+}
+
+.atlas-task-page-row.selected {
+  background: rgba(167, 171, 214, 0.18);
+}
+
+.atlas-task-page-row div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.atlas-task-page-row strong {
+  color: var(--atlas-text);
+  font-size: 17px;
+  line-height: 1.02;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.atlas-task-page-row small {
+  align-self: start;
+  border-radius: 999px;
+  background: rgba(246, 242, 230, 0.72);
+  color: var(--atlas-muted);
+  padding: 6px 8px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.atlas-task-page-empty {
+  border: 1px solid var(--atlas-border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.76);
+  padding: 16px;
+  color: var(--atlas-muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.atlas-task-page-empty.error {
+  background: rgba(225, 181, 165, 0.26);
+  color: #835345;
+}
+
+@media (max-width: 480px) {
+  .atlas-task-page-shell {
+    padding: 14px 10px 36px;
+  }
+
+  .atlas-task-page-active,
+  .atlas-task-page-hero {
+    border-radius: 24px;
+    padding: 15px;
+  }
+
+  .atlas-task-page-section {
+    border-radius: 22px;
+  }
+}
