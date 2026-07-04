@@ -14,6 +14,21 @@ export type AtlasProjectStepCard = {
   blocker_text: string | null;
 };
 
+export type AtlasProjectTaskCard = {
+  task_id: string;
+  task_title: string;
+  task_type: string | null;
+  task_status: string;
+  task_priority: string | null;
+  task_due_date: string | null;
+  zone_key: string | null;
+  zone_label: string | null;
+  unlock_text: string | null;
+  blocker_text: string | null;
+  note: string | null;
+  link_reason: string;
+};
+
 export type AtlasProjectCard = {
   farm_key: string;
 
@@ -50,6 +65,7 @@ export type AtlasProjectCard = {
   next_due_date: string | null;
 
   steps: AtlasProjectStepCard[];
+  current_tasks: AtlasProjectTaskCard[];
 };
 
 export type AtlasProjectsResponse = {
