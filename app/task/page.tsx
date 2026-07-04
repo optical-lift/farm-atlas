@@ -252,7 +252,7 @@ export default function AtlasTaskPage() {
   }
 
   return (
-    <main className="atlas-phone-shell atlas-task-page-shell">
+    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
           <Link href="/" className="atlas-phone-brand atlas-task-header-brand">
@@ -263,33 +263,35 @@ export default function AtlasTaskPage() {
           <button type="button" className="atlas-note-plus" aria-label="Add task note" onClick={() => void addHeaderNote()}>+</button>
         </header>
 
-        <section className="atlas-task-page-hero">
-          <span>Today · {prettyDate(today)}</span>
-          <h2>Production Setup</h2>
-          <p>{todayTasks.length} today · {nextTasks.length} next 7 days</p>
-          <div className="atlas-task-page-lanes">
-            {(Object.keys(laneLabels) as LaneKey[]).map((lane) => {
-              const count = openTasks.filter((task) => laneForTask(task) === lane).length;
-              return <button key={lane} type="button" className={selectedLane === lane ? "selected" : ""} onClick={() => { setSelectedLane(lane); setSelectedTaskId(null); }}>{laneLabels[lane]} <b>{count}</b></button>;
-            })}
-          </div>
-        </section>
+        <div className="atlas-task-page-body">
+          <section className="atlas-task-page-hero">
+            <span>Today · {prettyDate(today)}</span>
+            <h2>Production Setup</h2>
+            <p>{todayTasks.length} today · {nextTasks.length} next 7 days</p>
+            <div className="atlas-task-page-lanes">
+              {(Object.keys(laneLabels) as LaneKey[]).map((lane) => {
+                const count = openTasks.filter((task) => laneForTask(task) === lane).length;
+                return <button key={lane} type="button" className={selectedLane === lane ? "selected" : ""} onClick={() => { setSelectedLane(lane); setSelectedTaskId(null); }}>{laneLabels[lane]} <b>{count}</b></button>;
+              })}
+            </div>
+          </section>
 
-        {loading ? <div className="atlas-task-page-empty">Loading tasks.</div> : null}
-        {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
-        {message ? <div className="atlas-task-page-empty">{message}</div> : null}
-        {!loading && !selectedTask ? <div className="atlas-task-page-empty">No open tasks.</div> : null}
-        {selectedTask ? <ActiveTaskCard task={selectedTask} onChange={handleTaskChanged} /> : null}
+          {loading ? <div className="atlas-task-page-empty">Loading tasks.</div> : null}
+          {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
+          {message ? <div className="atlas-task-page-empty">{message}</div> : null}
+          {!loading && !selectedTask ? <div className="atlas-task-page-empty">No open tasks.</div> : null}
+          {selectedTask ? <ActiveTaskCard task={selectedTask} onChange={handleTaskChanged} /> : null}
 
-        <section className="atlas-task-page-section">
-          <div className="atlas-task-page-section-head"><span>Today</span><small>{todayTasks.length}</small></div>
-          {todayTasks.length === 0 ? <p className="atlas-task-page-muted">No open tasks due today.</p> : todayTasks.map((task) => <TaskSummaryButton key={task.task_id} task={task} selected={task.task_id === selectedTask?.task_id} onSelect={() => setSelectedTaskId(task.task_id)} />)}
-        </section>
+          <section className="atlas-task-page-section">
+            <div className="atlas-task-page-section-head"><span>Today</span><small>{todayTasks.length}</small></div>
+            {todayTasks.length === 0 ? <p className="atlas-task-page-muted">No open tasks due today.</p> : todayTasks.map((task) => <TaskSummaryButton key={task.task_id} task={task} selected={task.task_id === selectedTask?.task_id} onSelect={() => setSelectedTaskId(task.task_id)} />)}
+          </section>
 
-        <section className="atlas-task-page-section">
-          <div className="atlas-task-page-section-head"><span>Next 7 Days</span><small>{nextTasks.length}</small></div>
-          {nextTasks.length === 0 ? <p className="atlas-task-page-muted">No scheduled tasks in the next week.</p> : nextTasks.map((task) => <TaskSummaryButton key={task.task_id} task={task} selected={task.task_id === selectedTask?.task_id} onSelect={() => setSelectedTaskId(task.task_id)} />)}
-        </section>
+          <section className="atlas-task-page-section">
+            <div className="atlas-task-page-section-head"><span>Next 7 Days</span><small>{nextTasks.length}</small></div>
+            {nextTasks.length === 0 ? <p className="atlas-task-page-muted">No scheduled tasks in the next week.</p> : nextTasks.map((task) => <TaskSummaryButton key={task.task_id} task={task} selected={task.task_id === selectedTask?.task_id} onSelect={() => setSelectedTaskId(task.task_id)} />)}
+          </section>
+        </div>
       </section>
     </main>
   );
