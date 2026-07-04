@@ -1,11 +1,23 @@
 .atlas-task-page-shell {
-  padding: 8px;
+  padding: 0 !important;
+  background: rgba(251, 250, 244, 0.96) !important;
 }
 
 .atlas-task-page-phone {
-  min-height: calc(100svh - 16px);
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100svh !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: rgba(251, 250, 244, 0.96) !important;
   display: grid;
   grid-template-rows: 58px minmax(0, 1fr);
+}
+
+.atlas-task-page-phone > .atlas-phone-top {
+  border-radius: 0 !important;
 }
 
 .atlas-task-page-body {
@@ -283,7 +295,7 @@
 
 @media (max-width: 480px) {
   .atlas-task-page-shell {
-    padding: 8px;
+    padding: 0 !important;
   }
 
   .atlas-task-page-hero,
