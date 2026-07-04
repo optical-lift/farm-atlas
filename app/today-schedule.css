@@ -5,12 +5,12 @@
 
 .atlas-task-controller-head {
   align-items: start !important;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .atlas-task-kicker {
-  color: rgba(255, 255, 255, 0.58) !important;
-  font-size: 12px !important;
+  color: rgba(255, 255, 255, 0.62) !important;
+  font-size: 13px !important;
   letter-spacing: 0.25em !important;
 }
 
@@ -41,27 +41,19 @@
   grid-template-columns: 1fr !important;
   grid-template-rows: repeat(3, minmax(0, 1fr));
   align-content: stretch !important;
-  gap: 8px !important;
+  gap: 10px !important;
   min-height: 0;
   height: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.10);
-  padding: 46px 14px 14px;
-  overflow: hidden;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  overflow: visible;
 }
 
 .atlas-day-schedule::before {
-  content: "Today\2019s Schedule";
-  position: absolute;
-  top: 16px;
-  left: 18px;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 12px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: 0.19em;
-  text-transform: uppercase;
+  display: none !important;
+  content: none !important;
 }
 
 .atlas-day-row,
@@ -69,11 +61,11 @@
   position: relative;
   min-height: 0 !important;
   height: 100%;
-  border-radius: 21px !important;
-  border: 1px solid rgba(255, 255, 255, 0.17) !important;
-  background: rgba(126, 132, 187, 0.31) !important;
+  border-radius: 24px !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  background: rgba(126, 132, 187, 0.32) !important;
   color: #fff;
-  padding: 25px 18px 16px 18px !important;
+  padding: 27px 18px 17px 18px !important;
   display: grid !important;
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-areas:
@@ -86,15 +78,16 @@
 }
 
 .atlas-day-row.primary {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-color: rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.34) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
 .atlas-day-row::before {
   position: absolute;
-  top: 11px;
+  top: 12px;
   left: 18px;
-  color: rgba(255, 255, 255, 0.46);
+  color: rgba(255, 255, 255, 0.48);
   font-size: 9px;
   line-height: 1;
   font-weight: 950;
@@ -135,7 +128,7 @@
 .atlas-day-row.primary strong {
   grid-area: title;
   color: #fff;
-  font-size: clamp(24px, 5.8vw, 34px) !important;
+  font-size: clamp(25px, 6vw, 36px) !important;
   line-height: 0.93;
   font-weight: 950;
   letter-spacing: -0.055em;
@@ -143,7 +136,7 @@
 
 .atlas-day-row span {
   grid-area: zones;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.83);
   font-size: 14px;
   line-height: 1.05;
   font-weight: 850;
@@ -201,26 +194,18 @@
   }
 
   .atlas-day-schedule {
-    border-radius: 23px;
-    padding: 38px 10px 10px;
-    gap: 7px !important;
-  }
-
-  .atlas-day-schedule::before {
-    top: 13px;
-    left: 14px;
-    font-size: 10px;
+    gap: 8px !important;
   }
 
   .atlas-day-row,
   .atlas-day-row.primary {
-    border-radius: 18px !important;
-    padding: 22px 62px 12px 13px !important;
+    border-radius: 20px !important;
+    padding: 24px 62px 13px 13px !important;
     column-gap: 10px;
   }
 
   .atlas-day-row::before {
-    top: 9px;
+    top: 10px;
     left: 14px;
     font-size: 7.5px;
   }
@@ -234,7 +219,7 @@
 
   .atlas-day-row strong,
   .atlas-day-row.primary strong {
-    font-size: clamp(20px, 6.5vw, 27px) !important;
+    font-size: clamp(21px, 6.7vw, 28px) !important;
   }
 
   .atlas-day-row span {
