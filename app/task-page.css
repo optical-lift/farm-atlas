@@ -1,16 +1,31 @@
 .atlas-task-page-shell {
-  min-height: 100vh;
-  background: #f7f1e7;
+  min-height: 100svh;
+  padding: 8px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(188, 196, 220, 0.4), transparent 28%),
+    radial-gradient(circle at 88% 10%, rgba(207, 214, 175, 0.28), transparent 24%),
+    var(--atlas-bg);
   color: var(--atlas-text);
-  display: flex;
-  justify-content: center;
-  padding: 18px 12px 44px;
 }
 
 .atlas-task-page-phone {
-  width: min(100%, 520px);
+  width: min(100%, 430px);
+  margin: 0 auto;
   display: grid;
   gap: 10px;
+}
+
+.atlas-task-page-phone > :not(.atlas-phone-top) {
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.atlas-task-page-phone > .atlas-phone-top + * {
+  margin-top: 10px;
+}
+
+.atlas-task-page-phone > :last-child {
+  margin-bottom: 10px;
 }
 
 .atlas-task-header-brand,
@@ -280,7 +295,7 @@
 
 @media (max-width: 480px) {
   .atlas-task-page-shell {
-    padding: 14px 10px 36px;
+    padding: 8px;
   }
 
   .atlas-task-page-hero,
