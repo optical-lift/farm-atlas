@@ -29,6 +29,11 @@ type TaskRow = {
   metadata: Record<string, unknown> | null;
 };
 
+type ObjectStateRow = {
+  object_id: string;
+  metadata: Record<string, unknown> | null;
+};
+
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -37,6 +42,25 @@ function nextStatus(outcome: Outcome) {
   if (outcome === "done") return "done";
   if (outcome === "blocked") return "blocked";
   return "open";
+}
+
+function actionTypesFor(task: TaskRow, outcome: Outcome, laneKey: string | null, workKey: string | null) {
+  return Array.from(new Set([`task_${outcome}`, laneKey, workKey, task.task_type].filter(Boolean) as string[]));
+}
+
+function shouldMarkChecked(task: TaskRow, laneKey: string | null) {
+  const text = `${laneKey ?? ""} ${task.task_type ?? ""} ${task.title}`.toLowerCase();
+  return text.includes("verify") || text.includes("check") || text.includes("confirm") || text.includes("count") || text.includes("germin") || text.includes("mark");
+}
+
+function shouldMarkWeeded(task: TaskRow, laneKey: string | null) {
+  const text = `${laneKey ?? ""} ${task.task_type ?? ""} ${task.title}`.toLowerCase();
+  return text.includes("weed") || text.includes("hoe");
+}
+
+function shouldMarkWatered(task: TaskRow, laneKey: string | null) {
+  const text = `${laneKey ?? ""} ${task.task_type ?? ""} ${task.title}`.toLowerCase();
+  return text.includes("water");
 }
 
 async function getTask(body: Body) {
@@ -54,6 +78,50 @@ async function getTask(body: Body) {
   return data[0] as TaskRow;
 }
 
+async function getTaskObjectIds(taskId: string) {
+  const { data, error } = await atlasSupabase.schema("atlas").from("task_objects").select("object_id").eq("task_id", taskId);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => row.object_id as string).filter(Boolean);
+}
+
+async function updateObjectMemory(task: TaskRow, objectIds: string[], outcome: Outcome, note: string | null, laneKey: string | null, workKey: string | null, now: string) {
+  if (objectIds.length === 0) return;
+  const today = now.slice(0, 10);
+  const { data, error } = await atlasSupabase.schema("atlas").from("object_state").select("object_id, metadata").in("object_id", objectIds);
+  if (error) throw new Error(error.message);
+
+  const existing = new Map((data ?? []).map((row) => [(row as ObjectStateRow).object_id, (row as ObjectStateRow).metadata ?? {}]));
+  const rows = objectIds.map((objectId) => {
+    const metadata = {
+      ...(existing.get(objectId) ?? {}),
+      last_task_event: {
+        task_id: task.id,
+        task_title: task.title,
+        outcome,
+        note,
+        lane_key: laneKey,
+        work_key: workKey,
+        recorded_at: now,
+      },
+    };
+
+    return {
+      object_id: objectId,
+      farm_id: task.farm_id,
+      last_touched_at: today,
+      last_checked_at: shouldMarkChecked(task, laneKey) ? today : undefined,
+      last_weeded_at: shouldMarkWeeded(task, laneKey) ? today : undefined,
+      last_watered_at: shouldMarkWatered(task, laneKey) ? today : undefined,
+      decision_required: outcome === "blocked" ? true : outcome === "done" ? false : undefined,
+      metadata,
+      updated_at: now,
+    };
+  });
+
+  const { error: upsertError } = await atlasSupabase.schema("atlas").from("object_state").upsert(rows, { onConflict: "object_id" });
+  if (upsertError) throw new Error(upsertError.message);
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as Body;
@@ -66,14 +134,18 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
     const note = clean(body.note) || null;
     const reason = clean(body.reason) || null;
+    const laneKey = clean(body.laneKey) || null;
+    const workKey = clean(body.workKey) || null;
+    const objectIds = await getTaskObjectIds(task.id);
     const metadata = {
       ...(task.metadata ?? {}),
       last_outcome: {
         outcome,
         reason,
         note,
-        lane_key: clean(body.laneKey) || null,
-        work_key: clean(body.workKey) || null,
+        lane_key: laneKey,
+        work_key: workKey,
+        object_ids: objectIds,
         recorded_at: now,
       },
       outcome_history_count: typeof task.metadata?.outcome_history_count === "number" ? task.metadata.outcome_history_count + 1 : 1,
@@ -87,12 +159,12 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await atlasSupabase.schema("atlas").from("tasks").update(updatePayload).eq("id", task.id);
     if (updateError) throw new Error(updateError.message);
 
-    const { error: eventError } = await atlasSupabase.schema("atlas").from("task_outcome_events").insert({
+    const { data: eventData, error: eventError } = await atlasSupabase.schema("atlas").from("task_outcome_events").insert({
       farm_id: task.farm_id,
       task_id: task.id,
       outcome,
-      lane_key: clean(body.laneKey) || null,
-      work_key: clean(body.workKey) || null,
+      lane_key: laneKey,
+      work_key: workKey,
       blocker_reason: reason,
       note,
       task_title: task.title,
@@ -101,11 +173,34 @@ export async function POST(request: NextRequest) {
       due_date: task.due_date,
       priority: task.priority,
       source: "atlas_task_outcome",
-      metadata: { prior_status: task.status },
-    });
+      metadata: { prior_status: task.status, object_ids: objectIds },
+    }).select("id").single();
     if (eventError) throw new Error(eventError.message);
 
-    return NextResponse.json({ ok: true, taskId: task.id, outcome, status: nextStatus(outcome) });
+    const eventId = eventData?.id as string | undefined;
+    const logSummary = [task.title, outcome === "done" ? "done" : outcome, note].filter(Boolean).join(" · ");
+    const { error: logError } = await atlasSupabase.schema("atlas").from("field_logs").insert({
+      farm_id: task.farm_id,
+      log_date: now.slice(0, 10),
+      action_types: actionTypesFor(task, outcome, laneKey, workKey),
+      summary_sentence: logSummary,
+      note,
+      source: "atlas_task_board",
+      metadata: {
+        task_id: task.id,
+        task_title: task.title,
+        task_outcome_event_id: eventId,
+        outcome,
+        lane_key: laneKey,
+        work_key: workKey,
+        object_ids: objectIds,
+      },
+    });
+    if (logError) throw new Error(logError.message);
+
+    await updateObjectMemory(task, objectIds, outcome, note, laneKey, workKey, now);
+
+    return NextResponse.json({ ok: true, taskId: task.id, outcome, status: nextStatus(outcome), eventId });
   } catch (error) {
     return NextResponse.json({ ok: false, error: "Atlas task outcome failed.", details: error instanceof Error ? error.message : "Unknown error." }, { status: 500 });
   }
