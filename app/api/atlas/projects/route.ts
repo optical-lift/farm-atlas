@@ -61,8 +61,8 @@ type TaskRow = {
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const statusRank: Record<string, number> = { open: 0, blocked: 1, done: 2, archived: 3 };
 
-function sortValue(task: { status: string; due_date: string | null; priority: string | null; task_title: string; sort_order: number }) {
-  return `${statusRank[task.status] ?? 9}-${task.due_date ?? "9999-12-31"}-${priorityRank[task.priority ?? "normal"] ?? 9}-${String(task.sort_order).padStart(4, "0")}-${task.task_title}`;
+function sortValue(task: { task_status: string; task_due_date: string | null; task_priority: string | null; task_title: string; sort_order: number }) {
+  return `${statusRank[task.task_status] ?? 9}-${task.task_due_date ?? "9999-12-31"}-${priorityRank[task.task_priority ?? "normal"] ?? 9}-${String(task.sort_order).padStart(4, "0")}-${task.task_title}`;
 }
 
 function asLegacyStep(task: {
