@@ -2,20 +2,32 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-type GeoResult = {
-  name?: string;
-  latitude?: number;
-  longitude?: number;
-  country_code?: string;
-  admin1?: string;
-};
-
 type ForecastResponse = {
   current?: {
     temperature_2m?: number;
     weather_code?: number;
   };
+  daily?: {
+    time?: string[];
+    precipitation_sum?: number[];
+  };
 };
+
+type RainPoint = {
+  name: string;
+  latitude: number;
+  longitude: number;
+};
+
+const realRainThresholdIn = 0.2;
+
+const rainPoints: RainPoint[] = [
+  { name: "Marshfield", latitude: 37.3387, longitude: -92.9071 },
+  { name: "Niangua", latitude: 37.3898, longitude: -92.8310 },
+  { name: "Conway", latitude: 37.5020, longitude: -92.8227 },
+  { name: "Strafford", latitude: 37.2684, longitude: -93.1171 },
+  { name: "Rogersville", latitude: 37.1170, longitude: -93.0557 },
+];
 
 const weatherCodeLabels: Record<number, string> = {
   0: "clear",
@@ -53,43 +65,75 @@ function weatherLabel(code: number | undefined) {
   return weatherCodeLabels[code] ?? "weather";
 }
 
-async function resolveMarshfield() {
-  const geoUrl = new URL("https://geocoding-api.open-meteo.com/v1/search");
-  geoUrl.searchParams.set("name", "Marshfield");
-  geoUrl.searchParams.set("count", "10");
-  geoUrl.searchParams.set("language", "en");
-  geoUrl.searchParams.set("format", "json");
+function forecastUrlFor(point: RainPoint) {
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.searchParams.set("latitude", String(point.latitude));
+  url.searchParams.set("longitude", String(point.longitude));
+  url.searchParams.set("current", "temperature_2m,weather_code");
+  url.searchParams.set("daily", "precipitation_sum");
+  url.searchParams.set("temperature_unit", "fahrenheit");
+  url.searchParams.set("precipitation_unit", "inch");
+  url.searchParams.set("timezone", "America/Chicago");
+  url.searchParams.set("past_days", "14");
+  url.searchParams.set("forecast_days", "1");
+  return url;
+}
 
-  const response = await fetch(geoUrl, { cache: "no-store" });
-  if (!response.ok) throw new Error("Weather location lookup failed.");
+function dryLabel(daysSinceRain: number | null) {
+  if (daysSinceRain === null) return "rain age unknown";
+  if (daysSinceRain === 0) return "rained today";
+  if (daysSinceRain === 1) return "rained yesterday";
+  return `${daysSinceRain} days dry`;
+}
 
-  const payload = (await response.json()) as { results?: GeoResult[] };
-  const match = payload.results?.find((result) => result.country_code === "US" && result.admin1 === "Missouri") ?? payload.results?.[0];
-  if (typeof match?.latitude !== "number" || typeof match.longitude !== "number") throw new Error("Marshfield weather location not found.");
-
-  return { latitude: match.latitude, longitude: match.longitude };
+function daysBetween(dateIso: string, todayIso: string) {
+  const oneDay = 24 * 60 * 60 * 1000;
+  const date = new Date(`${dateIso}T12:00:00`);
+  const today = new Date(`${todayIso}T12:00:00`);
+  return Math.max(0, Math.round((today.getTime() - date.getTime()) / oneDay));
 }
 
 export async function GET() {
   try {
-    const { latitude, longitude } = await resolveMarshfield();
-    const forecastUrl = new URL("https://api.open-meteo.com/v1/forecast");
-    forecastUrl.searchParams.set("latitude", String(latitude));
-    forecastUrl.searchParams.set("longitude", String(longitude));
-    forecastUrl.searchParams.set("current", "temperature_2m,weather_code");
-    forecastUrl.searchParams.set("temperature_unit", "fahrenheit");
-    forecastUrl.searchParams.set("timezone", "America/Chicago");
+    const responses = await Promise.all(
+      rainPoints.map(async (point) => {
+        const response = await fetch(forecastUrlFor(point), { cache: "no-store" });
+        if (!response.ok) throw new Error(`Weather lookup failed for ${point.name}.`);
+        return (await response.json()) as ForecastResponse;
+      }),
+    );
 
-    const response = await fetch(forecastUrl, { cache: "no-store" });
-    if (!response.ok) throw new Error("Weather forecast lookup failed.");
-
-    const payload = (await response.json()) as ForecastResponse;
-    const temp = payload.current?.temperature_2m;
+    const primary = responses[0];
+    const temp = primary.current?.temperature_2m;
     const roundedTemp = typeof temp === "number" ? Math.round(temp) : null;
-    const condition = weatherLabel(payload.current?.weather_code);
-    const label = roundedTemp === null ? `${condition} · Marshfield` : `${condition} · ${roundedTemp}° · Marshfield`;
+    const condition = weatherLabel(primary.current?.weather_code);
+    const dates = primary.daily?.time ?? [];
+    const todayIso = dates[dates.length - 1] ?? new Date().toISOString().slice(0, 10);
 
-    return NextResponse.json({ ok: true, label, condition, temperatureF: roundedTemp });
+    const averagedRain = dates.map((date, index) => {
+      const values = responses
+        .map((payload) => payload.daily?.precipitation_sum?.[index])
+        .filter((value): value is number => typeof value === "number");
+      const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+      return { date, average };
+    });
+
+    const lastRealRain = [...averagedRain].reverse().find((day) => day.average >= realRainThresholdIn);
+    const daysSinceRain = lastRealRain ? daysBetween(lastRealRain.date, todayIso) : null;
+    const rainAge = dryLabel(daysSinceRain);
+    const label = roundedTemp === null ? `${condition} · ${rainAge}` : `${condition} · ${roundedTemp}° · ${rainAge}`;
+
+    return NextResponse.json({
+      ok: true,
+      label,
+      condition,
+      temperatureF: roundedTemp,
+      rainAge,
+      daysSinceRain,
+      realRainThresholdIn,
+      averagedRain,
+      rainPoints: rainPoints.map((point) => point.name),
+    });
   } catch (error) {
     console.error("Atlas weather load failed:", error);
     return NextResponse.json(
