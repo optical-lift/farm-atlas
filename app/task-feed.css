@@ -1,6 +1,10 @@
+.atlas-home-grid {
+  grid-template-rows: minmax(0, 2fr) minmax(0, 1fr) !important;
+}
+
 .atlas-home-task-hero.atlas-task-controller {
   display: grid !important;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 10px !important;
   padding: 18px !important;
   overflow: hidden;
@@ -37,20 +41,6 @@
   text-transform: uppercase;
 }
 
-.atlas-task-controller-head strong {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #fff;
-  font-size: clamp(27px, 5.2vw, 38px) !important;
-  line-height: 0.95 !important;
-  font-weight: 950;
-  letter-spacing: -0.07em !important;
-  margin-top: 5px;
-}
-
 .atlas-task-date {
   flex: 0 0 auto;
   border-radius: 18px;
@@ -66,21 +56,35 @@
 .atlas-task-active-card {
   position: relative;
   min-width: 0;
-  min-height: 112px;
+  min-height: 126px;
   border: 1px solid rgba(255, 255, 255, 0.26) !important;
   border-radius: 22px !important;
   background: rgba(255, 255, 255, 0.12) !important;
-  padding: 15px !important;
+  padding: 16px !important;
   display: grid !important;
   align-content: center;
-  gap: 8px;
+  gap: 7px;
   overflow: hidden;
+}
+
+.atlas-task-active-action {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .atlas-task-active-card strong {
   display: block;
   min-width: 0;
-  max-width: calc(100% - 88px);
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -93,7 +97,7 @@
 
 .atlas-task-active-card em {
   display: block;
-  max-width: calc(100% - 88px);
+  max-width: 100%;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -106,16 +110,7 @@
 }
 
 .atlas-task-record-button {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--atlas-text);
-  padding: 10px 14px;
-  font-size: 13px;
-  line-height: 1;
-  font-weight: 950;
+  display: none !important;
 }
 
 .atlas-task-preview-grid {
@@ -128,7 +123,7 @@
 
 .atlas-task-queue-card {
   min-width: 0;
-  min-height: 38px;
+  min-height: 40px;
   border-radius: 18px !important;
   border: 1px solid rgba(255, 255, 255, 0.22) !important;
   background: rgba(255, 255, 255, 0.11) !important;
@@ -165,8 +160,7 @@
 }
 
 .atlas-task-chip-row,
-.atlas-task-count-row,
-.atlas-task-active-action {
+.atlas-task-count-row {
   display: none !important;
 }
 
@@ -267,8 +261,14 @@
     gap: 8px !important;
   }
 
-  .atlas-task-controller-head strong {
-    font-size: clamp(23px, 5.6vw, 30px) !important;
+  .atlas-home-box:nth-child(3),
+  .atlas-home-box:nth-child(4) {
+    padding: 9px !important;
+  }
+
+  .atlas-home-box:nth-child(3) strong,
+  .atlas-home-box:nth-child(4) strong {
+    font-size: clamp(18px, 6vw, 26px) !important;
   }
 
   .atlas-task-date {
@@ -278,9 +278,13 @@
   }
 
   .atlas-task-active-card {
-    min-height: 92px;
+    min-height: 118px;
     border-radius: 19px !important;
-    padding: 12px !important;
+    padding: 13px !important;
+  }
+
+  .atlas-task-active-action {
+    font-size: 9.5px;
   }
 
   .atlas-task-active-card strong {
@@ -291,19 +295,12 @@
     font-size: 10px;
   }
 
-  .atlas-task-record-button {
-    right: 10px;
-    bottom: 10px;
-    padding: 8px 11px;
-    font-size: 12px;
-  }
-
   .atlas-task-preview-grid {
     gap: 6px;
   }
 
   .atlas-task-queue-card {
-    min-height: 34px;
+    min-height: 35px;
     border-radius: 16px !important;
     padding: 6px 10px !important;
   }
@@ -318,12 +315,13 @@
 }
 
 @media (max-width: 380px) {
-  .atlas-home-task-hero.atlas-task-controller {
-    padding: 11px !important;
+  .atlas-home-grid {
+    gap: 7px !important;
+    padding: 7px !important;
   }
 
-  .atlas-task-controller-head strong {
-    font-size: 22px !important;
+  .atlas-home-task-hero.atlas-task-controller {
+    padding: 11px !important;
   }
 
   .atlas-task-kicker {
