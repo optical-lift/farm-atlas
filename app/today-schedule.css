@@ -19,144 +19,116 @@
   margin-top: 9px;
   color: #fff;
   font-style: normal;
-  font-size: clamp(28px, 7vw, 48px);
-  line-height: 0.92;
+  font-size: 15px;
+  line-height: 1;
   font-weight: 950;
-  letter-spacing: -0.065em;
-  text-transform: capitalize;
+  letter-spacing: -0.02em;
+  text-transform: none;
 }
 
 .atlas-task-date {
   background: rgba(255, 255, 255, 0.92) !important;
   color: var(--atlas-text) !important;
+  text-decoration: none;
 }
 
 .atlas-task-status-footer {
   display: none !important;
 }
 
-.atlas-day-schedule {
-  position: relative;
-  display: grid !important;
-  grid-template-columns: 1fr !important;
+.atlas-hero-work-list {
+  display: grid;
+  grid-template-columns: 1fr;
   grid-template-rows: repeat(3, minmax(0, 1fr));
-  align-content: stretch !important;
-  gap: 10px !important;
+  gap: 10px;
   min-height: 0;
   height: 100%;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  padding: 0 !important;
-  overflow: visible;
 }
 
-.atlas-day-schedule::before {
-  display: none !important;
-  content: none !important;
-}
-
-.atlas-day-row,
-.atlas-day-row.primary {
+.atlas-hero-work-card,
+.atlas-hero-work-card.primary {
   position: relative;
-  min-height: 0 !important;
+  min-height: 0;
   height: 100%;
-  border-radius: 24px !important;
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
-  background: rgba(126, 132, 187, 0.32) !important;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(126, 132, 187, 0.32);
   color: #fff;
-  padding: 27px 18px 17px 18px !important;
-  display: grid !important;
+  padding: 13px 74px 13px 13px;
+  display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas:
-    "number title"
-    "number zones";
-  column-gap: 13px;
-  row-gap: 5px;
-  align-content: center;
+  gap: 11px;
+  align-items: center;
+  text-decoration: none;
   overflow: hidden;
 }
 
-.atlas-day-row.primary {
-  background: rgba(255, 255, 255, 0.16) !important;
-  border-color: rgba(255, 255, 255, 0.34) !important;
+.atlas-hero-work-card.primary {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.36);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
-.atlas-day-row::before {
-  position: absolute;
-  top: 12px;
-  left: 18px;
-  color: rgba(255, 255, 255, 0.48);
-  font-size: 9px;
+.atlas-hero-work-card small {
+  min-width: 32px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--atlas-text);
+  font-size: 14px;
   line-height: 1;
   font-weight: 950;
-  letter-spacing: 0.17em;
+}
+
+.atlas-hero-work-card div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.atlas-hero-work-card strong {
+  color: #fff;
+  font-size: clamp(20px, 5.2vw, 31px);
+  line-height: 0.96;
+  font-weight: 950;
+  letter-spacing: -0.055em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.atlas-hero-work-card em {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  line-height: 1.05;
+  font-style: normal;
+  font-weight: 850;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.atlas-hero-work-card b {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--atlas-text);
+  padding: 8px 10px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
   text-transform: uppercase;
 }
 
-.atlas-day-row:nth-child(1)::before {
-  content: "Field";
-}
-
-.atlas-day-row:nth-child(3)::before {
-  content: "Guest";
-}
-
-.atlas-day-row::after {
+.atlas-day-schedule {
   display: none !important;
-}
-
-.atlas-day-row small {
-  grid-area: number;
-  align-self: center;
-  min-width: 34px !important;
-  width: 34px !important;
-  height: 34px;
-  display: grid !important;
-  place-items: center;
-  padding: 0 !important;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--atlas-text);
-  font-size: 15px;
-  line-height: 1;
-  font-weight: 950;
-}
-
-.atlas-day-row strong,
-.atlas-day-row.primary strong {
-  grid-area: title;
-  color: #fff;
-  font-size: clamp(25px, 6vw, 36px) !important;
-  line-height: 0.93;
-  font-weight: 950;
-  letter-spacing: -0.055em;
-}
-
-.atlas-day-row span {
-  grid-area: zones;
-  color: rgba(255, 255, 255, 0.83);
-  font-size: 14px;
-  line-height: 1.05;
-  font-weight: 850;
-}
-
-.atlas-day-row em {
-  display: none !important;
-}
-
-.atlas-day-row b {
-  position: absolute;
-  right: 14px !important;
-  bottom: 14px !important;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--atlas-text);
-  padding: 8px 12px !important;
-  font-size: 12px !important;
-  line-height: 1;
-  font-weight: 950;
 }
 
 .atlas-projects-box strong,
@@ -190,47 +162,39 @@
 
   .atlas-season-label {
     margin-top: 7px;
-    font-size: clamp(25px, 7.4vw, 36px);
+    font-size: 13px;
   }
 
-  .atlas-day-schedule {
-    gap: 8px !important;
+  .atlas-hero-work-list {
+    gap: 8px;
   }
 
-  .atlas-day-row,
-  .atlas-day-row.primary {
-    border-radius: 20px !important;
-    padding: 24px 62px 13px 13px !important;
-    column-gap: 10px;
+  .atlas-hero-work-card,
+  .atlas-hero-work-card.primary {
+    border-radius: 20px;
+    padding: 11px 62px 11px 10px;
+    gap: 9px;
   }
 
-  .atlas-day-row::before {
-    top: 10px;
-    left: 14px;
-    font-size: 7.5px;
-  }
-
-  .atlas-day-row small {
-    min-width: 28px !important;
-    width: 28px !important;
-    height: 28px;
+  .atlas-hero-work-card small {
+    min-width: 27px;
+    width: 27px;
+    height: 27px;
     font-size: 12px;
   }
 
-  .atlas-day-row strong,
-  .atlas-day-row.primary strong {
-    font-size: clamp(21px, 6.7vw, 28px) !important;
+  .atlas-hero-work-card strong {
+    font-size: clamp(17px, 5.3vw, 25px);
   }
 
-  .atlas-day-row span {
-    font-size: 11px;
+  .atlas-hero-work-card em {
+    font-size: 10px;
   }
 
-  .atlas-day-row b {
-    right: 10px !important;
-    bottom: 10px !important;
-    padding: 7px 10px !important;
-    font-size: 10px !important;
+  .atlas-hero-work-card b {
+    right: 9px;
+    padding: 7px 8px;
+    font-size: 9px;
   }
 
   .atlas-projects-box strong,
@@ -241,17 +205,16 @@
 }
 
 @media (max-width: 380px) {
-  .atlas-day-row,
-  .atlas-day-row.primary {
-    padding-right: 54px !important;
+  .atlas-hero-work-card,
+  .atlas-hero-work-card.primary {
+    padding-right: 54px;
   }
 
-  .atlas-day-row strong,
-  .atlas-day-row.primary strong {
-    font-size: 18px !important;
+  .atlas-hero-work-card strong {
+    font-size: 16px;
   }
 
-  .atlas-day-row span {
+  .atlas-hero-work-card em {
     font-size: 9.5px;
   }
 }
