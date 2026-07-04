@@ -12,7 +12,6 @@ import { fetchAtlasZoneRegistry, type AtlasRegistryObject, type AtlasRegistryZon
 type HomePanel = "tasks" | "calendar" | "inbox" | null;
 type CalendarEntry = { date: string; title: string; dayKind: string; items: string[] };
 type TaskUnit = { id: string; card: AtlasTaskCard; object: AtlasTaskCardObject | null; registryObject: AtlasRegistryObject | null; zone: AtlasRegistryZone | null };
-
 type CloseoutCardRecord = AtlasCloseoutRecord & { sourceLine?: string };
 
 const calendarEntries: CalendarEntry[] = [
@@ -40,10 +39,6 @@ function cleanLabel(value: string | null | undefined) {
 
 function currentEntry(today: string) {
   return calendarEntries.find((entry) => entry.date === today) ?? calendarEntries.find((entry) => entry.date > today) ?? calendarEntries[calendarEntries.length - 1];
-}
-
-function nextEntries(today: string) {
-  return calendarEntries.filter((entry) => entry.date >= today).slice(0, 6);
 }
 
 function taskSortValue(card: AtlasTaskCard) {
@@ -287,7 +282,6 @@ export default function AtlasHomePage() {
   const primaryUnit = units[0] ?? null;
   const nextUnits = units.slice(1, 4);
   const calendarEntry = currentEntry(today);
-  const upcomingCalendar = nextEntries(today);
   const monthSummary = closeoutSummaries.find((summary) => summary.period === "month");
   const homeZones = useMemo(() => {
     const important = ["field_rows", "berry_walk_flower_rows", "barn_beds", "grow_room"];
@@ -383,7 +377,7 @@ export default function AtlasHomePage() {
 
       {openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{openPanel === "calendar" ? "Closeout" : openPanel === "inbox" ? "Note" : "Tasks"}</strong></div><button type="button" onClick={() => setOpenPanel(null)}>Close</button></div><div className="atlas-task-focus-body">
         {openPanel === "tasks" ? <section className="atlas-task-list">{error ? <div className="atlas-empty">{error}</div> : null}{units.length === 0 ? <div className="atlas-empty">Clear.</div> : null}{units.map((unit) => <article key={unit.id} className="atlas-task-row"><button type="button" className="atlas-task-row-main" onClick={() => openUnit(unit)}><div className="atlas-task-row-head atlas-task-object-row"><div><strong>{unit.object?.object_label ?? unit.card.zone_label ?? cleanLabel(unit.card.title)}</strong><span>{actionLabel(unit)}</span><small>{unitMeta(unit)}</small></div></div></button></article>)}</section> : null}
-        {openPanel === "calendar" ? <><section className="atlas-task-focus-purple atlas-closeout-hero"><div className="atlas-task-focus-kicker"><span>{calendarEntry.dayKind}</span></div><h2>Month record</h2><p>{calendarEntry.title}</p></section>{closeoutLoading ? <div className="atlas-empty">Loading closeout.</div> : null}<section className="atlas-closeout-grid">{closeoutSummaries.map((summary) => <CloseoutCard key={summary.period} summary={summary} />)}</section><section className="atlas-task-focus-section atlas-closeout-form"><div className="atlas-add-form"><select aria-label="Closeout period" value={closeoutPeriod} onChange={(event) => setCloseoutPeriod(event.target.value as AtlasCloseoutPeriod)}><option value="day">Today</option><option value="week">This week</option><option value="month">This month</option></select><textarea value={closeoutNote} onChange={(event) => setCloseoutNote(event.target.value)} placeholder="What changed?" /><textarea value={closeoutCarry} onChange={(event) => setCloseoutCarry(event.target.value)} placeholder="Carry forward" /><textarea value={closeoutNext} onChange={(event) => setCloseoutNext(event.target.value)} placeholder="Next focus" /></div><button type="button" className="atlas-zone-action" style={{ width: "100%", marginTop: 12 }} disabled={closeoutSaving} onClick={() => void submitCloseout()}>{closeoutSaving ? "Saving" : "Save closeout"}</button>{closeoutMessage ? <p className="atlas-task-result-message">{cleanLabel(closeoutMessage)}</p> : null}</section><section className="atlas-field-log-list atlas-calendar-preview">{upcomingCalendar.map((entry) => <article className="atlas-field-log-item" key={entry.date}><div className="atlas-field-log-main atlas-calendar-row"><strong>{prettyDate(entry.date)}</strong><span>{entry.title}</span><small>{entry.items.join(" · ")}</small></div></article>)}</section></> : null}
+        {openPanel === "calendar" ? <><section className="atlas-task-focus-purple atlas-closeout-hero"><div className="atlas-task-focus-kicker"><span>{calendarEntry.dayKind}</span></div><h2>Month record</h2><p>{calendarEntry.title}</p></section>{closeoutLoading ? <div className="atlas-empty">Loading closeout.</div> : null}<section className="atlas-closeout-grid">{closeoutSummaries.map((summary) => <CloseoutCard key={summary.period} summary={summary} />)}</section><section className="atlas-task-focus-section atlas-closeout-form"><div className="atlas-add-form"><select aria-label="Closeout period" value={closeoutPeriod} onChange={(event) => setCloseoutPeriod(event.target.value as AtlasCloseoutPeriod)}><option value="day">Today</option><option value="week">This week</option><option value="month">This month</option></select><textarea value={closeoutNote} onChange={(event) => setCloseoutNote(event.target.value)} placeholder="What changed?" /><textarea value={closeoutCarry} onChange={(event) => setCloseoutCarry(event.target.value)} placeholder="Carry forward" /><textarea value={closeoutNext} onChange={(event) => setCloseoutNext(event.target.value)} placeholder="Next focus" /></div><button type="button" className="atlas-zone-action" style={{ width: "100%", marginTop: 12 }} disabled={closeoutSaving} onClick={() => void submitCloseout()}>{closeoutSaving ? "Saving" : "Save closeout"}</button>{closeoutMessage ? <p className="atlas-task-result-message">{cleanLabel(closeoutMessage)}</p> : null}</section></> : null}
         {openPanel === "inbox" ? <section className="atlas-task-focus-section"><div className="atlas-add-form"><select aria-label="Zone" value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">Whole farm</option>{registryZones.map((zone) => <option key={zone.id} value={zone.stable_key}>{zone.label}</option>)}</select><textarea aria-label="Note" value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Note" /></div><button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving" : "Save"}</button>{inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}</section> : null}
       </div></div></section> : null}
 
