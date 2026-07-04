@@ -1,41 +1,141 @@
 .atlas-closeout-card.tidy {
-  border-radius: 21px;
-  padding: 12px;
-  gap: 9px;
+  border-radius: 24px;
+  padding: 14px;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.atlas-closeout-card.tidy.farm-records {
+  box-shadow: 0 12px 28px rgba(58, 46, 30, 0.055);
 }
 
 .atlas-closeout-simple {
   margin: 0;
   color: var(--atlas-muted);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.25;
   font-weight: 850;
 }
 
+.atlas-closeout-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.atlas-closeout-pill-row.primary span,
+.atlas-closeout-pill-row.soft span,
+.atlas-record-zone,
+.atlas-record-kind {
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+}
+
 .atlas-closeout-pill-row.primary span {
+  border: 1px solid rgba(139, 145, 194, 0.34);
   color: var(--atlas-text);
   background: rgba(246, 242, 230, 0.94);
 }
 
-.atlas-closeout-section {
-  display: grid;
-  gap: 5px;
-  border-top: 1px solid rgba(219, 210, 197, 0.62);
-  padding-top: 8px;
+.atlas-closeout-pill-row.soft span {
+  border: 1px solid var(--atlas-border-soft);
+  color: var(--atlas-muted);
+  background: rgba(246, 242, 230, 0.55);
 }
 
-.atlas-closeout-section span {
+.atlas-closeout-section {
+  display: grid;
+  gap: 7px;
+  border-top: 1px solid rgba(219, 210, 197, 0.62);
+  padding-top: 10px;
+}
+
+.atlas-closeout-section > span,
+.atlas-record-list > span {
   display: block;
   color: #858bb8;
   font-size: 10px;
   line-height: 1;
   font-weight: 950;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .atlas-closeout-section p {
   margin: 0;
+  color: var(--atlas-muted);
+  font-size: 13px;
+  line-height: 1.28;
+  font-weight: 850;
+}
+
+.atlas-record-list {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid rgba(219, 210, 197, 0.62);
+  padding-top: 10px;
+}
+
+.atlas-record-card {
+  border: 1px solid rgba(219, 210, 197, 0.88);
+  border-radius: 18px;
+  background: rgba(250, 247, 239, 0.8);
+  padding: 11px;
+  display: grid;
+  gap: 6px;
+}
+
+.atlas-record-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.atlas-record-zone {
+  border: 1px solid rgba(215, 204, 189, 0.9);
+  color: #6f7268;
+  background: rgba(255, 250, 242, 0.92);
+}
+
+.atlas-record-kind {
+  border: 1px solid rgba(139, 145, 194, 0.26);
+  color: #656b9c;
+  background: rgba(237, 239, 252, 0.76);
+}
+
+.atlas-record-card strong {
+  color: var(--atlas-text);
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.atlas-record-card p {
+  margin: 0;
+}
+
+.atlas-record-crop {
+  color: var(--atlas-text);
+  font-size: 14px;
+  line-height: 1.18;
+  font-weight: 900;
+}
+
+.atlas-record-date {
+  color: #767a6f;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.atlas-record-note {
+  border-top: 1px solid rgba(219, 210, 197, 0.62);
+  padding-top: 7px;
   color: var(--atlas-muted);
   font-size: 12px;
   line-height: 1.28;
@@ -43,5 +143,21 @@
 }
 
 .atlas-calendar-preview {
-  opacity: 0.78;
+  opacity: 0.72;
+}
+
+@media (max-width: 430px) {
+  .atlas-closeout-card.tidy {
+    padding: 12px;
+    border-radius: 21px;
+  }
+
+  .atlas-record-card {
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .atlas-record-card strong {
+    font-size: 18px;
+  }
 }
