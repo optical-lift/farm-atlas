@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
     const payload = (await request.json()) as InboxPayload;
     const body = payload.body?.trim();
     const zoneKey = payload.zoneKey?.trim() || null;
-    const createdBy = payload.createdBy?.trim() || "anna";
 
     if (!body) {
       return NextResponse.json(
@@ -67,11 +66,10 @@ export async function POST(request: NextRequest) {
         item_type: "field_note",
         status: "new",
         body,
-        created_by: createdBy,
+        created_by: null,
         source: "atlas_home_inbox",
         metadata: {
           zone_key: zoneKey,
-          needs_review_by: "lex_noel",
         },
       })
       .select("id, status, body, created_at")
