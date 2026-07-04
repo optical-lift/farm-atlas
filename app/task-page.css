@@ -28,6 +28,10 @@
   align-content: start;
 }
 
+.atlas-task-page-active-anchor {
+  scroll-margin-top: 10px;
+}
+
 .atlas-task-header-brand,
 .atlas-day-row {
   text-decoration: none;
