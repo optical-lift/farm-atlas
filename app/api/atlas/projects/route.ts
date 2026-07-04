@@ -58,26 +58,52 @@ type TaskRow = {
   objects: Array<{ object_key: string; object_label: string }> | null;
 };
 
-const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
-const statusRank: Record<string, number> = { open: 0, blocked: 1, done: 2, archived: 3 };
-
-function sortValue(task: { task_status: string; task_due_date: string | null; task_priority: string | null; task_title: string; sort_order: number }) {
-  return `${statusRank[task.task_status] ?? 9}-${task.task_due_date ?? "9999-12-31"}-${priorityRank[task.task_priority ?? "normal"] ?? 9}-${String(task.sort_order).padStart(4, "0")}-${task.task_title}`;
-}
-
-function asLegacyStep(task: {
+type ProjectTaskItem = {
   task_id: string;
   task_title: string;
   task_type: string | null;
   task_status: string;
   task_priority: string | null;
   task_due_date: string | null;
+  zone_key: string | null;
+  zone_label: string | null;
+  object_keys: string[];
+  object_labels: string[];
   unlock_text: string | null;
   blocker_text: string | null;
   note: string | null;
-  zone_label: string | null;
+  link_role: string;
   sort_order: number;
-}, index: number) {
+};
+
+const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
+const statusRank: Record<string, number> = { open: 0, blocked: 1, done: 2, archived: 3 };
+
+function sortValue(task: ProjectTaskItem) {
+  return `${statusRank[task.task_status] ?? 9}-${task.task_due_date ?? "9999-12-31"}-${priorityRank[task.task_priority ?? "normal"] ?? 9}-${String(task.sort_order).padStart(4, "0")}-${task.task_title}`;
+}
+
+function taskItem(task: TaskRow, linkRole = "belongs_to", sortOrder = 100): ProjectTaskItem {
+  return {
+    task_id: task.task_id,
+    task_title: task.title,
+    task_type: task.task_type,
+    task_status: task.status,
+    task_priority: task.priority,
+    task_due_date: task.due_date,
+    zone_key: task.zone_key,
+    zone_label: task.zone_label,
+    object_keys: (task.objects ?? []).map((object) => object.object_key).filter(Boolean),
+    object_labels: (task.objects ?? []).map((object) => object.object_label).filter(Boolean),
+    unlock_text: task.unlock_text,
+    blocker_text: task.blocker_text,
+    note: task.note,
+    link_role: linkRole,
+    sort_order: sortOrder,
+  };
+}
+
+function asLegacyStep(task: ProjectTaskItem, index: number) {
   return {
     step_id: `project-task-${task.task_id}`,
     step_order: index + 1,
@@ -95,6 +121,35 @@ function asLegacyStep(task: {
   };
 }
 
+function words(value: string | null | undefined) {
+  return (value ?? "").toLowerCase();
+}
+
+function projectText(project: ProjectRow) {
+  return `${project.project_key} ${project.project_title} ${project.project_goal_text ?? ""} ${project.goal_label ?? ""} ${project.zone_key ?? ""}`.toLowerCase();
+}
+
+function taskText(task: TaskRow) {
+  return `${task.title} ${task.task_type ?? ""} ${task.note ?? ""} ${task.unlock_text ?? ""} ${task.zone_key ?? ""} ${task.zone_label ?? ""}`.toLowerCase();
+}
+
+function inferredProjectMatch(project: ProjectRow, task: TaskRow) {
+  const p = projectText(project);
+  const t = taskText(task);
+  const zone = words(task.zone_key);
+
+  if (p.includes("sunflower") && t.includes("sunflower")) return true;
+  if ((p.includes("field_rows") || p.includes("field rows")) && (zone === "field_rows" || t.includes("field row"))) return true;
+  if ((p.includes("main_garden") || p.includes("main garden") || p.includes("potager")) && (zone === "main_garden" || t.includes("main garden") || t.includes("tea courtyard"))) return true;
+  if ((p.includes("berry_walk") || p.includes("berry walk")) && (zone === "berry_walk_flower_rows" || t.includes("berry walk"))) return true;
+  if ((p.includes("barn_beds") || p.includes("barn beds")) && (zone === "barn_beds" || t.includes("barn bed"))) return true;
+  if ((p.includes("curve_garden") || p.includes("curve garden")) && (zone === "curve_garden" || t.includes("curve garden") || t.includes("arch"))) return true;
+  if ((p.includes("follow_me") || p.includes("follow me") || p.includes("arrival")) && (zone === "follow_me" || t.includes("follow me") || t.includes("arrival"))) return true;
+  if ((p.includes("july6") || p.includes("july 6") || p.includes("launch hand")) && (t.includes("july6") || t.includes("july 6") || t.includes("launch"))) return true;
+
+  return false;
+}
+
 export async function GET() {
   const { data: projectRows, error: projectError } = await atlasSupabase
     .schema("atlas")
@@ -107,42 +162,29 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "Atlas project cards read failed.", details: projectError.message }, { status: 500 });
   }
 
+  const { data: taskRows, error: taskError } = await atlasSupabase
+    .schema("atlas")
+    .from("v_task_cards")
+    .select("task_id, title, task_type, status, priority, due_date, unlock_text, blocker_text, note, zone_key, zone_label, objects")
+    .eq("farm_key", "elm_farm");
+
   const projects = (projectRows ?? []) as ProjectRow[];
+  const allTasks = taskError ? [] : ((taskRows ?? []) as TaskRow[]);
+  const taskById = new Map(allTasks.map((task) => [task.task_id, task]));
   const projectIds = Array.from(new Set(projects.map((project) => project.project_id)));
   let links: LinkRow[] = [];
-  let taskRows: TaskRow[] = [];
 
   if (projectIds.length > 0) {
-    const { data: linkRows, error: linkError } = await atlasSupabase
+    const { data: linkRows } = await atlasSupabase
       .schema("atlas")
       .from("project_task_links")
       .select("project_id, task_id, link_role, sort_order")
       .in("project_id", projectIds)
       .order("sort_order", { ascending: true });
 
-    if (linkError) {
-      return NextResponse.json({ ok: false, error: "Atlas project task links read failed.", details: linkError.message }, { status: 500 });
-    }
-
     links = (linkRows ?? []) as LinkRow[];
-    const taskIds = Array.from(new Set(links.map((link) => link.task_id)));
-
-    if (taskIds.length > 0) {
-      const { data: cards, error: cardError } = await atlasSupabase
-        .schema("atlas")
-        .from("v_task_cards")
-        .select("task_id, title, task_type, status, priority, due_date, unlock_text, blocker_text, note, zone_key, zone_label, objects")
-        .in("task_id", taskIds);
-
-      if (cardError) {
-        return NextResponse.json({ ok: false, error: "Atlas project tasks read failed.", details: cardError.message }, { status: 500 });
-      }
-
-      taskRows = (cards ?? []) as TaskRow[];
-    }
   }
 
-  const tasksById = new Map(taskRows.map((task) => [task.task_id, task]));
   const linksByProject = new Map<string, LinkRow[]>();
   links.forEach((link) => {
     const list = linksByProject.get(link.project_id) ?? [];
@@ -151,31 +193,18 @@ export async function GET() {
   });
 
   const output = projects.map((project) => {
-    const collection = (linksByProject.get(project.project_id) ?? [])
+    const explicit = (linksByProject.get(project.project_id) ?? [])
       .map((link) => {
-        const task = tasksById.get(link.task_id);
-        if (!task) return null;
-        return {
-          task_id: task.task_id,
-          task_title: task.title,
-          task_type: task.task_type,
-          task_status: task.status,
-          task_priority: task.priority,
-          task_due_date: task.due_date,
-          zone_key: task.zone_key,
-          zone_label: task.zone_label,
-          object_keys: (task.objects ?? []).map((object) => object.object_key).filter(Boolean),
-          object_labels: (task.objects ?? []).map((object) => object.object_label).filter(Boolean),
-          unlock_text: task.unlock_text,
-          blocker_text: task.blocker_text,
-          note: task.note,
-          link_role: link.link_role,
-          sort_order: link.sort_order,
-        };
+        const task = taskById.get(link.task_id);
+        return task ? taskItem(task, link.link_role, link.sort_order) : null;
       })
-      .filter((task): task is NonNullable<typeof task> => Boolean(task))
-      .sort((a, b) => sortValue(a).localeCompare(sortValue(b)));
+      .filter((item): item is ProjectTaskItem => Boolean(item));
 
+    const inferred = explicit.length > 0 ? [] : allTasks
+      .filter((task) => inferredProjectMatch(project, task))
+      .map((task, index) => taskItem(task, "inferred", index + 1));
+
+    const collection = [...explicit, ...inferred].sort((a, b) => sortValue(a).localeCompare(sortValue(b)));
     const legacySteps = collection.map(asLegacyStep);
 
     return {
@@ -193,5 +222,5 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ ok: true, farmKey: "elm_farm", projects: output });
+  return NextResponse.json({ ok: true, farmKey: "elm_farm", projects: output, taskFallback: Boolean(taskError) });
 }
