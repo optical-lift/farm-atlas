@@ -180,6 +180,33 @@
   padding: 12px;
 }
 
+.atlas-project-panel > .atlas-project-section:nth-of-type(1) {
+  display: none !important;
+}
+
+.atlas-project-panel > .atlas-project-section:nth-of-type(2) .atlas-project-section-head span {
+  font-size: 0;
+  letter-spacing: 0;
+}
+
+.atlas-project-panel > .atlas-project-section:nth-of-type(2) .atlas-project-section-head span::after {
+  content: "Project Work";
+  color: #858bb8;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.atlas-project-panel > .atlas-project-section:nth-of-type(2) .atlas-project-step-card {
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.atlas-project-step-card span {
+  color: rgba(107, 111, 100, 0.82);
+}
+
 @media (max-width: 700px) {
   .atlas-project-detail-hero {
     border-radius: 24px;
