@@ -94,13 +94,59 @@ function addActionCounts(counts: ReturnType<typeof emptyCounts>, raw: string) {
   if (includesAny(text, ["closeout"])) counts.closeouts += 1;
 }
 
-function uniqueRecent(logs: FieldLogRow[], events: EventRow[]) {
-  const lines = [
-    ...logs.map((log) => log.summary_sentence).filter(Boolean),
-    ...events.map((event) => [event.event_date, event.event_type.replaceAll("_", " "), event.note].filter(Boolean).join(" · ")),
-  ];
+function humanAction(value: string) {
+  const text = value.replaceAll("_", " ").toLowerCase();
+  if (text.includes("germin")) return "germination checked";
+  if (text.includes("seed") || text.includes("sow")) return "sowing recorded";
+  if (text.includes("weed")) return "weeding recorded";
+  if (text.includes("harvest") || text.includes("cut")) return "harvest recorded";
+  if (text.includes("blocked")) return "blocked";
+  if (text.includes("closeout")) return "closeout saved";
+  if (text.includes("changed")) return "changed";
+  return text;
+}
 
-  return Array.from(new Set(lines)).slice(0, 5);
+function cleanSentence(value: string) {
+  return value
+    .replace(/^\d{4}-\d{2}-\d{2}\s*[·-]\s*/g, "")
+    .replace(/^[^·]+\s+recorded state for\s+/i, "")
+    .replace(/^[^·]+\s+completed\s+/i, "")
+    .replace(/^[^·]+\s+closed\s+(day|week|month)\.\s*/i, "")
+    .replaceAll('"', "")
+    .trim();
+}
+
+function recentLines(logs: FieldLogRow[], events: EventRow[]) {
+  const logLines = logs
+    .filter((log) => log.source !== "atlas_closeout")
+    .map((log) => {
+      const line = cleanSentence(log.summary_sentence || log.note || "");
+      return line || null;
+    })
+    .filter(Boolean) as string[];
+
+  const eventLines = events.map((event) => {
+    const action = humanAction(event.event_type);
+    return event.note ? `${action} · ${event.note}` : action;
+  });
+
+  return Array.from(new Set([...logLines, ...eventLines])).slice(0, 4);
+}
+
+function carryForwardLines(logs: FieldLogRow[], tasks: TaskRow[]) {
+  const fromCloseouts = logs.flatMap((log) => {
+    const metadata = log.metadata ?? {};
+    return [metadata.carry_forward, metadata.next_focus]
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      .map((value) => value.trim());
+  });
+
+  const fromTasks = tasks
+    .filter((task) => task.status === "blocked" || task.generated_from === "task_result")
+    .map((task) => task.title)
+    .filter(Boolean);
+
+  return Array.from(new Set([...fromCloseouts, ...fromTasks])).slice(0, 4);
 }
 
 async function getFarmId() {
@@ -176,7 +222,8 @@ async function getSummary(farmId: string, todayIso: string, period: Period) {
     startDate: bounds.start,
     endDate: bounds.end,
     counts,
-    recent: uniqueRecent(logRows, eventRows),
+    recent: recentLines(logRows, eventRows),
+    carryForward: carryForwardLines(logRows, taskRows),
   };
 }
 
