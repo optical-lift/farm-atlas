@@ -65,6 +65,36 @@ function sortValue(task: { status: string; due_date: string | null; priority: st
   return `${statusRank[task.status] ?? 9}-${task.due_date ?? "9999-12-31"}-${priorityRank[task.priority ?? "normal"] ?? 9}-${String(task.sort_order).padStart(4, "0")}-${task.task_title}`;
 }
 
+function asLegacyStep(task: {
+  task_id: string;
+  task_title: string;
+  task_type: string | null;
+  task_status: string;
+  task_priority: string | null;
+  task_due_date: string | null;
+  unlock_text: string | null;
+  blocker_text: string | null;
+  note: string | null;
+  zone_label: string | null;
+  sort_order: number;
+}, index: number) {
+  return {
+    step_id: `project-task-${task.task_id}`,
+    step_order: index + 1,
+    step_title: task.task_title,
+    step_status: task.task_status,
+    step_note: task.note ?? task.unlock_text ?? task.zone_label ?? null,
+    task_id: task.task_id,
+    task_title: task.task_title,
+    task_type: task.task_type,
+    task_status: task.task_status,
+    task_priority: task.task_priority,
+    task_due_date: task.task_due_date,
+    unlock_text: task.unlock_text,
+    blocker_text: task.blocker_text,
+  };
+}
+
 export async function GET() {
   const { data: projectRows, error: projectError } = await atlasSupabase
     .schema("atlas")
@@ -146,6 +176,8 @@ export async function GET() {
       .filter((task): task is NonNullable<typeof task> => Boolean(task))
       .sort((a, b) => sortValue(a).localeCompare(sortValue(b)));
 
+    const legacySteps = collection.map(asLegacyStep);
+
     return {
       ...project,
       task_count: collection.length,
@@ -154,10 +186,10 @@ export async function GET() {
       done_task_count: collection.filter((task) => task.task_status === "done" || task.task_status === "archived").length,
       next_due_date: collection.find((task) => task.task_status === "open")?.task_due_date ?? project.next_due_date,
       current_tasks: collection,
-      steps: [],
-      step_count: null,
-      done_step_count: null,
-      blocked_step_count: null,
+      steps: legacySteps,
+      step_count: collection.length,
+      done_step_count: collection.filter((task) => task.task_status === "done" || task.task_status === "archived").length,
+      blocked_step_count: collection.filter((task) => task.task_status === "blocked").length,
     };
   });
 
