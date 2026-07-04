@@ -3,6 +3,22 @@ import { atlasSupabase } from "@/lib/atlas/supabase-server";
 
 export const dynamic = "force-dynamic";
 
+type ProjectStepRow = {
+  step_id: string;
+  step_order: number;
+  step_title: string;
+  step_status: string;
+  step_note: string | null;
+  task_id: string | null;
+  task_title: string | null;
+  task_type: string | null;
+  task_status: string | null;
+  task_priority: string | null;
+  task_due_date: string | null;
+  unlock_text: string | null;
+  blocker_text: string | null;
+};
+
 type AtlasProjectCardRow = {
   farm_key: string;
 
@@ -38,21 +54,7 @@ type AtlasProjectCardRow = {
   blocked_task_count: number | null;
   next_due_date: string | null;
 
-  steps: Array<{
-    step_id: string;
-    step_order: number;
-    step_title: string;
-    step_status: string;
-    step_note: string | null;
-    task_id: string | null;
-    task_title: string | null;
-    task_type: string | null;
-    task_status: string | null;
-    task_priority: string | null;
-    task_due_date: string | null;
-    unlock_text: string | null;
-    blocker_text: string | null;
-  }>;
+  steps: ProjectStepRow[];
 };
 
 type TaskRow = {
@@ -75,6 +77,21 @@ type ZoneRow = {
   id: string;
   stable_key: string;
   label: string;
+};
+
+type CurrentProjectTask = {
+  task_id: string;
+  task_title: string;
+  task_type: string | null;
+  task_status: string;
+  task_priority: string | null;
+  task_due_date: string | null;
+  zone_key: string | null;
+  zone_label: string | null;
+  unlock_text: string | null;
+  blocker_text: string | null;
+  note: string | null;
+  link_reason: string;
 };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
@@ -158,6 +175,24 @@ function sortTasks(a: TaskRow, b: TaskRow) {
   );
 }
 
+function taskAsProjectWork(task: CurrentProjectTask, index: number): ProjectStepRow {
+  return {
+    step_id: `current-task-${task.task_id}`,
+    step_order: index + 1,
+    step_title: task.task_title,
+    step_status: "open",
+    step_note: task.note ?? task.unlock_text ?? task.zone_label ?? null,
+    task_id: task.task_id,
+    task_title: task.task_title,
+    task_type: task.task_type,
+    task_status: task.task_status,
+    task_priority: task.task_priority,
+    task_due_date: task.task_due_date,
+    unlock_text: task.unlock_text,
+    blocker_text: task.blocker_text,
+  };
+}
+
 export async function GET() {
   const [{ data, error }, { data: tasks, error: tasksError }, { data: zones, error: zonesError }] = await Promise.all([
     atlasSupabase
@@ -195,7 +230,7 @@ export async function GET() {
   const openTasks = ((tasks ?? []) as TaskRow[]).sort(sortTasks);
   const projects = ((data ?? []) as AtlasProjectCardRow[]).map((project) => {
     const currentTasks = openTasks
-      .map((task) => {
+      .map((task): CurrentProjectTask | null => {
         const zone = task.zone_id ? zoneById.get(task.zone_id) : undefined;
         const reason = taskMatchesProject(project, task, zone);
         if (!reason) return null;
@@ -214,11 +249,17 @@ export async function GET() {
           link_reason: reason,
         };
       })
-      .filter(Boolean);
+      .filter((task): task is CurrentProjectTask => Boolean(task));
+
+    const currentProjectWork = currentTasks.map(taskAsProjectWork);
 
     return {
       ...project,
+      step_count: currentProjectWork.length || project.step_count,
+      done_step_count: currentProjectWork.length ? 0 : project.done_step_count,
       open_task_count: currentTasks.length || project.open_task_count,
+      next_due_date: currentTasks[0]?.task_due_date ?? project.next_due_date,
+      steps: currentProjectWork.length ? currentProjectWork : project.steps,
       current_tasks: currentTasks,
     };
   });
