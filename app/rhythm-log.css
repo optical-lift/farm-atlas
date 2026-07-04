@@ -1,0 +1,129 @@
+.atlas-task-active-card {
+  cursor: pointer;
+}
+
+.atlas-task-log-cue {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--atlas-text);
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-log-builder {
+  gap: 14px;
+}
+
+.atlas-log-hero h2 {
+  margin-bottom: 8px !important;
+}
+
+.atlas-log-compose {
+  display: grid;
+  gap: 14px;
+}
+
+.atlas-log-sentence {
+  border: 1px solid var(--atlas-border);
+  border-radius: 22px;
+  background: rgba(246, 242, 230, 0.82);
+  color: var(--atlas-text);
+  padding: 14px 16px;
+  font-size: 18px;
+  line-height: 1.18;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
+.atlas-log-step {
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-log-step > span {
+  color: #858bb8;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.atlas-log-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.atlas-log-chip-grid.compact {
+  max-height: 170px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.atlas-log-chip-grid button {
+  border: 1px solid var(--atlas-border);
+  border-radius: 999px;
+  background: rgba(246, 242, 230, 0.72);
+  color: var(--atlas-muted);
+  padding: 9px 12px;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-log-chip-grid button.selected {
+  border-color: rgba(139, 145, 194, 0.48);
+  background: rgba(167, 171, 214, 0.26);
+  color: var(--atlas-text);
+}
+
+.atlas-log-muted {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.atlas-task-row-main span,
+.atlas-task-row-main small {
+  color: var(--atlas-muted);
+}
+
+@media (max-width: 700px) {
+  .atlas-task-log-cue {
+    right: 12px;
+    bottom: 12px;
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+
+  .atlas-task-active-card em {
+    max-width: calc(100% - 72px);
+  }
+
+  .atlas-log-sentence {
+    padding: 12px 14px;
+    border-radius: 19px;
+    font-size: 15px;
+  }
+
+  .atlas-log-chip-grid {
+    gap: 6px;
+  }
+
+  .atlas-log-chip-grid button {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .atlas-log-chip-grid.compact {
+    max-height: 150px;
+  }
+}
