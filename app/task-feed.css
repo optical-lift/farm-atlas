@@ -1,13 +1,58 @@
 .atlas-home-grid {
-  grid-template-rows: minmax(0, 2fr) minmax(0, 1fr) !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-rows: minmax(0, 2.35fr) minmax(0, 1fr) 46px !important;
+  gap: 9px !important;
 }
 
 .atlas-home-task-hero.atlas-task-controller {
+  grid-column: 1 / -1;
+  order: 1;
   display: grid !important;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 10px !important;
   padding: 18px !important;
   overflow: hidden;
+}
+
+.atlas-home-box:nth-child(3),
+.atlas-home-box:nth-child(4) {
+  order: 2;
+}
+
+.atlas-home-box:nth-child(2) {
+  grid-column: 1 / -1;
+  order: 3;
+  min-height: 0 !important;
+  height: auto !important;
+  border-radius: 18px !important;
+  padding: 9px 12px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+}
+
+.atlas-home-box:nth-child(2) strong {
+  flex: 0 0 auto;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  letter-spacing: -0.035em !important;
+}
+
+.atlas-home-box:nth-child(2) em {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px !important;
+  line-height: 1 !important;
+}
+
+.atlas-home-box:nth-child(2) .atlas-home-mini-list {
+  display: none !important;
 }
 
 .atlas-task-controller button {
@@ -60,10 +105,10 @@
   border: 1px solid rgba(255, 255, 255, 0.26) !important;
   border-radius: 22px !important;
   background: rgba(255, 255, 255, 0.12) !important;
-  padding: 16px !important;
+  padding: 17px !important;
   display: grid !important;
   align-content: center;
-  gap: 7px;
+  gap: 8px;
   overflow: hidden;
 }
 
@@ -74,7 +119,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: rgba(255, 255, 255, 0.78);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
   font-weight: 950;
   letter-spacing: 0.14em;
@@ -89,10 +134,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #fff;
-  font-size: 18px !important;
-  line-height: 1.05 !important;
+  font-size: 24px !important;
+  line-height: 1.02 !important;
   font-weight: 950;
-  letter-spacing: -0.025em !important;
+  letter-spacing: -0.04em !important;
 }
 
 .atlas-task-active-card em {
@@ -104,7 +149,7 @@
   white-space: nowrap;
   color: rgba(255, 255, 255, 0.78);
   font-style: normal;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   font-weight: 850;
 }
@@ -115,7 +160,7 @@
 
 .atlas-task-preview-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
   min-height: 0;
   overflow: hidden;
@@ -123,14 +168,14 @@
 
 .atlas-task-queue-card {
   min-width: 0;
-  min-height: 40px;
+  min-height: 58px;
   border-radius: 18px !important;
   border: 1px solid rgba(255, 255, 255, 0.22) !important;
   background: rgba(255, 255, 255, 0.11) !important;
-  padding: 7px 12px !important;
+  padding: 8px 10px !important;
   display: grid !important;
   align-content: center;
-  gap: 2px;
+  gap: 3px;
   overflow: hidden;
 }
 
@@ -256,6 +301,11 @@
 }
 
 @media (max-width: 700px) {
+  .atlas-home-grid {
+    grid-template-rows: minmax(0, 2.45fr) minmax(0, 1fr) 44px !important;
+    gap: 8px !important;
+  }
+
   .atlas-home-task-hero.atlas-task-controller {
     padding: 13px !important;
     gap: 8px !important;
@@ -271,6 +321,18 @@
     font-size: clamp(18px, 6vw, 26px) !important;
   }
 
+  .atlas-home-box:nth-child(2) {
+    padding: 8px 11px !important;
+  }
+
+  .atlas-home-box:nth-child(2) strong {
+    font-size: 15px !important;
+  }
+
+  .atlas-home-box:nth-child(2) em {
+    font-size: 10px !important;
+  }
+
   .atlas-task-date {
     padding: 7px 9px;
     border-radius: 15px;
@@ -278,21 +340,21 @@
   }
 
   .atlas-task-active-card {
-    min-height: 118px;
+    min-height: 126px;
     border-radius: 19px !important;
-    padding: 13px !important;
+    padding: 14px !important;
   }
 
   .atlas-task-active-action {
-    font-size: 9.5px;
+    font-size: 10px;
   }
 
   .atlas-task-active-card strong {
-    font-size: 16px !important;
+    font-size: 21px !important;
   }
 
   .atlas-task-active-card em {
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .atlas-task-preview-grid {
@@ -300,13 +362,13 @@
   }
 
   .atlas-task-queue-card {
-    min-height: 35px;
+    min-height: 52px;
     border-radius: 16px !important;
-    padding: 6px 10px !important;
+    padding: 7px 9px !important;
   }
 
   .atlas-task-queue-card strong {
-    font-size: 11px;
+    font-size: 10.5px;
   }
 
   .atlas-task-queue-card span {
@@ -316,6 +378,7 @@
 
 @media (max-width: 380px) {
   .atlas-home-grid {
+    grid-template-rows: minmax(0, 2.5fr) minmax(0, 1fr) 42px !important;
     gap: 7px !important;
     padding: 7px !important;
   }
@@ -329,6 +392,10 @@
   }
 
   .atlas-task-active-card strong {
-    font-size: 15px !important;
+    font-size: 18px !important;
+  }
+
+  .atlas-task-queue-card strong {
+    font-size: 9.5px;
   }
 }
