@@ -1,0 +1,215 @@
+.atlas-home-task-hero.atlas-task-controller {
+  grid-template-rows: auto minmax(0, 1fr) !important;
+}
+
+.atlas-task-status-footer {
+  display: none !important;
+}
+
+.atlas-day-schedule {
+  position: relative;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  align-content: start;
+  gap: 7px !important;
+  min-height: 0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.10);
+  padding: 40px 12px 12px;
+  overflow: hidden;
+}
+
+.atlas-day-schedule::before {
+  content: "Today\2019s Schedule";
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.atlas-day-row,
+.atlas-day-row.primary {
+  position: relative;
+  min-height: 0 !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  background: rgba(126, 132, 187, 0.30) !important;
+  padding: 10px 82px 10px 10px !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "number title"
+    "number zones";
+  column-gap: 9px;
+  row-gap: 3px;
+  align-content: center;
+  overflow: hidden;
+}
+
+.atlas-day-row.primary {
+  background: rgba(255, 255, 255, 0.13) !important;
+}
+
+.atlas-day-row::after {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  max-width: 68px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.54);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.atlas-day-row:nth-child(1)::after,
+.atlas-day-row:nth-child(2)::after {
+  content: "Field";
+}
+
+.atlas-day-row:nth-child(3)::after {
+  content: "Guest";
+}
+
+.atlas-day-row small {
+  grid-area: number;
+  align-self: center;
+  min-width: 26px !important;
+  width: 26px !important;
+  height: 26px;
+  display: grid !important;
+  place-items: center;
+  padding: 0 !important;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--atlas-text);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-day-row strong,
+.atlas-day-row.primary strong {
+  grid-area: title;
+  color: #fff;
+  font-size: 22px !important;
+  line-height: 0.95;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.atlas-day-row span {
+  grid-area: zones;
+  color: rgba(255, 255, 255, 0.80);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.atlas-day-row em {
+  display: none !important;
+}
+
+.atlas-day-row b {
+  right: 12px !important;
+  bottom: 9px !important;
+  padding: 7px 11px !important;
+  font-size: 11px !important;
+}
+
+.atlas-projects-box strong,
+.atlas-farm-snapshot-box strong,
+.atlas-home-box:nth-child(2) strong {
+  color: var(--atlas-text) !important;
+  font-size: clamp(24px, 5.2vw, 34px) !important;
+  line-height: 0.95 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.055em !important;
+}
+
+.atlas-home-box:nth-child(2) {
+  min-height: 60px !important;
+}
+
+.atlas-home-box:nth-child(2) em {
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+@media (max-width: 700px) {
+  .atlas-day-schedule {
+    border-radius: 22px;
+    padding: 34px 9px 9px;
+    gap: 6px !important;
+  }
+
+  .atlas-day-schedule::before {
+    top: 12px;
+    left: 12px;
+    font-size: 9px;
+  }
+
+  .atlas-day-row,
+  .atlas-day-row.primary {
+    border-radius: 16px !important;
+    padding: 9px 70px 9px 9px !important;
+    column-gap: 8px;
+  }
+
+  .atlas-day-row small {
+    min-width: 23px !important;
+    width: 23px !important;
+    height: 23px;
+    font-size: 10px;
+  }
+
+  .atlas-day-row strong,
+  .atlas-day-row.primary strong {
+    font-size: 18px !important;
+  }
+
+  .atlas-day-row span {
+    font-size: 10px;
+  }
+
+  .atlas-day-row::after {
+    right: 10px;
+    top: 9px;
+    max-width: 56px;
+    font-size: 7.5px;
+  }
+
+  .atlas-day-row b {
+    right: 9px !important;
+    bottom: 8px !important;
+    padding: 6px 9px !important;
+    font-size: 10px !important;
+  }
+
+  .atlas-projects-box strong,
+  .atlas-farm-snapshot-box strong,
+  .atlas-home-box:nth-child(2) strong {
+    font-size: clamp(21px, 6.3vw, 29px) !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .atlas-day-row strong,
+  .atlas-day-row.primary strong {
+    font-size: 16px !important;
+  }
+
+  .atlas-day-row span {
+    font-size: 9px;
+  }
+}
