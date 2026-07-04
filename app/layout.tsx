@@ -6,6 +6,7 @@ import "./zones.css";
 import "./task-feed.css";
 import "./closeout-clean.css";
 import "./rhythm-log.css";
+import "./log-picker-compact.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
