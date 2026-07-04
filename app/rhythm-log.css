@@ -1,3 +1,149 @@
+.atlas-season-label {
+  display: block;
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.74);
+  font-style: normal;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.atlas-day-schedule {
+  display: grid;
+  grid-template-columns: 1.12fr 0.94fr 0.94fr;
+  gap: 8px;
+  min-height: 0;
+}
+
+.atlas-day-row {
+  position: relative;
+  min-width: 0;
+  min-height: 88px;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-radius: 20px !important;
+  background: rgba(126, 132, 187, 0.32) !important;
+  color: #fff;
+  padding: 12px !important;
+  display: grid !important;
+  align-content: center;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.atlas-day-row.primary {
+  min-height: 116px;
+  background: rgba(255, 255, 255, 0.13) !important;
+  border-color: rgba(255, 255, 255, 0.30) !important;
+}
+
+.atlas-day-row small,
+.atlas-day-row strong,
+.atlas-day-row span,
+.atlas-day-row em,
+.atlas-day-row b {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-day-row small {
+  width: fit-content;
+  min-width: 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--atlas-text);
+  padding: 5px 7px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  text-align: center;
+}
+
+.atlas-day-row strong {
+  color: #fff;
+  font-size: 20px;
+  line-height: 0.98;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.atlas-day-row.primary strong {
+  font-size: 28px;
+}
+
+.atlas-day-row span {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.atlas-day-row em {
+  color: rgba(255, 255, 255, 0.70);
+  font-style: normal;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.atlas-day-row b {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--atlas-text);
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-farm-snapshot-box {
+  gap: 10px !important;
+}
+
+.atlas-snapshot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: auto;
+}
+
+.atlas-snapshot-grid span {
+  min-width: 0;
+  border: 1px solid var(--atlas-border-soft);
+  border-radius: 16px;
+  background: var(--atlas-cream);
+  color: var(--atlas-muted);
+  padding: 8px 9px;
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.atlas-snapshot-grid b {
+  display: block;
+  color: var(--atlas-text);
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.atlas-project-card small {
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
 .atlas-task-active-card {
   cursor: pointer;
 }
@@ -97,6 +243,53 @@
 }
 
 @media (max-width: 700px) {
+  .atlas-season-label {
+    font-size: 11px;
+  }
+
+  .atlas-day-schedule {
+    gap: 6px;
+  }
+
+  .atlas-day-row {
+    min-height: 74px;
+    border-radius: 17px !important;
+    padding: 9px !important;
+  }
+
+  .atlas-day-row.primary {
+    min-height: 98px;
+  }
+
+  .atlas-day-row small {
+    min-width: 19px;
+    padding: 4px 6px;
+    font-size: 8px;
+  }
+
+  .atlas-day-row strong {
+    font-size: 14px;
+  }
+
+  .atlas-day-row.primary strong {
+    font-size: 22px;
+  }
+
+  .atlas-day-row span {
+    font-size: 9px;
+  }
+
+  .atlas-day-row em {
+    font-size: 8px;
+  }
+
+  .atlas-day-row b {
+    right: 9px;
+    bottom: 9px;
+    padding: 7px 9px;
+    font-size: 10px;
+  }
+
   .atlas-task-log-cue {
     right: 12px;
     bottom: 12px;
@@ -106,6 +299,20 @@
 
   .atlas-task-active-card em {
     max-width: calc(100% - 72px);
+  }
+
+  .atlas-snapshot-grid {
+    gap: 5px;
+  }
+
+  .atlas-snapshot-grid span {
+    padding: 6px 7px;
+    border-radius: 13px;
+    font-size: 8px;
+  }
+
+  .atlas-snapshot-grid b {
+    font-size: 13px;
   }
 
   .atlas-log-sentence {
@@ -125,5 +332,15 @@
 
   .atlas-log-chip-grid.compact {
     max-height: 150px;
+  }
+}
+
+@media (max-width: 380px) {
+  .atlas-day-row.primary strong {
+    font-size: 19px;
+  }
+
+  .atlas-day-row strong {
+    font-size: 12px;
   }
 }
