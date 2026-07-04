@@ -44,12 +44,14 @@ function addDays(date: Date, days: number) {
   return next;
 }
 
+function prettyDate(dateIso: string) {
+  return new Date(`${dateIso}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
+
 function periodBounds(todayIso: string, period: Period) {
   const today = new Date(`${todayIso}T12:00:00Z`);
 
-  if (period === "day") {
-    return { start: todayIso, end: isoDate(addDays(today, 1)), label: "Today" };
-  }
+  if (period === "day") return { start: todayIso, end: isoDate(addDays(today, 1)), label: "Today" };
 
   if (period === "week") {
     const day = today.getUTCDay();
@@ -94,18 +96,6 @@ function addActionCounts(counts: ReturnType<typeof emptyCounts>, raw: string) {
   if (includesAny(text, ["closeout"])) counts.closeouts += 1;
 }
 
-function humanAction(value: string) {
-  const text = value.replaceAll("_", " ").toLowerCase();
-  if (text.includes("germin")) return "germination checked";
-  if (text.includes("seed") || text.includes("sow")) return "sowing recorded";
-  if (text.includes("weed")) return "weeding recorded";
-  if (text.includes("harvest") || text.includes("cut")) return "harvest recorded";
-  if (text.includes("blocked")) return "blocked";
-  if (text.includes("closeout")) return "closeout saved";
-  if (text.includes("changed")) return "changed";
-  return text;
-}
-
 function cleanSentence(value: string) {
   return value
     .replace(/^\d{4}-\d{2}-\d{2}\s*[·-]\s*/g, "")
@@ -113,40 +103,68 @@ function cleanSentence(value: string) {
     .replace(/^[^·]+\s+completed\s+/i, "")
     .replace(/^[^·]+\s+closed\s+(day|week|month)\.\s*/i, "")
     .replaceAll('"', "")
+    .replace(/\bAnna\b/g, "crew")
+    .replace(/\bLex\b/g, "crew")
     .trim();
 }
 
+function textValue(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function isCurated(log: FieldLogRow) {
+  return log.source === "atlas_curated_record" || log.metadata?.record_source === "curated_july_record";
+}
+
+function curatedLine(log: FieldLogRow) {
+  const metadata = log.metadata ?? {};
+  const spot = textValue(metadata.spot) ?? textValue(metadata.display_label);
+  const variety = textValue(metadata.variety);
+  const action = textValue(metadata.action);
+  const status = textValue(metadata.status);
+  const note = textValue(log.note);
+  const pieces = [spot, variety, prettyDate(log.log_date), action ?? status].filter(Boolean);
+  const base = pieces.join(" · ");
+  return note ? `${base} · ${note}` : base;
+}
+
 function recentLines(logs: FieldLogRow[], events: EventRow[]) {
+  const curated = logs.filter(isCurated).map(curatedLine).filter(Boolean);
+  if (curated.length > 0) return Array.from(new Set(curated)).slice(0, 8);
+
   const logLines = logs
     .filter((log) => log.source !== "atlas_closeout")
-    .map((log) => {
-      const line = cleanSentence(log.summary_sentence || log.note || "");
-      return line || null;
-    })
-    .filter(Boolean) as string[];
+    .map((log) => cleanSentence(log.summary_sentence || log.note || ""))
+    .filter(Boolean);
 
   const eventLines = events.map((event) => {
-    const action = humanAction(event.event_type);
-    return event.note ? `${action} · ${event.note}` : action;
+    const text = event.event_type.replaceAll("_", " ").toLowerCase();
+    const action = text.includes("germin") ? "germination checked" : text.includes("seed") || text.includes("sow") ? "sowing recorded" : text;
+    return event.note ? `${action} · ${cleanSentence(event.note)}` : action;
   });
 
-  return Array.from(new Set([...logLines, ...eventLines])).slice(0, 4);
+  return Array.from(new Set([...logLines, ...eventLines])).slice(0, 6);
 }
 
 function carryForwardLines(logs: FieldLogRow[], tasks: TaskRow[]) {
+  const fromCurated = logs
+    .filter(isCurated)
+    .map((log) => textValue(log.metadata?.next))
+    .filter(Boolean) as string[];
+
   const fromCloseouts = logs.flatMap((log) => {
     const metadata = log.metadata ?? {};
     return [metadata.carry_forward, metadata.next_focus]
       .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
-      .map((value) => value.trim());
+      .map((value) => cleanSentence(value));
   });
 
   const fromTasks = tasks
     .filter((task) => task.status === "blocked" || task.generated_from === "task_result")
-    .map((task) => task.title)
+    .map((task) => cleanSentence(task.title))
     .filter(Boolean);
 
-  return Array.from(new Set([...fromCloseouts, ...fromTasks])).slice(0, 4);
+  return Array.from(new Set([...fromCurated, ...fromCloseouts, ...fromTasks])).slice(0, 6);
 }
 
 async function getFarmId() {
@@ -166,8 +184,9 @@ async function getSummary(farmId: string, todayIso: string, period: Period) {
     .eq("farm_id", farmId)
     .gte("log_date", bounds.start)
     .lt("log_date", bounds.end)
+    .order("log_date", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(80);
+    .limit(100);
 
   if (logsError) throw logsError;
 
@@ -179,7 +198,7 @@ async function getSummary(farmId: string, todayIso: string, period: Period) {
     .gte("event_date", bounds.start)
     .lt("event_date", bounds.end)
     .order("event_date", { ascending: false })
-    .limit(80);
+    .limit(100);
 
   if (eventsError) throw eventsError;
 
@@ -196,16 +215,18 @@ async function getSummary(farmId: string, todayIso: string, period: Period) {
   const logRows = (logs ?? []) as FieldLogRow[];
   const eventRows = (events ?? []) as EventRow[];
   const taskRows = (tasks ?? []) as TaskRow[];
+  const curatedRows = logRows.filter(isCurated);
+  const countRows = curatedRows.length > 0 ? curatedRows : logRows;
 
   counts.logs = logRows.length;
-  counts.objectEvents = eventRows.length;
+  counts.objectEvents = curatedRows.length > 0 ? curatedRows.length : eventRows.length;
 
-  logRows.forEach((log) => {
+  countRows.forEach((log) => {
     (log.action_types ?? []).forEach((action) => addActionCounts(counts, action));
-    addActionCounts(counts, `${log.summary_sentence} ${log.note ?? ""}`);
+    addActionCounts(counts, `${log.summary_sentence} ${log.note ?? ""} ${JSON.stringify(log.metadata ?? {})}`);
   });
 
-  eventRows.forEach((event) => addActionCounts(counts, `${event.event_type} ${event.note ?? ""}`));
+  if (curatedRows.length === 0) eventRows.forEach((event) => addActionCounts(counts, `${event.event_type} ${event.note ?? ""}`));
 
   taskRows.forEach((task) => {
     const dueInPeriod = !task.due_date || (task.due_date >= bounds.start && task.due_date < bounds.end);
@@ -231,12 +252,7 @@ export async function GET() {
   try {
     const farmId = await getFarmId();
     const today = isoDate(new Date());
-    const summaries = await Promise.all([
-      getSummary(farmId, today, "day"),
-      getSummary(farmId, today, "week"),
-      getSummary(farmId, today, "month"),
-    ]);
-
+    const summaries = await Promise.all([getSummary(farmId, today, "day"), getSummary(farmId, today, "week"), getSummary(farmId, today, "month")]);
     return NextResponse.json({ ok: true, today, summaries });
   } catch (error) {
     console.error("Atlas closeout load failed:", error);
@@ -247,18 +263,17 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const farmId = await getFarmId();
-    const body = (await request.json()) as { period?: Period; note?: string; carryForward?: string; nextFocus?: string; createdBy?: string };
+    const body = (await request.json()) as { period?: Period; note?: string; carryForward?: string; nextFocus?: string };
     const period = body.period ?? "day";
     const note = body.note?.trim();
     const carryForward = body.carryForward?.trim() || null;
     const nextFocus = body.nextFocus?.trim() || null;
-    const createdBy = body.createdBy?.trim() || "anna";
     const today = isoDate(new Date());
 
     if (!note) return NextResponse.json({ ok: false, error: "Closeout note required." }, { status: 400 });
 
     const summary = [
-      `${today} · ${createdBy} closed ${period}.`,
+      `${today} · ${period} closeout saved.`,
       note,
       carryForward ? `Carry forward: ${carryForward}` : null,
       nextFocus ? `Next focus: ${nextFocus}` : null,
@@ -270,13 +285,9 @@ export async function POST(request: NextRequest) {
       action_types: ["closeout", `${period}_closeout`],
       summary_sentence: summary,
       note,
-      created_by: createdBy,
+      created_by: null,
       source: "atlas_closeout",
-      metadata: {
-        closeout_period: period,
-        carry_forward: carryForward,
-        next_focus: nextFocus,
-      },
+      metadata: { closeout_period: period, carry_forward: carryForward, next_focus: nextFocus },
     }).select("id").single();
 
     if (error) throw error;
