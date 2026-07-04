@@ -1,0 +1,205 @@
+.atlas-project-list-card {
+  width: 100%;
+  border: 1px solid var(--atlas-border);
+  text-align: left;
+}
+
+.atlas-project-back {
+  width: fit-content;
+  border: 1px solid var(--atlas-border);
+  border-radius: 999px;
+  background: rgba(246, 242, 230, 0.72);
+  color: var(--atlas-muted);
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-project-detail-hero {
+  border: 1px solid var(--atlas-border);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.86);
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+  box-shadow: 0 10px 22px rgba(58, 46, 30, 0.045);
+}
+
+.atlas-project-detail-hero strong {
+  color: var(--atlas-text);
+  font-size: clamp(32px, 8vw, 52px);
+  line-height: 0.92;
+  font-weight: 950;
+  letter-spacing: -0.065em;
+}
+
+.atlas-project-detail-hero p {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 18px;
+  line-height: 1.14;
+  font-weight: 900;
+}
+
+.atlas-project-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.atlas-project-detail-meta span {
+  border: 1px solid var(--atlas-border-soft);
+  border-radius: 999px;
+  background: var(--atlas-cream);
+  color: var(--atlas-muted);
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-project-section {
+  display: grid;
+  gap: 9px;
+}
+
+.atlas-project-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.atlas-project-section-head span {
+  color: #858bb8;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.atlas-project-section-head small {
+  border-radius: 999px;
+  background: rgba(167, 171, 214, 0.24);
+  color: var(--atlas-text);
+  padding: 6px 9px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-project-task-list,
+.atlas-project-step-list {
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-project-task-card {
+  width: 100%;
+  border: 1px solid rgba(139, 145, 194, 0.28);
+  border-radius: 22px;
+  background: rgba(167, 171, 214, 0.16);
+  padding: 14px;
+  display: grid;
+  gap: 5px;
+  text-align: left;
+}
+
+.atlas-project-task-card strong {
+  color: var(--atlas-text);
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.atlas-project-task-card span {
+  color: var(--atlas-muted);
+  font-size: 13px;
+  line-height: 1.15;
+  font-weight: 900;
+}
+
+.atlas-project-step-card {
+  border: 1px solid var(--atlas-border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 13px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+}
+
+.atlas-project-step-card.done {
+  opacity: 0.62;
+}
+
+.atlas-project-step-card > small {
+  width: 29px;
+  height: 29px;
+  border-radius: 999px;
+  background: rgba(246, 242, 230, 0.92);
+  color: var(--atlas-muted);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-project-step-card div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.atlas-project-step-card strong {
+  color: var(--atlas-text);
+  font-size: 17px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+}
+
+.atlas-project-step-card span,
+.atlas-project-step-card p,
+.atlas-project-empty {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1.22;
+  font-weight: 850;
+}
+
+.atlas-project-empty {
+  border: 1px solid var(--atlas-border);
+  border-radius: 18px;
+  background: rgba(246, 242, 230, 0.54);
+  padding: 12px;
+}
+
+@media (max-width: 700px) {
+  .atlas-project-detail-hero {
+    border-radius: 24px;
+    padding: 15px;
+  }
+
+  .atlas-project-detail-hero strong {
+    font-size: clamp(28px, 9vw, 44px);
+  }
+
+  .atlas-project-detail-hero p {
+    font-size: 15px;
+  }
+
+  .atlas-project-task-card {
+    border-radius: 19px;
+    padding: 12px;
+  }
+
+  .atlas-project-task-card strong {
+    font-size: 17px;
+  }
+}
