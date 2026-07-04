@@ -4,6 +4,16 @@ export type AtlasTaskCardObject = {
   object_label: string;
   object_type: string;
   object_mode: string | null;
+  life_status?: string | null;
+  weed_pressure?: string | null;
+  water_status?: string | null;
+  last_touched_at?: string | null;
+  last_weeded_at?: string | null;
+  last_watered_at?: string | null;
+  last_checked_at?: string | null;
+  decision_required?: boolean | null;
+  presentability?: string | null;
+  state_metadata?: Record<string, unknown> | null;
 };
 
 export type AtlasTaskCardResourceRequirement = {
@@ -49,6 +59,16 @@ export type AtlasTaskCardLog = {
   created_at: string;
 };
 
+export type AtlasTaskOutcomeEvent = {
+  event_id: string;
+  outcome: "done" | "partial" | "blocked" | string;
+  lane_key: string | null;
+  work_key: string | null;
+  blocker_reason: string | null;
+  note: string | null;
+  created_at: string;
+};
+
 export type AtlasTaskCaptureByObject = Record<
   string,
   {
@@ -88,6 +108,7 @@ export type AtlasTaskCard = {
   zone_label: string | null;
 
   task_logs: AtlasTaskCardLog[];
+  task_outcomes: AtlasTaskOutcomeEvent[];
 
   objects: AtlasTaskCardObject[];
   resource_requirements: AtlasTaskCardResourceRequirement[];
