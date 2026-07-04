@@ -1,3 +1,36 @@
+.atlas-dashboard-top {
+  gap: 12px !important;
+}
+
+.atlas-weather-line {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--atlas-muted);
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 900;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-note-plus {
+  flex: 0 0 auto;
+  width: 58px;
+  height: 58px;
+  border: 2px solid rgba(170, 172, 58, 0.34);
+  border-radius: 22px;
+  background: #e1e35a;
+  color: var(--atlas-text);
+  box-shadow: 0 8px 18px rgba(123, 124, 44, 0.14);
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 950;
+  display: grid;
+  place-items: center;
+}
+
 .atlas-home-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   grid-template-rows: minmax(0, 2.35fr) minmax(0, 1fr) 46px !important;
@@ -53,6 +86,61 @@
 
 .atlas-home-box:nth-child(2) .atlas-home-mini-list {
   display: none !important;
+}
+
+.atlas-projects-box {
+  gap: 10px !important;
+}
+
+.atlas-project-mini-list {
+  display: grid;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.atlas-project-mini-list span {
+  display: block;
+  min-width: 0;
+  border: 1px solid var(--atlas-border-soft);
+  border-radius: 999px;
+  background: var(--atlas-cream);
+  color: var(--atlas-muted);
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-project-list {
+  display: grid;
+  gap: 10px;
+}
+
+.atlas-project-card {
+  border: 1px solid var(--atlas-border);
+  border-radius: 22px;
+  background: rgba(250, 247, 239, 0.82);
+  padding: 15px;
+  display: grid;
+  gap: 6px;
+}
+
+.atlas-project-card strong {
+  color: var(--atlas-text);
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.atlas-project-card span {
+  color: var(--atlas-muted);
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 850;
 }
 
 .atlas-task-controller button {
@@ -356,6 +444,21 @@
 }
 
 @media (max-width: 700px) {
+  .atlas-dashboard-top {
+    gap: 9px !important;
+  }
+
+  .atlas-weather-line {
+    font-size: 12px;
+  }
+
+  .atlas-note-plus {
+    width: 50px;
+    height: 50px;
+    border-radius: 18px;
+    font-size: 30px;
+  }
+
   .atlas-home-grid {
     grid-template-rows: minmax(0, 2.55fr) minmax(0, 1fr) 44px !important;
     gap: 8px !important;
@@ -386,6 +489,11 @@
 
   .atlas-home-box:nth-child(2) em {
     font-size: 10px !important;
+  }
+
+  .atlas-project-mini-list span {
+    font-size: 9.5px;
+    padding: 6px 8px;
   }
 
   .atlas-task-date {
@@ -457,6 +565,17 @@
     grid-template-rows: minmax(0, 2.6fr) minmax(0, 1fr) 42px !important;
     gap: 7px !important;
     padding: 7px !important;
+  }
+
+  .atlas-weather-line {
+    font-size: 10px;
+  }
+
+  .atlas-note-plus {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    font-size: 26px;
   }
 
   .atlas-home-task-hero.atlas-task-controller {
