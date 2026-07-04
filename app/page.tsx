@@ -29,7 +29,13 @@ import {
 
 type HomePanel = "tasks" | "calendar" | "inbox" | null;
 type CalendarEntry = { date: string; title: string; dayKind: string; items: string[] };
-type TaskUnit = { id: string; card: AtlasTaskCard; object: AtlasTaskCardObject | null; registryObject: AtlasRegistryObject | null; zone: AtlasRegistryZone | null };
+type TaskUnit = {
+  id: string;
+  card: AtlasTaskCard;
+  object: AtlasTaskCardObject | null;
+  registryObject: AtlasRegistryObject | null;
+  zone: AtlasRegistryZone | null;
+};
 type CloseoutCardRecord = AtlasCloseoutRecord & { sourceLine?: string };
 
 const calendarEntries: CalendarEntry[] = [
@@ -66,7 +72,6 @@ function locationLine(unit: TaskUnit | null) { if (!unit) return ""; return [uni
 function queueSubtitle(unit: TaskUnit) { return [cropLine(unit), compactSpot(unit.object?.object_label)].filter(Boolean).join(" · "); }
 function completedObjectIds(card: AtlasTaskCard) { const captureMap = card.metadata?.capture_by_object ?? {}; return new Set(Object.entries(captureMap).filter(([, value]) => Boolean(value.completed_at)).map(([id]) => id)); }
 function taskUnits(cards: AtlasTaskCard[], zones: AtlasRegistryZone[]) { const units: TaskUnit[] = []; cards.forEach((card) => { const completed = completedObjectIds(card); if (card.objects.length === 0) { units.push({ id: `${card.task_id}:task`, card, object: null, registryObject: null, zone: null }); return; } card.objects.forEach((object) => { if (completed.has(object.object_id)) return; const match = registryForObject(object.object_id, zones); units.push({ id: `${card.task_id}:${object.object_id}`, card, object, registryObject: match.object, zone: match.zone }); }); }); return units; }
-function unitMeta(unit: TaskUnit) { return [contentLine(unit.registryObject), prettyDate(unit.card.due_date)].filter(Boolean).join(" · "); }
 function defaultCapture(kind: string): AtlasTaskCapture { return { kind, standQuality: "", standPercent: "", plantCount: "", gaps: "", nextAction: "", finished: "", pressure: "", stems: "", quality: "", destination: "", actualContents: "", heading: "" }; }
 function resultLabel(result: AtlasTaskResult) { return result === "needs_supplies" ? "Need supplies" : result[0].toUpperCase() + result.slice(1); }
 function countPhrase(count: number, singular: string, plural = `${singular}s`) { return count === 0 ? null : `${count} ${count === 1 ? singular : plural}`; }
@@ -88,7 +93,7 @@ function CloseoutCard({ summary }: { summary: AtlasCloseoutSummary }) {
 function TaskController({ primaryUnit, nextUnits, loading, openUnit, openTasks }: { primaryUnit: TaskUnit | null; nextUnits: TaskUnit[]; loading: boolean; openTasks: () => void; openUnit: (unit: TaskUnit) => void }) {
   const date = primaryUnit?.card.due_date ? prettyDate(primaryUnit.card.due_date) : "Today";
   if (!primaryUnit) return <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller empty"><div className="atlas-task-controller-head"><span className="atlas-task-kicker">Today</span><span className="atlas-task-date">{date}</span></div><button type="button" className="atlas-task-active-card" onClick={openTasks}><strong>{loading ? "Loading" : "Clear"}</strong><em>No open task selected.</em></button></article>;
-  return <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller"><div className="atlas-task-controller-head"><div><span className="atlas-task-kicker">Today</span><strong>{taskAction(primaryUnit)}</strong></div><span className="atlas-task-date">{date}</span></div><button type="button" className="atlas-task-active-card" onClick={() => openUnit(primaryUnit)}><strong>{cropLine(primaryUnit)}</strong><em>{locationLine(primaryUnit)}</em><span className="atlas-task-record-button">Record</span></button><div className="atlas-task-preview-grid">{nextUnits.slice(0, 3).map((unit) => <button type="button" key={unit.id} className="atlas-task-queue-card" onClick={() => openUnit(unit)}><strong>{taskAction(unit)}</strong><span>{queueSubtitle(unit)}</span></button>)}</div></article>;
+  return <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller"><div className="atlas-task-controller-head"><span className="atlas-task-kicker">Today</span><span className="atlas-task-date">{date}</span></div><button type="button" className="atlas-task-active-card" onClick={() => openUnit(primaryUnit)}><span className="atlas-task-active-action">{taskAction(primaryUnit)}</span><strong>{cropLine(primaryUnit)}</strong><em>{locationLine(primaryUnit)}</em></button><div className="atlas-task-preview-grid">{nextUnits.slice(0, 3).map((unit) => <button type="button" key={unit.id} className="atlas-task-queue-card" onClick={() => openUnit(unit)}><strong>{taskAction(unit)}</strong><span>{queueSubtitle(unit)}</span></button>)}</div></article>;
 }
 
 export default function AtlasHomePage() {
