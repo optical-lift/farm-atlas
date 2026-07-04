@@ -122,6 +122,18 @@
   font-weight: 900;
 }
 
+.atlas-project-task-card::after {
+  content: "open →";
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--atlas-text);
+  padding: 7px 10px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+}
+
 .atlas-project-step-card {
   border: 1px solid var(--atlas-border);
   border-radius: 22px;
@@ -180,17 +192,13 @@
   padding: 12px;
 }
 
-.atlas-project-panel > .atlas-project-section:nth-of-type(1) {
-  display: none !important;
-}
-
-.atlas-project-panel > .atlas-project-section:nth-of-type(2) .atlas-project-section-head span {
+.atlas-project-panel > .atlas-project-section:nth-of-type(1) .atlas-project-section-head span {
   font-size: 0;
   letter-spacing: 0;
 }
 
-.atlas-project-panel > .atlas-project-section:nth-of-type(2) .atlas-project-section-head span::after {
-  content: "Project Work";
+.atlas-project-panel > .atlas-project-section:nth-of-type(1) .atlas-project-section-head span::after {
+  content: "Project Tasks";
   color: #858bb8;
   font-size: 12px;
   line-height: 1;
@@ -199,8 +207,8 @@
   text-transform: uppercase;
 }
 
-.atlas-project-panel > .atlas-project-section:nth-of-type(2) .atlas-project-step-card {
-  background: rgba(255, 255, 255, 0.82);
+.atlas-project-panel > .atlas-project-section:nth-of-type(2) {
+  display: none !important;
 }
 
 .atlas-project-step-card span {
