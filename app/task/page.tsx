@@ -7,6 +7,7 @@ import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-
 
 type LaneKey = "start" | "maintain" | "verify" | "harvest" | "venue";
 type Outcome = "done" | "partial" | "blocked";
+type WeatherResponse = { ok: boolean; label?: string; rainAge?: string; daysSinceRain?: number | null; error?: string };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const laneLabels: Record<LaneKey, string> = {
@@ -183,6 +184,8 @@ export default function AtlasTaskPage() {
   const [selectedLane, setSelectedLane] = useState<LaneKey | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
+  const [message, setMessage] = useState<string | null>(null);
   const today = todayIso();
   const nextWeek = addDaysIso(today, 7);
 
@@ -199,6 +202,16 @@ export default function AtlasTaskPage() {
     }
   }
 
+  async function loadWeather() {
+    try {
+      const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" });
+      const data = (await response.json()) as WeatherResponse;
+      setWeatherLabel(response.ok && data.ok && data.label ? data.label : "weather unavailable");
+    } catch {
+      setWeatherLabel("weather unavailable");
+    }
+  }
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const taskId = params.get("taskId");
@@ -206,6 +219,7 @@ export default function AtlasTaskPage() {
     if (taskId) setSelectedTaskId(taskId);
     if (lane && laneLabels[lane]) setSelectedLane(lane);
     void loadTasks();
+    void loadWeather();
   }, []);
 
   const openTasks = useMemo(() => tasks.filter((task) => task.status === "open" || task.status === "blocked"), [tasks]);
@@ -223,15 +237,30 @@ export default function AtlasTaskPage() {
     setSelectedTaskId(null);
   }
 
+  async function addHeaderNote() {
+    if (!selectedTask) { setMessage("Choose a task first."); return; }
+    const note = window.prompt("Task note", "")?.trim();
+    if (!note) return;
+    try {
+      setMessage(null);
+      await postNote(selectedTask, note);
+      await loadTasks();
+      setMessage("Note saved.");
+    } catch (noteError) {
+      setMessage(noteError instanceof Error ? noteError.message : "Task note failed.");
+    }
+  }
+
   return (
-    <main className="atlas-task-page-shell">
-      <section className="atlas-task-page-phone">
-        <header className="atlas-task-page-top">
-          <div>
-            <span>Atlas</span>
-            <strong>Tasks</strong>
-          </div>
-          <Link href="/">Home</Link>
+    <main className="atlas-phone-shell atlas-task-page-shell">
+      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
+        <header className="atlas-phone-top atlas-dashboard-top">
+          <Link href="/" className="atlas-phone-brand atlas-task-header-brand">
+            <span className="atlas-phone-kicker">Atlas</span>
+            <span className="atlas-phone-title">Elm Farm</span>
+          </Link>
+          <span className="atlas-weather-line">{weatherLabel}</span>
+          <button type="button" className="atlas-note-plus" aria-label="Add task note" onClick={() => void addHeaderNote()}>+</button>
         </header>
 
         <section className="atlas-task-page-hero">
@@ -248,6 +277,7 @@ export default function AtlasTaskPage() {
 
         {loading ? <div className="atlas-task-page-empty">Loading tasks.</div> : null}
         {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
+        {message ? <div className="atlas-task-page-empty">{message}</div> : null}
         {!loading && !selectedTask ? <div className="atlas-task-page-empty">No open tasks.</div> : null}
         {selectedTask ? <ActiveTaskCard task={selectedTask} onChange={handleTaskChanged} /> : null}
 
