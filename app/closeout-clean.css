@@ -1,0 +1,47 @@
+.atlas-closeout-card.tidy {
+  border-radius: 21px;
+  padding: 12px;
+  gap: 9px;
+}
+
+.atlas-closeout-simple {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.atlas-closeout-pill-row.primary span {
+  color: var(--atlas-text);
+  background: rgba(246, 242, 230, 0.94);
+}
+
+.atlas-closeout-section {
+  display: grid;
+  gap: 5px;
+  border-top: 1px solid rgba(219, 210, 197, 0.62);
+  padding-top: 8px;
+}
+
+.atlas-closeout-section span {
+  display: block;
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atlas-closeout-section p {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1.28;
+  font-weight: 850;
+}
+
+.atlas-calendar-preview {
+  opacity: 0.78;
+}
