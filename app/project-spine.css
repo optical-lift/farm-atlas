@@ -134,6 +134,43 @@
   font-weight: 950;
 }
 
+.atlas-outcome-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin: -3px 0 5px;
+}
+
+.atlas-outcome-button {
+  border: 1px solid var(--atlas-border);
+  border-radius: 999px;
+  background: rgba(246, 242, 230, 0.72);
+  color: var(--atlas-muted);
+  padding: 8px 9px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-outcome-button.done {
+  background: rgba(214, 225, 177, 0.56);
+  color: #515b34;
+}
+
+.atlas-outcome-button.partial {
+  background: rgba(235, 220, 160, 0.45);
+  color: #74632a;
+}
+
+.atlas-outcome-button.blocked {
+  background: rgba(225, 181, 165, 0.38);
+  color: #835345;
+}
+
+.atlas-outcome-actions[data-outcome] .atlas-outcome-button:not(:disabled) {
+  opacity: 0.42;
+}
+
 .atlas-project-step-card {
   border: 1px solid var(--atlas-border);
   border-radius: 22px;
@@ -236,5 +273,10 @@
 
   .atlas-project-task-card strong {
     font-size: 17px;
+  }
+
+  .atlas-outcome-button {
+    padding: 7px 6px;
+    font-size: 11px;
   }
 }
