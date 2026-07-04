@@ -22,6 +22,7 @@ export type AtlasCloseoutSummary = {
   endDate: string;
   counts: AtlasCloseoutCounts;
   recent: string[];
+  carryForward: string[];
 };
 
 export type AtlasCloseoutResponse = {
