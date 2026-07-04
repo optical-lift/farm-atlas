@@ -3,7 +3,7 @@
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 
-import { fetchAtlasCloseout, saveAtlasCloseout, type AtlasCloseoutPeriod, type AtlasCloseoutSummary } from "@/lib/atlas/closeout-client";
+import { fetchAtlasCloseout, saveAtlasCloseout, type AtlasCloseoutPeriod, type AtlasCloseoutRecord, type AtlasCloseoutSummary } from "@/lib/atlas/closeout-client";
 import { fetchAtlasTaskCards, type AtlasTaskCard, type AtlasTaskCardObject } from "@/lib/atlas/task-cards-client";
 import { saveAtlasTaskResult, type AtlasTaskCapture, type AtlasTaskResult } from "@/lib/atlas/task-result-client";
 import { saveAtlasInboxItem } from "@/lib/atlas/inbox-client";
@@ -12,6 +12,8 @@ import { fetchAtlasZoneRegistry, type AtlasRegistryObject, type AtlasRegistryZon
 type HomePanel = "tasks" | "calendar" | "inbox" | null;
 type CalendarEntry = { date: string; title: string; dayKind: string; items: string[] };
 type TaskUnit = { id: string; card: AtlasTaskCard; object: AtlasTaskCardObject | null; registryObject: AtlasRegistryObject | null; zone: AtlasRegistryZone | null };
+
+type CloseoutCardRecord = AtlasCloseoutRecord & { sourceLine?: string };
 
 const calendarEntries: CalendarEntry[] = [
   { date: "2026-07-04", dayKind: "Succession / check", title: "Check field germination", items: ["CHECK: Field Rows germination", "CHECK: Barn Beds Teddy status"] },
@@ -31,35 +33,182 @@ function prettyDate(dateIso: string | null | undefined) {
   if (!dateIso) return "unknown";
   return new Date(`${dateIso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
-function cleanLabel(value: string | null | undefined) { return (value ?? "").replace(/truth/gi, "state").replace(/\bAnna\b/g, "crew").replace(/\bLex\b/g, "crew"); }
-function currentEntry(today: string) { return calendarEntries.find((entry) => entry.date === today) ?? calendarEntries.find((entry) => entry.date > today) ?? calendarEntries[calendarEntries.length - 1]; }
-function nextEntries(today: string) { return calendarEntries.filter((entry) => entry.date >= today).slice(0, 6); }
-function taskSortValue(card: AtlasTaskCard) { return `${card.due_date ?? "9999-12-31"}-${priorityRank[card.priority] ?? 9}-${card.title}`; }
-function registryForObject(objectId: string | null | undefined, zones: AtlasRegistryZone[]) { if (!objectId) return { zone: null, object: null }; for (const zone of zones) { const object = zone.objects.find((candidate) => candidate.id === objectId); if (object) return { zone, object }; } return { zone: null, object: null }; }
-function contentLine(object: AtlasRegistryObject | null) { const content = object?.contents[0]; return content ? [content.content_label, content.variety, content.status?.replaceAll("_", " ")].filter(Boolean).join(" · ") : null; }
-function sizeLine(object: AtlasRegistryObject | null) { if (!object) return null; if (object.width_ft && object.length_ft) return `${object.width_ft} ft × ${object.length_ft} ft`; return object.width_ft ? `${object.width_ft} ft` : object.length_ft ? `${object.length_ft} ft` : null; }
-function captureKind(card: AtlasTaskCard) { const text = `${card.task_type} ${card.title}`.toLowerCase(); if (text.includes("germin")) return "germination"; if (text.includes("weed")) return "weed"; if (text.includes("harvest") || text.includes("cut")) return "harvest"; if (text.includes("audit") || text.includes("walk") || text.includes("state") || text.includes("truth")) return "bed_audit"; return "generic"; }
-function actionLabel(unit: TaskUnit) { const kind = captureKind(unit.card); const crop = unit.registryObject?.contents[0]?.content_label; if (kind === "germination") return crop ? `Record ${crop} germination` : "Record germination"; if (kind === "weed") return "Record weeded state"; if (kind === "harvest") return crop ? `Record ${crop} harvest` : "Record harvest"; if (kind === "bed_audit") return "Record bed state"; return cleanLabel(unit.card.title); }
-function completedObjectIds(card: AtlasTaskCard) { const captureMap = card.metadata?.capture_by_object ?? {}; return new Set(Object.entries(captureMap).filter(([, value]) => Boolean(value.completed_at)).map(([id]) => id)); }
-function taskUnits(cards: AtlasTaskCard[], zones: AtlasRegistryZone[]) { const units: TaskUnit[] = []; cards.forEach((card) => { const completed = completedObjectIds(card); if (card.objects.length === 0) { units.push({ id: `${card.task_id}:task`, card, object: null, registryObject: null, zone: null }); return; } card.objects.forEach((object) => { if (completed.has(object.object_id)) return; const match = registryForObject(object.object_id, zones); units.push({ id: `${card.task_id}:${object.object_id}`, card, object, registryObject: match.object, zone: match.zone }); }); }); return units; }
-function unitMeta(unit: TaskUnit) { return [contentLine(unit.registryObject), prettyDate(unit.card.due_date)].filter(Boolean).join(" · "); }
-function defaultCapture(kind: string): AtlasTaskCapture { return { kind, standQuality: "", standPercent: "", plantCount: "", gaps: "", nextAction: "", finished: "", pressure: "", stems: "", quality: "", destination: "", actualContents: "", heading: "" }; }
-function resultLabel(result: AtlasTaskResult) { return result === "needs_supplies" ? "Need supplies" : result[0].toUpperCase() + result.slice(1); }
-function countPhrase(count: number, singular: string, plural = `${singular}s`) { return count === 0 ? null : `${count} ${count === 1 ? singular : plural}`; }
+
+function cleanLabel(value: string | null | undefined) {
+  return (value ?? "").replace(/truth/gi, "state").replace(/\bAnna\b/g, "crew").replace(/\bLex\b/g, "crew");
+}
+
+function currentEntry(today: string) {
+  return calendarEntries.find((entry) => entry.date === today) ?? calendarEntries.find((entry) => entry.date > today) ?? calendarEntries[calendarEntries.length - 1];
+}
+
+function nextEntries(today: string) {
+  return calendarEntries.filter((entry) => entry.date >= today).slice(0, 6);
+}
+
+function taskSortValue(card: AtlasTaskCard) {
+  return `${card.due_date ?? "9999-12-31"}-${priorityRank[card.priority] ?? 9}-${card.title}`;
+}
+
+function registryForObject(objectId: string | null | undefined, zones: AtlasRegistryZone[]) {
+  if (!objectId) return { zone: null, object: null };
+  for (const zone of zones) {
+    const object = zone.objects.find((candidate) => candidate.id === objectId);
+    if (object) return { zone, object };
+  }
+  return { zone: null, object: null };
+}
+
+function contentLine(object: AtlasRegistryObject | null) {
+  const content = object?.contents[0];
+  return content ? [content.content_label, content.variety, content.status?.replaceAll("_", " ")].filter(Boolean).join(" · ") : null;
+}
+
+function sizeLine(object: AtlasRegistryObject | null) {
+  if (!object) return null;
+  if (object.width_ft && object.length_ft) return `${object.width_ft} ft × ${object.length_ft} ft`;
+  return object.width_ft ? `${object.width_ft} ft` : object.length_ft ? `${object.length_ft} ft` : null;
+}
+
+function captureKind(card: AtlasTaskCard) {
+  const text = `${card.task_type} ${card.title}`.toLowerCase();
+  if (text.includes("germin")) return "germination";
+  if (text.includes("weed")) return "weed";
+  if (text.includes("harvest") || text.includes("cut")) return "harvest";
+  if (text.includes("audit") || text.includes("walk") || text.includes("state") || text.includes("truth")) return "bed_audit";
+  return "generic";
+}
+
+function actionLabel(unit: TaskUnit) {
+  const kind = captureKind(unit.card);
+  const crop = unit.registryObject?.contents[0]?.content_label;
+  if (kind === "germination") return crop ? `Record ${crop} germination` : "Record germination";
+  if (kind === "weed") return "Record weeded state";
+  if (kind === "harvest") return crop ? `Record ${crop} harvest` : "Record harvest";
+  if (kind === "bed_audit") return "Record bed state";
+  return cleanLabel(unit.card.title);
+}
+
+function completedObjectIds(card: AtlasTaskCard) {
+  const captureMap = card.metadata?.capture_by_object ?? {};
+  return new Set(Object.entries(captureMap).filter(([, value]) => Boolean(value.completed_at)).map(([id]) => id));
+}
+
+function taskUnits(cards: AtlasTaskCard[], zones: AtlasRegistryZone[]) {
+  const units: TaskUnit[] = [];
+  cards.forEach((card) => {
+    const completed = completedObjectIds(card);
+    if (card.objects.length === 0) {
+      units.push({ id: `${card.task_id}:task`, card, object: null, registryObject: null, zone: null });
+      return;
+    }
+    card.objects.forEach((object) => {
+      if (completed.has(object.object_id)) return;
+      const match = registryForObject(object.object_id, zones);
+      units.push({ id: `${card.task_id}:${object.object_id}`, card, object, registryObject: match.object, zone: match.zone });
+    });
+  });
+  return units;
+}
+
+function unitMeta(unit: TaskUnit) {
+  return [contentLine(unit.registryObject), prettyDate(unit.card.due_date)].filter(Boolean).join(" · ");
+}
+
+function defaultCapture(kind: string): AtlasTaskCapture {
+  return { kind, standQuality: "", standPercent: "", plantCount: "", gaps: "", nextAction: "", finished: "", pressure: "", stems: "", quality: "", destination: "", actualContents: "", heading: "" };
+}
+
+function resultLabel(result: AtlasTaskResult) {
+  return result === "needs_supplies" ? "Need supplies" : result[0].toUpperCase() + result.slice(1);
+}
+
+function countPhrase(count: number, singular: string, plural = `${singular}s`) {
+  return count === 0 ? null : `${count} ${count === 1 ? singular : plural}`;
+}
+
+function recordKind(record: CloseoutCardRecord) {
+  const text = [record.kind, record.action, record.status, record.sourceLine].filter(Boolean).join(" ").toLowerCase();
+  if (text.includes("germin") || text.includes("check")) return "Checked";
+  if (text.includes("sow") || text.includes("sown") || text.includes("seed")) return "Sown";
+  if (text.includes("harvest") || text.includes("cut")) return "Harvest";
+  return record.action || "Record";
+}
+
+function zoneForRecord(record: CloseoutCardRecord) {
+  const text = [record.zone, record.label, record.spot, record.sourceLine].filter(Boolean).join(" ").toLowerCase();
+  if (text.includes("berry") || text.includes("bw")) return "Berry Walk";
+  if (text.includes("barn") || text.includes("bb")) return "Barn Beds";
+  if (text.includes("field") || text.includes("fr") || text.includes("zinnia block") || text.includes("sunflower block")) return "Field Rows";
+  return record.zone ?? "Elm Farm";
+}
+
+function parseRecordLine(line: string, index: number): CloseoutCardRecord {
+  const parts = line.split("·").map((part) => cleanLabel(part.trim())).filter(Boolean);
+  const [spot, variety, date, action, ...noteParts] = parts;
+  const note = noteParts.join(" · ") || null;
+  return {
+    id: `line-${index}-${line}`,
+    date: date ?? "",
+    zone: null,
+    spot: spot ?? null,
+    label: spot ?? line,
+    action: action ?? null,
+    crop: null,
+    variety: variety ?? null,
+    status: action ?? null,
+    note,
+    next: null,
+    kind: action?.toLowerCase().includes("germination") ? "germination" : action?.toLowerCase().includes("sown") ? "sowing" : null,
+    sourceLine: line,
+  };
+}
+
+function closeoutRecords(summary: AtlasCloseoutSummary): CloseoutCardRecord[] {
+  const records = (summary.records ?? []) as CloseoutCardRecord[];
+  if (records.length > 0) return records;
+  return (summary.recent ?? []).map(parseRecordLine);
+}
+
+function CloseoutRecordCard({ record }: { record: CloseoutCardRecord }) {
+  const kind = recordKind(record);
+  const zone = zoneForRecord(record);
+  const title = record.spot || record.label;
+  const cropLine = [record.variety, record.crop].filter(Boolean).join(" · ");
+  const dateAction = [record.date ? prettyDate(record.date) : null, record.action || record.status].filter(Boolean).join(" · ");
+
+  return (
+    <article className="atlas-record-card">
+      <div className="atlas-record-card-top">
+        <span className="atlas-record-zone">{zone}</span>
+        <span className="atlas-record-kind">{kind}</span>
+      </div>
+      <strong>{title}</strong>
+      {cropLine ? <p className="atlas-record-crop">{cropLine}</p> : null}
+      {dateAction ? <p className="atlas-record-date">{dateAction}</p> : null}
+      {record.note ? <p className="atlas-record-note">{cleanLabel(record.note)}</p> : null}
+    </article>
+  );
+}
 
 function CloseoutCard({ summary }: { summary: AtlasCloseoutSummary }) {
   const count = summary.counts;
-  const hasAnyRecord = count.logs > 0 || count.objectEvents > 0 || count.tasksDone > 0 || count.tasksBlocked > 0;
-  const headline = [countPhrase(count.objectEvents, "record"), countPhrase(count.seeded, "sowing"), countPhrase(count.germination, "germination check"), countPhrase(count.tasksBlocked, "blocked item")].filter(Boolean).slice(0, 3) as string[];
+  const records = closeoutRecords(summary);
+  const hasAnyRecord = records.length > 0 || count.logs > 0 || count.objectEvents > 0 || count.tasksDone > 0 || count.tasksBlocked > 0;
+  const headline = [countPhrase(records.length || count.objectEvents, "record"), countPhrase(count.seeded, "sowing"), countPhrase(count.germination, "germination check")].filter(Boolean).slice(0, 3) as string[];
   const work = [countPhrase(count.tasksDone, "done"), count.openTasks ? `${count.openTasks} still open` : null, countPhrase(count.followUps, "follow-up")].filter(Boolean) as string[];
+
   return (
-    <article className="atlas-closeout-card tidy">
-      <div className="atlas-closeout-card-head"><strong>{summary.label}</strong><span>{prettyDate(summary.startDate)}–{prettyDate(summary.endDate)}</span></div>
+    <article className="atlas-closeout-card tidy farm-records">
+      <div className="atlas-closeout-card-head">
+        <strong>{summary.label}</strong>
+        <span>{prettyDate(summary.startDate)}–{prettyDate(summary.endDate)}</span>
+      </div>
       {!hasAnyRecord ? <p className="atlas-closeout-simple">No updates yet.</p> : null}
       {headline.length > 0 ? <div className="atlas-closeout-pill-row primary">{headline.map((fact) => <span key={fact}>{fact}</span>)}</div> : null}
       {work.length > 0 ? <div className="atlas-closeout-pill-row soft">{work.map((fact) => <span key={fact}>{fact}</span>)}</div> : null}
-      {summary.recent.length > 0 ? <div className="atlas-closeout-section"><span>Changed</span>{summary.recent.map((line) => <p key={line}>{cleanLabel(line)}</p>)}</div> : null}
       {summary.carryForward.length > 0 ? <div className="atlas-closeout-section carry"><span>Carry forward</span>{summary.carryForward.map((line) => <p key={line}>{cleanLabel(line)}</p>)}</div> : null}
+      {records.length > 0 ? <div className="atlas-record-list"><span>Records</span>{records.map((record) => <CloseoutRecordCard key={record.id} record={record} />)}</div> : null}
     </article>
   );
 }
@@ -90,11 +239,48 @@ export default function AtlasHomePage() {
   const [closeoutMessage, setCloseoutMessage] = useState<string | null>(null);
   const today = todayIso();
 
-  async function loadCards() { try { setLoading(true); setError(null); const response = await fetchAtlasTaskCards(); setCards(response.taskCards ?? []); } catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Tasks failed."); } finally { setLoading(false); } }
-  async function loadRegistry() { try { setRegistryLoading(true); const response = await fetchAtlasZoneRegistry(); setRegistryZones(response.zones ?? []); } catch (registryError) { setError(registryError instanceof Error ? registryError.message : "Zones failed."); } finally { setRegistryLoading(false); } }
-  async function loadCloseout() { try { setCloseoutLoading(true); const response = await fetchAtlasCloseout(); setCloseoutSummaries(response.summaries ?? []); } catch (closeoutError) { setCloseoutMessage(closeoutError instanceof Error ? closeoutError.message : "Closeout failed."); } finally { setCloseoutLoading(false); } }
+  async function loadCards() {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetchAtlasTaskCards();
+      setCards(response.taskCards ?? []);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  useEffect(() => { void loadCards(); void loadRegistry(); void loadCloseout(); }, []);
+  async function loadRegistry() {
+    try {
+      setRegistryLoading(true);
+      const response = await fetchAtlasZoneRegistry();
+      setRegistryZones(response.zones ?? []);
+    } catch (registryError) {
+      setError(registryError instanceof Error ? registryError.message : "Zones failed.");
+    } finally {
+      setRegistryLoading(false);
+    }
+  }
+
+  async function loadCloseout() {
+    try {
+      setCloseoutLoading(true);
+      const response = await fetchAtlasCloseout();
+      setCloseoutSummaries(response.summaries ?? []);
+    } catch (closeoutError) {
+      setCloseoutMessage(closeoutError instanceof Error ? closeoutError.message : "Closeout failed.");
+    } finally {
+      setCloseoutLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadCards();
+    void loadRegistry();
+    void loadCloseout();
+  }, []);
 
   const openCards = useMemo(() => cards.filter((card) => card.status === "open").sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b))), [cards]);
   const units = useMemo(() => taskUnits(openCards, registryZones), [openCards, registryZones]);
@@ -103,12 +289,85 @@ export default function AtlasHomePage() {
   const calendarEntry = currentEntry(today);
   const upcomingCalendar = nextEntries(today);
   const monthSummary = closeoutSummaries.find((summary) => summary.period === "month");
-  const homeZones = useMemo(() => { const important = ["field_rows", "berry_walk_flower_rows", "barn_beds", "grow_room"]; const byKey = new Map(registryZones.map((zone) => [zone.stable_key, zone])); return important.map((key) => byKey.get(key)).filter(Boolean) as AtlasRegistryZone[]; }, [registryZones]);
+  const homeZones = useMemo(() => {
+    const important = ["field_rows", "berry_walk_flower_rows", "barn_beds", "grow_room"];
+    const byKey = new Map(registryZones.map((zone) => [zone.stable_key, zone]));
+    return important.map((key) => byKey.get(key)).filter(Boolean) as AtlasRegistryZone[];
+  }, [registryZones]);
 
-  function openUnit(unit: TaskUnit) { const kind = captureKind(unit.card); setOpenPanel(null); setSelectedUnit(unit); setCapture(defaultCapture(kind)); setResultNote(""); setResultMessage(null); }
-  async function saveUnit(result: AtlasTaskResult, useCapture = true) { if (!selectedUnit) return; const kind = captureKind(selectedUnit.card); if (useCapture && kind === "germination" && !capture.standQuality) { setResultMessage("Stand required."); return; } try { setSavingResult(result); setResultMessage(null); await saveAtlasTaskResult({ taskId: selectedUnit.card.task_id, result, objectId: selectedUnit.object?.object_id, capture: useCapture ? capture : undefined, note: resultNote.trim() || undefined }); await loadCards(); await loadRegistry(); await loadCloseout(); setSelectedUnit(null); setResultNote(""); } catch (saveError) { setResultMessage(saveError instanceof Error ? saveError.message : "Save failed."); } finally { setSavingResult(null); } }
-  async function submitInbox() { const cleanBody = inboxBody.trim(); if (!cleanBody) { setInboxMessage("Note required."); return; } try { setInboxSaving(true); setInboxMessage(null); await saveAtlasInboxItem({ body: cleanBody, zoneKey: inboxZoneKey || null }); setInboxBody(""); setInboxZoneKey(""); setInboxMessage("Saved."); } catch (inboxError) { setInboxMessage(inboxError instanceof Error ? inboxError.message : "Save failed."); } finally { setInboxSaving(false); } }
-  async function submitCloseout() { const cleanNote = closeoutNote.trim(); if (!cleanNote) { setCloseoutMessage("Closeout note required."); return; } try { setCloseoutSaving(true); setCloseoutMessage(null); await saveAtlasCloseout({ period: closeoutPeriod, note: cleanNote, carryForward: closeoutCarry.trim() || undefined, nextFocus: closeoutNext.trim() || undefined }); setCloseoutNote(""); setCloseoutCarry(""); setCloseoutNext(""); setCloseoutMessage("Closeout saved."); await loadCloseout(); } catch (closeoutError) { setCloseoutMessage(closeoutError instanceof Error ? closeoutError.message : "Closeout save failed."); } finally { setCloseoutSaving(false); } }
+  function openUnit(unit: TaskUnit) {
+    const kind = captureKind(unit.card);
+    setOpenPanel(null);
+    setSelectedUnit(unit);
+    setCapture(defaultCapture(kind));
+    setResultNote("");
+    setResultMessage(null);
+  }
+
+  async function saveUnit(result: AtlasTaskResult, useCapture = true) {
+    if (!selectedUnit) return;
+    const kind = captureKind(selectedUnit.card);
+    if (useCapture && kind === "germination" && !capture.standQuality) {
+      setResultMessage("Stand required.");
+      return;
+    }
+    try {
+      setSavingResult(result);
+      setResultMessage(null);
+      await saveAtlasTaskResult({ taskId: selectedUnit.card.task_id, result, objectId: selectedUnit.object?.object_id, capture: useCapture ? capture : undefined, note: resultNote.trim() || undefined });
+      await loadCards();
+      await loadRegistry();
+      await loadCloseout();
+      setSelectedUnit(null);
+      setResultNote("");
+    } catch (saveError) {
+      setResultMessage(saveError instanceof Error ? saveError.message : "Save failed.");
+    } finally {
+      setSavingResult(null);
+    }
+  }
+
+  async function submitInbox() {
+    const cleanBody = inboxBody.trim();
+    if (!cleanBody) {
+      setInboxMessage("Note required.");
+      return;
+    }
+    try {
+      setInboxSaving(true);
+      setInboxMessage(null);
+      await saveAtlasInboxItem({ body: cleanBody, zoneKey: inboxZoneKey || null });
+      setInboxBody("");
+      setInboxZoneKey("");
+      setInboxMessage("Saved.");
+    } catch (inboxError) {
+      setInboxMessage(inboxError instanceof Error ? inboxError.message : "Save failed.");
+    } finally {
+      setInboxSaving(false);
+    }
+  }
+
+  async function submitCloseout() {
+    const cleanNote = closeoutNote.trim();
+    if (!cleanNote) {
+      setCloseoutMessage("Closeout note required.");
+      return;
+    }
+    try {
+      setCloseoutSaving(true);
+      setCloseoutMessage(null);
+      await saveAtlasCloseout({ period: closeoutPeriod, note: cleanNote, carryForward: closeoutCarry.trim() || undefined, nextFocus: closeoutNext.trim() || undefined });
+      setCloseoutNote("");
+      setCloseoutCarry("");
+      setCloseoutNext("");
+      setCloseoutMessage("Closeout saved.");
+      await loadCloseout();
+    } catch (closeoutError) {
+      setCloseoutMessage(closeoutError instanceof Error ? closeoutError.message : "Closeout save failed.");
+    } finally {
+      setCloseoutSaving(false);
+    }
+  }
 
   return (
     <main className="atlas-phone-shell atlas-home-shell">
