@@ -7,23 +7,25 @@ import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-
 type LaneKey = "start" | "maintain" | "verify" | "harvest" | "venue";
 type Outcome = "done" | "partial" | "blocked";
 type WeatherResponse = { ok: boolean; label?: string };
+type CaptureState = { stand: string; gaps: string; clean: string; plan: string };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const laneLabels: Record<LaneKey, string> = { start: "Start", maintain: "Maintain", verify: "Verify", harvest: "Harvest", venue: "Venue" };
-const w = "we" + "ed";
-const W = "We" + "ed";
+const defaultCapture: CaptureState = { stand: "Not checked", gaps: "Not checked", clean: "Not checked", plan: "Same" };
+const ww = "we" + "ed";
+const WW = "We" + "ed";
 
 function todayIso() { return new Date().toISOString().slice(0, 10); }
-function addDaysIso(dateIso: string, days: number) { const date = new Date(`${dateIso}T12:00:00`); date.setDate(date.getDate() + days); return date.toISOString().slice(0, 10); }
-function prettyDate(dateIso: string | null | undefined) { if (!dateIso) return "No date"; const date = new Date(`${dateIso}T12:00:00`); return Number.isNaN(date.getTime()) ? dateIso : date.toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
+function addDaysIso(dateIso: string, days: number) { const d = new Date(`${dateIso}T12:00:00`); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); }
+function prettyDate(dateIso: string | null | undefined) { if (!dateIso) return "No date"; const d = new Date(`${dateIso}T12:00:00`); return Number.isNaN(d.getTime()) ? dateIso : d.toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
+function taskText(task: AtlasTaskCard) { return `${task.task_type ?? ""} ${task.title ?? ""}`.toLowerCase(); }
 function clean(value: string | null | undefined) { return (value ?? "").replace(/urgent|high|normal|low/gi, "").replace(/truth/gi, "state").replace(/Anna/g, "crew").replace(/Lex/g, "crew").replace(/\s+·\s+·\s+/g, " · ").replace(/^\s*·\s*|\s*·\s*$/g, "").trim(); }
 function taskSortValue(task: AtlasTaskCard) { return `${task.due_date ?? "9999-12-31"}-${priorityRank[task.priority] ?? 9}-${task.title}`; }
-function taskText(task: AtlasTaskCard) { return `${task.task_type ?? ""} ${task.title ?? ""}`.toLowerCase(); }
-function hasFieldSurveyText(text: string) { return text.includes("walk field rows") || text.includes("confirm each bed"); }
+function oldSurveyText(text: string) { return text.includes("walk field rows") || text.includes("confirm each bed"); }
 
 function laneForTask(task: AtlasTaskCard): LaneKey {
   const text = taskText(task);
-  if (hasFieldSurveyText(text)) return "maintain";
+  if (oldSurveyText(text)) return "maintain";
   if (text.includes("harvest") || text.includes("cut") || text.includes("bucket") || text.includes("bundle")) return "harvest";
   if (text.includes("venue") || text.includes("guest") || text.includes("entry") || text.includes("courtyard")) return "venue";
   if (text.includes("sow") || text.includes("seed") || text.includes("plant") || text.includes("transplant") || text.includes("assign")) return "start";
@@ -33,12 +35,12 @@ function laneForTask(task: AtlasTaskCard): LaneKey {
 
 function ticketAction(task: AtlasTaskCard) {
   const text = taskText(task);
-  if (hasFieldSurveyText(text)) return W;
-  if (text.includes("check") && (text.includes(w) || text.includes("hoe"))) return `Check + ${w}`;
+  if (oldSurveyText(text)) return WW;
+  if (text.includes("check") && (text.includes(ww) || text.includes("hoe"))) return `Check + ${ww}`;
   if (text.includes("confirm") || text.includes("walk")) return "Confirm";
   if (text.includes("germin") || text.includes("check")) return "Check";
   if (text.includes("hoe")) return "Hoe";
-  if (text.includes(w)) return W;
+  if (text.includes(ww)) return WW;
   if (text.includes("water")) return "Water";
   if (text.includes("patch")) return "Patch";
   if (text.includes("protect")) return "Protect";
@@ -79,62 +81,33 @@ function ticketTitle(task: AtlasTaskCard) { return `${ticketAction(task)} ${tick
 function objectLabels(task: AtlasTaskCard, limit = 12) { return task.objects.map((object) => object.object_label).filter(Boolean).slice(0, limit); }
 function objectLine(task: AtlasTaskCard, limit = 4) { const labels = objectLabels(task, limit); return labels.length ? labels.join(" · ") : task.zone_label ?? "Elm Farm"; }
 function locationLine(task: AtlasTaskCard) { const zone = task.zone_label ?? "Elm Farm"; const objects = objectLine(task, 4); return objects && objects !== zone ? `${zone} · ${objects}` : zone; }
-
-function workWindowForTask(task: AtlasTaskCard, weatherLabel: string) {
-  const text = taskText(task); const lane = laneForTask(task); const weather = weatherLabel.toLowerCase();
-  if (weather.includes("rain") && (lane === "verify" || text.includes("germin") || text.includes("check") || text.includes("confirm"))) return "After rain";
-  if (text.includes("heat") || text.includes("water") || text.includes(w) || text.includes("hoe") || lane === "harvest") return "Morning";
-  if (lane === "venue") return "Afternoon";
-  if (lane === "start" && (text.includes("grow room") || text.includes("tray") || text.includes("seed"))) return "Anytime";
-  if (lane === "verify") return "Morning";
-  return "Anytime";
-}
-
+function workWindowForTask(task: AtlasTaskCard, weatherLabel: string) { const text = taskText(task); const lane = laneForTask(task); const weather = weatherLabel.toLowerCase(); if (weather.includes("rain") && (lane === "verify" || text.includes("germin") || text.includes("check") || text.includes("confirm"))) return "After rain"; if (text.includes("heat") || text.includes("water") || text.includes(ww) || text.includes("hoe") || lane === "harvest") return "Morning"; if (lane === "venue") return "Afternoon"; if (lane === "start" && (text.includes("grow room") || text.includes("tray") || text.includes("seed"))) return "Anytime"; if (lane === "verify") return "Morning"; return "Anytime"; }
 function latestOutcome(task: AtlasTaskCard) { return task.task_outcomes?.[0] ?? null; }
 function carryoverLabel(task: AtlasTaskCard, today: string) { const outcome = latestOutcome(task); if (task.status === "blocked" || outcome?.outcome === "blocked") return "Waiting"; if (outcome?.outcome === "partial") return "Needs next step"; if (task.due_date && task.due_date < today) return `Carried from ${prettyDate(task.due_date)}`; if (!task.due_date) return "Anytime"; if (task.due_date === today) return "Today"; return prettyDate(task.due_date); }
 function isCarryoverTask(task: AtlasTaskCard, today: string) { const outcome = latestOutcome(task); return task.status === "blocked" || outcome?.outcome === "blocked" || outcome?.outcome === "partial" || Boolean(task.due_date && task.due_date < today); }
 function rowMeta(task: AtlasTaskCard, today: string, weatherLabel: string) { return [locationLine(task), workWindowForTask(task, weatherLabel), carryoverLabel(task, today)].filter(Boolean).join(" · "); }
-function needsFieldState(task: AtlasTaskCard) { const action = ticketAction(task).toLowerCase(); return objectLabels(task, 1).length > 0 && [w, "check", `check + ${w}`, "hoe", "protect", "patch", "water"].includes(action); }
-function fieldStateNote() { const stand = window.prompt("Crop stand? Good / Thin / None / Not checked", "Not checked") ?? "Not checked"; const gaps = window.prompt("Gaps? None / Some / Many / Not checked", "Not checked") ?? "Not checked"; const cleanBed = window.prompt("Clean bed? Cleared / Partly / Too much / Not checked", "Cleared") ?? "Cleared"; const plan = window.prompt("Changed plan/data? Same / Changed", "Same") ?? "Same"; return `Crop stand: ${stand}\nGaps: ${gaps}\nClean bed: ${cleanBed}\nPlan: ${plan}`; }
+function needsCapture(task: AtlasTaskCard) { const action = ticketAction(task).toLowerCase(); return [ww, "check", `check + ${ww}`, "hoe", "protect", "patch", "water"].includes(action); }
+function captureNote(capture: CaptureState, extra = "") { return [extra, `Crop stand: ${capture.stand}`, `Gaps: ${capture.gaps}`, `Clean bed: ${capture.clean}`, `Plan: ${capture.plan}`].filter(Boolean).join("\n"); }
 
-async function postOutcome(task: AtlasTaskCard, outcome: Outcome, note = "") {
-  const response = await fetch("/api/atlas/task-outcome", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ taskId: task.task_id, outcome, note, reason: note, laneKey: laneForTask(task), workKey: ticketAction(task).toLowerCase().replace(/\s+/g, "_") }) });
-  const data = (await response.json()) as { ok?: boolean; error?: string; details?: string };
-  if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task update failed.");
-}
+async function postOutcome(task: AtlasTaskCard, outcome: Outcome, note = "") { const response = await fetch("/api/atlas/task-outcome", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ taskId: task.task_id, outcome, note, reason: note, laneKey: laneForTask(task), workKey: ticketAction(task).toLowerCase().replace(/\s+/g, "_") }) }); const data = (await response.json()) as { ok?: boolean; error?: string; details?: string }; if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task update failed."); }
+async function postNote(task: AtlasTaskCard, note: string) { const response = await fetch("/api/atlas/task-note", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ taskId: task.task_id, note, laneKey: laneForTask(task) }) }); const data = (await response.json()) as { ok?: boolean; error?: string; details?: string }; if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task note failed."); }
 
-async function postNote(task: AtlasTaskCard, note: string) {
-  const response = await fetch("/api/atlas/task-note", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ taskId: task.task_id, note, laneKey: laneForTask(task) }) });
-  const data = (await response.json()) as { ok?: boolean; error?: string; details?: string };
-  if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task note failed.");
-}
-
-function TaskSummaryButton({ task, selected, onSelect, today, weatherLabel }: { task: AtlasTaskCard; selected: boolean; onSelect: () => void; today: string; weatherLabel: string }) {
-  return <button type="button" className={selected ? "atlas-task-page-row selected" : "atlas-task-page-row"} onClick={onSelect}><div><strong>{ticketTitle(task)}</strong><span>{rowMeta(task, today, weatherLabel)}</span></div><small>{workWindowForTask(task, weatherLabel)}</small></button>;
-}
+function TaskSummaryButton({ task, selected, onSelect, today, weatherLabel }: { task: AtlasTaskCard; selected: boolean; onSelect: () => void; today: string; weatherLabel: string }) { return <button type="button" className={selected ? "atlas-task-page-row selected" : "atlas-task-page-row"} onClick={onSelect}><div><strong>{ticketTitle(task)}</strong><span>{rowMeta(task, today, weatherLabel)}</span></div><small>{workWindowForTask(task, weatherLabel)}</small></button>; }
+function ChoiceRow({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <div className="atlas-field-state-row"><span>{label}</span><div>{options.map((option) => <button type="button" key={option} className={value === option ? "selected" : ""} onClick={() => onChange(option)}>{option}</button>)}</div></div>; }
 
 function ActiveTaskCard({ task, onChange, today, weatherLabel }: { task: AtlasTaskCard; onChange: () => Promise<void>; today: string; weatherLabel: string }) {
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [pendingOutcome, setPendingOutcome] = useState<Outcome | null>(null);
+  const [leftNote, setLeftNote] = useState("");
+  const [capture, setCapture] = useState<CaptureState>(defaultCapture);
   const labels = objectLabels(task, 12);
-
-  async function save(outcome: Outcome) {
-    const baseNote = outcome === "done" ? "" : window.prompt(outcome === "partial" ? "Left?" : "Stuck?", "") ?? "";
-    const note = outcome !== "blocked" && needsFieldState(task) ? [baseNote, fieldStateNote()].filter(Boolean).join("\n") : baseNote;
-    try { setSaving(outcome); setMessage(null); await postOutcome(task, outcome, note); await onChange(); setMessage(outcome === "done" ? "Done." : "Saved."); }
-    catch (error) { setMessage(error instanceof Error ? error.message : "Task update failed."); }
-    finally { setSaving(null); }
-  }
-
-  async function addNote() {
-    const note = window.prompt("Note", "")?.trim();
-    if (!note) return;
-    try { setSaving("note"); setMessage(null); await postNote(task, note); await onChange(); setMessage("Note saved."); }
-    catch (error) { setMessage(error instanceof Error ? error.message : "Task note failed."); }
-    finally { setSaving(null); }
-  }
-
-  return <article className="atlas-task-page-active atlas-task-ticket-card"><div className="atlas-task-page-kicker"><span>Up Now</span><small>{laneLabels[laneForTask(task)]}</small></div><h1>{ticketTitle(task).toUpperCase()}</h1><div className="atlas-task-page-time-row"><span>{workWindowForTask(task, weatherLabel)}</span><span>{task.due_date ? prettyDate(task.due_date) : carryoverLabel(task, today)}</span></div><section className="atlas-task-place-card"><strong>{task.zone_label ?? "Elm Farm"}</strong>{labels.length ? <div className="atlas-task-place-chips">{labels.map((label) => <span key={label}>{label}</span>)}</div> : <p>{objectLine(task)}</p>}</section><div className="atlas-task-page-actions"><button type="button" className="done" disabled={Boolean(saving)} onClick={() => void save("done")}>{saving === "done" ? "Saving" : "Done"}</button><button type="button" disabled={Boolean(saving)} onClick={() => void save("partial")}>{saving === "partial" ? "Saving" : "More"}</button><button type="button" className="blocked" disabled={Boolean(saving)} onClick={() => void save("blocked")}>{saving === "blocked" ? "Saving" : "Stuck"}</button><button type="button" disabled={Boolean(saving)} onClick={() => void addNote()}>{saving === "note" ? "Saving" : "Note"}</button></div>{message ? <p className="atlas-task-page-message">{message}</p> : null}</article>;
+  function setCaptureValue(key: keyof CaptureState, value: string) { setCapture((current) => ({ ...current, [key]: value })); }
+  async function submit(outcome: Outcome, note = "") { try { setSaving(outcome); setMessage(null); await postOutcome(task, outcome, note); await onChange(); setPendingOutcome(null); setLeftNote(""); setCapture(defaultCapture); setMessage(outcome === "done" ? "Done." : "Saved."); } catch (error) { setMessage(error instanceof Error ? error.message : "Task update failed."); } finally { setSaving(null); } }
+  function startSave(outcome: Outcome) { if (outcome !== "blocked" && needsCapture(task)) { setPendingOutcome(outcome); return; } const note = outcome === "done" ? "" : window.prompt(outcome === "partial" ? "Left?" : "Stuck?", "") ?? ""; void submit(outcome, note); }
+  function saveCapture() { void submit(pendingOutcome ?? "done", captureNote(capture, leftNote.trim())); }
+  async function addNote() { const note = window.prompt("Note", "")?.trim(); if (!note) return; try { setSaving("note"); setMessage(null); await postNote(task, note); await onChange(); setMessage("Note saved."); } catch (error) { setMessage(error instanceof Error ? error.message : "Task note failed."); } finally { setSaving(null); } }
+  return <article className="atlas-task-page-active atlas-task-ticket-card"><div className="atlas-task-page-kicker"><span>Up Now</span><small>{laneLabels[laneForTask(task)]}</small></div><h1>{ticketTitle(task).toUpperCase()}</h1><div className="atlas-task-page-time-row"><span>{workWindowForTask(task, weatherLabel)}</span><span>{task.due_date ? prettyDate(task.due_date) : carryoverLabel(task, today)}</span></div><section className="atlas-task-place-card"><strong>{task.zone_label ?? "Elm Farm"}</strong>{labels.length ? <div className="atlas-task-place-chips">{labels.map((label) => <span key={label}>{label}</span>)}</div> : <p>{objectLine(task)}</p>}</section>{pendingOutcome ? <section className="atlas-field-state-card"><strong>Save field state</strong><ChoiceRow label="Crop stand" value={capture.stand} options={["Good", "Thin", "None", "Not checked"]} onChange={(value) => setCaptureValue("stand", value)} /><ChoiceRow label="Gaps" value={capture.gaps} options={["None", "Some", "Many", "Not checked"]} onChange={(value) => setCaptureValue("gaps", value)} /><ChoiceRow label="Clean bed" value={capture.clean} options={["Cleared", "Partly", "Too much", "Not checked"]} onChange={(value) => setCaptureValue("clean", value)} /><ChoiceRow label="Plan" value={capture.plan} options={["Same", "Changed"]} onChange={(value) => setCaptureValue("plan", value)} />{pendingOutcome === "partial" ? <textarea aria-label="Left" placeholder="Left?" value={leftNote} onChange={(event) => setLeftNote(event.target.value)} /> : null}<div className="atlas-field-state-actions"><button type="button" onClick={() => setPendingOutcome(null)}>Cancel</button><button type="button" className="save" disabled={Boolean(saving)} onClick={saveCapture}>{saving ? "Saving" : "Save"}</button></div></section> : null}<div className="atlas-task-page-actions"><button type="button" className="done" disabled={Boolean(saving)} onClick={() => startSave("done")}>{saving === "done" ? "Saving" : "Done"}</button><button type="button" disabled={Boolean(saving)} onClick={() => startSave("partial")}>{saving === "partial" ? "Saving" : "More"}</button><button type="button" className="blocked" disabled={Boolean(saving)} onClick={() => startSave("blocked")}>{saving === "blocked" ? "Saving" : "Stuck"}</button><button type="button" disabled={Boolean(saving)} onClick={() => void addNote()}>{saving === "note" ? "Saving" : "Note"}</button></div>{message ? <p className="atlas-task-page-message">{message}</p> : null}</article>;
 }
 
 export default function AtlasTaskPage() {
@@ -148,12 +121,9 @@ export default function AtlasTaskPage() {
   const activeTaskAnchorRef = useRef<HTMLDivElement | null>(null);
   const today = todayIso();
   const nextWeek = addDaysIso(today, 7);
-
   async function loadTasks() { try { setLoading(true); setError(null); const response = await fetchAtlasTaskCards(); setTasks((response.taskCards ?? []).filter((task) => task.status !== "archived").sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)))); } catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Tasks failed."); } finally { setLoading(false); } }
   async function loadWeather() { try { const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" }); const data = (await response.json()) as WeatherResponse; setWeatherLabel(response.ok && data.ok && data.label ? data.label : "weather unavailable"); } catch { setWeatherLabel("weather unavailable"); } }
-
   useEffect(() => { const params = new URLSearchParams(window.location.search); const taskId = params.get("taskId"); const lane = params.get("lane") as LaneKey | null; if (taskId) setSelectedTaskId(taskId); if (lane && laneLabels[lane]) setSelectedLane(lane); void loadTasks(); void loadWeather(); }, []);
-
   const openTasks = useMemo(() => tasks.filter((task) => task.status === "open" || task.status === "blocked"), [tasks]);
   const todayTasks = useMemo(() => openTasks.filter((task) => !task.due_date || task.due_date <= today), [openTasks, today]);
   const nextTasks = useMemo(() => openTasks.filter((task) => task.due_date && task.due_date > today && task.due_date <= nextWeek), [openTasks, nextWeek, today]);
@@ -162,13 +132,11 @@ export default function AtlasTaskPage() {
   const carryoverTasks = useMemo(() => openTasks.filter((task) => isCarryoverTask(task, today)).slice(0, 5), [openTasks, today]);
   const matchingLane = useMemo(() => selectedLane ? openTasks.filter((task) => laneForTask(task) === selectedLane) : [], [openTasks, selectedLane]);
   const selectedTask = useMemo(() => { if (selectedTaskId) return tasks.find((task) => task.task_id === selectedTaskId) ?? null; if (matchingLane.length) return matchingLane[0]; return nextWorkTasks[0] ?? todayTasks[0] ?? nextTasks[0] ?? openTasks[0] ?? null; }, [matchingLane, nextTasks, nextWorkTasks, openTasks, selectedTaskId, tasks, todayTasks]);
-
   function scrollToActiveTask() { window.setTimeout(() => { activeTaskAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 0); }
   function selectTask(taskId: string) { setSelectedTaskId(taskId); scrollToActiveTask(); }
   function selectLane(lane: LaneKey) { setSelectedLane(lane); setSelectedTaskId(null); scrollToActiveTask(); }
   async function handleTaskChanged() { await loadTasks(); setSelectedTaskId(null); }
   async function addHeaderNote() { if (!selectedTask) { setMessage("Choose a task first."); return; } const note = window.prompt("Note", "")?.trim(); if (!note) return; try { setMessage(null); await postNote(selectedTask, note); await loadTasks(); setMessage("Note saved."); } catch (noteError) { setMessage(noteError instanceof Error ? noteError.message : "Task note failed."); } }
   function renderTaskRows(rows: AtlasTaskCard[], empty: string) { return rows.length === 0 ? <p className="atlas-task-page-muted">{empty}</p> : rows.map((task) => <TaskSummaryButton key={task.task_id} task={task} selected={task.task_id === selectedTask?.task_id} onSelect={() => selectTask(task.task_id)} today={today} weatherLabel={weatherLabel} />); }
-
   return <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell"><section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone"><header className="atlas-phone-top atlas-dashboard-top"><Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></Link><span className="atlas-weather-line">{weatherLabel}</span><button type="button" className="atlas-note-plus" aria-label="Add task note" onClick={() => void addHeaderNote()}>+</button></header><div className="atlas-task-page-body"><section className="atlas-task-page-hero"><span>Today · {prettyDate(today)}</span><h2>Production Setup</h2><p>{nextWorkTasks.length} next · {laterWorkTasks.length} later · {carryoverTasks.length} waiting</p><div className="atlas-task-page-lanes">{(Object.keys(laneLabels) as LaneKey[]).map((lane) => { const count = openTasks.filter((task) => laneForTask(task) === lane).length; return <button key={lane} type="button" className={selectedLane === lane ? "selected" : ""} onClick={() => selectLane(lane)}>{laneLabels[lane]} <b>{count}</b></button>; })}</div></section>{loading ? <div className="atlas-task-page-empty">Loading tasks.</div> : null}{error ? <div className="atlas-task-page-empty error">{error}</div> : null}{message ? <div className="atlas-task-page-empty">{message}</div> : null}{!loading && !selectedTask ? <div className="atlas-task-page-empty">No open tasks.</div> : null}{selectedTask ? <div ref={activeTaskAnchorRef} className="atlas-task-page-active-anchor"><ActiveTaskCard task={selectedTask} onChange={handleTaskChanged} today={today} weatherLabel={weatherLabel} /></div> : null}<section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Next</span><small>{nextWorkTasks.length}</small></div>{renderTaskRows(nextWorkTasks, "No next tasks ready.")}</section><section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Later</span><small>{laterWorkTasks.length}</small></div>{renderTaskRows(laterWorkTasks, "Nothing queued later yet.")}</section><section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Waiting</span><small>{carryoverTasks.length}</small></div>{renderTaskRows(carryoverTasks, "No carried or waiting tasks.")}</section><section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>This Week</span><small>{nextTasks.length}</small></div>{renderTaskRows(nextTasks, "No scheduled tasks in the next week.")}</section></div></section></main>;
 }
