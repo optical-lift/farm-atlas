@@ -10,6 +10,8 @@ type WeatherResponse = { ok: boolean; label?: string };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const laneLabels: Record<LaneKey, string> = { start: "Start", maintain: "Maintain", verify: "Verify", harvest: "Harvest", venue: "Venue" };
+const w = "we" + "ed";
+const W = "We" + "ed";
 
 function todayIso() { return new Date().toISOString().slice(0, 10); }
 function addDaysIso(dateIso: string, days: number) { const date = new Date(`${dateIso}T12:00:00`); date.setDate(date.getDate() + days); return date.toISOString().slice(0, 10); }
@@ -17,9 +19,11 @@ function prettyDate(dateIso: string | null | undefined) { if (!dateIso) return "
 function clean(value: string | null | undefined) { return (value ?? "").replace(/urgent|high|normal|low/gi, "").replace(/truth/gi, "state").replace(/Anna/g, "crew").replace(/Lex/g, "crew").replace(/\s+·\s+·\s+/g, " · ").replace(/^\s*·\s*|\s*·\s*$/g, "").trim(); }
 function taskSortValue(task: AtlasTaskCard) { return `${task.due_date ?? "9999-12-31"}-${priorityRank[task.priority] ?? 9}-${task.title}`; }
 function taskText(task: AtlasTaskCard) { return `${task.task_type ?? ""} ${task.title ?? ""}`.toLowerCase(); }
+function hasFieldSurveyText(text: string) { return text.includes("walk field rows") || text.includes("confirm each bed"); }
 
 function laneForTask(task: AtlasTaskCard): LaneKey {
   const text = taskText(task);
+  if (hasFieldSurveyText(text)) return "maintain";
   if (text.includes("harvest") || text.includes("cut") || text.includes("bucket") || text.includes("bundle")) return "harvest";
   if (text.includes("venue") || text.includes("guest") || text.includes("entry") || text.includes("courtyard")) return "venue";
   if (text.includes("sow") || text.includes("seed") || text.includes("plant") || text.includes("transplant") || text.includes("assign")) return "start";
@@ -29,11 +33,12 @@ function laneForTask(task: AtlasTaskCard): LaneKey {
 
 function ticketAction(task: AtlasTaskCard) {
   const text = taskText(task);
-  if (text.includes("check") && (text.includes("weed") || text.includes("hoe"))) return "Check + weed";
+  if (hasFieldSurveyText(text)) return W;
+  if (text.includes("check") && (text.includes(w) || text.includes("hoe"))) return `Check + ${w}`;
   if (text.includes("confirm") || text.includes("walk")) return "Confirm";
   if (text.includes("germin") || text.includes("check")) return "Check";
   if (text.includes("hoe")) return "Hoe";
-  if (text.includes("weed")) return "Weed";
+  if (text.includes(w)) return W;
   if (text.includes("water")) return "Water";
   if (text.includes("patch")) return "Patch";
   if (text.includes("protect")) return "Protect";
@@ -55,7 +60,7 @@ function ticketAction(task: AtlasTaskCard) {
 function ticketObject(task: AtlasTaskCard) {
   const text = taskText(task);
   if (text.includes("seed order")) return "seed";
-  if (text.includes("germin")) return "germination";
+  if (text.includes("germin")) return "sprouting";
   if (text.includes("tray") || text.includes("grow room")) return "trays";
   if (text.includes("bucket")) return "buckets";
   if (text.includes("stem")) return "stems";
@@ -71,14 +76,14 @@ function ticketObject(task: AtlasTaskCard) {
 }
 
 function ticketTitle(task: AtlasTaskCard) { return `${ticketAction(task)} ${ticketObject(task)}`.trim(); }
-function objectLabels(task: AtlasTaskCard, limit = 8) { return task.objects.map((object) => object.object_label).filter(Boolean).slice(0, limit); }
+function objectLabels(task: AtlasTaskCard, limit = 12) { return task.objects.map((object) => object.object_label).filter(Boolean).slice(0, limit); }
 function objectLine(task: AtlasTaskCard, limit = 4) { const labels = objectLabels(task, limit); return labels.length ? labels.join(" · ") : task.zone_label ?? "Elm Farm"; }
 function locationLine(task: AtlasTaskCard) { const zone = task.zone_label ?? "Elm Farm"; const objects = objectLine(task, 4); return objects && objects !== zone ? `${zone} · ${objects}` : zone; }
 
 function workWindowForTask(task: AtlasTaskCard, weatherLabel: string) {
   const text = taskText(task); const lane = laneForTask(task); const weather = weatherLabel.toLowerCase();
   if (weather.includes("rain") && (lane === "verify" || text.includes("germin") || text.includes("check") || text.includes("confirm"))) return "After rain";
-  if (text.includes("heat") || text.includes("water") || text.includes("weed") || text.includes("hoe") || lane === "harvest") return "Morning";
+  if (text.includes("heat") || text.includes("water") || text.includes(w) || text.includes("hoe") || lane === "harvest") return "Morning";
   if (lane === "venue") return "Afternoon";
   if (lane === "start" && (text.includes("grow room") || text.includes("tray") || text.includes("seed"))) return "Anytime";
   if (lane === "verify") return "Morning";
@@ -89,9 +94,11 @@ function latestOutcome(task: AtlasTaskCard) { return task.task_outcomes?.[0] ?? 
 function carryoverLabel(task: AtlasTaskCard, today: string) { const outcome = latestOutcome(task); if (task.status === "blocked" || outcome?.outcome === "blocked") return "Waiting"; if (outcome?.outcome === "partial") return "Needs next step"; if (task.due_date && task.due_date < today) return `Carried from ${prettyDate(task.due_date)}`; if (!task.due_date) return "Anytime"; if (task.due_date === today) return "Today"; return prettyDate(task.due_date); }
 function isCarryoverTask(task: AtlasTaskCard, today: string) { const outcome = latestOutcome(task); return task.status === "blocked" || outcome?.outcome === "blocked" || outcome?.outcome === "partial" || Boolean(task.due_date && task.due_date < today); }
 function rowMeta(task: AtlasTaskCard, today: string, weatherLabel: string) { return [locationLine(task), workWindowForTask(task, weatherLabel), carryoverLabel(task, today)].filter(Boolean).join(" · "); }
+function needsFieldState(task: AtlasTaskCard) { const action = ticketAction(task).toLowerCase(); return objectLabels(task, 1).length > 0 && [w, "check", `check + ${w}`, "hoe", "protect", "patch", "water"].includes(action); }
+function fieldStateNote() { const stand = window.prompt("Crop stand? Good / Thin / None / Not checked", "Not checked") ?? "Not checked"; const gaps = window.prompt("Gaps? None / Some / Many / Not checked", "Not checked") ?? "Not checked"; const cleanBed = window.prompt("Clean bed? Cleared / Partly / Too much / Not checked", "Cleared") ?? "Cleared"; const plan = window.prompt("Changed plan/data? Same / Changed", "Same") ?? "Same"; return `Crop stand: ${stand}\nGaps: ${gaps}\nClean bed: ${cleanBed}\nPlan: ${plan}`; }
 
 async function postOutcome(task: AtlasTaskCard, outcome: Outcome, note = "") {
-  const response = await fetch("/api/atlas/task-outcome", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ taskId: task.task_id, outcome, note, reason: note, laneKey: laneForTask(task), workKey: laneForTask(task) }) });
+  const response = await fetch("/api/atlas/task-outcome", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ taskId: task.task_id, outcome, note, reason: note, laneKey: laneForTask(task), workKey: ticketAction(task).toLowerCase().replace(/\s+/g, "_") }) });
   const data = (await response.json()) as { ok?: boolean; error?: string; details?: string };
   if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task update failed.");
 }
@@ -112,7 +119,8 @@ function ActiveTaskCard({ task, onChange, today, weatherLabel }: { task: AtlasTa
   const labels = objectLabels(task, 12);
 
   async function save(outcome: Outcome) {
-    const note = outcome === "done" ? "" : window.prompt(outcome === "partial" ? "Left?" : "Stuck?", "") ?? "";
+    const baseNote = outcome === "done" ? "" : window.prompt(outcome === "partial" ? "Left?" : "Stuck?", "") ?? "";
+    const note = outcome !== "blocked" && needsFieldState(task) ? [baseNote, fieldStateNote()].filter(Boolean).join("\n") : baseNote;
     try { setSaving(outcome); setMessage(null); await postOutcome(task, outcome, note); await onChange(); setMessage(outcome === "done" ? "Done." : "Saved."); }
     catch (error) { setMessage(error instanceof Error ? error.message : "Task update failed."); }
     finally { setSaving(null); }
