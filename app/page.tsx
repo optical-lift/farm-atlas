@@ -53,14 +53,30 @@ function taskLaneForCard(card: AtlasTaskCard): TaskLaneKey {
   return "maintain";
 }
 
+function taskText(card: AtlasTaskCard) {
+  return `${card.task_type ?? ""} ${card.title} ${card.unlock_text ?? ""} ${card.note ?? ""}`.toLowerCase();
+}
+
+function workWindowForCard(card: AtlasTaskCard, weatherLabel: string) {
+  const text = taskText(card);
+  const lane = taskLaneForCard(card);
+  const weather = weatherLabel.toLowerCase();
+
+  if (weather.includes("rain") && (lane === "verify" || text.includes("germin") || text.includes("check"))) return "After rain";
+  if (text.includes("heat") || text.includes("water") || text.includes("weed") || text.includes("hoe")) return "Morning";
+  if (lane === "start" && (text.includes("grow room") || text.includes("tray") || text.includes("seed"))) return "Anytime";
+  if (lane === "verify") return "Morning";
+  return "Anytime";
+}
+
 function compactTaskLocation(task: AtlasTaskCard | undefined) {
   if (!task) return "Open task board";
   const objectLabels = task.objects.map((object) => object.object_label).filter(Boolean).slice(0, 2);
   return objectLabels.length ? objectLabels.join(" · ") : task.zone_label ?? "Elm Farm";
 }
 
-function taskLine(card: AtlasTaskCard) {
-  return [compactTaskLocation(card), card.due_date ? prettyDate(card.due_date) : null].filter(Boolean).join(" · ");
+function taskLine(card: AtlasTaskCard, weatherLabel: string) {
+  return [compactTaskLocation(card), card.due_date ? prettyDate(card.due_date) : null, workWindowForCard(card, weatherLabel)].filter(Boolean).join(" · ");
 }
 
 function projectCardKey(project: AtlasProjectCard) {
@@ -92,7 +108,7 @@ function panelTitle(panel: HomePanel) {
   return "Atlas";
 }
 
-function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: boolean }) {
+function TaskLaunchHero({ cards, loading, weatherLabel }: { cards: AtlasTaskCard[]; loading: boolean; weatherLabel: string }) {
   const nextCards = cards.slice(0, 3);
   const nextDue = nextCards[0]?.due_date ? prettyDate(nextCards[0].due_date) : "today";
 
@@ -135,7 +151,7 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
                 <small>{index + 1}</small>
                 <div>
                   <strong>{cleanLabel(card.title)}</strong>
-                  <em>{taskLine(card)}</em>
+                  <em>{taskLine(card, weatherLabel)}</em>
                 </div>
                 <b>{laneLabels[lane]}</b>
               </Link>
@@ -328,7 +344,7 @@ export default function AtlasHomePage() {
           <button type="button" className="atlas-note-plus" aria-label="Add note" onClick={() => setOpenPanel("inbox")}>+</button>
         </header>
         <div className="atlas-home-grid">
-          <TaskLaunchHero cards={cards} loading={loading} />
+          <TaskLaunchHero cards={cards} loading={loading} weatherLabel={weatherLabel} />
           <button type="button" className="atlas-home-box atlas-home-box-white" onClick={() => setOpenPanel("closeout")}>
             <strong>Closeout</strong>
             <em>{monthSummary ? `${monthSummary.counts.objectEvents} records · ${monthSummary.counts.openTasks} still open` : "Month record"}</em>
