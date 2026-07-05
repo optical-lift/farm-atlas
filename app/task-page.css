@@ -107,14 +107,16 @@
   font-weight: 850;
 }
 
-.atlas-task-page-lanes {
+.atlas-task-page-lanes,
+.atlas-task-page-time-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   padding-bottom: 0;
 }
 
-.atlas-task-page-lanes button {
+.atlas-task-page-lanes button,
+.atlas-task-page-time-row span {
   border: 1px solid rgba(139, 145, 194, 0.24);
   border-radius: 999px;
   background: rgba(167, 171, 214, 0.12);
@@ -127,6 +129,11 @@
   line-height: 1;
   font-weight: 950;
   white-space: nowrap;
+}
+
+.atlas-task-page-time-row span:first-child {
+  background: rgba(214, 225, 177, 0.50);
+  color: #515b34;
 }
 
 .atlas-task-page-lanes button.selected {
