@@ -40,7 +40,14 @@ function taskSortValue(task: AtlasTaskCard) {
 }
 
 function clean(value: string | null | undefined) {
-  return (value ?? "").replace(/truth/gi, "state").replace(/\bAnna\b/g, "crew").replace(/\bLex\b/g, "crew");
+  return (value ?? "")
+    .replace(/truth/gi, "state")
+    .replace(/\bAnna\b/g, "crew")
+    .replace(/\bLex\b/g, "crew")
+    .replace(/\b(urgent|high|normal|low)\b/gi, "")
+    .replace(/\s+·\s+·\s+/g, " · ")
+    .replace(/^\s*·\s*|\s*·\s*$/g, "")
+    .trim();
 }
 
 function laneForTask(task: AtlasTaskCard): LaneKey {
@@ -59,7 +66,7 @@ function objectLine(task: AtlasTaskCard) {
 }
 
 function taskMeta(task: AtlasTaskCard) {
-  return [task.zone_label, task.due_date ? prettyDate(task.due_date) : null, task.priority, laneLabels[laneForTask(task)]].filter(Boolean).join(" · ");
+  return [task.zone_label, task.due_date ? prettyDate(task.due_date) : null, laneLabels[laneForTask(task)]].filter(Boolean).join(" · ");
 }
 
 function helperLines(task: AtlasTaskCard) {
