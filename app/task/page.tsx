@@ -59,6 +59,42 @@ function laneForTask(task: AtlasTaskCard): LaneKey {
   return "maintain";
 }
 
+function taskText(task: AtlasTaskCard) {
+  return `${task.task_type ?? ""} ${task.title} ${task.unlock_text ?? ""} ${task.note ?? ""}`.toLowerCase();
+}
+
+function workWindowForTask(task: AtlasTaskCard, weatherLabel: string) {
+  const text = taskText(task);
+  const lane = laneForTask(task);
+  const weather = weatherLabel.toLowerCase();
+
+  if (weather.includes("rain") && (lane === "verify" || text.includes("germin") || text.includes("check"))) return "After rain";
+  if (text.includes("heat") || text.includes("water") || text.includes("weed") || text.includes("hoe") || lane === "harvest") return "Morning";
+  if (lane === "venue") return "Afternoon";
+  if (lane === "start" && (text.includes("grow room") || text.includes("tray") || text.includes("seed"))) return "Anytime";
+  if (lane === "verify") return "Morning";
+  return "Anytime";
+}
+
+function latestOutcome(task: AtlasTaskCard) {
+  return task.task_outcomes?.[0] ?? null;
+}
+
+function carryoverLabel(task: AtlasTaskCard, today: string) {
+  const outcome = latestOutcome(task);
+  if (task.status === "blocked" || outcome?.outcome === "blocked") return "Waiting";
+  if (outcome?.outcome === "partial") return "Needs next step";
+  if (task.due_date && task.due_date < today) return `Carried from ${prettyDate(task.due_date)}`;
+  if (!task.due_date) return "Anytime";
+  if (task.due_date === today) return "Today";
+  return prettyDate(task.due_date);
+}
+
+function isCarryoverTask(task: AtlasTaskCard, today: string) {
+  const outcome = latestOutcome(task);
+  return task.status === "blocked" || outcome?.outcome === "blocked" || outcome?.outcome === "partial" || Boolean(task.due_date && task.due_date < today);
+}
+
 function objectLine(task: AtlasTaskCard) {
   const labels = task.objects.map((object) => object.object_label).filter(Boolean).slice(0, 4);
   if (labels.length === 0) return task.zone_label ?? "Elm Farm";
@@ -67,6 +103,10 @@ function objectLine(task: AtlasTaskCard) {
 
 function taskMeta(task: AtlasTaskCard) {
   return [task.zone_label, task.due_date ? prettyDate(task.due_date) : null, laneLabels[laneForTask(task)]].filter(Boolean).join(" · ");
+}
+
+function rowMeta(task: AtlasTaskCard, today: string, weatherLabel: string) {
+  return [task.zone_label, carryoverLabel(task, today), workWindowForTask(task, weatherLabel), laneLabels[laneForTask(task)]].filter(Boolean).join(" · ");
 }
 
 function helperLines(task: AtlasTaskCard) {
@@ -79,12 +119,17 @@ function helperLines(task: AtlasTaskCard) {
 }
 
 function knownLines(task: AtlasTaskCard) {
+  const recentOutcomes = (task.task_outcomes ?? [])
+    .slice(0, 2)
+    .map((event) => [event.outcome, event.note || event.blocker_reason, event.created_at ? prettyDate(event.created_at) : null].filter(Boolean).join(" · "))
+    .filter(Boolean)
+    .map((line) => `Last result: ${line}`);
   const recentLogs = task.task_logs
     .slice(0, 2)
     .map((log) => clean(log.summary_sentence || log.note || ""))
     .filter(Boolean);
   const objectSummary = task.objects.length > 0 ? [`Linked: ${objectLine(task)}`] : [];
-  return [...recentLogs, ...objectSummary].slice(0, 3);
+  return [...recentOutcomes, ...recentLogs, ...objectSummary].slice(0, 3);
 }
 
 async function postOutcome(task: AtlasTaskCard, outcome: Outcome, note = "") {
@@ -107,19 +152,19 @@ async function postNote(task: AtlasTaskCard, note: string) {
   if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task note failed.");
 }
 
-function TaskSummaryButton({ task, selected, onSelect }: { task: AtlasTaskCard; selected: boolean; onSelect: () => void }) {
+function TaskSummaryButton({ task, selected, onSelect, today, weatherLabel }: { task: AtlasTaskCard; selected: boolean; onSelect: () => void; today: string; weatherLabel: string }) {
   return (
     <button type="button" className={selected ? "atlas-task-page-row selected" : "atlas-task-page-row"} onClick={onSelect}>
       <div>
         <strong>{clean(task.title)}</strong>
-        <span>{taskMeta(task)}</span>
+        <span>{rowMeta(task, today, weatherLabel)}</span>
       </div>
-      <small>{laneLabels[laneForTask(task)]}</small>
+      <small>{workWindowForTask(task, weatherLabel)}</small>
     </button>
   );
 }
 
-function ActiveTaskCard({ task, onChange }: { task: AtlasTaskCard; onChange: () => Promise<void> }) {
+function ActiveTaskCard({ task, onChange, today, weatherLabel }: { task: AtlasTaskCard; onChange: () => Promise<void>; today: string; weatherLabel: string }) {
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const helpers = helperLines(task);
@@ -164,6 +209,10 @@ function ActiveTaskCard({ task, onChange }: { task: AtlasTaskCard; onChange: () 
       </div>
       <h1>{clean(task.title)}</h1>
       <p>{taskMeta(task)}</p>
+      <div className="atlas-task-page-time-row">
+        <span>{workWindowForTask(task, weatherLabel)}</span>
+        <span>{carryoverLabel(task, today)}</span>
+      </div>
       <div className="atlas-task-page-context-grid">
         <section>
           <span>Focus</span>
@@ -233,12 +282,15 @@ export default function AtlasTaskPage() {
   const openTasks = useMemo(() => tasks.filter((task) => task.status === "open" || task.status === "blocked"), [tasks]);
   const todayTasks = useMemo(() => openTasks.filter((task) => !task.due_date || task.due_date <= today), [openTasks, today]);
   const nextTasks = useMemo(() => openTasks.filter((task) => task.due_date && task.due_date > today && task.due_date <= nextWeek), [openTasks, nextWeek, today]);
+  const nextWorkTasks = useMemo(() => (todayTasks.length ? todayTasks : nextTasks).slice(0, 3), [nextTasks, todayTasks]);
+  const laterWorkTasks = useMemo(() => (todayTasks.length ? todayTasks : nextTasks).slice(3), [nextTasks, todayTasks]);
+  const carryoverTasks = useMemo(() => openTasks.filter((task) => isCarryoverTask(task, today)).slice(0, 5), [openTasks, today]);
   const matchingLane = useMemo(() => selectedLane ? openTasks.filter((task) => laneForTask(task) === selectedLane) : [], [openTasks, selectedLane]);
   const selectedTask = useMemo(() => {
     if (selectedTaskId) return tasks.find((task) => task.task_id === selectedTaskId) ?? null;
     if (matchingLane.length) return matchingLane[0];
-    return todayTasks[0] ?? nextTasks[0] ?? openTasks[0] ?? null;
-  }, [matchingLane, nextTasks, openTasks, selectedTaskId, tasks, todayTasks]);
+    return nextWorkTasks[0] ?? todayTasks[0] ?? nextTasks[0] ?? openTasks[0] ?? null;
+  }, [matchingLane, nextTasks, nextWorkTasks, openTasks, selectedTaskId, tasks, todayTasks]);
 
   function scrollToActiveTask() {
     window.setTimeout(() => {
@@ -276,6 +328,10 @@ export default function AtlasTaskPage() {
     }
   }
 
+  function renderTaskRows(rows: AtlasTaskCard[], empty: string) {
+    return rows.length === 0 ? <p className="atlas-task-page-muted">{empty}</p> : rows.map((task) => <TaskSummaryButton key={task.task_id} task={task} selected={task.task_id === selectedTask?.task_id} onSelect={() => selectTask(task.task_id)} today={today} weatherLabel={weatherLabel} />);
+  }
+
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
@@ -292,7 +348,7 @@ export default function AtlasTaskPage() {
           <section className="atlas-task-page-hero">
             <span>Today · {prettyDate(today)}</span>
             <h2>Production Setup</h2>
-            <p>{todayTasks.length} today · {nextTasks.length} next 7 days</p>
+            <p>{nextWorkTasks.length} next · {laterWorkTasks.length} later · {carryoverTasks.length} still open</p>
             <div className="atlas-task-page-lanes">
               {(Object.keys(laneLabels) as LaneKey[]).map((lane) => {
                 const count = openTasks.filter((task) => laneForTask(task) === lane).length;
@@ -305,16 +361,26 @@ export default function AtlasTaskPage() {
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
           {message ? <div className="atlas-task-page-empty">{message}</div> : null}
           {!loading && !selectedTask ? <div className="atlas-task-page-empty">No open tasks.</div> : null}
-          {selectedTask ? <div ref={activeTaskAnchorRef} className="atlas-task-page-active-anchor"><ActiveTaskCard task={selectedTask} onChange={handleTaskChanged} /></div> : null}
+          {selectedTask ? <div ref={activeTaskAnchorRef} className="atlas-task-page-active-anchor"><ActiveTaskCard task={selectedTask} onChange={handleTaskChanged} today={today} weatherLabel={weatherLabel} /></div> : null}
 
           <section className="atlas-task-page-section">
-            <div className="atlas-task-page-section-head"><span>Today</span><small>{todayTasks.length}</small></div>
-            {todayTasks.length === 0 ? <p className="atlas-task-page-muted">No open tasks due today.</p> : todayTasks.map((task) => <TaskSummaryButton key={task.task_id} task={task} selected={task.task_id === selectedTask?.task_id} onSelect={() => selectTask(task.task_id)} />)}
+            <div className="atlas-task-page-section-head"><span>{todayTasks.length ? "Next Today" : "Next Work"}</span><small>{nextWorkTasks.length}</small></div>
+            {renderTaskRows(nextWorkTasks, "No next tasks ready.")}
+          </section>
+
+          <section className="atlas-task-page-section">
+            <div className="atlas-task-page-section-head"><span>{todayTasks.length ? "Later Today" : "Later"}</span><small>{laterWorkTasks.length}</small></div>
+            {renderTaskRows(laterWorkTasks, "Nothing queued later yet.")}
+          </section>
+
+          <section className="atlas-task-page-section">
+            <div className="atlas-task-page-section-head"><span>Still Open</span><small>{carryoverTasks.length}</small></div>
+            {renderTaskRows(carryoverTasks, "No carried or waiting tasks.")}
           </section>
 
           <section className="atlas-task-page-section">
             <div className="atlas-task-page-section-head"><span>Next 7 Days</span><small>{nextTasks.length}</small></div>
-            {nextTasks.length === 0 ? <p className="atlas-task-page-muted">No scheduled tasks in the next week.</p> : nextTasks.map((task) => <TaskSummaryButton key={task.task_id} task={task} selected={task.task_id === selectedTask?.task_id} onSelect={() => selectTask(task.task_id)} />)}
+            {renderTaskRows(nextTasks, "No scheduled tasks in the next week.")}
           </section>
         </div>
       </section>
