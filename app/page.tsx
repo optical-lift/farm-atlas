@@ -150,7 +150,7 @@ function TaskLaunchHero({ cards, loading, weatherLabel }: { cards: AtlasTaskCard
               <Link key={card.task_id} href={`/task?taskId=${encodeURIComponent(card.task_id)}`} className={index === 0 ? "atlas-hero-work-card primary" : "atlas-hero-work-card"}>
                 <small>{index + 1}</small>
                 <div>
-                  <strong>{cleanLabel(card.title)}</strong>
+                  <strong>{laneLabels[lane]} · {cleanLabel(compactTaskLocation(card))}</strong>
                   <em>{taskLine(card, weatherLabel)}</em>
                 </div>
                 <b>{laneLabels[lane]}</b>
@@ -171,84 +171,18 @@ function ProjectPanel({ projects }: { projects: AtlasProjectCard[] }) {
   const waiting = waitingProjectSteps(selectedProject);
 
   if (!selectedProject) {
-    return (
-      <section className="atlas-task-focus-section atlas-project-panel">
-        <div className="atlas-project-list">
-          {projectList.map((project) => (
-            <button key={projectCardKey(project)} type="button" className="atlas-project-card atlas-project-list-card" onClick={() => setSelectedProjectId(project.project_id)}>
-              <strong>{project.project_title}</strong>
-              <span>{project.goal_label ?? project.project_goal_text ?? project.target_window_label ?? "Project"}</span>
-              <small>{[project.zone_label, project.target_window_label, project.open_task_count ? `${project.open_task_count} open` : null].filter(Boolean).join(" · ")}</small>
-            </button>
-          ))}
-        </div>
-      </section>
-    );
+    return <section className="atlas-task-focus-section atlas-project-panel"><div className="atlas-project-list">{projectList.map((project) => <button key={projectCardKey(project)} type="button" className="atlas-project-card atlas-project-list-card" onClick={() => setSelectedProjectId(project.project_id)}><strong>{project.project_title}</strong><span>{project.goal_label ?? project.project_goal_text ?? project.target_window_label ?? "Project"}</span><small>{[project.zone_label, project.target_window_label, project.open_task_count ? `${project.open_task_count} open` : null].filter(Boolean).join(" · ")}</small></button>)}</div></section>;
   }
 
   const done = selectedProject.done_step_count ?? selectedSteps.filter((step) => step.step_status === "done").length;
   const total = selectedProject.step_count ?? selectedSteps.length;
   const percent = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  return (
-    <section className="atlas-task-focus-section atlas-project-panel">
-      <button type="button" className="atlas-project-back" onClick={() => setSelectedProjectId(null)}>← Projects</button>
-      <article className="atlas-project-detail-hero">
-        <strong>{selectedProject.project_title}</strong>
-        {selectedProject.project_goal_text ? <p>{selectedProject.project_goal_text}</p> : null}
-        <div className="atlas-project-detail-meta">
-          <span>{done}/{total} steps</span>
-          <span>{percent}%</span>
-          {selectedProject.open_task_count ? <span>{selectedProject.open_task_count} open</span> : null}
-        </div>
-      </article>
-      <div className="atlas-project-section">
-        <div className="atlas-project-section-head"><span>Project Tasks</span><small>{waiting.length}</small></div>
-        {waiting.length === 0 ? <p className="atlas-project-empty">No open linked tasks.</p> : (
-          <div className="atlas-project-task-list">
-            {waiting.map((step: AtlasProjectStepCard) => (
-              <Link key={step.step_id} href={step.task_id ? `/task?taskId=${encodeURIComponent(step.task_id)}` : "/task"} className="atlas-project-task-card">
-                <strong>{step.task_title ?? step.step_title}</strong>
-                <span>{[step.task_due_date ? prettyDate(step.task_due_date) : null, selectedProject.zone_label].filter(Boolean).join(" · ")}</span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
+  return <section className="atlas-task-focus-section atlas-project-panel"><button type="button" className="atlas-project-back" onClick={() => setSelectedProjectId(null)}>← Projects</button><article className="atlas-project-detail-hero"><strong>{selectedProject.project_title}</strong>{selectedProject.project_goal_text ? <p>{selectedProject.project_goal_text}</p> : null}<div className="atlas-project-detail-meta"><span>{done}/{total} steps</span><span>{percent}%</span>{selectedProject.open_task_count ? <span>{selectedProject.open_task_count} open</span> : null}</div></article><div className="atlas-project-section"><div className="atlas-project-section-head"><span>Project Tasks</span><small>{waiting.length}</small></div>{waiting.length === 0 ? <p className="atlas-project-empty">No open linked tasks.</p> : <div className="atlas-project-task-list">{waiting.map((step: AtlasProjectStepCard) => <Link key={step.step_id} href={step.task_id ? `/task?taskId=${encodeURIComponent(step.task_id)}` : "/task"} className="atlas-project-task-card"><strong>{step.task_title ?? step.step_title}</strong><span>{[step.task_due_date ? prettyDate(step.task_due_date) : null, selectedProject.zone_label].filter(Boolean).join(" · ")}</span></Link>)}</div>}</div></section>;
 }
 
-function FarmSnapshotBox({ snapshot, loading }: { snapshot: AtlasFarmSnapshot; loading: boolean }) {
-  return (
-    <Link href="/zones" className="atlas-home-box atlas-home-box-white atlas-home-box-link atlas-farm-snapshot-box">
-      <strong>Farm Snapshot</strong>
-      <div className="atlas-snapshot-grid">
-        <span><b>{loading ? "…" : snapshot.growingBeds}</b> growing beds</span>
-        <span><b>{loading ? "…" : snapshot.activeSqft.toLocaleString()}</b> active sq ft</span>
-        <span><b>{loading ? "…" : snapshot.sowingsLogged}</b> sowings logged</span>
-        <span><b>{loading ? "…" : snapshot.stemsLogged}</b> stems logged</span>
-      </div>
-    </Link>
-  );
-}
-
-function CloseoutPanel({ summaries, loading }: { summaries: AtlasCloseoutSummary[]; loading: boolean }) {
-  return (
-    <section className="atlas-task-focus-section">
-      <div className="atlas-closeout-grid">
-        {loading ? <div className="atlas-empty">Loading closeout.</div> : null}
-        {summaries.map((summary) => (
-          <article key={summary.period} className="atlas-closeout-card tidy">
-            <div className="atlas-closeout-card-head"><strong>{summary.label}</strong><span>{prettyDate(summary.startDate)}–{prettyDate(summary.endDate)}</span></div>
-            <div className="atlas-closeout-pill-row soft"><span>{summary.counts.objectEvents} records</span><span>{summary.counts.openTasks} open</span><span>{summary.counts.tasksBlocked} blocked</span></div>
-            {summary.carryForward.length > 0 ? <div className="atlas-closeout-section carry"><span>Carry forward</span>{summary.carryForward.map((line) => <p key={line}>{cleanLabel(line)}</p>)}</div> : null}
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
+function FarmSnapshotBox({ snapshot, loading }: { snapshot: AtlasFarmSnapshot; loading: boolean }) { return <Link href="/zones" className="atlas-home-box atlas-home-box-white atlas-home-box-link atlas-farm-snapshot-box"><strong>Farm Snapshot</strong><div className="atlas-snapshot-grid"><span><b>{loading ? "…" : snapshot.growingBeds}</b> growing beds</span><span><b>{loading ? "…" : snapshot.activeSqft.toLocaleString()}</b> active sq ft</span><span><b>{loading ? "…" : snapshot.sowingsLogged}</b> sowings logged</span><span><b>{loading ? "…" : snapshot.stemsLogged}</b> stems logged</span></div></Link>; }
+function CloseoutPanel({ summaries, loading }: { summaries: AtlasCloseoutSummary[]; loading: boolean }) { return <section className="atlas-task-focus-section"><div className="atlas-closeout-grid">{loading ? <div className="atlas-empty">Loading closeout.</div> : null}{summaries.map((summary) => <article key={summary.period} className="atlas-closeout-card tidy"><div className="atlas-closeout-card-head"><strong>{summary.label}</strong><span>{prettyDate(summary.startDate)}–{prettyDate(summary.endDate)}</span></div><div className="atlas-closeout-pill-row soft"><span>{summary.counts.objectEvents} records</span><span>{summary.counts.openTasks} open</span><span>{summary.counts.tasksBlocked} blocked</span></div>{summary.carryForward.length > 0 ? <div className="atlas-closeout-section carry"><span>Carry forward</span>{summary.carryForward.map((line) => <p key={line}>{cleanLabel(line)}</p>)}</div> : null}</article>)}</div></section>; }
 
 export default function AtlasHomePage() {
   const [cards, setCards] = useState<AtlasTaskCard[]>([]);
@@ -265,119 +199,14 @@ export default function AtlasHomePage() {
   const [closeoutLoading, setCloseoutLoading] = useState(true);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const today = todayIso();
-
-  async function loadCards() {
-    try {
-      setLoading(true);
-      const response = await fetchAtlasTaskCards();
-      setCards((response.taskCards ?? []).filter((card) => card.status === "open").sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b))));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadProjects() {
-    try {
-      const response = await fetchAtlasProjects();
-      setProjects((response.projects ?? []).filter((project) => project.project_status === "active"));
-    } catch {}
-  }
-
-  async function loadSnapshot() {
-    try {
-      setSnapshotLoading(true);
-      const response = await fetchAtlasFarmSnapshot();
-      setSnapshot(response.snapshot ?? defaultSnapshot);
-    } finally {
-      setSnapshotLoading(false);
-    }
-  }
-
-  async function loadCloseout() {
-    try {
-      setCloseoutLoading(true);
-      const response = await fetchAtlasCloseout();
-      setCloseoutSummaries(response.summaries ?? []);
-    } finally {
-      setCloseoutLoading(false);
-    }
-  }
-
-  async function loadWeather() {
-    try {
-      const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" });
-      const data = (await response.json()) as WeatherResponse;
-      setWeatherLabel(response.ok && data.ok && data.label ? data.label : "weather unavailable");
-    } catch {
-      setWeatherLabel("weather unavailable");
-    }
-  }
-
+  async function loadCards() { try { setLoading(true); const response = await fetchAtlasTaskCards(); setCards((response.taskCards ?? []).filter((card) => card.status === "open").sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)))); } finally { setLoading(false); } }
+  async function loadProjects() { try { const response = await fetchAtlasProjects(); setProjects((response.projects ?? []).filter((project) => project.project_status === "active")); } catch {} }
+  async function loadSnapshot() { try { setSnapshotLoading(true); const response = await fetchAtlasFarmSnapshot(); setSnapshot(response.snapshot ?? defaultSnapshot); } finally { setSnapshotLoading(false); } }
+  async function loadCloseout() { try { setCloseoutLoading(true); const response = await fetchAtlasCloseout(); setCloseoutSummaries(response.summaries ?? []); } finally { setCloseoutLoading(false); } }
+  async function loadWeather() { try { const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" }); const data = (await response.json()) as WeatherResponse; setWeatherLabel(response.ok && data.ok && data.label ? data.label : "weather unavailable"); } catch { setWeatherLabel("weather unavailable"); } }
   useEffect(() => { void loadCards(); void loadProjects(); void loadSnapshot(); void loadCloseout(); void loadWeather(); }, []);
-
   const homeProjects = uniqueProjects(projects).slice(0, 3);
   const monthSummary = closeoutSummaries.find((summary) => summary.period === "month");
-
-  async function submitInbox() {
-    const cleanBody = inboxBody.trim();
-    if (!cleanBody) { setInboxMessage("Note required."); return; }
-    try {
-      setInboxSaving(true);
-      setInboxMessage(null);
-      await saveAtlasInboxItem({ body: cleanBody, zoneKey: inboxZoneKey || null });
-      setInboxBody("");
-      setInboxZoneKey("");
-      setInboxMessage("Saved.");
-    } catch (inboxError) {
-      setInboxMessage(inboxError instanceof Error ? inboxError.message : "Save failed.");
-    } finally {
-      setInboxSaving(false);
-    }
-  }
-
-  return (
-    <main className="atlas-phone-shell atlas-home-shell">
-      <section className="atlas-phone atlas-dashboard-phone">
-        <header className="atlas-phone-top atlas-dashboard-top">
-          <div className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></div>
-          <span className="atlas-weather-line">{weatherLabel}</span>
-          <button type="button" className="atlas-note-plus" aria-label="Add note" onClick={() => setOpenPanel("inbox")}>+</button>
-        </header>
-        <div className="atlas-home-grid">
-          <TaskLaunchHero cards={cards} loading={loading} weatherLabel={weatherLabel} />
-          <button type="button" className="atlas-home-box atlas-home-box-white" onClick={() => setOpenPanel("closeout")}>
-            <strong>Closeout</strong>
-            <em>{monthSummary ? `${monthSummary.counts.objectEvents} records · ${monthSummary.counts.openTasks} still open` : "Month record"}</em>
-            <div className="atlas-home-mini-list"><span>Today · {prettyDate(today)}</span><span>Review what changed</span></div>
-          </button>
-          <button type="button" className="atlas-home-box atlas-home-box-white atlas-projects-box" onClick={() => setOpenPanel("projects")}>
-            <strong>Projects</strong>
-            <div className="atlas-project-mini-list">{homeProjects.length ? homeProjects.map((project) => <span key={projectCardKey(project)}>{project.project_title}</span>) : <span>Loading projects</span>}</div>
-          </button>
-          <FarmSnapshotBox snapshot={snapshot} loading={snapshotLoading} />
-        </div>
-      </section>
-      {openPanel ? (
-        <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true">
-          <div className="atlas-task-focus-phone">
-            <div className="atlas-task-focus-topbar"><div><strong>{panelTitle(openPanel)}</strong></div><button type="button" onClick={() => setOpenPanel(null)}>Close</button></div>
-            <div className="atlas-task-focus-body">
-              {openPanel === "projects" ? <ProjectPanel projects={projects} /> : null}
-              {openPanel === "closeout" ? <CloseoutPanel summaries={closeoutSummaries} loading={closeoutLoading} /> : null}
-              {openPanel === "inbox" ? (
-                <section className="atlas-task-focus-section">
-                  <div className="atlas-add-form">
-                    <select aria-label="Zone" value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">Whole farm</option></select>
-                    <textarea aria-label="Note" value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Note" />
-                  </div>
-                  <button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving" : "Save"}</button>
-                  {inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}
-                </section>
-              ) : null}
-            </div>
-          </div>
-        </section>
-      ) : null}
-    </main>
-  );
+  async function submitInbox() { const cleanBody = inboxBody.trim(); if (!cleanBody) { setInboxMessage("Note required."); return; } try { setInboxSaving(true); setInboxMessage(null); await saveAtlasInboxItem({ body: cleanBody, zoneKey: inboxZoneKey || null }); setInboxBody(""); setInboxZoneKey(""); setInboxMessage("Saved."); } catch (inboxError) { setInboxMessage(inboxError instanceof Error ? inboxError.message : "Save failed."); } finally { setInboxSaving(false); } }
+  return <main className="atlas-phone-shell atlas-home-shell"><section className="atlas-phone atlas-dashboard-phone"><header className="atlas-phone-top atlas-dashboard-top"><div className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></div><span className="atlas-weather-line">{weatherLabel}</span><button type="button" className="atlas-note-plus" aria-label="Add note" onClick={() => setOpenPanel("inbox")}>+</button></header><div className="atlas-home-grid"><TaskLaunchHero cards={cards} loading={loading} weatherLabel={weatherLabel} /><button type="button" className="atlas-home-box atlas-home-box-white" onClick={() => setOpenPanel("closeout")}><strong>Closeout</strong><em>{monthSummary ? `${monthSummary.counts.objectEvents} records · ${monthSummary.counts.openTasks} still open` : "Month record"}</em><div className="atlas-home-mini-list"><span>Today · {prettyDate(today)}</span><span>Review what changed</span></div></button><button type="button" className="atlas-home-box atlas-home-box-white atlas-projects-box" onClick={() => setOpenPanel("projects")}><strong>Projects</strong><div className="atlas-project-mini-list">{homeProjects.length ? homeProjects.map((project) => <span key={projectCardKey(project)}>{project.project_title}</span>) : <span>Loading projects</span>}</div></button><FarmSnapshotBox snapshot={snapshot} loading={snapshotLoading} /></div></section>{openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{panelTitle(openPanel)}</strong></div><button type="button" onClick={() => setOpenPanel(null)}>Close</button></div><div className="atlas-task-focus-body">{openPanel === "projects" ? <ProjectPanel projects={projects} /> : null}{openPanel === "closeout" ? <CloseoutPanel summaries={closeoutSummaries} loading={closeoutLoading} /> : null}{openPanel === "inbox" ? <section className="atlas-task-focus-section"><div className="atlas-add-form"><select aria-label="Zone" value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">Whole farm</option></select><textarea aria-label="Note" value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Note" /></div><button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving" : "Save"}</button>{inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}</section> : null}</div></div></section> : null}</main>;
 }
