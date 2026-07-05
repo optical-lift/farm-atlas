@@ -32,7 +32,14 @@ function prettyDate(dateIso: string | null | undefined) {
 }
 
 function cleanLabel(value: string | null | undefined) {
-  return (value ?? "").replace(/truth/gi, "state").replace(/\bAnna\b/g, "crew").replace(/\bLex\b/g, "crew");
+  return (value ?? "")
+    .replace(/truth/gi, "state")
+    .replace(/\bAnna\b/g, "crew")
+    .replace(/\bLex\b/g, "crew")
+    .replace(/\b(urgent|high|normal|low)\b/gi, "")
+    .replace(/\s+·\s+·\s+/g, " · ")
+    .replace(/^\s*·\s*|\s*·\s*$/g, "")
+    .trim();
 }
 
 function taskSortValue(card: AtlasTaskCard) {
@@ -53,7 +60,7 @@ function compactTaskLocation(task: AtlasTaskCard | undefined) {
 }
 
 function taskLine(card: AtlasTaskCard) {
-  return [compactTaskLocation(card), card.due_date ? prettyDate(card.due_date) : null, card.priority].filter(Boolean).join(" · ");
+  return [compactTaskLocation(card), card.due_date ? prettyDate(card.due_date) : null].filter(Boolean).join(" · ");
 }
 
 function projectCardKey(project: AtlasProjectCard) {
@@ -186,7 +193,7 @@ function ProjectPanel({ projects }: { projects: AtlasProjectCard[] }) {
             {waiting.map((step: AtlasProjectStepCard) => (
               <Link key={step.step_id} href={step.task_id ? `/task?taskId=${encodeURIComponent(step.task_id)}` : "/task"} className="atlas-project-task-card">
                 <strong>{step.task_title ?? step.step_title}</strong>
-                <span>{[step.task_due_date ? prettyDate(step.task_due_date) : null, step.task_priority, selectedProject.zone_label].filter(Boolean).join(" · ")}</span>
+                <span>{[step.task_due_date ? prettyDate(step.task_due_date) : null, selectedProject.zone_label].filter(Boolean).join(" · ")}</span>
               </Link>
             ))}
           </div>
