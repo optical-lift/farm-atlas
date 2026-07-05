@@ -16,7 +16,7 @@ function addDaysIso(dateIso: string, days: number) { const date = new Date(`${da
 function prettyDate(dateIso: string | null | undefined) { if (!dateIso) return "No date"; const date = new Date(`${dateIso}T12:00:00`); return Number.isNaN(date.getTime()) ? dateIso : date.toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
 function clean(value: string | null | undefined) { return (value ?? "").replace(/urgent|high|normal|low/gi, "").replace(/truth/gi, "state").replace(/Anna/g, "crew").replace(/Lex/g, "crew").replace(/\s+·\s+·\s+/g, " · ").replace(/^\s*·\s*|\s*·\s*$/g, "").trim(); }
 function taskSortValue(task: AtlasTaskCard) { return `${task.due_date ?? "9999-12-31"}-${priorityRank[task.priority] ?? 9}-${task.title}`; }
-function taskText(task: AtlasTaskCard) { return `${task.task_type ?? ""} ${task.title} ${task.unlock_text ?? ""} ${task.note ?? ""}`.toLowerCase(); }
+function taskText(task: AtlasTaskCard) { return `${task.task_type ?? ""} ${task.title ?? ""}`.toLowerCase(); }
 
 function laneForTask(task: AtlasTaskCard): LaneKey {
   const text = taskText(task);
@@ -71,12 +71,13 @@ function ticketObject(task: AtlasTaskCard) {
 }
 
 function ticketTitle(task: AtlasTaskCard) { return `${ticketAction(task)} ${ticketObject(task)}`.trim(); }
-function objectLine(task: AtlasTaskCard, limit = 4) { const labels = task.objects.map((object) => object.object_label).filter(Boolean).slice(0, limit); return labels.length ? labels.join(" · ") : task.zone_label ?? "Elm Farm"; }
+function objectLabels(task: AtlasTaskCard, limit = 8) { return task.objects.map((object) => object.object_label).filter(Boolean).slice(0, limit); }
+function objectLine(task: AtlasTaskCard, limit = 4) { const labels = objectLabels(task, limit); return labels.length ? labels.join(" · ") : task.zone_label ?? "Elm Farm"; }
 function locationLine(task: AtlasTaskCard) { const zone = task.zone_label ?? "Elm Farm"; const objects = objectLine(task, 4); return objects && objects !== zone ? `${zone} · ${objects}` : zone; }
 
 function workWindowForTask(task: AtlasTaskCard, weatherLabel: string) {
   const text = taskText(task); const lane = laneForTask(task); const weather = weatherLabel.toLowerCase();
-  if (weather.includes("rain") && (lane === "verify" || text.includes("germin") || text.includes("check"))) return "After rain";
+  if (weather.includes("rain") && (lane === "verify" || text.includes("germin") || text.includes("check") || text.includes("confirm"))) return "After rain";
   if (text.includes("heat") || text.includes("water") || text.includes("weed") || text.includes("hoe") || lane === "harvest") return "Morning";
   if (lane === "venue") return "Afternoon";
   if (lane === "start" && (text.includes("grow room") || text.includes("tray") || text.includes("seed"))) return "Anytime";
@@ -108,6 +109,7 @@ function TaskSummaryButton({ task, selected, onSelect, today, weatherLabel }: { 
 function ActiveTaskCard({ task, onChange, today, weatherLabel }: { task: AtlasTaskCard; onChange: () => Promise<void>; today: string; weatherLabel: string }) {
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const labels = objectLabels(task, 12);
 
   async function save(outcome: Outcome) {
     const note = outcome === "done" ? "" : window.prompt(outcome === "partial" ? "Left?" : "Stuck?", "") ?? "";
@@ -124,7 +126,7 @@ function ActiveTaskCard({ task, onChange, today, weatherLabel }: { task: AtlasTa
     finally { setSaving(null); }
   }
 
-  return <article className="atlas-task-page-active atlas-task-ticket-card"><div className="atlas-task-page-kicker"><span>Up Now</span><small>{laneLabels[laneForTask(task)]}</small></div><h1>{ticketTitle(task).toUpperCase()}</h1><p>{locationLine(task)}</p><div className="atlas-task-page-time-row"><span>{workWindowForTask(task, weatherLabel)}</span><span>{task.due_date ? prettyDate(task.due_date) : carryoverLabel(task, today)}</span></div><div className="atlas-task-ticket-grid"><section><span>Where</span><strong>{task.zone_label ?? "Elm Farm"}</strong><p>{objectLine(task)}</p></section><section><span>When</span><strong>{workWindowForTask(task, weatherLabel)}</strong><p>{carryoverLabel(task, today)}</p></section></div><div className="atlas-task-page-actions"><button type="button" className="done" disabled={Boolean(saving)} onClick={() => void save("done")}>{saving === "done" ? "Saving" : "Done"}</button><button type="button" disabled={Boolean(saving)} onClick={() => void save("partial")}>{saving === "partial" ? "Saving" : "More"}</button><button type="button" className="blocked" disabled={Boolean(saving)} onClick={() => void save("blocked")}>{saving === "blocked" ? "Saving" : "Stuck"}</button><button type="button" disabled={Boolean(saving)} onClick={() => void addNote()}>{saving === "note" ? "Saving" : "Note"}</button></div>{message ? <p className="atlas-task-page-message">{message}</p> : null}</article>;
+  return <article className="atlas-task-page-active atlas-task-ticket-card"><div className="atlas-task-page-kicker"><span>Up Now</span><small>{laneLabels[laneForTask(task)]}</small></div><h1>{ticketTitle(task).toUpperCase()}</h1><div className="atlas-task-page-time-row"><span>{workWindowForTask(task, weatherLabel)}</span><span>{task.due_date ? prettyDate(task.due_date) : carryoverLabel(task, today)}</span></div><section className="atlas-task-place-card"><strong>{task.zone_label ?? "Elm Farm"}</strong>{labels.length ? <div className="atlas-task-place-chips">{labels.map((label) => <span key={label}>{label}</span>)}</div> : <p>{objectLine(task)}</p>}</section><div className="atlas-task-page-actions"><button type="button" className="done" disabled={Boolean(saving)} onClick={() => void save("done")}>{saving === "done" ? "Saving" : "Done"}</button><button type="button" disabled={Boolean(saving)} onClick={() => void save("partial")}>{saving === "partial" ? "Saving" : "More"}</button><button type="button" className="blocked" disabled={Boolean(saving)} onClick={() => void save("blocked")}>{saving === "blocked" ? "Saving" : "Stuck"}</button><button type="button" disabled={Boolean(saving)} onClick={() => void addNote()}>{saving === "note" ? "Saving" : "Note"}</button></div>{message ? <p className="atlas-task-page-message">{message}</p> : null}</article>;
 }
 
 export default function AtlasTaskPage() {
