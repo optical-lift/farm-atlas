@@ -44,6 +44,15 @@ function norm(value: string | null | undefined) {
   return (value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+function html(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function isRouteKey(value: string): value is RouteKey {
   return value === "plant" || value === "weed" || value === "mow" || value === "seed" || value === "harvest" || value === "build" || value === "venue" || value === "water";
 }
@@ -78,6 +87,46 @@ function spacingLines(card: TaskCard) {
 
 function detailLines(card: TaskCard) {
   return stringList(card.metadata?.detail_lines);
+}
+
+function childDetailLines(parent: TaskCard, child: TaskCard) {
+  const ownDetails = detailLines(child);
+  if (ownDetails.length) return ownDetails;
+
+  const parentDetails = detailLines(parent);
+  if (!parentDetails.length) return [];
+
+  const childLabel = norm(label(child));
+  const directKeys = [
+    "field rows",
+    "barn beds",
+    "u pick",
+    "follow me",
+    "curve garden",
+    "main garden",
+    "lilac haven",
+    "garage",
+    "entry billboard",
+  ];
+
+  const directKey = directKeys.find((key) => childLabel.includes(key));
+  if (directKey) {
+    const directMatch = parentDetails.find((line) => norm(line).includes(directKey));
+    if (directMatch) return [directMatch];
+  }
+
+  const meaningfulWords = childLabel.split(" ").filter((word) => word.length > 2).slice(0, 3);
+  const fuzzyMatch = parentDetails.find((line) => {
+    const lineText = norm(line);
+    return meaningfulWords.length > 0 && meaningfulWords.every((word) => lineText.includes(word));
+  });
+
+  return fuzzyMatch ? [fuzzyMatch] : [];
+}
+
+function shouldRemoveParentDetail(parent: TaskCard, detail: Element | null) {
+  const heading = detail?.querySelector("strong")?.textContent?.trim().toLowerCase() ?? "";
+  return routeForTask(parent) === "mow" || heading === "weekly route";
 }
 
 function isDone(card: TaskCard) {
@@ -221,24 +270,32 @@ function insertChecklist(parent: TaskCard, children: TaskCard[]) {
   `;
 
   const openTarget = section.querySelector(".atlas-child-checklist-open");
-  openChildren.forEach((child) => openTarget?.appendChild(checkButton(child)));
+  openChildren.forEach((child) => openTarget?.appendChild(checkButton(child, parent)));
 
   const doneTarget = section.querySelector(".atlas-child-checklist-finished div");
-  doneChildren.forEach((child) => doneTarget?.appendChild(checkButton(child)));
+  doneChildren.forEach((child) => doneTarget?.appendChild(checkButton(child, parent)));
 
   const spacing = card.querySelector(".atlas-plant-spacing-card");
   const detail = card.querySelector(".atlas-task-detail-card");
   const place = card.querySelector(".atlas-task-place-card");
   (spacing ?? detail ?? place)?.insertAdjacentElement("afterend", section);
+  if (shouldRemoveParentDetail(parent, detail)) detail?.remove();
 }
 
-function checkButton(child: TaskCard) {
+function checkButton(child: TaskCard, parent: TaskCard) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = isDone(child) ? "atlas-child-check-item done" : "atlas-child-check-item";
   button.dataset.childTaskId = child.task_id;
   button.dataset.nextStatus = isDone(child) ? "open" : "done";
-  button.innerHTML = `<span>${isDone(child) ? "✓" : ""}</span><strong>${label(child)}</strong>`;
+  const details = childDetailLines(parent, child);
+  button.innerHTML = `
+    <span>${isDone(child) ? "✓" : ""}</span>
+    <div class="atlas-child-check-copy">
+      <strong>${html(label(child))}</strong>
+      ${details.map((line) => `<em>${html(line)}</em>`).join("")}
+    </div>
+  `;
   return button;
 }
 
