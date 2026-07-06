@@ -34,12 +34,18 @@
   display: none !important;
 }
 
+.atlas-task-page-active .atlas-task-page-time-row span:last-child::before {
+  content: none !important;
+  display: none !important;
+}
+
 .atlas-task-location-pill {
   background: rgba(246, 242, 230, 0.72) !important;
   color: var(--atlas-text) !important;
 }
 
 .atlas-plant-spacing-card,
+.atlas-task-tools-card,
 .atlas-child-checklist {
   border: 1px solid var(--atlas-border-soft);
   border-radius: 18px;
@@ -50,6 +56,7 @@
 }
 
 .atlas-plant-spacing-card > strong,
+.atlas-task-tools-card > strong,
 .atlas-child-checklist > strong {
   color: #858bb8;
   font-size: 11px;
@@ -59,13 +66,15 @@
   text-transform: uppercase;
 }
 
-.atlas-plant-spacing-card > div {
+.atlas-plant-spacing-card > div,
+.atlas-task-tools-card > div {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
 }
 
-.atlas-plant-spacing-card span {
+.atlas-plant-spacing-card span,
+.atlas-task-tools-card span {
   border: 1px solid rgba(139, 145, 194, 0.22);
   border-radius: 999px;
   background: rgba(246, 242, 230, 0.64);
