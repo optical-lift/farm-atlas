@@ -1,0 +1,135 @@
+.atlas-daily-run-sheet {
+  grid-template-rows: auto auto minmax(0, 1fr) !important;
+  gap: 10px !important;
+}
+
+.atlas-run-sheet-summary {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.10);
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.atlas-run-sheet-summary strong,
+.atlas-run-sheet-summary span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-run-sheet-summary strong {
+  color: #fff;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.atlas-run-sheet-summary span {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 11px;
+  line-height: 1.15;
+  font-weight: 850;
+}
+
+.atlas-run-sheet-grid {
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(74px, 1fr);
+  gap: 8px;
+}
+
+.atlas-run-sheet-box,
+.atlas-run-sheet-empty {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.13);
+  color: #fff;
+  text-decoration: none;
+  padding: 10px;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.atlas-run-sheet-box small,
+.atlas-run-sheet-box strong,
+.atlas-run-sheet-box span,
+.atlas-run-sheet-box em,
+.atlas-run-sheet-empty strong,
+.atlas-run-sheet-empty em {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-run-sheet-box small {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.atlas-run-sheet-box strong,
+.atlas-run-sheet-empty strong {
+  color: #fff;
+  font-size: 14px !important;
+  line-height: 1.02 !important;
+  font-weight: 950;
+  letter-spacing: -0.025em !important;
+}
+
+.atlas-run-sheet-box span,
+.atlas-run-sheet-box em,
+.atlas-run-sheet-empty em {
+  color: rgba(255, 255, 255, 0.76) !important;
+  font-size: 9px !important;
+  line-height: 1.05 !important;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.atlas-run-sheet-box em {
+  color: rgba(255, 255, 255, 0.62) !important;
+}
+
+.atlas-run-sheet-empty {
+  min-height: 0;
+  align-content: center;
+}
+
+.atlas-daily-run-sheet .atlas-hero-work-list,
+.atlas-daily-run-sheet .atlas-hero-work-card,
+.atlas-daily-run-sheet .atlas-task-queue-card,
+.atlas-daily-run-sheet .atlas-task-active-card {
+  display: none !important;
+}
+
+@media (max-width: 360px) {
+  .atlas-run-sheet-grid {
+    gap: 6px;
+    grid-auto-rows: minmax(68px, 1fr);
+  }
+
+  .atlas-run-sheet-box {
+    padding: 8px;
+    border-radius: 15px;
+  }
+
+  .atlas-run-sheet-box strong {
+    font-size: 12px !important;
+  }
+}
