@@ -1,12 +1,18 @@
-/* Purple hero rollback: bring back the early translucent card feel, but keep the new farm run-sheet data. */
+/* Purple hero rollback: early compact route-card feel with the new farm route data. */
+
+.atlas-home-grid {
+  grid-template-rows: auto auto !important;
+  align-content: start !important;
+}
 
 .atlas-home-task-hero.atlas-task-controller.atlas-daily-run-sheet {
   grid-column: 1 / -1;
   display: grid !important;
-  grid-template-rows: auto minmax(0, 1fr) !important;
-  gap: 12px !important;
-  padding: 18px !important;
+  grid-template-rows: auto auto !important;
+  gap: 11px !important;
+  padding: 14px !important;
   min-height: 0 !important;
+  height: auto !important;
   overflow: hidden !important;
 }
 
@@ -46,24 +52,25 @@
 
 .atlas-run-sheet-grid {
   min-height: 0 !important;
-  height: 100% !important;
+  height: auto !important;
   overflow: hidden !important;
   display: grid !important;
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  grid-auto-rows: minmax(0, 1fr) !important;
-  gap: 9px !important;
+  grid-auto-rows: 84px !important;
+  gap: 8px !important;
 }
 
 .atlas-run-sheet-box,
 .atlas-run-sheet-empty {
   min-width: 0 !important;
   min-height: 0 !important;
-  border-radius: 18px !important;
+  height: 84px !important;
+  border-radius: 16px !important;
   border: 1px solid rgba(255, 255, 255, 0.22) !important;
   background: rgba(126, 132, 187, 0.32) !important;
   color: #fff !important;
   text-decoration: none !important;
-  padding: 10px !important;
+  padding: 9px !important;
   display: grid !important;
   align-content: center !important;
   gap: 4px !important;
@@ -129,11 +136,13 @@
   }
 
   .atlas-run-sheet-grid {
+    grid-auto-rows: 80px !important;
     gap: 7px !important;
   }
 
   .atlas-run-sheet-box {
-    border-radius: 16px !important;
+    height: 80px !important;
+    border-radius: 15px !important;
     padding: 8px !important;
   }
 
@@ -149,7 +158,12 @@
 
 @media (max-width: 360px) {
   .atlas-run-sheet-grid {
+    grid-auto-rows: 72px !important;
     gap: 6px !important;
+  }
+
+  .atlas-run-sheet-box {
+    height: 72px !important;
   }
 
   .atlas-run-sheet-box strong {
