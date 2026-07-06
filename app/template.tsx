@@ -192,6 +192,51 @@ async function redirectSingleRoutePageToTaskCard() {
   }
 }
 
+function activeTaskText(card: Element) {
+  return [
+    card.querySelector("h1")?.textContent ?? "",
+    card.querySelector(".atlas-task-page-kicker")?.textContent ?? "",
+    card.querySelector(".atlas-task-page-time-row")?.textContent ?? "",
+  ].join(" ").toLowerCase();
+}
+
+function defaultToolsForTask(card: Element) {
+  const value = activeTaskText(card);
+  if (value.includes("mow") || value.includes("walkways") || value.includes("maintenance")) return ["Battery push mower", "Riding mower", "Weed whacker", "Leaf blower"];
+  if (value.includes("harvest") || value.includes("garlic") || value.includes("gather")) return ["Gloves", "Snips", "Buckets", "Rubber bands"];
+  if (value.includes("weed")) return ["Gloves"];
+  if (value.includes("plant") || value.includes("planting") || value.includes("transplant") || value.includes("dahlia")) return ["Hori hori", "Shovel", "Gloves", "Hose"];
+  return [];
+}
+
+function insertDefaultTaskTools() {
+  if (window.location.pathname !== "/task") return;
+  const card = document.querySelector(".atlas-task-page-active");
+  if (!card) return;
+  const tools = defaultToolsForTask(card);
+  if (!tools.length) return;
+  const key = tools.join("|");
+  const existing = card.querySelector<HTMLElement>(".atlas-task-tools-card");
+  if (existing?.dataset.toolSet === key) return;
+  existing?.remove();
+
+  const section = document.createElement("section");
+  section.className = "atlas-task-tools-card";
+  section.dataset.toolSet = key;
+  section.innerHTML = `<strong>Tools</strong><div></div>`;
+  const target = section.querySelector("div");
+  tools.forEach((tool) => {
+    const chip = document.createElement("span");
+    chip.textContent = tool;
+    target?.appendChild(chip);
+  });
+
+  const spacing = card.querySelector(".atlas-plant-spacing-card");
+  const detailCard = card.querySelector(".atlas-task-detail-card");
+  const placeCard = card.querySelector(".atlas-task-place-card");
+  (spacing ?? detailCard ?? placeCard)?.insertAdjacentElement("afterend", section);
+}
+
 function syncTaskMode() {
   const isTaskPage = window.location.pathname === "/task";
   const params = new URLSearchParams(window.location.search);
@@ -216,14 +261,19 @@ export default function RootTemplate({ children }: { children: ReactNode }) {
       window.location.assign(`/task?route=${encodeURIComponent(route)}`);
     }
 
+    const observer = new MutationObserver(() => window.setTimeout(insertDefaultTaskTools, 50));
+    observer.observe(document.body, { childList: true, subtree: true });
+
     syncTaskMode();
     void insertFirstTaskPreviews();
     void pointSingleRouteCardsToTaskCards();
     void redirectSingleRoutePageToTaskCard();
+    window.setTimeout(insertDefaultTaskTools, 250);
     document.addEventListener("click", handleClick, true);
     window.addEventListener("popstate", syncTaskMode);
     return () => {
       document.body.classList.remove("atlas-route-mode", "atlas-task-detail-mode");
+      observer.disconnect();
       document.removeEventListener("click", handleClick, true);
       window.removeEventListener("popstate", syncTaskMode);
     };
