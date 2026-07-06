@@ -1,26 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   fetchAtlasCloseout,
   type AtlasCloseoutSummary,
 } from "@/lib/atlas/closeout-client";
 import { fetchAtlasFarmSnapshot, type AtlasFarmSnapshot } from "@/lib/atlas/farm-snapshot-client";
-import { fetchAtlasProjects, type AtlasProjectCard, type AtlasProjectStepCard } from "@/lib/atlas/projects-client";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { saveAtlasInboxItem } from "@/lib/atlas/inbox-client";
 
-type HomePanel = "inbox" | "projects" | "closeout" | null;
+type HomePanel = "inbox" | "week" | "closeout" | null;
 type WeatherResponse = { ok: boolean; label?: string; rainAge?: string; daysSinceRain?: number | null; error?: string };
 type HomeTaskDisplay = { rhythm: string; action: string; subject: string; location: string; detail: string | null };
 type WorkRouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
 type WorkRoute = { key: WorkRouteKey; label: string; cards: AtlasTaskCard[]; zones: string[]; preview: string; href: string };
+type WorkGroup = { label: string; cards: AtlasTaskCard[]; routes: string[]; preview: string };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const defaultSnapshot: AtlasFarmSnapshot = { totalBeds: 0, growingBeds: 0, activeSqft: 0, sowingsLogged: 0, stemsLogged: 0 };
 const routeOrder: WorkRouteKey[] = ["plant", "weed", "mow", "seed", "harvest", "build", "venue", "water"];
+const mainRouteKeys = new Set<WorkRouteKey>(["plant", "weed", "mow", "seed", "build"]);
 const routeLabels: Record<WorkRouteKey, string> = {
   plant: "Plant",
   weed: "Weed",
@@ -34,6 +35,12 @@ const routeLabels: Record<WorkRouteKey, string> = {
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysIso(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 function prettyDate(dateIso: string | null | undefined) {
@@ -104,7 +111,13 @@ function isDashboardWork(card: AtlasTaskCard) {
   return !isChild && !(text.includes("verify") || text.includes("check") || text.includes("confirm") || text.includes("count") || text.includes("germin") || text.includes("walk field rows"));
 }
 
+function isRouteKey(value: string | null): value is WorkRouteKey {
+  return value === "plant" || value === "weed" || value === "mow" || value === "seed" || value === "harvest" || value === "build" || value === "venue" || value === "water";
+}
+
 function routeKeyForTask(card: AtlasTaskCard): WorkRouteKey {
+  const explicitRoute = metaString(card, "work_route");
+  if (isRouteKey(explicitRoute)) return explicitRoute;
   const display = taskDisplay(card);
   const text = `${card.task_type} ${card.title} ${display.rhythm} ${display.action}`.toLowerCase();
   if (text.includes("water")) return "water";
@@ -120,6 +133,7 @@ function routeKeyForTask(card: AtlasTaskCard): WorkRouteKey {
 
 function zoneBucket(location: string) {
   const lower = location.toLowerCase();
+  if (lower.includes("oak") || lower.includes("strawberry orchard")) return "Shady Oak";
   if (lower.includes("main garden") || lower.includes("straw strip")) return "Main Garden";
   if (lower.includes("field") || lower.includes("fr")) return "Field Rows";
   if (lower.includes("barn")) return "Barn Beds";
@@ -128,12 +142,27 @@ function zoneBucket(location: string) {
   if (lower.includes("follow me")) return "Follow Me";
   if (lower.includes("curve")) return "Curve Garden";
   if (lower.includes("lilac")) return "Lilac Haven";
-  if (lower.includes("garage") || lower.includes("hydrangea")) return "Garage Bed";
+  if (lower.includes("garage") || lower.includes("hydrangea")) return "Garage / House Beds";
   if (lower.includes("grow room")) return "Grow Room";
   if (lower.includes("entry") || lower.includes("billboard")) return "Entry Billboard";
-  if (lower.includes("oak") || lower.includes("strawberry orchard")) return "Shady Oak";
   if (lower.includes("chicken")) return "Chicken Coop";
   return location;
+}
+
+function collectionLabel(card: AtlasTaskCard) {
+  return metaString(card, "collection_label") ?? taskDisplay(card).subject;
+}
+
+function collectionZone(card: AtlasTaskCard) {
+  return metaString(card, "collection_zone") ?? zoneBucket(taskDisplay(card).location);
+}
+
+function weekCards(cards: AtlasTaskCard[]) {
+  const weekEnd = addDaysIso(6);
+  return cards
+    .filter(isDashboardWork)
+    .filter((card) => !card.due_date || card.due_date <= weekEnd)
+    .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
 }
 
 function buildRoutes(cards: AtlasTaskCard[]) {
@@ -148,44 +177,38 @@ function buildRoutes(cards: AtlasTaskCard[]) {
       const displays = routeCards.map(taskDisplay);
       const zones = Array.from(new Set(displays.map((display) => zoneBucket(display.location)).filter(Boolean))).slice(0, 4);
       const preview = displays.map((display) => display.subject).slice(0, 3).join(" · ");
-      const first = routeCards[0];
       return {
         key,
         label: routeLabels[key],
         cards: routeCards,
         zones,
         preview,
-        href: `/task?taskId=${encodeURIComponent(first.task_id)}`,
+        href: `/task?route=${encodeURIComponent(key)}`,
       };
     })
     .filter((route): route is WorkRoute => Boolean(route));
 }
 
-function projectCardKey(project: AtlasProjectCard) {
-  return `${project.project_id}-${project.project_goal_id ?? project.project_key}`;
-}
-
-function uniqueProjects(projects: AtlasProjectCard[]) {
-  const byId = new Map<string, AtlasProjectCard>();
-  projects.forEach((project) => {
-    if (!byId.has(project.project_id)) byId.set(project.project_id, project);
+function groupedCards(cards: AtlasTaskCard[], groupBy: (card: AtlasTaskCard) => string): WorkGroup[] {
+  const map = new Map<string, AtlasTaskCard[]>();
+  cards.forEach((card) => {
+    const key = groupBy(card);
+    map.set(key, [...(map.get(key) ?? []), card]);
   });
-  return Array.from(byId.values());
-}
-
-function projectSteps(project: AtlasProjectCard | null) {
-  return [...(project?.steps ?? [])].sort((a, b) => (a.step_order ?? 999) - (b.step_order ?? 999));
-}
-
-function waitingProjectSteps(project: AtlasProjectCard | null) {
-  return projectSteps(project)
-    .filter((step) => step.task_id && step.task_status === "open")
-    .sort((a, b) => `${a.task_due_date ?? "9999-12-31"}-${priorityRank[a.task_priority ?? "normal"] ?? 9}-${a.step_order}`.localeCompare(`${b.task_due_date ?? "9999-12-31"}-${priorityRank[b.task_priority ?? "normal"] ?? 9}-${b.step_order}`));
+  return Array.from(map.entries()).map(([label, groupCards]) => {
+    const routes = Array.from(new Set(groupCards.map((card) => routeLabels[routeKeyForTask(card)])));
+    return {
+      label,
+      cards: groupCards,
+      routes,
+      preview: groupCards.map(collectionLabel).slice(0, 3).join(" · "),
+    };
+  });
 }
 
 function panelTitle(panel: HomePanel) {
   if (panel === "inbox") return "Note";
-  if (panel === "projects") return "Projects";
+  if (panel === "week") return "Week Lineup";
   if (panel === "closeout") return "Closeout";
   return "Atlas";
 }
@@ -245,30 +268,95 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
   );
 }
 
-function ProjectPanel({ projects }: { projects: AtlasProjectCard[] }) {
-  const projectList = useMemo(() => uniqueProjects(projects), [projects]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const selectedProject = projectList.find((project) => project.project_id === selectedProjectId) ?? null;
-  const selectedSteps = projectSteps(selectedProject);
-  const waiting = waitingProjectSteps(selectedProject);
+function WeeklyWorkBox({ cards, loading, onOpen }: { cards: AtlasTaskCard[]; loading: boolean; onOpen: () => void }) {
+  const items = weekCards(cards);
+  const main = items.filter((card) => mainRouteKeys.has(routeKeyForTask(card)));
+  const side = items.filter((card) => !mainRouteKeys.has(routeKeyForTask(card)));
+  const mainGroups = groupedCards(main, collectionZone).slice(0, 3);
+  const sideRoutes = groupedCards(side, (card) => routeLabels[routeKeyForTask(card)]).map((group) => group.label).slice(0, 3);
 
-  if (!selectedProject) {
-    return <section className="atlas-task-focus-section atlas-project-panel"><div className="atlas-project-list">{projectList.map((project) => <button key={projectCardKey(project)} type="button" className="atlas-project-card atlas-project-list-card" onClick={() => setSelectedProjectId(project.project_id)}><strong>{project.project_title}</strong><span>{project.goal_label ?? project.project_goal_text ?? project.target_window_label ?? "Project"}</span><small>{[project.zone_label, project.target_window_label, project.open_task_count ? `${project.open_task_count} open` : null].filter(Boolean).join(" · ")}</small></button>)}</div></section>;
-  }
-
-  const done = selectedProject.done_step_count ?? selectedSteps.filter((step) => step.step_status === "done").length;
-  const total = selectedProject.step_count ?? selectedSteps.length;
-  const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-
-  return <section className="atlas-task-focus-section atlas-project-panel"><button type="button" className="atlas-project-back" onClick={() => setSelectedProjectId(null)}>← Projects</button><article className="atlas-project-detail-hero"><strong>{selectedProject.project_title}</strong>{selectedProject.project_goal_text ? <p>{selectedProject.project_goal_text}</p> : null}<div className="atlas-project-detail-meta"><span>{done}/{total} steps</span><span>{percent}%</span>{selectedProject.open_task_count ? <span>{selectedProject.open_task_count} open</span> : null}</div></article><div className="atlas-project-section"><div className="atlas-project-section-head"><span>Project Tasks</span><small>{waiting.length}</small></div>{waiting.length === 0 ? <p className="atlas-project-empty">No open linked tasks.</p> : <div className="atlas-project-task-list">{waiting.map((step: AtlasProjectStepCard) => <Link key={step.step_id} href={step.task_id ? `/task?taskId=${encodeURIComponent(step.task_id)}` : "/task"} className="atlas-project-task-card"><strong>{step.task_title ?? step.step_title}</strong><span>{[step.task_due_date ? prettyDate(step.task_due_date) : null, selectedProject.zone_label].filter(Boolean).join(" · ")}</span></Link>)}</div>}</div></section>;
+  return (
+    <button type="button" className="atlas-home-box atlas-home-box-white atlas-week-overview-box" onClick={onOpen}>
+      <strong>Week Lineup</strong>
+      <em>{loading ? "Loading work" : `${items.length} open · main work by place`}</em>
+      <div className="atlas-week-mini-list">
+        {mainGroups.map((group) => (
+          <span key={group.label}><b>{group.label}</b><small>{group.routes.join(" + ")}</small></span>
+        ))}
+        {sideRoutes.length ? <span><b>Side Work</b><small>{sideRoutes.join(" + ")}</small></span> : null}
+      </div>
+    </button>
+  );
 }
 
-function FarmSnapshotBox({ snapshot, loading }: { snapshot: AtlasFarmSnapshot; loading: boolean }) { return <Link href="/zones" className="atlas-home-box atlas-home-box-white atlas-home-box-link atlas-farm-snapshot-box"><strong>Farm Snapshot</strong><div className="atlas-snapshot-grid"><span><b>{loading ? "…" : snapshot.growingBeds}</b> growing beds</span><span><b>{loading ? "…" : snapshot.activeSqft.toLocaleString()}</b> active sq ft</span><span><b>{loading ? "…" : snapshot.sowingsLogged}</b> sowings logged</span><span><b>{loading ? "…" : snapshot.stemsLogged}</b> stems logged</span></div></Link>; }
-function CloseoutPanel({ summaries, loading }: { summaries: AtlasCloseoutSummary[]; loading: boolean }) { return <section className="atlas-task-focus-section"><div className="atlas-closeout-grid">{loading ? <div className="atlas-empty">Loading closeout.</div> : null}{summaries.map((summary) => <article key={summary.period} className="atlas-closeout-card tidy"><div className="atlas-closeout-card-head"><strong>{summary.label}</strong><span>{prettyDate(summary.startDate)}–{prettyDate(summary.endDate)}</span></div><div className="atlas-closeout-pill-row soft"><span>{summary.counts.objectEvents} records</span><span>{summary.counts.openTasks} open</span><span>{summary.counts.tasksBlocked} blocked</span></div>{summary.carryForward.length > 0 ? <div className="atlas-closeout-section carry"><span>Carry forward</span>{summary.carryForward.map((line) => <p key={line}>{cleanLabel(line)}</p>)}</div> : null}</article>)}</div></section>; }
+function WeekLineupPanel({ cards }: { cards: AtlasTaskCard[] }) {
+  const items = weekCards(cards);
+  const main = items.filter((card) => mainRouteKeys.has(routeKeyForTask(card)));
+  const side = items.filter((card) => !mainRouteKeys.has(routeKeyForTask(card)));
+  const mainGroups = groupedCards(main, collectionZone);
+  const sideGroups = groupedCards(side, (card) => routeLabels[routeKeyForTask(card)]);
+
+  return (
+    <section className="atlas-task-focus-section atlas-week-panel">
+      <article className="atlas-week-panel-hero">
+        <span>This Week</span>
+        <strong>{items.length} open</strong>
+        <p>Main work is grouped by place. Side work is grouped by route.</p>
+      </article>
+      <div className="atlas-week-shelf">
+        <h3>Main Work</h3>
+        {mainGroups.map((group) => (
+          <article key={group.label} className="atlas-week-group-card">
+            <div className="atlas-week-group-head">
+              <strong>{group.label}</strong>
+              <span>{group.routes.join(" + ")}</span>
+            </div>
+            <div className="atlas-week-task-list">
+              {group.cards.map((card) => (
+                <Link key={card.task_id} href={`/task?taskId=${encodeURIComponent(card.task_id)}`} className="atlas-week-task-row">
+                  <strong>{collectionLabel(card)}</strong>
+                  <span>{routeLabels[routeKeyForTask(card)]} · {prettyDate(card.due_date)}</span>
+                </Link>
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+      {sideGroups.length ? (
+        <div className="atlas-week-shelf">
+          <h3>Side Work</h3>
+          {sideGroups.map((group) => (
+            <article key={group.label} className="atlas-week-group-card">
+              <div className="atlas-week-group-head">
+                <strong>{group.label}</strong>
+                <span>{group.cards.length} {group.cards.length === 1 ? "task" : "tasks"}</span>
+              </div>
+              <div className="atlas-week-task-list">
+                {group.cards.map((card) => (
+                  <Link key={card.task_id} href={`/task?taskId=${encodeURIComponent(card.task_id)}`} className="atlas-week-task-row">
+                    <strong>{collectionLabel(card)}</strong>
+                    <span>{collectionZone(card)} · {prettyDate(card.due_date)}</span>
+                  </Link>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function FarmSnapshotBox({ snapshot, loading }: { snapshot: AtlasFarmSnapshot; loading: boolean }) {
+  return <Link href="/zones" className="atlas-home-box atlas-home-box-white atlas-home-box-link atlas-farm-snapshot-box"><strong>Farm Snapshot</strong><div className="atlas-snapshot-grid"><span><b>{loading ? "…" : snapshot.growingBeds}</b> growing beds</span><span><b>{loading ? "…" : snapshot.activeSqft.toLocaleString()}</b> active sq ft</span><span><b>{loading ? "…" : snapshot.sowingsLogged}</b> sowings logged</span><span><b>{loading ? "…" : snapshot.stemsLogged}</b> stems logged</span></div></Link>;
+}
+
+function CloseoutPanel({ summaries, loading }: { summaries: AtlasCloseoutSummary[]; loading: boolean }) {
+  return <section className="atlas-task-focus-section"><div className="atlas-closeout-grid">{loading ? <div className="atlas-empty">Loading closeout.</div> : null}{summaries.map((summary) => <article key={summary.period} className="atlas-closeout-card tidy"><div className="atlas-closeout-card-head"><strong>{summary.label}</strong><span>{prettyDate(summary.startDate)}–{prettyDate(summary.endDate)}</span></div><div className="atlas-closeout-pill-row soft"><span>{summary.counts.objectEvents} records</span><span>{summary.counts.openTasks} open</span><span>{summary.counts.tasksBlocked} blocked</span></div>{summary.carryForward.length > 0 ? <div className="atlas-closeout-section carry"><span>Carry forward</span>{summary.carryForward.map((line) => <p key={line}>{cleanLabel(line)}</p>)}</div> : null}</article>)}</div></section>;
+}
 
 export default function AtlasHomePage() {
   const [cards, setCards] = useState<AtlasTaskCard[]>([]);
-  const [projects, setProjects] = useState<AtlasProjectCard[]>([]);
   const [snapshot, setSnapshot] = useState<AtlasFarmSnapshot>(defaultSnapshot);
   const [loading, setLoading] = useState(true);
   const [snapshotLoading, setSnapshotLoading] = useState(true);
@@ -281,14 +369,33 @@ export default function AtlasHomePage() {
   const [closeoutLoading, setCloseoutLoading] = useState(true);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const today = todayIso();
+
   async function loadCards() { try { setLoading(true); const response = await fetchAtlasTaskCards(); setCards((response.taskCards ?? []).filter((card) => card.status === "open").sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)))); } finally { setLoading(false); } }
-  async function loadProjects() { try { const response = await fetchAtlasProjects(); setProjects((response.projects ?? []).filter((project) => project.project_status === "active")); } catch {} }
   async function loadSnapshot() { try { setSnapshotLoading(true); const response = await fetchAtlasFarmSnapshot(); setSnapshot(response.snapshot ?? defaultSnapshot); } finally { setSnapshotLoading(false); } }
   async function loadCloseout() { try { setCloseoutLoading(true); const response = await fetchAtlasCloseout(); setCloseoutSummaries(response.summaries ?? []); } finally { setCloseoutLoading(false); } }
   async function loadWeather() { try { const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" }); const data = (await response.json()) as WeatherResponse; setWeatherLabel(response.ok && data.ok && data.label ? data.label : "weather unavailable"); } catch { setWeatherLabel("weather unavailable"); } }
-  useEffect(() => { void loadCards(); void loadProjects(); void loadSnapshot(); void loadCloseout(); void loadWeather(); }, []);
-  const homeProjects = uniqueProjects(projects).slice(0, 3);
+
+  useEffect(() => { void loadCards(); void loadSnapshot(); void loadCloseout(); void loadWeather(); }, []);
+
   const monthSummary = closeoutSummaries.find((summary) => summary.period === "month");
   async function submitInbox() { const cleanBody = inboxBody.trim(); if (!cleanBody) { setInboxMessage("Note required."); return; } try { setInboxSaving(true); setInboxMessage(null); await saveAtlasInboxItem({ body: cleanBody, zoneKey: inboxZoneKey || null }); setInboxBody(""); setInboxZoneKey(""); setInboxMessage("Saved."); } catch (inboxError) { setInboxMessage(inboxError instanceof Error ? inboxError.message : "Save failed."); } finally { setInboxSaving(false); } }
-  return <main className="atlas-phone-shell atlas-home-shell"><section className="atlas-phone atlas-dashboard-phone"><header className="atlas-phone-top atlas-dashboard-top"><div className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></div><span className="atlas-weather-line">{weatherLabel}</span><button type="button" className="atlas-note-plus" aria-label="Add note" onClick={() => setOpenPanel("inbox")}>+</button></header><div className="atlas-home-grid"><TaskLaunchHero cards={cards} loading={loading} weatherLabel={weatherLabel} /><button type="button" className="atlas-home-box atlas-home-box-white" onClick={() => setOpenPanel("closeout")}><strong>Closeout</strong><em>{monthSummary ? `${monthSummary.counts.objectEvents} records · ${monthSummary.counts.openTasks} still open` : "Month record"}</em><div className="atlas-home-mini-list"><span>Today · {prettyDate(today)}</span><span>Review what changed</span></div></button><button type="button" className="atlas-home-box atlas-home-box-white atlas-projects-box" onClick={() => setOpenPanel("projects")}><strong>Projects</strong><div className="atlas-project-mini-list">{homeProjects.length ? homeProjects.map((project) => <span key={projectCardKey(project)}>{project.project_title}</span>) : <span>Loading projects</span>}</div></button><FarmSnapshotBox snapshot={snapshot} loading={snapshotLoading} /></div></section>{openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{panelTitle(openPanel)}</strong></div><button type="button" onClick={() => setOpenPanel(null)}>Close</button></div><div className="atlas-task-focus-body">{openPanel === "projects" ? <ProjectPanel projects={projects} /> : null}{openPanel === "closeout" ? <CloseoutPanel summaries={closeoutSummaries} loading={closeoutLoading} /> : null}{openPanel === "inbox" ? <section className="atlas-task-focus-section"><div className="atlas-add-form"><select aria-label="Zone" value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">Whole farm</option></select><textarea aria-label="Note" value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Note" /></div><button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving" : "Save"}</button>{inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}</section> : null}</div></div></section> : null}</main>;
+
+  return (
+    <main className="atlas-phone-shell atlas-home-shell">
+      <section className="atlas-phone atlas-dashboard-phone">
+        <header className="atlas-phone-top atlas-dashboard-top">
+          <div className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></div>
+          <span className="atlas-weather-line">{weatherLabel}</span>
+          <button type="button" className="atlas-note-plus" aria-label="Add note" onClick={() => setOpenPanel("inbox")}>+</button>
+        </header>
+        <div className="atlas-home-grid">
+          <TaskLaunchHero cards={cards} loading={loading} weatherLabel={weatherLabel} />
+          <button type="button" className="atlas-home-box atlas-home-box-white" onClick={() => setOpenPanel("closeout")}><strong>Closeout</strong><em>{monthSummary ? `${monthSummary.counts.objectEvents} records · ${monthSummary.counts.openTasks} still open` : "Month record"}</em><div className="atlas-home-mini-list"><span>Today · {prettyDate(today)}</span><span>Review what changed</span></div></button>
+          <WeeklyWorkBox cards={cards} loading={loading} onOpen={() => setOpenPanel("week")} />
+          <FarmSnapshotBox snapshot={snapshot} loading={snapshotLoading} />
+        </div>
+      </section>
+      {openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{panelTitle(openPanel)}</strong></div><button type="button" onClick={() => setOpenPanel(null)}>Close</button></div><div className="atlas-task-focus-body">{openPanel === "week" ? <WeekLineupPanel cards={cards} /> : null}{openPanel === "closeout" ? <CloseoutPanel summaries={closeoutSummaries} loading={closeoutLoading} /> : null}{openPanel === "inbox" ? <section className="atlas-task-focus-section"><div className="atlas-add-form"><select aria-label="Zone" value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">Whole farm</option></select><textarea aria-label="Note" value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Note" /></div><button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving" : "Save"}</button>{inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}</section> : null}</div></div></section> : null}
+    </main>
+  );
 }
