@@ -2,12 +2,6 @@
 
 import { type ReactNode, useEffect } from "react";
 
-function tomorrowIso() {
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  return date.toISOString().slice(0, 10);
-}
-
 export default function TaskTemplate({ children }: { children: ReactNode }) {
   useEffect(() => {
     function handleClick(event: MouseEvent) {
@@ -22,16 +16,14 @@ export default function TaskTemplate({ children }: { children: ReactNode }) {
 
       const params = new URLSearchParams(window.location.search);
       const taskId = params.get("taskId");
-      if (!taskId) return;
+      const activeTitle = document.querySelector(".atlas-task-page-active h1")?.textContent?.trim();
+      const payload = taskId ? { taskId } : { taskTitle: activeTitle ? `%${activeTitle}%` : "" };
 
-      fetch("/api/atlas/task-outcome", {
+      fetch("/api/atlas/task-unfinished", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
-          taskId,
-          outcome: "partial",
-          note: `Unfinished — moved to ${tomorrowIso()}`,
-          reason: "Unfinished",
+          ...payload,
           laneKey: "maintain",
           workKey: "unfinished",
         }),
