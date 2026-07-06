@@ -475,6 +475,10 @@ export default function AtlasTaskPage() {
   async function handleTaskChanged() {
     await loadTasks();
     setSelectedTaskId(null);
+    setSelectedLane(null);
+    if (window.location.pathname === "/task") {
+      window.history.replaceState(null, "", "/task");
+    }
   }
 
   async function addHeaderNote() {
@@ -514,9 +518,9 @@ export default function AtlasTaskPage() {
           {!loading && !selectedTask ? <div className="atlas-task-page-empty">No open tasks.</div> : null}
           {selectedTask ? <div ref={activeTaskAnchorRef} className="atlas-task-page-active-anchor"><ActiveTaskCard task={selectedTask} onChange={handleTaskChanged} today={today} weatherLabel={weatherLabel} /></div> : null}
           <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Next</span><small>{nextWorkTasks.length}</small></div>{renderTaskRows(nextWorkTasks, "No next tasks ready.")}</section>
-          <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Later</span><small>{laterWorkTasks.length}</small></div>{renderTaskRows(laterWorkTasks, "Nothing queued later yet.")}</section>
-          <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Waiting</span><small>{carryoverTasks.length}</small></div>{renderTaskRows(carryoverTasks, "No carried or waiting tasks.")}</section>
-          <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>This Week</span><small>{nextTasks.length}</small></div>{renderTaskRows(nextTasks.filter((task) => !isChildTask(task)), "No scheduled tasks in the next week.")}</section>
+          <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Later</span><small>{laterWorkTasks.length}</small></div>{renderTaskRows(laterWorkTasks, "No later tasks ready.")}</section>
+          <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Waiting</span><small>{carryoverTasks.length}</small></div>{renderTaskRows(carryoverTasks, "Nothing waiting.")}</section>
+          <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>This Week</span><small>{nextTasks.filter((task) => !isChildTask(task)).length}</small></div>{renderTaskRows(nextTasks.filter((task) => !isChildTask(task)), "No later weekly tasks.")}</section>
         </div>
       </section>
     </main>
