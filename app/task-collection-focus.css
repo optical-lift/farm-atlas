@@ -3,8 +3,8 @@
   display: none !important;
 }
 
-.atlas-route-mode .atlas-task-page-active-anchor,
-.atlas-route-mode .atlas-route-collection ~ .atlas-task-page-section:not(.atlas-route-collection):not(.atlas-route-lineup) {
+.atlas-task-collection-mode .atlas-task-page-active-anchor,
+.atlas-task-collection-mode .atlas-task-page-body > .atlas-task-page-section:not(.atlas-route-collection):not(.atlas-route-lineup) {
   display: none !important;
 }
 
@@ -17,7 +17,15 @@
 }
 
 .atlas-route-lineup {
+  display: grid !important;
   gap: 12px !important;
+}
+
+.atlas-route-collection .atlas-route-lineup {
+  border: 1px solid rgba(139, 145, 194, 0.18) !important;
+  background: rgba(246, 242, 230, 0.34) !important;
+  box-shadow: none !important;
+  margin-top: 2px;
 }
 
 .atlas-lineup-body,
