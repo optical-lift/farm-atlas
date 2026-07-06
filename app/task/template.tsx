@@ -2,14 +2,28 @@
 
 import { type ReactNode, useEffect } from "react";
 
+type RouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
+
 type TaskCard = {
   task_id: string;
   title: string;
+  task_type?: string;
   status: string;
   due_date: string | null;
   unlock_text?: string | null;
   zone_label?: string | null;
   metadata?: Record<string, unknown> | null;
+};
+
+const routeLabels: Record<RouteKey, string> = {
+  plant: "Plant",
+  weed: "Weed",
+  mow: "Mow",
+  seed: "Seed",
+  harvest: "Harvest",
+  build: "Build / Prep",
+  venue: "Venue",
+  water: "Water",
 };
 
 function text(value: unknown) {
@@ -28,6 +42,10 @@ function norm(value: string | null | undefined) {
   return (value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+function isRouteKey(value: string): value is RouteKey {
+  return value === "plant" || value === "weed" || value === "mow" || value === "seed" || value === "harvest" || value === "build" || value === "venue" || value === "water";
+}
+
 function subject(card: TaskCard) {
   const display = text(card.metadata?.display_subject);
   if (display) return display;
@@ -38,29 +56,80 @@ function label(card: TaskCard) {
   return text(card.metadata?.checklist_label) || subject(card);
 }
 
+function collectionLabel(card: TaskCard) {
+  return text(card.metadata?.collection_label) || subject(card);
+}
+
 function location(card: TaskCard) {
   return text(card.metadata?.display_detail) || card.unlock_text || card.zone_label || "Elm Farm";
+}
+
+function collectionZone(card: TaskCard) {
+  const explicit = text(card.metadata?.collection_zone);
+  if (explicit) return explicit;
+  return zoneBucket(location(card));
 }
 
 function spacingLines(card: TaskCard) {
   return stringList(card.metadata?.plant_spacing_lines);
 }
 
+function detailLines(card: TaskCard) {
+  return stringList(card.metadata?.detail_lines);
+}
+
 function isDone(card: TaskCard) {
   return text(card.metadata?.checklist_status) === "done";
+}
+
+function isChildTask(card: TaskCard) {
+  return text(card.metadata?.is_child_task) === "true" || card.metadata?.is_child_task === true;
 }
 
 function findParent(cards: TaskCard[]) {
   const params = new URLSearchParams(window.location.search);
   const taskId = params.get("taskId");
   const activeTitle = norm(document.querySelector(".atlas-task-page-active h1")?.textContent?.trim());
-  const candidates = cards.filter((card) => text(card.metadata?.is_child_task) !== "true" && card.metadata?.is_child_task !== true);
+  const candidates = cards.filter((card) => !isChildTask(card));
   if (taskId) {
     const direct = candidates.find((card) => card.task_id === taskId);
     if (direct) return direct;
   }
   if (!activeTitle) return null;
   return candidates.find((card) => norm(subject(card)) === activeTitle || norm(card.title).includes(activeTitle)) ?? null;
+}
+
+function routeForTask(card: TaskCard): RouteKey {
+  const explicit = text(card.metadata?.work_route);
+  if (isRouteKey(explicit)) return explicit;
+  const taskText = `${card.task_type ?? ""} ${card.title} ${text(card.metadata?.work_rhythm)} ${text(card.metadata?.display_action)}`.toLowerCase();
+  if (taskText.includes("water")) return "water";
+  if (taskText.includes("mow")) return "mow";
+  if (taskText.includes("weed")) return "weed";
+  if (taskText.includes("seed") || taskText.includes("sow")) return "seed";
+  if (taskText.includes("harvest") || taskText.includes("postharvest") || taskText.includes("garlic") || taskText.includes("gather")) return "harvest";
+  if (taskText.includes("venue") || taskText.includes("paint") || taskText.includes("trim") || taskText.includes("tidy") || taskText.includes("chicken")) return "venue";
+  if (taskText.includes("build") || taskText.includes("prep") || taskText.includes("string") || taskText.includes("arch")) return "build";
+  if (taskText.includes("plant") || taskText.includes("transplant")) return "plant";
+  return "venue";
+}
+
+function zoneBucket(value: string) {
+  const lower = value.toLowerCase();
+  if (lower.includes("oak") || lower.includes("strawberry orchard")) return "Shady Oak";
+  if (lower.includes("main garden") || lower.includes("straw strip")) return "Main Garden";
+  if (lower.includes("field") || lower.includes("fr")) return "Field Rows";
+  if (lower.includes("barn")) return "Barn Beds";
+  if (lower.includes("berry") || lower.includes("bw")) return "Berry Walk";
+  if (lower.includes("u-pick") || lower.includes("u pick")) return "U-Pick";
+  if (lower.includes("follow me")) return "Follow Me";
+  if (lower.includes("curve")) return "Curve Garden";
+  if (lower.includes("lilac")) return "Lilac Haven";
+  if (lower.includes("garage") || lower.includes("hydrangea")) return "Garage / House Beds";
+  if (lower.includes("grow room")) return "Grow Room";
+  if (lower.includes("entry") || lower.includes("billboard")) return "Entry Billboard";
+  if (lower.includes("chicken")) return "Chicken Coop";
+  return value;
 }
 
 async function loadCards() {
@@ -156,12 +225,70 @@ function checkButton(child: TaskCard) {
   return button;
 }
 
+function routeCard(task: TaskCard) {
+  const link = document.createElement("a");
+  link.className = "atlas-route-task-card";
+  link.href = `/task?taskId=${encodeURIComponent(task.task_id)}`;
+  const details = detailLines(task);
+  link.innerHTML = `
+    <strong>${collectionLabel(task)}</strong>
+    <span>${location(task)}</span>
+    ${details.length ? `<em>${details.slice(0, 2).join(" · ")}</em>` : ""}
+  `;
+  return link;
+}
+
+function insertRouteCollection(cards: TaskCard[]) {
+  const params = new URLSearchParams(window.location.search);
+  const routeParam = params.get("route") ?? "";
+  const hasTaskId = Boolean(params.get("taskId"));
+  const route = isRouteKey(routeParam) ? routeParam : null;
+  document.body.classList.toggle("atlas-route-mode", Boolean(route && !hasTaskId));
+  document.querySelector(".atlas-route-collection")?.remove();
+  if (!route || hasTaskId) return;
+
+  const parentCards = cards
+    .filter((card) => card.status === "open" && !isChildTask(card) && routeForTask(card) === route)
+    .sort((a, b) => `${collectionZone(a)}-${numberValue(a.metadata?.day_order)}-${collectionLabel(a)}`.localeCompare(`${collectionZone(b)}-${numberValue(b.metadata?.day_order)}-${collectionLabel(b)}`));
+
+  const hero = document.querySelector(".atlas-task-page-hero");
+  if (!hero) return;
+
+  const section = document.createElement("section");
+  section.className = "atlas-task-page-section atlas-route-collection";
+  const zones = Array.from(new Set(parentCards.map(collectionZone)));
+  section.innerHTML = `
+    <div class="atlas-route-collection-head">
+      <a href="/" class="atlas-route-back">← Routes</a>
+      <div>
+        <span>${routeLabels[route]}</span>
+        <strong>${parentCards.length} ${parentCards.length === 1 ? "task" : "tasks"}</strong>
+        <small>${zones.join(" · ")}</small>
+      </div>
+    </div>
+    <div class="atlas-route-zone-list"></div>
+  `;
+
+  const target = section.querySelector(".atlas-route-zone-list");
+  zones.forEach((zone) => {
+    const group = document.createElement("article");
+    group.className = "atlas-route-zone-group";
+    group.innerHTML = `<h3>${zone}</h3><div></div>`;
+    const groupTarget = group.querySelector("div");
+    parentCards.filter((task) => collectionZone(task) === zone).forEach((task) => groupTarget?.appendChild(routeCard(task)));
+    target?.appendChild(group);
+  });
+
+  hero.insertAdjacentElement("afterend", section);
+}
+
 export default function TaskTemplate({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cards: TaskCard[] = [];
 
     async function refresh() {
       cards = await loadCards();
+      insertRouteCollection(cards);
       const parent = findParent(cards);
       if (!parent) return;
       decorateParent(parent);
@@ -237,6 +364,7 @@ export default function TaskTemplate({ children }: { children: ReactNode }) {
     document.addEventListener("click", handleClick, true);
     window.setTimeout(refresh, 300);
     return () => {
+      document.body.classList.remove("atlas-route-mode");
       observer.disconnect();
       document.removeEventListener("click", handleClick, true);
     };
