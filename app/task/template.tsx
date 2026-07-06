@@ -7,11 +7,17 @@ type TaskCard = {
   title: string;
   status: string;
   due_date: string | null;
+  unlock_text?: string | null;
+  zone_label?: string | null;
   metadata?: Record<string, unknown> | null;
 };
 
 function text(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+function stringList(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
 }
 
 function numberValue(value: unknown) {
@@ -30,6 +36,14 @@ function subject(card: TaskCard) {
 
 function label(card: TaskCard) {
   return text(card.metadata?.checklist_label) || subject(card);
+}
+
+function location(card: TaskCard) {
+  return text(card.metadata?.display_detail) || card.unlock_text || card.zone_label || "Elm Farm";
+}
+
+function spacingLines(card: TaskCard) {
+  return stringList(card.metadata?.plant_spacing_lines);
 }
 
 function isDone(card: TaskCard) {
@@ -67,6 +81,43 @@ function message(value: string) {
   line.textContent = value;
 }
 
+function insertLocationPill(parent: TaskCard) {
+  const row = document.querySelector(".atlas-task-page-active .atlas-task-page-time-row");
+  if (!row) return;
+  row.querySelector(".atlas-task-location-pill")?.remove();
+  const pill = document.createElement("span");
+  pill.className = "atlas-task-location-pill";
+  pill.textContent = location(parent);
+  row.appendChild(pill);
+}
+
+function insertSpacing(parent: TaskCard) {
+  const card = document.querySelector(".atlas-task-page-active");
+  if (!card) return;
+  card.querySelector(".atlas-plant-spacing-card")?.remove();
+  const lines = spacingLines(parent);
+  if (!lines.length) return;
+
+  const section = document.createElement("section");
+  section.className = "atlas-plant-spacing-card";
+  section.innerHTML = `<strong>Spacing</strong><div></div>`;
+  const target = section.querySelector("div");
+  lines.forEach((line) => {
+    const chip = document.createElement("span");
+    chip.textContent = line;
+    target?.appendChild(chip);
+  });
+
+  const detail = card.querySelector(".atlas-task-detail-card");
+  const place = card.querySelector(".atlas-task-place-card");
+  (detail ?? place)?.insertAdjacentElement("afterend", section);
+}
+
+function decorateParent(parent: TaskCard) {
+  insertLocationPill(parent);
+  insertSpacing(parent);
+}
+
 function insertChecklist(parent: TaskCard, children: TaskCard[]) {
   const card = document.querySelector(".atlas-task-page-active");
   if (!card) return;
@@ -89,9 +140,10 @@ function insertChecklist(parent: TaskCard, children: TaskCard[]) {
   const doneTarget = section.querySelector(".atlas-child-checklist-finished div");
   doneChildren.forEach((child) => doneTarget?.appendChild(checkButton(child)));
 
+  const spacing = card.querySelector(".atlas-plant-spacing-card");
   const detail = card.querySelector(".atlas-task-detail-card");
   const place = card.querySelector(".atlas-task-place-card");
-  (detail ?? place)?.insertAdjacentElement("afterend", section);
+  (spacing ?? detail ?? place)?.insertAdjacentElement("afterend", section);
 }
 
 function checkButton(child: TaskCard) {
@@ -112,6 +164,7 @@ export default function TaskTemplate({ children }: { children: ReactNode }) {
       cards = await loadCards();
       const parent = findParent(cards);
       if (!parent) return;
+      decorateParent(parent);
       const childCards = cards
         .filter((card) => text(card.metadata?.parent_task_id) === parent.task_id)
         .filter((card) => card.status !== "archived")
