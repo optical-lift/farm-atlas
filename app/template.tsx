@@ -213,16 +213,12 @@ function insertDefaultTaskTools() {
   if (window.location.pathname !== "/task") return;
   const card = document.querySelector(".atlas-task-page-active");
   if (!card) return;
+  if (card.querySelector(".atlas-task-tools-card, .atlas-default-task-tools-card")) return;
   const tools = defaultToolsForTask(card);
   if (!tools.length) return;
-  const key = tools.join("|");
-  const existing = card.querySelector<HTMLElement>(".atlas-task-tools-card");
-  if (existing?.dataset.toolSet === key) return;
-  existing?.remove();
 
   const section = document.createElement("section");
-  section.className = "atlas-task-tools-card";
-  section.dataset.toolSet = key;
+  section.className = "atlas-default-task-tools-card";
   section.innerHTML = `<strong>Tools</strong><div></div>`;
   const target = section.querySelector("div");
   tools.forEach((tool) => {
