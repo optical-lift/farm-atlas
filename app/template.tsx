@@ -12,6 +12,17 @@ const ROUTE_KEYS: Record<string, string> = {
   venue: "venue",
 };
 
+const ROUTE_NAMES: Record<string, string> = {
+  plant: "Plant",
+  weed: "Weed",
+  mow: "Mow",
+  seed: "Seed",
+  harvest: "Harvest",
+  build: "Build / Prep",
+  water: "Water",
+  venue: "Venue",
+};
+
 type Card = {
   task_id: string;
   title: string;
@@ -39,6 +50,22 @@ function routeFromCard(card: Element) {
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function prettyDate(dateIso: string | null | undefined) {
+  if (!dateIso) return "No date";
+  const date = new Date(`${dateIso}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return dateIso;
+  return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function text(value: unknown) {
@@ -233,6 +260,66 @@ function insertDefaultTaskTools() {
   (spacing ?? detailCard ?? placeCard)?.insertAdjacentElement("afterend", section);
 }
 
+function routeTaskLink(card: Card) {
+  const link = document.createElement("a");
+  const details = detail(card);
+  link.className = "atlas-route-task-card";
+  link.href = `/task?taskId=${encodeURIComponent(card.task_id)}`;
+  link.innerHTML = `
+    <strong>${escapeHtml(subject(card))}</strong>
+    <span>${escapeHtml(zone(card))}</span>
+    ${details ? `<em>${escapeHtml(details)}</em>` : ""}
+  `;
+  return link;
+}
+
+async function groupRouteCollectionByDueDate() {
+  if (window.location.pathname !== "/task") return;
+  const params = new URLSearchParams(window.location.search);
+  const routeParam = params.get("route");
+  if (!routeParam || params.get("taskId")) return;
+  const section = document.querySelector<HTMLElement>(".atlas-route-collection");
+  if (!section || section.dataset.groupedByDate === routeParam) return;
+
+  const cards = (await fetchTaskCards())
+    .filter((card) => isMainCard(card) && routeKey(card) === routeParam)
+    .sort((a, b) => `${a.due_date ?? "9999-12-31"}-${sortKey(a)}`.localeCompare(`${b.due_date ?? "9999-12-31"}-${sortKey(b)}`));
+  if (!cards.length) return;
+
+  const dateKeys = Array.from(new Set(cards.map((card) => card.due_date ?? "No date")));
+  section.dataset.groupedByDate = routeParam;
+  section.innerHTML = `
+    <div class="atlas-route-collection-head">
+      <a href="/" class="atlas-route-back">← Routes</a>
+      <div>
+        <span>${escapeHtml(ROUTE_NAMES[routeParam] ?? routeParam)}</span>
+        <strong>${cards.length} ${cards.length === 1 ? "task" : "tasks"}</strong>
+        <small>Separated by due date</small>
+      </div>
+    </div>
+    <div class="atlas-route-date-list"></div>
+  `;
+
+  const target = section.querySelector(".atlas-route-date-list");
+  dateKeys.forEach((dateKey) => {
+    const dateCards = cards.filter((card) => (card.due_date ?? "No date") === dateKey);
+    const dateGroup = document.createElement("article");
+    dateGroup.className = "atlas-route-date-group";
+    dateGroup.innerHTML = `<h3>${escapeHtml(prettyDate(dateKey === "No date" ? null : dateKey))}</h3><div></div>`;
+    const dateTarget = dateGroup.querySelector("div");
+    const zones = Array.from(new Set(dateCards.map(zone)));
+    zones.forEach((zoneName) => {
+      const zoneGroup = document.createElement("section");
+      zoneGroup.className = "atlas-route-zone-group";
+      zoneGroup.innerHTML = `<h4>${escapeHtml(zoneName)}</h4><div></div>`;
+      const zoneTarget = zoneGroup.querySelector("div");
+      dateCards.filter((card) => zone(card) === zoneName).forEach((card) => zoneTarget?.appendChild(routeTaskLink(card)));
+      dateTarget?.appendChild(zoneGroup);
+    });
+    target?.appendChild(dateGroup);
+  });
+}
+
 function syncTaskMode() {
   const isTaskPage = window.location.pathname === "/task";
   const params = new URLSearchParams(window.location.search);
@@ -257,14 +344,20 @@ export default function RootTemplate({ children }: { children: ReactNode }) {
       window.location.assign(`/task?route=${encodeURIComponent(route)}`);
     }
 
-    const observer = new MutationObserver(() => window.setTimeout(insertDefaultTaskTools, 50));
+    const observer = new MutationObserver(() => window.setTimeout(() => {
+      insertDefaultTaskTools();
+      void groupRouteCollectionByDueDate();
+    }, 50));
     observer.observe(document.body, { childList: true, subtree: true });
 
     syncTaskMode();
     void insertFirstTaskPreviews();
     void pointSingleRouteCardsToTaskCards();
     void redirectSingleRoutePageToTaskCard();
-    window.setTimeout(insertDefaultTaskTools, 250);
+    window.setTimeout(() => {
+      insertDefaultTaskTools();
+      void groupRouteCollectionByDueDate();
+    }, 250);
     document.addEventListener("click", handleClick, true);
     window.addEventListener("popstate", syncTaskMode);
     return () => {
