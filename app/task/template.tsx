@@ -166,6 +166,16 @@ function taskSortKey(card: TaskCard) {
   return `${card.due_date ?? "9999-12-31"}-${String(numberValue(card.metadata?.day_order)).padStart(3, "0")}-${collectionLabel(card)}`;
 }
 
+function todayIso() {
+  const date = new Date();
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function isTodayWork(card: TaskCard) {
+  return !card.due_date || card.due_date <= todayIso();
+}
+
 function prettyDate(dateIso: string | null | undefined) {
   if (!dateIso) return "No date";
   const date = new Date(`${dateIso}T12:00:00`);
@@ -399,8 +409,11 @@ function insertZoneGroups(target: Element | null, label: string, cards: TaskCard
 }
 
 function insertWeeklyLineup(cards: TaskCard[], hasTaskId: boolean) {
-  document.querySelector(".atlas-route-lineup")?.remove();
-  if (hasTaskId) return;
+  const existing = document.querySelector(".atlas-route-lineup");
+  if (hasTaskId) {
+    existing?.remove();
+    return;
+  }
 
   const anchor = document.querySelector(".atlas-route-collection") ?? document.querySelector(".atlas-task-page-hero");
   if (!anchor) return;
@@ -410,9 +423,13 @@ function insertWeeklyLineup(cards: TaskCard[], hasTaskId: boolean) {
     .sort((a, b) => taskSortKey(a).localeCompare(taskSortKey(b)));
   const mainCards = parentCards.filter((card) => mainRoutes.has(routeForTask(card)));
   const sideCards = parentCards.filter((card) => !mainRoutes.has(routeForTask(card)));
+  const signature = parentCards.map((card) => card.task_id).join("|");
+  if (existing instanceof HTMLElement && existing.dataset.lineupSignature === signature) return;
+  existing?.remove();
 
   const section = document.createElement("section");
   section.className = "atlas-task-page-section atlas-route-lineup";
+  section.dataset.lineupSignature = signature;
   section.innerHTML = `
     <div class="atlas-route-collection-head atlas-lineup-head">
       <div>
@@ -440,56 +457,56 @@ function insertRouteCollection(cards: TaskCard[]) {
   const hasTaskId = Boolean(params.get("taskId"));
   const route = isRouteKey(routeParam) ? routeParam : null;
   const isCollectionPage = !hasTaskId;
+  const existing = document.querySelector<HTMLElement>(".atlas-route-collection");
   document.body.classList.toggle("atlas-route-mode", Boolean(route && isCollectionPage));
   document.body.classList.toggle("atlas-task-collection-mode", Boolean(isCollectionPage));
-  document.querySelector(".atlas-route-collection")?.remove();
-  document.querySelector(".atlas-route-lineup")?.remove();
-  if (hasTaskId) return;
-
-  if (!route) {
-    insertWeeklyLineup(cards, hasTaskId);
+  if (hasTaskId) {
+    existing?.remove();
+    document.querySelector(".atlas-route-lineup")?.remove();
     return;
   }
 
+  if (!route) {
+    existing?.remove();
+    insertWeeklyLineup(cards, hasTaskId);
+    return;
+  }
+  document.querySelector(".atlas-route-lineup")?.remove();
+
   const parentCards = cards
-    .filter((card) => isParentOpen(card) && routeForTask(card) === route)
-    .sort((a, b) => taskSortKey(a).localeCompare(taskSortKey(b)));
+    .filter((card) => isParentOpen(card) && routeForTask(card) === route && isTodayWork(card))
+    .sort((a, b) => `${collectionZone(a)}-${String(numberValue(a.metadata?.day_order)).padStart(3, "0")}-${collectionLabel(a)}`.localeCompare(`${collectionZone(b)}-${String(numberValue(b.metadata?.day_order)).padStart(3, "0")}-${collectionLabel(b)}`));
+  const signature = `${route}-${todayIso()}-${parentCards.map((card) => card.task_id).join("|")}`;
+  if (existing?.dataset.routeSignature === signature) return;
 
   const hero = document.querySelector(".atlas-task-page-hero");
   if (!hero) return;
+  existing?.remove();
 
   const section = document.createElement("section");
   section.className = "atlas-task-page-section atlas-route-collection";
-  const dates = Array.from(new Set(parentCards.map((card) => card.due_date ?? "No date")));
+  section.dataset.routeSignature = signature;
+  const zones = Array.from(new Set(parentCards.map(collectionZone)));
   section.innerHTML = `
     <div class="atlas-route-collection-head">
       <a href="/" class="atlas-route-back">← Routes</a>
       <div>
         <span>${routeLabels[route]}</span>
-        <strong>By due date</strong>
-        <small>${parentCards.length} ${parentCards.length === 1 ? "open task" : "open tasks"}</small>
+        <strong>${parentCards.length} ${parentCards.length === 1 ? "task" : "tasks"} today</strong>
+        <small>${zones.length ? zones.join(" · ") : "No tasks in this route today"}</small>
       </div>
     </div>
-    <div class="atlas-route-date-list"></div>
+    <div class="atlas-route-zone-list"></div>
   `;
 
-  const target = section.querySelector(".atlas-route-date-list");
-  dates.forEach((dateKey) => {
-    const dateCards = parentCards.filter((task) => (task.due_date ?? "No date") === dateKey);
-    const dateGroup = document.createElement("article");
-    dateGroup.className = "atlas-route-date-group";
-    dateGroup.innerHTML = `<h3>${html(prettyDate(dateKey === "No date" ? null : dateKey))} · ${dateCards.length} ${dateCards.length === 1 ? "task" : "tasks"}</h3><div></div>`;
-    const dateTarget = dateGroup.querySelector("div");
-    const zones = Array.from(new Set(dateCards.map(collectionZone)));
-    zones.forEach((zone) => {
-      const group = document.createElement("section");
-      group.className = "atlas-route-zone-group";
-      group.innerHTML = `<h4>${html(zone)}</h4><div></div>`;
-      const groupTarget = group.querySelector("div");
-      dateCards.filter((task) => collectionZone(task) === zone).forEach((task) => groupTarget?.appendChild(routeCard(task)));
-      dateTarget?.appendChild(group);
-    });
-    target?.appendChild(dateGroup);
+  const target = section.querySelector(".atlas-route-zone-list");
+  zones.forEach((zone) => {
+    const group = document.createElement("article");
+    group.className = "atlas-route-zone-group";
+    group.innerHTML = `<h3>${html(zone)}</h3><div></div>`;
+    const groupTarget = group.querySelector("div");
+    parentCards.filter((task) => collectionZone(task) === zone).forEach((task) => groupTarget?.appendChild(routeCard(task)));
+    target?.appendChild(group);
   });
 
   hero.insertAdjacentElement("afterend", section);
@@ -498,6 +515,7 @@ function insertRouteCollection(cards: TaskCard[]) {
 export default function TaskTemplate({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cards: TaskCard[] = [];
+    let refreshTimer: number | null = null;
 
     async function refresh() {
       cards = await loadCards();
@@ -511,6 +529,14 @@ export default function TaskTemplate({ children }: { children: ReactNode }) {
         .filter((card) => card.status !== "archived")
         .sort((a, b) => numberValue(a.metadata?.step_order) - numberValue(b.metadata?.step_order));
       if (childCards.length) insertChecklist(parent, childCards);
+    }
+
+    function queueRefresh() {
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        void refresh();
+      }, 120);
     }
 
     function activeParentAndChildren() {
@@ -573,12 +599,13 @@ export default function TaskTemplate({ children }: { children: ReactNode }) {
       }).then(() => window.location.assign("/task"));
     }
 
-    const observer = new MutationObserver(() => window.setTimeout(refresh, 50));
+    const observer = new MutationObserver(queueRefresh);
     observer.observe(document.body, { childList: true, subtree: true });
     document.addEventListener("click", handleClick, true);
-    window.setTimeout(refresh, 300);
+    queueRefresh();
     return () => {
       document.body.classList.remove("atlas-route-mode", "atlas-task-collection-mode");
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
       observer.disconnect();
       document.removeEventListener("click", handleClick, true);
     };
