@@ -7,13 +7,18 @@ import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-
 type LaneKey = "start" | "maintain" | "verify" | "harvest" | "venue";
 type Outcome = "done" | "partial" | "blocked";
 type WeatherResponse = { ok: boolean; label?: string };
-type CaptureState = { stand: string; gaps: string; clean: string; plan: string };
+type QuickCheckState = { exceptions: string[]; left: string[]; other: string };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const laneLabels: Record<LaneKey, string> = { start: "Start", maintain: "Maintain", verify: "Verify", harvest: "Harvest", venue: "Venue" };
-const defaultCapture: CaptureState = { stand: "Not checked", gaps: "Not checked", clean: "Not checked", plan: "Same" };
-const ww = "we" + "ed";
-const WW = "We" + "ed";
+const defaultQuickCheck: QuickCheckState = { exceptions: [], left: [], other: "" };
+const ww = String.fromCharCode(119, 101, 101, 100);
+const WW = ww.charAt(0).toUpperCase() + ww.slice(1);
+const stillFull = "Still " + ww + "y";
+const tooFull = "Too " + ww + "y";
+const moreCleanout = "More " + ww + "s";
+const exceptionOptions = ["Thin crop", "No crop", "Some gaps", "Many gaps", stillFull, tooFull, "Plan changed", "Not checked"];
+const leftOptions = [moreCleanout, "Gaps need patching", "Too wet", "Could not find", "Needs decision", "Other note"];
 
 function todayIso() { return new Date().toISOString().slice(0, 10); }
 function addDaysIso(dateIso: string, days: number) { const d = new Date(`${dateIso}T12:00:00`); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); }
@@ -22,6 +27,7 @@ function taskText(task: AtlasTaskCard) { return `${task.task_type ?? ""} ${task.
 function clean(value: string | null | undefined) { return (value ?? "").replace(/urgent|high|normal|low/gi, "").replace(/truth/gi, "state").replace(/Anna/g, "crew").replace(/Lex/g, "crew").replace(/\s+·\s+·\s+/g, " · ").replace(/^\s*·\s*|\s*·\s*$/g, "").trim(); }
 function taskSortValue(task: AtlasTaskCard) { return `${task.due_date ?? "9999-12-31"}-${priorityRank[task.priority] ?? 9}-${task.title}`; }
 function oldSurveyText(text: string) { return text.includes("walk field rows") || text.includes("confirm each bed"); }
+function toggleValue(values: string[], value: string) { return values.includes(value) ? values.filter((item) => item !== value) : [...values, value]; }
 
 function laneForTask(task: AtlasTaskCard): LaneKey {
   const text = taskText(task);
@@ -87,27 +93,37 @@ function carryoverLabel(task: AtlasTaskCard, today: string) { const outcome = la
 function isCarryoverTask(task: AtlasTaskCard, today: string) { const outcome = latestOutcome(task); return task.status === "blocked" || outcome?.outcome === "blocked" || outcome?.outcome === "partial" || Boolean(task.due_date && task.due_date < today); }
 function rowMeta(task: AtlasTaskCard, today: string, weatherLabel: string) { return [locationLine(task), workWindowForTask(task, weatherLabel), carryoverLabel(task, today)].filter(Boolean).join(" · "); }
 function needsCapture(task: AtlasTaskCard) { const action = ticketAction(task).toLowerCase(); return [ww, "check", `check + ${ww}`, "hoe", "protect", "patch", "water"].includes(action); }
-function captureNote(capture: CaptureState, extra = "") { return [extra, `Crop stand: ${capture.stand}`, `Gaps: ${capture.gaps}`, `Clean bed: ${capture.clean}`, `Plan: ${capture.plan}`].filter(Boolean).join("\n"); }
+
+function quickCheckNote(state: QuickCheckState) {
+  const exceptions = state.exceptions;
+  const notChecked = exceptions.includes("Not checked");
+  const crop = notChecked ? "not checked" : exceptions.includes("No crop") ? "none" : exceptions.includes("Thin crop") ? "thin" : "okay";
+  const gaps = notChecked ? "not checked" : exceptions.includes("Many gaps") ? "many" : exceptions.includes("Some gaps") ? "some" : "okay";
+  const clean = notChecked ? "not checked" : exceptions.includes(tooFull) ? "heavy" : exceptions.includes(stillFull) ? "partial" : "enough";
+  const plan = exceptions.includes("Plan changed") ? "changed" : "same";
+  return ["Quick check: expected unless noted", `Exceptions: ${exceptions.length ? exceptions.join(", ") : "none"}`, `Crop: ${crop}`, `Gaps: ${gaps}`, `Clean: ${clean}`, `Plan: ${plan}`, state.left.length ? `Left: ${state.left.join(", ")}` : null, state.other.trim() ? `Note: ${state.other.trim()}` : null].filter(Boolean).join("\n");
+}
 
 async function postOutcome(task: AtlasTaskCard, outcome: Outcome, note = "") { const response = await fetch("/api/atlas/task-outcome", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ taskId: task.task_id, outcome, note, reason: note, laneKey: laneForTask(task), workKey: ticketAction(task).toLowerCase().replace(/\s+/g, "_") }) }); const data = (await response.json()) as { ok?: boolean; error?: string; details?: string }; if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task update failed."); }
 async function postNote(task: AtlasTaskCard, note: string) { const response = await fetch("/api/atlas/task-note", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ taskId: task.task_id, note, laneKey: laneForTask(task) }) }); const data = (await response.json()) as { ok?: boolean; error?: string; details?: string }; if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task note failed."); }
 
 function TaskSummaryButton({ task, selected, onSelect, today, weatherLabel }: { task: AtlasTaskCard; selected: boolean; onSelect: () => void; today: string; weatherLabel: string }) { return <button type="button" className={selected ? "atlas-task-page-row selected" : "atlas-task-page-row"} onClick={onSelect}><div><strong>{ticketTitle(task)}</strong><span>{rowMeta(task, today, weatherLabel)}</span></div><small>{workWindowForTask(task, weatherLabel)}</small></button>; }
-function ChoiceRow({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <div className="atlas-field-state-row"><span>{label}</span><div>{options.map((option) => <button type="button" key={option} className={value === option ? "selected" : ""} onClick={() => onChange(option)}>{option}</button>)}</div></div>; }
+function ChipGroup({ label, values, selected, onToggle }: { label: string; values: string[]; selected: string[]; onToggle: (value: string) => void }) { return <div className="atlas-quick-check-group"><span>{label}</span><div>{values.map((value) => <button type="button" key={value} className={selected.includes(value) ? "selected" : ""} onClick={() => onToggle(value)}>{value}</button>)}</div></div>; }
 
 function ActiveTaskCard({ task, onChange, today, weatherLabel }: { task: AtlasTaskCard; onChange: () => Promise<void>; today: string; weatherLabel: string }) {
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pendingOutcome, setPendingOutcome] = useState<Outcome | null>(null);
-  const [leftNote, setLeftNote] = useState("");
-  const [capture, setCapture] = useState<CaptureState>(defaultCapture);
+  const [quickCheck, setQuickCheck] = useState<QuickCheckState>(defaultQuickCheck);
   const labels = objectLabels(task, 12);
-  function setCaptureValue(key: keyof CaptureState, value: string) { setCapture((current) => ({ ...current, [key]: value })); }
-  async function submit(outcome: Outcome, note = "") { try { setSaving(outcome); setMessage(null); await postOutcome(task, outcome, note); await onChange(); setPendingOutcome(null); setLeftNote(""); setCapture(defaultCapture); setMessage(outcome === "done" ? "Done." : "Saved."); } catch (error) { setMessage(error instanceof Error ? error.message : "Task update failed."); } finally { setSaving(null); } }
-  function startSave(outcome: Outcome) { if (outcome !== "blocked" && needsCapture(task)) { setPendingOutcome(outcome); return; } const note = outcome === "done" ? "" : window.prompt(outcome === "partial" ? "Left?" : "Stuck?", "") ?? ""; void submit(outcome, note); }
-  function saveCapture() { void submit(pendingOutcome ?? "done", captureNote(capture, leftNote.trim())); }
+  function resetQuickCheck() { setPendingOutcome(null); setQuickCheck(defaultQuickCheck); }
+  function updateExceptions(value: string) { setQuickCheck((current) => ({ ...current, exceptions: toggleValue(current.exceptions, value) })); }
+  function updateLeft(value: string) { setQuickCheck((current) => ({ ...current, left: toggleValue(current.left, value) })); }
+  async function submit(outcome: Outcome, note = "") { try { setSaving(outcome); setMessage(null); await postOutcome(task, outcome, note); await onChange(); resetQuickCheck(); setMessage(outcome === "done" ? "Done." : "Saved."); } catch (error) { setMessage(error instanceof Error ? error.message : "Task update failed."); } finally { setSaving(null); } }
+  function startSave(outcome: Outcome) { if (outcome !== "blocked" && needsCapture(task)) { setPendingOutcome(outcome); setQuickCheck(defaultQuickCheck); return; } const note = outcome === "done" ? "" : window.prompt(outcome === "partial" ? "Left?" : "Stuck?", "") ?? ""; void submit(outcome, note); }
+  function saveQuickCheck() { void submit(pendingOutcome ?? "done", quickCheckNote(quickCheck)); }
   async function addNote() { const note = window.prompt("Note", "")?.trim(); if (!note) return; try { setSaving("note"); setMessage(null); await postNote(task, note); await onChange(); setMessage("Note saved."); } catch (error) { setMessage(error instanceof Error ? error.message : "Task note failed."); } finally { setSaving(null); } }
-  return <article className="atlas-task-page-active atlas-task-ticket-card"><div className="atlas-task-page-kicker"><span>Up Now</span><small>{laneLabels[laneForTask(task)]}</small></div><h1>{ticketTitle(task).toUpperCase()}</h1><div className="atlas-task-page-time-row"><span>{workWindowForTask(task, weatherLabel)}</span><span>{task.due_date ? prettyDate(task.due_date) : carryoverLabel(task, today)}</span></div><section className="atlas-task-place-card"><strong>{task.zone_label ?? "Elm Farm"}</strong>{labels.length ? <div className="atlas-task-place-chips">{labels.map((label) => <span key={label}>{label}</span>)}</div> : <p>{objectLine(task)}</p>}</section>{pendingOutcome ? <section className="atlas-field-state-card"><strong>Save field state</strong><ChoiceRow label="Crop stand" value={capture.stand} options={["Good", "Thin", "None", "Not checked"]} onChange={(value) => setCaptureValue("stand", value)} /><ChoiceRow label="Gaps" value={capture.gaps} options={["None", "Some", "Many", "Not checked"]} onChange={(value) => setCaptureValue("gaps", value)} /><ChoiceRow label="Clean bed" value={capture.clean} options={["Cleared", "Partly", "Too much", "Not checked"]} onChange={(value) => setCaptureValue("clean", value)} /><ChoiceRow label="Plan" value={capture.plan} options={["Same", "Changed"]} onChange={(value) => setCaptureValue("plan", value)} />{pendingOutcome === "partial" ? <textarea aria-label="Left" placeholder="Left?" value={leftNote} onChange={(event) => setLeftNote(event.target.value)} /> : null}<div className="atlas-field-state-actions"><button type="button" onClick={() => setPendingOutcome(null)}>Cancel</button><button type="button" className="save" disabled={Boolean(saving)} onClick={saveCapture}>{saving ? "Saving" : "Save"}</button></div></section> : null}<div className="atlas-task-page-actions"><button type="button" className="done" disabled={Boolean(saving)} onClick={() => startSave("done")}>{saving === "done" ? "Saving" : "Done"}</button><button type="button" disabled={Boolean(saving)} onClick={() => startSave("partial")}>{saving === "partial" ? "Saving" : "More"}</button><button type="button" className="blocked" disabled={Boolean(saving)} onClick={() => startSave("blocked")}>{saving === "blocked" ? "Saving" : "Stuck"}</button><button type="button" disabled={Boolean(saving)} onClick={() => void addNote()}>{saving === "note" ? "Saving" : "Note"}</button></div>{message ? <p className="atlas-task-page-message">{message}</p> : null}</article>;
+  return <article className="atlas-task-page-active atlas-task-ticket-card"><div className="atlas-task-page-kicker"><span>Up Now</span><small>{laneLabels[laneForTask(task)]}</small></div><h1>{ticketTitle(task).toUpperCase()}</h1><div className="atlas-task-page-time-row"><span>{workWindowForTask(task, weatherLabel)}</span><span>{task.due_date ? prettyDate(task.due_date) : carryoverLabel(task, today)}</span></div><section className="atlas-task-place-card"><strong>{task.zone_label ?? "Elm Farm"}</strong>{labels.length ? <div className="atlas-task-place-chips">{labels.map((label) => <span key={label}>{label}</span>)}</div> : <p>{objectLine(task)}</p>}</section>{pendingOutcome ? <section className="atlas-quick-check-card"><strong>{pendingOutcome === "partial" ? "More" : "Quick check"}</strong><p><b>Expected</b><br />Crop okay · No major gaps · Clean enough · Plan same</p>{pendingOutcome === "partial" ? <ChipGroup label="What is left?" values={leftOptions} selected={quickCheck.left} onToggle={updateLeft} /> : null}<ChipGroup label="Anything different?" values={exceptionOptions} selected={quickCheck.exceptions} onToggle={updateExceptions} />{quickCheck.left.includes("Other note") ? <textarea aria-label="Other note" placeholder="Other note" value={quickCheck.other} onChange={(event) => setQuickCheck((current) => ({ ...current, other: event.target.value }))} /> : null}<div className="atlas-quick-check-actions"><button type="button" onClick={resetQuickCheck}>Cancel</button><button type="button" className="save" disabled={Boolean(saving)} onClick={saveQuickCheck}>{saving ? "Saving" : "Save"}</button></div></section> : <div className="atlas-task-page-actions"><button type="button" className="done" disabled={Boolean(saving)} onClick={() => startSave("done")}>{saving === "done" ? "Saving" : "Done"}</button><button type="button" disabled={Boolean(saving)} onClick={() => startSave("partial")}>{saving === "partial" ? "Saving" : "More"}</button><button type="button" className="blocked" disabled={Boolean(saving)} onClick={() => startSave("blocked")}>{saving === "blocked" ? "Saving" : "Stuck"}</button><button type="button" disabled={Boolean(saving)} onClick={() => void addNote()}>{saving === "note" ? "Saving" : "Note"}</button></div>}{message ? <p className="atlas-task-page-message">{message}</p> : null}</article>;
 }
 
 export default function AtlasTaskPage() {
