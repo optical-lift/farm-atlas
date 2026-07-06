@@ -1,0 +1,158 @@
+/* Purple hero rollback: bring back the early translucent card feel, but keep the new farm run-sheet data. */
+
+.atlas-home-task-hero.atlas-task-controller.atlas-daily-run-sheet {
+  grid-column: 1 / -1;
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  gap: 12px !important;
+  padding: 18px !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.atlas-daily-run-sheet .atlas-task-controller-head {
+  align-items: start !important;
+  margin-bottom: 0 !important;
+}
+
+.atlas-daily-run-sheet .atlas-task-kicker {
+  color: rgba(255, 255, 255, 0.62) !important;
+  font-size: 12px !important;
+  letter-spacing: 0.25em !important;
+}
+
+.atlas-daily-run-sheet .atlas-season-label {
+  display: block !important;
+  margin-top: 7px !important;
+  color: rgba(255, 255, 255, 0.86) !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.01em !important;
+  text-transform: none !important;
+}
+
+.atlas-daily-run-sheet .atlas-task-date {
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: var(--atlas-text) !important;
+  padding: 9px 12px !important;
+  text-decoration: none !important;
+}
+
+.atlas-run-sheet-summary {
+  display: none !important;
+}
+
+.atlas-run-sheet-grid {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-auto-rows: minmax(0, 1fr) !important;
+  gap: 9px !important;
+}
+
+.atlas-run-sheet-box,
+.atlas-run-sheet-empty {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  background: rgba(126, 132, 187, 0.32) !important;
+  color: #fff !important;
+  text-decoration: none !important;
+  padding: 10px !important;
+  display: grid !important;
+  align-content: center !important;
+  gap: 4px !important;
+  overflow: hidden !important;
+}
+
+.atlas-run-sheet-box:nth-child(1) {
+  background: rgba(255, 255, 255, 0.17) !important;
+  border-color: rgba(255, 255, 255, 0.34) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+.atlas-run-sheet-box small,
+.atlas-run-sheet-box strong,
+.atlas-run-sheet-box span,
+.atlas-run-sheet-box em,
+.atlas-run-sheet-empty strong,
+.atlas-run-sheet-empty em {
+  display: block !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.atlas-run-sheet-box small {
+  color: rgba(255, 255, 255, 0.50) !important;
+  font-size: 8px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+}
+
+.atlas-run-sheet-box strong,
+.atlas-run-sheet-empty strong {
+  color: #fff !important;
+  font-size: 14px !important;
+  line-height: 1.02 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.atlas-run-sheet-box span,
+.atlas-run-sheet-box em,
+.atlas-run-sheet-empty em {
+  color: rgba(255, 255, 255, 0.76) !important;
+  font-size: 9px !important;
+  line-height: 1.06 !important;
+  font-style: normal !important;
+  font-weight: 850 !important;
+}
+
+.atlas-run-sheet-box em {
+  color: rgba(255, 255, 255, 0.62) !important;
+}
+
+@media (max-width: 430px) {
+  .atlas-home-task-hero.atlas-task-controller.atlas-daily-run-sheet {
+    padding: 14px !important;
+    gap: 10px !important;
+  }
+
+  .atlas-run-sheet-grid {
+    gap: 7px !important;
+  }
+
+  .atlas-run-sheet-box {
+    border-radius: 16px !important;
+    padding: 8px !important;
+  }
+
+  .atlas-run-sheet-box strong {
+    font-size: 13px !important;
+  }
+
+  .atlas-run-sheet-box span,
+  .atlas-run-sheet-box em {
+    font-size: 8.5px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .atlas-run-sheet-grid {
+    gap: 6px !important;
+  }
+
+  .atlas-run-sheet-box strong {
+    font-size: 12px !important;
+  }
+}
