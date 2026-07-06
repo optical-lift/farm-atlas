@@ -26,6 +26,8 @@ const routeLabels: Record<RouteKey, string> = {
   water: "Water",
 };
 
+const mainRoutes = new Set<RouteKey>(["plant", "weed", "mow", "seed", "build"]);
+
 function text(value: unknown) {
   return typeof value === "string" ? value : "";
 }
@@ -84,6 +86,21 @@ function isDone(card: TaskCard) {
 
 function isChildTask(card: TaskCard) {
   return text(card.metadata?.is_child_task) === "true" || card.metadata?.is_child_task === true;
+}
+
+function isParentOpen(card: TaskCard) {
+  return card.status === "open" && !isChildTask(card);
+}
+
+function taskSortKey(card: TaskCard) {
+  return `${card.due_date ?? "9999-12-31"}-${String(numberValue(card.metadata?.day_order)).padStart(3, "0")}-${collectionLabel(card)}`;
+}
+
+function prettyDate(dateIso: string | null | undefined) {
+  if (!dateIso) return "No date";
+  const date = new Date(`${dateIso}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return dateIso;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function findParent(cards: TaskCard[]) {
@@ -238,6 +255,66 @@ function routeCard(task: TaskCard) {
   return link;
 }
 
+function lineupTaskCard(task: TaskCard) {
+  const link = routeCard(task);
+  link.classList.add("atlas-lineup-task-card");
+  const route = routeForTask(task);
+  const meta = document.createElement("small");
+  meta.textContent = `${routeLabels[route]} · ${prettyDate(task.due_date)}`;
+  link.insertBefore(meta, link.firstChild);
+  return link;
+}
+
+function insertZoneGroups(target: Element | null, label: string, cards: TaskCard[], groupBy: (card: TaskCard) => string) {
+  if (!target || cards.length === 0) return;
+  const shelf = document.createElement("article");
+  shelf.className = "atlas-lineup-shelf";
+  shelf.innerHTML = `<h3>${label}</h3><div class="atlas-lineup-zone-list"></div>`;
+  const list = shelf.querySelector(".atlas-lineup-zone-list");
+  const groups = Array.from(new Set(cards.map(groupBy)));
+  groups.forEach((groupName) => {
+    const group = document.createElement("section");
+    group.className = "atlas-route-zone-group atlas-lineup-zone-group";
+    group.innerHTML = `<h4>${groupName}</h4><div></div>`;
+    const groupTarget = group.querySelector("div");
+    cards.filter((task) => groupBy(task) === groupName).forEach((task) => groupTarget?.appendChild(lineupTaskCard(task)));
+    list?.appendChild(group);
+  });
+  target.appendChild(shelf);
+}
+
+function insertWeeklyLineup(cards: TaskCard[], route: RouteKey | null, hasTaskId: boolean) {
+  document.querySelector(".atlas-route-lineup")?.remove();
+  if (!route || hasTaskId) return;
+
+  const collection = document.querySelector(".atlas-route-collection");
+  if (!collection) return;
+
+  const parentCards = cards
+    .filter(isParentOpen)
+    .sort((a, b) => taskSortKey(a).localeCompare(taskSortKey(b)));
+  const mainCards = parentCards.filter((card) => mainRoutes.has(routeForTask(card)));
+  const sideCards = parentCards.filter((card) => !mainRoutes.has(routeForTask(card)));
+
+  const section = document.createElement("section");
+  section.className = "atlas-task-page-section atlas-route-lineup";
+  section.innerHTML = `
+    <div class="atlas-route-collection-head atlas-lineup-head">
+      <div>
+        <span>Lineup</span>
+        <strong>${parentCards.length} open</strong>
+        <small>Main work by place. Side work by route.</small>
+      </div>
+    </div>
+    <div class="atlas-lineup-body"></div>
+  `;
+  const body = section.querySelector(".atlas-lineup-body");
+  insertZoneGroups(body, "Main Work", mainCards, collectionZone);
+  insertZoneGroups(body, "Side Work", sideCards, (card) => routeLabels[routeForTask(card)]);
+
+  collection.insertAdjacentElement("afterend", section);
+}
+
 function insertRouteCollection(cards: TaskCard[]) {
   const params = new URLSearchParams(window.location.search);
   const routeParam = params.get("route") ?? "";
@@ -245,10 +322,11 @@ function insertRouteCollection(cards: TaskCard[]) {
   const route = isRouteKey(routeParam) ? routeParam : null;
   document.body.classList.toggle("atlas-route-mode", Boolean(route && !hasTaskId));
   document.querySelector(".atlas-route-collection")?.remove();
+  document.querySelector(".atlas-route-lineup")?.remove();
   if (!route || hasTaskId) return;
 
   const parentCards = cards
-    .filter((card) => card.status === "open" && !isChildTask(card) && routeForTask(card) === route)
+    .filter((card) => isParentOpen(card) && routeForTask(card) === route)
     .sort((a, b) => `${collectionZone(a)}-${numberValue(a.metadata?.day_order)}-${collectionLabel(a)}`.localeCompare(`${collectionZone(b)}-${numberValue(b.metadata?.day_order)}-${collectionLabel(b)}`));
 
   const hero = document.querySelector(".atlas-task-page-hero");
@@ -280,6 +358,7 @@ function insertRouteCollection(cards: TaskCard[]) {
   });
 
   hero.insertAdjacentElement("afterend", section);
+  insertWeeklyLineup(cards, route, hasTaskId);
 }
 
 export default function TaskTemplate({ children }: { children: ReactNode }) {
