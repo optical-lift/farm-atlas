@@ -1,0 +1,34 @@
+.atlas-default-task-tools-card {
+  border: 1px solid var(--atlas-border-soft);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-default-task-tools-card > strong {
+  color: #858bb8;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.atlas-default-task-tools-card > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.atlas-default-task-tools-card span {
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 999px;
+  background: rgba(246, 242, 230, 0.64);
+  color: var(--atlas-text);
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 950;
+}
