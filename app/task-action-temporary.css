@@ -1,0 +1,9 @@
+.atlas-task-page-actions button:nth-child(2) {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.atlas-task-page-actions button:nth-child(2)::after {
+  content: " soon";
+  font-size: 0.75em;
+}
