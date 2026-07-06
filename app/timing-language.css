@@ -2,3 +2,7 @@
 .atlas-task-page-row small {
   display: none !important;
 }
+
+.atlas-task-page-row span {
+  display: none !important;
+}
