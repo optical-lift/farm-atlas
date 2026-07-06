@@ -22,6 +22,7 @@ type Card = {
   zone_label?: string | null;
   priority?: string;
   metadata?: Record<string, unknown> | null;
+  task_outcomes?: Array<{ outcome?: string | null; created_at?: string | null }>;
 };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
@@ -104,10 +105,29 @@ function routeLabel(card: Card) {
   return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, " ");
 }
 
-function isMainCard(card: Card) {
+function excludedDashboardText(card: Card) {
   const joined = `${card.task_type ?? ""} ${card.title} ${card.unlock_text ?? ""}`.toLowerCase();
-  const isChild = meta(card, "is_child_task") === true || meta(card, "is_child_task") === "true";
-  return card.status === "open" && !isChild && !joined.includes("verify") && !joined.includes("check") && !joined.includes("confirm") && !joined.includes("germin");
+  return joined.includes("verify") || joined.includes("check") || joined.includes("confirm") || joined.includes("germin");
+}
+
+function isChildTask(card: Card) {
+  return meta(card, "is_child_task") === true || meta(card, "is_child_task") === "true";
+}
+
+function isMainCard(card: Card) {
+  return card.status === "open" && !isChildTask(card) && !excludedDashboardText(card);
+}
+
+function isDayProgressCard(card: Card) {
+  return card.status !== "archived" && !isChildTask(card) && !excludedDashboardText(card);
+}
+
+function latestOutcome(card: Card) {
+  return card.task_outcomes?.[0] ?? null;
+}
+
+function isCompletedCard(card: Card) {
+  return card.status === "done" || text(meta(card, "checklist_status")) === "done" || latestOutcome(card)?.outcome === "done";
 }
 
 function sortKey(card: Card) {
@@ -131,6 +151,25 @@ async function fetchTaskCards() {
   const response = await fetch("/api/atlas/task-cards", { headers: { Accept: "application/json" }, cache: "no-store" });
   const data = (await response.json()) as { taskCards?: Card[] };
   return data.taskCards ?? [];
+}
+
+async function updateHomeProgressPill() {
+  if (window.location.pathname !== "/") return;
+  const pill = document.querySelector<HTMLElement>(".atlas-home-task-hero .atlas-task-date");
+  if (!pill) return;
+
+  const today = todayIso();
+  const cards = (await fetchTaskCards())
+    .filter(isDayProgressCard)
+    .filter((card) => !card.due_date || card.due_date <= today);
+  const done = cards.filter(isCompletedCard).length;
+  const total = cards.length;
+  const label = `${done}/${total}`;
+
+  if (pill.dataset.progressSignature === label) return;
+  pill.dataset.progressSignature = label;
+  pill.textContent = label;
+  pill.setAttribute("aria-label", `${done} of ${total} tasks done today`);
 }
 
 async function insertFirstTaskPreviews() {
@@ -277,6 +316,17 @@ function syncTaskMode() {
 
 export default function RootTemplate({ children }: { children: ReactNode }) {
   useEffect(() => {
+    let homeProgressTimer: number | null = null;
+
+    function queueHomeProgressPill() {
+      if (window.location.pathname !== "/") return;
+      if (homeProgressTimer !== null) window.clearTimeout(homeProgressTimer);
+      homeProgressTimer = window.setTimeout(() => {
+        homeProgressTimer = null;
+        void updateHomeProgressPill();
+      }, 250);
+    }
+
     function handleClick(event: MouseEvent) {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
@@ -293,6 +343,7 @@ export default function RootTemplate({ children }: { children: ReactNode }) {
     const observer = new MutationObserver(() => window.setTimeout(() => {
       insertDefaultTaskTools();
       polishRouteHeader();
+      queueHomeProgressPill();
     }, 50));
     observer.observe(document.body, { childList: true, subtree: true });
 
@@ -300,14 +351,17 @@ export default function RootTemplate({ children }: { children: ReactNode }) {
     void insertFirstTaskPreviews();
     void pointSingleRouteCardsToTaskCards();
     void redirectSingleRoutePageToTaskCard();
+    queueHomeProgressPill();
     window.setTimeout(() => {
       insertDefaultTaskTools();
       polishRouteHeader();
+      queueHomeProgressPill();
     }, 250);
     document.addEventListener("click", handleClick, true);
     window.addEventListener("popstate", syncTaskMode);
     return () => {
       document.body.classList.remove("atlas-route-mode", "atlas-task-detail-mode");
+      if (homeProgressTimer !== null) window.clearTimeout(homeProgressTimer);
       observer.disconnect();
       document.removeEventListener("click", handleClick, true);
       window.removeEventListener("popstate", syncTaskMode);
