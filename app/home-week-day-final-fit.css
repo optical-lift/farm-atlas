@@ -1,0 +1,77 @@
+/* Final home day-card fit override. Loaded last on purpose. */
+
+body .atlas-home-grid > button.atlas-home-box.atlas-home-box-white.atlas-week-overview-box {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  display: block !important;
+  overflow: visible !important;
+}
+
+body .atlas-home-grid > button.atlas-home-box.atlas-home-box-white.atlas-week-overview-box > strong,
+body .atlas-home-grid > button.atlas-home-box.atlas-home-box-white.atlas-week-overview-box > em {
+  display: none !important;
+}
+
+body .atlas-home-grid > button.atlas-home-box.atlas-home-box-white.atlas-week-overview-box .atlas-week-day-preview-grid {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+body .atlas-home-grid > button.atlas-home-box.atlas-home-box-white.atlas-week-overview-box .atlas-week-day-preview-card {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  border: 1px solid #e1d8ca !important;
+  border-radius: 18px !important;
+  background: var(--atlas-cream) !important;
+  box-shadow: 0 10px 28px rgba(58, 46, 30, 0.045) !important;
+  padding: 10px !important;
+  display: grid !important;
+  gap: 5px !important;
+  text-align: left !important;
+}
+
+body .atlas-home-grid > button.atlas-home-box.atlas-home-box-white.atlas-week-overview-box .atlas-week-day-preview-card b {
+  color: var(--atlas-text) !important;
+  font-size: 15px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.04em !important;
+}
+
+body .atlas-home-grid > button.atlas-home-box.atlas-home-box-white.atlas-week-overview-box .atlas-week-day-preview-card small {
+  color: var(--atlas-muted) !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  font-weight: 850 !important;
+}
+
+body .atlas-home-grid > button.atlas-home-box.atlas-home-box-white.atlas-week-overview-box .atlas-week-day-preview-card i {
+  color: #65685d !important;
+  font-size: 10.5px !important;
+  line-height: 1.08 !important;
+  font-style: normal !important;
+  font-weight: 950 !important;
+}
+
+body .atlas-home-grid > button.atlas-home-box.atlas-home-box-white.atlas-week-overview-box .atlas-week-day-preview-card b,
+body .atlas-home-grid > button.atlas-home-box.atlas-home-box-white.atlas-week-overview-box .atlas-week-day-preview-card small,
+body .atlas-home-grid > button.atlas-home-box.atlas-home-box-white.atlas-week-overview-box .atlas-week-day-preview-card i {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
