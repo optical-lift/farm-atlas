@@ -1,0 +1,17 @@
+.atlas-task-detail-mode .atlas-task-page-active-anchor ~ .atlas-task-page-section:not(.atlas-route-collection),
+.atlas-task-detail-mode .atlas-task-page-body > .atlas-task-page-section:not(.atlas-route-collection) {
+  display: none !important;
+}
+
+.atlas-route-mode .atlas-task-page-active-anchor,
+.atlas-route-mode .atlas-task-page-body > .atlas-task-page-section:not(.atlas-route-collection) {
+  display: none !important;
+}
+
+.atlas-route-mode .atlas-task-page-hero h2::after {
+  content: "Task Collection" !important;
+}
+
+.atlas-task-detail-mode .atlas-task-page-hero h2::after {
+  content: "Task Detail" !important;
+}
