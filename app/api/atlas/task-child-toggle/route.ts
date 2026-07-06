@@ -23,8 +23,10 @@ export async function POST(request: NextRequest) {
       .single();
     if (taskError || !task) throw new Error(taskError?.message || "Child task was not found.");
 
-    const metadata = {
-      ...((task.metadata as Record<string, unknown> | null) ?? {}),
+    const currentMetadata = ((task.metadata as Record<string, unknown> | null) ?? {});
+    const parentTaskId = typeof currentMetadata.parent_task_id === "string" ? currentMetadata.parent_task_id : null;
+    const metadata: Record<string, unknown> = {
+      ...currentMetadata,
       checklist_status: checklistStatus,
       checklist_completed_at: checklistStatus === "done" ? now : null,
     };
@@ -49,7 +51,7 @@ export async function POST(request: NextRequest) {
       due_date: task.due_date,
       priority: task.priority,
       source: "atlas_child_checklist",
-      metadata: { checklist_status: checklistStatus, parent_task_id: metadata.parent_task_id ?? null },
+      metadata: { checklist_status: checklistStatus, parent_task_id: parentTaskId },
     });
 
     return NextResponse.json({ ok: true, taskId: task.id, checklistStatus });
