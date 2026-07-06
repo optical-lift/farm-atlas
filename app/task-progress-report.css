@@ -1,0 +1,115 @@
+.atlas-task-page-hero.atlas-task-progress-hero {
+  gap: 10px !important;
+}
+
+.atlas-task-progress-hero h2 {
+  margin: 0 !important;
+  color: var(--atlas-text) !important;
+  font-size: 28px !important;
+  line-height: 0.96 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.06em !important;
+}
+
+.atlas-task-progress-hero h2::after {
+  content: none !important;
+  display: none !important;
+}
+
+.atlas-progress-hero-head {
+  display: grid;
+  gap: 5px;
+}
+
+.atlas-progress-hero-head small {
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1.15;
+  font-weight: 850;
+}
+
+.atlas-progress-report {
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-progress-line {
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 17px;
+  background: rgba(246, 242, 230, 0.54);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-progress-line > div:first-child,
+.atlas-progress-next-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.atlas-progress-line span,
+.atlas-progress-next-line span {
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.atlas-progress-line strong,
+.atlas-progress-next-line strong {
+  min-width: 0;
+  color: var(--atlas-text);
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 950;
+  text-align: right;
+}
+
+.atlas-progress-next-line strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-progress-bar {
+  width: 100%;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(167, 171, 214, 0.18);
+  overflow: hidden;
+}
+
+.atlas-progress-bar i {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: inherit;
+  background: rgba(214, 225, 177, 0.88);
+}
+
+.atlas-progress-next-line {
+  border: 1px solid rgba(139, 145, 194, 0.14);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.58);
+  padding: 9px 10px;
+}
+
+@media (max-width: 480px) {
+  .atlas-task-progress-hero h2 {
+    font-size: 25px !important;
+  }
+
+  .atlas-progress-line {
+    padding: 9px;
+  }
+
+  .atlas-progress-line strong,
+  .atlas-progress-next-line strong {
+    font-size: 12px;
+  }
+}
