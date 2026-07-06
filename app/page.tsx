@@ -17,10 +17,12 @@ type HomeTaskDisplay = { rhythm: string; action: string; subject: string; locati
 type WorkRouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
 type WorkRoute = { key: WorkRouteKey; label: string; cards: AtlasTaskCard[]; zones: string[]; preview: string; href: string };
 type WorkGroup = { label: string; cards: AtlasTaskCard[]; routes: string[]; preview: string };
+type DayPlan = { dateIso: string; dayLabel: string; dateLabel: string; total: number; cards: AtlasTaskCard[]; routeCounts: { key: WorkRouteKey; label: string; count: number }[]; preview: string };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const defaultSnapshot: AtlasFarmSnapshot = { totalBeds: 0, growingBeds: 0, activeSqft: 0, sowingsLogged: 0, stemsLogged: 0 };
 const routeOrder: WorkRouteKey[] = ["plant", "weed", "mow", "seed", "harvest", "build", "venue", "water"];
+const heroRouteKeys = new Set<WorkRouteKey>(["plant", "weed", "mow", "harvest"]);
 const mainRouteKeys = new Set<WorkRouteKey>(["plant", "weed", "mow", "seed", "build"]);
 const routeLabels: Record<WorkRouteKey, string> = {
   plant: "Plant",
@@ -29,6 +31,16 @@ const routeLabels: Record<WorkRouteKey, string> = {
   seed: "Seed",
   harvest: "Harvest",
   build: "Build / Prep",
+  venue: "Venue",
+  water: "Water",
+};
+const shortRouteLabels: Record<WorkRouteKey, string> = {
+  plant: "Plant",
+  weed: "Weed",
+  mow: "Mow",
+  seed: "Seed",
+  harvest: "Harvest",
+  build: "Build",
   venue: "Venue",
   water: "Water",
 };
@@ -43,11 +55,21 @@ function addDaysIso(days: number) {
   return date.toISOString().slice(0, 10);
 }
 
+function dateFromIso(dateIso: string) {
+  return new Date(`${dateIso}T12:00:00`);
+}
+
 function prettyDate(dateIso: string | null | undefined) {
   if (!dateIso) return "unknown";
-  const date = dateIso.includes("-") ? new Date(`${dateIso}T12:00:00`) : new Date(dateIso);
+  const date = dateIso.includes("-") ? dateFromIso(dateIso) : new Date(dateIso);
   if (Number.isNaN(date.getTime())) return dateIso;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function dayLabel(dateIso: string) {
+  const date = dateFromIso(dateIso);
+  if (Number.isNaN(date.getTime())) return dateIso;
+  return date.toLocaleDateString("en-US", { weekday: "long" });
 }
 
 function cleanLabel(value: string | null | undefined) {
@@ -206,6 +228,37 @@ function groupedCards(cards: AtlasTaskCard[], groupBy: (card: AtlasTaskCard) => 
   });
 }
 
+function routeCountsFor(cards: AtlasTaskCard[]) {
+  return routeOrder
+    .map((key) => ({ key, label: shortRouteLabels[key], count: cards.filter((card) => routeKeyForTask(card) === key).length }))
+    .filter((item) => item.count > 0);
+}
+
+function dayPlan(dateIso: string, cards: AtlasTaskCard[]): DayPlan {
+  const dayCards = cards
+    .filter(isDashboardWork)
+    .filter((card) => card.due_date === dateIso)
+    .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
+  return {
+    dateIso,
+    dayLabel: dayLabel(dateIso),
+    dateLabel: prettyDate(dateIso),
+    total: dayCards.length,
+    cards: dayCards,
+    routeCounts: routeCountsFor(dayCards),
+    preview: dayCards.map(collectionLabel).slice(0, 2).join(" · "),
+  };
+}
+
+function forwardDayPlans(cards: AtlasTaskCard[], count: number, startOffset = 1) {
+  return Array.from({ length: count }, (_, index) => dayPlan(addDaysIso(startOffset + index), cards));
+}
+
+function routeCountLine(plan: DayPlan) {
+  if (!plan.routeCounts.length) return "No farm tasks planned";
+  return plan.routeCounts.map((item) => `${item.label} ${item.count}`).join(" · ");
+}
+
 function panelTitle(panel: HomePanel) {
   if (panel === "inbox") return "Note";
   if (panel === "week") return "Week Lineup";
@@ -219,7 +272,7 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
   const todayCards = dashboardCards.filter((card) => !card.due_date || card.due_date <= today);
   const upcomingCards = dashboardCards.filter((card) => card.due_date && card.due_date > today);
   const routeSource = todayCards.length ? todayCards : upcomingCards;
-  const routes = buildRoutes(routeSource);
+  const routes = buildRoutes(routeSource).filter((route) => heroRouteKeys.has(route.key)).slice(0, 4);
   const firstDue = routeSource[0]?.due_date ? prettyDate(routeSource[0].due_date) : prettyDate(today);
 
   if (loading && cards.length === 0) {
@@ -269,80 +322,61 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
 }
 
 function WeeklyWorkBox({ cards, loading, onOpen }: { cards: AtlasTaskCard[]; loading: boolean; onOpen: () => void }) {
-  const items = weekCards(cards);
-  const main = items.filter((card) => mainRouteKeys.has(routeKeyForTask(card)));
-  const side = items.filter((card) => !mainRouteKeys.has(routeKeyForTask(card)));
-  const mainGroups = groupedCards(main, collectionZone).slice(0, 3);
-  const sideRoutes = groupedCards(side, (card) => routeLabels[routeKeyForTask(card)]).map((group) => group.label).slice(0, 3);
+  const plans = forwardDayPlans(cards, 2, 1);
 
   return (
     <button type="button" className="atlas-home-box atlas-home-box-white atlas-week-overview-box" onClick={onOpen}>
       <strong>Week Lineup</strong>
-      <em>{loading ? "Loading work" : `${items.length} open · main work by place`}</em>
-      <div className="atlas-week-mini-list">
-        {mainGroups.map((group) => (
-          <span key={group.label}><b>{group.label}</b><small>{group.routes.join(" + ")}</small></span>
+      <em>{loading ? "Loading the next farm days" : "Next farm days"}</em>
+      <div className="atlas-week-day-preview-grid">
+        {plans.map((plan) => (
+          <span key={plan.dateIso} className="atlas-week-day-preview-card">
+            <b>{plan.dayLabel}</b>
+            <small>{plan.dateLabel} · {plan.total} {plan.total === 1 ? "task" : "tasks"}</small>
+            <i>{routeCountLine(plan)}</i>
+          </span>
         ))}
-        {sideRoutes.length ? <span><b>Side Work</b><small>{sideRoutes.join(" + ")}</small></span> : null}
       </div>
     </button>
   );
 }
 
 function WeekLineupPanel({ cards }: { cards: AtlasTaskCard[] }) {
-  const items = weekCards(cards);
-  const main = items.filter((card) => mainRouteKeys.has(routeKeyForTask(card)));
-  const side = items.filter((card) => !mainRouteKeys.has(routeKeyForTask(card)));
-  const mainGroups = groupedCards(main, collectionZone);
-  const sideGroups = groupedCards(side, (card) => routeLabels[routeKeyForTask(card)]);
+  const plans = forwardDayPlans(cards, 6, 1);
 
   return (
     <section className="atlas-task-focus-section atlas-week-panel">
-      <article className="atlas-week-panel-hero">
+      <article className="atlas-week-panel-hero atlas-week-calendar-hero">
         <span>This Week</span>
-        <strong>{items.length} open</strong>
-        <p>Main work is grouped by place. Side work is grouped by route.</p>
+        <strong>Next farm days</strong>
+        <p>Each day shows the task collections planned for that date.</p>
       </article>
-      <div className="atlas-week-shelf">
-        <h3>Main Work</h3>
-        {mainGroups.map((group) => (
-          <article key={group.label} className="atlas-week-group-card">
-            <div className="atlas-week-group-head">
-              <strong>{group.label}</strong>
-              <span>{group.routes.join(" + ")}</span>
-            </div>
-            <div className="atlas-week-task-list">
-              {group.cards.map((card) => (
-                <Link key={card.task_id} href={`/task?taskId=${encodeURIComponent(card.task_id)}`} className="atlas-week-task-row">
-                  <strong>{collectionLabel(card)}</strong>
-                  <span>{routeLabels[routeKeyForTask(card)]} · {prettyDate(card.due_date)}</span>
-                </Link>
-              ))}
-            </div>
-          </article>
-        ))}
-      </div>
-      {sideGroups.length ? (
-        <div className="atlas-week-shelf">
-          <h3>Side Work</h3>
-          {sideGroups.map((group) => (
-            <article key={group.label} className="atlas-week-group-card">
-              <div className="atlas-week-group-head">
-                <strong>{group.label}</strong>
-                <span>{group.cards.length} {group.cards.length === 1 ? "task" : "tasks"}</span>
+      <div className="atlas-week-calendar-list">
+        {plans.map((plan) => (
+          <article key={plan.dateIso} className="atlas-week-calendar-day">
+            <div className="atlas-week-calendar-day-head">
+              <div>
+                <strong>{plan.dayLabel}</strong>
+                <span>{plan.dateLabel}</span>
               </div>
+              <em>{plan.total} {plan.total === 1 ? "task" : "tasks"}</em>
+            </div>
+            <div className="atlas-week-route-counts">
+              {plan.routeCounts.length ? plan.routeCounts.map((item) => <span key={item.key}>{item.label} {item.count}</span>) : <span>No farm tasks planned</span>}
+            </div>
+            {plan.cards.length ? (
               <div className="atlas-week-task-list">
-                {group.cards.map((card) => (
+                {plan.cards.map((card) => (
                   <Link key={card.task_id} href={`/task?taskId=${encodeURIComponent(card.task_id)}`} className="atlas-week-task-row">
                     <strong>{collectionLabel(card)}</strong>
-                    <span>{collectionZone(card)} · {prettyDate(card.due_date)}</span>
+                    <span>{routeLabels[routeKeyForTask(card)]} · {collectionZone(card)}</span>
                   </Link>
                 ))}
               </div>
-            </article>
-          ))}
-        </div>
-      ) : null}
+            ) : null}
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
