@@ -359,9 +359,9 @@ export default function AtlasTaskPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const taskId = params.get("taskId");
-    const lane = params.get("lane") as LaneKey | null;
+    const laneParam = params.get("lane");
     if (taskId) setSelectedTaskId(taskId);
-    if (lane && laneLabels[lane]) setSelectedLane(lane);
+    if (laneParam === "start" || laneParam === "maintain" || laneParam === "harvest" || laneParam === "venue") setSelectedLane(laneParam);
     void loadTasks();
     void loadWeather();
   }, []);
