@@ -1,0 +1,33 @@
+.atlas-route-date-list {
+  display: grid;
+  gap: 12px;
+}
+
+.atlas-route-date-group {
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-route-date-group > h3 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 20px;
+  line-height: 0.98;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.atlas-route-date-group .atlas-route-zone-group h4 {
+  margin: 0;
+  color: #858bb8;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.atlas-route-date-group .atlas-route-zone-group > div {
+  display: grid;
+  gap: 7px;
+}
