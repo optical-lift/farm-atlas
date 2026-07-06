@@ -23,6 +23,15 @@ function routeFromCard(card: Element) {
   return null;
 }
 
+function syncTaskMode() {
+  const isTaskPage = window.location.pathname === "/task";
+  const params = new URLSearchParams(window.location.search);
+  const hasRoute = Boolean(params.get("route"));
+  const hasTaskId = Boolean(params.get("taskId"));
+  document.body.classList.toggle("atlas-route-mode", isTaskPage && hasRoute && !hasTaskId);
+  document.body.classList.toggle("atlas-task-detail-mode", isTaskPage && hasTaskId);
+}
+
 export default function RootTemplate({ children }: { children: ReactNode }) {
   useEffect(() => {
     function handleClick(event: MouseEvent) {
@@ -37,8 +46,14 @@ export default function RootTemplate({ children }: { children: ReactNode }) {
       window.location.assign(`/task?route=${encodeURIComponent(route)}`);
     }
 
+    syncTaskMode();
     document.addEventListener("click", handleClick, true);
-    return () => document.removeEventListener("click", handleClick, true);
+    window.addEventListener("popstate", syncTaskMode);
+    return () => {
+      document.body.classList.remove("atlas-route-mode", "atlas-task-detail-mode");
+      document.removeEventListener("click", handleClick, true);
+      window.removeEventListener("popstate", syncTaskMode);
+    };
   }, []);
 
   return <>{children}</>;
