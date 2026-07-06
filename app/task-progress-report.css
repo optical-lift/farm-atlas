@@ -28,16 +28,14 @@
   gap: 6px;
 }
 
-.atlas-progress-line > div:first-child,
-.atlas-progress-next-line {
+.atlas-progress-line > div:first-child {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
 
-.atlas-progress-line span,
-.atlas-progress-next-line span {
+.atlas-progress-line span {
   color: #858bb8;
   font-size: 9px;
   line-height: 1;
@@ -46,8 +44,7 @@
   text-transform: uppercase;
 }
 
-.atlas-progress-line strong,
-.atlas-progress-next-line strong {
+.atlas-progress-line strong {
   min-width: 0;
   color: var(--atlas-text);
   font-size: 12px;
@@ -115,21 +112,7 @@
 }
 
 .atlas-progress-next-line {
-  order: 3;
-  min-width: 0;
-  border: 1px solid rgba(139, 145, 194, 0.12);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.48);
-  padding: 8px;
-  display: grid;
-  gap: 4px;
-}
-
-.atlas-progress-next-line strong {
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: none !important;
 }
 
 .atlas-task-page-active .atlas-task-page-time-row span:last-child::before {
@@ -154,8 +137,7 @@
     padding: 7px 9px;
   }
 
-  .atlas-progress-line strong,
-  .atlas-progress-next-line strong {
+  .atlas-progress-line strong {
     font-size: 11px;
   }
 
