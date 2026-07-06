@@ -1,0 +1,189 @@
+.atlas-home-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-rows: none !important;
+  grid-auto-rows: auto !important;
+  align-content: start !important;
+  overflow: visible !important;
+}
+
+.atlas-route-sheet-box:nth-child(n + 5) {
+  display: none !important;
+}
+
+.atlas-home-task-hero.atlas-task-controller.atlas-daily-run-sheet {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.atlas-run-sheet-grid.atlas-route-sheet-grid {
+  grid-auto-rows: 82px !important;
+  height: auto !important;
+}
+
+.atlas-run-sheet-box.atlas-route-sheet-box {
+  height: 82px !important;
+  min-height: 0 !important;
+}
+
+.atlas-home-next-task-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.atlas-home-next-task-card {
+  min-width: 0;
+  border: 1px solid var(--atlas-border);
+  border-radius: 22px;
+  background: white;
+  color: var(--atlas-text);
+  text-decoration: none;
+  padding: 11px;
+  display: grid;
+  gap: 4px;
+  box-shadow: 0 10px 28px rgba(58, 46, 30, 0.07);
+}
+
+.atlas-home-next-task-card small,
+.atlas-home-next-task-card strong,
+.atlas-home-next-task-card span,
+.atlas-home-next-task-card em {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-home-next-task-card small {
+  color: #858bb8;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.atlas-home-next-task-card strong {
+  color: var(--atlas-text);
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.atlas-home-next-task-card span {
+  color: var(--atlas-muted);
+  font-size: 11px;
+  line-height: 1.1;
+  font-weight: 850;
+}
+
+.atlas-home-next-task-card em {
+  justify-self: start;
+  border: 1px solid #e1d8ca;
+  border-radius: 999px;
+  background: var(--atlas-cream);
+  color: #666252;
+  padding: 5px 8px;
+  font-style: normal;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-home-row-wide,
+.atlas-week-overview-box,
+.atlas-farm-snapshot-box,
+.atlas-home-grid > button:not(.atlas-note-plus):not(.atlas-week-overview-box) {
+  grid-column: 1 / -1 !important;
+}
+
+.atlas-week-overview-box,
+.atlas-farm-snapshot-box {
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+.atlas-week-overview-box {
+  order: 30;
+}
+
+.atlas-farm-snapshot-box {
+  order: 40;
+}
+
+.atlas-home-grid > button:not(.atlas-note-plus):not(.atlas-week-overview-box) {
+  order: 50;
+}
+
+.atlas-week-mini-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.atlas-week-mini-list span {
+  border-radius: 16px;
+}
+
+.atlas-farm-snapshot-box {
+  display: grid !important;
+  gap: 12px !important;
+}
+
+.atlas-farm-snapshot-box .atlas-snapshot-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.atlas-farm-snapshot-box .atlas-snapshot-grid span {
+  min-width: 0;
+  border: 1px solid #e1d8ca;
+  border-radius: 18px;
+  background: var(--atlas-cream);
+  padding: 9px;
+}
+
+.atlas-farm-snapshot-box .atlas-snapshot-grid b {
+  font-size: 22px;
+  line-height: 0.9;
+}
+
+@media (max-width: 430px) {
+  .atlas-home-next-task-strip {
+    gap: 8px;
+  }
+
+  .atlas-home-next-task-card {
+    border-radius: 18px;
+    padding: 10px;
+  }
+
+  .atlas-home-next-task-card strong {
+    font-size: 15px;
+  }
+
+  .atlas-home-next-task-card span {
+    font-size: 10px;
+  }
+
+  .atlas-farm-snapshot-box .atlas-snapshot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .atlas-run-sheet-grid.atlas-route-sheet-grid {
+    grid-auto-rows: 72px !important;
+  }
+
+  .atlas-run-sheet-box.atlas-route-sheet-box {
+    height: 72px !important;
+  }
+
+  .atlas-home-next-task-card strong {
+    font-size: 14px;
+  }
+}
