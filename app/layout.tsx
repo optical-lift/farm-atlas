@@ -12,6 +12,7 @@ import "./project-spine.css";
 import "./task-page.css";
 import "./field-state-capture.css";
 import "./day-run-sheet.css";
+import "./purple-hero-rollback.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
