@@ -38,7 +38,14 @@ function routeFromCard(card: Element) {
 }
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  const date = new Date();
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function todayDisplay() {
+  const date = new Date(`${todayIso()}T12:00:00`);
+  return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 }
 
 function text(value: unknown) {
@@ -233,6 +240,32 @@ function insertDefaultTaskTools() {
   (spacing ?? detailCard ?? placeCard)?.insertAdjacentElement("afterend", section);
 }
 
+function polishRouteHeader() {
+  if (window.location.pathname !== "/task") return;
+  const params = new URLSearchParams(window.location.search);
+  if (!params.get("route") || params.get("taskId")) return;
+  const head = document.querySelector<HTMLElement>(".atlas-route-collection-head");
+  if (!head || head.classList.contains("atlas-route-today-head")) return;
+
+  const routeName = head.querySelector("span")?.textContent?.trim() || "Route";
+  const count = (head.querySelector("strong")?.textContent?.trim() || "").replace(/\s+today$/i, "");
+  const date = todayDisplay();
+
+  const title = document.createElement("div");
+  title.className = "atlas-route-today-title";
+  const label = document.createElement("span");
+  label.textContent = routeName;
+  const countNode = document.createElement("strong");
+  countNode.textContent = count;
+  title.append(label, countNode);
+
+  const time = document.createElement("time");
+  time.textContent = date;
+
+  head.className = "atlas-route-collection-head atlas-route-today-head";
+  head.replaceChildren(title, time);
+}
+
 function syncTaskMode() {
   const isTaskPage = window.location.pathname === "/task";
   const params = new URLSearchParams(window.location.search);
@@ -257,14 +290,20 @@ export default function RootTemplate({ children }: { children: ReactNode }) {
       window.location.assign(`/task?route=${encodeURIComponent(route)}`);
     }
 
-    const observer = new MutationObserver(() => window.setTimeout(insertDefaultTaskTools, 50));
+    const observer = new MutationObserver(() => window.setTimeout(() => {
+      insertDefaultTaskTools();
+      polishRouteHeader();
+    }, 50));
     observer.observe(document.body, { childList: true, subtree: true });
 
     syncTaskMode();
     void insertFirstTaskPreviews();
     void pointSingleRouteCardsToTaskCards();
     void redirectSingleRoutePageToTaskCard();
-    window.setTimeout(insertDefaultTaskTools, 250);
+    window.setTimeout(() => {
+      insertDefaultTaskTools();
+      polishRouteHeader();
+    }, 250);
     document.addEventListener("click", handleClick, true);
     window.addEventListener("popstate", syncTaskMode);
     return () => {
