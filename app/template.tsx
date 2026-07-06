@@ -279,22 +279,33 @@ async function groupRouteCollectionByDueDate() {
   const routeParam = params.get("route");
   if (!routeParam || params.get("taskId")) return;
   const section = document.querySelector<HTMLElement>(".atlas-route-collection");
-  if (!section || section.dataset.groupedByDate === routeParam) return;
+  if (!section) return;
 
-  const cards = (await fetchTaskCards())
-    .filter((card) => isMainCard(card) && routeKey(card) === routeParam)
+  const allCards = await fetchTaskCards();
+  const activeIds = new Set(dashboardCardsForRouteSource(allCards).map((card) => card.task_id));
+  let cards = allCards
+    .filter((card) => isMainCard(card) && activeIds.has(card.task_id) && routeKey(card) === routeParam)
     .sort((a, b) => `${a.due_date ?? "9999-12-31"}-${sortKey(a)}`.localeCompare(`${b.due_date ?? "9999-12-31"}-${sortKey(b)}`));
+
+  if (!cards.length) {
+    cards = allCards
+      .filter((card) => isMainCard(card) && routeKey(card) === routeParam)
+      .sort((a, b) => `${a.due_date ?? "9999-12-31"}-${sortKey(a)}`.localeCompare(`${b.due_date ?? "9999-12-31"}-${sortKey(b)}`));
+  }
   if (!cards.length) return;
 
+  const groupKey = `${routeParam}-${cards.map((card) => card.task_id).join("|")}`;
+  if (section.dataset.groupedByDate === groupKey) return;
+
   const dateKeys = Array.from(new Set(cards.map((card) => card.due_date ?? "No date")));
-  section.dataset.groupedByDate = routeParam;
+  section.dataset.groupedByDate = groupKey;
   section.innerHTML = `
     <div class="atlas-route-collection-head">
       <a href="/" class="atlas-route-back">← Routes</a>
       <div>
         <span>${escapeHtml(ROUTE_NAMES[routeParam] ?? routeParam)}</span>
         <strong>${cards.length} ${cards.length === 1 ? "task" : "tasks"}</strong>
-        <small>Separated by due date</small>
+        <small>Current work by due date</small>
       </div>
     </div>
     <div class="atlas-route-date-list"></div>
