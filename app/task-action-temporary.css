@@ -24,3 +24,86 @@
 .atlas-task-page-actions button:nth-child(4) {
   display: none !important;
 }
+
+.atlas-child-checklist {
+  border: 1px solid var(--atlas-border-soft);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-child-checklist > strong {
+  color: #858bb8;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.atlas-child-checklist-open,
+.atlas-child-checklist-finished div {
+  display: grid;
+  gap: 7px;
+}
+
+.atlas-child-check-item {
+  width: 100%;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 16px;
+  background: rgba(246, 242, 230, 0.52);
+  color: var(--atlas-text);
+  padding: 9px 10px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+}
+
+.atlas-child-check-item span {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(139, 145, 194, 0.44);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #515b34;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-child-check-item strong {
+  min-width: 0;
+  color: var(--atlas-text);
+  font-size: 15px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+}
+
+.atlas-child-check-item.done {
+  background: rgba(214, 225, 177, 0.35);
+}
+
+.atlas-child-check-item.done span {
+  border-color: rgba(81, 91, 52, 0.34);
+  background: rgba(214, 225, 177, 0.62);
+}
+
+.atlas-child-checklist-finished {
+  border-top: 1px solid rgba(139, 145, 194, 0.16);
+  padding-top: 7px;
+}
+
+.atlas-child-checklist-finished summary {
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 900;
+  margin-bottom: 7px;
+}
