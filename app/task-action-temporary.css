@@ -91,12 +91,12 @@
   padding: 9px 10px;
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);
-  align-items: center;
+  align-items: start;
   gap: 9px;
   text-align: left;
 }
 
-.atlas-child-check-item span {
+.atlas-child-check-item > span:first-child {
   width: 22px;
   height: 22px;
   border: 2px solid rgba(139, 145, 194, 0.44);
@@ -108,6 +108,13 @@
   font-size: 14px;
   line-height: 1;
   font-weight: 950;
+  margin-top: 1px;
+}
+
+.atlas-child-check-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
 }
 
 .atlas-child-check-item strong {
@@ -119,11 +126,21 @@
   letter-spacing: -0.035em;
 }
 
+.atlas-child-check-copy em {
+  display: block;
+  min-width: 0;
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1.15;
+  font-weight: 850;
+  font-style: normal;
+}
+
 .atlas-child-check-item.done {
   background: rgba(214, 225, 177, 0.35);
 }
 
-.atlas-child-check-item.done span {
+.atlas-child-check-item.done > span:first-child {
   border-color: rgba(81, 91, 52, 0.34);
   background: rgba(214, 225, 177, 0.62);
 }
