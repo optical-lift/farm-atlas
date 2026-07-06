@@ -56,6 +56,19 @@ export async function POST(request: NextRequest) {
     const tomorrow = tomorrowIso();
     const laneKey = clean(body.laneKey) || null;
     const workKey = clean(body.workKey) || "unfinished";
+
+    const { data: childTasks, error: childError } = await atlasSupabase
+      .schema("atlas")
+      .from("tasks")
+      .select("id, metadata")
+      .eq("metadata->>parent_task_id", task.id)
+      .neq("status", "archived");
+    if (childError) throw new Error(childError.message);
+
+    const remainingChildIds = (childTasks ?? [])
+      .filter((child) => ((child.metadata as Record<string, unknown> | null)?.checklist_status ?? "open") !== "done")
+      .map((child) => child.id as string);
+
     const metadata = {
       ...((task.metadata as Record<string, unknown> | null) ?? {}),
       last_outcome: {
@@ -64,6 +77,7 @@ export async function POST(request: NextRequest) {
         moved_to: tomorrow,
         lane_key: laneKey,
         work_key: workKey,
+        remaining_child_task_ids: remainingChildIds,
         recorded_at: now,
       },
     };
@@ -74,6 +88,15 @@ export async function POST(request: NextRequest) {
       .update({ status: "open", due_date: tomorrow, metadata, updated_at: now })
       .eq("id", task.id);
     if (updateError) throw new Error(updateError.message);
+
+    if (remainingChildIds.length > 0) {
+      const { error: childMoveError } = await atlasSupabase
+        .schema("atlas")
+        .from("tasks")
+        .update({ due_date: tomorrow, updated_at: now })
+        .in("id", remainingChildIds);
+      if (childMoveError) throw new Error(childMoveError.message);
+    }
 
     await atlasSupabase.schema("atlas").from("task_outcome_events").insert({
       farm_id: task.farm_id,
@@ -88,10 +111,10 @@ export async function POST(request: NextRequest) {
       due_date: task.due_date,
       priority: task.priority,
       source: "atlas_task_unfinished",
-      metadata: { moved_to: tomorrow, prior_status: task.status },
+      metadata: { moved_to: tomorrow, prior_status: task.status, remaining_child_task_ids: remainingChildIds },
     });
 
-    return NextResponse.json({ ok: true, taskId: task.id, dueDate: tomorrow });
+    return NextResponse.json({ ok: true, taskId: task.id, dueDate: tomorrow, remainingChildTaskIds: remainingChildIds });
   } catch (error) {
     return NextResponse.json({ ok: false, error: "Atlas unfinished failed.", details: error instanceof Error ? error.message : "Unknown error." }, { status: 500 });
   }
