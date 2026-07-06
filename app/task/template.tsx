@@ -89,11 +89,21 @@ function detailLines(card: TaskCard) {
   return stringList(card.metadata?.detail_lines);
 }
 
+function cleanChecklistDetail(line: string) {
+  return line
+    .replace(/\s+—\s+battery push mower/gi, "")
+    .replace(/\s+—\s+riding mower can fit/gi, "")
+    .replace(/\s+—\s+push mower/gi, "")
+    .replace(/\s+—\s+weed whacker/gi, "")
+    .replace(/\s+—\s+leaf blower/gi, "")
+    .trim();
+}
+
 function childDetailLines(parent: TaskCard, child: TaskCard) {
-  const ownDetails = detailLines(child);
+  const ownDetails = detailLines(child).map(cleanChecklistDetail).filter(Boolean);
   if (ownDetails.length) return ownDetails;
 
-  const parentDetails = detailLines(parent);
+  const parentDetails = detailLines(parent).map(cleanChecklistDetail).filter(Boolean);
   if (!parentDetails.length) return [];
 
   const childLabel = norm(label(child));
@@ -127,6 +137,13 @@ function childDetailLines(parent: TaskCard, child: TaskCard) {
 function shouldRemoveParentDetail(parent: TaskCard, detail: Element | null) {
   const heading = detail?.querySelector("strong")?.textContent?.trim().toLowerCase() ?? "";
   return routeForTask(parent) === "mow" || heading === "weekly route";
+}
+
+function taskTools(parent: TaskCard) {
+  if (routeForTask(parent) === "mow") {
+    return ["Battery push mower", "Riding mower", "Weed whacker", "Leaf blower"];
+  }
+  return stringList(parent.metadata?.tool_lines);
 }
 
 function isDone(card: TaskCard) {
@@ -216,13 +233,22 @@ function message(value: string) {
   line.textContent = value;
 }
 
+function removeTimingPills() {
+  document.querySelectorAll(".atlas-task-page-time-row span, .atlas-task-page-row small").forEach((item) => {
+    const value = item.textContent?.trim().toLowerCase();
+    if (value === "morning" || value === "afternoon" || value === "after rain") item.remove();
+  });
+}
+
 function insertLocationPill(parent: TaskCard) {
   const row = document.querySelector(".atlas-task-page-active .atlas-task-page-time-row");
   if (!row) return;
   row.querySelector(".atlas-task-location-pill")?.remove();
+  const place = location(parent);
+  if (routeForTask(parent) === "mow" || norm(place) === "weekly production paths") return;
   const pill = document.createElement("span");
   pill.className = "atlas-task-location-pill";
-  pill.textContent = location(parent);
+  pill.textContent = place;
   row.appendChild(pill);
 }
 
@@ -248,9 +274,34 @@ function insertSpacing(parent: TaskCard) {
   (detail ?? place)?.insertAdjacentElement("afterend", section);
 }
 
+function insertTools(parent: TaskCard) {
+  const card = document.querySelector(".atlas-task-page-active");
+  if (!card) return;
+  card.querySelector(".atlas-task-tools-card")?.remove();
+  const tools = taskTools(parent);
+  if (!tools.length) return;
+
+  const section = document.createElement("section");
+  section.className = "atlas-task-tools-card";
+  section.innerHTML = `<strong>Tools</strong><div></div>`;
+  const target = section.querySelector("div");
+  tools.forEach((tool) => {
+    const chip = document.createElement("span");
+    chip.textContent = tool;
+    target?.appendChild(chip);
+  });
+
+  const spacing = card.querySelector(".atlas-plant-spacing-card");
+  const detail = card.querySelector(".atlas-task-detail-card");
+  const place = card.querySelector(".atlas-task-place-card");
+  (spacing ?? detail ?? place)?.insertAdjacentElement("afterend", section);
+}
+
 function decorateParent(parent: TaskCard) {
+  removeTimingPills();
   insertLocationPill(parent);
   insertSpacing(parent);
+  insertTools(parent);
 }
 
 function insertChecklist(parent: TaskCard, children: TaskCard[]) {
@@ -275,11 +326,13 @@ function insertChecklist(parent: TaskCard, children: TaskCard[]) {
   const doneTarget = section.querySelector(".atlas-child-checklist-finished div");
   doneChildren.forEach((child) => doneTarget?.appendChild(checkButton(child, parent)));
 
-  const spacing = card.querySelector(".atlas-plant-spacing-card");
   const detail = card.querySelector(".atlas-task-detail-card");
-  const place = card.querySelector(".atlas-task-place-card");
-  (spacing ?? detail ?? place)?.insertAdjacentElement("afterend", section);
   if (shouldRemoveParentDetail(parent, detail)) detail?.remove();
+
+  const tools = card.querySelector(".atlas-task-tools-card");
+  const spacing = card.querySelector(".atlas-plant-spacing-card");
+  const place = card.querySelector(".atlas-task-place-card");
+  (tools ?? spacing ?? place)?.insertAdjacentElement("afterend", section);
 }
 
 function checkButton(child: TaskCard, parent: TaskCard) {
@@ -435,6 +488,7 @@ export default function TaskTemplate({ children }: { children: ReactNode }) {
 
     async function refresh() {
       cards = await loadCards();
+      removeTimingPills();
       insertRouteCollection(cards);
       const parent = findParent(cards);
       if (!parent) return;
