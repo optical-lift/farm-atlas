@@ -10,17 +10,19 @@
   order: 5 !important;
 }
 
-.atlas-home-task-hero.atlas-route-sheet {
-  padding-bottom: 18px !important;
+.atlas-home-grid .atlas-home-task-hero.atlas-route-sheet {
+  padding-bottom: 20px !important;
 }
 
-.atlas-run-sheet-grid.atlas-route-sheet-grid {
-  grid-auto-rows: 90px !important;
-  gap: 10px !important;
+.atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-grid.atlas-route-sheet-grid {
+  grid-auto-rows: 128px !important;
+  gap: 12px !important;
+  align-items: stretch !important;
 }
 
-.atlas-run-sheet-box.atlas-route-sheet-box {
-  height: 90px !important;
+.atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-box.atlas-route-sheet-box {
+  min-height: 128px !important;
+  height: 128px !important;
   align-content: center !important;
 }
 
@@ -96,30 +98,34 @@
 }
 
 @media (max-width: 430px) {
-  .atlas-home-task-hero.atlas-route-sheet {
-    padding-bottom: 16px !important;
+  .atlas-home-grid .atlas-home-task-hero.atlas-route-sheet {
+    padding-bottom: 18px !important;
   }
 
-  .atlas-run-sheet-grid.atlas-route-sheet-grid {
-    grid-auto-rows: 88px !important;
+  .atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-grid.atlas-route-sheet-grid {
+    grid-auto-rows: 122px !important;
+    gap: 12px !important;
   }
 
-  .atlas-run-sheet-box.atlas-route-sheet-box {
-    height: 88px !important;
+  .atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-box.atlas-route-sheet-box {
+    min-height: 122px !important;
+    height: 122px !important;
   }
 }
 
 @media (max-width: 360px) {
-  .atlas-home-task-hero.atlas-route-sheet {
-    padding-bottom: 12px !important;
+  .atlas-home-grid .atlas-home-task-hero.atlas-route-sheet {
+    padding-bottom: 14px !important;
   }
 
-  .atlas-run-sheet-grid.atlas-route-sheet-grid {
-    grid-auto-rows: 78px !important;
+  .atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-grid.atlas-route-sheet-grid {
+    grid-auto-rows: 106px !important;
+    gap: 10px !important;
   }
 
-  .atlas-run-sheet-box.atlas-route-sheet-box {
-    height: 78px !important;
+  .atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-box.atlas-route-sheet-box {
+    min-height: 106px !important;
+    height: 106px !important;
   }
 
   .atlas-farm-snapshot-bar {
