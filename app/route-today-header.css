@@ -1,0 +1,45 @@
+.atlas-route-today-head {
+  display: flex !important;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px !important;
+}
+
+.atlas-route-today-title {
+  min-width: 0;
+  display: flex !important;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px !important;
+}
+
+.atlas-route-today-title span,
+.atlas-route-today-title strong {
+  color: var(--atlas-text) !important;
+  font-size: 30px !important;
+  line-height: 0.95 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.055em !important;
+  text-transform: none !important;
+}
+
+.atlas-route-today-head time {
+  flex: 0 0 auto;
+  color: var(--atlas-muted);
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 900;
+  padding-top: 5px;
+  white-space: nowrap;
+}
+
+@media (max-width: 430px) {
+  .atlas-route-today-title span,
+  .atlas-route-today-title strong {
+    font-size: 27px !important;
+  }
+
+  .atlas-route-today-head time {
+    font-size: 12px;
+  }
+}
