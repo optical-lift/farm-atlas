@@ -3,9 +3,12 @@
   display: none !important;
 }
 
-.atlas-route-mode .atlas-task-page-active-anchor,
-.atlas-route-mode .atlas-task-page-body > .atlas-task-page-section:not(.atlas-route-collection) {
+.atlas-route-mode .atlas-task-page-active-anchor {
   display: none !important;
+}
+
+.atlas-route-mode .atlas-route-collection ~ .atlas-task-page-section:not(.atlas-route-collection) {
+  display: grid !important;
 }
 
 .atlas-route-mode .atlas-task-page-hero h2::after {
