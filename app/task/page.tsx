@@ -163,6 +163,35 @@ function laneForTask(task: AtlasTaskCard): LaneKey {
   return displayTask(task).lane;
 }
 
+function isChildTask(task: AtlasTaskCard) {
+  return metadataValue(task, "is_child_task") === true || metadataValue(task, "is_child_task") === "true";
+}
+
+function childParentId(task: AtlasTaskCard) {
+  return metaString(task, "parent_task_id");
+}
+
+function checklistLabel(task: AtlasTaskCard) {
+  return metaString(task, "checklist_label") ?? displayTask(task).subject;
+}
+
+function isChecklistDone(task: AtlasTaskCard) {
+  return metaString(task, "checklist_status") === "done";
+}
+
+function latestOutcome(task: AtlasTaskCard) {
+  return task.task_outcomes?.[0] ?? null;
+}
+
+function isCompletedTask(task: AtlasTaskCard) {
+  return task.status === "done" || latestOutcome(task)?.outcome === "done" || isChecklistDone(task);
+}
+
+function progressPercent(done: number, total: number) {
+  if (total <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((done / total) * 100)));
+}
+
 function workWindowForTask(task: AtlasTaskCard, weatherLabel: string) {
   const display = displayTask(task);
   const text = `${task.task_type} ${task.title} ${display.rhythm} ${display.action}`.toLowerCase();
@@ -172,10 +201,6 @@ function workWindowForTask(task: AtlasTaskCard, weatherLabel: string) {
   if (text.includes("weed") || text.includes("hoe") || text.includes("mow") || display.lane === "harvest") return "Morning";
   if (display.lane === "venue") return "Afternoon";
   return "";
-}
-
-function latestOutcome(task: AtlasTaskCard) {
-  return task.task_outcomes?.[0] ?? null;
 }
 
 function carryoverLabel(task: AtlasTaskCard, today: string) {
@@ -247,6 +272,58 @@ function DetailCard({ heading, lines }: { heading: string | null; lines: string[
     <section className="atlas-task-detail-card">
       <strong>{heading}</strong>
       {lines.map((line) => <p key={line}>{line}</p>)}
+    </section>
+  );
+}
+
+function ProgressLine({ label, value, percent }: { label: string; value: string; percent: number }) {
+  return (
+    <div className="atlas-progress-line">
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+      <div className="atlas-progress-bar"><i style={{ width: `${percent}%` }} /></div>
+    </div>
+  );
+}
+
+function ProgressReportHero({ selectedTask, tasks, nextWorkTasks, today }: { selectedTask: AtlasTaskCard | null; tasks: AtlasTaskCard[]; nextWorkTasks: AtlasTaskCard[]; today: string }) {
+  const selectedDisplay = selectedTask ? displayTask(selectedTask) : null;
+  const childTasks = selectedTask ? tasks.filter((task) => childParentId(task) === selectedTask.task_id && task.status !== "archived").sort((a, b) => (metaNumber(a, "step_order") ?? 999) - (metaNumber(b, "step_order") ?? 999)) : [];
+  const taskTotal = childTasks.length || (selectedTask ? 1 : 0);
+  const taskDone = childTasks.length ? childTasks.filter(isChecklistDone).length : selectedTask && isCompletedTask(selectedTask) ? 1 : 0;
+  const dayTasks = tasks.filter((task) => !isChildTask(task) && task.status !== "archived" && (!task.due_date || task.due_date <= today));
+  const dayDone = dayTasks.filter(isCompletedTask).length;
+  const dayTotal = dayTasks.length;
+  const remainingSteps = childTasks.filter((task) => !isChecklistDone(task)).map(checklistLabel).slice(0, 3);
+  const nextTask = nextWorkTasks.find((task) => task.task_id !== selectedTask?.task_id) ?? null;
+
+  return (
+    <section className="atlas-task-page-hero atlas-task-progress-hero">
+      <span>Today · {prettyDate(today)}</span>
+      <div className="atlas-progress-hero-head">
+        <h2>{selectedDisplay?.subject ?? "Day Progress"}</h2>
+        {selectedDisplay ? <small>{selectedDisplay.action} · {selectedDisplay.location}</small> : null}
+      </div>
+      {selectedTask ? (
+        <div className="atlas-progress-report">
+          <ProgressLine label="Task" value={`${taskDone} / ${taskTotal} steps done`} percent={progressPercent(taskDone, taskTotal)} />
+          <ProgressLine label="Day" value={`${dayDone} / ${dayTotal} tasks done`} percent={progressPercent(dayDone, dayTotal)} />
+          <div className="atlas-progress-next-line">
+            <span>Remaining here</span>
+            <strong>{remainingSteps.length ? remainingSteps.join(" · ") : "Ready to finish this card"}</strong>
+          </div>
+          {nextTask ? (
+            <div className="atlas-progress-next-line">
+              <span>Next task</span>
+              <strong>{displayTask(nextTask).subject}</strong>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <p>No active task selected.</p>
+      )}
     </section>
   );
 }
@@ -370,14 +447,14 @@ export default function AtlasTaskPage() {
   const visibleTasks = useMemo(() => selectedLane ? openTasks.filter((task) => laneForTask(task) === selectedLane) : openTasks, [openTasks, selectedLane]);
   const todayTasks = useMemo(() => visibleTasks.filter((task) => !task.due_date || task.due_date <= today), [visibleTasks, today]);
   const nextTasks = useMemo(() => visibleTasks.filter((task) => task.due_date && task.due_date > today && task.due_date <= nextWeek), [visibleTasks, nextWeek, today]);
-  const nextWorkTasks = useMemo(() => (todayTasks.length ? todayTasks : nextTasks).slice(0, 3), [nextTasks, todayTasks]);
-  const laterWorkTasks = useMemo(() => (todayTasks.length ? todayTasks : nextTasks).slice(3), [nextTasks, todayTasks]);
-  const carryoverTasks = useMemo(() => visibleTasks.filter((task) => isCarryoverTask(task, today)).slice(0, 5), [visibleTasks, today]);
-  const matchingLane = useMemo(() => selectedLane ? openTasks.filter((task) => laneForTask(task) === selectedLane) : [], [openTasks, selectedLane]);
+  const nextWorkTasks = useMemo(() => (todayTasks.length ? todayTasks : nextTasks).filter((task) => !isChildTask(task)).slice(0, 3), [nextTasks, todayTasks]);
+  const laterWorkTasks = useMemo(() => (todayTasks.length ? todayTasks : nextTasks).filter((task) => !isChildTask(task)).slice(3), [nextTasks, todayTasks]);
+  const carryoverTasks = useMemo(() => visibleTasks.filter((task) => isCarryoverTask(task, today) && !isChildTask(task)).slice(0, 5), [visibleTasks, today]);
+  const matchingLane = useMemo(() => selectedLane ? openTasks.filter((task) => laneForTask(task) === selectedLane && !isChildTask(task)) : [], [openTasks, selectedLane]);
   const selectedTask = useMemo(() => {
     if (selectedTaskId) return tasks.find((task) => task.task_id === selectedTaskId) ?? null;
     if (matchingLane.length) return matchingLane[0];
-    return nextWorkTasks[0] ?? todayTasks[0] ?? nextTasks[0] ?? openTasks[0] ?? null;
+    return nextWorkTasks[0] ?? todayTasks.find((task) => !isChildTask(task)) ?? nextTasks.find((task) => !isChildTask(task)) ?? openTasks.find((task) => !isChildTask(task)) ?? null;
   }, [matchingLane, nextTasks, nextWorkTasks, openTasks, selectedTaskId, tasks, todayTasks]);
 
   function scrollToActiveTask() {
@@ -430,17 +507,7 @@ export default function AtlasTaskPage() {
           <button type="button" className="atlas-note-plus" aria-label="Add task note" onClick={() => void addHeaderNote()}>+</button>
         </header>
         <div className="atlas-task-page-body">
-          <section className="atlas-task-page-hero">
-            <span>Today · {prettyDate(today)}</span>
-            <h2>Production Setup</h2>
-            <p>{nextWorkTasks.length} next · {laterWorkTasks.length} later · {carryoverTasks.length} waiting</p>
-            <div className="atlas-task-page-lanes">
-              {(Object.keys(laneLabels) as LaneKey[]).map((lane) => {
-                const count = openTasks.filter((task) => laneForTask(task) === lane).length;
-                return <button key={lane} type="button" className={selectedLane === lane ? "selected" : ""} onClick={() => selectLane(lane)}>{laneLabels[lane]} <b>{count}</b></button>;
-              })}
-            </div>
-          </section>
+          <ProgressReportHero selectedTask={selectedTask} tasks={tasks} nextWorkTasks={nextWorkTasks} today={today} />
           {loading ? <div className="atlas-task-page-empty">Loading tasks.</div> : null}
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
           {message ? <div className="atlas-task-page-empty">{message}</div> : null}
@@ -449,7 +516,7 @@ export default function AtlasTaskPage() {
           <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Next</span><small>{nextWorkTasks.length}</small></div>{renderTaskRows(nextWorkTasks, "No next tasks ready.")}</section>
           <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Later</span><small>{laterWorkTasks.length}</small></div>{renderTaskRows(laterWorkTasks, "Nothing queued later yet.")}</section>
           <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Waiting</span><small>{carryoverTasks.length}</small></div>{renderTaskRows(carryoverTasks, "No carried or waiting tasks.")}</section>
-          <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>This Week</span><small>{nextTasks.length}</small></div>{renderTaskRows(nextTasks, "No scheduled tasks in the next week.")}</section>
+          <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>This Week</span><small>{nextTasks.length}</small></div>{renderTaskRows(nextTasks.filter((task) => !isChildTask(task)), "No scheduled tasks in the next week.")}</section>
         </div>
       </section>
     </main>
