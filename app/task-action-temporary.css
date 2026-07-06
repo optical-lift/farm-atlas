@@ -46,6 +46,7 @@
 
 .atlas-plant-spacing-card,
 .atlas-task-tools-card,
+.atlas-default-task-tools-card,
 .atlas-child-checklist {
   border: 1px solid var(--atlas-border-soft);
   border-radius: 18px;
@@ -57,6 +58,7 @@
 
 .atlas-plant-spacing-card > strong,
 .atlas-task-tools-card > strong,
+.atlas-default-task-tools-card > strong,
 .atlas-child-checklist > strong {
   color: #858bb8;
   font-size: 11px;
@@ -67,14 +69,16 @@
 }
 
 .atlas-plant-spacing-card > div,
-.atlas-task-tools-card > div {
+.atlas-task-tools-card > div,
+.atlas-default-task-tools-card > div {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
 }
 
 .atlas-plant-spacing-card span,
-.atlas-task-tools-card span {
+.atlas-task-tools-card span,
+.atlas-default-task-tools-card span {
   border: 1px solid rgba(139, 145, 194, 0.22);
   border-radius: 999px;
   background: rgba(246, 242, 230, 0.64);
