@@ -1,8 +1,4 @@
-.atlas-task-page-time-row span:nth-child(2):not(:last-child),
-.atlas-task-page-row small {
-  display: none !important;
-}
-
+.atlas-task-page-row small,
 .atlas-task-page-row span {
   display: none !important;
 }
