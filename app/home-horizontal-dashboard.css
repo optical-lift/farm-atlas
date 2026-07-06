@@ -6,6 +6,36 @@
   overflow: visible !important;
 }
 
+.atlas-home-grid > .atlas-home-task-hero.atlas-daily-run-sheet {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  order: 1 !important;
+}
+
+.atlas-home-grid > .atlas-home-next-task-strip {
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+  order: 2 !important;
+}
+
+.atlas-home-grid > .atlas-week-overview-box {
+  grid-column: 1 / -1 !important;
+  grid-row: 3 !important;
+  order: 3 !important;
+}
+
+.atlas-home-grid > .atlas-farm-snapshot-box {
+  grid-column: 1 / -1 !important;
+  grid-row: 4 !important;
+  order: 4 !important;
+}
+
+.atlas-home-grid > button:not(.atlas-note-plus):not(.atlas-week-overview-box) {
+  grid-column: 1 / -1 !important;
+  grid-row: 5 !important;
+  order: 5 !important;
+}
+
 .atlas-route-sheet-box:nth-child(n + 5) {
   display: none !important;
 }
@@ -13,7 +43,6 @@
 .atlas-home-task-hero.atlas-task-controller.atlas-daily-run-sheet {
   height: auto !important;
   min-height: 0 !important;
-  order: 10 !important;
 }
 
 .atlas-run-sheet-grid.atlas-route-sheet-grid {
@@ -27,12 +56,10 @@
 }
 
 .atlas-home-next-task-strip {
-  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   min-width: 0;
-  order: 20 !important;
 }
 
 .atlas-home-next-task-card {
@@ -96,29 +123,10 @@
   font-weight: 950;
 }
 
-.atlas-home-row-wide,
-.atlas-week-overview-box,
-.atlas-farm-snapshot-box,
-.atlas-home-grid > button:not(.atlas-note-plus):not(.atlas-week-overview-box) {
-  grid-column: 1 / -1 !important;
-}
-
 .atlas-week-overview-box,
 .atlas-farm-snapshot-box {
   min-height: 0 !important;
   height: auto !important;
-}
-
-.atlas-week-overview-box {
-  order: 30;
-}
-
-.atlas-farm-snapshot-box {
-  order: 40;
-}
-
-.atlas-home-grid > button:not(.atlas-note-plus):not(.atlas-week-overview-box) {
-  order: 50;
 }
 
 .atlas-week-mini-list {
