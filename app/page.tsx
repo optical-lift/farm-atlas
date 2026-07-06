@@ -15,9 +15,22 @@ import { saveAtlasInboxItem } from "@/lib/atlas/inbox-client";
 type HomePanel = "inbox" | "projects" | "closeout" | null;
 type WeatherResponse = { ok: boolean; label?: string; rainAge?: string; daysSinceRain?: number | null; error?: string };
 type HomeTaskDisplay = { rhythm: string; action: string; subject: string; location: string; detail: string | null };
+type WorkRouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
+type WorkRoute = { key: WorkRouteKey; label: string; cards: AtlasTaskCard[]; zones: string[]; preview: string; href: string };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const defaultSnapshot: AtlasFarmSnapshot = { totalBeds: 0, growingBeds: 0, activeSqft: 0, sowingsLogged: 0, stemsLogged: 0 };
+const routeOrder: WorkRouteKey[] = ["plant", "weed", "mow", "seed", "harvest", "build", "venue", "water"];
+const routeLabels: Record<WorkRouteKey, string> = {
+  plant: "Plant",
+  weed: "Weed",
+  mow: "Mow",
+  seed: "Seed",
+  harvest: "Harvest",
+  build: "Build / Prep",
+  venue: "Venue",
+  water: "Water",
+};
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -71,9 +84,9 @@ function taskSortValue(card: AtlasTaskCard) {
 function taskDisplay(card: AtlasTaskCard): HomeTaskDisplay {
   const text = `${card.task_type} ${card.title}`.toLowerCase();
   const rhythm = metaString(card, "work_rhythm")
-    ?? (text.includes("harvest") ? "Harvest + Postharvest" : text.includes("venue") || text.includes("paint") || text.includes("trim") || text.includes("tidy") ? "Venue Maintenance" : text.includes("seed") || text.includes("sow") ? "Seed Sowing" : text.includes("weed") ? "Weeding" : text.includes("plant") ? "Planting" : text.includes("mow") ? "Maintenance" : "Farm Work");
+    ?? (text.includes("water") ? "Watering" : text.includes("harvest") ? "Harvest + Postharvest" : text.includes("venue") || text.includes("paint") || text.includes("trim") || text.includes("tidy") ? "Venue Maintenance" : text.includes("seed") || text.includes("sow") ? "Seed Sowing" : text.includes("weed") ? "Weeding" : text.includes("plant") ? "Planting" : text.includes("mow") ? "Maintenance" : text.includes("prep") || text.includes("string") ? "Build / Prep" : "Farm Work");
   const action = metaString(card, "display_action")
-    ?? (text.includes("mow") ? "Mow" : text.includes("weed") ? "Weed" : text.includes("sow") ? "Sow" : text.includes("seed") ? "Seed" : text.includes("plant") ? "Plant" : text.includes("paint") ? "Paint" : text.includes("trim") ? "Trim" : text.includes("tidy") ? "Tidy" : text.includes("harvest") ? "Harvest" : rhythm);
+    ?? (text.includes("water") ? "Water" : text.includes("mow") ? "Mow" : text.includes("weed") ? "Weed" : text.includes("sow") ? "Sow" : text.includes("seed") ? "Seed" : text.includes("plant") ? "Plant" : text.includes("paint") ? "Paint" : text.includes("trim") ? "Trim" : text.includes("tidy") ? "Tidy" : text.includes("harvest") ? "Harvest" : text.includes("prep") ? "Prep" : text.includes("string") ? "String" : rhythm);
   const detailLines = metaStringList(card, "detail_lines");
 
   return {
@@ -87,7 +100,65 @@ function taskDisplay(card: AtlasTaskCard): HomeTaskDisplay {
 
 function isDashboardWork(card: AtlasTaskCard) {
   const text = `${card.task_type} ${card.title} ${card.unlock_text ?? ""}`.toLowerCase();
-  return !(text.includes("verify") || text.includes("check") || text.includes("confirm") || text.includes("count") || text.includes("germin") || text.includes("walk field rows"));
+  const isChild = metadataValue(card, "is_child_task") === true || metadataValue(card, "is_child_task") === "true";
+  return !isChild && !(text.includes("verify") || text.includes("check") || text.includes("confirm") || text.includes("count") || text.includes("germin") || text.includes("walk field rows"));
+}
+
+function routeKeyForTask(card: AtlasTaskCard): WorkRouteKey {
+  const display = taskDisplay(card);
+  const text = `${card.task_type} ${card.title} ${display.rhythm} ${display.action}`.toLowerCase();
+  if (text.includes("water")) return "water";
+  if (text.includes("mow")) return "mow";
+  if (text.includes("weed")) return "weed";
+  if (text.includes("seed") || text.includes("sow")) return "seed";
+  if (text.includes("harvest") || text.includes("postharvest") || text.includes("garlic") || text.includes("gather")) return "harvest";
+  if (text.includes("venue") || text.includes("paint") || text.includes("trim") || text.includes("tidy") || text.includes("chicken")) return "venue";
+  if (text.includes("build") || text.includes("prep") || text.includes("string") || text.includes("arch")) return "build";
+  if (text.includes("plant") || text.includes("transplant")) return "plant";
+  return "venue";
+}
+
+function zoneBucket(location: string) {
+  const lower = location.toLowerCase();
+  if (lower.includes("main garden") || lower.includes("straw strip")) return "Main Garden";
+  if (lower.includes("field") || lower.includes("fr")) return "Field Rows";
+  if (lower.includes("barn")) return "Barn Beds";
+  if (lower.includes("berry") || lower.includes("bw")) return "Berry Walk";
+  if (lower.includes("u-pick") || lower.includes("u pick")) return "U-Pick";
+  if (lower.includes("follow me")) return "Follow Me";
+  if (lower.includes("curve")) return "Curve Garden";
+  if (lower.includes("lilac")) return "Lilac Haven";
+  if (lower.includes("garage") || lower.includes("hydrangea")) return "Garage Bed";
+  if (lower.includes("grow room")) return "Grow Room";
+  if (lower.includes("entry") || lower.includes("billboard")) return "Entry Billboard";
+  if (lower.includes("oak") || lower.includes("strawberry orchard")) return "Shady Oak";
+  if (lower.includes("chicken")) return "Chicken Coop";
+  return location;
+}
+
+function buildRoutes(cards: AtlasTaskCard[]) {
+  const byRoute = new Map<WorkRouteKey, AtlasTaskCard[]>();
+  routeOrder.forEach((key) => byRoute.set(key, []));
+  cards.forEach((card) => byRoute.get(routeKeyForTask(card))?.push(card));
+
+  return routeOrder
+    .map((key): WorkRoute | null => {
+      const routeCards = (byRoute.get(key) ?? []).sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
+      if (routeCards.length === 0) return null;
+      const displays = routeCards.map(taskDisplay);
+      const zones = Array.from(new Set(displays.map((display) => zoneBucket(display.location)).filter(Boolean))).slice(0, 4);
+      const preview = displays.map((display) => display.subject).slice(0, 3).join(" · ");
+      const first = routeCards[0];
+      return {
+        key,
+        label: routeLabels[key],
+        cards: routeCards,
+        zones,
+        preview,
+        href: `/task?taskId=${encodeURIComponent(first.task_id)}`,
+      };
+    })
+    .filter((route): route is WorkRoute => Boolean(route));
 }
 
 function projectCardKey(project: AtlasProjectCard) {
@@ -124,12 +195,9 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
   const dashboardCards = cards.filter(isDashboardWork);
   const todayCards = dashboardCards.filter((card) => !card.due_date || card.due_date <= today);
   const upcomingCards = dashboardCards.filter((card) => card.due_date && card.due_date > today);
-  const runCards = (todayCards.length ? todayCards : upcomingCards).slice(0, 6);
-  const firstDue = runCards[0]?.due_date ? prettyDate(runCards[0].due_date) : prettyDate(today);
-  const shape = runCards.map((card) => {
-    const display = taskDisplay(card);
-    return `${display.action.toLowerCase()} ${display.subject.toLowerCase()}`;
-  }).join(" · ");
+  const routeSource = todayCards.length ? todayCards : upcomingCards;
+  const routes = buildRoutes(routeSource);
+  const firstDue = routeSource[0]?.due_date ? prettyDate(routeSource[0].due_date) : prettyDate(today);
 
   if (loading && cards.length === 0) {
     return (
@@ -147,38 +215,30 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
   }
 
   return (
-    <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller atlas-daily-run-sheet">
+    <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller atlas-daily-run-sheet atlas-route-sheet">
       <div className="atlas-task-controller-head">
         <div>
           <span className="atlas-task-kicker">Today</span>
-          <em className="atlas-season-label">Run sheet · {firstDue}</em>
+          <em className="atlas-season-label">Choose a route · {firstDue}</em>
         </div>
         <Link href="/task" className="atlas-task-date">{dashboardCards.length} work</Link>
       </div>
 
-      <div className="atlas-run-sheet-summary">
-        <strong>{todayCards.length ? "Today’s work" : "Next work"}</strong>
-        <span>{shape || "Open the task board."}</span>
-      </div>
-
-      {runCards.length === 0 ? (
+      {routes.length === 0 ? (
         <Link href="/task" className="atlas-run-sheet-empty">
           <strong>No open farm work</strong>
           <em>Open the task board.</em>
         </Link>
       ) : (
-        <div className="atlas-run-sheet-grid">
-          {runCards.map((card, index) => {
-            const display = taskDisplay(card);
-            return (
-              <Link key={card.task_id} href={`/task?taskId=${encodeURIComponent(card.task_id)}`} className="atlas-run-sheet-box">
-                <small>{index + 1} · {display.action}</small>
-                <strong>{display.subject}</strong>
-                <span>{display.location}</span>
-                {display.detail ? <em>{display.detail}</em> : null}
-              </Link>
-            );
-          })}
+        <div className="atlas-run-sheet-grid atlas-route-sheet-grid">
+          {routes.map((route, index) => (
+            <Link key={route.key} href={route.href} className="atlas-run-sheet-box atlas-route-sheet-box">
+              <small>{index + 1} · {route.label}</small>
+              <strong>{route.label}</strong>
+              <span>{route.cards.length} {route.cards.length === 1 ? "task" : "tasks"} · {route.zones.join(", ")}</span>
+              <em>{route.preview}</em>
+            </Link>
+          ))}
         </div>
       )}
     </article>
