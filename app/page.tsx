@@ -14,10 +14,9 @@ import { saveAtlasInboxItem } from "@/lib/atlas/inbox-client";
 
 type HomePanel = "inbox" | "projects" | "closeout" | null;
 type WeatherResponse = { ok: boolean; label?: string; rainAge?: string; daysSinceRain?: number | null; error?: string };
-type TaskLaneKey = "start" | "maintain" | "verify";
+type HomeTaskDisplay = { rhythm: string; action: string; subject: string; location: string; detail: string | null };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
-const laneLabels: Record<TaskLaneKey, string> = { start: "Start", maintain: "Maintain", verify: "Verify" };
 const defaultSnapshot: AtlasFarmSnapshot = { totalBeds: 0, growingBeds: 0, activeSqft: 0, sowingsLogged: 0, stemsLogged: 0 };
 
 function todayIso() {
@@ -34,49 +33,61 @@ function prettyDate(dateIso: string | null | undefined) {
 function cleanLabel(value: string | null | undefined) {
   return (value ?? "")
     .replace(/truth/gi, "state")
-    .replace(/\bAnna\b/g, "crew")
-    .replace(/\bLex\b/g, "crew")
     .replace(/\b(urgent|high|normal|low)\b/gi, "")
     .replace(/\s+·\s+·\s+/g, " · ")
     .replace(/^\s*·\s*|\s*·\s*$/g, "")
     .trim();
 }
 
+function metadataValue(card: AtlasTaskCard, key: string) {
+  return card.metadata?.[key];
+}
+
+function metaString(card: AtlasTaskCard, key: string) {
+  const value = metadataValue(card, key);
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function metaNumber(card: AtlasTaskCard, key: string) {
+  const value = metadataValue(card, key);
+  return typeof value === "number" ? value : null;
+}
+
+function metaStringList(card: AtlasTaskCard, key: string) {
+  const value = metadataValue(card, key);
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
+}
+
+function titleSubject(title: string) {
+  const parts = title.split("—");
+  return cleanLabel(parts.length > 1 ? parts.slice(1).join("—") : title);
+}
+
 function taskSortValue(card: AtlasTaskCard) {
-  return `${card.due_date ?? "9999-12-31"}-${priorityRank[card.priority] ?? 9}-${card.title}`;
+  const dayOrder = metaNumber(card, "day_order") ?? 999;
+  return `${card.due_date ?? "9999-12-31"}-${priorityRank[card.priority] ?? 9}-${String(dayOrder).padStart(3, "0")}-${card.title}`;
 }
 
-function taskLaneForCard(card: AtlasTaskCard): TaskLaneKey {
+function taskDisplay(card: AtlasTaskCard): HomeTaskDisplay {
+  const text = `${card.task_type} ${card.title}`.toLowerCase();
+  const rhythm = metaString(card, "work_rhythm")
+    ?? (text.includes("harvest") ? "Harvest + Postharvest" : text.includes("venue") || text.includes("paint") || text.includes("trim") || text.includes("tidy") ? "Venue Maintenance" : text.includes("seed") || text.includes("sow") ? "Seed Sowing" : text.includes("weed") ? "Weeding" : text.includes("plant") ? "Planting" : text.includes("mow") ? "Maintenance" : "Farm Work");
+  const action = metaString(card, "display_action")
+    ?? (text.includes("mow") ? "Mow" : text.includes("weed") ? "Weed" : text.includes("sow") ? "Sow" : text.includes("seed") ? "Seed" : text.includes("plant") ? "Plant" : text.includes("paint") ? "Paint" : text.includes("trim") ? "Trim" : text.includes("tidy") ? "Tidy" : text.includes("harvest") ? "Harvest" : rhythm);
+  const detailLines = metaStringList(card, "detail_lines");
+
+  return {
+    rhythm,
+    action,
+    subject: metaString(card, "display_subject") ?? titleSubject(card.title),
+    location: metaString(card, "display_detail") ?? card.unlock_text ?? card.zone_label ?? "Elm Farm",
+    detail: detailLines[0] ?? null,
+  };
+}
+
+function isDashboardWork(card: AtlasTaskCard) {
   const text = `${card.task_type} ${card.title} ${card.unlock_text ?? ""}`.toLowerCase();
-  if (text.includes("sow") || text.includes("seed") || text.includes("plant") || text.includes("transplant") || text.includes("assign")) return "start";
-  if (text.includes("check") || text.includes("confirm") || text.includes("count") || text.includes("germin") || text.includes("mark") || text.includes("walk")) return "verify";
-  return "maintain";
-}
-
-function taskText(card: AtlasTaskCard) {
-  return `${card.task_type ?? ""} ${card.title} ${card.unlock_text ?? ""} ${card.note ?? ""}`.toLowerCase();
-}
-
-function workWindowForCard(card: AtlasTaskCard, weatherLabel: string) {
-  const text = taskText(card);
-  const lane = taskLaneForCard(card);
-  const weather = weatherLabel.toLowerCase();
-
-  if (weather.includes("rain") && (lane === "verify" || text.includes("germin") || text.includes("check"))) return "After rain";
-  if (text.includes("heat") || text.includes("water") || text.includes("weed") || text.includes("hoe")) return "Morning";
-  if (lane === "start" && (text.includes("grow room") || text.includes("tray") || text.includes("seed"))) return "Anytime";
-  if (lane === "verify") return "Morning";
-  return "Anytime";
-}
-
-function compactTaskLocation(task: AtlasTaskCard | undefined) {
-  if (!task) return "Open task board";
-  const objectLabels = task.objects.map((object) => object.object_label).filter(Boolean).slice(0, 2);
-  return objectLabels.length ? objectLabels.join(" · ") : task.zone_label ?? "Elm Farm";
-}
-
-function taskLine(card: AtlasTaskCard, weatherLabel: string) {
-  return [compactTaskLocation(card), card.due_date ? prettyDate(card.due_date) : null, workWindowForCard(card, weatherLabel)].filter(Boolean).join(" · ");
+  return !(text.includes("verify") || text.includes("check") || text.includes("confirm") || text.includes("count") || text.includes("germin") || text.includes("walk field rows"));
 }
 
 function projectCardKey(project: AtlasProjectCard) {
@@ -108,18 +119,26 @@ function panelTitle(panel: HomePanel) {
   return "Atlas";
 }
 
-function TaskLaunchHero({ cards, loading, weatherLabel }: { cards: AtlasTaskCard[]; loading: boolean; weatherLabel: string }) {
-  const nextCards = cards.slice(0, 3);
-  const nextDue = nextCards[0]?.due_date ? prettyDate(nextCards[0].due_date) : "today";
+function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: boolean; weatherLabel: string }) {
+  const today = todayIso();
+  const dashboardCards = cards.filter(isDashboardWork);
+  const todayCards = dashboardCards.filter((card) => !card.due_date || card.due_date <= today);
+  const upcomingCards = dashboardCards.filter((card) => card.due_date && card.due_date > today);
+  const runCards = (todayCards.length ? todayCards : upcomingCards).slice(0, 6);
+  const firstDue = runCards[0]?.due_date ? prettyDate(runCards[0].due_date) : prettyDate(today);
+  const shape = runCards.map((card) => {
+    const display = taskDisplay(card);
+    return `${display.action.toLowerCase()} ${display.subject.toLowerCase()}`;
+  }).join(" · ");
 
   if (loading && cards.length === 0) {
     return (
-      <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller empty">
+      <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller atlas-daily-run-sheet empty">
         <div className="atlas-task-controller-head">
           <span className="atlas-task-kicker">Today</span>
           <span className="atlas-task-date">Loading</span>
         </div>
-        <Link href="/task" className="atlas-hero-work-card primary">
+        <Link href="/task" className="atlas-run-sheet-empty">
           <strong>Loading the work board</strong>
           <em>Atlas is pulling open tasks.</em>
         </Link>
@@ -128,32 +147,35 @@ function TaskLaunchHero({ cards, loading, weatherLabel }: { cards: AtlasTaskCard
   }
 
   return (
-    <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller">
+    <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller atlas-daily-run-sheet">
       <div className="atlas-task-controller-head">
         <div>
           <span className="atlas-task-kicker">Today</span>
-          <em className="atlas-season-label">Next work · {nextDue}</em>
+          <em className="atlas-season-label">Run sheet · {firstDue}</em>
         </div>
-        <Link href="/task" className="atlas-task-date">{cards.length} open</Link>
+        <Link href="/task" className="atlas-task-date">{dashboardCards.length} work</Link>
       </div>
 
-      {nextCards.length === 0 ? (
-        <Link href="/task" className="atlas-hero-work-card primary">
-          <strong>No open tasks</strong>
+      <div className="atlas-run-sheet-summary">
+        <strong>{todayCards.length ? "Today’s work" : "Next work"}</strong>
+        <span>{shape || "Open the task board."}</span>
+      </div>
+
+      {runCards.length === 0 ? (
+        <Link href="/task" className="atlas-run-sheet-empty">
+          <strong>No open farm work</strong>
           <em>Open the task board.</em>
         </Link>
       ) : (
-        <div className="atlas-hero-work-list">
-          {nextCards.map((card, index) => {
-            const lane = taskLaneForCard(card);
+        <div className="atlas-run-sheet-grid">
+          {runCards.map((card, index) => {
+            const display = taskDisplay(card);
             return (
-              <Link key={card.task_id} href={`/task?taskId=${encodeURIComponent(card.task_id)}`} className={index === 0 ? "atlas-hero-work-card primary" : "atlas-hero-work-card"}>
-                <small>{index + 1}</small>
-                <div>
-                  <strong>{laneLabels[lane]} · {cleanLabel(compactTaskLocation(card))}</strong>
-                  <em>{taskLine(card, weatherLabel)}</em>
-                </div>
-                <b>{laneLabels[lane]}</b>
+              <Link key={card.task_id} href={`/task?taskId=${encodeURIComponent(card.task_id)}`} className="atlas-run-sheet-box">
+                <small>{index + 1} · {display.action}</small>
+                <strong>{display.subject}</strong>
+                <span>{display.location}</span>
+                {display.detail ? <em>{display.detail}</em> : null}
               </Link>
             );
           })}
