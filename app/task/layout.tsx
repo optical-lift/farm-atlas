@@ -4,6 +4,7 @@ import "../task-collection-focus.css";
 import "../task-progress-report.css";
 import "../default-task-tools.css";
 import "../route-date-groups.css";
+import "../route-today-header.css";
 
 export default function TaskLayout(props: { children: React.ReactNode }) {
   return props.children;
