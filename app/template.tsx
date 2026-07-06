@@ -78,6 +78,20 @@ function route(card: Card) {
   return "Task";
 }
 
+function routeKey(card: Card) {
+  const value = route(card).toLowerCase();
+  if (value.includes("build")) return "build";
+  if (value.includes("prep")) return "build";
+  if (value.includes("plant")) return "plant";
+  if (value.includes("weed")) return "weed";
+  if (value.includes("mow")) return "mow";
+  if (value.includes("seed") || value.includes("sow")) return "seed";
+  if (value.includes("harvest")) return "harvest";
+  if (value.includes("water")) return "water";
+  if (value.includes("venue")) return "venue";
+  return value;
+}
+
 function routeLabel(card: Card) {
   const value = route(card);
   return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, " ");
@@ -98,16 +112,28 @@ function detail(card: Card) {
   return stringList(meta(card, "detail_lines"))[0] || text(meta(card, "display_detail")) || card.unlock_text || "Open task";
 }
 
+function dashboardCardsForRouteSource(cards: Card[]) {
+  const today = todayIso();
+  const dashboardCards = cards.filter(isMainCard).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+  const todayCards = dashboardCards.filter((card) => !card.due_date || card.due_date <= today);
+  const upcomingCards = dashboardCards.filter((card) => card.due_date && card.due_date > today);
+  return todayCards.length ? todayCards : upcomingCards;
+}
+
+async function fetchTaskCards() {
+  const response = await fetch("/api/atlas/task-cards", { headers: { Accept: "application/json" }, cache: "no-store" });
+  const data = (await response.json()) as { taskCards?: Card[] };
+  return data.taskCards ?? [];
+}
+
 async function insertFirstTaskPreviews() {
   if (window.location.pathname !== "/") return;
   const grid = document.querySelector(".atlas-home-grid");
   const hero = document.querySelector(".atlas-home-task-hero");
   if (!grid || !hero || grid.querySelector(".atlas-home-next-task-strip")) return;
 
-  const response = await fetch("/api/atlas/task-cards", { headers: { Accept: "application/json" }, cache: "no-store" });
-  const data = (await response.json()) as { taskCards?: Card[] };
   const today = todayIso();
-  const cards = (data.taskCards ?? [])
+  const cards = (await fetchTaskCards())
     .filter(isMainCard)
     .filter((card) => !card.due_date || card.due_date <= today)
     .sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
@@ -127,6 +153,32 @@ async function insertFirstTaskPreviews() {
   hero.insertAdjacentElement("afterend", strip);
 }
 
+async function pointSingleRouteCardsToTaskCards() {
+  if (window.location.pathname !== "/") return;
+  const routeCards = Array.from(document.querySelectorAll<HTMLAnchorElement>(".atlas-route-sheet-box"));
+  if (!routeCards.length) return;
+
+  const cards = dashboardCardsForRouteSource(await fetchTaskCards());
+  const byRoute = new Map<string, Card[]>();
+  cards.forEach((card) => {
+    const key = routeKey(card);
+    byRoute.set(key, [...(byRoute.get(key) ?? []), card]);
+  });
+
+  routeCards.forEach((card) => {
+    const key = routeFromCard(card);
+    if (!key) return;
+    const matchingCards = byRoute.get(key) ?? [];
+    if (matchingCards.length === 1) {
+      card.href = `/task?taskId=${encodeURIComponent(matchingCards[0].task_id)}`;
+      card.dataset.singleTaskId = matchingCards[0].task_id;
+      return;
+    }
+    card.href = `/task?route=${encodeURIComponent(key)}`;
+    delete card.dataset.singleTaskId;
+  });
+}
+
 function syncTaskMode() {
   const isTaskPage = window.location.pathname === "/task";
   const params = new URLSearchParams(window.location.search);
@@ -141,8 +193,9 @@ export default function RootTemplate({ children }: { children: ReactNode }) {
     function handleClick(event: MouseEvent) {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
-      const card = target.closest(".atlas-route-sheet-box");
+      const card = target.closest<HTMLAnchorElement>(".atlas-route-sheet-box");
       if (!card) return;
+      if (card.dataset.singleTaskId || card.href.includes("taskId=")) return;
       const route = routeFromCard(card);
       if (!route) return;
       event.preventDefault();
@@ -152,6 +205,7 @@ export default function RootTemplate({ children }: { children: ReactNode }) {
 
     syncTaskMode();
     void insertFirstTaskPreviews();
+    void pointSingleRouteCardsToTaskCards();
     document.addEventListener("click", handleClick, true);
     window.addEventListener("popstate", syncTaskMode);
     return () => {
