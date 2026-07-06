@@ -14,6 +14,7 @@ import "./field-state-capture.css";
 import "./day-run-sheet.css";
 import "./purple-hero-rollback.css";
 import "./home-horizontal-dashboard.css";
+import "./home-week-day-final-fit.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
