@@ -10,6 +10,20 @@
   order: 5 !important;
 }
 
+.atlas-home-task-hero.atlas-route-sheet {
+  padding-bottom: 18px !important;
+}
+
+.atlas-run-sheet-grid.atlas-route-sheet-grid {
+  grid-auto-rows: 90px !important;
+  gap: 10px !important;
+}
+
+.atlas-run-sheet-box.atlas-route-sheet-box {
+  height: 90px !important;
+  align-content: center !important;
+}
+
 .atlas-farm-snapshot-bar {
   min-width: 0;
   border: 1px solid rgba(225, 216, 202, 0.94);
@@ -81,7 +95,33 @@
   font-weight: 850;
 }
 
+@media (max-width: 430px) {
+  .atlas-home-task-hero.atlas-route-sheet {
+    padding-bottom: 16px !important;
+  }
+
+  .atlas-run-sheet-grid.atlas-route-sheet-grid {
+    grid-auto-rows: 88px !important;
+  }
+
+  .atlas-run-sheet-box.atlas-route-sheet-box {
+    height: 88px !important;
+  }
+}
+
 @media (max-width: 360px) {
+  .atlas-home-task-hero.atlas-route-sheet {
+    padding-bottom: 12px !important;
+  }
+
+  .atlas-run-sheet-grid.atlas-route-sheet-grid {
+    grid-auto-rows: 78px !important;
+  }
+
+  .atlas-run-sheet-box.atlas-route-sheet-box {
+    height: 78px !important;
+  }
+
   .atlas-farm-snapshot-bar {
     gap: 4px;
     padding-inline: 8px;
