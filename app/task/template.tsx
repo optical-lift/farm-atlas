@@ -49,7 +49,7 @@ function html(value: string) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
 
@@ -140,10 +140,14 @@ function shouldRemoveParentDetail(parent: TaskCard, detail: Element | null) {
 }
 
 function taskTools(parent: TaskCard) {
-  if (routeForTask(parent) === "mow") {
-    return ["Battery push mower", "Riding mower", "Weed whacker", "Leaf blower"];
-  }
-  return stringList(parent.metadata?.tool_lines);
+  const explicit = stringList(parent.metadata?.tool_lines);
+  if (explicit.length) return explicit;
+  const route = routeForTask(parent);
+  if (route === "plant") return ["Hori hori", "Shovel", "Gloves", "Hose"];
+  if (route === "weed") return ["Gloves"];
+  if (route === "harvest") return ["Gloves", "Snips", "Buckets", "Rubber bands"];
+  if (route === "mow") return ["Battery push mower", "Riding mower", "Weed whacker", "Leaf blower"];
+  return [];
 }
 
 function isDone(card: TaskCard) {
@@ -166,7 +170,7 @@ function prettyDate(dateIso: string | null | undefined) {
   if (!dateIso) return "No date";
   const date = new Date(`${dateIso}T12:00:00`);
   if (Number.isNaN(date.getTime())) return dateIso;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 }
 
 function findParent(cards: TaskCard[]) {
@@ -278,6 +282,7 @@ function insertTools(parent: TaskCard) {
   const card = document.querySelector(".atlas-task-page-active");
   if (!card) return;
   card.querySelector(".atlas-task-tools-card")?.remove();
+  card.querySelector(".atlas-default-task-tools-card")?.remove();
   const tools = taskTools(parent);
   if (!tools.length) return;
 
@@ -358,9 +363,9 @@ function routeCard(task: TaskCard) {
   link.href = `/task?taskId=${encodeURIComponent(task.task_id)}`;
   const details = detailLines(task);
   link.innerHTML = `
-    <strong>${collectionLabel(task)}</strong>
-    <span>${location(task)}</span>
-    ${details.length ? `<em>${details.slice(0, 2).join(" · ")}</em>` : ""}
+    <strong>${html(collectionLabel(task))}</strong>
+    <span>${html(location(task))}</span>
+    ${details.length ? `<em>${html(details.slice(0, 2).join(" · "))}</em>` : ""}
   `;
   return link;
 }
@@ -385,7 +390,7 @@ function insertZoneGroups(target: Element | null, label: string, cards: TaskCard
   groups.forEach((groupName) => {
     const group = document.createElement("section");
     group.className = "atlas-route-zone-group atlas-lineup-zone-group";
-    group.innerHTML = `<h4>${groupName}</h4><div></div>`;
+    group.innerHTML = `<h4>${html(groupName)}</h4><div></div>`;
     const groupTarget = group.querySelector("div");
     cards.filter((task) => groupBy(task) === groupName).forEach((task) => groupTarget?.appendChild(lineupTaskCard(task)));
     list?.appendChild(group);
@@ -448,38 +453,46 @@ function insertRouteCollection(cards: TaskCard[]) {
 
   const parentCards = cards
     .filter((card) => isParentOpen(card) && routeForTask(card) === route)
-    .sort((a, b) => `${collectionZone(a)}-${numberValue(a.metadata?.day_order)}-${collectionLabel(a)}`.localeCompare(`${collectionZone(b)}-${numberValue(b.metadata?.day_order)}-${collectionLabel(b)}`));
+    .sort((a, b) => taskSortKey(a).localeCompare(taskSortKey(b)));
 
   const hero = document.querySelector(".atlas-task-page-hero");
   if (!hero) return;
 
   const section = document.createElement("section");
   section.className = "atlas-task-page-section atlas-route-collection";
-  const zones = Array.from(new Set(parentCards.map(collectionZone)));
+  const dates = Array.from(new Set(parentCards.map((card) => card.due_date ?? "No date")));
   section.innerHTML = `
     <div class="atlas-route-collection-head">
       <a href="/" class="atlas-route-back">← Routes</a>
       <div>
         <span>${routeLabels[route]}</span>
-        <strong>${parentCards.length} ${parentCards.length === 1 ? "task" : "tasks"}</strong>
-        <small>${zones.join(" · ")}</small>
+        <strong>By due date</strong>
+        <small>${parentCards.length} ${parentCards.length === 1 ? "open task" : "open tasks"}</small>
       </div>
     </div>
-    <div class="atlas-route-zone-list"></div>
+    <div class="atlas-route-date-list"></div>
   `;
 
-  const target = section.querySelector(".atlas-route-zone-list");
-  zones.forEach((zone) => {
-    const group = document.createElement("article");
-    group.className = "atlas-route-zone-group";
-    group.innerHTML = `<h3>${zone}</h3><div></div>`;
-    const groupTarget = group.querySelector("div");
-    parentCards.filter((task) => collectionZone(task) === zone).forEach((task) => groupTarget?.appendChild(routeCard(task)));
-    target?.appendChild(group);
+  const target = section.querySelector(".atlas-route-date-list");
+  dates.forEach((dateKey) => {
+    const dateCards = parentCards.filter((task) => (task.due_date ?? "No date") === dateKey);
+    const dateGroup = document.createElement("article");
+    dateGroup.className = "atlas-route-date-group";
+    dateGroup.innerHTML = `<h3>${html(prettyDate(dateKey === "No date" ? null : dateKey))} · ${dateCards.length} ${dateCards.length === 1 ? "task" : "tasks"}</h3><div></div>`;
+    const dateTarget = dateGroup.querySelector("div");
+    const zones = Array.from(new Set(dateCards.map(collectionZone)));
+    zones.forEach((zone) => {
+      const group = document.createElement("section");
+      group.className = "atlas-route-zone-group";
+      group.innerHTML = `<h4>${html(zone)}</h4><div></div>`;
+      const groupTarget = group.querySelector("div");
+      dateCards.filter((task) => collectionZone(task) === zone).forEach((task) => groupTarget?.appendChild(routeCard(task)));
+      dateTarget?.appendChild(group);
+    });
+    target?.appendChild(dateGroup);
   });
 
   hero.insertAdjacentElement("afterend", section);
-  insertWeeklyLineup(cards, hasTaskId);
 }
 
 export default function TaskTemplate({ children }: { children: ReactNode }) {
