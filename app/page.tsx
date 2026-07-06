@@ -382,7 +382,23 @@ function WeekLineupPanel({ cards }: { cards: AtlasTaskCard[] }) {
 }
 
 function FarmSnapshotBox({ snapshot, loading }: { snapshot: AtlasFarmSnapshot; loading: boolean }) {
-  return <Link href="/zones" className="atlas-home-box atlas-home-box-white atlas-home-box-link atlas-farm-snapshot-box"><strong>Farm Snapshot</strong><div className="atlas-snapshot-grid"><span><b>{loading ? "…" : snapshot.growingBeds}</b> growing beds</span><span><b>{loading ? "…" : snapshot.activeSqft.toLocaleString()}</b> active sq ft</span><span><b>{loading ? "…" : snapshot.sowingsLogged}</b> sowings logged</span><span><b>{loading ? "…" : snapshot.stemsLogged}</b> stems logged</span></div></Link>;
+  return (
+    <Link href="/zones" className="atlas-farm-snapshot-bar" aria-label="Open farm snapshot">
+      <span><b>{loading ? "…" : snapshot.growingBeds}</b> beds</span>
+      <span><b>{loading ? "…" : snapshot.activeSqft.toLocaleString()}</b> sq ft</span>
+      <span><b>{loading ? "…" : snapshot.sowingsLogged}</b> sowings</span>
+      <span><b>{loading ? "…" : snapshot.stemsLogged}</b> stems</span>
+    </Link>
+  );
+}
+
+function CloseoutFooterLink({ summary, today, onOpen }: { summary: AtlasCloseoutSummary | undefined; today: string; onOpen: () => void }) {
+  return (
+    <button type="button" className="atlas-home-closeout-footer-link" onClick={onOpen}>
+      <span>Closeout</span>
+      <em>{summary ? `${summary.counts.objectEvents} records · ${summary.counts.openTasks} open` : `Review · ${prettyDate(today)}`}</em>
+    </button>
+  );
 }
 
 function CloseoutPanel({ summaries, loading }: { summaries: AtlasCloseoutSummary[]; loading: boolean }) {
@@ -424,9 +440,9 @@ export default function AtlasHomePage() {
         </header>
         <div className="atlas-home-grid">
           <TaskLaunchHero cards={cards} loading={loading} weatherLabel={weatherLabel} />
-          <button type="button" className="atlas-home-box atlas-home-box-white" onClick={() => setOpenPanel("closeout")}><strong>Closeout</strong><em>{monthSummary ? `${monthSummary.counts.objectEvents} records · ${monthSummary.counts.openTasks} still open` : "Month record"}</em><div className="atlas-home-mini-list"><span>Today · {prettyDate(today)}</span><span>Review what changed</span></div></button>
           <WeeklyWorkBox cards={cards} loading={loading} onOpen={() => setOpenPanel("week")} />
           <FarmSnapshotBox snapshot={snapshot} loading={snapshotLoading} />
+          <CloseoutFooterLink summary={monthSummary} today={today} onOpen={() => setOpenPanel("closeout")} />
         </div>
       </section>
       {openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{panelTitle(openPanel)}</strong></div><button type="button" onClick={() => setOpenPanel(null)}>Close</button></div><div className="atlas-task-focus-body">{openPanel === "week" ? <WeekLineupPanel cards={cards} /> : null}{openPanel === "closeout" ? <CloseoutPanel summaries={closeoutSummaries} loading={closeoutLoading} /> : null}{openPanel === "inbox" ? <section className="atlas-task-focus-section"><div className="atlas-add-form"><select aria-label="Zone" value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">Whole farm</option></select><textarea aria-label="Note" value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Note" /></div><button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving" : "Save"}</button>{inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}</section> : null}</div></div></section> : null}
