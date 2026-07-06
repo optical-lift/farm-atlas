@@ -179,6 +179,19 @@ async function pointSingleRouteCardsToTaskCards() {
   });
 }
 
+async function redirectSingleRoutePageToTaskCard() {
+  if (window.location.pathname !== "/task") return;
+  const params = new URLSearchParams(window.location.search);
+  const routeParam = params.get("route");
+  if (!routeParam || params.get("taskId")) return;
+
+  const cards = dashboardCardsForRouteSource(await fetchTaskCards());
+  const matchingCards = cards.filter((card) => routeKey(card) === routeParam).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+  if (matchingCards.length === 1) {
+    window.location.replace(`/task?taskId=${encodeURIComponent(matchingCards[0].task_id)}`);
+  }
+}
+
 function syncTaskMode() {
   const isTaskPage = window.location.pathname === "/task";
   const params = new URLSearchParams(window.location.search);
@@ -206,6 +219,7 @@ export default function RootTemplate({ children }: { children: ReactNode }) {
     syncTaskMode();
     void insertFirstTaskPreviews();
     void pointSingleRouteCardsToTaskCards();
+    void redirectSingleRoutePageToTaskCard();
     document.addEventListener("click", handleClick, true);
     window.addEventListener("popstate", syncTaskMode);
     return () => {
