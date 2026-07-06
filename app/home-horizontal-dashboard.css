@@ -130,35 +130,38 @@
 }
 
 .atlas-week-overview-box {
-  padding: 14px 16px !important;
-  gap: 8px !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  overflow: visible !important;
 }
 
-.atlas-week-overview-box > strong {
-  font-size: 30px !important;
-  line-height: 0.95 !important;
-}
-
+.atlas-week-overview-box > strong,
 .atlas-week-overview-box > em {
-  font-size: 12px !important;
-  line-height: 1 !important;
+  display: none !important;
 }
 
 .atlas-week-day-preview-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 .atlas-week-day-preview-card {
   min-width: 0;
-  border: 1px solid #e1d8ca;
-  border-radius: 18px;
-  background: var(--atlas-cream);
-  padding: 9px 10px;
+  border: 1px solid var(--atlas-border);
+  border-radius: 22px;
+  background: white;
+  padding: 11px;
   display: grid;
-  gap: 4px;
+  gap: 5px;
+  box-shadow: 0 10px 28px rgba(58, 46, 30, 0.07);
 }
 
 .atlas-week-day-preview-card b,
@@ -173,15 +176,15 @@
 
 .atlas-week-day-preview-card b {
   color: var(--atlas-text);
-  font-size: 14px;
+  font-size: 18px;
   line-height: 1;
   font-weight: 950;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.045em;
 }
 
 .atlas-week-day-preview-card small {
   color: var(--atlas-muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
   font-weight: 850;
 }
@@ -189,7 +192,7 @@
 .atlas-week-day-preview-card i {
   color: #65685d;
   font-style: normal;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.05;
   font-weight: 950;
 }
@@ -328,29 +331,21 @@
     font-size: 10px;
   }
 
-  .atlas-week-overview-box {
-    padding: 13px 14px !important;
-  }
-
-  .atlas-week-overview-box > strong {
-    font-size: 28px !important;
-  }
-
   .atlas-week-day-preview-card {
-    border-radius: 16px;
-    padding: 8px;
+    border-radius: 18px;
+    padding: 10px;
   }
 
   .atlas-week-day-preview-card b {
-    font-size: 13px;
+    font-size: 16px;
   }
 
   .atlas-week-day-preview-card small {
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .atlas-week-day-preview-card i {
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .atlas-farm-snapshot-box .atlas-snapshot-grid {
@@ -376,6 +371,6 @@
   }
 
   .atlas-week-day-preview-card i {
-    font-size: 9px;
+    font-size: 10px;
   }
 }
