@@ -115,6 +115,23 @@
   display: none !important;
 }
 
+body.atlas-route-mode .atlas-task-progress-hero {
+  padding: 9px !important;
+}
+
+body.atlas-route-mode .atlas-progress-report {
+  display: block;
+}
+
+body.atlas-route-mode .atlas-progress-line:nth-child(1) {
+  display: none !important;
+}
+
+body.atlas-route-mode .atlas-progress-line:nth-child(2) {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 .atlas-task-page-active .atlas-task-page-time-row span:last-child::before {
   content: "Today · ";
 }
