@@ -1,9 +1,26 @@
-.atlas-task-page-actions button:nth-child(2) {
-  opacity: 0.45;
-  pointer-events: none;
+.atlas-task-page-actions {
+  grid-template-columns: 1fr 1fr !important;
 }
 
-.atlas-task-page-actions button:nth-child(2)::after {
-  content: " soon";
-  font-size: 0.75em;
+.atlas-task-page-actions button:nth-child(2) {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  color: transparent !important;
+  position: relative;
+}
+
+.atlas-task-page-actions button:nth-child(2)::before {
+  content: "Unfinished";
+  color: var(--atlas-muted);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.atlas-task-page-actions button:nth-child(3),
+.atlas-task-page-actions button:nth-child(4) {
+  display: none !important;
 }
