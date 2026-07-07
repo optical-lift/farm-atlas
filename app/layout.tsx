@@ -19,6 +19,7 @@ import "./home-week-day-final-fit.css";
 import "./home-hero-less-redundant.css";
 import "./home-footer-bars.css";
 import "./week-day-navigation.css";
+import "./home-today-overview-link.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
