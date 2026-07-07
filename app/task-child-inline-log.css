@@ -1,89 +1,118 @@
-.atlas-child-checklist-stable-list {
-  display: grid;
-  gap: 10px;
+.atlas-child-checklist-stable-list,
+.atlas-child-checklist-open {
+  width: 100% !important;
+  min-width: 0 !important;
+  display: grid !important;
+  gap: 10px !important;
 }
 
 .atlas-child-check-item {
-  min-width: 0;
-  border: 1px solid rgba(139, 145, 194, 0.18);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.62);
-  overflow: hidden;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+  border: 1px solid rgba(139, 145, 194, 0.18) !important;
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.62) !important;
+  overflow: hidden !important;
+  display: block !important;
+  grid-template-columns: none !important;
+  padding: 0 !important;
 }
 
 .atlas-child-check-touch {
-  width: 100%;
-  appearance: none;
-  -webkit-appearance: none;
-  border: 0;
-  background: transparent;
-  color: var(--atlas-text);
-  padding: 13px 14px;
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 10px;
-  align-items: start;
-  text-align: left;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--atlas-text) !important;
+  padding: 13px 14px !important;
+  display: grid !important;
+  grid-template-columns: 38px minmax(0, 1fr) !important;
+  gap: 12px !important;
+  align-items: start !important;
+  text-align: left !important;
 }
 
 .atlas-child-check-touch > span {
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  border: 3px solid rgba(139, 145, 194, 0.34);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--atlas-text);
-  font-size: 18px;
-  line-height: 1;
-  font-weight: 950;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  border-radius: 999px !important;
+  border: 3px solid rgba(139, 145, 194, 0.34) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: var(--atlas-text) !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
 }
 
 .atlas-child-check-copy {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  display: grid !important;
+  gap: 4px !important;
+  justify-items: stretch !important;
+}
+
+.atlas-child-check-copy strong,
+.atlas-child-check-copy em,
+.atlas-child-log-summary {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  display: block !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
 }
 
 .atlas-child-check-copy strong {
-  color: var(--atlas-text);
-  font-size: 17px;
-  line-height: 1.05;
-  font-weight: 950;
-  letter-spacing: -0.04em;
+  color: var(--atlas-text) !important;
+  font-size: 20px !important;
+  line-height: 1.02 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.05em !important;
 }
 
 .atlas-child-check-copy em {
-  color: var(--atlas-muted);
-  font-style: normal;
-  font-size: 12px;
-  line-height: 1.16;
-  font-weight: 800;
+  color: var(--atlas-muted) !important;
+  font-style: normal !important;
+  font-size: 13px !important;
+  line-height: 1.18 !important;
+  font-weight: 850 !important;
 }
 
 .atlas-child-check-item.done {
-  background: rgba(228, 234, 200, 0.38);
+  background: rgba(228, 234, 200, 0.38) !important;
 }
 
 .atlas-child-check-item.done .atlas-child-check-touch > span {
-  border-color: rgba(185, 204, 124, 0.82);
-  background: rgba(222, 233, 183, 0.88);
+  border-color: rgba(185, 204, 124, 0.82) !important;
+  background: rgba(222, 233, 183, 0.88) !important;
 }
 
 .atlas-child-log-summary {
-  margin-top: 2px;
+  margin-top: 2px !important;
   color: #6e774f !important;
   font-weight: 900 !important;
 }
 
 .atlas-child-plant-log {
-  margin: 0 12px 12px 56px;
-  border-radius: 16px;
-  background: rgba(246, 242, 230, 0.8);
-  padding: 10px;
-  display: grid;
-  gap: 8px;
+  margin: 0 12px 12px 64px !important;
+  border-radius: 16px !important;
+  background: rgba(246, 242, 230, 0.8) !important;
+  padding: 10px !important;
+  display: grid !important;
+  gap: 8px !important;
 }
 
 .atlas-child-plant-log[hidden] {
@@ -91,64 +120,64 @@
 }
 
 .atlas-child-plant-log label {
-  display: grid;
-  gap: 4px;
-  color: var(--atlas-muted);
-  font-size: 10px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  display: grid !important;
+  gap: 4px !important;
+  color: var(--atlas-muted) !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
 }
 
 .atlas-child-plant-log input {
-  width: 100%;
-  min-height: 38px;
-  border-radius: 13px;
-  border: 1px solid rgba(139, 145, 194, 0.24);
-  background: rgba(255, 255, 255, 0.86);
-  color: var(--atlas-text);
-  padding: 8px 10px;
-  font-size: 16px;
-  line-height: 1;
-  font-weight: 850;
-  outline: none;
+  width: 100% !important;
+  min-height: 38px !important;
+  border-radius: 13px !important;
+  border: 1px solid rgba(139, 145, 194, 0.24) !important;
+  background: rgba(255, 255, 255, 0.86) !important;
+  color: var(--atlas-text) !important;
+  padding: 8px 10px !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  font-weight: 850 !important;
+  outline: none !important;
 }
 
 .atlas-child-plant-log-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 8px !important;
 }
 
 .atlas-child-plant-log-actions button {
-  appearance: none;
-  -webkit-appearance: none;
-  border: 0;
-  border-radius: 999px;
-  padding: 10px 12px;
-  color: var(--atlas-text);
-  font-size: 13px;
-  line-height: 1;
-  font-weight: 950;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  padding: 10px 12px !important;
+  color: var(--atlas-text) !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
 }
 
 .atlas-child-plant-log-actions button[type="submit"] {
-  background: rgba(222, 233, 183, 0.92);
+  background: rgba(222, 233, 183, 0.92) !important;
 }
 
 .atlas-child-log-cancel {
-  background: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.84) !important;
 }
 
 .atlas-child-log-error {
-  margin: 0;
-  color: var(--atlas-muted);
-  font-size: 12px;
-  line-height: 1.18;
-  font-weight: 850;
+  margin: 0 !important;
+  color: var(--atlas-muted) !important;
+  font-size: 12px !important;
+  line-height: 1.18 !important;
+  font-weight: 850 !important;
 }
 
 .atlas-child-check-item.saving {
-  opacity: 0.72;
+  opacity: 0.72 !important;
 }
