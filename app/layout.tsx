@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import WeekDayNavigation from "./WeekDayNavigation";
 import HomeTodayCompletePatch from "./HomeTodayCompletePatch";
 import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
+import HomeTaskForwardHeroPatch from "./HomeTaskForwardHeroPatch";
 import "./globals.css";
 import "./home.css";
 import "./zones.css";
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <WeekDayNavigation />
         <HomeTodayCompletePatch />
         <TaskProgressExactDayPatch />
+        <HomeTaskForwardHeroPatch />
         {children}
       </body>
     </html>
