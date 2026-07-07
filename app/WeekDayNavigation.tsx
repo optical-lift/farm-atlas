@@ -202,6 +202,9 @@ function openHomeDayCard(target: HTMLElement) {
 export default function WeekDayNavigation() {
   useEffect(() => {
     let timer: number | null = null;
+    let poller: number | null = null;
+    let inFlight = false;
+    let lastSignature = "";
 
     function handleClick(event: MouseEvent) {
       const target = event.target;
@@ -213,11 +216,21 @@ export default function WeekDayNavigation() {
       }
     }
 
+    function stopPolling() {
+      if (poller !== null) {
+        window.clearInterval(poller);
+        poller = null;
+      }
+    }
+
     async function renderDayBrowse() {
+      if (inFlight) return;
       if (window.location.pathname !== "/task") return;
       const params = new URLSearchParams(window.location.search);
       const dateIso = params.get("date");
       if (!dateIso) {
+        stopPolling();
+        lastSignature = "";
         document.body.classList.remove("atlas-day-browse-mode");
         document.querySelector(".atlas-day-browse")?.remove();
         return;
@@ -226,19 +239,30 @@ export default function WeekDayNavigation() {
       document.body.classList.add("atlas-day-browse-mode");
       const hero = document.querySelector(".atlas-task-page-hero");
       if (!hero) return;
-      const cards = await fetchTaskCards();
-      const signature = `${dateIso}-${cards.map((card) => `${card.task_id}:${card.status}:${card.due_date}`).join("|")}`;
-      const existing = document.querySelector<HTMLElement>(".atlas-day-browse");
-      if (existing?.dataset.daySignature === signature) return;
-      existing?.remove();
-      document.querySelector(".atlas-route-lineup")?.remove();
-      document.querySelector(".atlas-route-collection:not(.atlas-day-browse)")?.remove();
 
-      const section = document.createElement("section");
-      section.className = "atlas-task-page-section atlas-route-collection atlas-day-browse";
-      section.dataset.daySignature = signature;
-      section.innerHTML = buildDayHtml(dateIso, cards);
-      hero.insertAdjacentElement("afterend", section);
+      inFlight = true;
+      try {
+        const cards = await fetchTaskCards();
+        const dayCards = cards
+          .filter(isDashboardWork)
+          .filter((card) => card.due_date === dateIso)
+          .sort((a, b) => taskSortKey(a).localeCompare(taskSortKey(b)));
+        const signature = `${dateIso}:${dayCards.map((card) => `${card.task_id}:${card.status}:${card.due_date}:${String(card.metadata?.checklist_status ?? "")}`).join("|")}`;
+        if (signature === lastSignature && document.querySelector(".atlas-day-browse")) return;
+
+        let section = document.querySelector<HTMLElement>(".atlas-day-browse");
+        if (!section) {
+          section = document.createElement("section");
+          section.className = "atlas-task-page-section atlas-route-collection atlas-day-browse";
+          hero.insertAdjacentElement("afterend", section);
+        }
+
+        section.dataset.daySignature = signature;
+        section.innerHTML = buildDayHtml(dateIso, cards);
+        lastSignature = signature;
+      } finally {
+        inFlight = false;
+      }
     }
 
     function queueRender() {
@@ -246,18 +270,29 @@ export default function WeekDayNavigation() {
       timer = window.setTimeout(() => {
         timer = null;
         void renderDayBrowse();
-      }, 160);
+      }, 180);
     }
 
-    const observer = new MutationObserver(queueRender);
-    observer.observe(document.body, { childList: true, subtree: true });
+    function startPolling() {
+      stopPolling();
+      let attempts = 0;
+      poller = window.setInterval(() => {
+        attempts += 1;
+        void renderDayBrowse();
+        if (attempts >= 12 || document.querySelector(".atlas-day-browse")) stopPolling();
+      }, 250);
+    }
+
     document.addEventListener("click", handleClick, true);
+    window.addEventListener("popstate", queueRender);
     queueRender();
+    startPolling();
 
     return () => {
       if (timer !== null) window.clearTimeout(timer);
-      observer.disconnect();
+      stopPolling();
       document.removeEventListener("click", handleClick, true);
+      window.removeEventListener("popstate", queueRender);
       document.body.classList.remove("atlas-day-browse-mode");
     };
   }, []);
