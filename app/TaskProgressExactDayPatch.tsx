@@ -17,6 +17,21 @@ function todayIso() {
   return local.toISOString().slice(0, 10);
 }
 
+function dateFromIso(dateIso: string) {
+  return new Date(`${dateIso}T12:00:00`);
+}
+
+function isoFromDate(date: Date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function prettyDate(dateIso: string) {
+  const date = dateFromIso(dateIso);
+  if (Number.isNaN(date.getTime())) return dateIso;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -32,6 +47,11 @@ function isChildTask(card: Card) {
 function isProgressTask(card: Card) {
   const joined = `${card.task_type ?? ""} ${card.title ?? ""}`.toLowerCase();
   return card.status !== "archived" && !isChildTask(card) && !(joined.includes("verify") || joined.includes("check") || joined.includes("confirm") || joined.includes("count") || joined.includes("germin"));
+}
+
+function isOpenWork(card: Card) {
+  const joined = `${card.task_type ?? ""} ${card.title ?? ""}`.toLowerCase();
+  return card.status === "open" && !isChildTask(card) && !(joined.includes("verify") || joined.includes("check") || joined.includes("confirm") || joined.includes("count") || joined.includes("germin") || joined.includes("walk field rows"));
 }
 
 function isDone(card: Card) {
@@ -59,17 +79,83 @@ function setDayProgress(done: number, total: number) {
   return true;
 }
 
+function countOpenWork(cards: Card[], startIso: string, endIso: string) {
+  return cards.filter(isOpenWork).filter((card) => card.due_date && card.due_date >= startIso && card.due_date <= endIso).length;
+}
+
+function monthRows(cards: Card[]) {
+  const anchor = dateFromIso(todayIso());
+  const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1, 12, 0, 0, 0);
+  const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0, 12, 0, 0, 0);
+  const rows: Array<{ label: string; dateLabel: string; href: string; count: number }> = [];
+  let start = new Date(monthStart);
+  let index = 1;
+
+  while (start <= monthEnd) {
+    const end = new Date(start);
+    end.setDate(end.getDate() + (6 - end.getDay()));
+    if (end > monthEnd) end.setTime(monthEnd.getTime());
+    const startIso = isoFromDate(start);
+    const endIso = isoFromDate(end);
+    rows.push({
+      label: `Week ${index}`,
+      dateLabel: `${prettyDate(startIso)}–${prettyDate(endIso)}`,
+      href: `/overview/week?date=${encodeURIComponent(startIso)}&end=${encodeURIComponent(endIso)}`,
+      count: countOpenWork(cards, startIso, endIso),
+    });
+    start = new Date(end);
+    start.setDate(start.getDate() + 1);
+    index += 1;
+  }
+
+  return rows;
+}
+
+function patchHomeMonthWeeks(cards: Card[]) {
+  const list = document.querySelector<HTMLElement>(".atlas-home-month-week-list");
+  if (!list) return false;
+  const rows = monthRows(cards);
+  const signature = rows.map((row) => `${row.label}:${row.dateLabel}:${row.count}`).join("|");
+  if (list.dataset.workWeekSignature === signature) return true;
+  list.dataset.workWeekSignature = signature;
+  list.replaceChildren();
+  rows.forEach((row) => {
+    const link = document.createElement("a");
+    link.className = "atlas-home-overview-row-link";
+    link.href = row.href;
+
+    const label = document.createElement("b");
+    label.textContent = row.label;
+    const date = document.createElement("small");
+    date.textContent = row.dateLabel;
+    const count = document.createElement("em");
+    count.textContent = String(row.count);
+
+    link.append(label, date, count);
+    list.append(link);
+  });
+  return true;
+}
+
 export default function TaskProgressExactDayPatch() {
   useEffect(() => {
     let stopped = false;
     let timer: number | null = null;
 
     async function patch() {
-      if (stopped || window.location.pathname !== "/task") return;
-      const today = todayIso();
-      const cards = (await fetchTaskCards()).filter(isProgressTask).filter((card) => card.due_date === today);
       if (stopped) return;
-      setDayProgress(cards.filter(isDone).length, cards.length);
+      const cards = await fetchTaskCards();
+      if (stopped) return;
+
+      if (window.location.pathname === "/task") {
+        const today = todayIso();
+        const todayCards = cards.filter(isProgressTask).filter((card) => card.due_date === today);
+        setDayProgress(todayCards.filter(isDone).length, todayCards.length);
+      }
+
+      if (window.location.pathname === "/") {
+        patchHomeMonthWeeks(cards);
+      }
     }
 
     function queuePatch() {
