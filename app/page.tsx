@@ -3,10 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import {
-  fetchAtlasCloseout,
-  type AtlasCloseoutSummary,
-} from "@/lib/atlas/closeout-client";
+import { fetchAtlasCloseout, type AtlasCloseoutSummary } from "@/lib/atlas/closeout-client";
 import { fetchAtlasFarmSnapshot, type AtlasFarmSnapshot } from "@/lib/atlas/farm-snapshot-client";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { saveAtlasInboxItem } from "@/lib/atlas/inbox-client";
@@ -16,14 +13,12 @@ type WeatherResponse = { ok: boolean; label?: string; rainAge?: string; daysSinc
 type HomeTaskDisplay = { rhythm: string; action: string; subject: string; location: string; detail: string | null };
 type WorkRouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
 type WorkRoute = { key: WorkRouteKey; label: string; cards: AtlasTaskCard[]; zones: string[]; preview: string; href: string };
-type WorkGroup = { label: string; cards: AtlasTaskCard[]; routes: string[]; preview: string };
 type DayPlan = { dateIso: string; dayLabel: string; dateLabel: string; total: number; cards: AtlasTaskCard[]; routeCounts: { key: WorkRouteKey; label: string; count: number }[]; preview: string };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const defaultSnapshot: AtlasFarmSnapshot = { totalBeds: 0, growingBeds: 0, activeSqft: 0, sowingsLogged: 0, stemsLogged: 0 };
 const routeOrder: WorkRouteKey[] = ["plant", "weed", "mow", "seed", "harvest", "build", "venue", "water"];
 const heroRouteKeys = new Set<WorkRouteKey>(["plant", "weed", "mow", "harvest"]);
-const mainRouteKeys = new Set<WorkRouteKey>(["plant", "weed", "mow", "seed", "build"]);
 const routeLabels: Record<WorkRouteKey, string> = {
   plant: "Plant",
   weed: "Weed",
@@ -46,13 +41,16 @@ const shortRouteLabels: Record<WorkRouteKey, string> = {
 };
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  const date = new Date();
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
 }
 
 function addDaysIso(days: number) {
   const date = new Date();
   date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
 }
 
 function dateFromIso(dateIso: string) {
@@ -111,11 +109,11 @@ function taskSortValue(card: AtlasTaskCard) {
 }
 
 function taskDisplay(card: AtlasTaskCard): HomeTaskDisplay {
-  const text = `${card.task_type} ${card.title}`.toLowerCase();
+  const taskText = `${card.task_type} ${card.title}`.toLowerCase();
   const rhythm = metaString(card, "work_rhythm")
-    ?? (text.includes("water") ? "Watering" : text.includes("harvest") ? "Harvest + Postharvest" : text.includes("venue") || text.includes("paint") || text.includes("trim") || text.includes("tidy") ? "Venue Maintenance" : text.includes("seed") || text.includes("sow") ? "Seed Sowing" : text.includes("weed") ? "Weeding" : text.includes("plant") ? "Planting" : text.includes("mow") ? "Maintenance" : text.includes("prep") || text.includes("string") ? "Build / Prep" : "Farm Work");
+    ?? (taskText.includes("water") ? "Watering" : taskText.includes("harvest") ? "Harvest + Postharvest" : taskText.includes("venue") || taskText.includes("paint") || taskText.includes("trim") || taskText.includes("tidy") ? "Venue Maintenance" : taskText.includes("seed") || taskText.includes("sow") ? "Seed Sowing" : taskText.includes("weed") ? "Weeding" : taskText.includes("plant") ? "Planting" : taskText.includes("mow") ? "Maintenance" : taskText.includes("prep") || taskText.includes("string") ? "Build / Prep" : "Farm Work");
   const action = metaString(card, "display_action")
-    ?? (text.includes("water") ? "Water" : text.includes("mow") ? "Mow" : text.includes("weed") ? "Weed" : text.includes("sow") ? "Sow" : text.includes("seed") ? "Seed" : text.includes("plant") ? "Plant" : text.includes("paint") ? "Paint" : text.includes("trim") ? "Trim" : text.includes("tidy") ? "Tidy" : text.includes("harvest") ? "Harvest" : text.includes("prep") ? "Prep" : text.includes("string") ? "String" : rhythm);
+    ?? (taskText.includes("water") ? "Water" : taskText.includes("mow") ? "Mow" : taskText.includes("weed") ? "Weed" : taskText.includes("sow") ? "Sow" : taskText.includes("seed") ? "Seed" : taskText.includes("plant") ? "Plant" : taskText.includes("paint") ? "Paint" : taskText.includes("trim") ? "Trim" : taskText.includes("tidy") ? "Tidy" : taskText.includes("harvest") ? "Harvest" : taskText.includes("prep") ? "Prep" : taskText.includes("string") ? "String" : rhythm);
   const detailLines = metaStringList(card, "detail_lines");
 
   return {
@@ -179,14 +177,6 @@ function collectionZone(card: AtlasTaskCard) {
   return metaString(card, "collection_zone") ?? zoneBucket(taskDisplay(card).location);
 }
 
-function weekCards(cards: AtlasTaskCard[]) {
-  const weekEnd = addDaysIso(6);
-  return cards
-    .filter(isDashboardWork)
-    .filter((card) => !card.due_date || card.due_date <= weekEnd)
-    .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
-}
-
 function buildRoutes(cards: AtlasTaskCard[]) {
   const byRoute = new Map<WorkRouteKey, AtlasTaskCard[]>();
   routeOrder.forEach((key) => byRoute.set(key, []));
@@ -209,23 +199,6 @@ function buildRoutes(cards: AtlasTaskCard[]) {
       };
     })
     .filter((route): route is WorkRoute => Boolean(route));
-}
-
-function groupedCards(cards: AtlasTaskCard[], groupBy: (card: AtlasTaskCard) => string): WorkGroup[] {
-  const map = new Map<string, AtlasTaskCard[]>();
-  cards.forEach((card) => {
-    const key = groupBy(card);
-    map.set(key, [...(map.get(key) ?? []), card]);
-  });
-  return Array.from(map.entries()).map(([label, groupCards]) => {
-    const routes = Array.from(new Set(groupCards.map((card) => routeLabels[routeKeyForTask(card)])));
-    return {
-      label,
-      cards: groupCards,
-      routes,
-      preview: groupCards.map(collectionLabel).slice(0, 3).join(" · "),
-    };
-  });
 }
 
 function routeCountsFor(cards: AtlasTaskCard[]) {
@@ -268,6 +241,7 @@ function panelTitle(panel: HomePanel) {
 
 function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: boolean; weatherLabel: string }) {
   const today = todayIso();
+  const todayHref = `/day?date=${encodeURIComponent(today)}`;
   const dashboardCards = cards.filter(isDashboardWork);
   const todayCards = dashboardCards.filter((card) => !card.due_date || card.due_date <= today);
   const upcomingCards = dashboardCards.filter((card) => card.due_date && card.due_date > today);
@@ -278,11 +252,11 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
   if (loading && cards.length === 0) {
     return (
       <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller atlas-daily-run-sheet empty">
-        <div className="atlas-task-controller-head">
+        <Link href={todayHref} className="atlas-task-controller-head atlas-task-controller-head-link" aria-label="Open today's full work overview">
           <span className="atlas-task-kicker">Today</span>
           <span className="atlas-task-date">Loading</span>
-        </div>
-        <Link href="/task" className="atlas-run-sheet-empty">
+        </Link>
+        <Link href={todayHref} className="atlas-run-sheet-empty">
           <strong>Loading the work board</strong>
           <em>Atlas is pulling open tasks.</em>
         </Link>
@@ -292,18 +266,18 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
 
   return (
     <article className="atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller atlas-daily-run-sheet atlas-route-sheet">
-      <div className="atlas-task-controller-head">
+      <Link href={todayHref} className="atlas-task-controller-head atlas-task-controller-head-link" aria-label="Open today's full work overview">
         <div>
           <span className="atlas-task-kicker">Today</span>
-          <em className="atlas-season-label">Choose a route · {firstDue}</em>
+          <em className="atlas-season-label">Open day overview · {firstDue}</em>
         </div>
-        <Link href="/task" className="atlas-task-date">{dashboardCards.length} work</Link>
-      </div>
+        <span className="atlas-task-date">{dashboardCards.length} work</span>
+      </Link>
 
       {routes.length === 0 ? (
-        <Link href="/task" className="atlas-run-sheet-empty">
+        <Link href={todayHref} className="atlas-run-sheet-empty">
           <strong>No open farm work</strong>
-          <em>Open the task board.</em>
+          <em>Open today overview.</em>
         </Link>
       ) : (
         <div className="atlas-run-sheet-grid atlas-route-sheet-grid">
