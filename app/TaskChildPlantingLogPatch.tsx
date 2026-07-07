@@ -56,6 +56,19 @@ function detailLines(card: Card) {
   return stringList(card.metadata?.detail_lines);
 }
 
+function defaultAmount(card: Card) {
+  return numberText(card.metadata?.planting_log_default_amount);
+}
+
+function defaultLocation(card: Card) {
+  return text(card.metadata?.planting_log_default_location) || text(card.metadata?.display_detail);
+}
+
+function logSummary(card: Card) {
+  const log = card.metadata?.planting_log as Record<string, unknown> | undefined;
+  return text(log?.summary);
+}
+
 async function fetchCards() {
   const response = await fetch("/api/atlas/task-cards", { headers: { Accept: "application/json" }, cache: "no-store" });
   const data = await response.json() as { taskCards?: Card[] };
@@ -68,21 +81,42 @@ async function toggleChecklist(taskId: string, checklistStatus: "open" | "done",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ taskId, checklistStatus, ...body }),
   });
-  const data = await response.json() as { ok?: boolean; details?: string; error?: string };
+  const data = await response.json() as { ok?: boolean; details?: string; error?: string; plantingLog?: { summary?: string } | null };
   if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Checklist failed.");
+  return data.plantingLog ?? null;
+}
+
+function renderInlineLog(child: Card) {
+  if (!needsPlantingLog(child) || isDone(child)) return "";
+  return `
+    <form class="atlas-child-plant-log" data-child-task-id="${html(child.task_id)}" hidden>
+      <label><span>Count</span><input name="plantedAmount" inputmode="numeric" type="number" min="0" step="1" value="${html(defaultAmount(child))}" /></label>
+      <label><span>Where</span><input name="plantedLocation" type="text" value="${html(defaultLocation(child))}" placeholder="Bed or area" /></label>
+      <div class="atlas-child-plant-log-actions">
+        <button type="submit">Save planted</button>
+        <button type="button" class="atlas-child-log-cancel">Cancel</button>
+      </div>
+      <p class="atlas-child-log-error" aria-live="polite"></p>
+    </form>
+  `;
 }
 
 function renderButton(child: Card) {
   const done = isDone(child);
   const details = detailLines(child);
+  const summary = logSummary(child);
   return `
-    <button type="button" class="${done ? "atlas-child-check-item done" : "atlas-child-check-item"}" data-child-task-id="${html(child.task_id)}" data-next-status="${done ? "open" : "done"}">
-      <span>${done ? "✓" : ""}</span>
-      <div class="atlas-child-check-copy">
-        <strong>${html(label(child))}</strong>
-        ${details.map((line) => `<em>${html(line)}</em>`).join("")}
-      </div>
-    </button>
+    <div class="${done ? "atlas-child-check-item done" : "atlas-child-check-item"}" data-child-task-id="${html(child.task_id)}" data-next-status="${done ? "open" : "done"}" data-planting-log-required="${needsPlantingLog(child) ? "true" : "false"}">
+      <button type="button" class="atlas-child-check-touch">
+        <span>${done ? "✓" : ""}</span>
+        <div class="atlas-child-check-copy">
+          <strong>${html(label(child))}</strong>
+          ${details.map((line) => `<em>${html(line)}</em>`).join("")}
+          ${summary ? `<em class="atlas-child-log-summary">${html(summary)}</em>` : ""}
+        </div>
+      </button>
+      ${renderInlineLog(child)}
+    </div>
   `;
 }
 
@@ -94,7 +128,7 @@ function renderStableChecklists(cards: Card[]) {
       .filter((card) => parentId(card) === id && card.status !== "archived")
       .sort((a, b) => stepOrder(a) - stepOrder(b));
     if (!children.length) return;
-    const signature = children.map((child) => `${child.task_id}:${text(child.metadata?.checklist_status)}:${text(child.metadata?.planting_log?.recorded_at)}`).join("|");
+    const signature = children.map((child) => `${child.task_id}:${text(child.metadata?.checklist_status)}:${text((child.metadata?.planting_log as Record<string, unknown> | undefined)?.recorded_at)}`).join("|");
     if (section.dataset.stableChecklistSignature === signature) return;
     section.dataset.stableChecklistSignature = signature;
     section.innerHTML = `
@@ -106,12 +140,42 @@ function renderStableChecklists(cards: Card[]) {
   });
 }
 
-function markButton(button: HTMLButtonElement, done: boolean) {
-  button.disabled = false;
-  button.classList.toggle("done", done);
-  button.dataset.nextStatus = done ? "open" : "done";
-  const check = button.querySelector("span");
+function setRowError(row: HTMLElement, message: string) {
+  const error = row.querySelector<HTMLElement>(".atlas-child-log-error");
+  if (error) error.textContent = message;
+}
+
+function showInlineLog(row: HTMLElement) {
+  const form = row.querySelector<HTMLFormElement>(".atlas-child-plant-log");
+  if (!form) return;
+  row.classList.add("logging");
+  form.hidden = false;
+  setRowError(row, "");
+  form.querySelector<HTMLInputElement>("input[name='plantedAmount']")?.focus();
+}
+
+function hideInlineLog(row: HTMLElement) {
+  const form = row.querySelector<HTMLFormElement>(".atlas-child-plant-log");
+  if (!form) return;
+  row.classList.remove("logging");
+  form.hidden = true;
+  setRowError(row, "");
+}
+
+function markRow(row: HTMLElement, done: boolean, summary?: string) {
+  row.classList.toggle("done", done);
+  row.classList.remove("logging", "saving");
+  row.dataset.nextStatus = done ? "open" : "done";
+  const check = row.querySelector(".atlas-child-check-touch span");
   if (check) check.textContent = done ? "✓" : "";
+  const form = row.querySelector<HTMLFormElement>(".atlas-child-plant-log");
+  if (form) form.hidden = true;
+  if (summary) {
+    const copy = row.querySelector(".atlas-child-check-copy");
+    const existing = row.querySelector(".atlas-child-log-summary");
+    if (existing) existing.textContent = summary;
+    else copy?.insertAdjacentHTML("beforeend", `<em class="atlas-child-log-summary">${html(summary)}</em>`);
+  }
 }
 
 export default function TaskChildPlantingLogPatch() {
@@ -136,51 +200,79 @@ export default function TaskChildPlantingLogPatch() {
     async function handleClick(event: MouseEvent) {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
-      const button = target.closest<HTMLButtonElement>(".atlas-child-check-item");
-      if (!button?.dataset.childTaskId) return;
+
+      const cancel = target.closest<HTMLButtonElement>(".atlas-child-log-cancel");
+      if (cancel) {
+        const row = cancel.closest<HTMLElement>(".atlas-child-check-item");
+        if (row) hideInlineLog(row);
+        return;
+      }
+
+      const touch = target.closest<HTMLButtonElement>(".atlas-child-check-touch");
+      const row = touch?.closest<HTMLElement>(".atlas-child-check-item");
+      if (!touch || !row?.dataset.childTaskId) return;
 
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
 
-      const taskId = button.dataset.childTaskId;
-      const checklistStatus = button.dataset.nextStatus === "done" ? "done" : "open";
+      const taskId = row.dataset.childTaskId;
+      const checklistStatus = row.dataset.nextStatus === "done" ? "done" : "open";
+
+      if (checklistStatus === "done" && row.dataset.plantingLogRequired === "true") {
+        showInlineLog(row);
+        return;
+      }
 
       try {
-        button.disabled = true;
-        const cards = await fetchCards();
-        const child = cards.find((card) => card.task_id === taskId);
-        if (!child) throw new Error("Checklist item was not found.");
-
-        if (checklistStatus === "done" && needsPlantingLog(child)) {
-          const defaultAmount = numberText(child.metadata?.planting_log_default_amount);
-          const defaultLocation = text(child.metadata?.planting_log_default_location) || text(child.metadata?.display_detail);
-          const amount = window.prompt(`How many ${label(child)} did Anna plant?`, defaultAmount)?.trim();
-          if (!amount) {
-            button.disabled = false;
-            return;
-          }
-          const location = window.prompt(`Where did Anna plant ${label(child)}?`, defaultLocation)?.trim();
-          if (!location) {
-            button.disabled = false;
-            return;
-          }
-          await toggleChecklist(taskId, checklistStatus, { plantedAmount: amount, plantedLocation: location });
-        } else {
-          await toggleChecklist(taskId, checklistStatus);
-        }
-
-        markButton(button, checklistStatus === "done");
+        row.classList.add("saving");
+        await toggleChecklist(taskId, checklistStatus);
+        markRow(row, checklistStatus === "done");
         queueRefresh();
       } catch (error) {
-        button.disabled = false;
-        window.alert(error instanceof Error ? error.message : "Checklist failed.");
+        row.classList.remove("saving");
+        setRowError(row, error instanceof Error ? error.message : "Checklist failed.");
+      }
+    }
+
+    async function handleSubmit(event: SubmitEvent) {
+      const form = event.target instanceof HTMLFormElement ? event.target : null;
+      if (!form?.classList.contains("atlas-child-plant-log")) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const row = form.closest<HTMLElement>(".atlas-child-check-item");
+      const taskId = row?.dataset.childTaskId;
+      if (!row || !taskId) return;
+
+      const plantedAmount = form.querySelector<HTMLInputElement>("input[name='plantedAmount']")?.value.trim() ?? "";
+      const plantedLocation = form.querySelector<HTMLInputElement>("input[name='plantedLocation']")?.value.trim() ?? "";
+      if (!plantedAmount) {
+        setRowError(row, "Add the count first.");
+        return;
+      }
+      if (!plantedLocation) {
+        setRowError(row, "Add the location first.");
+        return;
+      }
+
+      try {
+        row.classList.add("saving");
+        setRowError(row, "Saving…");
+        const plantingLog = await toggleChecklist(taskId, "done", { plantedAmount, plantedLocation });
+        markRow(row, true, plantingLog?.summary);
+        setRowError(row, "");
+        queueRefresh();
+      } catch (error) {
+        row.classList.remove("saving");
+        setRowError(row, error instanceof Error ? error.message : "Checklist failed.");
       }
     }
 
     const observer = new MutationObserver(queueRefresh);
     observer.observe(document.body, { childList: true, subtree: true });
     window.addEventListener("click", handleClick, true);
+    window.addEventListener("submit", handleSubmit, true);
     queueRefresh();
     const interval = window.setInterval(() => void refreshStableChecklists(), 650);
     window.setTimeout(() => window.clearInterval(interval), 7000);
@@ -191,6 +283,7 @@ export default function TaskChildPlantingLogPatch() {
       window.clearInterval(interval);
       observer.disconnect();
       window.removeEventListener("click", handleClick, true);
+      window.removeEventListener("submit", handleSubmit, true);
     };
   }, []);
 
