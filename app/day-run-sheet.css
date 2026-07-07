@@ -118,6 +118,64 @@
   display: none !important;
 }
 
+.atlas-day-progress-card {
+  margin-top: 2px;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 18px;
+  background: rgba(246, 242, 230, 0.62);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-day-progress-card > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.atlas-day-progress-card span,
+.atlas-day-progress-card strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-day-progress-card span {
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atlas-day-progress-card strong {
+  color: var(--atlas-text);
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-day-progress-bar {
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.atlas-day-progress-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(167, 171, 214, 0.64), rgba(214, 225, 177, 0.90));
+}
+
 @media (max-width: 360px) {
   .atlas-run-sheet-grid {
     gap: 6px;
