@@ -120,16 +120,26 @@ function renderButton(child: Card) {
   `;
 }
 
+function checklistSignature(children: Card[]) {
+  return children.map((child) => `${child.task_id}:${text(child.metadata?.checklist_status)}:${text((child.metadata?.planting_log as Record<string, unknown> | undefined)?.recorded_at)}`).join("|");
+}
+
 function renderStableChecklists(cards: Card[]) {
   const sections = Array.from(document.querySelectorAll<HTMLElement>(".atlas-child-checklist[data-parent-task-id]"));
+  let rendered = false;
+
   sections.forEach((section) => {
     const id = section.dataset.parentTaskId ?? "";
     const children = cards
       .filter((card) => parentId(card) === id && card.status !== "archived")
       .sort((a, b) => stepOrder(a) - stepOrder(b));
     if (!children.length) return;
-    const signature = children.map((child) => `${child.task_id}:${text(child.metadata?.checklist_status)}:${text((child.metadata?.planting_log as Record<string, unknown> | undefined)?.recorded_at)}`).join("|");
-    if (section.dataset.stableChecklistSignature === signature) return;
+
+    const signature = checklistSignature(children);
+    const alreadyStable = section.dataset.stableChecklistSignature === signature && section.querySelector(".atlas-child-checklist-stable-list");
+    const activelyEditing = section.querySelector(".atlas-child-check-item.logging, .atlas-child-check-item.saving");
+    if (alreadyStable || activelyEditing) return;
+
     section.dataset.stableChecklistSignature = signature;
     section.innerHTML = `
       <strong>Checklist</strong>
@@ -137,7 +147,10 @@ function renderStableChecklists(cards: Card[]) {
         ${children.map(renderButton).join("")}
       </div>
     `;
+    rendered = true;
   });
+
+  return rendered;
 }
 
 function setRowError(row: HTMLElement, message: string) {
@@ -181,7 +194,7 @@ function markRow(row: HTMLElement, done: boolean, summary?: string) {
 export default function TaskChildPlantingLogPatch() {
   useEffect(() => {
     let stopped = false;
-    let timer: number | null = null;
+    const timers: number[] = [];
 
     async function refreshStableChecklists() {
       if (stopped || window.location.pathname !== "/task") return;
@@ -189,12 +202,13 @@ export default function TaskChildPlantingLogPatch() {
       if (!stopped) renderStableChecklists(cards);
     }
 
-    function queueRefresh() {
-      if (timer !== null) window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        timer = null;
-        void refreshStableChecklists();
-      }, 90);
+    function scheduleRefresh(delay: number) {
+      const timer = window.setTimeout(() => void refreshStableChecklists(), delay);
+      timers.push(timer);
+    }
+
+    function scheduleSettledRefreshes() {
+      [250, 800, 1600, 3000].forEach(scheduleRefresh);
     }
 
     async function handleClick(event: MouseEvent) {
@@ -228,7 +242,6 @@ export default function TaskChildPlantingLogPatch() {
         row.classList.add("saving");
         await toggleChecklist(taskId, checklistStatus);
         markRow(row, checklistStatus === "done");
-        queueRefresh();
       } catch (error) {
         row.classList.remove("saving");
         setRowError(row, error instanceof Error ? error.message : "Checklist failed.");
@@ -262,26 +275,19 @@ export default function TaskChildPlantingLogPatch() {
         const plantingLog = await toggleChecklist(taskId, "done", { plantedAmount, plantedLocation });
         markRow(row, true, plantingLog?.summary);
         setRowError(row, "");
-        queueRefresh();
       } catch (error) {
         row.classList.remove("saving");
         setRowError(row, error instanceof Error ? error.message : "Checklist failed.");
       }
     }
 
-    const observer = new MutationObserver(queueRefresh);
-    observer.observe(document.body, { childList: true, subtree: true });
     window.addEventListener("click", handleClick, true);
     window.addEventListener("submit", handleSubmit, true);
-    queueRefresh();
-    const interval = window.setInterval(() => void refreshStableChecklists(), 650);
-    window.setTimeout(() => window.clearInterval(interval), 7000);
+    scheduleSettledRefreshes();
 
     return () => {
       stopped = true;
-      if (timer !== null) window.clearTimeout(timer);
-      window.clearInterval(interval);
-      observer.disconnect();
+      timers.forEach((timer) => window.clearTimeout(timer));
       window.removeEventListener("click", handleClick, true);
       window.removeEventListener("submit", handleSubmit, true);
     };
