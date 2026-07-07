@@ -19,12 +19,41 @@ function numberText(value: unknown) {
   return "";
 }
 
+function stringList(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
+}
+
+function html(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function label(card: Card) {
   return text(card.metadata?.checklist_label) || text(card.metadata?.display_subject) || card.title.replace(/^Checklist\s+—\s+/i, "");
 }
 
+function stepOrder(card: Card) {
+  return typeof card.metadata?.step_order === "number" ? card.metadata.step_order : 999;
+}
+
+function parentId(card: Card) {
+  return text(card.metadata?.parent_task_id);
+}
+
+function isDone(card: Card) {
+  return text(card.metadata?.checklist_status) === "done";
+}
+
 function needsPlantingLog(card: Card) {
   return card.metadata?.planting_log_required === true || card.metadata?.planting_log_required === "true";
+}
+
+function detailLines(card: Card) {
+  return stringList(card.metadata?.detail_lines);
 }
 
 async function fetchCards() {
@@ -43,8 +72,67 @@ async function toggleChecklist(taskId: string, checklistStatus: "open" | "done",
   if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Checklist failed.");
 }
 
+function renderButton(child: Card) {
+  const done = isDone(child);
+  const details = detailLines(child);
+  return `
+    <button type="button" class="${done ? "atlas-child-check-item done" : "atlas-child-check-item"}" data-child-task-id="${html(child.task_id)}" data-next-status="${done ? "open" : "done"}">
+      <span>${done ? "✓" : ""}</span>
+      <div class="atlas-child-check-copy">
+        <strong>${html(label(child))}</strong>
+        ${details.map((line) => `<em>${html(line)}</em>`).join("")}
+      </div>
+    </button>
+  `;
+}
+
+function renderStableChecklists(cards: Card[]) {
+  const sections = Array.from(document.querySelectorAll<HTMLElement>(".atlas-child-checklist[data-parent-task-id]"));
+  sections.forEach((section) => {
+    const id = section.dataset.parentTaskId ?? "";
+    const children = cards
+      .filter((card) => parentId(card) === id && card.status !== "archived")
+      .sort((a, b) => stepOrder(a) - stepOrder(b));
+    if (!children.length) return;
+    const signature = children.map((child) => `${child.task_id}:${text(child.metadata?.checklist_status)}:${text(child.metadata?.planting_log?.recorded_at)}`).join("|");
+    if (section.dataset.stableChecklistSignature === signature) return;
+    section.dataset.stableChecklistSignature = signature;
+    section.innerHTML = `
+      <strong>Checklist</strong>
+      <div class="atlas-child-checklist-open atlas-child-checklist-stable-list">
+        ${children.map(renderButton).join("")}
+      </div>
+    `;
+  });
+}
+
+function markButton(button: HTMLButtonElement, done: boolean) {
+  button.disabled = false;
+  button.classList.toggle("done", done);
+  button.dataset.nextStatus = done ? "open" : "done";
+  const check = button.querySelector("span");
+  if (check) check.textContent = done ? "✓" : "";
+}
+
 export default function TaskChildPlantingLogPatch() {
   useEffect(() => {
+    let stopped = false;
+    let timer: number | null = null;
+
+    async function refreshStableChecklists() {
+      if (stopped || window.location.pathname !== "/task") return;
+      const cards = await fetchCards();
+      if (!stopped) renderStableChecklists(cards);
+    }
+
+    function queueRefresh() {
+      if (timer !== null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = null;
+        void refreshStableChecklists();
+      }, 90);
+    }
+
     async function handleClick(event: MouseEvent) {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
@@ -82,15 +170,28 @@ export default function TaskChildPlantingLogPatch() {
           await toggleChecklist(taskId, checklistStatus);
         }
 
-        window.location.reload();
+        markButton(button, checklistStatus === "done");
+        queueRefresh();
       } catch (error) {
         button.disabled = false;
         window.alert(error instanceof Error ? error.message : "Checklist failed.");
       }
     }
 
+    const observer = new MutationObserver(queueRefresh);
+    observer.observe(document.body, { childList: true, subtree: true });
     window.addEventListener("click", handleClick, true);
-    return () => window.removeEventListener("click", handleClick, true);
+    queueRefresh();
+    const interval = window.setInterval(() => void refreshStableChecklists(), 650);
+    window.setTimeout(() => window.clearInterval(interval), 7000);
+
+    return () => {
+      stopped = true;
+      if (timer !== null) window.clearTimeout(timer);
+      window.clearInterval(interval);
+      observer.disconnect();
+      window.removeEventListener("click", handleClick, true);
+    };
   }, []);
 
   return null;
