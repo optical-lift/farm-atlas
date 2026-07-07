@@ -58,9 +58,22 @@ function isChildTask(task: AtlasTaskCard) {
   return meta(task, "is_child_task") === true || meta(task, "is_child_task") === "true";
 }
 
-function isDashboardWork(task: AtlasTaskCard) {
+function isWorkTask(task: AtlasTaskCard) {
   const joined = `${task.task_type ?? ""} ${task.title} ${task.unlock_text ?? ""}`.toLowerCase();
-  return (task.status === "open" || task.status === "blocked") && !isChildTask(task) && !(joined.includes("verify") || joined.includes("check") || joined.includes("confirm") || joined.includes("count") || joined.includes("germin") || joined.includes("walk field rows"));
+  return task.status !== "archived" && task.status !== "skipped" && !isChildTask(task) && !(joined.includes("verify") || joined.includes("check") || joined.includes("confirm") || joined.includes("count") || joined.includes("germin") || joined.includes("walk field rows"));
+}
+
+function isDashboardWork(task: AtlasTaskCard) {
+  return (task.status === "open" || task.status === "blocked") && isWorkTask(task);
+}
+
+function isDoneTask(task: AtlasTaskCard) {
+  return task.status === "done" || text(meta(task, "checklist_status")) === "done" || task.task_outcomes?.[0]?.outcome === "done";
+}
+
+function progressPercent(done: number, total: number) {
+  if (total <= 0) return 100;
+  return Math.max(0, Math.min(100, Math.round((done / total) * 100)));
 }
 
 function subject(task: AtlasTaskCard) {
@@ -128,6 +141,19 @@ function routeCountLine(tasks: AtlasTaskCard[]) {
     .join(" · ") || "No farm tasks planned";
 }
 
+function DayProgressBar({ done, total }: { done: number; total: number }) {
+  const percent = progressPercent(done, total);
+  return (
+    <div className="atlas-day-progress-card" aria-label={`${done} of ${total} tasks done`}>
+      <div>
+        <span>Day progress</span>
+        <strong>{total ? `${done} / ${total} done` : "Complete"}</strong>
+      </div>
+      <div className="atlas-day-progress-bar"><i style={{ width: `${percent}%` }} /></div>
+    </div>
+  );
+}
+
 export default function AtlasDayPage() {
   const [dateIso, setDateIso] = useState(todayIso());
   const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
@@ -165,10 +191,17 @@ export default function AtlasDayPage() {
     void loadWeather();
   }, []);
 
+  const allDayTasks = useMemo(() => tasks
+    .filter(isWorkTask)
+    .filter((task) => task.due_date === dateIso)
+    .sort((a, b) => taskSortKey(a).localeCompare(taskSortKey(b))), [dateIso, tasks]);
+
   const dayTasks = useMemo(() => tasks
     .filter(isDashboardWork)
     .filter((task) => task.due_date === dateIso)
     .sort((a, b) => taskSortKey(a).localeCompare(taskSortKey(b))), [dateIso, tasks]);
+
+  const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask), [allDayTasks]);
 
   const routes = useMemo(() => routeOrder
     .map((key) => ({ key, tasks: dayTasks.filter((task) => routeForTask(task) === key) }))
@@ -192,6 +225,7 @@ export default function AtlasDayPage() {
                 <strong>{loading ? "Loading" : `${dayTasks.length} ${dayTasks.length === 1 ? "task" : "tasks"}`}</strong>
               </div>
               <p>{loading ? "Loading farm work" : routeCountLine(dayTasks)}</p>
+              <DayProgressBar done={doneDayTasks.length} total={allDayTasks.length} />
             </div>
 
             {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
