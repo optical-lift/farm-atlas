@@ -10,6 +10,7 @@ import {
   detail,
   filterWeekOverviewTasks,
   groupTasksByZone,
+  isRelevantOpenTask,
   isUrgentTask,
   location,
   prettyShortDate,
@@ -17,11 +18,16 @@ import {
   routeForTask,
   routeLabels,
   subject,
+  taskSortValue,
   todayIso,
   type ZoneTaskOverview,
 } from "@/lib/atlas/task-overview";
 
 type WeatherResponse = { ok: boolean; label?: string };
+
+function validIso(value: string | null) {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime()));
+}
 
 function TaskDueLabel({ task, anchorIso }: { task: AtlasTaskCard; anchorIso: string }) {
   if (!task.due_date) return <em>open</em>;
@@ -60,13 +66,18 @@ function ZoneSection({ zone, anchorIso, openDefault }: { zone: ZoneTaskOverview;
 
 export default function AtlasWeekOverviewPage() {
   const [anchorIso, setAnchorIso] = useState(todayIso());
+  const [explicitEndIso, setExplicitEndIso] = useState<string | null>(null);
   const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
 
   useEffect(() => {
-    setAnchorIso(new URLSearchParams(window.location.search).get("date") || todayIso());
+    const params = new URLSearchParams(window.location.search);
+    const dateParam = params.get("date");
+    const endParam = params.get("end");
+    setAnchorIso(validIso(dateParam) ? dateParam as string : todayIso());
+    setExplicitEndIso(validIso(endParam) ? endParam : null);
 
     async function load() {
       try {
@@ -95,8 +106,14 @@ export default function AtlasWeekOverviewPage() {
     void loadWeather();
   }, []);
 
-  const weekEndIso = addDaysIsoFrom(anchorIso, 6);
-  const weekTasks = useMemo(() => filterWeekOverviewTasks(tasks, anchorIso), [anchorIso, tasks]);
+  const weekEndIso = explicitEndIso ?? addDaysIsoFrom(anchorIso, 6);
+  const weekTasks = useMemo(() => {
+    if (!explicitEndIso) return filterWeekOverviewTasks(tasks, anchorIso);
+    return tasks
+      .filter(isRelevantOpenTask)
+      .filter((task) => Boolean(task.due_date && task.due_date >= anchorIso && task.due_date <= weekEndIso))
+      .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
+  }, [anchorIso, explicitEndIso, tasks, weekEndIso]);
   const urgentCount = useMemo(() => weekTasks.filter((task) => isUrgentTask(task, anchorIso)).length, [anchorIso, weekTasks]);
   const zoneGroups = useMemo(() => groupTasksByZone(weekTasks, anchorIso), [anchorIso, weekTasks]);
   const topZone = zoneGroups[0]?.zone ?? "No active zone";
@@ -113,7 +130,7 @@ export default function AtlasWeekOverviewPage() {
         <div className="atlas-task-page-body atlas-overview-body">
           <section className="atlas-overview-hero">
             <div>
-              <strong>This Week</strong>
+              <strong>{explicitEndIso ? "Work Week" : "This Week"}</strong>
               <span>{prettyShortDate(anchorIso)}–{prettyShortDate(weekEndIso)}</span>
             </div>
             <p>{loading ? "Loading farm week" : routeCountLineForTasks(weekTasks)}</p>
