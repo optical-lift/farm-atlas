@@ -32,6 +32,10 @@ function prettyDate(dateIso: string) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function monthShort(date: Date) {
+  return date.toLocaleDateString("en-US", { month: "short" });
+}
+
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -83,29 +87,64 @@ function countOpenWork(cards: Card[], startIso: string, endIso: string) {
   return cards.filter(isOpenWork).filter((card) => card.due_date && card.due_date >= startIso && card.due_date <= endIso).length;
 }
 
-function monthRows(cards: Card[]) {
-  const anchor = dateFromIso(todayIso());
-  const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1, 12, 0, 0, 0);
-  const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0, 12, 0, 0, 0);
-  const rows: Array<{ label: string; dateLabel: string; href: string; count: number }> = [];
-  let start = new Date(monthStart);
-  let index = 1;
+function monthStartFor(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1, 12, 0, 0, 0);
+}
 
-  while (start <= monthEnd) {
-    const end = new Date(start);
-    end.setDate(end.getDate() + (6 - end.getDay()));
-    if (end > monthEnd) end.setTime(monthEnd.getTime());
+function monthEndFor(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0, 12, 0, 0, 0);
+}
+
+function workWeekStartFor(date: Date) {
+  const sunday = new Date(date);
+  sunday.setDate(sunday.getDate() - sunday.getDay());
+  const monthStart = monthStartFor(date);
+  return sunday < monthStart ? monthStart : sunday;
+}
+
+function workWeekEndFor(start: Date) {
+  const end = new Date(start);
+  end.setDate(end.getDate() + (6 - end.getDay()));
+  const monthEnd = monthEndFor(start);
+  if (end > monthEnd) end.setTime(monthEnd.getTime());
+  return end;
+}
+
+function workWeekIndexFor(start: Date) {
+  let cursor = monthStartFor(start);
+  let index = 1;
+  while (isoFromDate(cursor) !== isoFromDate(start)) {
+    const end = workWeekEndFor(cursor);
+    cursor = new Date(end);
+    cursor.setDate(cursor.getDate() + 1);
+    index += 1;
+    if (index > 6) break;
+  }
+  return index;
+}
+
+function monthRows(cards: Card[]) {
+  const today = dateFromIso(todayIso());
+  const anchorMonth = today.getMonth();
+  const rows: Array<{ label: string; dateLabel: string; href: string; count: number }> = [];
+  let start = workWeekStartFor(today);
+
+  for (let rowIndex = 0; rowIndex < 4; rowIndex += 1) {
+    const end = workWeekEndFor(start);
     const startIso = isoFromDate(start);
     const endIso = isoFromDate(end);
+    const weekNumber = workWeekIndexFor(start);
+    const label = start.getMonth() === anchorMonth ? `Week ${weekNumber}` : `${monthShort(start)} Wk ${weekNumber}`;
+
     rows.push({
-      label: `Week ${index}`,
+      label,
       dateLabel: `${prettyDate(startIso)}–${prettyDate(endIso)}`,
       href: `/overview/week?date=${encodeURIComponent(startIso)}&end=${encodeURIComponent(endIso)}`,
       count: countOpenWork(cards, startIso, endIso),
     });
+
     start = new Date(end);
     start.setDate(start.getDate() + 1);
-    index += 1;
   }
 
   return rows;
