@@ -185,13 +185,13 @@ export default function AtlasDayPage() {
 
         <div className="atlas-task-page-body">
           <section className="atlas-task-page-section atlas-route-collection atlas-day-browse">
-            <div className="atlas-route-collection-head atlas-day-browse-head">
-              <Link href="/" className="atlas-route-back">← Week</Link>
-              <div>
+            <div className="atlas-day-browse-head">
+              <Link href="/" className="atlas-route-back atlas-day-back">← Week</Link>
+              <div className="atlas-day-browse-title-row">
                 <span>{dayOnly(dateIso)}</span>
                 <strong>{loading ? "Loading" : `${dayTasks.length} ${dayTasks.length === 1 ? "task" : "tasks"}`}</strong>
-                <small>{loading ? "Loading farm work" : routeCountLine(dayTasks)}</small>
               </div>
+              <p>{loading ? "Loading farm work" : routeCountLine(dayTasks)}</p>
             </div>
 
             {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
@@ -199,9 +199,8 @@ export default function AtlasDayPage() {
             <article className="atlas-day-route-hero">
               <div className="atlas-day-route-hero-head"><div><span>Day plan</span><strong>{prettyDate(dateIso)}</strong></div><em className="atlas-day-route-count-pill">{loading ? "…" : dayTasks.length}</em></div>
               <div className="atlas-day-route-grid">
-                {routes.length ? routes.map((route, index) => (
+                {routes.length ? routes.map((route) => (
                   <a key={route.key} className="atlas-day-route-box" href={`#atlas-day-route-${route.key}`}>
-                    <small>{index + 1} · {routeLabels[route.key]}</small>
                     <strong>{routeLabels[route.key]}</strong>
                     <span>{route.tasks.length} {route.tasks.length === 1 ? "task" : "tasks"}</span>
                     <em>{routePreview(route.tasks)}</em>
