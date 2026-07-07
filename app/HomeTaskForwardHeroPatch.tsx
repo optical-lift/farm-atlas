@@ -47,6 +47,28 @@ function isChildTask(card: Card) {
   return meta(card, "is_child_task") === true || meta(card, "is_child_task") === "true";
 }
 
+function parentTaskId(card: Card) {
+  return text(meta(card, "parent_task_id")) || text(meta(card, "parentTaskId"));
+}
+
+function isActiveChecklistChild(card: Card) {
+  if (!isChildTask(card)) return false;
+  const checklistStatus = text(meta(card, "checklist_status")).toLowerCase();
+  const atlasStatus = text(meta(card, "atlas_status")).toLowerCase();
+  const relevance = text(meta(card, "relevance")).toLowerCase();
+  return card.status !== "archived" && checklistStatus !== "archived" && atlasStatus !== "not_relevant" && relevance !== "not_relevant";
+}
+
+function subtaskCounts(cards: Card[]) {
+  const counts = new Map<string, number>();
+  cards.filter(isActiveChecklistChild).forEach((card) => {
+    const parentId = parentTaskId(card);
+    if (!parentId) return;
+    counts.set(parentId, (counts.get(parentId) ?? 0) + 1);
+  });
+  return counts;
+}
+
 function isHeroWork(card: Card) {
   const joined = `${card.task_type ?? ""} ${card.title ?? ""} ${card.unlock_text ?? ""}`.toLowerCase();
   return card.status === "open" && !isChildTask(card) && !(joined.includes("verify") || joined.includes("check") || joined.includes("confirm") || joined.includes("count") || joined.includes("germin") || joined.includes("walk field rows"));
@@ -98,8 +120,14 @@ function taskBuckets(cards: Card[]) {
   return source.slice(0, 4);
 }
 
-function cardHtml(card: Card) {
-  return `<a class="atlas-run-sheet-box atlas-route-sheet-box atlas-task-forward-box" href="/task?taskId=${encodeURIComponent(card.task_id)}" data-single-task-id="${html(card.task_id)}"><small>${html(routeLabel(card))} · ${html(location(card))}</small><strong>${html(subject(card))}</strong><span>${html(location(card))}</span><em>${html(detail(card))}</em></a>`;
+function subtaskLabel(card: Card, counts: Map<string, number>) {
+  const count = counts.get(card.task_id) ?? 0;
+  return `${count} ${count === 1 ? "step" : "steps"}`;
+}
+
+function cardHtml(card: Card, counts: Map<string, number>) {
+  const metaLine = `${routeLabel(card)} · ${location(card)} · ${subtaskLabel(card, counts)}`;
+  return `<a class="atlas-run-sheet-box atlas-route-sheet-box atlas-task-forward-box" href="/task?taskId=${encodeURIComponent(card.task_id)}" data-single-task-id="${html(card.task_id)}"><small>${html(metaLine)}</small><strong>${html(subject(card))}</strong><span>${html(subtaskLabel(card, counts))}</span><em>${html(detail(card))}</em></a>`;
 }
 
 export default function HomeTaskForwardHeroPatch() {
@@ -115,10 +143,11 @@ export default function HomeTaskForwardHeroPatch() {
       if (stopped) return;
       const buckets = taskBuckets(cards);
       if (!buckets.length) return;
-      const signature = buckets.map((card) => card.task_id).join("|");
+      const counts = subtaskCounts(cards);
+      const signature = buckets.map((card) => `${card.task_id}:${counts.get(card.task_id) ?? 0}`).join("|");
       if (grid.dataset.taskForwardSignature === signature) return;
       grid.dataset.taskForwardSignature = signature;
-      grid.innerHTML = buckets.map(cardHtml).join("");
+      grid.innerHTML = buckets.map((card) => cardHtml(card, counts)).join("");
     }
 
     function queuePatch() {
