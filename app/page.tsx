@@ -243,7 +243,7 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
   const today = todayIso();
   const todayHref = `/day?date=${encodeURIComponent(today)}`;
   const dashboardCards = cards.filter(isDashboardWork);
-  const todayCards = dashboardCards.filter((card) => !card.due_date || card.due_date <= today);
+  const todayCards = dashboardCards.filter((card) => card.due_date === today);
   const routes = buildRoutes(todayCards).filter((route) => heroRouteKeys.has(route.key)).slice(0, 4);
   const todayCount = todayCards.length;
 
