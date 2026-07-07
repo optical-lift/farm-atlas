@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
 
     const task = data as TaskRow;
     const now = new Date().toISOString();
+    const existingRescheduleCount = task.metadata?.reschedule_count;
     const metadata = {
       ...(task.metadata ?? {}),
       last_reschedule: {
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
         work_key: workKey,
         recorded_at: now,
       },
-      reschedule_count: typeof task.metadata?.reschedule_count === "number" ? task.metadata.reschedule_count + 1 : 1,
+      reschedule_count: typeof existingRescheduleCount === "number" ? existingRescheduleCount + 1 : 1,
     };
 
     const { error: updateError } = await atlasSupabase
