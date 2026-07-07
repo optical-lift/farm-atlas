@@ -187,8 +187,11 @@
   font-weight: 850;
 }
 
+body.atlas-day-browse-mode .atlas-task-progress-hero,
+body.atlas-day-browse-mode .atlas-task-page-active-anchor,
 body.atlas-day-browse-mode .atlas-route-lineup,
 body.atlas-day-browse-mode .atlas-route-collection:not(.atlas-day-browse),
-body.atlas-day-browse-mode .atlas-task-page-active {
+body.atlas-day-browse-mode .atlas-task-page-active,
+body.atlas-day-browse-mode .atlas-task-page-section:not(.atlas-day-browse) {
   display: none !important;
 }
