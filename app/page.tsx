@@ -244,10 +244,8 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
   const todayHref = `/day?date=${encodeURIComponent(today)}`;
   const dashboardCards = cards.filter(isDashboardWork);
   const todayCards = dashboardCards.filter((card) => !card.due_date || card.due_date <= today);
-  const upcomingCards = dashboardCards.filter((card) => card.due_date && card.due_date > today);
-  const routeSource = todayCards.length ? todayCards : upcomingCards;
-  const routes = buildRoutes(routeSource).filter((route) => heroRouteKeys.has(route.key)).slice(0, 4);
-  const firstDue = routeSource[0]?.due_date ? prettyDate(routeSource[0].due_date) : prettyDate(today);
+  const routes = buildRoutes(todayCards).filter((route) => heroRouteKeys.has(route.key)).slice(0, 4);
+  const todayCount = todayCards.length;
 
   if (loading && cards.length === 0) {
     return (
@@ -269,15 +267,15 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
       <Link href={todayHref} className="atlas-task-controller-head atlas-task-controller-head-link" aria-label="Open today's full work overview">
         <div>
           <span className="atlas-task-kicker">Today</span>
-          <em className="atlas-season-label">Open day overview · {firstDue}</em>
+          <em className="atlas-season-label">Open day overview · {prettyDate(today)}</em>
         </div>
-        <span className="atlas-task-date">{dashboardCards.length} work</span>
+        <span className="atlas-task-date">{todayCount ? `${todayCount} work` : "Complete"}</span>
       </Link>
 
       {routes.length === 0 ? (
         <Link href={todayHref} className="atlas-run-sheet-empty">
-          <strong>No open farm work</strong>
-          <em>Open today overview.</em>
+          <strong>All tasks complete</strong>
+          <em>Open today overview, or browse the week below.</em>
         </Link>
       ) : (
         <div className="atlas-run-sheet-grid atlas-route-sheet-grid">
