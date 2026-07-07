@@ -1,0 +1,92 @@
+.atlas-task-primary-actions {
+  grid-template-columns: 1fr 1fr !important;
+}
+
+.atlas-task-primary-actions button {
+  min-height: 48px;
+}
+
+.atlas-task-primary-actions button:not(.done) {
+  background: rgba(167, 171, 214, 0.18);
+  color: var(--atlas-text);
+}
+
+.atlas-task-unfinished-panel {
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 20px;
+  background: rgba(246, 242, 230, 0.58);
+  padding: 11px;
+  display: grid;
+  gap: 9px;
+}
+
+.atlas-task-unfinished-panel > strong,
+.atlas-task-unfinished-panel > span {
+  display: block;
+  min-width: 0;
+}
+
+.atlas-task-unfinished-panel > strong {
+  color: var(--atlas-text);
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.atlas-task-unfinished-panel > span {
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atlas-task-unfinished-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.atlas-task-unfinished-grid.reschedule,
+.atlas-task-unfinished-grid.quiet {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.atlas-task-unfinished-grid button {
+  min-width: 0;
+  border: 1px solid var(--atlas-border);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--atlas-text);
+  padding: 10px 8px;
+  font-size: 12px;
+  line-height: 1.05;
+  font-weight: 950;
+  text-align: center;
+}
+
+.atlas-task-unfinished-grid button.blocked {
+  border-color: rgba(225, 181, 165, 0.58);
+  background: rgba(225, 181, 165, 0.26);
+  color: #835345;
+}
+
+.atlas-task-unfinished-grid.reschedule button {
+  background: rgba(214, 225, 177, 0.34);
+  color: #515b34;
+}
+
+.atlas-task-unfinished-grid.quiet button {
+  background: rgba(255, 255, 255, 0.56);
+  color: var(--atlas-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 360px) {
+  .atlas-task-unfinished-grid.reschedule,
+  .atlas-task-unfinished-grid.quiet {
+    grid-template-columns: 1fr;
+  }
+}
