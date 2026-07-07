@@ -5,15 +5,21 @@ import { useEffect, useState } from "react";
 
 import { fetchAtlasCloseout, type AtlasCloseoutSummary } from "@/lib/atlas/closeout-client";
 import { fetchAtlasFarmSnapshot, type AtlasFarmSnapshot } from "@/lib/atlas/farm-snapshot-client";
-import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { saveAtlasInboxItem } from "@/lib/atlas/inbox-client";
+import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import {
+  filterMonthOverviewTasks,
+  filterWeekOverviewTasks,
+  isUrgentTask,
+  monthName,
+  monthProgress,
+} from "@/lib/atlas/task-overview";
 
-type HomePanel = "inbox" | "week" | "closeout" | null;
+type HomePanel = "inbox" | "closeout" | null;
 type WeatherResponse = { ok: boolean; label?: string; rainAge?: string; daysSinceRain?: number | null; error?: string };
 type HomeTaskDisplay = { rhythm: string; action: string; subject: string; location: string; detail: string | null };
 type WorkRouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
 type WorkRoute = { key: WorkRouteKey; label: string; cards: AtlasTaskCard[]; zones: string[]; preview: string; href: string };
-type DayPlan = { dateIso: string; dayLabel: string; dateLabel: string; total: number; cards: AtlasTaskCard[]; routeCounts: { key: WorkRouteKey; label: string; count: number }[]; preview: string };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const defaultSnapshot: AtlasFarmSnapshot = { totalBeds: 0, growingBeds: 0, activeSqft: 0, sowingsLogged: 0, stemsLogged: 0 };
@@ -29,26 +35,9 @@ const routeLabels: Record<WorkRouteKey, string> = {
   venue: "Venue",
   water: "Water",
 };
-const shortRouteLabels: Record<WorkRouteKey, string> = {
-  plant: "Plant",
-  weed: "Weed",
-  mow: "Mow",
-  seed: "Seed",
-  harvest: "Harvest",
-  build: "Build",
-  venue: "Venue",
-  water: "Water",
-};
 
 function todayIso() {
   const date = new Date();
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
-
-function addDaysIso(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 10);
 }
@@ -62,12 +51,6 @@ function prettyDate(dateIso: string | null | undefined) {
   const date = dateIso.includes("-") ? dateFromIso(dateIso) : new Date(dateIso);
   if (Number.isNaN(date.getTime())) return dateIso;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function dayLabel(dateIso: string) {
-  const date = dateFromIso(dateIso);
-  if (Number.isNaN(date.getTime())) return dateIso;
-  return date.toLocaleDateString("en-US", { weekday: "long" });
 }
 
 function cleanLabel(value: string | null | undefined) {
@@ -169,14 +152,6 @@ function zoneBucket(location: string) {
   return location;
 }
 
-function collectionLabel(card: AtlasTaskCard) {
-  return metaString(card, "collection_label") ?? taskDisplay(card).subject;
-}
-
-function collectionZone(card: AtlasTaskCard) {
-  return metaString(card, "collection_zone") ?? zoneBucket(taskDisplay(card).location);
-}
-
 function buildRoutes(cards: AtlasTaskCard[]) {
   const byRoute = new Map<WorkRouteKey, AtlasTaskCard[]>();
   routeOrder.forEach((key) => byRoute.set(key, []));
@@ -201,45 +176,13 @@ function buildRoutes(cards: AtlasTaskCard[]) {
     .filter((route): route is WorkRoute => Boolean(route));
 }
 
-function routeCountsFor(cards: AtlasTaskCard[]) {
-  return routeOrder
-    .map((key) => ({ key, label: shortRouteLabels[key], count: cards.filter((card) => routeKeyForTask(card) === key).length }))
-    .filter((item) => item.count > 0);
-}
-
-function dayPlan(dateIso: string, cards: AtlasTaskCard[]): DayPlan {
-  const dayCards = cards
-    .filter(isDashboardWork)
-    .filter((card) => card.due_date === dateIso)
-    .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
-  return {
-    dateIso,
-    dayLabel: dayLabel(dateIso),
-    dateLabel: prettyDate(dateIso),
-    total: dayCards.length,
-    cards: dayCards,
-    routeCounts: routeCountsFor(dayCards),
-    preview: dayCards.map(collectionLabel).slice(0, 2).join(" · "),
-  };
-}
-
-function forwardDayPlans(cards: AtlasTaskCard[], count: number, startOffset = 1) {
-  return Array.from({ length: count }, (_, index) => dayPlan(addDaysIso(startOffset + index), cards));
-}
-
-function routeCountLine(plan: DayPlan) {
-  if (!plan.routeCounts.length) return "No farm tasks planned";
-  return plan.routeCounts.map((item) => `${item.label} ${item.count}`).join(" · ");
-}
-
 function panelTitle(panel: HomePanel) {
   if (panel === "inbox") return "Note";
-  if (panel === "week") return "Week Lineup";
   if (panel === "closeout") return "Closeout";
   return "Atlas";
 }
 
-function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: boolean; weatherLabel: string }) {
+function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: boolean }) {
   const today = todayIso();
   const todayHref = `/day?date=${encodeURIComponent(today)}`;
   const dashboardCards = cards.filter(isDashboardWork);
@@ -293,63 +236,28 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
   );
 }
 
-function WeeklyWorkBox({ cards, loading, onOpen }: { cards: AtlasTaskCard[]; loading: boolean; onOpen: () => void }) {
-  const plans = forwardDayPlans(cards, 2, 1);
+function OverviewLaunchBoxes({ cards, loading }: { cards: AtlasTaskCard[]; loading: boolean }) {
+  const today = todayIso();
+  const weekTasks = filterWeekOverviewTasks(cards, today);
+  const monthTasks = filterMonthOverviewTasks(cards, today);
+  const urgentWeekTasks = weekTasks.filter((card) => isUrgentTask(card, today));
+  const progress = monthProgress(today);
 
   return (
-    <button type="button" className="atlas-home-box atlas-home-box-white atlas-week-overview-box" onClick={onOpen}>
-      <strong>Week Lineup</strong>
-      <em>{loading ? "Loading the next farm days" : "Next farm days"}</em>
-      <div className="atlas-week-day-preview-grid">
-        {plans.map((plan) => (
-          <span key={plan.dateIso} className="atlas-week-day-preview-card">
-            <b>{plan.dayLabel}</b>
-            <small>{plan.dateLabel} · {plan.total} {plan.total === 1 ? "task" : "tasks"}</small>
-            <i>{routeCountLine(plan)}</i>
-          </span>
-        ))}
-      </div>
-    </button>
-  );
-}
-
-function WeekLineupPanel({ cards }: { cards: AtlasTaskCard[] }) {
-  const plans = forwardDayPlans(cards, 6, 1);
-
-  return (
-    <section className="atlas-task-focus-section atlas-week-panel">
-      <article className="atlas-week-panel-hero atlas-week-calendar-hero">
-        <span>This Week</span>
-        <strong>Next farm days</strong>
-        <p>Each day shows the task collections planned for that date.</p>
-      </article>
-      <div className="atlas-week-calendar-list">
-        {plans.map((plan) => (
-          <article key={plan.dateIso} className="atlas-week-calendar-day">
-            <div className="atlas-week-calendar-day-head">
-              <div>
-                <strong>{plan.dayLabel}</strong>
-                <span>{plan.dateLabel}</span>
-              </div>
-              <em>{plan.total} {plan.total === 1 ? "task" : "tasks"}</em>
-            </div>
-            <div className="atlas-week-route-counts">
-              {plan.routeCounts.length ? plan.routeCounts.map((item) => <span key={item.key}>{item.label} {item.count}</span>) : <span>No farm tasks planned</span>}
-            </div>
-            {plan.cards.length ? (
-              <div className="atlas-week-task-list">
-                {plan.cards.map((card) => (
-                  <Link key={card.task_id} href={`/task?taskId=${encodeURIComponent(card.task_id)}`} className="atlas-week-task-row">
-                    <strong>{collectionLabel(card)}</strong>
-                    <span>{routeLabels[routeKeyForTask(card)]} · {collectionZone(card)}</span>
-                  </Link>
-                ))}
-              </div>
-            ) : null}
-          </article>
-        ))}
-      </div>
-    </section>
+    <div className="atlas-home-overview-row" aria-label="Week and month overview links">
+      <Link href="/overview/week" className="atlas-home-overview-card atlas-home-overview-week">
+        <strong>This Week</strong>
+        <em>{loading ? "Loading farm week" : "Today + 6 days"}</em>
+        <span>{loading ? "Loading" : `${weekTasks.length} open · ${urgentWeekTasks.length} urgent`}</span>
+      </Link>
+      <Link href="/overview/month" className="atlas-home-overview-card atlas-home-overview-month">
+        <strong>{monthName(today)}</strong>
+        <div className="atlas-home-month-progress" aria-label={`${progress.day} of ${progress.days} days through ${monthName(today)}`}>
+          <i style={{ width: `${progress.percent}%` }} />
+        </div>
+        <span>{loading ? "Loading" : `${progress.day} of ${progress.days} days · ${monthTasks.length} open`}</span>
+      </Link>
+    </div>
   );
 }
 
@@ -411,13 +319,13 @@ export default function AtlasHomePage() {
           <button type="button" className="atlas-note-plus" aria-label="Add note" onClick={() => setOpenPanel("inbox")}>+</button>
         </header>
         <div className="atlas-home-grid">
-          <TaskLaunchHero cards={cards} loading={loading} weatherLabel={weatherLabel} />
-          <WeeklyWorkBox cards={cards} loading={loading} onOpen={() => setOpenPanel("week")} />
+          <TaskLaunchHero cards={cards} loading={loading} />
+          <OverviewLaunchBoxes cards={cards} loading={loading} />
           <FarmSnapshotBox snapshot={snapshot} loading={snapshotLoading} />
           <CloseoutFooterLink summary={monthSummary} today={today} onOpen={() => setOpenPanel("closeout")} />
         </div>
       </section>
-      {openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{panelTitle(openPanel)}</strong></div><button type="button" onClick={() => setOpenPanel(null)}>Close</button></div><div className="atlas-task-focus-body">{openPanel === "week" ? <WeekLineupPanel cards={cards} /> : null}{openPanel === "closeout" ? <CloseoutPanel summaries={closeoutSummaries} loading={closeoutLoading} /> : null}{openPanel === "inbox" ? <section className="atlas-task-focus-section"><div className="atlas-add-form"><select aria-label="Zone" value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">Whole farm</option></select><textarea aria-label="Note" value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Note" /></div><button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving" : "Save"}</button>{inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}</section> : null}</div></div></section> : null}
+      {openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{panelTitle(openPanel)}</strong></div><button type="button" onClick={() => setOpenPanel(null)}>Close</button></div><div className="atlas-task-focus-body">{openPanel === "closeout" ? <CloseoutPanel summaries={closeoutSummaries} loading={closeoutLoading} /> : null}{openPanel === "inbox" ? <section className="atlas-task-focus-section"><div className="atlas-add-form"><select aria-label="Zone" value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">Whole farm</option></select><textarea aria-label="Note" value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Note" /></div><button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving" : "Save"}</button>{inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}</section> : null}</div></div></section> : null}
     </main>
   );
 }
