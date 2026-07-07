@@ -5,7 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
 type LaneKey = "start" | "maintain" | "harvest" | "venue";
-type Outcome = "done" | "partial" | "blocked";
+type Outcome = "done" | "partial" | "blocked" | "not_relevant" | "changed_plan";
+type RescheduleMode = "tomorrow" | "next_time_block" | "pick_date";
 type WeatherResponse = { ok: boolean; label?: string };
 
 type DisplayTask = {
@@ -163,6 +164,10 @@ function laneForTask(task: AtlasTaskCard): LaneKey {
   return displayTask(task).lane;
 }
 
+function workKeyForDisplay(display: DisplayTask) {
+  return display.action.toLowerCase().replace(/\s+/g, "_");
+}
+
 function isChildTask(task: AtlasTaskCard) {
   return metadataValue(task, "is_child_task") === true || metadataValue(task, "is_child_task") === "true";
 }
@@ -223,6 +228,25 @@ function rowMeta(task: AtlasTaskCard, today: string, weatherLabel: string) {
   return [display.location, workWindowForTask(task, weatherLabel), carryoverLabel(task, today)].filter(Boolean).join(" · ");
 }
 
+function validDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime());
+}
+
+function nextTimeBlockDate(task: AtlasTaskCard, allTasks: AtlasTaskCard[], today: string) {
+  const display = displayTask(task);
+  const sameBlock = allTasks
+    .filter((candidate) => candidate.task_id !== task.task_id)
+    .filter((candidate) => (candidate.status === "open" || candidate.status === "blocked") && !isChildTask(candidate))
+    .filter((candidate) => Boolean(candidate.due_date && candidate.due_date > today))
+    .filter((candidate) => {
+      const candidateDisplay = displayTask(candidate);
+      return candidateDisplay.lane === display.lane && (candidateDisplay.action === display.action || candidateDisplay.rhythm === display.rhythm);
+    })
+    .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)))[0];
+
+  return sameBlock?.due_date ?? addDaysIso(today, 7);
+}
+
 async function postOutcome(task: AtlasTaskCard, outcome: Outcome, note = "") {
   const display = displayTask(task);
   const response = await fetch("/api/atlas/task-outcome", {
@@ -234,11 +258,29 @@ async function postOutcome(task: AtlasTaskCard, outcome: Outcome, note = "") {
       note,
       reason: note,
       laneKey: display.lane,
-      workKey: display.action.toLowerCase().replace(/\s+/g, "_"),
+      workKey: workKeyForDisplay(display),
     }),
   });
   const data = (await response.json()) as { ok?: boolean; error?: string; details?: string };
   if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task update failed.");
+}
+
+async function postReschedule(task: AtlasTaskCard, targetDate: string, rescheduleMode: RescheduleMode, reason = "") {
+  const display = displayTask(task);
+  const response = await fetch("/api/atlas/task-reschedule", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      taskId: task.task_id,
+      targetDate,
+      rescheduleMode,
+      reason,
+      laneKey: display.lane,
+      workKey: workKeyForDisplay(display),
+    }),
+  });
+  const data = (await response.json()) as { ok?: boolean; error?: string; details?: string };
+  if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task reschedule failed.");
 }
 
 async function postNote(task: AtlasTaskCard, note: string) {
@@ -328,13 +370,14 @@ function ProgressReportHero({ selectedTask, tasks, nextWorkTasks, today }: { sel
   );
 }
 
-function ActiveTaskCard({ task, onChange, today, weatherLabel }: { task: AtlasTaskCard; onChange: () => Promise<void>; today: string; weatherLabel: string }) {
+function ActiveTaskCard({ task, allTasks, onChange, today, weatherLabel }: { task: AtlasTaskCard; allTasks: AtlasTaskCard[]; onChange: () => Promise<void>; today: string; weatherLabel: string }) {
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const display = displayTask(task);
   const windowLabel = workWindowForTask(task, weatherLabel);
 
-  async function submit(outcome: Outcome, note = "") {
+  async function submitOutcome(outcome: Outcome, note = "") {
     try {
       setSaving(outcome);
       setMessage(null);
@@ -348,13 +391,53 @@ function ActiveTaskCard({ task, onChange, today, weatherLabel }: { task: AtlasTa
     }
   }
 
-  function startSave(outcome: Outcome) {
-    if (outcome === "blocked") {
-      void submit(outcome, "Stuck");
+  async function submitReschedule(targetDate: string, mode: RescheduleMode, reason = "") {
+    try {
+      setSaving(mode);
+      setMessage(null);
+      await postReschedule(task, targetDate, mode, reason);
+      await onChange();
+      setMessage(`Moved to ${prettyDate(targetDate)}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Task reschedule failed.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  function finishDone() {
+    void submitOutcome("done");
+  }
+
+  function markPartial() {
+    const note = window.prompt("What is left?", "")?.trim() || "Unfinished — partly done";
+    void submitOutcome("partial", note);
+  }
+
+  function markBlocked() {
+    const note = window.prompt("What blocked it?", "")?.trim() || "Blocked";
+    void submitOutcome("blocked", note);
+  }
+
+  function markNotRelevant() {
+    const note = window.prompt("Why is this no longer relevant?", "")?.trim() || "Not relevant now";
+    void submitOutcome("not_relevant", note);
+  }
+
+  function markChangedPlan() {
+    const note = window.prompt("What changed?", "")?.trim() || "Plan changed";
+    void submitOutcome("changed_plan", note);
+  }
+
+  function reschedule(mode: RescheduleMode) {
+    const defaultDate = mode === "tomorrow" ? addDaysIso(today, 1) : mode === "next_time_block" ? nextTimeBlockDate(task, allTasks, today) : task.due_date && task.due_date > today ? task.due_date : addDaysIso(today, 1);
+    const targetDate = mode === "pick_date" ? window.prompt("Pick a date (YYYY-MM-DD)", defaultDate)?.trim() ?? "" : defaultDate;
+    if (!validDate(targetDate)) {
+      setMessage("Use a date like 2026-07-09.");
       return;
     }
-    const note = outcome === "done" ? "" : window.prompt(outcome === "partial" ? "Left?" : "Note", "") ?? "";
-    void submit(outcome, note);
+    const reason = mode === "next_time_block" ? "Moved to the next matching time block" : mode === "tomorrow" ? "Moved to tomorrow" : "Picked a new date";
+    void submitReschedule(targetDate, mode, reason);
   }
 
   async function addNote() {
@@ -387,12 +470,31 @@ function ActiveTaskCard({ task, onChange, today, weatherLabel }: { task: AtlasTa
         <strong>{display.location}</strong>
       </section>
       <DetailCard heading={display.detailHeading} lines={display.detailLines} />
-      <div className="atlas-task-page-actions">
-        <button type="button" className="done" disabled={Boolean(saving)} onClick={() => startSave("done")}>{saving === "done" ? "Saving" : "Done"}</button>
-        <button type="button" disabled={Boolean(saving)} onClick={() => startSave("partial")}>{saving === "partial" ? "Saving" : "More"}</button>
-        <button type="button" className="blocked" disabled={Boolean(saving)} onClick={() => startSave("blocked")}>{saving === "blocked" ? "Saving" : "Stuck"}</button>
-        <button type="button" disabled={Boolean(saving)} onClick={() => void addNote()}>{saving === "note" ? "Saving" : "Note"}</button>
+      <div className="atlas-task-page-actions atlas-task-primary-actions">
+        <button type="button" className="done" disabled={Boolean(saving)} onClick={finishDone}>{saving === "done" ? "Saving" : "Done"}</button>
+        <button type="button" disabled={Boolean(saving)} onClick={() => setUnfinishedOpen((open) => !open)}>{unfinishedOpen ? "Close" : "Unfinished"}</button>
       </div>
+      {unfinishedOpen ? (
+        <section className="atlas-task-unfinished-panel">
+          <strong>What happened?</strong>
+          <div className="atlas-task-unfinished-grid">
+            <button type="button" disabled={Boolean(saving)} onClick={markPartial}>{saving === "partial" ? "Saving" : "Partly done"}</button>
+            <button type="button" className="blocked" disabled={Boolean(saving)} onClick={markBlocked}>{saving === "blocked" ? "Saving" : "Blocked"}</button>
+          </div>
+          <span>Reschedule</span>
+          <div className="atlas-task-unfinished-grid reschedule">
+            <button type="button" disabled={Boolean(saving)} onClick={() => reschedule("tomorrow")}>{saving === "tomorrow" ? "Saving" : "Tomorrow"}</button>
+            <button type="button" disabled={Boolean(saving)} onClick={() => reschedule("next_time_block")}>{saving === "next_time_block" ? "Saving" : "Next time block"}</button>
+            <button type="button" disabled={Boolean(saving)} onClick={() => reschedule("pick_date")}>{saving === "pick_date" ? "Saving" : "Pick a date"}</button>
+          </div>
+          <span>Close this card without doing it</span>
+          <div className="atlas-task-unfinished-grid quiet">
+            <button type="button" disabled={Boolean(saving)} onClick={markChangedPlan}>{saving === "changed_plan" ? "Saving" : "Changed plan"}</button>
+            <button type="button" disabled={Boolean(saving)} onClick={markNotRelevant}>{saving === "not_relevant" ? "Saving" : "Not relevant"}</button>
+            <button type="button" disabled={Boolean(saving)} onClick={() => void addNote()}>{saving === "note" ? "Saving" : "Note only"}</button>
+          </div>
+        </section>
+      ) : null}
       {message ? <p className="atlas-task-page-message">{message}</p> : null}
     </article>
   );
@@ -516,7 +618,7 @@ export default function AtlasTaskPage() {
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
           {message ? <div className="atlas-task-page-empty">{message}</div> : null}
           {!loading && !selectedTask ? <div className="atlas-task-page-empty">No open tasks.</div> : null}
-          {selectedTask ? <div ref={activeTaskAnchorRef} className="atlas-task-page-active-anchor"><ActiveTaskCard task={selectedTask} onChange={handleTaskChanged} today={today} weatherLabel={weatherLabel} /></div> : null}
+          {selectedTask ? <div ref={activeTaskAnchorRef} className="atlas-task-page-active-anchor"><ActiveTaskCard task={selectedTask} allTasks={tasks} onChange={handleTaskChanged} today={today} weatherLabel={weatherLabel} /></div> : null}
           <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Next</span><small>{nextWorkTasks.length}</small></div>{renderTaskRows(nextWorkTasks, "No next tasks ready.")}</section>
           <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Later</span><small>{laterWorkTasks.length}</small></div>{renderTaskRows(laterWorkTasks, "No later tasks ready.")}</section>
           <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Waiting</span><small>{carryoverTasks.length}</small></div>{renderTaskRows(carryoverTasks, "Nothing waiting.")}</section>
