@@ -1,0 +1,14 @@
+.atlas-task-controller-head-link {
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
+.atlas-task-controller-head-link:active {
+  transform: translateY(1px);
+}
+
+.atlas-task-controller-head-link .atlas-task-date {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
