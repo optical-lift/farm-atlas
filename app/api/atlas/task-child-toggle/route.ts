@@ -10,6 +10,8 @@ type Body = {
   plantedLocation?: string | null;
 };
 
+const allowedPlantingMethods = new Set(["direct_sow", "transplant", "clump", "division", "start", "bulb", "seed_scatter", "full_bed_claim"]);
+
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -21,6 +23,11 @@ function numberValue(value: unknown) {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
+}
+
+function plantingMethod(value: unknown) {
+  const method = clean(value);
+  return allowedPlantingMethods.has(method) ? method : "transplant";
 }
 
 function shouldLogPlanting(metadata: Record<string, unknown>, checklistStatus: "open" | "done") {
@@ -91,7 +98,7 @@ async function writePlantingLog({
       crop_label: cropLabel,
       variety,
       planted_date: plantedDate,
-      planting_method: clean(metadata.planting_method) || "transplant / tuber",
+      planting_method: plantingMethod(metadata.planting_method),
       amount,
       unit,
       status: "planted",
@@ -128,7 +135,7 @@ export async function POST(request: NextRequest) {
     const parentTaskId = typeof currentMetadata.parent_task_id === "string" ? currentMetadata.parent_task_id : null;
     const defaultAmount = numberValue(currentMetadata.planting_log_default_amount);
     const amount = numberValue(body.plantedAmount) ?? defaultAmount;
-    const location = clean(body.plantedLocation) || clean(currentMetadata.planting_log_default_location) || clean(currentMetadata.display_detail) || clean(task.due_date) || "Elm Farm";
+    const location = clean(body.plantedLocation) || clean(currentMetadata.planting_log_default_location) || clean(currentMetadata.display_detail) || "Elm Farm";
     const plantingLog = shouldLogPlanting(currentMetadata, checklistStatus) && amount !== null
       ? await writePlantingLog({ task, metadata: currentMetadata, amount, location, now })
       : null;
