@@ -29,7 +29,7 @@ const routeLabels: Record<RouteKey, string> = {
 const mainRoutes = new Set<RouteKey>(["plant", "weed", "mow", "seed", "build"]);
 
 function text(value: unknown) {
-  return typeof value === "string" ? value : "";
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function stringList(value: unknown) {
@@ -58,9 +58,7 @@ function isRouteKey(value: string): value is RouteKey {
 }
 
 function subject(card: TaskCard) {
-  const display = text(card.metadata?.display_subject);
-  if (display) return display;
-  return card.title.split("—").slice(1).join("—").trim() || card.title;
+  return text(card.metadata?.display_subject) || card.title.split("—").slice(1).join("—").trim() || card.title;
 }
 
 function label(card: TaskCard) {
@@ -76,9 +74,7 @@ function location(card: TaskCard) {
 }
 
 function collectionZone(card: TaskCard) {
-  const explicit = text(card.metadata?.collection_zone);
-  if (explicit) return explicit;
-  return zoneBucket(location(card));
+  return text(card.metadata?.collection_zone) || zoneBucket(location(card));
 }
 
 function spacingLines(card: TaskCard) {
@@ -107,18 +103,7 @@ function childDetailLines(parent: TaskCard, child: TaskCard) {
   if (!parentDetails.length) return [];
 
   const childLabel = norm(label(child));
-  const directKeys = [
-    "field rows",
-    "barn beds",
-    "u pick",
-    "follow me",
-    "curve garden",
-    "main garden",
-    "lilac haven",
-    "garage",
-    "entry billboard",
-  ];
-
+  const directKeys = ["field rows", "barn beds", "u pick", "follow me", "curve garden", "main garden", "lilac haven", "garage", "entry billboard"];
   const directKey = directKeys.find((key) => childLabel.includes(key));
   if (directKey) {
     const directMatch = parentDetails.find((line) => norm(line).includes(directKey));
@@ -130,7 +115,6 @@ function childDetailLines(parent: TaskCard, child: TaskCard) {
     const lineText = norm(line);
     return meaningfulWords.length > 0 && meaningfulWords.every((word) => lineText.includes(word));
   });
-
   return fuzzyMatch ? [fuzzyMatch] : [];
 }
 
@@ -173,7 +157,7 @@ function todayIso() {
 }
 
 function isTodayWork(card: TaskCard) {
-  return !card.due_date || card.due_date <= todayIso();
+  return card.due_date === todayIso();
 }
 
 function prettyDate(dateIso: string | null | undefined) {
@@ -257,7 +241,7 @@ function removeTimingPills() {
 function insertLocationPill(parent: TaskCard) {
   const row = document.querySelector(".atlas-task-page-active .atlas-task-page-time-row");
   if (!row) return;
-  row.querySelector(".atlas-task-location-pill")?.remove();
+  if (row.querySelector(".atlas-task-location-pill")) return;
   const place = location(parent);
   if (routeForTask(parent) === "mow" || norm(place) === "weekly production paths") return;
   const pill = document.createElement("span");
@@ -268,8 +252,7 @@ function insertLocationPill(parent: TaskCard) {
 
 function insertSpacing(parent: TaskCard) {
   const card = document.querySelector(".atlas-task-page-active");
-  if (!card) return;
-  card.querySelector(".atlas-plant-spacing-card")?.remove();
+  if (!card || card.querySelector(".atlas-plant-spacing-card")) return;
   const lines = spacingLines(parent);
   if (!lines.length) return;
 
@@ -290,9 +273,7 @@ function insertSpacing(parent: TaskCard) {
 
 function insertTools(parent: TaskCard) {
   const card = document.querySelector(".atlas-task-page-active");
-  if (!card) return;
-  card.querySelector(".atlas-task-tools-card")?.remove();
-  card.querySelector(".atlas-default-task-tools-card")?.remove();
+  if (!card || card.querySelector(".atlas-task-tools-card, .atlas-default-task-tools-card")) return;
   const tools = taskTools(parent);
   if (!tools.length) return;
 
@@ -319,52 +300,87 @@ function decorateParent(parent: TaskCard) {
   insertTools(parent);
 }
 
+function checklistSignature(children: TaskCard[]) {
+  return children.map((child) => `${child.task_id}:${text(child.metadata?.checklist_status)}:${text((child.metadata?.planting_log as Record<string, unknown> | undefined)?.recorded_at)}`).join("|");
+}
+
+function plantingLogSummary(child: TaskCard) {
+  return text((child.metadata?.planting_log as Record<string, unknown> | undefined)?.summary);
+}
+
+function defaultAmount(child: TaskCard) {
+  const value = child.metadata?.planting_log_default_amount;
+  if (typeof value === "number") return String(value);
+  return text(value);
+}
+
+function defaultLocation(child: TaskCard) {
+  return text(child.metadata?.planting_log_default_location) || location(child);
+}
+
+function needsPlantingLog(child: TaskCard) {
+  return child.metadata?.planting_log_required === true || text(child.metadata?.planting_log_required) === "true";
+}
+
+function inlineLogForm(child: TaskCard) {
+  if (!needsPlantingLog(child) || isDone(child)) return "";
+  return `
+    <form class="atlas-child-plant-log" data-child-task-id="${html(child.task_id)}" hidden>
+      <label><span>Count</span><input name="plantedAmount" inputmode="numeric" type="number" min="0" step="1" value="${html(defaultAmount(child))}" /></label>
+      <label><span>Where</span><input name="plantedLocation" type="text" value="${html(defaultLocation(child))}" placeholder="Bed or area" /></label>
+      <div class="atlas-child-plant-log-actions">
+        <button type="submit">Save planted</button>
+        <button type="button" class="atlas-child-log-cancel">Cancel</button>
+      </div>
+      <p class="atlas-child-log-error" aria-live="polite"></p>
+    </form>`;
+}
+
+function checkRow(child: TaskCard, parent: TaskCard) {
+  const done = isDone(child);
+  const details = childDetailLines(parent, child);
+  const summary = plantingLogSummary(child);
+  return `
+    <div class="${done ? "atlas-child-check-item done" : "atlas-child-check-item"}" data-child-task-id="${html(child.task_id)}" data-next-status="${done ? "open" : "done"}" data-planting-log-required="${needsPlantingLog(child) ? "true" : "false"}">
+      <button type="button" class="atlas-child-check-touch">
+        <span>${done ? "✓" : ""}</span>
+        <div class="atlas-child-check-copy">
+          <strong>${html(label(child))}</strong>
+          ${details.map((line) => `<em>${html(line)}</em>`).join("")}
+          ${summary ? `<em class="atlas-child-log-summary">${html(summary)}</em>` : ""}
+        </div>
+      </button>
+      ${inlineLogForm(child)}
+    </div>`;
+}
+
 function insertChecklist(parent: TaskCard, children: TaskCard[]) {
   const card = document.querySelector(".atlas-task-page-active");
   if (!card) return;
-  card.querySelector(".atlas-child-checklist")?.remove();
+  const existing = card.querySelector<HTMLElement>(".atlas-child-checklist");
+  const signature = checklistSignature(children);
+  if (existing?.dataset.childChecklistSignature === signature || existing?.querySelector(".atlas-child-check-item.logging, .atlas-child-check-item.saving")) return;
 
-  const openChildren = children.filter((child) => !isDone(child));
-  const doneChildren = children.filter(isDone);
-  const section = document.createElement("section");
+  const section = existing ?? document.createElement("section");
   section.className = "atlas-child-checklist";
   section.dataset.parentTaskId = parent.task_id;
+  section.dataset.childChecklistSignature = signature;
   section.innerHTML = `
     <strong>Checklist</strong>
-    <div class="atlas-child-checklist-open"></div>
-    ${doneChildren.length ? `<details class="atlas-child-checklist-finished"><summary>Already finished · ${doneChildren.length}</summary><div></div></details>` : ""}
+    <div class="atlas-child-checklist-open atlas-child-checklist-stable-list">
+      ${children.map((child) => checkRow(child, parent)).join("")}
+    </div>
   `;
-
-  const openTarget = section.querySelector(".atlas-child-checklist-open");
-  openChildren.forEach((child) => openTarget?.appendChild(checkButton(child, parent)));
-
-  const doneTarget = section.querySelector(".atlas-child-checklist-finished div");
-  doneChildren.forEach((child) => doneTarget?.appendChild(checkButton(child, parent)));
 
   const detail = card.querySelector(".atlas-task-detail-card");
   if (shouldRemoveParentDetail(parent, detail)) detail?.remove();
 
-  const tools = card.querySelector(".atlas-task-tools-card");
-  const spacing = card.querySelector(".atlas-plant-spacing-card");
-  const place = card.querySelector(".atlas-task-place-card");
-  (tools ?? spacing ?? place)?.insertAdjacentElement("afterend", section);
-}
-
-function checkButton(child: TaskCard, parent: TaskCard) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = isDone(child) ? "atlas-child-check-item done" : "atlas-child-check-item";
-  button.dataset.childTaskId = child.task_id;
-  button.dataset.nextStatus = isDone(child) ? "open" : "done";
-  const details = childDetailLines(parent, child);
-  button.innerHTML = `
-    <span>${isDone(child) ? "✓" : ""}</span>
-    <div class="atlas-child-check-copy">
-      <strong>${html(label(child))}</strong>
-      ${details.map((line) => `<em>${html(line)}</em>`).join("")}
-    </div>
-  `;
-  return button;
+  if (!existing) {
+    const tools = card.querySelector(".atlas-task-tools-card");
+    const spacing = card.querySelector(".atlas-plant-spacing-card");
+    const place = card.querySelector(".atlas-task-place-card");
+    (tools ?? spacing ?? place)?.insertAdjacentElement("afterend", section);
+  }
 }
 
 function routeCard(task: TaskCard) {
@@ -390,11 +406,11 @@ function lineupTaskCard(task: TaskCard) {
   return link;
 }
 
-function insertZoneGroups(target: Element | null, label: string, cards: TaskCard[], groupBy: (card: TaskCard) => string) {
+function insertZoneGroups(target: Element | null, labelText: string, cards: TaskCard[], groupBy: (card: TaskCard) => string) {
   if (!target || cards.length === 0) return;
   const shelf = document.createElement("article");
   shelf.className = "atlas-lineup-shelf";
-  shelf.innerHTML = `<h3>${label}</h3><div class="atlas-lineup-zone-list"></div>`;
+  shelf.innerHTML = `<h3>${labelText}</h3><div class="atlas-lineup-zone-list"></div>`;
   const list = shelf.querySelector(".atlas-lineup-zone-list");
   const groups = Array.from(new Set(cards.map(groupBy)));
   groups.forEach((groupName) => {
@@ -418,9 +434,7 @@ function insertWeeklyLineup(cards: TaskCard[], hasTaskId: boolean) {
   const anchor = document.querySelector(".atlas-route-collection") ?? document.querySelector(".atlas-task-page-hero");
   if (!anchor) return;
 
-  const parentCards = cards
-    .filter(isParentOpen)
-    .sort((a, b) => taskSortKey(a).localeCompare(taskSortKey(b)));
+  const parentCards = cards.filter(isParentOpen).sort((a, b) => taskSortKey(a).localeCompare(taskSortKey(b)));
   const mainCards = parentCards.filter((card) => mainRoutes.has(routeForTask(card)));
   const sideCards = parentCards.filter((card) => !mainRoutes.has(routeForTask(card)));
   const signature = parentCards.map((card) => card.task_id).join("|");
@@ -432,11 +446,7 @@ function insertWeeklyLineup(cards: TaskCard[], hasTaskId: boolean) {
   section.dataset.lineupSignature = signature;
   section.innerHTML = `
     <div class="atlas-route-collection-head atlas-lineup-head">
-      <div>
-        <span>Lineup</span>
-        <strong>${parentCards.length} open</strong>
-        <small>Main work by place. Side work by route.</small>
-      </div>
+      <div><span>Lineup</span><strong>${parentCards.length} open</strong><small>Main work by place. Side work by route.</small></div>
     </div>
     <div class="atlas-lineup-body"></div>
   `;
@@ -444,11 +454,8 @@ function insertWeeklyLineup(cards: TaskCard[], hasTaskId: boolean) {
   insertZoneGroups(body, "Main Work", mainCards, collectionZone);
   insertZoneGroups(body, "Side Work", sideCards, (card) => routeLabels[routeForTask(card)]);
 
-  if (anchor.classList.contains("atlas-route-collection")) {
-    anchor.appendChild(section);
-  } else {
-    anchor.insertAdjacentElement("afterend", section);
-  }
+  if (anchor.classList.contains("atlas-route-collection")) anchor.appendChild(section);
+  else anchor.insertAdjacentElement("afterend", section);
 }
 
 function insertRouteCollection(cards: TaskCard[]) {
@@ -490,11 +497,7 @@ function insertRouteCollection(cards: TaskCard[]) {
   section.innerHTML = `
     <div class="atlas-route-collection-head">
       <a href="/" class="atlas-route-back">← Routes</a>
-      <div>
-        <span>${routeLabels[route]}</span>
-        <strong>${parentCards.length} ${parentCards.length === 1 ? "task" : "tasks"} today</strong>
-        <small>${zones.length ? zones.join(" · ") : "No tasks in this route today"}</small>
-      </div>
+      <div><span>${routeLabels[route]}</span><strong>${parentCards.length} ${parentCards.length === 1 ? "task" : "tasks"} today</strong><small>${zones.length ? zones.join(" · ") : "No tasks in this route today"}</small></div>
     </div>
     <div class="atlas-route-zone-list"></div>
   `;
@@ -515,10 +518,13 @@ function insertRouteCollection(cards: TaskCard[]) {
 export default function TaskTemplate({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cards: TaskCard[] = [];
-    let refreshTimer: number | null = null;
+    let stopped = false;
+    const timers: number[] = [];
 
     async function refresh() {
+      if (stopped) return;
       cards = await loadCards();
+      if (stopped) return;
       removeTimingPills();
       insertRouteCollection(cards);
       const parent = findParent(cards);
@@ -531,12 +537,13 @@ export default function TaskTemplate({ children }: { children: ReactNode }) {
       if (childCards.length) insertChecklist(parent, childCards);
     }
 
-    function queueRefresh() {
-      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
-      refreshTimer = window.setTimeout(() => {
-        refreshTimer = null;
-        void refresh();
-      }, 120);
+    function scheduleRefresh(delay: number) {
+      const timer = window.setTimeout(() => void refresh(), delay);
+      timers.push(timer);
+    }
+
+    function scheduleSettledRefreshes() {
+      [120, 400, 900, 1800, 3200].forEach(scheduleRefresh);
     }
 
     function activeParentAndChildren() {
@@ -549,18 +556,8 @@ export default function TaskTemplate({ children }: { children: ReactNode }) {
     function handleClick(event: MouseEvent) {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
-      const check = target.closest(".atlas-child-check-item") as HTMLButtonElement | null;
-      if (check?.dataset.childTaskId) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        fetch("/api/atlas/task-child-toggle", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ taskId: check.dataset.childTaskId, checklistStatus: check.dataset.nextStatus === "done" ? "done" : "open" }),
-        }).then(() => refresh());
-        return;
-      }
+      const check = target.closest(".atlas-child-check-item") as HTMLElement | null;
+      if (check?.dataset.childTaskId) return;
 
       const button = target.closest("button");
       if (!button) return;
@@ -591,22 +588,16 @@ export default function TaskTemplate({ children }: { children: ReactNode }) {
       fetch("/api/atlas/task-unfinished", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          ...payload,
-          laneKey: "maintain",
-          workKey: "unfinished",
-        }),
+        body: JSON.stringify({ ...payload, laneKey: "maintain", workKey: "unfinished" }),
       }).then(() => window.location.assign("/task"));
     }
 
-    const observer = new MutationObserver(queueRefresh);
-    observer.observe(document.body, { childList: true, subtree: true });
     document.addEventListener("click", handleClick, true);
-    queueRefresh();
+    scheduleSettledRefreshes();
     return () => {
+      stopped = true;
       document.body.classList.remove("atlas-route-mode", "atlas-task-collection-mode");
-      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
-      observer.disconnect();
+      timers.forEach((timer) => window.clearTimeout(timer));
       document.removeEventListener("click", handleClick, true);
     };
   }, []);
