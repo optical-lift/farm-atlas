@@ -46,11 +46,28 @@ function dateFromIso(dateIso: string) {
   return new Date(`${dateIso}T12:00:00`);
 }
 
+function isoFromDate(date: Date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function addDaysIsoFrom(dateIso: string, days: number) {
+  const date = dateFromIso(dateIso);
+  date.setDate(date.getDate() + days);
+  return isoFromDate(date);
+}
+
 function prettyDate(dateIso: string | null | undefined) {
   if (!dateIso) return "unknown";
   const date = dateIso.includes("-") ? dateFromIso(dateIso) : new Date(dateIso);
   if (Number.isNaN(date.getTime())) return dateIso;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function dayShortLabel(dateIso: string) {
+  const date = dateFromIso(dateIso);
+  if (Number.isNaN(date.getTime())) return dateIso;
+  return date.toLocaleDateString("en-US", { weekday: "short" });
 }
 
 function cleanLabel(value: string | null | undefined) {
@@ -176,6 +193,40 @@ function buildRoutes(cards: AtlasTaskCard[]) {
     .filter((route): route is WorkRoute => Boolean(route));
 }
 
+function taskCountForDate(cards: AtlasTaskCard[], dateIso: string) {
+  return cards.filter(isDashboardWork).filter((card) => card.due_date === dateIso).length;
+}
+
+function weekCountForRange(tasks: AtlasTaskCard[], startIso: string, endIso: string) {
+  return tasks.filter((task) => task.due_date && task.due_date >= startIso && task.due_date <= endIso).length;
+}
+
+function monthWeekRows(monthTasks: AtlasTaskCard[], anchorIso: string) {
+  const anchorDate = dateFromIso(anchorIso);
+  const monthStart = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1, 12, 0, 0, 0);
+  const monthEnd = new Date(anchorDate.getFullYear(), anchorDate.getMonth() + 1, 0, 12, 0, 0, 0);
+  const rows: { label: string; dateLabel: string; href: string; count: number }[] = [];
+
+  for (let index = 0; index < 6; index += 1) {
+    const start = new Date(monthStart);
+    start.setDate(monthStart.getDate() + index * 7);
+    if (start > monthEnd) break;
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    if (end > monthEnd) end.setTime(monthEnd.getTime());
+    const startIso = isoFromDate(start);
+    const endIso = isoFromDate(end);
+    rows.push({
+      label: `Week ${index + 1}`,
+      dateLabel: `${prettyDate(startIso)}–${prettyDate(endIso)}`,
+      href: `/overview/week?date=${encodeURIComponent(startIso)}`,
+      count: weekCountForRange(monthTasks, startIso, endIso),
+    });
+  }
+
+  return rows;
+}
+
 function panelTitle(panel: HomePanel) {
   if (panel === "inbox") return "Note";
   if (panel === "closeout") return "Closeout";
@@ -242,21 +293,44 @@ function OverviewLaunchBoxes({ cards, loading }: { cards: AtlasTaskCard[]; loadi
   const monthTasks = filterMonthOverviewTasks(cards, today);
   const urgentWeekTasks = weekTasks.filter((card) => isUrgentTask(card, today));
   const progress = monthProgress(today);
+  const dayRows = Array.from({ length: 4 }, (_, index) => {
+    const dateIso = addDaysIsoFrom(today, index + 1);
+    return { dateIso, count: taskCountForDate(cards, dateIso) };
+  });
+  const monthRows = monthWeekRows(monthTasks, today);
 
   return (
     <div className="atlas-home-overview-row" aria-label="Week and month overview links">
-      <Link href="/overview/week" className="atlas-home-overview-card atlas-home-overview-week">
-        <strong>This Week</strong>
-        <em>{loading ? "Loading farm week" : "Today + 6 days"}</em>
-        <span>{loading ? "Loading" : `${weekTasks.length} open · ${urgentWeekTasks.length} urgent`}</span>
-      </Link>
-      <Link href="/overview/month" className="atlas-home-overview-card atlas-home-overview-month">
-        <strong>{monthName(today)}</strong>
-        <div className="atlas-home-month-progress" aria-label={`${progress.day} of ${progress.days} days through ${monthName(today)}`}>
-          <i style={{ width: `${progress.percent}%` }} />
+      <article className="atlas-home-overview-card atlas-home-overview-week">
+        <Link href="/overview/week" className="atlas-home-overview-top">
+          <strong>This Week</strong>
+          <span>{loading ? "Loading" : `${weekTasks.length} open · ${urgentWeekTasks.length} urgent`}</span>
+        </Link>
+        <div className="atlas-home-overview-list">
+          {dayRows.map((row) => (
+            <Link key={row.dateIso} href={`/day?date=${encodeURIComponent(row.dateIso)}`} className="atlas-home-overview-row-link">
+              <b>{dayShortLabel(row.dateIso)}</b>
+              <small>{prettyDate(row.dateIso)}</small>
+              <em>{loading ? "…" : row.count}</em>
+            </Link>
+          ))}
         </div>
-        <span>{loading ? "Loading" : `${progress.day} of ${progress.days} days · ${monthTasks.length} open`}</span>
-      </Link>
+      </article>
+      <article className="atlas-home-overview-card atlas-home-overview-month">
+        <Link href="/overview/month" className="atlas-home-overview-top">
+          <strong>{monthName(today)}</strong>
+          <span>{loading ? "Loading" : `${progress.day}/${progress.days} days · ${monthTasks.length} open`}</span>
+        </Link>
+        <div className="atlas-home-overview-list atlas-home-month-week-list">
+          {monthRows.map((row) => (
+            <Link key={row.label} href={row.href} className="atlas-home-overview-row-link">
+              <b>{row.label}</b>
+              <small>{row.dateLabel}</small>
+              <em>{loading ? "…" : row.count}</em>
+            </Link>
+          ))}
+        </div>
+      </article>
     </div>
   );
 }
