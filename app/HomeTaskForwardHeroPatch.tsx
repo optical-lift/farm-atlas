@@ -126,8 +126,8 @@ function subtaskLabel(card: Card, counts: Map<string, number>) {
 }
 
 function cardHtml(card: Card, counts: Map<string, number>) {
-  const metaLine = `${routeLabel(card)} · ${location(card)} · ${subtaskLabel(card, counts)}`;
-  return `<a class="atlas-run-sheet-box atlas-route-sheet-box atlas-task-forward-box" href="/task?taskId=${encodeURIComponent(card.task_id)}" data-single-task-id="${html(card.task_id)}"><small>${html(metaLine)}</small><strong>${html(subject(card))}</strong><span>${html(subtaskLabel(card, counts))}</span><em>${html(detail(card))}</em></a>`;
+  const zoneAndSteps = `${location(card)} · ${subtaskLabel(card, counts)}`;
+  return `<a class="atlas-run-sheet-box atlas-route-sheet-box atlas-task-forward-box" href="/task?taskId=${encodeURIComponent(card.task_id)}" data-single-task-id="${html(card.task_id)}"><small>${html(routeLabel(card))}</small><strong>${html(subject(card))}</strong><span>${html(zoneAndSteps)}</span><em>${html(detail(card))}</em></a>`;
 }
 
 export default function HomeTaskForwardHeroPatch() {
