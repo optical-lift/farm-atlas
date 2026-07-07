@@ -40,6 +40,14 @@ function todayIso() {
   return local.toISOString().slice(0, 10);
 }
 
+function daysUntilFirstFrost() {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let frost = new Date(now.getFullYear(), 10, 1);
+  if (today > frost) frost = new Date(now.getFullYear() + 1, 10, 1);
+  return Math.max(0, Math.ceil((frost.getTime() - today.getTime()) / 86400000));
+}
+
 function dateFromIso(dateIso: string) {
   return new Date(`${dateIso}T12:00:00`);
 }
@@ -349,12 +357,20 @@ function FarmSnapshotBox({ snapshot, loading }: { snapshot: AtlasFarmSnapshot; l
   );
 }
 
-function CloseoutFooterLink({ summary, today, onOpen }: { summary: AtlasCloseoutSummary | undefined; today: string; onOpen: () => void }) {
+function HomeFooterBar({ summary, today, onOpen }: { summary: AtlasCloseoutSummary | undefined; today: string; onOpen: () => void }) {
+  const frostDays = daysUntilFirstFrost();
+
   return (
-    <button type="button" className="atlas-home-closeout-footer-link" onClick={onOpen}>
-      <span>Closeout</span>
-      <em>{summary ? `${summary.counts.objectEvents} records · ${summary.counts.openTasks} open` : `Review · ${prettyDate(today)}`}</em>
-    </button>
+    <div className="atlas-home-footer-row">
+      <button type="button" className="atlas-home-closeout-footer-link" onClick={onOpen}>
+        <span>Closeout</span>
+        <em>{summary ? `${summary.counts.objectEvents} records · ${summary.counts.openTasks} open` : `Review · ${prettyDate(today)}`}</em>
+      </button>
+      <div className="atlas-home-frost-countdown" aria-label={`${frostDays} days until first frost target on November 1`}>
+        <span>First frost</span>
+        <em>{frostDays} days · Nov 1</em>
+      </div>
+    </div>
   );
 }
 
@@ -399,7 +415,7 @@ export default function AtlasHomePage() {
           <TaskLaunchHero cards={cards} loading={loading} />
           <OverviewLaunchBoxes cards={cards} loading={loading} />
           <FarmSnapshotBox snapshot={snapshot} loading={snapshotLoading} />
-          <CloseoutFooterLink summary={monthSummary} today={today} onOpen={() => setOpenPanel("closeout")} />
+          <HomeFooterBar summary={monthSummary} today={today} onOpen={() => setOpenPanel("closeout")} />
         </div>
       </section>
       {openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{panelTitle(openPanel)}</strong></div><button type="button" onClick={() => setOpenPanel(null)}>Close</button></div><div className="atlas-task-focus-body">{openPanel === "closeout" ? <CloseoutPanel summaries={closeoutSummaries} loading={closeoutLoading} /> : null}{openPanel === "inbox" ? <section className="atlas-task-focus-section"><div className="atlas-add-form"><select aria-label="Zone" value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">Whole farm</option></select><textarea aria-label="Note" value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Note" /></div><button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving" : "Save"}</button>{inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}</section> : null}</div></div></section> : null}
