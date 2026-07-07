@@ -24,7 +24,7 @@ export const routeLabels: Record<WorkRouteKey, string> = {
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const urgentRoutes = new Set<WorkRouteKey>(["plant", "water", "harvest"]);
-const terminalWords = new Set(["done", "complete", "completed", "dismissed", "expired", "archived", "cancelled", "canceled", "not_relevant", "not relevant", "rescheduled"]);
+const terminalWords = new Set(["done", "complete", "completed", "dismissed", "expired", "archived", "cancelled", "canceled", "not_relevant", "not relevant", "changed_plan", "changed plan"]);
 
 export function todayIso() {
   const date = new Date();
@@ -98,7 +98,6 @@ function hasTerminalMetadata(task: AtlasTaskCard) {
     metadata.task_state,
     metadata.visibility,
     metadata.relevance,
-    metadata.reschedule_status,
     metadata.atlas_status,
   ].map((value) => text(value).toLowerCase()).filter(Boolean);
 
