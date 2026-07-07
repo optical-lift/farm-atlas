@@ -4,6 +4,7 @@ import WeekDayNavigation from "./WeekDayNavigation";
 import HomeTodayCompletePatch from "./HomeTodayCompletePatch";
 import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
 import HomeTaskForwardHeroPatch from "./HomeTaskForwardHeroPatch";
+import TaskChildPlantingLogPatch from "./TaskChildPlantingLogPatch";
 import "./globals.css";
 import "./home.css";
 import "./zones.css";
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <HomeTodayCompletePatch />
         <TaskProgressExactDayPatch />
         <HomeTaskForwardHeroPatch />
+        <TaskChildPlantingLogPatch />
         {children}
       </body>
     </html>
