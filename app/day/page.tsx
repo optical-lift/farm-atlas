@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
 type RouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
@@ -130,14 +129,15 @@ function routeCountLine(tasks: AtlasTaskCard[]) {
 }
 
 export default function AtlasDayPage() {
-  const params = useSearchParams();
-  const dateIso = params.get("date") || todayIso();
+  const [dateIso, setDateIso] = useState(todayIso());
   const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
 
   useEffect(() => {
+    setDateIso(new URLSearchParams(window.location.search).get("date") || todayIso());
+
     async function load() {
       try {
         setLoading(true);
