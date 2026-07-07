@@ -142,7 +142,7 @@ function detail(card: Card) {
 function dashboardCardsForRouteSource(cards: Card[]) {
   const today = todayIso();
   const dashboardCards = cards.filter(isMainCard).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
-  const todayCards = dashboardCards.filter((card) => !card.due_date || card.due_date <= today);
+  const todayCards = dashboardCards.filter((card) => card.due_date === today);
   const upcomingCards = dashboardCards.filter((card) => card.due_date && card.due_date > today);
   return todayCards.length ? todayCards : upcomingCards;
 }
@@ -161,15 +161,15 @@ async function updateHomeProgressPill() {
   const today = todayIso();
   const cards = (await fetchTaskCards())
     .filter(isDayProgressCard)
-    .filter((card) => !card.due_date || card.due_date <= today);
+    .filter((card) => card.due_date === today);
   const done = cards.filter(isCompletedCard).length;
   const total = cards.length;
-  const label = `${done}/${total}`;
+  const label = total ? `${done}/${total}` : "Complete";
 
   if (pill.dataset.progressSignature === label) return;
   pill.dataset.progressSignature = label;
   pill.textContent = label;
-  pill.setAttribute("aria-label", `${done} of ${total} tasks done today`);
+  pill.setAttribute("aria-label", total ? `${done} of ${total} tasks done today` : "No tasks scheduled for today");
 }
 
 async function insertFirstTaskPreviews() {
@@ -181,7 +181,7 @@ async function insertFirstTaskPreviews() {
   const today = todayIso();
   const cards = (await fetchTaskCards())
     .filter(isMainCard)
-    .filter((card) => !card.due_date || card.due_date <= today)
+    .filter((card) => card.due_date === today)
     .sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
     .slice(0, 2);
   if (!cards.length) return;
