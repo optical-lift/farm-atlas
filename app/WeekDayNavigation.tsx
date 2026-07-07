@@ -237,8 +237,8 @@ export default function WeekDayNavigation() {
       }
 
       document.body.classList.add("atlas-day-browse-mode");
-      const hero = document.querySelector(".atlas-task-page-hero");
-      if (!hero) return;
+      const taskBody = document.querySelector(".atlas-task-page-body");
+      if (!taskBody) return;
 
       inFlight = true;
       try {
@@ -254,7 +254,7 @@ export default function WeekDayNavigation() {
         if (!section) {
           section = document.createElement("section");
           section.className = "atlas-task-page-section atlas-route-collection atlas-day-browse";
-          hero.insertAdjacentElement("afterend", section);
+          taskBody.insertBefore(section, taskBody.firstChild);
         }
 
         section.dataset.daySignature = signature;
@@ -279,10 +279,18 @@ export default function WeekDayNavigation() {
       poller = window.setInterval(() => {
         attempts += 1;
         void renderDayBrowse();
-        if (attempts >= 12 || document.querySelector(".atlas-day-browse")) stopPolling();
+        if (attempts >= 40 || document.querySelector(".atlas-day-browse")) stopPolling();
       }, 250);
     }
 
+    const observer = new MutationObserver(() => {
+      if (window.location.pathname !== "/task") return;
+      const params = new URLSearchParams(window.location.search);
+      if (!params.get("date")) return;
+      if (!document.querySelector(".atlas-day-browse")) queueRender();
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
     document.addEventListener("click", handleClick, true);
     window.addEventListener("popstate", queueRender);
     queueRender();
@@ -291,6 +299,7 @@ export default function WeekDayNavigation() {
     return () => {
       if (timer !== null) window.clearTimeout(timer);
       stopPolling();
+      observer.disconnect();
       document.removeEventListener("click", handleClick, true);
       window.removeEventListener("popstate", queueRender);
       document.body.classList.remove("atlas-day-browse-mode");
