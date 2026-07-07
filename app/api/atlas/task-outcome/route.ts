@@ -3,7 +3,7 @@ import { atlasSupabase } from "@/lib/atlas/supabase-server";
 
 export const dynamic = "force-dynamic";
 
-type Outcome = "done" | "partial" | "blocked";
+type Outcome = "done" | "partial" | "blocked" | "not_relevant" | "changed_plan";
 
 type Body = {
   taskId?: string;
@@ -38,9 +38,14 @@ function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function isOutcome(value: unknown): value is Outcome {
+  return value === "done" || value === "partial" || value === "blocked" || value === "not_relevant" || value === "changed_plan";
+}
+
 function nextStatus(outcome: Outcome) {
   if (outcome === "done") return "done";
   if (outcome === "blocked") return "blocked";
+  if (outcome === "not_relevant" || outcome === "changed_plan") return "archived";
   return "open";
 }
 
@@ -112,7 +117,7 @@ async function updateObjectMemory(task: TaskRow, objectIds: string[], outcome: O
       last_checked_at: shouldMarkChecked(task, laneKey) ? today : undefined,
       last_weeded_at: shouldMarkWeeded(task, laneKey) ? today : undefined,
       last_watered_at: shouldMarkWatered(task, laneKey) ? today : undefined,
-      decision_required: outcome === "blocked" ? true : outcome === "done" ? false : undefined,
+      decision_required: outcome === "blocked" || outcome === "changed_plan" ? true : outcome === "done" || outcome === "not_relevant" ? false : undefined,
       metadata,
       updated_at: now,
     };
@@ -126,8 +131,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as Body;
     const outcome = body.outcome;
-    if (outcome !== "done" && outcome !== "partial" && outcome !== "blocked") {
-      return NextResponse.json({ ok: false, error: "Outcome must be done, partial, or blocked." }, { status: 400 });
+    if (!isOutcome(outcome)) {
+      return NextResponse.json({ ok: false, error: "Outcome must be done, partial, blocked, not relevant, or changed plan." }, { status: 400 });
     }
 
     const task = await getTask(body);
@@ -155,6 +160,8 @@ export async function POST(request: NextRequest) {
     if (outcome === "done") updatePayload.completed_at = now;
     if (outcome === "partial" && note) updatePayload.note = [task.note, note].filter(Boolean).join("\n");
     if (outcome === "blocked") updatePayload.blocker_text = reason || note || task.blocker_text || "blocked";
+    if (outcome === "not_relevant") updatePayload.note = [task.note, reason || note || "Marked not relevant"].filter(Boolean).join("\n");
+    if (outcome === "changed_plan") updatePayload.note = [task.note, reason || note || "Plan changed"].filter(Boolean).join("\n");
 
     const { error: updateError } = await atlasSupabase.schema("atlas").from("tasks").update(updatePayload).eq("id", task.id);
     if (updateError) throw new Error(updateError.message);
@@ -178,7 +185,7 @@ export async function POST(request: NextRequest) {
     if (eventError) throw new Error(eventError.message);
 
     const eventId = eventData?.id as string | undefined;
-    const logSummary = [task.title, outcome === "done" ? "done" : outcome, note].filter(Boolean).join(" · ");
+    const logSummary = [task.title, outcome === "done" ? "done" : outcome.replace(/_/g, " "), note].filter(Boolean).join(" · ");
     const { error: logError } = await atlasSupabase.schema("atlas").from("field_logs").insert({
       farm_id: task.farm_id,
       log_date: now.slice(0, 10),
