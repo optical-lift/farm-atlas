@@ -6,6 +6,7 @@ export function middleware(request: NextRequest) {
     url.pathname === "/task" &&
     !url.searchParams.has("taskId") &&
     !url.searchParams.has("route") &&
+    !url.searchParams.has("date") &&
     !url.searchParams.has("lane");
 
   if (isBareTaskPage) {
