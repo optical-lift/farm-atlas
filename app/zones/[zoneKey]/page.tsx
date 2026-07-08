@@ -33,18 +33,6 @@ function objectTasks(object: AtlasRegistryObject, tasks: AtlasTaskCard[]) {
   return tasks.filter((task) => task.objects.some((taskObject) => taskObject.object_id === object.id));
 }
 
-function workKeyFromTask(task: AtlasTaskCard): AtlasFieldLogSeed["workKey"] {
-  const text = `${task.task_type} ${task.title}`.toLowerCase();
-  if (text.includes("weed")) return "weed";
-  if (text.includes("plant") || text.includes("transplant")) return "plant";
-  if (text.includes("sow") || text.includes("seed")) return "sow";
-  if (text.includes("water")) return "water";
-  if (text.includes("harvest") || text.includes("cut")) return "harvest";
-  if (text.includes("mow") || text.includes("build") || text.includes("prep") || text.includes("maint")) return "maintain";
-  if (text.includes("check") || text.includes("germin") || text.includes("confirm")) return "check";
-  return "observe";
-}
-
 export default function AtlasZoneDetailPage() {
   const params = useParams<{ zoneKey: string }>();
   const zoneKey = params.zoneKey;
@@ -167,11 +155,7 @@ export default function AtlasZoneDetailPage() {
                     key={object.id}
                     object={object}
                     tasks={objectTasks(object, tasks)}
-                    onTaskSelect={(task) => {
-                      setSelectedTask(task);
-                      const taskObject = task.objects.find((candidate) => candidate.object_id === object.id);
-                      if (taskObject) openObjectLog(object, workKeyFromTask(task));
-                    }}
+                    onTaskSelect={setSelectedTask}
                     onDocumentObject={openObjectLog}
                   />
                 ))}
