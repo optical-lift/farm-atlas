@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { createAtlasFieldLog } from "@/lib/atlas/field-log-client";
 import type { AtlasRegistryObject, AtlasRegistryZone } from "@/lib/atlas/zone-registry-client";
@@ -141,6 +141,7 @@ export function FieldLogDrawer({
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const formRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setWorkKey(seed.workKey ?? "observe");
@@ -149,6 +150,13 @@ export function FieldLogDrawer({
     setNote("");
     setMessage(null);
   }, [seed]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   const selectedWork = workConfig(workKey);
   const visibleObjects = useMemo(() => visibleObjectsForZones(zones, zoneKeys), [zones, zoneKeys]);
@@ -197,9 +205,9 @@ export function FieldLogDrawer({
   }
 
   return (
-    <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true">
+    <section className="atlas-task-focus-overlay atlas-document-log-overlay" role="dialog" aria-modal="true">
       <div className="atlas-task-focus-phone atlas-document-log-phone">
-        <div className="atlas-task-focus-topbar">
+        <div className="atlas-task-focus-topbar atlas-document-log-topbar">
           <div>
             <strong>Document work</strong>
             <span>{prettyDate(todayIso())}</span>
@@ -208,13 +216,13 @@ export function FieldLogDrawer({
         </div>
 
         <div className="atlas-task-focus-body atlas-log-builder atlas-document-log-builder">
-          <section className="atlas-task-focus-purple atlas-log-hero">
+          <section className="atlas-task-focus-purple atlas-log-hero atlas-document-log-hero">
             <div className="atlas-task-focus-kicker"><span>Field log</span></div>
             <h2>{selectedWork.label}</h2>
             <p>{summarySentence}</p>
           </section>
 
-          <section className="atlas-task-focus-section atlas-log-compose">
+          <section ref={formRef} className="atlas-task-focus-section atlas-log-compose atlas-document-log-form">
             <div className="atlas-log-sentence">{summarySentence}</div>
 
             <div className="atlas-log-step">
