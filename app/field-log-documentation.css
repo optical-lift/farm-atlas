@@ -45,12 +45,115 @@
   font-weight: 850;
 }
 
+.atlas-document-log-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  width: 100vw !important;
+  min-height: 100svh !important;
+  padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)) !important;
+  display: grid !important;
+  place-items: end center !important;
+  overflow: hidden !important;
+  background: rgba(48, 50, 67, 0.42) !important;
+  backdrop-filter: blur(10px);
+}
+
 .atlas-document-log-phone {
-  max-height: min(760px, calc(100vh - 18px));
+  width: min(100%, 430px) !important;
+  height: min(760px, calc(100svh - 20px)) !important;
+  max-height: calc(100svh - 20px) !important;
+  margin: 0 auto !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(215, 204, 189, 0.95) !important;
+  border-radius: 28px !important;
+  background: rgba(251, 250, 244, 0.98) !important;
+  color: var(--atlas-text) !important;
+  box-shadow: 0 28px 90px rgba(27, 24, 20, 0.24) !important;
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+}
+
+.atlas-document-log-topbar {
+  min-height: 58px !important;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.82) !important;
+  background: rgba(251, 250, 244, 0.98) !important;
+  padding: 12px 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+
+.atlas-document-log-topbar > div {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.atlas-document-log-topbar strong,
+.atlas-document-log-topbar span,
+.atlas-document-log-topbar button {
+  display: block;
+  min-width: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.atlas-document-log-topbar strong {
+  color: var(--atlas-text) !important;
+  font-size: 18px !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.035em !important;
+}
+
+.atlas-document-log-topbar span {
+  color: var(--atlas-muted) !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+.atlas-document-log-topbar button {
+  border: 1px solid rgba(139, 145, 194, 0.22) !important;
+  border-radius: 999px !important;
+  background: rgba(246, 242, 230, 0.78) !important;
+  color: var(--atlas-text) !important;
+  padding: 9px 12px !important;
+  font-size: 13px !important;
+  font-weight: 950 !important;
 }
 
 .atlas-document-log-builder {
-  padding-bottom: 22px;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  padding: 12px !important;
+  padding-bottom: calc(22px + env(safe-area-inset-bottom)) !important;
+  display: grid !important;
+  gap: 12px !important;
+  align-content: start !important;
+  background: rgba(251, 250, 244, 0.96) !important;
+  scroll-behavior: smooth;
+}
+
+.atlas-document-log-hero {
+  border-radius: 24px !important;
+  padding: 16px !important;
+}
+
+.atlas-document-log-hero h2,
+.atlas-document-log-hero p {
+  margin: 0 !important;
+}
+
+.atlas-document-log-form {
+  scroll-margin-top: 12px;
+  border-radius: 24px !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  border: 1px solid rgba(215, 204, 189, 0.92) !important;
+  padding: 12px !important;
+  display: grid !important;
+  gap: 13px !important;
 }
 
 .atlas-document-log-builder .atlas-log-step-head {
@@ -60,7 +163,8 @@
   gap: 10px;
 }
 
-.atlas-document-log-builder .atlas-log-step-head span {
+.atlas-document-log-builder .atlas-log-step-head span,
+.atlas-document-log-builder .atlas-log-step > span {
   color: #858bb8;
   font-size: 11px;
   line-height: 1;
@@ -76,16 +180,80 @@
   font-weight: 900;
 }
 
+.atlas-document-log-builder .atlas-log-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
 .atlas-document-log-builder .atlas-log-chip-grid.compact.expanded {
-  max-height: 190px;
+  max-height: 150px;
   overflow: auto;
   padding: 1px 2px 2px 0;
 }
 
+.atlas-document-log-builder .atlas-log-chip-grid button {
+  border: 1px solid var(--atlas-border);
+  border-radius: 999px;
+  background: rgba(246, 242, 230, 0.72);
+  color: var(--atlas-muted);
+  padding: 9px 12px;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-document-log-builder .atlas-log-chip-grid button.selected {
+  border-color: rgba(139, 145, 194, 0.48);
+  background: rgba(167, 171, 214, 0.26);
+  color: var(--atlas-text);
+}
+
+.atlas-document-log-builder .atlas-log-sentence {
+  border: 1px solid var(--atlas-border);
+  border-radius: 22px;
+  background: rgba(246, 242, 230, 0.82);
+  color: var(--atlas-text);
+  padding: 14px 16px;
+  font-size: 18px;
+  line-height: 1.18;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
+.atlas-document-log-builder .atlas-log-muted {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.atlas-document-log-builder .atlas-add-form textarea {
+  width: 100% !important;
+  min-height: 86px !important;
+  border: 1px solid rgba(215, 204, 189, 0.92) !important;
+  border-radius: 18px !important;
+  background: rgba(251, 250, 244, 0.92) !important;
+  color: var(--atlas-text) !important;
+  padding: 12px !important;
+  font-size: 16px !important;
+  line-height: 1.25 !important;
+  font-weight: 850 !important;
+  resize: vertical !important;
+}
+
 .atlas-document-save-button {
   width: 100%;
+  min-height: 48px;
   border: 0 !important;
+  border-radius: 18px !important;
   margin-top: 4px;
+  background: rgba(167, 171, 214, 0.42) !important;
+  color: var(--atlas-text) !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
 }
 
 .atlas-document-this-bed-button {
@@ -99,4 +267,37 @@
   line-height: 1;
   font-weight: 950;
   text-align: center;
+}
+
+@media (max-width: 430px) {
+  .atlas-document-log-overlay {
+    padding: 6px 0 0 !important;
+    place-items: end stretch !important;
+  }
+
+  .atlas-document-log-phone {
+    width: 100% !important;
+    height: min(820px, calc(100svh - 6px)) !important;
+    max-height: calc(100svh - 6px) !important;
+    border-radius: 26px 26px 0 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+  }
+
+  .atlas-document-log-topbar strong {
+    font-size: 16px !important;
+  }
+
+  .atlas-document-log-builder {
+    padding-inline: 10px !important;
+  }
+
+  .atlas-document-log-hero {
+    padding: 14px !important;
+  }
+
+  .atlas-document-log-form {
+    padding: 10px !important;
+  }
 }
