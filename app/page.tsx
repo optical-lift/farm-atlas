@@ -251,7 +251,7 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
   const todayHref = `/day?date=${encodeURIComponent(today)}`;
   const dashboardCards = cards.filter(isDashboardWork).sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
   const todayCards = dashboardCards.filter((card) => card.due_date === today);
-  const heroCards = (todayCards.length >= 4 ? todayCards : [...todayCards, ...dashboardCards.filter((card) => card.due_date !== today)]).slice(0, 4);
+  const heroCards = todayCards.slice(0, 4);
   const stepCounts = subtaskCounts(cards);
   const dayProgressCards = cards.filter(isDayProgressTask).filter((card) => card.due_date === today);
   const dayDoneCount = dayProgressCards.filter(isTaskDone).length;
