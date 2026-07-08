@@ -8,6 +8,7 @@ import { TaskPhysicalSpaces } from "@/components/atlas/task-physical-spaces";
 import { DocumentWorkCard, FieldLogDrawer, type AtlasFieldLogSeed } from "@/components/atlas/field-log-builder";
 import {
   BedInspectorRow,
+  ZoneRegistryFactCard,
   prettyDate,
   stageLabel,
   zoneShortMode,
@@ -133,6 +134,8 @@ export default function AtlasZoneDetailPage() {
                   <span>{zoneTasks.length} {zoneTasks.length === 1 ? "task" : "tasks"}</span>
                 </div>
               </section>
+
+              <ZoneRegistryFactCard zone={zone} />
 
               <DocumentWorkCard
                 title="Document work here"
