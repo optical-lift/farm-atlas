@@ -1,3 +1,5 @@
+export type AtlasRegistryMetadata = Record<string, unknown>;
+
 export type AtlasObjectInspection = {
   crop_label: string;
   variety: string | null;
@@ -57,9 +59,12 @@ export type AtlasRegistryObject = {
   label: string;
   object_type: string;
   object_mode: string | null;
-  length_ft: number | null;
-  width_ft: number | null;
+  length_ft: number | string | null;
+  width_ft: number | string | null;
+  area_sqft: number | string | null;
+  guest_visible: boolean | null;
   sort_order: number | null;
+  metadata: AtlasRegistryMetadata | null;
   inspection_summary: AtlasInspectionSummary | null;
   contents: AtlasObjectContent[];
 };
@@ -71,7 +76,9 @@ export type AtlasRegistryZone = {
   zone_type: string | null;
   mode_bias: string | null;
   goal_text: string | null;
+  current_state: string | null;
   sort_order: number | null;
+  metadata: AtlasRegistryMetadata | null;
   object_count: number;
   active_object_count: number;
   unknown_count: number;
