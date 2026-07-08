@@ -193,11 +193,17 @@ function DayProgressBar({ done, total }: { done: number; total: number }) {
   );
 }
 
+function taskActionLabel(task: AtlasTaskCard, complete: boolean) {
+  if (complete) return "Complete";
+  return text(meta(task, "display_action")) || routeLabels[routeForTask(task)];
+}
+
 function TaskCard({ task, complete = false }: { task: AtlasTaskCard; complete?: boolean }) {
+  const action = taskActionLabel(task, complete);
   return (
     <Link className={`atlas-day-task-card${complete ? " complete" : ""}`} href={`/task?taskId=${encodeURIComponent(task.task_id)}`}>
-      <strong>{subject(task)}</strong>
-      <span>{complete ? "Complete" : location(task)}</span>
+      <strong>{complete ? subject(task) : `${action} · ${subject(task)}`}</strong>
+      <span>{complete ? action : location(task)}</span>
       <em>{detail(task)}</em>
     </Link>
   );
