@@ -1,18 +1,12 @@
 /* Home purple hero cleanup: less repeated language, more actual task titles. */
 
 .atlas-home-task-hero.atlas-daily-run-sheet .atlas-season-label {
-  font-size: 0 !important;
+  display: block !important;
+  color: rgba(255, 255, 255, 0.86) !important;
+  font-size: 16px !important;
   line-height: 1 !important;
-}
-
-.atlas-home-task-hero.atlas-daily-run-sheet .atlas-season-label::after {
-  content: "Jul 6";
-  display: block;
-  color: rgba(255, 255, 255, 0.86);
-  font-size: 16px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: -0.01em;
+  font-weight: 950 !important;
+  letter-spacing: -0.01em !important;
 }
 
 .atlas-run-sheet-box.atlas-route-sheet-box {
@@ -49,8 +43,8 @@
 }
 
 @media (max-width: 430px) {
-  .atlas-home-task-hero.atlas-daily-run-sheet .atlas-season-label::after {
-    font-size: 15px;
+  .atlas-home-task-hero.atlas-daily-run-sheet .atlas-season-label {
+    font-size: 15px !important;
   }
 
   .atlas-run-sheet-box.atlas-route-sheet-box strong {
