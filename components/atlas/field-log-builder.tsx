@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createAtlasFieldLog } from "@/lib/atlas/field-log-client";
 import type { AtlasRegistryObject, AtlasRegistryZone } from "@/lib/atlas/zone-registry-client";
 
-export type AtlasFieldLogWorkKey = "note" | "weed" | "plant" | "sow" | "water" | "check" | "harvest" | "move" | "maintain";
+export type AtlasFieldLogWorkKey = "note" | "weed" | "plant" | "sow" | "water" | "harvest" | "maintain";
 
 export type AtlasFieldLogSeed = {
   workKey?: AtlasFieldLogWorkKey;
@@ -25,9 +25,7 @@ const workConfigs: WorkConfig[] = [
   { key: "plant", label: "Planted", actionTypes: ["planted"] },
   { key: "sow", label: "Sowed", actionTypes: ["sowed"] },
   { key: "water", label: "Watered", actionTypes: ["watered"] },
-  { key: "check", label: "Checked", actionTypes: ["checked"] },
   { key: "harvest", label: "Harvested", actionTypes: ["harvested"] },
-  { key: "move", label: "Moved", actionTypes: ["moved"] },
   { key: "maintain", label: "Maintained", actionTypes: ["maintained"] },
 ];
 
@@ -127,6 +125,7 @@ export function FieldLogDrawer({
   const [workKey, setWorkKey] = useState<AtlasFieldLogWorkKey>(seed.workKey ?? "note");
   const [zoneKeys, setZoneKeys] = useState<string[]>(seed.zoneKeys ?? []);
   const [objectKeys, setObjectKeys] = useState<string[]>(seed.objectKeys ?? []);
+  const [showBedDrawer, setShowBedDrawer] = useState((seed.objectKeys ?? []).length > 0);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -136,6 +135,7 @@ export function FieldLogDrawer({
     setWorkKey(seed.workKey ?? "note");
     setZoneKeys(seed.zoneKeys ?? []);
     setObjectKeys(seed.objectKeys ?? []);
+    setShowBedDrawer((seed.objectKeys ?? []).length > 0);
     setNote("");
     setMessage(null);
   }, [seed]);
@@ -166,6 +166,7 @@ export function FieldLogDrawer({
       }
       return [...current, key];
     });
+    setShowBedDrawer(true);
   }
 
   function toggleObject(key: string) {
@@ -239,22 +240,24 @@ export function FieldLogDrawer({
               </div>
             </div>
 
-            <div className="atlas-log-step">
-              <div className="atlas-log-step-head">
+            <div className="atlas-log-step atlas-log-drawer-step">
+              <button type="button" className="atlas-log-drawer-toggle" onClick={() => setShowBedDrawer((current) => !current)} aria-expanded={showBedDrawer}>
                 <span>Beds / objects</span>
-                <small>{objectKeys.length ? `${objectKeys.length} selected` : "optional"}</small>
-              </div>
-              {visibleObjects.length === 0 ? (
-                <p className="atlas-log-muted">Tap an area above to attach this log to a specific bed.</p>
-              ) : (
-                <div className="atlas-log-chip-grid compact expanded">
-                  {visibleObjects.map((object) => (
-                    <button key={object.id} type="button" className={selectedObjectSet.has(object.stable_key) ? "selected" : ""} onClick={() => toggleObject(object.stable_key)}>
-                      {compactSpot(object.label)}
-                    </button>
-                  ))}
-                </div>
-              )}
+                <small>{objectKeys.length ? `${objectKeys.length} selected` : showBedDrawer ? "close" : "open"}</small>
+              </button>
+              {showBedDrawer ? (
+                visibleObjects.length === 0 ? (
+                  <p className="atlas-log-muted">Tap an area above to attach this log to a specific bed.</p>
+                ) : (
+                  <div className="atlas-log-chip-grid compact expanded">
+                    {visibleObjects.map((object) => (
+                      <button key={object.id} type="button" className={selectedObjectSet.has(object.stable_key) ? "selected" : ""} onClick={() => toggleObject(object.stable_key)}>
+                        {compactSpot(object.label)}
+                      </button>
+                    ))}
+                  </div>
+                )
+              ) : null}
             </div>
 
             <div className="atlas-add-form">
