@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createAtlasFieldLog } from "@/lib/atlas/field-log-client";
 import type { AtlasRegistryObject, AtlasRegistryZone } from "@/lib/atlas/zone-registry-client";
 
-export type AtlasFieldLogWorkKey = "weed" | "plant" | "sow" | "water" | "check" | "harvest" | "move" | "maintain" | "observe";
+export type AtlasFieldLogWorkKey = "note" | "weed" | "plant" | "sow" | "water" | "check" | "harvest" | "move" | "maintain";
 
 export type AtlasFieldLogSeed = {
   workKey?: AtlasFieldLogWorkKey;
@@ -16,20 +16,19 @@ export type AtlasFieldLogSeed = {
 type WorkConfig = {
   key: AtlasFieldLogWorkKey;
   label: string;
-  verb: string;
   actionTypes: string[];
 };
 
 const workConfigs: WorkConfig[] = [
-  { key: "weed", label: "Weed", verb: "weeded", actionTypes: ["weeded"] },
-  { key: "plant", label: "Plant", verb: "planted", actionTypes: ["planted"] },
-  { key: "sow", label: "Sow", verb: "sowed", actionTypes: ["sowed"] },
-  { key: "water", label: "Water", verb: "watered", actionTypes: ["watered"] },
-  { key: "check", label: "Check", verb: "checked", actionTypes: ["checked"] },
-  { key: "harvest", label: "Harvest", verb: "harvested", actionTypes: ["harvested"] },
-  { key: "move", label: "Move", verb: "moved", actionTypes: ["moved"] },
-  { key: "maintain", label: "Maintain", verb: "maintained", actionTypes: ["maintained"] },
-  { key: "observe", label: "Observe", verb: "observed", actionTypes: ["observed"] },
+  { key: "note", label: "Note", actionTypes: ["note"] },
+  { key: "weed", label: "Weeded", actionTypes: ["weeded"] },
+  { key: "plant", label: "Planted", actionTypes: ["planted"] },
+  { key: "sow", label: "Sowed", actionTypes: ["sowed"] },
+  { key: "water", label: "Watered", actionTypes: ["watered"] },
+  { key: "check", label: "Checked", actionTypes: ["checked"] },
+  { key: "harvest", label: "Harvested", actionTypes: ["harvested"] },
+  { key: "move", label: "Moved", actionTypes: ["moved"] },
+  { key: "maintain", label: "Maintained", actionTypes: ["maintained"] },
 ];
 
 function todayIso() {
@@ -61,7 +60,7 @@ function compactSpot(label: string) {
 }
 
 function workConfig(key: AtlasFieldLogWorkKey) {
-  return workConfigs.find((config) => config.key === key) ?? workConfigs[workConfigs.length - 1];
+  return workConfigs.find((config) => config.key === key) ?? workConfigs[0];
 }
 
 function zoneLabels(zones: AtlasRegistryZone[], zoneKeys: string[]) {
@@ -93,8 +92,7 @@ function documentationSentence({
   const selectedZoneLabels = zoneLabels(zones, zoneKeys);
   const selectedObjectLabels = objectLabels(visibleObjects, objectKeys).slice(0, 6).map(compactSpot);
   const objectExtra = objectKeys.length > 6 ? [`+${objectKeys.length - 6}`] : [];
-  const locationParts = selectedZoneLabels.length > 0 ? selectedZoneLabels : ["Whole farm"];
-  return [prettyDate(todayIso()), selectedWork.label, ...locationParts, ...selectedObjectLabels, ...objectExtra].filter(Boolean).join(" · ");
+  return [prettyDate(todayIso()), selectedWork.label, ...selectedZoneLabels, ...selectedObjectLabels, ...objectExtra].filter(Boolean).join(" · ");
 }
 
 export function DocumentWorkCard({
@@ -126,7 +124,7 @@ export function FieldLogDrawer({
   onClose: () => void;
   onSaved?: () => void | Promise<void>;
 }) {
-  const [workKey, setWorkKey] = useState<AtlasFieldLogWorkKey>(seed.workKey ?? "observe");
+  const [workKey, setWorkKey] = useState<AtlasFieldLogWorkKey>(seed.workKey ?? "note");
   const [zoneKeys, setZoneKeys] = useState<string[]>(seed.zoneKeys ?? []);
   const [objectKeys, setObjectKeys] = useState<string[]>(seed.objectKeys ?? []);
   const [note, setNote] = useState("");
@@ -135,7 +133,7 @@ export function FieldLogDrawer({
   const formRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    setWorkKey(seed.workKey ?? "observe");
+    setWorkKey(seed.workKey ?? "note");
     setZoneKeys(seed.zoneKeys ?? []);
     setObjectKeys(seed.objectKeys ?? []);
     setNote("");
@@ -217,7 +215,7 @@ export function FieldLogDrawer({
             <div className="atlas-log-sentence">{summarySentence}</div>
 
             <div className="atlas-log-step">
-              <span>Work</span>
+              <span>Log type</span>
               <div className="atlas-log-chip-grid">
                 {workConfigs.map((work) => (
                   <button key={work.key} type="button" className={work.key === workKey ? "selected" : ""} onClick={() => setWorkKey(work.key)}>
@@ -229,8 +227,8 @@ export function FieldLogDrawer({
 
             <div className="atlas-log-step">
               <div className="atlas-log-step-head">
-                <span>Zone</span>
-                <small>{zoneKeys.length ? `${zoneKeys.length} selected` : "Whole farm"}</small>
+                <span>Attach to bed</span>
+                <small>{zoneKeys.length ? `${zoneKeys.length} area selected` : "optional"}</small>
               </div>
               <div className="atlas-log-chip-grid compact expanded">
                 {zones.map((zone) => (
@@ -247,7 +245,7 @@ export function FieldLogDrawer({
                 <small>{objectKeys.length ? `${objectKeys.length} selected` : "optional"}</small>
               </div>
               {visibleObjects.length === 0 ? (
-                <p className="atlas-log-muted">Choose a zone to document a specific bed. Leave blank for a whole-farm note.</p>
+                <p className="atlas-log-muted">Tap an area above to attach this log to a specific bed.</p>
               ) : (
                 <div className="atlas-log-chip-grid compact expanded">
                   {visibleObjects.map((object) => (
