@@ -218,12 +218,6 @@ export function FieldLogDrawer({
         </div>
 
         <div className="atlas-task-focus-body atlas-log-builder atlas-document-log-builder">
-          <section className="atlas-task-focus-purple atlas-log-hero atlas-document-log-hero">
-            <div className="atlas-task-focus-kicker"><span>Field log</span></div>
-            <h2>{selectedWork.label}</h2>
-            <p>{summarySentence}</p>
-          </section>
-
           <section ref={formRef} className="atlas-task-focus-section atlas-log-compose atlas-document-log-form">
             <div className="atlas-log-sentence">{summarySentence}</div>
 
