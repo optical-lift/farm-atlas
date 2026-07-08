@@ -99,7 +99,7 @@ function zoneBucket(value: string) {
   if (lower.includes("grow room")) return "Grow Room";
   if (lower.includes("entry") || lower.includes("billboard")) return "Entry Billboard";
   if (lower.includes("chicken")) return "Chicken Coop";
-  return value;
+  return value || "Elm Farm";
 }
 
 function collectionZone(task: AtlasTaskCard) {
@@ -138,7 +138,7 @@ function routeCountLine(tasks: AtlasTaskCard[]) {
     .map((key) => ({ key, count: tasks.filter((task) => routeForTask(task) === key).length }))
     .filter((item) => item.count > 0)
     .map((item) => `${routeLabels[item.key]} ${item.count}`)
-    .join(" · ") || "No farm tasks planned";
+    .join(" · ") || "No open farm tasks planned";
 }
 
 function DayProgressBar({ done, total }: { done: number; total: number }) {
@@ -151,6 +151,16 @@ function DayProgressBar({ done, total }: { done: number; total: number }) {
       </div>
       <div className="atlas-day-progress-bar"><i style={{ width: `${percent}%` }} /></div>
     </div>
+  );
+}
+
+function TaskCard({ task, complete = false }: { task: AtlasTaskCard; complete?: boolean }) {
+  return (
+    <Link className={`atlas-day-task-card${complete ? " complete" : ""}`} href={`/task?taskId=${encodeURIComponent(task.task_id)}`}>
+      <strong>{subject(task)}</strong>
+      <span>{complete ? "Complete" : location(task)}</span>
+      <em>{detail(task)}</em>
+    </Link>
   );
 }
 
@@ -222,7 +232,7 @@ export default function AtlasDayPage() {
               <Link href="/" className="atlas-route-back atlas-day-back">← Week</Link>
               <div className="atlas-day-browse-title-row">
                 <span>{dayOnly(dateIso)}</span>
-                <strong>{loading ? "Loading" : `${dayTasks.length} ${dayTasks.length === 1 ? "task" : "tasks"}`}</strong>
+                <strong>{loading ? "Loading" : `${dayTasks.length} open · ${doneDayTasks.length} done`}</strong>
               </div>
               <p>{loading ? "Loading farm work" : routeCountLine(dayTasks)}</p>
               <DayProgressBar done={doneDayTasks.length} total={allDayTasks.length} />
@@ -239,7 +249,7 @@ export default function AtlasDayPage() {
                     <span>{route.tasks.length} {route.tasks.length === 1 ? "task" : "tasks"}</span>
                     <em>{routePreview(route.tasks)}</em>
                   </a>
-                )) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No farm tasks planned for this day."}</div>}
+                )) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div>}
               </div>
             </article>
 
@@ -253,17 +263,23 @@ export default function AtlasDayPage() {
                       <div className="atlas-day-zone-group" key={zone}>
                         <h4>{zone}</h4>
                         {route.tasks.filter((task) => collectionZone(task) === zone).map((task) => (
-                          <Link className="atlas-day-task-card" href={`/task?taskId=${encodeURIComponent(task.task_id)}`} key={task.task_id}>
-                            <strong>{subject(task)}</strong>
-                            <span>{location(task)}</span>
-                            <em>{detail(task)}</em>
-                          </Link>
+                          <TaskCard task={task} key={task.task_id} />
                         ))}
                       </div>
                     ))}
                   </article>
                 );
               })}
+
+              {doneDayTasks.length ? (
+                <article className="atlas-day-route-group atlas-day-complete-group" id="atlas-day-complete">
+                  <h3>Complete</h3>
+                  <div className="atlas-day-zone-group">
+                    <h4>{doneDayTasks.length} finished</h4>
+                    {doneDayTasks.map((task) => <TaskCard task={task} complete key={task.task_id} />)}
+                  </div>
+                </article>
+              ) : null}
             </div>
           </section>
         </div>
