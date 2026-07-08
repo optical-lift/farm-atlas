@@ -18,7 +18,7 @@ const routeLabels: Record<RouteKey, string> = {
   water: "Water",
 };
 
-const routeOrder: RouteKey[] = ["plant", "weed", "mow", "seed", "harvest", "build", "venue", "water"];
+const routeOrder: RouteKey[] = ["weed", "plant", "mow", "seed", "harvest", "build", "venue", "water"];
 
 function todayIso() {
   const date = new Date();
