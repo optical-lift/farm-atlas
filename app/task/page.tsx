@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { atlasTaskDisplay } from "@/lib/atlas/task-display";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
 type LaneKey = "start" | "maintain" | "harvest" | "venue";
@@ -20,7 +21,6 @@ type DisplayTask = {
 };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
-const laneLabels: Record<LaneKey, string> = { start: "Start", maintain: "Maintain", harvest: "Harvest", venue: "Venue" };
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -136,8 +136,9 @@ function fallbackDetailHeading(task: AtlasTaskCard, rhythm: string) {
 function displayTask(task: AtlasTaskCard): DisplayTask {
   const rhythm = rhythmFromTask(task);
   const action = actionFromTask(task, rhythm);
+  const sharedDisplay = atlasTaskDisplay(task);
   const subject = metaString(task, "display_subject") ?? titleSubject(task.title);
-  const location = metaString(task, "display_detail") ?? task.unlock_text ?? task.zone_label ?? "Elm Farm";
+  const location = sharedDisplay.location;
   const metadataLines = metaStringList(task, "detail_lines");
   const noteLines = (task.note ?? "")
     .split(".")
