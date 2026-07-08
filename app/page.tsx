@@ -22,7 +22,6 @@ type WorkRouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "v
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const defaultSnapshot: AtlasFarmSnapshot = { totalBeds: 0, growingBeds: 0, activeSqft: 0, sowingsLogged: 0, stemsLogged: 0 };
-const routeOrder: WorkRouteKey[] = ["plant", "weed", "mow", "seed", "harvest", "build", "venue", "water"];
 const routeLabels: Record<WorkRouteKey, string> = {
   plant: "Plant",
   weed: "Weed",
@@ -187,9 +186,17 @@ function taskDisplay(card: AtlasTaskCard): HomeTaskDisplay {
   };
 }
 
-function isDashboardWork(card: AtlasTaskCard) {
+function isTaskDone(card: AtlasTaskCard) {
+  return card.status === "done" || card.task_outcomes?.[0]?.outcome === "done" || metaString(card, "checklist_status") === "done";
+}
+
+function isDayProgressTask(card: AtlasTaskCard) {
   const text = `${card.task_type} ${card.title} ${card.unlock_text ?? ""}`.toLowerCase();
-  return card.status === "open" && !isChildTask(card) && !(text.includes("verify") || text.includes("check") || text.includes("confirm") || text.includes("count") || text.includes("germin") || text.includes("walk field rows"));
+  return card.status !== "archived" && !isChildTask(card) && !(text.includes("verify") || text.includes("check") || text.includes("confirm") || text.includes("count") || text.includes("germin") || text.includes("walk field rows"));
+}
+
+function isDashboardWork(card: AtlasTaskCard) {
+  return card.status === "open" && isDayProgressTask(card);
 }
 
 function taskCountForDate(cards: AtlasTaskCard[], dateIso: string) {
@@ -246,7 +253,10 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
   const todayCards = dashboardCards.filter((card) => card.due_date === today);
   const heroCards = (todayCards.length >= 4 ? todayCards : [...todayCards, ...dashboardCards.filter((card) => card.due_date !== today)]).slice(0, 4);
   const stepCounts = subtaskCounts(cards);
-  const todayCount = todayCards.length;
+  const dayProgressCards = cards.filter(isDayProgressTask).filter((card) => card.due_date === today);
+  const dayDoneCount = dayProgressCards.filter(isTaskDone).length;
+  const dayTotal = dayProgressCards.length;
+  const dayProgressLabel = dayTotal ? `${dayDoneCount}/${dayTotal}` : "Complete";
 
   if (loading && cards.length === 0) {
     return (
@@ -268,9 +278,9 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
       <Link href={todayHref} className="atlas-task-controller-head atlas-task-controller-head-link" aria-label="Open today's full work overview">
         <div>
           <span className="atlas-task-kicker">Today</span>
-          <em className="atlas-season-label">Open day overview · {prettyDate(today)}</em>
+          <em className="atlas-season-label">{prettyDate(today)}</em>
         </div>
-        <span className="atlas-task-date">{todayCount ? `${todayCount} work` : "Complete"}</span>
+        <span className="atlas-task-date">{dayProgressLabel}</span>
       </Link>
 
       {heroCards.length === 0 ? (
