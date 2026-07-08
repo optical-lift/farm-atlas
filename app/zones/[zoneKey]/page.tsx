@@ -82,12 +82,12 @@ export default function AtlasZoneDetailPage() {
     return tasks.filter((task) => task.objects.some((object) => objectIds.has(object.object_id)));
   }, [tasks, zone]);
 
-  function openZoneLog(workKey: AtlasFieldLogSeed["workKey"] = "observe") {
+  function openZoneLog(workKey: AtlasFieldLogSeed["workKey"] = "note") {
     if (!zone) return;
     setLogSeed({ workKey, zoneKeys: [zone.stable_key], objectKeys: [] });
   }
 
-  function openObjectLog(object: AtlasRegistryObject, workKey: AtlasFieldLogSeed["workKey"] = "observe") {
+  function openObjectLog(object: AtlasRegistryObject, workKey: AtlasFieldLogSeed["workKey"] = "note") {
     if (!zone) return;
     setLogSeed({ workKey, zoneKeys: [zone.stable_key], objectKeys: [object.stable_key] });
   }
