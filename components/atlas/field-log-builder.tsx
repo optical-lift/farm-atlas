@@ -125,7 +125,7 @@ export function FieldLogDrawer({
   const [workKey, setWorkKey] = useState<AtlasFieldLogWorkKey>(seed.workKey ?? "note");
   const [zoneKeys, setZoneKeys] = useState<string[]>(seed.zoneKeys ?? []);
   const [objectKeys, setObjectKeys] = useState<string[]>(seed.objectKeys ?? []);
-  const [showBedDrawer, setShowBedDrawer] = useState((seed.objectKeys ?? []).length > 0);
+  const [showAttachDrawer, setShowAttachDrawer] = useState((seed.zoneKeys ?? []).length > 0 || (seed.objectKeys ?? []).length > 0);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -135,7 +135,7 @@ export function FieldLogDrawer({
     setWorkKey(seed.workKey ?? "note");
     setZoneKeys(seed.zoneKeys ?? []);
     setObjectKeys(seed.objectKeys ?? []);
-    setShowBedDrawer((seed.objectKeys ?? []).length > 0);
+    setShowAttachDrawer((seed.zoneKeys ?? []).length > 0 || (seed.objectKeys ?? []).length > 0);
     setNote("");
     setMessage(null);
   }, [seed]);
@@ -152,6 +152,7 @@ export function FieldLogDrawer({
   const summarySentence = documentationSentence({ zones, selectedWork, zoneKeys, objectKeys });
   const selectedZoneSet = new Set(zoneKeys);
   const selectedObjectSet = new Set(objectKeys);
+  const attachStatus = objectKeys.length ? `${objectKeys.length} bed${objectKeys.length === 1 ? "" : "s"} attached` : zoneKeys.length ? `${zoneKeys.length} area${zoneKeys.length === 1 ? "" : "s"} attached` : "optional";
 
   function toggleZone(key: string) {
     setZoneKeys((current) => {
@@ -166,7 +167,6 @@ export function FieldLogDrawer({
       }
       return [...current, key];
     });
-    setShowBedDrawer(true);
   }
 
   function toggleObject(key: string) {
@@ -226,42 +226,50 @@ export function FieldLogDrawer({
               </div>
             </div>
 
-            <div className="atlas-log-step">
-              <div className="atlas-log-step-head">
-                <span>Attach to bed</span>
-                <small>{zoneKeys.length ? `${zoneKeys.length} area selected` : "optional"}</small>
-              </div>
-              <div className="atlas-log-chip-grid compact expanded">
-                {zones.map((zone) => (
-                  <button key={zone.id} type="button" className={selectedZoneSet.has(zone.stable_key) ? "selected" : ""} onClick={() => toggleZone(zone.stable_key)}>
-                    {zone.label}
-                  </button>
-                ))}
-              </div>
+            <div className="atlas-add-form">
+              <textarea aria-label="Field note" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Optional note" />
             </div>
 
             <div className="atlas-log-step atlas-log-drawer-step">
-              <button type="button" className="atlas-log-drawer-toggle" onClick={() => setShowBedDrawer((current) => !current)} aria-expanded={showBedDrawer}>
-                <span>Beds / objects</span>
-                <small>{objectKeys.length ? `${objectKeys.length} selected` : showBedDrawer ? "close" : "open"}</small>
+              <button type="button" className="atlas-log-drawer-toggle" onClick={() => setShowAttachDrawer((current) => !current)} aria-expanded={showAttachDrawer}>
+                <span>Attach to bed</span>
+                <small>{showAttachDrawer ? attachStatus : "open"}</small>
               </button>
-              {showBedDrawer ? (
-                visibleObjects.length === 0 ? (
-                  <p className="atlas-log-muted">Tap an area above to attach this log to a specific bed.</p>
-                ) : (
-                  <div className="atlas-log-chip-grid compact expanded">
-                    {visibleObjects.map((object) => (
-                      <button key={object.id} type="button" className={selectedObjectSet.has(object.stable_key) ? "selected" : ""} onClick={() => toggleObject(object.stable_key)}>
-                        {compactSpot(object.label)}
-                      </button>
-                    ))}
+              {showAttachDrawer ? (
+                <div className="atlas-log-attach-panel">
+                  <div className="atlas-log-substep">
+                    <div className="atlas-log-step-head">
+                      <span>Area</span>
+                      <small>{zoneKeys.length ? `${zoneKeys.length} selected` : "choose area"}</small>
+                    </div>
+                    <div className="atlas-log-chip-grid compact expanded">
+                      {zones.map((zone) => (
+                        <button key={zone.id} type="button" className={selectedZoneSet.has(zone.stable_key) ? "selected" : ""} onClick={() => toggleZone(zone.stable_key)}>
+                          {zone.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                )
-              ) : null}
-            </div>
 
-            <div className="atlas-add-form">
-              <textarea aria-label="Field note" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Optional note" />
+                  <div className="atlas-log-substep">
+                    <div className="atlas-log-step-head">
+                      <span>Beds / objects</span>
+                      <small>{objectKeys.length ? `${objectKeys.length} selected` : "optional"}</small>
+                    </div>
+                    {visibleObjects.length === 0 ? (
+                      <p className="atlas-log-muted">Choose an area to attach this log to a specific bed.</p>
+                    ) : (
+                      <div className="atlas-log-chip-grid compact expanded">
+                        {visibleObjects.map((object) => (
+                          <button key={object.id} type="button" className={selectedObjectSet.has(object.stable_key) ? "selected" : ""} onClick={() => toggleObject(object.stable_key)}>
+                            {compactSpot(object.label)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <button type="button" className="atlas-zone-action accent atlas-document-save-button" disabled={saving} onClick={() => void saveLog()}>
