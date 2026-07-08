@@ -20,7 +20,6 @@ type WorkConfig = {
 };
 
 const workConfigs: WorkConfig[] = [
-  { key: "note", label: "Note", actionTypes: ["note"] },
   { key: "weed", label: "Weeded", actionTypes: ["weeded"] },
   { key: "plant", label: "Planted", actionTypes: ["planted"] },
   { key: "sow", label: "Sowed", actionTypes: ["sowed"] },
@@ -28,6 +27,8 @@ const workConfigs: WorkConfig[] = [
   { key: "harvest", label: "Harvested", actionTypes: ["harvested"] },
   { key: "maintain", label: "Maintained", actionTypes: ["maintained"] },
 ];
+
+const noteConfig: WorkConfig = { key: "note", label: "Note", actionTypes: ["note"] };
 
 function todayIso() {
   const date = new Date();
@@ -58,7 +59,7 @@ function compactSpot(label: string) {
 }
 
 function workConfig(key: AtlasFieldLogWorkKey) {
-  return workConfigs.find((config) => config.key === key) ?? workConfigs[0];
+  return key === "note" ? noteConfig : workConfigs.find((config) => config.key === key) ?? workConfigs[0];
 }
 
 function zoneLabels(zones: AtlasRegistryZone[], zoneKeys: string[]) {
@@ -125,7 +126,7 @@ export function FieldLogDrawer({
   const [workKey, setWorkKey] = useState<AtlasFieldLogWorkKey>(seed.workKey ?? "note");
   const [zoneKeys, setZoneKeys] = useState<string[]>(seed.zoneKeys ?? []);
   const [objectKeys, setObjectKeys] = useState<string[]>(seed.objectKeys ?? []);
-  const [showAttachDrawer, setShowAttachDrawer] = useState((seed.zoneKeys ?? []).length > 0 || (seed.objectKeys ?? []).length > 0);
+  const [showAttachDrawer, setShowAttachDrawer] = useState((seed.zoneKeys ?? []).length > 0 || (seed.objectKeys ?? []).length > 0 || (seed.workKey ?? "note") !== "note");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -135,7 +136,7 @@ export function FieldLogDrawer({
     setWorkKey(seed.workKey ?? "note");
     setZoneKeys(seed.zoneKeys ?? []);
     setObjectKeys(seed.objectKeys ?? []);
-    setShowAttachDrawer((seed.zoneKeys ?? []).length > 0 || (seed.objectKeys ?? []).length > 0);
+    setShowAttachDrawer((seed.zoneKeys ?? []).length > 0 || (seed.objectKeys ?? []).length > 0 || (seed.workKey ?? "note") !== "note");
     setNote("");
     setMessage(null);
   }, [seed]);
@@ -152,7 +153,13 @@ export function FieldLogDrawer({
   const summarySentence = documentationSentence({ zones, selectedWork, zoneKeys, objectKeys });
   const selectedZoneSet = new Set(zoneKeys);
   const selectedObjectSet = new Set(objectKeys);
-  const attachStatus = objectKeys.length ? `${objectKeys.length} bed${objectKeys.length === 1 ? "" : "s"} attached` : zoneKeys.length ? `${zoneKeys.length} area${zoneKeys.length === 1 ? "" : "s"} attached` : "optional";
+  const attachStatus = objectKeys.length
+    ? `${selectedWork.label} · ${objectKeys.length} bed${objectKeys.length === 1 ? "" : "s"}`
+    : zoneKeys.length
+      ? `${selectedWork.label} · ${zoneKeys.length} area${zoneKeys.length === 1 ? "" : "s"}`
+      : workKey === "note"
+        ? "optional"
+        : selectedWork.label;
 
   function toggleZone(key: string) {
     setZoneKeys((current) => {
@@ -171,6 +178,11 @@ export function FieldLogDrawer({
 
   function toggleObject(key: string) {
     setObjectKeys((current) => current.includes(key) ? current.filter((candidate) => candidate !== key) : [...current, key]);
+  }
+
+  function chooseWork(key: AtlasFieldLogWorkKey) {
+    setWorkKey(key);
+    setShowAttachDrawer(true);
   }
 
   async function saveLog() {
@@ -215,17 +227,6 @@ export function FieldLogDrawer({
           <section ref={formRef} className="atlas-task-focus-section atlas-log-compose atlas-document-log-form">
             <div className="atlas-log-sentence">{summarySentence}</div>
 
-            <div className="atlas-log-step">
-              <span>Log type</span>
-              <div className="atlas-log-chip-grid">
-                {workConfigs.map((work) => (
-                  <button key={work.key} type="button" className={work.key === workKey ? "selected" : ""} onClick={() => setWorkKey(work.key)}>
-                    {work.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div className="atlas-add-form">
               <textarea aria-label="Field note" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Optional note" />
             </div>
@@ -237,6 +238,20 @@ export function FieldLogDrawer({
               </button>
               {showAttachDrawer ? (
                 <div className="atlas-log-attach-panel">
+                  <div className="atlas-log-substep">
+                    <div className="atlas-log-step-head">
+                      <span>Did what?</span>
+                      <small>{workKey === "note" ? "choose action" : selectedWork.label}</small>
+                    </div>
+                    <div className="atlas-log-chip-grid compact expanded">
+                      {workConfigs.map((work) => (
+                        <button key={work.key} type="button" className={work.key === workKey ? "selected" : ""} onClick={() => chooseWork(work.key)}>
+                          {work.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="atlas-log-substep">
                     <div className="atlas-log-step-head">
                       <span>Area</span>
@@ -253,11 +268,11 @@ export function FieldLogDrawer({
 
                   <div className="atlas-log-substep">
                     <div className="atlas-log-step-head">
-                      <span>Beds / objects</span>
+                      <span>Bed / object</span>
                       <small>{objectKeys.length ? `${objectKeys.length} selected` : "optional"}</small>
                     </div>
                     {visibleObjects.length === 0 ? (
-                      <p className="atlas-log-muted">Choose an area to attach this log to a specific bed.</p>
+                      <p className="atlas-log-muted">Choose an area, then choose a bed like FR1.</p>
                     ) : (
                       <div className="atlas-log-chip-grid compact expanded">
                         {visibleObjects.map((object) => (
