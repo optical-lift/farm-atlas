@@ -40,8 +40,10 @@ type ObjectRow = {
   label: string;
   object_type: string;
   object_mode: string | null;
-  length_ft: number | null;
-  width_ft: number | null;
+  length_ft: number | string | null;
+  width_ft: number | string | null;
+  area_sqft: number | string | null;
+  guest_visible: boolean | null;
   sort_order: number | null;
   metadata?: Record<string, unknown> | null;
 };
@@ -188,7 +190,7 @@ export async function GET() {
   const { data: objects, error: objectsError } = await atlasSupabase
     .schema("atlas")
     .from("growing_objects")
-    .select("id, zone_id, stable_key, label, object_type, object_mode, length_ft, width_ft, sort_order, metadata")
+    .select("id, zone_id, stable_key, label, object_type, object_mode, length_ft, width_ft, area_sqft, guest_visible, sort_order, metadata")
     .eq("farm_id", farm.id)
     .order("sort_order", { ascending: true });
 
