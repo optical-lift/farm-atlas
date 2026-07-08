@@ -26,6 +26,7 @@ import "./home-today-overview-link.css";
 import "./task-child-inline-log.css";
 import "./overview.css";
 import "./task-unfinished.css";
+import "./field-log-documentation.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
