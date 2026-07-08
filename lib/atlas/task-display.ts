@@ -110,8 +110,19 @@ export function atlasTaskSubject(task: AtlasTaskCard) {
   return atlasMetaString(task, "collection_label") || atlasMetaString(task, "display_subject") || atlasTitleSubject(task.title) || task.title;
 }
 
+function uniqueObjectLabels(task: AtlasTaskCard) {
+  return Array.from(new Set((task.objects ?? []).map((object) => object.object_label).filter(Boolean)));
+}
+
+export function atlasTaskObjectLocation(task: AtlasTaskCard) {
+  const labels = uniqueObjectLabels(task);
+  if (labels.length === 0) return null;
+  if (labels.length <= 3) return labels.join(" · ");
+  return `${labels.length} attached spaces`;
+}
+
 export function atlasTaskLocation(task: AtlasTaskCard) {
-  return atlasMetaString(task, "collection_zone") || atlasMetaString(task, "display_detail") || task.unlock_text || task.zone_label || "Elm Farm";
+  return atlasTaskObjectLocation(task) || atlasMetaString(task, "collection_zone") || atlasMetaString(task, "display_detail") || task.unlock_text || task.zone_label || "Elm Farm";
 }
 
 export function atlasTaskDetail(task: AtlasTaskCard) {
