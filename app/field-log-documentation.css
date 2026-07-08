@@ -252,6 +252,26 @@
   content: " ▸";
 }
 
+.atlas-log-attach-panel,
+.atlas-log-substep {
+  display: grid;
+  gap: 10px;
+}
+
+.atlas-log-attach-panel {
+  padding-top: 2px;
+}
+
+.atlas-log-substep {
+  border-top: 1px solid rgba(215, 204, 189, 0.58);
+  padding-top: 10px;
+}
+
+.atlas-log-substep:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
 .atlas-document-log-builder .atlas-log-muted {
   margin: 0;
   color: var(--atlas-muted);
