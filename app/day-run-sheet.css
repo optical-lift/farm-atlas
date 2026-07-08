@@ -176,6 +176,31 @@
   background: linear-gradient(90deg, rgba(167, 171, 214, 0.64), rgba(214, 225, 177, 0.90));
 }
 
+.atlas-day-complete-group {
+  margin-top: 16px;
+  opacity: 0.78;
+}
+
+.atlas-day-complete-group h3 {
+  color: #777c74 !important;
+}
+
+.atlas-day-task-card.complete {
+  border-style: dashed !important;
+  background: rgba(246, 242, 230, 0.48) !important;
+}
+
+.atlas-day-task-card.complete strong {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: rgba(120, 126, 109, 0.35);
+}
+
+.atlas-day-task-card.complete span {
+  color: #6d735f !important;
+  font-weight: 950 !important;
+}
+
 @media (max-width: 360px) {
   .atlas-run-sheet-grid {
     gap: 6px;
