@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
 type RouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
+type DayViewMode = "work_order" | "zone";
 type WeatherResponse = { ok: boolean; label?: string };
 
 const routeLabels: Record<RouteKey, string> = {
@@ -48,6 +49,15 @@ function stringList(value: unknown) {
 
 function meta(task: AtlasTaskCard, key: string) {
   return task.metadata?.[key];
+}
+
+function metaNumber(task: AtlasTaskCard, ...keys: string[]) {
+  for (const key of keys) {
+    const value = meta(task, key);
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  }
+  return null;
 }
 
 function isRouteKey(value: string): value is RouteKey {
@@ -124,13 +134,43 @@ function detail(task: AtlasTaskCard) {
   return stringList(meta(task, "detail_lines"))[0] || location(task);
 }
 
+function explicitWorkOrder(task: AtlasTaskCard) {
+  return metaNumber(task, "day_work_order", "work_order", "day_order_override", "run_sheet_order");
+}
+
+function workOrderMode(task: AtlasTaskCard) {
+  const mode = text(meta(task, "day_work_order_mode")) || text(meta(task, "work_order_mode")) || text(meta(task, "day_flow_mode"));
+  const label = `${text(meta(task, "day_work_order_label"))} ${text(meta(task, "work_order_label"))} ${text(meta(task, "work_order_bucket"))}`.toLowerCase();
+  if (mode === "extra_credit" || label.includes("extra credit")) return "extra_credit";
+  const order = explicitWorkOrder(task);
+  if (order !== null && order >= 10) return "extra_credit";
+  return "required";
+}
+
+function isExtraCredit(task: AtlasTaskCard) {
+  return workOrderMode(task) === "extra_credit";
+}
+
+function fallbackOrder(task: AtlasTaskCard) {
+  const routeIndex = routeOrder.indexOf(routeForTask(task));
+  const dayOrder = metaNumber(task, "day_order") ?? 999;
+  return (routeIndex < 0 ? 99 : routeIndex) * 1000 + dayOrder;
+}
+
+function workOrderSortKey(task: AtlasTaskCard) {
+  const explicit = explicitWorkOrder(task);
+  const primary = explicit ?? fallbackOrder(task);
+  const explicitFlag = explicit === null ? 1 : 0;
+  return `${String(primary).padStart(5, "0")}-${explicitFlag}-${subject(task)}`;
+}
+
 function taskSortKey(task: AtlasTaskCard) {
-  const dayOrder = typeof meta(task, "day_order") === "number" ? meta(task, "day_order") : 999;
+  const dayOrder = metaNumber(task, "day_order") ?? 999;
   return `${String(dayOrder).padStart(3, "0")}-${subject(task)}`;
 }
 
-function routePreview(tasks: AtlasTaskCard[]) {
-  return tasks.map(subject).slice(0, 2).join(" · ");
+function zoneSortKey(task: AtlasTaskCard) {
+  return `${collectionZone(task)}-${workOrderSortKey(task)}`;
 }
 
 function routeCountLine(tasks: AtlasTaskCard[]) {
@@ -154,13 +194,30 @@ function DayProgressBar({ done, total }: { done: number; total: number }) {
   );
 }
 
-function TaskCard({ task, complete = false }: { task: AtlasTaskCard; complete?: boolean }) {
+function TaskCard({ task, complete = false, orderLabel }: { task: AtlasTaskCard; complete?: boolean; orderLabel?: string }) {
   return (
-    <Link className={`atlas-day-task-card${complete ? " complete" : ""}`} href={`/task?taskId=${encodeURIComponent(task.task_id)}`}>
+    <Link className={`atlas-day-task-card${complete ? " complete" : ""}${orderLabel ? " has-order" : ""}`} href={`/task?taskId=${encodeURIComponent(task.task_id)}`}>
+      {orderLabel ? <b className="atlas-day-work-order-badge">{orderLabel}</b> : null}
       <strong>{subject(task)}</strong>
       <span>{complete ? "Complete" : location(task)}</span>
       <em>{detail(task)}</em>
     </Link>
+  );
+}
+
+function ViewToggle({ viewMode, onChange }: { viewMode: DayViewMode; onChange: (mode: DayViewMode) => void }) {
+  return (
+    <div className="atlas-day-filter-card" aria-label="Filter day overview">
+      <span>Filter by</span>
+      <div>
+        <button type="button" className={viewMode === "work_order" ? "selected" : ""} onClick={() => onChange("work_order")}>
+          Work order
+        </button>
+        <button type="button" className={viewMode === "zone" ? "selected" : ""} onClick={() => onChange("zone")}>
+          Zone
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -170,6 +227,7 @@ export default function AtlasDayPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
+  const [viewMode, setViewMode] = useState<DayViewMode>("work_order");
 
   useEffect(() => {
     setDateIso(new URLSearchParams(window.location.search).get("date") || todayIso());
@@ -204,18 +262,24 @@ export default function AtlasDayPage() {
   const allDayTasks = useMemo(() => tasks
     .filter(isWorkTask)
     .filter((task) => task.due_date === dateIso)
-    .sort((a, b) => taskSortKey(a).localeCompare(taskSortKey(b))), [dateIso, tasks]);
+    .sort((a, b) => workOrderSortKey(a).localeCompare(workOrderSortKey(b))), [dateIso, tasks]);
 
   const dayTasks = useMemo(() => tasks
     .filter(isDashboardWork)
     .filter((task) => task.due_date === dateIso)
-    .sort((a, b) => taskSortKey(a).localeCompare(taskSortKey(b))), [dateIso, tasks]);
+    .sort((a, b) => workOrderSortKey(a).localeCompare(workOrderSortKey(b))), [dateIso, tasks]);
 
+  const requiredTasks = useMemo(() => dayTasks.filter((task) => !isExtraCredit(task)), [dayTasks]);
+  const extraCreditTasks = useMemo(() => dayTasks.filter(isExtraCredit), [dayTasks]);
   const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask), [allDayTasks]);
 
-  const routes = useMemo(() => routeOrder
-    .map((key) => ({ key, tasks: dayTasks.filter((task) => routeForTask(task) === key) }))
-    .filter((route) => route.tasks.length > 0), [dayTasks]);
+  const zoneGroups = useMemo(() => {
+    const zones = Array.from(new Set(requiredTasks.map(collectionZone))).sort((a, b) => a.localeCompare(b));
+    return zones.map((zone) => ({
+      zone,
+      tasks: requiredTasks.filter((task) => collectionZone(task) === zone).sort((a, b) => zoneSortKey(a).localeCompare(zoneSortKey(b))),
+    }));
+  }, [requiredTasks]);
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
@@ -240,36 +304,48 @@ export default function AtlasDayPage() {
 
             {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
 
-            <article className="atlas-day-route-hero">
-              <div className="atlas-day-route-hero-head"><div><span>Day plan</span><strong>{prettyDate(dateIso)}</strong></div><em className="atlas-day-route-count-pill">{loading ? "…" : dayTasks.length}</em></div>
-              <div className="atlas-day-route-grid">
-                {routes.length ? routes.map((route) => (
-                  <a key={route.key} className="atlas-day-route-box" href={`#atlas-day-route-${route.key}`}>
-                    <strong>{routeLabels[route.key]}</strong>
-                    <span>{route.tasks.length} {route.tasks.length === 1 ? "task" : "tasks"}</span>
-                    <em>{routePreview(route.tasks)}</em>
-                  </a>
-                )) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div>}
+            <article className="atlas-day-route-hero atlas-day-view-hero">
+              <div className="atlas-day-route-hero-head">
+                <div>
+                  <span>Day plan</span>
+                  <strong>{prettyDate(dateIso)}</strong>
+                </div>
+                <em className="atlas-day-route-count-pill">{loading ? "…" : requiredTasks.length}</em>
               </div>
+              <ViewToggle viewMode={viewMode} onChange={setViewMode} />
             </article>
 
             <div className="atlas-day-task-groups">
-              {routes.map((route) => {
-                const zones = Array.from(new Set(route.tasks.map(collectionZone)));
-                return (
-                  <article className="atlas-day-route-group" id={`atlas-day-route-${route.key}`} key={route.key}>
-                    <h3>{routeLabels[route.key]}</h3>
-                    {zones.map((zone) => (
-                      <div className="atlas-day-zone-group" key={zone}>
-                        <h4>{zone}</h4>
-                        {route.tasks.filter((task) => collectionZone(task) === zone).map((task) => (
-                          <TaskCard task={task} key={task.task_id} />
-                        ))}
-                      </div>
-                    ))}
+              {viewMode === "work_order" ? (
+                <article className="atlas-day-route-group atlas-day-work-order-group" id="atlas-day-work-order">
+                  <h3>Work Order</h3>
+                  <div className="atlas-day-work-order-list">
+                    {requiredTasks.length ? requiredTasks.map((task, index) => {
+                      const explicit = explicitWorkOrder(task);
+                      const label = explicit !== null ? String(explicit) : String(index + 1);
+                      return <TaskCard task={task} orderLabel={label} key={task.task_id} />;
+                    }) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div>}
+                  </div>
+                </article>
+              ) : (
+                zoneGroups.length ? zoneGroups.map((group) => (
+                  <article className="atlas-day-route-group" id={`atlas-day-zone-${group.zone.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`} key={group.zone}>
+                    <h3>{group.zone}</h3>
+                    <div className="atlas-day-zone-group">
+                      {group.tasks.map((task) => <TaskCard task={task} key={task.task_id} />)}
+                    </div>
                   </article>
-                );
-              })}
+                )) : <article className="atlas-day-route-group"><div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div></article>
+              )}
+
+              {extraCreditTasks.length ? (
+                <article className="atlas-day-route-group atlas-day-extra-credit-group" id="atlas-day-extra-credit">
+                  <h3>Extra Credit</h3>
+                  <div className="atlas-day-zone-group">
+                    {extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} />)}
+                  </div>
+                </article>
+              ) : null}
 
               {doneDayTasks.length ? (
                 <article className="atlas-day-route-group atlas-day-complete-group" id="atlas-day-complete">
