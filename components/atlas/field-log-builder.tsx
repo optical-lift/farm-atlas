@@ -48,14 +48,6 @@ function cleanList(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 }
 
-function phraseList(values: string[]) {
-  const clean = cleanList(values);
-  if (clean.length === 0) return "";
-  if (clean.length === 1) return clean[0];
-  if (clean.length === 2) return `${clean[0]} and ${clean[1]}`;
-  return `${clean.slice(0, -1).join(", ")}, and ${clean[clean.length - 1]}`;
-}
-
 function compactSpot(label: string) {
   const berry = label.match(/Berry Walk Bed\s*(\d+)/i);
   if (berry) return `BW${berry[1]}`;
@@ -98,12 +90,11 @@ function documentationSentence({
   objectKeys: string[];
 }) {
   const visibleObjects = visibleObjectsForZones(zones, zoneKeys);
-  const bedPhrase = phraseList(objectLabels(visibleObjects, objectKeys).map(compactSpot));
-  const zonePhrase = phraseList(zoneLabels(zones, zoneKeys));
-
-  if (bedPhrase && zonePhrase) return `I touched ${bedPhrase} in ${zonePhrase} and ${selectedWork.verb}.`;
-  if (zonePhrase) return `I touched ${zonePhrase} and ${selectedWork.verb}.`;
-  return `I touched Whole farm and ${selectedWork.verb}.`;
+  const selectedZoneLabels = zoneLabels(zones, zoneKeys);
+  const selectedObjectLabels = objectLabels(visibleObjects, objectKeys).slice(0, 6).map(compactSpot);
+  const objectExtra = objectKeys.length > 6 ? [`+${objectKeys.length - 6}`] : [];
+  const locationParts = selectedZoneLabels.length > 0 ? selectedZoneLabels : ["Whole farm"];
+  return [prettyDate(todayIso()), selectedWork.label, ...locationParts, ...selectedObjectLabels, ...objectExtra].filter(Boolean).join(" · ");
 }
 
 export function DocumentWorkCard({
