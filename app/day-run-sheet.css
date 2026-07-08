@@ -176,6 +176,93 @@
   background: linear-gradient(90deg, rgba(167, 171, 214, 0.64), rgba(214, 225, 177, 0.90));
 }
 
+.atlas-day-view-hero {
+  display: grid;
+  gap: 10px;
+}
+
+.atlas-day-filter-card {
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 18px;
+  background: rgba(246, 242, 230, 0.58);
+  padding: 9px;
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-day-filter-card > span {
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.atlas-day-filter-card > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.atlas-day-filter-card button {
+  border: 1px solid rgba(139, 145, 194, 0.20);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--atlas-muted);
+  padding: 10px 9px;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-day-filter-card button.selected {
+  background: rgba(167, 171, 214, 0.30);
+  color: var(--atlas-text);
+  border-color: rgba(139, 145, 194, 0.34);
+}
+
+.atlas-day-work-order-list {
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-day-task-card.has-order {
+  position: relative;
+  padding-left: 54px !important;
+}
+
+.atlas-day-work-order-badge {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(167, 171, 214, 0.30);
+  color: var(--atlas-text);
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+}
+
+.atlas-day-extra-credit-group {
+  margin-top: 12px;
+}
+
+.atlas-day-extra-credit-group h3 {
+  color: #7b6a48 !important;
+}
+
+.atlas-day-extra-credit-group .atlas-day-task-card {
+  border-style: dashed !important;
+  background: rgba(246, 242, 230, 0.72) !important;
+}
+
 .atlas-day-complete-group {
   margin-top: 16px;
   opacity: 0.78;
@@ -214,5 +301,15 @@
 
   .atlas-run-sheet-box strong {
     font-size: 12px !important;
+  }
+
+  .atlas-day-task-card.has-order {
+    padding-left: 50px !important;
+  }
+
+  .atlas-day-work-order-badge {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
   }
 }
