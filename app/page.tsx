@@ -418,7 +418,7 @@ export default function AtlasHomePage() {
         <header className="atlas-phone-top atlas-dashboard-top">
           <div className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></div>
           <span className="atlas-weather-line">{weatherLabel}</span>
-          <button type="button" className="atlas-note-plus" aria-label="Document work" onClick={() => { setOpenPanel(null); setLogSeed({ workKey: "observe", zoneKeys: [], objectKeys: [] }); }}>+</button>
+          <button type="button" className="atlas-note-plus" aria-label="Document work" onClick={() => { setOpenPanel(null); setLogSeed({ workKey: "note", zoneKeys: [], objectKeys: [] }); }}>+</button>
         </header>
         <div className="atlas-home-grid">
           <TaskLaunchHero cards={cards} loading={loading} />
