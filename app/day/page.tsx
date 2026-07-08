@@ -333,7 +333,6 @@ export default function AtlasDayPage() {
               </div>
               <p>{loading ? "Loading farm work" : routeCountLine(dayTasks)}</p>
               <DayProgressBar done={doneDayTasks.length} total={allDayTasks.length} />
-              <ViewToggle viewMode={viewMode} onChange={setViewMode} />
             </div>
 
             {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
@@ -362,6 +361,8 @@ export default function AtlasDayPage() {
                 </div>
               )}
             </article>
+
+            <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
             <div className="atlas-day-task-groups">
               {viewMode === "work_order" ? (
