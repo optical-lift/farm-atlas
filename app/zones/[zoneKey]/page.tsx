@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 
 import { TaskPhysicalSpaces } from "@/components/atlas/task-physical-spaces";
+import { DocumentWorkCard, FieldLogDrawer, type AtlasFieldLogSeed } from "@/components/atlas/field-log-builder";
 import {
   BedInspectorRow,
   prettyDate,
@@ -32,6 +33,18 @@ function objectTasks(object: AtlasRegistryObject, tasks: AtlasTaskCard[]) {
   return tasks.filter((task) => task.objects.some((taskObject) => taskObject.object_id === object.id));
 }
 
+function workKeyFromTask(task: AtlasTaskCard): AtlasFieldLogSeed["workKey"] {
+  const text = `${task.task_type} ${task.title}`.toLowerCase();
+  if (text.includes("weed")) return "weed";
+  if (text.includes("plant") || text.includes("transplant")) return "plant";
+  if (text.includes("sow") || text.includes("seed")) return "sow";
+  if (text.includes("water")) return "water";
+  if (text.includes("harvest") || text.includes("cut")) return "harvest";
+  if (text.includes("mow") || text.includes("build") || text.includes("prep") || text.includes("maint")) return "maintain";
+  if (text.includes("check") || text.includes("germin") || text.includes("confirm")) return "check";
+  return "observe";
+}
+
 export default function AtlasZoneDetailPage() {
   const params = useParams<{ zoneKey: string }>();
   const zoneKey = params.zoneKey;
@@ -41,6 +54,7 @@ export default function AtlasZoneDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<AtlasTaskCard | null>(null);
+  const [logSeed, setLogSeed] = useState<AtlasFieldLogSeed | null>(null);
 
   async function loadZoneData() {
     try {
@@ -79,6 +93,16 @@ export default function AtlasZoneDetailPage() {
     const objectIds = new Set(zone.objects.map((object) => object.id));
     return tasks.filter((task) => task.objects.some((object) => objectIds.has(object.object_id)));
   }, [tasks, zone]);
+
+  function openZoneLog(workKey: AtlasFieldLogSeed["workKey"] = "observe") {
+    if (!zone) return;
+    setLogSeed({ workKey, zoneKeys: [zone.stable_key], objectKeys: [] });
+  }
+
+  function openObjectLog(object: AtlasRegistryObject, workKey: AtlasFieldLogSeed["workKey"] = "observe") {
+    if (!zone) return;
+    setLogSeed({ workKey, zoneKeys: [zone.stable_key], objectKeys: [object.stable_key] });
+  }
 
   return (
     <main className="atlas-phone-shell atlas-route-shell">
@@ -122,6 +146,12 @@ export default function AtlasZoneDetailPage() {
                 </div>
               </section>
 
+              <DocumentWorkCard
+                title="Document work here"
+                detail={`Write what was touched in ${zone.label}.`}
+                onOpen={() => openZoneLog()}
+              />
+
               <section className="atlas-zone-bed-list">
                 <div className="atlas-zone-bed-list-head">
                   <span className="atlas-home-kicker">Beds / objects</span>
@@ -137,7 +167,12 @@ export default function AtlasZoneDetailPage() {
                     key={object.id}
                     object={object}
                     tasks={objectTasks(object, tasks)}
-                    onTaskSelect={setSelectedTask}
+                    onTaskSelect={(task) => {
+                      setSelectedTask(task);
+                      const taskObject = task.objects.find((candidate) => candidate.object_id === object.id);
+                      if (taskObject) openObjectLog(object, workKeyFromTask(task));
+                    }}
+                    onDocumentObject={openObjectLog}
                   />
                 ))}
               </section>
@@ -188,6 +223,15 @@ export default function AtlasZoneDetailPage() {
             </div>
           </div>
         </section>
+      ) : null}
+
+      {logSeed ? (
+        <FieldLogDrawer
+          zones={zones}
+          seed={logSeed}
+          onClose={() => setLogSeed(null)}
+          onSaved={loadZoneData}
+        />
       ) : null}
     </main>
   );
