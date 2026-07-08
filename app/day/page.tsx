@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { atlasRouteKeyForTask, atlasTaskDisplay } from "@/lib/atlas/task-display";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
 type RouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
@@ -43,10 +44,6 @@ function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function stringList(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
-}
-
 function meta(task: AtlasTaskCard, key: string) {
   return task.metadata?.[key];
 }
@@ -58,10 +55,6 @@ function metaNumber(task: AtlasTaskCard, ...keys: string[]) {
     if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
   }
   return null;
-}
-
-function isRouteKey(value: string): value is RouteKey {
-  return routeOrder.includes(value as RouteKey);
 }
 
 function isChildTask(task: AtlasTaskCard) {
@@ -87,11 +80,11 @@ function progressPercent(done: number, total: number) {
 }
 
 function subject(task: AtlasTaskCard) {
-  return text(meta(task, "collection_label")) || text(meta(task, "display_subject")) || task.title.split("—").slice(1).join("—").trim() || task.title;
+  return atlasTaskDisplay(task).title;
 }
 
 function location(task: AtlasTaskCard) {
-  return text(meta(task, "display_detail")) || task.unlock_text || task.zone_label || "Elm Farm";
+  return atlasTaskDisplay(task).location;
 }
 
 function zoneBucket(value: string) {
@@ -117,21 +110,11 @@ function collectionZone(task: AtlasTaskCard) {
 }
 
 function routeForTask(task: AtlasTaskCard): RouteKey {
-  const explicit = text(meta(task, "work_route"));
-  if (isRouteKey(explicit)) return explicit;
-  const joined = `${task.task_type ?? ""} ${task.title} ${text(meta(task, "work_rhythm"))} ${text(meta(task, "display_action"))}`.toLowerCase();
-  if (joined.includes("water")) return "water";
-  if (joined.includes("mow")) return "mow";
-  if (joined.includes("weed")) return "weed";
-  if (joined.includes("seed") || joined.includes("sow")) return "seed";
-  if (joined.includes("harvest") || joined.includes("postharvest") || joined.includes("garlic") || joined.includes("gather")) return "harvest";
-  if (joined.includes("build") || joined.includes("prep") || joined.includes("string") || joined.includes("arch")) return "build";
-  if (joined.includes("plant") || joined.includes("transplant")) return "plant";
-  return "venue";
+  return atlasRouteKeyForTask(task);
 }
 
 function detail(task: AtlasTaskCard) {
-  return stringList(meta(task, "detail_lines"))[0] || location(task);
+  return atlasTaskDisplay(task).detail;
 }
 
 function explicitWorkOrder(task: AtlasTaskCard) {
@@ -193,18 +176,13 @@ function DayProgressBar({ done, total }: { done: number; total: number }) {
   );
 }
 
-function taskActionLabel(task: AtlasTaskCard, complete: boolean) {
-  if (complete) return "Complete";
-  return text(meta(task, "display_action")) || routeLabels[routeForTask(task)];
-}
-
 function TaskCard({ task, complete = false }: { task: AtlasTaskCard; complete?: boolean }) {
-  const action = taskActionLabel(task, complete);
+  const display = atlasTaskDisplay(task);
   return (
     <Link className={`atlas-day-task-card${complete ? " complete" : ""}`} href={`/task?taskId=${encodeURIComponent(task.task_id)}`}>
-      <strong>{complete ? subject(task) : `${action} · ${subject(task)}`}</strong>
-      <span>{complete ? action : location(task)}</span>
-      <em>{detail(task)}</em>
+      <strong>{display.title}</strong>
+      <span>{complete ? "Complete" : display.location}</span>
+      <em>{display.detail}</em>
     </Link>
   );
 }
