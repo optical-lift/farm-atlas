@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { FieldLogDrawer, type AtlasFieldLogSeed } from "@/components/atlas/field-log-builder";
 import { fetchAtlasCloseout, type AtlasCloseoutSummary } from "@/lib/atlas/closeout-client";
 import { fetchAtlasFarmSnapshot, type AtlasFarmSnapshot } from "@/lib/atlas/farm-snapshot-client";
-import { saveAtlasInboxItem } from "@/lib/atlas/inbox-client";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import {
   filterMonthOverviewTasks,
@@ -14,8 +14,9 @@ import {
   monthName,
   monthProgress,
 } from "@/lib/atlas/task-overview";
+import { fetchAtlasZoneRegistry, type AtlasRegistryZone } from "@/lib/atlas/zone-registry-client";
 
-type HomePanel = "inbox" | "closeout" | null;
+type HomePanel = "closeout" | null;
 type WeatherResponse = { ok: boolean; label?: string; rainAge?: string; daysSinceRain?: number | null; error?: string };
 type HomeTaskDisplay = { action: string; subject: string; zone: string; detail: string };
 type WorkRouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
@@ -241,7 +242,6 @@ function upcomingWeekRows(cards: AtlasTaskCard[], anchorIso: string) {
 }
 
 function panelTitle(panel: HomePanel) {
-  if (panel === "inbox") return "Note";
   if (panel === "closeout") return "Closeout";
   return "Atlas";
 }
@@ -390,28 +390,27 @@ function CloseoutPanel({ summaries, loading }: { summaries: AtlasCloseoutSummary
 
 export default function AtlasHomePage() {
   const [cards, setCards] = useState<AtlasTaskCard[]>([]);
+  const [registryZones, setRegistryZones] = useState<AtlasRegistryZone[]>([]);
   const [snapshot, setSnapshot] = useState<AtlasFarmSnapshot>(defaultSnapshot);
   const [loading, setLoading] = useState(true);
   const [snapshotLoading, setSnapshotLoading] = useState(true);
   const [openPanel, setOpenPanel] = useState<HomePanel>(null);
-  const [inboxBody, setInboxBody] = useState("");
-  const [inboxZoneKey, setInboxZoneKey] = useState("");
-  const [inboxSaving, setInboxSaving] = useState(false);
-  const [inboxMessage, setInboxMessage] = useState<string | null>(null);
+  const [logSeed, setLogSeed] = useState<AtlasFieldLogSeed | null>(null);
   const [closeoutSummaries, setCloseoutSummaries] = useState<AtlasCloseoutSummary[]>([]);
   const [closeoutLoading, setCloseoutLoading] = useState(true);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const today = todayIso();
 
   async function loadCards() { try { setLoading(true); const response = await fetchAtlasTaskCards(); setCards((response.taskCards ?? []).sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)))); } finally { setLoading(false); } }
+  async function loadRegistry() { try { const response = await fetchAtlasZoneRegistry(); setRegistryZones(response.zones ?? []); } catch { setRegistryZones([]); } }
   async function loadSnapshot() { try { setSnapshotLoading(true); const response = await fetchAtlasFarmSnapshot(); setSnapshot(response.snapshot ?? defaultSnapshot); } finally { setSnapshotLoading(false); } }
   async function loadCloseout() { try { setCloseoutLoading(true); const response = await fetchAtlasCloseout(); setCloseoutSummaries(response.summaries ?? []); } finally { setCloseoutLoading(false); } }
   async function loadWeather() { try { const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" }); const data = (await response.json()) as WeatherResponse; setWeatherLabel(response.ok && data.ok && data.label ? data.label : "weather unavailable"); } catch { setWeatherLabel("weather unavailable"); } }
 
-  useEffect(() => { void loadCards(); void loadSnapshot(); void loadCloseout(); void loadWeather(); }, []);
+  useEffect(() => { void loadCards(); void loadRegistry(); void loadSnapshot(); void loadCloseout(); void loadWeather(); }, []);
 
   const monthSummary = closeoutSummaries.find((summary) => summary.period === "month");
-  async function submitInbox() { const cleanBody = inboxBody.trim(); if (!cleanBody) { setInboxMessage("Note required."); return; } try { setInboxSaving(true); setInboxMessage(null); await saveAtlasInboxItem({ body: cleanBody, zoneKey: inboxZoneKey || null }); setInboxBody(""); setInboxZoneKey(""); setInboxMessage("Saved."); } catch (inboxError) { setInboxMessage(inboxError instanceof Error ? inboxError.message : "Save failed."); } finally { setInboxSaving(false); } }
+  async function afterFieldLogSaved() { await loadRegistry(); await loadSnapshot(); await loadCloseout(); }
 
   return (
     <main className="atlas-phone-shell atlas-home-shell">
@@ -419,7 +418,7 @@ export default function AtlasHomePage() {
         <header className="atlas-phone-top atlas-dashboard-top">
           <div className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></div>
           <span className="atlas-weather-line">{weatherLabel}</span>
-          <button type="button" className="atlas-note-plus" aria-label="Add note" onClick={() => setOpenPanel("inbox")}>+</button>
+          <button type="button" className="atlas-note-plus" aria-label="Document work" onClick={() => { setOpenPanel(null); setLogSeed({ workKey: "observe", zoneKeys: [], objectKeys: [] }); }}>+</button>
         </header>
         <div className="atlas-home-grid">
           <TaskLaunchHero cards={cards} loading={loading} />
@@ -428,7 +427,8 @@ export default function AtlasHomePage() {
           <HomeFooterBar summary={monthSummary} today={today} onOpen={() => setOpenPanel("closeout")} />
         </div>
       </section>
-      {openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{panelTitle(openPanel)}</strong></div><button type="button" onClick={() => setOpenPanel(null)}>Close</button></div><div className="atlas-task-focus-body">{openPanel === "closeout" ? <CloseoutPanel summaries={closeoutSummaries} loading={closeoutLoading} /> : null}{openPanel === "inbox" ? <section className="atlas-task-focus-section"><div className="atlas-add-form"><select aria-label="Zone" value={inboxZoneKey} onChange={(event) => setInboxZoneKey(event.target.value)}><option value="">Whole farm</option></select><textarea aria-label="Note" value={inboxBody} onChange={(event) => setInboxBody(event.target.value)} placeholder="Note" /></div><button type="button" className="atlas-zone-action accent" style={{ width: "100%", border: 0, marginTop: 12 }} disabled={inboxSaving} onClick={() => void submitInbox()}>{inboxSaving ? "Saving" : "Save"}</button>{inboxMessage ? <p className="atlas-task-result-message">{inboxMessage}</p> : null}</section> : null}</div></div></section> : null}
+      {openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{panelTitle(openPanel)}</strong></div><button type="button" onClick={() => setOpenPanel(null)}>Close</button></div><div className="atlas-task-focus-body">{openPanel === "closeout" ? <CloseoutPanel summaries={closeoutSummaries} loading={closeoutLoading} /> : null}</div></div></section> : null}
+      {logSeed ? <FieldLogDrawer zones={registryZones} seed={logSeed} onClose={() => setLogSeed(null)} onSaved={afterFieldLogSaved} /> : null}
     </main>
   );
 }
