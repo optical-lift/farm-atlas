@@ -166,13 +166,20 @@ function InspectionSheet({
   object,
   tasks,
   onTaskSelect,
+  onDocumentObject,
 }: {
   object: AtlasRegistryObject;
   tasks: AtlasTaskCard[];
   onTaskSelect?: (task: AtlasTaskCard) => void;
+  onDocumentObject?: (object: AtlasRegistryObject) => void;
 }) {
   return (
     <div className="atlas-bed-inspection-sheet">
+      {onDocumentObject ? (
+        <button type="button" className="atlas-document-this-bed-button" onClick={() => onDocumentObject(object)}>
+          Document work on this bed
+        </button>
+      ) : null}
       {object.contents.length === 0 ? <div className="atlas-inspection-empty">No current crop cycle logged.</div> : null}
       {object.contents.map((content) => (
         <section key={content.id} className="atlas-crop-cycle-sheet">
@@ -197,10 +204,12 @@ export function BedInspectorRow({
   object,
   tasks = [],
   onTaskSelect,
+  onDocumentObject,
 }: {
   object: AtlasRegistryObject;
   tasks?: AtlasTaskCard[];
   onTaskSelect?: (task: AtlasTaskCard) => void;
+  onDocumentObject?: (object: AtlasRegistryObject) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const first = object.contents[0]?.inspection;
@@ -215,7 +224,7 @@ export function BedInspectorRow({
         </div>
         <em>{isOpen ? "close" : "open"}</em>
       </button>
-      {isOpen ? <InspectionSheet object={object} tasks={tasks} onTaskSelect={onTaskSelect} /> : null}
+      {isOpen ? <InspectionSheet object={object} tasks={tasks} onTaskSelect={onTaskSelect} onDocumentObject={onDocumentObject} /> : null}
     </article>
   );
 }
