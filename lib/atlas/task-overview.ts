@@ -1,6 +1,19 @@
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import {
+  atlasCleanLabel,
+  atlasMetadataValue,
+  atlasRouteKeyForTask,
+  atlasRouteLabels,
+  atlasRouteOrder,
+  atlasStringList,
+  atlasTaskDetail,
+  atlasTaskDisplay,
+  atlasTaskLocation,
+  atlasText,
+  type AtlasWorkRouteKey,
+} from "@/lib/atlas/task-display";
 
-export type WorkRouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
+export type WorkRouteKey = AtlasWorkRouteKey;
 
 export type ZoneTaskOverview = {
   zone: string;
@@ -9,18 +22,8 @@ export type ZoneTaskOverview = {
   routeCounts: { key: WorkRouteKey; label: string; count: number }[];
 };
 
-export const routeOrder: WorkRouteKey[] = ["plant", "weed", "mow", "seed", "harvest", "build", "venue", "water"];
-
-export const routeLabels: Record<WorkRouteKey, string> = {
-  plant: "Plant",
-  weed: "Weed",
-  mow: "Mow",
-  seed: "Seed",
-  harvest: "Harvest",
-  build: "Build",
-  venue: "Venue",
-  water: "Water",
-};
+export const routeOrder = atlasRouteOrder;
+export const routeLabels = atlasRouteLabels;
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const urgentRoutes = new Set<WorkRouteKey>(["plant", "water", "harvest"]);
@@ -73,15 +76,15 @@ export function prettyShortDate(dateIso: string | null | undefined) {
 }
 
 export function text(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
+  return atlasText(value);
 }
 
 export function meta(task: AtlasTaskCard, key: string) {
-  return task.metadata?.[key];
+  return atlasMetadataValue(task, key);
 }
 
 export function stringList(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
+  return atlasStringList(value);
 }
 
 export function isChildTask(task: AtlasTaskCard) {
@@ -108,35 +111,24 @@ export function isRelevantOpenTask(task: AtlasTaskCard) {
   return task.status === "open" && !isChildTask(task) && !hasTerminalMetadata(task);
 }
 
-function isRouteKey(value: string | null): value is WorkRouteKey {
-  return Boolean(value && routeOrder.includes(value as WorkRouteKey));
-}
-
 export function routeForTask(task: AtlasTaskCard): WorkRouteKey {
-  const explicitRoute = text(meta(task, "work_route"));
-  if (isRouteKey(explicitRoute)) return explicitRoute;
-
-  const joined = `${task.task_type ?? ""} ${task.title ?? ""} ${text(meta(task, "work_rhythm"))} ${text(meta(task, "display_action"))}`.toLowerCase();
-  if (joined.includes("water")) return "water";
-  if (joined.includes("mow")) return "mow";
-  if (joined.includes("weed")) return "weed";
-  if (joined.includes("seed") || joined.includes("sow")) return "seed";
-  if (joined.includes("harvest") || joined.includes("postharvest") || joined.includes("garlic") || joined.includes("gather")) return "harvest";
-  if (joined.includes("build") || joined.includes("prep") || joined.includes("string") || joined.includes("arch")) return "build";
-  if (joined.includes("plant") || joined.includes("transplant")) return "plant";
-  return "venue";
+  return atlasRouteKeyForTask(task);
 }
 
 export function subject(task: AtlasTaskCard) {
-  return text(meta(task, "collection_label")) || text(meta(task, "display_subject")) || task.title.split("—").slice(1).join("—").trim() || task.title;
+  return atlasTaskDisplay(task).title;
+}
+
+export function taskSubjectOnly(task: AtlasTaskCard) {
+  return atlasTaskDisplay(task).subject;
 }
 
 export function location(task: AtlasTaskCard) {
-  return text(meta(task, "display_detail")) || task.unlock_text || task.zone_label || "Elm Farm";
+  return atlasTaskLocation(task);
 }
 
 export function detail(task: AtlasTaskCard) {
-  return stringList(meta(task, "detail_lines"))[0] || location(task);
+  return atlasTaskDetail(task);
 }
 
 export function zoneBucket(value: string) {
@@ -158,12 +150,12 @@ export function zoneBucket(value: string) {
 }
 
 export function collectionZone(task: AtlasTaskCard) {
-  return text(meta(task, "collection_zone")) || zoneBucket(location(task));
+  return atlasTaskLocation(task) || zoneBucket(location(task));
 }
 
 export function taskSortValue(task: AtlasTaskCard) {
   const dayOrder = typeof meta(task, "day_order") === "number" ? meta(task, "day_order") : 999;
-  return `${task.due_date ?? "9999-12-31"}-${priorityRank[task.priority] ?? 9}-${String(dayOrder).padStart(3, "0")}-${subject(task)}`;
+  return `${task.due_date ?? "9999-12-31"}-${priorityRank[task.priority] ?? 9}-${String(dayOrder).padStart(3, "0")}-${atlasCleanLabel(atlasTaskDisplay(task).subject)}`;
 }
 
 function dueByPeriodEndOrUndated(task: AtlasTaskCard, endIso: string) {
