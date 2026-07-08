@@ -164,7 +164,8 @@
 }
 
 .atlas-document-log-builder .atlas-log-step-head span,
-.atlas-document-log-builder .atlas-log-step > span {
+.atlas-document-log-builder .atlas-log-step > span,
+.atlas-document-log-builder .atlas-log-drawer-toggle span {
   color: #858bb8;
   font-size: 11px;
   line-height: 1;
@@ -173,7 +174,8 @@
   text-transform: uppercase;
 }
 
-.atlas-document-log-builder .atlas-log-step-head small {
+.atlas-document-log-builder .atlas-log-step-head small,
+.atlas-document-log-builder .atlas-log-drawer-toggle small {
   color: var(--atlas-muted);
   font-size: 11px;
   line-height: 1;
@@ -219,6 +221,35 @@
   line-height: 1.18;
   font-weight: 950;
   letter-spacing: -0.02em;
+}
+
+.atlas-log-drawer-step {
+  border: 1px solid rgba(215, 204, 189, 0.72);
+  border-radius: 18px;
+  background: rgba(246, 242, 230, 0.36);
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.atlas-log-drawer-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+}
+
+.atlas-log-drawer-toggle small::after {
+  content: " ▾";
+}
+
+.atlas-log-drawer-toggle[aria-expanded="false"] small::after {
+  content: " ▸";
 }
 
 .atlas-document-log-builder .atlas-log-muted {
