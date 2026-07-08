@@ -118,6 +118,11 @@
   display: none !important;
 }
 
+.atlas-day-browse-head > .atlas-day-browse-title-row,
+.atlas-day-browse-head > p {
+  display: none !important;
+}
+
 .atlas-day-progress-card {
   margin-top: 2px;
   border: 1px solid rgba(139, 145, 194, 0.18);
