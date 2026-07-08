@@ -6,6 +6,14 @@ import { useEffect, useState } from "react";
 import { FieldLogDrawer, type AtlasFieldLogSeed } from "@/components/atlas/field-log-builder";
 import { fetchAtlasCloseout, type AtlasCloseoutSummary } from "@/lib/atlas/closeout-client";
 import { fetchAtlasFarmSnapshot, type AtlasFarmSnapshot } from "@/lib/atlas/farm-snapshot-client";
+import {
+  atlasCleanLabel,
+  atlasMetadataValue,
+  atlasMetaString,
+  atlasRouteKeyForTask,
+  atlasRouteLabels,
+  atlasTaskDisplay,
+} from "@/lib/atlas/task-display";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import {
   filterMonthOverviewTasks,
@@ -18,21 +26,9 @@ import { fetchAtlasZoneRegistry, type AtlasRegistryZone } from "@/lib/atlas/zone
 
 type HomePanel = "closeout" | null;
 type WeatherResponse = { ok: boolean; label?: string; rainAge?: string; daysSinceRain?: number | null; error?: string };
-type HomeTaskDisplay = { action: string; subject: string; zone: string; detail: string };
-type WorkRouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const defaultSnapshot: AtlasFarmSnapshot = { totalBeds: 0, growingBeds: 0, activeSqft: 0, sowingsLogged: 0, stemsLogged: 0 };
-const routeLabels: Record<WorkRouteKey, string> = {
-  plant: "Plant",
-  weed: "Weed",
-  mow: "Mow",
-  seed: "Seed",
-  harvest: "Harvest",
-  build: "Build / Prep",
-  venue: "Venue",
-  water: "Water",
-};
 
 function todayIso() {
   const date = new Date();
@@ -86,52 +82,24 @@ function dayShortLabel(dateIso: string) {
   return date.toLocaleDateString("en-US", { weekday: "short" });
 }
 
-function cleanLabel(value: string | null | undefined) {
-  return (value ?? "")
-    .replace(/truth/gi, "state")
-    .replace(/\b(urgent|high|normal|low)\b/gi, "")
-    .replace(/\s+·\s+·\s+/g, " · ")
-    .replace(/^\s*·\s*|\s*·\s*$/g, "")
-    .trim();
-}
-
-function metadataValue(card: AtlasTaskCard, key: string) {
-  return card.metadata?.[key];
-}
-
-function metaString(card: AtlasTaskCard, key: string) {
-  const value = metadataValue(card, key);
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
 function metaNumber(card: AtlasTaskCard, key: string) {
-  const value = metadataValue(card, key);
+  const value = atlasMetadataValue(card, key);
   return typeof value === "number" ? value : null;
 }
 
-function metaStringList(card: AtlasTaskCard, key: string) {
-  const value = metadataValue(card, key);
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
-}
-
-function titleSubject(title: string) {
-  const parts = title.split("—");
-  return cleanLabel(parts.length > 1 ? parts.slice(1).join("—") : title);
-}
-
 function isChildTask(card: AtlasTaskCard) {
-  return metadataValue(card, "is_child_task") === true || metadataValue(card, "is_child_task") === "true";
+  return atlasMetadataValue(card, "is_child_task") === true || atlasMetadataValue(card, "is_child_task") === "true";
 }
 
 function parentTaskId(card: AtlasTaskCard) {
-  return metaString(card, "parent_task_id") || metaString(card, "parentTaskId") || "";
+  return atlasMetaString(card, "parent_task_id") || atlasMetaString(card, "parentTaskId") || "";
 }
 
 function isActiveChecklistChild(card: AtlasTaskCard) {
   if (!isChildTask(card)) return false;
-  const checklistStatus = (metaString(card, "checklist_status") ?? "").toLowerCase();
-  const atlasStatus = (metaString(card, "atlas_status") ?? "").toLowerCase();
-  const relevance = (metaString(card, "relevance") ?? "").toLowerCase();
+  const checklistStatus = (atlasMetaString(card, "checklist_status") ?? "").toLowerCase();
+  const atlasStatus = (atlasMetaString(card, "atlas_status") ?? "").toLowerCase();
+  const relevance = (atlasMetaString(card, "relevance") ?? "").toLowerCase();
   return card.status !== "archived" && checklistStatus !== "archived" && atlasStatus !== "not_relevant" && relevance !== "not_relevant";
 }
 
@@ -152,43 +120,11 @@ function subtaskLabel(card: AtlasTaskCard, counts: Map<string, number>) {
 
 function taskSortValue(card: AtlasTaskCard) {
   const dayOrder = metaNumber(card, "day_order") ?? 999;
-  return `${card.due_date ?? "9999-12-31"}-${priorityRank[card.priority] ?? 9}-${String(dayOrder).padStart(3, "0")}-${card.title}`;
-}
-
-function isRouteKey(value: string | null): value is WorkRouteKey {
-  return value === "plant" || value === "weed" || value === "mow" || value === "seed" || value === "harvest" || value === "build" || value === "venue" || value === "water";
-}
-
-function routeKeyForTask(card: AtlasTaskCard): WorkRouteKey {
-  const explicitRoute = metaString(card, "work_route");
-  if (isRouteKey(explicitRoute)) return explicitRoute;
-  const joined = `${card.task_type ?? ""} ${card.title} ${metaString(card, "work_rhythm") ?? ""} ${metaString(card, "display_action") ?? ""}`.toLowerCase();
-  if (joined.includes("water")) return "water";
-  if (joined.includes("mow")) return "mow";
-  if (joined.includes("weed")) return "weed";
-  if (joined.includes("seed") || joined.includes("sow")) return "seed";
-  if (joined.includes("harvest") || joined.includes("postharvest") || joined.includes("garlic") || joined.includes("gather")) return "harvest";
-  if (joined.includes("build") || joined.includes("prep") || joined.includes("string") || joined.includes("arch")) return "build";
-  if (joined.includes("plant") || joined.includes("transplant")) return "plant";
-  return "venue";
-}
-
-function taskDisplay(card: AtlasTaskCard): HomeTaskDisplay {
-  const route = routeKeyForTask(card);
-  const action = metaString(card, "display_action") ?? routeLabels[route];
-  const zone = metaString(card, "collection_zone") ?? metaString(card, "display_detail") ?? card.unlock_text ?? card.zone_label ?? "Elm Farm";
-  const detailLines = metaStringList(card, "detail_lines");
-
-  return {
-    action,
-    subject: metaString(card, "display_subject") ?? titleSubject(card.title),
-    zone,
-    detail: detailLines[0] ?? card.unlock_text ?? metaString(card, "display_detail") ?? "Open task",
-  };
+  return `${card.due_date ?? "9999-12-31"}-${priorityRank[card.priority] ?? 9}-${String(dayOrder).padStart(3, "0")}-${atlasTaskDisplay(card).title}`;
 }
 
 function isTaskDone(card: AtlasTaskCard) {
-  return card.status === "done" || card.task_outcomes?.[0]?.outcome === "done" || metaString(card, "checklist_status") === "done";
+  return card.status === "done" || card.task_outcomes?.[0]?.outcome === "done" || atlasMetaString(card, "checklist_status") === "done";
 }
 
 function isDayProgressTask(card: AtlasTaskCard) {
@@ -291,13 +227,14 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
       ) : (
         <div className="atlas-run-sheet-grid atlas-route-sheet-grid" data-task-forward-signature={heroCards.map((card) => `${card.task_id}:${stepCounts.get(card.task_id) ?? 0}`).join("|")}>
           {heroCards.map((card) => {
-            const display = taskDisplay(card);
+            const display = atlasTaskDisplay(card);
+            const routeLabel = atlasRouteLabels[atlasRouteKeyForTask(card)];
             const steps = subtaskLabel(card, stepCounts);
             return (
               <Link key={card.task_id} href={`/task?taskId=${encodeURIComponent(card.task_id)}`} className="atlas-run-sheet-box atlas-route-sheet-box atlas-task-forward-box" data-single-task-id={card.task_id}>
-                <small>{display.action}</small>
-                <strong>{display.subject}</strong>
-                <span>{display.zone} · {steps}</span>
+                <small>{display.action || routeLabel}</small>
+                <strong>{display.title}</strong>
+                <span>{display.location} · {steps}</span>
                 <em>{display.detail}</em>
               </Link>
             );
@@ -385,7 +322,7 @@ function HomeFooterBar({ summary, today, onOpen }: { summary: AtlasCloseoutSumma
 }
 
 function CloseoutPanel({ summaries, loading }: { summaries: AtlasCloseoutSummary[]; loading: boolean }) {
-  return <section className="atlas-task-focus-section"><div className="atlas-closeout-grid">{loading ? <div className="atlas-empty">Loading closeout.</div> : null}{summaries.map((summary) => <article key={summary.period} className="atlas-closeout-card tidy"><div className="atlas-closeout-card-head"><strong>{summary.label}</strong><span>{prettyDate(summary.startDate)}–{prettyDate(summary.endDate)}</span></div><div className="atlas-closeout-pill-row soft"><span>{summary.counts.objectEvents} records</span><span>{summary.counts.openTasks} open</span><span>{summary.counts.tasksBlocked} blocked</span></div>{summary.carryForward.length > 0 ? <div className="atlas-closeout-section carry"><span>Carry forward</span>{summary.carryForward.map((line) => <p key={line}>{cleanLabel(line)}</p>)}</div> : null}</article>)}</div></section>;
+  return <section className="atlas-task-focus-section"><div className="atlas-closeout-grid">{loading ? <div className="atlas-empty">Loading closeout.</div> : null}{summaries.map((summary) => <article key={summary.period} className="atlas-closeout-card tidy"><div className="atlas-closeout-card-head"><strong>{summary.label}</strong><span>{prettyDate(summary.startDate)}–{prettyDate(summary.endDate)}</span></div><div className="atlas-closeout-pill-row soft"><span>{summary.counts.objectEvents} records</span><span>{summary.counts.openTasks} open</span><span>{summary.counts.tasksBlocked} blocked</span></div>{summary.carryForward.length > 0 ? <div className="atlas-closeout-section carry"><span>Carry forward</span>{summary.carryForward.map((line) => <p key={line}>{atlasCleanLabel(line)}</p>)}</div> : null}</article>)}</div></section>;
 }
 
 export default function AtlasHomePage() {
