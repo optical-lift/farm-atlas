@@ -203,12 +203,49 @@ function TaskCard({ task, complete = false }: { task: AtlasTaskCard; complete?: 
   );
 }
 
+const filterPillStyle = {
+  border: "1px solid rgba(139, 145, 194, 0.18)",
+  borderRadius: "999px",
+  background: "rgba(246, 242, 230, 0.62)",
+  padding: "4px",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "4px",
+  width: "fit-content",
+  maxWidth: "100%",
+} as const;
+
+const filterLabelStyle = {
+  color: "#858bb8",
+  padding: "0 6px 0 8px",
+  fontSize: "9px",
+  lineHeight: 1,
+  fontWeight: 950,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+  whiteSpace: "nowrap",
+} as const;
+
+function filterButtonStyle(selected: boolean) {
+  return {
+    border: 0,
+    borderRadius: "999px",
+    background: selected ? "rgba(167, 171, 214, 0.28)" : "transparent",
+    color: selected ? "var(--atlas-text)" : "var(--atlas-muted)",
+    padding: "8px 10px",
+    fontSize: "12px",
+    lineHeight: 1,
+    fontWeight: 950,
+    whiteSpace: "nowrap",
+  } as const;
+}
+
 function ViewToggle({ viewMode, onChange }: { viewMode: DayViewMode; onChange: (mode: DayViewMode) => void }) {
   return (
-    <div className="atlas-day-filter-pill" aria-label="Filter day overview">
-      <span>Filter by</span>
-      <button type="button" className={viewMode === "work_order" ? "selected" : ""} onClick={() => onChange("work_order")}>Work order</button>
-      <button type="button" className={viewMode === "zone" ? "selected" : ""} onClick={() => onChange("zone")}>Zone</button>
+    <div className="atlas-day-filter-pill" style={filterPillStyle} aria-label="Filter day overview">
+      <span style={filterLabelStyle}>Filter by</span>
+      <button type="button" style={filterButtonStyle(viewMode === "work_order")} className={viewMode === "work_order" ? "selected" : ""} onClick={() => onChange("work_order")}>Work order</button>
+      <button type="button" style={filterButtonStyle(viewMode === "zone")} className={viewMode === "zone" ? "selected" : ""} onClick={() => onChange("zone")}>Zone</button>
     </div>
   );
 }
