@@ -8,8 +8,15 @@ type Match = {
   object: AtlasRegistryObject;
 };
 
-function feet(value: number | null | undefined) {
-  return typeof value === "number" ? `${value} ft` : null;
+function numericValue(value: number | string | null | undefined) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  return null;
+}
+
+function feet(value: number | string | null | undefined) {
+  const numeric = numericValue(value);
+  return numeric !== null ? `${numeric} ft` : null;
 }
 
 function dateLabel(value: string | null | undefined) {
