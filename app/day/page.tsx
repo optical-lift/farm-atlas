@@ -117,6 +117,10 @@ function detail(task: AtlasTaskCard) {
   return atlasTaskDisplay(task).detail;
 }
 
+function taskHref(task: AtlasTaskCard) {
+  return `/task?taskId=${encodeURIComponent(task.task_id)}`;
+}
+
 function explicitWorkOrder(task: AtlasTaskCard) {
   return metaNumber(task, "day_work_order", "work_order", "day_order_override", "run_sheet_order");
 }
@@ -179,7 +183,7 @@ function DayProgressBar({ done, total }: { done: number; total: number }) {
 function TaskCard({ task, complete = false }: { task: AtlasTaskCard; complete?: boolean }) {
   const display = atlasTaskDisplay(task);
   return (
-    <Link className={`atlas-day-task-card${complete ? " complete" : ""}`} href={`/task?taskId=${encodeURIComponent(task.task_id)}`}>
+    <Link className={`atlas-day-task-card${complete ? " complete" : ""}`} href={taskHref(task)}>
       <strong>{display.title}</strong>
       <span>{complete ? "Complete" : display.location}</span>
       <em>{display.detail}</em>
@@ -325,23 +329,29 @@ export default function AtlasDayPage() {
               <div className="atlas-day-route-hero-head"><div><span>Day plan</span><strong>{prettyDate(dateIso)}</strong></div><em className="atlas-day-route-count-pill">{loading ? "…" : requiredTasks.length}</em></div>
               {viewMode === "work_order" ? (
                 <div className="atlas-day-route-grid">
-                  {routes.length ? routes.map((route) => (
-                    <a key={route.key} className="atlas-day-route-box" href={`#atlas-day-route-${route.key}`}>
-                      <strong>{routeLabels[route.key]}</strong>
-                      <span>{route.tasks.length} {route.tasks.length === 1 ? "task" : "tasks"}</span>
-                      <em>{routePreview(route.tasks)}</em>
-                    </a>
-                  )) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div>}
+                  {routes.length ? routes.map((route) => {
+                    const firstTask = route.tasks[0];
+                    return (
+                      <Link key={route.key} className="atlas-day-route-box" href={taskHref(firstTask)}>
+                        <strong>{routeLabels[route.key]}</strong>
+                        <span>{route.tasks.length} {route.tasks.length === 1 ? "task" : "tasks"}</span>
+                        <em>{routePreview(route.tasks)}</em>
+                      </Link>
+                    );
+                  }) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div>}
                 </div>
               ) : (
                 <div className="atlas-day-route-grid">
-                  {zoneGroups.length ? zoneGroups.slice(0, 4).map((group) => (
-                    <a key={group.zone} className="atlas-day-route-box" href={`#atlas-day-zone-${group.zone.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
-                      <strong>{group.zone}</strong>
-                      <span>{group.tasks.length} {group.tasks.length === 1 ? "task" : "tasks"}</span>
-                      <em>{group.tasks.map(subject).slice(0, 2).join(" · ")}</em>
-                    </a>
-                  )) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div>}
+                  {zoneGroups.length ? zoneGroups.slice(0, 4).map((group) => {
+                    const firstTask = group.tasks[0];
+                    return (
+                      <Link key={group.zone} className="atlas-day-route-box" href={taskHref(firstTask)}>
+                        <strong>{group.zone}</strong>
+                        <span>{group.tasks.length} {group.tasks.length === 1 ? "task" : "tasks"}</span>
+                        <em>{group.tasks.map(subject).slice(0, 2).join(" · ")}</em>
+                      </Link>
+                    );
+                  }) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div>}
                 </div>
               )}
             </article>
