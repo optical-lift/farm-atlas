@@ -25,10 +25,17 @@ function CloseoutCard({ summary }: { summary: AtlasCloseoutSummary }) {
         <span>{prettyDate(summary.startDate)}–{prettyDate(summary.endDate)}</span>
       </div>
       <div className="atlas-closeout-pill-row soft">
+        <span>{summary.counts.tasksDone} done</span>
         <span>{summary.counts.objectEvents} records</span>
         <span>{summary.counts.openTasks} open</span>
         <span>{summary.counts.tasksBlocked} blocked</span>
       </div>
+      {summary.recent.length > 0 ? (
+        <div className="atlas-closeout-section carry">
+          <span>Checked off</span>
+          {summary.recent.map((line) => <p key={line}>{atlasCleanLabel(line)}</p>)}
+        </div>
+      ) : null}
       {summary.carryForward.length > 0 ? (
         <div className="atlas-closeout-section carry">
           <span>Carry forward</span>
