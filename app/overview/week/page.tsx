@@ -11,7 +11,6 @@ import {
   filterWeekOverviewTasks,
   groupTasksByZone,
   isRelevantOpenTask,
-  isUrgentTask,
   location,
   prettyShortDate,
   routeCountLineForTasks,
@@ -41,7 +40,7 @@ function ZoneSection({ zone, anchorIso, openDefault }: { zone: ZoneTaskOverview;
       <summary>
         <div>
           <strong>{zone.zone}</strong>
-          <span>{zone.tasks.length} open{zone.urgentCount ? ` · ${zone.urgentCount} urgent` : ""}</span>
+          <span>{zone.tasks.length} open{zone.urgentCount ? ` · ${zone.urgentCount} carryover` : ""}</span>
         </div>
         <b>Open</b>
       </summary>
@@ -114,7 +113,7 @@ export default function AtlasWeekOverviewPage() {
       .filter((task) => Boolean(task.due_date && task.due_date >= anchorIso && task.due_date <= weekEndIso))
       .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
   }, [anchorIso, explicitEndIso, tasks, weekEndIso]);
-  const urgentCount = useMemo(() => weekTasks.filter((task) => isUrgentTask(task, anchorIso)).length, [anchorIso, weekTasks]);
+  const carryoverCount = useMemo(() => weekTasks.filter((task) => Boolean(task.due_date && task.due_date < anchorIso)).length, [anchorIso, weekTasks]);
   const zoneGroups = useMemo(() => groupTasksByZone(weekTasks, anchorIso), [anchorIso, weekTasks]);
   const topZone = zoneGroups[0]?.zone ?? "No active zone";
 
@@ -138,7 +137,7 @@ export default function AtlasWeekOverviewPage() {
 
           <section className="atlas-overview-stat-grid" aria-label="Week overview stats">
             <article><strong>{loading ? "…" : weekTasks.length}</strong><span>open</span></article>
-            <article><strong>{loading ? "…" : urgentCount}</strong><span>urgent</span></article>
+            <article><strong>{loading ? "…" : carryoverCount}</strong><span>carryover</span></article>
             <article><strong>{loading ? "…" : zoneGroups.length}</strong><span>zones</span></article>
             <article><strong>{topZone}</strong><span>most open</span></article>
           </section>
