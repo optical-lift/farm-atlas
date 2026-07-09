@@ -265,6 +265,80 @@
   font-weight: 950 !important;
 }
 
+/* Hard mobile containment: prevents the day page from widening after route cards redraw. */
+.atlas-task-page-shell,
+.atlas-task-page-phone,
+.atlas-task-page-body,
+.atlas-route-collection,
+.atlas-day-browse,
+.atlas-day-browse-head,
+.atlas-day-route-hero,
+.atlas-day-route-grid,
+.atlas-day-task-groups,
+.atlas-day-route-group,
+.atlas-day-work-order-list,
+.atlas-day-zone-group,
+.atlas-day-task-card {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: hidden !important;
+}
+
+.atlas-day-route-hero {
+  width: 100% !important;
+  contain: layout paint;
+}
+
+.atlas-day-route-grid {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.atlas-day-route-box {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.atlas-day-route-box strong,
+.atlas-day-route-box span,
+.atlas-day-route-box em,
+.atlas-day-task-card strong,
+.atlas-day-task-card span,
+.atlas-day-task-card em {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.atlas-day-route-box strong,
+.atlas-day-route-box span,
+.atlas-day-route-box em {
+  white-space: nowrap !important;
+}
+
+.atlas-day-task-card strong,
+.atlas-day-task-card span,
+.atlas-day-task-card em {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 430px) {
+  .atlas-task-page-body {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .atlas-day-route-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
 @media (max-width: 360px) {
   .atlas-run-sheet-grid {
     gap: 6px;
