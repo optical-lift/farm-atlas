@@ -9,7 +9,6 @@ import {
   detail,
   filterMonthOverviewTasks,
   groupTasksByZone,
-  isUrgentTask,
   location,
   monthEndIso,
   monthName,
@@ -37,7 +36,7 @@ function ZoneSection({ zone, anchorIso }: { zone: ZoneTaskOverview; anchorIso: s
       <summary>
         <div>
           <strong>{zone.zone}</strong>
-          <span>{zone.tasks.length} open{zone.urgentCount ? ` · ${zone.urgentCount} urgent` : ""}</span>
+          <span>{zone.tasks.length} open{zone.urgentCount ? ` · ${zone.urgentCount} carryover` : ""}</span>
         </div>
         <b>Open</b>
       </summary>
@@ -100,7 +99,7 @@ export default function AtlasMonthOverviewPage() {
   const progress = monthProgress(anchorIso);
   const endIso = monthEndIso(anchorIso);
   const monthTasks = useMemo(() => filterMonthOverviewTasks(tasks, anchorIso), [anchorIso, tasks]);
-  const urgentCount = useMemo(() => monthTasks.filter((task) => isUrgentTask(task, anchorIso)).length, [anchorIso, monthTasks]);
+  const carryoverCount = useMemo(() => monthTasks.filter((task) => Boolean(task.due_date && task.due_date < anchorIso)).length, [anchorIso, monthTasks]);
   const zoneGroups = useMemo(() => groupTasksByZone(monthTasks, anchorIso), [anchorIso, monthTasks]);
   const topZone = zoneGroups[0]?.zone ?? "No active zone";
 
@@ -127,7 +126,7 @@ export default function AtlasMonthOverviewPage() {
 
           <section className="atlas-overview-stat-grid" aria-label="Month overview stats">
             <article><strong>{loading ? "…" : monthTasks.length}</strong><span>open</span></article>
-            <article><strong>{loading ? "…" : urgentCount}</strong><span>urgent</span></article>
+            <article><strong>{loading ? "…" : carryoverCount}</strong><span>carryover</span></article>
             <article><strong>{loading ? "…" : zoneGroups.length}</strong><span>zones</span></article>
             <article><strong>{topZone}</strong><span>most open</span></article>
           </section>
