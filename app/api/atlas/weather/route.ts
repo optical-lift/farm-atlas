@@ -19,7 +19,8 @@ type RainPoint = {
   longitude: number;
 };
 
-const realRainThresholdIn = 0.2;
+const touchedByWaterThresholdIn = 0.01;
+const wateringRainThresholdIn = 0.2;
 
 const rainPoints: RainPoint[] = [
   { name: "Marshfield", latitude: 37.3387, longitude: -92.9071 },
@@ -79,11 +80,11 @@ function forecastUrlFor(point: RainPoint) {
   return url;
 }
 
-function dryLabel(daysSinceRain: number | null) {
+function ageLabel(daysSinceRain: number | null, todayLabel: string, yesterdayLabel: string, olderLabel: string) {
   if (daysSinceRain === null) return "rain age unknown";
-  if (daysSinceRain === 0) return "rained today";
-  if (daysSinceRain === 1) return "rained yesterday";
-  return `${daysSinceRain} days dry`;
+  if (daysSinceRain === 0) return todayLabel;
+  if (daysSinceRain === 1) return yesterdayLabel;
+  return `${daysSinceRain} ${olderLabel}`;
 }
 
 function daysBetween(dateIso: string, todayIso: string) {
@@ -118,19 +119,31 @@ export async function GET() {
       return { date, average };
     });
 
-    const lastRealRain = [...averagedRain].reverse().find((day) => day.average >= realRainThresholdIn);
-    const daysSinceRain = lastRealRain ? daysBetween(lastRealRain.date, todayIso) : null;
-    const rainAge = dryLabel(daysSinceRain);
-    const label = roundedTemp === null ? `${condition} · ${rainAge}` : `${condition} · ${roundedTemp}° · ${rainAge}`;
+    const todayRain = averagedRain.find((day) => day.date === todayIso)?.average ?? 0;
+    const lastTouchedByWater = [...averagedRain].reverse().find((day) => day.average >= touchedByWaterThresholdIn);
+    const lastWateringRain = [...averagedRain].reverse().find((day) => day.average >= wateringRainThresholdIn);
+    const daysSinceTouchedByWater = lastTouchedByWater ? daysBetween(lastTouchedByWater.date, todayIso) : null;
+    const daysSinceWateringRain = lastWateringRain ? daysBetween(lastWateringRain.date, todayIso) : null;
+    const touchedByWaterAge = ageLabel(daysSinceTouchedByWater, "touched today", "touched yesterday", "days since sprinkle");
+    const wateringRainAge = ageLabel(daysSinceWateringRain, "watering rain today", "watering rain yesterday", "days since watering rain");
+    const rainStatus = todayRain >= wateringRainThresholdIn ? wateringRainAge : todayRain >= touchedByWaterThresholdIn ? `${touchedByWaterAge} · ${wateringRainAge}` : wateringRainAge;
+    const label = roundedTemp === null ? `${condition} · ${rainStatus}` : `${condition} · ${roundedTemp}° · ${rainStatus}`;
 
     return NextResponse.json({
       ok: true,
       label,
       condition,
       temperatureF: roundedTemp,
-      rainAge,
-      daysSinceRain,
-      realRainThresholdIn,
+      rainAge: wateringRainAge,
+      daysSinceRain: daysSinceWateringRain,
+      todayRainIn: todayRain,
+      touchedByWaterAge,
+      daysSinceTouchedByWater,
+      wateringRainAge,
+      daysSinceWateringRain,
+      touchedByWaterThresholdIn,
+      wateringRainThresholdIn,
+      realRainThresholdIn: wateringRainThresholdIn,
       averagedRain,
       rainPoints: rainPoints.map((point) => point.name),
     });
