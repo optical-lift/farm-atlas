@@ -126,8 +126,7 @@ export async function GET() {
     const daysSinceWateringRain = lastWateringRain ? daysBetween(lastWateringRain.date, todayIso) : null;
     const touchedByWaterAge = ageLabel(daysSinceTouchedByWater, "touched today", "touched yesterday", "days since sprinkle");
     const wateringRainAge = ageLabel(daysSinceWateringRain, "watering rain today", "watering rain yesterday", "days since watering rain");
-    const rainStatus = todayRain >= wateringRainThresholdIn ? wateringRainAge : todayRain >= touchedByWaterThresholdIn ? `${touchedByWaterAge} · ${wateringRainAge}` : wateringRainAge;
-    const label = roundedTemp === null ? `${condition} · ${rainStatus}` : `${condition} · ${roundedTemp}° · ${rainStatus}`;
+    const label = roundedTemp === null ? `${condition} · ${wateringRainAge}` : `${condition} · ${roundedTemp}° · ${wateringRainAge}`;
 
     return NextResponse.json({
       ok: true,
