@@ -25,7 +25,6 @@ export type ZoneTaskOverview = {
 export const routeOrder = atlasRouteOrder;
 export const routeLabels = atlasRouteLabels;
 
-const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const urgentRoutes = new Set<WorkRouteKey>(["plant", "water", "harvest"]);
 const terminalWords = new Set(["done", "complete", "completed", "dismissed", "expired", "archived", "cancelled", "canceled", "not_relevant", "not relevant", "changed_plan", "changed plan"]);
 
@@ -153,9 +152,15 @@ export function collectionZone(task: AtlasTaskCard) {
   return atlasTaskLocation(task) || zoneBucket(location(task));
 }
 
+function orderNumber(task: AtlasTaskCard) {
+  const value = meta(task, "day_order");
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  return 999;
+}
+
 export function taskSortValue(task: AtlasTaskCard) {
-  const dayOrder = typeof meta(task, "day_order") === "number" ? meta(task, "day_order") : 999;
-  return `${task.due_date ?? "9999-12-31"}-${priorityRank[task.priority] ?? 9}-${String(dayOrder).padStart(3, "0")}-${atlasCleanLabel(atlasTaskDisplay(task).subject)}`;
+  return `${task.due_date ?? "9999-12-31"}-${String(orderNumber(task)).padStart(5, "0")}-${atlasCleanLabel(atlasTaskDisplay(task).subject)}`;
 }
 
 function dueByPeriodEndOrUndated(task: AtlasTaskCard, endIso: string) {
