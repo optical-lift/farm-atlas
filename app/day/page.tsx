@@ -122,15 +122,13 @@ function taskHref(task: AtlasTaskCard) {
 }
 
 function explicitWorkOrder(task: AtlasTaskCard) {
-  return metaNumber(task, "day_work_order", "work_order", "day_order_override", "run_sheet_order");
+  return metaNumber(task, "day_work_order", "work_order", "day_order_override", "run_sheet_order", "day_order");
 }
 
 function workOrderMode(task: AtlasTaskCard) {
   const mode = text(meta(task, "day_work_order_mode")) || text(meta(task, "work_order_mode")) || text(meta(task, "day_flow_mode"));
   const label = `${text(meta(task, "day_work_order_label"))} ${text(meta(task, "work_order_label"))} ${text(meta(task, "work_order_bucket"))}`.toLowerCase();
   if (mode === "extra_credit" || label.includes("extra credit")) return "extra_credit";
-  const order = explicitWorkOrder(task);
-  if (order !== null && order >= 10) return "extra_credit";
   return "required";
 }
 
@@ -140,15 +138,12 @@ function isExtraCredit(task: AtlasTaskCard) {
 
 function fallbackOrder(task: AtlasTaskCard) {
   const routeIndex = routeOrder.indexOf(routeForTask(task));
-  const dayOrder = metaNumber(task, "day_order") ?? 999;
-  return (routeIndex < 0 ? 99 : routeIndex) * 1000 + dayOrder;
+  return 99900 + (routeIndex < 0 ? 99 : routeIndex);
 }
 
 function workOrderSortKey(task: AtlasTaskCard) {
-  const explicit = explicitWorkOrder(task);
-  const primary = explicit ?? fallbackOrder(task);
-  const explicitFlag = explicit === null ? 1 : 0;
-  return `${String(primary).padStart(5, "0")}-${explicitFlag}-${subject(task)}`;
+  const primary = explicitWorkOrder(task) ?? fallbackOrder(task);
+  return `${String(primary).padStart(5, "0")}-${subject(task)}`;
 }
 
 function zoneSortKey(task: AtlasTaskCard) {
