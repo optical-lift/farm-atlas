@@ -18,7 +18,6 @@ import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-
 import {
   filterMonthOverviewTasks,
   filterWeekOverviewTasks,
-  isUrgentTask,
   monthName,
   monthProgress,
 } from "@/lib/atlas/task-overview";
@@ -27,7 +26,6 @@ import { fetchAtlasZoneRegistry, type AtlasRegistryZone } from "@/lib/atlas/zone
 type HomePanel = "closeout" | null;
 type WeatherResponse = { ok: boolean; label?: string; rainAge?: string; daysSinceRain?: number | null; error?: string };
 
-const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const defaultSnapshot: AtlasFarmSnapshot = { totalBeds: 0, growingBeds: 0, activeSqft: 0, sowingsLogged: 0, stemsLogged: 0 };
 
 function todayIso() {
@@ -84,7 +82,9 @@ function dayShortLabel(dateIso: string) {
 
 function metaNumber(card: AtlasTaskCard, key: string) {
   const value = atlasMetadataValue(card, key);
-  return typeof value === "number" ? value : null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  return null;
 }
 
 function isChildTask(card: AtlasTaskCard) {
@@ -120,7 +120,7 @@ function subtaskLabel(card: AtlasTaskCard, counts: Map<string, number>) {
 
 function taskSortValue(card: AtlasTaskCard) {
   const dayOrder = metaNumber(card, "day_order") ?? 999;
-  return `${card.due_date ?? "9999-12-31"}-${priorityRank[card.priority] ?? 9}-${String(dayOrder).padStart(3, "0")}-${atlasTaskDisplay(card).title}`;
+  return `${card.due_date ?? "9999-12-31"}-${String(dayOrder).padStart(5, "0")}-${atlasTaskDisplay(card).title}`;
 }
 
 function isTaskDone(card: AtlasTaskCard) {
@@ -249,7 +249,6 @@ function OverviewLaunchBoxes({ cards, loading }: { cards: AtlasTaskCard[]; loadi
   const today = todayIso();
   const weekTasks = filterWeekOverviewTasks(cards, today);
   const monthTasks = filterMonthOverviewTasks(cards, today);
-  const urgentWeekTasks = weekTasks.filter((card) => isUrgentTask(card, today));
   const progress = monthProgress(today);
   const dayRows = Array.from({ length: 4 }, (_, index) => {
     const dateIso = addDaysIsoFrom(today, index + 1);
@@ -262,7 +261,7 @@ function OverviewLaunchBoxes({ cards, loading }: { cards: AtlasTaskCard[]; loadi
       <article className="atlas-home-overview-card atlas-home-overview-week">
         <Link href="/overview/week" className="atlas-home-overview-top">
           <strong>This Week</strong>
-          <span>{loading ? "Loading" : `${weekTasks.length} open · ${urgentWeekTasks.length} urgent`}</span>
+          <span>{loading ? "Loading" : `${weekTasks.length} open`}</span>
         </Link>
         <div className="atlas-home-overview-list">
           {dayRows.map((row) => (
@@ -309,7 +308,7 @@ function HomeFooterBar({ summary, today, onOpen }: { summary: AtlasCloseoutSumma
 
   return (
     <div className="atlas-home-footer-row">
-      <Link href="/?panel=closeout" className="atlas-home-closeout-footer-link" onClick={onOpen}>
+      <Link href="/closeout" className="atlas-home-closeout-footer-link" onClick={onOpen}>
         <span>Closeout</span>
         <em>{summary ? `${summary.counts.objectEvents} records · ${summary.counts.openTasks} open` : `Review · ${prettyDate(today)}`}</em>
       </Link>
