@@ -1,0 +1,193 @@
+/*
+  Universal Atlas mobile overflow guard.
+  This file is intentionally imported last. It prevents any Atlas page or late redraw
+  from widening the iPhone viewport after task completion or route-card changes.
+*/
+
+html,
+body {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: clip !important;
+}
+
+body {
+  position: relative;
+}
+
+body > * {
+  max-width: 100vw !important;
+  overflow-x: clip !important;
+}
+
+main,
+section,
+article,
+header,
+footer,
+nav,
+aside,
+div,
+form,
+ul,
+ol,
+li,
+a,
+button {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100% !important;
+  height: auto;
+}
+
+[class^="atlas-"],
+[class*=" atlas-"] {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.atlas-phone-shell,
+.atlas-home-shell,
+.atlas-task-page-shell,
+.atlas-overview-page-shell {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  overflow-x: clip !important;
+}
+
+.atlas-phone,
+.atlas-dashboard-phone,
+.atlas-task-page-phone,
+.atlas-overview-page-phone {
+  width: 100% !important;
+  max-width: 100vw !important;
+  overflow-x: clip !important;
+}
+
+.atlas-task-page-body,
+.atlas-overview-body,
+.atlas-home-grid,
+.atlas-task-page-section,
+.atlas-route-collection,
+.atlas-day-browse,
+.atlas-day-task-groups,
+.atlas-day-route-group,
+.atlas-day-work-order-list,
+.atlas-day-zone-group {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: clip !important;
+}
+
+.atlas-day-route-hero,
+.atlas-home-box-purple,
+.atlas-home-task-hero,
+.atlas-daily-run-sheet,
+.atlas-route-sheet,
+.atlas-overview-hero {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  contain: inline-size paint;
+}
+
+.atlas-day-route-grid,
+.atlas-run-sheet-grid,
+.atlas-route-sheet-grid,
+.atlas-home-overview-row,
+.atlas-overview-stat-grid {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.atlas-day-route-box,
+.atlas-run-sheet-box,
+.atlas-route-sheet-box,
+.atlas-task-forward-box,
+.atlas-day-task-card,
+.atlas-overview-task-card,
+.atlas-home-overview-card,
+.atlas-farm-snapshot-bar,
+.atlas-home-footer-row,
+.atlas-home-closeout-footer-link,
+.atlas-home-frost-countdown {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.atlas-day-route-box *,
+.atlas-run-sheet-box *,
+.atlas-route-sheet-box *,
+.atlas-task-forward-box *,
+.atlas-day-task-card *,
+.atlas-overview-task-card *,
+.atlas-home-overview-card *,
+.atlas-phone-top *,
+.atlas-weather-line {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-wrap: anywhere;
+}
+
+.atlas-day-route-box strong,
+.atlas-day-route-box span,
+.atlas-day-route-box em,
+.atlas-run-sheet-box strong,
+.atlas-run-sheet-box span,
+.atlas-run-sheet-box em,
+.atlas-route-sheet-box strong,
+.atlas-route-sheet-box span,
+.atlas-route-sheet-box em,
+.atlas-task-forward-box strong,
+.atlas-task-forward-box span,
+.atlas-task-forward-box em,
+.atlas-home-overview-card strong,
+.atlas-home-overview-card span,
+.atlas-home-overview-card em {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 430px) {
+  .atlas-phone-shell,
+  .atlas-home-shell,
+  .atlas-task-page-shell,
+  .atlas-overview-page-shell {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .atlas-task-page-body,
+  .atlas-overview-body,
+  .atlas-home-grid {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .atlas-day-route-grid,
+  .atlas-run-sheet-grid,
+  .atlas-route-sheet-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .atlas-day-route-grid,
+  .atlas-run-sheet-grid,
+  .atlas-route-sheet-grid,
+  .atlas-home-overview-row,
+  .atlas-overview-stat-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
