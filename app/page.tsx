@@ -309,10 +309,10 @@ function HomeFooterBar({ summary, today, onOpen }: { summary: AtlasCloseoutSumma
 
   return (
     <div className="atlas-home-footer-row">
-      <button type="button" className="atlas-home-closeout-footer-link" onClick={onOpen}>
+      <Link href="/?panel=closeout" className="atlas-home-closeout-footer-link" onClick={onOpen}>
         <span>Closeout</span>
         <em>{summary ? `${summary.counts.objectEvents} records · ${summary.counts.openTasks} open` : `Review · ${prettyDate(today)}`}</em>
-      </button>
+      </Link>
       <div className="atlas-home-frost-countdown" aria-label={`${frostDays} days until first frost target on November 1`}>
         <span>First frost</span>
         <em>{frostDays} days · Nov 1</em>
@@ -345,9 +345,18 @@ export default function AtlasHomePage() {
   async function loadWeather() { try { const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" }); const data = (await response.json()) as WeatherResponse; setWeatherLabel(response.ok && data.ok && data.label ? data.label : "weather unavailable"); } catch { setWeatherLabel("weather unavailable"); } }
 
   useEffect(() => { void loadCards(); void loadRegistry(); void loadSnapshot(); void loadCloseout(); void loadWeather(); }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("panel") === "closeout") setOpenPanel("closeout");
+  }, []);
 
   const monthSummary = closeoutSummaries.find((summary) => summary.period === "month");
   async function afterFieldLogSaved() { await loadRegistry(); await loadSnapshot(); await loadCloseout(); }
+  function closePanel() {
+    setOpenPanel(null);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("panel")) window.history.replaceState(null, "", "/");
+  }
 
   return (
     <main className="atlas-phone-shell atlas-home-shell">
@@ -364,7 +373,7 @@ export default function AtlasHomePage() {
           <HomeFooterBar summary={monthSummary} today={today} onOpen={() => setOpenPanel("closeout")} />
         </div>
       </section>
-      {openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{panelTitle(openPanel)}</strong></div><button type="button" onClick={() => setOpenPanel(null)}>Close</button></div><div className="atlas-task-focus-body">{openPanel === "closeout" ? <CloseoutPanel summaries={closeoutSummaries} loading={closeoutLoading} /> : null}</div></div></section> : null}
+      {openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{panelTitle(openPanel)}</strong></div><button type="button" onClick={closePanel}>Close</button></div><div className="atlas-task-focus-body">{openPanel === "closeout" ? <CloseoutPanel summaries={closeoutSummaries} loading={closeoutLoading} /> : null}</div></div></section> : null}
       {logSeed ? <FieldLogDrawer zones={registryZones} seed={logSeed} onClose={() => setLogSeed(null)} onSaved={afterFieldLogSaved} /> : null}
     </main>
   );
