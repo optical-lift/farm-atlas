@@ -107,6 +107,15 @@ function isOwnerTask(card: AtlasTaskCardRow) {
   return boolish(metadata.owner_task) || stringValue(metadata.assigned_to)?.toLowerCase() === "owner" || stringValue(metadata.collection_zone)?.toLowerCase() === "owner";
 }
 
+function isMarshallTask(card: AtlasTaskCardRow) {
+  const metadata = card.metadata ?? {};
+  return boolish(metadata.marshall_task) || stringValue(metadata.assigned_to)?.toLowerCase() === "marshall" || stringValue(metadata.collection_zone)?.toLowerCase() === "marshall";
+}
+
+function isPrivateAssignmentTask(card: AtlasTaskCardRow) {
+  return isOwnerTask(card) || isMarshallTask(card);
+}
+
 function formatNumberish(value: number | string | null | undefined) {
   if (value === null || value === undefined) return null;
   const text = String(value).trim();
@@ -226,8 +235,10 @@ export async function GET(request: NextRequest) {
 
     if (scope === "owner") {
       rows = rows.filter(isOwnerTask);
+    } else if (scope === "marshall") {
+      rows = rows.filter(isMarshallTask);
     } else if (scope !== "all" && !taskId) {
-      rows = rows.filter((card) => !isOwnerTask(card));
+      rows = rows.filter((card) => !isPrivateAssignmentTask(card));
     }
 
     const taskCards = await enrichWithCropProfiles(rows);
