@@ -72,6 +72,29 @@ type ContentRow = {
   note: string | null;
 };
 
+type CropCycleRow = {
+  crop_cycle_id: string;
+  object_id: string | null;
+  crop_label: string;
+  variety: string | null;
+  cycle_state: string;
+  lifecycle_status: string;
+  sown_date: string | null;
+  planted_date: string | null;
+  germination_checked_date: string | null;
+  expected_germination_start: string | null;
+  expected_germination_end: string | null;
+  harvest_started_date: string | null;
+  last_harvest_date: string | null;
+  cleared_date: string | null;
+  expected_harvest_watch_start: string | null;
+  expected_harvest_watch_end: string | null;
+  expected_clear_date: string | null;
+  crop_profile_stable_key: string | null;
+  default_planting_method: string | null;
+  note: string | null;
+};
+
 type EventRow = {
   id: string;
   object_id: string;
@@ -79,6 +102,7 @@ type EventRow = {
   event_type: string;
   event_date: string;
   note: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 function isRegistryHidden(row: { current_state?: string | null; metadata?: Record<string, unknown> | null }) {
@@ -122,7 +146,7 @@ function unknownFieldsFor(content: ContentRow, scopedEvents: EventRow[]) {
 
 function inspectionFor(content: ContentRow, objectEvents: EventRow[]) {
   const scopedEvents = objectEvents.filter(
-    (event) => !event.object_content_id || event.object_content_id === content.id,
+    (event) => !event.object_content_id || event.object_content_id === content.id || event.metadata?.crop_cycle_id === content.id,
   );
 
   const bloomDates = datesFor(scopedEvents, "bloom_started");
@@ -151,6 +175,34 @@ function inspectionFor(content: ContentRow, objectEvents: EventRow[]) {
     next_crop_planned: content.next_crop_planned,
     note: content.note,
     unknown_fields: unknownFieldsFor(content, scopedEvents),
+  };
+}
+
+function cropCycleContent(cycle: CropCycleRow): ContentRow | null {
+  if (!cycle.object_id) return null;
+
+  return {
+    id: cycle.crop_cycle_id,
+    object_id: cycle.object_id,
+    content_label: cycle.crop_label,
+    content_type: "crop_cycle",
+    variety: cycle.variety,
+    planted_date: cycle.sown_date ?? cycle.planted_date,
+    status: cycle.cycle_state,
+    confidence: "high",
+    start_method: cycle.default_planting_method,
+    germinated_date: cycle.germination_checked_date,
+    pinch_required: false,
+    pinch_note: cycle.crop_profile_stable_key?.includes("sunflower") ? "Sunflower crop cycle; do not pinch single-stem production unless a specific variety note says otherwise." : null,
+    bloom_start_date: cycle.harvest_started_date,
+    clear_bed_date: cycle.cleared_date,
+    next_crop_planned: null,
+    expected_germination_start: cycle.expected_germination_start,
+    expected_germination_end: cycle.expected_germination_end,
+    expected_harvest_watch_start: cycle.expected_harvest_watch_start,
+    expected_harvest_watch_end: cycle.expected_harvest_watch_end,
+    expected_clear_date: cycle.expected_clear_date,
+    note: cycle.note,
   };
 }
 
@@ -226,11 +278,31 @@ export async function GET() {
     );
   }
 
+  const { data: cropCycles, error: cropCyclesError } = objectIds.length
+    ? await atlasSupabase
+        .schema("atlas")
+        .from("v_crop_cycle_registry")
+        .select(
+          "crop_cycle_id, object_id, crop_label, variety, cycle_state, lifecycle_status, sown_date, planted_date, germination_checked_date, expected_germination_start, expected_germination_end, harvest_started_date, last_harvest_date, cleared_date, expected_harvest_watch_start, expected_harvest_watch_end, expected_clear_date, crop_profile_stable_key, default_planting_method, note",
+        )
+        .eq("farm_id", farm.id)
+        .eq("lifecycle_status", "active")
+        .in("object_id", objectIds)
+        .order("sown_date", { ascending: false })
+    : { data: [], error: null };
+
+  if (cropCyclesError) {
+    return NextResponse.json(
+      { ok: false, error: "Crop cycle registry read failed.", details: cropCyclesError.message },
+      { status: 500 },
+    );
+  }
+
   const { data: events, error: eventsError } = objectIds.length
     ? await atlasSupabase
         .schema("atlas")
         .from("object_activity_events")
-        .select("id, object_id, object_content_id, event_type, event_date, note")
+        .select("id, object_id, object_content_id, event_type, event_date, note, metadata")
         .in("object_id", objectIds)
         .order("event_date", { ascending: true })
     : { data: [], error: null };
@@ -252,7 +324,12 @@ export async function GET() {
 
   const contentByObject = new Map<string, Array<ContentRow & { inspection: ReturnType<typeof inspectionFor> }>>();
 
-  ((contents ?? []) as ContentRow[]).forEach((content) => {
+  const mergedContents: ContentRow[] = [
+    ...((cropCycles ?? []) as CropCycleRow[]).map(cropCycleContent).filter((content): content is ContentRow => Boolean(content)),
+    ...((contents ?? []) as ContentRow[]),
+  ];
+
+  mergedContents.forEach((content) => {
     const objectEvents = eventsByObject.get(content.object_id) ?? [];
     const list = contentByObject.get(content.object_id) ?? [];
     list.push({
