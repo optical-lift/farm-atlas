@@ -12,3 +12,9 @@
   position: relative !important;
   z-index: 2 !important;
 }
+
+/* Weeding child rows only need the place name; guidance belongs on the parent card. */
+.atlas-task-ticket-card--weeding .atlas-plant-check__copy > span,
+.atlas-task-ticket-card--weeding .atlas-plant-check__copy > em {
+  display: none !important;
+}
