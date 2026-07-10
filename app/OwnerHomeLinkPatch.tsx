@@ -18,14 +18,25 @@ export default function OwnerHomeLinkPatch() {
         footer.insertBefore(ownerLink, footer.firstChild);
       }
 
+      if (!footer.querySelector(".atlas-children-footer-link")) {
+        const childrenLink = document.createElement("a");
+        childrenLink.href = "/children";
+        childrenLink.className = "atlas-home-closeout-footer-link atlas-owner-footer-link atlas-children-footer-link";
+        childrenLink.setAttribute("aria-label", "Open children chores overview");
+        childrenLink.innerHTML = "<span>Kids</span><em>Trash · porches</em>";
+        const ownerLink = footer.querySelector(".atlas-owner-footer-link");
+        if (ownerLink?.nextSibling) footer.insertBefore(childrenLink, ownerLink.nextSibling);
+        else footer.appendChild(childrenLink);
+      }
+
       if (!footer.querySelector(".atlas-marshall-footer-link")) {
         const marshallLink = document.createElement("a");
         marshallLink.href = "/marshall";
         marshallLink.className = "atlas-home-closeout-footer-link atlas-owner-footer-link atlas-marshall-footer-link";
         marshallLink.setAttribute("aria-label", "Open Marshall task overview");
         marshallLink.innerHTML = "<span>Marshall</span><em>Jul 19–25</em>";
-        const ownerLink = footer.querySelector(".atlas-owner-footer-link");
-        if (ownerLink?.nextSibling) footer.insertBefore(marshallLink, ownerLink.nextSibling);
+        const childrenLink = footer.querySelector(".atlas-children-footer-link");
+        if (childrenLink?.nextSibling) footer.insertBefore(marshallLink, childrenLink.nextSibling);
         else footer.appendChild(marshallLink);
       }
     }
