@@ -87,7 +87,7 @@ async function placementFor({
       : { data: null };
 
     return {
-      zoneId: (zone?.id as string | undefined) ?? (object.zone_id as string | null) ?? zoneId || null,
+      zoneId: ((zone?.id as string | undefined) ?? (object.zone_id as string | null) ?? zoneId) || null,
       zoneLabel: (zone?.label as string | undefined) ?? null,
       objectId: object.id as string,
       objectLabel: object.label as string,
