@@ -101,14 +101,15 @@ function weekdayIndex(value: unknown) {
   return null;
 }
 
-function isoDateForNextWeekday(nowIso: string, targetWeekday: number) {
+function isoDateForNextWeekday(nowIso: string, targetWeekday: number, minimumDaysAway = 1) {
   const date = new Date(`${nowIso.slice(0, 10)}T12:00:00`);
-  for (let offset = 1; offset <= 7; offset += 1) {
+  const minimumOffset = Math.max(1, minimumDaysAway);
+  for (let offset = minimumOffset; offset <= minimumOffset + 13; offset += 1) {
     const candidate = new Date(date);
     candidate.setDate(date.getDate() + offset);
     if (candidate.getDay() === targetWeekday) return candidate.toISOString().slice(0, 10);
   }
-  return isoDateFromNowPlusDays(7);
+  return isoDateFromNowPlusDays(Math.max(7, minimumOffset));
 }
 
 function shouldRecreateTask(task: TaskRow, outcome: Outcome) {
@@ -121,7 +122,8 @@ function shouldRecreateTask(task: TaskRow, outcome: Outcome) {
 function nextRecreatedDueDate(task: TaskRow, recreateAfterDays: number, now: string) {
   const metadata = task.metadata ?? {};
   const anchoredWeekday = weekdayIndex(metadata.recreate_weekday) ?? weekdayIndex(metadata.repeat_anchor_day);
-  if (anchoredWeekday !== null) return isoDateForNextWeekday(now, anchoredWeekday);
+  const minimumInterval = positiveInteger(metadata.minimum_days_between_recurrences) ?? positiveInteger(metadata.min_days_since_last_mow) ?? 1;
+  if (anchoredWeekday !== null) return isoDateForNextWeekday(now, anchoredWeekday, minimumInterval);
   return isoDateFromNowPlusDays(recreateAfterDays);
 }
 
