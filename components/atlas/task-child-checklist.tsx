@@ -249,9 +249,9 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
   }
 
   return (
-    <section className="atlas-child-checklist" data-react-child-checklist="true">
-      <strong>Checklist</strong>
-      <div className="atlas-child-checklist-open atlas-child-checklist-stable-list">
+    <section className="atlas-plant-check" data-react-child-checklist="true">
+      <h3>Checklist</h3>
+      <div className="atlas-plant-check__list">
         {childTasks.map((task) => {
           const done = isDone(task);
           const active = activeLogId === task.task_id;
@@ -264,35 +264,35 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
           const summary = logSummary(task);
 
           return (
-            <div key={task.task_id} className={`atlas-child-check-item${done ? " done" : ""}${isSaving ? " saving" : ""}`} data-child-task-id={task.task_id}>
-              <div className="atlas-child-check-static">
-                <span className="atlas-child-check-mark">{done ? "✓" : ""}</span>
-                <div className="atlas-child-check-copy">
+            <article key={task.task_id} className={`atlas-plant-check__item${done ? " is-done" : ""}${isSaving ? " is-saving" : ""}`} data-child-task-id={task.task_id}>
+              <div className="atlas-plant-check__content">
+                <span className="atlas-plant-check__mark">{done ? "✓" : ""}</span>
+                <div className="atlas-plant-check__copy">
                   <strong>{label(task)}</strong>
-                  {detailLines(task).map((line) => <em key={line}>{line}</em>)}
-                  {summary ? <em className="atlas-child-log-summary">{summary}</em> : null}
-                  {rowMessage ? <em className="atlas-child-log-summary">{rowMessage}</em> : null}
+                  {detailLines(task).map((line) => <span key={line}>{line}</span>)}
+                  {summary ? <em>{summary}</em> : null}
+                  {rowMessage ? <em>{rowMessage}</em> : null}
                 </div>
               </div>
 
-              <div className="atlas-child-row-actions">
+              <div className="atlas-plant-check__actions">
                 {done ? (
-                  <button type="button" className="atlas-child-open-log-button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "open")}>
+                  <button type="button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "open")}>
                     {isSaving ? "Saving" : "Reopen"}
                   </button>
                 ) : needsPlantingLog(task) ? (
-                  <button type="button" className="atlas-child-open-log-button" disabled={Boolean(savingId)} onClick={() => active ? setActiveLogId(null) : openPlantingLog(task)}>
+                  <button type="button" disabled={Boolean(savingId)} onClick={() => active ? setActiveLogId(null) : openPlantingLog(task)}>
                     {active ? "Close planting log" : "Open planting log"}
                   </button>
                 ) : (
-                  <button type="button" className="atlas-child-open-log-button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "done")}>
+                  <button type="button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "done")}>
                     {isSaving ? "Saving" : "Mark done"}
                   </button>
                 )}
               </div>
 
               {active ? (
-                <form className="atlas-child-plant-log" onSubmit={(event) => { event.preventDefault(); void savePlantingLog(task); }}>
+                <form className="atlas-plant-check__form" onSubmit={(event) => { event.preventDefault(); void savePlantingLog(task); }}>
                   <label>
                     <span>Count</span>
                     <input name="plantedAmount" inputMode="numeric" type="number" min="0" step="1" value={form.amount} onChange={(event) => updateForm(task.task_id, { amount: event.target.value, message: null })} />
@@ -305,7 +305,7 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
                     </select>
                   </label>
                   {form.zoneId ? (
-                    <label className="atlas-child-bed-select-row">
+                    <label>
                       <span>Bed / area</span>
                       <select name="plantedObjectId" value={form.objectId} disabled={!objects.length} onChange={(event) => updateForm(task.task_id, { objectId: event.target.value, message: null })}>
                         <option value="">{objects.length ? "Choose bed / area" : "No registered beds in this zone"}</option>
@@ -313,14 +313,14 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
                       </select>
                     </label>
                   ) : null}
-                  <div className="atlas-child-plant-log-actions">
+                  <div className="atlas-plant-check__form-actions">
                     <button type="submit" disabled={isSaving}>{isSaving ? "Saving" : "Save planted"}</button>
-                    <button type="button" className="atlas-child-log-cancel" disabled={isSaving} onClick={() => setActiveLogId(null)}>Cancel</button>
+                    <button type="button" disabled={isSaving} onClick={() => setActiveLogId(null)}>Cancel</button>
                   </div>
-                  <p className="atlas-child-log-error" aria-live="polite">{formMessage ?? registryError ?? ""}</p>
+                  <p aria-live="polite">{formMessage ?? registryError ?? ""}</p>
                 </form>
               ) : null}
-            </div>
+            </article>
           );
         })}
       </div>
