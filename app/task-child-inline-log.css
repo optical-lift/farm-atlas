@@ -130,7 +130,8 @@
   text-transform: uppercase !important;
 }
 
-.atlas-child-plant-log input {
+.atlas-child-plant-log input,
+.atlas-child-plant-log select {
   width: 100% !important;
   min-height: 38px !important;
   border-radius: 13px !important;
@@ -142,6 +143,20 @@
   line-height: 1 !important;
   font-weight: 850 !important;
   outline: none !important;
+}
+
+.atlas-child-plant-log select {
+  appearance: auto !important;
+  -webkit-appearance: menulist !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+.atlas-child-plant-log input:disabled,
+.atlas-child-plant-log select:disabled,
+.atlas-child-plant-log-actions button:disabled,
+.atlas-child-check-touch:disabled {
+  opacity: 0.62 !important;
 }
 
 .atlas-child-plant-log-actions {
