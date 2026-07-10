@@ -1,0 +1,4 @@
+/* Keep the stable child checklist as the single tappable checklist surface. */
+.atlas-task-child-checklist-card {
+  display: none !important;
+}
