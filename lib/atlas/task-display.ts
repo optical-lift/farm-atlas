@@ -1,6 +1,6 @@
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
-export type AtlasWorkRouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
+export type AtlasWorkRouteKey = "plant" | "weed" | "mow" | "seed" | "crop_cycle" | "harvest" | "build" | "venue" | "water";
 
 export type AtlasTaskDisplay = {
   action: string;
@@ -17,13 +17,14 @@ export const atlasRouteLabels: Record<AtlasWorkRouteKey, string> = {
   weed: "Weed",
   mow: "Mow",
   seed: "Seed",
+  crop_cycle: "Crop Cycle",
   harvest: "Harvest",
   build: "Build / Prep",
   venue: "Venue",
   water: "Water",
 };
 
-export const atlasRouteOrder: AtlasWorkRouteKey[] = ["weed", "plant", "mow", "seed", "harvest", "build", "venue", "water"];
+export const atlasRouteOrder: AtlasWorkRouteKey[] = ["weed", "plant", "mow", "seed", "crop_cycle", "harvest", "build", "venue", "water"];
 
 export function atlasText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -57,12 +58,29 @@ export function atlasTitleSubject(title: string) {
 }
 
 export function atlasIsRouteKey(value: string | null | undefined): value is AtlasWorkRouteKey {
-  return value === "plant" || value === "weed" || value === "mow" || value === "seed" || value === "harvest" || value === "build" || value === "venue" || value === "water";
+  return value === "plant" || value === "weed" || value === "mow" || value === "seed" || value === "crop_cycle" || value === "harvest" || value === "build" || value === "venue" || value === "water";
+}
+
+export function atlasIsCropCycleTask(task: AtlasTaskCard) {
+  const metadata = task.metadata ?? {};
+  const explicit = atlasMetaString(task, "work_route");
+  const createdFrom = atlasMetaString(task, "created_from");
+  const text = `${task.task_type ?? ""} ${task.title} ${task.unlock_text ?? ""} ${atlasMetaString(task, "work_rhythm") ?? ""} ${atlasMetaString(task, "display_action") ?? ""}`.toLowerCase();
+
+  return explicit === "crop_cycle"
+    || Boolean(metadata.crop_cycle_id || metadata.crop_cycle_key || metadata.crop_profile_stable_key)
+    || createdFrom === "crop_cycle_triggered_sequence"
+    || text.includes("crop cycle")
+    || text.includes("germination")
+    || text.includes("stand_check")
+    || text.includes("harvest_watch")
+    || text.includes("turnover_watch");
 }
 
 export function atlasRouteKeyForTask(task: AtlasTaskCard): AtlasWorkRouteKey {
   const explicit = atlasMetaString(task, "work_route");
   if (atlasIsRouteKey(explicit)) return explicit;
+  if (atlasIsCropCycleTask(task)) return "crop_cycle";
 
   const templateText = (task.action_templates ?? [])
     .map((template) => `${template.action_type ?? ""} ${template.template_label ?? ""} ${template.card_language ?? ""}`)
@@ -85,6 +103,15 @@ export function atlasActionForTask(task: AtlasTaskCard) {
   const explicit = atlasMetaString(task, "display_action");
   if (explicit) return explicit;
 
+  if (atlasIsCropCycleTask(task)) {
+    const type = `${task.task_type ?? ""} ${task.title}`.toLowerCase();
+    if (type.includes("germination")) return "Check";
+    if (type.includes("stand")) return "Patch/thin";
+    if (type.includes("harvest")) return "Watch";
+    if (type.includes("turnover") || type.includes("clear")) return "Clear";
+    return "Crop Cycle";
+  }
+
   const templateAction = task.action_templates?.find((template) => atlasText(template.action_type))?.action_type;
   if (templateAction) return atlasCleanLabel(templateAction.replaceAll("_", " ")).replace(/^./, (letter) => letter.toUpperCase());
 
@@ -99,6 +126,7 @@ export function atlasRhythmForTask(task: AtlasTaskCard) {
   if (route === "plant") return "Planting";
   if (route === "weed") return "Weeding";
   if (route === "seed") return "Seed Sowing";
+  if (route === "crop_cycle") return "Crop Cycle";
   if (route === "harvest") return "Harvest + Postharvest";
   if (route === "mow") return "Maintenance";
   if (route === "build") return "Build / Prep";
@@ -126,6 +154,15 @@ export function atlasTaskLocation(task: AtlasTaskCard) {
 }
 
 export function atlasTaskDetail(task: AtlasTaskCard) {
+  if (atlasIsCropCycleTask(task)) {
+    const crop = [atlasMetaString(task, "crop_variety"), atlasMetaString(task, "crop_label")].filter(Boolean).join(" ");
+    const object = atlasTaskObjectLocation(task) || atlasMetaString(task, "collection_zone");
+    const anchor = atlasMetaString(task, "trigger_anchor_date");
+    const generated = anchor ? `generated from ${anchor}` : "generated from crop cycle";
+    const fallback = [crop || atlasMetaString(task, "display_detail"), object, generated].filter(Boolean).join(" · ");
+    return atlasStringList(atlasMetadataValue(task, "detail_lines"))[0] || fallback || task.unlock_text || "Crop-cycle follow-up";
+  }
+
   return atlasStringList(atlasMetadataValue(task, "detail_lines"))[0] || task.unlock_text || atlasMetaString(task, "display_detail") || "Open task";
 }
 
