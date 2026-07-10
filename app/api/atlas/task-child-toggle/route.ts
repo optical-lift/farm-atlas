@@ -8,6 +8,16 @@ type Body = {
   checklistStatus?: "open" | "done";
   plantedAmount?: number | string | null;
   plantedLocation?: string | null;
+  plantedZoneId?: string | null;
+  plantedObjectId?: string | null;
+};
+
+type Placement = {
+  zoneId: string | null;
+  zoneLabel: string | null;
+  objectId: string | null;
+  objectLabel: string | null;
+  location: string;
 };
 
 const allowedPlantingMethods = new Set(["direct_sow", "transplant", "clump", "division", "start", "bulb", "seed_scatter", "full_bed_claim"]);
@@ -44,17 +54,86 @@ async function cropProfileIdFor(cropLabel: string) {
   return (data?.[0]?.id as string | undefined) ?? null;
 }
 
+async function placementFor({
+  farmId,
+  body,
+  metadata,
+}: {
+  farmId: string;
+  body: Body;
+  metadata: Record<string, unknown>;
+}): Promise<Placement> {
+  const objectId = clean(body.plantedObjectId) || clean(metadata.planting_log_default_object_id);
+  const zoneId = clean(body.plantedZoneId) || clean(metadata.planting_log_default_zone_id);
+  const fallbackLocation = clean(body.plantedLocation) || clean(metadata.planting_log_default_location) || clean(metadata.display_detail) || "Elm Farm";
+
+  if (objectId) {
+    const { data: object, error: objectError } = await atlasSupabase
+      .schema("atlas")
+      .from("growing_objects")
+      .select("id, label, zone_id")
+      .eq("farm_id", farmId)
+      .eq("id", objectId)
+      .single();
+    if (objectError || !object) throw new Error(objectError?.message || "Selected bed was not found.");
+
+    const { data: zone } = object.zone_id
+      ? await atlasSupabase
+          .schema("atlas")
+          .from("zones")
+          .select("id, label")
+          .eq("id", object.zone_id)
+          .single()
+      : { data: null };
+
+    return {
+      zoneId: (zone?.id as string | undefined) ?? (object.zone_id as string | null) ?? zoneId || null,
+      zoneLabel: (zone?.label as string | undefined) ?? null,
+      objectId: object.id as string,
+      objectLabel: object.label as string,
+      location: object.label as string,
+    };
+  }
+
+  if (zoneId) {
+    const { data: zone, error: zoneError } = await atlasSupabase
+      .schema("atlas")
+      .from("zones")
+      .select("id, label")
+      .eq("farm_id", farmId)
+      .eq("id", zoneId)
+      .single();
+    if (zoneError || !zone) throw new Error(zoneError?.message || "Selected zone was not found.");
+
+    return {
+      zoneId: zone.id as string,
+      zoneLabel: zone.label as string,
+      objectId: null,
+      objectLabel: null,
+      location: fallbackLocation === "Elm Farm" ? zone.label as string : fallbackLocation,
+    };
+  }
+
+  return {
+    zoneId: null,
+    zoneLabel: null,
+    objectId: null,
+    objectLabel: null,
+    location: fallbackLocation,
+  };
+}
+
 async function writePlantingLog({
   task,
   metadata,
   amount,
-  location,
+  placement,
   now,
 }: {
   task: { id: string; farm_id: string; zone_id: string | null; title: string; due_date: string | null };
   metadata: Record<string, unknown>;
   amount: number;
-  location: string;
+  placement: Placement;
   now: string;
 }) {
   const cropLabel = clean(metadata.planting_log_crop_label) || "Dahlia";
@@ -62,7 +141,7 @@ async function writePlantingLog({
   const unit = clean(metadata.planting_log_unit) || "plants";
   const plantedDate = now.slice(0, 10);
   const cropProfileId = await cropProfileIdFor(cropLabel);
-  const summary = `Planted ${amount} ${unit} ${variety} in ${location}`;
+  const summary = `Planted ${amount} ${unit} ${variety} in ${placement.location}`;
 
   const { data: fieldLog, error: fieldLogError } = await atlasSupabase
     .schema("atlas")
@@ -81,14 +160,18 @@ async function writePlantingLog({
         variety,
         amount,
         unit,
-        location,
+        location: placement.location,
+        zone_id: placement.zoneId,
+        zone_label: placement.zoneLabel,
+        object_id: placement.objectId,
+        object_label: placement.objectLabel,
       },
     })
     .select("id")
     .single();
   if (fieldLogError) throw new Error(fieldLogError.message);
 
-  const { error: plantingError } = await atlasSupabase
+  const { data: plantingClaim, error: plantingError } = await atlasSupabase
     .schema("atlas")
     .from("planting_claims")
     .insert({
@@ -108,12 +191,96 @@ async function writePlantingLog({
         task_id: task.id,
         child_task_id: task.id,
         parent_task_id: clean(metadata.parent_task_id) || null,
-        location,
+        location: placement.location,
+        zone_id: placement.zoneId,
+        zone_label: placement.zoneLabel,
+        object_id: placement.objectId,
+        object_label: placement.objectLabel,
       },
-    });
+    })
+    .select("id")
+    .single();
   if (plantingError) throw new Error(plantingError.message);
 
-  return { summary, cropLabel, variety, amount, unit, location, fieldLogId: fieldLog?.id ?? null };
+  let objectContentId: string | null = null;
+  let objectEventId: string | null = null;
+
+  if (placement.objectId) {
+    const { data: objectContent, error: contentError } = await atlasSupabase
+      .schema("atlas")
+      .from("object_contents")
+      .insert({
+        farm_id: task.farm_id,
+        object_id: placement.objectId,
+        planting_claim_id: plantingClaim?.id,
+        crop_profile_id: cropProfileId,
+        content_label: cropLabel,
+        content_type: "planting",
+        variety,
+        planted_date: plantedDate,
+        status: "planted",
+        confidence: "field_logged",
+        start_method: plantingMethod(metadata.planting_method),
+        note: summary,
+        metadata: {
+          task_id: task.id,
+          child_task_id: task.id,
+          parent_task_id: clean(metadata.parent_task_id) || null,
+          amount,
+          unit,
+          zone_label: placement.zoneLabel,
+          object_label: placement.objectLabel,
+        },
+      })
+      .select("id")
+      .single();
+    if (contentError) throw new Error(contentError.message);
+    objectContentId = (objectContent?.id as string | undefined) ?? null;
+
+    const { data: objectEvent, error: eventError } = await atlasSupabase
+      .schema("atlas")
+      .from("object_activity_events")
+      .insert({
+        farm_id: task.farm_id,
+        object_id: placement.objectId,
+        object_content_id: objectContentId,
+        event_type: "planted",
+        event_date: plantedDate,
+        note: summary,
+        quantity: amount,
+        unit,
+        source: "atlas_child_planting_log",
+        metadata: {
+          task_id: task.id,
+          child_task_id: task.id,
+          parent_task_id: clean(metadata.parent_task_id) || null,
+          crop_label: cropLabel,
+          variety,
+          object_label: placement.objectLabel,
+        },
+      })
+      .select("id")
+      .single();
+    if (eventError) throw new Error(eventError.message);
+    objectEventId = (objectEvent?.id as string | undefined) ?? null;
+  }
+
+  return {
+    summary,
+    cropLabel,
+    variety,
+    amount,
+    unit,
+    location: placement.location,
+    zoneId: placement.zoneId,
+    zoneLabel: placement.zoneLabel,
+    objectId: placement.objectId,
+    objectLabel: placement.objectLabel,
+    fieldLogId: fieldLog?.id ?? null,
+    plantingClaimId: plantingClaim?.id ?? null,
+    objectContentId,
+    objectEventId,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -135,9 +302,9 @@ export async function POST(request: NextRequest) {
     const parentTaskId = typeof currentMetadata.parent_task_id === "string" ? currentMetadata.parent_task_id : null;
     const defaultAmount = numberValue(currentMetadata.planting_log_default_amount);
     const amount = numberValue(body.plantedAmount) ?? defaultAmount;
-    const location = clean(body.plantedLocation) || clean(currentMetadata.planting_log_default_location) || clean(currentMetadata.display_detail) || "Elm Farm";
+    const placement = await placementFor({ farmId: task.farm_id, body, metadata: currentMetadata });
     const plantingLog = shouldLogPlanting(currentMetadata, checklistStatus) && amount !== null
-      ? await writePlantingLog({ task, metadata: currentMetadata, amount, location, now })
+      ? await writePlantingLog({ task, metadata: currentMetadata, amount, placement, now })
       : null;
 
     const metadata: Record<string, unknown> = {
@@ -163,7 +330,7 @@ export async function POST(request: NextRequest) {
       note: plantingLog?.summary ?? (checklistStatus === "done" ? "Checklist item done" : "Checklist item reopened"),
       task_title: task.title,
       task_type: task.task_type,
-      zone_id: task.zone_id,
+      zone_id: plantingLog?.zoneId ?? task.zone_id,
       due_date: task.due_date,
       priority: task.priority,
       source: "atlas_child_checklist",
