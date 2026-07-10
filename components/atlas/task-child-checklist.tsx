@@ -106,6 +106,11 @@ function locationForSelection(zones: AtlasRegistryZone[], zoneId: string, object
   return zoneById(zones, zoneId)?.label ?? "";
 }
 
+function shouldIgnoreRowTap(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return Boolean(target.closest(".atlas-child-plant-log") || target.closest("select") || target.closest("input") || target.closest("button.atlas-child-log-cancel") || target.closest("button[type='submit']"));
+}
+
 async function postChildToggle(taskId: string, checklistStatus: "open" | "done", body: Record<string, unknown> = {}) {
   const response = await fetch("/api/atlas/task-child-toggle", {
     method: "POST",
@@ -175,9 +180,9 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
   }
 
   function openPlantingLog(task: AtlasTaskCard) {
+    const initial = formFor(task);
     setActiveLogId(task.task_id);
     setRowMessages((current) => ({ ...current, [task.task_id]: null }));
-    const initial = formFor(task);
     setForms((current) => ({ ...current, [task.task_id]: initial }));
   }
 
@@ -277,8 +282,32 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
           const formMessage = form.message;
 
           return (
-            <div key={task.task_id} className={`atlas-child-check-item${done ? " done" : ""}${savingId === task.task_id ? " saving" : ""}`} data-child-task-id={task.task_id}>
-              <button type="button" className="atlas-child-check-touch" disabled={Boolean(savingId)} onClick={() => void handleTouch(task)}>
+            <div
+              key={task.task_id}
+              className={`atlas-child-check-item${done ? " done" : ""}${savingId === task.task_id ? " saving" : ""}`}
+              data-child-task-id={task.task_id}
+              role="button"
+              tabIndex={0}
+              onClick={(event) => {
+                if (shouldIgnoreRowTap(event.target)) return;
+                void handleTouch(task);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                if (shouldIgnoreRowTap(event.target)) return;
+                event.preventDefault();
+                void handleTouch(task);
+              }}
+            >
+              <button
+                type="button"
+                className="atlas-child-check-touch"
+                aria-disabled={Boolean(savingId)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void handleTouch(task);
+                }}
+              >
                 <span>{done ? "✓" : ""}</span>
                 <div className="atlas-child-check-copy">
                   <strong>{label(task)}</strong>
@@ -289,7 +318,7 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
               </button>
 
               {active ? (
-                <form className="atlas-child-plant-log" onSubmit={(event) => { event.preventDefault(); void savePlantingLog(task); }}>
+                <form className="atlas-child-plant-log" onClick={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); void savePlantingLog(task); }}>
                   <label>
                     <span>Count</span>
                     <input name="plantedAmount" inputMode="numeric" type="number" min="0" step="1" value={form.amount} onChange={(event) => updateForm(task.task_id, { amount: event.target.value, message: null })} />
