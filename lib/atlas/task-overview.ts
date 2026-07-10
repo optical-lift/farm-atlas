@@ -187,6 +187,29 @@ export function routeCountsForTasks(tasks: AtlasTaskCard[]) {
     .filter((item) => item.count > 0);
 }
 
+export function groupTasksByZone(tasks: AtlasTaskCard[], anchorIso = todayIso()): ZoneTaskOverview[] {
+  const zones = Array.from(new Set(tasks.map(collectionZone))).filter(Boolean);
+  return zones
+    .map((zone) => {
+      const zoneTasks = tasks
+        .filter((task) => collectionZone(task) === zone)
+        .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
+      return {
+        zone,
+        tasks: zoneTasks,
+        urgentCount: zoneTasks.filter((task) => isUrgentTask(task, anchorIso)).length,
+        routeCounts: routeCountsForTasks(zoneTasks),
+      };
+    })
+    .sort((a, b) => {
+      const firstA = a.tasks[0];
+      const firstB = b.tasks[0];
+      if (!firstA || !firstB) return a.zone.localeCompare(b.zone);
+      const orderCompare = taskSortValue(firstA).localeCompare(taskSortValue(firstB));
+      return orderCompare || a.zone.localeCompare(b.zone);
+    });
+}
+
 export function routeCountLineForTasks(tasks: AtlasTaskCard[]) {
   const counts = routeCountsForTasks(tasks);
   return counts.length ? counts.map((item) => `${item.label} ${item.count}`).join(" · ") : "No open work";
