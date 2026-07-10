@@ -106,11 +106,6 @@ function locationForSelection(zones: AtlasRegistryZone[], zoneId: string, object
   return zoneById(zones, zoneId)?.label ?? "";
 }
 
-function shouldIgnoreRowTap(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) return false;
-  return Boolean(target.closest(".atlas-child-plant-log") || target.closest("select") || target.closest("input") || target.closest("button.atlas-child-log-cancel") || target.closest("button[type='submit']"));
-}
-
 async function postChildToggle(taskId: string, checklistStatus: "open" | "done", body: Record<string, unknown> = {}) {
   const response = await fetch("/api/atlas/task-child-toggle", {
     method: "POST",
@@ -200,21 +195,6 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
     }
   }
 
-  async function handleTouch(task: AtlasTaskCard) {
-    if (savingId) return;
-    if (isDone(task)) {
-      await togglePlain(task, "open");
-      return;
-    }
-
-    if (needsPlantingLog(task)) {
-      openPlantingLog(task);
-      return;
-    }
-
-    await togglePlain(task, "done");
-  }
-
   async function savePlantingLog(task: AtlasTaskCard) {
     const form = formFor(task);
     const selectedZone = zoneById(zones, form.zoneId);
@@ -280,45 +260,39 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
           const objects = visibleObjects(selectedZone);
           const rowMessage = rowMessages[task.task_id];
           const formMessage = form.message;
+          const isSaving = savingId === task.task_id;
+          const summary = logSummary(task);
 
           return (
-            <div
-              key={task.task_id}
-              className={`atlas-child-check-item${done ? " done" : ""}${savingId === task.task_id ? " saving" : ""}`}
-              data-child-task-id={task.task_id}
-              role="button"
-              tabIndex={0}
-              onClick={(event) => {
-                if (shouldIgnoreRowTap(event.target)) return;
-                void handleTouch(task);
-              }}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter" && event.key !== " ") return;
-                if (shouldIgnoreRowTap(event.target)) return;
-                event.preventDefault();
-                void handleTouch(task);
-              }}
-            >
-              <button
-                type="button"
-                className="atlas-child-check-touch"
-                aria-disabled={Boolean(savingId)}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  void handleTouch(task);
-                }}
-              >
-                <span>{done ? "✓" : ""}</span>
+            <div key={task.task_id} className={`atlas-child-check-item${done ? " done" : ""}${isSaving ? " saving" : ""}`} data-child-task-id={task.task_id}>
+              <div className="atlas-child-check-static">
+                <span className="atlas-child-check-mark">{done ? "✓" : ""}</span>
                 <div className="atlas-child-check-copy">
                   <strong>{label(task)}</strong>
                   {detailLines(task).map((line) => <em key={line}>{line}</em>)}
-                  {logSummary(task) ? <em className="atlas-child-log-summary">{logSummary(task)}</em> : null}
+                  {summary ? <em className="atlas-child-log-summary">{summary}</em> : null}
                   {rowMessage ? <em className="atlas-child-log-summary">{rowMessage}</em> : null}
                 </div>
-              </button>
+              </div>
+
+              <div className="atlas-child-row-actions">
+                {done ? (
+                  <button type="button" className="atlas-child-open-log-button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "open")}>
+                    {isSaving ? "Saving" : "Reopen"}
+                  </button>
+                ) : needsPlantingLog(task) ? (
+                  <button type="button" className="atlas-child-open-log-button" disabled={Boolean(savingId)} onClick={() => active ? setActiveLogId(null) : openPlantingLog(task)}>
+                    {active ? "Close planting log" : "Open planting log"}
+                  </button>
+                ) : (
+                  <button type="button" className="atlas-child-open-log-button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "done")}>
+                    {isSaving ? "Saving" : "Mark done"}
+                  </button>
+                )}
+              </div>
 
               {active ? (
-                <form className="atlas-child-plant-log" onClick={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); void savePlantingLog(task); }}>
+                <form className="atlas-child-plant-log" onSubmit={(event) => { event.preventDefault(); void savePlantingLog(task); }}>
                   <label>
                     <span>Count</span>
                     <input name="plantedAmount" inputMode="numeric" type="number" min="0" step="1" value={form.amount} onChange={(event) => updateForm(task.task_id, { amount: event.target.value, message: null })} />
@@ -340,8 +314,8 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
                     </label>
                   ) : null}
                   <div className="atlas-child-plant-log-actions">
-                    <button type="submit" disabled={savingId === task.task_id}>{savingId === task.task_id ? "Saving" : "Save planted"}</button>
-                    <button type="button" className="atlas-child-log-cancel" disabled={savingId === task.task_id} onClick={() => setActiveLogId(null)}>Cancel</button>
+                    <button type="submit" disabled={isSaving}>{isSaving ? "Saving" : "Save planted"}</button>
+                    <button type="button" className="atlas-child-log-cancel" disabled={isSaving} onClick={() => setActiveLogId(null)}>Cancel</button>
                   </div>
                   <p className="atlas-child-log-error" aria-live="polite">{formMessage ?? registryError ?? ""}</p>
                 </form>
