@@ -102,18 +102,31 @@ function boolish(value: unknown) {
   return value === true || value === "true" || value === "yes" || value === 1;
 }
 
+function assignedTo(card: AtlasTaskCardRow) {
+  return stringValue(card.metadata?.assigned_to)?.toLowerCase() ?? "";
+}
+
+function collectionZone(card: AtlasTaskCardRow) {
+  return stringValue(card.metadata?.collection_zone)?.toLowerCase() ?? "";
+}
+
 function isOwnerTask(card: AtlasTaskCardRow) {
   const metadata = card.metadata ?? {};
-  return boolish(metadata.owner_task) || stringValue(metadata.assigned_to)?.toLowerCase() === "owner" || stringValue(metadata.collection_zone)?.toLowerCase() === "owner";
+  return boolish(metadata.owner_task) || assignedTo(card) === "owner" || collectionZone(card) === "owner";
 }
 
 function isMarshallTask(card: AtlasTaskCardRow) {
   const metadata = card.metadata ?? {};
-  return boolish(metadata.marshall_task) || stringValue(metadata.assigned_to)?.toLowerCase() === "marshall" || stringValue(metadata.collection_zone)?.toLowerCase() === "marshall";
+  return boolish(metadata.marshall_task) || assignedTo(card) === "marshall" || collectionZone(card) === "marshall";
+}
+
+function isChildrenTask(card: AtlasTaskCardRow) {
+  const metadata = card.metadata ?? {};
+  return boolish(metadata.children_task) || assignedTo(card) === "children" || assignedTo(card) === "kids" || collectionZone(card) === "children" || collectionZone(card) === "kids";
 }
 
 function isPrivateAssignmentTask(card: AtlasTaskCardRow) {
-  return isOwnerTask(card) || isMarshallTask(card);
+  return isOwnerTask(card) || isMarshallTask(card) || isChildrenTask(card);
 }
 
 function formatNumberish(value: number | string | null | undefined) {
@@ -237,6 +250,8 @@ export async function GET(request: NextRequest) {
       rows = rows.filter(isOwnerTask);
     } else if (scope === "marshall") {
       rows = rows.filter(isMarshallTask);
+    } else if (scope === "children" || scope === "kids") {
+      rows = rows.filter(isChildrenTask);
     } else if (scope !== "all" && !taskId) {
       rows = rows.filter((card) => !isPrivateAssignmentTask(card));
     }
