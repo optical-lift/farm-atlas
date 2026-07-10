@@ -371,7 +371,7 @@ function ProgressReportHero({ selectedTask, tasks, nextWorkTasks, today }: { sel
   );
 }
 
-function ActiveTaskCard({ task, allTasks, onChange, today, weatherLabel }: { task: AtlasTaskCard; allTasks: AtlasTaskCard[]; onChange: () => Promise<void>; today: string; weatherLabel: string }) {
+function ActiveTaskCard({ task, allTasks, onChange, onDoneComplete, today, weatherLabel }: { task: AtlasTaskCard; allTasks: AtlasTaskCard[]; onChange: () => Promise<void>; onDoneComplete: () => void; today: string; weatherLabel: string }) {
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
@@ -383,8 +383,13 @@ function ActiveTaskCard({ task, allTasks, onChange, today, weatherLabel }: { tas
       setSaving(outcome);
       setMessage(null);
       await postOutcome(task, outcome, note);
+      if (outcome === "done") {
+        setMessage("Done.");
+        window.setTimeout(onDoneComplete, 150);
+        return;
+      }
       await onChange();
-      setMessage(outcome === "done" ? "Done." : "Saved.");
+      setMessage("Saved.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Task update failed.");
     } finally {
@@ -584,6 +589,35 @@ export default function AtlasTaskPage() {
     }
   }
 
+  function returnAfterDone() {
+    const params = new URLSearchParams(window.location.search);
+    const returnTo = params.get("returnTo");
+    if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("/task")) {
+      window.location.assign(returnTo);
+      return;
+    }
+
+    if (document.referrer) {
+      try {
+        const referrer = new URL(document.referrer);
+        const referrerPath = `${referrer.pathname}${referrer.search}${referrer.hash}`;
+        if (referrer.origin === window.location.origin && referrer.pathname !== "/task") {
+          window.location.assign(referrerPath);
+          return;
+        }
+      } catch {
+        // Ignore malformed referrers and fall back to history/day overview.
+      }
+    }
+
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    window.location.assign(`/day?date=${encodeURIComponent(today)}`);
+  }
+
   async function addHeaderNote() {
     if (!selectedTask) {
       setMessage("Choose a task first.");
@@ -619,7 +653,7 @@ export default function AtlasTaskPage() {
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
           {message ? <div className="atlas-task-page-empty">{message}</div> : null}
           {!loading && !selectedTask ? <div className="atlas-task-page-empty">No open tasks.</div> : null}
-          {selectedTask ? <div ref={activeTaskAnchorRef} className="atlas-task-page-active-anchor"><ActiveTaskCard task={selectedTask} allTasks={tasks} onChange={handleTaskChanged} today={today} weatherLabel={weatherLabel} /></div> : null}
+          {selectedTask ? <div ref={activeTaskAnchorRef} className="atlas-task-page-active-anchor"><ActiveTaskCard task={selectedTask} allTasks={tasks} onChange={handleTaskChanged} onDoneComplete={returnAfterDone} today={today} weatherLabel={weatherLabel} /></div> : null}
           <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Next</span><small>{nextWorkTasks.length}</small></div>{renderTaskRows(nextWorkTasks, "No next tasks ready.")}</section>
           <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Later</span><small>{laterWorkTasks.length}</small></div>{renderTaskRows(laterWorkTasks, "No later tasks ready.")}</section>
           <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Waiting</span><small>{carryoverTasks.length}</small></div>{renderTaskRows(carryoverTasks, "Nothing waiting.")}</section>
