@@ -21,6 +21,7 @@ import {
   todayIso,
   type ZoneTaskOverview,
 } from "@/lib/atlas/task-overview";
+import { atlasBuildMowingCollectionSummary, atlasIsMowingCollectionMember, type AtlasWorkCollectionSummary } from "@/lib/atlas/work-collections";
 
 type WeatherResponse = { ok: boolean; label?: string };
 
@@ -32,6 +33,30 @@ function TaskDueLabel({ task, anchorIso }: { task: AtlasTaskCard; anchorIso: str
   if (!task.due_date) return <em>open</em>;
   if (task.due_date < anchorIso) return <em className="urgent">carryover · {prettyShortDate(task.due_date)}</em>;
   return <em>{prettyShortDate(task.due_date)}</em>;
+}
+
+function CollectionOverviewCard({ collection }: { collection: AtlasWorkCollectionSummary }) {
+  return (
+    <details className="atlas-overview-zone-card atlas-work-collection-section" open>
+      <summary>
+        <div>
+          <strong>{collection.label}</strong>
+          <span>{collection.dueCount} due · {collection.doneRecentCount} resting · {collection.notReadyCount} not ready</span>
+        </div>
+        <b>Collection</b>
+      </summary>
+      <div className="atlas-overview-task-list">
+        <Link className="atlas-overview-task-card atlas-work-collection-task-card" href={collection.href}>
+          <div>
+            <strong>{collection.label} Work Collection</strong>
+            <span>Independent mowing clocks</span>
+          </div>
+          <em>next {collection.nextDueLabel}</em>
+          <p>{collection.preview}</p>
+        </Link>
+      </div>
+    </details>
+  );
 }
 
 function ZoneSection({ zone, anchorIso, openDefault }: { zone: ZoneTaskOverview; anchorIso: string; openDefault: boolean }) {
@@ -113,9 +138,13 @@ export default function AtlasWeekOverviewPage() {
       .filter((task) => Boolean(task.due_date && task.due_date >= anchorIso && task.due_date <= weekEndIso))
       .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
   }, [anchorIso, explicitEndIso, tasks, weekEndIso]);
-  const carryoverCount = useMemo(() => weekTasks.filter((task) => Boolean(task.due_date && task.due_date < anchorIso)).length, [anchorIso, weekTasks]);
-  const zoneGroups = useMemo(() => groupTasksByZone(weekTasks, anchorIso), [anchorIso, weekTasks]);
-  const topZone = zoneGroups[0]?.zone ?? "No active zone";
+  const mowingCollection = useMemo(() => atlasBuildMowingCollectionSummary(tasks, weekEndIso), [tasks, weekEndIso]);
+  const showMowingCollection = Boolean(mowingCollection && mowingCollection.dueCount > 0);
+  const standaloneWeekTasks = useMemo(() => weekTasks.filter((task) => !atlasIsMowingCollectionMember(task)), [weekTasks]);
+  const carryoverCount = useMemo(() => standaloneWeekTasks.filter((task) => Boolean(task.due_date && task.due_date < anchorIso)).length, [anchorIso, standaloneWeekTasks]);
+  const zoneGroups = useMemo(() => groupTasksByZone(standaloneWeekTasks, anchorIso), [anchorIso, standaloneWeekTasks]);
+  const topZone = showMowingCollection ? "Mowing" : zoneGroups[0]?.zone ?? "No active zone";
+  const displayedOpenCount = standaloneWeekTasks.length + (showMowingCollection ? 1 : 0);
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell">
@@ -132,13 +161,13 @@ export default function AtlasWeekOverviewPage() {
               <strong>{explicitEndIso ? "Work Week" : "This Week"}</strong>
               <span>{prettyShortDate(anchorIso)}–{prettyShortDate(weekEndIso)}</span>
             </div>
-            <p>{loading ? "Loading farm week" : routeCountLineForTasks(weekTasks)}</p>
+            <p>{loading ? "Loading farm week" : routeCountLineForTasks(standaloneWeekTasks)}</p>
           </section>
 
           <section className="atlas-overview-stat-grid" aria-label="Week overview stats">
-            <article><strong>{loading ? "…" : weekTasks.length}</strong><span>open</span></article>
+            <article><strong>{loading ? "…" : displayedOpenCount}</strong><span>open</span></article>
             <article><strong>{loading ? "…" : carryoverCount}</strong><span>carryover</span></article>
-            <article><strong>{loading ? "…" : zoneGroups.length}</strong><span>zones</span></article>
+            <article><strong>{loading ? "…" : zoneGroups.length + (showMowingCollection ? 1 : 0)}</strong><span>zones</span></article>
             <article><strong>{topZone}</strong><span>most open</span></article>
           </section>
 
@@ -146,8 +175,9 @@ export default function AtlasWeekOverviewPage() {
 
           <section className="atlas-overview-zone-list" aria-label="Open work by zone">
             {loading ? <div className="atlas-task-page-empty">Loading zone overview.</div> : null}
-            {!loading && zoneGroups.length === 0 ? <div className="atlas-task-page-empty">No open work in this week window.</div> : null}
-            {zoneGroups.map((zone, index) => <ZoneSection key={zone.zone} zone={zone} anchorIso={anchorIso} openDefault={index === 0} />)}
+            {!loading && zoneGroups.length === 0 && !showMowingCollection ? <div className="atlas-task-page-empty">No open work in this week window.</div> : null}
+            {showMowingCollection && mowingCollection ? <CollectionOverviewCard collection={mowingCollection} /> : null}
+            {zoneGroups.map((zone, index) => <ZoneSection key={zone.zone} zone={zone} anchorIso={anchorIso} openDefault={!showMowingCollection && index === 0} />)}
           </section>
         </div>
       </section>
