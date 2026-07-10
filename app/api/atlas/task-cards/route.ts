@@ -98,6 +98,15 @@ function stringList(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
 }
 
+function boolish(value: unknown) {
+  return value === true || value === "true" || value === "yes" || value === 1;
+}
+
+function isOwnerTask(card: AtlasTaskCardRow) {
+  const metadata = card.metadata ?? {};
+  return boolish(metadata.owner_task) || stringValue(metadata.assigned_to)?.toLowerCase() === "owner" || stringValue(metadata.collection_zone)?.toLowerCase() === "owner";
+}
+
 function formatNumberish(value: number | string | null | undefined) {
   if (value === null || value === undefined) return null;
   const text = String(value).trim();
@@ -183,6 +192,7 @@ async function enrichWithCropProfiles(cards: AtlasTaskCardRow[]) {
 
 export async function GET(request: NextRequest) {
   const taskId = request.nextUrl.searchParams.get("taskId");
+  const scope = request.nextUrl.searchParams.get("scope");
 
   let query = atlasSupabase
     .schema("atlas")
@@ -212,7 +222,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const taskCards = await enrichWithCropProfiles((data ?? []) as AtlasTaskCardRow[]);
+    let rows = (data ?? []) as AtlasTaskCardRow[];
+
+    if (scope === "owner") {
+      rows = rows.filter(isOwnerTask);
+    } else if (scope !== "all" && !taskId) {
+      rows = rows.filter((card) => !isOwnerTask(card));
+    }
+
+    const taskCards = await enrichWithCropProfiles(rows);
 
     return NextResponse.json({
       ok: true,
