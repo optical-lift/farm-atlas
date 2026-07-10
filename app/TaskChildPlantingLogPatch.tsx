@@ -9,6 +9,20 @@ type Card = {
   metadata?: Record<string, unknown> | null;
 };
 
+type RegistryObject = {
+  id: string;
+  label: string;
+  object_type: string;
+  sort_order?: number | null;
+};
+
+type RegistryZone = {
+  id: string;
+  label: string;
+  sort_order?: number | null;
+  objects?: RegistryObject[];
+};
+
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -68,6 +82,14 @@ function defaultAmount(card: Card) {
   return numberText(card.metadata?.planting_log_default_amount);
 }
 
+function defaultZoneId(card: Card) {
+  return text(card.metadata?.planting_log_default_zone_id);
+}
+
+function defaultObjectId(card: Card) {
+  return text(card.metadata?.planting_log_default_object_id);
+}
+
 function defaultLocation(card: Card) {
   return text(card.metadata?.planting_log_default_location) || text(card.metadata?.display_detail);
 }
@@ -81,10 +103,49 @@ function hasChildren(card: Card, cards: Card[]) {
   return cards.some((candidate) => parentId(candidate) === card.task_id && candidate.status !== "archived");
 }
 
+function visibleObjects(zone: RegistryZone) {
+  return (zone.objects ?? [])
+    .filter((object) => object.object_type !== "path" && object.object_type !== "corridor")
+    .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999) || a.label.localeCompare(b.label));
+}
+
+function zoneById(zones: RegistryZone[], zoneId: string) {
+  return zones.find((zone) => zone.id === zoneId) ?? null;
+}
+
+function zoneForObject(zones: RegistryZone[], objectId: string) {
+  return zones.find((zone) => visibleObjects(zone).some((object) => object.id === objectId)) ?? null;
+}
+
+function objectById(zones: RegistryZone[], objectId: string) {
+  return zoneForObject(zones, objectId)?.objects?.find((object) => object.id === objectId) ?? null;
+}
+
+function optionsForZones(zones: RegistryZone[], selectedZoneId: string) {
+  return zones
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999) || a.label.localeCompare(b.label))
+    .map((zone) => `<option value="${html(zone.id)}"${zone.id === selectedZoneId ? " selected" : ""}>${html(zone.label)}</option>`)
+    .join("");
+}
+
+function optionsForObjects(zone: RegistryZone | null, selectedObjectId: string) {
+  if (!zone) return "";
+  return visibleObjects(zone)
+    .map((object) => `<option value="${html(object.id)}"${object.id === selectedObjectId ? " selected" : ""}>${html(object.label)}</option>`)
+    .join("");
+}
+
 async function fetchCards() {
   const response = await fetch("/api/atlas/task-cards", { headers: { Accept: "application/json" }, cache: "no-store" });
   const data = await response.json() as { taskCards?: Card[] };
   return data.taskCards ?? [];
+}
+
+async function fetchRegistryZones() {
+  const response = await fetch("/api/atlas/zone-registry", { headers: { Accept: "application/json" }, cache: "no-store" });
+  const data = await response.json() as { zones?: RegistryZone[] };
+  return data.zones ?? [];
 }
 
 async function toggleChecklist(taskId: string, checklistStatus: "open" | "done", body: Record<string, unknown> = {}) {
@@ -98,12 +159,22 @@ async function toggleChecklist(taskId: string, checklistStatus: "open" | "done",
   return data.plantingLog ?? null;
 }
 
-function renderInlineLog(child: Card) {
+function renderInlineLog(child: Card, zones: RegistryZone[]) {
   if (!needsPlantingLog(child) || isDone(child)) return "";
+  const selectedObjectId = defaultObjectId(child);
+  const objectZone = selectedObjectId ? zoneForObject(zones, selectedObjectId) : null;
+  const selectedZoneId = objectZone?.id ?? defaultZoneId(child);
+  const selectedZone = zoneById(zones, selectedZoneId);
+  const selectedObject = selectedObjectId ? objectById(zones, selectedObjectId) : null;
+  const fallbackLocation = selectedObject?.label ?? selectedZone?.label ?? defaultLocation(child);
+  const showBed = Boolean(selectedZoneId);
+
   return `
     <form class="atlas-child-plant-log" data-child-task-id="${html(child.task_id)}" hidden>
       <label><span>Count</span><input name="plantedAmount" inputmode="numeric" type="number" min="0" step="1" value="${html(defaultAmount(child))}" /></label>
-      <label><span>Where</span><input name="plantedLocation" type="text" value="${html(defaultLocation(child))}" placeholder="Bed or area" /></label>
+      <label><span>Zone</span><select name="plantedZoneId" class="atlas-child-zone-select"><option value="">Choose zone</option>${optionsForZones(zones, selectedZoneId)}</select></label>
+      <label class="atlas-child-bed-select-row"${showBed ? "" : " hidden"}><span>Bed</span><select name="plantedObjectId" class="atlas-child-object-select"><option value="">Choose bed / area</option>${optionsForObjects(selectedZone, selectedObjectId)}</select></label>
+      <input name="plantedLocation" type="hidden" value="${html(fallbackLocation)}" />
       <div class="atlas-child-plant-log-actions">
         <button type="submit">Save planted</button>
         <button type="button" class="atlas-child-log-cancel">Cancel</button>
@@ -113,7 +184,7 @@ function renderInlineLog(child: Card) {
   `;
 }
 
-function renderButton(child: Card) {
+function renderButton(child: Card, zones: RegistryZone[]) {
   const done = isDone(child);
   const details = detailLines(child);
   const summary = logSummary(child);
@@ -127,7 +198,7 @@ function renderButton(child: Card) {
           ${summary ? `<em class="atlas-child-log-summary">${html(summary)}</em>` : ""}
         </div>
       </button>
-      ${renderInlineLog(child)}
+      ${renderInlineLog(child, zones)}
     </div>
   `;
 }
@@ -171,7 +242,7 @@ function ensureChecklistMount(cards: Card[]) {
   return true;
 }
 
-function renderStableChecklists(cards: Card[]) {
+function renderStableChecklists(cards: Card[], zones: RegistryZone[]) {
   ensureChecklistMount(cards);
   const sections = Array.from(document.querySelectorAll<HTMLElement>(".atlas-child-checklist[data-parent-task-id]"));
   let rendered = false;
@@ -183,7 +254,7 @@ function renderStableChecklists(cards: Card[]) {
       .sort((a, b) => stepOrder(a) - stepOrder(b));
     if (!children.length) return;
 
-    const signature = checklistSignature(children);
+    const signature = `${checklistSignature(children)}::zones:${zones.length}`;
     const alreadyStable = section.dataset.stableChecklistSignature === signature && section.querySelector(".atlas-child-checklist-stable-list");
     const activelyEditing = section.querySelector(".atlas-child-check-item.logging, .atlas-child-check-item.saving");
     if (alreadyStable || activelyEditing) return;
@@ -192,7 +263,7 @@ function renderStableChecklists(cards: Card[]) {
     section.innerHTML = `
       <strong>Checklist</strong>
       <div class="atlas-child-checklist-open atlas-child-checklist-stable-list">
-        ${children.map(renderButton).join("")}
+        ${children.map((child) => renderButton(child, zones)).join("")}
       </div>
     `;
     rendered = true;
@@ -204,6 +275,31 @@ function renderStableChecklists(cards: Card[]) {
 function setRowError(row: HTMLElement, message: string) {
   const error = row.querySelector<HTMLElement>(".atlas-child-log-error");
   if (error) error.textContent = message;
+}
+
+function syncLocation(form: HTMLFormElement, zones: RegistryZone[]) {
+  const zoneSelect = form.querySelector<HTMLSelectElement>("select[name='plantedZoneId']");
+  const objectSelect = form.querySelector<HTMLSelectElement>("select[name='plantedObjectId']");
+  const locationInput = form.querySelector<HTMLInputElement>("input[name='plantedLocation']");
+  const selectedObjectLabel = objectSelect?.selectedOptions?.[0]?.textContent?.trim() ?? "";
+  const selectedZoneLabel = zoneSelect?.selectedOptions?.[0]?.textContent?.trim() ?? "";
+  if (locationInput) locationInput.value = selectedObjectLabel && objectSelect?.value ? selectedObjectLabel : selectedZoneLabel;
+
+  const zone = zoneSelect?.value ? zoneById(zones, zoneSelect.value) : null;
+  const hasBeds = Boolean(zone && visibleObjects(zone).length > 0);
+  form.dataset.selectedZoneHasBeds = hasBeds ? "true" : "false";
+}
+
+function populateBedSelect(form: HTMLFormElement, zones: RegistryZone[]) {
+  const zoneSelect = form.querySelector<HTMLSelectElement>("select[name='plantedZoneId']");
+  const objectSelect = form.querySelector<HTMLSelectElement>("select[name='plantedObjectId']");
+  const bedRow = form.querySelector<HTMLElement>(".atlas-child-bed-select-row");
+  if (!zoneSelect || !objectSelect || !bedRow) return;
+
+  const zone = zoneById(zones, zoneSelect.value);
+  objectSelect.innerHTML = `<option value="">Choose bed / area</option>${optionsForObjects(zone, "")}`;
+  bedRow.hidden = !zoneSelect.value;
+  syncLocation(form, zones);
 }
 
 function showInlineLog(row: HTMLElement) {
@@ -242,12 +338,14 @@ function markRow(row: HTMLElement, done: boolean, summary?: string) {
 export default function TaskChildPlantingLogPatch() {
   useEffect(() => {
     let stopped = false;
+    let registryZones: RegistryZone[] = [];
     const timers: number[] = [];
 
     async function refreshStableChecklists() {
       if (stopped || window.location.pathname !== "/task") return;
-      const cards = await fetchCards();
-      if (!stopped) renderStableChecklists(cards);
+      const [cards, zones] = await Promise.all([fetchCards(), fetchRegistryZones()]);
+      registryZones = zones;
+      if (!stopped) renderStableChecklists(cards, zones);
     }
 
     function scheduleRefresh(delay: number) {
@@ -257,6 +355,17 @@ export default function TaskChildPlantingLogPatch() {
 
     function scheduleSettledRefreshes() {
       [250, 800, 1600, 3000].forEach(scheduleRefresh);
+    }
+
+    function handleChange(event: Event) {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const zoneSelect = target.closest<HTMLSelectElement>(".atlas-child-zone-select");
+      const objectSelect = target.closest<HTMLSelectElement>(".atlas-child-object-select");
+      const form = target.closest<HTMLFormElement>(".atlas-child-plant-log");
+      if (!form) return;
+      if (zoneSelect) populateBedSelect(form, registryZones);
+      if (objectSelect) syncLocation(form, registryZones);
     }
 
     async function handleClick(event: MouseEvent) {
@@ -306,21 +415,28 @@ export default function TaskChildPlantingLogPatch() {
       const taskId = row?.dataset.childTaskId;
       if (!row || !taskId) return;
 
+      syncLocation(form, registryZones);
       const plantedAmount = form.querySelector<HTMLInputElement>("input[name='plantedAmount']")?.value.trim() ?? "";
+      const plantedZoneId = form.querySelector<HTMLSelectElement>("select[name='plantedZoneId']")?.value.trim() ?? "";
+      const plantedObjectId = form.querySelector<HTMLSelectElement>("select[name='plantedObjectId']")?.value.trim() ?? "";
       const plantedLocation = form.querySelector<HTMLInputElement>("input[name='plantedLocation']")?.value.trim() ?? "";
       if (!plantedAmount) {
         setRowError(row, "Add the count first.");
         return;
       }
-      if (!plantedLocation) {
-        setRowError(row, "Add the location first.");
+      if (!plantedZoneId) {
+        setRowError(row, "Choose the zone first.");
+        return;
+      }
+      if (form.dataset.selectedZoneHasBeds === "true" && !plantedObjectId) {
+        setRowError(row, "Choose the bed next.");
         return;
       }
 
       try {
         row.classList.add("saving");
         setRowError(row, "Saving…");
-        const plantingLog = await toggleChecklist(taskId, "done", { plantedAmount, plantedLocation });
+        const plantingLog = await toggleChecklist(taskId, "done", { plantedAmount, plantedZoneId, plantedObjectId, plantedLocation });
         markRow(row, true, plantingLog?.summary);
         setRowError(row, "");
       } catch (error) {
@@ -329,6 +445,7 @@ export default function TaskChildPlantingLogPatch() {
       }
     }
 
+    window.addEventListener("change", handleChange, true);
     window.addEventListener("click", handleClick, true);
     window.addEventListener("submit", handleSubmit, true);
     scheduleSettledRefreshes();
@@ -336,6 +453,7 @@ export default function TaskChildPlantingLogPatch() {
     return () => {
       stopped = true;
       timers.forEach((timer) => window.clearTimeout(timer));
+      window.removeEventListener("change", handleChange, true);
       window.removeEventListener("click", handleClick, true);
       window.removeEventListener("submit", handleSubmit, true);
     };
