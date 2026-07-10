@@ -123,13 +123,25 @@ export type AtlasTaskCardsResponse = {
   details?: string;
 };
 
+export type AtlasTaskCardScope = "farm" | "owner" | "all";
+
+export type AtlasTaskCardFetchOptions = {
+  taskId?: string;
+  scope?: AtlasTaskCardScope;
+};
+
 export async function fetchAtlasTaskCards(
-  taskId?: string,
+  input?: string | AtlasTaskCardFetchOptions,
 ): Promise<AtlasTaskCardsResponse> {
   const params = new URLSearchParams();
+  const options: AtlasTaskCardFetchOptions = typeof input === "string" ? { taskId: input } : input ?? {};
 
-  if (taskId) {
-    params.set("taskId", taskId);
+  if (options.taskId) {
+    params.set("taskId", options.taskId);
+  }
+
+  if (options.scope && options.scope !== "farm") {
+    params.set("scope", options.scope);
   }
 
   const response = await fetch(
