@@ -22,9 +22,15 @@ import {
   monthProgress,
 } from "@/lib/atlas/task-overview";
 import { fetchAtlasZoneRegistry, type AtlasRegistryZone } from "@/lib/atlas/zone-registry-client";
+import {
+  atlasBuildMowingCollectionSummary,
+  atlasIsMowingCollectionMember,
+  type AtlasWorkCollectionSummary,
+} from "@/lib/atlas/work-collections";
 
 type HomePanel = "closeout" | null;
 type WeatherResponse = { ok: boolean; label?: string; rainAge?: string; daysSinceRain?: number | null; error?: string };
+type HomeLaunchItem = { kind: "task"; task: AtlasTaskCard } | { kind: "collection"; collection: AtlasWorkCollectionSummary };
 
 const defaultSnapshot: AtlasFarmSnapshot = { totalBeds: 0, growingBeds: 0, activeSqft: 0, sowingsLogged: 0, stemsLogged: 0 };
 
@@ -182,13 +188,24 @@ function panelTitle(panel: HomePanel) {
   return "Atlas";
 }
 
+function homeLaunchItems(todayCards: AtlasTaskCard[], cards: AtlasTaskCard[], today: string): HomeLaunchItem[] {
+  const mowing = atlasBuildMowingCollectionSummary(cards, today);
+  const standalone = todayCards.filter((card) => !atlasIsMowingCollectionMember(card)).map((task) => ({ kind: "task" as const, task }));
+  return [...(mowing && mowing.dueCount > 0 ? [{ kind: "collection" as const, collection: mowing }] : []), ...standalone].slice(0, 4);
+}
+
+function launchItemSignature(item: HomeLaunchItem, stepCounts: Map<string, number>) {
+  if (item.kind === "collection") return `collection:${item.collection.key}:${item.collection.dueCount}:${item.collection.doneRecentCount}:${item.collection.notReadyCount}`;
+  return `${item.task.task_id}:${stepCounts.get(item.task.task_id) ?? 0}`;
+}
+
 function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: boolean }) {
   const today = todayIso();
   const todayHref = `/day?date=${encodeURIComponent(today)}`;
   const dashboardCards = cards.filter(isDashboardWork).sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
   const todayCards = dashboardCards.filter((card) => card.due_date === today);
-  const heroCards = todayCards.slice(0, 4);
   const stepCounts = subtaskCounts(cards);
+  const heroItems = homeLaunchItems(todayCards, cards, today);
   const dayProgressCards = cards.filter(isDayProgressTask).filter((card) => card.due_date === today);
   const dayDoneCount = dayProgressCards.filter(isTaskDone).length;
   const dayTotal = dayProgressCards.length;
@@ -219,14 +236,26 @@ function TaskLaunchHero({ cards, loading }: { cards: AtlasTaskCard[]; loading: b
         <span className="atlas-task-date">{dayProgressLabel}</span>
       </Link>
 
-      {heroCards.length === 0 ? (
+      {heroItems.length === 0 ? (
         <Link href={todayHref} className="atlas-run-sheet-empty">
           <strong>All tasks complete</strong>
           <em>Open today overview, or browse the week below.</em>
         </Link>
       ) : (
-        <div className="atlas-run-sheet-grid atlas-route-sheet-grid" data-task-forward-signature={heroCards.map((card) => `${card.task_id}:${stepCounts.get(card.task_id) ?? 0}`).join("|")}>
-          {heroCards.map((card) => {
+        <div className="atlas-run-sheet-grid atlas-route-sheet-grid" data-task-forward-signature={heroItems.map((item) => launchItemSignature(item, stepCounts)).join("|")}>
+          {heroItems.map((item) => {
+            if (item.kind === "collection") {
+              return (
+                <Link key={`collection-${item.collection.key}`} href={item.collection.href} className="atlas-run-sheet-box atlas-route-sheet-box atlas-task-forward-box atlas-work-collection-forward-box" data-work-collection-key={item.collection.key}>
+                  <small>Collection</small>
+                  <strong>{item.collection.label}</strong>
+                  <span>{item.collection.dueCount} due · {item.collection.doneRecentCount} resting</span>
+                  <em>{item.collection.preview}</em>
+                </Link>
+              );
+            }
+
+            const card = item.task;
             const display = atlasTaskDisplay(card);
             const routeLabel = atlasRouteLabels[atlasRouteKeyForTask(card)];
             const steps = subtaskLabel(card, stepCounts);
