@@ -20,25 +20,24 @@
   padding: 0 !important;
 }
 
-.atlas-child-check-touch {
+.atlas-child-check-static {
   width: 100% !important;
   min-width: 0 !important;
   max-width: none !important;
   box-sizing: border-box !important;
-  appearance: none !important;
-  -webkit-appearance: none !important;
   border: 0 !important;
   background: transparent !important;
   color: var(--atlas-text) !important;
-  padding: 13px 14px !important;
+  padding: 13px 14px 8px !important;
   display: grid !important;
   grid-template-columns: 38px minmax(0, 1fr) !important;
   gap: 12px !important;
   align-items: start !important;
   text-align: left !important;
+  pointer-events: none !important;
 }
 
-.atlas-child-check-touch > span {
+.atlas-child-check-mark {
   width: 32px !important;
   height: 32px !important;
   min-width: 32px !important;
@@ -91,11 +90,36 @@
   font-weight: 850 !important;
 }
 
+.atlas-child-row-actions {
+  width: 100% !important;
+  padding: 0 14px 13px 64px !important;
+  box-sizing: border-box !important;
+  display: block !important;
+}
+
+.atlas-child-open-log-button {
+  width: 100% !important;
+  min-height: 44px !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(222, 233, 183, 0.95) !important;
+  color: var(--atlas-text) !important;
+  padding: 12px 14px !important;
+  font-size: 15px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  text-align: center !important;
+  touch-action: manipulation !important;
+  pointer-events: auto !important;
+}
+
 .atlas-child-check-item.done {
   background: rgba(228, 234, 200, 0.38) !important;
 }
 
-.atlas-child-check-item.done .atlas-child-check-touch > span {
+.atlas-child-check-item.done .atlas-child-check-mark {
   border-color: rgba(185, 204, 124, 0.82) !important;
   background: rgba(222, 233, 183, 0.88) !important;
 }
@@ -155,7 +179,7 @@
 .atlas-child-plant-log input:disabled,
 .atlas-child-plant-log select:disabled,
 .atlas-child-plant-log-actions button:disabled,
-.atlas-child-check-touch:disabled {
+.atlas-child-open-log-button:disabled {
   opacity: 0.62 !important;
 }
 
