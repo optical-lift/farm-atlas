@@ -26,6 +26,10 @@ function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function boolish(value: unknown) {
+  return value === true || value === "true" || value === "yes" || value === 1;
+}
+
 function numberValue(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
@@ -41,7 +45,7 @@ function plantingMethod(value: unknown) {
 }
 
 function shouldLogPlanting(metadata: Record<string, unknown>, checklistStatus: "open" | "done") {
-  return checklistStatus === "done" && (metadata.planting_log_required === true || metadata.planting_log_required === "true");
+  return checklistStatus === "done" && boolish(metadata.planting_log_required);
 }
 
 async function cropProfileIdFor(cropLabel: string) {
@@ -300,10 +304,18 @@ export async function POST(request: NextRequest) {
 
     const currentMetadata = ((task.metadata as Record<string, unknown> | null) ?? {});
     const parentTaskId = typeof currentMetadata.parent_task_id === "string" ? currentMetadata.parent_task_id : null;
+    const wantsPlantingLog = shouldLogPlanting(currentMetadata, checklistStatus);
     const defaultAmount = numberValue(currentMetadata.planting_log_default_amount);
     const amount = numberValue(body.plantedAmount) ?? defaultAmount;
+
+    if (wantsPlantingLog && amount === null) throw new Error("Add the count first.");
+    if (wantsPlantingLog && !clean(body.plantedZoneId) && !clean(currentMetadata.planting_log_default_zone_id)) throw new Error("Choose the zone first.");
+    if (wantsPlantingLog && boolish(currentMetadata.planting_log_object_required) && !clean(body.plantedObjectId) && !clean(currentMetadata.planting_log_default_object_id)) {
+      throw new Error("Choose the real bed / area before saving.");
+    }
+
     const placement = await placementFor({ farmId: task.farm_id, body, metadata: currentMetadata });
-    const plantingLog = shouldLogPlanting(currentMetadata, checklistStatus) && amount !== null
+    const plantingLog = wantsPlantingLog && amount !== null
       ? await writePlantingLog({ task, metadata: currentMetadata, amount, placement, now })
       : null;
 
