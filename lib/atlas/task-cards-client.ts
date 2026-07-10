@@ -123,7 +123,7 @@ export type AtlasTaskCardsResponse = {
   details?: string;
 };
 
-export type AtlasTaskCardScope = "farm" | "owner" | "marshall" | "all";
+export type AtlasTaskCardScope = "farm" | "owner" | "marshall" | "children" | "all";
 
 export type AtlasTaskCardFetchOptions = {
   taskId?: string;
@@ -134,9 +134,10 @@ function currentUrlScope() {
   if (typeof window === "undefined") return null;
   const params = new URLSearchParams(window.location.search);
   const scope = params.get("scope");
-  if (scope === "owner" || scope === "marshall" || scope === "all") return scope;
+  if (scope === "owner" || scope === "marshall" || scope === "children" || scope === "all") return scope;
   if (window.location.pathname === "/owner") return "owner";
   if (window.location.pathname === "/marshall") return "marshall";
+  if (window.location.pathname === "/children") return "children";
   return null;
 }
 
