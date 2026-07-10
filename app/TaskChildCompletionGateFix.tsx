@@ -21,17 +21,23 @@ function removeLegacyGateMessages(card: HTMLElement) {
 function applyFix() {
   if (window.location.pathname !== "/task") return;
 
-  const card = document.querySelector<HTMLElement>(".atlas-task-ticket-card");
-  if (!card || !childChecklistIsComplete(card)) return;
+  const cards = Array.from(document.querySelectorAll<HTMLElement>(".atlas-task-ticket-card"));
+  cards.forEach((card) => {
+    const heading = card.querySelector("h1")?.textContent?.trim().toLowerCase() ?? "";
+    card.classList.toggle("atlas-task-ticket-card--weeding", heading.includes("weeding"));
 
-  const doneButton = card.querySelector<HTMLButtonElement>(".atlas-task-primary-actions button.done");
-  if (!doneButton) return;
+    if (!childChecklistIsComplete(card)) return;
 
-  doneButton.disabled = false;
-  doneButton.removeAttribute("aria-disabled");
-  doneButton.style.pointerEvents = "auto";
-  doneButton.style.opacity = "1";
-  removeLegacyGateMessages(card);
+    const doneButton = card.querySelector<HTMLButtonElement>(".atlas-task-primary-actions button.done");
+    if (!doneButton) return;
+
+    doneButton.disabled = false;
+    doneButton.removeAttribute("disabled");
+    doneButton.removeAttribute("aria-disabled");
+    doneButton.style.pointerEvents = "auto";
+    doneButton.style.opacity = "1";
+    removeLegacyGateMessages(card);
+  });
 }
 
 export default function TaskChildCompletionGateFix() {
@@ -58,12 +64,10 @@ export default function TaskChildCompletionGateFix() {
 
     queue();
     const interval = window.setInterval(applyFix, 500);
-    const stopTimer = window.setTimeout(() => window.clearInterval(interval), 15000);
 
     return () => {
       observer.disconnect();
       window.clearInterval(interval);
-      window.clearTimeout(stopTimer);
     };
   }, []);
 
