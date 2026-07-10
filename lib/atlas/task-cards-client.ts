@@ -137,7 +137,6 @@ function currentUrlScope() {
   if (scope === "owner" || scope === "marshall" || scope === "all") return scope;
   if (window.location.pathname === "/owner") return "owner";
   if (window.location.pathname === "/marshall") return "marshall";
-  if (window.location.pathname === "/task" && params.get("taskId")) return "all";
   return null;
 }
 
