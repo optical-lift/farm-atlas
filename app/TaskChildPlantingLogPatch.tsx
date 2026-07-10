@@ -141,6 +141,16 @@ function optionsForObjects(zone: RegistryZone | null, selectedObjectId: string) 
     .join("")}`;
 }
 
+function normalizeRegistryZones(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((zone): zone is RegistryZone => Boolean(zone && typeof zone === "object" && text((zone as RegistryZone).id) && text((zone as RegistryZone).label)))
+    .map((zone) => ({
+      ...zone,
+      objects: Array.isArray(zone.objects) ? zone.objects.filter((object): object is RegistryObject => Boolean(object && typeof object === "object" && text((object as RegistryObject).id) && text((object as RegistryObject).label))) : [],
+    }));
+}
+
 async function fetchCards() {
   const response = await fetch("/api/atlas/task-cards", { headers: { Accept: "application/json" }, cache: "no-store" });
   const data = await response.json() as { taskCards?: Card[] };
@@ -149,8 +159,8 @@ async function fetchCards() {
 
 async function fetchRegistryZones() {
   const response = await fetch("/api/atlas/zone-registry", { headers: { Accept: "application/json" }, cache: "no-store" });
-  const data = await response.json() as { zones?: RegistryZone[] };
-  return data.zones ?? [];
+  const data = await response.json() as { zones?: unknown };
+  return normalizeRegistryZones(data.zones);
 }
 
 async function toggleChecklist(taskId: string, checklistStatus: "open" | "done", body: Record<string, unknown> = {}) {
@@ -175,7 +185,7 @@ function renderInlineLog(child: Card, zones: RegistryZone[]) {
   const showBed = Boolean(selectedZoneId);
 
   return `
-    <form class="atlas-child-plant-log" data-child-task-id="${html(child.task_id)}" data-object-required="${objectRequired(child) ? "true" : "false"}" hidden>
+    <form class="atlas-child-plant-log" data-child-task-id="${html(child.task_id)}" data-object-required="${objectRequired(child) ? "true" : "false"}" data-default-zone-id="${html(selectedZoneId)}" data-default-object-id="${html(selectedObjectId)}" hidden>
       <label><span>Count</span><input name="plantedAmount" inputmode="numeric" type="number" min="0" step="1" value="${html(defaultAmount(child))}" /></label>
       <label><span>Zone</span><select name="plantedZoneId" class="atlas-child-zone-select"><option value="">Choose zone</option>${optionsForZones(zones, selectedZoneId)}</select></label>
       <label class="atlas-child-bed-select-row"${showBed ? "" : " hidden"}><span>Bed / area</span><select name="plantedObjectId" class="atlas-child-object-select">${optionsForObjects(selectedZone, selectedObjectId)}</select></label>
@@ -259,7 +269,7 @@ function renderStableChecklists(cards: Card[], zones: RegistryZone[]) {
       .sort((a, b) => stepOrder(a) - stepOrder(b));
     if (!children.length) return;
 
-    const signature = `${checklistSignature(children)}::zones:${zones.length}`;
+    const signature = `${checklistSignature(children)}::zones:${zones.map((zone) => zone.id).join(",")}`;
     const alreadyStable = section.dataset.stableChecklistSignature === signature && section.querySelector(".atlas-child-checklist-stable-list");
     const activelyEditing = section.querySelector(".atlas-child-check-item.logging, .atlas-child-check-item.saving");
     if (alreadyStable || activelyEditing) return;
@@ -295,25 +305,36 @@ function syncLocation(form: HTMLFormElement, zones: RegistryZone[]) {
   form.dataset.selectedZoneHasBeds = hasBeds ? "true" : "false";
 }
 
-function populateBedSelect(form: HTMLFormElement, zones: RegistryZone[]) {
+function applyZoneOptions(form: HTMLFormElement, zones: RegistryZone[]) {
+  const zoneSelect = form.querySelector<HTMLSelectElement>("select[name='plantedZoneId']");
+  if (!zoneSelect) return;
+  const selectedZoneId = zoneSelect.value || form.dataset.defaultZoneId || "";
+  zoneSelect.innerHTML = `<option value="">Choose zone</option>${optionsForZones(zones, selectedZoneId)}`;
+  if (selectedZoneId && zoneById(zones, selectedZoneId)) zoneSelect.value = selectedZoneId;
+  populateBedSelect(form, zones, form.dataset.defaultObjectId || "");
+}
+
+function populateBedSelect(form: HTMLFormElement, zones: RegistryZone[], selectedObjectId = "") {
   const zoneSelect = form.querySelector<HTMLSelectElement>("select[name='plantedZoneId']");
   const objectSelect = form.querySelector<HTMLSelectElement>("select[name='plantedObjectId']");
   const bedRow = form.querySelector<HTMLElement>(".atlas-child-bed-select-row");
   if (!zoneSelect || !objectSelect || !bedRow) return;
 
   const zone = zoneById(zones, zoneSelect.value);
-  objectSelect.innerHTML = optionsForObjects(zone, "");
+  const objectId = selectedObjectId && zone && visibleObjects(zone).some((object) => object.id === selectedObjectId) ? selectedObjectId : "";
+  objectSelect.innerHTML = optionsForObjects(zone, objectId);
+  if (objectId) objectSelect.value = objectId;
   bedRow.hidden = !zoneSelect.value;
   syncLocation(form, zones);
 }
 
-function showInlineLog(row: HTMLElement) {
+function showInlineLog(row: HTMLElement, zones: RegistryZone[]) {
   const form = row.querySelector<HTMLFormElement>(".atlas-child-plant-log");
   if (!form) return;
+  applyZoneOptions(form, zones);
   row.classList.add("logging");
   form.hidden = false;
   setRowError(row, "");
-  syncLocation(form, []);
 }
 
 function hideInlineLog(row: HTMLElement) {
@@ -346,9 +367,15 @@ export default function TaskChildPlantingLogPatch() {
     let registryZones: RegistryZone[] = [];
     const timers: number[] = [];
 
+    async function loadRegistryZones() {
+      if (registryZones.length > 0) return registryZones;
+      registryZones = await fetchRegistryZones();
+      return registryZones;
+    }
+
     async function refreshStableChecklists() {
       if (stopped || window.location.pathname !== "/task") return;
-      const [cards, zones] = await Promise.all([fetchCards(), fetchRegistryZones()]);
+      const [cards, zones] = await Promise.all([fetchCards(), loadRegistryZones()]);
       registryZones = zones;
       if (!stopped) renderStableChecklists(cards, zones);
     }
@@ -396,7 +423,19 @@ export default function TaskChildPlantingLogPatch() {
       const checklistStatus = row.dataset.nextStatus === "done" ? "done" : "open";
 
       if (checklistStatus === "done" && row.dataset.plantingLogRequired === "true") {
-        showInlineLog(row);
+        row.classList.add("saving");
+        try {
+          const zones = await loadRegistryZones();
+          row.classList.remove("saving");
+          if (!zones.length) {
+            setRowError(row, "Zone registry did not load. Try again in a moment.");
+            return;
+          }
+          showInlineLog(row, zones);
+        } catch (error) {
+          row.classList.remove("saving");
+          setRowError(row, error instanceof Error ? error.message : "Zone registry failed.");
+        }
         return;
       }
 
@@ -420,6 +459,7 @@ export default function TaskChildPlantingLogPatch() {
       const taskId = row?.dataset.childTaskId;
       if (!row || !taskId) return;
 
+      if (!registryZones.length) registryZones = await fetchRegistryZones();
       syncLocation(form, registryZones);
       const plantedAmount = form.querySelector<HTMLInputElement>("input[name='plantedAmount']")?.value.trim() ?? "";
       const plantedZoneId = form.querySelector<HTMLSelectElement>("select[name='plantedZoneId']")?.value.trim() ?? "";
