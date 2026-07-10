@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { atlasSupabase } from "@/lib/atlas/supabase-server";
+import { runTriggeredSequencesForDoneTask } from "@/lib/atlas/triggered-sequences-server";
 
 export const dynamic = "force-dynamic";
 
@@ -150,7 +151,6 @@ async function recreateTaskIfNeeded(task: TaskRow, outcome: Outcome, now: string
     recreate_on_done: true,
     recreate_after_days: recreateAfterDays,
     outcome_history_count: 0,
-    last_outcome: undefined,
   };
 
   const { data: inserted, error: insertError } = await atlasSupabase
@@ -257,7 +257,11 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await atlasSupabase.schema("atlas").from("tasks").update(updatePayload).eq("id", task.id);
     if (updateError) throw new Error(updateError.message);
 
-    const nextTaskId = await recreateTaskIfNeeded({ ...task, metadata }, outcome, now);
+    const completedTask = { ...task, metadata };
+    const nextTaskId = await recreateTaskIfNeeded(completedTask, outcome, now);
+    const triggeredSequenceResult = outcome === "done"
+      ? await runTriggeredSequencesForDoneTask(completedTask, objectIds, now, note)
+      : null;
 
     const { data: eventData, error: eventError } = await atlasSupabase.schema("atlas").from("task_outcome_events").insert({
       farm_id: task.farm_id,
@@ -273,7 +277,7 @@ export async function POST(request: NextRequest) {
       due_date: task.due_date,
       priority: task.priority,
       source: "atlas_task_outcome",
-      metadata: { prior_status: task.status, object_ids: objectIds, next_recurring_task_id: nextTaskId },
+      metadata: { prior_status: task.status, object_ids: objectIds, next_recurring_task_id: nextTaskId, triggered_sequence_result: triggeredSequenceResult },
     }).select("id").single();
     if (eventError) throw new Error(eventError.message);
 
@@ -295,13 +299,14 @@ export async function POST(request: NextRequest) {
         work_key: workKey,
         object_ids: objectIds,
         next_recurring_task_id: nextTaskId,
+        triggered_sequence_result: triggeredSequenceResult,
       },
     });
     if (logError) throw new Error(logError.message);
 
     await updateObjectMemory(task, objectIds, outcome, note, laneKey, workKey, now);
 
-    return NextResponse.json({ ok: true, taskId: task.id, outcome, status: nextStatus(outcome), eventId, nextTaskId });
+    return NextResponse.json({ ok: true, taskId: task.id, outcome, status: nextStatus(outcome), eventId, nextTaskId, triggeredSequenceResult });
   } catch (error) {
     return NextResponse.json({ ok: false, error: "Atlas task outcome failed.", details: error instanceof Error ? error.message : "Unknown error." }, { status: 500 });
   }
