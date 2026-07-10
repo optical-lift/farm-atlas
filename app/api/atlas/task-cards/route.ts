@@ -126,7 +126,7 @@ function isChildrenTask(card: AtlasTaskCardRow) {
 }
 
 function isPrivateAssignmentTask(card: AtlasTaskCardRow) {
-  return isOwnerTask(card) || isMarshallTask(card) || isChildrenTask(card);
+  return isOwnerTask(card) || isMarshallTask(card);
 }
 
 function formatNumberish(value: number | string | null | undefined) {
