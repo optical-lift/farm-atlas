@@ -1,0 +1,14 @@
+/* The task page now owns child checklists in React. The old DOM-patch checklist can still be injected by a cached client patch; never show both. */
+.atlas-task-ticket-card > .atlas-child-checklist,
+.atlas-task-ticket-card .atlas-child-checklist[data-parent-task-id] {
+  display: none !important;
+}
+
+/* Keep the real React checklist above task completion actions. */
+.atlas-task-ticket-card > .atlas-plant-check {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
