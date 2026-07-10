@@ -29,6 +29,7 @@ import "./overview.css";
 import "./task-unfinished.css";
 import "./field-log-documentation.css";
 import "./mobile-overflow-guard.css";
+import "./task-checklist-dedupe.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
