@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import WeekDayNavigation from "./WeekDayNavigation";
 import HomeTodayCompletePatch from "./HomeTodayCompletePatch";
+import HomeQuietTaskHeroPatch from "./HomeQuietTaskHeroPatch";
 import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
 import TaskChildCompletionGateFix from "./TaskChildCompletionGateFix";
 import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="min-h-full flex flex-col">
         <WeekDayNavigation />
         <HomeTodayCompletePatch />
+        <HomeQuietTaskHeroPatch />
         <TaskProgressExactDayPatch />
         <TaskChildCompletionGateFix />
         <OwnerHomeLinkPatch />
