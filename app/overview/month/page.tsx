@@ -21,6 +21,7 @@ import {
   todayIso,
   type ZoneTaskOverview,
 } from "@/lib/atlas/task-overview";
+import { atlasBuildMowingCollectionSummary, atlasIsMowingCollectionMember, type AtlasWorkCollectionSummary } from "@/lib/atlas/work-collections";
 
 type WeatherResponse = { ok: boolean; label?: string };
 
@@ -28,6 +29,30 @@ function TaskDueLabel({ task, anchorIso }: { task: AtlasTaskCard; anchorIso: str
   if (!task.due_date) return <em>open</em>;
   if (task.due_date < anchorIso) return <em className="urgent">carryover · {prettyShortDate(task.due_date)}</em>;
   return <em>{prettyShortDate(task.due_date)}</em>;
+}
+
+function CollectionOverviewCard({ collection }: { collection: AtlasWorkCollectionSummary }) {
+  return (
+    <details className="atlas-overview-zone-card atlas-work-collection-section" open>
+      <summary>
+        <div>
+          <strong>{collection.label}</strong>
+          <span>{collection.dueCount} due · {collection.doneRecentCount} resting · {collection.notReadyCount} not ready</span>
+        </div>
+        <b>Collection</b>
+      </summary>
+      <div className="atlas-overview-task-list">
+        <Link className="atlas-overview-task-card atlas-work-collection-task-card" href={collection.href}>
+          <div>
+            <strong>{collection.label} Work Collection</strong>
+            <span>Independent mowing clocks</span>
+          </div>
+          <em>next {collection.nextDueLabel}</em>
+          <p>{collection.preview}</p>
+        </Link>
+      </div>
+    </details>
+  );
 }
 
 function ZoneSection({ zone, anchorIso }: { zone: ZoneTaskOverview; anchorIso: string }) {
@@ -99,9 +124,13 @@ export default function AtlasMonthOverviewPage() {
   const progress = monthProgress(anchorIso);
   const endIso = monthEndIso(anchorIso);
   const monthTasks = useMemo(() => filterMonthOverviewTasks(tasks, anchorIso), [anchorIso, tasks]);
-  const carryoverCount = useMemo(() => monthTasks.filter((task) => Boolean(task.due_date && task.due_date < anchorIso)).length, [anchorIso, monthTasks]);
-  const zoneGroups = useMemo(() => groupTasksByZone(monthTasks, anchorIso), [anchorIso, monthTasks]);
-  const topZone = zoneGroups[0]?.zone ?? "No active zone";
+  const mowingCollection = useMemo(() => atlasBuildMowingCollectionSummary(tasks, endIso), [endIso, tasks]);
+  const showMowingCollection = Boolean(mowingCollection && mowingCollection.dueCount > 0);
+  const standaloneMonthTasks = useMemo(() => monthTasks.filter((task) => !atlasIsMowingCollectionMember(task)), [monthTasks]);
+  const carryoverCount = useMemo(() => standaloneMonthTasks.filter((task) => Boolean(task.due_date && task.due_date < anchorIso)).length, [anchorIso, standaloneMonthTasks]);
+  const zoneGroups = useMemo(() => groupTasksByZone(standaloneMonthTasks, anchorIso), [anchorIso, standaloneMonthTasks]);
+  const topZone = showMowingCollection ? "Mowing" : zoneGroups[0]?.zone ?? "No active zone";
+  const displayedOpenCount = standaloneMonthTasks.length + (showMowingCollection ? 1 : 0);
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell">
@@ -120,26 +149,27 @@ export default function AtlasMonthOverviewPage() {
             </div>
             <div className="atlas-overview-month-progress-row">
               <div className="atlas-overview-month-progress"><i style={{ width: `${progress.percent}%` }} /></div>
-              <p>{progress.day} of {progress.days} days · {loading ? "loading" : `${monthTasks.length} open`}</p>
+              <p>{progress.day} of {progress.days} days · {loading ? "loading" : `${displayedOpenCount} open`}</p>
             </div>
           </section>
 
           <section className="atlas-overview-stat-grid" aria-label="Month overview stats">
-            <article><strong>{loading ? "…" : monthTasks.length}</strong><span>open</span></article>
+            <article><strong>{loading ? "…" : displayedOpenCount}</strong><span>open</span></article>
             <article><strong>{loading ? "…" : carryoverCount}</strong><span>carryover</span></article>
-            <article><strong>{loading ? "…" : zoneGroups.length}</strong><span>zones</span></article>
+            <article><strong>{loading ? "…" : zoneGroups.length + (showMowingCollection ? 1 : 0)}</strong><span>zones</span></article>
             <article><strong>{topZone}</strong><span>most open</span></article>
           </section>
 
           <section className="atlas-overview-summary-line">
-            <p>{loading ? "Loading month work" : routeCountLineForTasks(monthTasks)}</p>
+            <p>{loading ? "Loading month work" : routeCountLineForTasks(standaloneMonthTasks)}</p>
           </section>
 
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
 
           <section className="atlas-overview-zone-list" aria-label="Open work by zone">
             {loading ? <div className="atlas-task-page-empty">Loading zone overview.</div> : null}
-            {!loading && zoneGroups.length === 0 ? <div className="atlas-task-page-empty">No open work in this month window.</div> : null}
+            {!loading && zoneGroups.length === 0 && !showMowingCollection ? <div className="atlas-task-page-empty">No open work in this month window.</div> : null}
+            {showMowingCollection && mowingCollection ? <CollectionOverviewCard collection={mowingCollection} /> : null}
             {zoneGroups.map((zone) => <ZoneSection key={zone.zone} zone={zone} anchorIso={anchorIso} />)}
           </section>
         </div>
