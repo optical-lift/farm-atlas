@@ -131,9 +131,11 @@ function optionsForZones(zones: RegistryZone[], selectedZoneId: string) {
 
 function optionsForObjects(zone: RegistryZone | null, selectedObjectId: string) {
   if (!zone) return "";
-  return visibleObjects(zone)
+  const zoneOnly = `<option value="">No specific bed / general area</option>`;
+  const objects = visibleObjects(zone)
     .map((object) => `<option value="${html(object.id)}"${object.id === selectedObjectId ? " selected" : ""}>${html(object.label)}</option>`)
     .join("");
+  return `${zoneOnly}${objects}`;
 }
 
 async function fetchCards() {
@@ -173,7 +175,7 @@ function renderInlineLog(child: Card, zones: RegistryZone[]) {
     <form class="atlas-child-plant-log" data-child-task-id="${html(child.task_id)}" hidden>
       <label><span>Count</span><input name="plantedAmount" inputmode="numeric" type="number" min="0" step="1" value="${html(defaultAmount(child))}" /></label>
       <label><span>Zone</span><select name="plantedZoneId" class="atlas-child-zone-select"><option value="">Choose zone</option>${optionsForZones(zones, selectedZoneId)}</select></label>
-      <label class="atlas-child-bed-select-row"${showBed ? "" : " hidden"}><span>Bed</span><select name="plantedObjectId" class="atlas-child-object-select"><option value="">Choose bed / area</option>${optionsForObjects(selectedZone, selectedObjectId)}</select></label>
+      <label class="atlas-child-bed-select-row"${showBed ? "" : " hidden"}><span>Bed / area optional</span><select name="plantedObjectId" class="atlas-child-object-select">${optionsForObjects(selectedZone, selectedObjectId)}</select></label>
       <input name="plantedLocation" type="hidden" value="${html(fallbackLocation)}" />
       <div class="atlas-child-plant-log-actions">
         <button type="submit">Save planted</button>
@@ -297,7 +299,7 @@ function populateBedSelect(form: HTMLFormElement, zones: RegistryZone[]) {
   if (!zoneSelect || !objectSelect || !bedRow) return;
 
   const zone = zoneById(zones, zoneSelect.value);
-  objectSelect.innerHTML = `<option value="">Choose bed / area</option>${optionsForObjects(zone, "")}`;
+  objectSelect.innerHTML = optionsForObjects(zone, "");
   bedRow.hidden = !zoneSelect.value;
   syncLocation(form, zones);
 }
@@ -426,10 +428,6 @@ export default function TaskChildPlantingLogPatch() {
       }
       if (!plantedZoneId) {
         setRowError(row, "Choose the zone first.");
-        return;
-      }
-      if (form.dataset.selectedZoneHasBeds === "true" && !plantedObjectId) {
-        setRowError(row, "Choose the bed next.");
         return;
       }
 
