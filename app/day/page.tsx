@@ -103,15 +103,21 @@ function zoneBucket(value: string) {
 }
 
 function collectionZone(task: AtlasTaskCard) {
-  return text(meta(task, "collection_zone")) || zoneBucket(location(task));
+  return zoneBucket(text(meta(task, "collection_zone")) || location(task));
 }
 
 function routeForTask(task: AtlasTaskCard): RouteKey {
   return atlasRouteKeyForTask(task);
 }
 
-function detail(task: AtlasTaskCard) {
-  return atlasTaskDisplay(task).detail;
+function displayDetail(task: AtlasTaskCard) {
+  const display = atlasTaskDisplay(task);
+  const zone = collectionZone(task).toLowerCase();
+  const detailText = display.detail.trim();
+  if (!detailText) return detailText;
+  const parts = detailText.split("·").map((part) => part.trim()).filter(Boolean);
+  if (parts.length > 1 && parts[0].toLowerCase() === zone) return parts.slice(1).join(" · ");
+  return detailText;
 }
 
 function taskHref(task: AtlasTaskCard) {
@@ -167,8 +173,8 @@ function TaskCard({ task, complete = false }: { task: AtlasTaskCard; complete?: 
   return (
     <Link className={`atlas-day-task-card${complete ? " complete" : ""}${atlasIsCropCycleTask(task) ? " atlas-crop-cycle-task-card" : ""}`} href={taskHref(task)}>
       <strong>{display.title}</strong>
-      <span>{complete ? "Complete" : `${atlasWorkOrderLabel(task)} · ${display.location}`}</span>
-      <em>{display.detail}</em>
+      <span>{complete ? "Complete" : `${atlasWorkOrderLabel(task)} · ${collectionZone(task)}`}</span>
+      <em>{displayDetail(task)}</em>
     </Link>
   );
 }
