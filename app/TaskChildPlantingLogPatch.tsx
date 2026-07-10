@@ -74,6 +74,10 @@ function needsPlantingLog(card: Card) {
   return card.metadata?.planting_log_required === true || card.metadata?.planting_log_required === "true";
 }
 
+function objectRequired(card: Card) {
+  return card.metadata?.planting_log_object_required !== false && card.metadata?.planting_log_object_required !== "false";
+}
+
 function detailLines(card: Card) {
   return stringList(card.metadata?.detail_lines);
 }
@@ -103,8 +107,8 @@ function hasChildren(card: Card, cards: Card[]) {
   return cards.some((candidate) => parentId(candidate) === card.task_id && candidate.status !== "archived");
 }
 
-function visibleObjects(zone: RegistryZone) {
-  return (zone.objects ?? [])
+function visibleObjects(zone: RegistryZone | null) {
+  return (zone?.objects ?? [])
     .filter((object) => object.object_type !== "path" && object.object_type !== "corridor")
     .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999) || a.label.localeCompare(b.label));
 }
@@ -130,12 +134,11 @@ function optionsForZones(zones: RegistryZone[], selectedZoneId: string) {
 }
 
 function optionsForObjects(zone: RegistryZone | null, selectedObjectId: string) {
-  if (!zone) return "";
-  const zoneOnly = `<option value="">No specific bed / general area</option>`;
-  const objects = visibleObjects(zone)
+  const objects = visibleObjects(zone);
+  if (!objects.length) return `<option value="">No registered beds in this zone</option>`;
+  return `<option value="">Choose bed / area</option>${objects
     .map((object) => `<option value="${html(object.id)}"${object.id === selectedObjectId ? " selected" : ""}>${html(object.label)}</option>`)
-    .join("");
-  return `${zoneOnly}${objects}`;
+    .join("")}`;
 }
 
 async function fetchCards() {
@@ -172,10 +175,10 @@ function renderInlineLog(child: Card, zones: RegistryZone[]) {
   const showBed = Boolean(selectedZoneId);
 
   return `
-    <form class="atlas-child-plant-log" data-child-task-id="${html(child.task_id)}" hidden>
+    <form class="atlas-child-plant-log" data-child-task-id="${html(child.task_id)}" data-object-required="${objectRequired(child) ? "true" : "false"}" hidden>
       <label><span>Count</span><input name="plantedAmount" inputmode="numeric" type="number" min="0" step="1" value="${html(defaultAmount(child))}" /></label>
       <label><span>Zone</span><select name="plantedZoneId" class="atlas-child-zone-select"><option value="">Choose zone</option>${optionsForZones(zones, selectedZoneId)}</select></label>
-      <label class="atlas-child-bed-select-row"${showBed ? "" : " hidden"}><span>Bed / area optional</span><select name="plantedObjectId" class="atlas-child-object-select">${optionsForObjects(selectedZone, selectedObjectId)}</select></label>
+      <label class="atlas-child-bed-select-row"${showBed ? "" : " hidden"}><span>Bed / area</span><select name="plantedObjectId" class="atlas-child-object-select">${optionsForObjects(selectedZone, selectedObjectId)}</select></label>
       <input name="plantedLocation" type="hidden" value="${html(fallbackLocation)}" />
       <div class="atlas-child-plant-log-actions">
         <button type="submit">Save planted</button>
@@ -288,7 +291,7 @@ function syncLocation(form: HTMLFormElement, zones: RegistryZone[]) {
   if (locationInput) locationInput.value = selectedObjectLabel && objectSelect?.value ? selectedObjectLabel : selectedZoneLabel;
 
   const zone = zoneSelect?.value ? zoneById(zones, zoneSelect.value) : null;
-  const hasBeds = Boolean(zone && visibleObjects(zone).length > 0);
+  const hasBeds = visibleObjects(zone).length > 0;
   form.dataset.selectedZoneHasBeds = hasBeds ? "true" : "false";
 }
 
@@ -310,7 +313,7 @@ function showInlineLog(row: HTMLElement) {
   row.classList.add("logging");
   form.hidden = false;
   setRowError(row, "");
-  form.querySelector<HTMLInputElement>("input[name='plantedAmount']")?.focus();
+  syncLocation(form, []);
 }
 
 function hideInlineLog(row: HTMLElement) {
@@ -428,6 +431,14 @@ export default function TaskChildPlantingLogPatch() {
       }
       if (!plantedZoneId) {
         setRowError(row, "Choose the zone first.");
+        return;
+      }
+      if (form.dataset.selectedZoneHasBeds !== "true") {
+        setRowError(row, "This zone does not have registered beds yet.");
+        return;
+      }
+      if (form.dataset.objectRequired === "true" && !plantedObjectId) {
+        setRowError(row, "Choose the real bed / area next.");
         return;
       }
 
