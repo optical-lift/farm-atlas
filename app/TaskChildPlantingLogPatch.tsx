@@ -36,6 +36,14 @@ function label(card: Card) {
   return text(card.metadata?.checklist_label) || text(card.metadata?.display_subject) || card.title.replace(/^Checklist\s+—\s+/i, "");
 }
 
+function parentLabel(card: Card) {
+  return text(card.metadata?.display_subject) || card.title.replace(/^[^—]+—\s*/i, "");
+}
+
+function normalized(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
 function stepOrder(card: Card) {
   return typeof card.metadata?.step_order === "number" ? card.metadata.step_order : 999;
 }
@@ -67,6 +75,10 @@ function defaultLocation(card: Card) {
 function logSummary(card: Card) {
   const log = card.metadata?.planting_log as Record<string, unknown> | undefined;
   return text(log?.summary);
+}
+
+function hasChildren(card: Card, cards: Card[]) {
+  return cards.some((candidate) => parentId(candidate) === card.task_id && candidate.status !== "archived");
 }
 
 async function fetchCards() {
@@ -124,7 +136,43 @@ function checklistSignature(children: Card[]) {
   return children.map((child) => `${child.task_id}:${text(child.metadata?.checklist_status)}:${text((child.metadata?.planting_log as Record<string, unknown> | undefined)?.recorded_at)}`).join("|");
 }
 
+function currentParentCard(cards: Card[]) {
+  const params = new URLSearchParams(window.location.search);
+  const taskId = params.get("taskId");
+  if (taskId) {
+    const explicit = cards.find((card) => card.task_id === taskId && hasChildren(card, cards));
+    if (explicit) return explicit;
+  }
+
+  const activeHeading = normalized(document.querySelector<HTMLElement>(".atlas-task-ticket-card h1")?.textContent ?? "");
+  if (!activeHeading) return null;
+
+  return cards.find((card) => card.status !== "archived" && hasChildren(card, cards) && normalized(parentLabel(card)).includes(activeHeading))
+    ?? cards.find((card) => card.status !== "archived" && hasChildren(card, cards) && activeHeading.includes(normalized(parentLabel(card))));
+}
+
+function ensureChecklistMount(cards: Card[]) {
+  const parent = currentParentCard(cards);
+  const activeCard = document.querySelector<HTMLElement>(".atlas-task-ticket-card");
+  if (!parent || !activeCard) return false;
+
+  const existing = activeCard.querySelector<HTMLElement>(".atlas-child-checklist[data-parent-task-id]");
+  if (existing?.dataset.parentTaskId === parent.task_id) return true;
+  existing?.remove();
+
+  const section = document.createElement("section");
+  section.className = "atlas-child-checklist";
+  section.dataset.parentTaskId = parent.task_id;
+
+  const anchor = activeCard.querySelector<HTMLElement>(".atlas-task-page-actions");
+  if (anchor) activeCard.insertBefore(section, anchor);
+  else activeCard.appendChild(section);
+
+  return true;
+}
+
 function renderStableChecklists(cards: Card[]) {
+  ensureChecklistMount(cards);
   const sections = Array.from(document.querySelectorAll<HTMLElement>(".atlas-child-checklist[data-parent-task-id]"));
   let rendered = false;
 
