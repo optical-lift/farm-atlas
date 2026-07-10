@@ -25,7 +25,7 @@ export type ZoneTaskOverview = {
 export const routeOrder = atlasRouteOrder;
 export const routeLabels = atlasRouteLabels;
 
-const urgentRoutes = new Set<WorkRouteKey>(["plant", "water", "harvest"]);
+const urgentRoutes = new Set<WorkRouteKey>(["plant", "water", "crop_cycle", "harvest"]);
 const terminalWords = new Set(["done", "complete", "completed", "dismissed", "expired", "archived", "cancelled", "canceled", "not_relevant", "not relevant", "changed_plan", "changed plan"]);
 
 export function todayIso() {
