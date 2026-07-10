@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { atlasRouteKeyForTask, atlasTaskDisplay } from "@/lib/atlas/task-display";
+import {
+  atlasIsCropCycleTask,
+  atlasRouteKeyForTask,
+  atlasRouteLabels,
+  atlasRouteOrder,
+  atlasTaskDisplay,
+  type AtlasWorkRouteKey,
+} from "@/lib/atlas/task-display";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import {
   atlasBuildMowingCollectionSummary,
@@ -10,22 +17,12 @@ import {
   type AtlasWorkCollectionSummary,
 } from "@/lib/atlas/work-collections";
 
-type RouteKey = "plant" | "weed" | "mow" | "seed" | "harvest" | "build" | "venue" | "water";
+type RouteKey = AtlasWorkRouteKey;
 type DayViewMode = "work_order" | "zone";
 type WeatherResponse = { ok: boolean; label?: string };
 
-const routeLabels: Record<RouteKey, string> = {
-  plant: "Plant",
-  weed: "Weed",
-  mow: "Mow",
-  seed: "Seed",
-  harvest: "Harvest",
-  build: "Build / Prep",
-  venue: "Venue",
-  water: "Water",
-};
-
-const routeOrder: RouteKey[] = ["weed", "plant", "mow", "seed", "harvest", "build", "venue", "water"];
+const routeLabels = atlasRouteLabels;
+const routeOrder = atlasRouteOrder;
 
 function todayIso() {
   const date = new Date();
@@ -68,7 +65,10 @@ function isChildTask(task: AtlasTaskCard) {
 
 function isWorkTask(task: AtlasTaskCard) {
   const joined = `${task.task_type ?? ""} ${task.title} ${task.unlock_text ?? ""}`.toLowerCase();
-  return task.status !== "archived" && task.status !== "skipped" && !isChildTask(task) && !(joined.includes("verify") || joined.includes("check") || joined.includes("confirm") || joined.includes("count") || joined.includes("germin") || joined.includes("walk field rows"));
+  const hidden = task.status === "archived" || task.status === "skipped" || isChildTask(task);
+  if (hidden) return false;
+  if (atlasIsCropCycleTask(task)) return true;
+  return !(joined.includes("verify") || joined.includes("check") || joined.includes("confirm") || joined.includes("count") || joined.includes("germin") || joined.includes("walk field rows"));
 }
 
 function isDashboardWork(task: AtlasTaskCard) {
@@ -183,7 +183,7 @@ function DayProgressBar({ done, total }: { done: number; total: number }) {
 function TaskCard({ task, complete = false }: { task: AtlasTaskCard; complete?: boolean }) {
   const display = atlasTaskDisplay(task);
   return (
-    <Link className={`atlas-day-task-card${complete ? " complete" : ""}`} href={taskHref(task)}>
+    <Link className={`atlas-day-task-card${complete ? " complete" : ""}${atlasIsCropCycleTask(task) ? " atlas-crop-cycle-task-card" : ""}`} href={taskHref(task)}>
       <strong>{display.title}</strong>
       <span>{complete ? "Complete" : display.location}</span>
       <em>{display.detail}</em>
