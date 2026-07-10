@@ -4,6 +4,7 @@ import React, { useState } from "react";
 
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import type {
+  AtlasObjectContent,
   AtlasObjectInspection,
   AtlasRegistryMetadata,
   AtlasRegistryObject,
@@ -85,13 +86,47 @@ export function stageLabel(stage: string | null | undefined) {
   return (stage ?? EMPTY).replaceAll("_", " ");
 }
 
-function cropLine(object: AtlasRegistryObject) {
-  const inspection = object.inspection_summary;
-  if (!inspection) return "No current crop logged";
-  return `${inspection.crop_label} · ${stageLabel(inspection.stage)}`;
+function contentIsCropCycle(content: AtlasObjectContent | null | undefined) {
+  return content?.content_type === "crop_cycle";
 }
 
-function inspectionRows(inspection: AtlasObjectInspection) {
+function cropDisplayName(content: Pick<AtlasObjectContent, "content_label" | "variety"> | AtlasObjectInspection) {
+  const label = "content_label" in content ? content.content_label : content.crop_label;
+  const variety = content.variety;
+  if (!variety) return label;
+  const lower = label.toLowerCase();
+  return lower.includes(variety.toLowerCase()) ? label : `${variety} ${label}`;
+}
+
+function primaryContent(object: AtlasRegistryObject) {
+  return object.contents.find(contentIsCropCycle) ?? object.contents[0] ?? null;
+}
+
+function cropLine(object: AtlasRegistryObject) {
+  const content = primaryContent(object);
+  if (!content) return "No current crop logged";
+  const inspection = content.inspection;
+  const seeded = inspection.seeded_date ? ` · sown ${prettyDate(inspection.seeded_date)}` : "";
+  return `${cropDisplayName(content)} · ${stageLabel(inspection.stage)}${seeded}`;
+}
+
+function inspectionRows(content: AtlasObjectContent) {
+  const inspection = content.inspection;
+
+  if (contentIsCropCycle(content)) {
+    return [
+      ["Cycle", "Current crop cycle"],
+      ["State", stageLabel(inspection.stage)],
+      ["Sown", prettyDate(inspection.seeded_date)],
+      ["Variety", inspection.variety ?? EMPTY],
+      ["Start method", inspection.start_method ? stageLabel(inspection.start_method) : EMPTY],
+      ["Germination", inspection.germinated_date ? prettyDate(inspection.germinated_date) : prettyRange(inspection.expected_germination_start, inspection.expected_germination_end)],
+      ["Harvest watch", inspection.harvest_dates.length > 0 ? prettyDateList(inspection.harvest_dates) : prettyRange(inspection.expected_harvest_watch_start, inspection.expected_harvest_watch_end)],
+      ["Clear marker", prettyDate(inspection.clear_bed_date)],
+      ["Next crop", inspection.next_crop_planned ?? EMPTY],
+    ];
+  }
+
   return [
     ["Seeded", prettyDate(inspection.seeded_date)],
     ["Variety", inspection.variety ?? EMPTY],
@@ -133,6 +168,31 @@ function objectAreaSummary(object: AtlasRegistryObject) {
   if (widthFt && lengthFt) return `${formatNumber(widthFt)} × ${formatNumber(lengthFt)} ft`;
 
   return object.object_type.replaceAll("_", " ");
+}
+
+function currentCropCycleContents(zone: AtlasRegistryZone) {
+  return zone.objects.flatMap((object) => object.contents.filter(contentIsCropCycle));
+}
+
+function currentCropCycleLines(zone: AtlasRegistryZone) {
+  const cycles = currentCropCycleContents(zone);
+  if (cycles.length === 0) return [];
+
+  const counts = new Map<string, { count: number; state: string }>();
+  cycles.forEach((content) => {
+    const label = cropDisplayName(content);
+    const state = stageLabel(content.status);
+    const current = counts.get(label) ?? { count: 0, state };
+    current.count += 1;
+    counts.set(label, current);
+  });
+
+  const summary = `${cycles.length} active crop ${cycles.length === 1 ? "cycle" : "cycles"}`;
+  const cropLines = Array.from(counts.entries())
+    .slice(0, 3)
+    .map(([label, value]) => `${value.count} ${label} · ${value.state}`);
+
+  return [summary, ...cropLines];
 }
 
 function zoneSpaceSummary(zone: AtlasRegistryZone) {
@@ -199,9 +259,11 @@ function zoneFactRows(zone: AtlasRegistryZone) {
   const centerAreaRange = metadataNumberRange(metadata, "center_diamond_area_sqft_range");
   const centerPointRange = metadataNumberRange(metadata, "center_diamond_point_to_point_ft_range");
   const orientation = metadataString(metadata, "orientation_note");
+  const cropCycles = currentCropCycleContents(zone);
 
   const rows: Array<[string, string]> = [];
   if (bedCount || workingBedArea) rows.push(["Growing beds", `${bedCount ? `${formatNumber(bedCount)} beds` : "Beds"}${workingBedArea ? ` · ${formatNumber(workingBedArea)} sq ft each` : ""}`]);
+  if (cropCycles.length) rows.push(["Current crop cycles", `${cropCycles.length} active`]);
   if (bedAreaRange) rows.push(["Bed range", formatNumberRange(bedAreaRange, " sq ft")]);
   if (totalGrowing) rows.push(["Growing bed total", `${formatNumber(totalGrowing)} sq ft`]);
   if (centerAreaRange || centerPointRange) {
@@ -244,6 +306,8 @@ function taskLabel(count: number) {
 }
 
 export function ZoneLandingCard({ zone }: { zone: AtlasRegistryZone }) {
+  const cropLines = currentCropCycleLines(zone);
+
   return (
     <article className="atlas-zone-landing-card">
       <div>
@@ -254,6 +318,12 @@ export function ZoneLandingCard({ zone }: { zone: AtlasRegistryZone }) {
         {zoneSpaceSummary(zone).map((line) => (
           <p key={line}>{line}</p>
         ))}
+        {cropLines.length ? (
+          <div className="atlas-zone-current-crop-summary">
+            <span>Current crop</span>
+            {cropLines.map((line) => <p key={line}>{line}</p>)}
+          </div>
+        ) : null}
       </div>
     </article>
   );
@@ -284,7 +354,12 @@ function BedTaskList({
 function ObjectRegistryFactLine({ object }: { object: AtlasRegistryObject }) {
   const clockPosition = metadataString(object.metadata, "clock_position");
   const orientation = metadataString(object.metadata, "orientation_note");
+  const activeCropLabel = metadataString(object.metadata, "active_crop_label");
+  const activeCropVariety = metadataString(object.metadata, "active_crop_variety");
+  const activeCropSownDate = metadataString(object.metadata, "active_crop_sown_date");
+  const activeHarvestStart = metadataString(object.metadata, "expected_harvest_watch_start");
   const areaRange = metadataNumberRange(object.metadata, "bed_area_sqft_range") ?? metadataNumberRange(object.metadata, "area_sqft_range");
+  const cropName = activeCropLabel ? [activeCropVariety, activeCropLabel].filter(Boolean).join(" ") : null;
   const parts = [
     object.object_type.replaceAll("_", " "),
     objectAreaSummary(object),
@@ -297,6 +372,7 @@ function ObjectRegistryFactLine({ object }: { object: AtlasRegistryObject }) {
     <p className="atlas-object-registry-line">
       {parts.join(" · ")}
       {orientation ? <><br />{orientation}</> : null}
+      {cropName ? <><br />Current crop: {cropName} · sown {prettyDate(activeCropSownDate)} · harvest watch {prettyDate(activeHarvestStart)}</> : null}
     </p>
   );
 }
@@ -322,10 +398,13 @@ function InspectionSheet({
       <ObjectRegistryFactLine object={object} />
       {object.contents.length === 0 ? <div className="atlas-inspection-empty">No current crop cycle logged.</div> : null}
       {object.contents.map((content) => (
-        <section key={content.id} className="atlas-crop-cycle-sheet">
-          {object.contents.length > 1 ? <div className="atlas-crop-cycle-title">{content.content_label}</div> : null}
+        <section key={content.id} className={`atlas-crop-cycle-sheet ${contentIsCropCycle(content) ? "current-crop-cycle" : ""}`}>
+          <div className="atlas-crop-cycle-title">
+            {contentIsCropCycle(content) ? "Current crop cycle" : object.contents.length > 1 ? content.content_label : "Crop record"}
+            {contentIsCropCycle(content) ? <span>{cropDisplayName(content)}</span> : null}
+          </div>
           <dl className="atlas-inspection-list-sheet">
-            {inspectionRows(content.inspection).map(([label, value]) => (
+            {inspectionRows(content).map(([label, value]) => (
               <div key={label}>
                 <dt>{label}</dt>
                 <dd>{value}</dd>
@@ -352,7 +431,9 @@ export function BedInspectorRow({
   onDocumentObject?: (object: AtlasRegistryObject) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const first = object.contents[0]?.inspection;
+  const firstContent = primaryContent(object);
+  const first = firstContent?.inspection;
+  const harvestWatch = first?.expected_harvest_watch_start ? ` · harvest ${prettyDate(first.expected_harvest_watch_start)}` : "";
 
   return (
     <article className={`atlas-bed-row-card ${isOpen ? "open" : ""}`}>
@@ -360,7 +441,7 @@ export function BedInspectorRow({
         <div>
           <strong>{object.label}</strong>
           <span>{cropLine(object)}</span>
-          <small>{objectAreaSummary(object)} · Seeded {prettyDate(object.inspection_summary?.seeded_date)} · Pinch {first ? yesNo(first.pinch_required) : EMPTY} · {taskLabel(tasks.length)}</small>
+          <small>{objectAreaSummary(object)} · Sown {prettyDate(object.inspection_summary?.seeded_date)}{harvestWatch} · Pinch {first ? yesNo(first.pinch_required) : EMPTY} · {taskLabel(tasks.length)}</small>
         </div>
         <em>{isOpen ? "close" : "open"}</em>
       </button>
