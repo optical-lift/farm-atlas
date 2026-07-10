@@ -65,14 +65,15 @@
 .atlas-home-footer-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
   gap: 8px;
   padding: 4px 0 8px;
 }
 
 .atlas-home-closeout-footer-link,
-.atlas-home-frost-countdown {
+.atlas-home-frost-countdown,
+.atlas-owner-footer-link {
   min-width: 0;
   width: 100%;
   min-height: 38px;
@@ -89,15 +90,19 @@
   box-shadow: 0 8px 18px rgba(58, 46, 30, 0.035);
 }
 
-.atlas-home-closeout-footer-link {
+.atlas-home-closeout-footer-link,
+.atlas-owner-footer-link {
   appearance: none;
   -webkit-appearance: none;
+  text-decoration: none;
 }
 
 .atlas-home-closeout-footer-link span,
 .atlas-home-closeout-footer-link em,
 .atlas-home-frost-countdown span,
-.atlas-home-frost-countdown em {
+.atlas-home-frost-countdown em,
+.atlas-owner-footer-link span,
+.atlas-owner-footer-link em {
   display: block;
   min-width: 0;
   font-size: 10.5px;
@@ -107,7 +112,8 @@
 }
 
 .atlas-home-closeout-footer-link span,
-.atlas-home-frost-countdown span {
+.atlas-home-frost-countdown span,
+.atlas-owner-footer-link span {
   flex: 0 0 auto;
   color: var(--atlas-text);
   font-weight: 950;
@@ -115,7 +121,8 @@
 }
 
 .atlas-home-closeout-footer-link em,
-.atlas-home-frost-countdown em {
+.atlas-home-frost-countdown em,
+.atlas-owner-footer-link em {
   color: var(--atlas-muted);
   font-weight: 850;
   overflow: hidden;
@@ -135,6 +142,27 @@
   .atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-box.atlas-route-sheet-box {
     min-height: 122px !important;
     height: 122px !important;
+  }
+
+  .atlas-home-footer-row {
+    gap: 6px;
+  }
+
+  .atlas-home-closeout-footer-link,
+  .atlas-home-frost-countdown,
+  .atlas-owner-footer-link {
+    min-height: 36px;
+    gap: 4px;
+    padding-inline: 6px;
+  }
+
+  .atlas-home-closeout-footer-link span,
+  .atlas-home-closeout-footer-link em,
+  .atlas-home-frost-countdown span,
+  .atlas-home-frost-countdown em,
+  .atlas-owner-footer-link span,
+  .atlas-owner-footer-link em {
+    font-size: 9.5px;
   }
 }
 
@@ -167,20 +195,23 @@
   }
 
   .atlas-home-footer-row {
-    gap: 6px;
+    gap: 5px;
   }
 
   .atlas-home-closeout-footer-link,
-  .atlas-home-frost-countdown {
-    min-height: 36px;
-    gap: 5px;
-    padding-inline: 7px;
+  .atlas-home-frost-countdown,
+  .atlas-owner-footer-link {
+    min-height: 34px;
+    gap: 3px;
+    padding-inline: 5px;
   }
 
   .atlas-home-closeout-footer-link span,
   .atlas-home-closeout-footer-link em,
   .atlas-home-frost-countdown span,
-  .atlas-home-frost-countdown em {
-    font-size: 9.5px;
+  .atlas-home-frost-countdown em,
+  .atlas-owner-footer-link span,
+  .atlas-owner-footer-link em {
+    font-size: 8.75px;
   }
 }
