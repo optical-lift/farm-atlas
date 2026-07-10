@@ -83,11 +83,46 @@ function positiveInteger(value: unknown) {
   return null;
 }
 
+function weekdayIndex(value: unknown) {
+  if (typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 6) return value;
+  if (typeof value === "string" && /^\d+$/.test(value)) {
+    const parsed = Number(value);
+    if (parsed >= 0 && parsed <= 6) return parsed;
+  }
+
+  const label = clean(value).toLowerCase();
+  if (label === "sunday") return 0;
+  if (label === "monday") return 1;
+  if (label === "tuesday") return 2;
+  if (label === "wednesday") return 3;
+  if (label === "thursday") return 4;
+  if (label === "friday") return 5;
+  if (label === "saturday") return 6;
+  return null;
+}
+
+function isoDateForNextWeekday(nowIso: string, targetWeekday: number) {
+  const date = new Date(`${nowIso.slice(0, 10)}T12:00:00`);
+  for (let offset = 1; offset <= 7; offset += 1) {
+    const candidate = new Date(date);
+    candidate.setDate(date.getDate() + offset);
+    if (candidate.getDay() === targetWeekday) return candidate.toISOString().slice(0, 10);
+  }
+  return isoDateFromNowPlusDays(7);
+}
+
 function shouldRecreateTask(task: TaskRow, outcome: Outcome) {
   if (outcome !== "done") return null;
   const metadata = task.metadata ?? {};
   if (metadata.recreate_on_done !== true && metadata.recreate_on_done !== "true") return null;
   return positiveInteger(metadata.recreate_after_days) ?? positiveInteger(metadata.repeat_after_days) ?? null;
+}
+
+function nextRecreatedDueDate(task: TaskRow, recreateAfterDays: number, now: string) {
+  const metadata = task.metadata ?? {};
+  const anchoredWeekday = weekdayIndex(metadata.recreate_weekday) ?? weekdayIndex(metadata.repeat_anchor_day);
+  if (anchoredWeekday !== null) return isoDateForNextWeekday(now, anchoredWeekday);
+  return isoDateFromNowPlusDays(recreateAfterDays);
 }
 
 async function getTask(body: Body) {
@@ -125,7 +160,7 @@ async function recreateTaskIfNeeded(task: TaskRow, outcome: Outcome, now: string
   const recreateAfterDays = shouldRecreateTask(task, outcome);
   if (!recreateAfterDays) return null;
 
-  const nextDueDate = isoDateFromNowPlusDays(recreateAfterDays);
+  const nextDueDate = nextRecreatedDueDate(task, recreateAfterDays, now);
   const metadata = task.metadata ?? {};
   const seriesKey = clean(metadata.recurrence_series_key) || clean(metadata.recurring_series_key) || task.id;
 
@@ -150,6 +185,7 @@ async function recreateTaskIfNeeded(task: TaskRow, outcome: Outcome, now: string
     previous_due_date: task.due_date,
     recreate_on_done: true,
     recreate_after_days: recreateAfterDays,
+    next_due_rule: metadata.recreate_weekday || metadata.repeat_anchor_day ? "anchored_weekday" : "after_days",
     outcome_history_count: 0,
   };
 
