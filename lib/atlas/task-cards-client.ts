@@ -130,18 +130,29 @@ export type AtlasTaskCardFetchOptions = {
   scope?: AtlasTaskCardScope;
 };
 
+function currentUrlScope() {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const scope = params.get("scope");
+  if (scope === "owner" || scope === "all") return scope;
+  if (window.location.pathname === "/task" && params.get("taskId")) return "all";
+  return null;
+}
+
 export async function fetchAtlasTaskCards(
   input?: string | AtlasTaskCardFetchOptions,
 ): Promise<AtlasTaskCardsResponse> {
   const params = new URLSearchParams();
   const options: AtlasTaskCardFetchOptions = typeof input === "string" ? { taskId: input } : input ?? {};
+  const inferredScope = currentUrlScope();
+  const scope = options.scope ?? inferredScope ?? "farm";
 
   if (options.taskId) {
     params.set("taskId", options.taskId);
   }
 
-  if (options.scope && options.scope !== "farm") {
-    params.set("scope", options.scope);
+  if (scope !== "farm") {
+    params.set("scope", scope);
   }
 
   const response = await fetch(
