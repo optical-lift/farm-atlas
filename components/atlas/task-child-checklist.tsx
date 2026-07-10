@@ -1,0 +1,326 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import {
+  fetchAtlasZoneRegistry,
+  type AtlasRegistryObject,
+  type AtlasRegistryZone,
+} from "@/lib/atlas/zone-registry-client";
+
+type PlantingLogResponse = {
+  ok?: boolean;
+  error?: string;
+  details?: string;
+  plantingLog?: { summary?: string } | null;
+};
+
+type PlantLogForm = {
+  amount: string;
+  zoneId: string;
+  objectId: string;
+  message: string | null;
+};
+
+function meta(task: AtlasTaskCard, key: string) {
+  return task.metadata?.[key];
+}
+
+function text(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+function numberText(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "string" && value.trim()) return value.trim();
+  return "";
+}
+
+function stringList(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
+}
+
+function boolish(value: unknown) {
+  return value === true || value === "true" || value === "yes" || value === 1;
+}
+
+function label(task: AtlasTaskCard) {
+  return text(meta(task, "checklist_label")) || text(meta(task, "display_subject")) || task.title.replace(/^Checklist\s+—\s+/i, "");
+}
+
+function detailLines(task: AtlasTaskCard) {
+  return stringList(meta(task, "detail_lines"));
+}
+
+function isDone(task: AtlasTaskCard) {
+  return task.status === "done" || task.task_outcomes?.[0]?.outcome === "done" || text(meta(task, "checklist_status")) === "done";
+}
+
+function needsPlantingLog(task: AtlasTaskCard) {
+  return boolish(meta(task, "planting_log_required"));
+}
+
+function objectRequired(task: AtlasTaskCard) {
+  return meta(task, "planting_log_object_required") !== false && meta(task, "planting_log_object_required") !== "false";
+}
+
+function defaultAmount(task: AtlasTaskCard) {
+  return numberText(meta(task, "planting_log_default_amount"));
+}
+
+function defaultZoneId(task: AtlasTaskCard) {
+  return text(meta(task, "planting_log_default_zone_id"));
+}
+
+function defaultObjectId(task: AtlasTaskCard) {
+  return text(meta(task, "planting_log_default_object_id"));
+}
+
+function logSummary(task: AtlasTaskCard) {
+  const plantingLog = meta(task, "planting_log") as Record<string, unknown> | undefined;
+  return text(plantingLog?.summary);
+}
+
+function visibleObjects(zone: AtlasRegistryZone | null) {
+  return (zone?.objects ?? [])
+    .filter((object) => object.object_type !== "path" && object.object_type !== "corridor")
+    .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999) || a.label.localeCompare(b.label));
+}
+
+function zoneById(zones: AtlasRegistryZone[], zoneId: string) {
+  return zones.find((zone) => zone.id === zoneId) ?? null;
+}
+
+function zoneForObject(zones: AtlasRegistryZone[], objectId: string) {
+  return zones.find((zone) => visibleObjects(zone).some((object) => object.id === objectId)) ?? null;
+}
+
+function objectById(zones: AtlasRegistryZone[], objectId: string) {
+  return zoneForObject(zones, objectId)?.objects.find((object) => object.id === objectId) ?? null;
+}
+
+function locationForSelection(zones: AtlasRegistryZone[], zoneId: string, objectId: string) {
+  const object = objectId ? objectById(zones, objectId) : null;
+  if (object) return object.label;
+  return zoneById(zones, zoneId)?.label ?? "";
+}
+
+async function postChildToggle(taskId: string, checklistStatus: "open" | "done", body: Record<string, unknown> = {}) {
+  const response = await fetch("/api/atlas/task-child-toggle", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ taskId, checklistStatus, ...body }),
+  });
+  const data = (await response.json()) as PlantingLogResponse;
+  if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Checklist failed.");
+  return data.plantingLog ?? null;
+}
+
+export function TaskChildChecklist({ childTasks, onChange }: { childTasks: AtlasTaskCard[]; onChange: () => Promise<void> }) {
+  const [zones, setZones] = useState<AtlasRegistryZone[]>([]);
+  const [registryLoading, setRegistryLoading] = useState(false);
+  const [registryError, setRegistryError] = useState<string | null>(null);
+  const [activeLogId, setActiveLogId] = useState<string | null>(null);
+  const [forms, setForms] = useState<Record<string, PlantLogForm>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [rowMessages, setRowMessages] = useState<Record<string, string | null>>({});
+
+  const needsRegistry = useMemo(() => childTasks.some((task) => needsPlantingLog(task) && !isDone(task)), [childTasks]);
+
+  useEffect(() => {
+    if (!needsRegistry) return;
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setRegistryLoading(true);
+        setRegistryError(null);
+        const response = await fetchAtlasZoneRegistry();
+        if (!cancelled) setZones(response.zones ?? []);
+      } catch (error) {
+        if (!cancelled) setRegistryError(error instanceof Error ? error.message : "Zone registry failed.");
+      } finally {
+        if (!cancelled) setRegistryLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [needsRegistry]);
+
+  if (!childTasks.length) return null;
+
+  function formFor(task: AtlasTaskCard) {
+    const current = forms[task.task_id];
+    if (current) return current;
+
+    const objectId = defaultObjectId(task);
+    const objectZone = objectId ? zoneForObject(zones, objectId) : null;
+    return {
+      amount: defaultAmount(task),
+      zoneId: objectZone?.id ?? defaultZoneId(task),
+      objectId,
+      message: null,
+    };
+  }
+
+  function updateForm(taskId: string, patch: Partial<PlantLogForm>) {
+    setForms((current) => ({
+      ...current,
+      [taskId]: { ...(current[taskId] ?? { amount: "", zoneId: "", objectId: "", message: null }), ...patch },
+    }));
+  }
+
+  function openPlantingLog(task: AtlasTaskCard) {
+    setActiveLogId(task.task_id);
+    setRowMessages((current) => ({ ...current, [task.task_id]: null }));
+    const initial = formFor(task);
+    setForms((current) => ({ ...current, [task.task_id]: initial }));
+  }
+
+  async function togglePlain(task: AtlasTaskCard, checklistStatus: "open" | "done") {
+    try {
+      setSavingId(task.task_id);
+      setRowMessages((current) => ({ ...current, [task.task_id]: null }));
+      await postChildToggle(task.task_id, checklistStatus);
+      setActiveLogId(null);
+      await onChange();
+    } catch (error) {
+      setRowMessages((current) => ({ ...current, [task.task_id]: error instanceof Error ? error.message : "Checklist failed." }));
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function handleTouch(task: AtlasTaskCard) {
+    if (savingId) return;
+    if (isDone(task)) {
+      await togglePlain(task, "open");
+      return;
+    }
+
+    if (needsPlantingLog(task)) {
+      openPlantingLog(task);
+      return;
+    }
+
+    await togglePlain(task, "done");
+  }
+
+  async function savePlantingLog(task: AtlasTaskCard) {
+    const form = formFor(task);
+    const selectedZone = zoneById(zones, form.zoneId);
+    const selectedObjects = visibleObjects(selectedZone);
+    const selectedObject = form.objectId ? selectedObjects.find((object) => object.id === form.objectId) : null;
+
+    if (!form.amount.trim()) {
+      updateForm(task.task_id, { message: "Add the count first." });
+      return;
+    }
+    if (registryLoading) {
+      updateForm(task.task_id, { message: "Zones are still loading." });
+      return;
+    }
+    if (registryError) {
+      updateForm(task.task_id, { message: registryError });
+      return;
+    }
+    if (!zones.length) {
+      updateForm(task.task_id, { message: "Zone registry did not load. Try again in a moment." });
+      return;
+    }
+    if (!form.zoneId || !selectedZone) {
+      updateForm(task.task_id, { message: "Choose the zone first." });
+      return;
+    }
+    if (!selectedObjects.length) {
+      updateForm(task.task_id, { message: "This zone does not have registered beds yet." });
+      return;
+    }
+    if (objectRequired(task) && !selectedObject) {
+      updateForm(task.task_id, { message: "Choose the real bed / area next." });
+      return;
+    }
+
+    try {
+      setSavingId(task.task_id);
+      updateForm(task.task_id, { message: "Saving…" });
+      await postChildToggle(task.task_id, "done", {
+        plantedAmount: form.amount,
+        plantedZoneId: form.zoneId,
+        plantedObjectId: form.objectId,
+        plantedLocation: locationForSelection(zones, form.zoneId, form.objectId),
+      });
+      setActiveLogId(null);
+      await onChange();
+    } catch (error) {
+      updateForm(task.task_id, { message: error instanceof Error ? error.message : "Checklist failed." });
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  return (
+    <section className="atlas-child-checklist" data-react-child-checklist="true">
+      <strong>Checklist</strong>
+      <div className="atlas-child-checklist-open atlas-child-checklist-stable-list">
+        {childTasks.map((task) => {
+          const done = isDone(task);
+          const active = activeLogId === task.task_id;
+          const form = formFor(task);
+          const selectedZone = zoneById(zones, form.zoneId);
+          const objects = visibleObjects(selectedZone);
+          const rowMessage = rowMessages[task.task_id];
+          const formMessage = form.message;
+
+          return (
+            <div key={task.task_id} className={`atlas-child-check-item${done ? " done" : ""}${savingId === task.task_id ? " saving" : ""}`} data-child-task-id={task.task_id}>
+              <button type="button" className="atlas-child-check-touch" disabled={Boolean(savingId)} onClick={() => void handleTouch(task)}>
+                <span>{done ? "✓" : ""}</span>
+                <div className="atlas-child-check-copy">
+                  <strong>{label(task)}</strong>
+                  {detailLines(task).map((line) => <em key={line}>{line}</em>)}
+                  {logSummary(task) ? <em className="atlas-child-log-summary">{logSummary(task)}</em> : null}
+                  {rowMessage ? <em className="atlas-child-log-summary">{rowMessage}</em> : null}
+                </div>
+              </button>
+
+              {active ? (
+                <form className="atlas-child-plant-log" onSubmit={(event) => { event.preventDefault(); void savePlantingLog(task); }}>
+                  <label>
+                    <span>Count</span>
+                    <input name="plantedAmount" inputMode="numeric" type="number" min="0" step="1" value={form.amount} onChange={(event) => updateForm(task.task_id, { amount: event.target.value, message: null })} />
+                  </label>
+                  <label>
+                    <span>Zone</span>
+                    <select name="plantedZoneId" value={form.zoneId} disabled={registryLoading || Boolean(registryError)} onChange={(event) => updateForm(task.task_id, { zoneId: event.target.value, objectId: "", message: null })}>
+                      <option value="">{registryLoading ? "Loading zones…" : "Choose zone"}</option>
+                      {zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.label}</option>)}
+                    </select>
+                  </label>
+                  {form.zoneId ? (
+                    <label className="atlas-child-bed-select-row">
+                      <span>Bed / area</span>
+                      <select name="plantedObjectId" value={form.objectId} disabled={!objects.length} onChange={(event) => updateForm(task.task_id, { objectId: event.target.value, message: null })}>
+                        <option value="">{objects.length ? "Choose bed / area" : "No registered beds in this zone"}</option>
+                        {objects.map((object: AtlasRegistryObject) => <option key={object.id} value={object.id}>{object.label}</option>)}
+                      </select>
+                    </label>
+                  ) : null}
+                  <div className="atlas-child-plant-log-actions">
+                    <button type="submit" disabled={savingId === task.task_id}>{savingId === task.task_id ? "Saving" : "Save planted"}</button>
+                    <button type="button" className="atlas-child-log-cancel" disabled={savingId === task.task_id} onClick={() => setActiveLogId(null)}>Cancel</button>
+                  </div>
+                  <p className="atlas-child-log-error" aria-live="polite">{formMessage ?? registryError ?? ""}</p>
+                </form>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
