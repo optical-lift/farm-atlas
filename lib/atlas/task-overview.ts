@@ -12,6 +12,7 @@ import {
   atlasText,
   type AtlasWorkRouteKey,
 } from "@/lib/atlas/task-display";
+import { atlasWorkOrderNumber } from "@/lib/atlas/work-order";
 
 export type WorkRouteKey = AtlasWorkRouteKey;
 
@@ -152,15 +153,8 @@ export function collectionZone(task: AtlasTaskCard) {
   return atlasTaskLocation(task) || zoneBucket(location(task));
 }
 
-function orderNumber(task: AtlasTaskCard) {
-  const value = meta(task, "day_order");
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
-  return 999;
-}
-
 export function taskSortValue(task: AtlasTaskCard) {
-  return `${task.due_date ?? "9999-12-31"}-${String(orderNumber(task)).padStart(5, "0")}-${atlasCleanLabel(atlasTaskDisplay(task).subject)}`;
+  return `${task.due_date ?? "9999-12-31"}-${String(atlasWorkOrderNumber(task)).padStart(5, "0")}-${atlasCleanLabel(atlasTaskDisplay(task).subject)}`;
 }
 
 function dueByPeriodEndOrUndated(task: AtlasTaskCard, endIso: string) {
@@ -196,24 +190,4 @@ export function routeCountsForTasks(tasks: AtlasTaskCard[]) {
 export function routeCountLineForTasks(tasks: AtlasTaskCard[]) {
   const counts = routeCountsForTasks(tasks);
   return counts.length ? counts.map((item) => `${item.label} ${item.count}`).join(" · ") : "No open work";
-}
-
-export function groupTasksByZone(tasks: AtlasTaskCard[], anchorIso = todayIso()): ZoneTaskOverview[] {
-  const groups = new Map<string, AtlasTaskCard[]>();
-  tasks.forEach((task) => {
-    const zone = collectionZone(task);
-    groups.set(zone, [...(groups.get(zone) ?? []), task]);
-  });
-
-  return Array.from(groups.entries())
-    .map(([zone, zoneTasks]) => {
-      const sortedTasks = zoneTasks.sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
-      return {
-        zone,
-        tasks: sortedTasks,
-        urgentCount: sortedTasks.filter((task) => isUrgentTask(task, anchorIso)).length,
-        routeCounts: routeCountsForTasks(sortedTasks),
-      };
-    })
-    .sort((a, b) => b.tasks.length - a.tasks.length || a.zone.localeCompare(b.zone));
 }
