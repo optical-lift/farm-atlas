@@ -6,123 +6,106 @@
 .atlas-plant-check {
   width: 100% !important;
   min-width: 0 !important;
-  max-width: none !important;
-  margin: 16px 0 0 !important;
-  padding: 0 !important;
+  margin: 4px 0 0 !important;
+  padding: 14px !important;
+  border: 1px solid var(--atlas-border) !important;
+  border-radius: 22px !important;
+  background: rgba(255, 255, 255, 0.72) !important;
   display: block !important;
   overflow: visible !important;
-  position: relative !important;
-  contain: none !important;
 }
 
 .atlas-plant-check > h3 {
-  width: 100% !important;
-  margin: 0 0 10px !important;
+  margin: 0 0 12px !important;
   padding: 0 !important;
-  display: block !important;
   color: #858bb8 !important;
   font-size: 12px !important;
   line-height: 1 !important;
   font-weight: 950 !important;
-  letter-spacing: 0.18em !important;
+  letter-spacing: 0.16em !important;
   text-transform: uppercase !important;
 }
 
 .atlas-plant-check__list {
   width: 100% !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
   display: flex !important;
   flex-direction: column !important;
-  align-items: stretch !important;
-  gap: 12px !important;
+  gap: 10px !important;
   overflow: visible !important;
 }
 
 .atlas-plant-check__item {
+  position: relative !important;
   width: 100% !important;
   min-width: 0 !important;
-  max-width: none !important;
   height: auto !important;
   min-height: 0 !important;
-  max-height: none !important;
   margin: 0 !important;
-  padding: 14px !important;
-  border: 1px solid rgba(139, 145, 194, 0.2) !important;
-  border-radius: 22px !important;
-  background: rgba(255, 255, 255, 0.76) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: stretch !important;
-  gap: 12px !important;
+  padding: 0 !important;
+  border: 1px solid rgba(139, 145, 194, 0.22) !important;
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.82) !important;
+  display: block !important;
   overflow: visible !important;
-  position: relative !important;
-  text-align: left !important;
   writing-mode: horizontal-tb !important;
-  contain: none !important;
 }
 
 .atlas-plant-check__item.is-done {
-  background: rgba(228, 234, 200, 0.42) !important;
+  background: rgba(228, 234, 200, 0.48) !important;
 }
 
 .atlas-plant-check__item.is-saving {
-  opacity: 0.7 !important;
+  opacity: 0.68 !important;
 }
 
 .atlas-plant-check__content {
   width: 100% !important;
   min-width: 0 !important;
-  max-width: none !important;
+  min-height: 78px !important;
   margin: 0 !important;
-  padding: 0 !important;
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: flex-start !important;
+  padding: 14px 54px 14px 14px !important;
+  display: grid !important;
+  grid-template-columns: 40px minmax(0, 1fr) !important;
+  align-items: center !important;
   gap: 12px !important;
   overflow: visible !important;
   writing-mode: horizontal-tb !important;
 }
 
 .atlas-plant-check__mark {
-  flex: 0 0 34px !important;
-  width: 34px !important;
-  min-width: 34px !important;
-  max-width: 34px !important;
-  height: 34px !important;
-  min-height: 34px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
   margin: 0 !important;
   padding: 0 !important;
+  border: 3px solid rgba(139, 145, 194, 0.28) !important;
   border-radius: 999px !important;
-  border: 3px solid rgba(139, 145, 194, 0.34) !important;
   background: rgba(255, 255, 255, 0.42) !important;
+  color: var(--atlas-text) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  color: var(--atlas-text) !important;
-  font-size: 18px !important;
+  font-size: 20px !important;
   line-height: 1 !important;
   font-weight: 950 !important;
   overflow: hidden !important;
 }
 
 .atlas-plant-check__item.is-done .atlas-plant-check__mark {
-  border-color: rgba(185, 204, 124, 0.82) !important;
-  background: rgba(222, 233, 183, 0.9) !important;
+  border-color: rgba(185, 204, 124, 0.9) !important;
+  background: rgba(222, 233, 183, 0.96) !important;
 }
 
 .atlas-plant-check__copy {
-  flex: 1 1 auto !important;
-  width: auto !important;
+  width: 100% !important;
   min-width: 0 !important;
   max-width: none !important;
   margin: 0 !important;
   padding: 0 !important;
   display: flex !important;
   flex-direction: column !important;
-  align-items: stretch !important;
   gap: 4px !important;
   overflow: visible !important;
   writing-mode: horizontal-tb !important;
@@ -131,18 +114,16 @@
 .atlas-plant-check__copy strong,
 .atlas-plant-check__copy span,
 .atlas-plant-check__copy em {
-  width: auto !important;
+  width: 100% !important;
   min-width: 0 !important;
   max-width: none !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
   display: block !important;
   white-space: normal !important;
   overflow: visible !important;
   text-overflow: clip !important;
-  overflow-wrap: break-word !important;
+  overflow-wrap: normal !important;
   word-break: normal !important;
   hyphens: none !important;
   text-align: left !important;
@@ -151,96 +132,101 @@
 
 .atlas-plant-check__copy strong {
   color: var(--atlas-text) !important;
-  font-size: 21px !important;
-  line-height: 1.08 !important;
+  font-size: 20px !important;
+  line-height: 1.02 !important;
   font-weight: 950 !important;
-  letter-spacing: -0.035em !important;
+  letter-spacing: -0.04em !important;
 }
 
 .atlas-plant-check__copy span {
   color: var(--atlas-muted) !important;
-  font-size: 14px !important;
-  line-height: 1.28 !important;
+  font-size: 13px !important;
+  line-height: 1.22 !important;
   font-weight: 800 !important;
 }
 
 .atlas-plant-check__copy em {
-  margin-top: 2px !important;
-  color: #6e774f !important;
-  font-size: 13px !important;
-  line-height: 1.25 !important;
+  color: #657044 !important;
+  font-size: 12px !important;
+  line-height: 1.2 !important;
   font-style: normal !important;
   font-weight: 900 !important;
 }
 
-.atlas-plant-check__actions {
+/* The existing React action button is the tap target for the whole row. */
+.atlas-plant-check__item:not(:has(.atlas-plant-check__form)) .atlas-plant-check__actions {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 5 !important;
   width: 100% !important;
-  min-width: 0 !important;
-  max-width: none !important;
+  height: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
-  display: block !important;
-  overflow: visible !important;
+  pointer-events: none !important;
 }
 
-.atlas-plant-check__actions button {
+.atlas-plant-check__item:not(:has(.atlas-plant-check__form)) .atlas-plant-check__actions button {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 6 !important;
   width: 100% !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  min-height: 52px !important;
+  height: 100% !important;
+  min-height: 78px !important;
   margin: 0 !important;
-  box-sizing: border-box !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: transparent !important;
+  color: transparent !important;
+  font-size: 0 !important;
   appearance: none !important;
   -webkit-appearance: none !important;
-  border: 0 !important;
-  border-radius: 16px !important;
-  background: rgba(222, 233, 183, 0.95) !important;
-  color: var(--atlas-text) !important;
-  padding: 14px 16px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-size: 16px !important;
-  line-height: 1.1 !important;
-  font-weight: 950 !important;
-  text-align: center !important;
-  white-space: normal !important;
-  overflow: visible !important;
-  touch-action: manipulation !important;
   pointer-events: auto !important;
+  touch-action: manipulation !important;
   cursor: pointer !important;
-  position: relative !important;
-  z-index: 2 !important;
 }
 
-.atlas-plant-check__actions button:disabled,
-.atlas-plant-check__form button:disabled,
-.atlas-plant-check__form input:disabled,
-.atlas-plant-check__form select:disabled {
-  opacity: 0.62 !important;
+.atlas-plant-check__item:not(:has(.atlas-plant-check__form)) .atlas-plant-check__actions button::after {
+  content: "›" !important;
+  position: absolute !important;
+  right: 18px !important;
+  top: 50% !important;
+  transform: translateY(-52%) !important;
+  color: var(--atlas-text) !important;
+  font-size: 34px !important;
+  line-height: 1 !important;
+  font-weight: 500 !important;
+}
+
+.atlas-plant-check__item:not(:has(.atlas-plant-check__form)) .atlas-plant-check__actions button:focus-visible {
+  outline: 3px solid rgba(139, 145, 194, 0.45) !important;
+  outline-offset: 2px !important;
+}
+
+/* Once opened, remove the overlay and show only the real inline form. */
+.atlas-plant-check__item:has(.atlas-plant-check__form) .atlas-plant-check__actions {
+  display: none !important;
 }
 
 .atlas-plant-check__form {
-  width: 100% !important;
+  width: auto !important;
   min-width: 0 !important;
-  max-width: none !important;
-  margin: 0 !important;
+  margin: 0 12px 12px !important;
   padding: 12px !important;
-  border-radius: 18px !important;
+  border: 1px solid rgba(139, 145, 194, 0.18) !important;
+  border-radius: 16px !important;
   background: rgba(246, 242, 230, 0.82) !important;
   display: flex !important;
   flex-direction: column !important;
-  align-items: stretch !important;
   gap: 12px !important;
   overflow: visible !important;
   position: relative !important;
-  z-index: 3 !important;
+  z-index: 10 !important;
 }
 
 .atlas-plant-check__form label {
   width: 100% !important;
   min-width: 0 !important;
-  max-width: none !important;
   margin: 0 !important;
   padding: 0 !important;
   display: flex !important;
@@ -258,15 +244,13 @@
 .atlas-plant-check__form select {
   width: 100% !important;
   min-width: 0 !important;
-  max-width: none !important;
-  min-height: 48px !important;
+  min-height: 50px !important;
   margin: 0 !important;
-  box-sizing: border-box !important;
-  border-radius: 14px !important;
-  border: 1px solid rgba(139, 145, 194, 0.24) !important;
-  background: rgba(255, 255, 255, 0.96) !important;
-  color: var(--atlas-text) !important;
   padding: 11px 12px !important;
+  border: 1px solid rgba(139, 145, 194, 0.24) !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  color: var(--atlas-text) !important;
   display: block !important;
   font-size: 16px !important;
   line-height: 1.2 !important;
@@ -274,59 +258,76 @@
   text-transform: none !important;
   letter-spacing: normal !important;
   writing-mode: horizontal-tb !important;
-  outline: none !important;
 }
 
 .atlas-plant-check__form select {
-  appearance: menulist !important;
+  appearance: auto !important;
   -webkit-appearance: menulist !important;
 }
 
 .atlas-plant-check__form-actions {
   width: 100% !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
   gap: 8px !important;
 }
 
 .atlas-plant-check__form-actions button {
   width: 100% !important;
   min-width: 0 !important;
-  max-width: none !important;
   min-height: 48px !important;
   margin: 0 !important;
-  appearance: none !important;
-  -webkit-appearance: none !important;
-  border: 0 !important;
+  padding: 12px !important;
+  border: 1px solid rgba(139, 145, 194, 0.2) !important;
   border-radius: 14px !important;
-  padding: 12px 14px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
   color: var(--atlas-text) !important;
   font-size: 15px !important;
   line-height: 1.1 !important;
   font-weight: 950 !important;
-  background: rgba(255, 255, 255, 0.9) !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
   touch-action: manipulation !important;
   pointer-events: auto !important;
 }
 
 .atlas-plant-check__form-actions button[type="submit"] {
-  background: rgba(222, 233, 183, 0.96) !important;
+  background: rgba(214, 225, 177, 0.78) !important;
+  color: #515b34 !important;
 }
 
 .atlas-plant-check__form p {
   width: 100% !important;
-  min-width: 0 !important;
-  max-width: none !important;
+  min-height: 1em !important;
   margin: 0 !important;
   padding: 0 !important;
-  color: var(--atlas-muted) !important;
+  color: #835345 !important;
   font-size: 12px !important;
   line-height: 1.25 !important;
   font-weight: 850 !important;
   white-space: normal !important;
   overflow: visible !important;
+}
+
+.atlas-plant-check button:disabled,
+.atlas-plant-check input:disabled,
+.atlas-plant-check select:disabled {
+  opacity: 0.58 !important;
+}
+
+@media (max-width: 430px) {
+  .atlas-plant-check {
+    padding: 12px !important;
+  }
+
+  .atlas-plant-check__content {
+    min-height: 76px !important;
+    padding: 13px 48px 13px 12px !important;
+    grid-template-columns: 38px minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .atlas-plant-check__copy strong {
+    font-size: 19px !important;
+  }
 }
