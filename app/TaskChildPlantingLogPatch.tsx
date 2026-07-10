@@ -333,8 +333,9 @@ function showInlineLog(row: HTMLElement, zones: RegistryZone[]) {
   if (!form) return;
   applyZoneOptions(form, zones);
   row.classList.add("logging");
+  row.classList.remove("saving");
   form.hidden = false;
-  setRowError(row, "");
+  setRowError(row, zones.length ? "" : "Loading zones…");
 }
 
 function hideInlineLog(row: HTMLElement) {
@@ -423,18 +424,20 @@ export default function TaskChildPlantingLogPatch() {
       const checklistStatus = row.dataset.nextStatus === "done" ? "done" : "open";
 
       if (checklistStatus === "done" && row.dataset.plantingLogRequired === "true") {
-        row.classList.add("saving");
-        try {
-          const zones = await loadRegistryZones();
-          row.classList.remove("saving");
-          if (!zones.length) {
-            setRowError(row, "Zone registry did not load. Try again in a moment.");
-            return;
-          }
-          showInlineLog(row, zones);
-        } catch (error) {
-          row.classList.remove("saving");
-          setRowError(row, error instanceof Error ? error.message : "Zone registry failed.");
+        showInlineLog(row, registryZones);
+        if (!registryZones.length) {
+          void loadRegistryZones()
+            .then((zones) => {
+              const form = row.querySelector<HTMLFormElement>(".atlas-child-plant-log");
+              if (!form || form.hidden) return;
+              if (!zones.length) {
+                setRowError(row, "Zone registry did not load. Try again in a moment.");
+                return;
+              }
+              applyZoneOptions(form, zones);
+              setRowError(row, "");
+            })
+            .catch((error) => setRowError(row, error instanceof Error ? error.message : "Zone registry failed."));
         }
         return;
       }
