@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { TaskChildChecklist } from "@/components/atlas/task-child-checklist";
 import { atlasTaskDisplay } from "@/lib/atlas/task-display";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
@@ -381,12 +382,13 @@ function ProgressReportHero({ selectedTask, tasks, nextWorkTasks, today }: { sel
   );
 }
 
-function ActiveTaskCard({ task, allTasks, onChange, onDoneComplete, today, weatherLabel }: { task: AtlasTaskCard; allTasks: AtlasTaskCard[]; onChange: () => Promise<void>; onDoneComplete: () => void; today: string; weatherLabel: string }) {
+function ActiveTaskCard({ task, allTasks, onChange, onChildChange, onDoneComplete, today, weatherLabel }: { task: AtlasTaskCard; allTasks: AtlasTaskCard[]; onChange: () => Promise<void>; onChildChange: () => Promise<void>; onDoneComplete: () => void; today: string; weatherLabel: string }) {
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const display = displayTask(task);
   const windowLabel = workWindowForTask(task, weatherLabel);
+  const childTasks = childTasksFor(task, allTasks);
 
   async function submitOutcome(outcome: Outcome, note = "") {
     try {
@@ -486,6 +488,7 @@ function ActiveTaskCard({ task, allTasks, onChange, onDoneComplete, today, weath
         <strong>{display.location}</strong>
       </section>
       <DetailCard heading={display.detailHeading} lines={display.detailLines} />
+      <TaskChildChecklist childTasks={childTasks} onChange={onChildChange} />
       <div className="atlas-task-page-actions atlas-task-primary-actions">
         <button type="button" className="done" disabled={Boolean(saving)} onClick={finishDone}>{saving === "done" ? "Saving" : "Done"}</button>
         <button type="button" disabled={Boolean(saving)} onClick={() => setUnfinishedOpen((open) => !open)}>{unfinishedOpen ? "Close" : "Unfinished"}</button>
@@ -538,6 +541,15 @@ export default function AtlasTaskPage() {
       setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function refreshTaskData() {
+    try {
+      const response = await fetchAtlasTaskCards();
+      setTasks((response.taskCards ?? []).filter((task) => task.status !== "archived").sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b))));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
     }
   }
 
@@ -663,7 +675,7 @@ export default function AtlasTaskPage() {
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
           {message ? <div className="atlas-task-page-empty">{message}</div> : null}
           {!loading && !selectedTask ? <div className="atlas-task-page-empty">No open tasks.</div> : null}
-          {selectedTask ? <div ref={activeTaskAnchorRef} className="atlas-task-page-active-anchor"><ActiveTaskCard task={selectedTask} allTasks={tasks} onChange={handleTaskChanged} onDoneComplete={returnAfterDone} today={today} weatherLabel={weatherLabel} /></div> : null}
+          {selectedTask ? <div ref={activeTaskAnchorRef} className="atlas-task-page-active-anchor"><ActiveTaskCard task={selectedTask} allTasks={tasks} onChange={handleTaskChanged} onChildChange={refreshTaskData} onDoneComplete={returnAfterDone} today={today} weatherLabel={weatherLabel} /></div> : null}
           <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Next</span><small>{nextWorkTasks.length}</small></div>{renderTaskRows(nextWorkTasks, "No next tasks ready.")}</section>
           <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Later</span><small>{laterWorkTasks.length}</small></div>{renderTaskRows(laterWorkTasks, "No later tasks ready.")}</section>
           <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Waiting</span><small>{carryoverTasks.length}</small></div>{renderTaskRows(carryoverTasks, "Nothing waiting.")}</section>
