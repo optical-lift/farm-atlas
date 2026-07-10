@@ -181,12 +181,16 @@ function checklistLabel(task: AtlasTaskCard) {
   return metaString(task, "checklist_label") ?? displayTask(task).subject;
 }
 
-function isChecklistDone(task: AtlasTaskCard) {
-  return metaString(task, "checklist_status") === "done";
+function stepOrder(task: AtlasTaskCard) {
+  return metaNumber(task, "step_order") ?? 999;
 }
 
 function latestOutcome(task: AtlasTaskCard) {
   return task.task_outcomes?.[0] ?? null;
+}
+
+function isChecklistDone(task: AtlasTaskCard) {
+  return task.status === "done" || latestOutcome(task)?.outcome === "done" || metaString(task, "checklist_status") === "done";
 }
 
 function isCompletedTask(task: AtlasTaskCard) {
@@ -246,6 +250,12 @@ function nextTimeBlockDate(task: AtlasTaskCard, allTasks: AtlasTaskCard[], today
     .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)))[0];
 
   return sameBlock?.due_date ?? addDaysIso(today, 7);
+}
+
+function childTasksFor(task: AtlasTaskCard, allTasks: AtlasTaskCard[]) {
+  return allTasks
+    .filter((candidate) => childParentId(candidate) === task.task_id && candidate.status !== "archived")
+    .sort((a, b) => stepOrder(a) - stepOrder(b));
 }
 
 async function postOutcome(task: AtlasTaskCard, outcome: Outcome, note = "") {
@@ -333,7 +343,7 @@ function ProgressLine({ label, value, percent }: { label: string; value: string;
 
 function ProgressReportHero({ selectedTask, tasks, nextWorkTasks, today }: { selectedTask: AtlasTaskCard | null; tasks: AtlasTaskCard[]; nextWorkTasks: AtlasTaskCard[]; today: string }) {
   const selectedDisplay = selectedTask ? displayTask(selectedTask) : null;
-  const childTasks = selectedTask ? tasks.filter((task) => childParentId(task) === selectedTask.task_id && task.status !== "archived").sort((a, b) => (metaNumber(a, "step_order") ?? 999) - (metaNumber(b, "step_order") ?? 999)) : [];
+  const childTasks = selectedTask ? childTasksFor(selectedTask, tasks) : [];
   const taskTotal = childTasks.length || (selectedTask ? 1 : 0);
   const taskDone = childTasks.length ? childTasks.filter(isChecklistDone).length : selectedTask && isCompletedTask(selectedTask) ? 1 : 0;
   const dayTasks = tasks.filter((task) => !isChildTask(task) && task.status !== "archived" && (!task.due_date || task.due_date <= today));
@@ -371,12 +381,49 @@ function ProgressReportHero({ selectedTask, tasks, nextWorkTasks, today }: { sel
   );
 }
 
+function ChildChecklist({
+  childTasks,
+  saving,
+  onDone,
+}: {
+  childTasks: AtlasTaskCard[];
+  saving: string | null;
+  onDone: (task: AtlasTaskCard) => void;
+}) {
+  if (childTasks.length === 0) return null;
+  const doneCount = childTasks.filter(isChecklistDone).length;
+
+  return (
+    <section className="atlas-task-detail-card atlas-task-child-checklist-card">
+      <strong>Subtasks · {doneCount}/{childTasks.length} done</strong>
+      <div className="atlas-task-unfinished-grid quiet">
+        {childTasks.map((child) => {
+          const done = isChecklistDone(child);
+          const savingKey = `child:${child.task_id}`;
+          return (
+            <button
+              type="button"
+              key={child.task_id}
+              disabled={Boolean(saving) || done}
+              onClick={() => onDone(child)}
+            >
+              {saving === savingKey ? "Saving" : done ? `Done · ${checklistLabel(child)}` : checklistLabel(child)}
+            </button>
+          );
+        })}
+      </div>
+      <p>{doneCount === childTasks.length ? "All subtasks are done. Tap Done on this card to close the parent task." : "Tap each batch when that piece is actually finished."}</p>
+    </section>
+  );
+}
+
 function ActiveTaskCard({ task, allTasks, onChange, onDoneComplete, today, weatherLabel }: { task: AtlasTaskCard; allTasks: AtlasTaskCard[]; onChange: () => Promise<void>; onDoneComplete: () => void; today: string; weatherLabel: string }) {
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const display = displayTask(task);
   const windowLabel = workWindowForTask(task, weatherLabel);
+  const childTasks = childTasksFor(task, allTasks);
 
   async function submitOutcome(outcome: Outcome, note = "") {
     try {
@@ -392,6 +439,20 @@ function ActiveTaskCard({ task, allTasks, onChange, onDoneComplete, today, weath
       setMessage("Saved.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Task update failed.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function submitChildDone(childTask: AtlasTaskCard) {
+    try {
+      setSaving(`child:${childTask.task_id}`);
+      setMessage(null);
+      await postOutcome(childTask, "done", `Completed subtask: ${checklistLabel(childTask)}`);
+      await onChange();
+      setMessage("Subtask done.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Subtask update failed.");
     } finally {
       setSaving(null);
     }
@@ -476,6 +537,7 @@ function ActiveTaskCard({ task, allTasks, onChange, onDoneComplete, today, weath
         <strong>{display.location}</strong>
       </section>
       <DetailCard heading={display.detailHeading} lines={display.detailLines} />
+      <ChildChecklist childTasks={childTasks} saving={saving} onDone={(childTask) => void submitChildDone(childTask)} />
       <div className="atlas-task-page-actions atlas-task-primary-actions">
         <button type="button" className="done" disabled={Boolean(saving)} onClick={finishDone}>{saving === "done" ? "Saving" : "Done"}</button>
         <button type="button" disabled={Boolean(saving)} onClick={() => setUnfinishedOpen((open) => !open)}>{unfinishedOpen ? "Close" : "Unfinished"}</button>
