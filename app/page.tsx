@@ -22,6 +22,7 @@ import {
   monthProgress,
 } from "@/lib/atlas/task-overview";
 import { fetchAtlasZoneRegistry, type AtlasRegistryZone } from "@/lib/atlas/zone-registry-client";
+import { atlasWorkOrderSortValue } from "@/lib/atlas/work-order";
 import {
   atlasBuildMowingCollectionSummary,
   atlasIsMowingCollectionMember,
@@ -86,13 +87,6 @@ function dayShortLabel(dateIso: string) {
   return date.toLocaleDateString("en-US", { weekday: "short" });
 }
 
-function metaNumber(card: AtlasTaskCard, key: string) {
-  const value = atlasMetadataValue(card, key);
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
-  return null;
-}
-
 function isChildTask(card: AtlasTaskCard) {
   return atlasMetadataValue(card, "is_child_task") === true || atlasMetadataValue(card, "is_child_task") === "true";
 }
@@ -125,8 +119,7 @@ function subtaskLabel(card: AtlasTaskCard, counts: Map<string, number>) {
 }
 
 function taskSortValue(card: AtlasTaskCard) {
-  const dayOrder = metaNumber(card, "day_order") ?? 999;
-  return `${card.due_date ?? "9999-12-31"}-${String(dayOrder).padStart(5, "0")}-${atlasTaskDisplay(card).title}`;
+  return atlasWorkOrderSortValue(card);
 }
 
 function isTaskDone(card: AtlasTaskCard) {
@@ -191,7 +184,7 @@ function panelTitle(panel: HomePanel) {
 function homeLaunchItems(todayCards: AtlasTaskCard[], cards: AtlasTaskCard[], today: string): HomeLaunchItem[] {
   const mowing = atlasBuildMowingCollectionSummary(cards, today);
   const standalone = todayCards.filter((card) => !atlasIsMowingCollectionMember(card)).map((task) => ({ kind: "task" as const, task }));
-  return [...(mowing && mowing.dueCount > 0 ? [{ kind: "collection" as const, collection: mowing }] : []), ...standalone].slice(0, 4);
+  return [...standalone, ...(mowing && mowing.dueCount > 0 ? [{ kind: "collection" as const, collection: mowing }] : [])].slice(0, 4);
 }
 
 function launchItemSignature(item: HomeLaunchItem, stepCounts: Map<string, number>) {
