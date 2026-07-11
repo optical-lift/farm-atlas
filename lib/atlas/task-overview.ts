@@ -134,6 +134,7 @@ export function detail(task: AtlasTaskCard) {
 
 export function zoneBucket(value: string) {
   const lower = value.toLowerCase();
+  if (lower.includes("water")) return "Watering";
   if (lower.includes("weed")) return "Weeding";
   if (lower.includes("homestead") || lower.includes("chicken")) return "Homestead";
   if (lower.includes("oak") || lower.includes("strawberry orchard")) return "Shady Oak";
@@ -152,6 +153,7 @@ export function zoneBucket(value: string) {
 }
 
 export function collectionZone(task: AtlasTaskCard) {
+  if (routeForTask(task) === "water") return "Watering";
   const explicit = atlasMetaString(task, "collection_zone") || task.zone_label || "";
   return zoneBucket(explicit || location(task));
 }
@@ -205,6 +207,8 @@ export function groupTasksByZone(tasks: AtlasTaskCard[], anchorIso = todayIso())
       };
     })
     .sort((a, b) => {
+      if (a.zone === "Watering" && b.zone !== "Watering") return -1;
+      if (b.zone === "Watering" && a.zone !== "Watering") return 1;
       const firstA = a.tasks[0];
       const firstB = b.tasks[0];
       if (!firstA || !firstB) return a.zone.localeCompare(b.zone);
