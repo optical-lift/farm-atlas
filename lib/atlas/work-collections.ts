@@ -53,6 +53,10 @@ export function atlasWorkCollectionKey(task: AtlasTaskCard): AtlasWorkCollection
   return null;
 }
 
+export function atlasCollectionMemberKey(task: AtlasTaskCard) {
+  return atlasMetaString(task, "collection_member_key") || task.task_id;
+}
+
 export function atlasIsWorkCollectionMember(task: AtlasTaskCard) {
   return Boolean(atlasWorkCollectionKey(task));
 }
@@ -74,15 +78,28 @@ export function atlasIsNotReadyCollectionTask(task: AtlasTaskCard) {
   return state === "not_ready" || Boolean(atlasMetaString(task, "not_ready_reason"));
 }
 
+export function atlasVisibleCollectionTasks(tasks: AtlasTaskCard[]) {
+  const members = tasks
+    .filter((task) => task.status !== "archived")
+    .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b)));
+  const activeKeys = new Set(
+    members
+      .filter((task) => task.status === "open" || task.status === "blocked")
+      .map(atlasCollectionMemberKey),
+  );
+
+  return members.filter((task) => {
+    if (!atlasIsDoneTask(task)) return true;
+    return !activeKeys.has(atlasCollectionMemberKey(task));
+  });
+}
+
 export function atlasBuildWorkCollectionSummary(
   key: AtlasWorkCollectionKey,
   tasks: AtlasTaskCard[],
   anchorIso: string,
 ): AtlasWorkCollectionSummary | null {
-  const members = tasks
-    .filter((task) => atlasWorkCollectionKey(task) === key)
-    .filter((task) => task.status !== "archived")
-    .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b)));
+  const members = atlasVisibleCollectionTasks(tasks.filter((task) => atlasWorkCollectionKey(task) === key));
 
   if (!members.length) return null;
 
@@ -91,8 +108,8 @@ export function atlasBuildWorkCollectionSummary(
   const blocked = active.filter((task) => task.status === "blocked");
   const notReady = members.filter(atlasIsNotReadyCollectionTask);
   const doneRecent = members.filter(atlasIsDoneTask);
-  const nextDue = members
-    .map((task) => atlasMetaString(task, "next_due_at") || task.due_date)
+  const nextDue = active
+    .map((task) => task.due_date || atlasMetaString(task, "next_due_at"))
     .filter((value): value is string => Boolean(value && value >= anchorIso))
     .sort()[0];
   const previewTasks = [...due.filter((task) => !atlasIsNotReadyCollectionTask(task)), ...active]
