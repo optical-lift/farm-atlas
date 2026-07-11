@@ -41,7 +41,7 @@ export type AtlasCloseoutSummary = {
   records: AtlasCloseoutRecord[];
 };
 
-export type AtlasCloseoutResponse = {
+export type AtlasCloseoutResponse = AtlasCloseoutSummary & {
   ok: boolean;
   today: string;
   summaries: AtlasCloseoutSummary[];
@@ -63,9 +63,12 @@ export async function fetchAtlasCloseout(): Promise<AtlasCloseoutResponse> {
     cache: "no-store",
   });
 
-  const data = (await response.json()) as AtlasCloseoutResponse;
+  const data = (await response.json()) as Omit<AtlasCloseoutResponse, keyof AtlasCloseoutSummary>;
   if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Failed to load closeout.");
-  return data;
+
+  const summary = data.summaries.find((item) => item.period === "day") ?? data.summaries[0];
+  if (!summary) throw new Error("Closeout response did not include a summary.");
+  return { ...data, ...summary };
 }
 
 export async function saveAtlasCloseout(payload: {
