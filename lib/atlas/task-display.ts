@@ -34,8 +34,16 @@ export function atlasStringList(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
 }
 
+function isChickenTendingTask(task: AtlasTaskCard) {
+  const text = `${task.task_type ?? ""} ${task.title ?? ""} ${task.unlock_text ?? ""} ${task.metadata?.display_action ?? ""} ${task.metadata?.display_subject ?? ""}`.toLowerCase();
+  return text.includes("feed chicken") || text.includes("tend chicken") || text.includes("chicken chore");
+}
+
 export function atlasMetadataValue(task: AtlasTaskCard, key: string) {
-  return task.metadata?.[key];
+  const stored = task.metadata?.[key];
+  if (stored !== undefined && stored !== null) return stored;
+  if ((key === "quiet_task" || key === "hide_from_home_hero") && isChickenTendingTask(task)) return true;
+  return stored;
 }
 
 export function atlasMetaString(task: AtlasTaskCard, key: string) {
