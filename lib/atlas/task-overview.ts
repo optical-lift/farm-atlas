@@ -62,11 +62,11 @@ export function monthName(dateIso: string) {
 
 export function monthProgress(dateIso: string) {
   const date = dateFromIso(dateIso);
-  if (Number.isNaN(date.getTime())) return { day: 0, days: 0, percent: 0 };
+  if (Number.isNaN(date.getTime())) return { day: 0, days: 0, daysInMonth: 0, percent: 0 };
   const day = date.getDate();
   const days = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   const percent = days ? Math.max(0, Math.min(100, Math.round((day / days) * 100))) : 0;
-  return { day, days, percent };
+  return { day, days, daysInMonth: days, percent };
 }
 
 export function prettyShortDate(dateIso: string | null | undefined) {
