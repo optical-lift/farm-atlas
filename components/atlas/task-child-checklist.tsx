@@ -38,7 +38,9 @@ function numberText(value: unknown) {
 }
 
 function stringList(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
 }
 
 function boolish(value: unknown) {
@@ -201,34 +203,13 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
     const selectedObjects = visibleObjects(selectedZone);
     const selectedObject = form.objectId ? selectedObjects.find((object) => object.id === form.objectId) : null;
 
-    if (!form.amount.trim()) {
-      updateForm(task.task_id, { message: "Add the count first." });
-      return;
-    }
-    if (registryLoading) {
-      updateForm(task.task_id, { message: "Zones are still loading." });
-      return;
-    }
-    if (registryError) {
-      updateForm(task.task_id, { message: registryError });
-      return;
-    }
-    if (!zones.length) {
-      updateForm(task.task_id, { message: "Zone registry did not load. Try again in a moment." });
-      return;
-    }
-    if (!form.zoneId || !selectedZone) {
-      updateForm(task.task_id, { message: "Choose the zone first." });
-      return;
-    }
-    if (!selectedObjects.length) {
-      updateForm(task.task_id, { message: "This zone does not have registered beds yet." });
-      return;
-    }
-    if (objectRequired(task) && !selectedObject) {
-      updateForm(task.task_id, { message: "Choose the real bed / area next." });
-      return;
-    }
+    if (!form.amount.trim()) return updateForm(task.task_id, { message: "Add the count first." });
+    if (registryLoading) return updateForm(task.task_id, { message: "Zones are still loading." });
+    if (registryError) return updateForm(task.task_id, { message: registryError });
+    if (!zones.length) return updateForm(task.task_id, { message: "Zone registry did not load. Try again in a moment." });
+    if (!form.zoneId || !selectedZone) return updateForm(task.task_id, { message: "Choose the zone first." });
+    if (!selectedObjects.length) return updateForm(task.task_id, { message: "This zone does not have registered beds yet." });
+    if (objectRequired(task) && !selectedObject) return updateForm(task.task_id, { message: "Choose the real bed / area next." });
 
     try {
       setSavingId(task.task_id);
@@ -254,17 +235,22 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
       <div className="atlas-plant-check__list">
         {childTasks.map((task) => {
           const done = isDone(task);
+          const interactive = needsPlantingLog(task);
           const active = activeLogId === task.task_id;
           const form = formFor(task);
           const selectedZone = zoneById(zones, form.zoneId);
           const objects = visibleObjects(selectedZone);
           const rowMessage = rowMessages[task.task_id];
-          const formMessage = form.message;
           const isSaving = savingId === task.task_id;
           const summary = logSummary(task);
 
           return (
-            <article key={task.task_id} className={`atlas-plant-check__item${done ? " is-done" : ""}${isSaving ? " is-saving" : ""}`} data-child-task-id={task.task_id}>
+            <article
+              key={task.task_id}
+              className={`atlas-plant-check__item${interactive ? " has-inline-action" : " is-simple"}${done ? " is-done" : ""}${isSaving ? " is-saving" : ""}`}
+              data-child-task-id={task.task_id}
+              data-checklist-action={interactive ? "inline-form" : "simple"}
+            >
               <div className="atlas-plant-check__content">
                 <span className="atlas-plant-check__mark">{done ? "✓" : ""}</span>
                 <div className="atlas-plant-check__copy">
@@ -277,17 +263,13 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
 
               <div className="atlas-plant-check__actions">
                 {done ? (
-                  <button type="button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "open")}>
-                    {isSaving ? "Saving" : "Reopen"}
-                  </button>
-                ) : needsPlantingLog(task) ? (
-                  <button type="button" disabled={Boolean(savingId)} onClick={() => active ? setActiveLogId(null) : openPlantingLog(task)}>
+                  <button type="button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "open")}>{isSaving ? "Saving" : "Reopen"}</button>
+                ) : interactive ? (
+                  <button type="button" aria-expanded={active} disabled={Boolean(savingId)} onClick={() => active ? setActiveLogId(null) : openPlantingLog(task)}>
                     {active ? "Close planting log" : "Open planting log"}
                   </button>
                 ) : (
-                  <button type="button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "done")}>
-                    {isSaving ? "Saving" : "Mark done"}
-                  </button>
+                  <button type="button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "done")}>{isSaving ? "Saving" : "Mark done"}</button>
                 )}
               </div>
 
@@ -317,7 +299,7 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
                     <button type="submit" disabled={isSaving}>{isSaving ? "Saving" : "Save planted"}</button>
                     <button type="button" disabled={isSaving} onClick={() => setActiveLogId(null)}>Cancel</button>
                   </div>
-                  <p aria-live="polite">{formMessage ?? registryError ?? ""}</p>
+                  <p aria-live="polite">{form.message ?? registryError ?? ""}</p>
                 </form>
               ) : null}
             </article>
