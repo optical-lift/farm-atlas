@@ -231,6 +231,13 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
 
   return (
     <section className="atlas-plant-check" data-react-child-checklist="true">
+      <style>{`
+        .atlas-plant-check__item.is-simple .atlas-plant-check__actions button::after { content: none !important; }
+        .atlas-plant-check__item.is-simple .atlas-plant-check__content { padding-right: 14px !important; }
+        @media (max-width: 430px) {
+          .atlas-plant-check__item.is-simple .atlas-plant-check__content { padding-right: 12px !important; }
+        }
+      `}</style>
       <h3>Checklist</h3>
       <div className="atlas-plant-check__list">
         {childTasks.map((task) => {
