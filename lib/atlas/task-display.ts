@@ -166,13 +166,23 @@ export function atlasTaskDetail(task: AtlasTaskCard) {
   return atlasStringList(atlasMetadataValue(task, "detail_lines"))[0] || task.unlock_text || atlasMetaString(task, "display_detail") || "Open task";
 }
 
+function normalizedStoredTitle(task: AtlasTaskCard) {
+  const explicit = atlasMetaString(task, "display_title");
+  if (explicit) return atlasCleanLabel(explicit.replace(/\s+[—-]\s+/g, " · "));
+
+  const stored = atlasCleanLabel(task.title.replace(/\s+[—-]\s+/g, " · "));
+  if (/^kid chore\s*·/i.test(stored)) return stored;
+  return null;
+}
+
 export function atlasTaskDisplay(task: AtlasTaskCard): AtlasTaskDisplay {
-  const action = atlasActionForTask(task);
-  const subject = atlasTaskSubject(task);
+  const storedTitle = normalizedStoredTitle(task);
+  const action = storedTitle?.split("·")[0]?.trim() || atlasActionForTask(task);
+  const subject = storedTitle?.split("·").slice(1).join("·").trim() || atlasTaskSubject(task);
   return {
     action,
     subject,
-    title: `${action} · ${subject}`,
+    title: storedTitle || `${action} · ${subject}`,
     location: atlasTaskLocation(task),
     detail: atlasTaskDetail(task),
     route: atlasRouteKeyForTask(task),
