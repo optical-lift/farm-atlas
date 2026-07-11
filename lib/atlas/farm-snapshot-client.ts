@@ -6,7 +6,7 @@ export type AtlasFarmSnapshot = {
   stemsLogged: number;
 };
 
-export type AtlasFarmSnapshotResponse = {
+export type AtlasFarmSnapshotResponse = AtlasFarmSnapshot & {
   ok: boolean;
   farmKey: string;
   snapshot: AtlasFarmSnapshot;
@@ -21,7 +21,7 @@ export async function fetchAtlasFarmSnapshot(): Promise<AtlasFarmSnapshotRespons
     cache: "no-store",
   });
 
-  const data = (await response.json()) as AtlasFarmSnapshotResponse;
+  const data = (await response.json()) as Omit<AtlasFarmSnapshotResponse, keyof AtlasFarmSnapshot>;
   if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Failed to load farm snapshot.");
-  return data;
+  return { ...data, ...data.snapshot };
 }
