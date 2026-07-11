@@ -48,15 +48,22 @@ function CollectionOverviewCard({ collection }: { collection: AtlasWorkCollectio
       <div className="atlas-overview-task-list">
         <Link className="atlas-overview-task-card atlas-work-collection-task-card" href={collection.href}>
           <div>
-            <strong>{collection.label} Work Collection</strong>
-            <span>Independent mowing clocks</span>
+            <strong>{collection.label}</strong>
+            <span>{collection.preview}</span>
           </div>
           <em>next {collection.nextDueLabel}</em>
-          <p>{collection.preview}</p>
         </Link>
       </div>
     </details>
   );
+}
+
+function taskLocationLine(task: AtlasTaskCard) {
+  const taskDetail = detail(task).trim();
+  const taskLocation = location(task).trim();
+  if (routeForTask(task) === "weed" && taskDetail) return taskDetail;
+  if (taskLocation && taskLocation !== collectionZone(task)) return taskLocation;
+  return taskDetail || taskLocation;
 }
 
 function ZoneSection({ zone, anchorIso, openDefault }: { zone: ZoneTaskOverview; anchorIso: string; openDefault: boolean }) {
@@ -77,10 +84,9 @@ function ZoneSection({ zone, anchorIso, openDefault }: { zone: ZoneTaskOverview;
           <Link className="atlas-overview-task-card" href={`/task?taskId=${encodeURIComponent(task.task_id)}`} key={task.task_id}>
             <div>
               <strong>{subject(task)}</strong>
-              <span>{routeLabels[routeForTask(task)]} · {collectionZone(task)}</span>
+              <span>{taskLocationLine(task)}</span>
             </div>
             <TaskDueLabel task={task} anchorIso={anchorIso} />
-            <p>{detail(task) || location(task)}</p>
           </Link>
         ))}
       </div>
