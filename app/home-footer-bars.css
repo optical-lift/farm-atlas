@@ -65,36 +65,59 @@
 .atlas-home-footer-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
-  gap: 6px;
+  gap: 8px;
   padding: 4px 0 8px;
 }
 
 .atlas-home-closeout-footer-link,
-.atlas-home-frost-countdown,
 .atlas-owner-footer-link {
   min-width: 0;
   width: 100%;
-  min-height: 36px;
+  min-height: 40px;
   border: 1px solid rgba(225, 216, 202, 0.94);
   border-radius: 999px;
   background: rgba(246, 242, 230, 0.74);
   color: var(--atlas-muted);
-  padding: 0 7px;
+  padding: 0 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
   text-align: center;
   box-shadow: 0 8px 18px rgba(58, 46, 30, 0.035);
-}
-
-.atlas-home-closeout-footer-link,
-.atlas-owner-footer-link {
   appearance: none;
   -webkit-appearance: none;
   text-decoration: none;
+}
+
+.atlas-home-closeout-footer-link {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.atlas-children-footer-link {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.atlas-home-frost-countdown {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px 0 0;
+  color: var(--atlas-muted);
+  text-align: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .atlas-home-closeout-footer-link span,
@@ -145,15 +168,14 @@
   }
 
   .atlas-home-footer-row {
-    gap: 5px;
+    gap: 6px;
   }
 
   .atlas-home-closeout-footer-link,
-  .atlas-home-frost-countdown,
   .atlas-owner-footer-link {
-    min-height: 34px;
+    min-height: 38px;
     gap: 3px;
-    padding-inline: 5px;
+    padding-inline: 8px;
   }
 
   .atlas-home-closeout-footer-link span,
@@ -195,15 +217,14 @@
   }
 
   .atlas-home-footer-row {
-    gap: 4px;
+    gap: 5px;
   }
 
   .atlas-home-closeout-footer-link,
-  .atlas-home-frost-countdown,
   .atlas-owner-footer-link {
-    min-height: 32px;
+    min-height: 36px;
     gap: 2px;
-    padding-inline: 4px;
+    padding-inline: 6px;
   }
 
   .atlas-home-closeout-footer-link span,
