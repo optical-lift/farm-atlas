@@ -11,6 +11,7 @@ import {
   atlasIsDoneTask,
   atlasIsMowingCollectionMember,
   atlasIsNotReadyCollectionTask,
+  atlasVisibleCollectionTasks,
 } from "@/lib/atlas/work-collections";
 
 type WeatherResponse = { ok: boolean; label?: string };
@@ -35,17 +36,13 @@ function prettyDate(dateIso: string | null | undefined) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function nextDue(task: AtlasTaskCard) {
-  return atlasMetaString(task, "next_due_at") || task.due_date;
-}
-
 function taskHref(task: AtlasTaskCard) {
   return `/task?taskId=${encodeURIComponent(task.task_id)}`;
 }
 
 function statusLine(task: AtlasTaskCard) {
   if (atlasIsNotReadyCollectionTask(task)) return atlasMetaString(task, "not_ready_reason") || task.blocker_text || "Not ready";
-  if (atlasIsDoneTask(task)) return `Done${atlasMetaString(task, "next_due_at") ? ` · next ${prettyDate(atlasMetaString(task, "next_due_at"))}` : ""}`;
+  if (atlasIsDoneTask(task)) return "Done";
   if (task.status === "blocked") return task.blocker_text || "Waiting";
   if (task.due_date) return task.due_date <= todayIso() ? "Due now" : `Due ${prettyDate(task.due_date)}`;
   return "Open";
@@ -97,7 +94,10 @@ export default function MowingCollectionPage() {
         setLoading(true);
         setError(null);
         const response = await fetchAtlasTaskCards();
-        setTasks((response.taskCards ?? []).filter(atlasIsMowingCollectionMember).sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b))));
+        const mowingTasks = (response.taskCards ?? [])
+          .filter(atlasIsMowingCollectionMember)
+          .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b)));
+        setTasks(atlasVisibleCollectionTasks(mowingTasks));
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Mowing collection failed.");
       } finally {
@@ -130,7 +130,7 @@ export default function MowingCollectionPage() {
     .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b))), [tasks, today]);
   const recentlyDone = useMemo(() => tasks
     .filter(atlasIsDoneTask)
-    .sort((a, b) => String(nextDue(a) ?? "").localeCompare(String(nextDue(b) ?? ""))), [tasks]);
+    .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b))), [tasks]);
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-work-collection-page-shell">
@@ -158,7 +158,7 @@ export default function MowingCollectionPage() {
           </section>
 
           <section className="atlas-overview-summary-line">
-            <p>{summary?.preview ?? "Mowing is a work collection: each area closes and recurs independently."}</p>
+            <p>{summary?.preview ?? "No active mowing areas."}</p>
           </section>
 
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
