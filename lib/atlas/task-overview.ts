@@ -2,6 +2,7 @@ import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import {
   atlasCleanLabel,
   atlasMetadataValue,
+  atlasMetaString,
   atlasRouteKeyForTask,
   atlasRouteLabels,
   atlasRouteOrder,
@@ -133,6 +134,8 @@ export function detail(task: AtlasTaskCard) {
 
 export function zoneBucket(value: string) {
   const lower = value.toLowerCase();
+  if (lower.includes("weed")) return "Weeding";
+  if (lower.includes("homestead") || lower.includes("chicken")) return "Homestead";
   if (lower.includes("oak") || lower.includes("strawberry orchard")) return "Shady Oak";
   if (lower.includes("main garden") || lower.includes("straw strip")) return "Main Garden";
   if (lower.includes("field") || lower.includes("fr")) return "Field Rows";
@@ -145,12 +148,12 @@ export function zoneBucket(value: string) {
   if (lower.includes("garage") || lower.includes("hydrangea")) return "Garage / House Beds";
   if (lower.includes("grow room")) return "Grow Room";
   if (lower.includes("entry") || lower.includes("billboard")) return "Entry Billboard";
-  if (lower.includes("chicken")) return "Chicken Coop";
   return value || "Elm Farm";
 }
 
 export function collectionZone(task: AtlasTaskCard) {
-  return atlasTaskLocation(task) || zoneBucket(location(task));
+  const explicit = atlasMetaString(task, "collection_zone") || task.zone_label || "";
+  return zoneBucket(explicit || location(task));
 }
 
 export function taskSortValue(task: AtlasTaskCard) {
