@@ -113,13 +113,15 @@ export function DocumentWorkCard({
 }
 
 export function FieldLogDrawer({
+  open = true,
   zones,
-  seed,
+  seed = {},
   onClose,
   onSaved,
 }: {
+  open?: boolean;
   zones: AtlasRegistryZone[];
-  seed: AtlasFieldLogSeed;
+  seed?: AtlasFieldLogSeed;
   onClose: () => void;
   onSaved?: () => void | Promise<void>;
 }) {
@@ -142,11 +144,12 @@ export function FieldLogDrawer({
   }, [seed]);
 
   useEffect(() => {
+    if (!open) return;
     const frame = window.requestAnimationFrame(() => {
       formRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [open]);
 
   const selectedWork = workConfig(workKey);
   const visibleObjects = useMemo(() => visibleObjectsForZones(zones, zoneKeys), [zones, zoneKeys]);
@@ -205,6 +208,8 @@ export function FieldLogDrawer({
       setSaving(false);
     }
   }
+
+  if (!open) return null;
 
   return (
     <section className="atlas-task-focus-overlay atlas-document-log-overlay" role="dialog" aria-modal="true">
