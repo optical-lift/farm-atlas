@@ -8,6 +8,7 @@ import WorkerVocabularyCleanupPatch from "./WorkerVocabularyCleanupPatch";
 import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
 import TaskChildCompletionGateFix from "./TaskChildCompletionGateFix";
 import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
+import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
 import "./globals.css";
 import "./home.css";
 import "./zones.css";
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <TaskProgressExactDayPatch />
         <TaskChildCompletionGateFix />
         <OwnerHomeLinkPatch />
+        <HomeSundayNavigationPatch />
         {children}
       </body>
     </html>
