@@ -33,16 +33,65 @@
   border: 1px solid rgba(82, 59, 94, 0.18);
   border-radius: 16px;
   background: rgba(249, 247, 241, 0.92);
-  padding: 0.9rem;
-  display: grid;
-  gap: 0.75rem;
+  overflow: hidden;
 }
 
-.atlas-germination-memory > strong {
+.atlas-germination-memory summary {
+  min-height: 54px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  list-style: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.atlas-germination-memory summary::-webkit-details-marker {
+  display: none;
+}
+
+.atlas-germination-memory summary > span {
   font-size: 0.78rem;
+  font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #694f73;
+}
+
+.atlas-germination-memory summary > small {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: rgba(42, 34, 46, 0.64);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.atlas-germination-memory summary > small::after {
+  content: "+";
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(105, 79, 115, 0.1);
+  color: #694f73;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.atlas-germination-memory[open] summary > small::after {
+  content: "−";
+}
+
+.atlas-germination-memory[open] summary {
+  border-bottom: 1px solid rgba(82, 59, 94, 0.12);
+}
+
+.atlas-germination-memory-drawer {
+  padding: 0.9rem 1rem 1rem;
 }
 
 .atlas-germination-memory-list {
