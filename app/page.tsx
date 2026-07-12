@@ -91,12 +91,6 @@ function isChildTask(card: AtlasTaskCard) {
   return atlasMetadataValue(card, "is_child_task") === true || atlasMetadataValue(card, "is_child_task") === "true";
 }
 
-function isQuietHeroTask(card: AtlasTaskCard) {
-  const quietTask = atlasMetadataValue(card, "quiet_task");
-  const hiddenFromHero = atlasMetadataValue(card, "hide_from_home_hero");
-  return quietTask === true || quietTask === "true" || hiddenFromHero === true || hiddenFromHero === "true";
-}
-
 function parentTaskId(card: AtlasTaskCard) {
   return atlasMetaString(card, "parent_task_id") || atlasMetaString(card, "parentTaskId") || "";
 }
@@ -189,10 +183,7 @@ function panelTitle(panel: HomePanel) {
 
 function homeLaunchItems(todayCards: AtlasTaskCard[], cards: AtlasTaskCard[], today: string): HomeLaunchItem[] {
   const mowing = atlasBuildMowingCollectionSummary(cards, today);
-  const standalone = todayCards
-    .filter((card) => !isQuietHeroTask(card))
-    .filter((card) => !atlasIsMowingCollectionMember(card))
-    .map((task) => ({ kind: "task" as const, task }));
+  const standalone = todayCards.filter((card) => !atlasIsMowingCollectionMember(card)).map((task) => ({ kind: "task" as const, task }));
   return [...standalone, ...(mowing && mowing.dueCount > 0 ? [{ kind: "collection" as const, collection: mowing }] : [])].slice(0, 4);
 }
 
@@ -296,26 +287,25 @@ function OverviewLaunchBoxes({ cards, loading }: { cards: AtlasTaskCard[]; loadi
         </Link>
         <div className="atlas-home-overview-list">
           {dayRows.map((row) => (
-            <Link key={row.dateIso} href={`/day?date=${encodeURIComponent(row.dateIso)}`}>
-              <strong>{dayShortLabel(row.dateIso)}</strong>
-              <span>{prettyDate(row.dateIso)}</span>
-              <em>{row.count}</em>
+            <Link key={row.dateIso} href={`/day?date=${encodeURIComponent(row.dateIso)}`} className="atlas-home-overview-row-link">
+              <b>{dayShortLabel(row.dateIso)}</b>
+              <small>{prettyDate(row.dateIso)}</small>
+              <em>{loading ? "…" : row.count}</em>
             </Link>
           ))}
         </div>
       </article>
-
       <article className="atlas-home-overview-card atlas-home-overview-month">
         <Link href="/overview/month" className="atlas-home-overview-top">
           <strong>{monthName(today)}</strong>
-          <span>{loading ? "Loading" : `${progress.day}/${progress.daysInMonth} days · ${monthTasks.length} open`}</span>
+          <span>{loading ? "Loading" : `${progress.day}/${progress.days} days · ${monthTasks.length} open`}</span>
         </Link>
-        <div className="atlas-home-overview-list">
+        <div className="atlas-home-overview-list atlas-home-month-week-list">
           {monthRows.map((row) => (
-            <Link key={row.href} href={row.href}>
-              <strong>{row.label}</strong>
-              <span>{row.dateLabel}</span>
-              <em>{row.count}</em>
+            <Link key={row.label} href={row.href} className="atlas-home-overview-row-link">
+              <b>{row.label}</b>
+              <small>{row.dateLabel}</small>
+              <em>{loading ? "…" : row.count}</em>
             </Link>
           ))}
         </div>
@@ -324,99 +314,88 @@ function OverviewLaunchBoxes({ cards, loading }: { cards: AtlasTaskCard[]; loadi
   );
 }
 
-export default function AtlasHome() {
-  const [snapshot, setSnapshot] = useState<AtlasFarmSnapshot>(defaultSnapshot);
-  const [taskCards, setTaskCards] = useState<AtlasTaskCard[]>([]);
-  const [zoneRegistry, setZoneRegistry] = useState<AtlasRegistryZone[]>([]);
-  const [closeout, setCloseout] = useState<AtlasCloseoutSummary | null>(null);
-  const [weather, setWeather] = useState<WeatherResponse>({ ok: false, label: "loading weather…" });
-  const [loading, setLoading] = useState(true);
-  const [activePanel, setActivePanel] = useState<HomePanel>(null);
-  const [fieldLogSeed, setFieldLogSeed] = useState<AtlasFieldLogSeed | null>(null);
+function FarmSnapshotBox({ snapshot, loading }: { snapshot: AtlasFarmSnapshot; loading: boolean }) {
+  return (
+    <Link href="/zones" className="atlas-farm-snapshot-bar" aria-label="Open farm snapshot">
+      <span><b>{loading ? "…" : snapshot.growingBeds}</b> beds</span>
+      <span><b>{loading ? "…" : snapshot.activeSqft.toLocaleString()}</b> sq ft</span>
+      <span><b>{loading ? "…" : snapshot.sowingsLogged}</b> sowings</span>
+      <span><b>{loading ? "…" : snapshot.stemsLogged}</b> stems</span>
+    </Link>
+  );
+}
 
-  useEffect(() => {
-    let active = true;
-
-    async function load() {
-      try {
-        const [snapshotResult, taskResult, zoneResult, closeoutResult, weatherResult] = await Promise.allSettled([
-          fetchAtlasFarmSnapshot(),
-          fetchAtlasTaskCards(),
-          fetchAtlasZoneRegistry(),
-          fetchAtlasCloseout(),
-          fetch("/api/atlas/weather", { cache: "no-store" }).then((response) => response.json() as Promise<WeatherResponse>),
-        ]);
-
-        if (!active) return;
-        if (snapshotResult.status === "fulfilled") setSnapshot(snapshotResult.value);
-        if (taskResult.status === "fulfilled") setTaskCards(taskResult.value.taskCards ?? []);
-        if (zoneResult.status === "fulfilled") setZoneRegistry(zoneResult.value.zones ?? []);
-        if (closeoutResult.status === "fulfilled") setCloseout(closeoutResult.value);
-        if (weatherResult.status === "fulfilled") setWeather(weatherResult.value);
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    void load();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const weatherLabel = weather.label || "weather unavailable";
-  const rainLabel = weather.rainAge || (typeof weather.daysSinceRain === "number" ? `${weather.daysSinceRain} days since watering rain` : "rain age unavailable");
+function HomeFooterBar({ summary, today, onOpen }: { summary: AtlasCloseoutSummary | undefined; today: string; onOpen: () => void }) {
   const frostDays = daysUntilFirstFrost();
 
   return (
-    <main className="atlas-home-page">
-      <header className="atlas-home-header">
-        <div>
-          <span>Atlas</span>
-          <strong>Elm Farm</strong>
+    <div className="atlas-home-footer-row">
+      <Link href="/closeout" className="atlas-home-closeout-footer-link" onClick={onOpen}>
+        <span>Closeout</span>
+        <em>{summary ? `${summary.counts.objectEvents} records · ${summary.counts.openTasks} open` : `Review · ${prettyDate(today)}`}</em>
+      </Link>
+      <div className="atlas-home-frost-countdown" aria-label={`${frostDays} days until first frost target on November 1`}>
+        <span>First frost</span>
+        <em>{frostDays} days · Nov 1</em>
+      </div>
+    </div>
+  );
+}
+
+function CloseoutPanel({ summaries, loading }: { summaries: AtlasCloseoutSummary[]; loading: boolean }) {
+  return <section className="atlas-task-focus-section"><div className="atlas-closeout-grid">{loading ? <div className="atlas-empty">Loading closeout.</div> : null}{summaries.map((summary) => <article key={summary.period} className="atlas-closeout-card tidy"><div className="atlas-closeout-card-head"><strong>{summary.label}</strong><span>{prettyDate(summary.startDate)}–{prettyDate(summary.endDate)}</span></div><div className="atlas-closeout-pill-row soft"><span>{summary.counts.objectEvents} records</span><span>{summary.counts.openTasks} open</span><span>{summary.counts.tasksBlocked} blocked</span></div>{summary.carryForward.length > 0 ? <div className="atlas-closeout-section carry"><span>Carry forward</span>{summary.carryForward.map((line) => <p key={line}>{atlasCleanLabel(line)}</p>)}</div> : null}</article>)}</div></section>;
+}
+
+export default function AtlasHomePage() {
+  const [cards, setCards] = useState<AtlasTaskCard[]>([]);
+  const [registryZones, setRegistryZones] = useState<AtlasRegistryZone[]>([]);
+  const [snapshot, setSnapshot] = useState<AtlasFarmSnapshot>(defaultSnapshot);
+  const [loading, setLoading] = useState(true);
+  const [snapshotLoading, setSnapshotLoading] = useState(true);
+  const [openPanel, setOpenPanel] = useState<HomePanel>(null);
+  const [logSeed, setLogSeed] = useState<AtlasFieldLogSeed | null>(null);
+  const [closeoutSummaries, setCloseoutSummaries] = useState<AtlasCloseoutSummary[]>([]);
+  const [closeoutLoading, setCloseoutLoading] = useState(true);
+  const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
+  const today = todayIso();
+
+  async function loadCards() { try { setLoading(true); const response = await fetchAtlasTaskCards(); setCards((response.taskCards ?? []).sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)))); } finally { setLoading(false); } }
+  async function loadRegistry() { try { const response = await fetchAtlasZoneRegistry(); setRegistryZones(response.zones ?? []); } catch { setRegistryZones([]); } }
+  async function loadSnapshot() { try { setSnapshotLoading(true); const response = await fetchAtlasFarmSnapshot(); setSnapshot(response.snapshot ?? defaultSnapshot); } finally { setSnapshotLoading(false); } }
+  async function loadCloseout() { try { setCloseoutLoading(true); const response = await fetchAtlasCloseout(); setCloseoutSummaries(response.summaries ?? []); } finally { setCloseoutLoading(false); } }
+  async function loadWeather() { try { const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" }); const data = (await response.json()) as WeatherResponse; setWeatherLabel(response.ok && data.ok && data.label ? data.label : "weather unavailable"); } catch { setWeatherLabel("weather unavailable"); } }
+
+  useEffect(() => { void loadCards(); void loadRegistry(); void loadSnapshot(); void loadCloseout(); void loadWeather(); }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("panel") === "closeout") setOpenPanel("closeout");
+  }, []);
+
+  const monthSummary = closeoutSummaries.find((summary) => summary.period === "month");
+  async function afterFieldLogSaved() { await loadRegistry(); await loadSnapshot(); await loadCloseout(); }
+  function closePanel() {
+    setOpenPanel(null);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("panel")) window.history.replaceState(null, "", "/");
+  }
+
+  return (
+    <main className="atlas-phone-shell atlas-home-shell">
+      <section className="atlas-phone atlas-dashboard-phone">
+        <header className="atlas-phone-top atlas-dashboard-top">
+          <div className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></div>
+          <span className="atlas-weather-line">{weatherLabel}</span>
+          <button type="button" className="atlas-note-plus" aria-label="Document work" onClick={() => { setOpenPanel(null); setLogSeed({ workKey: "note", zoneKeys: [], objectKeys: [] }); }}>+</button>
+        </header>
+        <div className="atlas-home-grid">
+          <TaskLaunchHero cards={cards} loading={loading} />
+          <OverviewLaunchBoxes cards={cards} loading={loading} />
+          <FarmSnapshotBox snapshot={snapshot} loading={snapshotLoading} />
+          <HomeFooterBar summary={monthSummary} today={today} onOpen={() => setOpenPanel("closeout")} />
         </div>
-        <p>{weatherLabel} · {rainLabel}</p>
-        <button type="button" onClick={() => setFieldLogSeed({})} aria-label="Add field log">+</button>
-      </header>
-
-      <TaskLaunchHero cards={taskCards} loading={loading} />
-      <OverviewLaunchBoxes cards={taskCards} loading={loading} />
-
-      <section className="atlas-home-stats" aria-label="Farm snapshot">
-        <div><strong>{snapshot.totalBeds}</strong><span>Beds</span></div>
-        <div><strong>{snapshot.growingBeds}</strong><span>Growing</span></div>
-        <div><strong>{Math.round(snapshot.activeSqft).toLocaleString()}</strong><span>Active sq ft</span></div>
-        <div><strong>{snapshot.sowingsLogged}</strong><span>Sowings</span></div>
-        <div><strong>{snapshot.stemsLogged}</strong><span>Stems</span></div>
       </section>
-
-      <section className="atlas-home-actions">
-        <button type="button" onClick={() => setActivePanel("closeout")}>Closeout</button>
-        <Link href="/day">Today</Link>
-        <Link href="/overview/week">Week</Link>
-        <Link href="/overview/month">Month</Link>
-      </section>
-
-      <p className="atlas-home-frost">{frostDays} days until first frost</p>
-
-      {activePanel ? (
-        <div className="atlas-home-panel" role="dialog" aria-modal="true" aria-label={panelTitle(activePanel)}>
-          <button type="button" onClick={() => setActivePanel(null)} aria-label="Close panel">×</button>
-          {activePanel === "closeout" ? (
-            <section>
-              <h2>Closeout</h2>
-              <p>{closeout?.label ?? "No closeout summary available."}</p>
-            </section>
-          ) : null}
-        </div>
-      ) : null}
-
-      <FieldLogDrawer
-        open={Boolean(fieldLogSeed)}
-        onClose={() => setFieldLogSeed(null)}
-        zones={zoneRegistry}
-        seed={fieldLogSeed ?? undefined}
-      />
+      {openPanel ? <section className="atlas-task-focus-overlay" role="dialog" aria-modal="true"><div className="atlas-task-focus-phone"><div className="atlas-task-focus-topbar"><div><strong>{panelTitle(openPanel)}</strong></div><button type="button" onClick={closePanel}>Close</button></div><div className="atlas-task-focus-body">{openPanel === "closeout" ? <CloseoutPanel summaries={closeoutSummaries} loading={closeoutLoading} /> : null}</div></div></section> : null}
+      {logSeed ? <FieldLogDrawer zones={registryZones} seed={logSeed} onClose={() => setLogSeed(null)} onSaved={afterFieldLogSaved} /> : null}
     </main>
   );
 }
