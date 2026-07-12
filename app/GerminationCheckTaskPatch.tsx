@@ -15,10 +15,25 @@ type GerminationTask = {
   notYetCount: number;
 };
 
+type HistoryItem = {
+  key: string;
+  date: string | null;
+  action: string;
+  sourceTask: string | null;
+  details: string[];
+};
+
 type LookupResponse = {
   ok?: boolean;
   germinationCheck?: boolean;
   task?: GerminationTask;
+  error?: string;
+  details?: string;
+};
+
+type HistoryResponse = {
+  ok?: boolean;
+  history?: HistoryItem[];
   error?: string;
   details?: string;
 };
@@ -31,29 +46,37 @@ function activeTaskTitle() {
   return activeTaskCard()?.querySelector("h1")?.textContent?.trim() ?? "";
 }
 
-function hideNormalTaskActions(card: HTMLElement) {
+function prettyDate(dateIso: string | null) {
+  if (!dateIso) return "Date not recorded";
+  const date = new Date(`${dateIso}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return dateIso;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function hideNormalTaskParts(card: HTMLElement) {
   const actions = card.querySelector<HTMLElement>(".atlas-task-primary-actions");
   const unfinished = card.querySelector<HTMLElement>(".atlas-task-unfinished-panel");
-  if (actions) {
-    actions.hidden = true;
-    actions.style.display = "none";
-  }
-  if (unfinished) {
-    unfinished.hidden = true;
-    unfinished.style.display = "none";
+  const detail = card.querySelector<HTMLElement>(".atlas-task-detail-card");
+  for (const element of [actions, unfinished, detail]) {
+    if (!element) continue;
+    element.hidden = true;
+    element.style.display = "none";
   }
 }
 
-function restoreNormalTaskActions(card: HTMLElement) {
+function restoreNormalTaskParts(card: HTMLElement) {
   const actions = card.querySelector<HTMLElement>(".atlas-task-primary-actions");
-  if (actions) {
-    actions.hidden = false;
-    actions.style.removeProperty("display");
+  const detail = card.querySelector<HTMLElement>(".atlas-task-detail-card");
+  for (const element of [actions, detail]) {
+    if (!element) continue;
+    element.hidden = false;
+    element.style.removeProperty("display");
   }
 }
 
 export default function GerminationCheckTaskPatch() {
   const [task, setTask] = useState<GerminationTask | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [logOpen, setLogOpen] = useState(false);
   const [standNote, setStandNote] = useState("");
@@ -88,7 +111,7 @@ export default function GerminationCheckTaskPatch() {
 
       const lookupSignature = `${query}:${title}`;
       if (lookupSignature === lastLookup && task) {
-        hideNormalTaskActions(card);
+        hideNormalTaskParts(card);
         return;
       }
       lastLookup = lookupSignature;
@@ -106,11 +129,19 @@ export default function GerminationCheckTaskPatch() {
           setLogOpen(false);
           setStandNote("");
           card.classList.add("atlas-germination-task");
-          hideNormalTaskActions(card);
+          hideNormalTaskParts(card);
+
+          const historyResponse = await fetch(
+            `/api/atlas/germination-history?taskId=${encodeURIComponent(data.task.id)}&objectLabel=${encodeURIComponent(data.task.objectLabel)}`,
+            { headers: { Accept: "application/json" }, cache: "no-store" },
+          );
+          const historyData = (await historyResponse.json()) as HistoryResponse;
+          if (!stopped) setHistory(historyResponse.ok && historyData.ok ? historyData.history ?? [] : []);
         } else {
           setTask(null);
+          setHistory([]);
           card.classList.remove("atlas-germination-task");
-          restoreNormalTaskActions(card);
+          restoreNormalTaskParts(card);
         }
       } catch {
         // Keep normal task controls available if the specialized lookup is unavailable.
@@ -173,6 +204,26 @@ export default function GerminationCheckTaskPatch() {
         <small>{task.objectLabel} · {windowLabel}</small>
       </div>
 
+      <section className="atlas-germination-memory" aria-label={`${profileLabel} history`}>
+        <strong>Crop History</strong>
+        {history.length ? (
+          <div className="atlas-germination-memory-list">
+            {history.map((item) => (
+              <article key={item.key} className="atlas-germination-memory-item">
+                <time>{prettyDate(item.date)}</time>
+                <div>
+                  <strong>{item.action}</strong>
+                  {item.sourceTask ? <span>From: {item.sourceTask}</span> : null}
+                  {item.details.map((detail) => <p key={detail}>{detail}</p>)}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="atlas-germination-memory-empty">No earlier crop actions are recorded yet.</p>
+        )}
+      </section>
+
       {!logOpen ? (
         <div className="atlas-germination-actions atlas-germination-primary-actions">
           <button type="button" className="good" disabled={Boolean(saving)} onClick={() => setLogOpen(true)}>
@@ -216,7 +267,6 @@ export default function GerminationCheckTaskPatch() {
         </div>
       )}
 
-      {task.notYetCount > 0 ? <p className="atlas-germination-history">Checked “not yet” {task.notYetCount} time{task.notYetCount === 1 ? "" : "s"}.</p> : null}
       {message ? <p className="atlas-task-page-message">{message}</p> : null}
     </section>,
     host,
