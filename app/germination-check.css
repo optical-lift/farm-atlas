@@ -25,9 +25,66 @@
   line-height: 1.15;
 }
 
-.atlas-germination-check-head > small,
-.atlas-germination-history {
+.atlas-germination-check-head > small {
   color: rgba(42, 34, 46, 0.7);
+}
+
+.atlas-germination-memory {
+  border: 1px solid rgba(82, 59, 94, 0.18);
+  border-radius: 16px;
+  background: rgba(249, 247, 241, 0.92);
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.atlas-germination-memory > strong {
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #694f73;
+}
+
+.atlas-germination-memory-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.atlas-germination-memory-item {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.atlas-germination-memory-item time {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: rgba(42, 34, 46, 0.64);
+}
+
+.atlas-germination-memory-item > div {
+  border-left: 2px solid rgba(105, 79, 115, 0.18);
+  padding-left: 0.75rem;
+}
+
+.atlas-germination-memory-item strong,
+.atlas-germination-memory-item span,
+.atlas-germination-memory-item p {
+  display: block;
+}
+
+.atlas-germination-memory-item strong {
+  font-size: 0.95rem;
+}
+
+.atlas-germination-memory-item span,
+.atlas-germination-memory-item p,
+.atlas-germination-memory-empty {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: rgba(42, 34, 46, 0.72);
 }
 
 .atlas-germination-note {
@@ -92,13 +149,13 @@
   color: #6a2929;
 }
 
-.atlas-germination-history {
-  margin: 0;
-  font-size: 0.8rem;
-}
-
 @media (max-width: 520px) {
   .atlas-germination-actions {
     grid-template-columns: 1fr;
+  }
+
+  .atlas-germination-memory-item {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
   }
 }
