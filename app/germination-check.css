@@ -1,0 +1,104 @@
+.atlas-germination-check-panel {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid rgba(82, 59, 94, 0.2);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  display: grid;
+  gap: 0.9rem;
+}
+
+.atlas-germination-check-head {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.atlas-germination-check-head > span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #694f73;
+}
+
+.atlas-germination-check-head > strong {
+  font-size: 1.2rem;
+  line-height: 1.15;
+}
+
+.atlas-germination-check-head > small,
+.atlas-germination-history {
+  color: rgba(42, 34, 46, 0.7);
+}
+
+.atlas-germination-note {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.atlas-germination-note > span {
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.atlas-germination-note textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgba(82, 59, 94, 0.22);
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+
+.atlas-germination-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.atlas-germination-actions button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  padding: 0.72rem;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.atlas-germination-actions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.atlas-germination-actions .not-yet {
+  background: #eee8f0;
+  color: #4f3e55;
+}
+
+.atlas-germination-actions .good {
+  background: #dcebdc;
+  color: #254829;
+}
+
+.atlas-germination-actions .spotty {
+  background: #f5e7bc;
+  color: #5e4916;
+}
+
+.atlas-germination-actions .poor {
+  background: #f0d6d6;
+  color: #6a2929;
+}
+
+.atlas-germination-history {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 520px) {
+  .atlas-germination-actions {
+    grid-template-columns: 1fr;
+  }
+}
