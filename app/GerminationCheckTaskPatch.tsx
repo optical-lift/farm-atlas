@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 type GerminationTask = {
@@ -31,24 +31,40 @@ function activeTaskTitle() {
   return activeTaskCard()?.querySelector("h1")?.textContent?.trim() ?? "";
 }
 
+function hideNormalTaskActions(card: HTMLElement) {
+  const actions = card.querySelector<HTMLElement>(".atlas-task-primary-actions");
+  const unfinished = card.querySelector<HTMLElement>(".atlas-task-unfinished-panel");
+  if (actions) {
+    actions.hidden = true;
+    actions.style.display = "none";
+  }
+  if (unfinished) {
+    unfinished.hidden = true;
+    unfinished.style.display = "none";
+  }
+}
+
+function restoreNormalTaskActions(card: HTMLElement) {
+  const actions = card.querySelector<HTMLElement>(".atlas-task-primary-actions");
+  if (actions) {
+    actions.hidden = false;
+    actions.style.removeProperty("display");
+  }
+}
+
 export default function GerminationCheckTaskPatch() {
   const [task, setTask] = useState<GerminationTask | null>(null);
   const [host, setHost] = useState<HTMLElement | null>(null);
+  const [logOpen, setLogOpen] = useState(false);
   const [standNote, setStandNote] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-
-  const lookupKey = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    const params = new URLSearchParams(window.location.search);
-    return params.get("taskId") || activeTaskTitle();
-  }, [host]);
 
   useEffect(() => {
     if (window.location.pathname !== "/task") return;
 
     let stopped = false;
-    let timer: number | null = null;
+    let lastLookup = "";
 
     async function inspect() {
       const card = activeTaskCard();
@@ -70,42 +86,50 @@ export default function GerminationCheckTaskPatch() {
       const query = taskId ? `taskId=${encodeURIComponent(taskId)}` : title ? `taskTitle=${encodeURIComponent(title)}` : "";
       if (!query) return;
 
+      const lookupSignature = `${query}:${title}`;
+      if (lookupSignature === lastLookup && task) {
+        hideNormalTaskActions(card);
+        return;
+      }
+      lastLookup = lookupSignature;
+
       try {
-        const response = await fetch(`/api/atlas/germination-check?${query}`, { headers: { Accept: "application/json" }, cache: "no-store" });
+        const response = await fetch(`/api/atlas/germination-check?${query}`, {
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        });
         const data = (await response.json()) as LookupResponse;
         if (stopped) return;
+
         if (response.ok && data.ok && data.germinationCheck && data.task) {
           setTask(data.task);
+          setLogOpen(false);
+          setStandNote("");
           card.classList.add("atlas-germination-task");
-          card.querySelector<HTMLElement>(".atlas-task-primary-actions")?.setAttribute("hidden", "true");
-          card.querySelector<HTMLElement>(".atlas-task-unfinished-panel")?.setAttribute("hidden", "true");
+          hideNormalTaskActions(card);
         } else {
           setTask(null);
           card.classList.remove("atlas-germination-task");
-          card.querySelector<HTMLElement>(".atlas-task-primary-actions")?.removeAttribute("hidden");
+          restoreNormalTaskActions(card);
         }
       } catch {
-        // Leave the normal task card untouched when lookup is unavailable.
+        // Keep normal task controls available if the specialized lookup is unavailable.
       }
     }
 
-    const queue = () => {
-      if (timer) window.clearTimeout(timer);
-      timer = window.setTimeout(() => void inspect(), 80);
-    };
-
-    const observer = new MutationObserver(queue);
+    const interval = window.setInterval(() => void inspect(), 500);
+    const observer = new MutationObserver(() => void inspect());
     observer.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener("popstate", queue);
-    queue();
+    window.addEventListener("popstate", inspect);
+    void inspect();
 
     return () => {
       stopped = true;
+      window.clearInterval(interval);
       observer.disconnect();
-      window.removeEventListener("popstate", queue);
-      if (timer) window.clearTimeout(timer);
+      window.removeEventListener("popstate", inspect);
     };
-  }, [lookupKey]);
+  }, [task]);
 
   async function submit(action: "not_yet" | "germinated", standQuality?: "good" | "spotty" | "poor") {
     if (!task) return;
@@ -149,30 +173,48 @@ export default function GerminationCheckTaskPatch() {
         <small>{task.objectLabel} · {windowLabel}</small>
       </div>
 
-      <label className="atlas-germination-note">
-        <span>Inline stand log</span>
-        <textarea
-          value={standNote}
-          onChange={(event) => setStandNote(event.target.value)}
-          placeholder="Optional: where gaps are, how much of the row emerged, deer or washout damage…"
-          rows={3}
-        />
-      </label>
+      {!logOpen ? (
+        <div className="atlas-germination-actions atlas-germination-primary-actions">
+          <button type="button" className="good" disabled={Boolean(saving)} onClick={() => setLogOpen(true)}>
+            Germinated
+          </button>
+          <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => void submit("not_yet")}>
+            {saving === "not_yet" ? "Saving…" : "Not yet"}
+          </button>
+        </div>
+      ) : (
+        <div className="atlas-germination-inline-log">
+          <div className="atlas-germination-check-head">
+            <span>INLINE STAND LOG</span>
+            <strong>What kind of stand emerged?</strong>
+          </div>
 
-      <div className="atlas-germination-actions">
-        <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => void submit("not_yet")}>
-          {saving === "not_yet" ? "Saving…" : "Not yet"}
-        </button>
-        <button type="button" className="good" disabled={Boolean(saving)} onClick={() => void submit("germinated", "good")}>
-          {saving === "good" ? "Saving…" : "Yes — good stand"}
-        </button>
-        <button type="button" className="spotty" disabled={Boolean(saving)} onClick={() => void submit("germinated", "spotty")}>
-          {saving === "spotty" ? "Saving…" : "Yes — spotty stand"}
-        </button>
-        <button type="button" className="poor" disabled={Boolean(saving)} onClick={() => void submit("germinated", "poor")}>
-          {saving === "poor" ? "Saving…" : "Yes — poor stand"}
-        </button>
-      </div>
+          <label className="atlas-germination-note">
+            <span>What did you see?</span>
+            <textarea
+              value={standNote}
+              onChange={(event) => setStandNote(event.target.value)}
+              placeholder="Optional: where gaps are, how much emerged, washout, deer damage, or anything Anna noticed…"
+              rows={3}
+            />
+          </label>
+
+          <div className="atlas-germination-actions atlas-germination-stand-actions">
+            <button type="button" className="good" disabled={Boolean(saving)} onClick={() => void submit("germinated", "good")}>
+              {saving === "good" ? "Saving…" : "Good stand"}
+            </button>
+            <button type="button" className="spotty" disabled={Boolean(saving)} onClick={() => void submit("germinated", "spotty")}>
+              {saving === "spotty" ? "Saving…" : "Spotty stand"}
+            </button>
+            <button type="button" className="poor" disabled={Boolean(saving)} onClick={() => void submit("germinated", "poor")}>
+              {saving === "poor" ? "Saving…" : "Poor stand"}
+            </button>
+            <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => setLogOpen(false)}>
+              Back
+            </button>
+          </div>
+        </div>
+      )}
 
       {task.notYetCount > 0 ? <p className="atlas-germination-history">Checked “not yet” {task.notYetCount} time{task.notYetCount === 1 ? "" : "s"}.</p> : null}
       {message ? <p className="atlas-task-page-message">{message}</p> : null}
