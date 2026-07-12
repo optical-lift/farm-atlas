@@ -209,25 +209,30 @@ export default function GerminationCheckTaskPatch() {
         <small>{task.objectLabel} · {windowLabel}</small>
       </div>
 
-      <section className="atlas-germination-memory" aria-label={`${profileLabel} history`}>
-        <strong>Crop History</strong>
-        {history.length ? (
-          <div className="atlas-germination-memory-list">
-            {history.map((item) => (
-              <article key={item.key} className="atlas-germination-memory-item">
-                <time>{prettyDate(item.date)}</time>
-                <div>
-                  <strong>{item.action}</strong>
-                  {item.sourceTask ? <span>From: {item.sourceTask}</span> : null}
-                  {item.details.map((detail) => <p key={detail}>{detail}</p>)}
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="atlas-germination-memory-empty">Crop history is loading.</p>
-        )}
-      </section>
+      <details className="atlas-germination-memory" aria-label={`${profileLabel} history`}>
+        <summary>
+          <span>Crop History</span>
+          <small>{history.length} {history.length === 1 ? "entry" : "entries"}</small>
+        </summary>
+        <div className="atlas-germination-memory-drawer">
+          {history.length ? (
+            <div className="atlas-germination-memory-list">
+              {history.map((item) => (
+                <article key={item.key} className="atlas-germination-memory-item">
+                  <time>{prettyDate(item.date)}</time>
+                  <div>
+                    <strong>{item.action}</strong>
+                    {item.sourceTask ? <span>From: {item.sourceTask}</span> : null}
+                    {item.details.map((detail) => <p key={detail}>{detail}</p>)}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="atlas-germination-memory-empty">Crop history is loading.</p>
+          )}
+        </div>
+      </details>
 
       {!logOpen ? (
         <div className="atlas-germination-actions atlas-germination-primary-actions">
