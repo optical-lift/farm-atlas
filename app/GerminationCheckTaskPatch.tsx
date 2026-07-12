@@ -93,6 +93,13 @@ export default function GerminationCheckTaskPatch() {
       const card = activeTaskCard();
       if (!card) return;
 
+      const title = activeTaskTitle();
+      const looksLikeGermination = title.toLowerCase().includes("germination");
+      if (looksLikeGermination) {
+        card.classList.add("atlas-germination-task");
+        hideNormalTaskParts(card);
+      }
+
       let mount = card.querySelector<HTMLElement>("[data-germination-check-host]");
       if (!mount) {
         mount = document.createElement("div");
@@ -105,15 +112,11 @@ export default function GerminationCheckTaskPatch() {
 
       const params = new URLSearchParams(window.location.search);
       const taskId = params.get("taskId");
-      const title = activeTaskTitle();
       const query = taskId ? `taskId=${encodeURIComponent(taskId)}` : title ? `taskTitle=${encodeURIComponent(title)}` : "";
       if (!query) return;
 
       const lookupSignature = `${query}:${title}`;
-      if (lookupSignature === lastLookup && task) {
-        hideNormalTaskParts(card);
-        return;
-      }
+      if (lookupSignature === lastLookup) return;
       lastLookup = lookupSignature;
 
       try {
@@ -125,9 +128,6 @@ export default function GerminationCheckTaskPatch() {
         if (stopped) return;
 
         if (response.ok && data.ok && data.germinationCheck && data.task) {
-          setTask(data.task);
-          setLogOpen(false);
-          setStandNote("");
           card.classList.add("atlas-germination-task");
           hideNormalTaskParts(card);
 
@@ -136,7 +136,12 @@ export default function GerminationCheckTaskPatch() {
             { headers: { Accept: "application/json" }, cache: "no-store" },
           );
           const historyData = (await historyResponse.json()) as HistoryResponse;
-          if (!stopped) setHistory(historyResponse.ok && historyData.ok ? historyData.history ?? [] : []);
+          if (stopped) return;
+
+          setHistory(historyResponse.ok && historyData.ok ? historyData.history ?? [] : []);
+          setTask(data.task);
+          setLogOpen(false);
+          setStandNote("");
         } else {
           setTask(null);
           setHistory([]);
@@ -144,7 +149,7 @@ export default function GerminationCheckTaskPatch() {
           restoreNormalTaskParts(card);
         }
       } catch {
-        // Keep normal task controls available if the specialized lookup is unavailable.
+        if (!looksLikeGermination) restoreNormalTaskParts(card);
       }
     }
 
@@ -160,7 +165,7 @@ export default function GerminationCheckTaskPatch() {
       observer.disconnect();
       window.removeEventListener("popstate", inspect);
     };
-  }, [task]);
+  }, []);
 
   async function submit(action: "not_yet" | "germinated", standQuality?: "good" | "spotty" | "poor") {
     if (!task) return;
@@ -220,15 +225,13 @@ export default function GerminationCheckTaskPatch() {
             ))}
           </div>
         ) : (
-          <p className="atlas-germination-memory-empty">No earlier crop actions are recorded yet.</p>
+          <p className="atlas-germination-memory-empty">Crop history is loading.</p>
         )}
       </section>
 
       {!logOpen ? (
         <div className="atlas-germination-actions atlas-germination-primary-actions">
-          <button type="button" className="good" disabled={Boolean(saving)} onClick={() => setLogOpen(true)}>
-            Germinated
-          </button>
+          <button type="button" className="good" disabled={Boolean(saving)} onClick={() => setLogOpen(true)}>Germinated</button>
           <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => void submit("not_yet")}>
             {saving === "not_yet" ? "Saving…" : "Not yet"}
           </button>
@@ -239,30 +242,15 @@ export default function GerminationCheckTaskPatch() {
             <span>INLINE STAND LOG</span>
             <strong>What kind of stand emerged?</strong>
           </div>
-
           <label className="atlas-germination-note">
             <span>What did you see?</span>
-            <textarea
-              value={standNote}
-              onChange={(event) => setStandNote(event.target.value)}
-              placeholder="Optional: where gaps are, how much emerged, washout, deer damage, or anything Anna noticed…"
-              rows={3}
-            />
+            <textarea value={standNote} onChange={(event) => setStandNote(event.target.value)} placeholder="Optional: where gaps are, how much emerged, washout, deer damage, or anything Anna noticed…" rows={3} />
           </label>
-
           <div className="atlas-germination-actions atlas-germination-stand-actions">
-            <button type="button" className="good" disabled={Boolean(saving)} onClick={() => void submit("germinated", "good")}>
-              {saving === "good" ? "Saving…" : "Good stand"}
-            </button>
-            <button type="button" className="spotty" disabled={Boolean(saving)} onClick={() => void submit("germinated", "spotty")}>
-              {saving === "spotty" ? "Saving…" : "Spotty stand"}
-            </button>
-            <button type="button" className="poor" disabled={Boolean(saving)} onClick={() => void submit("germinated", "poor")}>
-              {saving === "poor" ? "Saving…" : "Poor stand"}
-            </button>
-            <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => setLogOpen(false)}>
-              Back
-            </button>
+            <button type="button" className="good" disabled={Boolean(saving)} onClick={() => void submit("germinated", "good")}>{saving === "good" ? "Saving…" : "Good stand"}</button>
+            <button type="button" className="spotty" disabled={Boolean(saving)} onClick={() => void submit("germinated", "spotty")}>{saving === "spotty" ? "Saving…" : "Spotty stand"}</button>
+            <button type="button" className="poor" disabled={Boolean(saving)} onClick={() => void submit("germinated", "poor")}>{saving === "poor" ? "Saving…" : "Poor stand"}</button>
+            <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => setLogOpen(false)}>Back</button>
           </div>
         </div>
       )}
