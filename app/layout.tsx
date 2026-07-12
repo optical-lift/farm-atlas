@@ -10,6 +10,7 @@ import TaskChildCompletionGateFix from "./TaskChildCompletionGateFix";
 import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
 import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
 import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
+import GerminationCheckTaskPatch from "./GerminationCheckTaskPatch";
 import "./globals.css";
 import "./home.css";
 import "./zones.css";
@@ -34,6 +35,7 @@ import "./task-unfinished.css";
 import "./field-log-documentation.css";
 import "./mobile-overflow-guard.css";
 import "./task-child-inline-log.css";
+import "./germination-check.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -57,6 +59,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <OwnerHomeLinkPatch />
         <HomeSundayNavigationPatch />
         <OwnerTaskReturnPatch />
+        <GerminationCheckTaskPatch />
         {children}
       </body>
     </html>
