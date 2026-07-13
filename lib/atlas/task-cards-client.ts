@@ -102,7 +102,6 @@ export type AtlasTaskCardMetadata = {
 
 export type AtlasTaskCard = {
   farm_key: string;
-
   task_id: string;
   title: string;
   task_type: string;
@@ -122,15 +121,12 @@ export type AtlasTaskCard = {
   created_at: string;
   updated_at: string;
   metadata: AtlasTaskCardMetadata | null;
-
   zone_id: string | null;
   zone_key: string | null;
   zone_label: string | null;
-
   task_logs: AtlasTaskCardLog[];
   task_outcomes: AtlasTaskOutcomeEvent[];
   task_transitions: AtlasTaskTransitionEvent[];
-
   objects: AtlasTaskCardObject[];
   resource_requirements: AtlasTaskCardResourceRequirement[];
   action_templates: AtlasTaskCardTemplate[];
@@ -162,38 +158,61 @@ function currentUrlScope() {
   return null;
 }
 
+let reconcilePromise: Promise<void> | null = null;
+
+async function refreshOperationalWork() {
+  if (typeof window === "undefined") return;
+  if (!reconcilePromise) {
+    reconcilePromise = fetch("/api/atlas/operational-reconcile", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "x-atlas-intent": "operational-reconcile-v1",
+      },
+      body: JSON.stringify({ days: 31 }),
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const data = (await response.json().catch(() => null)) as { error?: string; details?: string } | null;
+          throw new Error(data?.details || data?.error || "Atlas could not refresh operational work.");
+        }
+      })
+      .catch((error) => {
+        console.error("Atlas operational refresh failed:", error);
+      })
+      .finally(() => {
+        window.setTimeout(() => {
+          reconcilePromise = null;
+        }, 30_000);
+      });
+  }
+  await reconcilePromise;
+}
+
 export async function fetchAtlasTaskCards(
   input?: string | AtlasTaskCardFetchOptions,
 ): Promise<AtlasTaskCardsResponse> {
+  await refreshOperationalWork();
+
   const params = new URLSearchParams();
   const options: AtlasTaskCardFetchOptions = typeof input === "string" ? { taskId: input } : input ?? {};
   const inferredScope = currentUrlScope();
   const scope = options.scope ?? inferredScope ?? "farm";
 
-  if (options.taskId) {
-    params.set("taskId", options.taskId);
-  }
+  if (options.taskId) params.set("taskId", options.taskId);
+  if (scope !== "farm") params.set("scope", scope);
 
-  if (scope !== "farm") {
-    params.set("scope", scope);
-  }
-
-  const response = await fetch(
-    `/api/atlas/task-cards${params.toString() ? `?${params.toString()}` : ""}`,
-    {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    },
-  );
+  const response = await fetch(`/api/atlas/task-cards${params.toString() ? `?${params.toString()}` : ""}`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
 
   const data = (await response.json()) as AtlasTaskCardsResponse;
-
   if (!response.ok || !data.ok) {
     throw new Error(data.details || data.error || "Failed to load Atlas task cards.");
   }
-
   return data;
 }
