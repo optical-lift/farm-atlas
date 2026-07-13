@@ -73,8 +73,7 @@ function isDoneTask(task: AtlasTaskCard) {
 }
 
 function collectionZone(task: AtlasTaskCard) {
-  const value = text(meta(task, "collection_zone")) || atlasTaskDisplay(task).location || "Elm Farm";
-  return value;
+  return text(meta(task, "collection_zone")) || atlasTaskDisplay(task).location || "Elm Farm";
 }
 
 function taskHref(task: AtlasTaskCard) {
@@ -161,13 +160,25 @@ export default function AtlasDayPage() {
 
   const mowingCollection = useMemo(() => atlasBuildMowingCollectionSummary(tasks, dateIso), [dateIso, tasks]);
   const weedingCollection = useMemo(() => atlasBuildWeedingCollectionSummary(tasks, dateIso), [dateIso, tasks]);
-  const collections = useMemo(() => [weedingCollection, mowingCollection].filter((item): item is AtlasWorkCollectionSummary => Boolean(item && item.dueCount > 0)), [mowingCollection, weedingCollection]);
+  const showWeedingCollection = Boolean(weedingCollection && weedingCollection.dueCount > 0);
+  const showMowingCollection = Boolean(mowingCollection && mowingCollection.dueCount > 0);
+  const collectionCount = Number(showWeedingCollection) + Number(showMowingCollection);
 
-  const routeCards = useMemo(() => routeOrder.map((key) => {
-    const collection = key === "weed" ? weedingCollection : key === "mow" ? mowingCollection : null;
-    const routeTasks = standaloneTasks.filter((task) => atlasRouteKeyForTask(task) === key);
-    return { key, collection: collection && collection.dueCount > 0 ? collection : null, tasks: routeTasks };
-  }).filter((entry) => entry.collection || entry.tasks.length), [mowingCollection, standaloneTasks, weedingCollection]);
+  const routeCards = useMemo(() => {
+    const entries = routeOrder.map((key) => {
+      const collection = key === "weed" ? weedingCollection : key === "mow" ? mowingCollection : null;
+      const routeTasks = standaloneTasks.filter((task) => atlasRouteKeyForTask(task) === key);
+      return { key, collection: collection && collection.dueCount > 0 ? collection : null, tasks: routeTasks };
+    }).filter((entry) => entry.collection || entry.tasks.length);
+
+    return entries.sort((a, b) => {
+      if (a.key === "weed") return -1;
+      if (b.key === "weed") return 1;
+      if (a.key === "mow") return 1;
+      if (b.key === "mow") return -1;
+      return routeOrder.indexOf(a.key) - routeOrder.indexOf(b.key);
+    });
+  }, [mowingCollection, standaloneTasks, weedingCollection]);
 
   const zones = useMemo(() => Array.from(new Set(standaloneTasks.map(collectionZone))).sort(), [standaloneTasks]);
 
@@ -185,13 +196,13 @@ export default function AtlasDayPage() {
             <div className="atlas-day-browse-head">
               <Link href="/" className="atlas-route-back atlas-day-back">← Week</Link>
               <div className="atlas-day-browse-title-row"><span>{dayOnly(dateIso)}</span><strong>{loading ? "Loading" : `${dayTasks.length} open · ${doneDayTasks.length} done`}</strong></div>
-              <p>{loading ? "Loading farm work" : `${standaloneTasks.length} regular tasks · ${collections.length} work collections`}</p>
+              <p>{loading ? "Loading farm work" : `${standaloneTasks.length} regular tasks · ${collectionCount} work collections`}</p>
             </div>
 
             {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
 
             <article className="atlas-day-route-hero">
-              <div className="atlas-day-route-hero-head"><div><span>Day plan</span><strong>{prettyDate(dateIso)}</strong></div><em className="atlas-day-route-count-pill">{loading ? "…" : standaloneTasks.length + collections.length}</em></div>
+              <div className="atlas-day-route-hero-head"><div><span>Day plan</span><strong>{prettyDate(dateIso)}</strong></div><em className="atlas-day-route-count-pill">{loading ? "…" : standaloneTasks.length + collectionCount}</em></div>
               <div className="atlas-day-route-grid">
                 {routeCards.length ? routeCards.map((entry) => {
                   if (entry.collection) return <Link key={entry.key} className="atlas-day-route-box" href={entry.collection.href}><strong>{entry.collection.label}</strong><span>{entry.collection.dueCount} due</span><em>{entry.collection.preview}</em></Link>;
@@ -208,15 +219,17 @@ export default function AtlasDayPage() {
                 <article className="atlas-day-route-group atlas-day-work-order-group">
                   <h3>Work Order</h3>
                   <div className="atlas-day-work-order-list">
-                    {collections.map((collection) => <WorkCollectionCard collection={collection} key={collection.key} />)}
+                    {showWeedingCollection && weedingCollection ? <WorkCollectionCard collection={weedingCollection} /> : null}
                     {standaloneTasks.map((task) => <TaskCard task={task} key={task.task_id} />)}
-                    {!collections.length && !standaloneTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}
+                    {showMowingCollection && mowingCollection ? <WorkCollectionCard collection={mowingCollection} /> : null}
+                    {!collectionCount && !standaloneTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}
                   </div>
                 </article>
               ) : (
                 <>
-                  {collections.map((collection) => <article className="atlas-day-route-group atlas-day-work-collection-group" key={collection.key}><h3>{collection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={collection} /></div></article>)}
+                  {showWeedingCollection && weedingCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{weedingCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={weedingCollection} /></div></article> : null}
                   {zones.map((zone) => <article className="atlas-day-route-group" key={zone}><h3>{zone}</h3><div className="atlas-day-zone-group">{standaloneTasks.filter((task) => collectionZone(task) === zone).map((task) => <TaskCard task={task} key={task.task_id} />)}</div></article>)}
+                  {showMowingCollection && mowingCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{mowingCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={mowingCollection} /></div></article> : null}
                 </>
               )}
 
