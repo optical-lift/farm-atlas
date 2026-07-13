@@ -14,12 +14,17 @@ export type AtlasMaintenancePreviewItem = {
   condition: "maintained" | "moderate" | "heavy" | "reset" | string;
   estimated_minutes: number;
   priority_score: number;
+  effective_priority_score: number;
+  owner_priority: number;
   next_eligible_date: string;
   must_precede_task: boolean;
+  dependent_task_ids: string[];
+  dependent_task_labels: string[];
   guest_facing: boolean;
   crop_protective: boolean;
   revenue_linked: boolean;
   significant_day_work: boolean;
+  estimate_source: string;
   priority_reasons: string[];
 };
 
@@ -58,4 +63,46 @@ export async function fetchAtlasMaintenancePreview(
   }
 
   return data;
+}
+
+async function postMaintenanceControl(body: Record<string, unknown>) {
+  const response = await fetch("/api/atlas/maintenance-control", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = (await response.json()) as { ok: boolean; error?: string; details?: string };
+  if (!response.ok || !data.ok) {
+    throw new Error(data.details || data.error || "Maintenance update failed.");
+  }
+
+  return data;
+}
+
+export function setAtlasMaintenanceOwnerOverride(
+  maintenanceObjectId: string,
+  enabled: boolean,
+) {
+  return postMaintenanceControl({
+    action: "owner_override",
+    maintenanceObjectId,
+    enabled,
+  });
+}
+
+export function setAtlasMaintenanceCondition(
+  maintenanceObjectId: string,
+  condition: "maintained" | "moderate" | "heavy" | "reset",
+  reportedMinutes?: number | null,
+) {
+  return postMaintenanceControl({
+    action: "condition",
+    maintenanceObjectId,
+    condition,
+    reportedMinutes: reportedMinutes ?? null,
+  });
 }
