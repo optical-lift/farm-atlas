@@ -111,9 +111,12 @@ function MetricCard({
       <strong>{value}</strong>
       <span>{detail}</span>
       {typeof progress === "number" ? (
-        <div className={styles.progressTrack} aria-label={`${label}: ${progress}%`}>
-          <i style={{ width: `${Math.max(0, Math.min(progress, 100))}%` }} />
-        </div>
+        <progress
+          className={styles.progressTrack}
+          aria-label={`${label}: ${progress}%`}
+          max={100}
+          value={Math.max(0, Math.min(progress, 100))}
+        />
       ) : null}
     </article>
   );
