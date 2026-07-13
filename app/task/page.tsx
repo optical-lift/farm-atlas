@@ -382,13 +382,22 @@ function ProgressReportHero({ selectedTask, tasks, nextWorkTasks, today }: { sel
   );
 }
 
-function ActiveTaskCard({ task, allTasks, onChange, onChildChange, onDoneComplete, today, weatherLabel }: { task: AtlasTaskCard; allTasks: AtlasTaskCard[]; onChange: () => Promise<void>; onChildChange: () => Promise<void>; onDoneComplete: () => void; today: string; weatherLabel: string }) {
+function ActiveTaskCard({ task, allTasks, onChange, onChildChange, onDoneComplete, today, weatherLabel }: { task: AtlasTaskCard; allTasks: AtlasTaskCard[]; onChange: () => Promise<void>; onChildChange: () => Promise<AtlasTaskCard[]>; onDoneComplete: () => void; today: string; weatherLabel: string }) {
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const display = displayTask(task);
   const windowLabel = workWindowForTask(task, weatherLabel);
   const childTasks = childTasksFor(task, allTasks);
+
+  async function handleChildChange() {
+    const refreshedTasks = await onChildChange();
+    const refreshedParent = refreshedTasks.find((candidate) => candidate.task_id === task.task_id);
+    if (refreshedParent && isCompletedTask(refreshedParent)) {
+      setMessage("Done.");
+      window.setTimeout(onDoneComplete, 150);
+    }
+  }
 
   async function submitOutcome(outcome: Outcome, note = "") {
     try {
@@ -488,9 +497,9 @@ function ActiveTaskCard({ task, allTasks, onChange, onChildChange, onDoneComplet
         <strong>{display.location}</strong>
       </section>
       <DetailCard heading={display.detailHeading} lines={display.detailLines} />
-      <TaskChildChecklist childTasks={childTasks} onChange={onChildChange} />
+      <TaskChildChecklist childTasks={childTasks} onChange={handleChildChange} />
       <div className="atlas-task-page-actions atlas-task-primary-actions">
-        <button type="button" className="done" disabled={Boolean(saving)} onClick={finishDone}>{saving === "done" ? "Saving" : "Done"}</button>
+        <button type="button" className="done" disabled={Boolean(saving)} onClick={finishDone}>{saving === "done" ? "Finishing" : "Done"}</button>
         <button type="button" disabled={Boolean(saving)} onClick={() => setUnfinishedOpen((open) => !open)}>{unfinishedOpen ? "Close" : "Unfinished"}</button>
       </div>
       {unfinishedOpen ? (
@@ -547,9 +556,14 @@ export default function AtlasTaskPage() {
   async function refreshTaskData() {
     try {
       const response = await fetchAtlasTaskCards();
-      setTasks((response.taskCards ?? []).filter((task) => task.status !== "archived").sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b))));
+      const refreshedTasks = (response.taskCards ?? [])
+        .filter((task) => task.status !== "archived")
+        .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
+      setTasks(refreshedTasks);
+      return refreshedTasks;
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
+      return [];
     }
   }
 
