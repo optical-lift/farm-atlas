@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { TaskChildChecklist } from "@/components/atlas/task-child-checklist";
 import { atlasTaskDisplay } from "@/lib/atlas/task-display";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
 type LaneKey = "start" | "maintain" | "harvest" | "venue";
 type Outcome = "done" | "partial" | "blocked" | "not_relevant" | "changed_plan";
@@ -31,6 +32,16 @@ function addDaysIso(dateIso: string, days: number) {
   const date = new Date(`${dateIso}T12:00:00`);
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+function initialTaskQuery(): { taskId: string | null; lane: LaneKey | null } {
+  if (typeof window === "undefined") return { taskId: null, lane: null as LaneKey | null };
+  const params = new URLSearchParams(window.location.search);
+  const lane = params.get("lane");
+  return {
+    taskId: params.get("taskId"),
+    lane: lane === "start" || lane === "maintain" || lane === "harvest" || lane === "venue" ? lane : null,
+  };
 }
 
 function prettyDate(dateIso: string | null | undefined) {
@@ -78,7 +89,7 @@ function taskSortValue(task: AtlasTaskCard) {
 }
 
 function rhythmFromTask(task: AtlasTaskCard) {
-  const explicit = metaString(task, "work_rhythm");
+  const explicit = task.action_key || metaString(task, "work_rhythm");
   if (explicit) return explicit;
 
   const title = task.title.toLowerCase();
@@ -96,7 +107,7 @@ function rhythmFromTask(task: AtlasTaskCard) {
 }
 
 function actionFromTask(task: AtlasTaskCard, rhythm: string) {
-  const explicit = metaString(task, "display_action");
+  const explicit = metaString(task, "display_action") || task.action_key;
   if (explicit) return explicit;
 
   const text = `${task.task_type} ${task.title}`.toLowerCase();
@@ -171,11 +182,11 @@ function workKeyForDisplay(display: DisplayTask) {
 }
 
 function isChildTask(task: AtlasTaskCard) {
-  return metadataValue(task, "is_child_task") === true || metadataValue(task, "is_child_task") === "true";
+  return Boolean(task.parent_task_id) || metadataValue(task, "is_child_task") === true || metadataValue(task, "is_child_task") === "true";
 }
 
 function childParentId(task: AtlasTaskCard) {
-  return metaString(task, "parent_task_id");
+  return task.parent_task_id || metaString(task, "parent_task_id");
 }
 
 function checklistLabel(task: AtlasTaskCard) {
@@ -261,48 +272,38 @@ function childTasksFor(task: AtlasTaskCard, allTasks: AtlasTaskCard[]) {
 
 async function postOutcome(task: AtlasTaskCard, outcome: Outcome, note = "") {
   const display = displayTask(task);
-  const response = await fetch("/api/atlas/task-outcome", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({
-      taskId: task.task_id,
-      outcome,
-      note,
-      reason: note,
-      laneKey: display.lane,
-      workKey: workKeyForDisplay(display),
-    }),
+  return postAtlasTaskTransition({
+    taskId: task.task_id,
+    transition: outcome,
+    note,
+    reason: note,
+    laneKey: display.lane,
+    workKey: task.action_key || workKeyForDisplay(display),
+    payload: { workClass: task.work_class },
   });
-  const data = (await response.json()) as { ok?: boolean; error?: string; details?: string };
-  if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task update failed.");
 }
 
 async function postReschedule(task: AtlasTaskCard, targetDate: string, rescheduleMode: RescheduleMode, reason = "") {
   const display = displayTask(task);
-  const response = await fetch("/api/atlas/task-reschedule", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({
-      taskId: task.task_id,
-      targetDate,
-      rescheduleMode,
-      reason,
-      laneKey: display.lane,
-      workKey: workKeyForDisplay(display),
-    }),
+  return postAtlasTaskTransition({
+    taskId: task.task_id,
+    transition: "rescheduled",
+    targetDate,
+    reason,
+    laneKey: display.lane,
+    workKey: task.action_key || workKeyForDisplay(display),
+    payload: { rescheduleMode },
   });
-  const data = (await response.json()) as { ok?: boolean; error?: string; details?: string };
-  if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task reschedule failed.");
 }
 
 async function postNote(task: AtlasTaskCard, note: string) {
-  const response = await fetch("/api/atlas/task-note", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ taskId: task.task_id, note, laneKey: laneForTask(task) }),
+  return postAtlasTaskTransition({
+    taskId: task.task_id,
+    transition: "note",
+    note,
+    laneKey: laneForTask(task),
+    workKey: task.action_key,
   });
-  const data = (await response.json()) as { ok?: boolean; error?: string; details?: string };
-  if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task note failed.");
 }
 
 function TaskSummaryButton({ task, selected, onSelect, today, weatherLabel }: { task: AtlasTaskCard; selected: boolean; onSelect: () => void; today: string; weatherLabel: string }) {
@@ -326,6 +327,46 @@ function DetailCard({ heading, lines }: { heading: string | null; lines: string[
     <section className="atlas-task-detail-card">
       <strong>{heading}</strong>
       {lines.map((line) => <p key={line}>{line}</p>)}
+    </section>
+  );
+}
+
+function transitionLabel(value: string) {
+  return value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function TaskRecordCard({ task }: { task: AtlasTaskCard }) {
+  const transitions = (task.task_transitions ?? []).slice(0, 3);
+  const objects = task.objects ?? [];
+  if (!objects.length && !transitions.length && !task.work_class) return null;
+
+  return (
+    <section className="atlas-task-record-card">
+      <strong>Linked record</strong>
+      {objects.length ? (
+        <div>
+          <small>Spaces</small>
+          <nav aria-label="Task spaces">
+            {objects.map((object) => (
+              <Link key={object.object_id} href={`/objects/${encodeURIComponent(object.object_key)}`}>{object.object_label}</Link>
+            ))}
+          </nav>
+        </div>
+      ) : null}
+      {task.work_class ? <p><small>Work class</small><span>{transitionLabel(task.work_class)}</span></p> : null}
+      {transitions.length ? (
+        <div>
+          <small>Recent task history</small>
+          <ol>
+            {transitions.map((transition) => (
+              <li key={transition.transition_id}>
+                <span>{transitionLabel(transition.transition)}</span>
+                <time dateTime={transition.created_at}>{prettyDate(transition.created_at.slice(0, 10))}</time>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -394,9 +435,9 @@ function ActiveTaskCard({ task, allTasks, onChange, onChildChange, onDoneComplet
     try {
       setSaving(outcome);
       setMessage(null);
-      await postOutcome(task, outcome, note);
+      const result = await postOutcome(task, outcome, note);
       if (outcome === "done") {
-        setMessage("Done.");
+        setMessage(result.childrenClosed > 0 ? `Done — ${result.childrenClosed} checklist steps completed.` : "Done.");
         window.setTimeout(onDoneComplete, 150);
         return;
       }
@@ -488,6 +529,7 @@ function ActiveTaskCard({ task, allTasks, onChange, onChildChange, onDoneComplet
         <strong>{display.location}</strong>
       </section>
       <DetailCard heading={display.detailHeading} lines={display.detailLines} />
+      <TaskRecordCard task={task} />
       <TaskChildChecklist childTasks={childTasks} onChange={onChildChange} />
       <div className="atlas-task-page-actions atlas-task-primary-actions">
         <button type="button" className="done" disabled={Boolean(saving)} onClick={finishDone}>{saving === "done" ? "Finishing" : "Done"}</button>
@@ -520,9 +562,10 @@ function ActiveTaskCard({ task, allTasks, onChange, onChildChange, onDoneComplet
 }
 
 export default function AtlasTaskPage() {
+  const initialQuery = useMemo(() => initialTaskQuery(), []);
   const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [selectedLane, setSelectedLane] = useState<LaneKey | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialQuery.taskId);
+  const [selectedLane, setSelectedLane] = useState<LaneKey | null>(initialQuery.lane);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
@@ -564,13 +607,11 @@ export default function AtlasTaskPage() {
   }
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const taskId = params.get("taskId");
-    const laneParam = params.get("lane");
-    if (taskId) setSelectedTaskId(taskId);
-    if (laneParam === "start" || laneParam === "maintain" || laneParam === "harvest" || laneParam === "venue") setSelectedLane(laneParam);
-    void loadTasks();
-    void loadWeather();
+    const timer = window.setTimeout(() => {
+      void loadTasks();
+      void loadWeather();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const openTasks = useMemo(() => tasks.filter((task) => task.status === "open" || task.status === "blocked"), [tasks]);
@@ -593,12 +634,6 @@ export default function AtlasTaskPage() {
 
   function selectTask(taskId: string) {
     setSelectedTaskId(taskId);
-    scrollToActiveTask();
-  }
-
-  function selectLane(lane: LaneKey) {
-    setSelectedLane((current) => current === lane ? null : lane);
-    setSelectedTaskId(null);
     scrollToActiveTask();
   }
 

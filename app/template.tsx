@@ -305,40 +305,6 @@ function polishRouteHeader() {
   head.replaceChildren(title, time);
 }
 
-function activeTaskPayload() {
-  const params = new URLSearchParams(window.location.search);
-  const taskId = params.get("taskId");
-  if (taskId) return { taskId };
-
-  const activeTitle = document.querySelector(".atlas-task-page-active h1")?.textContent?.trim();
-  return activeTitle ? { taskTitle: `%${activeTitle}%` } : null;
-}
-
-function activeTaskWorkKeys() {
-  const card = document.querySelector(".atlas-task-page-active");
-  const content = card?.textContent?.toLowerCase() ?? "";
-  const action = card?.querySelector(".atlas-task-page-time-row span")?.textContent?.trim().toLowerCase().replace(/\s+/g, "_") || "unfinished";
-
-  if (content.includes("harvest") || content.includes("postharvest") || content.includes("garlic") || content.includes("gather")) return { laneKey: "harvest", workKey: action };
-  if (content.includes("venue") || content.includes("paint") || content.includes("trim") || content.includes("chicken")) return { laneKey: "venue", workKey: action };
-  if (content.includes("plant") || content.includes("seed") || content.includes("sow")) return { laneKey: "start", workKey: action };
-  return { laneKey: "maintain", workKey: action };
-}
-
-async function markActiveTaskUnfinished(button: HTMLButtonElement) {
-  const payload = activeTaskPayload();
-  if (!payload || button.disabled || button.dataset.saving === "true") return;
-
-  button.dataset.saving = "true";
-  button.disabled = true;
-  await fetch("/api/atlas/task-unfinished", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ ...payload, ...activeTaskWorkKeys() }),
-  });
-  window.location.assign("/task");
-}
-
 function syncTaskMode() {
   const isTaskPage = window.location.pathname === "/task";
   const params = new URLSearchParams(window.location.search);
@@ -364,15 +330,6 @@ export default function RootTemplate({ children }: { children: ReactNode }) {
     function handleClick(event: MouseEvent) {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
-
-      const unfinishedButton = target.closest<HTMLButtonElement>(".atlas-task-page-actions button:nth-child(2)");
-      if (unfinishedButton && window.location.pathname === "/task") {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        void markActiveTaskUnfinished(unfinishedButton);
-        return;
-      }
 
       const card = target.closest<HTMLAnchorElement>(".atlas-route-sheet-box");
       if (!card) return;

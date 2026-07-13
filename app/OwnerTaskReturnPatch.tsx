@@ -15,7 +15,7 @@ export default function OwnerTaskReturnPatch() {
         const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
         const params = new URLSearchParams(window.location.search);
         const isOwnerTask = window.location.pathname === "/task" && params.get("scope") === "owner";
-        const closesOrMovesTask = requestUrl.includes("/api/atlas/task-outcome") || requestUrl.includes("/api/atlas/task-reschedule");
+        const closesOrMovesTask = requestUrl.includes("/api/atlas/task-transition") || requestUrl.includes("/api/atlas/task-outcome") || requestUrl.includes("/api/atlas/task-reschedule");
 
         if (isOwnerTask && method === "POST" && closesOrMovesTask && response.ok) {
           window.setTimeout(() => window.location.assign("/owner"), 120);

@@ -86,8 +86,13 @@ export function atlasIsCropCycleTask(task: AtlasTaskCard) {
 }
 
 export function atlasRouteKeyForTask(task: AtlasTaskCard): AtlasWorkRouteKey {
-  const explicit = atlasMetaString(task, "work_route");
+  const explicit = task.action_key || atlasMetaString(task, "work_route");
   if (atlasIsRouteKey(explicit)) return explicit;
+  if (explicit === "weeding") return "weed";
+  if (explicit === "mowing") return "mow";
+  if (explicit === "watering") return "water";
+  if (explicit === "planting" || explicit === "transplant") return "plant";
+  if (explicit === "sowing") return "seed";
   if (atlasIsCropCycleTask(task)) return "crop_cycle";
 
   const templateText = (task.action_templates ?? [])

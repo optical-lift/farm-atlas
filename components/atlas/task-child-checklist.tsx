@@ -3,18 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 import {
   fetchAtlasZoneRegistry,
   type AtlasRegistryObject,
   type AtlasRegistryZone,
 } from "@/lib/atlas/zone-registry-client";
-
-type PlantingLogResponse = {
-  ok?: boolean;
-  error?: string;
-  details?: string;
-  plantingLog?: { summary?: string } | null;
-};
 
 type PlantLogForm = {
   amount: string;
@@ -109,14 +103,13 @@ function locationForSelection(zones: AtlasRegistryZone[], zoneId: string, object
 }
 
 async function postChildToggle(taskId: string, checklistStatus: "open" | "done", body: Record<string, unknown> = {}) {
-  const response = await fetch("/api/atlas/task-child-toggle", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ taskId, checklistStatus, ...body }),
+  return postAtlasTaskTransition({
+    taskId,
+    transition: checklistStatus === "done" ? "checklist_done" : "checklist_open",
+    laneKey: "checklist",
+    workKey: checklistStatus === "done" ? "checked" : "reopened",
+    payload: { completion_source: "checklist", ...body },
   });
-  const data = (await response.json()) as PlantingLogResponse;
-  if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Checklist failed.");
-  return data.plantingLog ?? null;
 }
 
 export function TaskChildChecklist({ childTasks, onChange }: { childTasks: AtlasTaskCard[]; onChange: () => Promise<void> }) {
