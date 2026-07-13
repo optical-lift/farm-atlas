@@ -6,7 +6,6 @@ import HomeQuietTaskHeroPatch from "./HomeQuietTaskHeroPatch";
 import DayHeroQuietPatch from "./DayHeroQuietPatch";
 import WorkerVocabularyCleanupPatch from "./WorkerVocabularyCleanupPatch";
 import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
-import TaskChildCompletionGateFix from "./TaskChildCompletionGateFix";
 import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
 import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
 import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
@@ -57,7 +56,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <DayHeroQuietPatch />
         <WorkerVocabularyCleanupPatch />
         <TaskProgressExactDayPatch />
-        <TaskChildCompletionGateFix />
         <OwnerHomeLinkPatch />
         <HomeSundayNavigationPatch />
         <OwnerTaskReturnPatch />
