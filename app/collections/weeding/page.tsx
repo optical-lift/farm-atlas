@@ -26,7 +26,7 @@ type EffortBand = "heavy" | "moderate" | "light";
 const effortBands: Array<{ key: EffortBand; label: string }> = [
   { key: "heavy", label: "Heavy" },
   { key: "moderate", label: "Moderate" },
-  { key: "light", label: "Light / Quick" },
+  { key: "light", label: "Light" },
 ];
 
 function taskMinutes(task: AtlasTaskCard) {
@@ -37,10 +37,11 @@ function taskMinutes(task: AtlasTaskCard) {
 
 function taskEffortBand(task: AtlasTaskCard): EffortBand {
   const condition = atlasMetaString(task, "condition").toLowerCase();
-  const quickPass = atlasMetadataValue(task, "quick_maintenance_pass") === true;
+  const lightPass = atlasMetadataValue(task, "light_maintenance_pass") === true
+    || atlasMetadataValue(task, "quick_maintenance_pass") === true;
   const minutes = taskMinutes(task);
 
-  if (quickPass || /maintain|light|easy|quick/.test(condition)) return "light";
+  if (lightPass || /maintain|light|easy|quick/.test(condition)) return "light";
   if (/heavy|reset|overgrown/.test(condition)) return "heavy";
   if (/moderate|medium/.test(condition)) return "moderate";
   if (minutes !== null && minutes >= 60) return "heavy";
