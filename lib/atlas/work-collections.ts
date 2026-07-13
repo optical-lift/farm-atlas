@@ -1,7 +1,7 @@
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasMetaString, atlasMetadataValue, atlasTaskDisplay } from "@/lib/atlas/task-display";
 
-export type AtlasWorkCollectionKey = "mowing";
+export type AtlasWorkCollectionKey = "mowing" | "weeding";
 
 export type AtlasWorkCollectionSummary = {
   key: AtlasWorkCollectionKey;
@@ -19,10 +19,12 @@ export type AtlasWorkCollectionSummary = {
 
 const collectionLabels: Record<AtlasWorkCollectionKey, string> = {
   mowing: "Mowing",
+  weeding: "Weeding",
 };
 
 const collectionHrefs: Record<AtlasWorkCollectionKey, string> = {
   mowing: "/collections/mowing",
+  weeding: "/collections/weeding",
 };
 
 function text(value: unknown) {
@@ -49,7 +51,7 @@ function metaNumber(task: AtlasTaskCard, key: string) {
 
 export function atlasWorkCollectionKey(task: AtlasTaskCard): AtlasWorkCollectionKey | null {
   const explicit = atlasMetaString(task, "work_collection_key");
-  if (explicit === "mowing") return explicit;
+  if (explicit === "mowing" || explicit === "weeding") return explicit;
   return null;
 }
 
@@ -63,6 +65,10 @@ export function atlasIsWorkCollectionMember(task: AtlasTaskCard) {
 
 export function atlasIsMowingCollectionMember(task: AtlasTaskCard) {
   return atlasWorkCollectionKey(task) === "mowing";
+}
+
+export function atlasIsWeedingCollectionMember(task: AtlasTaskCard) {
+  return atlasWorkCollectionKey(task) === "weeding";
 }
 
 export function atlasCollectionTaskSortValue(task: AtlasTaskCard) {
@@ -100,7 +106,6 @@ export function atlasBuildWorkCollectionSummary(
   anchorIso: string,
 ): AtlasWorkCollectionSummary | null {
   const members = atlasVisibleCollectionTasks(tasks.filter((task) => atlasWorkCollectionKey(task) === key));
-
   if (!members.length) return null;
 
   const active = members.filter((task) => task.status === "open" || task.status === "blocked");
@@ -127,11 +132,15 @@ export function atlasBuildWorkCollectionSummary(
     blockedCount: blocked.length,
     notReadyCount: notReady.length,
     nextDueLabel: nextDue ? prettyShortDate(nextDue) : "not scheduled",
-    preview: previewTasks.length ? previewTasks.join(" · ") : doneRecent.length ? "Recently mowed areas are resting" : "No active areas",
+    preview: previewTasks.length ? previewTasks.join(" · ") : doneRecent.length ? `Recently ${key === "weeding" ? "weeded" : "mowed"} areas are resting` : "No active areas",
     tasks: members,
   };
 }
 
 export function atlasBuildMowingCollectionSummary(tasks: AtlasTaskCard[], anchorIso: string) {
   return atlasBuildWorkCollectionSummary("mowing", tasks, anchorIso);
+}
+
+export function atlasBuildWeedingCollectionSummary(tasks: AtlasTaskCard[], anchorIso: string) {
+  return atlasBuildWorkCollectionSummary("weeding", tasks, anchorIso);
 }
