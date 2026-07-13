@@ -32,14 +32,14 @@ type AtlasTaskCardRow = {
   zone_key: string | null;
   zone_label: string | null;
 
-task_logs: Array<{
-  field_log_id: string;
-  log_date: string;
-  action_types: string[];
-  summary_sentence: string;
-  note: string | null;
-  created_at: string;
-}>;
+  task_logs: Array<{
+    field_log_id: string;
+    log_date: string;
+    action_types: string[];
+    summary_sentence: string;
+    note: string | null;
+    created_at: string;
+  }>;
 
   task_transitions: Array<{
     transition_id: string;
@@ -112,6 +112,10 @@ type CropProfileRow = {
 
 function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function stringList(value: unknown) {
@@ -233,8 +237,18 @@ async function enrichWithCropProfiles(cards: AtlasTaskCardRow[]) {
 }
 
 export async function GET(request: NextRequest) {
-  const taskId = request.nextUrl.searchParams.get("taskId");
+  const taskId = request.nextUrl.searchParams.get("taskId")?.trim() || null;
   const scope = request.nextUrl.searchParams.get("scope");
+
+  if (taskId && !isUuid(taskId)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "A valid task ID is required.",
+      },
+      { status: 400 },
+    );
+  }
 
   let query = atlasSupabase
     .schema("atlas")
