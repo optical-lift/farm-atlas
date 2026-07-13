@@ -37,6 +37,7 @@ import "./field-log-documentation.css";
 import "./mobile-overflow-guard.css";
 import "./task-child-inline-log.css";
 import "./germination-check.css";
+import "./day-overdue.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
