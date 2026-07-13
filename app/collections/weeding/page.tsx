@@ -31,6 +31,21 @@ function totalMinutes(items: AtlasMaintenancePreviewItem[]) {
 }
 
 type Condition = "maintained" | "moderate" | "heavy" | "reset";
+type CompletionOutcome = "fully_completed" | "partially_completed" | "heavier_reset";
+
+async function recordCompletion(
+  maintenanceObjectId: string,
+  outcome: CompletionOutcome,
+  actualMinutes: number | null,
+) {
+  const response = await fetch("/api/atlas/maintenance-completion", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ maintenanceObjectId, outcome, actualMinutes }),
+  });
+  const data = (await response.json()) as { ok: boolean; error?: string; details?: string };
+  if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Maintenance completion failed.");
+}
 
 type DayWindowProps = {
   title: string;
@@ -39,6 +54,7 @@ type DayWindowProps = {
   busyId: string | null;
   onOverride: (item: AtlasMaintenancePreviewItem) => void;
   onCondition: (item: AtlasMaintenancePreviewItem, condition: Condition) => void;
+  onComplete: (item: AtlasMaintenancePreviewItem, outcome: CompletionOutcome) => void;
 };
 
 function DayWindow({
@@ -48,6 +64,7 @@ function DayWindow({
   busyId,
   onOverride,
   onCondition,
+  onComplete,
 }: DayWindowProps) {
   const capacity = items[0]?.window_minutes ?? fallbackMinutes;
   const used = totalMinutes(items);
@@ -79,7 +96,14 @@ function DayWindow({
               {item.dependent_task_labels.length ? (
                 <p><strong>Unlocks:</strong> {item.dependent_task_labels.join(" · ")}</p>
               ) : null}
-              <div className="atlas-maintenance-control-row" aria-label={`Controls for ${item.object_label}`}>
+
+              <div className="atlas-maintenance-control-row" aria-label={`Completion choices for ${item.object_label}`}>
+                <button type="button" disabled={busy} onClick={() => onComplete(item, "fully_completed")}>Fully weeded</button>
+                <button type="button" disabled={busy} onClick={() => onComplete(item, "partially_completed")}>Partially weeded</button>
+                <button type="button" disabled={busy} onClick={() => onComplete(item, "heavier_reset")}>Heavier than expected</button>
+              </div>
+
+              <div className="atlas-maintenance-control-row" aria-label={`Planning controls for ${item.object_label}`}>
                 <button type="button" disabled={busy} onClick={() => onOverride(item)}>
                   {item.owner_priority > 0 ? "Remove owner override" : "Move to front"}
                 </button>
@@ -149,22 +173,42 @@ export default function WeedingPreviewPage() {
     }
   }
 
+  async function completeItem(item: AtlasMaintenancePreviewItem, outcome: CompletionOutcome) {
+    const promptLabel = outcome === "fully_completed"
+      ? "Actual minutes spent (optional)"
+      : outcome === "partially_completed"
+        ? "How many minutes were completed?"
+        : "New total minutes this reset needs (optional)";
+    const entered = window.prompt(promptLabel, outcome === "partially_completed" ? String(Math.max(1, Math.floor(item.estimated_minutes / 2))) : String(item.estimated_minutes));
+    if (entered === null) return;
+    const parsed = entered.trim() ? Number(entered) : null;
+    if (parsed !== null && (!Number.isFinite(parsed) || parsed < 0)) {
+      setError("Minutes must be zero or a positive number.");
+      return;
+    }
+
+    try {
+      setBusyId(item.maintenance_object_id);
+      setError(null);
+      await recordCompletion(item.maintenance_object_id, outcome, parsed === null ? null : Math.round(parsed));
+      setRevision((value) => value + 1);
+    } catch (completionError) {
+      setError(completionError instanceof Error ? completionError.message : "Maintenance completion failed.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   const days = useMemo(() => {
     const grouped = new Map<string, AtlasMaintenancePreviewItem[]>();
-    items.forEach((item) => {
-      grouped.set(item.schedule_date, [...(grouped.get(item.schedule_date) ?? []), item]);
-    });
+    items.forEach((item) => grouped.set(item.schedule_date, [...(grouped.get(item.schedule_date) ?? []), item]));
     return Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [items]);
 
   const scheduledMinutes = totalMinutes(items);
   const scheduledObjects = new Set(items.map((item) => item.maintenance_object_id)).size;
-  const dependencyObjects = new Set(
-    items.filter((item) => item.dependent_task_labels.length > 0).map((item) => item.maintenance_object_id),
-  ).size;
-  const ownerOverrides = new Set(
-    items.filter((item) => item.owner_priority > 0).map((item) => item.maintenance_object_id),
-  ).size;
+  const dependencyObjects = new Set(items.filter((item) => item.dependent_task_labels.length > 0).map((item) => item.maintenance_object_id)).size;
+  const ownerOverrides = new Set(items.filter((item) => item.owner_priority > 0).map((item) => item.maintenance_object_id)).size;
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-work-collection-page-shell">
@@ -172,22 +216,22 @@ export default function WeedingPreviewPage() {
         <header className="atlas-phone-top atlas-dashboard-top">
           <Link href="/" className="atlas-phone-brand atlas-task-header-brand">
             <span className="atlas-phone-kicker">Atlas</span>
-            <span className="atlas-phone-title">Weeding Preview</span>
+            <span className="atlas-phone-title">Weeding</span>
           </Link>
-          <span className="atlas-weather-line">Phase 3 priority engine</span>
+          <span className="atlas-weather-line">Phase 4 recurring engine</span>
           <Link href="/day" className="atlas-note-plus atlas-overview-top-dot" aria-label="Back to day overview">↩</Link>
         </header>
 
         <div className="atlas-task-page-body atlas-overview-body atlas-work-collection-body">
           <section className="atlas-overview-hero atlas-work-collection-hero">
             <div>
-              <strong>7-Day Weeding Preview</strong>
+              <strong>7-Day Weeding Plan</strong>
               <span>Starting {prettyDate(startDate)}</span>
             </div>
-            <p>Priority and condition controls update canonical objects. The preview still creates no daily tasks.</p>
+            <p>Completion now controls cooldown, remaining labor, object history, and dependent work.</p>
           </section>
 
-          <section className="atlas-overview-stat-grid" aria-label="Weeding scheduler preview stats">
+          <section className="atlas-overview-stat-grid" aria-label="Weeding scheduler stats">
             <article><strong>{loading ? "…" : scheduledObjects}</strong><span>objects</span></article>
             <article><strong>{loading ? "…" : scheduledMinutes}</strong><span>minutes</span></article>
             <article><strong>{loading ? "…" : dependencyObjects}</strong><span>unlock work</span></article>
@@ -195,21 +239,17 @@ export default function WeedingPreviewPage() {
           </section>
 
           <section className="atlas-overview-summary-line">
-            <p>Owner overrides move the canonical object to the front. Condition changes recalculate effort. Blocked planting work is attached directly to the object and shown by name.</p>
+            <p>Fully weeded starts the 21-day cooldown. Partial work stays eligible with only the remaining minutes. Heavier-than-expected work returns immediately with a revised reset estimate.</p>
           </section>
 
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
-          {loading ? <div className="atlas-task-page-empty">Building the dependency-aware weeding preview.</div> : null}
+          {loading ? <div className="atlas-task-page-empty">Building the recurring weeding plan.</div> : null}
 
           {!loading && !error ? (
-            <section className="atlas-overview-zone-list atlas-work-collection-list" aria-label="Seven day weeding preview">
+            <section className="atlas-overview-zone-list atlas-work-collection-list" aria-label="Seven day weeding plan">
               {days.length ? days.map(([date, dayItems]) => {
-                const morning = dayItems
-                  .filter((item) => item.window_key === "morning")
-                  .sort((a, b) => a.sequence_in_window - b.sequence_in_window);
-                const evening = dayItems
-                  .filter((item) => item.window_key === "evening")
-                  .sort((a, b) => a.sequence_in_window - b.sequence_in_window);
+                const morning = dayItems.filter((item) => item.window_key === "morning").sort((a, b) => a.sequence_in_window - b.sequence_in_window);
+                const evening = dayItems.filter((item) => item.window_key === "evening").sort((a, b) => a.sequence_in_window - b.sequence_in_window);
                 const significant = dayItems.some((item) => item.significant_day_work);
 
                 return (
@@ -221,22 +261,8 @@ export default function WeedingPreviewPage() {
                       </div>
                       <p>{totalMinutes(dayItems)} maintenance minutes</p>
                     </section>
-                    <DayWindow
-                      title="Morning Window"
-                      items={morning}
-                      fallbackMinutes={120}
-                      busyId={busyId}
-                      onOverride={changeOverride}
-                      onCondition={changeCondition}
-                    />
-                    <DayWindow
-                      title="Evening Window"
-                      items={evening}
-                      fallbackMinutes={significant ? 60 : 120}
-                      busyId={busyId}
-                      onOverride={changeOverride}
-                      onCondition={changeCondition}
-                    />
+                    <DayWindow title="Morning Window" items={morning} fallbackMinutes={120} busyId={busyId} onOverride={changeOverride} onCondition={changeCondition} onComplete={completeItem} />
+                    <DayWindow title="Evening Window" items={evening} fallbackMinutes={significant ? 60 : 120} busyId={busyId} onOverride={changeOverride} onCondition={changeCondition} onComplete={completeItem} />
                   </section>
                 );
               }) : (
