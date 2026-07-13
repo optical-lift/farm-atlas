@@ -48,7 +48,7 @@ export function atlasMetadataValue(task: AtlasTaskCard, key: string) {
 
 export function atlasMetaString(task: AtlasTaskCard, key: string) {
   const value = atlasMetadataValue(task, key);
-  return typeof value === "string" && value.trim() ? value.trim() : null;
+  return typeof value === "string" && value.trim() ? value.trim() : "";
 }
 
 export function atlasCleanLabel(value: string | null | undefined) {
@@ -73,7 +73,7 @@ export function atlasIsCropCycleTask(task: AtlasTaskCard) {
   const metadata = task.metadata ?? {};
   const explicit = atlasMetaString(task, "work_route");
   const createdFrom = atlasMetaString(task, "created_from");
-  const text = `${task.task_type ?? ""} ${task.title} ${task.unlock_text ?? ""} ${atlasMetaString(task, "work_rhythm") ?? ""} ${atlasMetaString(task, "display_action") ?? ""}`.toLowerCase();
+  const text = `${task.task_type ?? ""} ${task.title} ${task.unlock_text ?? ""} ${atlasMetaString(task, "work_rhythm")} ${atlasMetaString(task, "display_action")}`.toLowerCase();
 
   return explicit === "crop_cycle"
     || Boolean(metadata.crop_cycle_id || metadata.crop_cycle_key || metadata.crop_profile_stable_key)
@@ -94,7 +94,7 @@ export function atlasRouteKeyForTask(task: AtlasTaskCard): AtlasWorkRouteKey {
     .map((template) => `${template.action_type ?? ""} ${template.template_label ?? ""} ${template.card_language ?? ""}`)
     .join(" ");
 
-  const joined = `${task.task_type ?? ""} ${task.title} ${task.unlock_text ?? ""} ${atlasMetaString(task, "work_rhythm") ?? ""} ${atlasMetaString(task, "display_action") ?? ""} ${templateText}`.toLowerCase();
+  const joined = `${task.task_type ?? ""} ${task.title} ${task.unlock_text ?? ""} ${atlasMetaString(task, "work_rhythm")} ${atlasMetaString(task, "display_action")} ${templateText}`.toLowerCase();
 
   if (joined.includes("water")) return "water";
   if (joined.includes("mow")) return "mow";
