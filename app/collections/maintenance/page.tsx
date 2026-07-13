@@ -39,6 +39,37 @@ function unique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
+function rankItems(items: AtlasUnifiedMaintenanceItem[]) {
+  return [...items].sort((a, b) => {
+    if (a.owner_priority !== b.owner_priority) return b.owner_priority - a.owner_priority;
+    if (a.must_precede_task !== b.must_precede_task) return Number(b.must_precede_task) - Number(a.must_precede_task);
+    if (a.effective_priority_score !== b.effective_priority_score) return b.effective_priority_score - a.effective_priority_score;
+    const zoneCompare = (a.zone_label ?? "Elm Farm").localeCompare(b.zone_label ?? "Elm Farm");
+    if (zoneCompare !== 0) return zoneCompare;
+    return a.sequence_in_window - b.sequence_in_window;
+  });
+}
+
+function fillWindow(items: AtlasUnifiedMaintenanceItem[], capacity: number) {
+  const chosen: AtlasUnifiedMaintenanceItem[] = [];
+  let used = 0;
+  let currentZone = "";
+  const remaining = rankItems(items);
+
+  while (remaining.length) {
+    const fitting = remaining.filter((item) => used + item.estimated_minutes <= capacity);
+    if (!fitting.length) break;
+    const nearby = fitting.find((item) => currentZone && (item.zone_label ?? "Elm Farm") === currentZone);
+    const next = nearby ?? fitting[0];
+    chosen.push(next);
+    used += next.estimated_minutes;
+    currentZone = next.zone_label ?? "Elm Farm";
+    remaining.splice(remaining.indexOf(next), 1);
+  }
+
+  return chosen;
+}
+
 async function completeMaintenance(maintenanceObjectId: string, outcome: "fully_completed" | "partially_completed" | "heavier_reset", actualMinutes: number, revisedTotalMinutes?: number) {
   const response = await fetch("/api/atlas/maintenance-completion", {
     method: "POST",
@@ -141,19 +172,29 @@ export default function UnifiedMaintenancePage() {
     }
   }
 
+  const significantDayWork = items.some((item) => item.significant_day_work);
+  const morningCapacity = 120;
+  const eveningCapacity = significantDayWork ? 60 : 120;
+  const balancedItems = useMemo(() => {
+    const morning = fillWindow(items.filter((item) => item.window_key === "morning"), morningCapacity);
+    const usedIds = new Set(morning.map((item) => item.maintenance_object_id));
+    const eveningPool = items.filter((item) => item.window_key === "evening" && !usedIds.has(item.maintenance_object_id));
+    return [...morning, ...fillWindow(eveningPool, eveningCapacity)];
+  }, [items, eveningCapacity]);
+
   const windows = useMemo(() => ["morning", "evening"].map((windowKey) => {
-    const windowItems = items.filter((item) => item.window_key === windowKey).sort((a, b) => a.sequence_in_window - b.sequence_in_window);
+    const windowItems = balancedItems.filter((item) => item.window_key === windowKey);
     const routes = new Map<string, AtlasUnifiedMaintenanceItem[]>();
     windowItems.forEach((item) => {
       const route = item.zone_label || "Elm Farm";
       routes.set(route, [...(routes.get(route) ?? []), item]);
     });
     return { windowKey, items: windowItems, routes: Array.from(routes.entries()) };
-  }), [items]);
+  }), [balancedItems]);
 
-  const scheduled = totalMinutes(items);
-  const collections = unique(items.map((item) => item.collection_label));
-  const unlockCount = items.filter((item) => item.must_precede_task).length;
+  const scheduled = totalMinutes(balancedItems);
+  const collections = unique(balancedItems.map((item) => item.collection_label));
+  const unlockCount = balancedItems.filter((item) => item.must_precede_task).length;
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-work-collection-page-shell">
@@ -171,7 +212,7 @@ export default function UnifiedMaintenancePage() {
           <section className="atlas-overview-stat-grid" aria-label="Maintenance plan stats">
             <article><strong>{loading ? "…" : totalMinutes(windows[0].items)}</strong><span>morning min</span></article>
             <article><strong>{loading ? "…" : totalMinutes(windows[1].items)}</strong><span>evening min</span></article>
-            <article><strong>{loading ? "…" : unique(items.map((item) => item.zone_label || "Elm Farm")).length}</strong><span>farm routes</span></article>
+            <article><strong>{loading ? "…" : unique(balancedItems.map((item) => item.zone_label || "Elm Farm")).length}</strong><span>farm routes</span></article>
             <article><strong>{loading ? "…" : unlockCount}</strong><span>unlock work</span></article>
           </section>
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
@@ -179,12 +220,12 @@ export default function UnifiedMaintenancePage() {
           {!loading && !error ? <section className="atlas-overview-zone-list atlas-work-collection-list">
             {windows.map(({ windowKey, items: windowItems, routes }) => (
               <section key={windowKey} className="atlas-day-route-group atlas-day-work-collection-group">
-                <h3>{windowKey === "morning" ? "Morning" : "Evening"} · {totalMinutes(windowItems)} minutes</h3>
+                <h3>{windowKey === "morning" ? "Morning" : "Evening"} · {totalMinutes(windowItems)} of {windowKey === "morning" ? morningCapacity : eveningCapacity} minutes</h3>
                 {routes.map(([route, routeItems]) => <RouteCard key={`${windowKey}-${route}`} route={route} items={routeItems} busyId={busyId} onRecord={(item, outcome) => void record(item, outcome)} />)}
                 {!routes.length ? <div className="atlas-task-page-empty">No {windowKey} maintenance scheduled.</div> : null}
               </section>
             ))}
-            {!items.length ? <div className="atlas-task-page-empty">No canonical maintenance fits this day&apos;s available labor windows.</div> : null}
+            {!balancedItems.length ? <div className="atlas-task-page-empty">No canonical maintenance fits this day&apos;s available labor windows.</div> : null}
           </section> : null}
         </div>
       </section>
