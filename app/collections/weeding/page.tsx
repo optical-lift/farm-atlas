@@ -60,6 +60,11 @@ function todayIso() {
   return local.toISOString().slice(0, 10);
 }
 
+function addDaysIso(dateIso: string, days: number) {
+  const [year, month, day] = dateIso.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
 function prettyDate(dateIso: string | null | undefined) {
   if (!dateIso) return "No date";
   const date = new Date(`${dateIso}T12:00:00`);
@@ -137,6 +142,7 @@ export default function WeedingCollectionPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const today = todayIso();
+  const upcomingThrough = addDaysIso(today, 7);
 
   useEffect(() => {
     async function load() {
@@ -165,8 +171,8 @@ export default function WeedingCollectionPage() {
     .filter((task) => !task.due_date || task.due_date <= today)
     .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b))), [tasks, today]);
   const upcoming = useMemo(() => tasks
-    .filter((task) => task.status === "open" && task.due_date && task.due_date > today)
-    .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b))), [tasks, today]);
+    .filter((task) => task.status === "open" && task.due_date && task.due_date > today && task.due_date <= upcomingThrough)
+    .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b))), [tasks, today, upcomingThrough]);
   const recentlyDone = useMemo(() => tasks
     .filter(atlasIsDoneTask)
     .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b))), [tasks]);
@@ -206,7 +212,7 @@ export default function WeedingCollectionPage() {
           {!loading ? (
             <section className="atlas-overview-zone-list atlas-work-collection-list" aria-label="Weeding areas">
               <CollectionSection title="Due Now" tasks={dueNow} empty="No beds or areas due for weeding now." tone="due" />
-              <CollectionSection title="Upcoming" tasks={upcoming} empty="No upcoming weeding areas scheduled." tone="upcoming" />
+              <CollectionSection title="Upcoming (7 Days)" tasks={upcoming} empty="No weeding areas scheduled in the next 7 days." tone="upcoming" />
               <CollectionSection title="Recently Done / Resting" tasks={recentlyDone} empty="No recently weeded areas." tone="done" />
               <CollectionSection title="Not Ready" tasks={notReady} empty="No weeding areas are paused." tone="paused" />
             </section>
