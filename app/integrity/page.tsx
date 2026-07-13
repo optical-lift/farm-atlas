@@ -153,6 +153,13 @@ export default async function AtlasIntegrityPage() {
     .single();
 
   if (error || !data) {
+    console.error("[atlas-integrity] report query failed", {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+      hasData: Boolean(data),
+    });
     return <ErrorState />;
   }
 
