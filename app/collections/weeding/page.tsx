@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import { atlasMetaString, atlasTaskDisplay } from "@/lib/atlas/task-display";
+import { atlasMetaString, atlasMetadataValue, atlasTaskDisplay } from "@/lib/atlas/task-display";
 import {
   atlasBuildWeedingCollectionSummary,
   atlasCollectionTaskSortValue,
@@ -20,6 +20,39 @@ type CollectionSectionProps = {
   empty: string;
   tone?: "due" | "done" | "paused" | "upcoming";
 };
+
+type EffortBand = "heavy" | "moderate" | "light";
+
+const effortBands: Array<{ key: EffortBand; label: string }> = [
+  { key: "heavy", label: "Heavy" },
+  { key: "moderate", label: "Moderate" },
+  { key: "light", label: "Light / Quick" },
+];
+
+function taskMinutes(task: AtlasTaskCard) {
+  const raw = atlasMetadataValue(task, "estimated_minutes");
+  const minutes = typeof raw === "number" ? raw : Number(raw);
+  return Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes) : null;
+}
+
+function taskEffortBand(task: AtlasTaskCard): EffortBand {
+  const condition = atlasMetaString(task, "condition").toLowerCase();
+  const quickPass = atlasMetadataValue(task, "quick_maintenance_pass") === true;
+  const minutes = taskMinutes(task);
+
+  if (quickPass || /maintain|light|easy|quick/.test(condition)) return "light";
+  if (/heavy|reset|overgrown/.test(condition)) return "heavy";
+  if (/moderate|medium/.test(condition)) return "moderate";
+  if (minutes !== null && minutes >= 60) return "heavy";
+  if (minutes !== null && minutes < 30) return "light";
+  return "moderate";
+}
+
+function effortMinutes(tasks: AtlasTaskCard[]) {
+  const minutes = tasks.map(taskMinutes);
+  if (minutes.some((value) => value === null)) return null;
+  return minutes.reduce<number>((total, value) => total + (value ?? 0), 0);
+}
 
 function todayIso() {
   const date = new Date();
@@ -48,7 +81,7 @@ function statusLine(task: AtlasTaskCard) {
 
 function WeedingTaskCard({ task, tone }: { task: AtlasTaskCard; tone?: CollectionSectionProps["tone"] }) {
   const display = atlasTaskDisplay(task);
-  const estimatedMinutes = atlasMetaString(task, "estimated_minutes");
+  const estimatedMinutes = taskMinutes(task);
 
   return (
     <Link className={`atlas-overview-task-card atlas-work-collection-task-card ${tone ?? ""}`} href={taskHref(task)}>
@@ -63,6 +96,10 @@ function WeedingTaskCard({ task, tone }: { task: AtlasTaskCard; tone?: Collectio
 }
 
 function CollectionSection({ title, tasks, empty, tone }: CollectionSectionProps) {
+  const groups = effortBands
+    .map((band) => ({ ...band, tasks: tasks.filter((task) => taskEffortBand(task) === band.key) }))
+    .filter((group) => group.tasks.length > 0);
+
   return (
     <section className="atlas-overview-zone-card atlas-work-collection-section">
       <summary>
@@ -72,8 +109,24 @@ function CollectionSection({ title, tasks, empty, tone }: CollectionSectionProps
         </div>
         <b>Weeding</b>
       </summary>
-      <div className="atlas-overview-task-list">
-        {tasks.length ? tasks.map((task) => <WeedingTaskCard key={task.task_id} task={task} tone={tone} />) : <p className="atlas-task-page-muted">{empty}</p>}
+      <div className="atlas-overview-task-list atlas-work-collection-effort-list">
+        {groups.length ? groups.map((group) => {
+          const totalMinutes = effortMinutes(group.tasks);
+          return (
+            <section className={`atlas-work-effort-group ${group.key}`} key={group.key} aria-label={`${group.label} weeding`}>
+              <header className="atlas-work-effort-header">
+                <div>
+                  <strong>{group.label}</strong>
+                  <span>{group.tasks.length} {group.tasks.length === 1 ? "area" : "areas"}</span>
+                </div>
+                {totalMinutes !== null ? <b>{totalMinutes} min</b> : null}
+              </header>
+              <div className="atlas-work-effort-tasks">
+                {group.tasks.map((task) => <WeedingTaskCard key={task.task_id} task={task} tone={tone} />)}
+              </div>
+            </section>
+          );
+        }) : <p className="atlas-task-page-muted">{empty}</p>}
       </div>
     </section>
   );
