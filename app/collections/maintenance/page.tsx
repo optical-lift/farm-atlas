@@ -20,6 +20,10 @@ function totalMinutes(items: AtlasUnifiedMaintenanceItem[]) {
 }
 
 function actionLabel(item: AtlasUnifiedMaintenanceItem) {
+  if (item.maintenance_type === "weed" && item.priority_reasons.includes("daily quick hoe/rake pass")) {
+    return "Quick hoe/rake";
+  }
+
   const labels: Record<string, string> = {
     weed: "Weed",
     mow: "Mow",
@@ -111,14 +115,22 @@ export default function UnifiedMaintenancePage() {
   }, [date, revision]);
 
   const significantDayWork = items.some((item) => item.significant_day_work);
-  const morningCapacity = 120;
-  const eveningCapacity = significantDayWork ? 60 : 120;
+  const defaultMorningCapacity = 120;
+  const defaultEveningCapacity = significantDayWork ? 60 : 120;
+  const morningCapacity = Math.max(
+    defaultMorningCapacity,
+    ...items.filter((item) => item.window_key === "morning").map((item) => item.window_minutes),
+  );
+  const eveningCapacity = Math.max(
+    defaultEveningCapacity,
+    ...items.filter((item) => item.window_key === "evening").map((item) => item.window_minutes),
+  );
   const balancedItems = useMemo(() => {
     const morning = fillWindow(items.filter((item) => item.window_key === "morning"), morningCapacity);
     const usedIds = new Set(morning.map((item) => item.maintenance_object_id));
     const eveningPool = items.filter((item) => item.window_key === "evening" && !usedIds.has(item.maintenance_object_id));
     return [...morning, ...fillWindow(eveningPool, eveningCapacity)];
-  }, [items, eveningCapacity]);
+  }, [items, morningCapacity, eveningCapacity]);
 
   useEffect(() => {
     if (!balancedItems.length) {
