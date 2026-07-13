@@ -32,9 +32,7 @@ function currentDate() {
 }
 
 function compactLabels(items: MaintenanceItem[]) {
-  return Array.from(new Set(items.map((item) => item.collection_label)))
-    .slice(0, 3)
-    .join(" · ");
+  return Array.from(new Set(items.map((item) => item.collection_label))).slice(0, 3).join(" · ");
 }
 
 async function loadSummary(date: string): Promise<MaintenanceSummary | null> {
@@ -49,8 +47,8 @@ async function loadSummary(date: string): Promise<MaintenanceSummary | null> {
     collections: new Set(items.map((item) => item.maintenance_type)).size,
     objects: items.length,
     minutes: items.reduce((sum, item) => sum + item.estimated_minutes, 0),
-    morningMinutes: morning.reduce((sum, item) => sum + item.estimated_minutes, 0),
-    eveningMinutes: evening.reduce((sum, item) => sum + item.estimated_minutes, 0),
+    morningMinutes: Math.min(120, morning.reduce((sum, item) => sum + item.estimated_minutes, 0)),
+    eveningMinutes: Math.min(120, evening.reduce((sum, item) => sum + item.estimated_minutes, 0)),
     morningLabels: compactLabels(morning),
     eveningLabels: compactLabels(evening),
     preview: items.slice(0, 4).map((item) => item.object_label).join(" · ") || "No maintenance fits today’s windows",
@@ -59,10 +57,10 @@ async function loadSummary(date: string): Promise<MaintenanceSummary | null> {
 
 function summaryMarkup(summary: MaintenanceSummary) {
   const flow = [
-    summary.morningMinutes ? `Morning ${summary.morningMinutes} min${summary.morningLabels ? ` · ${summary.morningLabels}` : ""}` : "",
-    summary.eveningMinutes ? `Evening ${summary.eveningMinutes} min${summary.eveningLabels ? ` · ${summary.eveningLabels}` : ""}` : "",
+    summary.morningMinutes ? `Morning ${summary.morningMinutes} min` : "",
+    summary.eveningMinutes ? `Evening ${summary.eveningMinutes} min` : "",
   ].filter(Boolean).join(" · ");
-  return `<strong>Maintenance Plan</strong><span>${flow || `${summary.collections} collections · ${summary.minutes} min`}</span><em>${summary.preview}</em>`;
+  return `<strong>Maintenance Plan</strong><span>${flow || `${summary.collections} collections`}</span><em>${summary.preview}</em>`;
 }
 
 function makeLink(summary: MaintenanceSummary, className: string) {
@@ -75,10 +73,23 @@ function makeLink(summary: MaintenanceSummary, className: string) {
   return link;
 }
 
+function isRealMaintenancePlanCard(element: HTMLElement) {
+  return (element.textContent ?? "").toLowerCase().includes("maintenance plan");
+}
+
 function isLegacyMaintenanceCard(element: HTMLElement) {
-  if (element.dataset.atlasMaintenancePlan === "true") return false;
+  if (element.dataset.atlasMaintenancePlan === "true" || isRealMaintenancePlanCard(element)) return false;
   const value = (element.textContent ?? "").toLowerCase();
   return /(^|\s|·)(weed|weeding|priority weeding|mow|mowing|water|watering|spray|spraying|deadhead|deadheading|edge|edging|prune|pruning|pathway cleanup|venue landscape)(\s|·|$)/.test(value);
+}
+
+function wireRealPlanCards(summary: MaintenanceSummary) {
+  document.querySelectorAll<HTMLAnchorElement>("a.atlas-day-task-card, a.atlas-run-sheet-box, a.atlas-day-route-box, a.atlas-task-forward-box").forEach((card) => {
+    if (!isRealMaintenancePlanCard(card)) return;
+    card.href = `/collections/maintenance?date=${encodeURIComponent(summary.date)}`;
+    card.dataset.atlasMaintenancePlan = "true";
+    card.dataset.atlasMaintenanceDate = summary.date;
+  });
 }
 
 function collapseVisibleMaintenanceCards(summary: MaintenanceSummary) {
@@ -101,10 +112,6 @@ function collapseVisibleMaintenanceCards(summary: MaintenanceSummary) {
       const sourceClass = cards[0].className;
       summaryCard = makeLink(summary, sourceClass);
       parent.insertBefore(summaryCard, cards[0]);
-    } else {
-      summaryCard.setAttribute("href", `/collections/maintenance?date=${encodeURIComponent(summary.date)}`);
-      summaryCard.dataset.atlasMaintenanceDate = summary.date;
-      summaryCard.innerHTML = summaryMarkup(summary);
     }
 
     cards.forEach((card) => {
@@ -117,7 +124,7 @@ function collapseVisibleMaintenanceCards(summary: MaintenanceSummary) {
 
 function removeStaleSummaryCards(date: string) {
   document.querySelectorAll<HTMLElement>("[data-atlas-maintenance-plan='true']").forEach((card) => {
-    if (card.dataset.atlasMaintenanceDate !== date) card.remove();
+    if (card.dataset.atlasMaintenanceDate !== date && !isRealMaintenancePlanCard(card)) card.remove();
   });
 }
 
@@ -143,6 +150,7 @@ export default function MaintenancePlanNavigationPatch() {
       try {
         const summary = await loadSummary(date);
         if (!summary || stopped || window.location.pathname !== path || currentDate() !== date) return;
+        wireRealPlanCards(summary);
         collapseVisibleMaintenanceCards(summary);
       } finally {
         running = false;
@@ -151,7 +159,6 @@ export default function MaintenancePlanNavigationPatch() {
 
     const observer = new MutationObserver(() => void apply());
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-
     const onNavigation = () => void apply();
     window.addEventListener("popstate", onNavigation);
     const interval = window.setInterval(() => void apply(), 500);
