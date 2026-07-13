@@ -761,3 +761,4 @@ join atlas.truth_sources source
  and source.stable_key = 'atlas_phase_1_baseline_2026_07_13'
 where summary.farm_key = 'elm_farm'
 on conflict (farm_id, audit_version) do nothing;
+notify pgrst, 'reload schema';
