@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import "./focused-task-only.css";
 
 const AtlasTaskPage = dynamic(() => import("../../task/page"), {
   ssr: false,
@@ -8,5 +9,9 @@ const AtlasTaskPage = dynamic(() => import("../../task/page"), {
 });
 
 export default function TaskFocusPage() {
-  return <AtlasTaskPage />;
+  return (
+    <div className="atlas-focused-task-only">
+      <AtlasTaskPage />
+    </div>
+  );
 }
