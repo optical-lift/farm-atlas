@@ -46,6 +46,14 @@ function activeTaskTitle() {
   return activeTaskCard()?.querySelector("h1")?.textContent?.trim() ?? "";
 }
 
+function taskIdFromLocation() {
+  const params = new URLSearchParams(window.location.search);
+  const queryId = params.get("taskId");
+  if (queryId) return queryId;
+  const match = window.location.pathname.match(/^\/task-focus\/([^/]+)$/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
 function prettyDate(dateIso: string | null) {
   if (!dateIso) return "Date not recorded";
   const date = new Date(`${dateIso}T12:00:00`);
@@ -54,10 +62,16 @@ function prettyDate(dateIso: string | null) {
 }
 
 function hideNormalTaskParts(card: HTMLElement) {
-  const actions = card.querySelector<HTMLElement>(".atlas-task-primary-actions");
-  const unfinished = card.querySelector<HTMLElement>(".atlas-task-unfinished-panel");
-  const detail = card.querySelector<HTMLElement>(".atlas-task-detail-card");
-  for (const element of [actions, unfinished, detail]) {
+  const selectors = [
+    ".atlas-task-primary-actions",
+    ".atlas-task-unfinished-panel",
+    ".atlas-task-detail-card",
+    ".atlas-task-record-card",
+    ".atlas-task-page-kicker small",
+    ".atlas-task-page-time-row",
+  ];
+  for (const selector of selectors) {
+    const element = card.querySelector<HTMLElement>(selector);
     if (!element) continue;
     element.hidden = true;
     element.style.display = "none";
@@ -65,13 +79,26 @@ function hideNormalTaskParts(card: HTMLElement) {
 }
 
 function restoreNormalTaskParts(card: HTMLElement) {
-  const actions = card.querySelector<HTMLElement>(".atlas-task-primary-actions");
-  const detail = card.querySelector<HTMLElement>(".atlas-task-detail-card");
-  for (const element of [actions, detail]) {
+  const selectors = [
+    ".atlas-task-primary-actions",
+    ".atlas-task-detail-card",
+    ".atlas-task-record-card",
+    ".atlas-task-page-kicker small",
+    ".atlas-task-page-time-row",
+  ];
+  for (const selector of selectors) {
+    const element = card.querySelector<HTMLElement>(selector);
     if (!element) continue;
     element.hidden = false;
     element.style.removeProperty("display");
   }
+}
+
+function setFarmFacingHeading(card: HTMLElement, task: GerminationTask) {
+  const kicker = card.querySelector<HTMLElement>(".atlas-task-page-kicker span");
+  const title = card.querySelector<HTMLElement>("h1");
+  if (kicker) kicker.textContent = "Check germination";
+  if (title) title.textContent = `${task.cropLabel} · ${task.objectLabel}`.toUpperCase();
 }
 
 export default function GerminationCheckTaskPatch() {
@@ -84,7 +111,8 @@ export default function GerminationCheckTaskPatch() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (window.location.pathname !== "/task") return;
+    const isTaskRoute = window.location.pathname === "/task" || window.location.pathname.startsWith("/task-focus/");
+    if (!isTaskRoute) return;
 
     let stopped = false;
     let lastLookup = "";
@@ -94,11 +122,9 @@ export default function GerminationCheckTaskPatch() {
       if (!card) return;
 
       const title = activeTaskTitle();
-      const looksLikeGermination = title.toLowerCase().includes("germination");
-      if (looksLikeGermination) {
-        card.classList.add("atlas-germination-task");
-        hideNormalTaskParts(card);
-      }
+      const taskId = taskIdFromLocation();
+      const query = taskId ? `taskId=${encodeURIComponent(taskId)}` : title ? `taskTitle=${encodeURIComponent(title)}` : "";
+      if (!query) return;
 
       let mount = card.querySelector<HTMLElement>("[data-germination-check-host]");
       if (!mount) {
@@ -110,13 +136,15 @@ export default function GerminationCheckTaskPatch() {
       }
       if (!stopped) setHost(mount);
 
-      const params = new URLSearchParams(window.location.search);
-      const taskId = params.get("taskId");
-      const query = taskId ? `taskId=${encodeURIComponent(taskId)}` : title ? `taskTitle=${encodeURIComponent(title)}` : "";
-      if (!query) return;
-
       const lookupSignature = `${query}:${title}`;
-      if (lookupSignature === lastLookup) return;
+      if (lookupSignature === lastLookup) {
+        if (task) {
+          card.classList.add("atlas-germination-task");
+          hideNormalTaskParts(card);
+          setFarmFacingHeading(card, task);
+        }
+        return;
+      }
       lastLookup = lookupSignature;
 
       try {
@@ -130,6 +158,7 @@ export default function GerminationCheckTaskPatch() {
         if (response.ok && data.ok && data.germinationCheck && data.task) {
           card.classList.add("atlas-germination-task");
           hideNormalTaskParts(card);
+          setFarmFacingHeading(card, data.task);
 
           const historyResponse = await fetch(
             `/api/atlas/germination-history?taskId=${encodeURIComponent(data.task.id)}&objectLabel=${encodeURIComponent(data.task.objectLabel)}`,
@@ -149,7 +178,7 @@ export default function GerminationCheckTaskPatch() {
           restoreNormalTaskParts(card);
         }
       } catch {
-        if (!looksLikeGermination) restoreNormalTaskParts(card);
+        restoreNormalTaskParts(card);
       }
     }
 
@@ -165,7 +194,7 @@ export default function GerminationCheckTaskPatch() {
       observer.disconnect();
       window.removeEventListener("popstate", inspect);
     };
-  }, []);
+  }, [task]);
 
   async function submit(action: "not_yet" | "germinated", standQuality?: "good" | "spotty" | "poor") {
     if (!task) return;
@@ -184,7 +213,7 @@ export default function GerminationCheckTaskPatch() {
         setMessage(`Not yet logged. Check again ${data.nextDate ?? "tomorrow"}.`);
         window.setTimeout(() => window.location.assign("/"), 550);
       } else {
-        setMessage(standQuality === "good" ? "Good stand logged. Harvest watch created." : "Stand logged. Patch task created now.");
+        setMessage(standQuality === "good" ? "Good stand logged." : "Stand logged. Patch task created.");
         window.setTimeout(() => window.location.assign("/"), 650);
       }
     } catch (error) {
@@ -197,21 +226,17 @@ export default function GerminationCheckTaskPatch() {
   if (!host || !task) return null;
 
   const profileLabel = task.variety || task.cropLabel;
-  const windowLabel = task.expectedMinDays && task.expectedMaxDays
-    ? `${task.expectedMinDays}–${task.expectedMaxDays} days expected`
-    : "Expected germination window";
 
   return createPortal(
     <section className="atlas-germination-check-panel">
       <div className="atlas-germination-check-head">
-        <span>GERMINATION CHECK</span>
-        <strong>Did {profileLabel} germinate?</strong>
-        <small>{task.objectLabel} · {windowLabel}</small>
+        <span>{profileLabel}</span>
+        <strong>{task.objectLabel}</strong>
       </div>
 
       <details className="atlas-germination-memory" aria-label={`${profileLabel} history`}>
         <summary>
-          <span>Crop History</span>
+          <span>Crop history</span>
           <small>{history.length} {history.length === 1 ? "entry" : "entries"}</small>
         </summary>
         <div className="atlas-germination-memory-drawer">
@@ -222,14 +247,13 @@ export default function GerminationCheckTaskPatch() {
                   <time>{prettyDate(item.date)}</time>
                   <div>
                     <strong>{item.action}</strong>
-                    {item.sourceTask ? <span>From: {item.sourceTask}</span> : null}
                     {item.details.map((detail) => <p key={detail}>{detail}</p>)}
                   </div>
                 </article>
               ))}
             </div>
           ) : (
-            <p className="atlas-germination-memory-empty">Crop history is loading.</p>
+            <p className="atlas-germination-memory-empty">No earlier crop history.</p>
           )}
         </div>
       </details>
@@ -244,12 +268,12 @@ export default function GerminationCheckTaskPatch() {
       ) : (
         <div className="atlas-germination-inline-log">
           <div className="atlas-germination-check-head">
-            <span>INLINE STAND LOG</span>
-            <strong>What kind of stand emerged?</strong>
+            <span>Stand</span>
+            <strong>How did it come up?</strong>
           </div>
           <label className="atlas-germination-note">
-            <span>What did you see?</span>
-            <textarea value={standNote} onChange={(event) => setStandNote(event.target.value)} placeholder="Optional: where gaps are, how much emerged, washout, deer damage, or anything Anna noticed…" rows={3} />
+            <span>Optional note</span>
+            <textarea value={standNote} onChange={(event) => setStandNote(event.target.value)} rows={3} />
           </label>
           <div className="atlas-germination-actions atlas-germination-stand-actions">
             <button type="button" className="good" disabled={Boolean(saving)} onClick={() => void submit("germinated", "good")}>{saving === "good" ? "Saving…" : "Good stand"}</button>

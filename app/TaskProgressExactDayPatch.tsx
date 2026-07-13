@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 
 type Card = {
+  task_id: string;
+  parent_task_id?: string | null;
   status: string;
   due_date: string | null;
   title: string;
@@ -26,16 +28,24 @@ function meta(card: Card, key: string) {
 }
 
 function isChildTask(card: Card) {
-  return meta(card, "is_child_task") === true || meta(card, "is_child_task") === "true";
+  return Boolean(card.parent_task_id) || meta(card, "is_child_task") === true || meta(card, "is_child_task") === "true";
 }
 
 function isProgressTask(card: Card) {
   const joined = `${card.task_type ?? ""} ${card.title ?? ""}`.toLowerCase();
-  return card.status !== "archived" && !isChildTask(card) && !(joined.includes("verify") || joined.includes("check") || joined.includes("confirm") || joined.includes("count") || joined.includes("germin"));
+  const terminal = card.status === "archived" || card.status === "skipped" || card.status === "cancelled";
+  return !terminal && !isChildTask(card) && !(joined.includes("verify") || joined.includes("check") || joined.includes("confirm") || joined.includes("count") || joined.includes("germin"));
 }
 
 function isDone(card: Card) {
   return card.status === "done" || text(meta(card, "checklist_status")) === "done" || card.task_outcomes?.[0]?.outcome === "done";
+}
+
+function selectedTaskId() {
+  const queryId = new URLSearchParams(window.location.search).get("taskId");
+  if (queryId) return queryId;
+  const match = window.location.pathname.match(/^\/task-focus\/([^/]+)$/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 async function fetchTaskCards() {
@@ -44,24 +54,48 @@ async function fetchTaskCards() {
   return data.taskCards ?? [];
 }
 
-function setDayProgress(done: number, total: number) {
-  const lines = Array.from(document.querySelectorAll<HTMLElement>(".atlas-task-progress-hero .atlas-progress-line"));
-  const dayLine = lines.find((line) => line.querySelector("span")?.textContent?.trim().toLowerCase() === "day");
-  if (!dayLine) return false;
+function progressLines() {
+  return Array.from(document.querySelectorAll<HTMLElement>(".atlas-task-progress-hero .atlas-progress-line"));
+}
 
-  const value = dayLine.querySelector<HTMLElement>("strong");
-  const bar = dayLine.querySelector<HTMLElement>(".atlas-progress-bar i");
-  const label = total ? `${done} / ${total} tasks done` : "Complete";
-  const width = total ? Math.max(0, Math.min(100, Math.round((done / total) * 100))) : 100;
+function lineByLabel(label: string) {
+  return progressLines().find((line) => line.querySelector("span")?.textContent?.trim().toLowerCase() === label);
+}
 
-  if (value) value.textContent = label;
+function setProgress(line: HTMLElement | undefined, valueText: string, done: number, total: number) {
+  if (!line) return;
+  const value = line.querySelector<HTMLElement>("strong");
+  const bar = line.querySelector<HTMLElement>(".atlas-progress-bar i");
+  const width = total ? Math.max(0, Math.min(100, Math.round((done / total) * 100))) : 0;
+  if (value) value.textContent = valueText;
   if (bar) bar.style.width = `${width}%`;
-  return true;
+}
+
+function setDayProgress(done: number, total: number) {
+  const label = total ? `${done} / ${total} tasks done` : "No tasks planned today";
+  setProgress(lineByLabel("day"), label, done, total);
+}
+
+function setTaskProgress(cards: Card[]) {
+  const line = lineByLabel("task");
+  if (!line) return;
+  const taskId = selectedTaskId();
+  const children = taskId ? cards.filter((card) => card.parent_task_id === taskId && card.status !== "archived") : [];
+  if (!children.length) {
+    line.hidden = true;
+    line.style.display = "none";
+    return;
+  }
+  line.hidden = false;
+  line.style.removeProperty("display");
+  const done = children.filter(isDone).length;
+  setProgress(line, `${done} / ${children.length} steps done`, done, children.length);
 }
 
 export default function TaskProgressExactDayPatch() {
   useEffect(() => {
-    if (window.location.pathname !== "/task") return;
+    const isTaskRoute = window.location.pathname === "/task" || window.location.pathname.startsWith("/task-focus/");
+    if (!isTaskRoute) return;
 
     let stopped = false;
     let timer: number | null = null;
@@ -73,6 +107,7 @@ export default function TaskProgressExactDayPatch() {
       const today = todayIso();
       const todayCards = cards.filter(isProgressTask).filter((card) => card.due_date === today);
       setDayProgress(todayCards.filter(isDone).length, todayCards.length);
+      setTaskProgress(cards);
     }
 
     function queuePatch() {
