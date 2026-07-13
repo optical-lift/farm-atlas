@@ -10,6 +10,18 @@ type MaintenanceItem = {
   object_label: string;
 };
 
+type MaintenanceSummary = {
+  date: string;
+  collections: number;
+  objects: number;
+  minutes: number;
+  morningMinutes: number;
+  eveningMinutes: number;
+  morningLabels: string;
+  eveningLabels: string;
+  preview: string;
+};
+
 function currentDate() {
   const params = new URLSearchParams(window.location.search);
   const explicit = params.get("date");
@@ -25,7 +37,7 @@ function compactLabels(items: MaintenanceItem[]) {
     .join(" · ");
 }
 
-async function loadSummary(date: string) {
+async function loadSummary(date: string): Promise<MaintenanceSummary | null> {
   const response = await fetch(`/api/atlas/maintenance-plan?date=${encodeURIComponent(date)}&days=1`, { cache: "no-store" });
   if (!response.ok) return null;
   const data = await response.json() as { items?: MaintenanceItem[] };
@@ -33,6 +45,7 @@ async function loadSummary(date: string) {
   const morning = items.filter((item) => item.window_key === "morning");
   const evening = items.filter((item) => item.window_key === "evening");
   return {
+    date,
     collections: new Set(items.map((item) => item.maintenance_type)).size,
     objects: items.length,
     minutes: items.reduce((sum, item) => sum + item.estimated_minutes, 0),
@@ -44,90 +57,113 @@ async function loadSummary(date: string) {
   };
 }
 
-function makeLink(date: string, summary: NonNullable<Awaited<ReturnType<typeof loadSummary>>>, className: string) {
-  const link = document.createElement("a");
-  link.href = `/collections/maintenance?date=${encodeURIComponent(date)}`;
-  link.className = `${className} atlas-unified-maintenance-link`;
-  link.dataset.atlasMaintenancePlan = "true";
+function summaryMarkup(summary: MaintenanceSummary) {
   const flow = [
     summary.morningMinutes ? `Morning ${summary.morningMinutes} min${summary.morningLabels ? ` · ${summary.morningLabels}` : ""}` : "",
     summary.eveningMinutes ? `Evening ${summary.eveningMinutes} min${summary.eveningLabels ? ` · ${summary.eveningLabels}` : ""}` : "",
   ].filter(Boolean).join(" · ");
-  link.innerHTML = `<strong>Maintenance Plan</strong><span>${flow || `${summary.collections} collections · ${summary.minutes} min`}</span><em>${summary.preview}</em>`;
+  return `<strong>Maintenance Plan</strong><span>${flow || `${summary.collections} collections · ${summary.minutes} min`}</span><em>${summary.preview}</em>`;
+}
+
+function makeLink(summary: MaintenanceSummary, className: string) {
+  const link = document.createElement("a");
+  link.href = `/collections/maintenance?date=${encodeURIComponent(summary.date)}`;
+  link.className = `${className} atlas-unified-maintenance-link`;
+  link.dataset.atlasMaintenancePlan = "true";
+  link.dataset.atlasMaintenanceDate = summary.date;
+  link.innerHTML = summaryMarkup(summary);
   return link;
 }
 
 function isLegacyMaintenanceCard(element: HTMLElement) {
   if (element.dataset.atlasMaintenancePlan === "true") return false;
   const value = (element.textContent ?? "").toLowerCase();
-  return /\b(weed|weeding|mow|mowing|water|watering|spray|spraying|deadhead|deadheading|edge|edging|prune|pruning|pathway cleanup|venue landscape)\b/.test(value);
+  return /(^|\s|·)(weed|weeding|priority weeding|mow|mowing|water|watering|spray|spraying|deadhead|deadheading|edge|edging|prune|pruning|pathway cleanup|venue landscape)(\s|·|$)/.test(value);
 }
 
-function collapseMaintenanceCards(container: HTMLElement, summaryLink: HTMLElement) {
-  const cards = Array.from(container.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
-  const legacy = cards.filter(isLegacyMaintenanceCard);
-  const existing = container.querySelector<HTMLElement>("[data-atlas-maintenance-plan='true']");
+function collapseVisibleMaintenanceCards(summary: MaintenanceSummary) {
+  const candidates = Array.from(document.querySelectorAll<HTMLElement>(
+    "a.atlas-day-task-card, a.atlas-run-sheet-box, a.atlas-day-route-box, a.atlas-task-forward-box",
+  ));
+  const legacy = candidates.filter(isLegacyMaintenanceCard);
+  if (!legacy.length) return;
 
-  if (!existing) {
-    const anchor = legacy[0] ?? cards[0] ?? null;
-    if (anchor) container.insertBefore(summaryLink, anchor);
-    else container.appendChild(summaryLink);
-  }
-
+  const byParent = new Map<HTMLElement, HTMLElement[]>();
   legacy.forEach((card) => {
-    card.dataset.atlasCollapsedMaintenance = "true";
-    card.style.display = "none";
+    const parent = card.parentElement;
+    if (!parent) return;
+    byParent.set(parent, [...(byParent.get(parent) ?? []), card]);
+  });
+
+  byParent.forEach((cards, parent) => {
+    let summaryCard = parent.querySelector<HTMLElement>(":scope > [data-atlas-maintenance-plan='true']");
+    if (!summaryCard) {
+      const sourceClass = cards[0].className;
+      summaryCard = makeLink(summary, sourceClass);
+      parent.insertBefore(summaryCard, cards[0]);
+    } else {
+      summaryCard.setAttribute("href", `/collections/maintenance?date=${encodeURIComponent(summary.date)}`);
+      summaryCard.dataset.atlasMaintenanceDate = summary.date;
+      summaryCard.innerHTML = summaryMarkup(summary);
+    }
+
+    cards.forEach((card) => {
+      card.dataset.atlasCollapsedMaintenance = "true";
+      card.hidden = true;
+      card.style.setProperty("display", "none", "important");
+    });
+  });
+}
+
+function removeStaleSummaryCards(date: string) {
+  document.querySelectorAll<HTMLElement>("[data-atlas-maintenance-plan='true']").forEach((card) => {
+    if (card.dataset.atlasMaintenanceDate !== date) card.remove();
   });
 }
 
 export default function MaintenancePlanNavigationPatch() {
   useEffect(() => {
-    if (window.location.pathname !== "/" && window.location.pathname !== "/day") return;
     let stopped = false;
     let running = false;
+    let lastPath = "";
+    let lastDate = "";
 
     const apply = async () => {
       if (running || stopped) return;
+      const path = window.location.pathname;
+      if (path !== "/" && path !== "/day") return;
+
+      const date = currentDate();
+      const routeChanged = path !== lastPath || date !== lastDate;
+      lastPath = path;
+      lastDate = date;
+      if (routeChanged) removeStaleSummaryCards(date);
+
       running = true;
       try {
-        const date = currentDate();
         const summary = await loadSummary(date);
-        if (!summary || stopped) return;
-
-        if (window.location.pathname === "/day") {
-          const routeGrids = Array.from(document.querySelectorAll<HTMLElement>(".atlas-day-route-grid"));
-          routeGrids.forEach((grid) => collapseMaintenanceCards(grid, makeLink(date, summary, "atlas-day-route-box")));
-
-          const workOrderList = document.querySelector<HTMLElement>(".atlas-day-work-order-list");
-          if (workOrderList) collapseMaintenanceCards(workOrderList, makeLink(date, summary, "atlas-day-task-card atlas-work-collection-day-card"));
-
-          document.querySelectorAll<HTMLElement>(".atlas-day-route-group .atlas-day-zone-group").forEach((group) => {
-            if (Array.from(group.children).some((child) => child instanceof HTMLElement && isLegacyMaintenanceCard(child))) {
-              collapseMaintenanceCards(group, makeLink(date, summary, "atlas-day-task-card atlas-work-collection-day-card"));
-            }
-          });
-        } else {
-          const containers = Array.from(document.querySelectorAll<HTMLElement>(
-            ".atlas-home-task-grid, .atlas-dashboard-task-grid, .atlas-week-grid, .atlas-task-page-list, .atlas-dashboard-task-list",
-          ));
-          if (containers.length) {
-            containers.forEach((container) => collapseMaintenanceCards(container, makeLink(date, summary, "atlas-day-task-card atlas-work-collection-day-card")));
-          } else {
-            const body = document.querySelector<HTMLElement>(".atlas-dashboard-phone");
-            if (body && !body.querySelector("[data-atlas-maintenance-plan='true']")) {
-              body.appendChild(makeLink(date, summary, "atlas-day-task-card atlas-work-collection-day-card"));
-            }
-          }
-        }
+        if (!summary || stopped || window.location.pathname !== path || currentDate() !== date) return;
+        collapseVisibleMaintenanceCards(summary);
       } finally {
         running = false;
       }
     };
 
     const observer = new MutationObserver(() => void apply());
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
+    const onNavigation = () => void apply();
+    window.addEventListener("popstate", onNavigation);
+    const interval = window.setInterval(() => void apply(), 500);
     void apply();
-    return () => { stopped = true; observer.disconnect(); };
+
+    return () => {
+      stopped = true;
+      observer.disconnect();
+      window.removeEventListener("popstate", onNavigation);
+      window.clearInterval(interval);
+    };
   }, []);
+
   return null;
 }
