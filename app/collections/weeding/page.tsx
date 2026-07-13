@@ -48,7 +48,6 @@ function statusLine(task: AtlasTaskCard) {
 
 function WeedingTaskCard({ task, tone }: { task: AtlasTaskCard; tone?: CollectionSectionProps["tone"] }) {
   const display = atlasTaskDisplay(task);
-  const windowLabel = atlasMetaString(task, "window_key");
   const estimatedMinutes = atlasMetaString(task, "estimated_minutes");
 
   return (
@@ -58,7 +57,7 @@ function WeedingTaskCard({ task, tone }: { task: AtlasTaskCard; tone?: Collectio
         <span>{display.location}</span>
       </div>
       <em>{statusLine(task)}</em>
-      <p>{[windowLabel ? `${windowLabel} work` : "", estimatedMinutes ? `${estimatedMinutes} min` : "", display.detail].filter(Boolean).join(" · ")}</p>
+      <p>{[estimatedMinutes ? `${estimatedMinutes} min` : "", display.detail].filter(Boolean).join(" · ")}</p>
     </Link>
   );
 }
