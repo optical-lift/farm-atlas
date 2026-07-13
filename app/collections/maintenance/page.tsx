@@ -20,10 +20,6 @@ function totalMinutes(items: AtlasUnifiedMaintenanceItem[]) {
 }
 
 function actionLabel(item: AtlasUnifiedMaintenanceItem) {
-  if (item.maintenance_type === "weed" && item.priority_reasons.includes("daily quick hoe/rake pass")) {
-    return "Quick hoe/rake";
-  }
-
   const labels: Record<string, string> = {
     weed: "Weed",
     mow: "Mow",
