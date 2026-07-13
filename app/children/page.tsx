@@ -168,10 +168,6 @@ export default function AtlasChildrenPage() {
             <article><strong>{loading ? "…" : doneTasks.length}</strong><span>done</span></article>
           </section>
 
-          <section className="atlas-overview-summary-line atlas-children-summary-line">
-            <p>These are small support chores Anna can hand to kids without mixing them into the farm work order.</p>
-          </section>
-
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
           {loading ? <div className="atlas-task-page-empty">Loading children chores.</div> : null}
 
