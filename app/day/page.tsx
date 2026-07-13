@@ -72,6 +72,24 @@ function isDoneTask(task: AtlasTaskCard) {
   return task.status === "done" || text(meta(task, "checklist_status")) === "done" || task.task_outcomes?.[0]?.outcome === "done";
 }
 
+function isKidChore(task: AtlasTaskCard) {
+  const joined = [
+    task.task_type,
+    task.title,
+    text(meta(task, "work_route")),
+    text(meta(task, "work_rhythm")),
+    text(meta(task, "display_action")),
+    text(meta(task, "collection_label")),
+  ].filter(Boolean).join(" ").toLowerCase();
+  return joined.includes("kid chore") || joined.includes("kid_chore") || joined.includes("feed chickens");
+}
+
+function isOwnerOnlyTask(task: AtlasTaskCard) {
+  const ownerTask = meta(task, "owner_task");
+  const assignedTo = text(meta(task, "assigned_to")).toLowerCase();
+  return ownerTask === true || ownerTask === "true" || assignedTo === "owner";
+}
+
 function collectionZone(task: AtlasTaskCard) {
   return text(meta(task, "collection_zone")) || atlasTaskDisplay(task).location || "Elm Farm";
 }
@@ -86,12 +104,13 @@ function isExtraCredit(task: AtlasTaskCard) {
   return mode === "extra_credit" || label.includes("extra credit");
 }
 
-function TaskCard({ task, complete = false }: { task: AtlasTaskCard; complete?: boolean }) {
+function TaskCard({ task, complete = false, overdue = false }: { task: AtlasTaskCard; complete?: boolean; overdue?: boolean }) {
   const display = atlasTaskDisplay(task);
   return (
-    <Link className={`atlas-day-task-card${complete ? " complete" : ""}${atlasIsCropCycleTask(task) ? " atlas-crop-cycle-task-card" : ""}`} href={taskHref(task)}>
+    <Link className={`atlas-day-task-card${complete ? " complete" : ""}${overdue ? " atlas-day-overdue-task-card" : ""}${atlasIsCropCycleTask(task) ? " atlas-crop-cycle-task-card" : ""}`} href={taskHref(task)}>
+      {overdue ? <b className="atlas-day-overdue-badge">Overdue</b> : null}
       <strong>{display.title}</strong>
-      <span>{complete ? "Complete" : `${atlasWorkOrderLabel(task)} · ${collectionZone(task)}`}</span>
+      <span>{overdue ? `Due ${prettyDate(task.due_date ?? "")}` : complete ? "Complete" : `${atlasWorkOrderLabel(task)} · ${collectionZone(task)}`}</span>
       <em>{display.detail}</em>
     </Link>
   );
@@ -153,6 +172,15 @@ export default function AtlasDayPage() {
 
   const allDayTasks = useMemo(() => tasks.filter(isWorkTask).filter((task) => task.due_date === dateIso), [dateIso, tasks]);
   const dayTasks = useMemo(() => tasks.filter(isDashboardWork).filter((task) => task.due_date === dateIso).sort((a, b) => atlasWorkOrderSortValue(a).localeCompare(atlasWorkOrderSortValue(b))), [dateIso, tasks]);
+  const overdueTasks = useMemo(() => {
+    if (dateIso !== todayIso()) return [];
+    return tasks
+      .filter(isDashboardWork)
+      .filter((task) => Boolean(task.due_date && task.due_date < dateIso))
+      .filter((task) => !isKidChore(task) && !isOwnerOnlyTask(task) && !isExtraCredit(task))
+      .filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task))
+      .sort((a, b) => `${a.due_date ?? ""}-${atlasWorkOrderSortValue(a)}`.localeCompare(`${b.due_date ?? ""}-${atlasWorkOrderSortValue(b)}`));
+  }, [dateIso, tasks]);
   const requiredTasks = useMemo(() => dayTasks.filter((task) => !isExtraCredit(task)), [dayTasks]);
   const standaloneTasks = useMemo(() => requiredTasks.filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task)), [requiredTasks]);
   const extraCreditTasks = useMemo(() => dayTasks.filter(isExtraCredit), [dayTasks]);
@@ -195,14 +223,14 @@ export default function AtlasDayPage() {
           <section className="atlas-task-page-section atlas-route-collection atlas-day-browse">
             <div className="atlas-day-browse-head">
               <Link href="/" className="atlas-route-back atlas-day-back">← Week</Link>
-              <div className="atlas-day-browse-title-row"><span>{dayOnly(dateIso)}</span><strong>{loading ? "Loading" : `${dayTasks.length} open · ${doneDayTasks.length} done`}</strong></div>
+              <div className="atlas-day-browse-title-row"><span>{dayOnly(dateIso)}</span><strong>{loading ? "Loading" : `${dayTasks.length} open · ${overdueTasks.length} overdue · ${doneDayTasks.length} done`}</strong></div>
               <p>{loading ? "Loading farm work" : `${standaloneTasks.length} regular tasks · ${collectionCount} work collections`}</p>
             </div>
 
             {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
 
             <article className="atlas-day-route-hero">
-              <div className="atlas-day-route-hero-head"><div><span>Day plan</span><strong>{prettyDate(dateIso)}</strong></div><em className="atlas-day-route-count-pill">{loading ? "…" : standaloneTasks.length + collectionCount}</em></div>
+              <div className="atlas-day-route-hero-head"><div><span>Day plan</span><strong>{prettyDate(dateIso)}</strong></div><em className="atlas-day-route-count-pill">{loading ? "…" : standaloneTasks.length + collectionCount + overdueTasks.length}</em></div>
               <div className="atlas-day-route-grid">
                 {routeCards.length ? routeCards.map((entry) => {
                   if (entry.collection) return <Link key={entry.key} className="atlas-day-route-box" href={entry.collection.href}><strong>{entry.collection.label}</strong><span>{entry.collection.dueCount} due</span><em>{entry.collection.preview}</em></Link>;
@@ -211,6 +239,14 @@ export default function AtlasDayPage() {
                 }) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div>}
               </div>
             </article>
+
+            {overdueTasks.length ? (
+              <article className="atlas-day-route-group atlas-day-overdue-group" aria-label="Overdue carry-forward work">
+                <div className="atlas-day-overdue-group-head"><div><span>Carry forward</span><h3>Overdue</h3></div><b>{overdueTasks.length}</b></div>
+                <p>These unfinished tasks remain ahead of today’s regular work.</p>
+                <div className="atlas-day-work-order-list">{overdueTasks.map((task) => <TaskCard task={task} overdue key={task.task_id} />)}</div>
+              </article>
+            ) : null}
 
             <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
