@@ -197,17 +197,28 @@
 }
 
 .progressTrack {
+  width: 100%;
   height: 0.45rem;
+  appearance: none;
+  border: 0;
   border-radius: 999px;
   background: #ececf2;
   overflow: hidden;
   margin-top: 0.9rem;
 }
 
-.progressTrack i {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
+.progressTrack::-webkit-progress-bar {
+  border-radius: 999px;
+  background: #ececf2;
+}
+
+.progressTrack::-webkit-progress-value {
+  border-radius: 999px;
+  background: #abbf75;
+}
+
+.progressTrack::-moz-progress-bar {
+  border-radius: 999px;
   background: #abbf75;
 }
 
