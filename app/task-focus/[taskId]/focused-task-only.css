@@ -1,0 +1,7 @@
+.atlas-focused-task-only .atlas-task-page-section {
+  display: none !important;
+}
+
+.atlas-focused-task-only .atlas-task-page-body {
+  padding-bottom: 1.5rem;
+}
