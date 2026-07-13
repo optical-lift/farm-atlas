@@ -151,7 +151,9 @@ export default function MaintenancePlanNavigationPatch() {
         const summary = await loadSummary(date);
         if (!summary || stopped || window.location.pathname !== path || currentDate() !== date) return;
         wireRealPlanCards(summary);
-        collapseVisibleMaintenanceCards(summary);
+        // The day page already renders its canonical route collections and concrete tasks.
+        // Collapsing those cards here can hide a task that is still represented in the hero.
+        if (path === "/") collapseVisibleMaintenanceCards(summary);
       } finally {
         running = false;
       }
