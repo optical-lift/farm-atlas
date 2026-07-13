@@ -21,7 +21,13 @@ import {
   todayIso,
   type ZoneTaskOverview,
 } from "@/lib/atlas/task-overview";
-import { atlasBuildMowingCollectionSummary, atlasIsMowingCollectionMember, type AtlasWorkCollectionSummary } from "@/lib/atlas/work-collections";
+import {
+  atlasBuildMowingCollectionSummary,
+  atlasBuildWeedingCollectionSummary,
+  atlasIsMowingCollectionMember,
+  atlasIsWeedingCollectionMember,
+  type AtlasWorkCollectionSummary,
+} from "@/lib/atlas/work-collections";
 
 type WeatherResponse = { ok: boolean; label?: string };
 
@@ -144,13 +150,19 @@ export default function AtlasWeekOverviewPage() {
       .filter((task) => Boolean(task.due_date && task.due_date >= anchorIso && task.due_date <= weekEndIso))
       .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
   }, [anchorIso, explicitEndIso, tasks, weekEndIso]);
+  const weedingCollection = useMemo(() => atlasBuildWeedingCollectionSummary(tasks, weekEndIso), [tasks, weekEndIso]);
   const mowingCollection = useMemo(() => atlasBuildMowingCollectionSummary(tasks, weekEndIso), [tasks, weekEndIso]);
+  const showWeedingCollection = Boolean(weedingCollection && weedingCollection.dueCount > 0);
   const showMowingCollection = Boolean(mowingCollection && mowingCollection.dueCount > 0);
-  const standaloneWeekTasks = useMemo(() => weekTasks.filter((task) => !atlasIsMowingCollectionMember(task)), [weekTasks]);
+  const standaloneWeekTasks = useMemo(
+    () => weekTasks.filter((task) => !atlasIsWeedingCollectionMember(task) && !atlasIsMowingCollectionMember(task)),
+    [weekTasks],
+  );
   const carryoverCount = useMemo(() => standaloneWeekTasks.filter((task) => Boolean(task.due_date && task.due_date < anchorIso)).length, [anchorIso, standaloneWeekTasks]);
   const zoneGroups = useMemo(() => groupTasksByZone(standaloneWeekTasks, anchorIso), [anchorIso, standaloneWeekTasks]);
-  const topZone = showMowingCollection ? "Mowing" : zoneGroups[0]?.zone ?? "No active zone";
-  const displayedOpenCount = standaloneWeekTasks.length + (showMowingCollection ? 1 : 0);
+  const collectionCount = Number(showWeedingCollection) + Number(showMowingCollection);
+  const topZone = showWeedingCollection ? "Weeding" : showMowingCollection ? "Mowing" : zoneGroups[0]?.zone ?? "No active zone";
+  const displayedOpenCount = standaloneWeekTasks.length + collectionCount;
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell">
@@ -173,7 +185,7 @@ export default function AtlasWeekOverviewPage() {
           <section className="atlas-overview-stat-grid" aria-label="Week overview stats">
             <article><strong>{loading ? "…" : displayedOpenCount}</strong><span>open</span></article>
             <article><strong>{loading ? "…" : carryoverCount}</strong><span>carryover</span></article>
-            <article><strong>{loading ? "…" : zoneGroups.length + (showMowingCollection ? 1 : 0)}</strong><span>zones</span></article>
+            <article><strong>{loading ? "…" : zoneGroups.length + collectionCount}</strong><span>zones</span></article>
             <article><strong>{topZone}</strong><span>most open</span></article>
           </section>
 
@@ -181,9 +193,10 @@ export default function AtlasWeekOverviewPage() {
 
           <section className="atlas-overview-zone-list" aria-label="Open work by zone">
             {loading ? <div className="atlas-task-page-empty">Loading zone overview.</div> : null}
-            {!loading && zoneGroups.length === 0 && !showMowingCollection ? <div className="atlas-task-page-empty">No open work in this week window.</div> : null}
+            {!loading && zoneGroups.length === 0 && collectionCount === 0 ? <div className="atlas-task-page-empty">No open work in this week window.</div> : null}
+            {showWeedingCollection && weedingCollection ? <CollectionOverviewCard collection={weedingCollection} /> : null}
             {showMowingCollection && mowingCollection ? <CollectionOverviewCard collection={mowingCollection} /> : null}
-            {zoneGroups.map((zone, index) => <ZoneSection key={zone.zone} zone={zone} anchorIso={anchorIso} openDefault={!showMowingCollection && index === 0} />)}
+            {zoneGroups.map((zone, index) => <ZoneSection key={zone.zone} zone={zone} anchorIso={anchorIso} openDefault={collectionCount === 0 && index === 0} />)}
           </section>
         </div>
       </section>
