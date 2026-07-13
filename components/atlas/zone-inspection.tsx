@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useState } from "react";
 
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -391,9 +392,9 @@ function InspectionSheet({
   return (
     <div className="atlas-bed-inspection-sheet">
       {onDocumentObject ? (
-        <button type="button" className="atlas-document-this-bed-button" onClick={() => onDocumentObject(object)}>
-          Document work on this bed
-        </button>
+        <Link className="atlas-object-open-link" href={`/objects/${object.stable_key}`}>
+          Open object and log work
+        </Link>
       ) : null}
       <ObjectRegistryFactLine object={object} />
       {object.contents.length === 0 ? <div className="atlas-inspection-empty">No current crop cycle logged.</div> : null}
