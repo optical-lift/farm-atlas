@@ -10,6 +10,7 @@ import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
 import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
 import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
 import RouteAwareGerminationCheckTaskPatch from "./RouteAwareGerminationCheckTaskPatch";
+import FocusedTaskClarityPatch from "./FocusedTaskClarityPatch";
 import "./globals.css";
 import "./home.css";
 import "./zones.css";
@@ -59,6 +60,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <HomeSundayNavigationPatch />
         <OwnerTaskReturnPatch />
         <RouteAwareGerminationCheckTaskPatch />
+        <FocusedTaskClarityPatch />
         {children}
       </body>
     </html>
