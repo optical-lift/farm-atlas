@@ -74,48 +74,10 @@ async function completeMaintenance(maintenanceObjectId: string, outcome: "fully_
   const response = await fetch("/api/atlas/maintenance-completion", {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify({ maintenanceObjectId, outcome, actualMinutes, revisedTotalMinutes: revisedTotalMinutes ?? null, source: "unified_maintenance_plan" }),
+    body: JSON.stringify({ maintenanceObjectId, outcome, actualMinutes, revisedTotalMinutes: revisedTotalMinutes ?? null, source: "maintenance_task_runner" }),
   });
   const data = await response.json() as { ok: boolean; error?: string; details?: string };
   if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Maintenance completion failed.");
-}
-
-function RouteCard({ route, items, busyId, onRecord }: {
-  route: string;
-  items: AtlasUnifiedMaintenanceItem[];
-  busyId: string | null;
-  onRecord: (item: AtlasUnifiedMaintenanceItem, outcome: "fully_completed" | "partially_completed" | "heavier_reset") => void;
-}) {
-  const tools = unique(items.flatMap((item) => item.equipment_requirements ?? []));
-  return (
-    <section className="atlas-overview-zone-card atlas-work-collection-section">
-      <summary>
-        <div><strong>{route}</strong><span>{totalMinutes(items)} minutes</span></div>
-        <b>{items.length} {items.length === 1 ? "stop" : "stops"}</b>
-      </summary>
-      <div className="atlas-overview-task-list">
-        {items.map((item) => {
-          const busy = busyId === item.maintenance_object_id;
-          return (
-            <article key={item.maintenance_object_id} className="atlas-overview-task-card atlas-work-collection-task-card due">
-              <div>
-                <strong>{actionLabel(item)} {item.object_label}</strong>
-                <span>{item.collection_label} · {item.estimated_minutes} min · {item.condition}</span>
-              </div>
-              {item.dependent_task_labels.length ? <p><strong>Unlocks:</strong> {item.dependent_task_labels.join(" · ")}</p> : null}
-              {item.priority_reasons.length ? <p>{item.priority_reasons.slice(0, 3).join(" · ")}</p> : null}
-              <div className="atlas-maintenance-control-row" aria-label={`Completion for ${item.object_label}`}>
-                <button type="button" disabled={busy} onClick={() => onRecord(item, "fully_completed")}>Done</button>
-                <button type="button" disabled={busy} onClick={() => onRecord(item, "partially_completed")}>Partial</button>
-                <button type="button" disabled={busy} onClick={() => onRecord(item, "heavier_reset")}>Heavier</button>
-              </div>
-            </article>
-          );
-        })}
-        {tools.length ? <div className="atlas-overview-summary-line"><p><strong>Bring:</strong> {tools.join(" · ")}</p></div> : null}
-      </div>
-    </section>
-  );
 }
 
 export default function UnifiedMaintenancePage() {
@@ -125,6 +87,7 @@ export default function UnifiedMaintenancePage() {
   const [date, setDate] = useState(todayIso());
   const [busyId, setBusyId] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -146,6 +109,32 @@ export default function UnifiedMaintenancePage() {
     }
     void load();
   }, [date, revision]);
+
+  const significantDayWork = items.some((item) => item.significant_day_work);
+  const morningCapacity = 120;
+  const eveningCapacity = significantDayWork ? 60 : 120;
+  const balancedItems = useMemo(() => {
+    const morning = fillWindow(items.filter((item) => item.window_key === "morning"), morningCapacity);
+    const usedIds = new Set(morning.map((item) => item.maintenance_object_id));
+    const eveningPool = items.filter((item) => item.window_key === "evening" && !usedIds.has(item.maintenance_object_id));
+    return [...morning, ...fillWindow(eveningPool, eveningCapacity)];
+  }, [items, eveningCapacity]);
+
+  useEffect(() => {
+    if (!balancedItems.length) {
+      setActiveId(null);
+      return;
+    }
+    if (!activeId || !balancedItems.some((item) => item.maintenance_object_id === activeId)) {
+      setActiveId(balancedItems[0].maintenance_object_id);
+    }
+  }, [activeId, balancedItems]);
+
+  const activeIndex = Math.max(0, balancedItems.findIndex((item) => item.maintenance_object_id === activeId));
+  const activeItem = balancedItems[activeIndex] ?? null;
+  const morning = balancedItems.filter((item) => item.window_key === "morning");
+  const evening = balancedItems.filter((item) => item.window_key === "evening");
+  const tools = activeItem ? unique(activeItem.equipment_requirements ?? []) : [];
 
   async function record(item: AtlasUnifiedMaintenanceItem, outcome: "fully_completed" | "partially_completed" | "heavier_reset") {
     const actualPrompt = outcome === "fully_completed" ? `Actual minutes for ${item.object_label}?` : outcome === "partially_completed" ? `Minutes completed on ${item.object_label}?` : "Minutes worked before discovering the heavier reset?";
@@ -172,61 +161,74 @@ export default function UnifiedMaintenancePage() {
     }
   }
 
-  const significantDayWork = items.some((item) => item.significant_day_work);
-  const morningCapacity = 120;
-  const eveningCapacity = significantDayWork ? 60 : 120;
-  const balancedItems = useMemo(() => {
-    const morning = fillWindow(items.filter((item) => item.window_key === "morning"), morningCapacity);
-    const usedIds = new Set(morning.map((item) => item.maintenance_object_id));
-    const eveningPool = items.filter((item) => item.window_key === "evening" && !usedIds.has(item.maintenance_object_id));
-    return [...morning, ...fillWindow(eveningPool, eveningCapacity)];
-  }, [items, eveningCapacity]);
-
-  const windows = useMemo(() => ["morning", "evening"].map((windowKey) => {
-    const windowItems = balancedItems.filter((item) => item.window_key === windowKey);
-    const routes = new Map<string, AtlasUnifiedMaintenanceItem[]>();
-    windowItems.forEach((item) => {
-      const route = item.zone_label || "Elm Farm";
-      routes.set(route, [...(routes.get(route) ?? []), item]);
-    });
-    return { windowKey, items: windowItems, routes: Array.from(routes.entries()) };
-  }), [balancedItems]);
-
-  const scheduled = totalMinutes(balancedItems);
-  const collections = unique(balancedItems.map((item) => item.collection_label));
-  const unlockCount = balancedItems.filter((item) => item.must_precede_task).length;
+  function queueSection(label: string, queue: AtlasUnifiedMaintenanceItem[], capacity: number) {
+    return (
+      <section className="atlas-task-page-section">
+        <div className="atlas-task-page-section-head"><span>{label}</span><small>{queue.length} tasks · {totalMinutes(queue)} / {capacity} min</small></div>
+        {queue.length ? queue.map((item) => (
+          <button
+            key={item.maintenance_object_id}
+            type="button"
+            className={item.maintenance_object_id === activeItem?.maintenance_object_id ? "atlas-task-page-row selected" : "atlas-task-page-row"}
+            onClick={() => setActiveId(item.maintenance_object_id)}
+          >
+            <div><strong>{actionLabel(item)} {item.object_label}</strong><span>{item.zone_label ?? "Elm Farm"} · {item.estimated_minutes} min</span></div>
+            {item.must_precede_task ? <small>Unlocks work</small> : null}
+          </button>
+        )) : <p className="atlas-task-page-muted">No {label.toLowerCase()} maintenance scheduled.</p>}
+      </section>
+    );
+  }
 
   return (
-    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-work-collection-page-shell">
-      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone atlas-overview-page-phone">
+    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
+      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
           <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Maintenance</span></Link>
-          <span className="atlas-weather-line">today&apos;s farm route</span>
-          <Link href={`/day?date=${date}`} className="atlas-note-plus atlas-overview-top-dot" aria-label="Back to day overview">↩</Link>
+          <span className="atlas-weather-line">{prettyDate(date)}</span>
+          <Link href={`/day?date=${date}`} className="atlas-note-plus" aria-label="Back to day overview">↩</Link>
         </header>
-        <div className="atlas-task-page-body atlas-overview-body atlas-work-collection-body">
-          <section className="atlas-overview-hero atlas-work-collection-hero">
-            <div><strong>Maintenance Plan</strong><span>{prettyDate(date)}</span></div>
-            <p>{loading ? "Building today’s route" : `${scheduled} minutes remaining · ${collections.length} kinds of work`}</p>
-          </section>
-          <section className="atlas-overview-stat-grid" aria-label="Maintenance plan stats">
-            <article><strong>{loading ? "…" : totalMinutes(windows[0].items)}</strong><span>morning min</span></article>
-            <article><strong>{loading ? "…" : totalMinutes(windows[1].items)}</strong><span>evening min</span></article>
-            <article><strong>{loading ? "…" : unique(balancedItems.map((item) => item.zone_label || "Elm Farm")).length}</strong><span>farm routes</span></article>
-            <article><strong>{loading ? "…" : unlockCount}</strong><span>unlock work</span></article>
-          </section>
+
+        <div className="atlas-task-page-body">
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
-          {loading ? <div className="atlas-task-page-empty">Loading today&apos;s maintenance routes.</div> : null}
-          {!loading && !error ? <section className="atlas-overview-zone-list atlas-work-collection-list">
-            {windows.map(({ windowKey, items: windowItems, routes }) => (
-              <section key={windowKey} className="atlas-day-route-group atlas-day-work-collection-group">
-                <h3>{windowKey === "morning" ? "Morning" : "Evening"} · {totalMinutes(windowItems)} of {windowKey === "morning" ? morningCapacity : eveningCapacity} minutes</h3>
-                {routes.map(([route, routeItems]) => <RouteCard key={`${windowKey}-${route}`} route={route} items={routeItems} busyId={busyId} onRecord={(item, outcome) => void record(item, outcome)} />)}
-                {!routes.length ? <div className="atlas-task-page-empty">No {windowKey} maintenance scheduled.</div> : null}
+          {loading ? <div className="atlas-task-page-empty">Building today&apos;s maintenance route.</div> : null}
+
+          {!loading && activeItem ? (
+            <>
+              <section className="atlas-task-page-hero atlas-task-progress-hero">
+                <span>{activeItem.window_key === "morning" ? "Morning route" : "Evening route"} · Task {activeIndex + 1} of {balancedItems.length}</span>
+                <div className="atlas-progress-hero-head">
+                  <h2>{actionLabel(activeItem)} {activeItem.object_label}</h2>
+                  <small>{activeItem.zone_label ?? "Elm Farm"} · {activeItem.estimated_minutes} minutes</small>
+                </div>
+                <div className="atlas-progress-report">
+                  <div className="atlas-progress-next-line"><span>Remaining today</span><strong>{totalMinutes(balancedItems)} minutes across {balancedItems.length} tasks</strong></div>
+                  {activeItem.dependent_task_labels.length ? <div className="atlas-progress-next-line"><span>Completing this unlocks</span><strong>{activeItem.dependent_task_labels.join(" · ")}</strong></div> : null}
+                </div>
               </section>
-            ))}
-            {!balancedItems.length ? <div className="atlas-task-page-empty">No canonical maintenance fits this day&apos;s available labor windows.</div> : null}
-          </section> : null}
+
+              <article className="atlas-task-page-active atlas-task-ticket-card">
+                <div className="atlas-task-page-kicker"><span>Up Now</span><small>{activeItem.collection_label}</small></div>
+                <h1>{actionLabel(activeItem).toUpperCase()} {activeItem.object_label.toUpperCase()}</h1>
+                <div className="atlas-task-page-time-row"><span>{activeItem.window_key === "morning" ? "Morning" : "Evening"}</span><span>{activeItem.estimated_minutes} min</span><span>{activeItem.condition}</span></div>
+                <section className="atlas-task-place-card"><small>Location</small><strong>{activeItem.zone_label ?? "Elm Farm"}</strong></section>
+                {tools.length ? <section className="atlas-task-detail-card"><strong>Tools</strong>{tools.map((tool) => <p key={tool}>{tool}</p>)}</section> : null}
+                {activeItem.priority_reasons.length ? <section className="atlas-task-detail-card"><strong>Why this is next</strong><p>{activeItem.priority_reasons.slice(0, 3).join(" · ")}</p></section> : null}
+                <div className="atlas-task-page-actions atlas-task-primary-actions">
+                  <button type="button" className="done" disabled={busyId === activeItem.maintenance_object_id} onClick={() => void record(activeItem, "fully_completed")}>{busyId === activeItem.maintenance_object_id ? "Saving" : "Done"}</button>
+                  <button type="button" disabled={busyId === activeItem.maintenance_object_id} onClick={() => void record(activeItem, "partially_completed")}>Partly done</button>
+                </div>
+                <div className="atlas-task-unfinished-grid quiet">
+                  <button type="button" disabled={busyId === activeItem.maintenance_object_id} onClick={() => void record(activeItem, "heavier_reset")}>Heavier than expected</button>
+                </div>
+              </article>
+
+              {queueSection("Morning", morning, morningCapacity)}
+              {queueSection("Evening", evening, eveningCapacity)}
+            </>
+          ) : null}
+
+          {!loading && !balancedItems.length ? <div className="atlas-task-page-empty">No canonical maintenance fits today&apos;s available labor windows.</div> : null}
         </div>
       </section>
     </main>
