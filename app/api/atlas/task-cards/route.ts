@@ -19,6 +19,11 @@ type AtlasTaskCardRow = {
   note: string | null;
   generated_from: string | null;
   generated_from_id: string | null;
+  action_key: string | null;
+  work_class: string | null;
+  parent_task_id: string | null;
+  task_series_key: string | null;
+  engine_instance_key: string | null;
   created_at: string;
   updated_at: string;
   metadata: JsonRecord | null;
@@ -35,6 +40,21 @@ task_logs: Array<{
   note: string | null;
   created_at: string;
 }>;
+
+  task_transitions: Array<{
+    transition_id: string;
+    transition: string;
+    previous_status: string | null;
+    next_status: string | null;
+    previous_due_date: string | null;
+    target_date: string | null;
+    action_key: string | null;
+    work_class: string | null;
+    note: string | null;
+    reason: string | null;
+    field_log_id: string | null;
+    created_at: string;
+  }>;
 
   objects: Array<{
     object_id: string;

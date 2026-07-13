@@ -1,350 +1,48 @@
+import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { atlasSupabase } from "@/lib/atlas/supabase-server";
-import { runTriggeredSequencesForDoneTask } from "@/lib/atlas/triggered-sequences-server";
+import {
+  recordTaskTransition,
+  resolveAtlasTaskId,
+  type AtlasTaskTransition,
+} from "@/lib/atlas/task-transition-server";
 
 export const dynamic = "force-dynamic";
-
-type Outcome = "done" | "partial" | "blocked" | "not_relevant" | "changed_plan";
 
 type Body = {
   taskId?: string;
   taskTitle?: string;
-  outcome?: Outcome;
+  outcome?: AtlasTaskTransition;
   note?: string;
   reason?: string;
   laneKey?: string;
   workKey?: string;
+  idempotencyKey?: string;
 };
 
-type TaskRow = {
-  id: string;
-  farm_id: string;
-  zone_id: string | null;
-  title: string;
-  task_type: string | null;
-  status: string;
-  priority: string | null;
-  due_date: string | null;
-  blocker_text: string | null;
-  note: string | null;
-  generated_from?: string | null;
-  generated_from_id?: string | null;
-  metadata: Record<string, unknown> | null;
-};
-
-type ObjectStateRow = {
-  object_id: string;
-  metadata: Record<string, unknown> | null;
-};
+const outcomes = new Set<AtlasTaskTransition>(["done", "partial", "blocked", "not_relevant", "changed_plan"]);
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function isOutcome(value: unknown): value is Outcome {
-  return value === "done" || value === "partial" || value === "blocked" || value === "not_relevant" || value === "changed_plan";
-}
-
-function nextStatus(outcome: Outcome) {
-  if (outcome === "done") return "done";
-  if (outcome === "blocked") return "blocked";
-  if (outcome === "not_relevant" || outcome === "changed_plan") return "archived";
-  return "open";
-}
-
-function actionTypesFor(task: TaskRow, outcome: Outcome, laneKey: string | null, workKey: string | null) {
-  return Array.from(new Set([`task_${outcome}`, laneKey, workKey, task.task_type].filter(Boolean) as string[]));
-}
-
-function shouldMarkChecked(task: TaskRow, laneKey: string | null) {
-  const text = `${laneKey ?? ""} ${task.task_type ?? ""} ${task.title}`.toLowerCase();
-  return text.includes("verify") || text.includes("check") || text.includes("confirm") || text.includes("count") || text.includes("germin") || text.includes("mark");
-}
-
-function shouldMarkWeeded(task: TaskRow, laneKey: string | null) {
-  const text = `${laneKey ?? ""} ${task.task_type ?? ""} ${task.title}`.toLowerCase();
-  return text.includes("weed") || text.includes("hoe");
-}
-
-function shouldMarkWatered(task: TaskRow, laneKey: string | null) {
-  const text = `${laneKey ?? ""} ${task.task_type ?? ""} ${task.title}`.toLowerCase();
-  return text.includes("water");
-}
-
-function isoDateFromNowPlusDays(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-function positiveInteger(value: unknown) {
-  if (typeof value === "number" && Number.isInteger(value) && value > 0) return value;
-  if (typeof value === "string" && /^\d+$/.test(value) && Number(value) > 0) return Number(value);
-  return null;
-}
-
-function weekdayIndex(value: unknown) {
-  if (typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 6) return value;
-  if (typeof value === "string" && /^\d+$/.test(value)) {
-    const parsed = Number(value);
-    if (parsed >= 0 && parsed <= 6) return parsed;
-  }
-
-  const label = clean(value).toLowerCase();
-  if (label === "sunday") return 0;
-  if (label === "monday") return 1;
-  if (label === "tuesday") return 2;
-  if (label === "wednesday") return 3;
-  if (label === "thursday") return 4;
-  if (label === "friday") return 5;
-  if (label === "saturday") return 6;
-  return null;
-}
-
-function isoDateForNextWeekday(nowIso: string, targetWeekday: number, minimumDaysAway = 1) {
-  const date = new Date(`${nowIso.slice(0, 10)}T12:00:00`);
-  const minimumOffset = Math.max(1, minimumDaysAway);
-  for (let offset = minimumOffset; offset <= minimumOffset + 13; offset += 1) {
-    const candidate = new Date(date);
-    candidate.setDate(date.getDate() + offset);
-    if (candidate.getDay() === targetWeekday) return candidate.toISOString().slice(0, 10);
-  }
-  return isoDateFromNowPlusDays(Math.max(7, minimumOffset));
-}
-
-function shouldRecreateTask(task: TaskRow, outcome: Outcome) {
-  if (outcome !== "done") return null;
-  const metadata = task.metadata ?? {};
-  if (metadata.recreate_on_done !== true && metadata.recreate_on_done !== "true") return null;
-  return positiveInteger(metadata.recreate_after_days) ?? positiveInteger(metadata.repeat_after_days) ?? null;
-}
-
-function nextRecreatedDueDate(task: TaskRow, recreateAfterDays: number, now: string) {
-  const metadata = task.metadata ?? {};
-  const anchoredWeekday = weekdayIndex(metadata.recreate_weekday) ?? weekdayIndex(metadata.repeat_anchor_day);
-  const minimumInterval = positiveInteger(metadata.minimum_days_between_recurrences) ?? positiveInteger(metadata.min_days_since_last_mow) ?? 1;
-  if (anchoredWeekday !== null) return isoDateForNextWeekday(now, anchoredWeekday, minimumInterval);
-  return isoDateFromNowPlusDays(recreateAfterDays);
-}
-
-async function getTask(body: Body) {
-  if (body.taskId) {
-    const { data, error } = await atlasSupabase.schema("atlas").from("tasks").select("id, farm_id, zone_id, title, task_type, status, priority, due_date, blocker_text, note, generated_from, generated_from_id, metadata").eq("id", body.taskId).single();
-    if (error || !data) throw new Error(error?.message || "Task was not found.");
-    return data as TaskRow;
-  }
-
-  const title = clean(body.taskTitle);
-  if (!title) throw new Error("Task title is required.");
-  const { data, error } = await atlasSupabase.schema("atlas").from("tasks").select("id, farm_id, zone_id, title, task_type, status, priority, due_date, blocker_text, note, generated_from, generated_from_id, metadata").ilike("title", title).in("status", ["open", "blocked"]).order("due_date", { ascending: true }).limit(1);
-  if (error) throw new Error(error.message);
-  if (!data?.[0]) throw new Error("No matching open task was found.");
-  return data[0] as TaskRow;
-}
-
-async function getTaskObjectIds(taskId: string) {
-  const { data, error } = await atlasSupabase.schema("atlas").from("task_objects").select("object_id").eq("task_id", taskId);
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => row.object_id as string).filter(Boolean);
-}
-
-async function copyTaskObjects(sourceTaskId: string, targetTaskId: string) {
-  const objectIds = await getTaskObjectIds(sourceTaskId);
-  if (objectIds.length === 0) return [];
-
-  const rows = objectIds.map((objectId) => ({ task_id: targetTaskId, object_id: objectId, role: "primary_location" }));
-  const { error } = await atlasSupabase.schema("atlas").from("task_objects").insert(rows);
-  if (error) throw new Error(error.message);
-  return objectIds;
-}
-
-async function recreateTaskIfNeeded(task: TaskRow, outcome: Outcome, now: string) {
-  const recreateAfterDays = shouldRecreateTask(task, outcome);
-  if (!recreateAfterDays) return null;
-
-  const nextDueDate = nextRecreatedDueDate(task, recreateAfterDays, now);
-  const metadata = task.metadata ?? {};
-  const seriesKey = clean(metadata.recurrence_series_key) || clean(metadata.recurring_series_key) || task.id;
-
-  const { data: existing, error: existingError } = await atlasSupabase
-    .schema("atlas")
-    .from("tasks")
-    .select("id")
-    .eq("generated_from", "recurring_task")
-    .eq("generated_from_id", task.id)
-    .eq("due_date", nextDueDate)
-    .in("status", ["open", "blocked"])
-    .limit(1);
-  if (existingError) throw new Error(existingError.message);
-  if (existing?.[0]?.id) return existing[0].id as string;
-
-  const nextMetadata = {
-    ...metadata,
-    recurring_parent_task_id: task.id,
-    recurrence_series_key: seriesKey,
-    recreated_from_task_id: task.id,
-    recreated_from_completed_at: now,
-    previous_due_date: task.due_date,
-    recreate_on_done: true,
-    recreate_after_days: recreateAfterDays,
-    next_due_rule: metadata.recreate_weekday || metadata.repeat_anchor_day ? "anchored_weekday" : "after_days",
-    outcome_history_count: 0,
-  };
-
-  const { data: inserted, error: insertError } = await atlasSupabase
-    .schema("atlas")
-    .from("tasks")
-    .insert({
-      farm_id: task.farm_id,
-      zone_id: task.zone_id,
-      title: task.title,
-      task_type: task.task_type,
-      status: "open",
-      priority: task.priority ?? "normal",
-      due_date: nextDueDate,
-      unlock_text: null,
-      blocker_text: null,
-      note: task.note,
-      generated_from: "recurring_task",
-      generated_from_id: task.id,
-      metadata: nextMetadata,
-      updated_at: now,
-    })
-    .select("id")
-    .single();
-  if (insertError || !inserted?.id) throw new Error(insertError?.message || "Recurring task creation failed.");
-
-  await copyTaskObjects(task.id, inserted.id as string);
-  return inserted.id as string;
-}
-
-async function updateObjectMemory(task: TaskRow, objectIds: string[], outcome: Outcome, note: string | null, laneKey: string | null, workKey: string | null, now: string) {
-  if (objectIds.length === 0) return;
-  const today = now.slice(0, 10);
-  const { data, error } = await atlasSupabase.schema("atlas").from("object_state").select("object_id, metadata").in("object_id", objectIds);
-  if (error) throw new Error(error.message);
-
-  const existing = new Map((data ?? []).map((row) => [(row as ObjectStateRow).object_id, (row as ObjectStateRow).metadata ?? {}]));
-  const rows = objectIds.map((objectId) => {
-    const metadata = {
-      ...(existing.get(objectId) ?? {}),
-      last_task_event: {
-        task_id: task.id,
-        task_title: task.title,
-        outcome,
-        note,
-        lane_key: laneKey,
-        work_key: workKey,
-        recorded_at: now,
-      },
-    };
-
-    return {
-      object_id: objectId,
-      farm_id: task.farm_id,
-      last_touched_at: today,
-      last_checked_at: shouldMarkChecked(task, laneKey) ? today : undefined,
-      last_weeded_at: shouldMarkWeeded(task, laneKey) ? today : undefined,
-      last_watered_at: shouldMarkWatered(task, laneKey) ? today : undefined,
-      decision_required: outcome === "blocked" || outcome === "changed_plan" ? true : outcome === "done" || outcome === "not_relevant" ? false : undefined,
-      metadata,
-      updated_at: now,
-    };
-  });
-
-  const { error: upsertError } = await atlasSupabase.schema("atlas").from("object_state").upsert(rows, { onConflict: "object_id" });
-  if (upsertError) throw new Error(upsertError.message);
-}
-
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as Body;
-    const outcome = body.outcome;
-    if (!isOutcome(outcome)) {
-      return NextResponse.json({ ok: false, error: "Outcome must be done, partial, blocked, not relevant, or changed plan." }, { status: 400 });
+    const body = await request.json() as Body;
+    if (!body.outcome || !outcomes.has(body.outcome)) {
+      return NextResponse.json({ ok: false, error: "Unsupported task outcome." }, { status: 400 });
     }
-
-    const task = await getTask(body);
-    const now = new Date().toISOString();
-    const note = clean(body.note) || null;
-    const reason = clean(body.reason) || null;
-    const laneKey = clean(body.laneKey) || null;
-    const workKey = clean(body.workKey) || null;
-    const objectIds = await getTaskObjectIds(task.id);
-    const metadata = {
-      ...(task.metadata ?? {}),
-      last_outcome: {
-        outcome,
-        reason,
-        note,
-        lane_key: laneKey,
-        work_key: workKey,
-        object_ids: objectIds,
-        recorded_at: now,
-      },
-      outcome_history_count: typeof task.metadata?.outcome_history_count === "number" ? task.metadata.outcome_history_count + 1 : 1,
-    };
-
-    const updatePayload: Record<string, unknown> = { status: nextStatus(outcome), metadata, updated_at: now };
-    if (outcome === "done") updatePayload.completed_at = now;
-    if (outcome === "partial" && note) updatePayload.note = [task.note, note].filter(Boolean).join("\n");
-    if (outcome === "blocked") updatePayload.blocker_text = reason || note || task.blocker_text || "blocked";
-    if (outcome === "not_relevant") updatePayload.note = [task.note, reason || note || "Marked not relevant"].filter(Boolean).join("\n");
-    if (outcome === "changed_plan") updatePayload.note = [task.note, reason || note || "Plan changed"].filter(Boolean).join("\n");
-
-    const { error: updateError } = await atlasSupabase.schema("atlas").from("tasks").update(updatePayload).eq("id", task.id);
-    if (updateError) throw new Error(updateError.message);
-
-    const completedTask = { ...task, metadata };
-    const nextTaskId = await recreateTaskIfNeeded(completedTask, outcome, now);
-    const triggeredSequenceResult = outcome === "done"
-      ? await runTriggeredSequencesForDoneTask(completedTask, objectIds, now, note)
-      : null;
-
-    const { data: eventData, error: eventError } = await atlasSupabase.schema("atlas").from("task_outcome_events").insert({
-      farm_id: task.farm_id,
-      task_id: task.id,
-      outcome,
-      lane_key: laneKey,
-      work_key: workKey,
-      blocker_reason: reason,
-      note,
-      task_title: task.title,
-      task_type: task.task_type,
-      zone_id: task.zone_id,
-      due_date: task.due_date,
-      priority: task.priority,
-      source: "atlas_task_outcome",
-      metadata: { prior_status: task.status, object_ids: objectIds, next_recurring_task_id: nextTaskId, triggered_sequence_result: triggeredSequenceResult },
-    }).select("id").single();
-    if (eventError) throw new Error(eventError.message);
-
-    const eventId = eventData?.id as string | undefined;
-    const logSummary = [task.title, outcome === "done" ? "done" : outcome.replace(/_/g, " "), note].filter(Boolean).join(" · ");
-    const { error: logError } = await atlasSupabase.schema("atlas").from("field_logs").insert({
-      farm_id: task.farm_id,
-      log_date: now.slice(0, 10),
-      action_types: actionTypesFor(task, outcome, laneKey, workKey),
-      summary_sentence: logSummary,
-      note,
-      source: "atlas_task_board",
-      metadata: {
-        task_id: task.id,
-        task_title: task.title,
-        task_outcome_event_id: eventId,
-        outcome,
-        lane_key: laneKey,
-        work_key: workKey,
-        object_ids: objectIds,
-        next_recurring_task_id: nextTaskId,
-        triggered_sequence_result: triggeredSequenceResult,
-      },
+    const taskId = await resolveAtlasTaskId(clean(body.taskId), clean(body.taskTitle));
+    const result = await recordTaskTransition({
+      taskId,
+      transition: body.outcome,
+      idempotencyKey: clean(body.idempotencyKey) || clean(request.headers.get("x-idempotency-key")) || `legacy-outcome:${taskId}:${randomUUID()}`,
+      note: clean(body.note) || null,
+      reason: clean(body.reason) || null,
+      laneKey: clean(body.laneKey) || null,
+      workKey: clean(body.workKey) || null,
+      payload: { adapter: "task-outcome" },
     });
-    if (logError) throw new Error(logError.message);
-
-    await updateObjectMemory(task, objectIds, outcome, note, laneKey, workKey, now);
-
-    return NextResponse.json({ ok: true, taskId: task.id, outcome, status: nextStatus(outcome), eventId, nextTaskId, triggeredSequenceResult });
+    return NextResponse.json({ ok: true, outcome: body.outcome, ...result });
   } catch (error) {
     return NextResponse.json({ ok: false, error: "Atlas task outcome failed.", details: error instanceof Error ? error.message : "Unknown error." }, { status: 500 });
   }

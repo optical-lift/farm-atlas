@@ -229,6 +229,74 @@
   display: none !important;
 }
 
+.atlas-task-record-card {
+  border: 1px solid var(--atlas-border-soft);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.62);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.atlas-task-record-card > strong,
+.atlas-task-record-card small {
+  color: #858bb8;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.atlas-task-record-card > div,
+.atlas-task-record-card > p {
+  margin: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.atlas-task-record-card nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.atlas-task-record-card nav a {
+  border: 1px solid rgba(139, 145, 194, 0.24);
+  border-radius: 999px;
+  background: rgba(167, 171, 214, 0.13);
+  color: var(--atlas-text);
+  padding: 7px 9px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.atlas-task-record-card > p span {
+  color: var(--atlas-text);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.atlas-task-record-card ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 5px;
+}
+
+.atlas-task-record-card li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
 .atlas-task-page-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

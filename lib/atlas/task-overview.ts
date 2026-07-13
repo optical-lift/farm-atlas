@@ -89,7 +89,7 @@ export function stringList(value: unknown) {
 }
 
 export function isChildTask(task: AtlasTaskCard) {
-  return meta(task, "is_child_task") === true || meta(task, "is_child_task") === "true";
+  return Boolean(task.parent_task_id) || meta(task, "is_child_task") === true || meta(task, "is_child_task") === "true";
 }
 
 function hasTerminalMetadata(task: AtlasTaskCard) {

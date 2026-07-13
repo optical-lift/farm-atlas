@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
 type Card = {
   task_id: string;
@@ -163,15 +164,15 @@ async function fetchRegistryZones() {
   return normalizeRegistryZones(data.zones);
 }
 
-async function toggleChecklist(taskId: string, checklistStatus: "open" | "done", body: Record<string, unknown> = {}) {
-  const response = await fetch("/api/atlas/task-child-toggle", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ taskId, checklistStatus, ...body }),
+async function toggleChecklist(taskId: string, checklistStatus: "open" | "done", body: Record<string, unknown> = {}): Promise<{ summary?: string } | null> {
+  await postAtlasTaskTransition({
+    taskId,
+    transition: checklistStatus === "done" ? "checklist_done" : "checklist_open",
+    laneKey: "checklist",
+    workKey: checklistStatus === "done" ? "checked" : "reopened",
+    payload: { completion_source: "checklist", ...body },
   });
-  const data = await response.json() as { ok?: boolean; details?: string; error?: string; plantingLog?: { summary?: string } | null };
-  if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Checklist failed.");
-  return data.plantingLog ?? null;
+  return null;
 }
 
 function renderInlineLog(child: Card, zones: RegistryZone[]) {

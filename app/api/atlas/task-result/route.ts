@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { atlasSupabase } from "@/lib/atlas/supabase-server";
+import { recordTaskTransition, type AtlasTaskTransition } from "@/lib/atlas/task-transition-server";
 
 export const dynamic = "force-dynamic";
 
@@ -191,27 +192,37 @@ export async function POST(request: NextRequest) {
     const shouldBlock = result === "blocked" || (result === "needs_supplies" && taskObjectIds.length <= 1);
     const shouldComplete = capture ? completeAllObjects : result === "done";
 
-    const taskUpdate: AnyObj = { metadata: nextTaskMetadata, updated_at: nowIso };
-    if (shouldBlock) { taskUpdate.status = "blocked"; taskUpdate.blocker_text = note || "Blocked."; }
-    if (shouldComplete) { taskUpdate.status = "done"; taskUpdate.completed_at = nowIso; taskUpdate.completed_by = createdBy; }
-    const { error: taskUpdateError } = await atlasSupabase.schema("atlas").from("tasks").update(taskUpdate).eq("id", taskId);
+    const { error: taskUpdateError } = await atlasSupabase.schema("atlas").from("tasks").update({ metadata: nextTaskMetadata, updated_at: nowIso }).eq("id", taskId);
     if (taskUpdateError) throw taskUpdateError;
 
-    if (shouldComplete) {
-      const { error: stepError } = await atlasSupabase.schema("atlas").from("project_steps").update({ status: "done", completed_at: nowIso, updated_at: nowIso }).eq("linked_task_id", taskId);
-      if (stepError) throw stepError;
-    }
+    const transition: AtlasTaskTransition = shouldComplete
+      ? "done"
+      : shouldBlock || result === "needs_supplies"
+        ? "blocked"
+        : result === "changed"
+          ? "changed_plan"
+          : "partial";
+    const transitionResult = await recordTaskTransition({
+      taskId,
+      transition,
+      idempotencyKey: `task-result:${taskId}:${fieldLog.id}`,
+      note,
+      reason: shouldBlock || result === "needs_supplies" ? note || "Blocked" : null,
+      laneKey: capture?.kind || "task_result",
+      workKey: capture?.kind || task.task_type,
+      payload: {
+        adapter: "task-result",
+        createdBy,
+        result,
+        capture,
+        targetObjectId,
+        generatedSupplyTaskId: supplyTaskId,
+        generatedFollowUpTaskId: followUpTaskId,
+      },
+      existingFieldLogId: fieldLog.id,
+    });
 
-    const links = [
-      ...(task.zone_id ? [{ field_log_id: fieldLog.id, zone_id: task.zone_id, object_id: null, role: "task_zone" }] : []),
-      ...(targetObjectId ? [{ field_log_id: fieldLog.id, zone_id: objectZoneId, object_id: targetObjectId, role: "task_object" }] : taskObjectIds.map((id) => ({ field_log_id: fieldLog.id, zone_id: task.zone_id, object_id: id, role: "task_object" }))),
-    ];
-    if (links.length) {
-      const { error: linkError } = await atlasSupabase.schema("atlas").from("field_log_objects").insert(links);
-      if (linkError) throw linkError;
-    }
-
-    return NextResponse.json({ ok: true, taskId, result, fieldLogId: fieldLog.id, generatedSupplyTaskId: supplyTaskId, generatedFollowUpTaskId: followUpTaskId });
+    return NextResponse.json({ ok: true, taskId, result, fieldLogId: fieldLog.id, generatedSupplyTaskId: supplyTaskId, generatedFollowUpTaskId: followUpTaskId, transition: transitionResult });
   } catch (error) {
     console.error("Atlas task result failed:", error);
     return NextResponse.json({ ok: false, error: "Atlas task result failed.", details: error instanceof Error ? error.message : "Unknown task-result error." }, { status: 500 });

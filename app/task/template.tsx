@@ -61,10 +61,6 @@ function subject(card: TaskCard) {
   return text(card.metadata?.display_subject) || card.title.split("—").slice(1).join("—").trim() || card.title;
 }
 
-function label(card: TaskCard) {
-  return text(card.metadata?.checklist_label) || subject(card);
-}
-
 function collectionLabel(card: TaskCard) {
   return text(card.metadata?.collection_label) || subject(card);
 }
@@ -85,44 +81,6 @@ function detailLines(card: TaskCard) {
   return stringList(card.metadata?.detail_lines);
 }
 
-function cleanChecklistDetail(line: string) {
-  return line
-    .replace(/\s+—\s+battery push mower/gi, "")
-    .replace(/\s+—\s+riding mower can fit/gi, "")
-    .replace(/\s+—\s+push mower/gi, "")
-    .replace(/\s+—\s+weed whacker/gi, "")
-    .replace(/\s+—\s+leaf blower/gi, "")
-    .trim();
-}
-
-function childDetailLines(parent: TaskCard, child: TaskCard) {
-  const ownDetails = detailLines(child).map(cleanChecklistDetail).filter(Boolean);
-  if (ownDetails.length) return ownDetails;
-
-  const parentDetails = detailLines(parent).map(cleanChecklistDetail).filter(Boolean);
-  if (!parentDetails.length) return [];
-
-  const childLabel = norm(label(child));
-  const directKeys = ["field rows", "barn beds", "u pick", "follow me", "curve garden", "main garden", "lilac haven", "garage", "entry billboard"];
-  const directKey = directKeys.find((key) => childLabel.includes(key));
-  if (directKey) {
-    const directMatch = parentDetails.find((line) => norm(line).includes(directKey));
-    if (directMatch) return [directMatch];
-  }
-
-  const meaningfulWords = childLabel.split(" ").filter((word) => word.length > 2).slice(0, 3);
-  const fuzzyMatch = parentDetails.find((line) => {
-    const lineText = norm(line);
-    return meaningfulWords.length > 0 && meaningfulWords.every((word) => lineText.includes(word));
-  });
-  return fuzzyMatch ? [fuzzyMatch] : [];
-}
-
-function shouldRemoveParentDetail(parent: TaskCard, detail: Element | null) {
-  const heading = detail?.querySelector("strong")?.textContent?.trim().toLowerCase() ?? "";
-  return routeForTask(parent) === "mow" || heading === "weekly route";
-}
-
 function taskTools(parent: TaskCard) {
   const explicit = stringList(parent.metadata?.tool_lines);
   if (explicit.length) return explicit;
@@ -132,10 +90,6 @@ function taskTools(parent: TaskCard) {
   if (route === "harvest") return ["Gloves", "Snips", "Buckets", "Rubber bands"];
   if (route === "mow") return ["Battery push mower", "Riding mower", "Weed whacker", "Leaf blower"];
   return [];
-}
-
-function isDone(card: TaskCard) {
-  return text(card.metadata?.checklist_status) === "done";
 }
 
 function isChildTask(card: TaskCard) {
@@ -219,18 +173,6 @@ async function loadCards() {
   return data.taskCards ?? [];
 }
 
-function message(value: string) {
-  const card = document.querySelector(".atlas-task-page-active");
-  if (!card) return;
-  let line = card.querySelector(".atlas-child-checklist-message");
-  if (!line) {
-    line = document.createElement("p");
-    line.className = "atlas-task-page-message atlas-child-checklist-message";
-    card.appendChild(line);
-  }
-  line.textContent = value;
-}
-
 function removeTimingPills() {
   document.querySelectorAll(".atlas-task-page-time-row span, .atlas-task-page-row small").forEach((item) => {
     const value = item.textContent?.trim().toLowerCase();
@@ -298,89 +240,6 @@ function decorateParent(parent: TaskCard) {
   insertLocationPill(parent);
   insertSpacing(parent);
   insertTools(parent);
-}
-
-function checklistSignature(children: TaskCard[]) {
-  return children.map((child) => `${child.task_id}:${text(child.metadata?.checklist_status)}:${text((child.metadata?.planting_log as Record<string, unknown> | undefined)?.recorded_at)}`).join("|");
-}
-
-function plantingLogSummary(child: TaskCard) {
-  return text((child.metadata?.planting_log as Record<string, unknown> | undefined)?.summary);
-}
-
-function defaultAmount(child: TaskCard) {
-  const value = child.metadata?.planting_log_default_amount;
-  if (typeof value === "number") return String(value);
-  return text(value);
-}
-
-function defaultLocation(child: TaskCard) {
-  return text(child.metadata?.planting_log_default_location) || location(child);
-}
-
-function needsPlantingLog(child: TaskCard) {
-  return child.metadata?.planting_log_required === true || text(child.metadata?.planting_log_required) === "true";
-}
-
-function inlineLogForm(child: TaskCard) {
-  if (!needsPlantingLog(child) || isDone(child)) return "";
-  return `
-    <form class="atlas-child-plant-log" data-child-task-id="${html(child.task_id)}" hidden>
-      <label><span>Count</span><input name="plantedAmount" inputmode="numeric" type="number" min="0" step="1" value="${html(defaultAmount(child))}" /></label>
-      <label><span>Where</span><input name="plantedLocation" type="text" value="${html(defaultLocation(child))}" placeholder="Bed or area" /></label>
-      <div class="atlas-child-plant-log-actions">
-        <button type="submit">Save planted</button>
-        <button type="button" class="atlas-child-log-cancel">Cancel</button>
-      </div>
-      <p class="atlas-child-log-error" aria-live="polite"></p>
-    </form>`;
-}
-
-function checkRow(child: TaskCard, parent: TaskCard) {
-  const done = isDone(child);
-  const details = childDetailLines(parent, child);
-  const summary = plantingLogSummary(child);
-  return `
-    <div class="${done ? "atlas-child-check-item done" : "atlas-child-check-item"}" data-child-task-id="${html(child.task_id)}" data-next-status="${done ? "open" : "done"}" data-planting-log-required="${needsPlantingLog(child) ? "true" : "false"}">
-      <button type="button" class="atlas-child-check-touch">
-        <span>${done ? "✓" : ""}</span>
-        <div class="atlas-child-check-copy">
-          <strong>${html(label(child))}</strong>
-          ${details.map((line) => `<em>${html(line)}</em>`).join("")}
-          ${summary ? `<em class="atlas-child-log-summary">${html(summary)}</em>` : ""}
-        </div>
-      </button>
-      ${inlineLogForm(child)}
-    </div>`;
-}
-
-function insertChecklist(parent: TaskCard, children: TaskCard[]) {
-  const card = document.querySelector(".atlas-task-page-active");
-  if (!card) return;
-  const existing = card.querySelector<HTMLElement>(".atlas-child-checklist");
-  const signature = checklistSignature(children);
-  if (existing?.dataset.childChecklistSignature === signature || existing?.querySelector(".atlas-child-check-item.logging, .atlas-child-check-item.saving")) return;
-
-  const section = existing ?? document.createElement("section");
-  section.className = "atlas-child-checklist";
-  section.dataset.parentTaskId = parent.task_id;
-  section.dataset.childChecklistSignature = signature;
-  section.innerHTML = `
-    <strong>Checklist</strong>
-    <div class="atlas-child-checklist-open atlas-child-checklist-stable-list">
-      ${children.map((child) => checkRow(child, parent)).join("")}
-    </div>
-  `;
-
-  const detail = card.querySelector(".atlas-task-detail-card");
-  if (shouldRemoveParentDetail(parent, detail)) detail?.remove();
-
-  if (!existing) {
-    const tools = card.querySelector(".atlas-task-tools-card");
-    const spacing = card.querySelector(".atlas-plant-spacing-card");
-    const place = card.querySelector(".atlas-task-place-card");
-    (tools ?? spacing ?? place)?.insertAdjacentElement("afterend", section);
-  }
 }
 
 function routeCard(task: TaskCard) {
@@ -530,11 +389,7 @@ export default function TaskTemplate({ children }: { children: ReactNode }) {
       const parent = findParent(cards);
       if (!parent) return;
       decorateParent(parent);
-      const childCards = cards
-        .filter((card) => text(card.metadata?.parent_task_id) === parent.task_id)
-        .filter((card) => card.status !== "archived")
-        .sort((a, b) => numberValue(a.metadata?.step_order) - numberValue(b.metadata?.step_order));
-      if (childCards.length) insertChecklist(parent, childCards);
+      // The React task card owns the checklist and task transitions.
     }
 
     function scheduleRefresh(delay: number) {
@@ -546,59 +401,11 @@ export default function TaskTemplate({ children }: { children: ReactNode }) {
       [120, 400, 900, 1800, 3200].forEach(scheduleRefresh);
     }
 
-    function activeParentAndChildren() {
-      const parent = findParent(cards);
-      if (!parent) return { parent: null, childCards: [] as TaskCard[] };
-      const childCards = cards.filter((card) => text(card.metadata?.parent_task_id) === parent.task_id && card.status !== "archived");
-      return { parent, childCards };
-    }
-
-    function handleClick(event: MouseEvent) {
-      const target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-      const check = target.closest(".atlas-child-check-item") as HTMLElement | null;
-      if (check?.dataset.childTaskId) return;
-
-      const button = target.closest("button");
-      if (!button) return;
-      const buttonText = button.textContent?.trim();
-
-      if (buttonText === "Done") {
-        const { childCards } = activeParentAndChildren();
-        if (childCards.length && childCards.some((child) => !isDone(child))) {
-          event.preventDefault();
-          event.stopPropagation();
-          event.stopImmediatePropagation();
-          message("Finish the checklist before marking the whole task done.");
-        }
-        return;
-      }
-
-      if (buttonText !== "More" && buttonText !== "Unfinished") return;
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-
-      const { parent } = activeParentAndChildren();
-      const params = new URLSearchParams(window.location.search);
-      const taskId = parent?.task_id ?? params.get("taskId");
-      const activeTitle = document.querySelector(".atlas-task-page-active h1")?.textContent?.trim();
-      const payload = taskId ? { taskId } : { taskTitle: activeTitle ? `%${activeTitle}%` : "" };
-
-      fetch("/api/atlas/task-unfinished", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ ...payload, laneKey: "maintain", workKey: "unfinished" }),
-      }).then(() => window.location.assign("/task"));
-    }
-
-    document.addEventListener("click", handleClick, true);
     scheduleSettledRefreshes();
     return () => {
       stopped = true;
       document.body.classList.remove("atlas-route-mode", "atlas-task-collection-mode");
       timers.forEach((timer) => window.clearTimeout(timer));
-      document.removeEventListener("click", handleClick, true);
     };
   }, []);
 

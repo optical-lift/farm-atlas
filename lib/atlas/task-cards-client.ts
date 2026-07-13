@@ -69,6 +69,21 @@ export type AtlasTaskOutcomeEvent = {
   created_at: string;
 };
 
+export type AtlasTaskTransitionEvent = {
+  transition_id: string;
+  transition: string;
+  previous_status: string | null;
+  next_status: string | null;
+  previous_due_date: string | null;
+  target_date: string | null;
+  action_key: string | null;
+  work_class: string | null;
+  note: string | null;
+  reason: string | null;
+  field_log_id: string | null;
+  created_at: string;
+};
+
 export type AtlasTaskCaptureByObject = Record<
   string,
   {
@@ -99,6 +114,11 @@ export type AtlasTaskCard = {
   note: string | null;
   generated_from: string | null;
   generated_from_id: string | null;
+  action_key: string | null;
+  work_class: string | null;
+  parent_task_id: string | null;
+  task_series_key: string | null;
+  engine_instance_key: string | null;
   created_at: string;
   updated_at: string;
   metadata: AtlasTaskCardMetadata | null;
@@ -109,6 +129,7 @@ export type AtlasTaskCard = {
 
   task_logs: AtlasTaskCardLog[];
   task_outcomes: AtlasTaskOutcomeEvent[];
+  task_transitions: AtlasTaskTransitionEvent[];
 
   objects: AtlasTaskCardObject[];
   resource_requirements: AtlasTaskCardResourceRequirement[];

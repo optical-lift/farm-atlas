@@ -83,10 +83,10 @@ function dayShortLabel(dateIso: string) {
 }
 
 function isChildTask(card: AtlasTaskCard) {
-  return atlasMetadataValue(card, "is_child_task") === true || atlasMetadataValue(card, "is_child_task") === "true";
+  return Boolean(card.parent_task_id) || atlasMetadataValue(card, "is_child_task") === true || atlasMetadataValue(card, "is_child_task") === "true";
 }
 function parentTaskId(card: AtlasTaskCard) {
-  return atlasMetaString(card, "parent_task_id") || atlasMetaString(card, "parentTaskId") || "";
+  return card.parent_task_id || atlasMetaString(card, "parent_task_id") || atlasMetaString(card, "parentTaskId") || "";
 }
 function isActiveChecklistChild(card: AtlasTaskCard) {
   if (!isChildTask(card)) return false;
