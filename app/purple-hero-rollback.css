@@ -129,6 +129,51 @@
   color: rgba(255, 255, 255, 0.62) !important;
 }
 
+/* Carry-forward treatment from the early primary-card pattern. */
+.atlas-run-sheet-box.atlas-overdue-forward-box {
+  position: relative !important;
+  background: #f7f2df !important;
+  border: 2px solid #e7e450 !important;
+  box-shadow: inset 5px 0 0 #e7e450, 0 5px 14px rgba(33, 35, 58, 0.16) !important;
+  color: var(--atlas-text) !important;
+  padding-top: 25px !important;
+}
+
+.atlas-run-sheet-box.atlas-overdue-forward-box::before {
+  content: "OVERDUE";
+  position: absolute;
+  top: 7px;
+  left: 9px;
+  border-radius: 999px;
+  background: #e7e450;
+  color: var(--atlas-text);
+  padding: 4px 7px 3px;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+}
+
+.atlas-run-sheet-box.atlas-overdue-forward-box small {
+  position: absolute !important;
+  top: 10px !important;
+  right: 9px !important;
+  width: auto !important;
+  color: #55584d !important;
+  font-size: 8px !important;
+  letter-spacing: 0.04em !important;
+  text-transform: none !important;
+}
+
+.atlas-run-sheet-box.atlas-overdue-forward-box strong {
+  color: var(--atlas-text) !important;
+}
+
+.atlas-run-sheet-box.atlas-overdue-forward-box span,
+.atlas-run-sheet-box.atlas-overdue-forward-box em {
+  color: #66695f !important;
+}
+
 @media (max-width: 430px) {
   .atlas-home-task-hero.atlas-task-controller.atlas-daily-run-sheet {
     padding: 14px !important;
@@ -144,6 +189,10 @@
     height: 80px !important;
     border-radius: 15px !important;
     padding: 8px !important;
+  }
+
+  .atlas-run-sheet-box.atlas-overdue-forward-box {
+    padding-top: 24px !important;
   }
 
   .atlas-run-sheet-box strong {
