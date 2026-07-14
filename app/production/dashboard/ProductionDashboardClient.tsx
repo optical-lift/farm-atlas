@@ -60,6 +60,10 @@ function occupancyLabel(item: Succession) {
   return bed || "Bed not assigned";
 }
 
+function requiresBedSelection(item: Succession) {
+  return item.metadata?.requires_bed_selection === true;
+}
+
 export default function ProductionDashboardClient({ initialPlans }: { initialPlans: ProductionDashboardPlan[] }) {
   const [plans, setPlans] = useState(initialPlans);
   const [saving, setSaving] = useState(false);
@@ -103,7 +107,7 @@ export default function ProductionDashboardClient({ initialPlans }: { initialPla
       <section className="atlas-season-summary">
         <div><span>Active crop plans</span><strong>{orderedPlans.length}</strong></div>
         <div><span>Planned successions</span><strong>{orderedPlans.reduce((sum, plan) => sum + plan.production_successions.length, 0)}</strong></div>
-        <div><span>Unassigned beds</span><strong>{orderedPlans.reduce((sum, plan) => sum + plan.production_successions.filter((item) => !item.metadata?.bed_label).length, 0)}</strong></div>
+        <div><span>Bed decisions needed</span><strong>{orderedPlans.reduce((sum, plan) => sum + plan.production_successions.filter((item) => !item.metadata?.bed_label || requiresBedSelection(item)).length, 0)}</strong></div>
         <div><span>Projected harvest gaps</span><strong>{orderedPlans.reduce((sum, plan) => sum + harvestGaps(plan).length, 0)}</strong></div>
       </section>
 
@@ -124,6 +128,8 @@ export default function ProductionDashboardClient({ initialPlans }: { initialPla
                 <article className={`atlas-season-block state-${item.state}`} key={item.id}>
                   <div><b>S{item.sequence_number}</b><span>{item.state}</span></div>
                   <strong>{pretty(item.planned_window_start)}–{pretty(item.planned_window_end)}</strong>
+                  <small>{occupancyLabel(item)}</small>
+                  {requiresBedSelection(item) ? <small>Exact bed selection required</small> : null}
                   <small>Harvest {pretty(item.projected_harvest_start)}–{pretty(item.projected_harvest_end)}</small>
                   <small>Clear {pretty(item.projected_clear_date)}</small>
                 </article>
@@ -144,9 +150,9 @@ export default function ProductionDashboardClient({ initialPlans }: { initialPla
                     <input name="plannedWindowStart" type="date" defaultValue={item.planned_window_start} disabled={Boolean(item.actual_sow_date) || saving} />
                     <button type="submit" disabled={Boolean(item.actual_sow_date) || saving}>Move</button>
                   </form>
-                  <span><b>{occupancyLabel(item)}</b><small>{pretty(item.planned_window_start)}–{pretty(item.projected_clear_date)}</small></span>
+                  <span><b>{occupancyLabel(item)}</b><small>{requiresBedSelection(item) ? "Select a specific bed before sowing" : `${pretty(item.planned_window_start)}–${pretty(item.projected_clear_date)}`}</small></span>
                   <span><b>{pretty(item.projected_harvest_start)}–{pretty(item.projected_harvest_end)}</b><small>{item.crop_cycle_id ? "Live crop cycle" : "Projected"}</small></span>
-                  <span>{item.sow_task_id ? <Link href={`/task-focus/${encodeURIComponent(item.sow_task_id)}?returnTo=${encodeURIComponent("/production/dashboard")}`}>Open task</Link> : "No task"}</span>
+                  <span>{item.sow_task_id ? <Link href={`/task-focus/${encodeURIComponent(item.sow_task_id)}?returnTo=${encodeURIComponent("/production/dashboard")}`}>Open task</Link> : "Historical planting"}</span>
                 </div>
               ))}
             </div>
