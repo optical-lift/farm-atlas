@@ -9,3 +9,221 @@
 .atlas-focused-task-only .atlas-task-page-body {
   padding-bottom: 1.5rem;
 }
+
+.atlas-sowing-focus-shell {
+  min-height: 100vh;
+  background: #f3efe7;
+  padding: 1rem;
+  color: #1e2722;
+}
+
+.atlas-sowing-focus-card {
+  width: min(100%, 43rem);
+  margin: 0 auto;
+  background: #fffdf9;
+  border: 1px solid rgba(30, 39, 34, 0.12);
+  border-radius: 1.5rem;
+  box-shadow: 0 18px 50px rgba(50, 38, 24, 0.09);
+  overflow: hidden;
+}
+
+.atlas-sowing-focus-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid rgba(30, 39, 34, 0.09);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.atlas-sowing-focus-card > header a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.atlas-sowing-focus-title {
+  padding: 1.5rem 1.25rem 1.1rem;
+}
+
+.atlas-sowing-focus-title p,
+.atlas-sowing-focus-title h1 {
+  margin: 0;
+}
+
+.atlas-sowing-focus-title p {
+  color: #765f4c;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.atlas-sowing-focus-title h1 {
+  margin-top: 0.35rem;
+  font-size: clamp(1.65rem, 7vw, 2.5rem);
+  line-height: 1.03;
+}
+
+.atlas-sowing-focus-title > b {
+  display: inline-block;
+  margin-top: 0.95rem;
+  padding: 0.5rem 0.72rem;
+  border-radius: 999px;
+  background: #e7f0e7;
+  color: #315b3e;
+  font-size: 0.82rem;
+}
+
+.atlas-sowing-window-block {
+  margin: 0 1.25rem;
+  padding: 1.2rem;
+  border-radius: 1.15rem;
+  background: #45215d;
+  color: white;
+}
+
+.atlas-sowing-window-block span,
+.atlas-sowing-window-block strong,
+.atlas-sowing-window-block p {
+  display: block;
+  margin: 0;
+}
+
+.atlas-sowing-window-block span {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.atlas-sowing-window-block strong {
+  margin-top: 0.28rem;
+  font-size: 1.55rem;
+}
+
+.atlas-sowing-window-block p {
+  margin-top: 0.45rem;
+  font-size: 0.86rem;
+  opacity: 0.86;
+}
+
+.atlas-sowing-operating-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 0;
+  margin: 0;
+}
+
+.atlas-sowing-operating-grid div {
+  min-width: 0;
+  padding: 0.9rem;
+  border-radius: 1rem;
+  background: #f4f1eb;
+}
+
+.atlas-sowing-operating-grid dt {
+  color: #746b61;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.atlas-sowing-operating-grid dd {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.atlas-sowing-biology {
+  display: grid;
+  gap: 0;
+  margin: 1rem 1.25rem 0;
+  border: 1px solid rgba(30, 39, 34, 0.1);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.atlas-sowing-biology div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  background: white;
+}
+
+.atlas-sowing-biology div + div {
+  border-top: 1px solid rgba(30, 39, 34, 0.08);
+}
+
+.atlas-sowing-biology span {
+  color: #746b61;
+  font-size: 0.8rem;
+}
+
+.atlas-sowing-biology strong {
+  text-align: right;
+  font-size: 0.86rem;
+}
+
+.atlas-sowing-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 0.75rem;
+  padding: 1.25rem;
+}
+
+.atlas-sowing-actions button {
+  min-height: 3.15rem;
+  border: 0;
+  border-radius: 0.95rem;
+  background: #45215d;
+  color: white;
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.atlas-sowing-actions button.secondary {
+  background: #eee8e0;
+  color: #4b4037;
+}
+
+.atlas-sowing-actions button:disabled {
+  opacity: 0.48;
+  cursor: default;
+}
+
+.atlas-sowing-error {
+  margin: 1rem 1.25rem 0;
+  padding: 0.8rem;
+  border-radius: 0.8rem;
+  background: #f7dddd;
+  color: #792b2b;
+  font-weight: 700;
+}
+
+@media (max-width: 520px) {
+  .atlas-sowing-focus-shell {
+    padding: 0;
+    background: #fffdf9;
+  }
+
+  .atlas-sowing-focus-card {
+    min-height: 100vh;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .atlas-sowing-operating-grid,
+  .atlas-sowing-actions {
+    grid-template-columns: 1fr;
+  }
+}
