@@ -9,7 +9,6 @@ import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
 import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
 import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
 import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
-import ReliableGerminationTaskControls from "./ReliableGerminationTaskControls";
 import FocusedTaskClarityPatch from "./FocusedTaskClarityPatch";
 import "./globals.css";
 import "./home.css";
@@ -59,7 +58,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <OwnerHomeLinkPatch />
         <HomeSundayNavigationPatch />
         <OwnerTaskReturnPatch />
-        <ReliableGerminationTaskControls />
         <FocusedTaskClarityPatch />
         {children}
       </body>
