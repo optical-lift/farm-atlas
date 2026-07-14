@@ -44,6 +44,12 @@ function daysBetween(from: string, to: string) {
   return Math.ceil((new Date(`${to}T12:00:00`).getTime() - new Date(`${from}T12:00:00`).getTime()) / 86400000);
 }
 
+function frostBoundaryIsRelevant(task: ProductionSowingTask) {
+  if (!task.finalBiologicalSowDate) return false;
+  const days = daysBetween(todayIso(), task.finalBiologicalSowDate);
+  return days >= 0 && days <= 14;
+}
+
 function statusFor(task: ProductionSowingTask) {
   if (task.state === "sown") return "Sown";
   if (task.state === "skipped") return "Skipped";
@@ -58,7 +64,8 @@ function statusFor(task: ProductionSowingTask) {
     return `In window · ${days} days remain`;
   }
   if (today <= task.lateWindowEnd) return `Late for succession ${task.sequenceNumber}`;
-  if (task.sequenceNumber === task.successionCount) return "Final succession—frost deadline applies";
+  if (task.sequenceNumber === task.successionCount && frostBoundaryIsRelevant(task)) return "Final sowing boundary approaching";
+  if (task.sequenceNumber === task.successionCount) return "Outside planned sowing window";
   if (task.missedStrategy === "skip") return `Skip succession ${task.sequenceNumber} and protect succession ${task.sequenceNumber + 1}`;
   if (task.missedStrategy === "merge") return `Late · review overlap with succession ${task.sequenceNumber + 1}`;
   return `Late · preserve succession ${task.sequenceNumber}`;
@@ -68,6 +75,7 @@ export default function SowingFocusPage({ task }: { task: ProductionSowingTask }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const status = useMemo(() => statusFor(task), [task]);
+  const showFrostBoundary = useMemo(() => frostBoundaryIsRelevant(task), [task]);
   const returnTo = typeof window === "undefined" ? "/production" : new URLSearchParams(window.location.search).get("returnTo") || "/production";
 
   async function update(state: "sown" | "skipped") {
@@ -98,7 +106,7 @@ export default function SowingFocusPage({ task }: { task: ProductionSowingTask }
 
         <div className="atlas-sowing-focus-title">
           <p>{task.variety || task.cropLabel}</p>
-          <h1>{task.cropLabel} · Succession {task.sequenceNumber} of {task.successionCount}</h1>
+          <h1>Sow {task.cropLabel}</h1>
           <b>{status}</b>
         </div>
 
@@ -111,7 +119,7 @@ export default function SowingFocusPage({ task }: { task: ProductionSowingTask }
         <dl className="atlas-sowing-operating-grid">
           <div><dt>Next succession</dt><dd>{task.nextWindowStart ? `${pretty(task.nextWindowStart)}–${pretty(task.nextWindowEnd)}` : "None"}</dd></div>
           <div><dt>Skip threshold</dt><dd>{pretty(task.skipAfterDate)}</dd></div>
-          <div><dt>Frost boundary</dt><dd>{task.finalBiologicalSowDate ? `Final biologically viable sowing: ${pretty(task.finalBiologicalSowDate)}` : "Not set"}</dd></div>
+          {showFrostBoundary ? <div><dt>Final sowing boundary</dt><dd>{pretty(task.finalBiologicalSowDate)}</dd></div> : null}
           <div><dt>Production use</dt><dd>{task.intendedUses.length ? task.intendedUses.join(" · ") : "Mixed"}</dd></div>
         </dl>
 
