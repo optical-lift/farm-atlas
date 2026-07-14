@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+type GerminationOutcome = "thin" | "on_target" | "patch";
+
 type GerminationTask = {
   id: string;
   cropLabel: string;
@@ -17,6 +19,7 @@ type GerminationTask = {
   expectedGerminationEnd?: string | null;
   expectedHarvestStart?: string | null;
   expectedHarvestEnd?: string | null;
+  targetSpacingInches?: number | null;
 };
 
 type WeatherResponse = { ok?: boolean; label?: string };
@@ -44,20 +47,16 @@ function prettyValue(value: string | null | undefined) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function spacingPrompt(cropLabel: string) {
-  const crop = cropLabel.toLowerCase();
-  if (crop.includes("sunflower")) return "About how many inches between sunflower seedlings?";
-  if (crop.includes("zinnia")) return "About how many inches between zinnia seedlings?";
-  if (crop.includes("snapdragon")) return "About how many inches between snapdragon seedlings?";
-  return `About how many inches between ${cropLabel.toLowerCase()} seedlings?`;
+function cropName(task: GerminationTask) {
+  return task.variety ? `${task.variety} ${task.cropLabel}` : task.cropLabel;
 }
 
 export default function GerminationFocusPage({ task }: { task: GerminationTask }) {
-  const [spacingOpen, setSpacingOpen] = useState(false);
-  const [spacingInches, setSpacingInches] = useState("");
+  const [outcomeOpen, setOutcomeOpen] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
+  const target = task.targetSpacingInches;
 
   useEffect(() => {
     let active = true;
@@ -74,25 +73,24 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
     };
   }, []);
 
-  async function submit(action: "not_yet" | "germinated") {
+  async function submit(action: "not_yet" | "germinated", spacingOutcome?: GerminationOutcome) {
     try {
-      const parsedSpacing = Number(spacingInches);
-      if (action === "germinated" && (!Number.isFinite(parsedSpacing) || parsedSpacing <= 0 || parsedSpacing > 120)) {
-        setMessage("Enter the observed inches between seedlings.");
-        return;
-      }
-
-      setSaving(action);
+      setSaving(spacingOutcome || action);
       setMessage(null);
       const response = await fetch("/api/atlas/germination-check", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ taskId: task.id, action, spacingInches: action === "germinated" ? parsedSpacing : undefined }),
+        body: JSON.stringify({
+          taskId: task.id,
+          action,
+          spacingOutcome,
+          targetSpacingInches: target,
+        }),
       });
       const data = (await response.json()) as { ok?: boolean; nextDate?: string; error?: string; details?: string };
       if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Germination update failed.");
 
-      setMessage(action === "not_yet" ? `Not yet logged. Check again ${data.nextDate ?? "tomorrow"}.` : "Germination spacing logged.");
+      setMessage(action === "not_yet" ? `Not yet logged. Check again ${data.nextDate ?? "tomorrow"}.` : "Germination logged.");
       window.setTimeout(() => window.location.assign(returnDestination()), 650);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Germination update failed.");
@@ -110,7 +108,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
             <span className="atlas-phone-title">Elm Farm</span>
           </Link>
           <span className="atlas-weather-line">{weatherLabel}</span>
-          <button type="button" className="atlas-note-plus" aria-label="Log germination spacing" onClick={() => setSpacingOpen(true)}>+</button>
+          <button type="button" className="atlas-note-plus" aria-label="Log germination result" onClick={() => setOutcomeOpen(true)}>+</button>
         </header>
 
         <div className="atlas-task-page-body">
@@ -126,46 +124,32 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
             <section className="atlas-task-record-card">
               <small>Bed Context</small>
               <div className="atlas-task-record-section"><span>Space</span><strong>{task.objectLabel}</strong></div>
-              <div className="atlas-task-record-section"><span>Crop</span><strong>{task.variety ? `${task.variety} ${task.cropLabel}` : task.cropLabel}</strong></div>
+              <div className="atlas-task-record-section"><span>Crop</span><strong>{cropName(task)}</strong></div>
               <div className="atlas-task-record-section"><span>Sown</span><strong>{prettyDate(task.sownDate || task.plantedDate)}</strong></div>
               <div className="atlas-task-record-section"><span>Method</span><strong>{prettyValue(task.plantingMethod)}</strong></div>
               <div className="atlas-task-record-section"><span>Current state</span><strong>{prettyValue(task.cycleState)}</strong></div>
+              <div className="atlas-task-record-section"><span>Target spacing</span><strong>{target ? `${target} inches` : "Not logged"}</strong></div>
               <div className="atlas-task-record-section"><span>Germination window</span><strong>{prettyRange(task.expectedGerminationStart, task.expectedGerminationEnd)}</strong></div>
               <div className="atlas-task-record-section"><span>Harvest watch</span><strong>{prettyRange(task.expectedHarvestStart, task.expectedHarvestEnd)}</strong></div>
             </section>
 
             <section className="atlas-germination-check-panel">
-              {!spacingOpen ? (
+              {!outcomeOpen ? (
                 <div className="atlas-germination-actions atlas-germination-primary-actions">
-                  <button type="button" className="good" disabled={Boolean(saving)} onClick={() => setSpacingOpen(true)}>Germinated</button>
-                  <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => void submit("not_yet")}>
-                    {saving === "not_yet" ? "Saving…" : "Not yet"}
-                  </button>
+                  <button type="button" className="good" disabled={Boolean(saving)} onClick={() => setOutcomeOpen(true)}>Germinated</button>
+                  <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => void submit("not_yet")}>{saving === "not_yet" ? "Saving…" : "Not yet"}</button>
                 </div>
               ) : (
                 <div className="atlas-germination-inline-log">
                   <div className="atlas-germination-check-head">
-                    <span>{task.cropLabel} spacing</span>
-                    <strong>{spacingPrompt(task.cropLabel)}</strong>
+                    <span>{cropName(task)} spacing</span>
+                    <strong>{target ? `How does the stand compare with the ${target}-inch target?` : "How does the stand look?"}</strong>
                   </div>
-                  <label className="atlas-germination-note">
-                    <span>Inches between seedlings</span>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min="0.25"
-                      max="120"
-                      step="0.25"
-                      value={spacingInches}
-                      onChange={(event) => setSpacingInches(event.target.value)}
-                      autoFocus
-                    />
-                  </label>
                   <div className="atlas-germination-actions atlas-germination-stand-actions">
-                    <button type="button" className="good" disabled={Boolean(saving)} onClick={() => void submit("germinated")}>
-                      {saving === "germinated" ? "Saving…" : "Log germination"}
-                    </button>
-                    <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => setSpacingOpen(false)}>Back</button>
+                    <button type="button" className="good" disabled={Boolean(saving)} onClick={() => void submit("germinated", "thin")}>{saving === "thin" ? "Saving…" : `Great · closer than ${target ?? "target"} in · Thin`}</button>
+                    <button type="button" className="spotty" disabled={Boolean(saving)} onClick={() => void submit("germinated", "on_target")}>{saving === "on_target" ? "Saving…" : `Good · about ${target ?? "target"} in · No action`}</button>
+                    <button type="button" className="poor" disabled={Boolean(saving)} onClick={() => void submit("germinated", "patch")}>{saving === "patch" ? "Saving…" : `Poor · wider than ${target ?? "target"} in · Patch seed`}</button>
+                    <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => setOutcomeOpen(false)}>Back</button>
                   </div>
                 </div>
               )}
