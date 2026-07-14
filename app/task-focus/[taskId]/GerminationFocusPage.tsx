@@ -9,6 +9,14 @@ type GerminationTask = {
   variety: string | null;
   objectLabel: string;
   dueDate?: string | null;
+  sownDate?: string | null;
+  plantedDate?: string | null;
+  plantingMethod?: string | null;
+  cycleState?: string | null;
+  expectedGerminationStart?: string | null;
+  expectedGerminationEnd?: string | null;
+  expectedHarvestStart?: string | null;
+  expectedHarvestEnd?: string | null;
 };
 
 type WeatherResponse = { ok?: boolean; label?: string };
@@ -20,9 +28,20 @@ function returnDestination() {
 }
 
 function prettyDate(dateIso: string | null | undefined) {
-  if (!dateIso) return "No date";
+  if (!dateIso) return "Not logged";
   const date = new Date(`${dateIso}T12:00:00`);
-  return Number.isNaN(date.getTime()) ? dateIso : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return Number.isNaN(date.getTime()) ? dateIso : date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function prettyRange(start: string | null | undefined, end: string | null | undefined) {
+  if (!start && !end) return "Not logged";
+  if (start && end) return `${prettyDate(start)} – ${prettyDate(end)}`;
+  return prettyDate(start || end);
+}
+
+function prettyValue(value: string | null | undefined) {
+  if (!value) return "Not logged";
+  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 export default function GerminationFocusPage({ task }: { task: GerminationTask }) {
@@ -91,14 +110,34 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
             </div>
 
             <section className="atlas-task-record-card">
-              <small>Linked Record</small>
+              <small>Bed Context</small>
               <div className="atlas-task-record-section">
-                <span>Spaces</span>
+                <span>Space</span>
                 <strong>{task.objectLabel}</strong>
               </div>
               <div className="atlas-task-record-section">
                 <span>Crop</span>
-                <strong>{task.variety || task.cropLabel}</strong>
+                <strong>{task.variety ? `${task.variety} ${task.cropLabel}` : task.cropLabel}</strong>
+              </div>
+              <div className="atlas-task-record-section">
+                <span>Sown</span>
+                <strong>{prettyDate(task.sownDate || task.plantedDate)}</strong>
+              </div>
+              <div className="atlas-task-record-section">
+                <span>Method</span>
+                <strong>{prettyValue(task.plantingMethod)}</strong>
+              </div>
+              <div className="atlas-task-record-section">
+                <span>Current state</span>
+                <strong>{prettyValue(task.cycleState)}</strong>
+              </div>
+              <div className="atlas-task-record-section">
+                <span>Germination window</span>
+                <strong>{prettyRange(task.expectedGerminationStart, task.expectedGerminationEnd)}</strong>
+              </div>
+              <div className="atlas-task-record-section">
+                <span>Harvest watch</span>
+                <strong>{prettyRange(task.expectedHarvestStart, task.expectedHarvestEnd)}</strong>
               </div>
             </section>
 
