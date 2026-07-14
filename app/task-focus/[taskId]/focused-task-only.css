@@ -2,7 +2,7 @@
   display: none !important;
 }
 
-.atlas-focused-task-only .atlas-task-record-card:not(:has(nav)):not(:has(ol)) {
+.atlas-focused-task-only .atlas-task-ticket-card:not(.atlas-germination-task) .atlas-task-record-card:not(:has(nav)):not(:has(ol)) {
   display: none !important;
 }
 
