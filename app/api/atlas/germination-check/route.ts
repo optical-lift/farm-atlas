@@ -4,7 +4,6 @@ import { atlasSupabase } from "@/lib/atlas/supabase-server";
 export const dynamic = "force-dynamic";
 
 type GerminationAction = "not_yet" | "germinated";
-type StandQuality = "good" | "spotty" | "poor";
 
 type TaskRow = {
   id: string;
@@ -23,8 +22,7 @@ type Body = {
   taskId?: string;
   taskTitle?: string;
   action?: GerminationAction;
-  standQuality?: StandQuality;
-  standNote?: string;
+  spacingInches?: number | string;
 };
 
 function clean(value: unknown) {
@@ -38,13 +36,19 @@ function addDaysIso(dateIso: string, days: number) {
 }
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 
 function positiveInteger(value: unknown) {
   if (typeof value === "number" && Number.isInteger(value) && value > 0) return value;
   if (typeof value === "string" && /^\d+$/.test(value) && Number(value) > 0) return Number(value);
   return null;
+}
+
+function positiveSpacing(value: unknown) {
+  const number = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+  if (!Number.isFinite(number) || number <= 0 || number > 120) return null;
+  return Math.round(number * 100) / 100;
 }
 
 async function getTask(body: Body) {
@@ -102,12 +106,12 @@ async function linkObject(taskId: string, objectId: string | null) {
   if (error && !error.message.toLowerCase().includes("duplicate")) throw new Error(error.message);
 }
 
-async function createNextTask(task: TaskRow, kind: "patch" | "harvest", objectId: string | null, objectLabel: string, profile: Awaited<ReturnType<typeof getProfile>>, sourceSownDate: string) {
+async function createHarvestTask(task: TaskRow, objectId: string | null, objectLabel: string, profile: Awaited<ReturnType<typeof getProfile>>, sourceSownDate: string) {
   const today = todayIso();
   const profileLabel = profile.variety || profile.crop_label;
   const harvestOffset = positiveInteger(profile.days_to_harvest_watch_min);
-  const dueDate = kind === "patch" ? today : harvestOffset ? [addDaysIso(sourceSownDate, harvestOffset), today].sort().reverse()[0] : today;
-  const generatedFrom = kind === "patch" ? "germination_patch" : "germination_harvest_watch";
+  const dueDate = harvestOffset ? [addDaysIso(sourceSownDate, harvestOffset), today].sort().reverse()[0] : today;
+  const generatedFrom = "germination_harvest_watch";
 
   const { data: existing, error: existingError } = await atlasSupabase
     .schema("atlas")
@@ -120,17 +124,15 @@ async function createNextTask(task: TaskRow, kind: "patch" | "harvest", objectId
   if (existingError) throw new Error(existingError.message);
   if (existing?.[0]?.id) return existing[0].id as string;
 
-  const title = kind === "patch" ? `Patch ${profileLabel} stand — ${objectLabel}` : `Start harvest watch — ${profileLabel} — ${objectLabel}`;
   const metadata = {
     task_key: `${generatedFrom}_${task.id}`,
-    task_style: kind === "patch" ? "sowing" : "harvest_watch",
+    task_style: "harvest_watch",
     crop_profile_id: profile.id,
     crop_profile_stable_key: profile.stable_key,
     crop: profile.crop_label,
     variety: profile.variety,
-    crop_cycle_template_enabled: kind === "patch",
-    display_action: kind === "patch" ? "Patch / sow" : "Check",
-    display_subject: kind === "patch" ? `${profileLabel} stand` : `${profileLabel} harvest readiness`,
+    display_action: "Check",
+    display_subject: `${profileLabel} harvest readiness`,
     display_detail: objectLabel,
     collection_zone: objectLabel,
     assigned_to: "Anna",
@@ -146,20 +148,20 @@ async function createNextTask(task: TaskRow, kind: "patch" | "harvest", objectId
     .insert({
       farm_id: task.farm_id,
       zone_id: task.zone_id,
-      title,
-      task_type: kind === "patch" ? "sowing" : "harvest_watch",
+      title: `Start harvest watch — ${profileLabel} — ${objectLabel}`,
+      task_type: "harvest_watch",
       status: "open",
-      priority: kind === "patch" ? "high" : task.priority ?? "normal",
+      priority: task.priority ?? "normal",
       due_date: dueDate,
       generated_from: generatedFrom,
       generated_from_id: task.id,
-      note: kind === "patch" ? `Patch the spotty or poor stand immediately with the same seed variety: ${profileLabel}.` : `Begin checking ${profileLabel} for harvest readiness.`,
+      note: null,
       metadata,
       updated_at: new Date().toISOString(),
     })
     .select("id")
     .single();
-  if (error || !data?.id) throw new Error(error?.message || "Next task creation failed.");
+  if (error || !data?.id) throw new Error(error?.message || "Harvest watch task creation failed.");
   await linkObject(data.id as string, objectId);
   return data.id as string;
 }
@@ -204,7 +206,7 @@ export async function POST(request: NextRequest) {
 
     const [profile, object] = await Promise.all([getProfile(task), getObject(task.id)]);
     const now = new Date().toISOString();
-    const today = now.slice(0, 10);
+    const today = todayIso();
 
     if (action === "not_yet") {
       const baseDate = task.due_date && task.due_date > today ? task.due_date : today;
@@ -213,23 +215,28 @@ export async function POST(request: NextRequest) {
         ...metadata,
         not_yet_count: (positiveInteger(metadata.not_yet_count) ?? 0) + 1,
         last_not_yet_at: now,
-        last_not_yet_note: clean(body.standNote) || null,
       };
       const { error } = await atlasSupabase.schema("atlas").from("tasks").update({ due_date: nextDate, status: "open", metadata: nextMetadata, updated_at: now }).eq("id", task.id);
       if (error) throw new Error(error.message);
       return NextResponse.json({ ok: true, action, taskId: task.id, nextDate });
     }
 
-    const quality = body.standQuality;
-    if (quality !== "good" && quality !== "spotty" && quality !== "poor") {
-      return NextResponse.json({ ok: false, error: "Choose good, spotty, or poor stand." }, { status: 400 });
+    const spacingInches = positiveSpacing(body.spacingInches);
+    if (spacingInches === null) {
+      return NextResponse.json({ ok: false, error: "Enter the observed inches between seedlings." }, { status: 400 });
     }
 
     const sourceSowingTaskId = clean(metadata.source_sowing_task_id);
     const sourceSownDate = clean(metadata.source_sown_date) || clean(metadata.trigger_anchor_date) || today;
-    const standNote = clean(body.standNote);
-    const summary = `${profile.variety || profile.crop_label} germinated in ${object.objectLabel} · ${quality} stand${standNote ? ` · ${standNote}` : ""}`;
-    const nextMetadata = { ...metadata, stand_quality: quality, stand_note: standNote || null, germination_logged_at: now, germination_logged_by: "Anna" };
+    const cropName = profile.variety || profile.crop_label;
+    const summary = `${cropName} germinated in ${object.objectLabel} · ${spacingInches} inches between seedlings`;
+    const nextMetadata = {
+      ...metadata,
+      observed_spacing_inches: spacingInches,
+      spacing_measurement_kind: "average_between_seedlings",
+      germination_logged_at: now,
+      germination_logged_by: "Anna",
+    };
 
     const { error: taskError } = await atlasSupabase.schema("atlas").from("tasks").update({ status: "done", completed_at: now, metadata: nextMetadata, updated_at: now }).eq("id", task.id);
     if (taskError) throw new Error(taskError.message);
@@ -247,33 +254,56 @@ export async function POST(request: NextRequest) {
       due_date: task.due_date,
       priority: task.priority,
       source: "atlas_germination_workflow",
-      metadata: { stand_quality: quality, object_id: object.objectId, crop_profile_id: profile.id },
+      metadata: { observed_spacing_inches: spacingInches, object_id: object.objectId, crop_profile_id: profile.id },
     });
 
     await atlasSupabase.schema("atlas").from("field_logs").insert({
       farm_id: task.farm_id,
       log_date: today,
-      action_types: ["germination_check", "stand_logged", quality],
+      action_types: ["germination_check", "spacing_logged"],
       summary_sentence: summary,
-      note: standNote || null,
+      note: null,
       source: "atlas_germination_workflow",
-      metadata: { task_id: task.id, source_sowing_task_id: sourceSowingTaskId || null, object_id: object.objectId, crop_profile_id: profile.id, stand_quality: quality },
+      metadata: {
+        task_id: task.id,
+        source_sowing_task_id: sourceSowingTaskId || null,
+        object_id: object.objectId,
+        crop_profile_id: profile.id,
+        observed_spacing_inches: spacingInches,
+        spacing_measurement_kind: "average_between_seedlings",
+      },
     });
 
     if (object.objectId) {
       const { data: cycleRows } = await atlasSupabase.schema("atlas").from("crop_cycles").select("id, metadata").eq("object_id", object.objectId).eq("crop_profile_id", profile.id).eq("lifecycle_status", "active").order("created_at", { ascending: false }).limit(1);
       if (cycleRows?.[0]?.id) {
-        await atlasSupabase.schema("atlas").from("crop_cycles").update({ germination_checked_date: today, cycle_state: "germinated", metadata: { ...(cycleRows[0].metadata as Record<string, unknown> ?? {}), stand_quality: quality, stand_note: standNote || null }, updated_at: now }).eq("id", cycleRows[0].id);
+        await atlasSupabase.schema("atlas").from("crop_cycles").update({
+          germination_checked_date: today,
+          cycle_state: "germinated",
+          metadata: {
+            ...((cycleRows[0].metadata as Record<string, unknown>) ?? {}),
+            observed_spacing_inches: spacingInches,
+            spacing_measurement_kind: "average_between_seedlings",
+          },
+          updated_at: now,
+        }).eq("id", cycleRows[0].id);
       }
       const { data: stateRows } = await atlasSupabase.schema("atlas").from("object_state").select("metadata").eq("object_id", object.objectId).limit(1);
-      await atlasSupabase.schema("atlas").from("object_state").update({ last_checked_at: today, metadata: { ...(stateRows?.[0]?.metadata as Record<string, unknown> ?? {}), germination_status: "germinated", stand_quality: quality, stand_note: standNote || null, germination_logged_at: now }, updated_at: now }).eq("object_id", object.objectId);
+      await atlasSupabase.schema("atlas").from("object_state").update({
+        last_checked_at: today,
+        metadata: {
+          ...((stateRows?.[0]?.metadata as Record<string, unknown>) ?? {}),
+          germination_status: "germinated",
+          observed_spacing_inches: spacingInches,
+          spacing_measurement_kind: "average_between_seedlings",
+          germination_logged_at: now,
+        },
+        updated_at: now,
+      }).eq("object_id", object.objectId);
     }
 
-    const nextTaskId = quality === "good"
-      ? await createNextTask(task, "harvest", object.objectId, object.objectLabel, profile, sourceSownDate)
-      : await createNextTask(task, "patch", object.objectId, object.objectLabel, profile, sourceSownDate);
-
-    return NextResponse.json({ ok: true, action, taskId: task.id, standQuality: quality, nextTaskId });
+    const nextTaskId = await createHarvestTask(task, object.objectId, object.objectLabel, profile, sourceSownDate);
+    return NextResponse.json({ ok: true, action, taskId: task.id, spacingInches, nextTaskId });
   } catch (error) {
     return NextResponse.json({ ok: false, error: "Germination check update failed.", details: error instanceof Error ? error.message : "Unknown error." }, { status: 500 });
   }
