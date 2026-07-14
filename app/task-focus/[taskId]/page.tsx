@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { atlasSupabase } from "@/lib/atlas/supabase-server";
 import GerminationFocusPage from "./GerminationFocusPage";
 import GenericFocusPage from "./GenericFocusPage";
+import SowingFocusPage, { type ProductionSowingTask } from "./SowingFocusPage";
 import "./focused-task-only.css";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +70,11 @@ function isGerminationTask(task: TaskRow) {
   return task.task_type === "germination_check" || text(metadata.task_style) === "germination_check" || text(metadata.milestone) === "germination_check";
 }
 
+function isProductionSowingTask(task: TaskRow) {
+  const metadata = task.metadata ?? {};
+  return task.task_type === "production_sowing" && Boolean(text(metadata.production_succession_id));
+}
+
 async function loadTask(taskId: string) {
   const { data, error } = await atlasSupabase
     .schema("atlas")
@@ -93,6 +99,61 @@ async function loadObjectLabel(taskId: string) {
 
   const row = data as unknown as { growing_objects?: { label?: string } | null } | null;
   return text(row?.growing_objects?.label) || "Elm Farm";
+}
+
+async function loadProductionSowingTask(task: TaskRow): Promise<ProductionSowingTask | null> {
+  const successionId = text(task.metadata?.production_succession_id);
+  if (!successionId) return null;
+
+  const { data: succession, error: successionError } = await atlasSupabase
+    .schema("atlas")
+    .from("production_successions")
+    .select("id, production_plan_id, sequence_number, planned_window_start, planned_window_end, late_window_end, skip_after_date, projected_germination_start, projected_germination_end, projected_harvest_start, projected_harvest_end, projected_clear_date, state")
+    .eq("id", successionId)
+    .limit(1)
+    .maybeSingle();
+  if (successionError) throw new Error(successionError.message);
+  if (!succession) return null;
+
+  const { data: plan, error: planError } = await atlasSupabase
+    .schema("atlas")
+    .from("production_plans")
+    .select("id, crop_profile_id, succession_count, missed_strategy, protect_final_succession, final_biological_sow_date, intended_uses")
+    .eq("id", succession.production_plan_id)
+    .single();
+  if (planError) throw new Error(planError.message);
+
+  const [{ data: profile, error: profileError }, { data: next, error: nextError }] = await Promise.all([
+    atlasSupabase.schema("atlas").from("crop_profiles").select("crop_label, variety").eq("id", plan.crop_profile_id).single(),
+    atlasSupabase.schema("atlas").from("production_successions").select("planned_window_start, planned_window_end").eq("production_plan_id", succession.production_plan_id).eq("sequence_number", succession.sequence_number + 1).limit(1).maybeSingle(),
+  ]);
+  if (profileError) throw new Error(profileError.message);
+  if (nextError) throw new Error(nextError.message);
+
+  return {
+    taskId: task.id,
+    successionId: succession.id,
+    cropLabel: text(profile.crop_label) || text(task.metadata?.crop_label) || "Crop",
+    variety: text(profile.variety) || text(task.metadata?.variety) || null,
+    sequenceNumber: succession.sequence_number,
+    successionCount: plan.succession_count,
+    plannedWindowStart: succession.planned_window_start,
+    plannedWindowEnd: succession.planned_window_end,
+    lateWindowEnd: succession.late_window_end,
+    skipAfterDate: succession.skip_after_date,
+    nextWindowStart: next?.planned_window_start ?? null,
+    nextWindowEnd: next?.planned_window_end ?? null,
+    finalBiologicalSowDate: plan.final_biological_sow_date,
+    projectedGerminationStart: succession.projected_germination_start,
+    projectedGerminationEnd: succession.projected_germination_end,
+    projectedHarvestStart: succession.projected_harvest_start,
+    projectedHarvestEnd: succession.projected_harvest_end,
+    projectedClearDate: succession.projected_clear_date,
+    state: succession.state,
+    missedStrategy: plan.missed_strategy as "skip" | "merge" | "preserve",
+    protectFinalSuccession: plan.protect_final_succession,
+    intendedUses: Array.isArray(plan.intended_uses) ? plan.intended_uses : [],
+  };
 }
 
 async function loadCropContext(task: TaskRow): Promise<CropContext> {
@@ -171,6 +232,11 @@ export default async function TaskFocusPage({ params }: { params: Promise<{ task
   const { taskId } = await params;
   const task = await loadTask(taskId);
   if (!task) notFound();
+
+  if (isProductionSowingTask(task)) {
+    const productionTask = await loadProductionSowingTask(task);
+    if (productionTask) return <SowingFocusPage task={productionTask} />;
+  }
 
   if (!isGerminationTask(task)) {
     return <GenericFocusPage taskId={task.id} />;
