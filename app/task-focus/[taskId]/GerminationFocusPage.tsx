@@ -57,6 +57,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
   const [message, setMessage] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const target = task.targetSpacingInches;
+  const isLettuceContainer = task.cropLabel.toLowerCase().includes("lettuce");
 
   useEffect(() => {
     let active = true;
@@ -128,7 +129,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
               <div className="atlas-task-record-section"><span>Sown</span><strong>{prettyDate(task.sownDate || task.plantedDate)}</strong></div>
               <div className="atlas-task-record-section"><span>Method</span><strong>{prettyValue(task.plantingMethod)}</strong></div>
               <div className="atlas-task-record-section"><span>Current state</span><strong>{prettyValue(task.cycleState)}</strong></div>
-              <div className="atlas-task-record-section"><span>Target spacing</span><strong>{target ? `${target} inches` : "Not logged"}</strong></div>
+              <div className="atlas-task-record-section"><span>{isLettuceContainer ? "Target per pot" : "Target spacing"}</span><strong>{isLettuceContainer ? "1 healthy seedling" : target ? `${target} inches` : "Not logged"}</strong></div>
               <div className="atlas-task-record-section"><span>Germination window</span><strong>{prettyRange(task.expectedGerminationStart, task.expectedGerminationEnd)}</strong></div>
               <div className="atlas-task-record-section"><span>Harvest watch</span><strong>{prettyRange(task.expectedHarvestStart, task.expectedHarvestEnd)}</strong></div>
             </section>
@@ -142,13 +143,13 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
               ) : (
                 <div className="atlas-germination-inline-log">
                   <div className="atlas-germination-check-head">
-                    <span>{cropName(task)} spacing</span>
-                    <strong>{target ? `How does the stand compare with the ${target}-inch target?` : "How does the stand look?"}</strong>
+                    <span>{isLettuceContainer ? `${cropName(task)} pots` : `${cropName(task)} spacing`}</span>
+                    <strong>{isLettuceContainer ? "How did the seven lettuce pots germinate?" : target ? `How does the stand compare with the ${target}-inch target?` : "How does the stand look?"}</strong>
                   </div>
                   <div className="atlas-germination-actions atlas-germination-stand-actions">
-                    <button type="button" className="good" disabled={Boolean(saving)} onClick={() => void submit("germinated", "thin")}>{saving === "thin" ? "Saving…" : `Great · closer than ${target ?? "target"} in · Thin`}</button>
-                    <button type="button" className="spotty" disabled={Boolean(saving)} onClick={() => void submit("germinated", "on_target")}>{saving === "on_target" ? "Saving…" : `Good · about ${target ?? "target"} in · No action`}</button>
-                    <button type="button" className="poor" disabled={Boolean(saving)} onClick={() => void submit("germinated", "patch")}>{saving === "patch" ? "Saving…" : `Poor · wider than ${target ?? "target"} in · Patch seed`}</button>
+                    <button type="button" className="good" disabled={Boolean(saving)} onClick={() => void submit("germinated", "thin")}>{saving === "thin" ? "Saving…" : isLettuceContainer ? "Great · multiple seedlings per pot · Thin" : `Great · closer than ${target ?? "target"} in · Thin`}</button>
+                    <button type="button" className="spotty" disabled={Boolean(saving)} onClick={() => void submit("germinated", "on_target")}>{saving === "on_target" ? "Saving…" : isLettuceContainer ? "Good · one healthy seedling per pot · No action" : `Good · about ${target ?? "target"} in · No action`}</button>
+                    <button type="button" className="poor" disabled={Boolean(saving)} onClick={() => void submit("germinated", "patch")}>{saving === "patch" ? "Saving…" : isLettuceContainer ? "Poor · empty or failed pots · Reseed" : `Poor · wider than ${target ?? "target"} in · Patch seed`}</button>
                     <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => setOutcomeOpen(false)}>Back</button>
                   </div>
                 </div>
