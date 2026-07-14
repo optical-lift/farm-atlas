@@ -73,14 +73,7 @@ function isDoneTask(task: AtlasTaskCard) {
 }
 
 function isKidChore(task: AtlasTaskCard) {
-  const joined = [
-    task.task_type,
-    task.title,
-    text(meta(task, "work_route")),
-    text(meta(task, "work_rhythm")),
-    text(meta(task, "display_action")),
-    text(meta(task, "collection_label")),
-  ].filter(Boolean).join(" ").toLowerCase();
+  const joined = [task.task_type, task.title, text(meta(task, "work_route")), text(meta(task, "work_rhythm")), text(meta(task, "display_action")), text(meta(task, "collection_label"))].filter(Boolean).join(" ").toLowerCase();
   return joined.includes("kid chore") || joined.includes("kid_chore") || joined.includes("feed chickens");
 }
 
@@ -94,8 +87,13 @@ function collectionZone(task: AtlasTaskCard) {
   return text(meta(task, "collection_zone")) || atlasTaskDisplay(task).location || "Elm Farm";
 }
 
-function taskHref(task: AtlasTaskCard) {
-  return `/task?taskId=${encodeURIComponent(task.task_id)}`;
+function taskHref(task: AtlasTaskCard, returnTo?: string) {
+  const suffix = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : "";
+  return `/task-focus/${encodeURIComponent(task.task_id)}${suffix}`;
+}
+
+function routeHref(dateIso: string, key: RouteKey) {
+  return `/day?date=${encodeURIComponent(dateIso)}&route=${encodeURIComponent(key)}`;
 }
 
 function isExtraCredit(task: AtlasTaskCard) {
@@ -104,10 +102,10 @@ function isExtraCredit(task: AtlasTaskCard) {
   return mode === "extra_credit" || label.includes("extra credit");
 }
 
-function TaskCard({ task, complete = false, overdue = false }: { task: AtlasTaskCard; complete?: boolean; overdue?: boolean }) {
+function TaskCard({ task, complete = false, overdue = false, returnTo }: { task: AtlasTaskCard; complete?: boolean; overdue?: boolean; returnTo?: string }) {
   const display = atlasTaskDisplay(task);
   return (
-    <Link className={`atlas-day-task-card${complete ? " complete" : ""}${overdue ? " atlas-day-overdue-task-card" : ""}${atlasIsCropCycleTask(task) ? " atlas-crop-cycle-task-card" : ""}`} href={taskHref(task)}>
+    <Link className={`atlas-day-task-card${complete ? " complete" : ""}${overdue ? " atlas-day-overdue-task-card" : ""}${atlasIsCropCycleTask(task) ? " atlas-crop-cycle-task-card" : ""}`} href={taskHref(task, returnTo)}>
       {overdue ? <b className="atlas-day-overdue-badge">Overdue</b> : null}
       <strong>{display.title}</strong>
       <span>{overdue ? `Due ${prettyDate(task.due_date ?? "")}` : complete ? "Complete" : `${atlasWorkOrderLabel(task)} · ${collectionZone(task)}`}</span>
@@ -138,6 +136,7 @@ function ViewToggle({ viewMode, onChange }: { viewMode: DayViewMode; onChange: (
 
 export default function AtlasDayPage() {
   const [dateIso, setDateIso] = useState(todayIso());
+  const [routeFilter, setRouteFilter] = useState<RouteKey | null>(null);
   const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +144,11 @@ export default function AtlasDayPage() {
   const [viewMode, setViewMode] = useState<DayViewMode>("work_order");
 
   useEffect(() => {
-    setDateIso(new URLSearchParams(window.location.search).get("date") || todayIso());
+    const params = new URLSearchParams(window.location.search);
+    setDateIso(params.get("date") || todayIso());
+    const requestedRoute = params.get("route");
+    setRouteFilter(requestedRoute && routeOrder.includes(requestedRoute as RouteKey) ? requestedRoute as RouteKey : null);
+
     async function load() {
       try {
         setLoading(true);
@@ -174,17 +177,13 @@ export default function AtlasDayPage() {
   const dayTasks = useMemo(() => tasks.filter(isDashboardWork).filter((task) => task.due_date === dateIso).sort((a, b) => atlasWorkOrderSortValue(a).localeCompare(atlasWorkOrderSortValue(b))), [dateIso, tasks]);
   const overdueTasks = useMemo(() => {
     if (dateIso !== todayIso()) return [];
-    return tasks
-      .filter(isDashboardWork)
-      .filter((task) => Boolean(task.due_date && task.due_date < dateIso))
-      .filter((task) => !isKidChore(task) && !isOwnerOnlyTask(task) && !isExtraCredit(task))
-      .filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task))
-      .sort((a, b) => `${a.due_date ?? ""}-${atlasWorkOrderSortValue(a)}`.localeCompare(`${b.due_date ?? ""}-${atlasWorkOrderSortValue(b)}`));
+    return tasks.filter(isDashboardWork).filter((task) => Boolean(task.due_date && task.due_date < dateIso)).filter((task) => !isKidChore(task) && !isOwnerOnlyTask(task) && !isExtraCredit(task)).filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task)).sort((a, b) => `${a.due_date ?? ""}-${atlasWorkOrderSortValue(a)}`.localeCompare(`${b.due_date ?? ""}-${atlasWorkOrderSortValue(b)}`));
   }, [dateIso, tasks]);
   const requiredTasks = useMemo(() => dayTasks.filter((task) => !isExtraCredit(task)), [dayTasks]);
   const standaloneTasks = useMemo(() => requiredTasks.filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task)), [requiredTasks]);
   const extraCreditTasks = useMemo(() => dayTasks.filter(isExtraCredit), [dayTasks]);
   const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask), [allDayTasks]);
+  const filteredTasks = useMemo(() => routeFilter ? standaloneTasks.filter((task) => atlasRouteKeyForTask(task) === routeFilter) : standaloneTasks, [routeFilter, standaloneTasks]);
 
   const mowingCollection = useMemo(() => atlasBuildMowingCollectionSummary(tasks, dateIso), [dateIso, tasks]);
   const weedingCollection = useMemo(() => atlasBuildWeedingCollectionSummary(tasks, dateIso), [dateIso, tasks]);
@@ -198,7 +197,6 @@ export default function AtlasDayPage() {
       const routeTasks = standaloneTasks.filter((task) => atlasRouteKeyForTask(task) === key);
       return { key, collection: collection && collection.dueCount > 0 ? collection : null, tasks: routeTasks };
     }).filter((entry) => entry.collection || entry.tasks.length);
-
     return entries.sort((a, b) => {
       if (a.key === "weed") return -1;
       if (b.key === "weed") return 1;
@@ -208,7 +206,8 @@ export default function AtlasDayPage() {
     });
   }, [mowingCollection, standaloneTasks, weedingCollection]);
 
-  const zones = useMemo(() => Array.from(new Set(standaloneTasks.map(collectionZone))).sort(), [standaloneTasks]);
+  const zones = useMemo(() => Array.from(new Set(filteredTasks.map(collectionZone))).sort(), [filteredTasks]);
+  const returnTo = routeFilter ? routeHref(dateIso, routeFilter) : `/day?date=${encodeURIComponent(dateIso)}`;
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
@@ -222,41 +221,50 @@ export default function AtlasDayPage() {
         <div className="atlas-task-page-body">
           <section className="atlas-task-page-section atlas-route-collection atlas-day-browse">
             <div className="atlas-day-browse-head">
-              <Link href="/" className="atlas-route-back atlas-day-back">← Week</Link>
-              <div className="atlas-day-browse-title-row"><span>{dayOnly(dateIso)}</span><strong>{loading ? "Loading" : `${dayTasks.length} open · ${overdueTasks.length} overdue · ${doneDayTasks.length} done`}</strong></div>
-              <p>{loading ? "Loading farm work" : `${standaloneTasks.length} regular tasks · ${collectionCount} work collections`}</p>
+              <Link href={routeFilter ? `/day?date=${encodeURIComponent(dateIso)}` : "/"} className="atlas-route-back atlas-day-back">{routeFilter ? "← Day plan" : "← Week"}</Link>
+              <div className="atlas-day-browse-title-row"><span>{routeFilter ? routeLabels[routeFilter] : dayOnly(dateIso)}</span><strong>{loading ? "Loading" : `${dayTasks.length} open · ${overdueTasks.length} overdue · ${doneDayTasks.length} done`}</strong></div>
+              <p>{loading ? "Loading farm work" : routeFilter ? `${filteredTasks.length} ${filteredTasks.length === 1 ? "task" : "tasks"} in this collection` : `${standaloneTasks.length} regular tasks · ${collectionCount} work collections`}</p>
             </div>
 
             {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
 
-            <article className="atlas-day-route-hero">
-              <div className="atlas-day-route-hero-head"><div><span>Day plan</span><strong>{prettyDate(dateIso)}</strong></div><em className="atlas-day-route-count-pill">{loading ? "…" : standaloneTasks.length + collectionCount + overdueTasks.length}</em></div>
-              <div className="atlas-day-route-grid">
-                {routeCards.length ? routeCards.map((entry) => {
-                  if (entry.collection) return <Link key={entry.key} className="atlas-day-route-box" href={entry.collection.href}><strong>{entry.collection.label}</strong><span>{entry.collection.dueCount} due</span><em>{entry.collection.preview}</em></Link>;
-                  const first = entry.tasks[0];
-                  return <Link key={entry.key} className="atlas-day-route-box" href={taskHref(first)}><strong>{routeLabels[entry.key as RouteKey]}</strong><span>{entry.tasks.length} {entry.tasks.length === 1 ? "task" : "tasks"}</span><em>{entry.tasks.slice(0, 2).map((task) => atlasTaskDisplay(task).title).join(" · ")}</em></Link>;
-                }) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div>}
-              </div>
-            </article>
-
-            {overdueTasks.length ? (
-              <article className="atlas-day-route-group atlas-day-overdue-group" aria-label="Overdue carry-forward work">
-                <div className="atlas-day-overdue-group-head"><div><span>Carry forward</span><h3>Overdue</h3></div><b>{overdueTasks.length}</b></div>
-                <p>These unfinished tasks remain ahead of today’s regular work.</p>
-                <div className="atlas-day-work-order-list">{overdueTasks.map((task) => <TaskCard task={task} overdue key={task.task_id} />)}</div>
+            {!routeFilter ? (
+              <article className="atlas-day-route-hero">
+                <div className="atlas-day-route-hero-head"><div><span>Day plan</span><strong>{prettyDate(dateIso)}</strong></div><em className="atlas-day-route-count-pill">{loading ? "…" : standaloneTasks.length + collectionCount + overdueTasks.length}</em></div>
+                <div className="atlas-day-route-grid">
+                  {routeCards.length ? routeCards.map((entry) => {
+                    if (entry.collection) return <Link key={entry.key} className="atlas-day-route-box" href={entry.collection.href}><strong>{entry.collection.label}</strong><span>{entry.collection.dueCount} due</span><em>{entry.collection.preview}</em></Link>;
+                    return <Link key={entry.key} className="atlas-day-route-box" href={routeHref(dateIso, entry.key)}><strong>{routeLabels[entry.key]}</strong><span>{entry.tasks.length} {entry.tasks.length === 1 ? "task" : "tasks"}</span><em>{entry.tasks.slice(0, 2).map((task) => atlasTaskDisplay(task).title).join(" · ")}</em></Link>;
+                  }) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div>}
+                </div>
               </article>
             ) : null}
 
-            <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+            {!routeFilter && overdueTasks.length ? (
+              <article className="atlas-day-route-group atlas-day-overdue-group" aria-label="Overdue carry-forward work">
+                <div className="atlas-day-overdue-group-head"><div><span>Carry forward</span><h3>Overdue</h3></div><b>{overdueTasks.length}</b></div>
+                <p>These unfinished tasks remain ahead of today’s regular work.</p>
+                <div className="atlas-day-work-order-list">{overdueTasks.map((task) => <TaskCard task={task} overdue key={task.task_id} returnTo={returnTo} />)}</div>
+              </article>
+            ) : null}
+
+            {!routeFilter ? <ViewToggle viewMode={viewMode} onChange={setViewMode} /> : null}
 
             <div className="atlas-day-task-groups">
-              {viewMode === "work_order" ? (
+              {routeFilter ? (
+                <article className="atlas-day-route-group atlas-day-work-order-group">
+                  <h3>{routeLabels[routeFilter]}</h3>
+                  <div className="atlas-day-work-order-list">
+                    {filteredTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}
+                    {!filteredTasks.length ? <div className="atlas-day-route-empty">No open tasks in this collection.</div> : null}
+                  </div>
+                </article>
+              ) : viewMode === "work_order" ? (
                 <article className="atlas-day-route-group atlas-day-work-order-group">
                   <h3>Work Order</h3>
                   <div className="atlas-day-work-order-list">
                     {showWeedingCollection && weedingCollection ? <WorkCollectionCard collection={weedingCollection} /> : null}
-                    {standaloneTasks.map((task) => <TaskCard task={task} key={task.task_id} />)}
+                    {standaloneTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}
                     {showMowingCollection && mowingCollection ? <WorkCollectionCard collection={mowingCollection} /> : null}
                     {!collectionCount && !standaloneTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}
                   </div>
@@ -264,13 +272,13 @@ export default function AtlasDayPage() {
               ) : (
                 <>
                   {showWeedingCollection && weedingCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{weedingCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={weedingCollection} /></div></article> : null}
-                  {zones.map((zone) => <article className="atlas-day-route-group" key={zone}><h3>{zone}</h3><div className="atlas-day-zone-group">{standaloneTasks.filter((task) => collectionZone(task) === zone).map((task) => <TaskCard task={task} key={task.task_id} />)}</div></article>)}
+                  {zones.map((zone) => <article className="atlas-day-route-group" key={zone}><h3>{zone}</h3><div className="atlas-day-zone-group">{filteredTasks.filter((task) => collectionZone(task) === zone).map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}</div></article>)}
                   {showMowingCollection && mowingCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{mowingCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={mowingCollection} /></div></article> : null}
                 </>
               )}
 
-              {extraCreditTasks.length ? <article className="atlas-day-route-group atlas-day-extra-credit-group"><h3>Extra Credit</h3><div className="atlas-day-zone-group">{extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} />)}</div></article> : null}
-              {doneDayTasks.length ? <article className="atlas-day-route-group atlas-day-complete-group"><h3>Complete</h3><div className="atlas-day-zone-group">{doneDayTasks.map((task) => <TaskCard task={task} complete key={task.task_id} />)}</div></article> : null}
+              {!routeFilter && extraCreditTasks.length ? <article className="atlas-day-route-group atlas-day-extra-credit-group"><h3>Extra Credit</h3><div className="atlas-day-zone-group">{extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}</div></article> : null}
+              {!routeFilter && doneDayTasks.length ? <article className="atlas-day-route-group atlas-day-complete-group"><h3>Complete</h3><div className="atlas-day-zone-group">{doneDayTasks.map((task) => <TaskCard task={task} complete key={task.task_id} returnTo={returnTo} />)}</div></article> : null}
             </div>
           </section>
         </div>
