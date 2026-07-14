@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import "./production.css";
+import "./production-rules.css";
 
 type Succession = {
   id: string;
