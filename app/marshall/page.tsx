@@ -55,7 +55,7 @@ function taskSortValue(task: AtlasTaskCard) {
 }
 
 function taskHref(task: AtlasTaskCard) {
-  return `/task?scope=marshall&taskId=${encodeURIComponent(task.task_id)}`;
+  return `/task-focus/${encodeURIComponent(task.task_id)}?returnTo=${encodeURIComponent("/marshall")}`;
 }
 
 function dayRange() {
