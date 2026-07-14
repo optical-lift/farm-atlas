@@ -14,6 +14,25 @@ type TaskRow = {
   metadata: Record<string, unknown> | null;
 };
 
+type CycleRow = {
+  crop_profile_id?: string | null;
+  crop_label?: string | null;
+  variety?: string | null;
+  sown_date?: string | null;
+  planted_date?: string | null;
+  cycle_state?: string | null;
+  expected_germination_start?: string | null;
+  expected_germination_end?: string | null;
+  expected_harvest_watch_start?: string | null;
+  expected_harvest_watch_end?: string | null;
+  planting_claim_id?: string | null;
+};
+
+type ProfileRow = {
+  crop_label?: string | null;
+  variety?: string | null;
+};
+
 type CropContext = {
   cropLabel: string;
   variety: string | null;
@@ -81,20 +100,7 @@ async function loadCropContext(task: TaskRow): Promise<CropContext> {
     }
   }
 
-  let cycle: {
-    crop_profile_id?: string | null;
-    crop_label?: string | null;
-    variety?: string | null;
-    sown_date?: string | null;
-    planted_date?: string | null;
-    cycle_state?: string | null;
-    expected_germination_start?: string | null;
-    expected_germination_end?: string | null;
-    expected_harvest_watch_start?: string | null;
-    expected_harvest_watch_end?: string | null;
-    planting_claim_id?: string | null;
-  } | null = null;
-
+  let cycle: CycleRow | null = null;
   if (cycleId) {
     const { data } = await atlasSupabase
       .schema("atlas")
@@ -103,11 +109,11 @@ async function loadCropContext(task: TaskRow): Promise<CropContext> {
       .eq("id", cycleId)
       .limit(1)
       .maybeSingle();
-    cycle = data as typeof cycle;
+    cycle = data as CycleRow | null;
     profileId = profileId || text(cycle?.crop_profile_id);
   }
 
-  let profile: { crop_label?: string | null; variety?: string | null } | null = null;
+  let profile: ProfileRow | null = null;
   if (profileId) {
     const { data } = await atlasSupabase
       .schema("atlas")
@@ -116,7 +122,7 @@ async function loadCropContext(task: TaskRow): Promise<CropContext> {
       .eq("id", profileId)
       .limit(1)
       .maybeSingle();
-    profile = data as typeof profile;
+    profile = data as ProfileRow | null;
   }
 
   let plantingMethod: string | null = null;
