@@ -2,6 +2,10 @@
   display: none !important;
 }
 
+.atlas-focused-task-only .atlas-task-record-card:not(:has(nav)):not(:has(ol)) {
+  display: none !important;
+}
+
 .atlas-focused-task-only .atlas-task-page-body {
   padding-bottom: 1.5rem;
 }
