@@ -18,6 +18,8 @@ type Succession = {
   projected_harvest_end: string | null;
   projected_clear_date: string | null;
   state: string;
+  sow_task_id: string | null;
+  crop_cycle_id: string | null;
 };
 
 type Plan = {
@@ -176,9 +178,11 @@ export default function ProductionCalendarPage() {
                       <span>Clear bed <b>{pretty(succession.projected_clear_date)}</b></span>
                     </div>
                     <div className="atlas-production-actions">
-                      <button type="button" disabled={saving} onClick={() => void patch({ action: "set_succession_state", successionId: succession.id, state: "skipped" })}>Skip</button>
-                      <button type="button" disabled={saving} onClick={() => void patch({ action: "set_succession_state", successionId: succession.id, state: "sown", actualSowDate: todayIso() })}>Mark sown today</button>
+                      {succession.sow_task_id ? <Link href={`/task-focus/${encodeURIComponent(succession.sow_task_id)}?returnTo=${encodeURIComponent("/production")}`}>Open sowing task</Link> : null}
+                      <button type="button" disabled={saving || succession.state === "sown"} onClick={() => void patch({ action: "set_succession_state", successionId: succession.id, state: "skipped" })}>Skip</button>
+                      <button type="button" disabled={saving || succession.state === "sown"} onClick={() => void patch({ action: "set_succession_state", successionId: succession.id, state: "sown", actualSowDate: todayIso() })}>{succession.state === "sown" ? "Sown" : "Mark sown today"}</button>
                     </div>
+                    {succession.crop_cycle_id ? <p className="atlas-production-linked-state">Linked to a live crop cycle.</p> : null}
                   </article>
                 );
               })}
