@@ -31,6 +31,7 @@ type CycleRow = {
 type ProfileRow = {
   crop_label?: string | null;
   variety?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 type CropContext = {
@@ -44,10 +45,23 @@ type CropContext = {
   expectedGerminationEnd: string | null;
   expectedHarvestStart: string | null;
   expectedHarvestEnd: string | null;
+  targetSpacingInches: number | null;
 };
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function spacingFromProfile(metadata: Record<string, unknown> | null | undefined) {
+  const direct = metadata?.target_spacing_inches;
+  if (typeof direct === "number" && Number.isFinite(direct) && direct > 0) return direct;
+  const lines = Array.isArray(metadata?.spacing_lines) ? metadata.spacing_lines : [];
+  for (const line of lines) {
+    if (typeof line !== "string") continue;
+    const match = line.match(/(\d+(?:\.\d+)?)\s*(?:in|inch|inches)\b/i);
+    if (match) return Number(match[1]);
+  }
+  return null;
 }
 
 function isGerminationTask(task: TaskRow) {
@@ -118,7 +132,7 @@ async function loadCropContext(task: TaskRow): Promise<CropContext> {
     const { data } = await atlasSupabase
       .schema("atlas")
       .from("crop_profiles")
-      .select("crop_label, variety")
+      .select("crop_label, variety, metadata")
       .eq("id", profileId)
       .limit(1)
       .maybeSingle();
@@ -149,6 +163,7 @@ async function loadCropContext(task: TaskRow): Promise<CropContext> {
     expectedGerminationEnd: text(cycle?.expected_germination_end) || null,
     expectedHarvestStart: text(cycle?.expected_harvest_watch_start) || null,
     expectedHarvestEnd: text(cycle?.expected_harvest_watch_end) || null,
+    targetSpacingInches: spacingFromProfile(profile?.metadata),
   };
 }
 
@@ -180,6 +195,7 @@ export default async function TaskFocusPage({ params }: { params: Promise<{ task
           expectedGerminationEnd: crop.expectedGerminationEnd,
           expectedHarvestStart: crop.expectedHarvestStart,
           expectedHarvestEnd: crop.expectedHarvestEnd,
+          targetSpacingInches: crop.targetSpacingInches,
         }}
       />
     </div>
