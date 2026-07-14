@@ -58,7 +58,7 @@ function taskSortValue(task: AtlasTaskCard) {
 }
 
 function taskHref(task: AtlasTaskCard) {
-  return `/task?scope=children&taskId=${encodeURIComponent(task.task_id)}`;
+  return `/task-focus/${encodeURIComponent(task.task_id)}?returnTo=${encodeURIComponent("/children")}`;
 }
 
 function childSafeLabel(task: AtlasTaskCard) {
