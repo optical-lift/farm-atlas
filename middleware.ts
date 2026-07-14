@@ -9,6 +9,31 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(destination);
   }
 
+  const taskId = url.pathname === "/task" ? url.searchParams.get("taskId") : null;
+  if (taskId) {
+    const destination = new URL(`/task-focus/${encodeURIComponent(taskId)}`, request.url);
+
+    for (const [key, value] of url.searchParams.entries()) {
+      if (key !== "taskId") destination.searchParams.append(key, value);
+    }
+
+    if (!destination.searchParams.has("returnTo")) {
+      const referrer = request.headers.get("referer");
+      if (referrer) {
+        try {
+          const referrerUrl = new URL(referrer);
+          if (referrerUrl.origin === url.origin) {
+            destination.searchParams.set("returnTo", `${referrerUrl.pathname}${referrerUrl.search}${referrerUrl.hash}`);
+          }
+        } catch {
+          // Ignore malformed referrers.
+        }
+      }
+    }
+
+    return NextResponse.redirect(destination);
+  }
+
   const isBareTaskPage =
     url.pathname === "/task" &&
     !url.searchParams.has("taskId") &&
