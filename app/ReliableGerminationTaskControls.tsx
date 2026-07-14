@@ -59,6 +59,14 @@ function restoreGenericControls(card: HTMLElement) {
   }
 }
 
+function applyGerminationCard(card: HTMLElement, task: GerminationTask) {
+  hideGenericControls(card);
+  const kicker = card.querySelector<HTMLElement>(".atlas-task-page-kicker span");
+  const title = card.querySelector<HTMLElement>("h1");
+  if (kicker) kicker.textContent = "Check germination";
+  if (title) title.textContent = `${task.cropLabel} · ${task.objectLabel}`.toUpperCase();
+}
+
 export default function ReliableGerminationTaskControls() {
   const pathname = usePathname();
   const [task, setTask] = useState<GerminationTask | null>(null);
@@ -74,6 +82,7 @@ export default function ReliableGerminationTaskControls() {
 
     let stopped = false;
     let lookupStarted = false;
+    let recognizedTask: GerminationTask | null = null;
 
     async function mount() {
       if (stopped) return;
@@ -91,6 +100,11 @@ export default function ReliableGerminationTaskControls() {
       }
       setHost(nextHost);
 
+      if (recognizedTask) {
+        applyGerminationCard(card, recognizedTask);
+        return;
+      }
+
       if (lookupStarted) return;
       lookupStarted = true;
 
@@ -107,11 +121,8 @@ export default function ReliableGerminationTaskControls() {
           return;
         }
 
-        hideGenericControls(card);
-        const kicker = card.querySelector<HTMLElement>(".atlas-task-page-kicker span");
-        const title = card.querySelector<HTMLElement>("h1");
-        if (kicker) kicker.textContent = "Check germination";
-        if (title) title.textContent = `${data.task.cropLabel} · ${data.task.objectLabel}`.toUpperCase();
+        recognizedTask = data.task;
+        applyGerminationCard(card, data.task);
         setTask(data.task);
       } catch (error) {
         restoreGenericControls(card);
