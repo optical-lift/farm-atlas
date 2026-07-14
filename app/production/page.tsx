@@ -38,8 +38,30 @@ type Plan = {
   protect_final_succession: boolean;
   final_biological_sow_date: string | null;
   notes: string | null;
+  metadata?: Record<string, unknown> | null;
   crop_profiles: { crop_label?: string; variety?: string | null } | null;
   production_successions: Succession[];
+};
+
+type Rule = {
+  id: string;
+  stable_key: string;
+  rule_label: string;
+  crop_profile_id: string | null;
+  crop_match: string | null;
+  plan_kind: string;
+  default_anchor_month_day: string | null;
+  default_succession_count: number;
+  default_spacing_days: number;
+  default_window_length_days: number;
+  default_late_window_days: number;
+  missed_strategy: "skip" | "merge" | "preserve";
+  overlap_policy: "none" | "limited" | "allowed" | "replacement";
+  protect_final_succession: boolean;
+  final_window_rule: string;
+  series_behavior: string;
+  operational_summary: string;
+  crop_profiles: { id: string; stable_key: string; crop_label: string; variety: string | null; default_planting_method: string | null } | null;
 };
 
 function pretty(dateIso: string | null | undefined) {
@@ -52,6 +74,10 @@ function todayIso() {
   const date = new Date();
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 10);
+}
+
+function defaultAnchor(rule: Rule, year: number) {
+  return rule.default_anchor_month_day ? `${year}-${rule.default_anchor_month_day}` : "";
 }
 
 function operationalStatus(succession: Succession, plan: Plan) {
@@ -71,17 +97,26 @@ function operationalStatus(succession: Succession, plan: Plan) {
 
 export default function ProductionCalendarPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [rules, setRules] = useState<Rule[]>([]);
+  const [selectedRuleId, setSelectedRuleId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const planningYear = 2027;
 
   async function load() {
     try {
       setLoading(true);
-      const response = await fetch("/api/atlas/production-plans", { cache: "no-store" });
-      const data = await response.json();
-      if (!response.ok || !data.ok) throw new Error(data.error || "Production plans failed.");
-      setPlans(data.plans ?? []);
+      const [planResponse, ruleResponse] = await Promise.all([
+        fetch("/api/atlas/production-plans", { cache: "no-store" }),
+        fetch("/api/atlas/production-rules", { cache: "no-store" }),
+      ]);
+      const [planData, ruleData] = await Promise.all([planResponse.json(), ruleResponse.json()]);
+      if (!planResponse.ok || !planData.ok) throw new Error(planData.error || "Production plans failed.");
+      if (!ruleResponse.ok || !ruleData.ok) throw new Error(ruleData.error || "Production rules failed.");
+      setPlans(planData.plans ?? []);
+      setRules(ruleData.rules ?? []);
+      setSelectedRuleId((current) => current || ruleData.rules?.find((rule: Rule) => rule.crop_profile_id)?.id || "");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Production plans failed.");
     } finally {
@@ -92,6 +127,7 @@ export default function ProductionCalendarPage() {
   useEffect(() => { void load(); }, []);
 
   const orderedPlans = useMemo(() => plans.map((plan) => ({ ...plan, production_successions: [...(plan.production_successions ?? [])].sort((a, b) => a.sequence_number - b.sequence_number) })), [plans]);
+  const selectedRule = rules.find((rule) => rule.id === selectedRuleId) ?? null;
 
   async function patch(body: Record<string, unknown>) {
     try {
@@ -112,6 +148,33 @@ export default function ProductionCalendarPage() {
     }
   }
 
+  async function createFromRule(form: HTMLFormElement) {
+    try {
+      setSaving(true);
+      setError(null);
+      const data = new FormData(form);
+      const response = await fetch("/api/atlas/production-rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-atlas-intent": "production-rule-v1" },
+        body: JSON.stringify({
+          ruleId: String(data.get("ruleId")),
+          cropProfileId: selectedRule?.crop_profile_id,
+          seasonYear: Number(data.get("seasonYear")),
+          firstWindowStart: String(data.get("firstWindowStart")),
+          finalBiologicalSowDate: String(data.get("finalBiologicalSowDate") || ""),
+          intendedUses: String(data.get("intendedUses") || "").split(",").map((item) => item.trim()).filter(Boolean),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || "Production plan creation failed.");
+      await load();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Production plan creation failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <main className="atlas-production-shell">
       <header className="atlas-production-header">
@@ -122,6 +185,37 @@ export default function ProductionCalendarPage() {
 
       {error ? <div className="atlas-production-error">{error}</div> : null}
       {loading ? <div className="atlas-production-empty">Loading crop plans…</div> : null}
+
+      {!loading ? (
+        <section className="atlas-production-rule-library">
+          <div className="atlas-production-rule-head">
+            <div><span>Crop-specific instructions</span><h1>Production rule library</h1><p>Each crop keeps its own cadence, overlap behavior, missed-sowing rule, and series identity.</p></div>
+          </div>
+          <div className="atlas-production-rule-grid">
+            {rules.map((rule) => (
+              <button type="button" key={rule.id} className={selectedRuleId === rule.id ? "selected" : ""} onClick={() => setSelectedRuleId(rule.id)}>
+                <strong>{rule.rule_label}</strong>
+                <span>{rule.default_succession_count} succession{rule.default_succession_count === 1 ? "" : "s"} · {rule.default_spacing_days ? `every ${rule.default_spacing_days} days` : "one block"}</span>
+                <em>{rule.operational_summary}</em>
+                <small>{rule.overlap_policy} overlap · {rule.missed_strategy} missed succession</small>
+              </button>
+            ))}
+          </div>
+          {selectedRule ? (
+            <form className="atlas-production-rule-create" onSubmit={(event) => { event.preventDefault(); void createFromRule(event.currentTarget); }}>
+              <input type="hidden" name="ruleId" value={selectedRule.id} />
+              <label>Rule<strong>{selectedRule.rule_label}</strong></label>
+              <label>Crop<strong>{selectedRule.crop_profiles ? `${selectedRule.crop_profiles.crop_label}${selectedRule.crop_profiles.variety ? ` · ${selectedRule.crop_profiles.variety}` : ""}` : "Choose a genetic series later"}</strong></label>
+              <label>Season year<input name="seasonYear" type="number" min="2026" max="2100" defaultValue={planningYear} /></label>
+              <label>First window<input name="firstWindowStart" type="date" required defaultValue={defaultAnchor(selectedRule, planningYear)} /></label>
+              <label>Final biological sow date<input name="finalBiologicalSowDate" type="date" defaultValue={selectedRule.final_window_rule === "frost_constrained" ? `${planningYear}-08-22` : ""} /></label>
+              <label>Intended uses<input name="intendedUses" placeholder="florist, bouquet, grocery" defaultValue={selectedRule.stable_key.includes("sunflower") ? "florist, grocery, bouquet" : "florist, bouquet"} /></label>
+              <button type="submit" disabled={saving || !selectedRule.crop_profile_id || !selectedRule.default_anchor_month_day}>{selectedRule.crop_profile_id && selectedRule.default_anchor_month_day ? "Create crop plan from rule" : "Series/date selection required"}</button>
+            </form>
+          ) : null}
+        </section>
+      ) : null}
+
       {!loading && !orderedPlans.length ? <div className="atlas-production-empty">No production plans yet.</div> : null}
 
       {orderedPlans.map((plan) => {
