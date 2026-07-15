@@ -148,7 +148,7 @@ export function atlasRhythmForTask(task: AtlasTaskCard) {
 }
 
 export function atlasTaskSubject(task: AtlasTaskCard) {
-  return atlasMetaString(task, "collection_label") || atlasMetaString(task, "display_subject") || atlasTitleSubject(task.title) || task.title;
+  return atlasMetaString(task, "display_subject") || atlasTitleSubject(task.title) || atlasMetaString(task, "collection_label") || task.title;
 }
 
 function uniqueObjectLabels(task: AtlasTaskCard) {
@@ -162,14 +162,28 @@ export function atlasTaskObjectLocation(task: AtlasTaskCard) {
   return `${labels.length} attached spaces`;
 }
 
+function usableCollectionLocation(task: AtlasTaskCard) {
+  const collection = atlasMetaString(task, "collection_zone");
+  if (!collection) return "";
+  const normalized = collection.toLowerCase();
+  if (["owner", "marshall", "kids", "children", "anna", "farm team", "farm_team"].includes(normalized)) return "";
+  return collection;
+}
+
 export function atlasTaskLocation(task: AtlasTaskCard) {
-  return atlasTaskObjectLocation(task) || atlasMetaString(task, "collection_zone") || atlasMetaString(task, "display_detail") || task.unlock_text || task.zone_label || "Elm Farm";
+  return atlasTaskObjectLocation(task)
+    || atlasMetaString(task, "display_location")
+    || task.zone_label
+    || usableCollectionLocation(task)
+    || atlasMetaString(task, "display_detail")
+    || task.unlock_text
+    || "Elm Farm";
 }
 
 export function atlasTaskDetail(task: AtlasTaskCard) {
   if (atlasIsCropCycleTask(task)) {
     const crop = [atlasMetaString(task, "crop_variety"), atlasMetaString(task, "crop_label")].filter(Boolean).join(" ");
-    const object = atlasTaskObjectLocation(task) || atlasMetaString(task, "collection_zone");
+    const object = atlasTaskObjectLocation(task) || usableCollectionLocation(task);
     const anchor = atlasMetaString(task, "trigger_anchor_date");
     const generated = anchor ? `generated from ${anchor}` : "generated from crop cycle";
     const fallback = [crop || atlasMetaString(task, "display_detail"), object, generated].filter(Boolean).join(" · ");
