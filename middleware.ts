@@ -9,13 +9,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(destination);
   }
 
-  const directTaskHandoff = url.pathname === "/task" && url.searchParams.get("direct") === "1";
   const taskId = url.pathname === "/task" ? url.searchParams.get("taskId") : null;
-  if (taskId && !directTaskHandoff) {
+  if (taskId) {
     const destination = new URL(`/task-focus/${encodeURIComponent(taskId)}`, request.url);
 
     for (const [key, value] of url.searchParams.entries()) {
-      if (key !== "taskId") destination.searchParams.append(key, value);
+      if (key !== "taskId" && key !== "direct") destination.searchParams.append(key, value);
     }
 
     if (!destination.searchParams.has("returnTo")) {
