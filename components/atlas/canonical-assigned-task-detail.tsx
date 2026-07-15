@@ -132,6 +132,26 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
     }
   }
 
+  async function moveToNextDay() {
+    try {
+      setSaving("reschedule");
+      setMessage(null);
+      await postAtlasTaskTransition({
+        taskId: task.task_id,
+        transition: "rescheduled",
+        reason: "Moved to next Elm Farm calendar day from assigned task page",
+        laneKey: task.action_key || undefined,
+        workKey: task.action_key || undefined,
+        payload: { assigneeKey: assignee.key, scheduleIntent: "next_day" },
+      });
+      window.location.assign(returnDestination(assignee.listPath));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Task reschedule failed.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
@@ -158,7 +178,7 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
             <div className="atlas-task-page-actions atlas-task-primary-actions">
               <button type="button" className="done" disabled={Boolean(saving)} onClick={() => void transition("done")}>{saving === "done" ? "Finishing" : "Done"}</button>
               {assignee.secondaryAction === "tomorrow" ? (
-                <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(addDays(todayIso(), 1), "Moved to tomorrow from assigned task page")}>{saving === "reschedule" ? "Moving" : "Tomorrow"}</button>
+                <button type="button" disabled={Boolean(saving)} onClick={() => void moveToNextDay()}>{saving === "reschedule" ? "Moving" : "Tomorrow"}</button>
               ) : (
                 <button type="button" disabled={Boolean(saving)} onClick={() => setUnfinishedOpen((open) => !open)}>{unfinishedOpen ? "Close" : "Unfinished"}</button>
               )}
@@ -172,7 +192,7 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
               </div>
               <span>Reschedule</span>
               <div className="atlas-task-unfinished-grid reschedule">
-                <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(addDays(todayIso(), 1), "Moved to tomorrow from assigned task page")}>Tomorrow</button>
+                <button type="button" disabled={Boolean(saving)} onClick={() => void moveToNextDay()}>Tomorrow</button>
                 <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(addDays(todayIso(), 7), "Moved to next week from assigned task page")}>Next week</button>
                 <button type="button" disabled={Boolean(saving)} onClick={() => { const date = window.prompt("Pick a date (YYYY-MM-DD)", task.due_date || todayIso())?.trim(); if (date) void reschedule(date, "Rescheduled from assigned task page"); }}>Pick a date</button>
               </div>
