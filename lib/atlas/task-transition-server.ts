@@ -79,6 +79,26 @@ function stringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
+function chicagoTodayIso() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function addCalendarDays(dateIso: string, days: number) {
+  const date = new Date(`${dateIso}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function resolveNextTaskDate(dueDate: string | null | undefined, todayIso = chicagoTodayIso()) {
+  const baseDate = dueDate && dueDate > todayIso ? dueDate : todayIso;
+  return addCalendarDays(baseDate, 1);
+}
+
 async function taskContext(taskId: string) {
   const [{ data: task, error: taskError }, { data: links, error: linksError }] = await Promise.all([
     atlasSupabase
@@ -100,12 +120,17 @@ async function taskContext(taskId: string) {
 }
 
 export async function recordTaskTransition(input: RecordTaskTransitionInput): Promise<RecordTaskTransitionResult> {
-  const context = input.transition === "done" ? await taskContext(input.taskId) : null;
+  const needsContext = input.transition === "done" || (input.transition === "rescheduled" && input.payload?.scheduleIntent === "next_day");
+  const context = needsContext ? await taskContext(input.taskId) : null;
+  const targetDate = input.transition === "rescheduled" && input.payload?.scheduleIntent === "next_day"
+    ? resolveNextTaskDate(context?.task.due_date)
+    : input.targetDate ?? null;
+
   const { data, error } = await atlasSupabase.schema("atlas").rpc("record_task_transition_v1", {
     p_task_id: input.taskId,
     p_transition: input.transition,
     p_idempotency_key: input.idempotencyKey,
-    p_target_date: input.targetDate ?? null,
+    p_target_date: targetDate,
     p_note: input.note ?? null,
     p_reason: input.reason ?? null,
     p_lane_key: input.laneKey ?? null,
