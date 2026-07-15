@@ -1,3 +1,5 @@
+import { taskMatchesAssignee } from "@/lib/atlas/task-assignment";
+
 export type AtlasTaskCardObject = {
   object_id: string;
   object_key: string;
@@ -191,6 +193,13 @@ async function refreshOperationalWork() {
   await reconcilePromise;
 }
 
+function canonicalScopeRows(taskCards: AtlasTaskCard[], scope: AtlasTaskCardScope) {
+  if (scope === "owner") return taskCards.filter((task) => taskMatchesAssignee(task, "owner"));
+  if (scope === "marshall") return taskCards.filter((task) => taskMatchesAssignee(task, "marshall"));
+  if (scope === "children") return taskCards.filter((task) => taskMatchesAssignee(task, "kids"));
+  return taskCards;
+}
+
 export async function fetchAtlasTaskCards(
   input?: string | AtlasTaskCardFetchOptions,
 ): Promise<AtlasTaskCardsResponse> {
@@ -200,9 +209,11 @@ export async function fetchAtlasTaskCards(
   const options: AtlasTaskCardFetchOptions = typeof input === "string" ? { taskId: input } : input ?? {};
   const inferredScope = currentUrlScope();
   const scope = options.scope ?? inferredScope ?? "farm";
+  const assignmentScope = scope === "owner" || scope === "marshall" || scope === "children";
 
   if (options.taskId) params.set("taskId", options.taskId);
-  if (scope !== "farm") params.set("scope", scope);
+  if (assignmentScope) params.set("scope", "all");
+  else if (scope !== "farm") params.set("scope", scope);
 
   const response = await fetch(`/api/atlas/task-cards${params.toString() ? `?${params.toString()}` : ""}`, {
     method: "GET",
@@ -214,5 +225,9 @@ export async function fetchAtlasTaskCards(
   if (!response.ok || !data.ok) {
     throw new Error(data.details || data.error || "Failed to load Atlas task cards.");
   }
-  return data;
+
+  return {
+    ...data,
+    taskCards: canonicalScopeRows(data.taskCards ?? [], scope),
+  };
 }
