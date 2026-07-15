@@ -153,7 +153,7 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
             <section className="atlas-task-place-card"><small>Location</small><strong>{display.location || "Elm Farm"}</strong></section>
 
             {lines.length ? <section className="atlas-task-detail-card"><strong>{detailHeading}</strong>{lines.map((line) => <p key={line}>{line}</p>)}</section> : null}
-            <TaskChildChecklist childTasks={children} onChange={() => setChildren((current) => [...current])} />
+            <TaskChildChecklist childTasks={children} onChange={async () => setChildren((current) => [...current])} />
 
             <div className="atlas-task-page-actions atlas-task-primary-actions">
               <button type="button" className="done" disabled={Boolean(saving)} onClick={() => void transition("done")}>{saving === "done" ? "Finishing" : "Done"}</button>
