@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { TaskChildChecklist } from "@/components/atlas/task-child-checklist";
 import { atlasTaskDisplay } from "@/lib/atlas/task-display";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
-import { TaskChildChecklist } from "@/components/atlas/task-child-checklist";
 
 type Outcome = "done" | "partial" | "blocked" | "not_relevant" | "changed_plan";
 
@@ -125,6 +125,7 @@ export default function AssignedTaskFocusPage({ taskId, assigneeLabel }: Props) 
   const display = useMemo(() => task ? atlasTaskDisplay(task) : null, [task]);
   const assignedTo = useMemo(() => task ? canonicalAssignee(task, assigneeLabel) : assigneeLabel || "Farm Team", [task, assigneeLabel]);
   const fallbackReturn = assigneeReturnPath(assignedTo);
+  const directTomorrow = assignedTo === "Owner" || assignedTo === "Marshall";
   const detailLines = task ? metaLines(task) : [];
   const detailHeading = task ? metaString(task, "detail_heading") || "Details" : "Details";
 
@@ -155,7 +156,7 @@ export default function AssignedTaskFocusPage({ taskId, assigneeLabel }: Props) 
     }
   }
 
-  async function reschedule(targetDate: string) {
+  async function reschedule(targetDate: string, reason = "Rescheduled from assigned work page") {
     if (!task) return;
     try {
       setSaving("reschedule");
@@ -164,7 +165,7 @@ export default function AssignedTaskFocusPage({ taskId, assigneeLabel }: Props) 
         taskId: task.task_id,
         transition: "rescheduled",
         targetDate,
-        reason: "Rescheduled from assigned work page",
+        reason,
         laneKey: task.action_key || undefined,
         workKey: task.action_key || undefined,
       });
@@ -209,10 +210,14 @@ export default function AssignedTaskFocusPage({ taskId, assigneeLabel }: Props) 
 
             <div className="atlas-task-page-actions atlas-task-primary-actions">
               <button type="button" className="done" disabled={Boolean(saving)} onClick={() => void transition("done")}>{saving === "done" ? "Finishing" : "Done"}</button>
-              <button type="button" disabled={Boolean(saving)} onClick={() => setUnfinishedOpen((open) => !open)}>{unfinishedOpen ? "Close" : "Unfinished"}</button>
+              {directTomorrow ? (
+                <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(addDays(todayIso(), 1), "Moved to tomorrow from assigned task page")}>{saving === "reschedule" ? "Moving" : "Tomorrow"}</button>
+              ) : (
+                <button type="button" disabled={Boolean(saving)} onClick={() => setUnfinishedOpen((open) => !open)}>{unfinishedOpen ? "Close" : "Unfinished"}</button>
+              )}
             </div>
 
-            {unfinishedOpen ? <section className="atlas-task-unfinished-panel">
+            {!directTomorrow && unfinishedOpen ? <section className="atlas-task-unfinished-panel">
               <strong>What happened?</strong>
               <div className="atlas-task-unfinished-grid">
                 <button type="button" disabled={Boolean(saving)} onClick={() => void transition("partial", window.prompt("What is left?", "")?.trim() || "Partly done")}>Partly done</button>
@@ -220,8 +225,8 @@ export default function AssignedTaskFocusPage({ taskId, assigneeLabel }: Props) 
               </div>
               <span>Reschedule</span>
               <div className="atlas-task-unfinished-grid reschedule">
-                <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(addDays(todayIso(), 1))}>Tomorrow</button>
-                <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(addDays(todayIso(), 7))}>Next week</button>
+                <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(addDays(todayIso(), 1), "Moved to tomorrow from assigned task page")}>Tomorrow</button>
+                <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(addDays(todayIso(), 7), "Moved to next week from assigned task page")}>Next week</button>
                 <button type="button" disabled={Boolean(saving)} onClick={() => { const date = window.prompt("Pick a date (YYYY-MM-DD)", task.due_date || todayIso())?.trim(); if (date) void reschedule(date); }}>Pick a date</button>
               </div>
               <span>Close without doing it</span>
