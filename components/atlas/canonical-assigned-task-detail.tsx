@@ -16,6 +16,22 @@ type Props = {
   assignee: AtlasAssigneeConfig;
 };
 
+type ProductionContext = {
+  kind?: string;
+  system_label?: string;
+  varieties?: unknown;
+  target_areas?: unknown;
+  target_gap_fill_percent?: unknown;
+  rows_per_bed?: unknown;
+  target_spacing_inches?: unknown;
+  marketable_stems_per_plant?: unknown;
+  projected_germination_start?: string;
+  projected_germination_end?: string;
+  projected_harvest_start?: string;
+  projected_harvest_end?: string;
+  projection_basis?: string;
+};
+
 const ALLOWED_RETURN_PATHS = new Set(["/", "/owner", "/marshall", "/children", "/task"]);
 
 function todayIso() {
@@ -50,6 +66,23 @@ function detailLines(task: AtlasTaskCard) {
   return task.note ? [task.note] : [];
 }
 
+function stringArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
+}
+
+function productionContext(task: AtlasTaskCard) {
+  const value = task.metadata?.production_context;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const context = value as ProductionContext;
+  return context.kind === "sunflower_gap_fill" ? context : null;
+}
+
+function numberValue(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  return null;
+}
+
 function returnDestination(fallback: string) {
   const params = new URLSearchParams(window.location.search);
   const returnTo = params.get("returnTo");
@@ -74,6 +107,13 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
   const display = useMemo(() => atlasTaskDisplay(task), [task]);
   const lines = detailLines(task);
   const detailHeading = metaString(task, "detail_heading") || "Details";
+  const production = productionContext(task);
+  const varieties = stringArray(production?.varieties);
+  const targetAreas = stringArray(production?.target_areas);
+  const gapFillPercent = numberValue(production?.target_gap_fill_percent);
+  const rowsPerBed = numberValue(production?.rows_per_bed);
+  const spacingInches = numberValue(production?.target_spacing_inches);
+  const stemsPerPlant = numberValue(production?.marketable_stems_per_plant);
 
   async function refreshTask() {
     const response = await fetch(`/api/atlas/task-cards?taskId=${encodeURIComponent(task.task_id)}`, {
@@ -171,6 +211,19 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
             <h1>{display.title.toUpperCase()}</h1>
             <div className="atlas-task-page-time-row"><span>{metaString(task, "display_action") || task.action_key || "Work"}</span><span>{prettyDate(task.due_date)}</span></div>
             <section className="atlas-task-place-card"><small>Location</small><strong>{display.location || "Elm Farm"}</strong></section>
+
+            {production ? (
+              <section className="atlas-task-detail-card atlas-production-context-card">
+                <strong>{production.system_label || "Sunflower succession"}</strong>
+                <p><b>Work type:</b> Production gap-fill recovery{gapFillPercent !== null ? ` · ${gapFillPercent}% target fill` : ""}</p>
+                {targetAreas.length ? <p><b>Areas:</b> {targetAreas.join(" · ")}</p> : null}
+                {varieties.length ? <p><b>Linked varieties:</b> {varieties.join(" · ")}</p> : null}
+                {rowsPerBed !== null || spacingInches !== null ? <p><b>Planting pattern:</b> {rowsPerBed !== null ? `${rowsPerBed} rows per bed` : "Existing rows"}{spacingInches !== null ? ` · ${spacingInches}-inch spacing` : ""}{stemsPerPlant !== null ? ` · ${stemsPerPlant} marketable stem per plant` : ""}</p> : null}
+                <p><b>Germination watch:</b> {prettyDate(production.projected_germination_start)}–{prettyDate(production.projected_germination_end)}</p>
+                <p><b>Harvest watch:</b> {prettyDate(production.projected_harvest_start)}–{prettyDate(production.projected_harvest_end)}</p>
+                {production.projection_basis ? <p><small>{production.projection_basis}</small></p> : null}
+              </section>
+            ) : null}
 
             {lines.length ? <section className="atlas-task-detail-card"><strong>{detailHeading}</strong>{lines.map((line) => <p key={line}>{line}</p>)}</section> : null}
             <TaskChildChecklist childTasks={children} onChange={async () => setChildren((current) => [...current])} />
