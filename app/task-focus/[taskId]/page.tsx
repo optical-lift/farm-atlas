@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { atlasSupabase } from "@/lib/atlas/supabase-server";
+import CanonicalAssignedTaskDetail from "@/components/atlas/canonical-assigned-task-detail";
+import { resolveTaskAssignee } from "@/lib/atlas/task-assignment";
+import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import GerminationFocusPage from "./GerminationFocusPage";
-import GenericFocusPage from "./GenericFocusPage";
 import SowingFocusPage, { type ProductionSowingTask } from "./SowingFocusPage";
 import "./focused-task-only.css";
 
@@ -86,6 +88,36 @@ async function loadTask(taskId: string) {
 
   if (error) throw new Error(error.message);
   return (data as TaskRow | null) ?? null;
+}
+
+async function loadGenericTaskDetail(taskId: string) {
+  const [{ data: taskCard, error: taskError }, { data: childCards, error: childrenError }] = await Promise.all([
+    atlasSupabase
+      .schema("atlas")
+      .from("v_task_cards")
+      .select("*")
+      .eq("farm_key", "elm_farm")
+      .eq("task_id", taskId)
+      .limit(1)
+      .maybeSingle(),
+    atlasSupabase
+      .schema("atlas")
+      .from("v_task_cards")
+      .select("*")
+      .eq("farm_key", "elm_farm")
+      .eq("parent_task_id", taskId)
+      .neq("status", "archived")
+      .order("created_at", { ascending: true }),
+  ]);
+
+  if (taskError) throw new Error(taskError.message);
+  if (childrenError) throw new Error(childrenError.message);
+  if (!taskCard) return null;
+
+  return {
+    task: taskCard as AtlasTaskCard,
+    children: (childCards ?? []) as AtlasTaskCard[],
+  };
 }
 
 async function loadObjectLabel(taskId: string) {
@@ -239,7 +271,9 @@ export default async function TaskFocusPage({ params }: { params: Promise<{ task
   }
 
   if (!isGerminationTask(task)) {
-    return <GenericFocusPage taskId={task.id} />;
+    const detail = await loadGenericTaskDetail(task.id);
+    if (!detail) notFound();
+    return <CanonicalAssignedTaskDetail task={detail.task} childTasks={detail.children} assignee={resolveTaskAssignee(task)} />;
   }
 
   const [objectLabel, crop] = await Promise.all([loadObjectLabel(task.id), loadCropContext(task)]);
