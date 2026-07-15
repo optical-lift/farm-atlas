@@ -74,9 +74,7 @@ function buildChildrenByParent(tasks: AtlasTaskCard[]) {
 }
 
 function taskHref(task: AtlasTaskCard) {
-  const taskId = encodeURIComponent(task.task_id);
-  const returnTo = encodeURIComponent("/owner");
-  return `/task-focus/${taskId}?taskId=${taskId}&returnTo=${returnTo}`;
+  return `/task-focus/${encodeURIComponent(task.task_id)}?returnTo=${encodeURIComponent("/owner")}`;
 }
 
 function OwnerTaskCard({ task, childrenByParent }: { task: AtlasTaskCard; childrenByParent: Map<string, AtlasTaskCard[]> }) {
@@ -86,14 +84,14 @@ function OwnerTaskCard({ task, childrenByParent }: { task: AtlasTaskCard; childr
   const stepLine = children.length ? `${children.length - openSteps}/${children.length} steps done` : display.detail;
 
   return (
-    <Link className="atlas-overview-task-card atlas-owner-task-card" href={taskHref(task)}>
+    <a className="atlas-overview-task-card atlas-owner-task-card" href={taskHref(task)}>
       <div>
         <strong>{display.title}</strong>
         <span>{display.location}</span>
       </div>
       <em>{prettyDate(task.due_date)}</em>
       <p>{stepLine}</p>
-    </Link>
+    </a>
   );
 }
 
