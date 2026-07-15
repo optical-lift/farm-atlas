@@ -1,22 +1,19 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
-
-const AtlasTaskPage = dynamic(() => import("../../task/page"), {
-  ssr: false,
-  loading: () => <div className="atlas-task-page-empty">Opening task…</div>,
-});
+import { useEffect } from "react";
 
 export default function GenericFocusPage({ taskId }: { taskId: string }) {
-  const [ready, setReady] = useState(false);
-
   useEffect(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("taskId", taskId);
-    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-    setReady(true);
+    const current = new URL(window.location.href);
+    const destination = new URL("/task", window.location.origin);
+    destination.searchParams.set("taskId", taskId);
+    destination.searchParams.set("direct", "1");
+
+    const returnTo = current.searchParams.get("returnTo");
+    if (returnTo) destination.searchParams.set("returnTo", returnTo);
+
+    window.location.replace(`${destination.pathname}${destination.search}`);
   }, [taskId]);
 
-  return <div className="atlas-focused-task-only">{ready ? <AtlasTaskPage /> : <div className="atlas-task-page-empty">Opening task…</div>}</div>;
+  return <div className="atlas-task-page-empty">Opening task…</div>;
 }
