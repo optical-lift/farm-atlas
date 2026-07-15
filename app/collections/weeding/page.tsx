@@ -23,12 +23,6 @@ type CollectionSectionProps = {
 
 type EffortBand = "heavy" | "moderate" | "light";
 
-const effortBands: Array<{ key: EffortBand; label: string }> = [
-  { key: "heavy", label: "Heavy" },
-  { key: "moderate", label: "Moderate" },
-  { key: "light", label: "Light" },
-];
-
 function taskMinutes(task: AtlasTaskCard) {
   const raw = atlasMetadataValue(task, "estimated_minutes");
   const minutes = typeof raw === "number" ? raw : Number(raw);
@@ -49,10 +43,38 @@ function taskEffortBand(task: AtlasTaskCard): EffortBand {
   return "moderate";
 }
 
-function effortMinutes(tasks: AtlasTaskCard[]) {
-  const minutes = tasks.map(taskMinutes);
-  if (minutes.some((value) => value === null)) return null;
-  return minutes.reduce<number>((total, value) => total + (value ?? 0), 0);
+function effortLabel(task: AtlasTaskCard) {
+  const band = taskEffortBand(task);
+  return band.charAt(0).toUpperCase() + band.slice(1);
+}
+
+function ownerPriority(task: AtlasTaskCard) {
+  const raw = atlasMetadataValue(task, "owner_priority");
+  const priority = typeof raw === "number" ? raw : Number(raw);
+  return Number.isFinite(priority) ? priority : 0;
+}
+
+function effortRank(task: AtlasTaskCard) {
+  return { heavy: 0, moderate: 1, light: 2 }[taskEffortBand(task)];
+}
+
+function chronologicalTaskSort(a: AtlasTaskCard, b: AtlasTaskCard) {
+  const aDate = a.due_date || "9999-12-31";
+  const bDate = b.due_date || "9999-12-31";
+  const dateCompare = aDate.localeCompare(bDate);
+  if (dateCompare !== 0) return dateCompare;
+
+  const priorityCompare = ownerPriority(b) - ownerPriority(a);
+  if (priorityCompare !== 0) return priorityCompare;
+
+  const effortCompare = effortRank(a) - effortRank(b);
+  if (effortCompare !== 0) return effortCompare;
+
+  const aMinutes = taskMinutes(a) ?? Number.MAX_SAFE_INTEGER;
+  const bMinutes = taskMinutes(b) ?? Number.MAX_SAFE_INTEGER;
+  if (aMinutes !== bMinutes) return aMinutes - bMinutes;
+
+  return atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b));
 }
 
 function todayIso() {
@@ -96,16 +118,12 @@ function WeedingTaskCard({ task, tone }: { task: AtlasTaskCard; tone?: Collectio
         <span>{display.location}</span>
       </div>
       <em>{statusLine(task)}</em>
-      <p>{[estimatedMinutes ? `${estimatedMinutes} min` : "", display.detail].filter(Boolean).join(" · ")}</p>
+      <p>{[estimatedMinutes ? `${estimatedMinutes} min` : "", effortLabel(task), display.detail].filter(Boolean).join(" · ")}</p>
     </Link>
   );
 }
 
 function CollectionSection({ title, tasks, empty, tone }: CollectionSectionProps) {
-  const groups = effortBands
-    .map((band) => ({ ...band, tasks: tasks.filter((task) => taskEffortBand(task) === band.key) }))
-    .filter((group) => group.tasks.length > 0);
-
   return (
     <section className="atlas-overview-zone-card atlas-work-collection-section">
       <summary>
@@ -115,24 +133,10 @@ function CollectionSection({ title, tasks, empty, tone }: CollectionSectionProps
         </div>
         <b>Weeding</b>
       </summary>
-      <div className="atlas-overview-task-list atlas-work-collection-effort-list">
-        {groups.length ? groups.map((group) => {
-          const totalMinutes = effortMinutes(group.tasks);
-          return (
-            <section className={`atlas-work-effort-group ${group.key}`} key={group.key} aria-label={`${group.label} weeding`}>
-              <header className="atlas-work-effort-header">
-                <div>
-                  <strong>{group.label}</strong>
-                  <span>{group.tasks.length} {group.tasks.length === 1 ? "area" : "areas"}</span>
-                </div>
-                {totalMinutes !== null ? <b>{totalMinutes} min</b> : null}
-              </header>
-              <div className="atlas-work-effort-tasks">
-                {group.tasks.map((task) => <WeedingTaskCard key={task.task_id} task={task} tone={tone} />)}
-              </div>
-            </section>
-          );
-        }) : <p className="atlas-task-page-muted">{empty}</p>}
+      <div className="atlas-overview-task-list">
+        {tasks.length
+          ? tasks.map((task) => <WeedingTaskCard key={task.task_id} task={task} tone={tone} />)
+          : <p className="atlas-task-page-muted">{empty}</p>}
       </div>
     </section>
   );
@@ -153,7 +157,7 @@ export default function WeedingCollectionPage() {
         const response = await fetchAtlasTaskCards();
         const weedingTasks = (response.taskCards ?? [])
           .filter(atlasIsWeedingCollectionMember)
-          .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b)));
+          .sort(chronologicalTaskSort);
         setTasks(atlasVisibleCollectionTasks(weedingTasks));
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Weeding collection failed.");
@@ -166,17 +170,17 @@ export default function WeedingCollectionPage() {
   }, []);
 
   const summary = useMemo(() => atlasBuildWeedingCollectionSummary(tasks, today), [tasks, today]);
-  const notReady = useMemo(() => tasks.filter(atlasIsNotReadyCollectionTask), [tasks]);
+  const notReady = useMemo(() => tasks.filter(atlasIsNotReadyCollectionTask).sort(chronologicalTaskSort), [tasks]);
   const dueNow = useMemo(() => tasks
     .filter((task) => (task.status === "open" || task.status === "blocked") && !atlasIsNotReadyCollectionTask(task))
     .filter((task) => !task.due_date || task.due_date <= today)
-    .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b))), [tasks, today]);
+    .sort(chronologicalTaskSort), [tasks, today]);
   const upcoming = useMemo(() => tasks
     .filter((task) => task.status === "open" && task.due_date && task.due_date > today && task.due_date <= upcomingThrough)
-    .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b))), [tasks, today, upcomingThrough]);
+    .sort(chronologicalTaskSort), [tasks, today, upcomingThrough]);
   const recentlyDone = useMemo(() => tasks
     .filter(atlasIsDoneTask)
-    .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b))), [tasks]);
+    .sort(chronologicalTaskSort), [tasks]);
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-work-collection-page-shell">
