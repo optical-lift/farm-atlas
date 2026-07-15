@@ -151,6 +151,7 @@ export default function AtlasOwnerPage() {
   const parentTasks = useMemo(() => tasks.filter((task) => !isChildTask(task)), [tasks]);
   const childrenByParent = useMemo(() => buildChildrenByParent(tasks), [tasks]);
   const openParents = useMemo(() => parentTasks.filter(isOpenTask), [parentTasks]);
+  const overdueTasks = useMemo(() => openParents.filter((task) => task.due_date && task.due_date < today), [openParents, today]);
   const todayTasks = useMemo(() => openParents.filter((task) => task.due_date === today), [openParents, today]);
   const weekTasks = useMemo(() => openParents.filter((task) => task.due_date && task.due_date > today && task.due_date <= weekEnd), [openParents, today, weekEnd]);
   const laterTasks = useMemo(() => openParents.filter((task) => !task.due_date || task.due_date > weekEnd), [openParents, weekEnd]);
@@ -176,10 +177,10 @@ export default function AtlasOwnerPage() {
           </section>
 
           <section className="atlas-overview-stat-grid" aria-label="Owner task stats">
+            <article><strong>{loading ? "…" : overdueTasks.length}</strong><span>overdue</span></article>
             <article><strong>{loading ? "…" : todayTasks.length}</strong><span>today</span></article>
             <article><strong>{loading ? "…" : weekTasks.length}</strong><span>this week</span></article>
             <article><strong>{loading ? "…" : laterTasks.length}</strong><span>later</span></article>
-            <article><strong>{loading ? "…" : doneTasks.length}</strong><span>done</span></article>
           </section>
 
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
@@ -187,6 +188,7 @@ export default function AtlasOwnerPage() {
 
           {!loading ? (
             <section className="atlas-overview-zone-list atlas-owner-list" aria-label="Owner task list">
+              <OwnerSection title="Overdue" tasks={overdueTasks} childrenByParent={childrenByParent} empty="No overdue owner tasks." />
               <OwnerSection title="Today" tasks={todayTasks} childrenByParent={childrenByParent} empty="No owner tasks due today." />
               <OwnerSection title="This Week" tasks={weekTasks} childrenByParent={childrenByParent} empty="No owner tasks later this week." />
               <OwnerSection title="Later" tasks={laterTasks} childrenByParent={childrenByParent} empty="No later owner tasks." />
