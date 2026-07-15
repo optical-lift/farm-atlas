@@ -74,7 +74,12 @@ function buildChildrenByParent(tasks: AtlasTaskCard[]) {
 }
 
 function taskHref(task: AtlasTaskCard) {
-  return `/task-focus/${encodeURIComponent(task.task_id)}?returnTo=${encodeURIComponent("/owner")}`;
+  const params = new URLSearchParams({
+    taskId: task.task_id,
+    direct: "1",
+    returnTo: "/owner",
+  });
+  return `/task?${params.toString()}`;
 }
 
 function OwnerTaskCard({ task, childrenByParent }: { task: AtlasTaskCard; childrenByParent: Map<string, AtlasTaskCard[]> }) {
