@@ -1,50 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { legacyTaskRedirectCore } from "@/lib/atlas/task-routing-core.js";
 
 export function middleware(request: NextRequest) {
-  const url = request.nextUrl;
-
-  if (url.pathname === "/task" && url.searchParams.has("date")) {
-    const destination = new URL("/day", request.url);
-    destination.searchParams.set("date", url.searchParams.get("date") ?? "");
-    return NextResponse.redirect(destination);
-  }
-
-  const taskId = url.pathname === "/task" ? url.searchParams.get("taskId") : null;
-  if (taskId) {
-    const destination = new URL(`/task-focus/${encodeURIComponent(taskId)}`, request.url);
-
-    for (const [key, value] of url.searchParams.entries()) {
-      if (key !== "taskId" && key !== "direct") destination.searchParams.append(key, value);
-    }
-
-    if (!destination.searchParams.has("returnTo")) {
-      const referrer = request.headers.get("referer");
-      if (referrer) {
-        try {
-          const referrerUrl = new URL(referrer);
-          if (referrerUrl.origin === url.origin) {
-            destination.searchParams.set("returnTo", `${referrerUrl.pathname}${referrerUrl.search}${referrerUrl.hash}`);
-          }
-        } catch {
-          // Ignore malformed referrers.
-        }
-      }
-    }
-
-    return NextResponse.redirect(destination);
-  }
-
-  const isBareTaskPage =
-    url.pathname === "/task" &&
-    !url.searchParams.has("taskId") &&
-    !url.searchParams.has("route") &&
-    !url.searchParams.has("lane");
-
-  if (isBareTaskPage) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  return NextResponse.next();
+  const destination = legacyTaskRedirectCore(request.url, request.headers.get("referer"));
+  return destination ? NextResponse.redirect(destination) : NextResponse.next();
 }
 
 export const config = {
