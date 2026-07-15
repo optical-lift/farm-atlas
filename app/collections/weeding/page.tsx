@@ -48,6 +48,19 @@ function effortLabel(task: AtlasTaskCard) {
   return band.charAt(0).toUpperCase() + band.slice(1);
 }
 
+function usefulTaskDetail(detail: string | null | undefined) {
+  if (!detail) return "";
+
+  return detail
+    .split("·")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !/^\d+\s*min$/i.test(part))
+    .filter((part) => !/^(heavy|moderate|medium|light|maintained|quick)$/i.test(part))
+    .filter((part) => !/^(open task|open)$/i.test(part))
+    .join(" · ");
+}
+
 function ownerPriority(task: AtlasTaskCard) {
   const raw = atlasMetadataValue(task, "owner_priority");
   const priority = typeof raw === "number" ? raw : Number(raw);
@@ -110,6 +123,7 @@ function statusLine(task: AtlasTaskCard) {
 function WeedingTaskCard({ task, tone }: { task: AtlasTaskCard; tone?: CollectionSectionProps["tone"] }) {
   const display = atlasTaskDisplay(task);
   const estimatedMinutes = taskMinutes(task);
+  const usefulDetail = usefulTaskDetail(display.detail);
 
   return (
     <Link className={`atlas-overview-task-card atlas-work-collection-task-card ${tone ?? ""}`} href={taskHref(task)}>
@@ -118,7 +132,7 @@ function WeedingTaskCard({ task, tone }: { task: AtlasTaskCard; tone?: Collectio
         <span>{display.location}</span>
       </div>
       <em>{statusLine(task)}</em>
-      <p>{[estimatedMinutes ? `${estimatedMinutes} min` : "", effortLabel(task), display.detail].filter(Boolean).join(" · ")}</p>
+      <p>{[estimatedMinutes ? `${estimatedMinutes} min` : "", effortLabel(task), usefulDetail].filter(Boolean).join(" · ")}</p>
     </Link>
   );
 }
