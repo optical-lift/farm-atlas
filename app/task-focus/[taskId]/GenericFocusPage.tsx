@@ -4,9 +4,9 @@ import AssignedTaskFocusPage from "@/components/atlas/assigned-task-focus-page";
 
 type Props = {
   taskId: string;
-  assigneeLabel: string | null;
+  assigneeLabel?: string | null;
 };
 
-export default function GenericFocusPage({ taskId, assigneeLabel }: Props) {
+export default function GenericFocusPage({ taskId, assigneeLabel = null }: Props) {
   return <AssignedTaskFocusPage taskId={taskId} assigneeLabel={assigneeLabel} />;
 }
