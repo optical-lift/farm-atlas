@@ -84,14 +84,14 @@ function OwnerTaskCard({ task, childrenByParent }: { task: AtlasTaskCard; childr
   const stepLine = children.length ? `${children.length - openSteps}/${children.length} steps done` : display.detail;
 
   return (
-    <Link className="atlas-overview-task-card atlas-owner-task-card" href={taskHref(task)}>
+    <a className="atlas-overview-task-card atlas-owner-task-card" href={taskHref(task)}>
       <div>
         <strong>{display.title}</strong>
         <span>{display.location}</span>
       </div>
       <em>{prettyDate(task.due_date)}</em>
       <p>{stepLine}</p>
-    </Link>
+    </a>
   );
 }
 
