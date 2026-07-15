@@ -49,6 +49,15 @@ function detailLines(task: AtlasTaskCard) {
   return stringList(meta(task, "detail_lines"));
 }
 
+function sourceSowingSummary(task: AtlasTaskCard) {
+  const sourceId = text(meta(task, "source_sowing_task_id"));
+  if (!sourceId) return "";
+
+  const sourceTitle = text(meta(task, "source_sowing_title")) || "Linked sowing record";
+  const sourceStatus = text(meta(task, "source_sowing_status"));
+  return `Original sowing · ${sourceTitle}${sourceStatus ? ` · ${sourceStatus}` : ""}`;
+}
+
 function isDone(task: AtlasTaskCard) {
   return task.status === "done" || task.task_outcomes?.[0]?.outcome === "done" || text(meta(task, "checklist_status")) === "done";
 }
@@ -243,6 +252,7 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
           const rowMessage = rowMessages[task.task_id];
           const isSaving = savingId === task.task_id;
           const summary = logSummary(task);
+          const sourceSowing = sourceSowingSummary(task);
 
           return (
             <article
@@ -255,6 +265,7 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
                 <span className="atlas-plant-check__mark">{done ? "✓" : ""}</span>
                 <div className="atlas-plant-check__copy">
                   <strong>{label(task)}</strong>
+                  {sourceSowing ? <em>{sourceSowing}</em> : null}
                   {detailLines(task).map((line) => <span key={line}>{line}</span>)}
                   {summary ? <em>{summary}</em> : null}
                   {rowMessage ? <em>{rowMessage}</em> : null}
