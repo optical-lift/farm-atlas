@@ -9,8 +9,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(destination);
   }
 
+  const directTaskHandoff = url.pathname === "/task" && url.searchParams.get("direct") === "1";
   const taskId = url.pathname === "/task" ? url.searchParams.get("taskId") : null;
-  if (taskId) {
+  if (taskId && !directTaskHandoff) {
     const destination = new URL(`/task-focus/${encodeURIComponent(taskId)}`, request.url);
 
     for (const [key, value] of url.searchParams.entries()) {
