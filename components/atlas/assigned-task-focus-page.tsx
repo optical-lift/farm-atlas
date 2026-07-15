@@ -40,6 +40,38 @@ function metaString(task: AtlasTaskCard, key: string) {
   return typeof value === "string" && value.trim() ? value.trim() : "";
 }
 
+function metaBool(task: AtlasTaskCard, key: string) {
+  const value = task.metadata?.[key];
+  return value === true || value === "true" || value === "yes" || value === 1;
+}
+
+function canonicalAssignee(task: AtlasTaskCard, explicit?: string | null) {
+  if (explicit?.trim()) return explicit.trim();
+
+  const assigned = metaString(task, "assigned_to").toLowerCase();
+  const zone = metaString(task, "collection_zone").toLowerCase();
+
+  if (metaBool(task, "owner_task") || assigned === "owner" || zone === "owner") return "Owner";
+  if (metaBool(task, "marshall_task") || assigned === "marshall" || zone === "marshall") return "Marshall";
+  if (
+    metaBool(task, "children_task") ||
+    assigned === "children" ||
+    assigned === "kids" ||
+    zone === "children" ||
+    zone === "kids"
+  ) return "Kids";
+  if (assigned) return assigned.replace(/^./, (letter) => letter.toUpperCase());
+  return "Farm Team";
+}
+
+function assigneeReturnPath(label: string) {
+  const normalized = label.toLowerCase();
+  if (normalized === "owner") return "/owner";
+  if (normalized === "marshall") return "/marshall";
+  if (normalized === "kids" || normalized === "children") return "/children";
+  return "/";
+}
+
 function metaLines(task: AtlasTaskCard) {
   const value = task.metadata?.detail_lines;
   if (Array.isArray(value)) return value.filter((line): line is string => typeof line === "string" && line.trim().length > 0);
@@ -50,10 +82,10 @@ function childParentId(task: AtlasTaskCard) {
   return task.parent_task_id || metaString(task, "parent_task_id");
 }
 
-function returnDestination() {
+function returnDestination(fallback = "/") {
   const params = new URLSearchParams(window.location.search);
   const returnTo = params.get("returnTo");
-  return returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/";
+  return returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : fallback;
 }
 
 export default function AssignedTaskFocusPage({ taskId, assigneeLabel }: Props) {
@@ -91,6 +123,8 @@ export default function AssignedTaskFocusPage({ taskId, assigneeLabel }: Props) 
   }, [taskId]);
 
   const display = useMemo(() => task ? atlasTaskDisplay(task) : null, [task]);
+  const assignedTo = useMemo(() => task ? canonicalAssignee(task, assigneeLabel) : assigneeLabel || "Farm Team", [task, assigneeLabel]);
+  const fallbackReturn = assigneeReturnPath(assignedTo);
   const detailLines = task ? metaLines(task) : [];
   const detailHeading = task ? metaString(task, "detail_heading") || "Details" : "Details";
 
@@ -109,7 +143,7 @@ export default function AssignedTaskFocusPage({ taskId, assigneeLabel }: Props) 
         payload: { workClass: task.work_class },
       });
       if (outcome === "done" || outcome === "not_relevant" || outcome === "changed_plan") {
-        window.location.assign(returnDestination());
+        window.location.assign(returnDestination(fallbackReturn));
         return;
       }
       await load();
@@ -134,7 +168,7 @@ export default function AssignedTaskFocusPage({ taskId, assigneeLabel }: Props) 
         laneKey: task.action_key || undefined,
         workKey: task.action_key || undefined,
       });
-      window.location.assign(returnDestination());
+      window.location.assign(returnDestination(fallbackReturn));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Task reschedule failed.");
     } finally {
@@ -154,13 +188,17 @@ export default function AssignedTaskFocusPage({ taskId, assigneeLabel }: Props) 
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href={returnDestination()} className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">{assigneeLabel || "Elm Farm"}</span></Link>
+          <Link href={returnDestination(fallbackReturn)} className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">{assignedTo}</span></Link>
           <span className="atlas-weather-line">{weatherLabel}</span>
-          <Link href={returnDestination()} className="atlas-note-plus" aria-label="Back to assigned work">↩</Link>
+          <Link href={returnDestination(fallbackReturn)} className="atlas-note-plus" aria-label={`Back to ${assignedTo} work`}>↩</Link>
         </header>
 
         <div className="atlas-task-page-body">
           <article className="atlas-task-page-active atlas-task-ticket-card">
+            <section className="atlas-task-place-card" aria-label={`Assigned to ${assignedTo}`}>
+              <small>Assigned to</small>
+              <strong>{assignedTo.toUpperCase()}</strong>
+            </section>
             <div className="atlas-task-page-kicker"><span>Up Now</span><small>{task.task_type.replaceAll("_", " ")}</small></div>
             <h1>{display.title.toUpperCase()}</h1>
             <div className="atlas-task-page-time-row"><span>{metaString(task, "display_action") || task.action_key || "Work"}</span><span>{prettyDate(task.due_date)}</span></div>
