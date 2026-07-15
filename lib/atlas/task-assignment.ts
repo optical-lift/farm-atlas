@@ -64,14 +64,9 @@ function normalizeAssignee(value: string): AtlasAssigneeKey | null {
 export function resolveTaskAssignee(task: AssignmentTask): AtlasAssigneeConfig {
   const metadata = task.metadata ?? {};
 
-  // assignee_key is the durable canonical field when present.
   const explicit = normalizeAssignee(text(metadata.assignee_key));
   if (explicit) return ATLAS_ASSIGNEES[explicit];
 
-  // Dedicated assignment-lane flags outrank visibility and supervision metadata.
-  // This keeps kid chores assigned to Kids even when assigned_to: Anna means Anna
-  // supervises or sees the task. Joint Owner + Marshall tasks resolve to Owner unless
-  // a future assignee_key explicitly says otherwise.
   if (boolish(metadata.owner_task)) return ATLAS_ASSIGNEES.owner;
   if (boolish(metadata.marshall_task)) return ATLAS_ASSIGNEES.marshall;
   if (boolish(metadata.children_task) || boolish(metadata.kid_chore)) return ATLAS_ASSIGNEES.kids;
@@ -87,4 +82,13 @@ export function resolveTaskAssignee(task: AssignmentTask): AtlasAssigneeConfig {
   if (collectionZone) return ATLAS_ASSIGNEES[collectionZone];
 
   return ATLAS_ASSIGNEES.farm_team;
+}
+
+export function taskMatchesAssignee(task: AssignmentTask, assigneeKey: AtlasAssigneeKey) {
+  return resolveTaskAssignee(task).key === assigneeKey;
+}
+
+export function assignedTaskHref(taskId: string, assigneeKey: AtlasAssigneeKey) {
+  const assignee = ATLAS_ASSIGNEES[assigneeKey];
+  return `/task-focus/${encodeURIComponent(taskId)}?returnTo=${encodeURIComponent(assignee.listPath)}`;
 }
