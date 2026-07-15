@@ -65,14 +65,14 @@ function dayRange() {
 function MarshallTaskCard({ task }: { task: AtlasTaskCard }) {
   const display = atlasTaskDisplay(task);
   return (
-    <Link className="atlas-overview-task-card atlas-marshall-task-card" href={taskHref(task)}>
+    <a className="atlas-overview-task-card atlas-marshall-task-card" href={taskHref(task)}>
       <div>
         <strong>{display.title}</strong>
         <span>{display.location}</span>
       </div>
       <em>{prettyDate(task.due_date)}</em>
       <p>{display.detail}</p>
-    </Link>
+    </a>
   );
 }
 
