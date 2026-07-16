@@ -39,11 +39,60 @@ export type AtlasTaskTransitionResponse = {
   details?: string;
 };
 
+type ChecklistVisualState = "done" | "open";
+
+const checklistVisualStates = new Map<string, ChecklistVisualState>();
+let checklistObserver: MutationObserver | null = null;
+
 function transitionKey(taskId: string, transition: AtlasTaskTransition) {
   const nonce = typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return `atlas:${taskId}:${transition}:${nonce}`;
+}
+
+function applyChecklistVisualState(taskId: string, state: ChecklistVisualState) {
+  if (typeof document === "undefined") return;
+
+  const row = document.querySelector<HTMLElement>(`[data-child-task-id="${CSS.escape(taskId)}"]`);
+  if (!row) return;
+
+  const done = state === "done";
+  row.classList.toggle("is-done", done);
+  row.dataset.optimisticChecklistStatus = state;
+
+  const mark = row.querySelector<HTMLElement>(".atlas-plant-check__mark");
+  if (mark) mark.textContent = done ? "✓" : "";
+
+  const button = row.querySelector<HTMLButtonElement>(".atlas-plant-check__actions button");
+  if (button) {
+    button.textContent = done ? "Reopen" : "Mark done";
+    button.setAttribute("aria-label", done ? "Reopen subtask" : "Mark subtask complete");
+  }
+}
+
+function ensureChecklistObserver() {
+  if (typeof document === "undefined" || checklistObserver) return;
+
+  checklistObserver = new MutationObserver(() => {
+    checklistVisualStates.forEach((state, taskId) => applyChecklistVisualState(taskId, state));
+  });
+
+  checklistObserver.observe(document.body, { childList: true, subtree: true });
+}
+
+function rememberChecklistVisualState(taskId: string, state: ChecklistVisualState) {
+  checklistVisualStates.set(taskId, state);
+  ensureChecklistObserver();
+  applyChecklistVisualState(taskId, state);
+
+  window.setTimeout(() => {
+    checklistVisualStates.delete(taskId);
+    if (!checklistVisualStates.size && checklistObserver) {
+      checklistObserver.disconnect();
+      checklistObserver = null;
+    }
+  }, 10000);
 }
 
 export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest): Promise<AtlasTaskTransitionResponse> {
@@ -62,5 +111,12 @@ export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest)
   });
   const data = await response.json() as AtlasTaskTransitionResponse;
   if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task update failed.");
+
+  if (typeof window !== "undefined" && input.transition === "checklist_done") {
+    rememberChecklistVisualState(input.taskId, "done");
+  } else if (typeof window !== "undefined" && input.transition === "checklist_open") {
+    rememberChecklistVisualState(input.taskId, "open");
+  }
+
   return data;
 }
