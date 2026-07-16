@@ -16,10 +16,11 @@ function objectMap(objects: AtlasRegistryObject[]) {
 function cropSummary(object: AtlasRegistryObject | undefined) {
   if (!object) return "not found";
   const labels = object.contents
-    .map((content) => content.variety || content.content_label)
+    .map((content) => content.content_label || content.variety)
     .filter(Boolean)
     .filter((label, index, all) => all.indexOf(label) === index)
-    .slice(0, 2);
+    .slice(0, 2)
+    .map((label) => String(label).replace(/ plant cluster$/i, "").replace(/ collection$/i, ""));
   return labels.length ? labels.join(" · ") : "no crop record";
 }
 
@@ -38,7 +39,7 @@ function BedLabel({ object, x, y }: { object: AtlasRegistryObject | undefined; x
   return (
     <g>
       <text x={x} y={y} textAnchor="middle" className="bed-title">{object?.label ?? "Missing bed"}</text>
-      <text x={x} y={y + 22} textAnchor="middle" className="bed-crop">{cropSummary(object)}</text>
+      <text x={x} y={y + 20} textAnchor="middle" className="bed-crop">{cropSummary(object)}</text>
     </g>
   );
 }
@@ -164,8 +165,8 @@ export default function MainGardenMapPage() {
         .garden-map-header h1 { margin: 3px 0 5px; font-size: clamp(30px, 6vw, 52px); }
         .garden-map-header p { margin: 0; color: #625e58; }
         .garden-map-header a { background: #6d5892; color: white; text-decoration: none; padding: 11px 14px; border-radius: 999px; font-weight: 800; white-space: nowrap; }
-        .garden-map-frame { background: #fffdfa; border: 2px solid #25231f; border-radius: 16px; padding: 8px; box-shadow: 0 10px 35px rgba(47,39,29,.08); overflow-x: auto; }
-        svg { display: block; width: 100%; min-width: 760px; height: auto; font-family: inherit; }
+        .garden-map-frame { background: #fffdfa; border: 2px solid #25231f; border-radius: 16px; padding: 8px; box-shadow: 0 10px 35px rgba(47,39,29,.08); overflow: hidden; }
+        svg { display: block; width: 100%; min-width: 0; height: auto; font-family: inherit; }
         .outer, .bed, .center, .walkway, .structure { stroke: #25231f; stroke-width: 2.5; }
         .outer { fill: #fffdfa; }
         .center { fill: #efe8dc; }
@@ -174,11 +175,11 @@ export default function MainGardenMapPage() {
         .walk-line { stroke-width: 4; }
         .structure { fill: #f1eee7; }
         .direction { font-size: 20px; font-weight: 900; }
-        .bed-title { font-size: 20px; font-weight: 900; }
-        .bed-crop { font-size: 11px; font-weight: 700; fill: #514d47; }
-        .walk-label { font-size: 14px; font-weight: 850; }
-        .center-title { font-size: 18px; font-weight: 900; }
-        .center-note { font-size: 12px; font-weight: 700; fill: #625e58; }
+        .bed-title { font-size: 18px; font-weight: 900; }
+        .bed-crop { font-size: 10px; font-weight: 700; fill: #514d47; }
+        .walk-label { font-size: 13px; font-weight: 850; }
+        .center-title { font-size: 17px; font-weight: 900; }
+        .center-note { font-size: 11px; font-weight: 700; fill: #625e58; }
         .garden-map-legend { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; margin: 12px 0; }
         .garden-map-legend div { background: #fffdfa; border: 1px solid #d5cec3; border-radius: 10px; padding: 9px 10px; font-size: 12px; font-weight: 750; }
         .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 7px; vertical-align: -1px; border: 1px solid #777; }
@@ -189,7 +190,12 @@ export default function MainGardenMapPage() {
           .garden-map-shell { padding: 12px; }
           .garden-map-header { align-items: stretch; flex-direction: column; gap: 12px; }
           .garden-map-header a { text-align: center; }
+          .garden-map-frame { padding: 4px; }
           .garden-map-legend { grid-template-columns: repeat(2,minmax(0,1fr)); }
+          .direction { font-size: 17px; }
+          .bed-title { font-size: 16px; }
+          .bed-crop { font-size: 9px; }
+          .walk-label { font-size: 11px; }
         }
       `}</style>
     </main>
