@@ -91,46 +91,48 @@ export default function BerryWalkMapPage() {
             <div className="berry-map-frame">
               <svg viewBox="0 0 720 1320" role="img" aria-labelledby="berry-map-title berry-map-desc">
                 <title id="berry-map-title">Berry Walk north-up field diagram</title>
-                <desc id="berry-map-desc">Crescent Moon at the north end, Original Berry Walk and spiral below it, asparagus strips farther south, and ten Berry Walk flower rows at the south end.</desc>
+                <desc id="berry-map-desc">The Crescent Moon wraps around the north and west sides of the spiral, the two rail-tie beds sit east of the spiral, asparagus lies farther south, and ten Berry Walk flower rows are at the south end.</desc>
 
                 <text x="360" y="30" textAnchor="middle" className="direction">North / dining-room side</text>
                 <path d="M360 44 V72 M348 58 L360 44 L372 58" className="line" />
 
-                <text x="360" y="105" textAnchor="middle" className="section-title">Crescent Moon</text>
+                <text x="350" y="105" textAnchor="middle" className="section-title">Original Berry Walk</text>
+                <text x="350" y="127" textAnchor="middle" className="section-note">crescent wrapping the spiral · rail-tie entrance on east side</text>
+
                 <ObjectLink object={crescent} zoneKey="original_berry_walk" ariaLabel="Open Crescent Moon in the zone inspector">
-                  <path d="M230 280 A150 145 0 0 0 230 120 A108 112 0 0 1 230 280 Z" fill={bedTone(crescent)} className="crescent clickable-shape" />
-                  <text x="360" y="195" textAnchor="middle" className="object-title">Crescent Moon</text>
+                  <path
+                    d="M92 590 C82 330 220 155 430 155 C590 155 675 325 625 555 C590 475 515 420 430 392 C310 352 205 410 92 590 Z"
+                    fill={bedTone(crescent)}
+                    className="crescent clickable-shape"
+                  />
+                  <text x="330" y="205" textAnchor="middle" className="object-title">Crescent Moon</text>
                 </ObjectLink>
 
-                <path d="M80 315 H640" className="divider" />
-                <text x="360" y="350" textAnchor="middle" className="section-title">Original Berry Walk</text>
-                <text x="360" y="372" textAnchor="middle" className="section-note">spiral / labyrinth · rail-tie entrance at south edge</text>
-
                 <ObjectLink object={spiral} zoneKey="original_berry_walk" ariaLabel="Open the Berry Walk spiral path in the zone inspector">
-                  <path d="M360 640 C205 640 190 470 340 425 C490 380 590 520 505 600 C445 658 330 610 355 520 C375 450 460 460 470 520 C478 566 430 590 397 560" className="spiral clickable-path" />
-                  <text x="360" y="415" textAnchor="middle" className="object-title">Spiral / labyrinth</text>
+                  <path d="M355 655 C195 655 185 480 337 430 C490 380 590 520 505 607 C445 668 325 620 350 525 C370 448 462 458 474 522 C484 570 430 600 394 565" className="spiral clickable-path" />
+                  <text x="350" y="390" textAnchor="middle" className="object-title">Spiral / labyrinth</text>
                 </ObjectLink>
 
                 <ObjectLink object={northTulip} zoneKey="original_berry_walk" ariaLabel="Open the north rail-tie bed in the zone inspector">
-                  <rect x="130" y="690" width="190" height="58" rx="5" fill={bedTone(northTulip)} className="tulip-bed clickable-shape" />
-                  <text x="225" y="724" textAnchor="middle" className="small-title">North rail-tie bed</text>
+                  <rect x="610" y="360" width="54" height="125" rx="5" fill={bedTone(northTulip)} className="tulip-bed clickable-shape" />
+                  <text x="637" y="423" textAnchor="middle" transform="rotate(-90 637 423)" className="small-title">North rail-tie</text>
                 </ObjectLink>
-                <ObjectLink object={southTulip} zoneKey="original_berry_walk" ariaLabel="Open the south rail-tie bed in the zone inspector">
-                  <rect x="400" y="690" width="190" height="58" rx="5" fill={bedTone(southTulip)} className="tulip-bed clickable-shape" />
-                  <text x="495" y="724" textAnchor="middle" className="small-title">South rail-tie bed</text>
-                </ObjectLink>
-                <path d="M320 690 Q360 632 400 690" className="arch" />
-                <text x="360" y="665" textAnchor="middle" className="small-label">guest entrance / future arch</text>
 
-                <path d="M80 785 H640" className="divider" />
-                <text x="360" y="820" textAnchor="middle" className="section-title">Asparagus</text>
-                <text x="360" y="842" textAnchor="middle" className="section-note">two east-west strips · four registry sections</text>
+                <ObjectLink object={southTulip} zoneKey="original_berry_walk" ariaLabel="Open the south rail-tie bed in the zone inspector">
+                  <rect x="610" y="525" width="54" height="125" rx="5" fill={bedTone(southTulip)} className="tulip-bed clickable-shape" />
+                  <text x="637" y="588" textAnchor="middle" transform="rotate(-90 637 588)" className="small-title">South rail-tie</text>
+                </ObjectLink>
+                <path d="M610 485 Q565 505 610 525" className="arch" />
+                <text x="570" y="510" textAnchor="end" className="small-label">guest entrance</text>
+
+                <text x="360" y="730" textAnchor="middle" className="section-title">Asparagus</text>
+                <text x="360" y="752" textAnchor="middle" className="section-note">two east-west strips · four registry sections</text>
 
                 {[
-                  { object: asparagus[0], x: 110, y: 870, width: 230, label: "A1" },
-                  { object: asparagus[1], x: 380, y: 870, width: 230, label: "A2" },
-                  { object: asparagus[2], x: 110, y: 950, width: 230, label: "A3" },
-                  { object: asparagus[3], x: 380, y: 950, width: 230, label: "A4" },
+                  { object: asparagus[0], x: 110, y: 780, width: 230, label: "A1" },
+                  { object: asparagus[1], x: 380, y: 780, width: 230, label: "A2" },
+                  { object: asparagus[2], x: 110, y: 860, width: 230, label: "A3" },
+                  { object: asparagus[3], x: 380, y: 860, width: 230, label: "A4" },
                 ].map((section) => (
                   <ObjectLink key={section.label} object={section.object} zoneKey="berry_walk_flower_rows" ariaLabel={`Open ${section.label} in the zone inspector`}>
                     <rect x={section.x} y={section.y} width={section.width} height="52" rx="5" className="asparagus clickable-shape" />
@@ -138,17 +140,16 @@ export default function BerryWalkMapPage() {
                   </ObjectLink>
                 ))}
 
-                <rect x="90" y="930" width="540" height="12" className="center-walkway" />
+                <rect x="90" y="840" width="540" height="12" className="center-walkway" />
 
-                <path d="M80 1035 H640" className="divider" />
-                <text x="360" y="1070" textAnchor="middle" className="section-title">Berry Walk Flower Rows</text>
-                <text x="360" y="1092" textAnchor="middle" className="section-note">10 east-west beds · two groups of five</text>
+                <text x="360" y="980" textAnchor="middle" className="section-title">Berry Walk Flower Rows</text>
+                <text x="360" y="1002" textAnchor="middle" className="section-note">10 east-west beds · two groups of five</text>
 
                 {beds.map((object, index) => {
                   const row = index < 5 ? 0 : 1;
                   const column = index % 5;
                   const x = 65 + column * 124;
-                  const y = 1120 + row * 92;
+                  const y = 1030 + row * 92;
                   return (
                     <ObjectLink key={`bw-${index + 1}`} object={object} zoneKey="berry_walk_flower_rows" ariaLabel={`Open BW${index + 1} in the zone inspector`}>
                       <rect x={x} y={y} width="100" height="58" rx="5" fill={bedTone(object)} className="bed clickable-shape" />
@@ -157,11 +158,11 @@ export default function BerryWalkMapPage() {
                   );
                 })}
 
-                <rect x="45" y="1186" width="630" height="18" className="center-walkway" />
-                <text x="360" y="1200" textAnchor="middle" className="walk-label">3 ft center walkway</text>
+                <rect x="45" y="1096" width="630" height="18" className="center-walkway" />
+                <text x="360" y="1110" textAnchor="middle" className="walk-label">3 ft center walkway</text>
 
-                <text x="360" y="1300" textAnchor="middle" className="direction">South / flower-row end</text>
-                <path d="M360 1262 V1288 M348 1275 L360 1288 L372 1275" className="line" />
+                <text x="360" y="1265" textAnchor="middle" className="direction">South / flower-row end</text>
+                <path d="M360 1225 V1252 M348 1239 L360 1252 L372 1239" className="line" />
               </svg>
             </div>
 
@@ -172,7 +173,7 @@ export default function BerryWalkMapPage() {
               <div><span className="swatch open" />Open / no crop record</div>
             </section>
 
-            <p className="berry-map-source">North-up field order: Crescent Moon → Original Berry Walk / spiral → asparagus → BW1–BW10 flower rows. Tap a mapped bed or path to open that exact Atlas object in its existing zone inspector.</p>
+            <p className="berry-map-source">North-up field map: the Crescent Moon now wraps around the spiral, the two rail-tie beds sit on the east side at the guest entrance, asparagus lies south of the Original Berry Walk, and BW1–BW10 remain at the south end. Tap a mapped object to open its Atlas record.</p>
           </>
         ) : null}
       </section>
@@ -187,8 +188,7 @@ export default function BerryWalkMapPage() {
         .berry-map-header a { background: #6d5892; color: white; text-decoration: none; padding: 11px 14px; border-radius: 999px; font-weight: 800; white-space: nowrap; }
         .berry-map-frame { background: #fffdfa; border: 2px solid #25231f; border-radius: 16px; padding: 8px; box-shadow: 0 10px 35px rgba(47,39,29,.08); overflow: hidden; }
         svg { display: block; width: 100%; min-width: 0; height: auto; font-family: inherit; }
-        .line, .divider, .arch, .spiral { fill: none; stroke: #22211e; stroke-width: 3; }
-        .divider { stroke-width: 2; }
+        .line, .arch, .spiral { fill: none; stroke: #22211e; stroke-width: 3; }
         .arch { stroke-width: 4; }
         .spiral { stroke-width: 14; stroke-linecap: round; }
         .bed, .asparagus, .tulip-bed, .crescent, .center-walkway { stroke: #25231f; stroke-width: 2.5; }
