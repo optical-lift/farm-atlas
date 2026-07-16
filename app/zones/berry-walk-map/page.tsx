@@ -89,9 +89,9 @@ export default function BerryWalkMapPage() {
         {!loading && flowerZone && originalZone ? (
           <>
             <div className="berry-map-frame">
-              <svg viewBox="0 0 720 1320" role="img" aria-labelledby="berry-map-title berry-map-desc">
+              <svg viewBox="0 0 720 1340" role="img" aria-labelledby="berry-map-title berry-map-desc">
                 <title id="berry-map-title">Berry Walk north-up field diagram</title>
-                <desc id="berry-map-desc">The Crescent Moon wraps around the north and west sides of the spiral, the two rail-tie beds sit east of the spiral, asparagus lies farther south, and ten Berry Walk flower rows are at the south end.</desc>
+                <desc id="berry-map-desc">The Crescent Moon wraps around the spiral, rail-tie beds sit east of it, asparagus lies south, and ten east-west Berry Walk flower beds form two groups of five divided by a north-south center walkway.</desc>
 
                 <text x="360" y="30" textAnchor="middle" className="direction">North / dining-room side</text>
                 <path d="M360 44 V72 M348 58 L360 44 L372 58" className="line" />
@@ -100,11 +100,7 @@ export default function BerryWalkMapPage() {
                 <text x="350" y="127" textAnchor="middle" className="section-note">crescent wrapping the spiral · rail-tie entrance on east side</text>
 
                 <ObjectLink object={crescent} zoneKey="original_berry_walk" ariaLabel="Open Crescent Moon in the zone inspector">
-                  <path
-                    d="M92 590 C82 330 220 155 430 155 C590 155 675 325 625 555 C590 475 515 420 430 392 C310 352 205 410 92 590 Z"
-                    fill={bedTone(crescent)}
-                    className="crescent clickable-shape"
-                  />
+                  <path d="M92 590 C82 330 220 155 430 155 C590 155 675 325 625 555 C590 475 515 420 430 392 C310 352 205 410 92 590 Z" fill={bedTone(crescent)} className="crescent clickable-shape" />
                   <text x="330" y="205" textAnchor="middle" className="object-title">Crescent Moon</text>
                 </ObjectLink>
 
@@ -142,27 +138,27 @@ export default function BerryWalkMapPage() {
 
                 <rect x="90" y="840" width="540" height="12" className="center-walkway" />
 
-                <text x="360" y="980" textAnchor="middle" className="section-title">Berry Walk Flower Rows</text>
-                <text x="360" y="1002" textAnchor="middle" className="section-note">10 east-west beds · two groups of five</text>
+                <text x="360" y="965" textAnchor="middle" className="section-title">Berry Walk Flower Rows</text>
+                <text x="360" y="987" textAnchor="middle" className="section-note">10 east-west beds · two groups of five</text>
 
                 {beds.map((object, index) => {
-                  const row = index < 5 ? 0 : 1;
-                  const column = index % 5;
-                  const x = 65 + column * 124;
-                  const y = 1030 + row * 92;
+                  const leftGroup = index < 5;
+                  const groupIndex = leftGroup ? index : index - 5;
+                  const x = leftGroup ? 70 : 390;
+                  const y = 1015 + groupIndex * 48;
                   return (
                     <ObjectLink key={`bw-${index + 1}`} object={object} zoneKey="berry_walk_flower_rows" ariaLabel={`Open BW${index + 1} in the zone inspector`}>
-                      <rect x={x} y={y} width="100" height="58" rx="5" fill={bedTone(object)} className="bed clickable-shape" />
-                      <text x={x + 50} y={y + 35} textAnchor="middle" className="bed-title">BW{index + 1}</text>
+                      <rect x={x} y={y} width="250" height="34" rx="5" fill={bedTone(object)} className="bed clickable-shape" />
+                      <text x={x + 125} y={y + 23} textAnchor="middle" className="bed-title">BW{index + 1}</text>
                     </ObjectLink>
                   );
                 })}
 
-                <rect x="45" y="1096" width="630" height="18" className="center-walkway" />
-                <text x="360" y="1110" textAnchor="middle" className="walk-label">3 ft center walkway</text>
+                <rect x="344" y="1005" width="32" height="238" className="center-walkway" />
+                <text x="360" y="1124" textAnchor="middle" transform="rotate(-90 360 1124)" className="walk-label">3 ft center walkway</text>
 
-                <text x="360" y="1265" textAnchor="middle" className="direction">South / flower-row end</text>
-                <path d="M360 1225 V1252 M348 1239 L360 1252 L372 1239" className="line" />
+                <text x="360" y="1305" textAnchor="middle" className="direction">South / flower-row end</text>
+                <path d="M360 1265 V1292 M348 1279 L360 1292 L372 1279" className="line" />
               </svg>
             </div>
 
@@ -173,7 +169,7 @@ export default function BerryWalkMapPage() {
               <div><span className="swatch open" />Open / no crop record</div>
             </section>
 
-            <p className="berry-map-source">North-up field map: the Crescent Moon now wraps around the spiral, the two rail-tie beds sit on the east side at the guest entrance, asparagus lies south of the Original Berry Walk, and BW1–BW10 remain at the south end. Tap a mapped object to open its Atlas record.</p>
+            <p className="berry-map-source">North-up field map: the Crescent Moon wraps around the spiral, the rail-tie beds sit on the east side, asparagus lies south of the Original Berry Walk, and BW1–BW10 are shown as east-west beds in two groups of five divided by the north-south center walkway. Tap a mapped object to open its Atlas record.</p>
           </>
         ) : null}
       </section>
@@ -201,7 +197,7 @@ export default function BerryWalkMapPage() {
         .section-note { font-size: 12px; font-weight: 700; fill: #666158; }
         .object-title, .bed-title, .small-title { font-size: 15px; font-weight: 900; pointer-events: none; }
         .small-label { font-size: 11px; font-weight: 700; fill: #4e4a44; }
-        .walk-label { font-size: 11px; font-weight: 850; }
+        .walk-label { font-size: 11px; font-weight: 850; pointer-events: none; }
         .clickable-shape, .clickable-path { cursor: pointer; transition: opacity .15s ease, stroke-width .15s ease; }
         :global(.map-object-link:hover) .clickable-shape, :global(.map-object-link:focus-visible) .clickable-shape { opacity: .78; stroke-width: 5; }
         :global(.map-object-link:hover) .clickable-path, :global(.map-object-link:focus-visible) .clickable-path { opacity: .68; stroke-width: 19; }
