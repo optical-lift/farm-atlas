@@ -80,7 +80,7 @@ export default function BerryWalkMapPage() {
             <div className="berry-map-frame">
               <svg viewBox="0 0 1240 720" role="img" aria-labelledby="berry-map-title berry-map-desc">
                 <title id="berry-map-title">Berry Walk field diagram</title>
-                <desc id="berry-map-desc">East-west flower beds on the left, asparagus beds beside them, Original Berry Walk and spiral to the right, and the crescent moon at the far right.</desc>
+                <desc id="berry-map-desc">East-west flower beds on the left, asparagus beds beside them, Original Berry Walk and spiral to the right, rail-tie beds at the guest entrance, and the crescent moon at the far right.</desc>
 
                 <text x="620" y="32" textAnchor="middle" className="direction">North / dining-room side</text>
                 <path d="M620 45 L620 75 M608 58 L620 45 L632 58" className="line" />
@@ -122,22 +122,20 @@ export default function BerryWalkMapPage() {
 
                 <path d="M648 104 V668" className="divider" />
                 <text x="835" y="94" textAnchor="middle" className="section-title">Original Berry Walk</text>
-                <text x="835" y="115" textAnchor="middle" className="section-note">rail-tie entrance · stone spiral / labyrinth</text>
+                <text x="835" y="115" textAnchor="middle" className="section-note">stone spiral / labyrinth · rail-tie entrance at south end</text>
 
-                <rect x="682" y="142" width="78" height="108" rx="4" className="tulip-bed" />
-                <rect x="766" y="142" width="78" height="108" rx="4" className="tulip-bed" />
-                <text x="721" y="173" textAnchor="middle" className="small-title">North</text>
-                <text x="721" y="193" textAnchor="middle" className="small-label">rail-tie</text>
-                <text x="721" y="211" textAnchor="middle" className="small-label">tulips</text>
-                <text x="805" y="173" textAnchor="middle" className="small-title">South</text>
-                <text x="805" y="193" textAnchor="middle" className="small-label">rail-tie</text>
-                <text x="805" y="211" textAnchor="middle" className="small-label">tulips</text>
-                <path d="M721 142 Q763 96 805 142" className="arch" />
-                <text x="763" y="130" textAnchor="middle" className="small-label">future arch / entrance</text>
+                <path d="M838 510 C708 510 690 370 807 334 C924 298 1014 398 951 471 C905 526 814 487 834 417 C849 365 919 369 926 414 C932 448 895 469 870 446" className="spiral" />
+                <text x="835" y="240" textAnchor="middle" className="bed-title">Spiral / labyrinth walk</text>
+                <text x="835" y="260" textAnchor="middle" className="bed-crop">{spiral ? `${Math.round(Number(spiral.length_ft || 162))} ft · ${spiral.width_ft || 2} ft wide` : "stone-lined path"}</text>
 
-                <path d="M838 592 C708 592 690 452 807 416 C924 380 1014 480 951 553 C905 608 814 569 834 499 C849 447 919 451 926 496 C932 530 895 551 870 528" className="spiral" />
-                <text x="835" y="322" textAnchor="middle" className="bed-title">Spiral / labyrinth walk</text>
-                <text x="835" y="342" textAnchor="middle" className="bed-crop">{spiral ? `${Math.round(Number(spiral.length_ft || 162))} ft · ${spiral.width_ft || 2} ft wide` : "stone-lined path"}</text>
+                <rect x="676" y="594" width="136" height="54" rx="4" className="tulip-bed" />
+                <rect x="858" y="594" width="136" height="54" rx="4" className="tulip-bed" />
+                <text x="744" y="617" textAnchor="middle" className="small-title">North rail-tie bed</text>
+                <text x="744" y="637" textAnchor="middle" className="small-label">florist tulips</text>
+                <text x="926" y="617" textAnchor="middle" className="small-title">South rail-tie bed</text>
+                <text x="926" y="637" textAnchor="middle" className="small-label">florist tulips</text>
+                <path d="M812 594 Q835 558 858 594" className="arch" />
+                <text x="835" y="552" textAnchor="middle" className="small-label">future arch / guest entrance</text>
 
                 <path d="M982 154 V668" className="divider" />
                 <text x="1105" y="94" textAnchor="middle" className="section-title">Crescent Moon</text>
@@ -157,7 +155,7 @@ export default function BerryWalkMapPage() {
               <div><span className="swatch open" />Open / no crop record</div>
             </section>
 
-            <p className="berry-map-source">Corrected field order: Flower Rows → Asparagus → Original Berry Walk / spiral → Crescent Moon. Current registry: {flowerZone.object_count} Berry Walk row/asparagus objects and {originalZone.object_count} Original Berry Walk objects. Rail-tie beds: {northTulip?.length_ft ?? 8.5} × {northTulip?.width_ft ?? 4} ft and {southTulip?.length_ft ?? 8.5} × {southTulip?.width_ft ?? 4} ft.</p>
+            <p className="berry-map-source">Corrected field order: Flower Rows → Asparagus → Original Berry Walk / spiral → Crescent Moon. The two rail-tie florist-tulip beds sit at the south guest entrance below the spiral. Current registry: {flowerZone.object_count} Berry Walk row/asparagus objects and {originalZone.object_count} Original Berry Walk objects. Rail-tie beds: {northTulip?.length_ft ?? 8.5} × {northTulip?.width_ft ?? 4} ft and {southTulip?.length_ft ?? 8.5} × {southTulip?.width_ft ?? 4} ft.</p>
           </>
         ) : null}
       </section>
