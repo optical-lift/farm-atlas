@@ -54,6 +54,7 @@ export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest)
       Accept: "application/json",
       "x-atlas-intent": "task-transition-v1",
     },
+    cache: "no-store",
     body: JSON.stringify({
       ...input,
       idempotencyKey: input.idempotencyKey ?? transitionKey(input.taskId, input.transition),
@@ -61,5 +62,15 @@ export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest)
   });
   const data = await response.json() as AtlasTaskTransitionResponse;
   if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task update failed.");
+
+  if (
+    typeof window !== "undefined"
+    && (input.transition === "checklist_done" || input.transition === "checklist_open")
+  ) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("checklistRefresh", Date.now().toString());
+    window.location.replace(url.toString());
+  }
+
   return data;
 }
