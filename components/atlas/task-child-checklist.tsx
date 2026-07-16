@@ -17,6 +17,15 @@ type PlantLogForm = {
   message: string | null;
 };
 
+type SowingContext = {
+  title: string;
+  status: string;
+  sownDate: string;
+  variety: string;
+  currentStage: string;
+  detailLines: string[];
+};
+
 function meta(task: AtlasTaskCard, key: string) {
   return task.metadata?.[key];
 }
@@ -41,6 +50,24 @@ function boolish(value: unknown) {
   return value === true || value === "true" || value === "yes" || value === 1;
 }
 
+function record(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function prettyDate(value: string) {
+  if (!value) return "";
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function humanStage(value: string) {
+  return value ? value.replaceAll("_", " ") : "";
+}
+
 function label(task: AtlasTaskCard) {
   return text(meta(task, "checklist_label")) || text(meta(task, "display_subject")) || task.title.replace(/^Checklist\s+—\s+/i, "");
 }
@@ -49,13 +76,32 @@ function detailLines(task: AtlasTaskCard) {
   return stringList(meta(task, "detail_lines"));
 }
 
-function sourceSowingSummary(task: AtlasTaskCard) {
-  const sourceId = text(meta(task, "source_sowing_task_id"));
-  if (!sourceId) return "";
+function sowingContext(task: AtlasTaskCard, key: "source_sowing" | "gap_fill_sowing"): SowingContext | null {
+  const value = record(meta(task, key));
+  if (!value) return null;
+  const title = text(value.title);
+  if (!title) return null;
+  return {
+    title,
+    status: text(value.status),
+    sownDate: text(value.sown_date),
+    variety: text(value.variety),
+    currentStage: text(value.current_stage),
+    detailLines: stringList(value.detail_lines),
+  };
+}
 
-  const sourceTitle = text(meta(task, "source_sowing_title")) || "Linked sowing record";
-  const sourceStatus = text(meta(task, "source_sowing_status"));
-  return `Original sowing · ${sourceTitle}${sourceStatus ? ` · ${sourceStatus}` : ""}`;
+function legacySourceSowing(task: AtlasTaskCard): SowingContext | null {
+  const sourceId = text(meta(task, "source_sowing_task_id"));
+  if (!sourceId) return null;
+  return {
+    title: text(meta(task, "source_sowing_title")) || "Linked sowing record",
+    status: text(meta(task, "source_sowing_status")),
+    sownDate: text(meta(task, "source_sowing_date")),
+    variety: "",
+    currentStage: text(meta(task, "current_stage")),
+    detailLines: [],
+  };
 }
 
 function isDone(task: AtlasTaskCard) {
@@ -236,6 +282,10 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
       <style>{`
         .atlas-plant-check__item.is-simple .atlas-plant-check__actions button::after { content: none !important; }
         .atlas-plant-check__item.is-simple .atlas-plant-check__content { padding-right: 14px !important; }
+        .atlas-plant-check__history { display: grid; gap: 3px; margin-top: 8px; }
+        .atlas-plant-check__history + .atlas-plant-check__history { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(91, 99, 71, .18); }
+        .atlas-plant-check__history b { font-size: .78em; letter-spacing: .08em; text-transform: uppercase; }
+        .atlas-plant-check__history em { font-style: normal; font-weight: 700; }
         @media (max-width: 430px) {
           .atlas-plant-check__item.is-simple .atlas-plant-check__content { padding-right: 12px !important; }
         }
@@ -252,7 +302,9 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
           const rowMessage = rowMessages[task.task_id];
           const isSaving = savingId === task.task_id;
           const summary = logSummary(task);
-          const sourceSowing = sourceSowingSummary(task);
+          const source = sowingContext(task, "source_sowing") ?? legacySourceSowing(task);
+          const gapFill = sowingContext(task, "gap_fill_sowing");
+          const fallbackLines = !gapFill ? detailLines(task) : [];
 
           return (
             <article
@@ -265,8 +317,22 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
                 <span className="atlas-plant-check__mark">{done ? "✓" : ""}</span>
                 <div className="atlas-plant-check__copy">
                   <strong>{label(task)}</strong>
-                  {sourceSowing ? <em>{sourceSowing}</em> : null}
-                  {detailLines(task).map((line) => <span key={line}>{line}</span>)}
+                  {source ? (
+                    <div className="atlas-plant-check__history">
+                      <b>Last sowing</b>
+                      <em>{source.title}{source.sownDate ? ` · ${prettyDate(source.sownDate)}` : ""}</em>
+                      {source.currentStage ? <span>Current stand · {humanStage(source.currentStage)}</span> : null}
+                      {source.detailLines.map((line) => <span key={`source-${line}`}>{line}</span>)}
+                    </div>
+                  ) : null}
+                  {gapFill ? (
+                    <div className="atlas-plant-check__history">
+                      <b>Gap fill</b>
+                      <em>{gapFill.variety || gapFill.title}{gapFill.sownDate ? ` · ${prettyDate(gapFill.sownDate)}` : ""}</em>
+                      {gapFill.detailLines.map((line) => <span key={`gap-${line}`}>{line}</span>)}
+                    </div>
+                  ) : null}
+                  {fallbackLines.map((line) => <span key={line}>{line}</span>)}
                   {summary ? <em>{summary}</em> : null}
                   {rowMessage ? <em>{rowMessage}</em> : null}
                 </div>
