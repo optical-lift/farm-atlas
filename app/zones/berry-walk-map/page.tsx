@@ -98,7 +98,7 @@ export default function BerryWalkMapPage() {
             <div className="berry-map-frame">
               <svg viewBox="0 0 720 1340" role="img" aria-labelledby="berry-map-title berry-map-desc">
                 <title id="berry-map-title">Berry Walk north-up field diagram</title>
-                <desc id="berry-map-desc">The Crescent Moon wraps around the spiral, rail-tie beds sit east of it, asparagus lies south, and ten east-west Berry Walk flower beds form two numbered columns divided by a north-south center walkway.</desc>
+                <desc id="berry-map-desc">A shallower Crescent Moon wraps around the spiral, rail-tie beds sit east of it, and one north-south center walkway continues through both asparagus and the ten Berry Walk flower rows.</desc>
 
                 <text x="360" y="30" textAnchor="middle" className="direction">North</text>
                 <path d="M360 44 V72 M348 58 L360 44 L372 58" className="line" />
@@ -107,7 +107,7 @@ export default function BerryWalkMapPage() {
                 <text x="350" y="127" textAnchor="middle" className="section-note">crescent wrapping the spiral · rail-tie entrance on east side</text>
 
                 <ObjectLink object={crescent} zoneKey="original_berry_walk" ariaLabel="Open Crescent Moon in the zone inspector">
-                  <path d="M92 590 C82 330 220 155 430 155 C590 155 675 325 625 555 C590 475 515 420 430 392 C310 352 205 410 92 590 Z" fill={bedTone(crescent)} className="crescent clickable-shape" />
+                  <path d="M92 500 C82 300 220 155 430 155 C590 155 675 300 625 480 C585 420 515 372 430 340 C310 300 205 350 92 500 Z" fill={bedTone(crescent)} className="crescent clickable-shape" />
                   <text x="330" y="205" textAnchor="middle" className="object-title">Crescent Moon</text>
                 </ObjectLink>
 
@@ -139,6 +139,7 @@ export default function BerryWalkMapPage() {
                 ))}
 
                 <rect x="90" y="840" width="540" height="12" className="center-walkway" />
+                <rect x="344" y="770" width="32" height="473" className="center-walkway" />
 
                 <text x="360" y="965" textAnchor="middle" className="section-title">Berry Walk Flower Rows</text>
                 <text x="360" y="987" textAnchor="middle" className="section-note">BW1–BW5 west · BW6–BW10 east · numbered south to north</text>
@@ -158,7 +159,6 @@ export default function BerryWalkMapPage() {
                   );
                 })}
 
-                <rect x="344" y="1005" width="32" height="238" className="center-walkway" />
                 <text x="360" y="1124" textAnchor="middle" transform="rotate(-90 360 1124)" className="walk-label">3 ft center walkway</text>
 
                 <text x="360" y="1305" textAnchor="middle" className="direction">South</text>
@@ -173,7 +173,7 @@ export default function BerryWalkMapPage() {
               <div><span className="swatch open" />Open / no crop record</div>
             </section>
 
-            <p className="berry-map-source">North-up field map: BW1–BW5 run up the west side from south to north, BW6–BW10 run up the east side from south to north, A2 and A4 touch the Original Berry Walk, and A1 and A3 touch the flower rows. The asparagus sections now match the flower-row bed length. Tap a mapped object to open its Atlas record.</p>
+            <p className="berry-map-source">North-up field map: BW1–BW5 run up the west side from south to north, BW6–BW10 run up the east side from south to north, A2 and A4 touch the Original Berry Walk, and A1 and A3 touch the flower rows. The north-south center walkway now continues through both the asparagus and flower-row sections. Tap a mapped object to open its Atlas record.</p>
           </>
         ) : null}
       </section>
