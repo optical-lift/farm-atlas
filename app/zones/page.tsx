@@ -49,6 +49,22 @@ export default function AtlasZonesPage() {
           {loading ? <div className="atlas-route-loading">Loading zones...</div> : null}
           {error ? <div className="atlas-route-error">{error}</div> : null}
 
+          <Link
+            href="/zones/berry-walk-map"
+            className="atlas-zone-landing-link"
+            aria-label="Open the Berry Walk field diagram"
+          >
+            <article className="atlas-zone-landing-card">
+              <span className="atlas-home-kicker">Field diagram</span>
+              <h2>Berry Walk map</h2>
+              <p>See the 10 flower rows, four asparagus beds, rail-tie beds, crescent, and spiral together.</p>
+              <div className="atlas-zone-landing-card-footer">
+                <span>Live Atlas labels</span>
+                <strong>Open map →</strong>
+              </div>
+            </article>
+          </Link>
+
           <section className="atlas-zone-landing-grid" aria-label="Atlas zones">
             {zones.map((zone) => (
               <Link href={`/zones/${zone.stable_key}`} key={zone.id} className="atlas-zone-landing-link">
