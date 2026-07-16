@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 
 import { TaskPhysicalSpaces } from "@/components/atlas/task-physical-spaces";
@@ -36,7 +36,9 @@ function objectTasks(object: AtlasRegistryObject, tasks: AtlasTaskCard[]) {
 
 export default function AtlasZoneDetailPage() {
   const params = useParams<{ zoneKey: string }>();
+  const searchParams = useSearchParams();
   const zoneKey = params.zoneKey;
+  const selectedObjectKey = searchParams.get("object");
 
   const [zones, setZones] = useState<AtlasRegistryZone[]>([]);
   const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
@@ -70,6 +72,20 @@ export default function AtlasZoneDetailPage() {
     () => zones.find((candidate) => candidate.stable_key === zoneKey) ?? null,
     [zones, zoneKey],
   );
+
+  useEffect(() => {
+    if (!zone || !selectedObjectKey) return;
+
+    const target = document.getElementById(`object-${selectedObjectKey}`);
+    if (!target) return;
+
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      const card = target.querySelector<HTMLElement>(".atlas-bed-row-card");
+      const button = target.querySelector<HTMLButtonElement>(".atlas-bed-row-button");
+      if (card && button && !card.classList.contains("open")) button.click();
+    }, 80);
+  }, [selectedObjectKey, zone]);
 
   const nextZone = useMemo(() => {
     if (!zone || zones.length === 0) return null;
@@ -154,13 +170,14 @@ export default function AtlasZoneDetailPage() {
                 ) : null}
 
                 {zone.objects.map((object) => (
-                  <BedInspectorRow
-                    key={object.id}
-                    object={object}
-                    tasks={objectTasks(object, tasks)}
-                    onTaskSelect={setSelectedTask}
-                    onDocumentObject={openObjectLog}
-                  />
+                  <div id={`object-${object.stable_key}`} key={object.id}>
+                    <BedInspectorRow
+                      object={object}
+                      tasks={objectTasks(object, tasks)}
+                      onTaskSelect={setSelectedTask}
+                      onDocumentObject={openObjectLog}
+                    />
+                  </div>
                 ))}
               </section>
 
