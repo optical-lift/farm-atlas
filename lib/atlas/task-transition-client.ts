@@ -62,15 +62,5 @@ export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest)
   });
   const data = await response.json() as AtlasTaskTransitionResponse;
   if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task update failed.");
-
-  if (
-    typeof window !== "undefined"
-    && (input.transition === "checklist_done" || input.transition === "checklist_open")
-  ) {
-    const url = new URL(window.location.href);
-    url.searchParams.set("checklistRefresh", Date.now().toString());
-    window.location.replace(url.toString());
-  }
-
   return data;
 }
