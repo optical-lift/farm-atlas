@@ -80,7 +80,7 @@ export default function BerryWalkMapPage() {
             <div className="berry-map-frame">
               <svg viewBox="0 0 1240 720" role="img" aria-labelledby="berry-map-title berry-map-desc">
                 <title id="berry-map-title">Berry Walk field diagram</title>
-                <desc id="berry-map-desc">East-west flower beds on the left, asparagus beds beside them, Original Berry Walk and spiral to the right, rail-tie beds at the guest entrance, and the crescent moon at the far right.</desc>
+                <desc id="berry-map-desc">East-west flower beds on the left, east-west asparagus beds beside them, Original Berry Walk and spiral to the right, rail-tie beds at the guest entrance, and the crescent moon at the far right.</desc>
 
                 <text x="620" y="32" textAnchor="middle" className="direction">North / dining-room side</text>
                 <path d="M620 45 L620 75 M608 58 L620 45 L632 58" className="line" />
@@ -89,33 +89,42 @@ export default function BerryWalkMapPage() {
                 <text x="250" y="115" textAnchor="middle" className="section-note">10 east-west beds · 3 ft × 22 ft · 2 ft mulch walks</text>
 
                 {beds.map((object, index) => {
-                  const y = 132 + index * 48 + (index >= 5 ? 26 : 0);
+                  const groupIndex = index < 5 ? index : index - 5;
+                  const x = 48 + groupIndex * 82;
+                  const y = index < 5 ? 136 : 408;
                   const lines = labelFor(object, `BW${index + 1}\nnot found`).split("\n");
+                  const centerX = x + 32;
+                  const centerY = y + 102;
                   return (
                     <g key={`bed-${index}`}>
-                      <rect x="42" y={y} width="416" height="34" rx="5" fill={object ? bedTone(object) : "#eee"} className="bed" />
-                      <text x="250" y={y + 14} textAnchor="middle" className="bed-title">{lines[0]}</text>
-                      <text x="250" y={y + 28} textAnchor="middle" className="bed-crop">{lines[1]}</text>
+                      <rect x={x} y={y} width="64" height="204" rx="5" fill={object ? bedTone(object) : "#eee"} className="bed" />
+                      <text x={centerX} y={centerY - 8} textAnchor="middle" transform={`rotate(-90 ${centerX} ${centerY - 8})`} className="bed-title">{lines[0]}</text>
+                      <text x={centerX} y={centerY + 10} textAnchor="middle" transform={`rotate(-90 ${centerX} ${centerY + 10})`} className="bed-crop">{lines[1]}</text>
                     </g>
                   );
                 })}
 
-                <rect x="42" y="366" width="416" height="22" className="walkway" />
-                <text x="250" y="381" textAnchor="middle" className="walk-label">3 ft center walkway between the two groups of five</text>
+                <rect x="42" y="360" width="416" height="28" className="walkway" />
+                <text x="250" y="379" textAnchor="middle" className="walk-label">3 ft center walkway between the two groups of five</text>
 
                 <path d="M478 104 V668" className="divider" />
                 <text x="562" y="94" textAnchor="middle" className="section-title">Asparagus</text>
-                <text x="562" y="115" textAnchor="middle" className="section-note">four beds · 18 in walks</text>
+                <text x="562" y="115" textAnchor="middle" className="section-note">four east-west beds · 18 in walks</text>
 
                 {asparagus.map((object, index) => {
-                  const y = 146 + index * 116;
-                  const width = index % 2 === 0 ? 64 : 88;
-                  const x = 562 - width / 2;
+                  const widths = [34, 48, 34, 48];
+                  const gap = 10;
+                  const totalWidth = widths.reduce((sum, width) => sum + width, 0) + gap * 3;
+                  const left = 562 - totalWidth / 2;
+                  const x = left + widths.slice(0, index).reduce((sum, width) => sum + width, 0) + gap * index;
+                  const width = widths[index];
+                  const centerX = x + width / 2;
+                  const centerY = 384;
                   return (
                     <g key={`asparagus-${index}`}>
-                      <rect x={x} y={y} width={width} height="82" rx="5" className="asparagus" />
-                      <text x="562" y={y + 35} textAnchor="middle" className="small-title">A{index + 1}</text>
-                      <text x="562" y={y + 54} textAnchor="middle" className="small-label">{object?.width_ft ?? (index % 2 === 0 ? 2 : 3)} ft wide</text>
+                      <rect x={x} y="144" width={width} height="480" rx="5" className="asparagus" />
+                      <text x={centerX} y={centerY - 8} textAnchor="middle" transform={`rotate(-90 ${centerX} ${centerY - 8})`} className="small-title">A{index + 1}</text>
+                      <text x={centerX} y={centerY + 12} textAnchor="middle" transform={`rotate(-90 ${centerX} ${centerY + 12})`} className="small-label">{object?.width_ft ?? (index % 2 === 0 ? 2 : 3)} ft wide</text>
                     </g>
                   );
                 })}
@@ -155,7 +164,7 @@ export default function BerryWalkMapPage() {
               <div><span className="swatch open" />Open / no crop record</div>
             </section>
 
-            <p className="berry-map-source">Corrected field order: Flower Rows → Asparagus → Original Berry Walk / spiral → Crescent Moon. The two rail-tie florist-tulip beds sit at the south guest entrance below the spiral. Current registry: {flowerZone.object_count} Berry Walk row/asparagus objects and {originalZone.object_count} Original Berry Walk objects. Rail-tie beds: {northTulip?.length_ft ?? 8.5} × {northTulip?.width_ft ?? 4} ft and {southTulip?.length_ft ?? 8.5} × {southTulip?.width_ft ?? 4} ft.</p>
+            <p className="berry-map-source">Corrected field order: Flower Rows → Asparagus → Original Berry Walk / spiral → Crescent Moon. Flower-row and asparagus bed shapes are rotated to match their real east-west run. The two rail-tie florist-tulip beds sit at the south guest entrance below the spiral. Current registry: {flowerZone.object_count} Berry Walk row/asparagus objects and {originalZone.object_count} Original Berry Walk objects. Rail-tie beds: {northTulip?.length_ft ?? 8.5} × {northTulip?.width_ft ?? 4} ft and {southTulip?.length_ft ?? 8.5} × {southTulip?.width_ft ?? 4} ft.</p>
           </>
         ) : null}
       </section>
