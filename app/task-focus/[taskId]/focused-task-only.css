@@ -10,6 +10,40 @@
   padding-bottom: 1.5rem;
 }
 
+/* Simple checklist items should behave like large mobile checkboxes. */
+.atlas-plant-check__item.is-simple {
+  position: relative;
+}
+
+.atlas-plant-check__item.is-simple .atlas-plant-check__actions {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+}
+
+.atlas-plant-check__item.is-simple .atlas-plant-check__actions button {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.atlas-plant-check__item.is-simple:focus-within {
+  outline: 3px solid rgba(112, 121, 190, 0.34);
+  outline-offset: 2px;
+}
+
+.atlas-plant-check__item.is-simple.is-saving {
+  opacity: 0.62;
+  pointer-events: none;
+}
+
 .atlas-sowing-focus-shell {
   min-height: 100vh;
   background: #f3efe7;
