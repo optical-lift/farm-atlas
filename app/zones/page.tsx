@@ -50,6 +50,22 @@ export default function AtlasZonesPage() {
           {error ? <div className="atlas-route-error">{error}</div> : null}
 
           <Link
+            href="/zones/main-garden-map"
+            className="atlas-zone-landing-link"
+            aria-label="Open the Main Garden field diagram"
+          >
+            <article className="atlas-zone-landing-card">
+              <span className="atlas-home-kicker">Field diagram</span>
+              <h2>Main Garden map</h2>
+              <p>See all eight clock-face beds, the eight named walkways, and the center diamond together.</p>
+              <div className="atlas-zone-landing-card-footer">
+                <span>Live Atlas labels</span>
+                <strong>Open map →</strong>
+              </div>
+            </article>
+          </Link>
+
+          <Link
             href="/zones/berry-walk-map"
             className="atlas-zone-landing-link"
             aria-label="Open the Berry Walk field diagram"
