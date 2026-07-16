@@ -84,21 +84,21 @@ export default function MainGardenMapPage() {
             <div className="garden-map-frame">
               <svg viewBox="0 0 1000 900" role="img" aria-labelledby="main-garden-title main-garden-desc">
                 <title id="main-garden-title">Main Garden clock-face diagram</title>
-                <desc id="main-garden-desc">Eight growing beds arranged around a center diamond, divided by walkways at clock positions.</desc>
+                <desc id="main-garden-desc">Eight growing beds arranged around a center diamond, with eight fully defined white walkways between them.</desc>
 
                 <text x="500" y="34" textAnchor="middle" className="direction">North / back of garden</text>
                 <path d="M500 48 V78 M488 62 L500 48 L512 62" className="line" />
 
-                <rect x="55" y="95" width="790" height="700" rx="2" className="outer" />
+                <rect x="55" y="95" width="890" height="700" rx="2" className="outer" />
 
-                <polygon points="500,95 845,95 845,132 620,355 560,315 560,95" fill={bedTone(beds.mg1)} className="bed" />
-                <polygon points="845,132 845,455 632,455 605,415 845,175" fill={bedTone(beds.mg2)} className="bed" />
-                <polygon points="632,495 845,495 845,795 790,795 605,610" fill={bedTone(beds.mg4)} className="bed" />
-                <polygon points="560,575 620,535 845,760 845,795 560,795" fill={bedTone(beds.mg5)} className="bed" />
-                <polygon points="440,575 380,535 155,760 55,795 440,795" fill={bedTone(beds.mg7)} className="bed" />
-                <polygon points="368,495 55,495 55,795 155,760 395,520" fill={bedTone(beds.mg8)} className="bed" />
-                <polygon points="368,455 55,455 55,132 395,415" fill={bedTone(beds.mg10)} className="bed" />
-                <polygon points="440,95 55,95 55,132 380,355 440,315" fill={bedTone(beds.mg11)} className="bed" />
+                <polygon points="560,95 945,95 945,145 650,350 590,315 560,315" fill={bedTone(beds.mg1)} className="bed" />
+                <polygon points="945,195 945,455 655,455 625,415" fill={bedTone(beds.mg2)} className="bed" />
+                <polygon points="655,495 945,495 945,795 825,795 625,610" fill={bedTone(beds.mg4)} className="bed" />
+                <polygon points="590,575 650,540 905,795 560,795 560,575" fill={bedTone(beds.mg5)} className="bed" />
+                <polygon points="440,575 380,540 125,795 55,795 440,795" fill={bedTone(beds.mg7)} className="bed" />
+                <polygon points="345,495 55,495 55,795 175,795 375,610" fill={bedTone(beds.mg8)} className="bed" />
+                <polygon points="345,455 55,455 55,195 375,415" fill={bedTone(beds.mg10)} className="bed" />
+                <polygon points="440,95 55,95 55,145 350,350 410,315 440,315" fill={bedTone(beds.mg11)} className="bed" />
 
                 <polygon points="500,340 620,455 500,575 380,455" className="center" />
                 <text x="500" y="443" textAnchor="middle" className="center-title">Center Diamond</text>
@@ -106,39 +106,31 @@ export default function MainGardenMapPage() {
 
                 <rect x="440" y="95" width="120" height="220" className="walkway" />
                 <rect x="440" y="575" width="120" height="220" className="walkway" />
-                <rect x="55" y="455" width="313" height="40" className="walkway" />
-                <rect x="632" y="455" width="213" height="40" className="walkway" />
+                <rect x="55" y="455" width="290" height="40" className="walkway" />
+                <rect x="655" y="455" width="290" height="40" className="walkway" />
 
-                <path d="M55 132 L380 415" className="walk-line" />
-                <path d="M620 355 L845 132" className="walk-line" />
-                <path d="M395 520 L155 760" className="walk-line" />
-                <path d="M605 610 L790 795" className="walk-line" />
+                <polygon points="55,145 75,175 380,415 410,385" className="walkway" />
+                <polygon points="590,385 620,415 945,175 945,145" className="walkway" />
+                <polygon points="345,495 375,525 175,795 125,795" className="walkway" />
+                <polygon points="625,525 655,495 905,795 825,795" className="walkway" />
 
                 <text x="500" y="205" textAnchor="middle" className="walk-label">12 walkway</text>
                 <text x="500" y="695" textAnchor="middle" className="walk-label">6 walkway</text>
-                <text x="205" y="481" textAnchor="middle" className="walk-label">9 walkway</text>
-                <text x="745" y="481" textAnchor="middle" className="walk-label">3 walkway</text>
-                <text x="270" y="270" transform="rotate(42 270 270)" textAnchor="middle" className="walk-label">10:30 walkway</text>
-                <text x="730" y="270" transform="rotate(-42 730 270)" textAnchor="middle" className="walk-label">1:30 walkway</text>
-                <text x="270" y="650" transform="rotate(-42 270 650)" textAnchor="middle" className="walk-label">7:30 walkway</text>
-                <text x="730" y="650" transform="rotate(42 730 650)" textAnchor="middle" className="walk-label">4:30 walkway</text>
+                <text x="200" y="481" textAnchor="middle" className="walk-label">9 walkway</text>
+                <text x="800" y="481" textAnchor="middle" className="walk-label">3 walkway</text>
+                <text x="255" y="270" transform="rotate(39 255 270)" textAnchor="middle" className="walk-label">10:30 walkway</text>
+                <text x="745" y="270" transform="rotate(-39 745 270)" textAnchor="middle" className="walk-label">1:30 walkway</text>
+                <text x="255" y="650" transform="rotate(-49 255 650)" textAnchor="middle" className="walk-label">7:30 walkway</text>
+                <text x="745" y="650" transform="rotate(49 745 650)" textAnchor="middle" className="walk-label">4:30 walkway</text>
 
-                <BedLabel object={beds.mg11} x={320} y={205} />
+                <BedLabel object={beds.mg11} x={315} y={205} />
                 <BedLabel object={beds.mg10} x={205} y={350} />
                 <BedLabel object={beds.mg8} x={205} y={590} />
                 <BedLabel object={beds.mg7} x={320} y={710} />
-                <BedLabel object={beds.mg1} x={680} y={205} />
-                <BedLabel object={beds.mg2} x={755} y={350} />
-                <BedLabel object={beds.mg4} x={755} y={590} />
-                <BedLabel object={beds.mg5} x={680} y={710} />
-
-                <g transform="translate(845 92)">
-                  <rect x="22" y="0" width="105" height="58" className="structure" />
-                  <rect x="22" y="58" width="105" height="68" className="structure" />
-                  <path d="M22 70 H127 M22 82 H127 M22 94 H127 M22 106 H127" className="structure-line" />
-                  <rect x="0" y="48" width="22" height="30" className="structure" />
-                  <path d="M0 48 L22 78 M22 48 L0 78" className="structure-line" />
-                </g>
+                <BedLabel object={beds.mg1} x={700} y={205} />
+                <BedLabel object={beds.mg2} x={815} y={350} />
+                <BedLabel object={beds.mg4} x={815} y={590} />
+                <BedLabel object={beds.mg5} x={700} y={710} />
 
                 <text x="500" y="842" textAnchor="middle" className="direction">South / front / oak-tree side</text>
                 <path d="M500 805 V830 M488 817 L500 830 L512 817" className="line" />
@@ -152,7 +144,7 @@ export default function MainGardenMapPage() {
               <div><span className="swatch reset" />Reset required</div>
             </section>
 
-            <p className="garden-map-source">Live map: eight numbered beds, eight clock-position walkways, and the center diamond. Orientation follows the oak-tree entrance view stored in Atlas.</p>
+            <p className="garden-map-source">Live map: eight numbered beds, eight fully bounded clock-position walkways, and the center diamond. The map now uses the whole real garden footprint without the chicken-coop illustration.</p>
           </>
         ) : null}
       </section>
@@ -167,13 +159,11 @@ export default function MainGardenMapPage() {
         .garden-map-header a { background: #6d5892; color: white; text-decoration: none; padding: 11px 14px; border-radius: 999px; font-weight: 800; white-space: nowrap; }
         .garden-map-frame { background: #fffdfa; border: 2px solid #25231f; border-radius: 16px; padding: 8px; box-shadow: 0 10px 35px rgba(47,39,29,.08); overflow: hidden; }
         svg { display: block; width: 100%; min-width: 0; height: auto; font-family: inherit; }
-        .outer, .bed, .center, .walkway, .structure { stroke: #25231f; stroke-width: 2.5; }
+        .outer, .bed, .center, .walkway { stroke: #25231f; stroke-width: 2.5; }
         .outer { fill: #fffdfa; }
         .center { fill: #efe8dc; }
         .walkway { fill: #fffdfa; }
-        .line, .walk-line, .structure-line { fill: none; stroke: #25231f; stroke-width: 2.5; }
-        .walk-line { stroke-width: 4; }
-        .structure { fill: #f1eee7; }
+        .line { fill: none; stroke: #25231f; stroke-width: 2.5; }
         .direction { font-size: 20px; font-weight: 900; }
         .bed-title { font-size: 18px; font-weight: 900; }
         .bed-crop { font-size: 10px; font-weight: 700; fill: #514d47; }
@@ -190,12 +180,7 @@ export default function MainGardenMapPage() {
           .garden-map-shell { padding: 12px; }
           .garden-map-header { align-items: stretch; flex-direction: column; gap: 12px; }
           .garden-map-header a { text-align: center; }
-          .garden-map-frame { padding: 4px; }
           .garden-map-legend { grid-template-columns: repeat(2,minmax(0,1fr)); }
-          .direction { font-size: 17px; }
-          .bed-title { font-size: 16px; }
-          .bed-crop { font-size: 9px; }
-          .walk-label { font-size: 11px; }
         }
       `}</style>
     </main>
