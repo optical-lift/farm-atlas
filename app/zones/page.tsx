@@ -59,21 +59,33 @@ export default function AtlasZonesPage() {
             {zones.map((zone) => {
               const mapRoute = MAP_ROUTES[zone.stable_key];
 
-              return (
-                <article key={zone.id} className="atlas-zone-card-with-actions">
-                  <Link href={`/zones/${zone.stable_key}`} className="atlas-zone-landing-link">
+              if (!mapRoute) {
+                return (
+                  <Link href={`/zones/${zone.stable_key}`} key={zone.id} className="atlas-zone-landing-link">
                     <ZoneLandingCard zone={zone} />
                   </Link>
+                );
+              }
 
-                  {mapRoute ? (
+              return (
+                <article key={zone.id} className="atlas-zone-card-with-actions">
+                  <ZoneLandingCard zone={zone} />
+                  <div className="atlas-zone-card-actions">
+                    <Link
+                      href={`/zones/${zone.stable_key}`}
+                      className="atlas-zone-action atlas-zone-action-secondary"
+                      aria-label={`Open ${zone.label} zone inspector`}
+                    >
+                      Open zone →
+                    </Link>
                     <Link
                       href={mapRoute.href}
-                      className="atlas-zone-map-button"
+                      className="atlas-zone-action atlas-zone-action-primary"
                       aria-label={mapRoute.label}
                     >
                       Visual map →
                     </Link>
-                  ) : null}
+                  </div>
                 </article>
               );
             })}
@@ -83,27 +95,53 @@ export default function AtlasZonesPage() {
 
       <style jsx>{`
         .atlas-zone-card-with-actions {
-          display: grid;
-          gap: 0;
+          overflow: hidden;
+          border: 1px solid #d5cec3;
+          border-radius: 16px;
+          background: #fffdfa;
         }
 
-        .atlas-zone-map-button {
+        .atlas-zone-card-with-actions :global(.atlas-zone-landing-card) {
+          border: 0;
+          border-radius: 0;
+          box-shadow: none;
+        }
+
+        .atlas-zone-card-actions {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+          padding: 0 12px 12px;
+        }
+
+        .atlas-zone-action {
           display: block;
-          margin: -10px 12px 12px;
-          padding: 11px 14px;
-          border-radius: 0 0 12px 12px;
-          background: #6d5892;
-          color: white;
+          padding: 11px 12px;
+          border-radius: 10px;
           text-align: center;
           text-decoration: none;
           font-weight: 850;
-          position: relative;
-          z-index: 1;
         }
 
-        .atlas-zone-map-button:hover,
-        .atlas-zone-map-button:focus-visible {
+        .atlas-zone-action-secondary {
+          border: 1px solid #d5cec3;
+          background: #f7f2e9;
+          color: #29263a;
+        }
+
+        .atlas-zone-action-primary {
+          background: #6d5892;
+          color: white;
+        }
+
+        .atlas-zone-action-primary:hover,
+        .atlas-zone-action-primary:focus-visible {
           background: #5d487f;
+        }
+
+        .atlas-zone-action-secondary:hover,
+        .atlas-zone-action-secondary:focus-visible {
+          background: #eee7dc;
         }
       `}</style>
     </main>
