@@ -71,6 +71,13 @@ export default function BerryWalkMapPage() {
   const northTulip = originalObjects.get("berry_walk_rail_tie_bed_north");
   const southTulip = originalObjects.get("berry_walk_rail_tie_bed_south");
 
+  const asparagusSections = [
+    { object: asparagus[1], x: 110, y: 780, width: 230, label: "A2" },
+    { object: asparagus[3], x: 380, y: 780, width: 230, label: "A4" },
+    { object: asparagus[0], x: 110, y: 860, width: 230, label: "A1" },
+    { object: asparagus[2], x: 380, y: 860, width: 230, label: "A3" },
+  ];
+
   return (
     <main className="berry-map-shell">
       <section className="berry-map-page">
@@ -91,7 +98,7 @@ export default function BerryWalkMapPage() {
             <div className="berry-map-frame">
               <svg viewBox="0 0 720 1340" role="img" aria-labelledby="berry-map-title berry-map-desc">
                 <title id="berry-map-title">Berry Walk north-up field diagram</title>
-                <desc id="berry-map-desc">The Crescent Moon wraps around the spiral, rail-tie beds sit east of it, asparagus lies south, and ten east-west Berry Walk flower beds form two groups divided by a north-south center walkway.</desc>
+                <desc id="berry-map-desc">The Crescent Moon wraps around the spiral, rail-tie beds sit east of it, asparagus lies south, and ten east-west Berry Walk flower beds form two numbered columns divided by a north-south center walkway.</desc>
 
                 <text x="360" y="30" textAnchor="middle" className="direction">North / dining-room side</text>
                 <path d="M360 44 V72 M348 58 L360 44 L372 58" className="line" />
@@ -122,14 +129,9 @@ export default function BerryWalkMapPage() {
                 <text x="570" y="510" textAnchor="end" className="small-label">guest entrance</text>
 
                 <text x="360" y="730" textAnchor="middle" className="section-title">Asparagus</text>
-                <text x="360" y="752" textAnchor="middle" className="section-note">two east-west strips · four registry sections</text>
+                <text x="360" y="752" textAnchor="middle" className="section-note">A2 / A4 north · A1 / A3 south</text>
 
-                {[
-                  { object: asparagus[0], x: 110, y: 780, width: 230, label: "A1" },
-                  { object: asparagus[1], x: 380, y: 780, width: 230, label: "A2" },
-                  { object: asparagus[2], x: 110, y: 860, width: 230, label: "A3" },
-                  { object: asparagus[3], x: 380, y: 860, width: 230, label: "A4" },
-                ].map((section) => (
+                {asparagusSections.map((section) => (
                   <ObjectLink key={section.label} object={section.object} zoneKey="berry_walk_flower_rows" ariaLabel={`Open ${section.label} in the zone inspector`}>
                     <rect x={section.x} y={section.y} width={section.width} height="52" rx="5" className="asparagus clickable-shape" />
                     <text x={section.x + section.width / 2} y={section.y + 32} textAnchor="middle" className="small-title">{section.label}</text>
@@ -139,14 +141,15 @@ export default function BerryWalkMapPage() {
                 <rect x="90" y="840" width="540" height="12" className="center-walkway" />
 
                 <text x="360" y="965" textAnchor="middle" className="section-title">Berry Walk Flower Rows</text>
-                <text x="360" y="987" textAnchor="middle" className="section-note">10 east-west beds · odd west / even east</text>
+                <text x="360" y="987" textAnchor="middle" className="section-note">BW1–BW5 west · BW6–BW10 east · numbered south to north</text>
 
                 {beds.map((object, index) => {
                   const bedNumber = index + 1;
-                  const leftGroup = bedNumber % 2 === 1;
-                  const groupIndex = Math.floor(index / 2);
+                  const leftGroup = bedNumber <= 5;
+                  const positionFromSouth = leftGroup ? bedNumber - 1 : bedNumber - 6;
+                  const rowFromTop = 4 - positionFromSouth;
                   const x = leftGroup ? 70 : 390;
-                  const y = 1015 + groupIndex * 48;
+                  const y = 1015 + rowFromTop * 48;
                   return (
                     <ObjectLink key={`bw-${bedNumber}`} object={object} zoneKey="berry_walk_flower_rows" ariaLabel={`Open BW${bedNumber} in the zone inspector`}>
                       <rect x={x} y={y} width="250" height="34" rx="5" fill={bedTone(object)} className="bed clickable-shape" />
@@ -170,7 +173,7 @@ export default function BerryWalkMapPage() {
               <div><span className="swatch open" />Open / no crop record</div>
             </section>
 
-            <p className="berry-map-source">North-up field map: the Crescent Moon wraps around the spiral, the rail-tie beds sit on the east side, asparagus lies south of the Original Berry Walk, and the flower rows are numbered across each east-west pair: odd beds on the west, even beds on the east. Tap a mapped object to open its Atlas record.</p>
+            <p className="berry-map-source">North-up field map: BW1–BW5 run up the west side from south to north, BW6–BW10 run up the east side from south to north, A2 and A4 touch the Original Berry Walk, and A1 and A3 touch the flower rows. Tap a mapped object to open its Atlas record.</p>
           </>
         ) : null}
       </section>
