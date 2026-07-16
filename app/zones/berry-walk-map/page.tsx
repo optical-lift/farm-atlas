@@ -78,80 +78,75 @@ export default function BerryWalkMapPage() {
         {!loading && flowerZone && originalZone ? (
           <>
             <div className="berry-map-frame">
-              <svg viewBox="0 0 1000 760" role="img" aria-labelledby="berry-map-title berry-map-desc">
+              <svg viewBox="0 0 1240 720" role="img" aria-labelledby="berry-map-title berry-map-desc">
                 <title id="berry-map-title">Berry Walk field diagram</title>
-                <desc id="berry-map-desc">Ten flower beds in two groups, four asparagus beds, two rail-tie tulip beds, the crescent moon bed, and the spiral walk.</desc>
+                <desc id="berry-map-desc">East-west flower beds on the left, asparagus beds beside them, Original Berry Walk and spiral to the right, and the crescent moon at the far right.</desc>
 
-                <text x="500" y="34" textAnchor="middle" className="direction">North / dining-room side</text>
-                <path d="M500 48 L500 78 M488 61 L500 48 L512 61" className="line" />
+                <text x="620" y="32" textAnchor="middle" className="direction">North / dining-room side</text>
+                <path d="M620 45 L620 75 M608 58 L620 45 L632 58" className="line" />
 
-                <text x="245" y="92" textAnchor="middle" className="section-title">Berry Walk Flower Rows</text>
-                <text x="245" y="114" textAnchor="middle" className="section-note">10 beds · 3 ft × 22 ft · 2 ft mulch walks</text>
+                <text x="250" y="94" textAnchor="middle" className="section-title">Berry Walk Flower Rows</text>
+                <text x="250" y="115" textAnchor="middle" className="section-note">10 east-west beds · 3 ft × 22 ft · 2 ft mulch walks</text>
 
-                {beds.slice(0, 5).map((object, index) => {
-                  const y = 135 + index * 66;
+                {beds.map((object, index) => {
+                  const y = 132 + index * 48 + (index >= 5 ? 26 : 0);
                   const lines = labelFor(object, `BW${index + 1}\nnot found`).split("\n");
                   return (
-                    <g key={`west-${index}`}>
-                      <rect x="70" y={y} width="350" height="44" rx="5" fill={object ? bedTone(object) : "#eee"} className="bed" />
-                      <text x="245" y={y + 18} textAnchor="middle" className="bed-title">{lines[0]}</text>
-                      <text x="245" y={y + 34} textAnchor="middle" className="bed-crop">{lines[1]}</text>
+                    <g key={`bed-${index}`}>
+                      <rect x="42" y={y} width="416" height="34" rx="5" fill={object ? bedTone(object) : "#eee"} className="bed" />
+                      <text x="250" y={y + 14} textAnchor="middle" className="bed-title">{lines[0]}</text>
+                      <text x="250" y={y + 28} textAnchor="middle" className="bed-crop">{lines[1]}</text>
                     </g>
                   );
                 })}
 
-                <rect x="438" y="135" width="44" height="308" className="walkway" />
-                <text x="460" y="290" textAnchor="middle" transform="rotate(-90 460 290)" className="walk-label">3 ft center walkway</text>
+                <rect x="42" y="366" width="416" height="22" className="walkway" />
+                <text x="250" y="381" textAnchor="middle" className="walk-label">3 ft center walkway between the two groups of five</text>
 
-                {beds.slice(5, 10).map((object, index) => {
-                  const y = 135 + index * 66;
-                  const lines = labelFor(object, `BW${index + 6}\nnot found`).split("\n");
-                  return (
-                    <g key={`east-${index}`}>
-                      <rect x="500" y={y} width="350" height="44" rx="5" fill={object ? bedTone(object) : "#eee"} className="bed" />
-                      <text x="675" y={y + 18} textAnchor="middle" className="bed-title">{lines[0]}</text>
-                      <text x="675" y={y + 34} textAnchor="middle" className="bed-crop">{lines[1]}</text>
-                    </g>
-                  );
-                })}
+                <path d="M478 104 V668" className="divider" />
+                <text x="562" y="94" textAnchor="middle" className="section-title">Asparagus</text>
+                <text x="562" y="115" textAnchor="middle" className="section-note">four beds · 18 in walks</text>
 
-                <text x="880" y="92" textAnchor="middle" className="section-title">Asparagus connection</text>
-                <text x="880" y="114" textAnchor="middle" className="section-note">18 in walks · widths 2 / 3 / 2 / 3 ft</text>
                 {asparagus.map((object, index) => {
-                  const x = 872 + (index % 2) * 48;
-                  const y = 145 + Math.floor(index / 2) * 148;
-                  const width = index % 2 === 0 ? 30 : 42;
+                  const y = 146 + index * 116;
+                  const width = index % 2 === 0 ? 64 : 88;
+                  const x = 562 - width / 2;
                   return (
                     <g key={`asparagus-${index}`}>
-                      <rect x={x} y={y} width={width} height="116" rx="4" className="asparagus" />
-                      <text x={x + width / 2} y={y + 59} textAnchor="middle" transform={`rotate(-90 ${x + width / 2} ${y + 59})`} className="vertical-label">A{index + 1}</text>
+                      <rect x={x} y={y} width={width} height="82" rx="5" className="asparagus" />
+                      <text x="562" y={y + 35} textAnchor="middle" className="small-title">A{index + 1}</text>
+                      <text x="562" y={y + 54} textAnchor="middle" className="small-label">{object?.width_ft ?? (index % 2 === 0 ? 2 : 3)} ft wide</text>
                     </g>
                   );
                 })}
 
-                <path d="M70 468 H932" className="divider" />
-                <text x="500" y="498" textAnchor="middle" className="section-title">Original Berry Walk</text>
+                <path d="M648 104 V668" className="divider" />
+                <text x="835" y="94" textAnchor="middle" className="section-title">Original Berry Walk</text>
+                <text x="835" y="115" textAnchor="middle" className="section-note">rail-tie entrance · stone spiral / labyrinth</text>
 
-                <rect x="420" y="520" width="78" height="102" rx="4" className="tulip-bed" />
-                <rect x="502" y="520" width="78" height="102" rx="4" className="tulip-bed" />
-                <text x="459" y="548" textAnchor="middle" className="small-title">North</text>
-                <text x="459" y="566" textAnchor="middle" className="small-label">rail-tie</text>
-                <text x="459" y="584" textAnchor="middle" className="small-label">tulips</text>
-                <text x="541" y="548" textAnchor="middle" className="small-title">South</text>
-                <text x="541" y="566" textAnchor="middle" className="small-label">rail-tie</text>
-                <text x="541" y="584" textAnchor="middle" className="small-label">tulips</text>
-                <path d="M459 520 Q500 475 541 520" className="arch" />
-                <text x="500" y="512" textAnchor="middle" className="small-label">future arch / entrance</text>
+                <rect x="682" y="142" width="78" height="108" rx="4" className="tulip-bed" />
+                <rect x="766" y="142" width="78" height="108" rx="4" className="tulip-bed" />
+                <text x="721" y="173" textAnchor="middle" className="small-title">North</text>
+                <text x="721" y="193" textAnchor="middle" className="small-label">rail-tie</text>
+                <text x="721" y="211" textAnchor="middle" className="small-label">tulips</text>
+                <text x="805" y="173" textAnchor="middle" className="small-title">South</text>
+                <text x="805" y="193" textAnchor="middle" className="small-label">rail-tie</text>
+                <text x="805" y="211" textAnchor="middle" className="small-label">tulips</text>
+                <path d="M721 142 Q763 96 805 142" className="arch" />
+                <text x="763" y="130" textAnchor="middle" className="small-label">future arch / entrance</text>
 
-                <path d="M92 704 A225 225 0 0 1 542 704 L470 704 A153 153 0 0 0 164 704 Z" className="crescent" />
-                <text x="317" y="672" textAnchor="middle" className="bed-title">Crescent Moon</text>
-                <text x="317" y="692" textAnchor="middle" className="bed-crop">{crescent ? compactCrop(crescent) : "zinnias + celosia"}</text>
+                <path d="M838 592 C708 592 690 452 807 416 C924 380 1014 480 951 553 C905 608 814 569 834 499 C849 447 919 451 926 496 C932 530 895 551 870 528" className="spiral" />
+                <text x="835" y="322" textAnchor="middle" className="bed-title">Spiral / labyrinth walk</text>
+                <text x="835" y="342" textAnchor="middle" className="bed-crop">{spiral ? `${Math.round(Number(spiral.length_ft || 162))} ft · ${spiral.width_ft || 2} ft wide` : "stone-lined path"}</text>
 
-                <path d="M785 698 C670 698 650 590 750 565 C850 540 914 622 860 680 C820 722 742 690 758 631 C770 589 830 590 837 627 C842 653 811 670 790 652" className="spiral" />
-                <text x="780" y="536" textAnchor="middle" className="bed-title">Spiral walk</text>
-                <text x="780" y="554" textAnchor="middle" className="bed-crop">{spiral ? `${Math.round(Number(spiral.length_ft || 162))} ft · ${spiral.width_ft || 2} ft wide` : "stone-lined path"}</text>
+                <path d="M982 154 V668" className="divider" />
+                <text x="1105" y="94" textAnchor="middle" className="section-title">Crescent Moon</text>
+                <text x="1105" y="115" textAnchor="middle" className="section-note">furthest-right garden end</text>
+                <path d="M1024 620 A170 240 0 0 0 1024 160 A116 188 0 0 1 1024 620 Z" className="crescent" />
+                <text x="1100" y="376" textAnchor="middle" className="bed-title">Crescent Moon</text>
+                <text x="1100" y="397" textAnchor="middle" className="bed-crop">{crescent ? compactCrop(crescent) : "zinnias + celosia"}</text>
 
-                <text x="500" y="744" textAnchor="middle" className="direction">South / guest entrance side</text>
+                <text x="620" y="700" textAnchor="middle" className="direction">South / guest entrance side</text>
               </svg>
             </div>
 
@@ -162,21 +157,21 @@ export default function BerryWalkMapPage() {
               <div><span className="swatch open" />Open / no crop record</div>
             </section>
 
-            <p className="berry-map-source">Current registry: {flowerZone.object_count} Berry Walk row/asparagus objects and {originalZone.object_count} Original Berry Walk objects. Rail-tie beds: {northTulip?.length_ft ?? 8.5} × {northTulip?.width_ft ?? 4} ft and {southTulip?.length_ft ?? 8.5} × {southTulip?.width_ft ?? 4} ft.</p>
+            <p className="berry-map-source">Corrected field order: Flower Rows → Asparagus → Original Berry Walk / spiral → Crescent Moon. Current registry: {flowerZone.object_count} Berry Walk row/asparagus objects and {originalZone.object_count} Original Berry Walk objects. Rail-tie beds: {northTulip?.length_ft ?? 8.5} × {northTulip?.width_ft ?? 4} ft and {southTulip?.length_ft ?? 8.5} × {southTulip?.width_ft ?? 4} ft.</p>
           </>
         ) : null}
       </section>
 
       <style jsx>{`
         .berry-map-shell { min-height: 100vh; background: #f4f0e8; color: #211f1c; padding: 18px; }
-        .berry-map-page { width: min(100%, 980px); margin: 0 auto; }
+        .berry-map-page { width: min(100%, 1180px); margin: 0 auto; }
         .berry-map-header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; margin-bottom: 16px; }
         .berry-map-header span { font-size: 12px; text-transform: uppercase; letter-spacing: .14em; font-weight: 800; color: #69558c; }
         .berry-map-header h1 { margin: 3px 0 5px; font-size: clamp(30px, 6vw, 52px); }
         .berry-map-header p { margin: 0; color: #625e58; }
         .berry-map-header a { background: #6d5892; color: white; text-decoration: none; padding: 11px 14px; border-radius: 999px; font-weight: 800; white-space: nowrap; }
         .berry-map-frame { background: #fffdfa; border: 2px solid #25231f; border-radius: 16px; padding: 8px; box-shadow: 0 10px 35px rgba(47, 39, 29, .08); overflow-x: auto; }
-        svg { display: block; width: 100%; min-width: 720px; height: auto; font-family: inherit; }
+        svg { display: block; width: 100%; min-width: 980px; height: auto; font-family: inherit; }
         .line, .divider, .arch, .spiral { fill: none; stroke: #22211e; stroke-width: 3; }
         .divider { stroke-width: 2; }
         .arch { stroke-width: 4; }
@@ -191,7 +186,7 @@ export default function BerryWalkMapPage() {
         .section-note { font-size: 12px; font-weight: 700; fill: #666158; }
         .bed-title, .small-title { font-size: 14px; font-weight: 900; }
         .bed-crop, .small-label { font-size: 11px; font-weight: 650; fill: #4e4a44; }
-        .walk-label, .vertical-label { font-size: 12px; font-weight: 850; }
+        .walk-label { font-size: 12px; font-weight: 850; }
         .berry-map-legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
         .berry-map-legend div { background: #fffdfa; border: 1px solid #d5cec3; border-radius: 10px; padding: 9px 10px; font-size: 12px; font-weight: 750; }
         .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 7px; vertical-align: -1px; border: 1px solid #777; }
