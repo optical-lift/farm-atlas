@@ -38,7 +38,7 @@ export default function AtlasZonesPage() {
   }, []);
 
   return (
-    <main className="atlas-phone-shell atlas-route-shell">
+    <main className="atlas-phone-shell atlas-route-shell" data-map-navigation="embedded-zone-buttons">
       <section className="atlas-phone atlas-zone-page-phone">
         <header className="atlas-phone-top atlas-route-top">
           <div className="atlas-phone-brand">
