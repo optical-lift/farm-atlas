@@ -72,10 +72,10 @@ export default function BerryWalkMapPage() {
   const southTulip = originalObjects.get("berry_walk_rail_tie_bed_south");
 
   const asparagusSections = [
-    { object: asparagus[1], x: 70, y: 780, width: 250, label: "A2" },
-    { object: asparagus[3], x: 390, y: 780, width: 250, label: "A4" },
-    { object: asparagus[0], x: 70, y: 860, width: 250, label: "A1" },
-    { object: asparagus[2], x: 390, y: 860, width: 250, label: "A3" },
+    { object: asparagus[1], x: 70, y: 798, width: 250, height: 34, label: "A2" },
+    { object: asparagus[3], x: 390, y: 798, width: 250, height: 34, label: "A4" },
+    { object: asparagus[0], x: 70, y: 856, width: 250, height: 23, label: "A1" },
+    { object: asparagus[2], x: 390, y: 856, width: 250, height: 23, label: "A3" },
   ];
 
   return (
@@ -98,7 +98,7 @@ export default function BerryWalkMapPage() {
             <div className="berry-map-frame">
               <svg viewBox="0 0 720 1340" role="img" aria-labelledby="berry-map-title berry-map-desc">
                 <title id="berry-map-title">Berry Walk north-up field diagram</title>
-                <desc id="berry-map-desc">A shallower Crescent Moon wraps around the spiral, rail-tie beds sit east of it, and one north-south center walkway continues through asparagus and ten Berry Walk flower rows separated by an eighteen-inch cross walkway.</desc>
+                <desc id="berry-map-desc">The Berry Walk flower beds, A2, and A4 are three feet wide. A1 and A3 are two feet wide. One north-south center walkway continues through both sections.</desc>
 
                 <text x="360" y="30" textAnchor="middle" className="direction">North</text>
                 <path d="M360 44 V72 M348 58 L360 44 L372 58" className="line" />
@@ -129,17 +129,17 @@ export default function BerryWalkMapPage() {
                 <text x="570" y="510" textAnchor="end" className="small-label">guest entrance</text>
 
                 <text x="360" y="730" textAnchor="middle" className="section-title">Asparagus</text>
-                <text x="360" y="752" textAnchor="middle" className="section-note">A2 / A4 north · A1 / A3 south</text>
+                <text x="360" y="752" textAnchor="middle" className="section-note">A2 / A4 are 3 ft · A1 / A3 are 2 ft</text>
 
                 {asparagusSections.map((section) => (
                   <ObjectLink key={section.label} object={section.object} zoneKey="berry_walk_flower_rows" ariaLabel={`Open ${section.label} in the zone inspector`}>
-                    <rect x={section.x} y={section.y} width={section.width} height="52" rx="5" className="asparagus clickable-shape" />
-                    <text x={section.x + section.width / 2} y={section.y + 32} textAnchor="middle" className="small-title">{section.label}</text>
+                    <rect x={section.x} y={section.y} width={section.width} height={section.height} rx="5" className="asparagus clickable-shape" />
+                    <text x={section.x + section.width / 2} y={section.y + section.height / 2 + 5} textAnchor="middle" className="small-title">{section.label}</text>
                   </ObjectLink>
                 ))}
 
-                <rect x="90" y="840" width="540" height="12" className="center-walkway" />
-                <rect x="344" y="770" width="32" height="388" className="center-walkway" />
+                <rect x="90" y="838" width="540" height="12" className="center-walkway" />
+                <rect x="344" y="788" width="32" height="350" className="center-walkway" />
 
                 {beds.map((object, index) => {
                   const bedNumber = index + 1;
@@ -147,7 +147,7 @@ export default function BerryWalkMapPage() {
                   const positionFromSouth = leftGroup ? bedNumber - 1 : bedNumber - 6;
                   const rowFromTop = 4 - positionFromSouth;
                   const x = leftGroup ? 70 : 390;
-                  const y = 932 + rowFromTop * 48;
+                  const y = 897 + rowFromTop * 48;
                   return (
                     <ObjectLink key={`bw-${bedNumber}`} object={object} zoneKey="berry_walk_flower_rows" ariaLabel={`Open BW${bedNumber} in the zone inspector`}>
                       <rect x={x} y={y} width="250" height="34" rx="5" fill={bedTone(object)} className="bed clickable-shape" />
@@ -156,9 +156,9 @@ export default function BerryWalkMapPage() {
                   );
                 })}
 
-                <text x="360" y="1198" textAnchor="middle" className="section-title">Berry Walk Flower Rows</text>
-                <text x="360" y="1220" textAnchor="middle" className="section-note">BW1–BW5 west · BW6–BW10 east · numbered south to north</text>
-                <text x="360" y="1045" textAnchor="middle" transform="rotate(-90 360 1045)" className="walk-label">3 ft center walkway</text>
+                <text x="360" y="1165" textAnchor="middle" className="section-title">Berry Walk Flower Rows</text>
+                <text x="360" y="1187" textAnchor="middle" className="section-note">all flower beds are 3 ft wide</text>
+                <text x="360" y="1025" textAnchor="middle" transform="rotate(-90 360 1025)" className="walk-label">3 ft center walkway</text>
 
                 <text x="360" y="1305" textAnchor="middle" className="direction">South</text>
                 <path d="M360 1265 V1292 M348 1279 L360 1292 L372 1279" className="line" />
@@ -172,7 +172,7 @@ export default function BerryWalkMapPage() {
               <div><span className="swatch open" />Open / no crop record</div>
             </section>
 
-            <p className="berry-map-source">North-up field map: BW1–BW5 run up the west side from south to north, BW6–BW10 run up the east side from south to north, A2 and A4 touch the Original Berry Walk, and A1 and A3 sit across the eighteen-inch walkway from the flower rows. Tap a mapped object to open its Atlas record.</p>
+            <p className="berry-map-source">North-up field map: all Berry Walk flower beds, A2, and A4 are shown at the same three-foot width. A1 and A3 are shown proportionally narrower at two feet. Tap a mapped object to open its Atlas record.</p>
           </>
         ) : null}
       </section>
