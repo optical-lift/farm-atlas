@@ -42,7 +42,7 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Atlas could not find this farm object." }, { status: 404 });
     }
 
-    const [cyclesResult, plantsResult, eventsResult] = await Promise.all([
+    const [cyclesResult, plantsResult, eventsResult, operationalTimelineResult] = await Promise.all([
       atlasSupabase
         .schema("atlas")
         .from("crop_cycles")
@@ -67,11 +67,20 @@ export async function GET(_request: Request, context: RouteContext) {
         .order("event_date", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(40),
+      atlasSupabase
+        .schema("atlas")
+        .rpc("get_object_operational_timeline_v1", {
+          p_farm_key: "elm_farm",
+          p_object_key: objectKey,
+          p_history_days: 14,
+          p_future_days: 365,
+        }),
     ]);
 
     if (cyclesResult.error) throw cyclesResult.error;
     if (plantsResult.error) throw plantsResult.error;
     if (eventsResult.error) throw eventsResult.error;
+    if (operationalTimelineResult.error) throw operationalTimelineResult.error;
 
     const currentPlants = ((plantsResult.data ?? []) as PlantInstanceRow[]).filter(
       (plant) => !["dead", "removed", "archived"].includes(plant.status),
@@ -102,6 +111,7 @@ export async function GET(_request: Request, context: RouteContext) {
         cropCycles: cyclesResult.data ?? [],
         plantInstances,
         events: eventsResult.data ?? [],
+        operationalTimeline: operationalTimelineResult.data ?? null,
       },
       { headers: { "Cache-Control": "no-store" } },
     );
