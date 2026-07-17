@@ -5,13 +5,14 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { ObjectQuickLog } from "@/components/atlas/object-quick-log";
-import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import {
   fetchAtlasObjectWorkbench,
   type AtlasObjectCropCycle,
   type AtlasObjectPlantInstance,
   type AtlasObjectTimelineEvent,
   type AtlasObjectWorkbenchObject,
+  type AtlasOperationalTimeline,
+  type AtlasOperationalTimelineItem,
 } from "@/lib/atlas/object-workbench-client";
 
 const EVENT_LABELS: Record<string, string> = {
@@ -35,6 +36,13 @@ function prettyDate(value: string | null | undefined) {
   const date = new Date(`${value}T12:00:00`);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function shortDate(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function prettyState(value: string | null | undefined) {
@@ -77,9 +85,49 @@ function stateChips(object: AtlasObjectWorkbenchObject) {
   ].filter((value): value is string => Boolean(value));
 }
 
-function taskDue(task: AtlasTaskCard) {
-  const date = prettyDate(task.due_date);
-  return [date, task.status.replaceAll("_", " "), task.task_type.replaceAll("_", " ")].filter(Boolean).join(" · ");
+function timelineDate(item: AtlasOperationalTimelineItem) {
+  const start = shortDate(item.startDate);
+  const end = shortDate(item.endDate);
+  if (start && end && start !== end) return `${start}–${end}`;
+  return start ?? end ?? "Current";
+}
+
+function OperationalTimelineItem({ item }: { item: AtlasOperationalTimelineItem }) {
+  const blocker = typeof item.metadata?.blocker_text === "string" ? item.metadata.blocker_text : null;
+  return (
+    <article className={`atlas-operational-item state-${item.state}`}>
+      <div className="atlas-operational-date">{timelineDate(item)}</div>
+      <div className="atlas-operational-copy">
+        <span>{item.action}</span>
+        <strong>{item.subject}</strong>
+        {item.detail ? <p>{item.detail}</p> : null}
+        {blocker ? <p className="atlas-operational-blocker">Waiting: {blocker}</p> : null}
+      </div>
+    </article>
+  );
+}
+
+function OperationalTimelineSection({
+  label,
+  items,
+}: {
+  label: "Now" | "Next" | "Later";
+  items: AtlasOperationalTimelineItem[];
+}) {
+  if (items.length === 0) return null;
+  return (
+    <section className={`atlas-operational-group atlas-operational-${label.toLowerCase()}`}>
+      <h3>{label}</h3>
+      <div className="atlas-operational-list">
+        {items.map((item, index) => (
+          <OperationalTimelineItem
+            key={`${item.kind}-${item.taskId ?? item.eventId ?? item.cropCycleId ?? index}-${item.startDate ?? "current"}`}
+            item={item}
+          />
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function TimelineCard({ event }: { event: AtlasObjectTimelineEvent }) {
@@ -104,7 +152,7 @@ export default function AtlasObjectPage() {
   const [cropCycles, setCropCycles] = useState<AtlasObjectCropCycle[]>([]);
   const [plantInstances, setPlantInstances] = useState<AtlasObjectPlantInstance[]>([]);
   const [events, setEvents] = useState<AtlasObjectTimelineEvent[]>([]);
-  const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
+  const [operationalTimeline, setOperationalTimeline] = useState<AtlasOperationalTimeline | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,19 +160,12 @@ export default function AtlasObjectPage() {
     try {
       if (showLoading) setLoading(true);
       setError(null);
-      const [workbench, taskResponse] = await Promise.all([
-        fetchAtlasObjectWorkbench(objectKey),
-        fetchAtlasTaskCards(),
-      ]);
+      const workbench = await fetchAtlasObjectWorkbench(objectKey);
       setObject(workbench.object);
       setCropCycles(workbench.cropCycles);
       setPlantInstances(workbench.plantInstances);
       setEvents(workbench.events);
-      setTasks(
-        (taskResponse.taskCards ?? []).filter(
-          (task) => task.status !== "archived" && task.objects.some((item) => item.object_id === workbench.object.object_id),
-        ),
-      );
+      setOperationalTimeline(workbench.operationalTimeline);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Atlas could not load this object.");
     } finally {
@@ -137,6 +178,9 @@ export default function AtlasObjectPage() {
   }, [loadObject]);
 
   const chips = object ? stateChips(object) : [];
+  const timelineCount = operationalTimeline
+    ? operationalTimeline.now.length + operationalTimeline.next.length + operationalTimeline.later.length
+    : 0;
 
   return (
     <main className="atlas-phone-shell atlas-route-shell">
@@ -217,28 +261,31 @@ export default function AtlasObjectPage() {
                 ) : null}
               </section>
 
+              <section className="atlas-object-panel atlas-operational-panel">
+                <div className="atlas-object-section-head">
+                  <div>
+                    <span className="atlas-home-kicker">Working timeline</span>
+                    <h2>What happens next</h2>
+                  </div>
+                  <span>{timelineCount}</span>
+                </div>
+                {operationalTimeline ? (
+                  <div className="atlas-operational-groups">
+                    <OperationalTimelineSection label="Now" items={operationalTimeline.now} />
+                    <OperationalTimelineSection label="Next" items={operationalTimeline.next} />
+                    <OperationalTimelineSection label="Later" items={operationalTimeline.later} />
+                  </div>
+                ) : (
+                  <p className="atlas-object-empty">No operational timeline is available yet.</p>
+                )}
+              </section>
+
               <ObjectQuickLog
                 objectKey={object.object_key}
                 cropCycles={cropCycles}
                 plantInstances={plantInstances}
                 onSaved={() => loadObject(false)}
               />
-
-              {tasks.length > 0 ? (
-                <section className="atlas-object-panel atlas-object-task-panel">
-                  <div className="atlas-object-section-head">
-                    <div><span className="atlas-home-kicker">Linked</span><h2>Open tasks</h2></div>
-                    <span>{tasks.length}</span>
-                  </div>
-                  {tasks.map((task) => (
-                    <article key={task.task_id} className="atlas-object-task-card">
-                      <strong>{task.title}</strong>
-                      <span>{taskDue(task)}</span>
-                      {task.unlock_text ? <p>{task.unlock_text}</p> : null}
-                    </article>
-                  ))}
-                </section>
-              ) : null}
 
               <section className="atlas-object-panel atlas-object-timeline">
                 <div className="atlas-object-section-head">
