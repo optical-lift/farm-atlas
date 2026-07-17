@@ -106,10 +106,79 @@
   color: var(--atlas-muted);
 }
 
+.atlas-crop-observation-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.atlas-crop-observation-crop,
+.atlas-crop-observation-fields label {
+  display: grid;
+  gap: 6px;
+}
+
+.atlas-crop-observation-crop > span,
+.atlas-crop-observation-fields label > span {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--atlas-muted);
+}
+
+.atlas-crop-observation-crop select,
+.atlas-crop-observation-fields input,
+.atlas-crop-observation-fields textarea {
+  width: 100%;
+  border: 1px solid var(--atlas-border);
+  border-radius: 14px;
+  padding: 11px 12px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--atlas-text);
+}
+
+.atlas-crop-observation-fields textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.atlas-crop-observation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.atlas-crop-observation-grid button {
+  min-height: 42px;
+  border: 1px solid var(--atlas-border-soft);
+  border-radius: 14px;
+  padding: 8px 10px;
+  background: rgba(246, 242, 230, 0.75);
+  color: var(--atlas-text);
+  font-size: 12px;
+  font-weight: 850;
+  text-align: left;
+}
+
+.atlas-crop-observation-grid button.selected {
+  border-color: var(--atlas-purple-deep);
+  background: var(--atlas-purple);
+  color: white;
+}
+
+.atlas-crop-observation-fields {
+  display: grid;
+  gap: 10px;
+}
+
 @media (max-width: 360px) {
   .atlas-operational-item {
     grid-template-columns: 62px minmax(0, 1fr);
     gap: 8px;
     padding: 10px;
+  }
+
+  .atlas-crop-observation-grid {
+    grid-template-columns: 1fr;
   }
 }
