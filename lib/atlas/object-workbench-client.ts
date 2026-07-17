@@ -114,12 +114,37 @@ export type AtlasObjectTimelineEvent = {
   created_at: string;
 };
 
+export type AtlasOperationalTimelineItem = {
+  kind: "current_crop" | "observation" | "task" | "harvest_window" | "clear_window" | "planned_crop" | string;
+  state: "observed" | "scheduled" | "blocked" | "projected" | string;
+  action: string;
+  subject: string;
+  detail: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  taskId: string | null;
+  eventId: string | null;
+  cropCycleId: string | null;
+  metadata: Record<string, unknown> | null;
+};
+
+export type AtlasOperationalTimeline = {
+  objectId: string;
+  objectKey: string;
+  objectLabel: string;
+  generatedOn: string;
+  now: AtlasOperationalTimelineItem[];
+  next: AtlasOperationalTimelineItem[];
+  later: AtlasOperationalTimelineItem[];
+};
+
 export type AtlasObjectWorkbenchResponse = {
   ok: boolean;
   object?: AtlasObjectWorkbenchObject;
   cropCycles?: AtlasObjectCropCycle[];
   plantInstances?: AtlasObjectPlantInstance[];
   events?: AtlasObjectTimelineEvent[];
+  operationalTimeline?: AtlasOperationalTimeline | null;
   error?: string;
   details?: string;
 };
@@ -160,6 +185,7 @@ export async function fetchAtlasObjectWorkbench(objectKey: string) {
     cropCycles: data.cropCycles ?? [],
     plantInstances: data.plantInstances ?? [],
     events: data.events ?? [],
+    operationalTimeline: data.operationalTimeline ?? null,
   };
 }
 
