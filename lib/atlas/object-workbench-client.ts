@@ -13,6 +13,23 @@ export type AtlasObjectEventType =
   | "cleared"
   | "blocked";
 
+export type AtlasCropObservationKey =
+  | "germinated"
+  | "established"
+  | "vegetative"
+  | "budding"
+  | "flowering"
+  | "fruit_set"
+  | "first_harvest"
+  | "peak_harvest"
+  | "slowing"
+  | "finished"
+  | "failed"
+  | "dormant"
+  | "cleared"
+  | "not_ready"
+  | "changed_plan";
+
 export type AtlasObjectWorkbenchObject = {
   farm_id: string;
   farm_key: string;
@@ -170,6 +187,16 @@ export type RecordAtlasObjectEventResult = {
   deduplicated: boolean;
 };
 
+export type RecordAtlasCropObservationInput = {
+  cropCycleId: string;
+  observationKey: AtlasCropObservationKey;
+  eventDate: string;
+  note?: string;
+  quantity?: number;
+  unit?: string;
+  idempotencyKey: string;
+};
+
 export async function fetchAtlasObjectWorkbench(objectKey: string) {
   const response = await fetch(`/api/atlas/objects/${encodeURIComponent(objectKey)}`, {
     method: "GET",
@@ -207,6 +234,28 @@ export async function recordAtlasObjectEvent(objectKey: string, input: RecordAtl
   };
   if (!response.ok || !data.ok || !data.result) {
     throw new Error(data.details || data.error || "Atlas could not save this object event.");
+  }
+  return data.result;
+}
+
+export async function recordAtlasCropObservation(objectKey: string, input: RecordAtlasCropObservationInput) {
+  const response = await fetch(`/api/atlas/objects/${encodeURIComponent(objectKey)}/observations`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Atlas-Intent": "crop-observation-v1",
+    },
+    body: JSON.stringify(input),
+  });
+  const data = (await response.json()) as {
+    ok: boolean;
+    result?: Record<string, unknown>;
+    error?: string;
+    details?: string;
+  };
+  if (!response.ok || !data.ok || !data.result) {
+    throw new Error(data.details || data.error || "Atlas could not save this crop observation.");
   }
   return data.result;
 }
