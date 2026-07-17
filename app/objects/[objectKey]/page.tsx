@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { CropObservationPanel } from "@/components/atlas/crop-observation-panel";
 import { ObjectQuickLog } from "@/components/atlas/object-quick-log";
 import {
   fetchAtlasObjectWorkbench,
@@ -279,6 +280,12 @@ export default function AtlasObjectPage() {
                   <p className="atlas-object-empty">No operational timeline is available yet.</p>
                 )}
               </section>
+
+              <CropObservationPanel
+                objectKey={object.object_key}
+                cropCycles={cropCycles}
+                onSaved={() => loadObject(false)}
+              />
 
               <ObjectQuickLog
                 objectKey={object.object_key}
