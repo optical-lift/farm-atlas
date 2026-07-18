@@ -10,6 +10,7 @@ import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
 import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
 import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
 import CollapsibleBedCropPatch from "./CollapsibleBedCropPatch";
+import ZoneInspectorBedTapPatch from "./ZoneInspectorBedTapPatch";
 import "./globals.css";
 import "./home.css";
 import "./zones.css";
@@ -61,6 +62,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <HomeSundayNavigationPatch />
         <OwnerTaskReturnPatch />
         <CollapsibleBedCropPatch />
+        <ZoneInspectorBedTapPatch />
         {children}
       </body>
     </html>
