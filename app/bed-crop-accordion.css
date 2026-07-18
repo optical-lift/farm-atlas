@@ -1,0 +1,97 @@
+.atlas-bed-crop-list-label {
+  margin-top: 2px;
+  color: var(--atlas-purple-deep);
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atlas-bed-crop-list-item {
+  margin: 0;
+  border: 1px solid var(--atlas-border-soft);
+  border-radius: 15px;
+  background: rgba(251, 250, 244, 0.9);
+  overflow: hidden;
+}
+
+.atlas-bed-crop-list-trigger {
+  position: relative;
+  min-height: 54px;
+  padding: 12px 44px 12px 13px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--atlas-text);
+  font-size: 0;
+}
+
+.atlas-bed-crop-list-trigger::after {
+  content: "+";
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translateY(-50%);
+  border: 1px solid var(--atlas-border);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--atlas-cream);
+  color: var(--atlas-purple-deep);
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.atlas-bed-crop-list-trigger > span {
+  order: -1;
+  display: block;
+  color: var(--atlas-text);
+  font-size: 17px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+}
+
+.atlas-bed-crop-list-trigger:not(:has(> span)) {
+  font-size: 17px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+}
+
+.atlas-bed-crop-list-item > .atlas-inspection-list-sheet,
+.atlas-bed-crop-list-item > .atlas-inspection-note {
+  display: none;
+}
+
+.atlas-bed-crop-list-item.is-expanded {
+  border-color: rgba(139, 145, 194, 0.55);
+  background: rgba(247, 246, 234, 0.98);
+}
+
+.atlas-bed-crop-list-item.is-expanded > .atlas-bed-crop-list-trigger::after {
+  content: "−";
+}
+
+.atlas-bed-crop-list-item.is-expanded > .atlas-inspection-list-sheet {
+  display: grid;
+  margin: 0 13px 13px;
+  padding-top: 4px;
+}
+
+.atlas-bed-crop-list-item.is-expanded > .atlas-inspection-note {
+  display: block;
+  margin: -2px 13px 13px;
+}
+
+.atlas-bed-crop-list-trigger:focus-visible {
+  outline: 2px solid rgba(139, 145, 194, 0.8);
+  outline-offset: -2px;
+}
