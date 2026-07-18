@@ -1,0 +1,18 @@
+.atlas-attached-tasks-toggle {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
+  border: 1px solid var(--atlas-border-soft);
+  border-radius: 14px;
+  background: rgba(251, 250, 244, 0.72);
+  color: var(--atlas-purple-deep);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 850;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+
+.atlas-attached-tasks-toggle[hidden] {
+  display: none;
+}
