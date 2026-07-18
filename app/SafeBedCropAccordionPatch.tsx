@@ -11,10 +11,60 @@ function normalizedCropName(value: string | null | undefined) {
     .replace(/\s+/g, " ");
 }
 
-function cropName(crop: HTMLElement) {
+function titleCase(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function collapseRepeatedPhrase(value: string) {
+  const words = value.trim().split(/\s+/).filter(Boolean);
+  for (let size = Math.floor(words.length / 2); size >= 1; size -= 1) {
+    const left = words.slice(words.length - size * 2, words.length - size).join(" ").toLowerCase();
+    const right = words.slice(words.length - size).join(" ").toLowerCase();
+    if (left === right) return words.slice(0, words.length - size).join(" ");
+  }
+  return value;
+}
+
+function cleanCropTitle(value: string | null | undefined) {
+  let cleaned = (value ?? "")
+    .replace(/^robin\s+tn\s+/i, "")
+    .replace(/^marshfield\s+mulch\s+pile\s+lineage\s+/i, "")
+    .replace(/^marshfield\s+mulch\s+pile\s+/i, "")
+    .replace(/^lineage\s+/i, "")
+    .trim();
+
+  cleaned = collapseRepeatedPhrase(cleaned);
+
+  if (/mint collection$/i.test(cleaned) && /,/.test(cleaned)) {
+    cleaned = "Mint collection";
+  }
+
+  return titleCase(cleaned || "Crop");
+}
+
+function titleText(crop: HTMLElement) {
   const title = crop.querySelector<HTMLElement>(":scope > .atlas-crop-cycle-title");
-  const namedCycle = title?.querySelector<HTMLElement>(":scope > span")?.textContent;
-  return normalizedCropName(namedCycle || title?.textContent);
+  const namedCycle = title?.querySelector<HTMLElement>(":scope > span");
+  return namedCycle?.textContent || title?.textContent || "";
+}
+
+function cropName(crop: HTMLElement) {
+  return normalizedCropName(cleanCropTitle(titleText(crop)));
+}
+
+function applyCleanTitle(crop: HTMLElement) {
+  const title = crop.querySelector<HTMLElement>(":scope > .atlas-crop-cycle-title");
+  if (!title) return;
+  const namedCycle = title.querySelector<HTMLElement>(":scope > span");
+  const cleaned = cleanCropTitle(namedCycle?.textContent || title.textContent);
+
+  if (namedCycle) {
+    namedCycle.textContent = cleaned;
+  } else {
+    title.textContent = cleaned;
+  }
 }
 
 function prepareSheet(sheet: HTMLElement) {
@@ -24,6 +74,8 @@ function prepareSheet(sheet: HTMLElement) {
     sheet.querySelectorAll<HTMLElement>(":scope > .atlas-crop-cycle-sheet"),
   );
   if (!initialCrops.length) return;
+
+  initialCrops.forEach(applyCleanTitle);
 
   const cycleNames = initialCrops
     .filter((crop) => crop.classList.contains("current-crop-cycle"))
