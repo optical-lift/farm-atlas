@@ -9,6 +9,7 @@ import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
 import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
 import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
 import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
+import CollapsibleBedCropPatch from "./CollapsibleBedCropPatch";
 import "./globals.css";
 import "./home.css";
 import "./zones.css";
@@ -36,6 +37,7 @@ import "./task-child-inline-log.css";
 import "./germination-check.css";
 import "./day-overdue.css";
 import "./object-operational-timeline.css";
+import "./bed-crop-accordion.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -58,6 +60,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <OwnerHomeLinkPatch />
         <HomeSundayNavigationPatch />
         <OwnerTaskReturnPatch />
+        <CollapsibleBedCropPatch />
         {children}
       </body>
     </html>
