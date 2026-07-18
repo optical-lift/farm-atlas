@@ -10,6 +10,7 @@ import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
 import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
 import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
 import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
+import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
 import "./globals.css";
 import "./home.css";
 import "./zones.css";
@@ -38,6 +39,7 @@ import "./germination-check.css";
 import "./day-overdue.css";
 import "./object-operational-timeline.css";
 import "./bed-crop-accordion.css";
+import "./attached-task-history.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -61,6 +63,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <HomeSundayNavigationPatch />
         <OwnerTaskReturnPatch />
         <SafeBedCropAccordionPatch />
+        <AttachedTaskHistoryPatch />
         {children}
       </body>
     </html>
