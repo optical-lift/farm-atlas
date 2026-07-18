@@ -51,6 +51,11 @@ function transitionKey(taskId: string, transition: AtlasTaskTransition) {
   return `atlas:${taskId}:${transition}:${nonce}`;
 }
 
+function scopedTransitionKey(input: AtlasTaskTransitionRequest) {
+  const baseKey = input.idempotencyKey ?? transitionKey(input.taskId, input.transition);
+  return baseKey.startsWith(`${input.taskId}:`) ? baseKey : `${input.taskId}:${baseKey}`;
+}
+
 function applyChecklistVisualState(taskId: string, state: ChecklistVisualState) {
   if (typeof document === "undefined") return;
 
@@ -106,7 +111,7 @@ export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest)
     cache: "no-store",
     body: JSON.stringify({
       ...input,
-      idempotencyKey: input.idempotencyKey ?? transitionKey(input.taskId, input.transition),
+      idempotencyKey: scopedTransitionKey(input),
     }),
   });
   const data = await response.json() as AtlasTaskTransitionResponse;
