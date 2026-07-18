@@ -150,8 +150,8 @@ export default function AtlasWeekOverviewPage() {
       .filter((task) => Boolean(task.due_date && task.due_date >= anchorIso && task.due_date <= weekEndIso))
       .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)));
   }, [anchorIso, explicitEndIso, tasks, weekEndIso]);
-  const weedingCollection = useMemo(() => atlasBuildWeedingCollectionSummary(tasks, weekEndIso), [tasks, weekEndIso]);
-  const mowingCollection = useMemo(() => atlasBuildMowingCollectionSummary(tasks, weekEndIso), [tasks, weekEndIso]);
+  const weedingCollection = useMemo(() => atlasBuildWeedingCollectionSummary(tasks, weekEndIso, "through"), [tasks, weekEndIso]);
+  const mowingCollection = useMemo(() => atlasBuildMowingCollectionSummary(tasks, weekEndIso, "through"), [tasks, weekEndIso]);
   const showWeedingCollection = Boolean(weedingCollection && weedingCollection.dueCount > 0);
   const showMowingCollection = Boolean(mowingCollection && mowingCollection.dueCount > 0);
   const standaloneWeekTasks = useMemo(
