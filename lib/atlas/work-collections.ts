@@ -2,6 +2,7 @@ import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasMetaString, atlasMetadataValue, atlasTaskDisplay } from "@/lib/atlas/task-display";
 
 export type AtlasWorkCollectionKey = "mowing" | "weeding";
+export type AtlasWorkCollectionDueMode = "exact" | "through";
 
 export type AtlasWorkCollectionSummary = {
   key: AtlasWorkCollectionKey;
@@ -104,12 +105,16 @@ export function atlasBuildWorkCollectionSummary(
   key: AtlasWorkCollectionKey,
   tasks: AtlasTaskCard[],
   anchorIso: string,
+  dueMode: AtlasWorkCollectionDueMode = "exact",
 ): AtlasWorkCollectionSummary | null {
   const members = atlasVisibleCollectionTasks(tasks.filter((task) => atlasWorkCollectionKey(task) === key));
   if (!members.length) return null;
 
   const active = members.filter((task) => task.status === "open" || task.status === "blocked");
-  const due = active.filter((task) => !task.due_date || task.due_date <= anchorIso);
+  const due = active.filter((task) => {
+    if (!task.due_date) return dueMode === "through";
+    return dueMode === "through" ? task.due_date <= anchorIso : task.due_date === anchorIso;
+  });
   const blocked = active.filter((task) => task.status === "blocked");
   const notReady = members.filter(atlasIsNotReadyCollectionTask);
   const doneRecent = members.filter(atlasIsDoneTask);
@@ -137,10 +142,18 @@ export function atlasBuildWorkCollectionSummary(
   };
 }
 
-export function atlasBuildMowingCollectionSummary(tasks: AtlasTaskCard[], anchorIso: string) {
-  return atlasBuildWorkCollectionSummary("mowing", tasks, anchorIso);
+export function atlasBuildMowingCollectionSummary(
+  tasks: AtlasTaskCard[],
+  anchorIso: string,
+  dueMode: AtlasWorkCollectionDueMode = "exact",
+) {
+  return atlasBuildWorkCollectionSummary("mowing", tasks, anchorIso, dueMode);
 }
 
-export function atlasBuildWeedingCollectionSummary(tasks: AtlasTaskCard[], anchorIso: string) {
-  return atlasBuildWorkCollectionSummary("weeding", tasks, anchorIso);
+export function atlasBuildWeedingCollectionSummary(
+  tasks: AtlasTaskCard[],
+  anchorIso: string,
+  dueMode: AtlasWorkCollectionDueMode = "exact",
+) {
+  return atlasBuildWorkCollectionSummary("weeding", tasks, anchorIso, dueMode);
 }
