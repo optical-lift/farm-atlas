@@ -3,17 +3,55 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
+function normalizedCropName(value: string | null | undefined) {
+  return (value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function cropName(crop: HTMLElement) {
+  const title = crop.querySelector<HTMLElement>(":scope > .atlas-crop-cycle-title");
+  const namedCycle = title?.querySelector<HTMLElement>(":scope > span")?.textContent;
+  return normalizedCropName(namedCycle || title?.textContent);
+}
+
+function removeLegacyDuplicates(crops: HTMLElement[]) {
+  const cycleNames = crops
+    .filter((crop) => crop.classList.contains("current-crop-cycle"))
+    .map(cropName)
+    .filter(Boolean);
+
+  crops.forEach((crop) => {
+    if (crop.classList.contains("current-crop-cycle")) return;
+    const legacyName = cropName(crop);
+    if (!legacyName) return;
+
+    const hasCycleReplacement = cycleNames.some(
+      (cycleName) => cycleName === legacyName || cycleName.endsWith(` ${legacyName}`),
+    );
+
+    if (hasCycleReplacement) crop.remove();
+  });
+}
+
 function prepareCropLists() {
   document.querySelectorAll<HTMLElement>(".atlas-bed-inspection-sheet").forEach((sheet) => {
+    const initialCrops = Array.from(sheet.querySelectorAll<HTMLElement>(":scope > .atlas-crop-cycle-sheet"));
+    if (!initialCrops.length) return;
+
+    removeLegacyDuplicates(initialCrops);
     const crops = Array.from(sheet.querySelectorAll<HTMLElement>(":scope > .atlas-crop-cycle-sheet"));
     if (!crops.length) return;
 
-    if (!sheet.querySelector(":scope > .atlas-bed-crop-list-label")) {
-      const label = document.createElement("div");
+    let label = sheet.querySelector<HTMLElement>(":scope > .atlas-bed-crop-list-label");
+    if (!label) {
+      label = document.createElement("div");
       label.className = "atlas-bed-crop-list-label";
-      label.textContent = `Crops in this bed · ${crops.length}`;
       crops[0].before(label);
     }
+    label.textContent = `Crops in this bed · ${crops.length}`;
 
     crops.forEach((crop) => {
       if (crop.dataset.cropAccordionReady === "true") return;
@@ -27,7 +65,7 @@ function prepareCropLists() {
       title.setAttribute("role", "button");
       title.setAttribute("tabindex", "0");
       title.setAttribute("aria-expanded", "false");
-      title.setAttribute("aria-label", `Open ${title.textContent?.trim() || "crop"} details`);
+      title.setAttribute("aria-label", `Open ${cropName(crop) || "crop"} details`);
     });
   });
 }
