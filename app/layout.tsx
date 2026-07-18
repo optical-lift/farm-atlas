@@ -9,6 +9,7 @@ import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
 import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
 import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
 import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
+import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
 import "./globals.css";
 import "./home.css";
 import "./zones.css";
@@ -59,6 +60,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <OwnerHomeLinkPatch />
         <HomeSundayNavigationPatch />
         <OwnerTaskReturnPatch />
+        <SafeBedCropAccordionPatch />
         {children}
       </body>
     </html>
