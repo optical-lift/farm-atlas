@@ -61,6 +61,7 @@ function metaString(task: AtlasTaskCard, key: string) {
 }
 
 function detailLines(task: AtlasTaskCard) {
+  if (task.metadata?.hide_details === true || task.metadata?.hide_details === "true") return [];
   const value = task.metadata?.detail_lines;
   if (Array.isArray(value)) return value.filter((line): line is string => typeof line === "string" && line.trim().length > 0);
   return task.note ? [task.note] : [];
