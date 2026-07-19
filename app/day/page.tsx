@@ -13,8 +13,10 @@ import {
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasWorkOrderLabel, atlasWorkOrderSortValue } from "@/lib/atlas/work-order";
 import {
+  atlasBuildGerminationCollectionSummary,
   atlasBuildMowingCollectionSummary,
   atlasBuildWeedingCollectionSummary,
+  atlasIsGerminationCollectionMember,
   atlasIsMowingCollectionMember,
   atlasIsWeedingCollectionMember,
   type AtlasWorkCollectionSummary,
@@ -115,10 +117,13 @@ function TaskCard({ task, complete = false, overdue = false, returnTo }: { task:
 }
 
 function WorkCollectionCard({ collection }: { collection: AtlasWorkCollectionSummary }) {
+  const status = collection.key === "germination"
+    ? `${collection.dueCount} need a look · ${collection.openCount} active`
+    : `${collection.dueCount} due · ${collection.doneRecentCount} resting · ${collection.notReadyCount} not ready`;
   return (
     <Link className="atlas-day-task-card atlas-work-collection-day-card" href={collection.href}>
       <strong>{collection.label}</strong>
-      <span>{collection.dueCount} due · {collection.doneRecentCount} resting · {collection.notReadyCount} not ready</span>
+      <span>{status}</span>
       <em>{collection.preview}</em>
     </Link>
   );
@@ -177,34 +182,41 @@ export default function AtlasDayPage() {
   const dayTasks = useMemo(() => tasks.filter(isDashboardWork).filter((task) => task.due_date === dateIso).sort((a, b) => atlasWorkOrderSortValue(a).localeCompare(atlasWorkOrderSortValue(b))), [dateIso, tasks]);
   const overdueTasks = useMemo(() => {
     if (dateIso !== todayIso()) return [];
-    return tasks.filter(isDashboardWork).filter((task) => Boolean(task.due_date && task.due_date < dateIso)).filter((task) => !isKidChore(task) && !isOwnerOnlyTask(task) && !isExtraCredit(task)).filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task)).sort((a, b) => `${a.due_date ?? ""}-${atlasWorkOrderSortValue(a)}`.localeCompare(`${b.due_date ?? ""}-${atlasWorkOrderSortValue(b)}`));
+    return tasks.filter(isDashboardWork).filter((task) => Boolean(task.due_date && task.due_date < dateIso)).filter((task) => !isKidChore(task) && !isOwnerOnlyTask(task) && !isExtraCredit(task)).filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task) && !atlasIsGerminationCollectionMember(task)).sort((a, b) => `${a.due_date ?? ""}-${atlasWorkOrderSortValue(a)}`.localeCompare(`${b.due_date ?? ""}-${atlasWorkOrderSortValue(b)}`));
   }, [dateIso, tasks]);
   const requiredTasks = useMemo(() => dayTasks.filter((task) => !isExtraCredit(task)), [dayTasks]);
-  const standaloneTasks = useMemo(() => requiredTasks.filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task)), [requiredTasks]);
+  const standaloneTasks = useMemo(() => requiredTasks.filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task) && !atlasIsGerminationCollectionMember(task)), [requiredTasks]);
   const extraCreditTasks = useMemo(() => dayTasks.filter(isExtraCredit), [dayTasks]);
-  const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask), [allDayTasks]);
+  const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask).filter((task) => !atlasIsGerminationCollectionMember(task)), [allDayTasks]);
   const filteredTasks = useMemo(() => routeFilter ? standaloneTasks.filter((task) => atlasRouteKeyForTask(task) === routeFilter) : standaloneTasks, [routeFilter, standaloneTasks]);
 
   const mowingCollection = useMemo(() => atlasBuildMowingCollectionSummary(tasks, dateIso), [dateIso, tasks]);
   const weedingCollection = useMemo(() => atlasBuildWeedingCollectionSummary(tasks, dateIso), [dateIso, tasks]);
+  const germinationCollection = useMemo(() => atlasBuildGerminationCollectionSummary(tasks, dateIso), [dateIso, tasks]);
   const showWeedingCollection = Boolean(weedingCollection && weedingCollection.dueCount > 0);
+  const showGerminationCollection = Boolean(germinationCollection && germinationCollection.dueCount > 0);
   const showMowingCollection = Boolean(mowingCollection && mowingCollection.dueCount > 0);
-  const collectionCount = Number(showWeedingCollection) + Number(showMowingCollection);
+  const collectionCount = Number(showWeedingCollection) + Number(showGerminationCollection) + Number(showMowingCollection);
 
   const routeCards = useMemo(() => {
-    const entries = routeOrder.map((key) => {
+    const regularEntries = routeOrder.map((key) => {
       const collection = key === "weed" ? weedingCollection : key === "mow" ? mowingCollection : null;
       const routeTasks = standaloneTasks.filter((task) => atlasRouteKeyForTask(task) === key);
       return { key, collection: collection && collection.dueCount > 0 ? collection : null, tasks: routeTasks };
     }).filter((entry) => entry.collection || entry.tasks.length);
-    return entries.sort((a, b) => {
+    const germinationEntry = germinationCollection && germinationCollection.dueCount > 0
+      ? [{ key: "germination" as const, collection: germinationCollection, tasks: [] as AtlasTaskCard[] }]
+      : [];
+    return [...regularEntries, ...germinationEntry].sort((a, b) => {
       if (a.key === "weed") return -1;
       if (b.key === "weed") return 1;
+      if (a.key === "germination") return -1;
+      if (b.key === "germination") return 1;
       if (a.key === "mow") return 1;
       if (b.key === "mow") return -1;
-      return routeOrder.indexOf(a.key) - routeOrder.indexOf(b.key);
+      return routeOrder.indexOf(a.key as RouteKey) - routeOrder.indexOf(b.key as RouteKey);
     });
-  }, [mowingCollection, standaloneTasks, weedingCollection]);
+  }, [germinationCollection, mowingCollection, standaloneTasks, weedingCollection]);
 
   const zones = useMemo(() => Array.from(new Set(filteredTasks.map(collectionZone))).sort(), [filteredTasks]);
   const returnTo = routeFilter ? routeHref(dateIso, routeFilter) : `/day?date=${encodeURIComponent(dateIso)}`;
@@ -234,7 +246,7 @@ export default function AtlasDayPage() {
                 <div className="atlas-day-route-grid">
                   {routeCards.length ? routeCards.map((entry) => {
                     if (entry.collection) return <Link key={entry.key} className="atlas-day-route-box" href={entry.collection.href}><strong>{entry.collection.label}</strong><span>{entry.collection.dueCount} due</span><em>{entry.collection.preview}</em></Link>;
-                    return <Link key={entry.key} className="atlas-day-route-box" href={routeHref(dateIso, entry.key)}><strong>{routeLabels[entry.key]}</strong><span>{entry.tasks.length} {entry.tasks.length === 1 ? "task" : "tasks"}</span><em>{entry.tasks.slice(0, 2).map((task) => atlasTaskDisplay(task).title).join(" · ")}</em></Link>;
+                    return <Link key={entry.key} className="atlas-day-route-box" href={routeHref(dateIso, entry.key as RouteKey)}><strong>{routeLabels[entry.key as RouteKey]}</strong><span>{entry.tasks.length} {entry.tasks.length === 1 ? "task" : "tasks"}</span><em>{entry.tasks.slice(0, 2).map((task) => atlasTaskDisplay(task).title).join(" · ")}</em></Link>;
                   }) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div>}
                 </div>
               </article>
@@ -264,6 +276,7 @@ export default function AtlasDayPage() {
                   <h3>Work Order</h3>
                   <div className="atlas-day-work-order-list">
                     {showWeedingCollection && weedingCollection ? <WorkCollectionCard collection={weedingCollection} /> : null}
+                    {showGerminationCollection && germinationCollection ? <WorkCollectionCard collection={germinationCollection} /> : null}
                     {standaloneTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}
                     {showMowingCollection && mowingCollection ? <WorkCollectionCard collection={mowingCollection} /> : null}
                     {!collectionCount && !standaloneTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}
@@ -272,6 +285,7 @@ export default function AtlasDayPage() {
               ) : (
                 <>
                   {showWeedingCollection && weedingCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{weedingCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={weedingCollection} /></div></article> : null}
+                  {showGerminationCollection && germinationCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{germinationCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={germinationCollection} /></div></article> : null}
                   {zones.map((zone) => <article className="atlas-day-route-group" key={zone}><h3>{zone}</h3><div className="atlas-day-zone-group">{filteredTasks.filter((task) => collectionZone(task) === zone).map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}</div></article>)}
                   {showMowingCollection && mowingCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{mowingCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={mowingCollection} /></div></article> : null}
                 </>
