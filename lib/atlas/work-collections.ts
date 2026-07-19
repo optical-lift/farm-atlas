@@ -1,7 +1,7 @@
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasMetaString, atlasMetadataValue, atlasTaskDisplay } from "@/lib/atlas/task-display";
 
-export type AtlasWorkCollectionKey = "mowing" | "weeding" | "germination";
+export type AtlasWorkCollectionKey = "mowing" | "weeding" | "germination" | "propagation";
 export type AtlasWorkCollectionDueMode = "exact" | "through";
 
 export type AtlasWorkCollectionSummary = {
@@ -22,12 +22,14 @@ const collectionLabels: Record<AtlasWorkCollectionKey, string> = {
   mowing: "Mowing",
   weeding: "Weeding",
   germination: "Germination",
+  propagation: "Propagation",
 };
 
 const collectionHrefs: Record<AtlasWorkCollectionKey, string> = {
   mowing: "/collections/mowing",
   weeding: "/collections/weeding",
   germination: "/collections/germination",
+  propagation: "/collections/propagation",
 };
 
 function text(value: unknown) {
@@ -61,10 +63,30 @@ function isGerminationTask(task: AtlasTaskCard) {
     || title.includes("germinate?");
 }
 
+function isPropagationTask(task: AtlasTaskCard) {
+  const explicit = atlasMetaString(task, "work_collection_key");
+  const route = atlasMetaString(task, "work_route").toLowerCase();
+  const rhythm = atlasMetaString(task, "work_rhythm").toLowerCase();
+  const action = (task.action_key || "").toLowerCase();
+  const type = (task.task_type || "").toLowerCase();
+  const title = task.title.toLowerCase();
+
+  return explicit === "propagation"
+    || route === "propagation"
+    || route === "propagate"
+    || rhythm === "propagation"
+    || type.startsWith("propagation")
+    || ["propagate", "propagation", "propagation_start", "propagation_count", "check_rooting", "pot_rooted_cuttings"].includes(action)
+    || title.includes("propagation")
+    || title.includes("take cuttings")
+    || title.includes("root cuttings");
+}
+
 export function atlasWorkCollectionKey(task: AtlasTaskCard): AtlasWorkCollectionKey | null {
   const explicit = atlasMetaString(task, "work_collection_key");
-  if (explicit === "mowing" || explicit === "weeding" || explicit === "germination") return explicit;
+  if (explicit === "mowing" || explicit === "weeding" || explicit === "germination" || explicit === "propagation") return explicit;
   if (isGerminationTask(task)) return "germination";
+  if (isPropagationTask(task)) return "propagation";
   return null;
 }
 
@@ -82,6 +104,9 @@ export function atlasCollectionPhysicalKey(task: AtlasTaskCard) {
   const objectIds = (task.objects ?? []).map((object) => object.object_id).filter(Boolean).sort();
   if (atlasWorkCollectionKey(task) === "germination") {
     return `germination:${atlasCollectionMemberKey(task)}:${objectIds.join(",")}`;
+  }
+  if (atlasWorkCollectionKey(task) === "propagation") {
+    return `propagation:${atlasCollectionMemberKey(task)}`;
   }
   if (objectIds.length) return `objects:${objectIds.join(",")}`;
   return `member:${atlasCollectionMemberKey(task)}`;
@@ -101,6 +126,10 @@ export function atlasIsWeedingCollectionMember(task: AtlasTaskCard) {
 
 export function atlasIsGerminationCollectionMember(task: AtlasTaskCard) {
   return atlasWorkCollectionKey(task) === "germination";
+}
+
+export function atlasIsPropagationCollectionMember(task: AtlasTaskCard) {
+  return atlasWorkCollectionKey(task) === "propagation";
 }
 
 export function atlasCollectionTaskSortValue(task: AtlasTaskCard) {
@@ -186,7 +215,7 @@ export function atlasBuildWorkCollectionSummary(
     .slice(0, 3)
     .map((task) => atlasTaskDisplay(task).subject);
 
-  const restingCopy = key === "weeding" ? "weeded" : key === "mowing" ? "mowed" : "checked";
+  const restingCopy = key === "weeding" ? "weeded" : key === "mowing" ? "mowed" : key === "propagation" ? "completed" : "checked";
   return {
     key,
     label: collectionLabels[key],
@@ -224,4 +253,12 @@ export function atlasBuildGerminationCollectionSummary(
   dueMode: AtlasWorkCollectionDueMode = "exact",
 ) {
   return atlasBuildWorkCollectionSummary("germination", tasks, anchorIso, dueMode);
+}
+
+export function atlasBuildPropagationCollectionSummary(
+  tasks: AtlasTaskCard[],
+  anchorIso: string,
+  dueMode: AtlasWorkCollectionDueMode = "exact",
+) {
+  return atlasBuildWorkCollectionSummary("propagation", tasks, anchorIso, dueMode);
 }
