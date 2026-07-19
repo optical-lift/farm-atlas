@@ -1,6 +1,6 @@
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
-export type AtlasWorkRouteKey = "plant" | "weed" | "mow" | "seed" | "crop_cycle" | "harvest" | "build" | "venue" | "water";
+export type AtlasWorkRouteKey = "plant" | "weed" | "mow" | "seed" | "crop_cycle" | "harvest" | "build" | "venue" | "water" | "propagation";
 
 export type AtlasTaskDisplay = {
   action: string;
@@ -22,9 +22,10 @@ export const atlasRouteLabels: Record<AtlasWorkRouteKey, string> = {
   build: "Build / Prep",
   venue: "Venue",
   water: "Water",
+  propagation: "Propagation",
 };
 
-export const atlasRouteOrder: AtlasWorkRouteKey[] = ["weed", "plant", "mow", "seed", "crop_cycle", "harvest", "build", "venue", "water"];
+export const atlasRouteOrder: AtlasWorkRouteKey[] = ["weed", "plant", "propagation", "mow", "seed", "crop_cycle", "harvest", "build", "venue", "water"];
 
 export function atlasText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -66,7 +67,7 @@ export function atlasTitleSubject(title: string) {
 }
 
 export function atlasIsRouteKey(value: string | null | undefined): value is AtlasWorkRouteKey {
-  return value === "plant" || value === "weed" || value === "mow" || value === "seed" || value === "crop_cycle" || value === "harvest" || value === "build" || value === "venue" || value === "water";
+  return value === "plant" || value === "weed" || value === "mow" || value === "seed" || value === "crop_cycle" || value === "harvest" || value === "build" || value === "venue" || value === "water" || value === "propagation";
 }
 
 export function atlasIsCropCycleTask(task: AtlasTaskCard) {
@@ -93,6 +94,12 @@ export function atlasRouteKeyForTask(task: AtlasTaskCard): AtlasWorkRouteKey {
   if (explicit === "watering") return "water";
   if (explicit === "planting" || explicit === "transplant") return "plant";
   if (explicit === "sowing") return "seed";
+  if (["propagate", "propagation_start", "propagation_count", "check_rooting", "pot_rooted_cuttings"].includes(explicit)) return "propagation";
+
+  const explicitCollection = atlasMetaString(task, "work_collection_key");
+  const explicitRhythm = atlasMetaString(task, "work_rhythm").toLowerCase();
+  if (explicitCollection === "propagation" || explicitRhythm === "propagation") return "propagation";
+
   if (atlasIsCropCycleTask(task)) return "crop_cycle";
 
   const templateText = (task.action_templates ?? [])
@@ -101,6 +108,7 @@ export function atlasRouteKeyForTask(task: AtlasTaskCard): AtlasWorkRouteKey {
 
   const joined = `${task.task_type ?? ""} ${task.title} ${task.unlock_text ?? ""} ${atlasMetaString(task, "work_rhythm")} ${atlasMetaString(task, "display_action")} ${templateText}`.toLowerCase();
 
+  if (joined.includes("propagat") || joined.includes("take cuttings") || joined.includes("root cuttings")) return "propagation";
   if (joined.includes("water")) return "water";
   if (joined.includes("mow")) return "mow";
   if (joined.includes("weed")) return "weed";
@@ -144,6 +152,7 @@ export function atlasRhythmForTask(task: AtlasTaskCard) {
   if (route === "mow") return "Maintenance";
   if (route === "build") return "Build / Prep";
   if (route === "water") return "Watering";
+  if (route === "propagation") return "Propagation";
   return "Farm Work";
 }
 
