@@ -60,6 +60,12 @@ export function atlasCollectionMemberKey(task: AtlasTaskCard) {
   return atlasMetaString(task, "collection_member_key") || task.task_id;
 }
 
+export function atlasCollectionPhysicalKey(task: AtlasTaskCard) {
+  const objectIds = (task.objects ?? []).map((object) => object.object_id).filter(Boolean).sort();
+  if (objectIds.length) return `objects:${objectIds.join(",")}`;
+  return `member:${atlasCollectionMemberKey(task)}`;
+}
+
 export function atlasIsWorkCollectionMember(task: AtlasTaskCard) {
   return Boolean(atlasWorkCollectionKey(task));
 }
@@ -85,20 +91,46 @@ export function atlasIsNotReadyCollectionTask(task: AtlasTaskCard) {
   return state === "not_ready" || Boolean(atlasMetaString(task, "not_ready_reason"));
 }
 
+function isActiveCollectionTask(task: AtlasTaskCard) {
+  return task.status === "open" || task.status === "blocked";
+}
+
+function canonicalCollectionRank(task: AtlasTaskCard) {
+  if (task.generated_from === "maintenance_weeding_collection" || task.generated_from === "maintenance_mowing_collection") return 0;
+  if (atlasMetaString(task, "maintenance_object_id")) return 1;
+  return 2;
+}
+
+function preferredCollectionTask(current: AtlasTaskCard, candidate: AtlasTaskCard) {
+  const currentActive = isActiveCollectionTask(current);
+  const candidateActive = isActiveCollectionTask(candidate);
+  if (candidateActive !== currentActive) return candidateActive ? candidate : current;
+
+  if (candidateActive && currentActive) {
+    const rankDifference = canonicalCollectionRank(candidate) - canonicalCollectionRank(current);
+    if (rankDifference !== 0) return rankDifference < 0 ? candidate : current;
+    return atlasCollectionTaskSortValue(candidate).localeCompare(atlasCollectionTaskSortValue(current)) < 0 ? candidate : current;
+  }
+
+  const candidateUpdated = candidate.updated_at || candidate.created_at || "";
+  const currentUpdated = current.updated_at || current.created_at || "";
+  return candidateUpdated > currentUpdated ? candidate : current;
+}
+
 export function atlasVisibleCollectionTasks(tasks: AtlasTaskCard[]) {
   const members = tasks
     .filter((task) => task.status !== "archived")
     .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b)));
-  const activeKeys = new Set(
-    members
-      .filter((task) => task.status === "open" || task.status === "blocked")
-      .map(atlasCollectionMemberKey),
-  );
 
-  return members.filter((task) => {
-    if (!atlasIsDoneTask(task)) return true;
-    return !activeKeys.has(atlasCollectionMemberKey(task));
-  });
+  const byPhysicalObject = new Map<string, AtlasTaskCard>();
+  for (const task of members) {
+    const key = atlasCollectionPhysicalKey(task);
+    const current = byPhysicalObject.get(key);
+    byPhysicalObject.set(key, current ? preferredCollectionTask(current, task) : task);
+  }
+
+  return Array.from(byPhysicalObject.values())
+    .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b)));
 }
 
 export function atlasBuildWorkCollectionSummary(
