@@ -1,7 +1,7 @@
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasMetaString, atlasMetadataValue, atlasTaskDisplay } from "@/lib/atlas/task-display";
 
-export type AtlasWorkCollectionKey = "mowing" | "weeding";
+export type AtlasWorkCollectionKey = "mowing" | "weeding" | "germination";
 export type AtlasWorkCollectionDueMode = "exact" | "through";
 
 export type AtlasWorkCollectionSummary = {
@@ -21,11 +21,13 @@ export type AtlasWorkCollectionSummary = {
 const collectionLabels: Record<AtlasWorkCollectionKey, string> = {
   mowing: "Mowing",
   weeding: "Weeding",
+  germination: "Germination",
 };
 
 const collectionHrefs: Record<AtlasWorkCollectionKey, string> = {
   mowing: "/collections/mowing",
   weeding: "/collections/weeding",
+  germination: "/collections/germination",
 };
 
 function text(value: unknown) {
@@ -50,18 +52,37 @@ function metaNumber(task: AtlasTaskCard, key: string) {
   return 999;
 }
 
+function isGerminationTask(task: AtlasTaskCard) {
+  const title = task.title.toLowerCase();
+  return task.action_key === "germination_check"
+    || atlasMetaString(task, "task_style") === "germination_check"
+    || atlasMetaString(task, "milestone") === "germination_check"
+    || title.includes("germination")
+    || title.includes("germinate?");
+}
+
 export function atlasWorkCollectionKey(task: AtlasTaskCard): AtlasWorkCollectionKey | null {
   const explicit = atlasMetaString(task, "work_collection_key");
-  if (explicit === "mowing" || explicit === "weeding") return explicit;
+  if (explicit === "mowing" || explicit === "weeding" || explicit === "germination") return explicit;
+  if (isGerminationTask(task)) return "germination";
   return null;
 }
 
 export function atlasCollectionMemberKey(task: AtlasTaskCard) {
+  if (atlasWorkCollectionKey(task) === "germination") {
+    return atlasMetaString(task, "crop_cycle_id")
+      || atlasMetaString(task, "source_sowing_task_id")
+      || task.generated_from_id
+      || task.task_id;
+  }
   return atlasMetaString(task, "collection_member_key") || task.task_id;
 }
 
 export function atlasCollectionPhysicalKey(task: AtlasTaskCard) {
   const objectIds = (task.objects ?? []).map((object) => object.object_id).filter(Boolean).sort();
+  if (atlasWorkCollectionKey(task) === "germination") {
+    return `germination:${atlasCollectionMemberKey(task)}:${objectIds.join(",")}`;
+  }
   if (objectIds.length) return `objects:${objectIds.join(",")}`;
   return `member:${atlasCollectionMemberKey(task)}`;
 }
@@ -76,6 +97,10 @@ export function atlasIsMowingCollectionMember(task: AtlasTaskCard) {
 
 export function atlasIsWeedingCollectionMember(task: AtlasTaskCard) {
   return atlasWorkCollectionKey(task) === "weeding";
+}
+
+export function atlasIsGerminationCollectionMember(task: AtlasTaskCard) {
+  return atlasWorkCollectionKey(task) === "germination";
 }
 
 export function atlasCollectionTaskSortValue(task: AtlasTaskCard) {
@@ -97,7 +122,9 @@ function isActiveCollectionTask(task: AtlasTaskCard) {
 
 function canonicalCollectionRank(task: AtlasTaskCard) {
   if (task.generated_from === "maintenance_weeding_collection" || task.generated_from === "maintenance_mowing_collection") return 0;
+  if (task.generated_from === "crop_cycle_milestone" && atlasWorkCollectionKey(task) === "germination") return 0;
   if (atlasMetaString(task, "maintenance_object_id")) return 1;
+  if (task.generated_from === "germination_workflow") return 1;
   return 2;
 }
 
@@ -159,6 +186,7 @@ export function atlasBuildWorkCollectionSummary(
     .slice(0, 3)
     .map((task) => atlasTaskDisplay(task).subject);
 
+  const restingCopy = key === "weeding" ? "weeded" : key === "mowing" ? "mowed" : "checked";
   return {
     key,
     label: collectionLabels[key],
@@ -169,7 +197,7 @@ export function atlasBuildWorkCollectionSummary(
     blockedCount: blocked.length,
     notReadyCount: notReady.length,
     nextDueLabel: nextDue ? prettyShortDate(nextDue) : "not scheduled",
-    preview: previewTasks.length ? previewTasks.join(" · ") : doneRecent.length ? `Recently ${key === "weeding" ? "weeded" : "mowed"} areas are resting` : "No active areas",
+    preview: previewTasks.length ? previewTasks.join(" · ") : doneRecent.length ? `Recently ${restingCopy} records are resting` : "No active records",
     tasks: members,
   };
 }
@@ -188,4 +216,12 @@ export function atlasBuildWeedingCollectionSummary(
   dueMode: AtlasWorkCollectionDueMode = "exact",
 ) {
   return atlasBuildWorkCollectionSummary("weeding", tasks, anchorIso, dueMode);
+}
+
+export function atlasBuildGerminationCollectionSummary(
+  tasks: AtlasTaskCard[],
+  anchorIso: string,
+  dueMode: AtlasWorkCollectionDueMode = "exact",
+) {
+  return atlasBuildWorkCollectionSummary("germination", tasks, anchorIso, dueMode);
 }
