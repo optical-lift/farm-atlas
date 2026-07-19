@@ -88,6 +88,14 @@ export default function GerminationCollectionPage() {
   const today = todayIso();
   const upcomingThrough = addDaysIso(today, 7);
 
+  function goBack() {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    window.location.assign(`/day?date=${encodeURIComponent(today)}`);
+  }
+
   useEffect(() => {
     async function load() {
       try {
@@ -120,9 +128,9 @@ export default function GerminationCollectionPage() {
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-work-collection-page-shell">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone atlas-overview-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Germination</span></Link>
+          <button type="button" onClick={goBack} className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Germination</span></button>
           <span className="atlas-weather-line">all sowing records due for a look</span>
-          <Link href="/day" className="atlas-note-plus atlas-overview-top-dot" aria-label="Back to day overview">↩</Link>
+          <button type="button" onClick={goBack} className="atlas-note-plus atlas-overview-top-dot" aria-label="Back to previous page">↩</button>
         </header>
 
         <div className="atlas-task-page-body atlas-overview-body atlas-work-collection-body">
