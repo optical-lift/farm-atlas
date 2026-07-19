@@ -1,10 +1,10 @@
 .atlas-day-overdue-group {
   margin-top: 4px;
-  border: 2px solid rgba(202, 177, 58, 0.62) !important;
+  border: 2px solid rgba(139, 145, 194, 0.54) !important;
   border-radius: 20px !important;
-  background: linear-gradient(180deg, rgba(255, 250, 221, 0.98), rgba(247, 241, 211, 0.94)) !important;
+  background: linear-gradient(180deg, rgba(174, 179, 212, 0.30), rgba(174, 179, 212, 0.22)) !important;
   padding: 10px !important;
-  box-shadow: 0 8px 18px rgba(103, 86, 26, 0.10), inset 5px 0 0 #e9dc4c;
+  box-shadow: 0 8px 18px rgba(85, 90, 134, 0.10), inset 5px 0 0 var(--atlas-purple-deep);
 }
 
 .atlas-day-overdue-group-head {
@@ -21,7 +21,7 @@
 }
 
 .atlas-day-overdue-group-head span {
-  color: #8c7520;
+  color: var(--atlas-purple-dark);
   font-size: 8px;
   line-height: 1;
   font-weight: 950;
@@ -31,7 +31,7 @@
 
 .atlas-day-overdue-group-head h3 {
   margin: 0 !important;
-  color: #342f18 !important;
+  color: var(--atlas-text) !important;
   font-size: 21px !important;
   line-height: 0.95 !important;
 }
@@ -41,8 +41,8 @@
   height: 34px;
   padding: 0 9px;
   border-radius: 999px;
-  background: #e7dc4b;
-  color: #302d1e;
+  background: var(--atlas-purple-deep);
+  color: white;
   display: grid;
   place-items: center;
   font-size: 14px;
@@ -56,10 +56,10 @@
 
 .atlas-day-overdue-task-card {
   position: relative;
-  border: 2px solid rgba(186, 159, 42, 0.55) !important;
-  background: rgba(255, 253, 239, 0.98) !important;
+  border: 2px solid rgba(139, 145, 194, 0.48) !important;
+  background: rgba(174, 179, 212, 0.20) !important;
   padding: 30px 12px 10px 14px !important;
-  box-shadow: 0 5px 12px rgba(89, 73, 20, 0.08);
+  box-shadow: 0 5px 12px rgba(85, 90, 134, 0.08);
 }
 
 .atlas-day-overdue-task-card::before {
@@ -68,23 +68,23 @@
   inset: 0 auto 0 0;
   width: 6px;
   border-radius: 16px 0 0 16px;
-  background: #e7dc4b;
+  background: var(--atlas-purple-deep);
 }
 
 .atlas-day-overdue-task-card strong {
-  color: #2f2d22 !important;
+  color: var(--atlas-text) !important;
   font-size: 19px !important;
   line-height: 1 !important;
 }
 
 .atlas-day-overdue-task-card span {
-  color: #7f6820 !important;
+  color: var(--atlas-purple-dark) !important;
   font-weight: 950 !important;
   font-size: 11px !important;
 }
 
 .atlas-day-overdue-task-card em {
-  color: #6e6851 !important;
+  color: var(--atlas-muted) !important;
   font-size: 11px !important;
   line-height: 1.05 !important;
 }
@@ -97,8 +97,8 @@
   align-items: center;
   width: fit-content;
   border-radius: 999px;
-  background: #e7dc4b;
-  color: #302d1e;
+  background: var(--atlas-purple-deep);
+  color: white;
   padding: 5px 8px;
   font-size: 8px;
   line-height: 1;
