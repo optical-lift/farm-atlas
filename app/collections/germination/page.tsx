@@ -38,6 +38,30 @@ function cropLabel(task: AtlasTaskCard) {
     || task.title;
 }
 
+function varietyKey(task: AtlasTaskCard) {
+  return atlasMetaString(task, "germination_variety_key")
+    || atlasMetaString(task, "crop_profile_stable_key")
+    || atlasMetaString(task, "crop_variety")
+    || atlasMetaString(task, "variety")
+    || cropLabel(task).toLowerCase().replace(/[^a-z0-9]+/g, "_");
+}
+
+function dedupeByVarietyAndDate(tasks: AtlasTaskCard[]) {
+  const byEvent = new Map<string, AtlasTaskCard>();
+  for (const task of tasks) {
+    const key = `${varietyKey(task)}:${task.due_date ?? "open"}`;
+    const current = byEvent.get(key);
+    if (!current) {
+      byEvent.set(key, task);
+      continue;
+    }
+    const currentRank = current.generated_from === "crop_cycle_milestone" ? 0 : 1;
+    const candidateRank = task.generated_from === "crop_cycle_milestone" ? 0 : 1;
+    if (candidateRank < currentRank) byEvent.set(key, task);
+  }
+  return Array.from(byEvent.values());
+}
+
 function sowingDate(task: AtlasTaskCard) {
   return atlasMetaString(task, "source_sown_date")
     || atlasMetaString(task, "actual_sow_date")
@@ -45,6 +69,8 @@ function sowingDate(task: AtlasTaskCard) {
 }
 
 function locationLabel(task: AtlasTaskCard) {
+  const merged = task.metadata?.merged_object_labels;
+  if (Array.isArray(merged) && merged.length) return merged.filter((value): value is string => typeof value === "string").join(" · ");
   return task.objects?.map((object) => object.object_label).filter(Boolean).join(" · ")
     || atlasTaskDisplay(task).location
     || "Elm Farm";
@@ -105,7 +131,7 @@ export default function GerminationCollectionPage() {
         const germinationTasks = (response.taskCards ?? [])
           .filter(atlasIsGerminationCollectionMember)
           .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b)));
-        setTasks(atlasVisibleCollectionTasks(germinationTasks));
+        setTasks(dedupeByVarietyAndDate(atlasVisibleCollectionTasks(germinationTasks)));
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Germination collection failed.");
       } finally {
