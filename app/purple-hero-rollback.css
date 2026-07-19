@@ -129,13 +129,14 @@
   color: rgba(255, 255, 255, 0.62) !important;
 }
 
-/* Carry-forward treatment from the early primary-card pattern. */
-.atlas-run-sheet-box.atlas-overdue-forward-box {
+/* Carry-forward card: same purple family, only slightly darker than on-time work. */
+.atlas-run-sheet-box.atlas-overdue-forward-box,
+.atlas-run-sheet-box.atlas-overdue-forward-box:nth-child(1) {
   position: relative !important;
-  background: #f7f2df !important;
-  border: 2px solid #e7e450 !important;
-  box-shadow: inset 5px 0 0 #e7e450, 0 5px 14px rgba(33, 35, 58, 0.16) !important;
-  color: var(--atlas-text) !important;
+  background: rgba(104, 110, 171, 0.58) !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  box-shadow: inset 4px 0 0 rgba(85, 90, 134, 0.88), 0 5px 14px rgba(33, 35, 58, 0.14) !important;
+  color: #fff !important;
   padding-top: 25px !important;
 }
 
@@ -145,8 +146,8 @@
   top: 7px;
   left: 9px;
   border-radius: 999px;
-  background: #e7e450;
-  color: var(--atlas-text);
+  background: rgba(85, 90, 134, 0.94) !important;
+  color: #fff !important;
   padding: 4px 7px 3px;
   font-size: 8px;
   line-height: 1;
@@ -159,19 +160,19 @@
   top: 10px !important;
   right: 9px !important;
   width: auto !important;
-  color: #55584d !important;
+  color: rgba(255, 255, 255, 0.70) !important;
   font-size: 8px !important;
   letter-spacing: 0.04em !important;
   text-transform: none !important;
 }
 
 .atlas-run-sheet-box.atlas-overdue-forward-box strong {
-  color: var(--atlas-text) !important;
+  color: #fff !important;
 }
 
 .atlas-run-sheet-box.atlas-overdue-forward-box span,
 .atlas-run-sheet-box.atlas-overdue-forward-box em {
-  color: #66695f !important;
+  color: rgba(255, 255, 255, 0.78) !important;
 }
 
 @media (max-width: 430px) {
