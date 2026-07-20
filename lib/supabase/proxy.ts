@@ -14,7 +14,12 @@ function copySessionCookies(source: NextResponse, target: NextResponse) {
 }
 
 function isPublicPath(pathname: string) {
-  return pathname === "/login" || pathname.startsWith("/api/atlas/auth/");
+  return (
+    pathname === "/login" ||
+    pathname === "/auth/confirm" ||
+    pathname === "/auth/error" ||
+    pathname.startsWith("/api/atlas/auth/")
+  );
 }
 
 export async function updateAtlasSession(request: NextRequest) {
