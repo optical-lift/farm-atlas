@@ -5,9 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 
 type SessionResponse = {
   ok?: boolean;
-  identity?: {
-    memberships?: Array<{ role?: string; active?: boolean }>;
-  } | null;
+  authenticated?: boolean;
+  memberships?: Array<{ role?: string; farmKey?: string | null }>;
 };
 
 export default function AtlasRoleHomeRedirect() {
@@ -30,19 +29,21 @@ export default function AtlasRoleHomeRedirect() {
         if (!response.ok) return;
 
         const data = (await response.json()) as SessionResponse;
-        if (cancelled || !data.ok || !data.identity) return;
+        if (cancelled || !data.ok || !data.authenticated) return;
 
-        const memberships = data.identity.memberships ?? [];
-        if (memberships.some((membership) => membership.active && membership.role === "owner")) {
+        const memberships = data.memberships ?? [];
+        const elmMemberships = memberships.filter((membership) => membership.farmKey === "elm_farm");
+
+        if (elmMemberships.some((membership) => membership.role === "owner")) {
           router.replace("/owner");
           return;
         }
 
-        if (memberships.some((membership) => membership.active && membership.role === "manager")) {
+        if (elmMemberships.some((membership) => membership.role === "manager")) {
           router.replace("/marshall");
         }
       } catch {
-        // The login middleware remains the authority when a session is unavailable.
+        // Login middleware remains the authority when a session is unavailable.
       }
     }
 
