@@ -180,7 +180,17 @@ export async function fetchAtlasTaskCards(
   if (assignmentScope) params.set("scope", "all");
   else if (scope !== "farm") params.set("scope", scope);
 
-  const response = await fetch(`/api/atlas/task-cards${params.toString() ? `?${params.toString()}` : ""}`, {
+  const useHomeReadPath =
+    typeof window !== "undefined" &&
+    window.location.pathname === "/" &&
+    !options.taskId &&
+    scope === "farm";
+
+  const endpoint = useHomeReadPath
+    ? "/api/atlas/home-task-cards"
+    : `/api/atlas/task-cards${params.toString() ? `?${params.toString()}` : ""}`;
+
+  const response = await fetch(endpoint, {
     method: "GET",
     headers: { Accept: "application/json" },
     cache: "no-store",
