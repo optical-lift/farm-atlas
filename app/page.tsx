@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { roleHomeForMembership } from "@/lib/atlas/auth-core.js";
 import { getAtlasSession } from "@/lib/atlas/session";
 import styles from "./page.module.css";
 
@@ -23,9 +25,14 @@ export default async function AtlasRootPage() {
             <h1 id="atlas-title">Atlas</h1>
             <p className={styles.identity}>{session.displayName}</p>
           </div>
-          <form action="/api/atlas/auth/logout" method="post">
-            <button className={styles.signOut} type="submit">Sign out</button>
-          </form>
+          <div className={styles.actions}>
+            <Link className={styles.account} href="/settings/password">
+              Account
+            </Link>
+            <form action="/api/atlas/auth/logout" method="post">
+              <button className={styles.signOut} type="submit">Sign out</button>
+            </form>
+          </div>
         </header>
 
         <div className={styles.sectionHeading}>
@@ -35,7 +42,11 @@ export default async function AtlasRootPage() {
 
         <div className={styles.farmList}>
           {session.memberships.map((membership) => (
-            <article className={styles.farmCard} key={membership.membershipId}>
+            <Link
+              className={styles.farmCard}
+              href={roleHomeForMembership(membership) ?? "/"}
+              key={membership.membershipId}
+            >
               <div>
                 <p className={styles.farmName}>
                   {membership.farmName ?? membership.farmKey ?? "Farm"}
@@ -45,7 +56,7 @@ export default async function AtlasRootPage() {
                 </p>
               </div>
               <span className={styles.role}>{roleLabel(membership.role)}</span>
-            </article>
+            </Link>
           ))}
 
           {session.memberships.length === 0 ? (
