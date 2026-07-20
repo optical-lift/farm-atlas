@@ -95,8 +95,12 @@ export default function OwnerDashboardClient({
             <span className="atlas-phone-title">Owner</span>
           </Link>
           <span className="atlas-weather-line">{counts.open} open actions</span>
-          <Link href="/" className="atlas-note-plus atlas-overview-top-dot" aria-label="Back to farms">
-            ↩
+          <Link
+            href="/owner/members"
+            className="atlas-note-plus atlas-overview-top-dot"
+            aria-label="People and access"
+          >
+            People
           </Link>
         </header>
 
