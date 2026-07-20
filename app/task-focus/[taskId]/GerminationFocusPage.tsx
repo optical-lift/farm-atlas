@@ -66,14 +66,18 @@ function prettyRange(start: string | null | undefined, end: string | null | unde
   return prettyDate(start || end);
 }
 
-function prettyValue(value: string | null | undefined) {
-  if (!value) return "";
-  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
 function cropName(cropLabel: string, variety: string | null) {
   if (!variety) return cropLabel;
   return variety.toLowerCase().includes(cropLabel.toLowerCase()) ? variety : `${variety} ${cropLabel}`;
+}
+
+function plantingRecordLabel(method: string | null, dateIso: string | null) {
+  if (!dateIso) return "";
+  const date = prettyDate(dateIso);
+  const normalized = (method || "").toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+  if (normalized.includes("transplant") || normalized.includes("plug") || normalized.includes("division")) return `Transplanted ${date}`;
+  if (normalized.includes("direct_sow") || normalized === "sown" || normalized === "sow") return `Direct sown ${date}`;
+  return `Planted ${date}`;
 }
 
 function stringValue(value: unknown) {
@@ -90,9 +94,9 @@ function compactSpacing(value: unknown) {
   if (!Array.isArray(value)) return null;
   const lines = value.filter((line): line is string => typeof line === "string");
   const rowLine = lines.find((line) => /row/i.test(line));
-  const spacingLine = lines.find((line) => /apart|spacing|inch|\"|″/i.test(line));
+  const spacingLine = lines.find((line) => /apart|spacing|inch|"|″/i.test(line));
   const rowMatch = rowLine?.match(/(\d+(?:\.\d+)?)\s*rows?/i);
-  const spacingMatch = spacingLine?.match(/(\d+(?:\.\d+)?)\s*(?:in|inch|inches|\"|″)/i);
+  const spacingMatch = spacingLine?.match(/(\d+(?:\.\d+)?)\s*(?:in|inch|inches|"|″)/i);
   return [rowMatch ? `${rowMatch[1]} rows` : "", spacingMatch ? `${spacingMatch[1]}″ spacing` : ""].filter(Boolean).join(" · ") || null;
 }
 
@@ -119,6 +123,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
   const target = facts.targetSpacingInches;
   const isLettuceContainer = facts.cropLabel.toLowerCase().includes("lettuce");
   const displayCrop = useMemo(() => cropName(facts.cropLabel, facts.variety), [facts.cropLabel, facts.variety]);
+  const plantingRecord = plantingRecordLabel(facts.plantingMethod, facts.sownDate);
 
   useEffect(() => {
     let active = true;
@@ -137,15 +142,15 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
         const spacing = compactSpacing(metadata.plant_spacing_lines);
         const spacingNumber = numberValue(metadata.target_spacing_inches)
           || numberValue(Array.isArray(metadata.plant_spacing_lines)
-            ? metadata.plant_spacing_lines.map((line) => typeof line === "string" ? line.match(/(\d+(?:\.\d+)?)\s*(?:in|inch|inches|\"|″)/i)?.[1] : null).find(Boolean)
+            ? metadata.plant_spacing_lines.map((line) => typeof line === "string" ? line.match(/(\d+(?:\.\d+)?)\s*(?:in|inch|inches|"|″)/i)?.[1] : null).find(Boolean)
             : null);
 
         setFacts((current) => ({
           cropLabel: stringValue(metadata.crop_label) || current.cropLabel,
-          variety: stringValue(metadata.crop_profile_variety) || stringValue(metadata.crop_variety) || current.variety,
+          variety: stringValue(metadata.crop_variety) || stringValue(metadata.variety) || current.variety || stringValue(metadata.crop_profile_variety),
           objectLabel: card?.objects?.map((object) => object.object_label).filter(Boolean).join(" · ") || stringValue(metadata.object_label) || current.objectLabel,
           sownDate: stringValue(metadata.source_sown_date) || stringValue(metadata.actual_sow_date) || current.sownDate,
-          plantingMethod: stringValue(metadata.default_planting_method) || stringValue(metadata.planting_method) || current.plantingMethod,
+          plantingMethod: stringValue(metadata.planting_method) || stringValue(metadata.default_planting_method) || current.plantingMethod,
           cycleState: stringValue(metadata.current_state) || stringValue(metadata.cycle_state) || current.cycleState,
           expectedGerminationStart: stringValue(metadata.expected_germination_start) || current.expectedGerminationStart,
           expectedGerminationEnd: stringValue(metadata.expected_germination_end) || current.expectedGerminationEnd,
@@ -203,9 +208,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
               <div style={{ ...factCardStyle, gridColumn: "1 / -1" }}><small style={factLabelStyle}>Crop</small><strong style={{ ...factValueStyle, fontSize: "1.28rem", lineHeight: 1.15 }}>{displayCrop}</strong></div>
               <div style={factCardStyle}><small style={factLabelStyle}>Bed / location</small><strong style={factValueStyle}>{facts.objectLabel}</strong></div>
               {facts.spacing ? <div style={factCardStyle}><small style={factLabelStyle}>Spacing</small><strong style={factValueStyle}>{facts.spacing}</strong></div> : null}
-              {facts.sownDate ? <div style={factCardStyle}><small style={factLabelStyle}>Sown</small><strong style={factValueStyle}>{prettyDate(facts.sownDate)}</strong></div> : null}
-              {facts.plantingMethod ? <div style={factCardStyle}><small style={factLabelStyle}>Method</small><strong style={factValueStyle}>{prettyValue(facts.plantingMethod)}</strong></div> : null}
-              {facts.cycleState ? <div style={{ ...factCardStyle, gridColumn: "1 / -1" }}><small style={factLabelStyle}>Current state</small><strong style={factValueStyle}>{prettyValue(facts.cycleState)}</strong></div> : null}
+              {plantingRecord ? <div style={{ ...factCardStyle, gridColumn: "1 / -1" }}><small style={factLabelStyle}>Planting</small><strong style={factValueStyle}>{plantingRecord}</strong></div> : null}
             </section>
 
             {(facts.expectedGerminationStart || facts.expectedGerminationEnd || facts.expectedHarvestStart || facts.expectedHarvestEnd) ? (
