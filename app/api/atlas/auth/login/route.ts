@@ -23,20 +23,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "That login did not work." }, { status: 401 });
   }
 
-  const { count: membershipCount, error: membershipError } = await supabase
-    .from("farm_memberships")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", data.user.id)
-    .eq("active", true);
-
-  if (membershipError || !membershipCount) {
-    await supabase.auth.signOut();
-    return NextResponse.json(
-      { ok: false, error: "Atlas access is not active for this account." },
-      { status: 403 },
-    );
-  }
-
   return NextResponse.json(
     { ok: true },
     { headers: { "Cache-Control": "private, no-store" } },
