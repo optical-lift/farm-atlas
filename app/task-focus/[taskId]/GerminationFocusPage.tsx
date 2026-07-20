@@ -31,19 +31,30 @@ function returnDestination() {
 }
 
 function prettyDate(dateIso: string | null | undefined) {
-  if (!dateIso) return "Not logged";
+  if (!dateIso) return "";
   const date = new Date(`${dateIso}T12:00:00`);
-  return Number.isNaN(date.getTime()) ? dateIso : date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return Number.isNaN(date.getTime()) ? dateIso : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function prettyRange(start: string | null | undefined, end: string | null | undefined) {
-  if (!start && !end) return "Not logged";
-  if (start && end) return `${prettyDate(start)} – ${prettyDate(end)}`;
+  if (!start && !end) return "";
+  if (start && end) {
+    const startDate = new Date(`${start}T12:00:00`);
+    const endDate = new Date(`${end}T12:00:00`);
+    if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())) {
+      const startLabel = startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const endLabel = endDate.toLocaleDateString("en-US", {
+        month: startDate.getMonth() === endDate.getMonth() ? undefined : "short",
+        day: "numeric",
+      });
+      return `${startLabel}–${endLabel}`;
+    }
+  }
   return prettyDate(start || end);
 }
 
 function prettyValue(value: string | null | undefined) {
-  if (!value) return "Not logged";
+  if (!value) return "";
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
@@ -58,6 +69,12 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const target = task.targetSpacingInches;
   const isLettuceContainer = task.cropLabel.toLowerCase().includes("lettuce");
+  const sown = prettyDate(task.sownDate || task.plantedDate);
+  const method = prettyValue(task.plantingMethod);
+  const state = prettyValue(task.cycleState);
+  const germinationWindow = prettyRange(task.expectedGerminationStart, task.expectedGerminationEnd);
+  const harvestWindow = prettyRange(task.expectedHarvestStart, task.expectedHarvestEnd);
+  const spacing = isLettuceContainer ? "1 healthy seedling" : target ? `${target}″ spacing` : "";
 
   useEffect(() => {
     let active = true;
@@ -81,17 +98,11 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
       const response = await fetch("/api/atlas/germination-check", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          taskId: task.id,
-          action,
-          spacingOutcome,
-          targetSpacingInches: target,
-        }),
+        body: JSON.stringify({ taskId: task.id, action, spacingOutcome, targetSpacingInches: target }),
       });
       const data = (await response.json()) as { ok?: boolean; nextDate?: string; error?: string; details?: string };
       if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Germination update failed.");
-
-      setMessage(action === "not_yet" ? `Not yet logged. Check again ${data.nextDate ?? "tomorrow"}.` : "Germination logged.");
+      setMessage(action === "not_yet" ? `Check again ${data.nextDate ?? "tomorrow"}.` : "Germination logged.");
       window.setTimeout(() => window.location.assign(returnDestination()), 650);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Germination update failed.");
@@ -99,6 +110,10 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
       setSaving(null);
     }
   }
+
+  const cardStyle = { padding: "14px 16px", border: "1px solid rgba(111, 97, 76, .24)", borderRadius: "18px" } as const;
+  const labelStyle = { display: "block", fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", opacity: .62 } as const;
+  const valueStyle = { display: "block", marginTop: "3px", lineHeight: 1.2 } as const;
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
@@ -122,17 +137,60 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
               <span>{prettyDate(task.dueDate)}</span>
             </div>
 
-            <section className="atlas-task-record-card">
-              <small>Bed Context</small>
-              <div className="atlas-task-record-section"><span>Space</span><strong>{task.objectLabel}</strong></div>
-              <div className="atlas-task-record-section"><span>Crop</span><strong>{cropName(task)}</strong></div>
-              <div className="atlas-task-record-section"><span>Sown</span><strong>{prettyDate(task.sownDate || task.plantedDate)}</strong></div>
-              <div className="atlas-task-record-section"><span>Method</span><strong>{prettyValue(task.plantingMethod)}</strong></div>
-              <div className="atlas-task-record-section"><span>Current state</span><strong>{prettyValue(task.cycleState)}</strong></div>
-              <div className="atlas-task-record-section"><span>{isLettuceContainer ? "Target per pot" : "Target spacing"}</span><strong>{isLettuceContainer ? "1 healthy seedling" : target ? `${target} inches` : "Not logged"}</strong></div>
-              <div className="atlas-task-record-section"><span>Germination window</span><strong>{prettyRange(task.expectedGerminationStart, task.expectedGerminationEnd)}</strong></div>
-              <div className="atlas-task-record-section"><span>Harvest watch</span><strong>{prettyRange(task.expectedHarvestStart, task.expectedHarvestEnd)}</strong></div>
+            <section aria-label="Germination crop data" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", margin: "18px 0 4px" }}>
+              <div style={{ ...cardStyle, gridColumn: "1 / -1" }}>
+                <small style={labelStyle}>Crop</small>
+                <strong style={{ ...valueStyle, fontSize: "1.28rem", lineHeight: 1.15 }}>{cropName(task)}</strong>
+              </div>
+              <div style={cardStyle}>
+                <small style={labelStyle}>Bed / location</small>
+                <strong style={valueStyle}>{task.objectLabel}</strong>
+              </div>
+              {spacing ? (
+                <div style={cardStyle}>
+                  <small style={labelStyle}>{isLettuceContainer ? "Target per pot" : "Spacing"}</small>
+                  <strong style={valueStyle}>{spacing}</strong>
+                </div>
+              ) : null}
+              {sown ? (
+                <div style={cardStyle}>
+                  <small style={labelStyle}>Sown</small>
+                  <strong style={valueStyle}>{sown}</strong>
+                </div>
+              ) : null}
+              {method ? (
+                <div style={cardStyle}>
+                  <small style={labelStyle}>Method</small>
+                  <strong style={valueStyle}>{method}</strong>
+                </div>
+              ) : null}
+              {state ? (
+                <div style={cardStyle}>
+                  <small style={labelStyle}>Current state</small>
+                  <strong style={valueStyle}>{state}</strong>
+                </div>
+              ) : null}
             </section>
+
+            {(germinationWindow || harvestWindow) ? (
+              <section className="atlas-task-detail-card" aria-label="Crop timing">
+                <strong>Crop timing</strong>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", marginTop: "12px" }}>
+                  {germinationWindow ? (
+                    <div style={{ ...cardStyle, padding: "12px 14px" }}>
+                      <small style={labelStyle}>Germination window</small>
+                      <strong style={{ ...valueStyle, fontSize: "1.02rem" }}>{germinationWindow}</strong>
+                    </div>
+                  ) : null}
+                  {harvestWindow ? (
+                    <div style={{ ...cardStyle, padding: "12px 14px" }}>
+                      <small style={labelStyle}>Harvest watch</small>
+                      <strong style={{ ...valueStyle, fontSize: "1.02rem" }}>{harvestWindow}</strong>
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
 
             <section className="atlas-germination-check-panel">
               {!outcomeOpen ? (
