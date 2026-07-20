@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getAtlasIdentity } from "@/lib/atlas-auth";
 import { atlasSupabase } from "@/lib/atlas/supabase-server";
 
 export const dynamic = "force-dynamic";
@@ -39,15 +40,17 @@ function boolish(value: unknown) {
   return value === true || value === "true" || value === "yes" || value === 1;
 }
 
-function isAnnaTask(row: TaskRow) {
+function isWorkerTask(row: TaskRow, workerKey: string | null) {
+  if (!workerKey) return false;
   const metadata = row.metadata ?? {};
   const assignedTo = textValue(metadata.assigned_to);
   const collectionZone = textValue(metadata.collection_zone);
+  const normalizedWorker = workerKey.trim().toLowerCase();
   const privateTask =
     boolish(metadata.owner_task) || boolish(metadata.marshall_task) || boolish(metadata.children_task) ||
     ["owner", "marshall", "children", "kids"].includes(assignedTo) ||
     ["owner", "marshall", "children", "kids"].includes(collectionZone);
-  return !privateTask && (boolish(metadata.anna_task) || assignedTo === "anna");
+  return !privateTask && (assignedTo === normalizedWorker || boolish(metadata[`${normalizedWorker}_task`]));
 }
 
 function zoneFor(row: TaskRow) {
@@ -90,6 +93,18 @@ function toCard(row: TaskRow) {
 }
 
 export async function GET() {
+  const identity = await getAtlasIdentity();
+  if (!identity?.profile?.active) {
+    return NextResponse.json({ ok: false, error: "Sign in required." }, { status: 401 });
+  }
+
+  const membership = identity.memberships.find(
+    (item) => item.active && item.farm?.stable_key === "elm_farm",
+  );
+  if (!membership) {
+    return NextResponse.json({ ok: false, error: "Farm access is not active." }, { status: 403 });
+  }
+
   const { data: farm, error: farmError } = await atlasSupabase.schema("atlas").from("farms").select("id").eq("stable_key", "elm_farm").single();
   if (farmError || !farm) return NextResponse.json({ ok: false, error: "Elm Farm was not found." }, { status: 500 });
 
@@ -97,9 +112,13 @@ export async function GET() {
   const { data, error } = await atlasSupabase.schema("atlas").from("tasks").select(fields).eq("farm_id", farm.id).neq("status", "archived").order("due_date", { ascending: true, nullsFirst: false });
   if (error) return NextResponse.json({ ok: false, error: "Atlas task list read failed." }, { status: 500 });
 
-  const rows = ((data ?? []) as unknown as TaskRow[]).filter(isAnnaTask);
+  const allRows = (data ?? []) as unknown as TaskRow[];
+  const rows = membership.role === "owner"
+    ? allRows
+    : allRows.filter((row) => isWorkerTask(row, membership.worker_key));
+
   return NextResponse.json(
-    { ok: true, farmKey: "elm_farm", taskCards: rows.map(toCard) },
-    { headers: { "Cache-Control": "private, max-age=0, must-revalidate", "X-Atlas-Read-Path": "task-list-anna-v1" } },
+    { ok: true, farmKey: "elm_farm", role: membership.role, taskCards: rows.map(toCard) },
+    { headers: { "Cache-Control": "private, max-age=0, must-revalidate", "X-Atlas-Read-Path": "task-list-membership-v1" } },
   );
 }
