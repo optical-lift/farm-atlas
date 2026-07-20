@@ -11,11 +11,18 @@ function roleLabel(role: string) {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
-export default function MembershipClient({ directory }: { directory: AtlasMemberDirectory }) {
+export default function MembershipClient({
+  directory,
+  invitesEnabled,
+}: {
+  directory: AtlasMemberDirectory;
+  invitesEnabled: boolean;
+}) {
   const router = useRouter();
   const [role, setRole] = useState("farm_hand");
   const [working, setWorking] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [sending, setSending] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -50,6 +57,33 @@ export default function MembershipClient({ directory }: { directory: AtlasMember
     setRole("farm_hand");
     setMessage("Invitation prepared. No email has been sent.");
     setWorking(false);
+    router.refresh();
+  }
+
+  async function sendInvite(inviteId: string) {
+    setSending(inviteId);
+    setError("");
+    setMessage("");
+
+    const response = await fetch(
+      `/api/atlas/owner/members/invites/${encodeURIComponent(inviteId)}/send`,
+      {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ farmId: directory.farmId }),
+      },
+    );
+
+    const result = (await response.json().catch(() => null)) as { error?: string } | null;
+    if (!response.ok) {
+      setError(result?.error ?? "Atlas could not send that invitation.");
+      setSending(null);
+      return;
+    }
+
+    setMessage("Invitation sent.");
+    setSending(null);
     router.refresh();
   }
 
@@ -111,35 +145,54 @@ export default function MembershipClient({ directory }: { directory: AtlasMember
       <section className={styles.section} aria-labelledby="invite-drafts-title">
         <div className={styles.sectionHeader}>
           <div>
-            <p className={styles.kicker}>Not sent</p>
-            <h2 id="invite-drafts-title">Invitation drafts</h2>
+            <p className={styles.kicker}>{invitesEnabled ? "Owner controlled" : "Sending disabled"}</p>
+            <h2 id="invite-drafts-title">Invitations</h2>
           </div>
           <span>{directory.inviteDrafts.length}</span>
         </div>
 
         <div className={styles.list}>
           {directory.inviteDrafts.length ? (
-            directory.inviteDrafts.map((invite) => (
-              <article className={styles.card} key={invite.record_id}>
-                <div>
-                  <strong>{invite.display_name}</strong>
-                  <p>{invite.email}</p>
-                </div>
-                <div className={styles.cardMeta}>
-                  <span>{roleLabel(invite.role)}</span>
-                  {invite.worker_key ? <span>{invite.worker_key}</span> : null}
-                  <button
-                    type="button"
-                    disabled={removing === invite.record_id}
-                    onClick={() => void revokeInvite(invite.record_id)}
-                  >
-                    {removing === invite.record_id ? "Removing…" : "Remove"}
-                  </button>
-                </div>
-              </article>
-            ))
+            directory.inviteDrafts.map((invite) => {
+              const editable = invite.status === "draft" || invite.status === "error";
+              return (
+                <article className={styles.card} key={invite.record_id}>
+                  <div>
+                    <strong>{invite.display_name}</strong>
+                    <p>{invite.email}</p>
+                  </div>
+                  <div className={styles.cardMeta}>
+                    <span>{roleLabel(invite.role)}</span>
+                    {invite.worker_key ? <span>{invite.worker_key}</span> : null}
+                    <span>{invite.status}</span>
+                    {editable ? (
+                      <button
+                        type="button"
+                        disabled={!invitesEnabled || sending === invite.record_id}
+                        onClick={() => void sendInvite(invite.record_id)}
+                      >
+                        {!invitesEnabled
+                          ? "Send unavailable"
+                          : sending === invite.record_id
+                            ? "Sending…"
+                            : "Send"}
+                      </button>
+                    ) : null}
+                    {editable ? (
+                      <button
+                        type="button"
+                        disabled={removing === invite.record_id}
+                        onClick={() => void revokeInvite(invite.record_id)}
+                      >
+                        {removing === invite.record_id ? "Removing…" : "Remove"}
+                      </button>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })
           ) : (
-            <p className={styles.empty}>No invitation drafts have been prepared.</p>
+            <p className={styles.empty}>No invitations have been prepared.</p>
           )}
         </div>
       </section>
@@ -148,7 +201,7 @@ export default function MembershipClient({ directory }: { directory: AtlasMember
         <p className={styles.kicker}>Owner control</p>
         <h2 id="prepare-invite-title">Prepare an invitation</h2>
         <p className={styles.explainer}>
-          This records the intended farm role. It does not create an account or send an email yet.
+          This records the intended farm role. Preparing a draft never sends an email.
         </p>
 
         <form className={styles.form} onSubmit={prepareInvite}>
