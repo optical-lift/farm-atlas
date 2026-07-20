@@ -193,6 +193,7 @@ export async function fetchAtlasTaskCards(
   const response = await fetch(endpoint, {
     method: "GET",
     headers: { Accept: "application/json" },
+    credentials: "same-origin",
     cache: "no-store",
   });
 
