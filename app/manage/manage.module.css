@@ -1,0 +1,156 @@
+.page {
+  min-height: 100vh;
+  padding: 24px 18px 56px;
+  background:
+    radial-gradient(circle at top left, rgba(111, 75, 137, 0.13), transparent 34%),
+    linear-gradient(180deg, #f7f3f8 0%, #eee8f1 100%);
+  color: #342a38;
+}
+
+.shell {
+  width: min(100%, 820px);
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.eyebrow {
+  margin: 0 0 7px;
+  color: #765b83;
+  font-size: 0.75rem;
+  font-weight: 780;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.header h1 {
+  margin: 0;
+  color: #3e2849;
+  font-size: clamp(2rem, 8vw, 3.5rem);
+  line-height: 1;
+}
+
+.identity {
+  margin: 10px 0 0;
+  color: #6c626f;
+}
+
+.back {
+  color: #553267;
+  font-weight: 760;
+  text-decoration: none;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stats article,
+.section {
+  border: 1px solid rgba(74, 43, 99, 0.13);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 15px 36px rgba(61, 37, 75, 0.07);
+}
+
+.stats article {
+  padding: 17px;
+  display: grid;
+  gap: 4px;
+}
+
+.stats strong {
+  color: #452d51;
+  font-size: 1.55rem;
+}
+
+.stats span {
+  color: #756a78;
+  font-size: 0.8rem;
+}
+
+.section {
+  padding: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 13px;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  color: #452d51;
+  font-size: 1.05rem;
+}
+
+.sectionHeader span {
+  color: #765b83;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.list {
+  display: grid;
+  gap: 9px;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 14px;
+  border-radius: 15px;
+  background: #f6f1f7;
+  padding: 13px 14px;
+}
+
+.card strong {
+  color: #413246;
+}
+
+.card time,
+.card span {
+  color: #776d79;
+  font-size: 0.82rem;
+}
+
+.card p {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  color: #665d69;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.empty {
+  margin: 0;
+  color: #786e7b;
+  font-size: 0.9rem;
+}
+
+.warning {
+  border-color: rgba(151, 80, 64, 0.2);
+  background: rgba(255, 250, 247, 0.94);
+}
+
+@media (max-width: 620px) {
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .card {
+    grid-template-columns: 1fr;
+  }
+}
