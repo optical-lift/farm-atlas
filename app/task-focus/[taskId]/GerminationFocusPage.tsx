@@ -38,18 +38,7 @@ function prettyDate(dateIso: string | null | undefined) {
 
 function prettyRange(start: string | null | undefined, end: string | null | undefined) {
   if (!start && !end) return "";
-  if (start && end) {
-    const startDate = new Date(`${start}T12:00:00`);
-    const endDate = new Date(`${end}T12:00:00`);
-    if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())) {
-      const startLabel = startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      const endLabel = endDate.toLocaleDateString("en-US", {
-        month: startDate.getMonth() === endDate.getMonth() ? undefined : "short",
-        day: "numeric",
-      });
-      return `${startLabel}–${endLabel}`;
-    }
-  }
+  if (start && end) return `${prettyDate(start)}–${prettyDate(end)}`;
   return prettyDate(start || end);
 }
 
@@ -69,12 +58,15 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const target = task.targetSpacingInches;
   const isLettuceContainer = task.cropLabel.toLowerCase().includes("lettuce");
-  const sown = prettyDate(task.sownDate || task.plantedDate);
+  const sowingDate = prettyDate(task.sownDate || task.plantedDate);
   const method = prettyValue(task.plantingMethod);
-  const state = prettyValue(task.cycleState);
+  const currentState = prettyValue(task.cycleState);
   const germinationWindow = prettyRange(task.expectedGerminationStart, task.expectedGerminationEnd);
   const harvestWindow = prettyRange(task.expectedHarvestStart, task.expectedHarvestEnd);
   const spacing = isLettuceContainer ? "1 healthy seedling" : target ? `${target}″ spacing` : "";
+  const factCardStyle = { padding: "14px 16px", border: "1px solid rgba(111, 97, 76, .24)", borderRadius: "18px" } as const;
+  const factLabelStyle = { display: "block", fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", opacity: .62 } as const;
+  const factValueStyle = { display: "block", marginTop: "3px", lineHeight: 1.2 } as const;
 
   useEffect(() => {
     let active = true;
@@ -102,7 +94,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
       });
       const data = (await response.json()) as { ok?: boolean; nextDate?: string; error?: string; details?: string };
       if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Germination update failed.");
-      setMessage(action === "not_yet" ? `Check again ${data.nextDate ?? "tomorrow"}.` : "Germination logged.");
+      setMessage(action === "not_yet" ? `Not yet logged. Check again ${data.nextDate ?? "tomorrow"}.` : "Germination logged.");
       window.setTimeout(() => window.location.assign(returnDestination()), 650);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Germination update failed.");
@@ -111,18 +103,11 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
     }
   }
 
-  const cardStyle = { padding: "14px 16px", border: "1px solid rgba(111, 97, 76, .24)", borderRadius: "18px" } as const;
-  const labelStyle = { display: "block", fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", opacity: .62 } as const;
-  const valueStyle = { display: "block", marginTop: "3px", lineHeight: 1.2 } as const;
-
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href="/" className="atlas-phone-brand atlas-task-header-brand">
-            <span className="atlas-phone-kicker">Atlas</span>
-            <span className="atlas-phone-title">Elm Farm</span>
-          </Link>
+          <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></Link>
           <span className="atlas-weather-line">{weatherLabel}</span>
           <button type="button" className="atlas-note-plus" aria-label="Log germination result" onClick={() => setOutcomeOpen(true)}>+</button>
         </header>
@@ -131,63 +116,23 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
           <article className="atlas-task-page-active atlas-task-ticket-card atlas-germination-task">
             <div className="atlas-task-page-kicker"><span>Up Now</span><small>Germination</small></div>
             <h1>{`${task.cropLabel} · ${task.objectLabel}`.toUpperCase()}</h1>
-            <div className="atlas-task-page-time-row">
-              <span>Germination</span>
-              <span>After rain</span>
-              <span>{prettyDate(task.dueDate)}</span>
-            </div>
+            <div className="atlas-task-page-time-row"><span>Germination</span><span>After rain</span><span>{prettyDate(task.dueDate)}</span></div>
 
-            <section aria-label="Germination crop data" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", margin: "18px 0 4px" }}>
-              <div style={{ ...cardStyle, gridColumn: "1 / -1" }}>
-                <small style={labelStyle}>Crop</small>
-                <strong style={{ ...valueStyle, fontSize: "1.28rem", lineHeight: 1.15 }}>{cropName(task)}</strong>
-              </div>
-              <div style={cardStyle}>
-                <small style={labelStyle}>Bed / location</small>
-                <strong style={valueStyle}>{task.objectLabel}</strong>
-              </div>
-              {spacing ? (
-                <div style={cardStyle}>
-                  <small style={labelStyle}>{isLettuceContainer ? "Target per pot" : "Spacing"}</small>
-                  <strong style={valueStyle}>{spacing}</strong>
-                </div>
-              ) : null}
-              {sown ? (
-                <div style={cardStyle}>
-                  <small style={labelStyle}>Sown</small>
-                  <strong style={valueStyle}>{sown}</strong>
-                </div>
-              ) : null}
-              {method ? (
-                <div style={cardStyle}>
-                  <small style={labelStyle}>Method</small>
-                  <strong style={valueStyle}>{method}</strong>
-                </div>
-              ) : null}
-              {state ? (
-                <div style={cardStyle}>
-                  <small style={labelStyle}>Current state</small>
-                  <strong style={valueStyle}>{state}</strong>
-                </div>
-              ) : null}
+            <section aria-label="Crop context" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", margin: "18px 0 4px" }}>
+              <div style={{ ...factCardStyle, gridColumn: "1 / -1" }}><small style={factLabelStyle}>Crop</small><strong style={{ ...factValueStyle, fontSize: "1.28rem", lineHeight: 1.15 }}>{cropName(task)}</strong></div>
+              <div style={factCardStyle}><small style={factLabelStyle}>Bed / location</small><strong style={factValueStyle}>{task.objectLabel}</strong></div>
+              {spacing ? <div style={factCardStyle}><small style={factLabelStyle}>{isLettuceContainer ? "Target per pot" : "Spacing"}</small><strong style={factValueStyle}>{spacing}</strong></div> : null}
             </section>
 
-            {(germinationWindow || harvestWindow) ? (
+            {(sowingDate || method || currentState || germinationWindow || harvestWindow) ? (
               <section className="atlas-task-detail-card" aria-label="Crop timing">
                 <strong>Crop timing</strong>
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", marginTop: "12px" }}>
-                  {germinationWindow ? (
-                    <div style={{ ...cardStyle, padding: "12px 14px" }}>
-                      <small style={labelStyle}>Germination window</small>
-                      <strong style={{ ...valueStyle, fontSize: "1.02rem" }}>{germinationWindow}</strong>
-                    </div>
-                  ) : null}
-                  {harvestWindow ? (
-                    <div style={{ ...cardStyle, padding: "12px 14px" }}>
-                      <small style={labelStyle}>Harvest watch</small>
-                      <strong style={{ ...valueStyle, fontSize: "1.02rem" }}>{harvestWindow}</strong>
-                    </div>
-                  ) : null}
+                  {sowingDate ? <div style={{ ...factCardStyle, padding: "12px 14px" }}><small style={factLabelStyle}>Sown</small><strong style={factValueStyle}>{sowingDate}</strong></div> : null}
+                  {method ? <div style={{ ...factCardStyle, padding: "12px 14px" }}><small style={factLabelStyle}>Method</small><strong style={factValueStyle}>{method}</strong></div> : null}
+                  {currentState ? <div style={{ ...factCardStyle, padding: "12px 14px" }}><small style={factLabelStyle}>Current state</small><strong style={factValueStyle}>{currentState}</strong></div> : null}
+                  {germinationWindow ? <div style={{ ...factCardStyle, padding: "12px 14px" }}><small style={factLabelStyle}>Germination</small><strong style={factValueStyle}>{germinationWindow}</strong></div> : null}
+                  {harvestWindow ? <div style={{ ...factCardStyle, padding: "12px 14px" }}><small style={factLabelStyle}>Harvest watch</small><strong style={factValueStyle}>{harvestWindow}</strong></div> : null}
                 </div>
               </section>
             ) : null}
@@ -200,10 +145,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
                 </div>
               ) : (
                 <div className="atlas-germination-inline-log">
-                  <div className="atlas-germination-check-head">
-                    <span>{isLettuceContainer ? `${cropName(task)} pots` : `${cropName(task)} spacing`}</span>
-                    <strong>{isLettuceContainer ? "How did the seven lettuce pots germinate?" : target ? `How does the stand compare with the ${target}-inch target?` : "How does the stand look?"}</strong>
-                  </div>
+                  <div className="atlas-germination-check-head"><span>{isLettuceContainer ? `${cropName(task)} pots` : `${cropName(task)} spacing`}</span><strong>{isLettuceContainer ? "How did the seven lettuce pots germinate?" : target ? `How does the stand compare with the ${target}-inch target?` : "How does the stand look?"}</strong></div>
                   <div className="atlas-germination-actions atlas-germination-stand-actions">
                     <button type="button" className="good" disabled={Boolean(saving)} onClick={() => void submit("germinated", "thin")}>{saving === "thin" ? "Saving…" : isLettuceContainer ? "Great · multiple seedlings per pot · Thin" : `Great · closer than ${target ?? "target"} in · Thin`}</button>
                     <button type="button" className="spotty" disabled={Boolean(saving)} onClick={() => void submit("germinated", "on_target")}>{saving === "on_target" ? "Saving…" : isLettuceContainer ? "Good · one healthy seedling per pot · No action" : `Good · about ${target ?? "target"} in · No action`}</button>
