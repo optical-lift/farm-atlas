@@ -50,23 +50,19 @@ function boolish(value: unknown) {
   return value === true || value === "true" || value === "yes" || value === 1;
 }
 
-function isPrivateAssignment(row: TaskRow) {
+function isAnnaTask(row: TaskRow) {
   const metadata = row.metadata ?? {};
   const assignedTo = textValue(metadata.assigned_to);
   const collectionZone = textValue(metadata.collection_zone);
-  return (
-    boolish(metadata.owner_task) ||
-    boolish(metadata.marshall_task) ||
-    assignedTo === "owner" ||
-    assignedTo === "marshall" ||
-    collectionZone === "owner" ||
-    collectionZone === "marshall"
-  );
+  const privateTask =
+    boolish(metadata.owner_task) || boolish(metadata.marshall_task) || boolish(metadata.children_task) ||
+    ["owner", "marshall", "children", "kids"].includes(assignedTo) ||
+    ["owner", "marshall", "children", "kids"].includes(collectionZone);
+  return !privateTask && (boolish(metadata.anna_task) || assignedTo === "anna");
 }
 
 function zoneFor(row: TaskRow) {
-  if (Array.isArray(row.zones)) return row.zones[0] ?? null;
-  return row.zones;
+  return Array.isArray(row.zones) ? row.zones[0] ?? null : row.zones;
 }
 
 function toCard(row: TaskRow) {
@@ -107,65 +103,23 @@ function toCard(row: TaskRow) {
 export async function GET() {
   const today = localDateIso();
   const rangeEnd = addDaysIso(today, 35);
-
-  const { data: farm, error: farmError } = await atlasSupabase
-    .schema("atlas")
-    .from("farms")
-    .select("id")
-    .eq("stable_key", "elm_farm")
-    .single();
-
-  if (farmError || !farm) {
-    return NextResponse.json(
-      { ok: false, error: "Elm Farm was not found.", details: farmError?.message },
-      { status: 500 },
-    );
-  }
+  const { data: farm, error: farmError } = await atlasSupabase.schema("atlas").from("farms").select("id").eq("stable_key", "elm_farm").single();
+  if (farmError || !farm) return NextResponse.json({ ok: false, error: "Elm Farm was not found." }, { status: 500 });
 
   const fields = "id,farm_id,zone_id,title,task_type,status,priority,due_date,unlock_text,blocker_text,note,generated_from,generated_from_id,action_key,work_class,parent_task_id,task_series_key,engine_instance_key,created_at,updated_at,metadata,zones(stable_key,label)";
-
   const [activeResponse, doneTodayResponse] = await Promise.all([
-    atlasSupabase
-      .schema("atlas")
-      .from("tasks")
-      .select(fields)
-      .eq("farm_id", farm.id)
-      .in("status", ["open", "blocked"])
-      .or(`due_date.is.null,due_date.lte.${rangeEnd}`)
-      .order("due_date", { ascending: true, nullsFirst: false }),
-    atlasSupabase
-      .schema("atlas")
-      .from("tasks")
-      .select(fields)
-      .eq("farm_id", farm.id)
-      .eq("status", "done")
-      .eq("due_date", today),
+    atlasSupabase.schema("atlas").from("tasks").select(fields).eq("farm_id", farm.id).in("status", ["open", "blocked"]).or(`due_date.is.null,due_date.lte.${rangeEnd}`).order("due_date", { ascending: true, nullsFirst: false }),
+    atlasSupabase.schema("atlas").from("tasks").select(fields).eq("farm_id", farm.id).eq("status", "done").eq("due_date", today),
   ]);
 
   const firstError = activeResponse.error ?? doneTodayResponse.error;
-  if (firstError) {
-    return NextResponse.json(
-      { ok: false, error: "Atlas homepage task read failed.", details: firstError.message },
-      { status: 500 },
-    );
-  }
+  if (firstError) return NextResponse.json({ ok: false, error: "Atlas homepage task read failed." }, { status: 500 });
 
   const rows = [...((activeResponse.data ?? []) as unknown as TaskRow[]), ...((doneTodayResponse.data ?? []) as unknown as TaskRow[])];
-  const uniqueRows = Array.from(new Map(rows.map((row) => [row.id, row])).values())
-    .filter((row) => !isPrivateAssignment(row));
+  const uniqueRows = Array.from(new Map(rows.map((row) => [row.id, row])).values()).filter(isAnnaTask);
 
   return NextResponse.json(
-    {
-      ok: true,
-      farmKey: "elm_farm",
-      taskCards: uniqueRows.map(toCard),
-      window: { today, rangeEnd },
-    },
-    {
-      headers: {
-        "Cache-Control": "private, max-age=0, must-revalidate",
-        "X-Atlas-Read-Path": "home-light-v1",
-      },
-    },
+    { ok: true, farmKey: "elm_farm", taskCards: uniqueRows.map(toCard), window: { today, rangeEnd } },
+    { headers: { "Cache-Control": "private, max-age=0, must-revalidate", "X-Atlas-Read-Path": "home-anna-v1" } },
   );
 }
