@@ -28,6 +28,8 @@ type HydratedFacts = {
   cropLabel: string;
   variety: string | null;
   objectLabel: string;
+  locationLabel: string | null;
+  containerLabel: string | null;
   sownDate: string | null;
   plantingMethod: string | null;
   cycleState: string | null;
@@ -100,6 +102,19 @@ function compactSpacing(value: unknown) {
   return [rowMatch ? `${rowMatch[1]} rows` : "", spacingMatch ? `${spacingMatch[1]}″ spacing` : ""].filter(Boolean).join(" · ") || null;
 }
 
+function normalizeGrowRoom(value: string | null) {
+  return value && value.toLowerCase().replaceAll("-", " ").includes("grow room") ? "Grow Room" : value;
+}
+
+function containerSummary(metadata: Record<string, unknown>) {
+  const detail = stringValue(metadata.display_detail);
+  if (detail && /(tray|pot|box|block|flat)/i.test(detail)) return detail;
+  const kind = stringValue(metadata.container_kind);
+  const count = numberValue(metadata.container_count) || numberValue(metadata.actual_tray_count) || numberValue(metadata.tray_count);
+  if (!kind) return null;
+  return count && count > 1 ? `${count} × ${kind}` : kind;
+}
+
 export default function GerminationFocusPage({ task }: { task: GerminationTask }) {
   const [outcomeOpen, setOutcomeOpen] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
@@ -109,6 +124,8 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
     cropLabel: task.cropLabel,
     variety: task.variety,
     objectLabel: task.objectLabel,
+    locationLabel: null,
+    containerLabel: null,
     sownDate: task.sownDate || task.plantedDate || null,
     plantingMethod: task.plantingMethod || null,
     cycleState: task.cycleState || null,
@@ -124,6 +141,8 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
   const isLettuceContainer = facts.cropLabel.toLowerCase().includes("lettuce");
   const displayCrop = useMemo(() => cropName(facts.cropLabel, facts.variety), [facts.cropLabel, facts.variety]);
   const plantingRecord = plantingRecordLabel(facts.plantingMethod, facts.sownDate);
+  const displayLocation = facts.locationLabel || facts.objectLabel;
+  const isGrowRoom = displayLocation === "Grow Room";
 
   useEffect(() => {
     let active = true;
@@ -144,11 +163,15 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
           || numberValue(Array.isArray(metadata.plant_spacing_lines)
             ? metadata.plant_spacing_lines.map((line) => typeof line === "string" ? line.match(/(\d+(?:\.\d+)?)\s*(?:in|inch|inches|"|″)/i)?.[1] : null).find(Boolean)
             : null);
+        const objectLabel = card?.objects?.map((object) => object.object_label).filter(Boolean).join(" · ") || stringValue(metadata.object_label);
+        const location = normalizeGrowRoom(stringValue(metadata.location_label) || stringValue(metadata.collection_zone));
 
         setFacts((current) => ({
           cropLabel: stringValue(metadata.crop_label) || current.cropLabel,
           variety: stringValue(metadata.crop_variety) || stringValue(metadata.variety) || current.variety || stringValue(metadata.crop_profile_variety),
-          objectLabel: card?.objects?.map((object) => object.object_label).filter(Boolean).join(" · ") || stringValue(metadata.object_label) || current.objectLabel,
+          objectLabel: objectLabel || current.objectLabel,
+          locationLabel: location || current.locationLabel,
+          containerLabel: containerSummary(metadata) || current.containerLabel,
           sownDate: stringValue(metadata.source_sown_date) || stringValue(metadata.actual_sow_date) || current.sownDate,
           plantingMethod: stringValue(metadata.planting_method) || stringValue(metadata.default_planting_method) || current.plantingMethod,
           cycleState: stringValue(metadata.current_state) || stringValue(metadata.cycle_state) || current.cycleState,
@@ -201,13 +224,14 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
         <div className="atlas-task-page-body">
           <article className="atlas-task-page-active atlas-task-ticket-card atlas-germination-task">
             <div className="atlas-task-page-kicker"><span>Up Now</span><small>Germination</small></div>
-            <h1>{`${facts.cropLabel} · ${facts.objectLabel}`.toUpperCase()}</h1>
+            <h1>{`${facts.cropLabel} · ${displayLocation}`.toUpperCase()}</h1>
             <div className="atlas-task-page-time-row"><span>Germination</span><span>After rain</span><span>{prettyDate(task.dueDate)}</span></div>
 
             <section aria-label="Germination crop facts" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", margin: "18px 0 4px" }}>
               <div style={{ ...factCardStyle, gridColumn: "1 / -1" }}><small style={factLabelStyle}>Crop</small><strong style={{ ...factValueStyle, fontSize: "1.28rem", lineHeight: 1.15 }}>{displayCrop}</strong></div>
-              <div style={factCardStyle}><small style={factLabelStyle}>Bed / location</small><strong style={factValueStyle}>{facts.objectLabel}</strong></div>
-              {facts.spacing ? <div style={factCardStyle}><small style={factLabelStyle}>Spacing</small><strong style={factValueStyle}>{facts.spacing}</strong></div> : null}
+              <div style={factCardStyle}><small style={factLabelStyle}>Location</small><strong style={factValueStyle}>{displayLocation}</strong></div>
+              {facts.containerLabel ? <div style={factCardStyle}><small style={factLabelStyle}>Container</small><strong style={factValueStyle}>{facts.containerLabel}</strong></div> : null}
+              {!isGrowRoom && facts.spacing ? <div style={factCardStyle}><small style={factLabelStyle}>Spacing</small><strong style={factValueStyle}>{facts.spacing}</strong></div> : null}
               {plantingRecord ? <div style={{ ...factCardStyle, gridColumn: "1 / -1" }}><small style={factLabelStyle}>Planting</small><strong style={factValueStyle}>{plantingRecord}</strong></div> : null}
             </section>
 
