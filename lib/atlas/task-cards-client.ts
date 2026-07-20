@@ -149,7 +149,7 @@ export type AtlasTaskCardFetchOptions = {
   scope?: AtlasTaskCardScope;
 };
 
-function currentUrlScope() {
+function currentUrlScope(): AtlasTaskCardScope | null {
   if (typeof window === "undefined") return null;
   const params = new URLSearchParams(window.location.search);
   const scope = params.get("scope");
@@ -158,39 +158,6 @@ function currentUrlScope() {
   if (window.location.pathname === "/marshall") return "marshall";
   if (window.location.pathname === "/children") return "children";
   return null;
-}
-
-let reconcilePromise: Promise<void> | null = null;
-
-async function refreshOperationalWork() {
-  if (typeof window === "undefined") return;
-  if (!reconcilePromise) {
-    reconcilePromise = fetch("/api/atlas/operational-reconcile", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "x-atlas-intent": "operational-reconcile-v1",
-      },
-      body: JSON.stringify({ days: 31 }),
-      cache: "no-store",
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          const data = (await response.json().catch(() => null)) as { error?: string; details?: string } | null;
-          throw new Error(data?.details || data?.error || "Atlas could not refresh operational work.");
-        }
-      })
-      .catch((error) => {
-        console.error("Atlas operational refresh failed:", error);
-      })
-      .finally(() => {
-        window.setTimeout(() => {
-          reconcilePromise = null;
-        }, 30_000);
-      });
-  }
-  await reconcilePromise;
 }
 
 function canonicalScopeRows(taskCards: AtlasTaskCard[], scope: AtlasTaskCardScope) {
@@ -203,8 +170,6 @@ function canonicalScopeRows(taskCards: AtlasTaskCard[], scope: AtlasTaskCardScop
 export async function fetchAtlasTaskCards(
   input?: string | AtlasTaskCardFetchOptions,
 ): Promise<AtlasTaskCardsResponse> {
-  await refreshOperationalWork();
-
   const params = new URLSearchParams();
   const options: AtlasTaskCardFetchOptions = typeof input === "string" ? { taskId: input } : input ?? {};
   const inferredScope = currentUrlScope();
