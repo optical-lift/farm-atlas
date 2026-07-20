@@ -3,6 +3,11 @@
 import { FormEvent, useState } from "react";
 import styles from "./login.module.css";
 
+function safeNextPath() {
+  const requested = new URLSearchParams(window.location.search).get("next");
+  return requested && requested.startsWith("/") && !requested.startsWith("//") ? requested : "/";
+}
+
 export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,7 +34,7 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.assign("/");
+    window.location.assign(safeNextPath());
   }
 
   return (
