@@ -34,3 +34,7 @@ Owner invitation draft
 → assignment of migrated worker tasks
 → worker-safe prepared task projection
 ```
+
+## Build validation
+
+The invitation API boundary uses an explicit TypeScript contract after the initial compiler pass identified an optional JavaScript result shape. This update retriggers production from the corrected repository head.
