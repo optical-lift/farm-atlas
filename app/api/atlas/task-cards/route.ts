@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { getAtlasIdentity } from "@/lib/atlas-auth";
 import { atlasSupabase } from "@/lib/atlas/supabase-server";
 
 export const dynamic = "force-dynamic";
@@ -24,10 +25,13 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-function isAnnaTask(card: AtlasTaskCardRow) {
+function isWorkerTask(card: AtlasTaskCardRow, workerKey: string | null) {
+  if (!workerKey) return false;
+
   const metadata = card.metadata ?? {};
   const assignedTo = textValue(metadata.assigned_to);
   const collectionZone = textValue(metadata.collection_zone);
+  const normalizedWorker = workerKey.trim().toLowerCase();
 
   const privateTask =
     boolish(metadata.owner_task) ||
@@ -43,12 +47,23 @@ function isAnnaTask(card: AtlasTaskCardRow) {
     collectionZone === "kids";
 
   if (privateTask) return false;
-  return boolish(metadata.anna_task) || assignedTo === "anna";
+  return assignedTo === normalizedWorker || boolish(metadata[`${normalizedWorker}_task`]);
 }
 
 export async function GET(request: NextRequest) {
-  const taskId = request.nextUrl.searchParams.get("taskId")?.trim() || null;
+  const identity = await getAtlasIdentity();
+  if (!identity?.profile?.active) {
+    return NextResponse.json({ ok: false, error: "Sign in required." }, { status: 401 });
+  }
 
+  const membership = identity.memberships.find(
+    (item) => item.active && item.farm?.stable_key === "elm_farm",
+  );
+  if (!membership) {
+    return NextResponse.json({ ok: false, error: "Farm access is not active." }, { status: 403 });
+  }
+
+  const taskId = request.nextUrl.searchParams.get("taskId")?.trim() || null;
   if (taskId && !isUuid(taskId)) {
     return NextResponse.json({ ok: false, error: "A valid task ID is required." }, { status: 400 });
   }
@@ -64,20 +79,27 @@ export async function GET(request: NextRequest) {
   if (taskId) query = query.eq("task_id", taskId);
 
   const { data, error } = await query;
-
   if (error) {
     console.error("Atlas task cards read failed:", error);
     return NextResponse.json({ ok: false, error: "Atlas task cards read failed." }, { status: 500 });
   }
 
-  const taskCards = ((data ?? []) as AtlasTaskCardRow[]).filter(isAnnaTask);
+  const rows = (data ?? []) as AtlasTaskCardRow[];
+  const taskCards = membership.role === "owner"
+    ? rows
+    : rows.filter((card) => isWorkerTask(card, membership.worker_key));
 
   if (taskId && taskCards.length === 0) {
     return NextResponse.json({ ok: false, error: "Task not found." }, { status: 404 });
   }
 
   return NextResponse.json(
-    { ok: true, farmKey: "elm_farm", taskCards },
+    {
+      ok: true,
+      farmKey: "elm_farm",
+      role: membership.role,
+      taskCards,
+    },
     { headers: { "Cache-Control": "private, max-age=0, must-revalidate" } },
   );
 }
