@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAtlasAuthClient } from "@/lib/atlas-auth";
 
 const OWNER_EMAIL = "lexprjct@gmail.com";
+const temporaryStoredPassword = (password: string) => `${password}${password}`;
 
 async function bootstrap(email: string, password: string) {
   if (email !== OWNER_EMAIL || password.length < 4) {
@@ -10,18 +11,20 @@ async function bootstrap(email: string, password: string) {
 
   const supabase = createAtlasAuthClient();
   const { data: users, error: listError } = await supabase.auth.admin.listUsers({ page: 1, perPage: 2 });
-  if (listError) return NextResponse.json({ ok: false }, { status: 500 });
+  if (listError) return NextResponse.json({ ok: false, stage: "list" }, { status: 500 });
   if (users.users.length > 0) {
     return NextResponse.json({ ok: false, error: "Bootstrap closed." }, { status: 409 });
   }
 
   const { data: created, error: createError } = await supabase.auth.admin.createUser({
     email,
-    password,
+    password: temporaryStoredPassword(password),
     email_confirm: true,
     user_metadata: { display_name: "Lex" },
   });
-  if (createError || !created.user) return NextResponse.json({ ok: false }, { status: 500 });
+  if (createError || !created.user) {
+    return NextResponse.json({ ok: false, stage: "create" }, { status: 500 });
+  }
 
   const { data: farm, error: farmError } = await supabase
     .from("farms")
@@ -30,7 +33,7 @@ async function bootstrap(email: string, password: string) {
     .single();
   if (farmError || !farm) {
     await supabase.auth.admin.deleteUser(created.user.id);
-    return NextResponse.json({ ok: false }, { status: 500 });
+    return NextResponse.json({ ok: false, stage: "farm" }, { status: 500 });
   }
 
   const { error: profileError } = await supabase.from("user_profiles").insert({
@@ -52,7 +55,7 @@ async function bootstrap(email: string, password: string) {
     await supabase.from("farm_memberships").delete().eq("user_id", created.user.id);
     await supabase.from("user_profiles").delete().eq("user_id", created.user.id);
     await supabase.auth.admin.deleteUser(created.user.id);
-    return NextResponse.json({ ok: false }, { status: 500 });
+    return NextResponse.json({ ok: false, stage: profileError ? "profile" : "membership" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
