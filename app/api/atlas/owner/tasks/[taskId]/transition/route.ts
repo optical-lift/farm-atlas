@@ -98,7 +98,12 @@ export async function POST(
       targetDate,
       note,
       reason,
-      payload: payload ?? {},
+      payload: {
+        ...(payload ?? {}),
+        actor_user_id: session.userId,
+        actor_membership_id: ownerMembership.membershipId,
+        actor_role: "owner",
+      },
     });
 
     return NextResponse.json(
