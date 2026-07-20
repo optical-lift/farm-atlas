@@ -9,7 +9,6 @@ type OwnerSectionProps = {
   title: string;
   tasks: OwnerAction[];
   empty: string;
-  returnTo?: string;
 };
 
 function prettyDate(dateIso: string | null | undefined) {
@@ -27,7 +26,7 @@ function taskDetail(task: OwnerAction) {
   return task.detail;
 }
 
-function OwnerTaskCard({ task, returnTo = "/owner" }: { task: OwnerAction; returnTo?: string }) {
+function OwnerTaskCard({ task }: { task: OwnerAction }) {
   const detail = taskDetail(task);
   const content = (
     <>
@@ -47,14 +46,14 @@ function OwnerTaskCard({ task, returnTo = "/owner" }: { task: OwnerAction; retur
   return (
     <Link
       className="atlas-overview-task-card atlas-owner-task-card"
-      href={`/task-focus/${encodeURIComponent(task.id)}?returnTo=${encodeURIComponent(returnTo)}`}
+      href={`/owner/tasks/${encodeURIComponent(task.id)}`}
     >
       {content}
     </Link>
   );
 }
 
-function OwnerSection({ title, tasks, empty, returnTo }: OwnerSectionProps) {
+function OwnerSection({ title, tasks, empty }: OwnerSectionProps) {
   return (
     <section className="atlas-overview-zone-card atlas-owner-section">
       <summary>
@@ -70,7 +69,6 @@ function OwnerSection({ title, tasks, empty, returnTo }: OwnerSectionProps) {
             <OwnerTaskCard
               key={task.id ?? `${task.title}-${task.dueDate ?? "none"}`}
               task={task}
-              returnTo={returnTo}
             />
           ))
         ) : (
