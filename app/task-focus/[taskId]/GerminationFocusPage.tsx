@@ -106,6 +106,12 @@ function normalizeGrowRoom(value: string | null) {
   return value && value.toLowerCase().replaceAll("-", " ").includes("grow room") ? "Grow Room" : value;
 }
 
+function initialLocation(objectLabel: string) {
+  const normalized = normalizeGrowRoom(objectLabel);
+  if (normalized === "Grow Room") return normalized;
+  return /(pot(?:\s|$)|tray|nursery box|seed shelves)/i.test(objectLabel) ? "Grow Room" : objectLabel;
+}
+
 function containerSummary(metadata: Record<string, unknown>) {
   const detail = stringValue(metadata.display_detail);
   if (detail && /(tray|pot|box|block|flat)/i.test(detail)) return detail;
@@ -124,7 +130,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
     cropLabel: task.cropLabel,
     variety: task.variety,
     objectLabel: task.objectLabel,
-    locationLabel: null,
+    locationLabel: initialLocation(task.objectLabel),
     containerLabel: null,
     sownDate: task.sownDate || task.plantedDate || null,
     plantingMethod: task.plantingMethod || null,
@@ -141,7 +147,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
   const isLettuceContainer = facts.cropLabel.toLowerCase().includes("lettuce");
   const displayCrop = useMemo(() => cropName(facts.cropLabel, facts.variety), [facts.cropLabel, facts.variety]);
   const plantingRecord = plantingRecordLabel(facts.plantingMethod, facts.sownDate);
-  const displayLocation = facts.locationLabel || facts.objectLabel;
+  const displayLocation = facts.locationLabel || initialLocation(facts.objectLabel);
   const isGrowRoom = displayLocation === "Grow Room";
 
   useEffect(() => {
