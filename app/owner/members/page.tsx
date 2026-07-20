@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getOwnerMemberDirectory } from "@/lib/atlas-data/members";
+import { invitationsEnabled } from "@/lib/atlas/invite-flow-core.js";
 import { requireAtlasRole } from "@/lib/atlas/role-access";
 import MembershipClient from "./MembershipClient";
 import styles from "./members.module.css";
@@ -25,7 +26,10 @@ export default async function OwnerMembersPage() {
           </Link>
         </header>
 
-        <MembershipClient directory={directory} />
+        <MembershipClient
+          directory={directory}
+          invitesEnabled={invitationsEnabled(process.env.ATLAS_INVITES_ENABLED)}
+        />
       </section>
     </main>
   );
