@@ -59,8 +59,7 @@ function prettyRange(start: string | null | undefined, end: string | null | unde
     const startDate = new Date(`${start}T12:00:00`);
     const endDate = new Date(`${end}T12:00:00`);
     if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())) {
-      const sameMonth = startDate.getMonth() === endDate.getMonth();
-      return sameMonth
+      return startDate.getMonth() === endDate.getMonth()
         ? `${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}–${endDate.toLocaleDateString("en-US", { day: "numeric" })}`
         : `${prettyDate(start)}–${prettyDate(end)}`;
     }
@@ -96,10 +95,8 @@ function numberValue(value: unknown) {
 function compactSpacing(value: unknown) {
   if (!Array.isArray(value)) return null;
   const lines = value.filter((line): line is string => typeof line === "string");
-  const rowLine = lines.find((line) => /row/i.test(line));
-  const spacingLine = lines.find((line) => /apart|spacing|inch|"|″/i.test(line));
-  const rowMatch = rowLine?.match(/(\d+(?:\.\d+)?)\s*rows?/i);
-  const spacingMatch = spacingLine?.match(/(\d+(?:\.\d+)?)\s*(?:in|inch|inches|"|″)/i);
+  const rowMatch = lines.find((line) => /row/i.test(line))?.match(/(\d+(?:\.\d+)?)\s*rows?/i);
+  const spacingMatch = lines.find((line) => /apart|spacing|inch|"|″/i.test(line))?.match(/(\d+(?:\.\d+)?)\s*(?:in|inch|inches|"|″)/i);
   return [rowMatch ? `${rowMatch[1]} rows` : "", spacingMatch ? `${spacingMatch[1]}″ spacing` : ""].filter(Boolean).join(" · ") || null;
 }
 
@@ -111,6 +108,14 @@ function initialLocation(objectLabel: string) {
   const normalized = normalizeGrowRoom(objectLabel);
   if (normalized === "Grow Room") return normalized;
   return /(pot(?:\s|$)|tray|nursery box|seed shelves)/i.test(objectLabel) ? "Grow Room" : objectLabel;
+}
+
+function initialContainer(objectLabel: string) {
+  const labels = objectLabel.split("·").map((value) => value.trim()).filter(Boolean);
+  if (/pot/i.test(objectLabel)) return labels.length > 1 ? `${labels.length} pots` : "Pot";
+  if (/tray/i.test(objectLabel)) return labels.length > 1 ? `${labels.length} trays` : "Tray";
+  if (/nursery box/i.test(objectLabel)) return labels.length > 1 ? `${labels.length} nursery boxes` : "Nursery box";
+  return null;
 }
 
 function containerSummary(metadata: Record<string, unknown>) {
@@ -132,7 +137,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
     variety: task.variety,
     objectLabel: task.objectLabel,
     locationLabel: initialLocation(task.objectLabel),
-    containerLabel: null,
+    containerLabel: initialContainer(task.objectLabel),
     sownDate: task.sownDate || task.plantedDate || null,
     plantingMethod: task.plantingMethod || null,
     cycleState: task.cycleState || null,
@@ -153,7 +158,6 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
 
   useEffect(() => {
     let active = true;
-
     void fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" })
       .then((response) => response.json() as Promise<WeatherResponse>)
       .then((data) => { if (active) setWeatherLabel(data.ok && data.label ? data.label : "weather unavailable"); })
@@ -172,7 +176,6 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
             : null);
         const objectLabel = card?.objects?.map((object) => object.object_label).filter(Boolean).join(" · ") || stringValue(metadata.object_label);
         const location = normalizeGrowRoom(stringValue(metadata.location_label) || stringValue(metadata.collection_zone));
-
         setFacts((current) => ({
           cropLabel: stringValue(metadata.crop_label) || current.cropLabel,
           variety: stringValue(metadata.crop_variety) || stringValue(metadata.variety) || current.variety || stringValue(metadata.crop_profile_variety),
@@ -191,7 +194,6 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
         }));
       })
       .catch(() => undefined);
-
     return () => { active = false; };
   }, [task.id]);
 
@@ -227,13 +229,11 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
           <span className="atlas-weather-line">{weatherLabel}</span>
           <button type="button" className="atlas-note-plus" aria-label="Log germination result" onClick={() => setOutcomeOpen(true)}>+</button>
         </header>
-
         <div className="atlas-task-page-body">
           <article className="atlas-task-page-active atlas-task-ticket-card atlas-germination-task">
             <div className="atlas-task-page-kicker"><span>Up Now</span><small>Germination</small></div>
             <h1>{`${facts.cropLabel} · ${displayLocation}`.toUpperCase()}</h1>
             <div className="atlas-task-page-time-row"><span>Germination</span><span>After rain</span><span>{prettyDate(task.dueDate)}</span></div>
-
             <section aria-label="Germination crop facts" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", margin: "18px 0 4px" }}>
               <div style={{ ...factCardStyle, gridColumn: "1 / -1" }}><small style={factLabelStyle}>Crop</small><strong style={{ ...factValueStyle, fontSize: "1.28rem", lineHeight: 1.15 }}>{displayCrop}</strong></div>
               <div style={factCardStyle}><small style={factLabelStyle}>Location</small><strong style={factValueStyle}>{displayLocation}</strong></div>
@@ -241,7 +241,6 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
               {!isGrowRoom && facts.spacing ? <div style={factCardStyle}><small style={factLabelStyle}>Spacing</small><strong style={factValueStyle}>{facts.spacing}</strong></div> : null}
               {plantingRecord ? <div style={{ ...factCardStyle, gridColumn: "1 / -1" }}><small style={factLabelStyle}>Planting</small><strong style={factValueStyle}>{plantingRecord}</strong></div> : null}
             </section>
-
             {(facts.expectedGerminationStart || facts.expectedGerminationEnd || facts.expectedHarvestStart || facts.expectedHarvestEnd) ? (
               <section className="atlas-task-detail-card" aria-label="Crop timing">
                 <strong>Crop timing</strong>
@@ -251,7 +250,6 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
                 </div>
               </section>
             ) : null}
-
             <section className="atlas-germination-check-panel">
               {!outcomeOpen ? (
                 <div className="atlas-germination-actions atlas-germination-primary-actions">
