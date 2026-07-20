@@ -26,39 +26,7 @@ async function bootstrap(email: string, password: string) {
     return NextResponse.json({ ok: false, stage: "create" }, { status: 500 });
   }
 
-  const { data: farm, error: farmError } = await supabase
-    .from("farms")
-    .select("id")
-    .eq("stable_key", "elm_farm")
-    .single();
-  if (farmError || !farm) {
-    await supabase.auth.admin.deleteUser(created.user.id);
-    return NextResponse.json({ ok: false, stage: "farm" }, { status: 500 });
-  }
-
-  const { error: profileError } = await supabase.from("user_profiles").insert({
-    user_id: created.user.id,
-    display_name: "Lex",
-    default_farm_id: farm.id,
-    active: true,
-  });
-  const { error: membershipError } = await supabase.from("farm_memberships").insert({
-    user_id: created.user.id,
-    farm_id: farm.id,
-    role: "owner",
-    worker_key: "lex",
-    active: true,
-    permissions: { all_farm_data: true, manage_memberships: true },
-  });
-
-  if (profileError || membershipError) {
-    await supabase.from("farm_memberships").delete().eq("user_id", created.user.id);
-    await supabase.from("user_profiles").delete().eq("user_id", created.user.id);
-    await supabase.auth.admin.deleteUser(created.user.id);
-    return NextResponse.json({ ok: false, stage: profileError ? "profile" : "membership" }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, userId: created.user.id });
 }
 
 export async function GET(request: Request) {
