@@ -52,7 +52,7 @@ function isWorkerTask(card: AtlasTaskCardRow, workerKey: string | null) {
 
 export async function GET(request: NextRequest) {
   const identity = await getAtlasIdentity();
-  if (!identity?.profile?.active) {
+  if (!identity) {
     return NextResponse.json({ ok: false, error: "Sign in required." }, { status: 401 });
   }
 
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
   }
 
   const rows = (data ?? []) as AtlasTaskCardRow[];
-  const taskCards = membership.role === "owner"
+  const taskCards = membership.role === "owner" || membership.role === "manager"
     ? rows
     : rows.filter((card) => isWorkerTask(card, membership.worker_key));
 
