@@ -1,9 +1,8 @@
-# Atlas Phase B — Identity and Protected Route Status
+# Atlas Phase B — Identity, Role Layout, and First Data Paths
 
-**Date:** July 20, 2026  
-**Production head:** `eb89983960f535129c4f20267fafaaf04e36c64b`
+**Date:** July 20, 2026
 
-## Completed
+## Completed identity core
 
 - Standard Supabase SSR session cookies and refresh proxy.
 - One normalized `getAtlasSession()` resolver.
@@ -12,6 +11,11 @@
 - Explicit session states: anonymous, no membership, active.
 - Account-neutral login; no hardcoded email or password alias.
 - Signed-in password-change endpoint and settings page.
+- A temporary build credential created through one-use Admin Auth and not stored in source control.
+- The one-use credential-reset route removed immediately after use.
+
+## Protected perspectives
+
 - Protected Owner layout at `/owner`.
 - Protected Manager layout at `/manage`.
 - Protected worker layout at `/work/today`.
@@ -19,9 +23,6 @@
 - Legacy `/marshall` redirects to `/manage`.
 - Login preserves a safe requested `next` path.
 - Anonymous requests to protected routes resolve to Login.
-- 34 automated tests pass, including role-boundary tests.
-
-## Current role boundary
 
 | Perspective | Route | Allowed memberships |
 |---|---|---|
@@ -31,20 +32,67 @@
 
 The worker layout intentionally permits Owner and Manager memberships to inspect the worker-safe projection. It does not grant Farm Hands access to management or Owner routes.
 
-## Password status
-
-The connector did not permit an administrative credential reset. Atlas now provides a supported signed-in password-change flow at `/settings/password`. No temporary password is stored in source control.
-
-## Next vertical slice
-
-Build the first authorized Owner data path:
+## First authorized Owner vertical slice
 
 ```text
 verified session
 → Owner membership
 → selected farm
-→ server-only Owner task query
+→ user-scoped task query
 → Owner dashboard projection
+→ secure Owner task detail
+→ controlled Owner task action
 ```
 
-The next code should begin the Atlas data layer rather than reading operational tables directly from the Owner page.
+Implemented boundaries:
+
+- `atlas.tasks` permits authenticated Owner reads only for owned farms.
+- Owner dashboard data comes from `lib/atlas-data`, not browser task-list APIs.
+- Owner actions link to `/owner/tasks/[taskId]`, not the legacy task-focus route.
+- Direct authenticated and anonymous execution of the broad transition RPC is revoked.
+- An Owner-checked database wrapper exists for the transition engine.
+- The application transition endpoint verifies session, task visibility, farm, Owner membership, request origin, intent, and idempotency.
+- The legacy general `/api/atlas/task-transition` endpoint returns `410 Gone`.
+
+## Normalized task visibility foundation
+
+`atlas.tasks` now has:
+
+- `visibility_scope`
+- `assigned_membership_id`
+- a same-farm, active-membership assignment trigger
+- an index for farm, visibility, assignment, status, and due date
+
+Current migrated scopes:
+
+- 45 Owner tasks
+- 2,631 management tasks
+- 662 assigned-worker tasks
+
+The 662 worker tasks remain deliberately unassigned until real Farm-Hand memberships exist. This prevents historical Anna metadata from becoming an authorization grant.
+
+Manager RLS permits management, assigned-worker, and farm-shared scopes while excluding Owner and system-internal tasks. Farm Hands still have no direct base-table task policy.
+
+## Manager read path
+
+The Manager home now uses a server-only, farm-scoped task projection. It shows:
+
+- blocked work
+- overdue work
+- due-today work
+- worker work needing assignment
+- the management queue
+
+An Owner may inspect the Manager lens, but the query explicitly limits itself to Manager-visible scopes.
+
+## Validation
+
+- 43 automated tests pass, including role, Owner projection, Owner action, and Manager projection tests.
+- Production TypeScript and Next.js builds pass.
+- Owner RLS simulation exposes owned-farm tasks and zero tasks to an unrelated authenticated identity.
+- A rolled-back Manager membership simulation exposed 2,631 management tasks and 662 assigned-worker tasks while exposing zero Owner tasks.
+- Lex’s real membership remained Owner after the transaction rolled back.
+
+## Next vertical slice
+
+Create real Manager and Farm-Hand memberships, then bind the 662 migrated worker tasks to a real membership through controlled assignment. After that, build a worker-safe prepared task projection rather than granting Farm Hands direct access to `atlas.tasks`.
