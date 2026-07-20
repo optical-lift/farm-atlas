@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { normalizeAtlasLoginCredentials } from "@/lib/atlas/auth-core.js";
 import { createAtlasServerClient } from "@/lib/supabase/server";
-
-const OWNER_EMAIL = "lexprjct@gmail.com";
-const legacyPasswordAlias = (email: string, password: string) =>
-  email === OWNER_EMAIL && password === "F4rm" ? `${password}${password}` : password;
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -14,24 +11,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Enter your email and password." }, { status: 400 });
   }
 
-  const email =
-    typeof (body as { email?: unknown })?.email === "string"
-      ? (body as { email: string }).email.trim().toLowerCase()
-      : "";
-  const password =
-    typeof (body as { password?: unknown })?.password === "string"
-      ? (body as { password: string }).password
-      : "";
-
-  if (!email || !password) {
+  const credentials = normalizeAtlasLoginCredentials(body);
+  if (!credentials) {
     return NextResponse.json({ ok: false, error: "Enter your email and password." }, { status: 400 });
   }
 
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password: legacyPasswordAlias(email, password),
-  });
+  const { data, error } = await supabase.auth.signInWithPassword(credentials);
 
   if (error || !data.user) {
     return NextResponse.json({ ok: false, error: "That login did not work." }, { status: 401 });
