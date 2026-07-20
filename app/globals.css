@@ -163,3 +163,11 @@ button {
 }
 
 /* HERO */
+
+/* The sowing forecast is server-rendered from canonical task metadata. Keep
+   task-page mode styles from hiding it after the client hydrates. */
+.atlas-task-ticket-card > section[aria-label="Timing forecast"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
