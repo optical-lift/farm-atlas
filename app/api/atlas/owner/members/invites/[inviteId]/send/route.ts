@@ -22,13 +22,6 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ inviteId: string }> },
 ) {
-  if (!invitationsEnabled(process.env.ATLAS_INVITES_ENABLED)) {
-    return NextResponse.json(
-      { ok: false, error: "Invitation sending is disabled while Atlas onboarding is being built." },
-      { status: 503, headers: { "Cache-Control": "private, no-store" } },
-    );
-  }
-
   const session = await getAtlasSession();
   if (!session) {
     return NextResponse.json(
@@ -59,6 +52,13 @@ export async function POST(
     return NextResponse.json(
       { ok: false, error: "Owner membership required." },
       { status: 403, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
+
+  if (!invitationsEnabled(process.env.ATLAS_INVITES_ENABLED)) {
+    return NextResponse.json(
+      { ok: false, error: "Invitation sending is disabled while Atlas onboarding is being built." },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } },
     );
   }
 
