@@ -102,13 +102,17 @@ function daysSince(dateIso: string) {
   return Math.max(0, Math.round((end.getTime() - start.getTime()) / 86_400_000));
 }
 
-function lastWeededLabel(task: AtlasTaskCard) {
+function maintenanceAgeLabel(task: AtlasTaskCard) {
+  const lastSprayed = atlasMetaString(task, "last_sprayed_at");
   const lastWeeded = atlasMetaString(task, "last_weeded_at") || "2026-06-24";
-  const days = daysSince(lastWeeded);
-  if (days === null) return `Last weeded ${prettyDate(lastWeeded)}`;
-  if (days === 0) return "Weeded today";
-  if (days === 1) return "1 day since weeded";
-  return `${days} days since weeded`;
+  const dateIso = lastSprayed || lastWeeded;
+  const action = lastSprayed ? "sprayed" : "weeded";
+  const days = daysSince(dateIso);
+
+  if (days === null) return `Last ${action} ${prettyDate(dateIso)}`;
+  if (days === 0) return `${action === "sprayed" ? "Sprayed" : "Weeded"} today`;
+  if (days === 1) return `1 day since ${action}`;
+  return `${days} days since ${action}`;
 }
 
 function taskHref(task: AtlasTaskCard) {
@@ -134,7 +138,7 @@ function WeedingTaskCard({ task, tone }: { task: AtlasTaskCard; tone?: Collectio
         <span>{display.location}</span>
       </div>
       <em>{statusLine(task)}</em>
-      <p>{[estimatedMinutes ? `${estimatedMinutes} min` : "", effortLabel(task), lastWeededLabel(task)].filter(Boolean).join(" · ")}</p>
+      <p>{[estimatedMinutes ? `${estimatedMinutes} min` : "", effortLabel(task), maintenanceAgeLabel(task)].filter(Boolean).join(" · ")}</p>
     </Link>
   );
 }
