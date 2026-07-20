@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { clearAtlasSession } from "@/lib/atlas-auth";
+
+import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
-  await clearAtlasSession();
+  const supabase = await createAtlasServerClient();
+  await supabase.auth.signOut();
   return NextResponse.redirect(new URL("/login", request.url), { status: 303 });
 }
