@@ -6,6 +6,14 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+type NormalizedInviteInput = {
+  farmId: string;
+  email: string;
+  displayName: string;
+  role: "manager" | "farm_hand";
+  workerKey: string | null;
+};
+
 export async function POST(request: Request) {
   const session = await getAtlasSession();
   if (!session) {
@@ -23,11 +31,14 @@ export async function POST(request: Request) {
   }
 
   const normalized = normalizeMembershipInviteInput(body);
-  if (!normalized.ok) {
-    return NextResponse.json({ ok: false, error: normalized.error }, { status: 400 });
+  if (!normalized.ok || !normalized.value) {
+    return NextResponse.json(
+      { ok: false, error: normalized.error ?? "Enter the invitation details." },
+      { status: 400 },
+    );
   }
 
-  const input = normalized.value;
+  const input = normalized.value as NormalizedInviteInput;
   const membership = membershipForFarm(session, input.farmId);
   if (!membership || membership.role !== "owner") {
     return NextResponse.json(
