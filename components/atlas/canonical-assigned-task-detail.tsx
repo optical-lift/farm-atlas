@@ -38,6 +38,12 @@ type LinkedCropTask = AtlasTaskCard & {
   crop_profile_metadata?: Record<string, unknown> | null;
 };
 
+type TimingFact = {
+  key: "germination" | "transplant" | "harvest" | "clear_bed";
+  label: string;
+  value: string;
+};
+
 const ALLOWED_RETURN_PATHS = new Set(["/", "/owner", "/marshall", "/children", "/task"]);
 
 function todayIso() {
@@ -163,6 +169,40 @@ function sowingFacts(task: AtlasTaskCard, fallbackLocation: string) {
   };
 }
 
+function isGrowRoomSowing(task: AtlasTaskCard, location: string) {
+  const context = [
+    location,
+    metaString(task, "collection_zone"),
+    metaString(task, "location_label"),
+    metaString(task, "display_detail"),
+  ].join(" ").toLowerCase();
+  return /grow\s*room|seed shelves/.test(context);
+}
+
+function timingFacts(lines: string[], includeTransplant: boolean) {
+  const facts: TimingFact[] = [];
+  const rest: string[] = [];
+  const labels: Record<TimingFact["key"], string> = {
+    germination: "Germination",
+    transplant: "Transplant",
+    harvest: "Harvest",
+    clear_bed: "Clear bed",
+  };
+
+  for (const line of lines) {
+    const match = line.match(/^Projected\s+(germination|transplant|harvest|clear bed)\s*·\s*(.+)$/i);
+    if (!match) {
+      rest.push(line);
+      continue;
+    }
+    const key = match[1].toLowerCase().replace(" ", "_") as TimingFact["key"];
+    if (key === "transplant" && !includeTransplant) continue;
+    facts.push({ key, label: labels[key], value: match[2].trim() });
+  }
+
+  return { facts, rest };
+}
+
 function returnDestination(fallback: string) {
   const params = new URLSearchParams(window.location.search);
   const returnTo = params.get("returnTo");
@@ -185,7 +225,7 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
   }, []);
 
   const display = useMemo(() => atlasTaskDisplay(task), [task]);
-  const lines = detailLines(task);
+  const allLines = detailLines(task);
   const detailHeading = metaString(task, "detail_heading") || "Details";
   const production = productionContext(task);
   const varieties = stringArray(production?.varieties);
@@ -195,6 +235,8 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
   const spacingInches = numberValue(production?.target_spacing_inches);
   const stemsPerPlant = numberValue(production?.marketable_stems_per_plant);
   const sowing = sowingFacts(task, display.location);
+  const timing = timingFacts(allLines, sowing ? isGrowRoomSowing(task, sowing.location) : true);
+  const lines = sowing ? timing.rest : allLines;
 
   async function refreshTask() {
     const response = await fetch(`/api/atlas/task-cards?taskId=${encodeURIComponent(task.task_id)}`, {
@@ -275,6 +317,10 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
     }
   }
 
+  const factCardStyle = { padding: "14px 16px", border: "1px solid rgba(111, 97, 76, .24)", borderRadius: "18px" } as const;
+  const factLabelStyle = { display: "block", fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", opacity: .62 } as const;
+  const factValueStyle = { display: "block", marginTop: "3px", lineHeight: 1.2 } as const;
+
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
@@ -304,27 +350,18 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
             </div>
 
             {sowing ? (
-              <section
-                className="atlas-task-sowing-facts"
-                aria-label="Sowing specification"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-                  gap: "10px",
-                  margin: "18px 0 4px",
-                }}
-              >
-                <div style={{ gridColumn: "1 / -1", padding: "14px 16px", border: "1px solid rgba(111, 97, 76, .24)", borderRadius: "18px" }}>
-                  <small style={{ display: "block", fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", opacity: .62 }}>Seed packet</small>
-                  <strong style={{ display: "block", marginTop: "3px", fontSize: "1.28rem", lineHeight: 1.15 }}>{sowing.seedPacket}</strong>
+              <section className="atlas-task-sowing-facts" aria-label="Sowing specification" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", margin: "18px 0 4px" }}>
+                <div style={{ ...factCardStyle, gridColumn: "1 / -1" }}>
+                  <small style={factLabelStyle}>Seed packet</small>
+                  <strong style={{ ...factValueStyle, fontSize: "1.28rem", lineHeight: 1.15 }}>{sowing.seedPacket}</strong>
                 </div>
-                <div style={{ padding: "14px 16px", border: "1px solid rgba(111, 97, 76, .24)", borderRadius: "18px" }}>
-                  <small style={{ display: "block", fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", opacity: .62 }}>Bed / location</small>
-                  <strong style={{ display: "block", marginTop: "3px", lineHeight: 1.2 }}>{sowing.location}</strong>
+                <div style={factCardStyle}>
+                  <small style={factLabelStyle}>Bed / location</small>
+                  <strong style={factValueStyle}>{sowing.location}</strong>
                 </div>
-                <div style={{ padding: "14px 16px", border: "1px solid rgba(111, 97, 76, .24)", borderRadius: "18px" }}>
-                  <small style={{ display: "block", fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", opacity: .62 }}>Spacing</small>
-                  <strong style={{ display: "block", marginTop: "3px", lineHeight: 1.2 }}>{sowing.spacing || "Not linked"}</strong>
+                <div style={factCardStyle}>
+                  <small style={factLabelStyle}>Spacing</small>
+                  <strong style={factValueStyle}>{sowing.spacing || "Not linked"}</strong>
                 </div>
               </section>
             ) : (
@@ -346,6 +383,20 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
                 <p><b>Germination watch:</b> {prettyDate(production.projected_germination_start)}–{prettyDate(production.projected_germination_end)}</p>
                 <p><b>Harvest watch:</b> {prettyDate(production.projected_harvest_start)}–{prettyDate(production.projected_harvest_end)}</p>
                 {production.projection_basis ? <p><small>{production.projection_basis}</small></p> : null}
+              </section>
+            ) : null}
+
+            {sowing && timing.facts.length ? (
+              <section className="atlas-task-detail-card" aria-label="Timing forecast">
+                <strong>Timing forecast</strong>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", marginTop: "12px" }}>
+                  {timing.facts.map((fact, index) => (
+                    <div key={fact.key} style={{ ...factCardStyle, padding: "12px 14px", ...(timing.facts.length % 2 === 1 && index === timing.facts.length - 1 ? { gridColumn: "1 / -1" } : {}) }}>
+                      <small style={factLabelStyle}>{fact.label}</small>
+                      <strong style={{ ...factValueStyle, fontSize: "1.02rem" }}>{fact.value}</strong>
+                    </div>
+                  ))}
+                </div>
               </section>
             ) : null}
 
