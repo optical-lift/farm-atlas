@@ -85,14 +85,22 @@ The Manager home now uses a server-only, farm-scoped task projection. It shows:
 
 An Owner may inspect the Manager lens, but the query explicitly limits itself to Manager-visible scopes.
 
+## Owner membership registry
+
+- `/owner/members` lists active farm memberships through an Owner-checked database function.
+- Invitation drafts record intended Manager or Farm-Hand access without creating an Auth account or sending email.
+- Farm-Hand drafts require a normalized worker key.
+- Drafts are prepared and revoked through controlled authenticated functions.
+- The invitation table has RLS enabled and no direct application grants.
+
 ## Validation
 
-- 43 automated tests pass, including role, Owner projection, Owner action, and Manager projection tests.
-- Production TypeScript and Next.js builds pass.
+- 47 automated tests pass, including identity, role, Owner projection, Owner action, Manager projection, and invitation validation tests.
+- The corrected registry head passes TypeScript and the complete Next.js production build in Vercel preview.
 - Owner RLS simulation exposes owned-farm tasks and zero tasks to an unrelated authenticated identity.
 - A rolled-back Manager membership simulation exposed 2,631 management tasks and 662 assigned-worker tasks while exposing zero Owner tasks.
 - Lex’s real membership remained Owner after the transaction rolled back.
 
 ## Next vertical slice
 
-Create real Manager and Farm-Hand memberships, then bind the 662 migrated worker tasks to a real membership through controlled assignment. After that, build a worker-safe prepared task projection rather than granting Farm Hands direct access to `atlas.tasks`.
+Implement explicit invitation sending and atomic acceptance before creating live Manager or Farm-Hand accounts. After acceptance, bind the migrated worker tasks to the real Farm-Hand membership and build a worker-safe prepared task projection rather than granting Farm Hands direct access to `atlas.tasks`.
