@@ -2,4 +2,4 @@
 
 This branch exists only to run the complete test, TypeScript, and Next.js build against the current Atlas membership-registry head.
 
-The second run uses `npm install` while the repository lockfile is regenerated separately.
+The current run uses the corrected invitation type boundary and condensed build-error output.
