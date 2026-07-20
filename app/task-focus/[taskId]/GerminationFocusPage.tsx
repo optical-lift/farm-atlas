@@ -233,7 +233,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
           <article className="atlas-task-page-active atlas-task-ticket-card atlas-germination-task">
             <div className="atlas-task-page-kicker"><span>Up Now</span><small>Germination</small></div>
             <h1>{`${facts.cropLabel} · ${displayLocation}`.toUpperCase()}</h1>
-            <div className="atlas-task-page-time-row"><span>Germination</span><span>After rain</span><span>{prettyDate(task.dueDate)}</span></div>
+            <div className="atlas-task-page-time-row"><span>Germination</span><span>{prettyDate(task.dueDate)}</span></div>
             <section aria-label="Germination crop facts" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", margin: "18px 0 4px" }}>
               <div style={{ ...factCardStyle, gridColumn: "1 / -1" }}><small style={factLabelStyle}>Crop</small><strong style={{ ...factValueStyle, fontSize: "1.28rem", lineHeight: 1.15 }}>{displayCrop}</strong></div>
               <div style={factCardStyle}><small style={factLabelStyle}>Location</small><strong style={factValueStyle}>{displayLocation}</strong></div>
