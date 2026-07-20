@@ -39,7 +39,7 @@ type LinkedCropTask = AtlasTaskCard & {
 };
 
 type TimingFact = {
-  key: "germination" | "transplant" | "harvest" | "clear_bed";
+  key: "germination" | "transplant" | "harvest" | "clear_bed" | "expected_stems";
   label: string;
   value: string;
 };
@@ -150,11 +150,15 @@ function sowingFacts(task: AtlasTaskCard, fallbackLocation: string) {
     || linked.crop_label
     || "Seed packet not linked";
 
-  const spacingLines = stringArray(profile.spacing_lines)
-    .filter((line) => /row|spacing|inch/i.test(line))
+  const metadataSpacingLines = stringArray(task.metadata?.plant_spacing_lines)
+    .filter((line) => /row|spacing|inch|apart/i.test(line))
+    .slice(0, 2);
+  const profileSpacingLines = stringArray(profile.spacing_lines)
+    .filter((line) => /row|spacing|inch|apart/i.test(line))
     .slice(0, 2);
   const rowsPerBed = numberValue(profile.rows_per_3ft_bed);
   const spacingInches = numberValue(profile.in_row_spacing_in);
+  const spacingLines = metadataSpacingLines.length ? metadataSpacingLines : profileSpacingLines;
   const spacing = spacingLines.length
     ? spacingLines.join(" · ")
     : [
@@ -179,7 +183,7 @@ function isGrowRoomSowing(task: AtlasTaskCard, location: string) {
   return /grow\s*room|seed shelves/.test(context);
 }
 
-function timingFacts(lines: string[], includeTransplant: boolean) {
+function timingFacts(lines: string[], includeTransplant: boolean, expectedStems: number | null) {
   const facts: TimingFact[] = [];
   const rest: string[] = [];
   const labels: Record<TimingFact["key"], string> = {
@@ -187,6 +191,7 @@ function timingFacts(lines: string[], includeTransplant: boolean) {
     transplant: "Transplant",
     harvest: "Harvest",
     clear_bed: "Clear bed",
+    expected_stems: "Expected stems",
   };
 
   for (const line of lines) {
@@ -198,6 +203,14 @@ function timingFacts(lines: string[], includeTransplant: boolean) {
     const key = match[1].toLowerCase().replace(" ", "_") as TimingFact["key"];
     if (key === "transplant" && !includeTransplant) continue;
     facts.push({ key, label: labels[key], value: match[2].trim() });
+  }
+
+  if (expectedStems !== null) {
+    facts.push({
+      key: "expected_stems",
+      label: labels.expected_stems,
+      value: expectedStems.toLocaleString("en-US"),
+    });
   }
 
   return { facts, rest };
@@ -235,7 +248,8 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
   const spacingInches = numberValue(production?.target_spacing_inches);
   const stemsPerPlant = numberValue(production?.marketable_stems_per_plant);
   const sowing = sowingFacts(task, display.location);
-  const timing = timingFacts(allLines, sowing ? isGrowRoomSowing(task, sowing.location) : true);
+  const expectedStems = numberValue(task.metadata?.expected_stems);
+  const timing = timingFacts(allLines, sowing ? isGrowRoomSowing(task, sowing.location) : true, expectedStems);
   const lines = sowing ? timing.rest : allLines;
 
   async function refreshTask() {
@@ -391,7 +405,7 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
                 <strong>Timing forecast</strong>
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", marginTop: "12px" }}>
                   {timing.facts.map((fact, index) => (
-                    <div key={fact.key} style={{ ...factCardStyle, padding: "12px 14px", ...(timing.facts.length % 2 === 1 && index === timing.facts.length - 1 ? { gridColumn: "1 / -1" } : {}) }}>
+                    <div key={fact.key} style={{ ...factCardStyle, padding: "12px 14px", ...(timing.facts.length % 2 === 1 && index === 0 ? { gridColumn: "1 / -1" } : {}) }}>
                       <small style={factLabelStyle}>{fact.label}</small>
                       <strong style={{ ...factValueStyle, fontSize: "1.02rem" }}>{fact.value}</strong>
                     </div>
