@@ -14,6 +14,8 @@ export type AtlasOwnerTaskRow = {
   completed_at: string | null;
   note: string | null;
   metadata: Record<string, unknown>;
+  visibility_scope: "owner";
+  assigned_membership_id: string | null;
   updated_at: string;
   parent_task_id: string | null;
 };
@@ -23,10 +25,10 @@ export async function getOwnerTaskRows(farmId: string): Promise<AtlasOwnerTaskRo
   const { data, error } = await supabase
     .from("tasks")
     .select(
-      "id, farm_id, zone_id, title, task_type, status, priority, due_date, unlock_text, blocker_text, completed_at, note, metadata, updated_at, parent_task_id",
+      "id, farm_id, zone_id, title, task_type, status, priority, due_date, unlock_text, blocker_text, completed_at, note, metadata, visibility_scope, assigned_membership_id, updated_at, parent_task_id",
     )
     .eq("farm_id", farmId)
-    .contains("metadata", { owner_task: true })
+    .eq("visibility_scope", "owner")
     .in("status", ["open", "blocked", "done"])
     .order("due_date", { ascending: true, nullsFirst: false })
     .limit(200);
