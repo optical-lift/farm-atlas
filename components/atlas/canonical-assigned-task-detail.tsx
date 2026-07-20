@@ -58,7 +58,9 @@ function addDays(dateIso: string, days: number) {
 function prettyDate(value: string | null | undefined) {
   if (!value) return "No date";
   const date = new Date(`${value}T12:00:00`);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function metaString(task: AtlasTaskCard, key: string) {
@@ -69,12 +71,22 @@ function metaString(task: AtlasTaskCard, key: string) {
 function detailLines(task: AtlasTaskCard) {
   if (task.metadata?.hide_details === true || task.metadata?.hide_details === "true") return [];
   const value = task.metadata?.detail_lines;
-  if (Array.isArray(value)) return value.filter((line): line is string => typeof line === "string" && line.trim().length > 0);
+  if (Array.isArray(value)) {
+    return value.filter((line): line is string => typeof line === "string" && line.trim().length > 0);
+  }
   return task.note ? [task.note] : [];
 }
 
 function stringArray(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
+}
+
+function numberValue(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  return null;
 }
 
 function productionContext(task: AtlasTaskCard) {
@@ -84,15 +96,40 @@ function productionContext(task: AtlasTaskCard) {
   return context.kind === "sunflower_gap_fill" ? context : null;
 }
 
-function numberValue(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
-  return null;
+function isSowingTask(task: AtlasTaskCard) {
+  const route = [
+    task.action_key,
+    task.task_type,
+    metaString(task, "work_route"),
+    metaString(task, "display_action"),
+  ].filter(Boolean).join(" ").toLowerCase();
+  return route.includes("sow") || route.includes("seed");
 }
 
-function isSowingTask(task: AtlasTaskCard) {
-  const route = `${task.action_key ?? ""} ${task.task_type ?? ""} ${metaString(task, "work_route")}`.toLowerCase();
-  return route.includes("sow") || route.includes("seed");
+function pluralBedPrefix(prefix: string) {
+  return prefix.replace(/\bBed\s*$/i, "Beds ").replace(/\s+/g, " ");
+}
+
+function compactObjectLocations(task: AtlasTaskCard, fallbackLocation: string) {
+  const labels = task.objects.map((object) => object.object_label).filter(Boolean);
+  if (!labels.length) return metaString(task, "location_label") || fallbackLocation || "Elm Farm";
+  if (labels.length === 1) return labels[0];
+
+  const parsed = labels.map((label) => {
+    const match = label.match(/^(.*?)(\d+)$/);
+    return match ? { prefix: match[1].trimEnd(), number: Number(match[2]) } : null;
+  });
+  const first = parsed[0];
+  if (first && parsed.every((item) => item && item.prefix === first.prefix)) {
+    const numbers = parsed.map((item) => item!.number).sort((a, b) => a - b);
+    const contiguous = numbers.every((number, index) => index === 0 || number === numbers[index - 1] + 1);
+    const prefix = pluralBedPrefix(first.prefix);
+    return contiguous
+      ? `${prefix}${numbers[0]}–${numbers[numbers.length - 1]}`
+      : `${prefix}${numbers.join(" + ")}`;
+  }
+
+  return labels.join(" · ");
 }
 
 function sowingFacts(task: AtlasTaskCard, fallbackLocation: string) {
@@ -102,23 +139,28 @@ function sowingFacts(task: AtlasTaskCard, fallbackLocation: string) {
   const seedPacket = metaString(task, "seed_packet_name")
     || metaString(task, "seed_variety")
     || metaString(task, "crop_variety")
+    || metaString(task, "variety")
     || linked.variety
     || linked.crop_label
-    || "Seed packet";
-  const objectLocations = task.objects.map((object) => object.object_label).filter(Boolean);
-  const location = objectLocations.length
-    ? objectLocations.join(" · ")
-    : metaString(task, "location_label") || fallbackLocation || "Elm Farm";
+    || "Seed packet not linked";
+
   const spacingLines = stringArray(profile.spacing_lines)
-    .filter((line) => /row|spacing|inch/i.test(line));
+    .filter((line) => /row|spacing|inch/i.test(line))
+    .slice(0, 2);
   const rowsPerBed = numberValue(profile.rows_per_3ft_bed);
   const spacingInches = numberValue(profile.in_row_spacing_in);
   const spacing = spacingLines.length
     ? spacingLines.join(" · ")
-    : [rowsPerBed !== null ? `${rowsPerBed} rows per 3 ft bed` : "", spacingInches !== null ? `${spacingInches} in spacing` : ""]
-      .filter(Boolean)
-      .join(" · ");
-  return { seedPacket, location, spacing };
+    : [
+      rowsPerBed !== null ? `${rowsPerBed} rows per 3 ft bed` : "",
+      spacingInches !== null ? `${spacingInches}-inch spacing` : "",
+    ].filter(Boolean).join(" · ");
+
+  return {
+    seedPacket,
+    location: compactObjectLocations(task, fallbackLocation),
+    spacing,
+  };
 }
 
 function returnDestination(fallback: string) {
@@ -160,7 +202,9 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
       cache: "no-store",
     });
     const data = await response.json() as { ok?: boolean; taskCards?: AtlasTaskCard[]; error?: string; details?: string };
-    if (!response.ok || !data.ok || !data.taskCards?.[0]) throw new Error(data.details || data.error || "Task refresh failed.");
+    if (!response.ok || !data.ok || !data.taskCards?.[0]) {
+      throw new Error(data.details || data.error || "Task refresh failed.");
+    }
     setTask(data.taskCards[0]);
   }
 
@@ -235,7 +279,10 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href={assignee.listPath} className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">{assignee.label}</span></Link>
+          <Link href={assignee.listPath} className="atlas-phone-brand atlas-task-header-brand">
+            <span className="atlas-phone-kicker">Atlas</span>
+            <span className="atlas-phone-title">{assignee.label}</span>
+          </Link>
           <span className="atlas-weather-line">{weatherLabel}</span>
           <Link href={assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
         </header>
@@ -246,17 +293,46 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
               <small>Assigned to</small>
               <strong>{assignee.label.toUpperCase()}</strong>
             </section>
-            <div className="atlas-task-page-kicker"><span>Up Now</span><small>{task.task_type.replaceAll("_", " ")}</small></div>
+            <div className="atlas-task-page-kicker">
+              <span>Up Now</span>
+              <small>{task.task_type.replaceAll("_", " ")}</small>
+            </div>
             <h1>{display.title.toUpperCase()}</h1>
-            <div className="atlas-task-page-time-row"><span>{metaString(task, "display_action") || task.action_key || "Work"}</span><span>{prettyDate(task.due_date)}</span></div>
+            <div className="atlas-task-page-time-row">
+              <span>{metaString(task, "display_action") || task.action_key || "Work"}</span>
+              <span>{prettyDate(task.due_date)}</span>
+            </div>
 
             {sowing ? (
-              <div className="atlas-task-sowing-facts">
-                <p><b>Seed packet</b> {sowing.seedPacket}</p>
-                <p><b>Location</b> {sowing.location}</p>
-                {sowing.spacing ? <p><b>Spacing</b> {sowing.spacing}</p> : null}
-              </div>
-            ) : <section className="atlas-task-place-card"><small>Location</small><strong>{display.location || "Elm Farm"}</strong></section>}
+              <section
+                className="atlas-task-sowing-facts"
+                aria-label="Sowing specification"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+                  gap: "10px",
+                  margin: "18px 0 4px",
+                }}
+              >
+                <div style={{ gridColumn: "1 / -1", padding: "14px 16px", border: "1px solid rgba(111, 97, 76, .24)", borderRadius: "18px" }}>
+                  <small style={{ display: "block", fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", opacity: .62 }}>Seed packet</small>
+                  <strong style={{ display: "block", marginTop: "3px", fontSize: "1.28rem", lineHeight: 1.15 }}>{sowing.seedPacket}</strong>
+                </div>
+                <div style={{ padding: "14px 16px", border: "1px solid rgba(111, 97, 76, .24)", borderRadius: "18px" }}>
+                  <small style={{ display: "block", fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", opacity: .62 }}>Bed / location</small>
+                  <strong style={{ display: "block", marginTop: "3px", lineHeight: 1.2 }}>{sowing.location}</strong>
+                </div>
+                <div style={{ padding: "14px 16px", border: "1px solid rgba(111, 97, 76, .24)", borderRadius: "18px" }}>
+                  <small style={{ display: "block", fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", opacity: .62 }}>Spacing</small>
+                  <strong style={{ display: "block", marginTop: "3px", lineHeight: 1.2 }}>{sowing.spacing || "Not linked"}</strong>
+                </div>
+              </section>
+            ) : (
+              <section className="atlas-task-place-card">
+                <small>Location</small>
+                <strong>{display.location || "Elm Farm"}</strong>
+              </section>
+            )}
 
             {production ? (
               <section className="atlas-task-detail-card atlas-production-context-card">
@@ -264,43 +340,62 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
                 <p><b>Work type:</b> Production gap-fill recovery{gapFillPercent !== null ? ` · ${gapFillPercent}% target fill` : ""}</p>
                 {targetAreas.length ? <p><b>Areas:</b> {targetAreas.join(" · ")}</p> : null}
                 {varieties.length ? <p><b>Linked varieties:</b> {varieties.join(" · ")}</p> : null}
-                {rowsPerBed !== null || spacingInches !== null ? <p><b>Planting pattern:</b> {rowsPerBed !== null ? `${rowsPerBed} rows per bed` : "Existing rows"}{spacingInches !== null ? ` · ${spacingInches}-inch spacing` : ""}{stemsPerPlant !== null ? ` · ${stemsPerPlant} marketable stem per plant` : ""}</p> : null}
+                {rowsPerBed !== null || spacingInches !== null ? (
+                  <p><b>Planting pattern:</b> {rowsPerBed !== null ? `${rowsPerBed} rows per bed` : "Existing rows"}{spacingInches !== null ? ` · ${spacingInches}-inch spacing` : ""}{stemsPerPlant !== null ? ` · ${stemsPerPlant} marketable stem per plant` : ""}</p>
+                ) : null}
                 <p><b>Germination watch:</b> {prettyDate(production.projected_germination_start)}–{prettyDate(production.projected_germination_end)}</p>
                 <p><b>Harvest watch:</b> {prettyDate(production.projected_harvest_start)}–{prettyDate(production.projected_harvest_end)}</p>
                 {production.projection_basis ? <p><small>{production.projection_basis}</small></p> : null}
               </section>
             ) : null}
 
-            {lines.length ? <section className="atlas-task-detail-card"><strong>{detailHeading}</strong>{lines.map((line) => <p key={line}>{line}</p>)}</section> : null}
+            {lines.length ? (
+              <section className="atlas-task-detail-card">
+                <strong>{detailHeading}</strong>
+                {lines.map((line) => <p key={line}>{line}</p>)}
+              </section>
+            ) : null}
+
             <TaskChildChecklist childTasks={children} onChange={async () => setChildren((current) => [...current])} />
 
             <div className="atlas-task-page-actions atlas-task-primary-actions">
-              <button type="button" className="done" disabled={Boolean(saving)} onClick={() => void transition("done")}>{saving === "done" ? "Finishing" : "Done"}</button>
+              <button type="button" className="done" disabled={Boolean(saving)} onClick={() => void transition("done")}>
+                {saving === "done" ? "Finishing" : "Done"}
+              </button>
               {assignee.secondaryAction === "tomorrow" ? (
-                <button type="button" disabled={Boolean(saving)} onClick={() => void moveToNextDay()}>{saving === "reschedule" ? "Moving" : "Tomorrow"}</button>
+                <button type="button" disabled={Boolean(saving)} onClick={() => void moveToNextDay()}>
+                  {saving === "reschedule" ? "Moving" : "Tomorrow"}
+                </button>
               ) : (
-                <button type="button" disabled={Boolean(saving)} onClick={() => setUnfinishedOpen((open) => !open)}>{unfinishedOpen ? "Close" : "Unfinished"}</button>
+                <button type="button" disabled={Boolean(saving)} onClick={() => setUnfinishedOpen((open) => !open)}>
+                  {unfinishedOpen ? "Close" : "Unfinished"}
+                </button>
               )}
             </div>
 
-            {assignee.secondaryAction === "unfinished" && unfinishedOpen ? <section className="atlas-task-unfinished-panel">
-              <strong>What happened?</strong>
-              <div className="atlas-task-unfinished-grid">
-                <button type="button" disabled={Boolean(saving)} onClick={() => void transition("partial", window.prompt("What is left?", "")?.trim() || "Partly done")}>Partly done</button>
-                <button type="button" className="blocked" disabled={Boolean(saving)} onClick={() => void transition("blocked", window.prompt("What blocked it?", "")?.trim() || "Blocked")}>Blocked</button>
-              </div>
-              <span>Reschedule</span>
-              <div className="atlas-task-unfinished-grid reschedule">
-                <button type="button" disabled={Boolean(saving)} onClick={() => void moveToNextDay()}>Tomorrow</button>
-                <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(addDays(todayIso(), 7), "Moved to next week from assigned task page")}>Next week</button>
-                <button type="button" disabled={Boolean(saving)} onClick={() => { const date = window.prompt("Pick a date (YYYY-MM-DD)", task.due_date || todayIso())?.trim(); if (date) void reschedule(date, "Rescheduled from assigned task page"); }}>Pick a date</button>
-              </div>
-              <span>Close without doing it</span>
-              <div className="atlas-task-unfinished-grid quiet">
-                <button type="button" disabled={Boolean(saving)} onClick={() => void transition("changed_plan", window.prompt("What changed?", "")?.trim() || "Plan changed")}>Changed plan</button>
-                <button type="button" disabled={Boolean(saving)} onClick={() => void transition("not_relevant", window.prompt("Why is this no longer relevant?", "")?.trim() || "Not relevant")}>Not relevant</button>
-              </div>
-            </section> : null}
+            {assignee.secondaryAction === "unfinished" && unfinishedOpen ? (
+              <section className="atlas-task-unfinished-panel">
+                <strong>What happened?</strong>
+                <div className="atlas-task-unfinished-grid">
+                  <button type="button" disabled={Boolean(saving)} onClick={() => void transition("partial", window.prompt("What is left?", "")?.trim() || "Partly done")}>Partly done</button>
+                  <button type="button" className="blocked" disabled={Boolean(saving)} onClick={() => void transition("blocked", window.prompt("What blocked it?", "")?.trim() || "Blocked")}>Blocked</button>
+                </div>
+                <span>Reschedule</span>
+                <div className="atlas-task-unfinished-grid reschedule">
+                  <button type="button" disabled={Boolean(saving)} onClick={() => void moveToNextDay()}>Tomorrow</button>
+                  <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(addDays(todayIso(), 7), "Moved to next week from assigned task page")}>Next week</button>
+                  <button type="button" disabled={Boolean(saving)} onClick={() => {
+                    const date = window.prompt("Pick a date (YYYY-MM-DD)", task.due_date || todayIso())?.trim();
+                    if (date) void reschedule(date, "Rescheduled from assigned task page");
+                  }}>Pick a date</button>
+                </div>
+                <span>Close without doing it</span>
+                <div className="atlas-task-unfinished-grid quiet">
+                  <button type="button" disabled={Boolean(saving)} onClick={() => void transition("changed_plan", window.prompt("What changed?", "")?.trim() || "Plan changed")}>Changed plan</button>
+                  <button type="button" disabled={Boolean(saving)} onClick={() => void transition("not_relevant", window.prompt("Why is this no longer relevant?", "")?.trim() || "Not relevant")}>Not relevant</button>
+                </div>
+              </section>
+            ) : null}
 
             {message ? <p className="atlas-task-page-message">{message}</p> : null}
           </article>
