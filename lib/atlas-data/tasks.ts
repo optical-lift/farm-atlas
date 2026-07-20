@@ -26,7 +26,7 @@ export async function getOwnerTaskRows(farmId: string): Promise<AtlasOwnerTaskRo
       "id, farm_id, zone_id, title, task_type, status, priority, due_date, unlock_text, blocker_text, completed_at, note, metadata, updated_at, parent_task_id",
     )
     .eq("farm_id", farmId)
-    .eq("metadata->>owner_task", "true")
+    .contains("metadata", { owner_task: true })
     .in("status", ["open", "blocked", "done"])
     .order("due_date", { ascending: true, nullsFirst: false })
     .limit(200);
