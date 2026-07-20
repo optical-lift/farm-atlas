@@ -73,9 +73,10 @@ function cropName(cropLabel: string, variety: string | null) {
   return variety.toLowerCase().includes(cropLabel.toLowerCase()) ? variety : `${variety} ${cropLabel}`;
 }
 
-function plantingRecordLabel(method: string | null, dateIso: string | null) {
+function plantingRecordLabel(method: string | null, dateIso: string | null, isGrowRoom: boolean) {
   if (!dateIso) return "";
   const date = prettyDate(dateIso);
+  if (isGrowRoom) return `Sown ${date}`;
   const normalized = (method || "").toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
   if (normalized.includes("transplant") || normalized.includes("plug") || normalized.includes("division")) return `Transplanted ${date}`;
   if (normalized.includes("direct_sow") || normalized === "sown" || normalized === "sow") return `Direct sown ${date}`;
@@ -146,9 +147,9 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
   const target = facts.targetSpacingInches;
   const isLettuceContainer = facts.cropLabel.toLowerCase().includes("lettuce");
   const displayCrop = useMemo(() => cropName(facts.cropLabel, facts.variety), [facts.cropLabel, facts.variety]);
-  const plantingRecord = plantingRecordLabel(facts.plantingMethod, facts.sownDate);
   const displayLocation = facts.locationLabel || initialLocation(facts.objectLabel);
   const isGrowRoom = displayLocation === "Grow Room";
+  const plantingRecord = plantingRecordLabel(facts.plantingMethod, facts.sownDate, isGrowRoom);
 
   useEffect(() => {
     let active = true;
