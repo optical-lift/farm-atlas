@@ -32,6 +32,12 @@ type ProductionContext = {
   projection_basis?: string;
 };
 
+type LinkedCropTask = AtlasTaskCard & {
+  crop_label?: string | null;
+  variety?: string | null;
+  crop_profile_metadata?: Record<string, unknown> | null;
+};
+
 const ALLOWED_RETURN_PATHS = new Set(["/", "/owner", "/marshall", "/children", "/task"]);
 
 function todayIso() {
@@ -84,6 +90,37 @@ function numberValue(value: unknown) {
   return null;
 }
 
+function isSowingTask(task: AtlasTaskCard) {
+  const route = `${task.action_key ?? ""} ${task.task_type ?? ""} ${metaString(task, "work_route")}`.toLowerCase();
+  return route.includes("sow") || route.includes("seed");
+}
+
+function sowingFacts(task: AtlasTaskCard, fallbackLocation: string) {
+  if (!isSowingTask(task)) return null;
+  const linked = task as LinkedCropTask;
+  const profile = linked.crop_profile_metadata ?? {};
+  const seedPacket = metaString(task, "seed_packet_name")
+    || metaString(task, "seed_variety")
+    || metaString(task, "crop_variety")
+    || linked.variety
+    || linked.crop_label
+    || "Seed packet";
+  const objectLocations = task.objects.map((object) => object.object_label).filter(Boolean);
+  const location = objectLocations.length
+    ? objectLocations.join(" · ")
+    : metaString(task, "location_label") || fallbackLocation || "Elm Farm";
+  const spacingLines = stringArray(profile.spacing_lines)
+    .filter((line) => /row|spacing|inch/i.test(line));
+  const rowsPerBed = numberValue(profile.rows_per_3ft_bed);
+  const spacingInches = numberValue(profile.in_row_spacing_in);
+  const spacing = spacingLines.length
+    ? spacingLines.join(" · ")
+    : [rowsPerBed !== null ? `${rowsPerBed} rows per 3 ft bed` : "", spacingInches !== null ? `${spacingInches} in spacing` : ""]
+      .filter(Boolean)
+      .join(" · ");
+  return { seedPacket, location, spacing };
+}
+
 function returnDestination(fallback: string) {
   const params = new URLSearchParams(window.location.search);
   const returnTo = params.get("returnTo");
@@ -115,6 +152,7 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
   const rowsPerBed = numberValue(production?.rows_per_bed);
   const spacingInches = numberValue(production?.target_spacing_inches);
   const stemsPerPlant = numberValue(production?.marketable_stems_per_plant);
+  const sowing = sowingFacts(task, display.location);
 
   async function refreshTask() {
     const response = await fetch(`/api/atlas/task-cards?taskId=${encodeURIComponent(task.task_id)}`, {
@@ -211,7 +249,14 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
             <div className="atlas-task-page-kicker"><span>Up Now</span><small>{task.task_type.replaceAll("_", " ")}</small></div>
             <h1>{display.title.toUpperCase()}</h1>
             <div className="atlas-task-page-time-row"><span>{metaString(task, "display_action") || task.action_key || "Work"}</span><span>{prettyDate(task.due_date)}</span></div>
-            <section className="atlas-task-place-card"><small>Location</small><strong>{display.location || "Elm Farm"}</strong></section>
+
+            {sowing ? (
+              <div className="atlas-task-sowing-facts">
+                <p><b>Seed packet</b> {sowing.seedPacket}</p>
+                <p><b>Location</b> {sowing.location}</p>
+                {sowing.spacing ? <p><b>Spacing</b> {sowing.spacing}</p> : null}
+              </div>
+            ) : <section className="atlas-task-place-card"><small>Location</small><strong>{display.location || "Elm Farm"}</strong></section>}
 
             {production ? (
               <section className="atlas-task-detail-card atlas-production-context-card">
