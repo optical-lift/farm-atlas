@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAuthorizedOwnerTaskById } from "@/lib/atlas-data/owner-task-detail";
+import { ownerMembershipForTask } from "@/lib/atlas/owner-task-access-core.js";
 import { getAtlasSession } from "@/lib/atlas/session";
 import {
   recordTaskTransition,
@@ -45,11 +46,7 @@ export async function POST(
 
   const { taskId } = await params;
   const task = await getAuthorizedOwnerTaskById(taskId);
-  const ownerMembership = task
-    ? session.memberships.find(
-        (membership) => membership.farmId === task.farm_id && membership.role === "owner",
-      )
-    : null;
+  const ownerMembership = ownerMembershipForTask(session, task);
 
   if (!task || !ownerMembership) {
     return NextResponse.json(
