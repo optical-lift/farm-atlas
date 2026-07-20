@@ -6,6 +6,7 @@ import {
   isValidInviteId,
   membershipHomeForRole,
   safeInviteRedirect,
+  validateInvitePassword,
 } from "../lib/atlas/invite-flow-core.js";
 
 const INVITE_ID = "8b6ddf06-a780-4e97-9d10-443e32794824";
@@ -48,4 +49,19 @@ test("invitation sending remains disabled unless explicitly enabled", () => {
   assert.equal(invitationsEnabled("false"), false);
   assert.equal(invitationsEnabled("TRUE"), false);
   assert.equal(invitationsEnabled("true"), true);
+});
+
+test("requires a matching twelve-character password during acceptance", () => {
+  assert.deepEqual(validateInvitePassword("too-short", "too-short"), {
+    ok: false,
+    error: "Use at least 12 characters for the Atlas password.",
+  });
+  assert.deepEqual(validateInvitePassword("long-enough-password", "different-password"), {
+    ok: false,
+    error: "The passwords do not match.",
+  });
+  assert.deepEqual(
+    validateInvitePassword("long-enough-password", "long-enough-password"),
+    { ok: true, password: "long-enough-password" },
+  );
 });
