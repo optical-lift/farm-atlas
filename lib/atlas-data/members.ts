@@ -40,6 +40,8 @@ export async function getOwnerMemberDirectory(
     farmId: access.membership.farmId,
     farmName: access.membership.farmName ?? access.membership.farmKey ?? "Farm",
     memberships: rows.filter((row) => row.record_kind === "membership"),
-    inviteDrafts: rows.filter((row) => row.record_kind === "invite"),
+    inviteDrafts: rows.filter(
+      (row) => row.record_kind === "invite" && row.status !== "accepted",
+    ),
   };
 }
