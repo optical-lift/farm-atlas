@@ -167,6 +167,17 @@ function canonicalScopeRows(taskCards: AtlasTaskCard[], scope: AtlasTaskCardScop
   return taskCards;
 }
 
+function listReadPath(pathname: string) {
+  return (
+    pathname === "/day" ||
+    pathname === "/overview/week" ||
+    pathname === "/overview/month" ||
+    pathname === "/owner" ||
+    pathname === "/marshall" ||
+    pathname === "/children"
+  );
+}
+
 export async function fetchAtlasTaskCards(
   input?: string | AtlasTaskCardFetchOptions,
 ): Promise<AtlasTaskCardsResponse> {
@@ -180,15 +191,20 @@ export async function fetchAtlasTaskCards(
   if (assignmentScope) params.set("scope", "all");
   else if (scope !== "farm") params.set("scope", scope);
 
-  const useHomeReadPath =
-    typeof window !== "undefined" &&
-    window.location.pathname === "/" &&
-    !options.taskId &&
-    scope === "farm";
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+  const useHomeReadPath = pathname === "/" && !options.taskId && scope === "farm";
+  const useListReadPath = listReadPath(pathname) && !options.taskId;
+
+  if (useListReadPath) {
+    params.delete("taskId");
+    params.set("scope", scope);
+  }
 
   const endpoint = useHomeReadPath
     ? "/api/atlas/home-task-cards"
-    : `/api/atlas/task-cards${params.toString() ? `?${params.toString()}` : ""}`;
+    : useListReadPath
+      ? `/api/atlas/task-list-cards?${params.toString()}`
+      : `/api/atlas/task-cards${params.toString() ? `?${params.toString()}` : ""}`;
 
   const response = await fetch(endpoint, {
     method: "GET",
