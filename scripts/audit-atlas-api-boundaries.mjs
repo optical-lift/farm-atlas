@@ -27,6 +27,10 @@ function endpointForRoute(path) {
     .replace(/\/\[[^/]+\]/g, "");
 }
 
+function moduleKey(path) {
+  return `@/${path.replace(/\.(?:ts|tsx|js|jsx)$/, "")}`;
+}
+
 const routeFiles = filesUnder("app/api/atlas").filter((path) => /\/route\.(?:ts|tsx|js|jsx)$/.test(path));
 const sourceFiles = [
   ...filesUnder("app"),
@@ -41,11 +45,24 @@ const offenders = routeFiles
     const endpoint = endpointForRoute(path);
     const methods = Array.from(source.matchAll(/export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE)/g), (match) => match[1]);
     const references = sourceFiles.filter((candidate) => read(candidate).includes(endpoint));
-    return { path, endpoint, methods, references };
+    const referenceConsumers = Object.fromEntries(references.map((reference) => {
+      if (!reference.startsWith("lib/")) return [reference, []];
+      const key = moduleKey(reference);
+      return [
+        reference,
+        sourceFiles.filter((candidate) => candidate !== reference && read(candidate).includes(key)),
+      ];
+    }));
+    return { path, endpoint, methods, references, referenceConsumers };
   });
 
 for (const offender of offenders) {
-  const refs = offender.references.length ? offender.references.join(",") : "none";
+  const refs = offender.references.length
+    ? offender.references.map((reference) => {
+      const consumers = offender.referenceConsumers[reference] ?? [];
+      return consumers.length ? `${reference}<-${consumers.join("+")}` : reference;
+    }).join(",")
+    : "none";
   console.log(`${offender.path}\t${offender.methods.join("+") || "unknown"}\trefs=${refs}`);
 }
 
