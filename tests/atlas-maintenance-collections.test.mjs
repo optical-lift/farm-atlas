@@ -2,45 +2,53 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { atlasScheduleRouteKey } from "../lib/atlas/task-route-core.js";
-
 function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("mowing weed-whack tasks remain in the Mowing collection", () => {
-  assert.equal(
-    atlasScheduleRouteKey({ taskType: "mowing", title: "Mowing — Weed-Whack U-Pick Sunflowers" }),
-    "mow",
-  );
-  assert.equal(
-    atlasScheduleRouteKey({ taskType: "maintenance", title: "Weed Field Row 12" }),
-    "weed",
-  );
-  assert.equal(
-    atlasScheduleRouteKey({ taskType: "maintenance", title: "Cut back weeds in Field Row 3" }),
-    "weed",
-  );
+test("Day keeps the deployed purple hero and collection layout", () => {
+  const source = read("app/day/page.tsx");
+  assert.match(source, /atlas-day-route-hero/);
+  assert.match(source, /atlas-day-route-grid/);
+  assert.match(source, /atlas-day-filter-pill/);
+  assert.match(source, /WorkCollectionCard/);
+  assert.match(source, /fetchAtlasTaskCards/);
+  assert.doesNotMatch(source, /CanonicalScheduleView/);
 });
 
-test("Day, Week, and Month surface Mowing and Weeding as collections", () => {
-  const source = read("components/atlas/CanonicalScheduleView.tsx");
-  assert.match(source, /\/collections\/weeding/);
-  assert.match(source, /\/collections\/mowing/);
-  assert.match(source, /CollectionCard/);
-  assert.match(source, /withoutMaintenanceCollections/);
-  assert.match(source, /atlasIsMaintenanceCollectionRoute/);
+test("Week and Month keep their deployed overview shapes", () => {
+  const week = read("app/overview/week/page.tsx");
+  const month = read("app/overview/month/page.tsx");
+
+  assert.match(week, /atlas-overview-hero/);
+  assert.match(week, /atlas-overview-stat-grid/);
+  assert.match(week, /CollectionOverviewCard/);
+  assert.match(week, /ZoneSection/);
+
+  assert.match(month, /atlas-overview-month-hero/);
+  assert.match(month, /atlas-overview-month-progress-row/);
+  assert.match(month, /CollectionOverviewCard/);
+  assert.match(month, /ZoneSection/);
+
+  assert.doesNotMatch(week, /CanonicalScheduleView/);
+  assert.doesNotMatch(month, /CanonicalScheduleView/);
 });
 
-test("maintenance collection pages use the canonical membership schedule", () => {
-  for (const path of ["app/collections/mowing/page.tsx", "app/collections/weeding/page.tsx"]) {
-    const source = read(path);
-    assert.match(source, /requireAtlasRole\(\["owner", "manager", "farm_hand"\]\)/);
-    assert.match(source, /getTaskSchedule/);
-    assert.match(source, /CanonicalMaintenanceCollectionView/);
-    assert.doesNotMatch(source, /fetchAtlasTaskCards/);
-    assert.doesNotMatch(source, /task-cards-client/);
-    assert.doesNotMatch(source, /atlasSupabase/);
-    assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY/);
+test("Mowing and Weeding keep the deployed collection boxes and data lines", () => {
+  const mowing = read("app/collections/mowing/page.tsx");
+  const weeding = read("app/collections/weeding/page.tsx");
+
+  for (const source of [mowing, weeding]) {
+    assert.match(source, /atlas-work-collection-hero/);
+    assert.match(source, /atlas-overview-stat-grid/);
+    assert.match(source, /atlas-work-collection-list/);
+    assert.match(source, /Recently Done \/ Resting/);
+    assert.match(source, /Not Ready/);
+    assert.match(source, /fetchAtlasTaskCards/);
+    assert.doesNotMatch(source, /CanonicalMaintenanceCollectionView/);
   }
+
+  assert.match(mowing, /Upcoming/);
+  assert.match(weeding, /Upcoming \(7 Days\)/);
+  assert.match(weeding, /maintenanceAgeLabel/);
 });

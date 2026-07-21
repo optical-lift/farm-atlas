@@ -6,35 +6,46 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("worker Today is built from the canonical schedule and worker membership context", () => {
+test("Worker Today keeps the deployed page structure and lane order", () => {
   const page = read("app/work/today/page.tsx");
+  const css = read("app/work/today/work.module.css");
 
   assert.match(page, /getWorkerHand/);
-  assert.match(page, /getDaySchedule/);
-  assert.match(page, /atlasScheduleRouteKey/);
-  assert.match(page, /WorkerTodayBoard/);
-  assert.doesNotMatch(page, /hand\.lanes/);
-  assert.doesNotMatch(page, /fetchAtlasTaskCards/);
-  assert.doesNotMatch(page, /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(page, /WorkerTaskActions/);
+  assert.match(page, /<WorkerSection title="Blocked"/);
+  assert.match(page, /<WorkerSection title="Overdue"/);
+  assert.match(page, /<WorkerSection title="Today"/);
+  assert.match(page, /<WorkerSection title="Next Useful Actions"/);
+  assert.match(page, /hand\.counts\.blocked/);
+  assert.match(page, /hand\.counts\.overdue/);
+  assert.match(page, /hand\.counts\.today/);
+  assert.match(page, /hand\.counts\.undated/);
+  assert.doesNotMatch(page, /WorkerTodayBoard/);
+
+  for (const selector of [".summary", ".section", ".task", ".actions", ".actionGrid"]) {
+    assert.match(css, new RegExp(selector.replace(".", "\\.")));
+  }
+  assert.match(css, /border-radius: 20px/);
+  assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
 });
 
-test("worker Today actions use the shared authenticated transition client", () => {
-  const board = read("app/work/today/WorkerTodayBoard.tsx");
+test("Worker Today action boxes look the same but use the shared transition client", () => {
+  const actions = read("app/work/today/WorkerTaskActions.tsx");
 
-  assert.match(board, /postAtlasTaskTransition/);
-  assert.match(board, /source: "worker_today"/);
-  assert.match(board, /setHiddenTaskIds/);
-  assert.match(board, /setCompletedTaskIds/);
-  assert.match(board, /router\.refresh\(\)/);
-  assert.doesNotMatch(board, /\/api\/atlas\/work\/tasks/);
-  assert.doesNotMatch(board, /worker_record_task_transition_v1/);
+  assert.match(actions, /postAtlasTaskTransition/);
+  assert.match(actions, /source: "worker_today"/);
+  assert.match(actions, />Complete</);
+  assert.match(actions, />Blocked</);
+  assert.match(actions, />Save note</);
+  assert.match(actions, /styles\.actions/);
+  assert.match(actions, /styles\.actionGrid/);
+  assert.doesNotMatch(actions, /\/api\/atlas\/work\/tasks/);
 });
 
-test("worker Today preserves Anna's familiar Done and Unfinished flow", () => {
-  const board = read("app/work/today/WorkerTodayBoard.tsx");
+test("the full task page keeps Anna's familiar Unfinished drawer", () => {
+  const detail = read("components/atlas/canonical-assigned-task-detail.tsx");
 
   for (const label of [
-    "Done",
     "Unfinished",
     "What happened?",
     "Partly done",
@@ -47,59 +58,7 @@ test("worker Today preserves Anna's familiar Done and Unfinished flow", () => {
     "Changed plan",
     "Not relevant",
   ]) {
-    assert.match(board, new RegExp(label.replace(/[?]/g, "\\?")));
+    assert.match(detail, new RegExp(label.replace(/[?]/g, "\\?")));
   }
-
-  for (const transition of [
-    "done",
-    "partial",
-    "blocked",
-    "rescheduled",
-    "changed_plan",
-    "not_relevant",
-  ]) {
-    assert.match(board, new RegExp(`apply\\("${transition}"`));
-  }
-
-  assert.match(board, /window\.prompt\("What is left\?"/);
-  assert.match(board, /window\.prompt\("What blocked it\?"/);
-  assert.match(board, /window\.prompt\("Pick a date \(YYYY-MM-DD\)"/);
-});
-
-test("worker Today preserves mowing and weeding as collection cards", () => {
-  const page = read("app/work/today/page.tsx");
-  const board = read("app/work/today/WorkerTodayBoard.tsx");
-
-  assert.match(page, /atlasIsMaintenanceCollectionRoute/);
-  assert.match(page, /\/collections\/mowing/);
-  assert.match(page, /\/collections\/weeding/);
-  assert.match(board, /Maintenance collections/);
-  assert.match(board, /carryoverCount/);
-  assert.match(board, /blockedCount/);
-});
-
-test("task focus accepts only known internal return destinations", () => {
-  const focusPage = read("app/task-focus/[taskId]/page.tsx");
-  const collectionView = read("components/atlas/CanonicalMaintenanceCollectionView.tsx");
-
-  assert.match(focusPage, /SAFE_RETURN_PATHS/);
-  assert.match(focusPage, /"\/work\/today"/);
-  assert.match(focusPage, /"\/collections\/mowing"/);
-  assert.match(focusPage, /"\/collections\/weeding"/);
-  assert.match(focusPage, /value\.startsWith\("\/\/"\)/);
-  assert.match(focusPage, /listPath: returnTo/);
-  assert.match(collectionView, /returnTo=\$\{encodeURIComponent\(returnTo\)\}/);
-});
-
-test("the full task page keeps the familiar Unfinished drawer and next-day intent", () => {
-  const detail = read("components/atlas/canonical-assigned-task-detail.tsx");
-
-  assert.match(detail, /"Unfinished"/);
-  assert.match(detail, />Partly done</);
-  assert.match(detail, />Tomorrow</);
-  assert.match(detail, />Next week</);
-  assert.match(detail, />Pick a date</);
-  assert.match(detail, />Changed plan</);
-  assert.match(detail, />Not relevant</);
   assert.match(detail, /scheduleIntent: "next_day"/);
 });

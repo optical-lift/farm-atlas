@@ -1,167 +1,137 @@
 import Link from "next/link";
 
-import { getDaySchedule, type TaskScheduleProjection } from "@/lib/atlas-data/task-schedule";
+import type { WorkerHandTask } from "@/lib/atlas-data/worker-hand";
 import { getWorkerHand } from "@/lib/atlas-data/worker-hand";
 import { requireAtlasRole } from "@/lib/atlas/role-access";
-import {
-  atlasIsMaintenanceCollectionRoute,
-  atlasScheduleRouteKey,
-  ATLAS_SCHEDULE_ROUTE_LABELS,
-} from "@/lib/atlas/task-route-core.js";
-import WorkerTodayBoard, {
-  type WorkerCollectionCard,
-  type WorkerTodayTask,
-} from "./WorkerTodayBoard";
+import WorkerTaskActions from "./WorkerTaskActions";
 import styles from "./work.module.css";
 
 export const dynamic = "force-dynamic";
 
-type ScheduleTask = TaskScheduleProjection["days"][number]["tasks"][number];
-
-function uniqueTasks(tasks: ScheduleTask[]) {
-  const seen = new Set<string>();
-  return tasks.filter((task) => {
-    if (!task.taskId || seen.has(task.taskId)) return false;
-    seen.add(task.taskId);
-    return true;
+function prettyDate(dateIso: string | null) {
+  if (!dateIso) return "No due date";
+  const date = new Date(`${dateIso}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return dateIso;
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
   });
 }
 
-function isCollectionTask(task: ScheduleTask) {
-  return atlasIsMaintenanceCollectionRoute(atlasScheduleRouteKey(task));
+function WorkerTaskCard({ task }: { task: WorkerHandTask }) {
+  return (
+    <article className={`${styles.task} ${task.lane === "blocked" ? styles.blocked : ""}`}>
+      <div className={styles.taskTop}>
+        <h3>{task.title}</h3>
+        <span className={styles.date}>{prettyDate(task.dueDate)}</span>
+      </div>
+      {task.zoneLabel || task.zoneKey ? (
+        <p className={styles.location}>{task.zoneLabel ?? task.zoneKey}</p>
+      ) : null}
+      {task.instruction ? <p className={styles.instruction}>{task.instruction}</p> : null}
+      {task.blocker ? <p className={styles.instruction}>Blocked: {task.blocker}</p> : null}
+      {task.totalSteps ? (
+        <p className={styles.progress}>
+          {task.completedSteps}/{task.totalSteps} checklist steps complete
+        </p>
+      ) : null}
+      {task.canAct && task.taskId ? <WorkerTaskActions taskId={task.taskId} /> : null}
+    </article>
+  );
 }
 
-function toWorkerTask(task: ScheduleTask): WorkerTodayTask {
-  return {
-    taskId: task.taskId,
-    title: task.title,
-    taskType: task.taskType,
-    status: task.status,
-    priority: task.priority,
-    dueDate: task.dueDate,
-    instruction: task.instruction,
-    blocker: task.blocker,
-    zone: {
-      label: task.zone.label,
-      key: task.zone.key,
-    },
-    object: {
-      label: task.object.label,
-      key: task.object.key,
-    },
-    totalSteps: task.totalSteps,
-    completedSteps: task.completedSteps,
-    canAct: task.canAct,
-  };
-}
+function WorkerSection({
+  title,
+  tasks,
+  empty,
+}: {
+  title: string;
+  tasks: WorkerHandTask[];
+  empty: string;
+}) {
+  if (!tasks.length) return null;
 
-function collectionPreview(tasks: ScheduleTask[]) {
-  const locations = tasks
-    .map((task) => task.object.label || task.zone.label)
-    .filter((value): value is string => Boolean(value));
-  return [...new Set(locations)].slice(0, 3).join(" · ") || "Open the collection to see the work areas.";
-}
-
-function buildCollectionCards(
-  today: string,
-  scheduled: ScheduleTask[],
-  carryover: ScheduleTask[],
-): WorkerCollectionCard[] {
-  return (["weed", "mow"] as const).flatMap((key) => {
-    const todayTasks = scheduled.filter((task) => atlasScheduleRouteKey(task) === key && task.status !== "done");
-    const carryoverTasks = carryover.filter((task) => atlasScheduleRouteKey(task) === key && task.status !== "done");
-    const all = uniqueTasks([...todayTasks, ...carryoverTasks]);
-    if (!all.length) return [];
-
-    return [{
-      key,
-      label: ATLAS_SCHEDULE_ROUTE_LABELS[key],
-      href: key === "mow" ? "/collections/mowing" : "/collections/weeding",
-      todayCount: todayTasks.filter((task) => task.dueDate === today).length,
-      carryoverCount: carryoverTasks.length,
-      blockedCount: all.filter((task) => task.status === "blocked").length,
-      preview: collectionPreview(all),
-    }];
-  });
+  return (
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <h2>{title}</h2>
+        <span>{tasks.length}</span>
+      </div>
+      <div className={styles.list}>
+        {tasks.map((task) => (
+          <WorkerTaskCard
+            key={task.taskId ?? `${task.title}-${task.dueDate ?? "undated"}`}
+            task={task}
+          />
+        ))}
+        {!tasks.length ? <p className={styles.empty}>{empty}</p> : null}
+      </div>
+    </section>
+  );
 }
 
 export default async function WorkerTodayPage() {
   const access = await requireAtlasRole(["owner", "manager", "farm_hand"]);
   const hand = await getWorkerHand(access);
 
-  if (!hand.worker) {
-    return (
-      <main className={styles.page}>
-        <section className={styles.shell}>
-          <header className={styles.header}>
-            <div>
-              <p className={styles.eyebrow}>{hand.farm.name} · Today</p>
-              <h1>Farm work</h1>
-            </div>
-            <Link className={styles.back} href="/">Farm home</Link>
-          </header>
+  return (
+    <main className={styles.page}>
+      <section className={styles.shell} aria-labelledby="worker-title">
+        <header className={styles.header}>
+          <div>
+            <p className={styles.eyebrow}>{hand.farm.name} · Today</p>
+            <h1 id="worker-title">{hand.worker?.displayName ?? "Farm work"}</h1>
+            <p className={styles.identity}>{access.session.displayName}</p>
+          </div>
+          <Link className={styles.back} href="/">
+            Farms
+          </Link>
+        </header>
+
+        {!hand.worker ? (
           <section className={styles.emptyState}>
             <h2>No active Farm Hand membership yet</h2>
             <p>
               {hand.unassignedWorkerTaskCount
-                ? `${hand.unassignedWorkerTaskCount} open worker tasks are waiting for a real farm membership.`
+                ? `${hand.unassignedWorkerTaskCount} open worker tasks are waiting for a real farm membership before they can be shown or acted on.`
                 : "There is no Farm Hand membership available for this farm."}
             </p>
-            {access.membership.role === "owner" ? <Link href="/owner/members">Open People &amp; Access</Link> : null}
+            {access.membership.role === "owner" ? (
+              <Link href="/owner/members">Open People &amp; Access</Link>
+            ) : null}
           </section>
-        </section>
-      </main>
-    );
-  }
+        ) : (
+          <>
+            {!hand.canAct ? (
+              <p className={styles.inspect}>
+                Read-only worker view. Task actions remain available only to the assigned Farm Hand.
+              </p>
+            ) : null}
 
-  const schedule = await getDaySchedule(access, hand.forDate, hand.worker.membershipId);
-  const scheduled = schedule.days[0]?.tasks ?? [];
-  const carryover = uniqueTasks([
-    ...schedule.carryover.blocked,
-    ...schedule.carryover.overdue,
-    ...schedule.carryover.undated,
-  ]);
-  const collections = buildCollectionCards(hand.forDate, scheduled, carryover);
+            <section className={styles.summary} aria-label="Today work summary">
+              <article><strong>{hand.counts.blocked}</strong><span>blocked</span></article>
+              <article><strong>{hand.counts.overdue}</strong><span>overdue</span></article>
+              <article><strong>{hand.counts.today}</strong><span>today</span></article>
+              <article><strong>{hand.counts.undated}</strong><span>next</span></article>
+            </section>
 
-  const todayTasks = scheduled
-    .filter((task) => task.status === "open" && !isCollectionTask(task))
-    .map(toWorkerTask);
-  const blockedTasks = uniqueTasks([
-    ...scheduled.filter((task) => task.status === "blocked"),
-    ...schedule.carryover.blocked,
-  ])
-    .filter((task) => !isCollectionTask(task))
-    .map(toWorkerTask);
-  const carryoverTasks = uniqueTasks([
-    ...schedule.carryover.overdue,
-    ...schedule.carryover.undated,
-  ])
-    .filter((task) => task.status === "open" && !isCollectionTask(task))
-    .map(toWorkerTask);
-
-  const allOpenToday = scheduled.filter((task) => task.status !== "done");
-  const allBlocked = uniqueTasks([
-    ...scheduled.filter((task) => task.status === "blocked"),
-    ...schedule.carryover.blocked,
-  ]);
-
-  return (
-    <WorkerTodayBoard
-      farmName={hand.farm.name}
-      workerName={hand.worker.displayName}
-      viewerName={access.session.displayName}
-      forDate={hand.forDate}
-      canAct={hand.canAct}
-      collections={collections}
-      todayTasks={todayTasks}
-      blockedTasks={blockedTasks}
-      carryoverTasks={carryoverTasks}
-      summary={{
-        todayOpen: allOpenToday.length,
-        carryover: carryover.length,
-        blocked: allBlocked.length,
-        done: scheduled.filter((task) => task.status === "done").length,
-      }}
-    />
+            {hand.counts.total ? (
+              <>
+                <WorkerSection title="Blocked" tasks={hand.lanes.blocked} empty="No blocked work." />
+                <WorkerSection title="Overdue" tasks={hand.lanes.overdue} empty="No overdue work." />
+                <WorkerSection title="Today" tasks={hand.lanes.today} empty="No work due today." />
+                <WorkerSection title="Next Useful Actions" tasks={hand.lanes.undated} empty="No undated work." />
+              </>
+            ) : (
+              <section className={styles.emptyState}>
+                <h2>No work is ready</h2>
+                <p>There are no assigned or farm-shared tasks due for this worker today.</p>
+              </section>
+            )}
+          </>
+        )}
+      </section>
+    </main>
   );
 }
