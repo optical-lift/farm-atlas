@@ -34,9 +34,9 @@ test("Worker Today action boxes look the same but use the shared transition clie
 
   assert.match(actions, /postAtlasTaskTransition/);
   assert.match(actions, /source: "worker_today"/);
-  assert.match(actions, />Complete</);
-  assert.match(actions, />Blocked</);
-  assert.match(actions, />Save note</);
+  assert.match(actions, /"Complete"/);
+  assert.match(actions, /"Blocked"/);
+  assert.match(actions, /"Save note"/);
   assert.match(actions, /styles\.actions/);
   assert.match(actions, /styles\.actionGrid/);
   assert.doesNotMatch(actions, /\/api\/atlas\/work\/tasks/);
