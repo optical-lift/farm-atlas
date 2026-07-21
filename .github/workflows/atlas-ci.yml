@@ -30,16 +30,8 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${GITHUB_SHA}" \
             | tar -xz --strip-components=1 -C source
 
-      - name: List service-role Atlas API routes
-        shell: bash
-        run: |
-          cd source
-          offenders="$(grep -RIlE 'SUPABASE_SERVICE_ROLE_KEY|atlasSupabase' app/api/atlas || true)"
-          if [ -n "$offenders" ]; then
-            echo "Interactive Atlas API routes using the service-role client:"
-            echo "$offenders"
-            exit 1
-          fi
+      - name: Audit service-role Atlas API routes
+        run: cd source && node scripts/audit-atlas-api-boundaries.mjs
 
       - name: List direct task-transition RPC routes
         shell: bash
