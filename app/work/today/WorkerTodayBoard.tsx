@@ -256,7 +256,15 @@ export default function WorkerTodayBoard({
     router.refresh();
   }
 
-  const visibleOpenCount = Math.max(0, summary.todayOpen - hiddenTaskIds.size);
+  const hiddenTodayCount = [...todayTasks, ...blockedTasks.filter((task) => task.dueDate === forDate)]
+    .filter((task) => task.taskId && hiddenTaskIds.has(task.taskId)).length;
+  const hiddenCarryoverCount = [...carryoverTasks, ...blockedTasks.filter((task) => task.dueDate !== forDate)]
+    .filter((task) => task.taskId && hiddenTaskIds.has(task.taskId)).length;
+  const hiddenBlockedCount = blockedTasks
+    .filter((task) => task.taskId && hiddenTaskIds.has(task.taskId)).length;
+  const visibleOpenCount = Math.max(0, summary.todayOpen - hiddenTodayCount);
+  const visibleCarryoverCount = Math.max(0, summary.carryover - hiddenCarryoverCount);
+  const visibleBlockedCount = Math.max(0, summary.blocked - hiddenBlockedCount);
 
   return (
     <main className={styles.page}>
@@ -275,8 +283,8 @@ export default function WorkerTodayBoard({
 
         <section className={styles.summary} aria-label="Today work summary">
           <article><strong>{visibleOpenCount}</strong><span>today</span></article>
-          <article><strong>{summary.carryover}</strong><span>carryover</span></article>
-          <article><strong>{summary.blocked}</strong><span>blocked</span></article>
+          <article><strong>{visibleCarryoverCount}</strong><span>carryover</span></article>
+          <article><strong>{visibleBlockedCount}</strong><span>blocked</span></article>
           <article><strong>{summary.done + hiddenTaskIds.size}</strong><span>done</span></article>
         </section>
 
