@@ -1,72 +1,19 @@
 # Atlas Backend Foundation Checkpoint — 2026-07-21
 
-## Release state
+Atlas now has one membership-aware operational boundary while retaining the deployed visual interface as the presentation source of truth. Day, Week, Month, Mowing, Weeding, Owner, Worker Today, and Worker Today CSS remain identical to deployed commit `3c5bacaae61a411ae897dc9994d0b7d08ca27792`.
 
-Atlas now has one membership-aware operational boundary while retaining the deployed visual interface as the presentation source of truth.
+Every Atlas API route uses the signed-in user's cookie-backed Supabase session. There are zero Atlas API service-role routes. Anonymous execution is revoked for the new database functions; authenticated execution is constrained by active Elm Farm membership and the applicable role or assignment rule. `/api/atlas/task-transition` is the only active task-result mutation endpoint.
 
-The Day, Week, Month, Mowing, Weeding, Owner, Worker Today, and Worker Today CSS files remain identical to deployed commit `3c5bacaae61a411ae897dc9994d0b7d08ca27792`.
+Anna retains Done, Unfinished, Partly done, Blocked, Tomorrow, Next week, Pick a date, Changed plan, Not relevant, checklist Mark done, and checklist Reopen. The transition engine preserves field logs, object history, checklist movement, recurring mowing generation, and duplicate-click idempotency.
+
+The operational audit repaired objective defects: Entry Billboard sowing classification and bed links, duplicate checklist children, blocked checklist normalization, terminal-parent checklist generation, iris child dates, BW3–BW5 Teddy links, BB8–BB11 July 27 production timing, stale checklist children, and duplicate active engine prevention.
+
+Ten July 20 carryovers remain open for human field-status decisions: grow-room basil readiness, lemon basil cuttings, Barn Beds mowing, Corral mowing, U-Pick walkway mowing, U-Pick sunflower weed-whacking, Rose Queen/Violet patching, FR1 cosmos patching, FR17 Horizon patching, and FR18 weeding.
+
+The production, planting-claim, object-content, and crop-cycle graph was reconciled without flattening bed-level history. Historical Cosmos, pollenless sunflower, Teddy, and Zinnia successions now link to real bed crop cycles; the BW3–BW5 Teddy interplant is recorded as the July 18 succession; MG10 has a dedicated California Giant Zinnia cycle; BB4 Teddy, FR1 Cosmos, and FR16 ProCut Orange claim continuity is repaired; and FR16/FR17 content identities reflect their July 14 reset sowings.
+
+Current queried invariants return zero issues for unusable Anna locations, metadata-only assignments, terminal-cycle task links, active children under terminal parents, duplicate active engine instances, blocked tasks without reasons, production state/date/task/cycle mismatches, claims without contents or cycles, and active or planned crop cycles without a growing object.
+
+Rollback-only proofs passed across task transitions, recurring mowing, field logs, closeouts, germination, production changes, regeneration, mark-sown, planting claims, crop cycles, and rule-plan creation. Atlas CI run 201 passed the zero-service-role API audit, transition guardrails, homepage membership guard, complete repository tests, and complete Next.js production build.
 
 PR #43 remains draft and unmerged pending the intentional Vercel release and post-deploy visual/mobile verification.
-
-## Membership and API boundary
-
-Every Atlas API route now uses the signed-in user's cookie-backed Supabase session. There are zero Atlas API service-role routes.
-
-Membership-scoped contracts cover task cards, homepage work, owner and Farm-Hand task transitions, the object workbench, field logs, closeouts, germination, the zone registry, and production planning.
-
-Anonymous execution is revoked for the new database functions. Authenticated execution remains constrained inside each function by the active Elm Farm membership and applicable role or assignment rule.
-
-`/api/atlas/task-transition` is the only active task-result mutation endpoint. CI rejects service-role API routes, direct task-transition RPC bypasses, and references to the removed worker transition endpoint.
-
-## Anna compatibility
-
-Anna retains Done, Unfinished, Partly done, Blocked, Tomorrow, Next week, Pick a date, Changed plan, Not relevant, checklist Mark done, and checklist Reopen.
-
-The transition engine preserves field logs, object history, checklist movement, recurring mowing generation, and duplicate-click idempotency.
-
-## Live task repairs
-
-The operational audit repaired only objective defects:
-
-- removed six Entry Billboard sowing tasks from the Weeding collection
-- attached EB1–EB6 to their real parent sowing tasks
-- retained one spray-gated checklist child per Entry Billboard bed
-- prevented terminal sowing parents from generating new open checklist work
-- moved three iris checklist dates with their July 23 parent
-- attached BW3–BW5 to the completed Teddy interplant record
-- aligned BB8–BB11 Teddy succession timing and projections to the July 27 post-spray sowing date
-- closed stale checklist children and prevented stale metadata from reopening terminal or blocked states
-- prevented duplicate active engine instances
-
-Ten July 20 carryovers remain open because their actual field status requires a human decision rather than a structural database repair:
-
-- Check whether grow-room basil is ready to transplant
-- Take lemon basil cuttings to root in water
-- Mowing — Barn Beds
-- Mowing — Mow Corral
-- Mowing — U-Pick Walkways + Middle Lane
-- Mowing — Weed-Whack U-Pick Sunflowers
-- Patch 1/3 Rose Queen + 2/3 Violet seed — Grow Room seed shelves
-- Patch Anna mixed cosmos seed — Field Row 1
-- Patch ProCut Horizon seed — Field Row 17
-- Weed Field Row 18
-
-## Crop and production reconciliation
-
-The production, planting-claim, object-content, and crop-cycle graph was reconciled without flattening bed-level history:
-
-- linked historical Cosmos, pollenless sunflower, Teddy, and Zinnia successions to existing bed crop cycles
-- recorded the completed BW3–BW5 Teddy interplant as the July 18 succession
-- preserved multi-bed cycle IDs in succession metadata
-- created a dedicated MG10 California Giant Zinnia cycle within the owner-confirmed mixed sowing
-- repaired BB4 Teddy, FR1 Cosmos, and FR16 ProCut Orange planting-claim continuity
-- corrected the FR16 and FR17 content identities to their July 14 reset sowings
-- required future production mark-sown actions to identify real growing objects
-
-Current queried invariants return zero issues for Anna tasks without a usable location, metadata-only Anna assignments, active tasks linked to terminal crop cycles, active children beneath terminal parents, duplicate active engine instances, blocked tasks without a reason, production state/date/task/cycle mismatches, planting claims without contents or cycles, and active or planned crop cycles without a growing object.
-
-## Verification
-
-Rollback-only proofs passed for all task transitions, recurring mowing, field logs, closeouts, germination flows, production policy and window changes, regeneration, mark-sown, planting claims, crop cycles, and rule-based plan creation.
-
-Atlas CI run 201 passed the zero-service-role API audit, transition guardrails, homepage membership guard, complete repository test suite, and complete Next.js production build.
