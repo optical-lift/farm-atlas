@@ -86,6 +86,10 @@ export async function POST(request: Request) {
       p_note: input.note,
       p_reason: input.reason,
       p_payload: input.payload,
+      p_target_date: input.targetDate,
+      p_lane_key: input.laneKey,
+      p_work_key: input.workKey,
+      p_existing_field_log_id: input.existingFieldLogId,
     });
     data = response.data;
     error = response.error;

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   postAtlasTaskTransition,
@@ -10,6 +10,7 @@ import {
   type AtlasTaskTransitionResponse,
 } from "@/lib/atlas/task-transition-client";
 import styles from "./work.module.css";
+import unfinishedStyles from "./unfinished.module.css";
 
 export type WorkerTodayTask = {
   taskId: string | null;
@@ -61,6 +62,29 @@ type WorkerTodayBoardProps = {
   };
 };
 
+type WorkerActionOptions = {
+  note?: string | null;
+  reason?: string | null;
+  targetDate?: string | null;
+};
+
+function todayIso() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function addDays(dateIso: string, days: number) {
+  const date = new Date(`${dateIso}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 function prettyDate(dateIso: string | null) {
   if (!dateIso) return "No due date";
   const date = new Date(`${dateIso}T12:00:00`);
@@ -89,17 +113,16 @@ function WorkerTaskCard({
   canAct: boolean;
   onResult: (taskId: string, transition: AtlasTaskTransition, result: AtlasTaskTransitionResponse) => void;
 }) {
-  const [note, setNote] = useState("");
+  const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const [working, setWorking] = useState<AtlasTaskTransition | null>(null);
   const [error, setError] = useState("");
   const href = taskHref(task);
 
-  async function apply(transition: "done" | "blocked" | "note") {
+  async function apply(
+    transition: AtlasTaskTransition,
+    options: WorkerActionOptions = {},
+  ) {
     if (!task.taskId) return;
-    if ((transition === "blocked" || transition === "note") && !note.trim()) {
-      setError(transition === "blocked" ? "Describe what is blocking this task." : "Write the note before saving it.");
-      return;
-    }
 
     setWorking(transition);
     setError("");
@@ -108,17 +131,62 @@ function WorkerTaskCard({
       const result = await postAtlasTaskTransition({
         taskId: task.taskId,
         transition,
-        note: note.trim() || null,
-        reason: transition === "blocked" ? note.trim() : null,
+        targetDate: options.targetDate ?? null,
+        note: options.note ?? null,
+        reason: options.reason ?? options.note ?? null,
         payload: { source: "worker_today" },
       });
-      setNote("");
+      setUnfinishedOpen(false);
       onResult(task.taskId, transition, result);
     } catch (transitionError) {
       setError(transitionError instanceof Error ? transitionError.message : "Atlas could not save that task update.");
     } finally {
       setWorking(null);
     }
+  }
+
+  function partlyDone() {
+    const note = window.prompt("What is left?", "")?.trim() || "Partly done";
+    void apply("partial", { note, reason: note });
+  }
+
+  function markBlocked() {
+    const note = window.prompt("What blocked it?", "")?.trim() || "Blocked";
+    void apply("blocked", { note, reason: note });
+  }
+
+  function moveTomorrow() {
+    void apply("rescheduled", {
+      targetDate: addDays(todayIso(), 1),
+      reason: "Moved to next Elm Farm calendar day from worker Today",
+    });
+  }
+
+  function moveNextWeek() {
+    void apply("rescheduled", {
+      targetDate: addDays(todayIso(), 7),
+      reason: "Moved to next week from worker Today",
+    });
+  }
+
+  function pickDate() {
+    const date = window.prompt("Pick a date (YYYY-MM-DD)", task.dueDate || todayIso())?.trim();
+    if (date) {
+      void apply("rescheduled", {
+        targetDate: date,
+        reason: "Rescheduled from worker Today",
+      });
+    }
+  }
+
+  function changedPlan() {
+    const note = window.prompt("What changed?", "")?.trim() || "Plan changed";
+    void apply("changed_plan", { note, reason: note });
+  }
+
+  function notRelevant() {
+    const note = window.prompt("Why is this no longer relevant?", "")?.trim() || "Not relevant";
+    void apply("not_relevant", { note, reason: note });
   }
 
   return (
@@ -139,35 +207,48 @@ function WorkerTaskCard({
 
       {canAct && task.canAct && task.taskId ? (
         <div className={styles.quickActions}>
-          <button
-            className={styles.doneButton}
-            type="button"
-            disabled={working !== null}
-            onClick={() => void apply("done")}
-          >
-            {working === "done" ? "Completing…" : "Done"}
-          </button>
-          <details className={styles.moreActions}>
-            <summary>Add note or blocker</summary>
-            <div className={styles.moreActionsBody}>
-              <textarea
-                aria-label={`Note or blocker for ${task.title}`}
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                rows={3}
-                maxLength={4000}
-                placeholder="What changed, or what is blocking the work?"
-              />
-              <div className={styles.secondaryActions}>
-                <button type="button" disabled={working !== null || !note.trim()} onClick={() => void apply("blocked")}>
-                  {working === "blocked" ? "Saving…" : "Mark blocked"}
-                </button>
-                <button type="button" disabled={working !== null || !note.trim()} onClick={() => void apply("note")}>
-                  {working === "note" ? "Saving…" : "Save note"}
-                </button>
+          <div className={unfinishedStyles.primaryActions}>
+            <button
+              className={unfinishedStyles.doneButton}
+              type="button"
+              disabled={working !== null}
+              onClick={() => void apply("done")}
+            >
+              {working === "done" ? "Finishing" : "Done"}
+            </button>
+            <button
+              className={unfinishedStyles.unfinishedButton}
+              type="button"
+              disabled={working !== null}
+              onClick={() => setUnfinishedOpen((open) => !open)}
+            >
+              {unfinishedOpen ? "Close" : "Unfinished"}
+            </button>
+          </div>
+
+          {unfinishedOpen ? (
+            <section className={unfinishedStyles.panel}>
+              <strong>What happened?</strong>
+              <div className={unfinishedStyles.twoColumnGrid}>
+                <button type="button" disabled={working !== null} onClick={partlyDone}>Partly done</button>
+                <button type="button" className={unfinishedStyles.blockedButton} disabled={working !== null} onClick={markBlocked}>Blocked</button>
               </div>
-            </div>
-          </details>
+
+              <span>Reschedule</span>
+              <div className={unfinishedStyles.threeColumnGrid}>
+                <button type="button" disabled={working !== null} onClick={moveTomorrow}>Tomorrow</button>
+                <button type="button" disabled={working !== null} onClick={moveNextWeek}>Next week</button>
+                <button type="button" disabled={working !== null} onClick={pickDate}>Pick a date</button>
+              </div>
+
+              <span>Close without doing it</span>
+              <div className={unfinishedStyles.twoColumnGrid}>
+                <button type="button" disabled={working !== null} onClick={changedPlan}>Changed plan</button>
+                <button type="button" disabled={working !== null} onClick={notRelevant}>Not relevant</button>
+              </div>
+            </section>
+          ) : null}
+
           {error ? <p className={styles.error} role="alert">{error}</p> : null}
         </div>
       ) : null}
@@ -229,7 +310,22 @@ export default function WorkerTodayBoard({
 }: WorkerTodayBoardProps) {
   const router = useRouter();
   const [hiddenTaskIds, setHiddenTaskIds] = useState<Set<string>>(() => new Set());
+  const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(() => new Set());
   const [announcement, setAnnouncement] = useState("");
+
+  const sourceTaskIds = useMemo(
+    () => new Set(
+      [...todayTasks, ...blockedTasks, ...carryoverTasks]
+        .map((task) => task.taskId)
+        .filter((taskId): taskId is string => Boolean(taskId)),
+    ),
+    [blockedTasks, carryoverTasks, todayTasks],
+  );
+
+  useEffect(() => {
+    setHiddenTaskIds((current) => new Set([...current].filter((taskId) => sourceTaskIds.has(taskId))));
+    setCompletedTaskIds((current) => new Set([...current].filter((taskId) => sourceTaskIds.has(taskId))));
+  }, [sourceTaskIds]);
 
   const visibleToday = useMemo(
     () => todayTasks.filter((task) => !task.taskId || !hiddenTaskIds.has(task.taskId)),
@@ -245,13 +341,24 @@ export default function WorkerTodayBoard({
   );
 
   function handleResult(taskId: string, transition: AtlasTaskTransition, result: AtlasTaskTransitionResponse) {
-    if (transition === "done") {
+    if (["done", "rescheduled", "unfinished", "changed_plan", "not_relevant"].includes(transition)) {
       setHiddenTaskIds((current) => new Set(current).add(taskId));
+    }
+    if (transition === "done") {
+      setCompletedTaskIds((current) => new Set(current).add(taskId));
       setAnnouncement(result.nextTaskId ? "Completed. The next rotation was created." : "Completed.");
+    } else if (transition === "partial") {
+      setAnnouncement("Partly done saved.");
     } else if (transition === "blocked") {
       setAnnouncement("Blocker saved.");
+    } else if (transition === "rescheduled" || transition === "unfinished") {
+      setAnnouncement("Task moved.");
+    } else if (transition === "changed_plan") {
+      setAnnouncement("Changed plan saved.");
+    } else if (transition === "not_relevant") {
+      setAnnouncement("Task closed as not relevant.");
     } else {
-      setAnnouncement("Note saved.");
+      setAnnouncement("Saved.");
     }
     router.refresh();
   }
@@ -285,7 +392,7 @@ export default function WorkerTodayBoard({
           <article><strong>{visibleOpenCount}</strong><span>today</span></article>
           <article><strong>{visibleCarryoverCount}</strong><span>carryover</span></article>
           <article><strong>{visibleBlockedCount}</strong><span>blocked</span></article>
-          <article><strong>{summary.done + hiddenTaskIds.size}</strong><span>done</span></article>
+          <article><strong>{summary.done + completedTaskIds.size}</strong><span>done</span></article>
         </section>
 
         {collections.length ? (

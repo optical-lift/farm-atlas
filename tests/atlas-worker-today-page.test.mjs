@@ -24,9 +24,46 @@ test("worker Today actions use the shared authenticated transition client", () =
   assert.match(board, /postAtlasTaskTransition/);
   assert.match(board, /source: "worker_today"/);
   assert.match(board, /setHiddenTaskIds/);
+  assert.match(board, /setCompletedTaskIds/);
   assert.match(board, /router\.refresh\(\)/);
   assert.doesNotMatch(board, /\/api\/atlas\/work\/tasks/);
   assert.doesNotMatch(board, /worker_record_task_transition_v1/);
+});
+
+test("worker Today preserves Anna's familiar Done and Unfinished flow", () => {
+  const board = read("app/work/today/WorkerTodayBoard.tsx");
+
+  for (const label of [
+    "Done",
+    "Unfinished",
+    "What happened?",
+    "Partly done",
+    "Blocked",
+    "Reschedule",
+    "Tomorrow",
+    "Next week",
+    "Pick a date",
+    "Close without doing it",
+    "Changed plan",
+    "Not relevant",
+  ]) {
+    assert.match(board, new RegExp(label.replace(/[?]/g, "\\?")));
+  }
+
+  for (const transition of [
+    "done",
+    "partial",
+    "blocked",
+    "rescheduled",
+    "changed_plan",
+    "not_relevant",
+  ]) {
+    assert.match(board, new RegExp(`apply\\("${transition}"`));
+  }
+
+  assert.match(board, /window\.prompt\("What is left\?"/);
+  assert.match(board, /window\.prompt\("What blocked it\?"/);
+  assert.match(board, /window\.prompt\("Pick a date \(YYYY-MM-DD\)"/);
 });
 
 test("worker Today preserves mowing and weeding as collection cards", () => {
@@ -52,4 +89,17 @@ test("task focus accepts only known internal return destinations", () => {
   assert.match(focusPage, /value\.startsWith\("\/\/"\)/);
   assert.match(focusPage, /listPath: returnTo/);
   assert.match(collectionView, /returnTo=\$\{encodeURIComponent\(returnTo\)\}/);
+});
+
+test("the full task page keeps the familiar Unfinished drawer and next-day intent", () => {
+  const detail = read("components/atlas/canonical-assigned-task-detail.tsx");
+
+  assert.match(detail, />Unfinished</);
+  assert.match(detail, />Partly done</);
+  assert.match(detail, />Tomorrow</);
+  assert.match(detail, />Next week</);
+  assert.match(detail, />Pick a date</);
+  assert.match(detail, />Changed plan</);
+  assert.match(detail, />Not relevant</);
+  assert.match(detail, /scheduleIntent: "next_day"/);
 });

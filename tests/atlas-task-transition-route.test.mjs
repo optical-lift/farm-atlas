@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  ATLAS_FARM_HAND_TRANSITIONS,
   AtlasTaskTransitionInputError,
   atlasTaskTransitionRpcForRole,
   normalizeAtlasTaskTransitionInput,
@@ -67,21 +68,46 @@ test("rescheduling requires an ISO target date", () => {
   );
 });
 
-test("role routing keeps owner and Farm-Hand mutation boundaries separate", () => {
+test("next-day intent preserves the familiar Tomorrow action", () => {
+  const result = normalizeAtlasTaskTransitionInput({
+    taskId: TASK_ID,
+    transition: "rescheduled",
+    idempotencyKey: "task-request-next-day",
+    payload: { scheduleIntent: "next_day" },
+  });
+
+  assert.match(result.targetDate, /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test("role routing preserves every familiar Farm-Hand outcome", () => {
   assert.equal(
     atlasTaskTransitionRpcForRole("owner", "rescheduled"),
     "owner_record_task_transition_v1",
   );
-  assert.equal(
-    atlasTaskTransitionRpcForRole("farm_hand", "done"),
-    "worker_record_task_transition_v1",
-  );
-  assert.throws(
-    () => atlasTaskTransitionRpcForRole("farm_hand", "rescheduled"),
-    (error) => error instanceof AtlasTaskTransitionInputError
-      && error.status === 403
-      && error.code === "farm_hand_transition_not_allowed",
-  );
+
+  for (const transition of ATLAS_FARM_HAND_TRANSITIONS) {
+    assert.equal(
+      atlasTaskTransitionRpcForRole("farm_hand", transition),
+      "worker_record_task_transition_v1",
+      `${transition} must remain available for assigned Farm-Hand work`,
+    );
+  }
+
+  for (const transition of [
+    "done",
+    "partial",
+    "blocked",
+    "not_relevant",
+    "changed_plan",
+    "rescheduled",
+    "unfinished",
+    "checklist_done",
+    "checklist_open",
+    "note",
+  ]) {
+    assert.ok(ATLAS_FARM_HAND_TRANSITIONS.includes(transition));
+  }
+
   assert.throws(
     () => atlasTaskTransitionRpcForRole("manager", "done"),
     (error) => error instanceof AtlasTaskTransitionInputError
@@ -90,7 +116,7 @@ test("role routing keeps owner and Farm-Hand mutation boundaries separate", () =
   );
 });
 
-test("task transition route uses cookie auth and role-specific RPCs", () => {
+test("task transition route uses cookie auth and forwards the full RPC payload", () => {
   const route = read("app/api/atlas/task-transition/route.ts");
   assert.match(route, /requireAtlasApiAccess/);
   assert.match(route, /createAtlasServerClient/);
@@ -98,6 +124,10 @@ test("task transition route uses cookie auth and role-specific RPCs", () => {
   assert.match(route, /worker_record_task_transition_v1/);
   assert.match(route, /x-atlas-intent/);
   assert.match(route, /private, no-store/);
+  assert.equal((route.match(/p_target_date: input\.targetDate/g) ?? []).length, 2);
+  assert.equal((route.match(/p_lane_key: input\.laneKey/g) ?? []).length, 2);
+  assert.equal((route.match(/p_work_key: input\.workKey/g) ?? []).length, 2);
+  assert.equal((route.match(/p_existing_field_log_id: input\.existingFieldLogId/g) ?? []).length, 2);
   assert.doesNotMatch(route, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.doesNotMatch(route, /atlasSupabase/);
   assert.doesNotMatch(route, /supabase\.rpc\("record_task_transition_v1"/);

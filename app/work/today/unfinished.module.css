@@ -1,0 +1,88 @@
+.primaryActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.primaryActions button,
+.panel button {
+  min-height: 42px;
+  border-radius: 11px;
+  padding: 8px 11px;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.doneButton {
+  border: 0;
+  background: #553267;
+  color: white;
+}
+
+.unfinishedButton {
+  border: 1px solid rgba(74, 43, 99, 0.16);
+  background: #eee5f1;
+  color: #4f345d;
+}
+
+.panel {
+  display: grid;
+  gap: 9px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 12px;
+}
+
+.panel > strong {
+  color: #452d51;
+  font-size: 0.9rem;
+}
+
+.panel > span {
+  margin-top: 2px;
+  color: #756a78;
+  font-size: 0.76rem;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.twoColumnGrid,
+.threeColumnGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.twoColumnGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.threeColumnGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.panel button {
+  border: 1px solid rgba(74, 43, 99, 0.16);
+  background: #f0e9f2;
+  color: #4f345d;
+}
+
+.panel .blockedButton {
+  border-color: rgba(160, 74, 63, 0.22);
+  background: #fff1ed;
+  color: #7b4038;
+}
+
+.primaryActions button:disabled,
+.panel button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+@media (max-width: 430px) {
+  .threeColumnGrid {
+    grid-template-columns: 1fr;
+  }
+}
