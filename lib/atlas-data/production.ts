@@ -2,6 +2,18 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 
 type AtlasServerClient = Awaited<ReturnType<typeof createAtlasServerClient>>;
 
+export async function loadSharedProductionPlans(
+  supabase: AtlasServerClient,
+  farmId: string,
+) {
+  const { data, error } = await supabase.rpc("shared_production_plans_v1", {
+    p_farm_id: farmId,
+  });
+
+  if (error) throw new Error(error.message);
+  return Array.isArray(data) ? data : [];
+}
+
 export async function loadProductionPlans(supabase: AtlasServerClient) {
   const { data, error } = await supabase
     .from("production_plans")
