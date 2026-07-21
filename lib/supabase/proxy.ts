@@ -4,6 +4,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { legacyTaskRedirectCore } from "@/lib/atlas/task-routing-core.js";
 import { getAtlasSupabaseConfig } from "@/lib/supabase/config";
 
+const LEGACY_MUTATION_REWRITES = new Map([
+  ["POST /api/atlas/closeout", "/api/atlas/closeout-save"],
+  ["POST /api/atlas/germination-check", "/api/atlas/germination-check-save"],
+  ["PATCH /api/atlas/production-dashboard", "/api/atlas/production-dashboard-update"],
+  ["PATCH /api/atlas/production-plans", "/api/atlas/production-plans-update"],
+  ["POST /api/atlas/production-rules", "/api/atlas/production-rules-save"],
+]);
+
 function copySessionCookies(source: NextResponse, target: NextResponse) {
   source.cookies.getAll().forEach((cookie) => target.cookies.set(cookie));
   for (const headerName of ["cache-control", "expires", "pragma"]) {
@@ -24,6 +32,10 @@ function isPublicPath(pathname: string) {
 
 function needsAtlasFarmMembership(pathname: string) {
   return pathname.startsWith("/api/atlas/") && !pathname.startsWith("/api/atlas/auth/");
+}
+
+function legacyMutationDestination(request: NextRequest) {
+  return LEGACY_MUTATION_REWRITES.get(`${request.method.toUpperCase()} ${request.nextUrl.pathname}`) ?? null;
 }
 
 export async function updateAtlasSession(request: NextRequest) {
@@ -92,6 +104,13 @@ export async function updateAtlasSession(request: NextRequest) {
           { status: 403, headers: { "Cache-Control": "private, no-store" } },
         ),
       );
+    }
+
+    const rewritePath = legacyMutationDestination(request);
+    if (rewritePath) {
+      const destination = request.nextUrl.clone();
+      destination.pathname = rewritePath;
+      return copySessionCookies(response, NextResponse.rewrite(destination));
     }
   }
 
