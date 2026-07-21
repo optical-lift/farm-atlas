@@ -100,7 +100,7 @@ Each route resolves the signed-in farm membership server-side. None accepts `own
 - Planting claim was tested end to end with Lex inside a rollback, including profile timing, object contents, crop cycle creation, and idempotent replay.
 - Farm-Hand use of the standalone planting claim was rejected and created zero records.
 - Database rollback tests left no test farm records behind.
-- Strict GitHub CI passed all 74 tests and the full Next.js production build against the completed foundation.
+- Strict GitHub CI run `29795101480` passed all 74 tests and the full Next.js production build against the completed foundation.
 
 ## Remaining known backend debt
 
