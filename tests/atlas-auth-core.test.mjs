@@ -26,32 +26,20 @@ test("blank login credentials are rejected before Supabase is called", () => {
   assert.equal(normalizeAtlasLoginCredentials(null), null);
 });
 
-test("owner fixture resolves to one active Owner membership", () => {
-  const session = fixtureSession(ATLAS_IDENTITY_FIXTURES.owner);
-  const state = classifyAtlasSession(session);
+for (const [label, fixture, role] of [
+  ["owner", ATLAS_IDENTITY_FIXTURES.owner, "owner"],
+  ["manager", ATLAS_IDENTITY_FIXTURES.manager, "manager"],
+  ["farm hand", ATLAS_IDENTITY_FIXTURES.farmHand, "farm_hand"],
+]) {
+  test(`${label} fixture enters the shared Atlas home`, () => {
+    const session = fixtureSession(fixture);
+    const state = classifyAtlasSession(session);
 
-  assert.equal(state.status, "active");
-  assert.equal(state.activeMembership.role, "owner");
-  assert.equal(roleHomeForMembership(state.activeMembership), "/owner");
-});
-
-test("manager fixture resolves to one active Manager membership", () => {
-  const session = fixtureSession(ATLAS_IDENTITY_FIXTURES.manager);
-  const state = classifyAtlasSession(session);
-
-  assert.equal(state.status, "active");
-  assert.equal(state.activeMembership.role, "manager");
-  assert.equal(roleHomeForMembership(state.activeMembership), "/manage");
-});
-
-test("farm-hand fixture resolves to one active Farm-Hand membership", () => {
-  const session = fixtureSession(ATLAS_IDENTITY_FIXTURES.farmHand);
-  const state = classifyAtlasSession(session);
-
-  assert.equal(state.status, "active");
-  assert.equal(state.activeMembership.role, "farm_hand");
-  assert.equal(roleHomeForMembership(state.activeMembership), "/work/today");
-});
+    assert.equal(state.status, "active");
+    assert.equal(state.activeMembership.role, role);
+    assert.equal(roleHomeForMembership(state.activeMembership), "/");
+  });
+}
 
 test("logout and expired sessions both resolve to anonymous", () => {
   assert.deepEqual(classifyAtlasSession(null), {
