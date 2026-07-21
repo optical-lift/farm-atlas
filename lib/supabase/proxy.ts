@@ -22,6 +22,10 @@ function isPublicPath(pathname: string) {
   );
 }
 
+function needsAtlasFarmMembership(pathname: string) {
+  return pathname.startsWith("/api/atlas/") && !pathname.startsWith("/api/atlas/auth/");
+}
+
 export async function updateAtlasSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   const { url, publishableKey } = getAtlasSupabaseConfig();
@@ -46,7 +50,8 @@ export async function updateAtlasSession(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getClaims();
-  const authenticated = Boolean(data?.claims?.sub);
+  const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
+  const authenticated = Boolean(userId);
   const { pathname } = request.nextUrl;
 
   if (!authenticated && !isPublicPath(pathname)) {
@@ -67,6 +72,27 @@ export async function updateAtlasSession(request: NextRequest) {
       loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     }
     return copySessionCookies(response, NextResponse.redirect(loginUrl));
+  }
+
+  if (authenticated && needsAtlasFarmMembership(pathname)) {
+    const { data: membership, error: membershipError } = await supabase
+      .from("farm_memberships")
+      .select("id, farm:farms!inner(stable_key)")
+      .eq("user_id", userId)
+      .eq("active", true)
+      .eq("farm.stable_key", "elm_farm")
+      .limit(1)
+      .maybeSingle();
+
+    if (membershipError || !membership) {
+      return copySessionCookies(
+        response,
+        NextResponse.json(
+          { ok: false, error: "Active Elm Farm membership required." },
+          { status: 403, headers: { "Cache-Control": "private, no-store" } },
+        ),
+      );
+    }
   }
 
   if (authenticated && pathname === "/task") {
