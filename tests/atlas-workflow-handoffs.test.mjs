@@ -45,9 +45,9 @@ test("handoffs may open or schedule downstream work but never complete it", () =
 test("downstream work cannot be represented as checklist children", () => {
   assert.match(infrastructure, /guard_downstream_task_not_checklist_child_v1/);
   assert.match(infrastructure, /Downstream workflow tasks cannot use parent_task_id/);
+  assert.match(infrastructure, /new\.parent_task_id is not null/);
   assert.match(infrastructure, /'task_follow_up'/);
   assert.match(infrastructure, /'relationship_kind', 'downstream'/);
-  assert.match(infrastructure, /parent_task_id[\s\S]{0,500}\n\s*null,/);
 });
 
 test("known farm chains are migrated through readiness-aware handoffs", () => {
