@@ -141,9 +141,11 @@ export async function getPlantingClaimCatalog(
     throw new Error("Atlas planting crop-profile catalog read failed.");
   }
 
+  const cropProfiles = (cropProfilesResult.data ?? []) as unknown as CropProfileRow[];
+
   return {
     farm: operationalState.farm,
-    cropProfiles: ((cropProfilesResult.data ?? []) as CropProfileRow[]).map((profile) => ({
+    cropProfiles: cropProfiles.map((profile) => ({
       id: profile.id,
       key: profile.stable_key,
       cropLabel: profile.crop_label,
@@ -210,7 +212,8 @@ export async function recordPlantingClaim(
     throw new Error("Atlas planting claim write failed.");
   }
 
-  const row = ((data ?? []) as PlantingClaimResultRow[])[0];
+  const rows = (data ?? []) as unknown as PlantingClaimResultRow[];
+  const row = rows[0];
   if (!row?.planting_claim_id) {
     throw new Error("Atlas planting claim did not return a durable claim.");
   }
