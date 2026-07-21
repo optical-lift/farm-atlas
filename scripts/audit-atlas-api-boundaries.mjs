@@ -38,7 +38,7 @@ const sourceFiles = [
   ...filesUnder("lib"),
 ].filter((path) => !path.startsWith("app/api/atlas/"));
 
-const offenders = routeFiles
+const serviceRoleRoutes = routeFiles
   .filter((path) => /SUPABASE_SERVICE_ROLE_KEY|atlasSupabase/.test(read(path)))
   .map((path) => {
     const source = read(path);
@@ -48,22 +48,33 @@ const offenders = routeFiles
     const referenceConsumers = Object.fromEntries(references.map((reference) => {
       if (!reference.startsWith("lib/")) return [reference, []];
       const key = moduleKey(reference);
-      return [
-        reference,
-        sourceFiles.filter((candidate) => candidate !== reference && read(candidate).includes(key)),
-      ];
+      return [reference, sourceFiles.filter((candidate) => candidate !== reference && read(candidate).includes(key))];
     }));
     return { path, endpoint, methods, references, referenceConsumers };
   });
 
-for (const offender of offenders) {
-  const refs = offender.references.length
-    ? offender.references.map((reference) => {
-      const consumers = offender.referenceConsumers[reference] ?? [];
+for (const route of serviceRoleRoutes) {
+  const refs = route.references.length
+    ? route.references.map((reference) => {
+      const consumers = route.referenceConsumers[reference] ?? [];
       return consumers.length ? `${reference}<-${consumers.join("+")}` : reference;
     }).join(",")
     : "none";
-  console.log(`${offender.path}\t${offender.methods.join("+") || "unknown"}\trefs=${refs}`);
+  const classification = route.methods.length > 0 && route.methods.every((method) => method === "GET")
+    ? "READ_ONLY_LEGACY"
+    : "UNSAFE_MUTATION";
+  console.log(`${classification}\t${route.path}\t${route.methods.join("+") || "unknown"}\trefs=${refs}`);
 }
 
-if (offenders.length) process.exitCode = 1;
+const proxy = read("lib/supabase/proxy.ts");
+const membershipBoundary = /needsAtlasFarmMembership/.test(proxy)
+  && /farm_memberships/.test(proxy)
+  && /farm\.stable_key/.test(proxy)
+  && /elm_farm/.test(proxy);
+if (!membershipBoundary) {
+  console.error("Atlas API proxy is missing the active Elm membership boundary.");
+  process.exitCode = 1;
+}
+
+const unsafe = serviceRoleRoutes.filter((route) => route.methods.length === 0 || route.methods.some((method) => method !== "GET"));
+if (unsafe.length) process.exitCode = 1;
