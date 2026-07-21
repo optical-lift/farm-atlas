@@ -1,0 +1,27 @@
+name: Package Atlas Production Source
+
+on:
+  push:
+    branches: [agent/package-atlas-production]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout merged main source
+        uses: actions/checkout@v4
+      - name: Add Vercel project link
+        run: |
+          mkdir -p .vercel
+          printf '%s\n' '{"orgId":"team_5arSaOpnt8SRptBkOggAUmuC","projectId":"prj_ppP8y06TilUlHOtTLhQjM7hSedh6"}' > .vercel/project.json
+      - name: Package source
+        run: zip -qr farm-atlas-production-source.zip . -x '.git/*' 'farm-atlas-production-source.zip'
+      - name: Upload source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: farm-atlas-production-source
+          path: farm-atlas-production-source.zip
+          retention-days: 1
