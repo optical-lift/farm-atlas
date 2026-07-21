@@ -4,7 +4,9 @@ This checkpoint records the behind-the-scenes foundation required before Atlas s
 
 ## Status
 
-The identity, authorization, farm-state read, scheduling, Quick Log, planting-claim, and client gateway layers now have coherent contracts. The next build phase may reconnect and replace presentation routes without reviving legacy page-specific Supabase queries or client-supplied role scope.
+The identity, authorization, farm-state read, scheduling, Quick Log, planting-claim, client gateway, and database-policy layers now have coherent contracts. Presentation routes may be restored without reviving legacy page-specific Supabase queries, direct browser mutations, or client-supplied role scope.
+
+The backend foundation is complete enough to begin rebuilding the working Atlas experience.
 
 ## Completed foundations
 
@@ -91,6 +93,15 @@ The following neutral API boundaries are available for interactive client compon
 
 Each route resolves the signed-in farm membership server-side. None accepts `owner`, `anna`, `marshall`, or a query-string scope as authorization.
 
+### Complete database policy boundary
+
+- All 48 Atlas tables have Row Level Security enabled.
+- Farm-scoped operational tables use active Owner/Manager membership reads.
+- Parent-linked project/task/crop relationships inherit the visibility of their parent records.
+- Farm Hands receive shared crop aliases and observation choices but no direct operational-table access.
+- Direct authenticated writes remain closed except through controlled functions.
+- `farm_membership_invites` intentionally has no direct table policy or user grant; eight authenticated security-definer invitation functions govern its complete lifecycle.
+
 ## Validation
 
 - Role simulations confirmed Owner and Manager can read 145 Elm operational objects.
@@ -101,21 +112,8 @@ Each route resolves the signed-in farm membership server-side. None accepts `own
 - Farm-Hand use of the standalone planting claim was rejected and created zero records.
 - Database rollback tests left no test farm records behind.
 - Strict GitHub CI run `29795101480` passed all 74 tests and the full Next.js production build against the completed foundation.
-
-## Remaining known backend debt
-
-The following tables still have Row Level Security disabled and require individual classification before broad restoration work reaches them:
-
-- `atlas.inbox_items`
-- `atlas.object_activity_events`
-- `atlas.rhythm_templates`
-- `atlas.project_task_links`
-- `atlas.crop_cycle_impacts`
-- `atlas.crop_profile_aliases`
-- `atlas.crop_observation_types`
-- `atlas.task_crop_cycles`
-
-The new authenticated write functions do not grant direct authenticated mutation access to `object_activity_events`, but the table remains part of the later security cleanup.
+- Vercel production deployment `dpl_DhTnFxagQ9T9WZQ7SgSRvhgKueaQ` reached READY with the validated application foundation.
+- The live logged-out operational-state and schedule gateways return `401` with private, non-cacheable responses.
 
 ## Next build phase
 
