@@ -94,7 +94,7 @@ test("task focus accepts only known internal return destinations", () => {
 test("the full task page keeps the familiar Unfinished drawer and next-day intent", () => {
   const detail = read("components/atlas/canonical-assigned-task-detail.tsx");
 
-  assert.match(detail, />Unfinished</);
+  assert.match(detail, /"Unfinished"/);
   assert.match(detail, />Partly done</);
   assert.match(detail, />Tomorrow</);
   assert.match(detail, />Next week</);
