@@ -54,24 +54,33 @@ function taskLocation(task: ScheduleTask) {
 }
 
 function taskHref(task: ScheduleTask, role: AtlasFarmRole) {
+  const taskId = task.taskId;
+  if (!taskId) return null;
   if (role === "owner" && task.visibilityScope === "owner") {
-    return `/owner/tasks/${encodeURIComponent(task.taskId)}`;
+    return `/owner/tasks/${encodeURIComponent(taskId)}`;
   }
-  return `/task-focus/${encodeURIComponent(task.taskId)}`;
+  return `/task-focus/${encodeURIComponent(taskId)}`;
+}
+
+function taskKey(task: ScheduleTask) {
+  return task.taskId ?? `${task.title}-${task.dueDate ?? "undated"}-${taskLocation(task)}`;
 }
 
 function TaskCard({ task, role }: { task: ScheduleTask; role: AtlasFarmRole }) {
   const detail = task.blocker || task.instruction;
-  return (
-    <Link className="atlas-overview-task-card" href={taskHref(task, role)}>
+  const content = (
+    <>
       <div>
         <strong>{task.title}</strong>
         <span>{ROUTE_LABELS[routeKey(task)]} · {taskLocation(task)}</span>
       </div>
       <em>{task.status === "done" ? "complete" : prettyFarmDate(task.dueDate)}</em>
       {detail ? <p>{detail}</p> : null}
-    </Link>
+    </>
   );
+  const href = taskHref(task, role);
+  if (!href) return <article className="atlas-overview-task-card">{content}</article>;
+  return <Link className="atlas-overview-task-card" href={href}>{content}</Link>;
 }
 
 function TaskSection({
@@ -98,7 +107,7 @@ function TaskSection({
         <b>{badge}</b>
       </summary>
       <div className="atlas-overview-task-list">
-        {tasks.map((task) => <TaskCard key={task.taskId} task={task} role={role} />)}
+        {tasks.map((task) => <TaskCard key={taskKey(task)} task={task} role={role} />)}
       </div>
     </details>
   );
