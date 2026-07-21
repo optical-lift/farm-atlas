@@ -1,25 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { atlasSupabase } from "@/lib/atlas/supabase-server";
+import { requireAtlasApiAccess } from "@/lib/atlas/api-access";
+import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ objectKey: string }> };
 
 const EVENT_TYPES = new Set([
-  "observed",
-  "checked",
-  "weeded",
-  "watered",
-  "sowed",
-  "planted",
-  "germinated",
-  "pinched",
-  "bloom_started",
-  "harvested",
-  "maintained",
-  "cleared",
-  "blocked",
+  "observed", "checked", "weeded", "watered", "sowed", "planted", "germinated",
+  "pinched", "bloom_started", "harvested", "maintained", "cleared", "blocked",
 ]);
 
 type EventBody = {
@@ -32,6 +22,8 @@ type EventBody = {
   plantInstanceId?: string;
   idempotencyKey?: string;
 };
+
+type RpcError = { code?: string; message?: string };
 
 function validDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -53,6 +45,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Object event intent header is required." }, { status: 403 });
     }
 
+    const authorized = await requireAtlasApiAccess();
+    if (!authorized.ok) return authorized.response;
+
     const { objectKey: rawObjectKey } = await context.params;
     const objectKey = rawObjectKey.trim();
     const body = (await request.json()) as EventBody;
@@ -62,39 +57,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const unit = body.unit?.trim() || null;
     const idempotencyKey = body.idempotencyKey?.trim() ?? "";
 
-    if (!objectKey || objectKey.length > 160) {
-      return NextResponse.json({ ok: false, error: "A valid object key is required." }, { status: 400 });
-    }
-    if (!EVENT_TYPES.has(eventType)) {
-      return NextResponse.json({ ok: false, error: "Choose a valid object event." }, { status: 400 });
-    }
-    if (!validDate(eventDate)) {
-      return NextResponse.json({ ok: false, error: "Choose a valid event date." }, { status: 400 });
-    }
-    if (!idempotencyKey || idempotencyKey.length > 160) {
-      return NextResponse.json({ ok: false, error: "A valid save key is required." }, { status: 400 });
-    }
-    if (note && note.length > 4000) {
-      return NextResponse.json({ ok: false, error: "Keep the note under 4,000 characters." }, { status: 400 });
-    }
-    if (unit && unit.length > 40) {
-      return NextResponse.json({ ok: false, error: "Keep the unit under 40 characters." }, { status: 400 });
-    }
-    if (body.quantity !== undefined && (!Number.isFinite(body.quantity) || body.quantity < 0)) {
-      return NextResponse.json({ ok: false, error: "Quantity must be zero or greater." }, { status: 400 });
-    }
-    if (body.quantity !== undefined && eventType !== "harvested") {
-      return NextResponse.json({ ok: false, error: "Quantity is only used for harvest events." }, { status: 400 });
-    }
-    if (!validUuid(body.cropCycleId) || !validUuid(body.plantInstanceId)) {
-      return NextResponse.json({ ok: false, error: "The selected crop or plant link is invalid." }, { status: 400 });
-    }
-    if (body.cropCycleId && body.plantInstanceId) {
-      return NextResponse.json({ ok: false, error: "Choose one crop or permanent plant target." }, { status: 400 });
-    }
+    if (!objectKey || objectKey.length > 160) return NextResponse.json({ ok: false, error: "A valid object key is required." }, { status: 400 });
+    if (!EVENT_TYPES.has(eventType)) return NextResponse.json({ ok: false, error: "Choose a valid object event." }, { status: 400 });
+    if (!validDate(eventDate)) return NextResponse.json({ ok: false, error: "Choose a valid event date." }, { status: 400 });
+    if (!idempotencyKey || idempotencyKey.length > 160) return NextResponse.json({ ok: false, error: "A valid save key is required." }, { status: 400 });
+    if (note && note.length > 4000) return NextResponse.json({ ok: false, error: "Keep the note under 4,000 characters." }, { status: 400 });
+    if (unit && unit.length > 40) return NextResponse.json({ ok: false, error: "Keep the unit under 40 characters." }, { status: 400 });
+    if (body.quantity !== undefined && (!Number.isFinite(body.quantity) || body.quantity < 0)) return NextResponse.json({ ok: false, error: "Quantity must be zero or greater." }, { status: 400 });
+    if (body.quantity !== undefined && eventType !== "harvested") return NextResponse.json({ ok: false, error: "Quantity is only used for harvest events." }, { status: 400 });
+    if (!validUuid(body.cropCycleId) || !validUuid(body.plantInstanceId)) return NextResponse.json({ ok: false, error: "The selected crop or plant link is invalid." }, { status: 400 });
+    if (body.cropCycleId && body.plantInstanceId) return NextResponse.json({ ok: false, error: "Choose one crop or permanent plant target." }, { status: 400 });
 
-    const { data, error } = await atlasSupabase.schema("atlas").rpc("record_object_event_v1", {
-      p_farm_key: "elm_farm",
+    const supabase = await createAtlasServerClient();
+    const { data, error } = await supabase.rpc("record_object_event_for_member_v1", {
+      p_farm_id: authorized.access.membership.farmId,
       p_object_key: objectKey,
       p_event_type: eventType,
       p_event_date: eventDate,
@@ -108,23 +84,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
 
     if (error) {
-      const status = error.code === "P0002" ? 404 : error.code === "22023" ? 400 : 500;
-      return NextResponse.json(
-        { ok: false, error: "Atlas could not record this object event.", details: error.message },
-        { status },
-      );
+      const rpcError = error as RpcError;
+      const status = rpcError.code === "42501" ? 403 : rpcError.code === "P0002" ? 404 : rpcError.code === "22023" ? 400 : 500;
+      return NextResponse.json({ ok: false, error: "Atlas could not record this object event.", details: rpcError.message }, { status });
     }
 
-    return NextResponse.json({ ok: true, result: data }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: true, result: data }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("Atlas object event write failed:", error);
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Atlas object event write failed.",
-        details: error instanceof Error ? error.message : "Unknown object event error.",
-      },
-      { status: 500 },
-    );
+    return NextResponse.json({ ok: false, error: "Atlas object event write failed.", details: error instanceof Error ? error.message : "Unknown object event error." }, { status: 500 });
   }
 }
