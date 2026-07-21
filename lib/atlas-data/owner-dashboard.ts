@@ -196,7 +196,7 @@ export async function getOwnerDashboard(
   for (const task of scheduled) {
     const membershipId = task.assignee.membershipId;
     if (!membershipId || task.visibilityScope !== "assigned_worker") continue;
-    const current = workers.get(membershipId) ?? {
+    const current: WorkerExecution & { tasks: ScheduleTask[] } = workers.get(membershipId) ?? {
       membershipId,
       displayName: task.assignee.displayName,
       workerKey: task.assignee.workerKey,
