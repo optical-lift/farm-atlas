@@ -57,7 +57,18 @@ The operational audit repaired only objective defects:
 - closed stale checklist children and prevented stale metadata from reopening terminal or blocked states
 - prevented duplicate active engine instances
 
-Ten July 20 carryovers remain open because their actual field status requires a human decision rather than a structural database repair.
+Ten July 20 carryovers remain open because their actual field status requires a human decision rather than a structural database repair:
+
+- Check whether grow-room basil is ready to transplant
+- Take lemon basil cuttings to root in water
+- Mowing — Barn Beds
+- Mowing — Mow Corral
+- Mowing — U-Pick Walkways + Middle Lane
+- Mowing — Weed-Whack U-Pick Sunflowers
+- Patch 1/3 Rose Queen + 2/3 Violet seed — Grow Room seed shelves
+- Patch Anna mixed cosmos seed — Field Row 1
+- Patch ProCut Horizon seed — Field Row 17
+- Weed Field Row 18
 
 ## Crop and production reconciliation
 
