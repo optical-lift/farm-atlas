@@ -30,6 +30,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Guard service-role API routes
+        run: node --test --test-name-pattern="interactive Atlas API routes" tests/atlas-architecture-traps.test.mjs
+
+      - name: Guard canonical task mutations
+        run: node --test --test-name-pattern="all task mutations" tests/atlas-architecture-traps.test.mjs
+
+      - name: Guard homepage membership scope
+        run: node --test --test-name-pattern="homepage reader" tests/atlas-architecture-traps.test.mjs
+
       - name: Run tests
         run: npm test
 
