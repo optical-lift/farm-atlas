@@ -93,6 +93,30 @@ type CropProfileRow = {
   clear_offset_days: number | null;
 };
 
+type OperationalCatalogObject = {
+  id: string | null;
+  key: string | null;
+  label: string;
+  type: string;
+  dimensions: {
+    lengthFt: number | null;
+    widthFt: number | null;
+    areaSqft: number | null;
+  };
+  state: {
+    currentStage: string;
+    decisionRequired: boolean;
+  };
+  crop: { label: string } | null;
+};
+
+type OperationalCatalogZone = {
+  id: string | null;
+  key: string | null;
+  label: string;
+  objects: OperationalCatalogObject[];
+};
+
 function requirePlantingManagement(access: AtlasRoleAccess) {
   if (access.membership.role !== "owner" && access.membership.role !== "manager") {
     throw new Error("Owner or Manager membership required.");
@@ -142,6 +166,7 @@ export async function getPlantingClaimCatalog(
   }
 
   const cropProfiles = (cropProfilesResult.data ?? []) as unknown as CropProfileRow[];
+  const operationalZones = operationalState.zones as unknown as OperationalCatalogZone[];
 
   return {
     farm: operationalState.farm,
@@ -163,7 +188,7 @@ export async function getPlantingClaimCatalog(
       inRowSpacingInches: nullableNumber(profile.in_row_spacing_in),
       clearOffsetDays: profile.clear_offset_days,
     })),
-    zones: operationalState.zones.map((zone) => ({
+    zones: operationalZones.map((zone) => ({
       id: zone.id,
       key: zone.key,
       label: zone.label,
