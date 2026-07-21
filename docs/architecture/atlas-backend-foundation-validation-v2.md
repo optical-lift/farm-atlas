@@ -12,6 +12,6 @@ The build under test includes:
 - centralized API membership resolution
 - operational state, schedule, Quick Log, and planting-claim API gateways
 
-Validation rerun after the planting-catalog type boundary was made explicit.
+Validation rerun after the planting catalog's crop, zone, and object boundaries were explicitly typed.
 
 This branch is not intended to be merged.
