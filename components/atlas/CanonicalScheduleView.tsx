@@ -3,6 +3,11 @@ import Link from "next/link";
 import type { TaskScheduleProjection } from "@/lib/atlas-data/task-schedule";
 import { prettyFarmDate } from "@/lib/atlas/date";
 import type { AtlasFarmRole } from "@/lib/atlas/session";
+import {
+  ATLAS_SCHEDULE_ROUTE_LABELS,
+  atlasIsMaintenanceCollectionRoute,
+  atlasScheduleRouteKey,
+} from "@/lib/atlas/task-route-core.js";
 
 type ScheduleTask = TaskScheduleProjection["days"][number]["tasks"][number];
 type ScheduleMode = "day" | "week" | "month";
@@ -16,37 +21,14 @@ type CanonicalScheduleViewProps = {
   routeFilter?: string | null;
 };
 
-const ROUTE_LABELS: Record<string, string> = {
-  weed: "Weeding",
-  mow: "Mowing",
-  sow: "Sowing",
-  plant: "Planting",
-  harvest: "Harvest",
-  water: "Watering",
-  care: "Crop Care",
-  maintain: "Venue + Maintenance",
-  other: "Farm Work",
+const ROUTE_LABELS = ATLAS_SCHEDULE_ROUTE_LABELS as Record<string, string>;
+const COLLECTION_LINKS: Record<string, string> = {
+  weed: "/collections/weeding",
+  mow: "/collections/mowing",
 };
 
 function routeKey(task: ScheduleTask) {
-  const joined = `${task.taskType} ${task.title} ${task.instruction ?? ""}`.toLowerCase();
-  if (joined.includes("weed") || joined.includes("hoe")) return "weed";
-  if (joined.includes("mow")) return "mow";
-  if (joined.includes("harvest") || joined.includes("cut flower")) return "harvest";
-  if (joined.includes("water") || joined.includes("irrigat")) return "water";
-  if (joined.includes("transplant") || joined.includes("plant ")) return "plant";
-  if (joined.includes("sow") || joined.includes("seed")) return "sow";
-  if (joined.includes("germin") || joined.includes("thin") || joined.includes("pinch")) return "care";
-  if (
-    joined.includes("maint") ||
-    joined.includes("paint") ||
-    joined.includes("trim") ||
-    joined.includes("clean") ||
-    joined.includes("repair")
-  ) {
-    return "maintain";
-  }
-  return "other";
+  return atlasScheduleRouteKey(task);
 }
 
 function taskLocation(task: ScheduleTask) {
@@ -113,6 +95,36 @@ function TaskSection({
   );
 }
 
+function CollectionCard({ route, tasks, mode }: { route: "weed" | "mow"; tasks: ScheduleTask[]; mode: ScheduleMode }) {
+  if (!tasks.length) return null;
+  const open = tasks.filter((task) => task.status === "open").length;
+  const blocked = tasks.filter((task) => task.status === "blocked").length;
+  const done = tasks.filter((task) => task.status === "done").length;
+  const locations = Array.from(new Set(tasks.map(taskLocation))).slice(0, 3);
+  const windowLabel = mode === "day" ? "today" : mode === "week" ? "this week" : "this month";
+
+  return (
+    <Link className="atlas-overview-zone-card atlas-work-collection-summary-card" href={COLLECTION_LINKS[route]}>
+      <summary>
+        <div>
+          <strong>{ROUTE_LABELS[route]} Collection</strong>
+          <span>{tasks.length} {tasks.length === 1 ? "area" : "areas"} in {windowLabel}</span>
+        </div>
+        <b>Collection</b>
+      </summary>
+      <div className="atlas-overview-task-list">
+        <article className="atlas-overview-task-card">
+          <div>
+            <strong>{open} open · {blocked} blocked · {done} done</strong>
+            <span>{locations.length ? locations.join(" · ") : "Elm Farm"}</span>
+          </div>
+          <em>Open collection</em>
+        </article>
+      </div>
+    </Link>
+  );
+}
+
 function groupByZone(tasks: ScheduleTask[]) {
   const groups = new Map<string, ScheduleTask[]>();
   for (const task of tasks) {
@@ -134,6 +146,10 @@ function groupByRoute(tasks: ScheduleTask[]) {
   });
 }
 
+function withoutMaintenanceCollections(tasks: ScheduleTask[]) {
+  return tasks.filter((task) => !atlasIsMaintenanceCollectionRoute(routeKey(task)));
+}
+
 export default function CanonicalScheduleView({
   mode,
   title,
@@ -144,15 +160,30 @@ export default function CanonicalScheduleView({
 }: CanonicalScheduleViewProps) {
   const homeHref = role === "owner" ? "/owner" : role === "manager" ? "/manage" : "/";
   const scheduledTasks = schedule.days.flatMap((day) => day.tasks);
-  const filteredTasks = routeFilter
-    ? scheduledTasks.filter((task) => routeKey(task) === routeFilter)
-    : scheduledTasks;
-  const groups = mode === "day" ? groupByRoute(filteredTasks) : groupByZone(filteredTasks);
-  const carryover = [
+  const rawCarryover = [
     ...schedule.carryover.blocked,
     ...schedule.carryover.overdue,
     ...schedule.carryover.undated,
   ];
+  const allWindowTasks = [...scheduledTasks, ...rawCarryover];
+  const collectionCards = (["weed", "mow"] as const)
+    .map((route) => ({ route, tasks: allWindowTasks.filter((task) => routeKey(task) === route) }))
+    .filter((collection) => collection.tasks.length > 0);
+
+  const filteredTasks = routeFilter
+    ? scheduledTasks.filter((task) => routeKey(task) === routeFilter)
+    : withoutMaintenanceCollections(scheduledTasks);
+  const groups = mode === "day" ? groupByRoute(filteredTasks) : groupByZone(filteredTasks);
+  const visibleBlocked = routeFilter
+    ? schedule.carryover.blocked.filter((task) => routeKey(task) === routeFilter)
+    : withoutMaintenanceCollections(schedule.carryover.blocked);
+  const visibleOverdue = routeFilter
+    ? schedule.carryover.overdue.filter((task) => routeKey(task) === routeFilter)
+    : withoutMaintenanceCollections(schedule.carryover.overdue);
+  const visibleUndated = routeFilter
+    ? schedule.carryover.undated.filter((task) => routeKey(task) === routeFilter)
+    : withoutMaintenanceCollections(schedule.carryover.undated);
+  const visibleCarryover = [...visibleBlocked, ...visibleOverdue, ...visibleUndated];
   const doneCount = scheduledTasks.filter((task) => task.status === "done").length;
 
   return (
@@ -173,20 +204,23 @@ export default function CanonicalScheduleView({
               <strong>{title}</strong>
               <span>{subtitle}</span>
             </div>
-            <p>{schedule.counts.scheduled} scheduled · {carryover.length} carryover</p>
+            <p>{schedule.counts.scheduled} scheduled · {rawCarryover.length} carryover</p>
           </section>
 
           <section className="atlas-overview-stat-grid" aria-label={`${title} schedule stats`}>
             <article><strong>{schedule.progress.open}</strong><span>open</span></article>
             <article><strong>{schedule.progress.blocked}</strong><span>blocked</span></article>
             <article><strong>{doneCount}</strong><span>done</span></article>
-            <article><strong>{groups.length}</strong><span>{mode === "day" ? "work lanes" : "zones"}</span></article>
+            <article><strong>{groups.length + collectionCards.length}</strong><span>{mode === "day" ? "work lanes" : "work groups"}</span></article>
           </section>
 
           {mode === "day" && !routeFilter ? (
             <section className="atlas-overview-route-chip-row" aria-label="Day work lanes">
               {groupByRoute(scheduledTasks).map(([key, tasks]) => (
-                <Link key={key} href={`/day?date=${encodeURIComponent(schedule.startDate)}&route=${encodeURIComponent(key)}`}>
+                <Link
+                  key={key}
+                  href={COLLECTION_LINKS[key] ?? `/day?date=${encodeURIComponent(schedule.startDate)}&route=${encodeURIComponent(key)}`}
+                >
                   {ROUTE_LABELS[key]} {tasks.length}
                 </Link>
               ))}
@@ -200,9 +234,13 @@ export default function CanonicalScheduleView({
           ) : null}
 
           <section className="atlas-overview-zone-list" aria-label={`${title} work`}>
-            <TaskSection title="Blocked carryover" tasks={schedule.carryover.blocked} role={role} badge="Blocked" open />
-            <TaskSection title="Overdue carryover" tasks={schedule.carryover.overdue} role={role} badge="Overdue" open />
-            <TaskSection title="Undated carryover" tasks={schedule.carryover.undated} role={role} badge="Open" />
+            {!routeFilter ? collectionCards.map((collection) => (
+              <CollectionCard key={collection.route} route={collection.route} tasks={collection.tasks} mode={mode} />
+            )) : null}
+
+            <TaskSection title="Blocked carryover" tasks={visibleBlocked} role={role} badge="Blocked" open />
+            <TaskSection title="Overdue carryover" tasks={visibleOverdue} role={role} badge="Overdue" open />
+            <TaskSection title="Undated carryover" tasks={visibleUndated} role={role} badge="Open" />
 
             {groups.map(([key, tasks], index) => (
               <TaskSection
@@ -211,11 +249,11 @@ export default function CanonicalScheduleView({
                 tasks={tasks}
                 role={role}
                 badge={mode === "day" ? "Lane" : "Zone"}
-                open={carryover.length === 0 && index === 0}
+                open={visibleCarryover.length === 0 && collectionCards.length === 0 && index === 0}
               />
             ))}
 
-            {!carryover.length && !groups.length ? (
+            {!visibleCarryover.length && !groups.length && !collectionCards.length ? (
               <div className="atlas-task-page-empty">No work is scheduled in this window.</div>
             ) : null}
           </section>
