@@ -56,7 +56,7 @@ test("production plans are shared reads with owner-only controls", () => {
   const page = read("app/production/page.tsx");
   const planRoute = read("app/api/atlas/production-plans/route.ts");
   const dashboardRoute = read("app/api/atlas/production-dashboard/route.ts");
-  const migration = read("supabase/migrations/20260721193000_atlas_restore_shared_member_read_surface.sql");
+  const migration = read("supabase/migrations/20260721193551_atlas_restore_shared_member_read_surface.sql");
 
   for (const route of [planRoute, dashboardRoute]) {
     const getBody = functionBody(route, "GET", "PATCH");
