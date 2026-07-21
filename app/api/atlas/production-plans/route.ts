@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireAtlasApiAccess } from "@/lib/atlas/api-access";
-import { loadProductionPlans } from "@/lib/atlas-data/production";
+import {
+  loadProductionPlans,
+  loadSharedProductionPlans,
+} from "@/lib/atlas-data/production";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -40,12 +43,22 @@ function validDate(value: string) {
 
 export async function GET() {
   try {
-    const authorized = await requireAtlasApiAccess({ allowedRoles: ["owner", "manager"] });
+    const authorized = await requireAtlasApiAccess();
     if (!authorized.ok) return authorized.response;
+
     const supabase = await createAtlasServerClient();
+    const role = authorized.access.membership.role;
     return NextResponse.json(
-      { ok: true, plans: await loadProductionPlans(supabase) },
-      { headers: { "Cache-Control": "private, no-store", "X-Atlas-Read-Path": "production-membership-v1" } },
+      {
+        ok: true,
+        role,
+        canManageProduction: role === "owner",
+        plans: await loadSharedProductionPlans(
+          supabase,
+          authorized.access.membership.farmId,
+        ),
+      },
+      { headers: { "Cache-Control": "private, no-store", "X-Atlas-Read-Path": "production-shared-member-v1" } },
     );
   } catch (error) {
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Production plans failed." }, { status: 500 });
