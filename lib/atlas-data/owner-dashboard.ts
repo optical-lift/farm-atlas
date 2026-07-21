@@ -213,12 +213,10 @@ export async function getOwnerDashboard(
     workers.set(membershipId, current);
   }
   const workerExecution = Array.from(workers.values())
-    .map(({ tasks, ...worker }) => ({
-      ...worker,
-      nextTask: tasks.filter((task) => task.status !== "done").sort(taskDateSort)[0]
-        ? action(tasks.filter((task) => task.status !== "done").sort(taskDateSort)[0])
-        : null,
-    }))
+    .map(({ tasks, ...worker }) => {
+      const nextTask = tasks.filter((task) => task.status !== "done").sort(taskDateSort)[0];
+      return { ...worker, nextTask: nextTask ? action(nextTask) : null };
+    })
     .sort((left, right) => left.displayName.localeCompare(right.displayName));
 
   const upcomingDeadlines = scheduled
@@ -232,7 +230,11 @@ export async function getOwnerDashboard(
     .map(action);
 
   return {
-    farm: farmState.farm,
+    farm: {
+      id: farmState.farm.id,
+      farmKey: farmState.farm.key,
+      name: farmState.farm.name,
+    },
     generatedForDate: today,
     weekEndDate: weekEnd,
     horizonEndDate: horizonEnd,
