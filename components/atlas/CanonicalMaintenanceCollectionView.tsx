@@ -21,12 +21,12 @@ function taskLocation(task: ScheduleTask) {
   return task.object.label || task.zone.label || "Elm Farm";
 }
 
-function taskHref(task: ScheduleTask, role: AtlasFarmRole) {
+function taskHref(task: ScheduleTask, role: AtlasFarmRole, returnTo: string) {
   if (!task.taskId) return null;
   if (role === "owner" && task.visibilityScope === "owner") {
     return `/owner/tasks/${encodeURIComponent(task.taskId)}`;
   }
-  return `/task-focus/${encodeURIComponent(task.taskId)}`;
+  return `/task-focus/${encodeURIComponent(task.taskId)}?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
 function uniqueTasks(tasks: ScheduleTask[]) {
@@ -41,7 +41,15 @@ function uniqueTasks(tasks: ScheduleTask[]) {
   });
 }
 
-function CollectionTaskCard({ task, role }: { task: ScheduleTask; role: AtlasFarmRole }) {
+function CollectionTaskCard({
+  task,
+  role,
+  returnTo,
+}: {
+  task: ScheduleTask;
+  role: AtlasFarmRole;
+  returnTo: string;
+}) {
   const content = (
     <>
       <div>
@@ -52,7 +60,7 @@ function CollectionTaskCard({ task, role }: { task: ScheduleTask; role: AtlasFar
       {task.blocker || task.instruction ? <p>{task.blocker || task.instruction}</p> : null}
     </>
   );
-  const href = taskHref(task, role);
+  const href = taskHref(task, role, returnTo);
   if (!href) return <article className="atlas-overview-task-card">{content}</article>;
   return <Link className="atlas-overview-task-card" href={href}>{content}</Link>;
 }
@@ -61,12 +69,14 @@ function CollectionSection({
   title,
   tasks,
   role,
+  returnTo,
   empty,
   open = false,
 }: {
   title: string;
   tasks: ScheduleTask[];
   role: AtlasFarmRole;
+  returnTo: string;
   empty: string;
   open?: boolean;
 }) {
@@ -81,7 +91,7 @@ function CollectionSection({
       </summary>
       <div className="atlas-overview-task-list">
         {tasks.length
-          ? tasks.map((task) => <CollectionTaskCard key={task.taskId} task={task} role={role} />)
+          ? tasks.map((task) => <CollectionTaskCard key={task.taskId} task={task} role={role} returnTo={returnTo} />)
           : <p className="atlas-task-page-muted">{empty}</p>}
       </div>
     </details>
@@ -108,17 +118,18 @@ export default function CanonicalMaintenanceCollectionView({
   const upcoming = allTasks.filter((task) => task.status === "open" && Boolean(task.dueDate && task.dueDate > today));
   const recentlyDone = allTasks.filter((task) => task.status === "done");
   const nextDue = upcoming.find((task) => task.dueDate)?.dueDate ?? null;
+  const returnTo = route === "mow" ? "/collections/mowing" : "/collections/weeding";
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-work-collection-page-shell">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone atlas-overview-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href={role === "owner" ? "/owner" : role === "manager" ? "/manage" : "/"} className="atlas-phone-brand atlas-task-header-brand">
+          <Link href={role === "owner" ? "/owner" : role === "manager" ? "/manage" : "/work/today"} className="atlas-phone-brand atlas-task-header-brand">
             <span className="atlas-phone-kicker">Atlas</span>
             <span className="atlas-phone-title">{title}</span>
           </Link>
           <span className="atlas-weather-line">{subtitle}</span>
-          <Link href={`/day?date=${encodeURIComponent(today)}`} className="atlas-note-plus atlas-overview-top-dot" aria-label="Back to day overview">↩</Link>
+          <Link href={role === "farm_hand" ? "/work/today" : `/day?date=${encodeURIComponent(today)}`} className="atlas-note-plus atlas-overview-top-dot" aria-label="Back to work overview">↩</Link>
         </header>
 
         <div className="atlas-task-page-body atlas-overview-body atlas-work-collection-body">
@@ -138,10 +149,10 @@ export default function CanonicalMaintenanceCollectionView({
           </section>
 
           <section className="atlas-overview-zone-list atlas-work-collection-list" aria-label={`${title} areas`}>
-            <CollectionSection title="Due Now" tasks={dueNow} role={role} empty={`No ${title.toLowerCase()} areas are due now.`} open />
-            <CollectionSection title="Blocked" tasks={blocked} role={role} empty={`No ${title.toLowerCase()} areas are blocked.`} open={blocked.length > 0} />
-            <CollectionSection title="Upcoming (7 Days)" tasks={upcoming} role={role} empty={`No ${title.toLowerCase()} areas are scheduled in the next 7 days.`} />
-            <CollectionSection title="Recently Done" tasks={recentlyDone} role={role} empty={`No ${title.toLowerCase()} areas were completed in the last 7 days.`} />
+            <CollectionSection title="Due Now" tasks={dueNow} role={role} returnTo={returnTo} empty={`No ${title.toLowerCase()} areas are due now.`} open />
+            <CollectionSection title="Blocked" tasks={blocked} role={role} returnTo={returnTo} empty={`No ${title.toLowerCase()} areas are blocked.`} open={blocked.length > 0} />
+            <CollectionSection title="Upcoming (7 Days)" tasks={upcoming} role={role} returnTo={returnTo} empty={`No ${title.toLowerCase()} areas are scheduled in the next 7 days.`} />
+            <CollectionSection title="Recently Done" tasks={recentlyDone} role={role} returnTo={returnTo} empty={`No ${title.toLowerCase()} areas were completed in the last 7 days.`} />
           </section>
         </div>
       </section>
