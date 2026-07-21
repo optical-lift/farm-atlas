@@ -16,23 +16,23 @@ test("Owner membership opens the Owner route group", () => {
   assert.equal(access.redirectTo, null);
 });
 
-test("Manager membership opens management but not Owner routes", () => {
+test("Manager membership opens management but returns to shared Atlas from Owner routes", () => {
   const session = sessionFor("manager");
   assert.equal(resolveRoleAccess(session, ["owner", "manager"]).status, "authorized");
   assert.deepEqual(resolveRoleAccess(session, ["owner"]), {
     status: "wrong_role",
     membership: null,
-    redirectTo: "/manage",
+    redirectTo: "/",
   });
 });
 
-test("Farm-Hand membership opens worker routes only", () => {
+test("Farm-Hand membership opens worker actions and returns to shared Atlas from private routes", () => {
   const session = sessionFor("farmHand");
   assert.equal(resolveRoleAccess(session, ["owner", "manager", "farm_hand"]).status, "authorized");
   assert.deepEqual(resolveRoleAccess(session, ["owner", "manager"]), {
     status: "wrong_role",
     membership: null,
-    redirectTo: "/work/today",
+    redirectTo: "/",
   });
 });
 
