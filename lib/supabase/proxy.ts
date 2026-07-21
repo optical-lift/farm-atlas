@@ -7,9 +7,6 @@ import { getAtlasSupabaseConfig } from "@/lib/supabase/config";
 const LEGACY_MUTATION_REWRITES = new Map([
   ["POST /api/atlas/closeout", "/api/atlas/closeout-save"],
   ["POST /api/atlas/germination-check", "/api/atlas/germination-check-save"],
-  ["PATCH /api/atlas/production-dashboard", "/api/atlas/production-dashboard-update"],
-  ["PATCH /api/atlas/production-plans", "/api/atlas/production-plans-update"],
-  ["POST /api/atlas/production-rules", "/api/atlas/production-rules-save"],
 ]);
 
 function copySessionCookies(source: NextResponse, target: NextResponse) {
