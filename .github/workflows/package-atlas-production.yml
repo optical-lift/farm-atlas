@@ -3,6 +3,8 @@ name: Package Atlas Production Source
 on:
   push:
     branches: [agent/package-atlas-production]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
