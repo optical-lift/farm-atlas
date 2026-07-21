@@ -15,6 +15,9 @@ const impactAudit = read(
 const policyCoverage = read(
   "supabase/migrations/20260721231030_atlas_complete_completion_impact_policy_coverage.sql",
 );
+const internalSealing = read(
+  "supabase/migrations/20260721231615_atlas_seal_workflow_audit_internals.sql",
+);
 
 test("workflow handoffs use explicit guarded firing modes", () => {
   for (const mode of [
@@ -90,4 +93,12 @@ test("biological and maintenance actions require appropriate state impacts", () 
 test("grow-room actions are classified instead of falling through the audit", () => {
   assert.match(policyCoverage, /'grow_room'/);
   assert.match(policyCoverage, /tray or crop stage/);
+});
+
+test("workflow classification and audit internals are not callable or readable by app roles", () => {
+  assert.match(internalSealing, /revoke all on function atlas\.validate_workflow_handoff_mode_v1\(\) from public, anon, authenticated/);
+  assert.match(internalSealing, /revoke all on table atlas\.task_completion_impact_policies from public, anon, authenticated/);
+  assert.match(internalSealing, /revoke all on table atlas\.workflow_handoff_classification_v1 from public, anon, authenticated/);
+  assert.match(internalSealing, /revoke all on table atlas\.task_completion_impact_audit_v1 from public, anon, authenticated/);
+  assert.match(internalSealing, /revoke all on table atlas\.task_completion_impact_summary_v1 from public, anon, authenticated/);
 });
