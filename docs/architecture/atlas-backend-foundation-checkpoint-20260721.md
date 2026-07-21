@@ -12,15 +12,7 @@ PR #43 remains draft and unmerged pending the intentional Vercel release and pos
 
 Every Atlas API route now uses the signed-in user's cookie-backed Supabase session. There are zero Atlas API service-role routes.
 
-Membership-scoped contracts cover:
-
-- task cards and homepage work
-- owner and Farm-Hand task transitions
-- object workbench reads, events, and crop observations
-- field logs and closeouts
-- germination checks and germination history
-- zone registry
-- production dashboard, production plans, succession state, mark-sown, and rule-plan creation
+Membership-scoped contracts cover task cards, homepage work, owner and Farm-Hand task transitions, the object workbench, field logs, closeouts, germination, the zone registry, and production planning.
 
 Anonymous execution is revoked for the new database functions. Authenticated execution remains constrained inside each function by the active Elm Farm membership and applicable role or assignment rule.
 
@@ -28,18 +20,7 @@ Anonymous execution is revoked for the new database functions. Authenticated exe
 
 ## Anna compatibility
 
-Anna retains the existing task interface and behavior:
-
-- Done
-- Unfinished
-- Partly done
-- Blocked
-- Tomorrow
-- Next week
-- Pick a date
-- Changed plan
-- Not relevant
-- checklist Mark done and Reopen
+Anna retains Done, Unfinished, Partly done, Blocked, Tomorrow, Next week, Pick a date, Changed plan, Not relevant, checklist Mark done, and checklist Reopen.
 
 The transition engine preserves field logs, object history, checklist movement, recurring mowing generation, and duplicate-click idempotency.
 
@@ -82,26 +63,10 @@ The production, planting-claim, object-content, and crop-cycle graph was reconci
 - corrected the FR16 and FR17 content identities to their July 14 reset sowings
 - required future production mark-sown actions to identify real growing objects
 
-Current queried invariants return zero issues for:
-
-- Anna tasks without a usable location
-- metadata-only Anna assignments
-- active tasks linked to terminal crop cycles
-- active children beneath terminal parents
-- duplicate active engine instances
-- blocked tasks without a reason
-- production state, date, task, or cycle-link mismatches
-- planting claims without object contents or crop cycles
-- active or planned crop cycles without a growing object
+Current queried invariants return zero issues for Anna tasks without a usable location, metadata-only Anna assignments, active tasks linked to terminal crop cycles, active children beneath terminal parents, duplicate active engine instances, blocked tasks without a reason, production state/date/task/cycle mismatches, planting claims without contents or cycles, and active or planned crop cycles without a growing object.
 
 ## Verification
 
 Rollback-only proofs passed for all task transitions, recurring mowing, field logs, closeouts, germination flows, production policy and window changes, regeneration, mark-sown, planting claims, crop cycles, and rule-based plan creation.
 
-Atlas CI run 201 passed:
-
-- zero-service-role API architecture audit
-- canonical transition guardrails
-- homepage membership guard
-- complete repository test suite
-- complete Next.js production build
+Atlas CI run 201 passed the zero-service-role API audit, transition guardrails, homepage membership guard, complete repository test suite, and complete Next.js production build.
