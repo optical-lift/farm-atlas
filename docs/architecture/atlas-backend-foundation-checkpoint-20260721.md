@@ -1,12 +1,12 @@
 # Atlas Backend Foundation Checkpoint — 2026-07-21
 
-This checkpoint records the behind-the-scenes foundation required before Atlas screens are restored.
+This checkpoint records the secured Atlas foundation and the first restored presentation routes.
 
 ## Status
 
-The identity, authorization, farm-state read, scheduling, Quick Log, planting-claim, client gateway, and database-policy layers now have coherent contracts. Presentation routes may be restored without reviving legacy page-specific Supabase queries, direct browser mutations, or client-supplied role scope.
+The identity, authorization, farm-state read, scheduling, Quick Log, planting-claim, client gateway, database-policy, and transition-integrity layers now have coherent contracts.
 
-The backend foundation is complete enough to begin rebuilding the working Atlas experience.
+Owner Home, Day, Week, and Month have been moved onto those contracts. They no longer depend on the legacy service-role task-card feed, browser-side role scope, or metadata fields such as `owner_task`, `anna_task`, or `assigned_to` for authorization.
 
 ## Completed foundations
 
@@ -93,14 +93,48 @@ The following neutral API boundaries are available for interactive client compon
 
 Each route resolves the signed-in farm membership server-side. None accepts `owner`, `anna`, `marshall`, or a query-string scope as authorization.
 
-### Complete database policy boundary
+### Closed database boundary
 
-- All 48 Atlas tables have Row Level Security enabled.
-- Farm-scoped operational tables use active Owner/Manager membership reads.
-- Parent-linked project/task/crop relationships inherit the visibility of their parent records.
-- Farm Hands receive shared crop aliases and observation choices but no direct operational-table access.
-- Direct authenticated writes remain closed except through controlled functions.
-- `farm_membership_invites` intentionally has no direct table policy or user grant; eight authenticated security-definer invitation functions govern its complete lifecycle.
+- All Atlas tables have Row Level Security enabled.
+- Farm-scoped operational tables use active membership reads.
+- Parent-linked project/task/crop relationships inherit parent visibility.
+- Direct browser writes remain closed except through controlled functions.
+- Anonymous production-plan and production-succession writes are removed.
+- Legacy definer views are `security_invoker` and reserved for trusted server use.
+- Legacy maintenance, reconciliation, crop-observation, timeline, and trigger functions are not public RPCs.
+- Only membership-aware Atlas `SECURITY DEFINER` contracts remain executable by signed-in users.
+- `farm_membership_invites` intentionally has no direct table policy or user grant; its controlled invitation functions govern the lifecycle.
+
+### Transition reconciliation
+
+The audited transition debt has been closed:
+
+- every Elm physical object has an `object_state` row;
+- every active planting claim has a physical object link;
+- the four detached planting claims now have object contents, field-log links, activity events, state memory, and crop cycles;
+- the five Anna Network tasks point to Anna's real membership;
+- all transition identity reviews are resolved or explicitly dismissed;
+- historical field logs with unknowable actors are marked `migrated_unknown` instead of being guessed;
+- GitHub and Supabase migration history agree on the task-relationship migration version.
+
+`atlas.v_transition_integrity` is the permanent deploy-check surface. For Elm Farm it currently reports zero for:
+
+- objects without state;
+- active planting claims without object links;
+- assigned-worker tasks without memberships;
+- open identity reviews;
+- anonymous production write grants;
+- anonymous Atlas definer functions;
+- anonymous legacy-view reads.
+
+## Restored screens
+
+- Owner Home reads canonical operational state and the role-aware schedule.
+- Day reads `getDaySchedule` and keeps carryover separate from exact-date work.
+- Week reads the canonical schedule for its selected window.
+- Month reads `getMonthSchedule` for real month bounds.
+- These routes are server-rendered behind Owner/Manager membership checks.
+- CI fails if these screens reintroduce the service-role task-card client or metadata-based authorization.
 
 ## Validation
 
@@ -111,20 +145,17 @@ Each route resolves the signed-in farm membership server-side. None accepts `own
 - Planting claim was tested end to end with Lex inside a rollback, including profile timing, object contents, crop cycle creation, and idempotent replay.
 - Farm-Hand use of the standalone planting claim was rejected and created zero records.
 - Database rollback tests left no test farm records behind.
-- Strict GitHub CI run `29795101480` passed all 74 tests and the full Next.js production build against the completed foundation.
-- Vercel production deployment `dpl_DhTnFxagQ9T9WZQ7SgSRvhgKueaQ` reached READY with the validated application foundation.
-- The live logged-out operational-state and schedule gateways return `401` with private, non-cacheable responses.
+- Live logged-out operational-state, schedule, and planting-claim gateways return private, non-cacheable `401` responses.
+- Transition integrity currently reports zero gaps for Elm Farm.
 
 ## Next build phase
 
-Restore screens against the new foundation in this order:
+Continue screen restoration in this order:
 
-1. Owner farm home using canonical operational state and schedule.
-2. Day overview using the canonical schedule and exact-date progress.
-3. Week and Month overviews using the same schedule contract.
-4. Zone and object pages using canonical operational state.
-5. Quick Log form using the authenticated gateway.
-6. Claim Planting form using the planting catalog and transaction.
-7. Projects, resources, production, and remaining legacy features one bounded capability at a time.
+1. Zone and object pages using canonical operational state.
+2. Quick Log form using the authenticated gateway.
+3. Claim Planting form using the planting catalog and transaction.
+4. Projects, resources, and production through bounded membership-aware capabilities.
+5. Remaining legacy features one route at a time.
 
 A restored route replaces its legacy data path. The old and new authorization systems must not remain active beside each other.
