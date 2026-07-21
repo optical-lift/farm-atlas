@@ -40,3 +40,16 @@ test("worker Today preserves mowing and weeding as collection cards", () => {
   assert.match(board, /carryoverCount/);
   assert.match(board, /blockedCount/);
 });
+
+test("task focus accepts only known internal return destinations", () => {
+  const focusPage = read("app/task-focus/[taskId]/page.tsx");
+  const collectionView = read("components/atlas/CanonicalMaintenanceCollectionView.tsx");
+
+  assert.match(focusPage, /SAFE_RETURN_PATHS/);
+  assert.match(focusPage, /"\/work\/today"/);
+  assert.match(focusPage, /"\/collections\/mowing"/);
+  assert.match(focusPage, /"\/collections\/weeding"/);
+  assert.match(focusPage, /value\.startsWith\("\/\/"\)/);
+  assert.match(focusPage, /listPath: returnTo/);
+  assert.match(collectionView, /returnTo=\$\{encodeURIComponent\(returnTo\)\}/);
+});
