@@ -20,98 +20,24 @@ function read(path) {
   return readFileSync(join(root, path), "utf8");
 }
 
-function endpointForRoute(path) {
-  return `/${path}`
-    .replace(/^\/app/, "")
-    .replace(/\/route\.(?:ts|tsx|js|jsx)$/, "")
-    .replace(/\/\[[^/]+\]/g, "");
-}
-
-function moduleKey(path) {
-  return `@/${path.replace(/\.(?:ts|tsx|js|jsx)$/, "")}`;
-}
-
-function routePathForEndpoint(endpoint) {
-  return `app${endpoint}/route.ts`;
-}
-
 const routeFiles = filesUnder("app/api/atlas").filter((path) => /\/route\.(?:ts|tsx|js|jsx)$/.test(path));
-const sourceFiles = [
-  ...filesUnder("app"),
-  ...filesUnder("components"),
-  ...filesUnder("lib"),
-].filter((path) => !path.startsWith("app/api/atlas/"));
-const proxy = read("lib/supabase/proxy.ts");
-const rewriteEntries = Array.from(
-  proxy.matchAll(/\["(GET|POST|PUT|PATCH|DELETE) (\/api\/atlas\/[^"?]+)",\s*"(\/api\/atlas\/[^"?]+)"\]/g),
-  (match) => [`${match[1]} ${match[2]}`, match[3]],
-);
-const rewrites = new Map(rewriteEntries);
+const serviceRoleRoutes = routeFiles.filter((path) => /SUPABASE_SERVICE_ROLE_KEY|atlasSupabase/.test(read(path)));
 
-const serviceRoleRoutes = routeFiles
-  .filter((path) => /SUPABASE_SERVICE_ROLE_KEY|atlasSupabase/.test(read(path)))
-  .map((path) => {
-    const source = read(path);
-    const endpoint = endpointForRoute(path);
-    const methods = Array.from(source.matchAll(/export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE)/g), (match) => match[1]);
-    const references = sourceFiles.filter((candidate) => read(candidate).includes(endpoint));
-    const referenceConsumers = Object.fromEntries(references.map((reference) => {
-      if (!reference.startsWith("lib/")) return [reference, []];
-      const key = moduleKey(reference);
-      return [reference, sourceFiles.filter((candidate) => candidate !== reference && read(candidate).includes(key))];
-    }));
-    return { path, endpoint, methods, references, referenceConsumers };
-  });
-
-let unsafe = false;
-for (const route of serviceRoleRoutes) {
-  const refs = route.references.length
-    ? route.references.map((reference) => {
-      const consumers = route.referenceConsumers[reference] ?? [];
-      return consumers.length ? `${reference}<-${consumers.join("+")}` : reference;
-    }).join(",")
-    : "none";
-
-  const nonGetMethods = route.methods.filter((method) => method !== "GET");
-  const missingRewrite = [];
-  const invalidDestination = [];
-  for (const method of nonGetMethods) {
-    const destination = rewrites.get(`${method} ${route.endpoint}`);
-    if (!destination) {
-      missingRewrite.push(method);
-      continue;
-    }
-    const destinationPath = routePathForEndpoint(destination);
-    if (!existsSync(join(root, destinationPath))) {
-      invalidDestination.push(`${method}->missing:${destinationPath}`);
-      continue;
-    }
-    const destinationSource = read(destinationPath);
-    if (/SUPABASE_SERVICE_ROLE_KEY|atlasSupabase/.test(destinationSource)
-      || !/requireAtlasApiAccess/.test(destinationSource)
-      || !/createAtlasServerClient/.test(destinationSource)) {
-      invalidDestination.push(`${method}->unsafe:${destinationPath}`);
-    }
-  }
-
-  const classification = route.methods.length === 0 || missingRewrite.length || invalidDestination.length
-    ? "UNSAFE_MUTATION"
-    : nonGetMethods.length
-      ? "REWRITTEN_MUTATION"
-      : "READ_ONLY_LEGACY";
-  console.log(`${classification}\t${route.path}\t${route.methods.join("+") || "unknown"}\trefs=${refs}`);
-  if (missingRewrite.length) console.error(`Missing rewrites for ${route.path}: ${missingRewrite.join(", ")}`);
-  if (invalidDestination.length) console.error(`Invalid rewrite destinations for ${route.path}: ${invalidDestination.join(", ")}`);
-  if (classification === "UNSAFE_MUTATION") unsafe = true;
+if (serviceRoleRoutes.length) {
+  console.error("Atlas API routes still using the service-role client:");
+  serviceRoleRoutes.forEach((path) => console.error(path));
+  process.exitCode = 1;
+} else {
+  console.log("Atlas API boundary clean: zero service-role routes.");
 }
 
+const proxy = read("lib/supabase/proxy.ts");
 const membershipBoundary = /needsAtlasFarmMembership/.test(proxy)
   && /farm_memberships/.test(proxy)
   && /farm\.stable_key/.test(proxy)
   && /elm_farm/.test(proxy);
+
 if (!membershipBoundary) {
   console.error("Atlas API proxy is missing the active Elm membership boundary.");
-  unsafe = true;
+  process.exitCode = 1;
 }
-
-if (unsafe) process.exitCode = 1;
