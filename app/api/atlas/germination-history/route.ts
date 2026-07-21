@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { atlasSupabase } from "@/lib/atlas/supabase-server";
+
+import { requireAtlasApiAccess } from "@/lib/atlas/api-access";
+import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,11 @@ type TaskRow = {
   metadata: Record<string, unknown> | null;
 };
 
+type HistorySource = {
+  task?: TaskRow | null;
+  sourceTask?: TaskRow | null;
+};
+
 type HistoryItem = {
   key: string;
   date: string | null;
@@ -22,6 +29,8 @@ type HistoryItem = {
   sourceTask: string | null;
   details: string[];
 };
+
+type RpcError = { code?: string };
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -52,18 +61,6 @@ function uniqueDetails(values: Array<string | null>) {
   return Array.from(new Set(values.map((value) => clean(value)).filter(Boolean)));
 }
 
-async function fetchTask(taskId: string) {
-  const { data, error } = await atlasSupabase
-    .schema("atlas")
-    .from("tasks")
-    .select("id, title, task_type, status, due_date, completed_at, created_at, note, metadata")
-    .eq("id", taskId)
-    .limit(1);
-  if (error) throw new Error(error.message);
-  if (!data?.[0]) throw new Error("Task was not found.");
-  return data[0] as TaskRow;
-}
-
 function sowingHistory(task: TaskRow, objectLabel: string | null): HistoryItem {
   const metadata = task.metadata ?? {};
   const count = numberValue(metadata.container_count);
@@ -87,53 +84,76 @@ function sowingHistory(task: TaskRow, objectLabel: string | null): HistoryItem {
   };
 }
 
+function privateJson(body: Record<string, unknown>, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      "Cache-Control": "private, max-age=0, must-revalidate",
+      "X-Atlas-Read-Path": "germination-history-membership-v1",
+    },
+  });
+}
+
 export async function GET(request: NextRequest) {
-  try {
-    const taskId = clean(request.nextUrl.searchParams.get("taskId"));
-    if (!taskId) return NextResponse.json({ ok: false, error: "taskId is required." }, { status: 400 });
+  const authorized = await requireAtlasApiAccess();
+  if (!authorized.ok) return authorized.response;
 
-    const task = await fetchTask(taskId);
-    const metadata = task.metadata ?? {};
-    const sourceSowingTaskId = clean(metadata.source_sowing_task_id);
-    const objectLabel = clean(request.nextUrl.searchParams.get("objectLabel")) || null;
-    const history: HistoryItem[] = [];
+  const taskId = clean(request.nextUrl.searchParams.get("taskId"));
+  if (!taskId) return privateJson({ ok: false, error: "taskId is required." }, 400);
 
-    if (sourceSowingTaskId) {
-      const sourceTask = await fetchTask(sourceSowingTaskId);
-      history.push(sowingHistory(sourceTask, objectLabel));
+  const supabase = await createAtlasServerClient();
+  const { data, error } = await supabase.rpc("germination_history_source_v1", {
+    p_farm_id: authorized.access.membership.farmId,
+    p_task_id: taskId,
+  });
+
+  if (error) {
+    const rpcError = error as RpcError;
+    if (rpcError.code === "42501") {
+      return privateJson({ ok: false, error: "This germination task is outside the active membership scope." }, 403);
     }
-
-    const notYetCount = numberValue(metadata.not_yet_count) ?? 0;
-    if (notYetCount > 0) {
-      history.push({
-        key: `not-yet-${task.id}`,
-        date: dateOnly(metadata.last_not_yet_at) || taskDate(task),
-        action: "Checked — not yet germinated",
-        sourceTask: task.title,
-        details: uniqueDetails([
-          `${notYetCount} check${notYetCount === 1 ? "" : "s"} recorded`,
-          clean(metadata.last_not_yet_note) || null,
-        ]),
-      });
+    if (rpcError.code === "P0002") {
+      return privateJson({ ok: false, error: "Task was not found." }, 404);
     }
+    console.error("Atlas germination history read failed:", error);
+    return privateJson({ ok: false, error: "Germination history lookup failed." }, 500);
+  }
 
+  const source = (data ?? {}) as HistorySource;
+  const task = source.task;
+  if (!task) return privateJson({ ok: false, error: "Task was not found." }, 404);
+
+  const metadata = task.metadata ?? {};
+  const objectLabel = clean(request.nextUrl.searchParams.get("objectLabel")) || null;
+  const history: HistoryItem[] = [];
+
+  if (source.sourceTask) history.push(sowingHistory(source.sourceTask, objectLabel));
+
+  const notYetCount = numberValue(metadata.not_yet_count) ?? 0;
+  if (notYetCount > 0) {
     history.push({
-      key: `current-${task.id}`,
-      date: dateOnly(task.due_date),
-      action: "Germination check due",
+      key: `not-yet-${task.id}`,
+      date: dateOnly(metadata.last_not_yet_at) || taskDate(task),
+      action: "Checked — not yet germinated",
       sourceTask: task.title,
       details: uniqueDetails([
-        objectLabel,
-        clean(metadata.actual_sow_date) ? `Sown ${clean(metadata.actual_sow_date)}` : null,
+        `${notYetCount} check${notYetCount === 1 ? "" : "s"} recorded`,
+        clean(metadata.last_not_yet_note) || null,
       ]),
     });
-
-    history.sort((a, b) => (a.date ?? "9999-12-31").localeCompare(b.date ?? "9999-12-31"));
-    return NextResponse.json({ ok: true, taskId: task.id, history });
-  } catch (error) {
-    return NextResponse.json(
-      { ok: false, error: "Germination history lookup failed.", details: error instanceof Error ? error.message : "Unknown error." },
-      { status: 500 },
-    );
   }
+
+  history.push({
+    key: `current-${task.id}`,
+    date: dateOnly(task.due_date),
+    action: "Germination check due",
+    sourceTask: task.title,
+    details: uniqueDetails([
+      objectLabel,
+      clean(metadata.actual_sow_date) ? `Sown ${clean(metadata.actual_sow_date)}` : null,
+    ]),
+  });
+
+  history.sort((a, b) => (a.date ?? "9999-12-31").localeCompare(b.date ?? "9999-12-31"));
+  return privateJson({ ok: true, taskId: task.id, history });
 }
