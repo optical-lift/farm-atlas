@@ -24,6 +24,10 @@ function addDaysIso(dateIso: string, days: number) {
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 
+function validDateIso(value: string | null) {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime()));
+}
+
 function privateJson(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, {
     status,
@@ -34,7 +38,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
   });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
 
@@ -43,14 +47,26 @@ export async function GET() {
     return privateJson({ ok: false, error: "The signed-in farm membership does not have an Atlas worker identity." }, 409);
   }
 
+  const url = new URL(request.url);
+  const requestedDueThrough = url.searchParams.get("dueThrough");
+  const requestedDoneDate = url.searchParams.get("doneDate");
+
+  if (requestedDueThrough && !validDateIso(requestedDueThrough)) {
+    return privateJson({ ok: false, error: "dueThrough must be a valid YYYY-MM-DD date." }, 400);
+  }
+  if (requestedDoneDate && !validDateIso(requestedDoneDate)) {
+    return privateJson({ ok: false, error: "doneDate must be a valid YYYY-MM-DD date." }, 400);
+  }
+
   const today = centralDateIso();
-  const rangeEnd = addDaysIso(today, 35);
+  const rangeEnd = requestedDueThrough ?? addDaysIso(today, 35);
+  const doneDate = requestedDoneDate ?? today;
   const supabase = await createAtlasServerClient();
   const { data, error } = await supabase.rpc("home_task_cards_v1", {
     p_farm_id: authorized.access.membership.farmId,
     p_worker_key: workerKey,
     p_due_through: rangeEnd,
-    p_done_date: today,
+    p_done_date: doneDate,
   });
 
   if (error) {
@@ -75,6 +91,6 @@ export async function GET() {
       role: authorized.access.membership.role,
     },
     taskCards: (data ?? []) as AtlasTaskCardRow[],
-    window: { today, rangeEnd },
+    window: { today, rangeEnd, doneDate },
   });
 }
