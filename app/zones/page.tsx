@@ -3,6 +3,7 @@
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 
+import { VenueZoneLandingCard } from "@/components/atlas/room-inspection";
 import { ZoneLandingCard } from "@/components/atlas/zone-inspection";
 import {
   fetchAtlasZoneRegistry,
@@ -14,6 +15,12 @@ const MAP_ROUTES: Record<string, { href: string; label: string }> = {
   original_berry_walk: { href: "/zones/berry-walk-map", label: "Open Berry Walk visual map" },
   berry_walk_flower_rows: { href: "/zones/berry-walk-map", label: "Open Berry Walk visual map" },
 };
+
+function ZoneCard({ zone }: { zone: AtlasRegistryZone }) {
+  return zone.stable_key === "venue"
+    ? <VenueZoneLandingCard zone={zone} />
+    : <ZoneLandingCard zone={zone} />;
+}
 
 export default function AtlasZonesPage() {
   const [zones, setZones] = useState<AtlasRegistryZone[]>([]);
@@ -62,14 +69,14 @@ export default function AtlasZonesPage() {
               if (!mapRoute) {
                 return (
                   <Link href={`/zones/${zone.stable_key}`} key={zone.id} className="atlas-zone-landing-link">
-                    <ZoneLandingCard zone={zone} />
+                    <ZoneCard zone={zone} />
                   </Link>
                 );
               }
 
               return (
                 <article key={zone.id} className="atlas-zone-card-with-actions">
-                  <ZoneLandingCard zone={zone} />
+                  <ZoneCard zone={zone} />
                   <div className="atlas-zone-card-actions">
                     <Link
                       href={`/zones/${zone.stable_key}`}

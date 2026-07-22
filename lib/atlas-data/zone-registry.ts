@@ -10,6 +10,7 @@ const FINAL_ZONE_KEYS = [
   "original_berry_walk",
   "asparagus_row",
   "grow_room",
+  "venue",
   "lilac_haven",
   "redbud_islands",
   "memorial_garden",
@@ -280,7 +281,7 @@ export function buildZoneRegistry(source: ZoneRegistrySource) {
       };
     });
 
-    const activeObjectCount = objectsWithContents.filter((object) => object.contents.length > 0).length;
+    const activeObjectCount = objectsWithContents.filter((object) => object.object_type === "room" || object.contents.length > 0).length;
     const unknownCount = objectsWithContents.reduce(
       (sum, object) => sum + object.contents.reduce(
         (contentSum, content) => contentSum + content.inspection.unknown_fields.length,

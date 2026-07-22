@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 
+import { RoomInspectorRow } from "@/components/atlas/room-inspection";
 import { TaskPhysicalSpaces } from "@/components/atlas/task-physical-spaces";
 import { DocumentWorkCard, FieldLogDrawer, type AtlasFieldLogSeed } from "@/components/atlas/field-log-builder";
 import {
@@ -96,7 +97,7 @@ export default function AtlasZoneDetailPage() {
   const zoneTasks = useMemo(() => {
     if (!zone) return [];
     const objectIds = new Set(zone.objects.map((object) => object.id));
-    return tasks.filter((task) => task.objects.some((object) => objectIds.has(object.object_id)));
+    return tasks.filter((task) => task.zone_id === zone.id || task.objects.some((object) => objectIds.has(object.object_id)));
   }, [tasks, zone]);
 
   function openZoneLog(workKey: AtlasFieldLogSeed["workKey"] = "note") {
@@ -108,6 +109,8 @@ export default function AtlasZoneDetailPage() {
     if (!zone) return;
     setLogSeed({ workKey, zoneKeys: [zone.stable_key], objectKeys: [object.stable_key] });
   }
+
+  const isVenue = zone?.stable_key === "venue";
 
   return (
     <main className="atlas-phone-shell atlas-route-shell">
@@ -151,18 +154,18 @@ export default function AtlasZoneDetailPage() {
                 </div>
               </section>
 
-              <ZoneRegistryFactCard zone={zone} />
+              {!isVenue ? <ZoneRegistryFactCard zone={zone} /> : null}
 
               <DocumentWorkCard
-                title="Document work here"
-                detail={`Write what was touched in ${zone.label}.`}
+                title={isVenue ? "Document venue work" : "Document work here"}
+                detail={isVenue ? "Record what changed in a rentable room." : `Write what was touched in ${zone.label}.`}
                 onOpen={() => openZoneLog()}
               />
 
               <section className="atlas-zone-bed-list">
                 <div className="atlas-zone-bed-list-head">
-                  <span className="atlas-home-kicker">Beds / objects</span>
-                  <p>Tap one bed to open its crop record and attached tasks.</p>
+                  <span className="atlas-home-kicker">{isVenue ? "Rentable rooms" : "Beds / objects"}</span>
+                  <p>{isVenue ? "Open one room to see the work and readiness attached to it." : "Tap one bed to open its crop record and attached tasks."}</p>
                 </div>
 
                 {zone.objects.length === 0 ? (
@@ -171,12 +174,21 @@ export default function AtlasZoneDetailPage() {
 
                 {zone.objects.map((object) => (
                   <div id={`object-${object.stable_key}`} key={object.id}>
-                    <BedInspectorRow
-                      object={object}
-                      tasks={objectTasks(object, tasks)}
-                      onTaskSelect={setSelectedTask}
-                      onDocumentObject={openObjectLog}
-                    />
+                    {object.object_type === "room" ? (
+                      <RoomInspectorRow
+                        object={object}
+                        tasks={objectTasks(object, tasks)}
+                        onTaskSelect={setSelectedTask}
+                        onDocumentObject={openObjectLog}
+                      />
+                    ) : (
+                      <BedInspectorRow
+                        object={object}
+                        tasks={objectTasks(object, tasks)}
+                        onTaskSelect={setSelectedTask}
+                        onDocumentObject={openObjectLog}
+                      />
+                    )}
                   </div>
                 ))}
               </section>

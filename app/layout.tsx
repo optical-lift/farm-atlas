@@ -41,6 +41,7 @@ import "./day-overdue.css";
 import "./object-operational-timeline.css";
 import "./bed-crop-accordion.css";
 import "./attached-task-history.css";
+import "./venue-rooms.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
