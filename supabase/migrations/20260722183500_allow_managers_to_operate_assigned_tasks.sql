@@ -1,4 +1,4 @@
--- Managers and Farm Hands use one assigned-work transition boundary.
+-- One assigned-work transition boundary serves Managers and Farm Hands.
 -- The task must still be assigned to the signed-in membership, so this does
 -- not grant manager access to another worker's or the owner's task state.
 
