@@ -93,7 +93,8 @@ test("recalculation releases stale reservations before creating the current wind
 });
 
 test("bed assignments create canonical preparation work linked to place and crop cohort", () => {
-  assert.match(engine, /generated_from,'production_bed_assignment'/);
+  assert.match(engine, /generated_from,generated_from_id/);
+  assert.match(engine, /'production_bed_assignment',v_assignment\.assignment_id/);
   assert.match(engine, /engine_instance_key/);
   assert.match(engine, /capacity-bed-prep:/);
   assert.match(engine, /insert into atlas\.task_objects/);
