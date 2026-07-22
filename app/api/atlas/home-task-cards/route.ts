@@ -5,6 +5,7 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+// The shared home, day, week, and month surfaces all use this membership-scoped reader.
 type RpcError = { code?: string };
 type AtlasTaskCardRow = { task_id: string; [key: string]: unknown };
 
