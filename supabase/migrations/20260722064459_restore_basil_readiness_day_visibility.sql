@@ -1,3 +1,4 @@
+-- Live migration already applied; this commit retriggers the production release after Vercel rate limiting.
 update atlas.tasks
 set title = 'Grow-room basil transplant readiness',
     updated_at = now()
