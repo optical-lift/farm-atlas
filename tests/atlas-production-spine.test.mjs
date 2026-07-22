@@ -87,6 +87,13 @@ test("Potomac inventory splits into two confirmed 500-seed successions", () => {
   assert.match(pilot, /'reserved'/);
 });
 
+test("Potomac purchase economics remain unknown instead of inferred", () => {
+  assert.match(pilot, /'cost_status','unknown'/);
+  assert.match(pilot, /'do_not_infer_purchase_date',true/);
+  assert.doesNotMatch(pilot, /purchase_cost\s*,\s*[0-9]/);
+  assert.doesNotMatch(pilot, /acquired_date\s*,\s*date/);
+});
+
 test("all four future sowing tasks are linked to durable production lots", () => {
   for (const taskKey of [
     "spring_snapdragon_2027_s1_rocket",
