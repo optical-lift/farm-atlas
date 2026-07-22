@@ -44,7 +44,7 @@ test("Anna enters the familiar shared Atlas operating surface", () => {
 
   assert.match(home, /data-atlas-home-portal="shared"/);
   assert.doesNotMatch(layout, /AtlasRoleHomeRedirect/);
-  assert.match(taskClient, /window\.location\.pathname === "\/"/);
+  assert.match(taskClient, /if \(pathname === "\/"\)/);
   assert.match(taskClient, /\/api\/atlas\/home-task-cards/);
 
   for (const role of ["owner", "manager", "farm_hand"]) {
