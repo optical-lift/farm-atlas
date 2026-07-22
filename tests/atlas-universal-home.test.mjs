@@ -36,6 +36,7 @@ test("home task data follows the signed-in membership", () => {
   const route = read("app/api/atlas/home-task-cards/route.ts");
   const viewer = read("lib/atlas/viewer.ts");
   const migration = read("supabase/migrations/20260722174500_universal_home_viewer_scope.sql");
+  const optimization = read("supabase/migrations/20260722181500_optimize_universal_home_card_read.sql");
 
   assert.match(route, /authorized\.access\.membership\.workerKey/);
   assert.match(route, /p_worker_key: workerKey/);
@@ -51,4 +52,8 @@ test("home task data follows the signed-in membership", () => {
   assert.match(migration, /v_requested_worker_key is distinct from v_current_worker_key/);
   assert.match(migration, /task\.assigned_membership_id = v_current_membership_id/);
   assert.doesNotMatch(migration, /worker_key = 'anna'/);
+
+  assert.match(optimization, /select coalesce\(array_agg\(task\.id\)/);
+  assert.match(optimization, /card\.task_id = any\(v_task_ids\)/);
+  assert.doesNotMatch(optimization, /join atlas\.tasks task on task\.id = card\.task_id/);
 });
