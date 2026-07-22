@@ -72,3 +72,17 @@ test("Weeding keeps the queue and hierarchy while using quiet state labels", () 
   assert.doesNotMatch(weeding, /Upcoming \(7 Days\)/);
   assert.doesNotMatch(weeding, /CanonicalMaintenanceCollectionView/);
 });
+
+test("Waiting Field Row queue items can complete without releasing extra work", () => {
+  const weeding = read("app/collections/weeding/page.tsx");
+  const migration = read("supabase/migrations/20260722172500_allow_out_of_sequence_weeding_queue_completion.sql");
+
+  assert.match(weeding, /postAtlasTaskTransition/);
+  assert.match(weeding, /queueCompletion: "out_of_sequence"/);
+  assert.match(weeding, /Mark \$\{item\.title\} done\?/);
+  assert.match(weeding, /item\.state === "queued"/);
+  assert.match(migration, /qi\.state in \('active', 'queued'\)/);
+  assert.match(migration, /if v_item\.state = 'active' then/);
+  assert.match(migration, /completed_out_of_sequence/);
+  assert.match(migration, /sync_task_release_queue_summary_v1/);
+});
