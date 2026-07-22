@@ -120,6 +120,29 @@ export default function OwnerDashboardClient({
             <article><strong>{counts.later}</strong><span>later</span></article>
           </section>
 
+          <section className="atlas-overview-zone-card atlas-owner-section">
+            <summary>
+              <div>
+                <strong>Production Readiness</strong>
+                <span>Spring 2027 snapdragons</span>
+              </div>
+              <b>Plan</b>
+            </summary>
+            <div className="atlas-overview-task-list">
+              <Link
+                className="atlas-overview-task-card atlas-owner-task-card"
+                href="/owner/production-readiness"
+              >
+                <div>
+                  <strong>Measure January capacity</strong>
+                  <span>seed · trays · lights · shelves · beds</span>
+                </div>
+                <em>13 planning facts</em>
+                <p>Turn real measurements into dated grow-room reservations and winter bed-preparation work.</p>
+              </Link>
+            </div>
+          </section>
+
           <section className="atlas-overview-zone-list atlas-owner-list" aria-label="Owner task list">
             <OwnerSection title="Overdue" tasks={ownerActions.overdue} empty="No overdue owner tasks." />
             <OwnerSection title="Today" tasks={ownerActions.today} empty="No owner tasks due today." />
