@@ -34,21 +34,34 @@ test("Week and Month keep their deployed overview shapes", () => {
   assert.doesNotMatch(month, /CanonicalScheduleView/);
 });
 
-test("Mowing and Weeding keep the deployed collection boxes and data lines", () => {
+test("Mowing keeps the deployed collection boxes and data lines", () => {
   const mowing = read("app/collections/mowing/page.tsx");
-  const weeding = read("app/collections/weeding/page.tsx");
 
-  for (const source of [mowing, weeding]) {
-    assert.match(source, /atlas-work-collection-hero/);
-    assert.match(source, /atlas-overview-stat-grid/);
-    assert.match(source, /atlas-work-collection-list/);
-    assert.match(source, /Recently Done \/ Resting/);
-    assert.match(source, /Not Ready/);
-    assert.match(source, /fetchAtlasTaskCards/);
-    assert.doesNotMatch(source, /CanonicalMaintenanceCollectionView/);
-  }
-
+  assert.match(mowing, /atlas-work-collection-hero/);
+  assert.match(mowing, /atlas-overview-stat-grid/);
+  assert.match(mowing, /atlas-work-collection-list/);
   assert.match(mowing, /Upcoming/);
-  assert.match(weeding, /Upcoming \(7 Days\)/);
+  assert.match(mowing, /Recently Done \/ Resting/);
+  assert.match(mowing, /Not Ready/);
+  assert.match(mowing, /fetchAtlasTaskCards/);
+  assert.doesNotMatch(mowing, /CanonicalMaintenanceCollectionView/);
+});
+
+test("Weeding shows released work, the Field Row queue, and farm hierarchy", () => {
+  const weeding = read("app/collections/weeding/page.tsx");
+  const route = read("app/api/atlas/weeding-cycle/route.ts");
+
+  assert.match(weeding, /atlas-work-collection-hero/);
+  assert.match(weeding, /atlas-overview-stat-grid/);
+  assert.match(weeding, /atlas-weeding-cycle-stack/);
+  assert.match(weeding, /Work Now/);
+  assert.match(weeding, /Field Row Queue/);
+  assert.match(weeding, /Farm Weeding Order/);
+  assert.match(weeding, /Recently Done \/ Resting/);
+  assert.match(weeding, /Paused \/ Not Ready/);
   assert.match(weeding, /maintenanceAgeLabel/);
+  assert.match(weeding, /fetchAtlasTaskCards/);
+  assert.match(route, /weeding_cycle_v1/);
+  assert.doesNotMatch(weeding, /Upcoming \(7 Days\)/);
+  assert.doesNotMatch(weeding, /CanonicalMaintenanceCollectionView/);
 });
