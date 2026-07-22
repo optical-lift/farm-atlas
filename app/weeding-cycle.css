@@ -1,0 +1,306 @@
+/* Weeding collection: explicit released work, queue, and farm hierarchy. */
+
+.atlas-weeding-cycle-body,
+.atlas-weeding-cycle-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.atlas-weeding-cycle-hero strong {
+  font-size: clamp(30px, 9vw, 42px);
+}
+
+.atlas-weeding-cycle-stats article:last-child strong {
+  font-size: 15px;
+  line-height: 1;
+  white-space: normal;
+}
+
+.atlas-weeding-cycle-summary {
+  border-left: 5px solid var(--atlas-purple-deep);
+}
+
+.atlas-weeding-panel {
+  overflow: hidden;
+  border: 1px solid var(--atlas-border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 20px rgba(58, 46, 30, 0.04);
+}
+
+.atlas-weeding-panel-header {
+  padding: 13px 14px 11px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+  background: rgba(246, 242, 230, 0.34);
+}
+
+.atlas-weeding-panel-header > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.atlas-weeding-panel-header strong,
+.atlas-weeding-panel-header span,
+.atlas-weeding-panel-header b {
+  display: block;
+}
+
+.atlas-weeding-panel-header strong {
+  color: var(--atlas-text);
+  font-size: 25px;
+  line-height: 0.96;
+  font-weight: 950;
+  letter-spacing: -0.055em;
+}
+
+.atlas-weeding-panel-header span {
+  color: var(--atlas-muted);
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.atlas-weeding-panel-header b {
+  flex: 0 0 auto;
+  min-width: 34px;
+  border: 1px solid rgba(139, 145, 194, 0.25);
+  border-radius: 999px;
+  background: white;
+  color: var(--atlas-purple-dark);
+  padding: 7px 9px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-weeding-queue-list,
+.atlas-weeding-hierarchy-list {
+  padding: 10px 12px;
+  display: grid;
+  gap: 7px;
+}
+
+.atlas-weeding-queue-row {
+  min-width: 0;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 15px;
+  background: rgba(246, 242, 230, 0.5);
+  color: var(--atlas-text);
+  text-decoration: none;
+  padding: 9px 10px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.atlas-weeding-queue-row.completed {
+  opacity: 0.7;
+  background: rgba(216, 220, 151, 0.16);
+}
+
+.atlas-weeding-queue-row.active {
+  border-color: rgba(139, 145, 194, 0.55);
+  background: rgba(174, 179, 212, 0.2);
+  box-shadow: inset 4px 0 0 var(--atlas-purple-deep);
+}
+
+.atlas-weeding-queue-row.next {
+  border-color: rgba(195, 168, 94, 0.58);
+  background: rgba(238, 233, 184, 0.26);
+  box-shadow: inset 4px 0 0 #c3a85e;
+}
+
+.atlas-weeding-queue-row.skipped {
+  opacity: 0.65;
+}
+
+.atlas-weeding-queue-number,
+.atlas-weeding-hierarchy-number {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(174, 179, 212, 0.18);
+  color: var(--atlas-purple-dark);
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-weeding-queue-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.atlas-weeding-queue-row strong,
+.atlas-weeding-queue-row span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-weeding-queue-row strong {
+  font-size: 14px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.025em;
+}
+
+.atlas-weeding-queue-row > div span {
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.atlas-weeding-queue-row > b {
+  border: 1px solid rgba(215, 204, 189, 0.8);
+  border-radius: 999px;
+  background: white;
+  color: #666252;
+  padding: 6px 8px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.atlas-weeding-queue-row.active > b {
+  border-color: rgba(139, 145, 194, 0.42);
+  color: var(--atlas-purple-dark);
+}
+
+.atlas-weeding-queue-row.next > b {
+  border-color: rgba(195, 168, 94, 0.5);
+  background: rgba(238, 233, 184, 0.42);
+  color: #77652d;
+}
+
+.atlas-weeding-panel-note {
+  margin: 0;
+  border-top: 1px solid rgba(215, 204, 189, 0.62);
+  padding: 10px 13px 12px;
+  color: var(--atlas-muted);
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.atlas-weeding-hierarchy-row {
+  min-width: 0;
+  border: 1px solid rgba(215, 204, 189, 0.72);
+  border-radius: 16px;
+  background: rgba(251, 250, 244, 0.7);
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 9px;
+}
+
+.atlas-weeding-hierarchy-row.current {
+  border-color: rgba(139, 145, 194, 0.58);
+  background: rgba(174, 179, 212, 0.18);
+  box-shadow: inset 4px 0 0 var(--atlas-purple-deep);
+}
+
+.atlas-weeding-hierarchy-row.next {
+  border-color: rgba(151, 170, 120, 0.58);
+  background: rgba(216, 220, 151, 0.18);
+  box-shadow: inset 4px 0 0 #97aa78;
+}
+
+.atlas-weeding-hierarchy-row.excluded {
+  background: rgba(187, 178, 160, 0.12);
+}
+
+.atlas-weeding-hierarchy-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.atlas-weeding-hierarchy-row strong,
+.atlas-weeding-hierarchy-row span,
+.atlas-weeding-hierarchy-row p {
+  display: block;
+  min-width: 0;
+}
+
+.atlas-weeding-hierarchy-row strong {
+  color: var(--atlas-text);
+  font-size: 15px;
+  line-height: 1.04;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+}
+
+.atlas-weeding-hierarchy-row > div > span {
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1.15;
+  font-weight: 850;
+}
+
+.atlas-weeding-hierarchy-row p {
+  margin: 1px 0 0;
+  color: #66685e;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 750;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.atlas-weeding-hierarchy-row > b {
+  border: 1px solid rgba(215, 204, 189, 0.8);
+  border-radius: 999px;
+  background: white;
+  color: #666252;
+  padding: 6px 8px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.atlas-weeding-hierarchy-row.current > b {
+  border-color: rgba(139, 145, 194, 0.42);
+  color: var(--atlas-purple-dark);
+}
+
+.atlas-weeding-hierarchy-row.next > b {
+  border-color: rgba(151, 170, 120, 0.48);
+  background: rgba(216, 220, 151, 0.32);
+  color: #5f6e47;
+}
+
+@media (max-width: 360px) {
+  .atlas-weeding-panel-header strong {
+    font-size: 22px;
+  }
+
+  .atlas-weeding-queue-row,
+  .atlas-weeding-hierarchy-row {
+    grid-template-columns: 25px minmax(0, 1fr);
+  }
+
+  .atlas-weeding-queue-row > b,
+  .atlas-weeding-hierarchy-row > b {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
