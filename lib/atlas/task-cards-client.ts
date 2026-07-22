@@ -147,6 +147,14 @@ export type AtlasTaskCardScope = "farm" | "owner" | "marshall" | "children" | "a
 export type AtlasTaskCardFetchOptions = {
   taskId?: string;
   scope?: AtlasTaskCardScope;
+  viewerScoped?: boolean;
+  dueThrough?: string;
+  doneDate?: string;
+};
+
+type ViewerOperationalWindow = {
+  dueThrough?: string;
+  doneDate?: string;
 };
 
 function currentUrlScope(): AtlasTaskCardScope | null {
@@ -167,6 +175,65 @@ function canonicalScopeRows(taskCards: AtlasTaskCard[], scope: AtlasTaskCardScop
   return taskCards;
 }
 
+function validDateIso(value: string | null | undefined) {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime()));
+}
+
+function localTodayIso() {
+  const date = new Date();
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function addDaysIso(dateIso: string, days: number) {
+  const date = new Date(`${dateIso}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function monthEndIso(dateIso: string) {
+  const date = new Date(`${dateIso}T12:00:00`);
+  const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 12);
+  const local = new Date(end.getTime() - end.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function viewerOperationalWindow(options: AtlasTaskCardFetchOptions): ViewerOperationalWindow | null {
+  if (typeof window === "undefined") return options.viewerScoped ? { dueThrough: options.dueThrough, doneDate: options.doneDate } : null;
+
+  if (options.viewerScoped) {
+    return {
+      dueThrough: validDateIso(options.dueThrough) ? options.dueThrough : undefined,
+      doneDate: validDateIso(options.doneDate) ? options.doneDate : undefined,
+    };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const pathname = window.location.pathname;
+  const today = localTodayIso();
+
+  if (pathname === "/") return {};
+
+  if (pathname === "/day") {
+    const dateIso = validDateIso(params.get("date")) ? params.get("date") as string : today;
+    return { dueThrough: dateIso, doneDate: dateIso };
+  }
+
+  if (pathname === "/overview/week") {
+    const anchorIso = validDateIso(params.get("date")) ? params.get("date") as string : today;
+    const dueThrough = validDateIso(params.get("end")) ? params.get("end") as string : addDaysIso(anchorIso, 6);
+    return { dueThrough };
+  }
+
+  if (pathname === "/overview/month") {
+    const anchorIso = validDateIso(params.get("date")) ? params.get("date") as string : today;
+    return { dueThrough: monthEndIso(anchorIso) };
+  }
+
+  return null;
+}
+
 export async function fetchAtlasTaskCards(
   input?: string | AtlasTaskCardFetchOptions,
 ): Promise<AtlasTaskCardsResponse> {
@@ -175,19 +242,19 @@ export async function fetchAtlasTaskCards(
   const inferredScope = currentUrlScope();
   const scope = options.scope ?? inferredScope ?? "farm";
   const assignmentScope = scope === "owner" || scope === "marshall" || scope === "children";
+  const viewerWindow = !options.taskId && scope === "farm" ? viewerOperationalWindow(options) : null;
 
   if (options.taskId) params.set("taskId", options.taskId);
   if (assignmentScope) params.set("scope", "all");
   else if (scope !== "farm") params.set("scope", scope);
 
-  const useHomeReadPath =
-    typeof window !== "undefined" &&
-    window.location.pathname === "/" &&
-    !options.taskId &&
-    scope === "farm";
-
-  const endpoint = useHomeReadPath
-    ? "/api/atlas/home-task-cards"
+  const endpoint = viewerWindow
+    ? (() => {
+        const viewerParams = new URLSearchParams();
+        if (viewerWindow.dueThrough) viewerParams.set("dueThrough", viewerWindow.dueThrough);
+        if (viewerWindow.doneDate) viewerParams.set("doneDate", viewerWindow.doneDate);
+        return `/api/atlas/home-task-cards${viewerParams.toString() ? `?${viewerParams.toString()}` : ""}`;
+      })()
     : `/api/atlas/task-cards${params.toString() ? `?${params.toString()}` : ""}`;
 
   const response = await fetch(endpoint, {
