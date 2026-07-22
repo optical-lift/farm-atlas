@@ -79,18 +79,20 @@ test("next-day intent preserves the familiar Tomorrow action", () => {
   assert.match(result.targetDate, /^\d{4}-\d{2}-\d{2}$/);
 });
 
-test("role routing preserves every familiar Farm-Hand outcome", () => {
+test("role routing preserves every familiar assigned-worker outcome", () => {
   assert.equal(
     atlasTaskTransitionRpcForRole("owner", "rescheduled"),
     "owner_record_task_transition_v1",
   );
 
-  for (const transition of ATLAS_FARM_HAND_TRANSITIONS) {
-    assert.equal(
-      atlasTaskTransitionRpcForRole("farm_hand", transition),
-      "worker_record_task_transition_v1",
-      `${transition} must remain available for assigned Farm-Hand work`,
-    );
+  for (const role of ["farm_hand", "manager"]) {
+    for (const transition of ATLAS_FARM_HAND_TRANSITIONS) {
+      assert.equal(
+        atlasTaskTransitionRpcForRole(role, transition),
+        "worker_record_task_transition_v1",
+        `${transition} must remain available for assigned ${role} work`,
+      );
+    }
   }
 
   for (const transition of [
@@ -109,10 +111,10 @@ test("role routing preserves every familiar Farm-Hand outcome", () => {
   }
 
   assert.throws(
-    () => atlasTaskTransitionRpcForRole("manager", "done"),
+    () => atlasTaskTransitionRpcForRole("guest", "done"),
     (error) => error instanceof AtlasTaskTransitionInputError
       && error.status === 403
-      && error.code === "manager_transition_not_available",
+      && error.code === "task_transition_role_not_allowed",
   );
 });
 
