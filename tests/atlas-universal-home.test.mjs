@@ -35,6 +35,7 @@ test("legacy Marshall route returns to the universal root", () => {
 test("home task data follows the signed-in membership", () => {
   const route = read("app/api/atlas/home-task-cards/route.ts");
   const viewer = read("lib/atlas/viewer.ts");
+  const migration = read("supabase/migrations/20260722174500_universal_home_viewer_scope.sql");
 
   assert.match(route, /authorized\.access\.membership\.workerKey/);
   assert.match(route, /p_worker_key: workerKey/);
@@ -43,4 +44,11 @@ test("home task data follows the signed-in membership", () => {
 
   assert.match(viewer, /canManageFarm: membership\.role === "owner" \|\| membership\.role === "manager"/);
   assert.match(viewer, /canUseOwnerTools: membership\.role === "owner"/);
+
+  assert.match(migration, /assigned_membership_id = v_marshall_membership_id/);
+  assert.match(migration, /visibility_scope = 'assigned_worker'/);
+  assert.match(migration, /assigned_membership_id = v_owner_membership_id/);
+  assert.match(migration, /v_requested_worker_key is distinct from v_current_worker_key/);
+  assert.match(migration, /task\.assigned_membership_id = v_current_membership_id/);
+  assert.doesNotMatch(migration, /worker_key = 'anna'/);
 });
