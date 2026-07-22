@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  atlasPostLoginPath,
   classifyAtlasSession,
   normalizeAtlasLoginCredentials,
   roleHomeForMembership,
@@ -24,6 +25,10 @@ test("blank login credentials are rejected before Supabase is called", () => {
   assert.equal(normalizeAtlasLoginCredentials({ email: "", password: "secret" }), null);
   assert.equal(normalizeAtlasLoginCredentials({ email: "person@example.com", password: "" }), null);
   assert.equal(normalizeAtlasLoginCredentials(null), null);
+});
+
+test("successful login always opens the shared Atlas home", () => {
+  assert.equal(atlasPostLoginPath(), "/");
 });
 
 for (const [label, fixture, role] of [

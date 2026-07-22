@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
+import { atlasPostLoginPath } from "@/lib/atlas/auth-core.js";
 import { legacyTaskRedirectCore } from "@/lib/atlas/task-routing-core.js";
 import { getAtlasSupabaseConfig } from "@/lib/supabase/config";
 
@@ -81,6 +83,13 @@ export async function updateAtlasSession(request: NextRequest) {
       loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     }
     return copySessionCookies(response, NextResponse.redirect(loginUrl));
+  }
+
+  if (authenticated && pathname === "/login") {
+    const atlasHomeUrl = request.nextUrl.clone();
+    atlasHomeUrl.pathname = atlasPostLoginPath();
+    atlasHomeUrl.search = "";
+    return copySessionCookies(response, NextResponse.redirect(atlasHomeUrl));
   }
 
   if (authenticated && needsAtlasFarmMembership(pathname)) {
