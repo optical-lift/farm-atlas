@@ -40,6 +40,12 @@ function dateFromIso(dateIso: string) {
   return new Date(`${dateIso}T12:00:00`);
 }
 
+function localTodayIso() {
+  const date = new Date();
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
 function prettyShortDate(dateIso: string | null | undefined) {
   if (!dateIso) return "open";
   const date = dateFromIso(dateIso);
@@ -193,15 +199,18 @@ export function atlasBuildWorkCollectionSummary(
   key: AtlasWorkCollectionKey,
   tasks: AtlasTaskCard[],
   anchorIso: string,
-  dueMode: AtlasWorkCollectionDueMode = "exact",
+  dueMode?: AtlasWorkCollectionDueMode,
 ): AtlasWorkCollectionSummary | null {
   const members = atlasVisibleCollectionTasks(tasks.filter((task) => atlasWorkCollectionKey(task) === key));
   if (!members.length) return null;
 
+  // Today's work hand is cumulative: unfinished collection members remain due until completed.
+  // Historical and future day pages remain exact-date views unless a caller explicitly requests otherwise.
+  const resolvedDueMode = dueMode ?? (anchorIso === localTodayIso() ? "through" : "exact");
   const active = members.filter((task) => task.status === "open" || task.status === "blocked");
   const due = active.filter((task) => {
-    if (!task.due_date) return dueMode === "through";
-    return dueMode === "through" ? task.due_date <= anchorIso : task.due_date === anchorIso;
+    if (!task.due_date) return resolvedDueMode === "through";
+    return resolvedDueMode === "through" ? task.due_date <= anchorIso : task.due_date === anchorIso;
   });
   const blocked = active.filter((task) => task.status === "blocked");
   const notReady = members.filter(atlasIsNotReadyCollectionTask);
@@ -234,7 +243,7 @@ export function atlasBuildWorkCollectionSummary(
 export function atlasBuildMowingCollectionSummary(
   tasks: AtlasTaskCard[],
   anchorIso: string,
-  dueMode: AtlasWorkCollectionDueMode = "exact",
+  dueMode?: AtlasWorkCollectionDueMode,
 ) {
   return atlasBuildWorkCollectionSummary("mowing", tasks, anchorIso, dueMode);
 }
@@ -242,7 +251,7 @@ export function atlasBuildMowingCollectionSummary(
 export function atlasBuildWeedingCollectionSummary(
   tasks: AtlasTaskCard[],
   anchorIso: string,
-  dueMode: AtlasWorkCollectionDueMode = "exact",
+  dueMode?: AtlasWorkCollectionDueMode,
 ) {
   return atlasBuildWorkCollectionSummary("weeding", tasks, anchorIso, dueMode);
 }
@@ -250,7 +259,7 @@ export function atlasBuildWeedingCollectionSummary(
 export function atlasBuildGerminationCollectionSummary(
   tasks: AtlasTaskCard[],
   anchorIso: string,
-  dueMode: AtlasWorkCollectionDueMode = "exact",
+  dueMode?: AtlasWorkCollectionDueMode,
 ) {
   return atlasBuildWorkCollectionSummary("germination", tasks, anchorIso, dueMode);
 }
@@ -258,7 +267,7 @@ export function atlasBuildGerminationCollectionSummary(
 export function atlasBuildPropagationCollectionSummary(
   tasks: AtlasTaskCard[],
   anchorIso: string,
-  dueMode: AtlasWorkCollectionDueMode = "exact",
+  dueMode?: AtlasWorkCollectionDueMode,
 ) {
   return atlasBuildWorkCollectionSummary("propagation", tasks, anchorIso, dueMode);
 }
