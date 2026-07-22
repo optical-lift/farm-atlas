@@ -1,0 +1,77 @@
+.atlas-day-area-group {
+  display: grid;
+  gap: 12px;
+}
+
+.atlas-day-area-head,
+.atlas-day-area-category-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.atlas-day-area-head h3 {
+  margin: 0;
+}
+
+.atlas-day-area-head b {
+  min-width: 30px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--atlas-purple);
+  color: var(--atlas-text);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.atlas-day-area-category {
+  display: grid;
+  gap: 7px;
+}
+
+.atlas-day-area-category + .atlas-day-area-category {
+  padding-top: 10px;
+  border-top: 1px solid var(--atlas-border-soft);
+}
+
+.atlas-day-area-category-head span {
+  color: var(--atlas-purple-dark);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.atlas-day-area-category-head em {
+  color: var(--atlas-muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.atlas-room-registry-summary {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.atlas-room-registry-summary span {
+  color: var(--atlas-purple-dark);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atlas-room-registry-summary p {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.atlas-bed-row-card.room-object .atlas-bed-row-button span {
+  color: var(--atlas-purple-dark);
+}
