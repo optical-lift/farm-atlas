@@ -65,6 +65,11 @@ export type AtlasRegistryObject = {
   guest_visible: boolean | null;
   sort_order: number | null;
   metadata: AtlasRegistryMetadata | null;
+  life_status: string | null;
+  presentability: string | null;
+  active_task_count: number | null;
+  decision_required: boolean | null;
+  state_metadata: AtlasRegistryMetadata | null;
   inspection_summary: AtlasInspectionSummary | null;
   contents: AtlasObjectContent[];
 };
