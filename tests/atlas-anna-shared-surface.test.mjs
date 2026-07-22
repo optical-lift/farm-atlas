@@ -14,11 +14,16 @@ function functionBody(source, name, nextName) {
 }
 
 test("Anna enters the familiar shared Atlas operating surface", () => {
-  const home = read("app/page.tsx");
+  const root = read("app/page.tsx");
+  const home = read("components/atlas/home/AtlasHomePortal.tsx");
   const layout = read("app/layout.tsx");
   const taskClient = read("lib/atlas/task-cards-client.ts");
   const authCore = read("lib/atlas/auth-core.js");
   const snapshotRoute = read("app/api/atlas/farm-snapshot/route.ts");
+
+  assert.match(root, /requireAtlasViewer/);
+  assert.match(root, /<AtlasHomePortal viewer=\{viewer\}/);
+  assert.doesNotMatch(root, /TaskLaunchHero|atlas-home-box-purple/);
 
   for (const marker of [
     "TaskLaunchHero",
@@ -37,6 +42,7 @@ test("Anna enters the familiar shared Atlas operating surface", () => {
     assert.match(home, new RegExp(marker.replaceAll("/", "\\/")));
   }
 
+  assert.match(home, /data-atlas-home-portal="shared"/);
   assert.doesNotMatch(layout, /AtlasRoleHomeRedirect/);
   assert.match(taskClient, /window\.location\.pathname === "\/"/);
   assert.match(taskClient, /\/api\/atlas\/home-task-cards/);
