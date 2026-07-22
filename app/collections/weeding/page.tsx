@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasMetaString, atlasMetadataValue, atlasTaskDisplay } from "@/lib/atlas/task-display";
+import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 import {
   atlasCollectionTaskSortValue,
   atlasIsDoneTask,
@@ -194,17 +195,29 @@ function TaskPanel({
   );
 }
 
-function QueueRow({ item, nextPosition }: { item: WeedingQueueItem; nextPosition: number | null }) {
+function QueueRow({
+  item,
+  nextPosition,
+  saving,
+  onComplete,
+}: {
+  item: WeedingQueueItem;
+  nextPosition: number | null;
+  saving: boolean;
+  onComplete: (item: WeedingQueueItem) => void;
+}) {
   const isNext = item.state === "queued" && item.position === nextPosition;
-  const status = item.state === "completed"
-    ? "Done"
-    : item.state === "active"
-      ? "Today"
-      : isNext
-        ? "Next"
-        : item.state === "skipped"
-          ? "Skipped"
-          : "Waiting";
+  const status = saving
+    ? "Saving"
+    : item.state === "completed"
+      ? "Done"
+      : item.state === "active"
+        ? "Today"
+        : isNext
+          ? "Next"
+          : item.state === "skipped"
+            ? "Skipped"
+            : "Waiting";
   const rowClass = `atlas-weeding-queue-row ${item.state}${isNext ? " next" : ""}`;
   const detail = [
     item.estimated_minutes ? `${item.estimated_minutes} min` : "",
@@ -221,9 +234,25 @@ function QueueRow({ item, nextPosition }: { item: WeedingQueueItem; nextPosition
     </>
   );
 
+  if (item.state === "queued") {
+    return (
+      <button
+        type="button"
+        className={rowClass}
+        disabled={saving}
+        onClick={() => onComplete(item)}
+        aria-label={`Mark ${item.title} complete`}
+        style={{ width: "100%", font: "inherit", textAlign: "left", cursor: saving ? "wait" : "pointer" }}
+      >
+        {content}
+      </button>
+    );
+  }
+
   if (item.state === "active" || item.state === "completed") {
     return <Link className={rowClass} href={taskHref(item.task_id)}>{content}</Link>;
   }
+
   return <div className={rowClass}>{content}</div>;
 }
 
@@ -240,6 +269,8 @@ export default function WeedingCollectionPage() {
   const [cycle, setCycle] = useState<WeedingCycle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [queueMessage, setQueueMessage] = useState<string | null>(null);
+  const [savingQueueTaskId, setSavingQueueTaskId] = useState<string | null>(null);
   const today = todayIso();
 
   useEffect(() => {
@@ -277,6 +308,31 @@ export default function WeedingCollectionPage() {
 
     void load();
   }, []);
+
+  async function completeQueuedTask(item: WeedingQueueItem) {
+    if (!window.confirm(`Mark ${item.title} done?`)) return;
+
+    try {
+      setSavingQueueTaskId(item.task_id);
+      setQueueMessage(null);
+      await postAtlasTaskTransition({
+        taskId: item.task_id,
+        transition: "done",
+        note: "Completed before this row released from the Field Row queue.",
+        reason: "Work was completed out of sequence in the field.",
+        laneKey: "maintain",
+        workKey: "weed",
+        payload: {
+          workClass: item.condition,
+          queueCompletion: "out_of_sequence",
+        },
+      });
+      window.location.reload();
+    } catch (completionError) {
+      setQueueMessage(completionError instanceof Error ? completionError.message : "Queue task update failed.");
+      setSavingQueueTaskId(null);
+    }
+  }
 
   const activeQueueIds = useMemo(() => new Set(
     cycle?.queue.filter((item) => item.state === "active").map((item) => item.task_id) ?? [],
@@ -330,6 +386,7 @@ export default function WeedingCollectionPage() {
           </section>
 
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
+          {queueMessage ? <div className="atlas-task-page-empty error">{queueMessage}</div> : null}
           {loading ? <div className="atlas-task-page-empty">Loading…</div> : null}
 
           {!loading && cycle ? (
@@ -343,7 +400,13 @@ export default function WeedingCollectionPage() {
                 </header>
                 <div className="atlas-weeding-queue-list">
                   {cycle.queue.map((item) => (
-                    <QueueRow key={item.task_id} item={item} nextPosition={nextQueuePosition} />
+                    <QueueRow
+                      key={item.task_id}
+                      item={item}
+                      nextPosition={nextQueuePosition}
+                      saving={savingQueueTaskId === item.task_id}
+                      onComplete={completeQueuedTask}
+                    />
                   ))}
                 </div>
               </section>
