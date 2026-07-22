@@ -1,12 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import styles from "./login.module.css";
 
-function safeNextPath() {
-  const requested = new URLSearchParams(window.location.search).get("next");
-  return requested && requested.startsWith("/") && !requested.startsWith("//") ? requested : "/";
-}
+import { atlasPostLoginPath } from "@/lib/atlas/auth-core.js";
+import styles from "./login.module.css";
 
 export default function LoginPage() {
   const [error, setError] = useState("");
@@ -34,7 +31,7 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.assign(safeNextPath());
+    window.location.replace(atlasPostLoginPath());
   }
 
   return (
