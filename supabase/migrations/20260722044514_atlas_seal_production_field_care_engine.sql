@@ -1,4 +1,0 @@
--- Historical migration applied to the live Atlas database.
--- This sealed the first field-care model before the concurrent field-stand model
--- was consolidated. Final canonical privileges and lineage are defined by:
---   20260722052234_atlas_seal_canonical_production_field_engine.sql

@@ -1,5 +1,0 @@
--- Historical migration applied to the live Atlas database.
--- These first field-care command bodies were superseded before production use.
--- The canonical implementations are defined by:
---   20260722050107_atlas_make_field_stands_and_care_policies_canonical.sql
---   20260722051702_atlas_add_canonical_production_field_care_commands.sql

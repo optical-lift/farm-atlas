@@ -1,4 +1,0 @@
--- Historical migration applied to the live Atlas database.
--- This concurrent field-stand establishment command was superseded and dropped
--- before production use. The canonical implementation is defined by:
---   20260722051030_atlas_add_canonical_production_establishment_command.sql
