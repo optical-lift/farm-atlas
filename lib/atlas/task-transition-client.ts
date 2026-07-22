@@ -23,6 +23,11 @@ export type AtlasTaskTransitionRequest = {
   existingFieldLogId?: string | null;
 };
 
+type AtlasApiError = string | {
+  code?: string;
+  message?: string;
+};
+
 export type AtlasTaskTransitionResponse = {
   ok: boolean;
   transitionId: string;
@@ -35,7 +40,7 @@ export type AtlasTaskTransitionResponse = {
   nextTaskId: string | null;
   deduplicated: boolean;
   warnings: string[];
-  error?: string;
+  error?: AtlasApiError;
   details?: string;
 };
 
@@ -54,6 +59,13 @@ function transitionKey(taskId: string, transition: AtlasTaskTransition) {
 function scopedTransitionKey(input: AtlasTaskTransitionRequest) {
   const baseKey = input.idempotencyKey ?? transitionKey(input.taskId, input.transition);
   return baseKey.startsWith(`${input.taskId}:`) ? baseKey : `${input.taskId}:${baseKey}`;
+}
+
+function taskTransitionError(data: AtlasTaskTransitionResponse) {
+  if (data.details) return data.details;
+  if (typeof data.error === "string") return data.error;
+  if (data.error?.message) return data.error.message;
+  return "Task update failed.";
 }
 
 function applyChecklistVisualState(taskId: string, state: ChecklistVisualState) {
@@ -115,7 +127,7 @@ export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest)
     }),
   });
   const data = await response.json() as AtlasTaskTransitionResponse;
-  if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task update failed.");
+  if (!response.ok || !data.ok) throw new Error(taskTransitionError(data));
 
   if (typeof window !== "undefined" && input.transition === "checklist_done") {
     rememberChecklistVisualState(input.taskId, "done");

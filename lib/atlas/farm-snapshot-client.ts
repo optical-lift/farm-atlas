@@ -18,6 +18,7 @@ export async function fetchAtlasFarmSnapshot(): Promise<AtlasFarmSnapshotRespons
   const response = await fetch("/api/atlas/farm-snapshot", {
     method: "GET",
     headers: { Accept: "application/json" },
+    credentials: "same-origin",
     cache: "no-store",
   });
 

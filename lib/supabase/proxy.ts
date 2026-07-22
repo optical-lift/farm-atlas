@@ -4,6 +4,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { legacyTaskRedirectCore } from "@/lib/atlas/task-routing-core.js";
 import { getAtlasSupabaseConfig } from "@/lib/supabase/config";
 
+const LEGACY_MUTATION_REWRITES = new Map([
+  ["POST /api/atlas/closeout", "/api/atlas/closeout-save"],
+  ["POST /api/atlas/germination-check", "/api/atlas/germination-check-save"],
+]);
+
 function copySessionCookies(source: NextResponse, target: NextResponse) {
   source.cookies.getAll().forEach((cookie) => target.cookies.set(cookie));
   for (const headerName of ["cache-control", "expires", "pragma"]) {
@@ -20,6 +25,14 @@ function isPublicPath(pathname: string) {
     pathname === "/auth/error" ||
     pathname.startsWith("/api/atlas/auth/")
   );
+}
+
+function needsAtlasFarmMembership(pathname: string) {
+  return pathname.startsWith("/api/atlas/") && !pathname.startsWith("/api/atlas/auth/");
+}
+
+function legacyMutationDestination(request: NextRequest) {
+  return LEGACY_MUTATION_REWRITES.get(`${request.method.toUpperCase()} ${request.nextUrl.pathname}`) ?? null;
 }
 
 export async function updateAtlasSession(request: NextRequest) {
@@ -46,7 +59,8 @@ export async function updateAtlasSession(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getClaims();
-  const authenticated = Boolean(data?.claims?.sub);
+  const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
+  const authenticated = Boolean(userId);
   const { pathname } = request.nextUrl;
 
   if (!authenticated && !isPublicPath(pathname)) {
@@ -67,6 +81,34 @@ export async function updateAtlasSession(request: NextRequest) {
       loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     }
     return copySessionCookies(response, NextResponse.redirect(loginUrl));
+  }
+
+  if (authenticated && needsAtlasFarmMembership(pathname)) {
+    const { data: membership, error: membershipError } = await supabase
+      .from("farm_memberships")
+      .select("id, farm:farms!inner(stable_key)")
+      .eq("user_id", userId)
+      .eq("active", true)
+      .eq("farm.stable_key", "elm_farm")
+      .limit(1)
+      .maybeSingle();
+
+    if (membershipError || !membership) {
+      return copySessionCookies(
+        response,
+        NextResponse.json(
+          { ok: false, error: "Active Elm Farm membership required." },
+          { status: 403, headers: { "Cache-Control": "private, no-store" } },
+        ),
+      );
+    }
+
+    const rewritePath = legacyMutationDestination(request);
+    if (rewritePath) {
+      const destination = request.nextUrl.clone();
+      destination.pathname = rewritePath;
+      return copySessionCookies(response, NextResponse.rewrite(destination));
+    }
   }
 
   if (authenticated && pathname === "/task") {

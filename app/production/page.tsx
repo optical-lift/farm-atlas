@@ -65,6 +65,19 @@ type Rule = {
   crop_profiles: { id: string; stable_key: string; crop_label: string; variety: string | null; default_planting_method: string | null } | null;
 };
 
+type PlanResponse = {
+  ok?: boolean;
+  error?: string;
+  plans?: Plan[];
+  canManageProduction?: boolean;
+};
+
+type RuleResponse = {
+  ok?: boolean;
+  error?: string;
+  rules?: Rule[];
+};
+
 function pretty(dateIso: string | null | undefined) {
   if (!dateIso) return "Not set";
   const date = new Date(`${dateIso}T12:00:00`);
@@ -100,6 +113,7 @@ export default function ProductionCalendarPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
   const [selectedRuleId, setSelectedRuleId] = useState("");
+  const [canManageProduction, setCanManageProduction] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,16 +122,28 @@ export default function ProductionCalendarPage() {
   async function load() {
     try {
       setLoading(true);
-      const [planResponse, ruleResponse] = await Promise.all([
-        fetch("/api/atlas/production-plans", { cache: "no-store" }),
-        fetch("/api/atlas/production-rules", { cache: "no-store" }),
-      ]);
-      const [planData, ruleData] = await Promise.all([planResponse.json(), ruleResponse.json()]);
+      setError(null);
+
+      const planResponse = await fetch("/api/atlas/production-plans", { cache: "no-store" });
+      const planData = await planResponse.json() as PlanResponse;
       if (!planResponse.ok || !planData.ok) throw new Error(planData.error || "Production plans failed.");
-      if (!ruleResponse.ok || !ruleData.ok) throw new Error(ruleData.error || "Production rules failed.");
+
+      const canManage = planData.canManageProduction === true;
       setPlans(planData.plans ?? []);
+      setCanManageProduction(canManage);
+
+      if (!canManage) {
+        setRules([]);
+        setSelectedRuleId("");
+        return;
+      }
+
+      const ruleResponse = await fetch("/api/atlas/production-rules", { cache: "no-store" });
+      const ruleData = await ruleResponse.json() as RuleResponse;
+      if (!ruleResponse.ok || !ruleData.ok) throw new Error(ruleData.error || "Production rules failed.");
+
       setRules(ruleData.rules ?? []);
-      setSelectedRuleId((current) => current || ruleData.rules?.find((rule: Rule) => rule.crop_profile_id)?.id || "");
+      setSelectedRuleId((current) => current || ruleData.rules?.find((rule) => rule.crop_profile_id)?.id || "");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Production plans failed.");
     } finally {
@@ -131,6 +157,7 @@ export default function ProductionCalendarPage() {
   const selectedRule = rules.find((rule) => rule.id === selectedRuleId) ?? null;
 
   async function patch(body: Record<string, unknown>) {
+    if (!canManageProduction) return;
     try {
       setSaving(true);
       setError(null);
@@ -150,6 +177,7 @@ export default function ProductionCalendarPage() {
   }
 
   async function createFromRule(form: HTMLFormElement) {
+    if (!canManageProduction) return;
     try {
       setSaving(true);
       setError(null);
@@ -181,13 +209,13 @@ export default function ProductionCalendarPage() {
       <header className="atlas-production-header">
         <Link href="/">← Atlas</Link>
         <div><span>Production calendar</span><strong>Crop plans, not floating deadlines</strong></div>
-        <em>{saving ? "Saving…" : "Elm Farm"}</em>
+        <em>{saving ? "Saving…" : canManageProduction ? "Owner controls" : "Elm Farm"}</em>
       </header>
 
       {error ? <div className="atlas-production-error">{error}</div> : null}
       {loading ? <div className="atlas-production-empty">Loading crop plans…</div> : null}
 
-      {!loading ? (
+      {!loading && canManageProduction ? (
         <section className="atlas-production-rule-library">
           <div className="atlas-production-rule-head">
             <div><span>Crop-specific instructions</span><h1>Production rule library</h1><p>Each crop keeps its own cadence, overlap behavior, missed-sowing rule, and series identity.</p></div>
@@ -217,6 +245,7 @@ export default function ProductionCalendarPage() {
         </section>
       ) : null}
 
+      {!loading && !canManageProduction ? <div className="atlas-production-empty">Shared crop plan view. Owner controls stay private.</div> : null}
       {!loading && !orderedPlans.length ? <div className="atlas-production-empty">No production plans yet.</div> : null}
 
       {orderedPlans.map((plan) => {
@@ -228,28 +257,30 @@ export default function ProductionCalendarPage() {
               <div className="atlas-production-use-list">{plan.intended_uses.map((use) => <b key={use}>{use}</b>)}</div>
             </div>
 
-            <form className="atlas-production-controls" onSubmit={(event) => {
-              event.preventDefault();
-              const form = new FormData(event.currentTarget);
-              void patch({
-                action: "regenerate",
-                planId: plan.id,
-                successionCount: Number(form.get("successionCount")),
-                spacingDays: Number(form.get("spacingDays")),
-                firstWindowStart: String(form.get("firstWindowStart")),
-                windowLengthDays: Number(form.get("windowLengthDays")),
-                lateWindowDays: Number(form.get("lateWindowDays")),
-                missedStrategy: String(form.get("missedStrategy")),
-              });
-            }}>
-              <label>First window<input name="firstWindowStart" type="date" defaultValue={plan.first_window_start} /></label>
-              <label>Successions<input name="successionCount" type="number" min="1" max="60" defaultValue={plan.succession_count} /></label>
-              <label>Spacing days<input name="spacingDays" type="number" min="0" max="120" defaultValue={plan.spacing_days} /></label>
-              <label>Window days<input name="windowLengthDays" type="number" min="0" max="45" defaultValue={plan.window_length_days} /></label>
-              <label>Late days<input name="lateWindowDays" type="number" min="0" max="45" defaultValue={plan.late_window_days} /></label>
-              <label>Missed succession<select name="missedStrategy" defaultValue={plan.missed_strategy}><option value="skip">Skip</option><option value="merge">Merge</option><option value="preserve">Preserve</option></select></label>
-              <button type="submit" disabled={saving}>Regenerate later windows</button>
-            </form>
+            {canManageProduction ? (
+              <form className="atlas-production-controls" onSubmit={(event) => {
+                event.preventDefault();
+                const form = new FormData(event.currentTarget);
+                void patch({
+                  action: "regenerate",
+                  planId: plan.id,
+                  successionCount: Number(form.get("successionCount")),
+                  spacingDays: Number(form.get("spacingDays")),
+                  firstWindowStart: String(form.get("firstWindowStart")),
+                  windowLengthDays: Number(form.get("windowLengthDays")),
+                  lateWindowDays: Number(form.get("lateWindowDays")),
+                  missedStrategy: String(form.get("missedStrategy")),
+                });
+              }}>
+                <label>First window<input name="firstWindowStart" type="date" defaultValue={plan.first_window_start} /></label>
+                <label>Successions<input name="successionCount" type="number" min="1" max="60" defaultValue={plan.succession_count} /></label>
+                <label>Spacing days<input name="spacingDays" type="number" min="0" max="120" defaultValue={plan.spacing_days} /></label>
+                <label>Window days<input name="windowLengthDays" type="number" min="0" max="45" defaultValue={plan.window_length_days} /></label>
+                <label>Late days<input name="lateWindowDays" type="number" min="0" max="45" defaultValue={plan.late_window_days} /></label>
+                <label>Missed succession<select name="missedStrategy" defaultValue={plan.missed_strategy}><option value="skip">Skip</option><option value="merge">Merge</option><option value="preserve">Preserve</option></select></label>
+                <button type="submit" disabled={saving}>Regenerate later windows</button>
+              </form>
+            ) : null}
 
             <div className="atlas-production-sequence" aria-label={`${crop} succession sequence`}>
               {plan.production_successions.map((succession) => <div className={`atlas-production-node state-${succession.state}`} key={succession.id}><b>S{succession.sequence_number}</b><span>{succession.state === "upcoming" ? operationalStatus(succession, plan) : succession.state}</span></div>)}
@@ -274,8 +305,12 @@ export default function ProductionCalendarPage() {
                     </div>
                     <div className="atlas-production-actions">
                       {succession.sow_task_id ? <Link href={`/task-focus/${encodeURIComponent(succession.sow_task_id)}?returnTo=${encodeURIComponent("/production")}`}>Open sowing task</Link> : null}
-                      <button type="button" disabled={saving || succession.state === "sown"} onClick={() => void patch({ action: "set_succession_state", successionId: succession.id, state: "skipped" })}>Skip</button>
-                      <button type="button" disabled={saving || succession.state === "sown"} onClick={() => void patch({ action: "set_succession_state", successionId: succession.id, state: "sown", actualSowDate: todayIso() })}>{succession.state === "sown" ? "Sown" : "Mark sown today"}</button>
+                      {canManageProduction ? (
+                        <>
+                          <button type="button" disabled={saving || succession.state === "sown"} onClick={() => void patch({ action: "set_succession_state", successionId: succession.id, state: "skipped" })}>Skip</button>
+                          <button type="button" disabled={saving || succession.state === "sown"} onClick={() => void patch({ action: "set_succession_state", successionId: succession.id, state: "sown", actualSowDate: todayIso() })}>{succession.state === "sown" ? "Sown" : "Mark sown today"}</button>
+                        </>
+                      ) : null}
                     </div>
                     {succession.crop_cycle_id ? <p className="atlas-production-linked-state">Linked to a live crop cycle.</p> : null}
                   </article>

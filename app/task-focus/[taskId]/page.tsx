@@ -51,8 +51,30 @@ type CropContext = {
   targetSpacingInches: number | null;
 };
 
+const SAFE_RETURN_PATHS = new Set([
+  "/",
+  "/owner",
+  "/manage",
+  "/work/today",
+  "/collections/mowing",
+  "/collections/weeding",
+  "/day",
+  "/overview/week",
+  "/overview/month",
+]);
+
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function safeReturnPath(value: string | undefined) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+  const pathname = value.split(/[?#]/, 1)[0];
+  return SAFE_RETURN_PATHS.has(pathname) ? value : null;
 }
 
 function spacingFromProfile(metadata: Record<string, unknown> | null | undefined) {
@@ -260,8 +282,15 @@ async function loadCropContext(task: TaskRow): Promise<CropContext> {
   };
 }
 
-export default async function TaskFocusPage({ params }: { params: Promise<{ taskId: string }> }) {
-  const { taskId } = await params;
+export default async function TaskFocusPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ taskId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [{ taskId }, query] = await Promise.all([params, searchParams]);
+  const returnTo = safeReturnPath(firstValue(query.returnTo));
   const task = await loadTask(taskId);
   if (!task) notFound();
 
@@ -273,7 +302,14 @@ export default async function TaskFocusPage({ params }: { params: Promise<{ task
   if (!isGerminationTask(task)) {
     const detail = await loadGenericTaskDetail(task.id);
     if (!detail) notFound();
-    return <CanonicalAssignedTaskDetail task={detail.task} childTasks={detail.children} assignee={resolveTaskAssignee(task)} />;
+    const assignee = resolveTaskAssignee(task);
+    return (
+      <CanonicalAssignedTaskDetail
+        task={detail.task}
+        childTasks={detail.children}
+        assignee={returnTo ? { ...assignee, listPath: returnTo } : assignee}
+      />
+    );
   }
 
   const [objectLabel, crop] = await Promise.all([loadObjectLabel(task.id), loadCropContext(task)]);

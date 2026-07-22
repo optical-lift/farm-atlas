@@ -14,6 +14,48 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  architecture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Download source quietly
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir source
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${GITHUB_SHA}" \
+            | tar -xz --strip-components=1 -C source
+
+      - name: Audit service-role Atlas API routes
+        run: cd source && node scripts/audit-atlas-api-boundaries.mjs
+
+      - name: List direct task-transition RPC routes
+        shell: bash
+        run: |
+          cd source
+          offenders="$(grep -RIlE 'worker_record_task_transition_v1|owner_record_task_transition_v1|record_task_transition_v1' app/api/atlas || true)"
+          offenders="$(printf '%s\n' "$offenders" | grep -v '^app/api/atlas/task-transition/route.ts$' || true)"
+          if [ -n "$offenders" ]; then
+            echo "Atlas API routes bypassing the shared task transition route:"
+            echo "$offenders"
+            exit 1
+          fi
+
+      - name: Reject legacy worker transition clients
+        shell: bash
+        run: |
+          cd source
+          offenders="$(grep -RIl '/api/atlas/work/tasks/' app components lib || true)"
+          if [ -n "$offenders" ]; then
+            echo "Legacy worker transition endpoint references:"
+            echo "$offenders"
+            exit 1
+          fi
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -29,6 +71,15 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Guard service-role API routes
+        run: node --test --test-name-pattern="interactive Atlas API routes" tests/atlas-architecture-traps.test.mjs
+
+      - name: Guard canonical task mutations
+        run: node --test --test-name-pattern="all task mutations" tests/atlas-architecture-traps.test.mjs
+
+      - name: Guard homepage membership scope
+        run: node --test --test-name-pattern="homepage reader" tests/atlas-architecture-traps.test.mjs
 
       - name: Run tests
         run: npm test

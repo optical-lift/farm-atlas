@@ -6,35 +6,25 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-const activeSchedulePages = [
-  ["app/day/page.tsx", "getDaySchedule"],
-  ["app/overview/week/page.tsx", "getTaskSchedule"],
-  ["app/overview/month/page.tsx", "getMonthSchedule"],
-];
+test("legacy-shaped task cards are supplied through a membership-scoped reader", () => {
+  const route = read("app/api/atlas/task-cards/route.ts");
+  const migration = read("supabase/migrations/20260721053300_atlas_add_membership_scoped_task_cards_reader.sql");
 
-const forbiddenLegacyReadPatterns = [
-  /fetchAtlasTaskCards/,
-  /task-cards-client/,
-  /atlasSupabase/,
-  /SUPABASE_SERVICE_ROLE_KEY/,
-  /anna_task/,
-  /marshall_task/,
-  /owner_task/,
-  /searchParams\.get\("scope"\)/,
-];
+  assert.match(route, /requireAtlasApiAccess/);
+  assert.match(route, /createAtlasServerClient/);
+  assert.match(route, /task_cards_v1/);
+  assert.doesNotMatch(route, /atlasSupabase/);
+  assert.doesNotMatch(route, /SUPABASE_SERVICE_ROLE_KEY/);
 
-test("active Day, Week, and Month screens use the canonical schedule", () => {
-  for (const [path, requiredReader] of activeSchedulePages) {
-    const source = read(path);
-    assert.match(source, new RegExp(requiredReader), `${path} must use ${requiredReader}`);
-    assert.match(source, /requireAtlasRole\(\["owner", "manager"\]\)/);
-    for (const pattern of forbiddenLegacyReadPatterns) {
-      assert.doesNotMatch(source, pattern, `${path} revived ${pattern}`);
-    }
-  }
+  assert.match(migration, /returns setof atlas\.v_task_cards/);
+  assert.match(migration, /atlas\.current_farm_role/);
+  assert.match(migration, /task\.assigned_membership_id = v_membership_id/);
+  assert.match(migration, /task\.visibility_scope = 'farm_shared'/);
+  assert.match(migration, /revoke all .* from public, anon/is);
+  assert.match(migration, /grant execute .* to authenticated, service_role/is);
 });
 
-test("Owner Home is built from farm state and canonical schedule", () => {
+test("Owner Home remains built from farm state and canonical schedule", () => {
   const source = read("lib/atlas-data/owner-dashboard.ts");
   assert.match(source, /getFarmOperationalState/);
   assert.match(source, /getTaskSchedule/);
@@ -61,21 +51,15 @@ test("transition migration history matches the applied Supabase versions", () =>
     "20260721032431_atlas_mark_legacy_actor_attribution_unknown.sql",
     "20260721032449_atlas_add_transition_integrity_view.sql",
     "20260721032618_atlas_complete_boom_boom_white_crop_cycle.sql",
+    "20260721051235_atlas_restore_worker_unfinished_transitions.sql",
+    "20260721053300_atlas_add_membership_scoped_task_cards_reader.sql",
   ];
 
   for (const filename of versions) {
-    assert.equal(
-      existsSync(new URL(`../supabase/migrations/${filename}`, import.meta.url)),
-      true,
-      `Missing migration ${filename}`,
-    );
+    assert.equal(existsSync(new URL(`../supabase/migrations/${filename}`, import.meta.url)), true, `Missing migration ${filename}`);
   }
 
-  assert.equal(
-    existsSync(new URL("../supabase/migrations/20260721023500_atlas_scope_task_relationship_reads.sql", import.meta.url)),
-    false,
-    "The mismatched migration version must not return",
-  );
+  assert.equal(existsSync(new URL("../supabase/migrations/20260721023500_atlas_scope_task_relationship_reads.sql", import.meta.url)), false);
 });
 
 test("transition security and integrity migrations retain their guardrails", () => {

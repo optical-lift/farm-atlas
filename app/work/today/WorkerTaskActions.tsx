@@ -3,16 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 import styles from "./work.module.css";
 
 type Transition = "done" | "blocked" | "note";
-
-function idempotencyKey(taskId: string, transition: Transition) {
-  const nonce = typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return `worker:${taskId}:${transition}:${nonce}`;
-}
 
 export default function WorkerTaskActions({ taskId }: { taskId: string }) {
   const router = useRouter();
@@ -35,42 +29,29 @@ export default function WorkerTaskActions({ taskId }: { taskId: string }) {
     setError("");
     setMessage("");
 
-    const response = await fetch(
-      `/api/atlas/work/tasks/${encodeURIComponent(taskId)}/transition`,
-      {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          "Content-Type": "application/json",
-          "x-atlas-intent": "task-transition-v1",
-        },
-        body: JSON.stringify({
-          transition,
-          idempotencyKey: idempotencyKey(taskId, transition),
-          note: note.trim() || null,
-          reason: transition === "blocked" ? note.trim() : null,
-          payload: {},
-        }),
-      },
-    );
+    try {
+      await postAtlasTaskTransition({
+        taskId,
+        transition,
+        note: note.trim() || null,
+        reason: transition === "blocked" ? note.trim() : null,
+        payload: { source: "worker_today" },
+      });
 
-    const result = (await response.json().catch(() => null)) as { error?: string } | null;
-    if (!response.ok) {
-      setError(result?.error ?? "Atlas could not save that result.");
+      setNote("");
+      setMessage(
+        transition === "done"
+          ? "Task completed."
+          : transition === "blocked"
+            ? "Blocker reported."
+            : "Note saved.",
+      );
+      router.refresh();
+    } catch (transitionError) {
+      setError(transitionError instanceof Error ? transitionError.message : "Atlas could not save that result.");
+    } finally {
       setWorking(null);
-      return;
     }
-
-    setNote("");
-    setMessage(
-      transition === "done"
-        ? "Task completed."
-        : transition === "blocked"
-          ? "Blocker reported."
-          : "Note saved.",
-    );
-    setWorking(null);
-    router.refresh();
   }
 
   return (
