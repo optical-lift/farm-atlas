@@ -47,14 +47,15 @@ test("Mowing keeps the deployed collection boxes and data lines", () => {
   assert.doesNotMatch(mowing, /CanonicalMaintenanceCollectionView/);
 });
 
-test("Weeding shows released work, the Field Row queue, and farm hierarchy", () => {
+test("Weeding keeps the queue and hierarchy while using quiet state labels", () => {
   const weeding = read("app/collections/weeding/page.tsx");
   const route = read("app/api/atlas/weeding-cycle/route.ts");
 
   assert.match(weeding, /atlas-work-collection-hero/);
   assert.match(weeding, /atlas-overview-stat-grid/);
   assert.match(weeding, /atlas-weeding-cycle-stack/);
-  assert.match(weeding, /Work Now/);
+  assert.match(weeding, /title="Today"/);
+  assert.match(weeding, /\? "Today"/);
   assert.match(weeding, /Field Row Queue/);
   assert.match(weeding, /Farm Weeding Order/);
   assert.match(weeding, /Recently Done \/ Resting/);
@@ -62,6 +63,12 @@ test("Weeding shows released work, the Field Row queue, and farm hierarchy", () 
   assert.match(weeding, /maintenanceAgeLabel/);
   assert.match(weeding, /fetchAtlasTaskCards/);
   assert.match(route, /weeding_cycle_v1/);
+  assert.doesNotMatch(weeding, /Work Now/);
+  assert.doesNotMatch(weeding, /Only released work appears here/);
+  assert.doesNotMatch(weeding, /Finish the current batch/);
+  assert.doesNotMatch(weeding, /The hierarchy—not the calendar/);
+  assert.doesNotMatch(weeding, /queueExplanation/);
+  assert.doesNotMatch(weeding, /hierarchyStepCopy/);
   assert.doesNotMatch(weeding, /Upcoming \(7 Days\)/);
   assert.doesNotMatch(weeding, /CanonicalMaintenanceCollectionView/);
 });

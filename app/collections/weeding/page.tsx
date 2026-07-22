@@ -139,7 +139,7 @@ function statusLine(task: AtlasTaskCard) {
   }
   if (atlasIsDoneTask(task)) return "Resting";
   if (task.status === "blocked") return task.blocker_text || "Waiting";
-  if (task.due_date) return task.due_date <= todayIso() ? "Work now" : `Due ${prettyDate(task.due_date)}`;
+  if (task.due_date) return task.due_date <= todayIso() ? "Today" : `Due ${prettyDate(task.due_date)}`;
   return "Open";
 }
 
@@ -172,31 +172,24 @@ function WeedingTaskCard({ task, tone }: { task: AtlasTaskCard; tone?: "due" | "
 
 function TaskPanel({
   title,
-  subtitle,
   tasks,
-  empty,
   tone,
 }: {
   title: string;
-  subtitle: string;
   tasks: AtlasTaskCard[];
-  empty: string;
   tone?: "due" | "done" | "paused";
 }) {
   return (
     <section className="atlas-weeding-panel">
       <header className="atlas-weeding-panel-header">
-        <div>
-          <strong>{title}</strong>
-          <span>{subtitle}</span>
-        </div>
+        <strong>{title}</strong>
         <b>{tasks.length}</b>
       </header>
-      <div className="atlas-overview-task-list">
-        {tasks.length
-          ? tasks.map((task) => <WeedingTaskCard key={task.task_id} task={task} tone={tone} />)
-          : <p className="atlas-task-page-muted">{empty}</p>}
-      </div>
+      {tasks.length ? (
+        <div className="atlas-overview-task-list">
+          {tasks.map((task) => <WeedingTaskCard key={task.task_id} task={task} tone={tone} />)}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -206,7 +199,7 @@ function QueueRow({ item, nextPosition }: { item: WeedingQueueItem; nextPosition
   const status = item.state === "completed"
     ? "Done"
     : item.state === "active"
-      ? "Work now"
+      ? "Today"
       : isNext
         ? "Next"
         : item.state === "skipped"
@@ -232,30 +225,6 @@ function QueueRow({ item, nextPosition }: { item: WeedingQueueItem; nextPosition
     return <Link className={rowClass} href={taskHref(item.task_id)}>{content}</Link>;
   }
   return <div className={rowClass}>{content}</div>;
-}
-
-function queueExplanation(cycle: WeedingCycle | null) {
-  if (!cycle) return "The queue is loading.";
-  const { active_count: active, queued_count: queued, queue_next_label: next } = cycle.summary;
-  if (active > 0 && queued > 0) {
-    return `Finish the ${active} released ${active === 1 ? "task" : "tasks"}. Then ${next || "the next row"} releases for the next workday.`;
-  }
-  if (queued > 0) return `${next || "The next row"} is waiting to release.`;
-  return "The Field Row queue is cleared.";
-}
-
-function hierarchyStepCopy(step: WeedingHierarchyStep, cycle: WeedingCycle) {
-  if (step.mode === "fall_tillage") return "No hand-weeding · beds wait for fall tillage";
-  if (step.rank === cycle.summary.current_rank) {
-    return `${cycle.summary.active_count} active · ${cycle.summary.queued_count} waiting in the Field Row queue`;
-  }
-  if (step.rank === cycle.summary.next_rank) {
-    return `Next tier · ${step.needs_attention} ${step.needs_attention === 1 ? "area" : "areas"} currently flagged`;
-  }
-  if (step.needs_attention > 0) {
-    return `${step.needs_attention} ${step.needs_attention === 1 ? "area" : "areas"} currently flagged`;
-  }
-  return step.maintained > 0 ? `${step.maintained} resting / maintained` : "No active hand-weeding work";
 }
 
 function hierarchyBadge(step: WeedingHierarchyStep, cycle: WeedingCycle) {
@@ -313,7 +282,7 @@ export default function WeedingCollectionPage() {
     cycle?.queue.filter((item) => item.state === "active").map((item) => item.task_id) ?? [],
   ), [cycle]);
 
-  const workNow = useMemo(() => tasks
+  const todayTasks = useMemo(() => tasks
     .filter((task) => (task.status === "open" || task.status === "blocked") && !atlasIsNotReadyCollectionTask(task))
     .filter((task) => activeQueueIds.size > 0
       ? activeQueueIds.has(task.task_id)
@@ -334,9 +303,6 @@ export default function WeedingCollectionPage() {
     .map((item) => item.position)
     .sort((a, b) => a - b)[0] ?? null, [cycle]);
 
-  const heroLine = cycle
-    ? `${cycle.summary.current_zone_label} · ${cycle.summary.active_count} active · ${cycle.summary.queued_count} waiting`
-    : "Loading the farm weeding cycle";
   const nextZone = cycle?.summary.next_zone_label || "none";
 
   return (
@@ -344,7 +310,7 @@ export default function WeedingCollectionPage() {
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone atlas-overview-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
           <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Weeding</span></Link>
-          <span className="atlas-weather-line">farm cycle + released work</span>
+          <span className="atlas-weather-line" aria-hidden="true" />
           <Link href="/day" className="atlas-note-plus atlas-overview-top-dot" aria-label="Back to day overview">↩</Link>
         </header>
 
@@ -354,41 +320,25 @@ export default function WeedingCollectionPage() {
               <strong>Weeding Cycle</strong>
               <span>{prettyDate(today)}</span>
             </div>
-            <p>{heroLine}</p>
           </section>
 
           <section className="atlas-overview-stat-grid atlas-weeding-cycle-stats" aria-label="Weeding cycle stats">
             <article><strong>{loading ? "…" : `${cycle?.summary.current_rank ?? 1}/9`}</strong><span>current tier</span></article>
-            <article><strong>{loading ? "…" : cycle?.summary.active_count ?? workNow.length}</strong><span>work now</span></article>
+            <article><strong>{loading ? "…" : cycle?.summary.active_count ?? todayTasks.length}</strong><span>today</span></article>
             <article><strong>{loading ? "…" : cycle?.summary.queued_count ?? 0}</strong><span>in queue</span></article>
             <article><strong>{loading ? "…" : nextZone}</strong><span>next zone</span></article>
           </section>
 
-          <section className="atlas-overview-summary-line atlas-weeding-cycle-summary">
-            <p>{cycle
-              ? `${queueExplanation(cycle)} ${cycle.summary.next_zone_label ? `${cycle.summary.next_zone_label} begins after the Field Row queue clears.` : ""}`
-              : "Loading the next weeding movement."}</p>
-          </section>
-
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
-          {loading ? <div className="atlas-task-page-empty">Loading weeding cycle.</div> : null}
+          {loading ? <div className="atlas-task-page-empty">Loading…</div> : null}
 
           {!loading && cycle ? (
             <section className="atlas-weeding-cycle-stack" aria-label="Weeding work and cycle">
-              <TaskPanel
-                title="Work Now"
-                subtitle="Only released work appears here"
-                tasks={workNow}
-                empty="No weeding task is currently released."
-                tone="due"
-              />
+              <TaskPanel title="Today" tasks={todayTasks} tone="due" />
 
               <section className="atlas-weeding-panel atlas-weeding-queue-panel">
                 <header className="atlas-weeding-panel-header">
-                  <div>
-                    <strong>Field Row Queue</strong>
-                    <span>Finish the current batch, then release one row at a time</span>
-                  </div>
+                  <strong>Field Row Queue</strong>
                   <b>{cycle.queue.length}</b>
                 </header>
                 <div className="atlas-weeding-queue-list">
@@ -396,15 +346,11 @@ export default function WeedingCollectionPage() {
                     <QueueRow key={item.task_id} item={item} nextPosition={nextQueuePosition} />
                   ))}
                 </div>
-                <p className="atlas-weeding-panel-note">{queueExplanation(cycle)}</p>
               </section>
 
               <section className="atlas-weeding-panel atlas-weeding-hierarchy-panel">
                 <header className="atlas-weeding-panel-header">
-                  <div>
-                    <strong>Farm Weeding Order</strong>
-                    <span>The hierarchy—not the calendar—decides what comes next</span>
-                  </div>
+                  <strong>Farm Weeding Order</strong>
                   <b>1–9</b>
                 </header>
                 <div className="atlas-weeding-hierarchy-list">
@@ -416,7 +362,6 @@ export default function WeedingCollectionPage() {
                       <span className="atlas-weeding-hierarchy-number">{step.rank}</span>
                       <div>
                         <strong>{step.label}</strong>
-                        <span>{hierarchyStepCopy(step, cycle)}</span>
                         {step.attention_labels.length ? <p>{step.attention_labels.join(" · ")}</p> : null}
                       </div>
                       <b>{hierarchyBadge(step, cycle)}</b>
@@ -425,25 +370,8 @@ export default function WeedingCollectionPage() {
                 </div>
               </section>
 
-              {recentlyDone.length ? (
-                <TaskPanel
-                  title="Recently Done / Resting"
-                  subtitle="Completed work stays visible without blocking the queue"
-                  tasks={recentlyDone}
-                  empty="No recently weeded areas."
-                  tone="done"
-                />
-              ) : null}
-
-              {notReady.length ? (
-                <TaskPanel
-                  title="Paused / Not Ready"
-                  subtitle="Excluded until the underlying condition changes"
-                  tasks={notReady}
-                  empty="No weeding areas are paused."
-                  tone="paused"
-                />
-              ) : null}
+              {recentlyDone.length ? <TaskPanel title="Recently Done / Resting" tasks={recentlyDone} tone="done" /> : null}
+              {notReady.length ? <TaskPanel title="Paused / Not Ready" tasks={notReady} tone="paused" /> : null}
             </section>
           ) : null}
         </div>
