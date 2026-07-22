@@ -87,6 +87,11 @@ test("Spring 2027 pilot records only confirmed physical capacity", () => {
   assert.doesNotMatch(pilot, /insert into atlas\.production_capacity_reservations/);
 });
 
+test("bed capacity comes from live object geometry instead of a hardcoded length", () => {
+  assert.match(pilot, /go\.length_ft,'bed_ft','confirmed'/);
+  assert.doesNotMatch(pilot, /30::numeric/);
+});
+
 test("unknown January planning inputs remain explicit questions", () => {
   for (const question of [
     "rocket_s1_seed_quantity",
