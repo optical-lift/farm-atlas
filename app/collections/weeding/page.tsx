@@ -23,10 +23,18 @@ type CollectionSectionProps = {
 
 type EffortBand = "heavy" | "moderate" | "light";
 
+const FIELD_ROW_QUEUE_KEY = "field_rows_weeding_rotation";
+
 function taskMinutes(task: AtlasTaskCard) {
   const raw = atlasMetadataValue(task, "estimated_minutes");
   const minutes = typeof raw === "number" ? raw : Number(raw);
   return Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes) : null;
+}
+
+function metadataCount(task: AtlasTaskCard, key: string) {
+  const raw = atlasMetadataValue(task, key);
+  const count = typeof raw === "number" ? raw : Number(raw);
+  return Number.isFinite(count) && count >= 0 ? Math.round(count) : 0;
 }
 
 function taskEffortBand(task: AtlasTaskCard): EffortBand {
@@ -190,6 +198,22 @@ export default function WeedingCollectionPage() {
   }, []);
 
   const summary = useMemo(() => atlasBuildWeedingCollectionSummary(tasks, today), [tasks, today]);
+  const fieldRowQueueTask = useMemo(() => tasks.find((task) => (
+    atlasMetaString(task, "release_queue_key") === FIELD_ROW_QUEUE_KEY
+    && atlasMetaString(task, "release_queue_state") === "active"
+  )) ?? null, [tasks]);
+  const fieldRowQueueActiveCount = fieldRowQueueTask
+    ? metadataCount(fieldRowQueueTask, "release_queue_active_count")
+    : 0;
+  const fieldRowQueueQueuedCount = fieldRowQueueTask
+    ? metadataCount(fieldRowQueueTask, "release_queue_queued_count")
+    : 0;
+  const fieldRowQueueNextLabel = fieldRowQueueTask
+    ? atlasMetaString(fieldRowQueueTask, "release_queue_next_label")
+    : "";
+  const fieldRowQueueSummary = fieldRowQueueTask
+    ? `${fieldRowQueueActiveCount} active · ${fieldRowQueueQueuedCount} queued${fieldRowQueueNextLabel ? ` · next ${fieldRowQueueNextLabel}` : ""}`
+    : null;
   const notReady = useMemo(() => tasks.filter(atlasIsNotReadyCollectionTask).sort(chronologicalTaskSort), [tasks]);
   const dueNow = useMemo(() => tasks
     .filter((task) => (task.status === "open" || task.status === "blocked") && !atlasIsNotReadyCollectionTask(task))
@@ -217,18 +241,20 @@ export default function WeedingCollectionPage() {
               <strong>Weeding Collection</strong>
               <span>{prettyDate(today)}</span>
             </div>
-            <p>{loading ? "Loading weedable areas" : summary ? `${summary.dueCount} due · ${summary.doneRecentCount} resting · ${summary.notReadyCount} not ready` : "No weeding areas found"}</p>
+            <p>{loading ? "Loading weedable areas" : fieldRowQueueSummary ?? (summary ? `${summary.dueCount} due · ${summary.doneRecentCount} resting · ${summary.notReadyCount} not ready` : "No weeding areas found")}</p>
           </section>
 
           <section className="atlas-overview-stat-grid" aria-label="Weeding collection stats">
             <article><strong>{loading ? "…" : summary?.dueCount ?? 0}</strong><span>due</span></article>
-            <article><strong>{loading ? "…" : summary?.doneRecentCount ?? 0}</strong><span>resting</span></article>
+            <article><strong>{loading ? "…" : fieldRowQueueTask ? fieldRowQueueQueuedCount : summary?.doneRecentCount ?? 0}</strong><span>{fieldRowQueueTask ? "queued" : "resting"}</span></article>
             <article><strong>{loading ? "…" : summary?.notReadyCount ?? 0}</strong><span>not ready</span></article>
-            <article><strong>{loading ? "…" : summary?.nextDueLabel ?? "none"}</strong><span>next due</span></article>
+            <article><strong>{loading ? "…" : fieldRowQueueNextLabel || summary?.nextDueLabel || "none"}</strong><span>{fieldRowQueueTask ? "next row" : "next due"}</span></article>
           </section>
 
           <section className="atlas-overview-summary-line">
-            <p>{summary?.preview ?? "No active weeding areas."}</p>
+            <p>{fieldRowQueueTask
+              ? `Field Row rotation waits for the current work to be completed before releasing ${fieldRowQueueNextLabel || "another row"}.`
+              : summary?.preview ?? "No active weeding areas."}</p>
           </section>
 
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
