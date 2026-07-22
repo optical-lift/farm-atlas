@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function AtlasMarshallPage() {
-  redirect("/manage");
+export default function AtlasMarshallCompatibilityRoute() {
+  redirect("/");
 }

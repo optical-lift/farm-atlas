@@ -29,7 +29,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "home-membership-v1",
+      "X-Atlas-Read-Path": "home-membership-v2",
     },
   });
 }
@@ -38,12 +38,17 @@ export async function GET() {
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
 
+  const workerKey = authorized.access.membership.workerKey?.trim().toLowerCase() || null;
+  if (!workerKey) {
+    return privateJson({ ok: false, error: "The signed-in farm membership does not have an Atlas worker identity." }, 409);
+  }
+
   const today = centralDateIso();
   const rangeEnd = addDaysIso(today, 35);
   const supabase = await createAtlasServerClient();
   const { data, error } = await supabase.rpc("home_task_cards_v1", {
     p_farm_id: authorized.access.membership.farmId,
-    p_worker_key: "anna",
+    p_worker_key: workerKey,
     p_due_through: rangeEnd,
     p_done_date: today,
   });
@@ -54,7 +59,7 @@ export async function GET() {
       return privateJson({ ok: false, error: "Farm access is not active." }, 403);
     }
     if (rpcError.code === "P0002") {
-      return privateJson({ ok: false, error: "The active Farm Hand was not found." }, 404);
+      return privateJson({ ok: false, error: "The signed-in Atlas worker identity was not found." }, 404);
     }
     console.error("Atlas homepage task read failed:", error);
     return privateJson({ ok: false, error: "Atlas homepage task read failed." }, 500);
@@ -64,6 +69,11 @@ export async function GET() {
     ok: true,
     farmKey: authorized.access.membership.farmKey ?? "elm_farm",
     role: authorized.access.membership.role,
+    viewer: {
+      membershipId: authorized.access.membership.membershipId,
+      workerKey,
+      role: authorized.access.membership.role,
+    },
     taskCards: (data ?? []) as AtlasTaskCardRow[],
     window: { today, rangeEnd },
   });
