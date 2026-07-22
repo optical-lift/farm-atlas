@@ -72,7 +72,7 @@ export function RoomInspectorRow({
       {isOpen ? (
         <div className="atlas-bed-inspection-sheet">
           {onDocumentObject ? (
-            <Link className="atlas-object-open-link" href={`/objects/${object.stable_key}`} onClick={() => onDocumentObject(object)}>
+            <Link className="atlas-object-open-link" href={`/objects/${object.stable_key}`}>
               Open room and log work
             </Link>
           ) : null}
