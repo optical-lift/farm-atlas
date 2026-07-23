@@ -44,6 +44,15 @@ type TimingFact = {
   value: string;
 };
 
+type CropWorkFacts = {
+  kind: "sowing" | "planting";
+  primaryLabel: "Seed packet" | "Crop";
+  primaryValue: string;
+  location: string;
+  patternLabel: "Spacing" | "Planting pattern";
+  pattern: string;
+};
+
 const ALLOWED_RETURN_PATHS = new Set(["/", "/owner", "/marshall", "/children", "/task"]);
 
 function todayIso() {
@@ -102,14 +111,23 @@ function productionContext(task: AtlasTaskCard) {
   return context.kind === "sunflower_gap_fill" ? context : null;
 }
 
-function isSowingTask(task: AtlasTaskCard) {
-  const route = [
+function taskRoute(task: AtlasTaskCard) {
+  return [
     task.action_key,
     task.task_type,
     metaString(task, "work_route"),
     metaString(task, "display_action"),
   ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function isSowingTask(task: AtlasTaskCard) {
+  const route = taskRoute(task);
   return route.includes("sow") || route.includes("seed");
+}
+
+function isPlantingTask(task: AtlasTaskCard) {
+  const route = taskRoute(task);
+  return !isSowingTask(task) && (route.includes("plant") || route.includes("transplant"));
 }
 
 function pluralBedPrefix(prefix: string) {
@@ -138,39 +156,68 @@ function compactObjectLocations(task: AtlasTaskCard, fallbackLocation: string) {
   return labels.join(" · ");
 }
 
-function sowingFacts(task: AtlasTaskCard, fallbackLocation: string) {
-  if (!isSowingTask(task)) return null;
-  const linked = task as LinkedCropTask;
-  const profile = linked.crop_profile_metadata ?? {};
-  const seedPacket = metaString(task, "seed_packet_name")
-    || metaString(task, "seed_variety")
-    || metaString(task, "crop_variety")
-    || metaString(task, "variety")
-    || linked.variety
-    || linked.crop_label
-    || "Seed packet not linked";
-
+function cropSpacing(task: AtlasTaskCard, profile: Record<string, unknown>) {
   const metadataSpacingLines = stringArray(task.metadata?.plant_spacing_lines)
     .filter((line) => /row|spacing|inch|apart/i.test(line))
     .slice(0, 2);
   const profileSpacingLines = stringArray(profile.spacing_lines)
     .filter((line) => /row|spacing|inch|apart/i.test(line))
     .slice(0, 2);
-  const rowsPerBed = numberValue(profile.rows_per_3ft_bed);
-  const spacingInches = numberValue(profile.in_row_spacing_in);
+  const rowsPerBed = numberValue(profile.rows_per_3ft_bed) ?? numberValue(task.metadata?.rows_per_3ft_bed);
+  const spacingInches = numberValue(profile.in_row_spacing_in) ?? numberValue(task.metadata?.in_row_spacing_in);
   const spacingLines = metadataSpacingLines.length ? metadataSpacingLines : profileSpacingLines;
-  const spacing = spacingLines.length
+
+  return spacingLines.length
     ? spacingLines.join(" · ")
     : [
       rowsPerBed !== null ? `${rowsPerBed} rows per 3 ft bed` : "",
       spacingInches !== null ? `${spacingInches}-inch spacing` : "",
     ].filter(Boolean).join(" · ");
+}
 
-  return {
-    seedPacket,
-    location: compactObjectLocations(task, fallbackLocation),
-    spacing,
-  };
+function cropWorkFacts(task: AtlasTaskCard, fallbackLocation: string): CropWorkFacts | null {
+  const linked = task as LinkedCropTask;
+  const profile = linked.crop_profile_metadata ?? {};
+  const location = compactObjectLocations(task, fallbackLocation);
+  const pattern = cropSpacing(task, profile);
+
+  if (isSowingTask(task)) {
+    return {
+      kind: "sowing",
+      primaryLabel: "Seed packet",
+      primaryValue: metaString(task, "seed_packet_name")
+        || metaString(task, "seed_variety")
+        || metaString(task, "crop_variety")
+        || metaString(task, "variety")
+        || linked.variety
+        || linked.crop_label
+        || metaString(task, "crop_label")
+        || metaString(task, "crop")
+        || "Seed packet not linked",
+      location,
+      patternLabel: "Spacing",
+      pattern,
+    };
+  }
+
+  if (isPlantingTask(task)) {
+    return {
+      kind: "planting",
+      primaryLabel: "Crop",
+      primaryValue: metaString(task, "crop_variety")
+        || metaString(task, "variety")
+        || linked.variety
+        || metaString(task, "crop_label")
+        || metaString(task, "crop")
+        || linked.crop_label
+        || "Crop not linked",
+      location,
+      patternLabel: "Planting pattern",
+      pattern,
+    };
+  }
+
+  return null;
 }
 
 function isGrowRoomSowing(task: AtlasTaskCard, location: string) {
@@ -247,10 +294,14 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
   const rowsPerBed = numberValue(production?.rows_per_bed);
   const spacingInches = numberValue(production?.target_spacing_inches);
   const stemsPerPlant = numberValue(production?.marketable_stems_per_plant);
-  const sowing = sowingFacts(task, display.location);
+  const cropWork = cropWorkFacts(task, display.location);
   const expectedStems = numberValue(task.metadata?.expected_stems);
-  const timing = timingFacts(allLines, sowing ? isGrowRoomSowing(task, sowing.location) : true, expectedStems);
-  const lines = sowing ? timing.rest : allLines;
+  const timing = timingFacts(
+    allLines,
+    cropWork?.kind === "sowing" ? isGrowRoomSowing(task, cropWork.location) : true,
+    expectedStems,
+  );
+  const lines = cropWork?.kind === "sowing" ? timing.rest : allLines;
 
   async function refreshTask() {
     const response = await fetch(`/api/atlas/task-cards?taskId=${encodeURIComponent(task.task_id)}`, {
@@ -363,19 +414,23 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
               <span>{prettyDate(task.due_date)}</span>
             </div>
 
-            {sowing ? (
-              <section className="atlas-task-sowing-facts" aria-label="Sowing specification" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", margin: "18px 0 4px" }}>
+            {cropWork ? (
+              <section
+                className="atlas-task-sowing-facts"
+                aria-label={cropWork.kind === "sowing" ? "Sowing specification" : "Planting specification"}
+                style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", margin: "18px 0 4px" }}
+              >
                 <div style={{ ...factCardStyle, gridColumn: "1 / -1" }}>
-                  <small style={factLabelStyle}>Seed packet</small>
-                  <strong style={{ ...factValueStyle, fontSize: "1.28rem", lineHeight: 1.15 }}>{sowing.seedPacket}</strong>
+                  <small style={factLabelStyle}>{cropWork.primaryLabel}</small>
+                  <strong style={{ ...factValueStyle, fontSize: "1.28rem", lineHeight: 1.15 }}>{cropWork.primaryValue}</strong>
                 </div>
                 <div style={factCardStyle}>
                   <small style={factLabelStyle}>Bed / location</small>
-                  <strong style={factValueStyle}>{sowing.location}</strong>
+                  <strong style={factValueStyle}>{cropWork.location}</strong>
                 </div>
                 <div style={factCardStyle}>
-                  <small style={factLabelStyle}>Spacing</small>
-                  <strong style={factValueStyle}>{sowing.spacing || "Not linked"}</strong>
+                  <small style={factLabelStyle}>{cropWork.patternLabel}</small>
+                  <strong style={factValueStyle}>{cropWork.pattern || "Not linked"}</strong>
                 </div>
               </section>
             ) : (
@@ -400,7 +455,7 @@ export default function CanonicalAssignedTaskDetail({ task: initialTask, childTa
               </section>
             ) : null}
 
-            {sowing && timing.facts.length ? (
+            {cropWork?.kind === "sowing" && timing.facts.length ? (
               <section className="atlas-task-detail-card" aria-label="Timing forecast">
                 <strong>Timing forecast</strong>
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", marginTop: "12px" }}>
