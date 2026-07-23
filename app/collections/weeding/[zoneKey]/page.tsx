@@ -9,6 +9,9 @@ import {
   formatTendingEffort,
   tendingBedHref,
   tendingClock,
+  tendingDueLabel,
+  tendingStepLabel,
+  tendingStepsToHarvestLabel,
   tendingTaskHref,
   type TendingBedTrack,
   type TendingBoard,
@@ -28,19 +31,26 @@ function humanizeZoneKey(value: string) {
 
 function AreaGateCard({ track }: { track: TendingBedTrack }) {
   const taskHref = tendingTaskHref(track);
+  const gate = track.currentGate;
   return (
     <article className="atlas-tending-card">
       <Link href={tendingBedHref(track)} className="atlas-tending-card-head"><strong>{track.bedLabel}</strong></Link>
-      {taskHref && track.currentGate ? (
+      {taskHref && gate ? (
         <Link href={taskHref} className="atlas-tending-current-gate">
-          <small>Current tending step</small>
-          <strong>{track.currentGate.label}</strong>
-          <span>opens {track.unlockLabel}</span>
+          <div className="atlas-tending-step-meta">
+            <small>Next step</small>
+            <time>{tendingDueLabel(track.taskDueDate || gate.dueDate)}</time>
+          </div>
+          <strong>{track.taskTitle || gate.label}</strong>
+          <footer>
+            <span>{tendingStepLabel(track)}</span>
+            <em>unlocks {track.unlockLabel}</em>
+          </footer>
         </Link>
       ) : null}
       <div className="atlas-tending-card-data">
         <span>{tendingClock(track)}</span>
-        <span>{track.remainingGateCount} {track.remainingGateCount === 1 ? "step" : "steps"} remaining</span>
+        <span>{tendingStepsToHarvestLabel(track)}</span>
         <span>{formatTendingEffort(track.taskEffortMinutes)}</span>
       </div>
       <Link href={tendingBedHref(track)} className="atlas-tending-board-link">Open bed board <span aria-hidden="true">›</span></Link>
