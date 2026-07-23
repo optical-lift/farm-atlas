@@ -9,6 +9,9 @@ import {
   prettyTendingDate,
   tendingBedHref,
   tendingClock,
+  tendingDueLabel,
+  tendingStepLabel,
+  tendingStepsToHarvestLabel,
   tendingTaskHref,
   type TendingBedTrack,
   type TendingBoard,
@@ -16,10 +19,10 @@ import {
 } from "@/lib/atlas/tending-client";
 
 const SECTIONS: Array<{ key: TendingSectionKey; label: string; detail: string }> = [
-  { key: "harvest_now", label: "Harvest now", detail: "Open harvest gates" },
-  { key: "unlock_next", label: "Unlock next", detail: "Moves that open a crop track" },
-  { key: "protect_harvests", label: "Protect harvests", detail: "Moves that preserve an active crop" },
-  { key: "needs_a_look", label: "Needs a look", detail: "Checks that advance the bed" },
+  { key: "harvest_now", label: "Harvest now", detail: "Beds ready to give" },
+  { key: "unlock_next", label: "Unlock next", detail: "One next step toward a crop" },
+  { key: "protect_harvests", label: "Protect harvests", detail: "Tending active crops" },
+  { key: "needs_a_look", label: "Needs a look", detail: "A quick check decides what follows" },
 ];
 
 function GateCard({ track }: { track: TendingBedTrack }) {
@@ -35,14 +38,20 @@ function GateCard({ track }: { track: TendingBedTrack }) {
       </Link>
       {taskHref && gate ? (
         <Link href={taskHref} className="atlas-tending-current-gate">
-          <small>Current tending step</small>
-          <strong>{gate.label}</strong>
-          <span>opens {track.unlockLabel}</span>
+          <div className="atlas-tending-step-meta">
+            <small>Next step</small>
+            <time>{tendingDueLabel(track.taskDueDate || gate.dueDate)}</time>
+          </div>
+          <strong>{track.taskTitle || gate.label}</strong>
+          <footer>
+            <span>{tendingStepLabel(track)}</span>
+            <em>unlocks {track.unlockLabel}</em>
+          </footer>
         </Link>
       ) : null}
       <div className="atlas-tending-card-data">
         <span>{tendingClock(track)}</span>
-        <span>{track.remainingGateCount} {track.remainingGateCount === 1 ? "step" : "steps"} remaining</span>
+        <span>{tendingStepsToHarvestLabel(track)}</span>
         <span>{formatTendingEffort(track.taskEffortMinutes)}</span>
       </div>
       <Link href={bedHref} className="atlas-tending-board-link">Open bed board <span aria-hidden="true">›</span></Link>
