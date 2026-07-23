@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import TendingMiniTrack from "@/components/atlas/tending-mini-track";
 import {
   fetchTendingBoard,
   formatTendingEffort,
@@ -35,6 +36,7 @@ function AreaGateCard({ track }: { track: TendingBedTrack }) {
   return (
     <article className="atlas-tending-card">
       <Link href={tendingBedHref(track)} className="atlas-tending-card-head"><strong>{track.bedLabel}</strong></Link>
+      <TendingMiniTrack track={track} />
       {taskHref && gate ? (
         <Link href={taskHref} className="atlas-tending-current-gate">
           <div className="atlas-tending-step-meta">
@@ -103,10 +105,12 @@ export default function TendingAreaPage() {
         </header>
 
         <div className="atlas-task-page-body atlas-overview-body atlas-tending-body">
-          <section className="atlas-overview-hero atlas-tending-hero">
-            <div><span>Elm Farm</span><strong>{zoneLabel}</strong></div>
-            <p>{loading ? "Loading open steps…" : `${cards.length} ${cards.length === 1 ? "bed" : "beds"} with an open step`}</p>
-          </section>
+          <header className="atlas-tending-page-title atlas-tending-area-title">
+            <div>
+              <h1>{zoneLabel}</h1>
+              <p>{loading ? "Loading open steps…" : `${cards.length} ${cards.length === 1 ? "bed" : "beds"} with a next step`}</p>
+            </div>
+          </header>
 
           {loading ? <div className="atlas-task-page-empty">Loading area board…</div> : null}
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
