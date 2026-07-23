@@ -47,40 +47,38 @@ test("Mowing keeps the deployed collection boxes and data lines", () => {
   assert.doesNotMatch(mowing, /CanonicalMaintenanceCollectionView/);
 });
 
-test("Weeding keeps the queue and hierarchy while using quiet state labels", () => {
-  const weeding = read("app/collections/weeding/page.tsx");
-  const route = read("app/api/atlas/weeding-cycle/route.ts");
+test("Weeding is replaced by the prepared Farm Care overview", () => {
+  const farmCare = read("app/collections/weeding/page.tsx");
+  const route = read("app/api/atlas/farm-care/route.ts");
 
-  assert.match(weeding, /atlas-work-collection-hero/);
-  assert.match(weeding, /atlas-overview-stat-grid/);
-  assert.match(weeding, /atlas-weeding-cycle-stack/);
-  assert.match(weeding, /title="Today"/);
-  assert.match(weeding, /\? "Today"/);
-  assert.match(weeding, /Field Row Queue/);
-  assert.match(weeding, /Farm Weeding Order/);
-  assert.match(weeding, /Recently Done \/ Resting/);
-  assert.match(weeding, /Paused \/ Not Ready/);
-  assert.match(weeding, /maintenanceAgeLabel/);
-  assert.match(weeding, /fetchAtlasTaskCards/);
-  assert.match(route, /weeding_cycle_v1/);
-  assert.doesNotMatch(weeding, /Work Now/);
-  assert.doesNotMatch(weeding, /Only released work appears here/);
-  assert.doesNotMatch(weeding, /Finish the current batch/);
-  assert.doesNotMatch(weeding, /The hierarchy—not the calendar/);
-  assert.doesNotMatch(weeding, /queueExplanation/);
-  assert.doesNotMatch(weeding, /hierarchyStepCopy/);
-  assert.doesNotMatch(weeding, /Upcoming \(7 Days\)/);
-  assert.doesNotMatch(weeding, /CanonicalMaintenanceCollectionView/);
+  assert.match(farmCare, /Farm Care/);
+  assert.match(farmCare, /summarySentence/);
+  assert.match(farmCare, /stateCounts/);
+  assert.match(farmCare, /observationCoverage/);
+  assert.match(farmCare, /areasChanging/);
+  assert.match(farmCare, /recentWins/);
+  assert.match(farmCare, /highestConcernObject/);
+  assert.match(farmCare, /strategySummary/);
+  assert.match(farmCare, /care\.zones\.map/);
+  assert.match(farmCare, /Unknown means the place needs a current look/);
+  assert.match(route, /farm_care_summary_v1/);
+  assert.match(route, /requireAtlasApiAccess/);
+
+  assert.doesNotMatch(farmCare, /Field Row Queue/);
+  assert.doesNotMatch(farmCare, /Farm Weeding Order/);
+  assert.doesNotMatch(farmCare, /current tier/);
+  assert.doesNotMatch(farmCare, /maintenanceAgeLabel/);
+  assert.doesNotMatch(farmCare, /fetchAtlasTaskCards/);
+  assert.doesNotMatch(farmCare, /postAtlasTaskTransition/);
+  assert.doesNotMatch(route, /weeding_cycle_v1/);
 });
 
-test("Waiting Field Row queue items can complete without releasing extra work", () => {
-  const weeding = read("app/collections/weeding/page.tsx");
+test("Legacy queue completion remains in the task engine, outside Farm Care", () => {
+  const farmCare = read("app/collections/weeding/page.tsx");
   const migration = read("supabase/migrations/20260722172500_allow_out_of_sequence_weeding_queue_completion.sql");
 
-  assert.match(weeding, /postAtlasTaskTransition/);
-  assert.match(weeding, /queueCompletion: "out_of_sequence"/);
-  assert.match(weeding, /Mark \$\{item\.title\} done\?/);
-  assert.match(weeding, /item\.state === "queued"/);
+  assert.doesNotMatch(farmCare, /queueCompletion: "out_of_sequence"/);
+  assert.doesNotMatch(farmCare, /item\.state === "queued"/);
   assert.match(migration, /qi\.state in \('active', 'queued'\)/);
   assert.match(migration, /if v_item\.state = 'active' then/);
   assert.match(migration, /completed_out_of_sequence/);
