@@ -3,304 +3,337 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import { atlasMetaString, atlasMetadataValue, atlasTaskDisplay } from "@/lib/atlas/task-display";
-import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
-import {
-  atlasCollectionTaskSortValue,
-  atlasIsDoneTask,
-  atlasIsNotReadyCollectionTask,
-  atlasIsWeedingCollectionMember,
-  atlasVisibleCollectionTasks,
-} from "@/lib/atlas/work-collections";
+type CareState =
+  | "settled"
+  | "stirring"
+  | "needs_tending"
+  | "losing_shape"
+  | "recovery_needed"
+  | "resting"
+  | "suppressed"
+  | "decision_needed"
+  | "unknown";
 
-type EffortBand = "heavy" | "moderate" | "light";
-type QueueState = "active" | "queued" | "completed" | "skipped";
+type CareTrend = "improving" | "stable" | "rising" | "unknown";
 
-type WeedingQueueItem = {
-  position: number;
-  state: QueueState;
-  initial_batch: boolean;
-  task_id: string;
-  title: string;
-  task_status: string;
-  due_date: string | null;
-  label: string;
-  condition: string;
-  estimated_minutes: number | null;
-  object_key: string | null;
+type StateCounts = {
+  settled: number;
+  stirring: number;
+  needsTending: number;
+  losingShape: number;
+  recoveryNeeded: number;
+  resting: number;
+  suppressed: number;
+  decisionNeeded: number;
+  unknown: number;
 };
 
-type WeedingHierarchyStep = {
-  rank: number;
-  key: string;
+type StrategySummary = {
+  strategy: string;
   label: string;
-  mode: "weeding" | "fall_tillage" | string;
-  total_objects: number;
-  active_objects: number;
-  needs_attention: number;
-  maintained: number;
-  inactive: number;
-  attention_labels: string[];
+  objectCount: number;
 };
 
-type WeedingCycle = {
-  summary: {
-    current_rank: number;
-    current_zone_label: string;
-    next_rank: number | null;
-    next_zone_label: string | null;
-    active_count: number;
-    queued_count: number;
-    completed_count: number;
-    queue_next_label: string | null;
+type HighestConcernObject = {
+  objectId: string;
+  objectKey: string;
+  objectLabel: string;
+  careState: CareState;
+  careStateLabel: string;
+  estimatedEffortMinutes?: number;
+  nextValidAction?: string;
+};
+
+type ZoneCard = {
+  zoneId: string;
+  zoneKey: string;
+  zoneLabel: string;
+  zoneType: string;
+  zoneMode: string;
+  purpose?: string;
+  intendedFinish?: string;
+  visibleToGuests: boolean;
+  sortOrder: number;
+  careState: CareState;
+  careStateLabel: string;
+  careTrend: CareTrend;
+  careTrendLabel: string;
+  objectCount: number;
+  stateCounts: StateCounts;
+  observationCoverage: {
+    reliable: number;
+    stale: number;
+    unknownOrStale: number;
+    oldestReliableObservation?: string;
   };
-  queue: WeedingQueueItem[];
-  hierarchy: WeedingHierarchyStep[];
+  estimatedCareMinutes: number;
+  estimatedRecoveryMinutes: number;
+  risks: {
+    production: number;
+    presentation: number;
+    accessOrEstablishment: number;
+    spread: number;
+  };
+  highestConcernObject?: HighestConcernObject;
+  strategySummary: StrategySummary[];
+  releasedInterventionCount: number;
+  plannedRecommendationCount: number;
+  decisionRequired: boolean;
+  nextMove?: string;
 };
 
-type WeedingCycleResponse = {
+type RecentWin = {
+  historyId: string;
+  occurredAt: string;
+  zoneLabel?: string;
+  objectLabel: string;
+  previousStateLabel?: string;
+  resultingStateLabel: string;
+  reason?: string;
+};
+
+type FarmCareSummary = {
+  contractVersion: string;
+  farm: {
+    farmId: string;
+    farmKey: string;
+    farmName: string;
+    status: string;
+  };
+  generatedAt: string;
+  summarySentence: string;
+  objectCount: number;
+  zoneCount: number;
+  stateCounts: StateCounts;
+  statePercentages: StateCounts;
+  zoneTrends: {
+    improving: number;
+    holding: number;
+    rising: number;
+    unknown: number;
+    recoveryZones: number;
+  };
+  observationCoverage: {
+    observed: number;
+    estimated: number;
+    stale: number;
+    unknown: number;
+    needsObservation: number;
+    coveredPercent: number;
+  };
+  effort: {
+    tendingMinutes: number;
+    recoveryMinutes: number;
+    knownCareMinutes: number;
+    releasedMinutes: number;
+    plannedMinutes: number;
+  };
+  concerns: {
+    production: number;
+    guestPresentation: number;
+    accessOrEstablishment: number;
+    spread: number;
+    resting: number;
+    suppressed: number;
+    decisionNeeded: number;
+  };
+  releasedInterventionCount: number;
+  plannedRecommendationCount: number;
+  recentWins: RecentWin[];
+  zones: ZoneCard[];
+};
+
+type FarmCareResponse = {
   ok: boolean;
-  cycle?: WeedingCycle;
+  role?: string;
+  care?: FarmCareSummary;
   error?: string;
 };
 
-function taskMinutes(task: AtlasTaskCard) {
-  const raw = atlasMetadataValue(task, "estimated_minutes");
-  const minutes = typeof raw === "number" ? raw : Number(raw);
-  return Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes) : null;
-}
+const STATE_ROWS: Array<{
+  key: keyof StateCounts;
+  state: CareState;
+  label: string;
+  quietLabel: string;
+}> = [
+  { key: "settled", state: "settled", label: "Settled", quietLabel: "holding well" },
+  { key: "stirring", state: "stirring", label: "Stirring", quietLabel: "early pressure" },
+  { key: "needsTending", state: "needs_tending", label: "Needs tending", quietLabel: "light care" },
+  { key: "losingShape", state: "losing_shape", label: "Losing shape", quietLabel: "shape at risk" },
+  { key: "recoveryNeeded", state: "recovery_needed", label: "Recovery needed", quietLabel: "focused recovery" },
+  { key: "resting", state: "resting", label: "Resting", quietLabel: "intentionally paused" },
+  { key: "suppressed", state: "suppressed", label: "Suppressed", quietLabel: "held by strategy" },
+  { key: "decisionNeeded", state: "decision_needed", label: "Decision needed", quietLabel: "management choice" },
+  { key: "unknown", state: "unknown", label: "Unknown", quietLabel: "needs observation" },
+];
 
-function taskEffortBand(task: AtlasTaskCard): EffortBand {
-  const condition = atlasMetaString(task, "condition").toLowerCase();
-  const lightPass = atlasMetadataValue(task, "light_maintenance_pass") === true
-    || atlasMetadataValue(task, "quick_maintenance_pass") === true;
-  const minutes = taskMinutes(task);
+const CONCERN_ORDER: Array<keyof StateCounts> = [
+  "recoveryNeeded",
+  "losingShape",
+  "needsTending",
+  "stirring",
+  "decisionNeeded",
+  "resting",
+  "suppressed",
+  "settled",
+  "unknown",
+];
 
-  if (lightPass || /maintain|light|easy|quick/.test(condition)) return "light";
-  if (/heavy|reset|overgrown/.test(condition)) return "heavy";
-  if (/moderate|medium/.test(condition)) return "moderate";
-  if (minutes !== null && minutes >= 60) return "heavy";
-  if (minutes !== null && minutes < 30) return "light";
-  return "moderate";
-}
-
-function effortLabel(task: AtlasTaskCard) {
-  const band = taskEffortBand(task);
-  return band.charAt(0).toUpperCase() + band.slice(1);
-}
-
-function queueEffortLabel(item: WeedingQueueItem) {
-  const condition = item.condition.toLowerCase();
-  if (/heavy|reset|overgrown/.test(condition)) return "Heavy";
-  if (/maintain|light|easy|quick/.test(condition)) return "Light";
-  return "Moderate";
-}
-
-function todayIso() {
-  const date = new Date();
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
-
-function prettyDate(dateIso: string | null | undefined) {
-  if (!dateIso) return "No date";
-  const date = new Date(`${dateIso}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return dateIso;
+function prettyDate(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function daysSince(dateIso: string) {
-  const start = new Date(`${dateIso}T12:00:00`);
-  const end = new Date(`${todayIso()}T12:00:00`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-  return Math.max(0, Math.round((end.getTime() - start.getTime()) / 86_400_000));
+function formatMinutes(minutes: number | null | undefined) {
+  const safe = Math.max(0, Math.round(minutes ?? 0));
+  if (safe === 0) return "No known effort";
+  if (safe < 60) return `${safe} min`;
+  const hours = Math.floor(safe / 60);
+  const remainder = safe % 60;
+  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
 }
 
-function maintenanceAgeLabel(task: AtlasTaskCard) {
-  const lastSprayed = atlasMetaString(task, "last_sprayed_at");
-  const lastWeeded = atlasMetaString(task, "last_weeded_at") || "2026-06-24";
-  const dateIso = lastSprayed || lastWeeded;
-  const action = lastSprayed ? "sprayed" : "weeded";
-  const days = daysSince(dateIso);
-
-  if (days === null) return `Last ${action} ${prettyDate(dateIso)}`;
-  if (days === 0) return `${action === "sprayed" ? "Sprayed" : "Weeded"} today`;
-  if (days === 1) return `1 day since ${action}`;
-  return `${days} days since ${action}`;
+function stateClass(state: CareState) {
+  return state.replaceAll("_", "-");
 }
 
-function taskHref(taskId: string) {
-  return `/task?taskId=${encodeURIComponent(taskId)}`;
+function stateLabel(key: keyof StateCounts) {
+  return STATE_ROWS.find((row) => row.key === key)?.label ?? key;
 }
 
-function statusLine(task: AtlasTaskCard) {
-  if (atlasIsNotReadyCollectionTask(task)) {
-    return atlasMetaString(task, "not_ready_reason") || task.blocker_text || "Not ready";
-  }
-  if (atlasIsDoneTask(task)) return "Resting";
-  if (task.status === "blocked") return task.blocker_text || "Waiting";
-  if (task.due_date) return task.due_date <= todayIso() ? "Today" : `Due ${prettyDate(task.due_date)}`;
-  return "Open";
+function zoneStateSummary(zone: ZoneCard) {
+  return CONCERN_ORDER
+    .filter((key) => zone.stateCounts[key] > 0)
+    .map((key) => `${zone.stateCounts[key]} ${stateLabel(key)}`)
+    .slice(0, 4);
 }
 
-function taskSort(a: AtlasTaskCard, b: AtlasTaskCard) {
-  const aQueue = Number(atlasMetadataValue(a, "release_queue_position")) || Number.MAX_SAFE_INTEGER;
-  const bQueue = Number(atlasMetadataValue(b, "release_queue_position")) || Number.MAX_SAFE_INTEGER;
-  if (aQueue !== bQueue) return aQueue - bQueue;
-  return atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b));
+function riskSummary(zone: ZoneCard) {
+  if (zone.careState === "resting") return "Intentionally resting; not overdue.";
+  if (zone.careState === "suppressed") return "Pressure is being held by the current strategy.";
+
+  const risks = [
+    zone.risks.production ? `${zone.risks.production} production` : "",
+    zone.risks.presentation ? `${zone.risks.presentation} presentation` : "",
+    zone.risks.accessOrEstablishment ? `${zone.risks.accessOrEstablishment} access / establishment` : "",
+    zone.risks.spread ? `${zone.risks.spread} spread` : "",
+  ].filter(Boolean);
+
+  if (risks.length) return `At risk: ${risks.join(" · ")}`;
+  if (zone.observationCoverage.unknownOrStale > 0) return "Risk is not fully known until current observations are recorded.";
+  return "No verified active risk.";
 }
 
-function doneSort(a: AtlasTaskCard, b: AtlasTaskCard) {
-  return (b.updated_at || b.created_at || "").localeCompare(a.updated_at || a.created_at || "");
+function primaryStrategy(zone: ZoneCard) {
+  const known = zone.strategySummary.find((item) => item.strategy !== "unknown");
+  return known ?? zone.strategySummary[0] ?? null;
 }
 
-function WeedingTaskCard({ task, tone }: { task: AtlasTaskCard; tone?: "due" | "done" | "paused" }) {
-  const display = atlasTaskDisplay(task);
-  const estimatedMinutes = taskMinutes(task);
+function changeRank(zone: ZoneCard) {
+  if (zone.careState === "recovery_needed") return 0;
+  if (zone.careState === "losing_shape") return 1;
+  if (zone.careTrend === "rising") return 2;
+  if (zone.careTrend === "improving") return 3;
+  return 4;
+}
+
+function AreaChangeRow({ zone }: { zone: ZoneCard }) {
+  const note = zone.careTrend === "improving"
+    ? "Improving"
+    : zone.careTrend === "rising"
+      ? "Pressure rising"
+      : zone.careStateLabel;
 
   return (
-    <Link className={`atlas-overview-task-card atlas-work-collection-task-card ${tone ?? ""}`} href={taskHref(task.task_id)}>
+    <article className={`atlas-farm-care-change-row ${stateClass(zone.careState)}`}>
       <div>
-        <strong>{display.title}</strong>
-        <span>{display.location}</span>
+        <strong>{zone.zoneLabel}</strong>
+        <span>{zone.highestConcernObject?.objectLabel ?? zone.careStateLabel}</span>
       </div>
-      <em>{statusLine(task)}</em>
-      <p>{[estimatedMinutes ? `${estimatedMinutes} min` : "", effortLabel(task), maintenanceAgeLabel(task)].filter(Boolean).join(" · ")}</p>
-    </Link>
+      <b>{note}</b>
+    </article>
   );
 }
 
-function TaskPanel({
-  title,
-  tasks,
-  tone,
-}: {
-  title: string;
-  tasks: AtlasTaskCard[];
-  tone?: "due" | "done" | "paused";
-}) {
+function AreaCard({ zone }: { zone: ZoneCard }) {
+  const strategy = primaryStrategy(zone);
+  const summaries = zoneStateSummary(zone);
+  const concern = zone.highestConcernObject;
+
   return (
-    <section className="atlas-weeding-panel">
-      <header className="atlas-weeding-panel-header">
-        <strong>{title}</strong>
-        <b>{tasks.length}</b>
-      </header>
-      {tasks.length ? (
-        <div className="atlas-overview-task-list">
-          {tasks.map((task) => <WeedingTaskCard key={task.task_id} task={task} tone={tone} />)}
+    <article className={`atlas-farm-care-area-card ${stateClass(zone.careState)}`}>
+      <header>
+        <div>
+          <span className="atlas-farm-care-area-kicker">{zone.objectCount} {zone.objectCount === 1 ? "place" : "places"}</span>
+          <h3>{zone.zoneLabel}</h3>
         </div>
-      ) : null}
-    </section>
-  );
-}
+        <span className={`atlas-farm-care-state-badge ${stateClass(zone.careState)}`}>{zone.careStateLabel}</span>
+      </header>
 
-function QueueRow({
-  item,
-  nextPosition,
-  saving,
-  onComplete,
-}: {
-  item: WeedingQueueItem;
-  nextPosition: number | null;
-  saving: boolean;
-  onComplete: (item: WeedingQueueItem) => void;
-}) {
-  const isNext = item.state === "queued" && item.position === nextPosition;
-  const status = saving
-    ? "Saving"
-    : item.state === "completed"
-      ? "Done"
-      : item.state === "active"
-        ? "Today"
-        : isNext
-          ? "Next"
-          : item.state === "skipped"
-            ? "Skipped"
-            : "Waiting";
-  const rowClass = `atlas-weeding-queue-row ${item.state}${isNext ? " next" : ""}`;
-  const detail = [
-    item.estimated_minutes ? `${item.estimated_minutes} min` : "",
-    queueEffortLabel(item),
-  ].filter(Boolean).join(" · ");
-  const content = (
-    <>
-      <span className="atlas-weeding-queue-number">{item.position}</span>
-      <div>
-        <strong>{item.title}</strong>
-        <span>{detail}</span>
+      <p className="atlas-farm-care-purpose">{zone.purpose || zone.intendedFinish || "Purpose not yet recorded."}</p>
+
+      <div className="atlas-farm-care-area-signals">
+        <span>{zone.careTrend === "unknown" ? "Trend not yet known" : zone.careTrendLabel}</span>
+        <span>{zone.observationCoverage.reliable} current · {zone.observationCoverage.unknownOrStale} need observation</span>
       </div>
-      <b>{status}</b>
-    </>
+
+      <div className="atlas-farm-care-count-line" aria-label={`${zone.zoneLabel} care state counts`}>
+        {summaries.map((summary) => <span key={summary}>{summary}</span>)}
+      </div>
+
+      <p className="atlas-farm-care-risk-line">{riskSummary(zone)}</p>
+
+      {concern ? (
+        <section className="atlas-farm-care-object-focus">
+          <span>{zone.careState === "resting" ? "Resting place" : "Current focus"}</span>
+          <strong>{concern.objectLabel}</strong>
+          <p>{concern.nextValidAction || zone.nextMove || "Record a current care observation."}</p>
+        </section>
+      ) : null}
+
+      <footer>
+        <div>
+          <span>Strategy</span>
+          <strong>{strategy ? strategy.label : "Strategy unknown"}</strong>
+        </div>
+        <div>
+          <span>Known effort</span>
+          <strong>{formatMinutes(zone.estimatedCareMinutes)}</strong>
+        </div>
+        <div>
+          <span>Released care</span>
+          <strong>{zone.releasedInterventionCount}</strong>
+        </div>
+      </footer>
+    </article>
   );
-
-  if (item.state === "queued") {
-    return (
-      <button
-        type="button"
-        className={rowClass}
-        disabled={saving}
-        onClick={() => onComplete(item)}
-        aria-label={`Mark ${item.title} complete`}
-        style={{ width: "100%", font: "inherit", textAlign: "left", cursor: saving ? "wait" : "pointer" }}
-      >
-        {content}
-      </button>
-    );
-  }
-
-  if (item.state === "active" || item.state === "completed") {
-    return <Link className={rowClass} href={taskHref(item.task_id)}>{content}</Link>;
-  }
-
-  return <div className={rowClass}>{content}</div>;
-}
-
-function hierarchyBadge(step: WeedingHierarchyStep, cycle: WeedingCycle) {
-  if (step.mode === "fall_tillage") return "Tillage";
-  if (step.rank === cycle.summary.current_rank) return "Current";
-  if (step.rank === cycle.summary.next_rank) return "Next";
-  if (step.needs_attention === 0) return "Resting";
-  return `Tier ${step.rank}`;
 }
 
 export default function WeedingCollectionPage() {
-  const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
-  const [cycle, setCycle] = useState<WeedingCycle | null>(null);
+  const [care, setCare] = useState<FarmCareSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [queueMessage, setQueueMessage] = useState<string | null>(null);
-  const [savingQueueTaskId, setSavingQueueTaskId] = useState<string | null>(null);
-  const today = todayIso();
 
   useEffect(() => {
     async function load() {
       try {
         setLoading(true);
         setError(null);
-
-        const [taskResponse, cycleResponse] = await Promise.all([
-          fetchAtlasTaskCards(),
-          fetch("/api/atlas/weeding-cycle", {
-            method: "GET",
-            headers: { Accept: "application/json" },
-            credentials: "same-origin",
-            cache: "no-store",
-          }),
-        ]);
-
-        const cycleData = (await cycleResponse.json()) as WeedingCycleResponse;
-        if (!cycleResponse.ok || !cycleData.ok || !cycleData.cycle) {
-          throw new Error(cycleData.error || "Weeding cycle failed.");
+        const response = await fetch("/api/atlas/farm-care", {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        const result = (await response.json()) as FarmCareResponse;
+        if (!response.ok || !result.ok || !result.care) {
+          throw new Error(result.error || "Farm Care failed to load.");
         }
-
-        const weedingTasks = (taskResponse.taskCards ?? [])
-          .filter(atlasIsWeedingCollectionMember)
-          .sort(taskSort);
-        setTasks(atlasVisibleCollectionTasks(weedingTasks));
-        setCycle(cycleData.cycle);
+        setCare(result.care);
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Weeding collection failed.");
+        setError(loadError instanceof Error ? loadError.message : "Farm Care failed to load.");
       } finally {
         setLoading(false);
       }
@@ -309,133 +342,148 @@ export default function WeedingCollectionPage() {
     void load();
   }, []);
 
-  async function completeQueuedTask(item: WeedingQueueItem) {
-    if (!window.confirm(`Mark ${item.title} done?`)) return;
+  const areasChanging = useMemo(() => {
+    if (!care) return [];
+    return care.zones
+      .filter((zone) => (
+        zone.careTrend === "improving"
+        || zone.careTrend === "rising"
+        || zone.careState === "recovery_needed"
+        || zone.careState === "losing_shape"
+      ))
+      .sort((a, b) => changeRank(a) - changeRank(b) || a.sortOrder - b.sortOrder)
+      .slice(0, 6);
+  }, [care]);
 
-    try {
-      setSavingQueueTaskId(item.task_id);
-      setQueueMessage(null);
-      await postAtlasTaskTransition({
-        taskId: item.task_id,
-        transition: "done",
-        note: "Completed before this row released from the Field Row queue.",
-        reason: "Work was completed out of sequence in the field.",
-        laneKey: "maintain",
-        workKey: "weed",
-        payload: {
-          workClass: item.condition,
-          queueCompletion: "out_of_sequence",
-        },
-      });
-      window.location.reload();
-    } catch (completionError) {
-      setQueueMessage(completionError instanceof Error ? completionError.message : "Queue task update failed.");
-      setSavingQueueTaskId(null);
-    }
-  }
-
-  const activeQueueIds = useMemo(() => new Set(
-    cycle?.queue.filter((item) => item.state === "active").map((item) => item.task_id) ?? [],
-  ), [cycle]);
-
-  const todayTasks = useMemo(() => tasks
-    .filter((task) => (task.status === "open" || task.status === "blocked") && !atlasIsNotReadyCollectionTask(task))
-    .filter((task) => activeQueueIds.size > 0
-      ? activeQueueIds.has(task.task_id)
-      : !task.due_date || task.due_date <= today)
-    .sort(taskSort), [tasks, activeQueueIds, today]);
-
-  const recentlyDone = useMemo(() => tasks
-    .filter(atlasIsDoneTask)
-    .sort(doneSort)
-    .slice(0, 6), [tasks]);
-
-  const notReady = useMemo(() => tasks
-    .filter(atlasIsNotReadyCollectionTask)
-    .sort(taskSort), [tasks]);
-
-  const nextQueuePosition = useMemo(() => cycle?.queue
-    .filter((item) => item.state === "queued")
-    .map((item) => item.position)
-    .sort((a, b) => a - b)[0] ?? null, [cycle]);
-
-  const nextZone = cycle?.summary.next_zone_label || "none";
+  const recoveryObjectCount = care
+    ? care.stateCounts.recoveryNeeded + care.stateCounts.losingShape
+    : 0;
+  const changingZoneCount = care
+    ? care.zoneTrends.improving + care.zoneTrends.rising
+    : 0;
 
   return (
-    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-work-collection-page-shell atlas-weeding-cycle-page-shell">
+    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-work-collection-page-shell atlas-farm-care-page-shell">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone atlas-overview-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Weeding</span></Link>
+          <Link href="/" className="atlas-phone-brand atlas-task-header-brand">
+            <span className="atlas-phone-kicker">Atlas</span>
+            <span className="atlas-phone-title">Farm Care</span>
+          </Link>
           <span className="atlas-weather-line" aria-hidden="true" />
           <Link href="/day" className="atlas-note-plus atlas-overview-top-dot" aria-label="Back to day overview">↩</Link>
         </header>
 
-        <div className="atlas-task-page-body atlas-overview-body atlas-work-collection-body atlas-weeding-cycle-body">
-          <section className="atlas-overview-hero atlas-work-collection-hero atlas-weeding-cycle-hero">
+        <div className="atlas-task-page-body atlas-overview-body atlas-work-collection-body atlas-farm-care-body">
+          <section className="atlas-overview-hero atlas-work-collection-hero atlas-farm-care-hero">
             <div>
-              <strong>Weeding Cycle</strong>
-              <span>{prettyDate(today)}</span>
+              <span>Elm Farm condition</span>
+              <strong>Farm Care</strong>
             </div>
-          </section>
-
-          <section className="atlas-overview-stat-grid atlas-weeding-cycle-stats" aria-label="Weeding cycle stats">
-            <article><strong>{loading ? "…" : `${cycle?.summary.current_rank ?? 1}/9`}</strong><span>current tier</span></article>
-            <article><strong>{loading ? "…" : cycle?.summary.active_count ?? todayTasks.length}</strong><span>today</span></article>
-            <article><strong>{loading ? "…" : cycle?.summary.queued_count ?? 0}</strong><span>in queue</span></article>
-            <article><strong>{loading ? "…" : nextZone}</strong><span>next zone</span></article>
+            <p>{loading ? "Reading how the farm is holding…" : care?.summarySentence}</p>
           </section>
 
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
-          {queueMessage ? <div className="atlas-task-page-empty error">{queueMessage}</div> : null}
-          {loading ? <div className="atlas-task-page-empty">Loading…</div> : null}
+          {loading ? <div className="atlas-task-page-empty">Loading Farm Care…</div> : null}
 
-          {!loading && cycle ? (
-            <section className="atlas-weeding-cycle-stack" aria-label="Weeding work and cycle">
-              <TaskPanel title="Today" tasks={todayTasks} tone="due" />
-
-              <section className="atlas-weeding-panel atlas-weeding-queue-panel">
-                <header className="atlas-weeding-panel-header">
-                  <strong>Field Row Queue</strong>
-                  <b>{cycle.queue.length}</b>
-                </header>
-                <div className="atlas-weeding-queue-list">
-                  {cycle.queue.map((item) => (
-                    <QueueRow
-                      key={item.task_id}
-                      item={item}
-                      nextPosition={nextQueuePosition}
-                      saving={savingQueueTaskId === item.task_id}
-                      onComplete={completeQueuedTask}
-                    />
-                  ))}
-                </div>
+          {!loading && care ? (
+            <>
+              <section className="atlas-overview-stat-grid atlas-farm-care-stats" aria-label="Farm Care summary">
+                <article><strong>{recoveryObjectCount}</strong><span>need shape / recovery</span></article>
+                <article><strong>{changingZoneCount}</strong><span>areas changing</span></article>
+                <article><strong>{formatMinutes(care.effort.knownCareMinutes)}</strong><span>known care effort</span></article>
+                <article><strong>{care.observationCoverage.coveredPercent}%</strong><span>condition coverage</span></article>
               </section>
 
-              <section className="atlas-weeding-panel atlas-weeding-hierarchy-panel">
-                <header className="atlas-weeding-panel-header">
-                  <strong>Farm Weeding Order</strong>
-                  <b>1–9</b>
+              <section className="atlas-farm-care-panel atlas-farm-care-state-panel">
+                <header className="atlas-farm-care-section-header">
+                  <div>
+                    <span>Farm condition</span>
+                    <h2>{care.objectCount} maintainable places</h2>
+                  </div>
+                  <b>{care.zoneCount} areas</b>
                 </header>
-                <div className="atlas-weeding-hierarchy-list">
-                  {cycle.hierarchy.map((step) => (
-                    <article
-                      key={step.key}
-                      className={`atlas-weeding-hierarchy-row${step.rank === cycle.summary.current_rank ? " current" : ""}${step.rank === cycle.summary.next_rank ? " next" : ""}${step.mode === "fall_tillage" ? " excluded" : ""}`}
-                    >
-                      <span className="atlas-weeding-hierarchy-number">{step.rank}</span>
-                      <div>
-                        <strong>{step.label}</strong>
-                        {step.attention_labels.length ? <p>{step.attention_labels.join(" · ")}</p> : null}
-                      </div>
-                      <b>{hierarchyBadge(step, cycle)}</b>
+                <div className="atlas-farm-care-state-grid">
+                  {STATE_ROWS.map((row) => (
+                    <article key={row.key} className={stateClass(row.state)}>
+                      <strong>{care.stateCounts[row.key]}</strong>
+                      <span>{row.label}</span>
+                      <small>{row.quietLabel}</small>
                     </article>
                   ))}
                 </div>
               </section>
 
-              {recentlyDone.length ? <TaskPanel title="Recently Done / Resting" tasks={recentlyDone} tone="done" /> : null}
-              {notReady.length ? <TaskPanel title="Paused / Not Ready" tasks={notReady} tone="paused" /> : null}
-            </section>
+              <section className="atlas-farm-care-panel atlas-farm-care-coverage-panel">
+                <header className="atlas-farm-care-section-header">
+                  <div>
+                    <span>Observation coverage</span>
+                    <h2>What Atlas actually knows</h2>
+                  </div>
+                  <b>{care.observationCoverage.coveredPercent}%</b>
+                </header>
+                <div className="atlas-farm-care-coverage-grid">
+                  <article><strong>{care.observationCoverage.observed}</strong><span>Observed</span></article>
+                  <article><strong>{care.observationCoverage.estimated}</strong><span>Estimated</span></article>
+                  <article><strong>{care.observationCoverage.stale}</strong><span>Stale</span></article>
+                  <article><strong>{care.observationCoverage.needsObservation}</strong><span>Need observation</span></article>
+                </div>
+                <p>Unknown means the place needs a current look. It does not mean the place is failing.</p>
+              </section>
+
+              <section className="atlas-farm-care-panel atlas-farm-care-changing-panel">
+                <header className="atlas-farm-care-section-header">
+                  <div>
+                    <span>Movement</span>
+                    <h2>Areas changing</h2>
+                  </div>
+                  <b>{areasChanging.length}</b>
+                </header>
+                {areasChanging.length ? (
+                  <div className="atlas-farm-care-change-list">
+                    {areasChanging.map((zone) => <AreaChangeRow key={zone.zoneId} zone={zone} />)}
+                  </div>
+                ) : <p className="atlas-farm-care-empty-line">No verified area movement yet.</p>}
+              </section>
+
+              <section className="atlas-farm-care-panel atlas-farm-care-wins-panel">
+                <header className="atlas-farm-care-section-header">
+                  <div>
+                    <span>Recorded momentum</span>
+                    <h2>Recent wins</h2>
+                  </div>
+                  <b>{care.recentWins.length}</b>
+                </header>
+                {care.recentWins.length ? (
+                  <div className="atlas-farm-care-win-list">
+                    {care.recentWins.map((win) => (
+                      <article key={win.historyId}>
+                        <strong>{win.objectLabel}</strong>
+                        <span>{win.zoneLabel || "Elm Farm"} · {prettyDate(win.occurredAt)}</span>
+                        <p>{win.previousStateLabel ? `${win.previousStateLabel} → ` : ""}{win.resultingStateLabel}</p>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="atlas-farm-care-empty-line">No verified care transition has been recorded yet.</p>
+                )}
+              </section>
+
+              <section className="atlas-farm-care-area-section" aria-label="Farm areas">
+                <header className="atlas-farm-care-section-header atlas-farm-care-area-heading">
+                  <div>
+                    <span>Farm → area</span>
+                    <h2>All farm areas</h2>
+                  </div>
+                  <b>{care.zones.length}</b>
+                </header>
+                <div className="atlas-farm-care-area-list">
+                  {care.zones.map((zone) => <AreaCard key={zone.zoneId} zone={zone} />)}
+                </div>
+              </section>
+
+              <p className="atlas-farm-care-generated">Condition prepared {prettyDate(care.generatedAt)} · released care remains available in Today and task views.</p>
+            </>
           ) : null}
         </div>
       </section>
