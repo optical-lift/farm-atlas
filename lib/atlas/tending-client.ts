@@ -33,6 +33,9 @@ export type TendingBedTrack = {
   currentGate?: TendingGate | null;
   gates: TendingGate[];
   remainingGateCount: number;
+  stepsToHarvestCount?: number | null;
+  totalStepCount?: number | null;
+  currentStepNumber?: number | null;
   releasedTaskId?: string | null;
   taskTitle?: string | null;
   taskDueDate?: string | null;
@@ -129,6 +132,25 @@ export function tendingDaysUntil(dateIso: string | null | undefined) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12);
   return Math.ceil((target.getTime() - today.getTime()) / 86400000);
+}
+
+export function tendingDueLabel(dateIso: string | null | undefined) {
+  if (!dateIso) return "Date not set";
+  const days = tendingDaysUntil(dateIso);
+  const date = prettyTendingDate(dateIso);
+  if (days === 0) return `Today · ${date}`;
+  if (days === 1) return `Tomorrow · ${date}`;
+  return `Due ${date}`;
+}
+
+export function tendingStepLabel(track: Pick<TendingBedTrack, "currentStepNumber" | "totalStepCount">) {
+  if (!track.currentStepNumber || !track.totalStepCount) return "Next step";
+  return `Step ${track.currentStepNumber} of ${track.totalStepCount}`;
+}
+
+export function tendingStepsToHarvestLabel(track: Pick<TendingBedTrack, "stepsToHarvestCount" | "remainingGateCount">) {
+  const count = track.stepsToHarvestCount ?? Math.max(0, track.remainingGateCount - 1);
+  return `${count} ${count === 1 ? "step" : "steps"} to harvest`;
 }
 
 export function tendingClock(track: Pick<TendingBedTrack, "firstOrNextHarvestOn" | "clockBasis">) {
