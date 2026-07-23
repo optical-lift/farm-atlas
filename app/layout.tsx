@@ -32,6 +32,7 @@ import "./week-day-navigation.css";
 import "./home-today-overview-link.css";
 import "./overview.css";
 import "./weeding-cycle.css";
+import "./farm-care-drilldown.css";
 import "./task-unfinished.css";
 import "./field-log-documentation.css";
 import "./mobile-overflow-guard.css";
