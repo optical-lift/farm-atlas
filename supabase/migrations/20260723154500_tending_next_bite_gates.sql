@@ -44,9 +44,8 @@ stable
 security invoker
 set search_path to pg_catalog, atlas
 as $function$
-with raw_cycle as (
+with cycle_context as (
   select
-    cc.id,
     cc.crop_label,
     cc.variety,
     cc.cycle_state,
@@ -54,27 +53,22 @@ with raw_cycle as (
     cc.sown_date,
     cc.planted_date,
     cc.expected_germination_end,
-    cc.expected_harvest_watch_start,
-    cc.metadata as cycle_metadata,
+    coalesce(p_harvest_on,cc.expected_harvest_watch_start) as harvest_on,
+    coalesce(
+      case
+        when coalesce(cc.metadata->>'planned_date','') ~ '^\d{4}-\d{2}-\d{2}$'
+          then (cc.metadata->>'planned_date')::date
+      end,
+      cc.sown_date,
+      cc.planted_date
+    ) as anchor_on,
     cp.default_planting_method,
     cp.days_to_germination_max,
-    cp.harvest_pattern,
-    cp.metadata as profile_metadata
+    cp.metadata as profile_metadata,
+    lower(concat_ws(' ',cc.crop_label,cc.variety)) as crop_text
   from atlas.crop_cycles cc
   left join atlas.crop_profiles cp on cp.id=cc.crop_profile_id
   where cc.id=p_crop_cycle_id
-), cycle_context as (
-  select
-    r.*,
-    coalesce(
-      case when coalesce(r.cycle_metadata->>'planned_date','') ~ '^\d{4}-\d{2}-\d{2}$'
-        then (r.cycle_metadata->>'planned_date')::date end,
-      r.sown_date,
-      r.planted_date
-    ) as anchor_on,
-    coalesce(p_harvest_on,r.expected_harvest_watch_start) as harvest_on,
-    lower(concat_ws(' ',r.crop_label,r.variety)) as crop_text
-  from raw_cycle r
 ), template_source as (
   select
     c.*,
@@ -107,21 +101,21 @@ with raw_cycle as (
           {"key":"harvest","label":"Harvest","order":60,"basis":"harvest_start","offsetDays":0}
         ]'::jsonb
       else '[{"key":"harvest","label":"Harvest","order":60,"basis":"harvest_start","offsetDays":0}]'::jsonb
-    end as template
+    end as gate_template
   from cycle_context c
 ), expanded as (
   select
     t.*,
-    item,
-    coalesce((item->>'offsetDays')::integer,0) as offset_days
+    j.value as gate,
+    coalesce((j.value->>'offsetDays')::integer,0) as offset_days
   from template_source t
-  cross join lateral jsonb_array_elements(t.template) item
+  cross join lateral jsonb_array_elements(t.gate_template) as j(value)
 )
 select
-  item->>'key' as gate_key,
-  coalesce(nullif(item->>'label',''),atlas.tending_action_label_v1(item->>'key')) as gate_label,
-  coalesce((item->>'order')::integer,60) as gate_order,
-  case item->>'basis'
+  gate->>'key' as gate_key,
+  coalesce(nullif(gate->>'label',''),atlas.tending_action_label_v1(gate->>'key')) as gate_label,
+  coalesce((gate->>'order')::integer,60) as gate_order,
+  case gate->>'basis'
     when 'anchor' then anchor_on + offset_days
     when 'germination_end' then coalesce(
       expected_germination_end,
@@ -131,7 +125,7 @@ select
     else null
   end as due_date
 from expanded
-where nullif(item->>'key','') is not null
+where nullif(gate->>'key','') is not null
 $function$;
 
 create or replace function atlas.tending_gates_v1(
@@ -147,11 +141,7 @@ security invoker
 set search_path to pg_catalog, atlas
 as $function$
 with cycle_context as (
-  select
-    cc.cycle_state,
-    cc.lifecycle_status,
-    cc.sown_date,
-    cc.planted_date
+  select cc.cycle_state,cc.lifecycle_status,cc.sown_date,cc.planted_date
   from atlas.crop_cycles cc
   where cc.id=p_crop_cycle_id
 ), linked_raw as (
@@ -161,9 +151,14 @@ with cycle_context as (
     t.due_date,
     t.created_at,
     atlas.tending_action_key_v1(t.action_key,t.work_class,t.task_type,t.title,t.metadata) as gate_key,
-    atlas.tending_action_label_v1(atlas.tending_action_key_v1(t.action_key,t.work_class,t.task_type,t.title,t.metadata)) as gate_label,
+    atlas.tending_action_label_v1(
+      atlas.tending_action_key_v1(t.action_key,t.work_class,t.task_type,t.title,t.metadata)
+    ) as gate_label,
     exists(select 1 from atlas.task_crop_cycles tc where tc.task_id=t.id) as has_cycle_link,
-    exists(select 1 from atlas.task_crop_cycles tc where tc.task_id=t.id and tc.crop_cycle_id=p_crop_cycle_id) as matches_cycle
+    exists(
+      select 1 from atlas.task_crop_cycles tc
+      where tc.task_id=t.id and tc.crop_cycle_id=p_crop_cycle_id
+    ) as matches_cycle
   from atlas.tasks t
   join atlas.tending_task_object_v1 x on x.task_id=t.id and x.object_id=p_object_id
   where t.status<>'archived'
@@ -173,8 +168,10 @@ with cycle_context as (
   select
     r.*,
     case
-      when r.gate_key='weed' and c.lifecycle_status='planned' and c.sown_date is null and c.planted_date is null then 10
-      when r.gate_key='clear' and c.lifecycle_status='planned' and c.sown_date is null and c.planted_date is null then 11
+      when r.gate_key='weed' and c.lifecycle_status='planned'
+        and c.sown_date is null and c.planted_date is null then 10
+      when r.gate_key='clear' and c.lifecycle_status='planned'
+        and c.sown_date is null and c.planted_date is null then 11
       when r.gate_key in ('sow','plant','transplant','pot_up','harden_off') then 20
       when r.gate_key in ('germination_check','observe') then 30
       when r.gate_key='weed' then 40
@@ -193,7 +190,11 @@ with cycle_context as (
 ), relevant as (
   select *
   from linked
-  where gate_key in ('weed','clear','sow','plant','transplant','pot_up','harden_off','germination_check','observe','pinch','water','support','thin','prune','harvest_watch','harvest')
+  where gate_key in (
+    'weed','clear','sow','plant','transplant','pot_up','harden_off',
+    'germination_check','observe','pinch','water','support','thin','prune',
+    'harvest_watch','harvest'
+  )
     and (not has_cycle_link or matches_cycle or id=p_current_task_id)
 ), actual_ranked as (
   select
@@ -201,7 +202,12 @@ with cycle_context as (
     row_number() over (
       partition by r.gate_key
       order by
-        case when r.id=p_current_task_id then 0 when r.status='done' then 1 when r.status='blocked' then 2 else 3 end,
+        case
+          when r.id=p_current_task_id then 0
+          when r.status='done' then 1
+          when r.status='blocked' then 2
+          else 3
+        end,
         r.due_date nulls last,
         r.created_at,
         r.id
@@ -235,7 +241,9 @@ with cycle_context as (
       when p.gate_key in ('sow','plant','transplant')
         and (c.sown_date is not null or c.planted_date is not null) then 'complete'
       when p.gate_key='germination_check'
-        and lower(coalesce(c.cycle_state,'')) in ('germinated','growing','established','harvest_watch','harvesting','declining') then 'complete'
+        and lower(coalesce(c.cycle_state,'')) in (
+          'germinated','growing','established','harvest_watch','harvesting','declining'
+        ) then 'complete'
       when pos.current_gate_order>p.gate_order then 'complete'
       else 'future'
     end as gate_status,
@@ -254,13 +262,19 @@ with cycle_context as (
     row_number() over(order by c.gate_order,c.due_date nulls last,c.gate_key) as display_order
   from combined c
 )
-select coalesce(jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
-  'key',gate_key,
-  'label',gate_label,
-  'status',gate_status,
-  'taskId',task_id,
-  'dueDate',due_date
-)) order by display_order),'[]'::jsonb)
+select coalesce(
+  jsonb_agg(
+    jsonb_strip_nulls(jsonb_build_object(
+      'key',gate_key,
+      'label',gate_label,
+      'status',gate_status,
+      'taskId',task_id,
+      'dueDate',due_date
+    ))
+    order by display_order
+  ),
+  '[]'::jsonb
+)
 from ordered
 where display_order<=10
 $function$;
@@ -312,24 +326,31 @@ select jsonb_strip_nulls(jsonb_build_object(
   'gates',coalesce(p_gates,'[]'::jsonb),
   'remainingGateCount',(
     select count(*)::integer
-    from jsonb_array_elements(coalesce(p_gates,'[]'::jsonb)) gate
-    where gate->>'status' not in ('complete','skipped')
+    from jsonb_array_elements(coalesce(p_gates,'[]'::jsonb)) as gate(value)
+    where gate.value->>'status' not in ('complete','skipped')
   ),
   'stepsToHarvestCount',(
     select count(*)::integer
-    from jsonb_array_elements(coalesce(p_gates,'[]'::jsonb)) gate
-    where gate->>'key'<>'harvest' and gate->>'status' not in ('complete','skipped')
+    from jsonb_array_elements(coalesce(p_gates,'[]'::jsonb)) as gate(value)
+    where gate.value->>'key'<>'harvest'
+      and gate.value->>'status' not in ('complete','skipped')
   ),
   'totalStepCount',(
     select count(*)::integer
-    from jsonb_array_elements(coalesce(p_gates,'[]'::jsonb)) gate
-    where gate->>'key'<>'harvest' and gate->>'status'<>'skipped'
+    from jsonb_array_elements(coalesce(p_gates,'[]'::jsonb)) as gate(value)
+    where gate.value->>'key'<>'harvest' and gate.value->>'status'<>'skipped'
   ),
   'currentStepNumber',(
-    select ordinality::integer
-    from jsonb_array_elements(coalesce(p_gates,'[]'::jsonb)) with ordinality gate
-    where gate->>'key'<>'harvest' and gate->>'status'='current'
-    limit 1
+    select count(*)::integer
+    from jsonb_array_elements(coalesce(p_gates,'[]'::jsonb)) with ordinality as gate(value,ordinality)
+    where gate.value->>'key'<>'harvest'
+      and gate.ordinality <= coalesce((
+        select current_gate.ordinality
+        from jsonb_array_elements(coalesce(p_gates,'[]'::jsonb)) with ordinality
+          as current_gate(value,ordinality)
+        where current_gate.value->>'status'='current'
+        limit 1
+      ),0)
   ),
   'releasedTaskId',x.task_id,
   'taskTitle',x.task_title,
@@ -349,6 +370,7 @@ limit 1
 $function$;
 
 revoke all on function atlas.tending_profile_gates_v1(uuid,date) from public,anon;
+
 comment on function atlas.tending_profile_gates_v1(uuid,date) is
   'Crop-profile harvest path for Tending. Produces dated future stages without creating duplicate tasks.';
 comment on function atlas.tending_gates_v1(uuid,uuid,uuid,date) is
