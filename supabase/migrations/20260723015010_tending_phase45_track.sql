@@ -1,4 +1,7 @@
-create or replace view atlas.tending_task_track_v1
+-- Rebuild the prepared track as one unit so this migration is safe after the live Phase 4.5 prototype.
+drop view if exists atlas.tending_task_track_v1 cascade;
+
+create view atlas.tending_task_track_v1
 with (security_invoker=true)
 as
 select
