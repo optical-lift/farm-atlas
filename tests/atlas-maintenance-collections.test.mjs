@@ -50,6 +50,8 @@ test("Mowing keeps the deployed collection boxes and data lines", () => {
 test("Weeding is now the action-only Tending board", () => {
   const tending = read("app/collections/weeding/page.tsx");
   const route = read("app/api/atlas/tending/route.ts");
+  const layout = read("app/layout.tsx");
+  const calmCss = read("app/tending-calm.css");
 
   assert.match(tending, /Tending/);
   assert.match(tending, /fetchTendingBoard/);
@@ -57,8 +59,8 @@ test("Weeding is now the action-only Tending board", () => {
   assert.match(tending, /Unlock next/);
   assert.match(tending, /Protect harvests/);
   assert.match(tending, /Needs a look/);
-  assert.match(tending, /Current gate/);
-  assert.match(tending, /unlocks/);
+  assert.match(tending, /Current tending step/);
+  assert.match(tending, /opens/);
   assert.match(tending, /remaining/);
   assert.match(tending, /tendingClock/);
   assert.match(tending, /tendingTaskHref/);
@@ -66,6 +68,11 @@ test("Weeding is now the action-only Tending board", () => {
   assert.match(route, /tending_board_v1/);
   assert.match(route, /requireAtlasApiAccess/);
   assert.match(route, /createAtlasServerClient/);
+  assert.match(layout, /tending-calm\.css/);
+  assert.match(calmCss, /--tending-sage/);
+  assert.match(calmCss, /--tending-mauve/);
+  assert.match(calmCss, /--tending-parchment/);
+  assert.match(calmCss, /atlas-tending-current-gate/);
 
   assert.doesNotMatch(tending, /Holding/);
   assert.doesNotMatch(tending, /Resting/);
