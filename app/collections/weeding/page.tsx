@@ -3,169 +3,16 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-type CareState =
-  | "settled"
-  | "stirring"
-  | "needs_tending"
-  | "losing_shape"
-  | "recovery_needed"
-  | "resting"
-  | "suppressed"
-  | "decision_needed"
-  | "unknown";
-
-type CareTrend = "improving" | "stable" | "rising" | "unknown";
-
-type StateCounts = {
-  settled: number;
-  stirring: number;
-  needsTending: number;
-  losingShape: number;
-  recoveryNeeded: number;
-  resting: number;
-  suppressed: number;
-  decisionNeeded: number;
-  unknown: number;
-};
-
-type StrategySummary = {
-  strategy: string;
-  label: string;
-  objectCount: number;
-};
-
-type HighestConcernObject = {
-  objectId: string;
-  objectKey: string;
-  objectLabel: string;
-  careState: CareState;
-  careStateLabel: string;
-  estimatedEffortMinutes?: number;
-  nextValidAction?: string;
-};
-
-type ZoneCard = {
-  zoneId: string;
-  zoneKey: string;
-  zoneLabel: string;
-  zoneType: string;
-  zoneMode: string;
-  purpose?: string;
-  intendedFinish?: string;
-  visibleToGuests: boolean;
-  sortOrder: number;
-  careState: CareState;
-  careStateLabel: string;
-  careTrend: CareTrend;
-  careTrendLabel: string;
-  objectCount: number;
-  stateCounts: StateCounts;
-  observationCoverage: {
-    reliable: number;
-    stale: number;
-    unknownOrStale: number;
-    oldestReliableObservation?: string;
-  };
-  estimatedCareMinutes: number;
-  estimatedRecoveryMinutes: number;
-  risks: {
-    production: number;
-    presentation: number;
-    accessOrEstablishment: number;
-    spread: number;
-  };
-  highestConcernObject?: HighestConcernObject;
-  strategySummary: StrategySummary[];
-  releasedInterventionCount: number;
-  plannedRecommendationCount: number;
-  decisionRequired: boolean;
-  nextMove?: string;
-};
-
-type RecentWin = {
-  historyId: string;
-  occurredAt: string;
-  zoneLabel?: string;
-  objectLabel: string;
-  previousStateLabel?: string;
-  resultingStateLabel: string;
-  reason?: string;
-};
-
-type FarmCareSummary = {
-  contractVersion: string;
-  farm: {
-    farmId: string;
-    farmKey: string;
-    farmName: string;
-    status: string;
-  };
-  generatedAt: string;
-  summarySentence: string;
-  objectCount: number;
-  zoneCount: number;
-  stateCounts: StateCounts;
-  statePercentages: StateCounts;
-  zoneTrends: {
-    improving: number;
-    holding: number;
-    rising: number;
-    unknown: number;
-    recoveryZones: number;
-  };
-  observationCoverage: {
-    observed: number;
-    estimated: number;
-    stale: number;
-    unknown: number;
-    needsObservation: number;
-    coveredPercent: number;
-  };
-  effort: {
-    tendingMinutes: number;
-    recoveryMinutes: number;
-    knownCareMinutes: number;
-    releasedMinutes: number;
-    plannedMinutes: number;
-  };
-  concerns: {
-    production: number;
-    guestPresentation: number;
-    accessOrEstablishment: number;
-    spread: number;
-    resting: number;
-    suppressed: number;
-    decisionNeeded: number;
-  };
-  releasedInterventionCount: number;
-  plannedRecommendationCount: number;
-  recentWins: RecentWin[];
-  zones: ZoneCard[];
-};
-
-type FarmCareResponse = {
-  ok: boolean;
-  role?: string;
-  care?: FarmCareSummary;
-  error?: string;
-};
-
-const STATE_ROWS: Array<{
-  key: keyof StateCounts;
-  state: CareState;
-  label: string;
-  quietLabel: string;
-}> = [
-  { key: "settled", state: "settled", label: "Settled", quietLabel: "holding well" },
-  { key: "stirring", state: "stirring", label: "Stirring", quietLabel: "early pressure" },
-  { key: "needsTending", state: "needs_tending", label: "Needs tending", quietLabel: "light care" },
-  { key: "losingShape", state: "losing_shape", label: "Losing shape", quietLabel: "shape at risk" },
-  { key: "recoveryNeeded", state: "recovery_needed", label: "Recovery needed", quietLabel: "focused recovery" },
-  { key: "resting", state: "resting", label: "Resting", quietLabel: "intentionally paused" },
-  { key: "suppressed", state: "suppressed", label: "Suppressed", quietLabel: "held by strategy" },
-  { key: "decisionNeeded", state: "decision_needed", label: "Decision needed", quietLabel: "management choice" },
-  { key: "unknown", state: "unknown", label: "Unknown", quietLabel: "needs observation" },
-];
+import {
+  CARE_STATE_ROWS,
+  careStateClass,
+  fetchFarmCareSummary,
+  formatCareMinutes,
+  prettyCareDate,
+  type FarmCareSummary,
+  type FarmCareZone,
+  type StateCounts,
+} from "@/lib/atlas/farm-care-client";
 
 const CONCERN_ORDER: Array<keyof StateCounts> = [
   "recoveryNeeded",
@@ -179,38 +26,18 @@ const CONCERN_ORDER: Array<keyof StateCounts> = [
   "unknown",
 ];
 
-function prettyDate(value: string | null | undefined) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function formatMinutes(minutes: number | null | undefined) {
-  const safe = Math.max(0, Math.round(minutes ?? 0));
-  if (safe === 0) return "No known effort";
-  if (safe < 60) return `${safe} min`;
-  const hours = Math.floor(safe / 60);
-  const remainder = safe % 60;
-  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
-}
-
-function stateClass(state: CareState) {
-  return state.replaceAll("_", "-");
-}
-
 function stateLabel(key: keyof StateCounts) {
-  return STATE_ROWS.find((row) => row.key === key)?.label ?? key;
+  return CARE_STATE_ROWS.find((row) => row.key === key)?.label ?? key;
 }
 
-function zoneStateSummary(zone: ZoneCard) {
+function zoneStateSummary(zone: FarmCareZone) {
   return CONCERN_ORDER
     .filter((key) => zone.stateCounts[key] > 0)
     .map((key) => `${zone.stateCounts[key]} ${stateLabel(key)}`)
     .slice(0, 4);
 }
 
-function riskSummary(zone: ZoneCard) {
+function riskSummary(zone: FarmCareZone) {
   if (zone.careState === "resting") return "Intentionally resting; not overdue.";
   if (zone.careState === "suppressed") return "Pressure is being held by the current strategy.";
 
@@ -226,12 +53,12 @@ function riskSummary(zone: ZoneCard) {
   return "No verified active risk.";
 }
 
-function primaryStrategy(zone: ZoneCard) {
+function primaryStrategy(zone: FarmCareZone) {
   const known = zone.strategySummary.find((item) => item.strategy !== "unknown");
   return known ?? zone.strategySummary[0] ?? null;
 }
 
-function changeRank(zone: ZoneCard) {
+function changeRank(zone: FarmCareZone) {
   if (zone.careState === "recovery_needed") return 0;
   if (zone.careState === "losing_shape") return 1;
   if (zone.careTrend === "rising") return 2;
@@ -239,7 +66,11 @@ function changeRank(zone: ZoneCard) {
   return 4;
 }
 
-function AreaChangeRow({ zone }: { zone: ZoneCard }) {
+function zoneHref(zoneKey: string) {
+  return `/collections/weeding/${encodeURIComponent(zoneKey)}`;
+}
+
+function AreaChangeRow({ zone }: { zone: FarmCareZone }) {
   const note = zone.careTrend === "improving"
     ? "Improving"
     : zone.careTrend === "rising"
@@ -247,29 +78,29 @@ function AreaChangeRow({ zone }: { zone: ZoneCard }) {
       : zone.careStateLabel;
 
   return (
-    <article className={`atlas-farm-care-change-row ${stateClass(zone.careState)}`}>
+    <Link className={`atlas-farm-care-change-row ${careStateClass(zone.careState)}`} href={zoneHref(zone.zoneKey)}>
       <div>
         <strong>{zone.zoneLabel}</strong>
         <span>{zone.highestConcernObject?.objectLabel ?? zone.careStateLabel}</span>
       </div>
       <b>{note}</b>
-    </article>
+    </Link>
   );
 }
 
-function AreaCard({ zone }: { zone: ZoneCard }) {
+function AreaCard({ zone }: { zone: FarmCareZone }) {
   const strategy = primaryStrategy(zone);
   const summaries = zoneStateSummary(zone);
   const concern = zone.highestConcernObject;
 
   return (
-    <article className={`atlas-farm-care-area-card ${stateClass(zone.careState)}`}>
+    <Link className={`atlas-farm-care-area-card atlas-farm-care-area-link ${careStateClass(zone.careState)}`} href={zoneHref(zone.zoneKey)}>
       <header>
         <div>
           <span className="atlas-farm-care-area-kicker">{zone.objectCount} {zone.objectCount === 1 ? "place" : "places"}</span>
           <h3>{zone.zoneLabel}</h3>
         </div>
-        <span className={`atlas-farm-care-state-badge ${stateClass(zone.careState)}`}>{zone.careStateLabel}</span>
+        <span className={`atlas-farm-care-state-badge ${careStateClass(zone.careState)}`}>{zone.careStateLabel}</span>
       </header>
 
       <p className="atlas-farm-care-purpose">{zone.purpose || zone.intendedFinish || "Purpose not yet recorded."}</p>
@@ -294,20 +125,12 @@ function AreaCard({ zone }: { zone: ZoneCard }) {
       ) : null}
 
       <footer>
-        <div>
-          <span>Strategy</span>
-          <strong>{strategy ? strategy.label : "Strategy unknown"}</strong>
-        </div>
-        <div>
-          <span>Known effort</span>
-          <strong>{formatMinutes(zone.estimatedCareMinutes)}</strong>
-        </div>
-        <div>
-          <span>Released care</span>
-          <strong>{zone.releasedInterventionCount}</strong>
-        </div>
+        <div><span>Strategy</span><strong>{strategy ? strategy.label : "Strategy unknown"}</strong></div>
+        <div><span>Known effort</span><strong>{formatCareMinutes(zone.estimatedCareMinutes)}</strong></div>
+        <div><span>Released care</span><strong>{zone.releasedInterventionCount}</strong></div>
       </footer>
-    </article>
+      <em className="atlas-farm-care-area-arrow" aria-hidden="true">›</em>
+    </Link>
   );
 }
 
@@ -321,24 +144,15 @@ export default function WeedingCollectionPage() {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch("/api/atlas/farm-care", {
-          method: "GET",
-          headers: { Accept: "application/json" },
-          credentials: "same-origin",
-          cache: "no-store",
-        });
-        const result = (await response.json()) as FarmCareResponse;
-        if (!response.ok || !result.ok || !result.care) {
-          throw new Error(result.error || "Farm Care failed to load.");
-        }
-        setCare(result.care);
+        const response = await fetchFarmCareSummary();
+        if (!response.care) throw new Error("Farm Care failed to load.");
+        setCare(response.care);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Farm Care failed to load.");
       } finally {
         setLoading(false);
       }
     }
-
     void load();
   }, []);
 
@@ -355,12 +169,8 @@ export default function WeedingCollectionPage() {
       .slice(0, 6);
   }, [care]);
 
-  const recoveryObjectCount = care
-    ? care.stateCounts.recoveryNeeded + care.stateCounts.losingShape
-    : 0;
-  const changingZoneCount = care
-    ? care.zoneTrends.improving + care.zoneTrends.rising
-    : 0;
+  const recoveryObjectCount = care ? care.stateCounts.recoveryNeeded + care.stateCounts.losingShape : 0;
+  const changingZoneCount = care ? care.zoneTrends.improving + care.zoneTrends.rising : 0;
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-work-collection-page-shell atlas-farm-care-page-shell">
@@ -376,10 +186,7 @@ export default function WeedingCollectionPage() {
 
         <div className="atlas-task-page-body atlas-overview-body atlas-work-collection-body atlas-farm-care-body">
           <section className="atlas-overview-hero atlas-work-collection-hero atlas-farm-care-hero">
-            <div>
-              <span>Elm Farm condition</span>
-              <strong>Farm Care</strong>
-            </div>
+            <div><span>Elm Farm condition</span><strong>Farm Care</strong></div>
             <p>{loading ? "Reading how the farm is holding…" : care?.summarySentence}</p>
           </section>
 
@@ -391,24 +198,19 @@ export default function WeedingCollectionPage() {
               <section className="atlas-overview-stat-grid atlas-farm-care-stats" aria-label="Farm Care summary">
                 <article><strong>{recoveryObjectCount}</strong><span>need shape / recovery</span></article>
                 <article><strong>{changingZoneCount}</strong><span>areas changing</span></article>
-                <article><strong>{formatMinutes(care.effort.knownCareMinutes)}</strong><span>known care effort</span></article>
+                <article><strong>{formatCareMinutes(care.effort.knownCareMinutes)}</strong><span>known care effort</span></article>
                 <article><strong>{care.observationCoverage.coveredPercent}%</strong><span>condition coverage</span></article>
               </section>
 
               <section className="atlas-farm-care-panel atlas-farm-care-state-panel">
                 <header className="atlas-farm-care-section-header">
-                  <div>
-                    <span>Farm condition</span>
-                    <h2>{care.objectCount} maintainable places</h2>
-                  </div>
+                  <div><span>Farm condition</span><h2>{care.objectCount} maintainable places</h2></div>
                   <b>{care.zoneCount} areas</b>
                 </header>
                 <div className="atlas-farm-care-state-grid">
-                  {STATE_ROWS.map((row) => (
-                    <article key={row.key} className={stateClass(row.state)}>
-                      <strong>{care.stateCounts[row.key]}</strong>
-                      <span>{row.label}</span>
-                      <small>{row.quietLabel}</small>
+                  {CARE_STATE_ROWS.map((row) => (
+                    <article key={row.key} className={careStateClass(row.state)}>
+                      <strong>{care.stateCounts[row.key]}</strong><span>{row.label}</span><small>{row.quietLabel}</small>
                     </article>
                   ))}
                 </div>
@@ -416,11 +218,7 @@ export default function WeedingCollectionPage() {
 
               <section className="atlas-farm-care-panel atlas-farm-care-coverage-panel">
                 <header className="atlas-farm-care-section-header">
-                  <div>
-                    <span>Observation coverage</span>
-                    <h2>What Atlas actually knows</h2>
-                  </div>
-                  <b>{care.observationCoverage.coveredPercent}%</b>
+                  <div><span>Observation coverage</span><h2>What Atlas actually knows</h2></div><b>{care.observationCoverage.coveredPercent}%</b>
                 </header>
                 <div className="atlas-farm-care-coverage-grid">
                   <article><strong>{care.observationCoverage.observed}</strong><span>Observed</span></article>
@@ -433,56 +231,32 @@ export default function WeedingCollectionPage() {
 
               <section className="atlas-farm-care-panel atlas-farm-care-changing-panel">
                 <header className="atlas-farm-care-section-header">
-                  <div>
-                    <span>Movement</span>
-                    <h2>Areas changing</h2>
-                  </div>
-                  <b>{areasChanging.length}</b>
+                  <div><span>Movement</span><h2>Areas changing</h2></div><b>{areasChanging.length}</b>
                 </header>
-                {areasChanging.length ? (
-                  <div className="atlas-farm-care-change-list">
-                    {areasChanging.map((zone) => <AreaChangeRow key={zone.zoneId} zone={zone} />)}
-                  </div>
-                ) : <p className="atlas-farm-care-empty-line">No verified area movement yet.</p>}
+                {areasChanging.length ? <div className="atlas-farm-care-change-list">{areasChanging.map((zone) => <AreaChangeRow key={zone.zoneId} zone={zone} />)}</div> : <p className="atlas-farm-care-empty-line">No verified area movement yet.</p>}
               </section>
 
               <section className="atlas-farm-care-panel atlas-farm-care-wins-panel">
                 <header className="atlas-farm-care-section-header">
-                  <div>
-                    <span>Recorded momentum</span>
-                    <h2>Recent wins</h2>
-                  </div>
-                  <b>{care.recentWins.length}</b>
+                  <div><span>Recorded momentum</span><h2>Recent wins</h2></div><b>{care.recentWins.length}</b>
                 </header>
                 {care.recentWins.length ? (
                   <div className="atlas-farm-care-win-list">
                     {care.recentWins.map((win) => (
-                      <article key={win.historyId}>
-                        <strong>{win.objectLabel}</strong>
-                        <span>{win.zoneLabel || "Elm Farm"} · {prettyDate(win.occurredAt)}</span>
-                        <p>{win.previousStateLabel ? `${win.previousStateLabel} → ` : ""}{win.resultingStateLabel}</p>
-                      </article>
+                      <article key={win.historyId}><strong>{win.objectLabel}</strong><span>{win.zoneLabel || "Elm Farm"} · {prettyCareDate(win.occurredAt)}</span><p>{win.previousStateLabel ? `${win.previousStateLabel} → ` : ""}{win.resultingStateLabel}</p></article>
                     ))}
                   </div>
-                ) : (
-                  <p className="atlas-farm-care-empty-line">No verified care transition has been recorded yet.</p>
-                )}
+                ) : <p className="atlas-farm-care-empty-line">No verified care transition has been recorded yet.</p>}
               </section>
 
               <section className="atlas-farm-care-area-section" aria-label="Farm areas">
                 <header className="atlas-farm-care-section-header atlas-farm-care-area-heading">
-                  <div>
-                    <span>Farm → area</span>
-                    <h2>All farm areas</h2>
-                  </div>
-                  <b>{care.zones.length}</b>
+                  <div><span>Farm → area</span><h2>All farm areas</h2></div><b>{care.zones.length}</b>
                 </header>
-                <div className="atlas-farm-care-area-list">
-                  {care.zones.map((zone) => <AreaCard key={zone.zoneId} zone={zone} />)}
-                </div>
+                <div className="atlas-farm-care-area-list">{care.zones.map((zone) => <AreaCard key={zone.zoneId} zone={zone} />)}</div>
               </section>
 
-              <p className="atlas-farm-care-generated">Condition prepared {prettyDate(care.generatedAt)} · released care remains available in Today and task views.</p>
+              <p className="atlas-farm-care-generated">Condition prepared {prettyCareDate(care.generatedAt)} · open an area to see its places, interventions, and history.</p>
             </>
           ) : null}
         </div>
