@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import TendingMiniTrack from "@/components/atlas/tending-mini-track";
 import {
   fetchTendingBoard,
   formatTendingEffort,
@@ -36,6 +37,7 @@ function GateCard({ track }: { track: TendingBedTrack }) {
         <span>{track.zoneLabel}</span>
         <strong>{track.bedLabel}</strong>
       </Link>
+      <TendingMiniTrack track={track} />
       {taskHref && gate ? (
         <Link href={taskHref} className="atlas-tending-current-gate">
           <div className="atlas-tending-step-meta">
@@ -101,11 +103,15 @@ export default function TendingCollectionPage() {
         </header>
 
         <div className="atlas-task-page-body atlas-overview-body atlas-tending-body">
-          <section className="atlas-overview-hero atlas-tending-hero">
-            <div><span>Elm Farm</span><strong>Tending</strong></div>
-            <p>{loading ? "Loading open steps…" : `${board?.bedCount ?? 0} beds · ${board?.actionableCount ?? 0} open steps`}</p>
-            {!loading && board?.nextHarvestOn ? <footer><span>Next harvest</span><strong>{prettyTendingDate(board.nextHarvestOn)}</strong></footer> : null}
-          </section>
+          <header className="atlas-tending-page-title">
+            <div>
+              <h1>Tending</h1>
+              <p>{loading ? "Loading open steps…" : `${board?.bedCount ?? 0} beds with a next step`}</p>
+            </div>
+            {!loading && board?.nextHarvestOn ? (
+              <span><small>Next harvest</small><strong>{prettyTendingDate(board.nextHarvestOn)}</strong></span>
+            ) : null}
+          </header>
 
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
           {loading ? <div className="atlas-task-page-empty">Loading Tending…</div> : null}

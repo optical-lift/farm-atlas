@@ -1,0 +1,178 @@
+/* Compact Tending overview.
+   The page title recedes; each bed carries the visual weight and shows its crop path. */
+
+.atlas-tending-page-title {
+  min-width: 0;
+  padding: 5px 3px 2px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.atlas-tending-page-title > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.atlas-tending-page-title h1 {
+  margin: 0;
+  color: var(--tending-ink);
+  font-size: clamp(27px, 8vw, 36px);
+  line-height: 0.95;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+}
+
+.atlas-tending-page-title p {
+  margin: 0;
+  color: #7a7c72;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 760;
+}
+
+.atlas-tending-page-title > span {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  text-align: right;
+}
+
+.atlas-tending-page-title > span small {
+  color: #8a8b82;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 820;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.atlas-tending-page-title > span strong {
+  color: #6f7189;
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 860;
+}
+
+.atlas-tending-area-title h1 {
+  max-width: 560px;
+  overflow-wrap: anywhere;
+  font-size: clamp(24px, 7vw, 33px);
+}
+
+.atlas-tending-mini-track {
+  margin: 0;
+  padding: 3px 19px 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: none;
+}
+
+.atlas-tending-mini-track::-webkit-scrollbar {
+  display: none;
+}
+
+.atlas-tending-mini-track li {
+  position: relative;
+  min-width: 58px;
+  flex: 1 0 58px;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  color: #85867d;
+  text-align: center;
+}
+
+.atlas-tending-mini-track li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: calc(50% + 7px);
+  width: calc(100% - 14px);
+  height: 1px;
+  background: rgba(185, 183, 171, 0.62);
+}
+
+.atlas-tending-mini-track li i {
+  position: relative;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid #9d9e96;
+  border-radius: 50%;
+  display: block;
+  background: #fffefa;
+}
+
+.atlas-tending-mini-track li span {
+  max-width: 74px;
+  color: inherit;
+  font-size: 8px;
+  line-height: 1.12;
+  font-weight: 760;
+}
+
+.atlas-tending-mini-track li.gate-complete {
+  color: #737765;
+}
+
+.atlas-tending-mini-track li.gate-complete i {
+  border-color: #8e9279;
+  background: #8e9279;
+}
+
+.atlas-tending-mini-track li.gate-complete:not(:last-child)::after {
+  background: rgba(142, 146, 121, 0.62);
+}
+
+.atlas-tending-mini-track li.gate-current {
+  color: var(--tending-ink);
+  font-weight: 850;
+}
+
+.atlas-tending-mini-track li.gate-current i {
+  width: 11px;
+  height: 11px;
+  margin-top: -1px;
+  border: 2px solid #343542;
+  background: #343542;
+  box-shadow: 0 0 0 3px rgba(201, 192, 198, 0.35);
+}
+
+.atlas-tending-mini-track li.gate-blocked i {
+  border-color: #9a7f76;
+  background: #9a7f76;
+}
+
+.atlas-tending-card-head {
+  padding-bottom: 8px;
+}
+
+.atlas-tending-current-gate {
+  margin-top: 0;
+}
+
+@media (max-width: 520px) {
+  .atlas-tending-body {
+    gap: 12px;
+  }
+
+  .atlas-tending-page-title {
+    padding-inline: 4px;
+  }
+
+  .atlas-tending-mini-track {
+    padding-inline: 15px;
+  }
+
+  .atlas-tending-mini-track li {
+    min-width: 54px;
+    flex-basis: 54px;
+  }
+}
