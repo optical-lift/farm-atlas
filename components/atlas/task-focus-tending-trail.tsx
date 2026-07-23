@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -24,16 +25,19 @@ function isWeedingTask(task: AtlasTaskCard) {
 }
 
 export default function TaskFocusTendingTrail() {
+  const pathname = usePathname();
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [target, setTarget] = useState<TrailTarget | null>(null);
 
   useEffect(() => {
-    const match = window.location.pathname.match(/^\/task-focus\/([0-9a-f-]{36})\/?$/i);
+    const match = pathname.match(/^\/task-focus\/([0-9a-f-]{36})\/?$/i);
     const taskId = match?.[1] ?? null;
     if (!taskId) return;
 
     let active = true;
     let host: HTMLDivElement | null = null;
+    let observer: MutationObserver | null = null;
+    let observerTimer: number | null = null;
 
     const attach = () => {
       const taskCard = document.querySelector<HTMLElement>(".atlas-task-page-active");
@@ -46,11 +50,11 @@ export default function TaskFocusTendingTrail() {
     };
 
     if (!attach()) {
-      const observer = new MutationObserver(() => {
-        if (attach()) observer.disconnect();
+      observer = new MutationObserver(() => {
+        if (attach()) observer?.disconnect();
       });
       observer.observe(document.body, { childList: true, subtree: true });
-      window.setTimeout(() => observer.disconnect(), 5000);
+      observerTimer = window.setTimeout(() => observer?.disconnect(), 5000);
     }
 
     void fetch(`/api/atlas/task-cards?taskId=${encodeURIComponent(taskId)}`, {
@@ -72,11 +76,13 @@ export default function TaskFocusTendingTrail() {
 
     return () => {
       active = false;
+      observer?.disconnect();
+      if (observerTimer !== null) window.clearTimeout(observerTimer);
       host?.remove();
       setMount(null);
       setTarget(null);
     };
-  }, []);
+  }, [pathname]);
 
   if (!mount || !target) return null;
   return createPortal(
