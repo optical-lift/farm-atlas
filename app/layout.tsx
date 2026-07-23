@@ -11,6 +11,7 @@ import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
 import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
 import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
 import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
+import TendingTaskContext from "@/components/atlas/tending-task-context";
 import "./globals.css";
 import "./home.css";
 import "./zones.css";
@@ -33,6 +34,7 @@ import "./home-today-overview-link.css";
 import "./overview.css";
 import "./weeding-cycle.css";
 import "./farm-care-drilldown.css";
+import "./tending.css";
 import "./task-unfinished.css";
 import "./field-log-documentation.css";
 import "./mobile-overflow-guard.css";
@@ -67,6 +69,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <OwnerTaskReturnPatch />
         <SafeBedCropAccordionPatch />
         <AttachedTaskHistoryPatch />
+        <TendingTaskContext />
         {children}
       </body>
     </html>
