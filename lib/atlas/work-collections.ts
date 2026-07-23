@@ -254,7 +254,7 @@ export function atlasBuildWeedingCollectionSummary(
   _tasks: AtlasTaskCard[],
   _anchorIso: string,
   _dueMode?: AtlasWorkCollectionDueMode,
-) {
+): AtlasWorkCollectionSummary | null {
   // The harvest-first Tending page still exists at /collections/weeding.
   // Task lineups intentionally do not replace today's exact weeding task with a collection card.
   return null;
