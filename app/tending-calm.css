@@ -1,0 +1,402 @@
+/* Calm garden pass for Tending.
+   Uses the existing Atlas cream, sage, mauve, butter, taupe, and lavender family,
+   with the muted garden-strip palette supplied for this refinement. */
+
+.atlas-tending-shell {
+  --tending-ink: #414251;
+  --tending-muted: #74756d;
+  --tending-paper: #fbfaf5;
+  --tending-parchment: #e6e2cf;
+  --tending-sage: #c8c8a5;
+  --tending-sage-deep: #7f846f;
+  --tending-mauve: #c9c0c6;
+  --tending-lavender: #aaa7b1;
+  --tending-lavender-deep: #6d7093;
+  --tending-butter: #d9d6b1;
+  --tending-border: #d9d2c4;
+  --tending-shadow: rgba(72, 66, 54, 0.055);
+  background:
+    radial-gradient(circle at 8% 4%, rgba(201, 192, 198, 0.2), transparent 25%),
+    radial-gradient(circle at 92% 11%, rgba(200, 200, 165, 0.2), transparent 22%),
+    var(--atlas-bg);
+}
+
+.atlas-tending-shell .atlas-phone {
+  background:
+    linear-gradient(rgba(251, 250, 245, 0.97), rgba(251, 250, 245, 0.97)),
+    var(--tending-paper);
+}
+
+.atlas-tending-body {
+  gap: 18px;
+}
+
+/* The opening should feel like entering a garden, not an alert screen. */
+.atlas-tending-hero,
+.atlas-tending-bed-hero {
+  position: relative;
+  overflow: hidden;
+  color: var(--tending-ink);
+  border: 1px solid rgba(170, 167, 177, 0.42);
+  background:
+    radial-gradient(circle at 86% 18%, rgba(217, 214, 177, 0.58), transparent 31%),
+    radial-gradient(circle at 13% 84%, rgba(201, 192, 198, 0.4), transparent 34%),
+    linear-gradient(140deg, #eeeadf 0%, #dedccf 42%, #c8c8b2 100%);
+  box-shadow: 0 12px 28px rgba(72, 66, 54, 0.055);
+}
+
+.atlas-tending-hero {
+  min-height: 152px;
+  padding: 20px 22px 23px;
+}
+
+.atlas-tending-hero::after,
+.atlas-tending-bed-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--tending-parchment) 0 16%,
+    var(--tending-sage) 16% 34%,
+    var(--tending-mauve) 34% 52%,
+    var(--tending-lavender) 52% 70%,
+    var(--tending-butter) 70% 86%,
+    var(--tending-parchment) 86% 100%
+  );
+  opacity: 0.92;
+}
+
+.atlas-tending-hero > div {
+  justify-items: start;
+  text-align: left;
+}
+
+.atlas-tending-hero > div > span,
+.atlas-tending-hero footer > span,
+.atlas-tending-bed-hero > span {
+  color: rgba(65, 66, 81, 0.62);
+  font-weight: 850;
+  letter-spacing: 0.13em;
+}
+
+.atlas-tending-hero > div > strong {
+  color: var(--tending-ink);
+  font-size: clamp(34px, 6vw, 47px);
+  line-height: 0.95;
+  font-weight: 820;
+  letter-spacing: -0.052em;
+}
+
+.atlas-tending-hero > p {
+  color: rgba(65, 66, 81, 0.82);
+  font-size: 14px;
+  font-weight: 720;
+}
+
+.atlas-tending-hero footer {
+  border-top-color: rgba(65, 66, 81, 0.14);
+}
+
+.atlas-tending-hero footer strong {
+  color: var(--tending-ink);
+  font-size: 17px;
+  font-weight: 820;
+}
+
+/* Section headings are wayfinding markers rather than warnings. */
+.atlas-tending-section {
+  gap: 11px;
+}
+
+.atlas-tending-section > header {
+  padding: 2px 7px;
+}
+
+.atlas-tending-section > header span {
+  color: var(--tending-muted);
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+
+.atlas-tending-section > header h2 {
+  color: var(--tending-ink);
+  font-size: 24px;
+  font-weight: 820;
+  letter-spacing: -0.038em;
+}
+
+.atlas-tending-section > header b {
+  border-color: rgba(170, 167, 177, 0.38);
+  background: rgba(201, 192, 198, 0.25);
+  color: var(--tending-lavender-deep);
+  font-weight: 850;
+}
+
+.atlas-tending-section[data-tending-section="protect_harvests"] > header b {
+  background: rgba(217, 214, 177, 0.42);
+  color: #747552;
+}
+
+.atlas-tending-section[data-tending-section="needs_a_look"] > header b {
+  background: rgba(201, 192, 198, 0.34);
+  color: #71656f;
+}
+
+.atlas-tending-section[data-tending-section="harvest_now"] > header b {
+  background: rgba(200, 200, 165, 0.38);
+  color: #656b57;
+}
+
+/* Cards read like quiet garden notes. */
+.atlas-tending-card,
+.atlas-tending-gate-board,
+.atlas-tending-detail-drawer {
+  border-color: var(--tending-border);
+  background: rgba(255, 254, 250, 0.92);
+  box-shadow: 0 9px 23px var(--tending-shadow);
+}
+
+.atlas-tending-card {
+  border-radius: 24px;
+}
+
+.atlas-tending-card-head {
+  padding: 15px 17px 12px;
+}
+
+.atlas-tending-card-head > span {
+  color: var(--tending-muted);
+  font-weight: 800;
+}
+
+.atlas-tending-card-head > strong {
+  color: var(--tending-ink);
+  font-size: 20px;
+  line-height: 1.05;
+  font-weight: 820;
+  letter-spacing: -0.035em;
+}
+
+/* The current step remains obvious without becoming a purple alarm. */
+.atlas-tending-current-gate,
+.atlas-tending-bed-current,
+.atlas-tending-task-context {
+  color: var(--tending-ink);
+  border-color: rgba(170, 167, 177, 0.46);
+  background:
+    radial-gradient(circle at 91% 17%, rgba(217, 214, 177, 0.52), transparent 34%),
+    linear-gradient(135deg, rgba(230, 226, 207, 0.96), rgba(200, 200, 165, 0.86));
+  box-shadow: inset 0 -4px 0 rgba(170, 167, 177, 0.28);
+}
+
+.atlas-tending-section[data-tending-section="protect_harvests"] .atlas-tending-current-gate {
+  background:
+    radial-gradient(circle at 90% 15%, rgba(200, 200, 165, 0.5), transparent 34%),
+    linear-gradient(135deg, rgba(238, 233, 184, 0.72), rgba(230, 226, 207, 0.95));
+}
+
+.atlas-tending-section[data-tending-section="needs_a_look"] .atlas-tending-current-gate {
+  background:
+    radial-gradient(circle at 90% 15%, rgba(230, 226, 207, 0.68), transparent 34%),
+    linear-gradient(135deg, rgba(201, 192, 198, 0.78), rgba(230, 226, 207, 0.92));
+}
+
+.atlas-tending-section[data-tending-section="harvest_now"] .atlas-tending-current-gate {
+  background:
+    radial-gradient(circle at 90% 15%, rgba(217, 214, 177, 0.54), transparent 34%),
+    linear-gradient(135deg, rgba(200, 200, 165, 0.88), rgba(230, 226, 207, 0.95));
+}
+
+.atlas-tending-current-gate {
+  margin: 0 13px;
+  border-radius: 18px;
+  padding: 13px 15px;
+}
+
+.atlas-tending-current-gate small,
+.atlas-tending-bed-current > small,
+.atlas-tending-task-context > div span {
+  color: rgba(65, 66, 81, 0.57);
+  font-weight: 820;
+}
+
+.atlas-tending-current-gate strong {
+  color: var(--tending-ink);
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 820;
+  letter-spacing: -0.025em;
+}
+
+.atlas-tending-current-gate > span,
+.atlas-tending-bed-current > span,
+.atlas-tending-task-context > a {
+  color: #6f745d;
+  font-weight: 850;
+}
+
+.atlas-tending-card-data {
+  padding: 13px 15px;
+  gap: 7px;
+}
+
+.atlas-tending-card-data span {
+  border-color: rgba(211, 206, 191, 0.82);
+  background: rgba(246, 242, 230, 0.7);
+  color: #696a61;
+  font-weight: 780;
+}
+
+.atlas-tending-board-link {
+  border-top-color: rgba(211, 206, 191, 0.65);
+  color: var(--tending-lavender-deep);
+  font-weight: 820;
+}
+
+.atlas-tending-card a:hover,
+.atlas-tending-card a:focus-visible,
+.atlas-tending-gate-board a:hover,
+.atlas-tending-gate-board a:focus-visible,
+.atlas-tending-bed-current:hover,
+.atlas-tending-bed-current:focus-visible,
+.atlas-tending-task-context a:hover,
+.atlas-tending-task-context a:focus-visible {
+  outline-color: rgba(127, 132, 111, 0.56);
+}
+
+/* Bed board: quiet record of a crop moving through time. */
+.atlas-tending-bed-hero {
+  min-height: 192px;
+  padding: 20px 21px 24px;
+}
+
+.atlas-tending-bed-hero h1 {
+  color: var(--tending-ink);
+  font-size: clamp(32px, 8vw, 46px);
+  line-height: 0.94;
+  font-weight: 820;
+  letter-spacing: -0.052em;
+}
+
+.atlas-tending-crop-line strong {
+  color: #6f745d;
+  font-weight: 850;
+}
+
+.atlas-tending-crop-line em,
+.atlas-tending-score span {
+  color: rgba(65, 66, 81, 0.66);
+  font-weight: 760;
+}
+
+.atlas-tending-score {
+  border-top-color: rgba(65, 66, 81, 0.14);
+}
+
+.atlas-tending-score strong {
+  color: var(--tending-ink);
+  font-weight: 820;
+  letter-spacing: 0.02em;
+}
+
+.atlas-tending-gate-board > header {
+  background: rgba(230, 226, 207, 0.58);
+}
+
+.atlas-tending-gate-board > header strong,
+.atlas-tending-gate-board li b {
+  color: var(--tending-lavender-deep);
+}
+
+.atlas-tending-gate-board li > a {
+  background: rgba(201, 192, 198, 0.22);
+}
+
+.atlas-tending-gate-board li.gate-complete b {
+  color: var(--tending-sage-deep);
+}
+
+.atlas-tending-gate-board li.gate-blocked b {
+  color: #81716d;
+}
+
+.atlas-tending-bed-current {
+  border-radius: 23px;
+  padding: 17px 18px;
+}
+
+.atlas-tending-bed-current > strong,
+.atlas-tending-task-context > div strong,
+.atlas-tending-task-context dd {
+  color: var(--tending-ink);
+}
+
+.atlas-tending-bed-current > strong {
+  font-size: 25px;
+  line-height: 1;
+  font-weight: 820;
+  letter-spacing: -0.035em;
+}
+
+.atlas-tending-bed-current footer,
+.atlas-tending-task-context > a {
+  border-top-color: rgba(65, 66, 81, 0.14);
+}
+
+.atlas-tending-detail-drawer[open] > summary,
+.atlas-tending-detail-stack h2 {
+  background: rgba(230, 226, 207, 0.48);
+}
+
+.atlas-tending-detail-drawer > summary strong,
+.atlas-tending-detail-stack article strong,
+.atlas-tending-facts b,
+.atlas-tending-management form h2 {
+  font-weight: 820;
+}
+
+.atlas-tending-management button {
+  background: var(--tending-lavender-deep);
+  font-weight: 820;
+}
+
+/* Tending context on the familiar task page stays informative and gentle. */
+.atlas-tending-task-context {
+  padding: 16px;
+}
+
+.atlas-tending-task-context dl > div {
+  border-color: rgba(65, 66, 81, 0.13);
+  background: rgba(255, 254, 250, 0.33);
+}
+
+.atlas-tending-task-context dt {
+  color: rgba(65, 66, 81, 0.56);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .atlas-tending-card,
+  .atlas-tending-current-gate,
+  .atlas-tending-board-link,
+  .atlas-tending-bed-current {
+    transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  }
+
+  .atlas-tending-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 27px rgba(72, 66, 54, 0.075);
+  }
+}
+
+@media (max-width: 520px) {
+  .atlas-tending-hero {
+    min-height: 144px;
+    padding: 18px 18px 21px;
+  }
+
+  .atlas-tending-current-gate {
+    margin-inline: 10px;
+  }
+}
