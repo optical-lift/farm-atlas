@@ -16,6 +16,30 @@ test("Day keeps the deployed purple hero and collection layout", () => {
   assert.doesNotMatch(source, /CanonicalScheduleView/);
 });
 
+test("Weeding remains a Tending destination but today's beds stay individual tasks", () => {
+  const collections = read("lib/atlas/work-collections.ts");
+  const portal = read("components/atlas/task-focus-tending-trail.tsx");
+  const panel = read("components/atlas/tending-task-trail-panel.tsx");
+  const layout = read("app/layout.tsx");
+  const css = read("app/task-tending-trail.css");
+
+  assert.match(collections, /atlasIsWeedingCollectionMember\(_task/);
+  assert.match(collections, /released weeding task as the worker's ordinary canonical task/);
+  assert.match(collections, /atlasBuildWeedingCollectionSummary/);
+  assert.match(collections, /Task lineups intentionally do not replace today's exact weeding task/);
+  assert.match(portal, /task-focus/);
+  assert.match(portal, /isWeedingTask/);
+  assert.match(portal, /object_key/);
+  assert.match(portal, /TendingTaskTrailPanel/);
+  assert.match(panel, /TendingMiniTrack/);
+  assert.match(panel, /tendingClock/);
+  assert.match(panel, /tendingStepsToHarvestLabel/);
+  assert.match(panel, /Open bed board/);
+  assert.match(layout, /<TaskFocusTendingTrail/);
+  assert.match(layout, /task-tending-trail\.css/);
+  assert.match(css, /atlas-task-tending-trail/);
+});
+
 test("Week and Month keep their deployed overview shapes", () => {
   const week = read("app/overview/week/page.tsx");
   const month = read("app/overview/month/page.tsx");
