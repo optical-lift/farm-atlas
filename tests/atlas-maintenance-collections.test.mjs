@@ -52,6 +52,7 @@ test("Weeding is now the action-only Tending board", () => {
   const route = read("app/api/atlas/tending/route.ts");
   const layout = read("app/layout.tsx");
   const calmCss = read("app/tending-calm.css");
+  const biteCss = read("app/tending-next-bite.css");
 
   assert.match(tending, /Tending/);
   assert.match(tending, /fetchTendingBoard/);
@@ -59,9 +60,12 @@ test("Weeding is now the action-only Tending board", () => {
   assert.match(tending, /Unlock next/);
   assert.match(tending, /Protect harvests/);
   assert.match(tending, /Needs a look/);
-  assert.match(tending, /Current tending step/);
-  assert.match(tending, /opens/);
-  assert.match(tending, /remaining/);
+  assert.match(tending, /Next step/);
+  assert.match(tending, /taskTitle/);
+  assert.match(tending, /unlocks/);
+  assert.match(tending, /tendingDueLabel/);
+  assert.match(tending, /tendingStepLabel/);
+  assert.match(tending, /tendingStepsToHarvestLabel/);
   assert.match(tending, /tendingClock/);
   assert.match(tending, /tendingTaskHref/);
   assert.match(tending, /tendingBedHref/);
@@ -69,10 +73,12 @@ test("Weeding is now the action-only Tending board", () => {
   assert.match(route, /requireAtlasApiAccess/);
   assert.match(route, /createAtlasServerClient/);
   assert.match(layout, /tending-calm\.css/);
+  assert.match(layout, /tending-next-bite\.css/);
   assert.match(calmCss, /--tending-sage/);
   assert.match(calmCss, /--tending-mauve/);
   assert.match(calmCss, /--tending-parchment/);
-  assert.match(calmCss, /atlas-tending-current-gate/);
+  assert.match(biteCss, /background: rgba\(255, 254, 250/);
+  assert.match(biteCss, /atlas-tending-step-meta/);
 
   assert.doesNotMatch(tending, /Holding/);
   assert.doesNotMatch(tending, /Resting/);
@@ -97,8 +103,12 @@ test("Tending opens the exact canonical task with the familiar result controls",
   assert.match(client, /from: "tending"/);
   assert.match(client, /bedKey: track\.bedKey/);
   assert.match(client, /returnTo: boardPath/);
+  assert.match(client, /tendingDueLabel/);
+  assert.match(client, /tendingStepLabel/);
   assert.match(context, /fetchTendingTaskContext/);
   assert.match(context, /atlas-tending-task-context/);
+  assert.match(context, /<dt>Due<\/dt>/);
+  assert.match(context, /tendingStepsToHarvestLabel/);
   assert.match(context, /Open bed board/);
   assert.match(taskRoute, /tending_task_context_v2/);
   assert.match(taskRoute, /p_task_id: taskId/);
@@ -114,16 +124,19 @@ test("Tending opens the exact canonical task with the familiar result controls",
   assert.doesNotMatch(taskRoute, /service_role|createServiceClient/i);
 });
 
-test("The bed page is a harvest game board with one clickable current gate", () => {
+test("The bed page is a dated harvest path with one clickable next step", () => {
   const bed = read("app/collections/weeding/[zoneKey]/[objectKey]/page.tsx");
   const bedRoute = read("app/api/atlas/tending/bed/route.ts");
+  const migration = read("supabase/migrations/20260723154500_tending_next_bite_gates.sql");
 
   assert.match(bed, /fetchTendingBed/);
   assert.match(bed, /HARVEST TRACK/);
-  assert.match(bed, /Harvest gates/);
+  assert.match(bed, /Path to harvest/);
   assert.match(bed, /gateSymbol/);
   assert.match(bed, /gate\.status === "current"/);
-  assert.match(bed, /Current gate/);
+  assert.match(bed, /tendingDueLabel/);
+  assert.match(bed, /tendingStepLabel/);
+  assert.match(bed, /taskTitle/);
   assert.match(bed, /unlocks/);
   assert.match(bed, /tendingTaskHref/);
   assert.match(bed, /<details className="atlas-tending-detail-drawer"/);
@@ -132,6 +145,11 @@ test("The bed page is a harvest game board with one clickable current gate", () 
   assert.match(bedRoute, /tending_bed_v1/);
   assert.match(bedRoute, /requireAtlasApiAccess/);
 
+  assert.match(migration, /tending_profile_gates_v1/);
+  assert.match(migration, /"pinch","label":"Pinch"/);
+  assert.match(migration, /stepsToHarvestCount/);
+  assert.match(migration, /currentStepNumber/);
+  assert.doesNotMatch(migration, /insert into atlas\.tasks/i);
   assert.doesNotMatch(bed, /Farm Care object hero/);
   assert.doesNotMatch(bed, /Prepared, not released/);
   assert.doesNotMatch(bed, /No executable task is currently released/);

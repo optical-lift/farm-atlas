@@ -1,0 +1,228 @@
+/* Tending next-bite pass.
+   The hero remains a calm garden banner; the clickable work is a light field note. */
+
+.atlas-tending-current-gate,
+.atlas-tending-bed-current,
+.atlas-tending-task-context {
+  position: relative;
+  overflow: hidden;
+  color: var(--tending-ink);
+  border: 1px solid rgba(196, 190, 177, 0.78);
+  background: rgba(255, 254, 250, 0.96);
+  box-shadow: 0 5px 15px rgba(72, 66, 54, 0.055);
+}
+
+.atlas-tending-current-gate::before,
+.atlas-tending-bed-current::before,
+.atlas-tending-task-context::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(
+    180deg,
+    var(--tending-sage),
+    var(--tending-mauve) 58%,
+    var(--tending-butter)
+  );
+}
+
+.atlas-tending-current-gate {
+  margin: 0 12px;
+  border-radius: 17px;
+  padding: 13px 15px 13px 19px;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.atlas-tending-step-meta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.atlas-tending-current-gate .atlas-tending-step-meta small,
+.atlas-tending-current-gate .atlas-tending-step-meta time {
+  grid-column: auto;
+  color: rgba(65, 66, 81, 0.58);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 790;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.atlas-tending-current-gate .atlas-tending-step-meta time {
+  flex: 0 0 auto;
+  color: #6f745d;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.atlas-tending-current-gate > strong {
+  color: var(--tending-ink);
+  font-size: 19px;
+  line-height: 1.12;
+  font-weight: 820;
+  letter-spacing: -0.025em;
+}
+
+.atlas-tending-current-gate > footer {
+  padding-top: 8px;
+  border-top: 1px solid rgba(211, 206, 191, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.atlas-tending-current-gate > footer span,
+.atlas-tending-current-gate > footer em {
+  color: #77786e;
+  font-size: 9px;
+  line-height: 1.1;
+  font-style: normal;
+  font-weight: 790;
+}
+
+.atlas-tending-current-gate > footer em {
+  color: #6f745d;
+  text-align: right;
+}
+
+.atlas-tending-card-data {
+  padding-top: 10px;
+}
+
+.atlas-tending-card-data span {
+  border-color: rgba(211, 206, 191, 0.66);
+  background: rgba(250, 248, 239, 0.82);
+  color: #74756d;
+  font-weight: 740;
+}
+
+.atlas-tending-board-link {
+  color: #727491;
+}
+
+/* The bed board is the whole path; only the present step reads as a button. */
+.atlas-tending-gate-board > header {
+  background: rgba(246, 243, 232, 0.76);
+}
+
+.atlas-tending-gate-board li > a {
+  background: rgba(201, 192, 198, 0.13);
+  box-shadow: inset 4px 0 0 rgba(170, 167, 177, 0.56);
+}
+
+.atlas-tending-gate-board li.gate-future {
+  color: #7b7b73;
+}
+
+.atlas-tending-gate-board li time {
+  color: #77786f;
+  font-weight: 760;
+}
+
+.atlas-tending-bed-current {
+  border-radius: 20px;
+  padding: 15px 17px 15px 21px;
+  display: grid;
+  gap: 7px;
+}
+
+.atlas-tending-bed-current > small {
+  color: #77786e;
+  font-size: 9px;
+  line-height: 1.1;
+  font-weight: 790;
+  letter-spacing: 0.035em;
+  text-transform: none;
+}
+
+.atlas-tending-bed-current > strong {
+  color: var(--tending-ink);
+  font-size: 22px;
+  line-height: 1.08;
+  font-weight: 820;
+  letter-spacing: -0.032em;
+}
+
+.atlas-tending-bed-current > span {
+  color: #6f745d;
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.atlas-tending-bed-current footer {
+  border-top-color: rgba(211, 206, 191, 0.62);
+}
+
+.atlas-tending-bed-current footer b,
+.atlas-tending-bed-current footer em {
+  color: #6f7069;
+  font-weight: 790;
+}
+
+.atlas-tending-bed-current.quiet {
+  background: rgba(255, 254, 250, 0.94);
+}
+
+/* The same quiet context travels into the familiar canonical task. */
+.atlas-tending-task-context {
+  padding: 15px 15px 15px 20px;
+}
+
+.atlas-tending-task-context > div span {
+  color: #77786e;
+}
+
+.atlas-tending-task-context > div strong,
+.atlas-tending-task-context dd {
+  color: var(--tending-ink);
+}
+
+.atlas-tending-task-context dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.atlas-tending-task-context dl > div {
+  border-color: rgba(211, 206, 191, 0.72);
+  background: rgba(250, 248, 239, 0.72);
+}
+
+.atlas-tending-task-context dt {
+  color: #7b7c74;
+}
+
+.atlas-tending-task-context > a {
+  border-top-color: rgba(211, 206, 191, 0.68);
+  color: #727491;
+}
+
+.atlas-tending-current-gate:hover,
+.atlas-tending-current-gate:focus-visible,
+.atlas-tending-bed-current:hover,
+.atlas-tending-bed-current:focus-visible {
+  background: #fffefa;
+  box-shadow: 0 7px 18px rgba(72, 66, 54, 0.075);
+}
+
+@media (max-width: 520px) {
+  .atlas-tending-current-gate {
+    margin-inline: 10px;
+    padding-right: 13px;
+  }
+
+  .atlas-tending-step-meta {
+    align-items: flex-start;
+  }
+
+  .atlas-tending-current-gate > footer {
+    align-items: flex-start;
+  }
+}

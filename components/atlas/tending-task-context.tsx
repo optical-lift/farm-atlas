@@ -9,6 +9,9 @@ import {
   formatTendingEffort,
   tendingBedHref,
   tendingClock,
+  tendingDueLabel,
+  tendingStepLabel,
+  tendingStepsToHarvestLabel,
   type TendingBedTrack,
 } from "@/lib/atlas/tending-client";
 
@@ -58,13 +61,14 @@ export default function TendingTaskContext() {
   return createPortal(
     <section className="atlas-tending-task-context" aria-label="Tending harvest context">
       <div>
-        <span>{bed.zoneLabel}</span>
+        <span>Tending · {tendingStepLabel(bed)}</span>
         <strong>{bed.bedLabel} · {bed.cropLabel}</strong>
       </div>
       <dl>
+        <div><dt>Due</dt><dd>{tendingDueLabel(bed.taskDueDate || bed.currentGate?.dueDate)}</dd></div>
         <div><dt>Unlocks</dt><dd>{bed.unlockLabel}</dd></div>
         <div><dt>Harvest</dt><dd>{tendingClock(bed)}</dd></div>
-        <div><dt>Track</dt><dd>{bed.remainingGateCount} {bed.remainingGateCount === 1 ? "gate" : "gates"} remaining</dd></div>
+        <div><dt>Path</dt><dd>{tendingStepsToHarvestLabel(bed)}</dd></div>
         <div><dt>Effort</dt><dd>{formatTendingEffort(bed.taskEffortMinutes)}</dd></div>
       </dl>
       <Link href={tendingBedHref(bed)}>Open bed board</Link>
