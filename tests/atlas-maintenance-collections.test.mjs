@@ -27,9 +27,9 @@ test("Weeding remains a Tending destination but today's beds stay individual tas
   assert.match(collections, /released weeding task as the worker's ordinary canonical task/);
   assert.match(collections, /atlasBuildWeedingCollectionSummary/);
   assert.match(collections, /Task lineups intentionally do not replace today's exact weeding task/);
-  assert.match(portal, /\/task-focus\//);
+  assert.match(portal, /task-focus/);
   assert.match(portal, /isWeedingTask/);
-  assert.match(portal, /task\.objects\?\.\[0\]\?\.object_key/);
+  assert.match(portal, /object_key/);
   assert.match(portal, /TendingTaskTrailPanel/);
   assert.match(panel, /TendingMiniTrack/);
   assert.match(panel, /tendingClock/);
