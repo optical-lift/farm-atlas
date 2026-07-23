@@ -35,14 +35,14 @@ function GateCard({ track }: { track: TendingBedTrack }) {
       </Link>
       {taskHref && gate ? (
         <Link href={taskHref} className="atlas-tending-current-gate">
-          <small>Current gate</small>
-          <strong>{gate.label.toUpperCase()}</strong>
-          <span>unlocks {track.unlockLabel}</span>
+          <small>Current tending step</small>
+          <strong>{gate.label}</strong>
+          <span>opens {track.unlockLabel}</span>
         </Link>
       ) : null}
       <div className="atlas-tending-card-data">
         <span>{tendingClock(track)}</span>
-        <span>{track.remainingGateCount} {track.remainingGateCount === 1 ? "gate" : "gates"} remaining</span>
+        <span>{track.remainingGateCount} {track.remainingGateCount === 1 ? "step" : "steps"} remaining</span>
         <span>{formatTendingEffort(track.taskEffortMinutes)}</span>
       </div>
       <Link href={bedHref} className="atlas-tending-board-link">Open bed board <span aria-hidden="true">›</span></Link>
@@ -94,7 +94,7 @@ export default function TendingCollectionPage() {
         <div className="atlas-task-page-body atlas-overview-body atlas-tending-body">
           <section className="atlas-overview-hero atlas-tending-hero">
             <div><span>Elm Farm</span><strong>Tending</strong></div>
-            <p>{loading ? "Loading open gates…" : `${board?.bedCount ?? 0} beds · ${board?.actionableCount ?? 0} open gates`}</p>
+            <p>{loading ? "Loading open steps…" : `${board?.bedCount ?? 0} beds · ${board?.actionableCount ?? 0} open steps`}</p>
             {!loading && board?.nextHarvestOn ? <footer><span>Next harvest</span><strong>{prettyTendingDate(board.nextHarvestOn)}</strong></footer> : null}
           </section>
 
@@ -102,7 +102,7 @@ export default function TendingCollectionPage() {
           {loading ? <div className="atlas-task-page-empty">Loading Tending…</div> : null}
 
           {!loading && board && board.cards.length === 0 ? (
-            <div className="atlas-task-page-empty">No Tending gates are open.</div>
+            <div className="atlas-task-page-empty">No Tending steps are open.</div>
           ) : null}
 
           {!loading && board ? SECTIONS.map((section) => {

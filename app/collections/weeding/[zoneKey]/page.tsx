@@ -33,14 +33,14 @@ function AreaGateCard({ track }: { track: TendingBedTrack }) {
       <Link href={tendingBedHref(track)} className="atlas-tending-card-head"><strong>{track.bedLabel}</strong></Link>
       {taskHref && track.currentGate ? (
         <Link href={taskHref} className="atlas-tending-current-gate">
-          <small>Current gate</small>
-          <strong>{track.currentGate.label.toUpperCase()}</strong>
-          <span>unlocks {track.unlockLabel}</span>
+          <small>Current tending step</small>
+          <strong>{track.currentGate.label}</strong>
+          <span>opens {track.unlockLabel}</span>
         </Link>
       ) : null}
       <div className="atlas-tending-card-data">
         <span>{tendingClock(track)}</span>
-        <span>{track.remainingGateCount} {track.remainingGateCount === 1 ? "gate" : "gates"} remaining</span>
+        <span>{track.remainingGateCount} {track.remainingGateCount === 1 ? "step" : "steps"} remaining</span>
         <span>{formatTendingEffort(track.taskEffortMinutes)}</span>
       </div>
       <Link href={tendingBedHref(track)} className="atlas-tending-board-link">Open bed board <span aria-hidden="true">›</span></Link>
@@ -95,12 +95,12 @@ export default function TendingAreaPage() {
         <div className="atlas-task-page-body atlas-overview-body atlas-tending-body">
           <section className="atlas-overview-hero atlas-tending-hero">
             <div><span>Elm Farm</span><strong>{zoneLabel}</strong></div>
-            <p>{loading ? "Loading open gates…" : `${cards.length} ${cards.length === 1 ? "bed" : "beds"} with an open gate`}</p>
+            <p>{loading ? "Loading open steps…" : `${cards.length} ${cards.length === 1 ? "bed" : "beds"} with an open step`}</p>
           </section>
 
           {loading ? <div className="atlas-task-page-empty">Loading area board…</div> : null}
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
-          {!loading && !error && cards.length === 0 ? <div className="atlas-task-page-empty">No Tending gates are open in this area.</div> : null}
+          {!loading && !error && cards.length === 0 ? <div className="atlas-task-page-empty">No Tending steps are open in this area.</div> : null}
 
           {!loading && !error ? SECTIONS.map((section) => {
             const rows = grouped.get(section.key) ?? [];
