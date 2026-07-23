@@ -61,6 +61,7 @@ test("Weeding is replaced by the prepared Farm Care overview", () => {
   assert.match(farmCare, /strategySummary/);
   assert.match(farmCare, /care\.zones\.map/);
   assert.match(farmCare, /Unknown means the place needs a current look/);
+  assert.match(farmCare, /zoneHref\(zone\.zoneKey\)/);
   assert.match(route, /farm_care_summary_v1/);
   assert.match(route, /requireAtlasApiAccess/);
 
@@ -71,6 +72,51 @@ test("Weeding is replaced by the prepared Farm Care overview", () => {
   assert.doesNotMatch(farmCare, /fetchAtlasTaskCards/);
   assert.doesNotMatch(farmCare, /postAtlasTaskTransition/);
   assert.doesNotMatch(route, /weeding_cycle_v1/);
+});
+
+test("Farm Care moves from farm to area to place through prepared readers", () => {
+  const area = read("app/collections/weeding/[zoneKey]/page.tsx");
+  const object = read("app/collections/weeding/[zoneKey]/[objectKey]/page.tsx");
+  const areaRoute = read("app/api/atlas/farm-care/zone/route.ts");
+  const objectRoute = read("app/api/atlas/farm-care/object/route.ts");
+  const client = read("lib/atlas/farm-care-client.ts");
+  const migration = read("supabase/migrations/20260723014000_farm_care_phase4_object_context.sql");
+
+  assert.match(area, /What this area is for/);
+  assert.match(area, /Places by condition/);
+  assert.match(area, /Recovery needed/);
+  assert.match(area, /Resting \/ suppressed/);
+  assert.match(area, /Prepared, not released/);
+  assert.match(area, /History and momentum/);
+  assert.match(area, /Open task/);
+  assert.match(area, /fetchFarmCareZone/);
+  assert.match(areaRoute, /farm_care_zone_v1/);
+
+  assert.match(object, />Now</);
+  assert.match(object, /After this/);
+  assert.match(object, /Done means/);
+  assert.match(object, /Current contents/);
+  assert.match(object, /Next valid action/);
+  assert.match(object, /Care history and evidence/);
+  assert.match(object, /Record current observation/);
+  assert.match(object, /Change care strategy/);
+  assert.match(object, /mayCorrect/);
+  assert.match(object, /Open task/);
+  assert.match(object, /fetchFarmCareObject/);
+  assert.match(objectRoute, /farm_care_object_v1/);
+  assert.match(objectRoute, /allowedRoles: \["owner", "manager"\]/);
+  assert.match(objectRoute, /record_care_observation_v1/);
+  assert.match(objectRoute, /set_object_care_strategy_v1/);
+
+  assert.match(client, /\/api\/atlas\/farm-care\/zone\?zoneKey=/);
+  assert.match(client, /\/api\/atlas\/farm-care\/object\?objectKey=/);
+  assert.match(migration, /'zoneKey',o\.zone_key/);
+  assert.match(migration, /'zoneLabel',o\.zone_label/);
+
+  assert.doesNotMatch(area, /fetchAtlasTaskCards/);
+  assert.doesNotMatch(object, /fetchAtlasTaskCards/);
+  assert.doesNotMatch(area, /Field Row Queue/);
+  assert.doesNotMatch(object, /Farm Weeding Order/);
 });
 
 test("Legacy queue completion remains in the task engine, outside Farm Care", () => {
