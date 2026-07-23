@@ -35,6 +35,7 @@ import "./overview.css";
 import "./weeding-cycle.css";
 import "./farm-care-drilldown.css";
 import "./tending.css";
+import "./tending-calm.css";
 import "./task-unfinished.css";
 import "./field-log-documentation.css";
 import "./mobile-overflow-guard.css";
