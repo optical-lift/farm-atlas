@@ -95,7 +95,7 @@ test("Farm Care moves from farm to area to place through prepared readers", () =
   assert.match(object, />Now</);
   assert.match(object, /After this/);
   assert.match(object, /Done means/);
-  assert.match(object, /Current contents/);
+  assert.match(object, /Identity and contents/);
   assert.match(object, /Next valid action/);
   assert.match(object, /Care history and evidence/);
   assert.match(object, /Record current observation/);
