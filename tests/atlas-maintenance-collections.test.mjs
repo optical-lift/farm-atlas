@@ -98,7 +98,7 @@ test("Tending opens the exact canonical task with the familiar result controls",
   assert.match(taskRoute, /p_object_key: objectKey/);
   assert.match(layout, /<TendingTaskContext/);
 
-  assert.match(taskPage, />Done</);
+  assert.match(taskPage, /saving === "done"/);
   assert.match(taskPage, /Unfinished/);
   assert.match(taskPage, /Partly done/);
   assert.match(taskPage, /Blocked/);
