@@ -15,6 +15,9 @@ import {
   formatTendingEffort,
   prettyTendingDate,
   tendingClock,
+  tendingDueLabel,
+  tendingStepLabel,
+  tendingStepsToHarvestLabel,
   tendingTaskHref,
   type TendingBedTrack,
   type TendingGate,
@@ -176,12 +179,15 @@ export default function TendingBedPage() {
                 <div className="atlas-tending-score"><HarvestScore bed={bed} /><span>{tendingClock(bed)}</span></div>
               </section>
 
-              <section className="atlas-tending-gate-board" aria-label={`${bed.bedLabel} harvest gates`}>
-                <header><span>Harvest gates</span><strong>{bed.remainingGateCount} remaining</strong></header>
+              <section className="atlas-tending-gate-board" aria-label={`${bed.bedLabel} harvest path`}>
+                <header><span>Path to harvest</span><strong>{tendingStepsToHarvestLabel(bed)}</strong></header>
                 <ol>
                   {bed.gates.map((gate, index) => {
                     const active = gate.status === "current" && gate.taskId && taskHref;
-                    const content = <><b>{gateSymbol(gate)}</b><span>{gate.label}</span>{gate.dueDate ? <time>{prettyTendingDate(gate.dueDate)}</time> : null}</>;
+                    const dateLabel = gate.dueDate
+                      ? gate.status === "current" ? tendingDueLabel(gate.dueDate) : prettyTendingDate(gate.dueDate)
+                      : null;
+                    const content = <><b>{gateSymbol(gate)}</b><span>{gate.label}</span>{dateLabel ? <time>{dateLabel}</time> : null}</>;
                     return <li key={`${gate.key}:${gate.dueDate ?? index}`} className={`gate-${gate.status}`}>{active ? <Link href={taskHref}>{content}</Link> : content}</li>;
                   })}
                 </ol>
@@ -189,12 +195,12 @@ export default function TendingBedPage() {
 
               {bed.currentGate && taskHref ? (
                 <Link href={taskHref} className="atlas-tending-bed-current">
-                  <small>Current gate</small>
-                  <strong>{bed.currentGate.label.toUpperCase()} {bed.bedLabel.toUpperCase()}</strong>
+                  <small>{tendingDueLabel(bed.taskDueDate || bed.currentGate.dueDate)} · {tendingStepLabel(bed)}</small>
+                  <strong>{bed.taskTitle || `${bed.currentGate.label} ${bed.bedLabel}`}</strong>
                   <span>unlocks {bed.unlockLabel}</span>
                   <footer><b>{formatTendingEffort(bed.taskEffortMinutes)}</b><em>Open task ›</em></footer>
                 </Link>
-              ) : <section className="atlas-tending-bed-current quiet"><small>Current gate</small><strong>NO GATE OPEN</strong><span>{tendingClock(bed)}</span></section>}
+              ) : <section className="atlas-tending-bed-current quiet"><small>Next step</small><strong>No step is open</strong><span>{tendingClock(bed)}</span></section>}
 
               <details className="atlas-tending-detail-drawer">
                 <summary><strong>Bed details</strong><span>contents · care · history</span></summary>
