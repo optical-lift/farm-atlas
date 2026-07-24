@@ -38,8 +38,18 @@ type LinkedCropTask = AtlasTaskCard & {
   crop_profile_metadata?: Record<string, unknown> | null;
 };
 
+type TimingFactKey =
+  | "sow_window"
+  | "germination"
+  | "transplant"
+  | "first_bloom"
+  | "display"
+  | "harvest"
+  | "clear_bed"
+  | "expected_stems";
+
 type TimingFact = {
-  key: "germination" | "transplant" | "harvest" | "clear_bed" | "expected_stems";
+  key: TimingFactKey;
   label: string;
   value: string;
 };
@@ -233,21 +243,37 @@ function isGrowRoomSowing(task: AtlasTaskCard, location: string) {
 function timingFacts(lines: string[], includeTransplant: boolean, expectedStems: number | null) {
   const facts: TimingFact[] = [];
   const rest: string[] = [];
-  const labels: Record<TimingFact["key"], string> = {
+  const labels: Record<TimingFactKey, string> = {
+    sow_window: "Sow window",
     germination: "Germination",
     transplant: "Transplant",
+    first_bloom: "First bloom",
+    display: "Expected display",
     harvest: "Harvest",
     clear_bed: "Clear bed",
     expected_stems: "Expected stems",
   };
+  const keys: Record<string, TimingFactKey> = {
+    "sow window": "sow_window",
+    germination: "germination",
+    transplant: "transplant",
+    "first bloom": "first_bloom",
+    display: "display",
+    harvest: "harvest",
+    "clear bed": "clear_bed",
+  };
 
   for (const line of lines) {
-    const match = line.match(/^Projected\s+(germination|transplant|harvest|clear bed)\s*·\s*(.+)$/i);
+    const match = line.match(/^Projected\s+(sow window|germination|transplant|first bloom|display|harvest|clear bed)\s*·\s*(.+)$/i);
     if (!match) {
       rest.push(line);
       continue;
     }
-    const key = match[1].toLowerCase().replace(" ", "_") as TimingFact["key"];
+    const key = keys[match[1].toLowerCase()];
+    if (!key) {
+      rest.push(line);
+      continue;
+    }
     if (key === "transplant" && !includeTransplant) continue;
     facts.push({ key, label: labels[key], value: match[2].trim() });
   }
