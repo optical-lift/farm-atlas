@@ -22,6 +22,7 @@ export default function AnnaPaidScheduleHomePatch() {
       current.href = "/paid-schedule";
       current.dataset.annaPaidScheduleLink = "true";
       current.classList.add("atlas-anna-paid-schedule-link");
+      current.style.gridColumn = "1 / -1";
       current.setAttribute("aria-label", "Open Anna paid schedule");
 
       const title = current.querySelector("span");
