@@ -6,6 +6,7 @@ export type TaskConditionRailModel = {
   points: [string, string, string];
   currentIndex: 0 | 1 | 2;
   targetIndex: 0 | 1 | 2;
+  meaningful: boolean;
 };
 
 type ConditionTemplate = {
@@ -78,10 +79,39 @@ const CONDITION_TEMPLATES: Record<AtlasWorkRouteKey, ConditionTemplate> = {
   },
 };
 
-function sentenceCase(value: string) {
-  const normalized = value.replaceAll("_", " ").replace(/\s+/g, " ").trim();
-  if (!normalized) return "";
-  return `${normalized.charAt(0).toUpperCase()}${normalized.slice(1).toLowerCase()}`;
+const NATURAL_SEQUENCE_ROUTES = new Set<AtlasWorkRouteKey>([
+  "weed",
+  "plant",
+  "seed",
+  "crop_cycle",
+  "harvest",
+  "propagation",
+]);
+
+const LINKED_SEQUENCE_METADATA = [
+  "crop_cycle_id",
+  "crop_cycle_key",
+  "workflow_id",
+  "workflow_key",
+  "trail_key",
+  "sequence_key",
+  "maintenance_cycle_key",
+  "recurrence_key",
+  "booking_id",
+  "booking_key",
+  "event_id",
+  "event_key",
+  "venue_event_id",
+  "project_id",
+  "project_key",
+];
+
+function titleCase(value: string) {
+  return value
+    .replaceAll("_", " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function firstObject(task: AtlasTaskCard) {
@@ -119,6 +149,36 @@ function explicitPoints(task: AtlasTaskCard) {
     if (values.length === 3) return values as [string, string, string];
   }
   return null;
+}
+
+function explicitTrailDecision(task: AtlasTaskCard) {
+  const raw = task.metadata?.trail_mode
+    ?? task.metadata?.trail_display
+    ?? task.metadata?.has_trail
+    ?? task.metadata?.condition_rail;
+
+  if (raw === true) return true;
+  if (raw === false) return false;
+  if (typeof raw !== "string") return null;
+
+  const value = raw.trim().toLowerCase();
+  if (["linked", "full", "on", "show", "true"].includes(value)) return true;
+  if (["none", "off", "hide", "false", "one_time", "one-time"].includes(value)) return false;
+  return null;
+}
+
+export function taskHasMeaningfulTrail(task: AtlasTaskCard) {
+  const explicit = explicitTrailDecision(task);
+  if (explicit !== null) return explicit;
+
+  const route = atlasRouteKeyForTask(task);
+  if (NATURAL_SEQUENCE_ROUTES.has(route)) return true;
+  if ((task.objects ?? []).length > 0) return true;
+  if (task.task_series_key || task.engine_instance_key || task.generated_from_id || task.parent_task_id) return true;
+  if (LINKED_SEQUENCE_METADATA.some((key) => Boolean(task.metadata?.[key]))) return true;
+  if ((task.action_templates ?? []).some((template) => (template.unlocks ?? []).some((value) => typeof value === "string" && value.trim()))) return true;
+
+  return false;
 }
 
 function waterCurrentIndex(value: string): 0 | 1 | 2 {
@@ -181,11 +241,11 @@ function recordedCondition(task: AtlasTaskCard, object: AtlasTaskCardObject | nu
   if (explicit) return explicit;
 
   if (route === "weed" && atlasText(object?.weed_pressure)) {
-    const pressure = sentenceCase(atlasText(object?.weed_pressure));
+    const pressure = titleCase(atlasText(object?.weed_pressure));
     return /pressure$/i.test(pressure) ? pressure : `${pressure} pressure`;
   }
-  if (route === "water" && atlasText(object?.water_status)) return sentenceCase(atlasText(object?.water_status));
-  if (route === "venue" && atlasText(object?.presentability)) return sentenceCase(atlasText(object?.presentability));
+  if (route === "water" && atlasText(object?.water_status)) return titleCase(atlasText(object?.water_status));
+  if (route === "venue" && atlasText(object?.presentability)) return titleCase(atlasText(object?.presentability));
 
   return "";
 }
@@ -194,25 +254,24 @@ export function taskConditionRailModel(task: AtlasTaskCard): TaskConditionRailMo
   const route = atlasRouteKeyForTask(task);
   const object = firstObject(task);
   const template = routeSpecificTemplate(task, route);
-  const points = explicitPoints(task) ?? ([...template.points] as [string, string, string]);
+  const points = explicitPoints(task) ?? [...template.points] as [string, string, string];
   const recorded = recordedCondition(task, object, route);
 
   let currentIndex = metadataIndex(task, "condition_current_index", template.currentIndex);
   const targetIndex = metadataIndex(task, "condition_target_index", template.targetIndex);
-  const storedCurrentIndex = task.metadata?.condition_current_index;
-  const hasExplicitCurrentIndex = storedCurrentIndex !== undefined && storedCurrentIndex !== null;
 
-  if (!hasExplicitCurrentIndex && recorded) {
+  if (task.metadata?.condition_current_index === undefined && recorded) {
     if (route === "water") currentIndex = waterCurrentIndex(recorded);
     else if (route === "venue") currentIndex = venueCurrentIndex(recorded);
     else currentIndex = genericCurrentIndex(recorded);
   }
 
+  const currentOverride = recorded;
   const middleOverride = metadataString(task, ["condition_middle", "intermediate_condition"]);
   const targetOverride = metadataString(task, ["condition_target", "target_condition", "done_condition", "completion_condition"]);
   const label = metadataString(task, ["condition_label", "condition_axis_label"]) || template.label;
 
-  if (recorded) points[currentIndex] = sentenceCase(recorded);
+  if (currentOverride) points[currentIndex] = titleCase(currentOverride);
   if (middleOverride) points[1] = middleOverride;
   if (targetOverride) points[targetIndex] = targetOverride;
 
@@ -221,5 +280,6 @@ export function taskConditionRailModel(task: AtlasTaskCard): TaskConditionRailMo
     points,
     currentIndex,
     targetIndex,
+    meaningful: taskHasMeaningfulTrail(task),
   };
 }
