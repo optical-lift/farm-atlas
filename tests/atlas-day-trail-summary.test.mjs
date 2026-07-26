@@ -17,6 +17,7 @@ test("Day progress reads exact-date required work without a DOM patch", () => {
   assert.match(page, /!isExtraCredit\(task\)/);
   assert.match(page, /finishedProgressTasks/);
   assert.match(page, /blockedProgressTasks/);
+  assert.match(page, /<DayTrailSummary compact/);
 
   assert.match(component, /role="progressbar"/);
   assert.match(component, /No work planned/);
@@ -24,22 +25,43 @@ test("Day progress reads exact-date required work without a DOM patch", () => {
   assert.doesNotMatch(component, /MutationObserver|setInterval|querySelector/);
 
   assert.match(css, /linear-gradient/);
+  assert.match(css, /\.compact/);
   assert.match(css, /\.blocked/);
 });
 
-test("progress sits above the purple hero and completed work returns to the bottom", () => {
+test("Day Route v1 is compact, task-forward, and keeps completed work at the bottom", () => {
   const page = read("app/day/page.tsx");
-  const progressIndex = page.indexOf("<DayTrailSummary");
-  const heroIndex = page.indexOf('<article className="atlas-day-route-hero">');
+  const css = read("app/day-route-v1.css");
+  const layout = read("app/layout.tsx");
+  const adapter = read("lib/atlas/day-route.ts");
+
+  const commandIndex = page.indexOf('className="atlas-day-command-header"');
+  const overviewIndex = page.indexOf('className="atlas-day-overview-drawer"');
   const workOrderIndex = page.indexOf("standaloneTasks.map");
   const completeIndex = page.indexOf("doneStandaloneTasks.map");
 
-  assert.notEqual(progressIndex, -1);
-  assert.notEqual(heroIndex, -1);
-  assert.ok(progressIndex < heroIndex);
+  assert.notEqual(commandIndex, -1);
+  assert.notEqual(overviewIndex, -1);
+  assert.ok(commandIndex < overviewIndex);
   assert.notEqual(workOrderIndex, -1);
   assert.notEqual(completeIndex, -1);
   assert.ok(workOrderIndex < completeIndex);
+
+  assert.match(page, /atlasDayCurrentTask/);
+  assert.match(page, /atlasDayIsCarePulse/);
+  assert.match(page, /atlas-day-route-spine/);
+  assert.match(page, /<details className="atlas-day-overview-drawer">/);
   assert.match(page, /!routeFilter && doneStandaloneTasks\.length/);
-  assert.doesNotMatch(page, /complete=\{isDoneTask\(task\)\}/);
+  assert.doesNotMatch(page, /atlas-day-route-hero/);
+
+  assert.match(adapter, /atlasDayTaskFamily/);
+  assert.match(adapter, /atlasDayTaskCues/);
+  assert.match(adapter, /atlasDayRouteState/);
+  assert.match(css, /\.atlas-day-route-current/);
+  assert.match(css, /\.atlas-day-route-care/);
+  assert.match(css, /\.atlas-day-route-blocked/);
+  assert.match(css, /\.atlas-day-task-cues/);
+
+  assert.doesNotMatch(layout, /DayHeroQuietPatch/);
+  assert.match(layout, /day-route-v1\.css/);
 });
