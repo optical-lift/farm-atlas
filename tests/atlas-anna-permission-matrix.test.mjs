@@ -51,7 +51,7 @@ test("Day, Week, and Month all use the canonical task-card reader", () => {
   assert.match(client, /cache: "no-store"/);
 });
 
-test("Mowing stays a destination collection while the Day plan shows actual mowing jobs", () => {
+test("Mowing stays a destination collection while Day and Week show actual mowing jobs", () => {
   const day = read("app/day/page.tsx");
   const week = read("app/overview/week/page.tsx");
   const month = read("app/overview/month/page.tsx");
@@ -62,8 +62,13 @@ test("Mowing stays a destination collection while the Day plan shows actual mowi
   assert.match(day, /atlasIsMowingCollectionMember/);
   assert.match(day, /standaloneTasks\.map/);
   assert.match(day, /atlasBuildWeedingCollectionSummary/);
-  assert.match(week, /atlasBuildMowingCollectionSummary/);
-  assert.match(week, /atlasBuildWeedingCollectionSummary/);
+
+  assert.doesNotMatch(week, /atlasBuildMowingCollectionSummary/);
+  assert.doesNotMatch(week, /atlasBuildWeedingCollectionSummary/);
+  assert.match(week, /scheduledWeekTasks/);
+  assert.match(week, /WeekTaskCard/);
+  assert.match(week, /routeForTask/);
+
   assert.match(month, /atlasBuildMowingCollectionSummary/);
   assert.match(collections, /mowing: "\/collections\/mowing"/);
   assert.match(collections, /weeding: "\/collections\/weeding"/);
