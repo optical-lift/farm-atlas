@@ -31,8 +31,15 @@ test("day overview cannot silently fall back to the mixed farm-wide reader", () 
   const week = read("app/overview/week/page.tsx");
   const month = read("app/overview/month/page.tsx");
 
-  for (const page of [day, week, month]) {
+  assert.match(day, /fetchAtlasTaskCards\(\{[\s\S]*?viewerScoped:\s*true,[\s\S]*?dueThrough:\s*dateIso,[\s\S]*?doneDate:\s*dateIso,[\s\S]*?\}\)/);
+  assert.match(day, /atlas:day-change/);
+  assert.match(day, /\[dateIso\]/);
+
+  for (const page of [week, month]) {
     assert.match(page, /fetchAtlasTaskCards\(\)/);
+  }
+
+  for (const page of [day, week, month]) {
     assert.doesNotMatch(page, /scope:\s*"all"/);
     assert.doesNotMatch(page, /scope:\s*"farm"/);
   }
