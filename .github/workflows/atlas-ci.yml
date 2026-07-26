@@ -82,28 +82,9 @@ jobs:
         run: node --test --test-name-pattern="homepage reader" tests/atlas-architecture-traps.test.mjs
 
       - name: Run tests
-        id: tests
-        shell: bash
-        run: |
-          set +e
-          npm test > atlas-test.log 2>&1
-          status=$?
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          exit 0
-
-      - name: Upload failing test output
-        if: steps.tests.outputs.status != '0'
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-test-failure
-          path: atlas-test.log
-
-      - name: Fail test job
-        if: steps.tests.outputs.status != '0'
-        run: exit 1
+        run: npm test
 
       - name: Build Atlas
-        if: steps.tests.outputs.status == '0'
         shell: bash
         run: |
           set +e
