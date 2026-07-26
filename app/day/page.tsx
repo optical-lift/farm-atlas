@@ -153,27 +153,62 @@ export default function AtlasDayPage() {
   const [viewMode, setViewMode] = useState<DayViewMode>("work_order");
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setDateIso(params.get("date") || todayIso());
-    const requestedRoute = params.get("route");
-    const requestedView = params.get("view");
-    setRouteFilter(requestedRoute && routeOrder.includes(requestedRoute as RouteKey) ? requestedRoute as RouteKey : null);
+    const syncFromLocation = () => {
+      const params = new URLSearchParams(window.location.search);
+      const nextDate = params.get("date") || todayIso();
+      const requestedRoute = params.get("route");
+      const requestedView = params.get("view");
+
+      setDateIso(nextDate);
+      setRouteFilter(requestedRoute && routeOrder.includes(requestedRoute as RouteKey) ? requestedRoute as RouteKey : null);
+      if (requestedView === "zone" || requestedView === "area") setViewMode("zone");
+      else if (requestedView === "work_order") setViewMode("work_order");
+    };
+
+    syncFromLocation();
+    window.addEventListener("popstate", syncFromLocation);
+    window.addEventListener("atlas:day-change", syncFromLocation);
+
+    return () => {
+      window.removeEventListener("popstate", syncFromLocation);
+      window.removeEventListener("atlas:day-change", syncFromLocation);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
 
     async function load() {
       try {
         setLoading(true);
-        const response = await fetchAtlasTaskCards();
+        setError(null);
+        const response = await fetchAtlasTaskCards({
+          viewerScoped: true,
+          dueThrough: dateIso,
+          doneDate: dateIso,
+        });
+        if (cancelled) return;
+
         const taskCards = response.taskCards ?? [];
         setTasks(taskCards);
+        const requestedView = new URLSearchParams(window.location.search).get("view");
         if (requestedView === "zone" || requestedView === "area") setViewMode("zone");
         else if (requestedView === "work_order") setViewMode("work_order");
         else if (atlasTasksHaveRooms(taskCards)) setViewMode("zone");
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [dateIso]);
+
+  useEffect(() => {
     async function loadWeather() {
       try {
         const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" });
@@ -183,7 +218,7 @@ export default function AtlasDayPage() {
         setWeatherLabel("weather unavailable");
       }
     }
-    void load();
+
     void loadWeather();
   }, []);
 
