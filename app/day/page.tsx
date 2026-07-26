@@ -120,13 +120,7 @@ function isExtraCredit(task: AtlasTaskCard) {
   return mode === "extra_credit" || label.includes("extra credit");
 }
 
-function TaskCard({
-  task,
-  complete = false,
-  overdue = false,
-  returnTo,
-  routeState,
-}: {
+function TaskCard({ task, complete = false, overdue = false, returnTo, routeState }: {
   task: AtlasTaskCard;
   complete?: boolean;
   overdue?: boolean;
@@ -200,28 +194,20 @@ function AtlasDayPageContent() {
 
   useEffect(() => {
     const requestId = ++requestSequence.current;
-
     async function load() {
       try {
         setLoading(true);
         setError(null);
         setTasks([]);
-        const response = await fetchAtlasTaskCards({
-          viewerScoped: true,
-          dueThrough: dateIso,
-          doneDate: dateIso,
-        });
+        const response = await fetchAtlasTaskCards({ viewerScoped: true, dueThrough: dateIso, doneDate: dateIso });
         if (requestId !== requestSequence.current) return;
         setTasks(response.taskCards ?? []);
       } catch (loadError) {
-        if (requestId === requestSequence.current) {
-          setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
-        }
+        if (requestId === requestSequence.current) setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
       } finally {
         if (requestId === requestSequence.current) setLoading(false);
       }
     }
-
     void load();
   }, [dateIso]);
 
@@ -235,7 +221,6 @@ function AtlasDayPageContent() {
         setWeatherLabel("weather unavailable");
       }
     }
-
     void loadWeather();
   }, []);
 
@@ -332,18 +317,10 @@ function AtlasDayPageContent() {
 
                   <div className="atlas-day-command-overview-body">
                     {currentTask ? <Link className="atlas-day-open-current" href={taskHref(currentTask, returnTo)}>Open current task <span aria-hidden="true">→</span></Link> : null}
-
-                    {careTasks.length ? (
-                      <div className="atlas-day-care-lane">
-                        <span>Care today</span>
-                        <p>{careTasks.map((task) => atlasTaskDisplay(task).title).join(" · ")}</p>
-                      </div>
-                    ) : null}
-
+                    {careTasks.length ? <div className="atlas-day-care-lane"><span>Care today</span><p>{careTasks.map((task) => atlasTaskDisplay(task).title).join(" · ")}</p></div> : null}
                     <div className="atlas-day-overview-pills" aria-label="Day work groups">
                       {routeCards.map((entry) => <span key={entry.key}>{entry.key === "germination" ? "Check" : routeLabels[entry.key as RouteKey]} {entry.collection?.dueCount ?? entry.tasks.length}</span>)}
                     </div>
-
                     <div className="atlas-day-route-grid">
                       {routeCards.length ? routeCards.map((entry) => {
                         if (entry.collection) return <Link key={entry.key} className="atlas-day-route-box" href={entry.collection.href}><strong>{entry.collection.label}</strong><span>{entry.collection.dueCount} due</span><em>{entry.collection.preview}</em></Link>;
@@ -373,8 +350,7 @@ function AtlasDayPageContent() {
                   </div>
                 </article>
               ) : viewMode === "work_order" ? (
-                <article className="atlas-day-route-group atlas-day-work-order-group">
-                  <h3>Timeline</h3>
+                <article className="atlas-day-route-group atlas-day-work-order-group atlas-day-timeline-group">
                   <div className="atlas-day-work-order-list atlas-day-route-spine">
                     {showWeedingCollection && weedingCollection ? <WorkCollectionCard collection={weedingCollection} route /> : null}
                     {showGerminationCollection && germinationCollection ? <WorkCollectionCard collection={germinationCollection} route /> : null}
@@ -391,7 +367,19 @@ function AtlasDayPageContent() {
               )}
 
               {!routeFilter && extraCreditTasks.length ? <article className="atlas-day-route-group atlas-day-extra-credit-group"><h3>Extra Credit</h3><div className="atlas-day-zone-group">{extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}</div></article> : null}
-              {!routeFilter && doneStandaloneTasks.length ? <article className="atlas-day-route-group atlas-day-complete-group"><h3>Complete</h3><div className="atlas-day-zone-group">{doneStandaloneTasks.map((task) => <TaskCard task={task} complete key={task.task_id} returnTo={returnTo} />)}</div></article> : null}
+
+              {!routeFilter && doneStandaloneTasks.length ? (
+                <details className="atlas-day-overview-drawer atlas-day-complete-drawer">
+                  <summary>
+                    <span className="atlas-day-complete-label">Complete</span>
+                    <span className="atlas-day-complete-count">{doneStandaloneTasks.length} {doneStandaloneTasks.length === 1 ? "task" : "tasks"}</span>
+                    <b aria-hidden="true">⌄</b>
+                  </summary>
+                  <div className="atlas-day-complete-body atlas-day-zone-group">
+                    {doneStandaloneTasks.map((task) => <TaskCard task={task} complete key={task.task_id} returnTo={returnTo} />)}
+                  </div>
+                </details>
+              ) : null}
             </div>
 
             {!routeFilter ? (
