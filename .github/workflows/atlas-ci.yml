@@ -38,7 +38,7 @@ jobs:
           set +e
           npm test > /tmp/atlas-tests.log 2>&1
           status=$?
-          tail -n 45 /tmp/atlas-tests.log
+          awk '/^not ok / { remaining=22 } remaining > 0 { print; remaining-- }' /tmp/atlas-tests.log
           exit "$status"
 
       - name: Audit service-role Atlas API routes
