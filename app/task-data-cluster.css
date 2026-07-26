@@ -44,6 +44,10 @@
   text-align: center;
 }
 
+.atlas-task-result-heading {
+  display: none;
+}
+
 .atlas-task-result-footer {
   padding: 12px 14px 14px;
   gap: 9px;
