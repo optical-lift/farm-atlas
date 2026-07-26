@@ -11,6 +11,7 @@ import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
 import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
 import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
 import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
+import DayAdjacentNavigation from "./DayAdjacentNavigation";
 import TendingTaskContext from "@/components/atlas/tending-task-context";
 import TaskFocusTendingTrail from "@/components/atlas/task-focus-tending-trail";
 import "./globals.css";
@@ -25,6 +26,7 @@ import "./project-spine.css";
 import "./task-page.css";
 import "./field-state-capture.css";
 import "./day-run-sheet.css";
+import "./day-adjacent-navigation.css";
 import "./purple-hero-rollback.css";
 import "./home-horizontal-dashboard.css";
 import "./home-week-day-final-fit.css";
@@ -77,6 +79,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <TendingTaskContext />
         <TaskFocusTendingTrail />
         {children}
+        <DayAdjacentNavigation />
       </body>
     </html>
   );
