@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import WeekDayNavigation from "./WeekDayNavigation";
 import HomeTodayCompletePatch from "./HomeTodayCompletePatch";
@@ -12,7 +11,6 @@ import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
 import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
 import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
 import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
-import DayAdjacentNavigation from "./DayAdjacentNavigation";
 import TendingTaskContext from "@/components/atlas/tending-task-context";
 import TaskFocusTendingTrail from "@/components/atlas/task-focus-tending-trail";
 import "./globals.css";
@@ -80,9 +78,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <TendingTaskContext />
         <TaskFocusTendingTrail />
         {children}
-        <Suspense fallback={null}>
-          <DayAdjacentNavigation />
-        </Suspense>
       </body>
     </html>
   );
