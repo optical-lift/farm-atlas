@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { atlasTasksHaveRooms } from "@/lib/atlas/operational-areas";
 import {
   atlasIsCropCycleTask,
@@ -143,70 +144,53 @@ function ViewToggle({ viewMode, onChange }: { viewMode: DayViewMode; onChange: (
   );
 }
 
-export default function AtlasDayPage() {
-  const [dateIso, setDateIso] = useState(todayIso());
-  const [routeFilter, setRouteFilter] = useState<RouteKey | null>(null);
+function AtlasDayPageContent() {
+  const searchParams = useSearchParams();
+  const dateIso = searchParams.get("date") || todayIso();
+  const requestedRoute = searchParams.get("route");
+  const requestedView = searchParams.get("view");
+  const routeFilter = requestedRoute && routeOrder.includes(requestedRoute as RouteKey) ? requestedRoute as RouteKey : null;
   const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const [viewMode, setViewMode] = useState<DayViewMode>("work_order");
+  const requestSequence = useRef(0);
 
   useEffect(() => {
-    const syncFromLocation = () => {
-      const params = new URLSearchParams(window.location.search);
-      const nextDate = params.get("date") || todayIso();
-      const requestedRoute = params.get("route");
-      const requestedView = params.get("view");
-
-      setDateIso(nextDate);
-      setRouteFilter(requestedRoute && routeOrder.includes(requestedRoute as RouteKey) ? requestedRoute as RouteKey : null);
-      if (requestedView === "zone" || requestedView === "area") setViewMode("zone");
-      else if (requestedView === "work_order") setViewMode("work_order");
-    };
-
-    syncFromLocation();
-    window.addEventListener("popstate", syncFromLocation);
-    window.addEventListener("atlas:day-change", syncFromLocation);
-
-    return () => {
-      window.removeEventListener("popstate", syncFromLocation);
-      window.removeEventListener("atlas:day-change", syncFromLocation);
-    };
-  }, []);
+    if (requestedView === "zone" || requestedView === "area") setViewMode("zone");
+    else if (requestedView === "work_order") setViewMode("work_order");
+  }, [requestedView]);
 
   useEffect(() => {
-    let cancelled = false;
+    const requestId = ++requestSequence.current;
 
     async function load() {
       try {
         setLoading(true);
         setError(null);
+        setTasks([]);
         const response = await fetchAtlasTaskCards({
           viewerScoped: true,
           dueThrough: dateIso,
           doneDate: dateIso,
         });
-        if (cancelled) return;
+        if (requestId !== requestSequence.current) return;
 
         const taskCards = response.taskCards ?? [];
         setTasks(taskCards);
-        const requestedView = new URLSearchParams(window.location.search).get("view");
-        if (requestedView === "zone" || requestedView === "area") setViewMode("zone");
-        else if (requestedView === "work_order") setViewMode("work_order");
-        else if (atlasTasksHaveRooms(taskCards)) setViewMode("zone");
+        if (!requestedView && atlasTasksHaveRooms(taskCards)) setViewMode("zone");
       } catch (loadError) {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
+        if (requestId === requestSequence.current) {
+          setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (requestId === requestSequence.current) setLoading(false);
       }
     }
 
     void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [dateIso]);
+  }, [dateIso, requestedView]);
 
   useEffect(() => {
     async function loadWeather() {
@@ -310,7 +294,7 @@ export default function AtlasDayPage() {
                   <h3>{routeLabels[routeFilter]}</h3>
                   <div className="atlas-day-work-order-list">
                     {filteredTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}
-                    {!filteredTasks.length ? <div className="atlas-day-route-empty">No open tasks in this collection.</div> : null}
+                    {!loading && !filteredTasks.length ? <div className="atlas-day-route-empty">No open tasks in this collection.</div> : null}
                   </div>
                 </article>
               ) : viewMode === "work_order" ? (
@@ -320,7 +304,7 @@ export default function AtlasDayPage() {
                     {showWeedingCollection && weedingCollection ? <WorkCollectionCard collection={weedingCollection} /> : null}
                     {showGerminationCollection && germinationCollection ? <WorkCollectionCard collection={germinationCollection} /> : null}
                     {standaloneTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}
-                    {!collectionCount && !standaloneTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}
+                    {!loading && !collectionCount && !standaloneTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}
                   </div>
                 </article>
               ) : (
@@ -338,5 +322,27 @@ export default function AtlasDayPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function DayPageFallback() {
+  return (
+    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
+      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
+        <div className="atlas-task-page-body">
+          <section className="atlas-task-page-section atlas-route-collection atlas-day-browse">
+            <div className="atlas-day-route-empty">Loading farm tasks.</div>
+          </section>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export default function AtlasDayPage() {
+  return (
+    <Suspense fallback={<DayPageFallback />}>
+      <AtlasDayPageContent />
+    </Suspense>
   );
 }
