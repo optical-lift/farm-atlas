@@ -96,20 +96,27 @@
 .factGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 8px;
 }
 
 .factGrid article {
   display: grid;
-  gap: 8px;
-  min-height: 104px;
-  padding: 18px;
+  align-content: space-between;
+  gap: 5px;
+  min-height: 72px;
+  padding: 12px 13px;
+  border-radius: 18px;
+}
+
+.factGrid span {
+  font-size: 9px;
+  letter-spacing: 0.13em;
 }
 
 .factGrid strong {
   align-self: end;
-  font-size: 18px;
-  line-height: 1.15;
+  font-size: 15px;
+  line-height: 1.12;
 }
 
 .section {
@@ -192,9 +199,12 @@
 
 @media (max-width: 520px) {
   .heroFacts,
-  .factGrid,
   .paymentGrid {
     grid-template-columns: 1fr;
+  }
+
+  .factGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .timeline article {
