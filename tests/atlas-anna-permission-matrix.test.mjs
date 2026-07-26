@@ -51,13 +51,16 @@ test("Day, Week, and Month all use the canonical task-card reader", () => {
   assert.match(client, /cache: "no-store"/);
 });
 
-test("Mowing and Weeding stay canonical shared collections", () => {
+test("Mowing stays a destination collection while the Day plan shows actual mowing jobs", () => {
   const day = read("app/day/page.tsx");
   const week = read("app/overview/week/page.tsx");
   const month = read("app/overview/month/page.tsx");
   const collections = read("lib/atlas/work-collections.ts");
 
-  assert.match(day, /atlasBuildMowingCollectionSummary/);
+  assert.doesNotMatch(day, /atlasBuildMowingCollectionSummary/);
+  assert.doesNotMatch(day, /collection=\{mowingCollection\}/);
+  assert.match(day, /atlasIsMowingCollectionMember/);
+  assert.match(day, /standaloneTasks\.map/);
   assert.match(day, /atlasBuildWeedingCollectionSummary/);
   assert.match(week, /atlasBuildMowingCollectionSummary/);
   assert.match(week, /atlasBuildWeedingCollectionSummary/);
@@ -65,6 +68,7 @@ test("Mowing and Weeding stay canonical shared collections", () => {
   assert.match(collections, /mowing: "\/collections\/mowing"/);
   assert.match(collections, /weeding: "\/collections\/weeding"/);
   assert.match(collections, /atlasVisibleCollectionTasks/);
+  assert.match(collections, /atlasIsMowingCollectionMember\(_task[\s\S]*?return false;/);
 });
 
 test("production is shared for reading and Owner-only for mutation", () => {
