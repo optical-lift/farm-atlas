@@ -18,6 +18,11 @@ function shiftIsoDate(dateIso: string, days: number) {
   return local.toISOString().slice(0, 10);
 }
 
+function liveDateIso() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("date") || localTodayIso();
+}
+
 function dayHref(dateIso: string) {
   return `/day?date=${encodeURIComponent(dateIso)}&view=work_order`;
 }
@@ -48,8 +53,9 @@ export default function DayAdjacentNavigation() {
   const previousDate = shiftIsoDate(dateIso, -1);
   const nextDate = shiftIsoDate(dateIso, 1);
 
-  function openDay(event: React.MouseEvent<HTMLAnchorElement>, targetDate: string) {
+  function openDay(event: React.MouseEvent<HTMLAnchorElement>, offsetDays: number) {
     event.preventDefault();
+    const targetDate = shiftIsoDate(liveDateIso(), offsetDays);
     router.push(`/day?date=${encodeURIComponent(targetDate)}&view=work_order`, { scroll: false });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -59,7 +65,7 @@ export default function DayAdjacentNavigation() {
       <a
         href={dayHref(previousDate)}
         aria-label="Open yesterday"
-        onClick={(event) => openDay(event, previousDate)}
+        onClick={(event) => openDay(event, -1)}
       >
         <span aria-hidden="true">←</span>
         <em>Yesterday</em>
@@ -67,7 +73,7 @@ export default function DayAdjacentNavigation() {
       <a
         href={dayHref(nextDate)}
         aria-label="Open tomorrow"
-        onClick={(event) => openDay(event, nextDate)}
+        onClick={(event) => openDay(event, 1)}
       >
         <em>Tomorrow</em>
         <span aria-hidden="true">→</span>
