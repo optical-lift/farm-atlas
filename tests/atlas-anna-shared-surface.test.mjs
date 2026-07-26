@@ -113,5 +113,5 @@ test("Anna retains the full task outcome vocabulary in the Dominion result foote
   assert.match(detail, /transition\("done"\)/);
   assert.match(detail, /transition\("partial"/);
   assert.match(detail, /transition\("blocked"/);
-  assert.match(detail, /scheduleIntent: "next_day"/);
+  assert.match(detail, /reschedule\(null, [^)]*"next_day"\)/);
 });
