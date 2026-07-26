@@ -18,6 +18,7 @@
 }
 
 .card header strong,
+.card header span,
 .card footer span {
   min-width: 0;
 }
@@ -30,6 +31,14 @@
   font-weight: 900;
   letter-spacing: 0.11em;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card header span {
+  color: #777b73;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 800;
   white-space: nowrap;
 }
 
@@ -72,8 +81,30 @@
   background: #9a7f76;
 }
 
+.compact {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  gap: 6px;
+}
+
+.compact header strong {
+  color: var(--atlas-purple-dark);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.compact .rail {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
 @media (max-width: 360px) {
-  .card {
+  .card:not(.compact) {
     padding-inline: 9px;
   }
 }
