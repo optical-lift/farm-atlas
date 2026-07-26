@@ -5,6 +5,7 @@ type DayTrailSummaryProps = {
   total: number;
   blocked: number;
   loading?: boolean;
+  compact?: boolean;
 };
 
 function progressPercent(completed: number, total: number) {
@@ -12,7 +13,7 @@ function progressPercent(completed: number, total: number) {
   return Math.max(0, Math.min(100, Math.round((completed / total) * 100)));
 }
 
-export default function DayTrailSummary({ completed, total, blocked, loading = false }: DayTrailSummaryProps) {
+export default function DayTrailSummary({ completed, total, blocked, loading = false, compact = false }: DayTrailSummaryProps) {
   const safeTotal = Math.max(0, total);
   const safeCompleted = Math.max(0, Math.min(completed, safeTotal));
   const remaining = Math.max(0, safeTotal - safeCompleted);
@@ -24,9 +25,10 @@ export default function DayTrailSummary({ completed, total, blocked, loading = f
       : "No work planned";
 
   return (
-    <section className={styles.card} aria-label="Day progress">
+    <section className={`${styles.card}${compact ? ` ${styles.compact}` : ""}`} aria-label="Day progress">
       <header>
         <strong>{valueText}</strong>
+        {!loading && compact && blocked > 0 ? <span>{blocked} blocked</span> : null}
       </header>
 
       <div
@@ -40,14 +42,16 @@ export default function DayTrailSummary({ completed, total, blocked, loading = f
         <span className={styles.fill} style={{ width: `${percent}%` }} />
       </div>
 
-      <footer>
-        <span>{loading ? "Reading exact-date work" : safeTotal ? `${remaining} remaining` : "The day is clear"}</span>
-        {!loading && blocked > 0 ? (
-          <span className={styles.blocked}><i aria-hidden="true" />{blocked} blocked</span>
-        ) : !loading && safeTotal > 0 ? (
-          <span>Path clear</span>
-        ) : null}
-      </footer>
+      {!compact ? (
+        <footer>
+          <span>{loading ? "Reading exact-date work" : safeTotal ? `${remaining} remaining` : "The day is clear"}</span>
+          {!loading && blocked > 0 ? (
+            <span className={styles.blocked}><i aria-hidden="true" />{blocked} blocked</span>
+          ) : !loading && safeTotal > 0 ? (
+            <span>Path clear</span>
+          ) : null}
+        </footer>
+      ) : null}
     </section>
   );
 }

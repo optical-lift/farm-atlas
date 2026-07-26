@@ -6,13 +6,21 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Day keeps the deployed purple hero and collection layout", () => {
+test("Day keeps canonical collections inside the compact route overview", () => {
   const source = read("app/day/page.tsx");
-  assert.match(source, /atlas-day-route-hero/);
+  const routeCss = read("app/day-route-v1.css");
+  const adapter = read("lib/atlas/day-route.ts");
+
+  assert.match(source, /atlas-day-command-header/);
+  assert.match(source, /atlas-day-overview-drawer/);
   assert.match(source, /atlas-day-route-grid/);
   assert.match(source, /atlas-day-filter-pill/);
+  assert.match(source, /atlas-day-route-spine/);
   assert.match(source, /WorkCollectionCard/);
   assert.match(source, /fetchAtlasTaskCards/);
+  assert.match(adapter, /atlasDayCurrentTask/);
+  assert.match(routeCss, /atlas-day-overview-pills/);
+  assert.doesNotMatch(source, /atlas-day-route-hero/);
   assert.doesNotMatch(source, /CanonicalScheduleView/);
 });
 

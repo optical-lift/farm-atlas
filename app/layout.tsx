@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import WeekDayNavigation from "./WeekDayNavigation";
 import HomeTodayCompletePatch from "./HomeTodayCompletePatch";
 import HomeQuietTaskHeroPatch from "./HomeQuietTaskHeroPatch";
-import DayHeroQuietPatch from "./DayHeroQuietPatch";
 import WorkerVocabularyCleanupPatch from "./WorkerVocabularyCleanupPatch";
 import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
 import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
@@ -52,6 +51,7 @@ import "./object-operational-timeline.css";
 import "./bed-crop-accordion.css";
 import "./attached-task-history.css";
 import "./venue-rooms.css";
+import "./day-route-v1.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -68,7 +68,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <WeekDayNavigation />
         <HomeTodayCompletePatch />
         <HomeQuietTaskHeroPatch />
-        <DayHeroQuietPatch />
         <WorkerVocabularyCleanupPatch />
         <TaskProgressExactDayPatch />
         <OwnerHomeLinkPatch />
