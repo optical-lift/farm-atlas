@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 const HOME_SELECTOR = '[data-atlas-home-portal="shared"][data-atlas-viewer-worker="anna"]';
 const LINK_SELECTOR = ".atlas-home-closeout-footer-link";
-const PAID_SCHEDULE_DETAIL = "Started Jul 6 · Next pay Aug 31";
+const PAID_SCHEDULE_DETAIL = "Started Jul 6 · Next pay Jul 31";
 
 export default function AnnaPaidScheduleHomePatch() {
   useEffect(() => {
