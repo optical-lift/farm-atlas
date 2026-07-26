@@ -1,0 +1,97 @@
+.card {
+  margin-top: 10px;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 18px;
+  background: rgba(246, 242, 230, 0.62);
+  padding: 10px 11px 9px;
+  display: grid;
+  gap: 7px;
+}
+
+.card header,
+.card footer {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card header span,
+.card header strong,
+.card footer span {
+  min-width: 0;
+}
+
+.card header span {
+  color: #858bb8;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.card header strong {
+  overflow: hidden;
+  color: var(--atlas-text);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rail {
+  position: relative;
+  width: 100%;
+  height: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(139, 145, 194, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(167, 171, 214, 0.70), rgba(214, 225, 177, 0.92));
+  transition: width 180ms ease-out;
+}
+
+.card footer span {
+  color: #777b73;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 780;
+}
+
+.blocked {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #8b6f67 !important;
+}
+
+.blocked i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9a7f76;
+}
+
+@media (max-width: 360px) {
+  .card {
+    padding-inline: 9px;
+  }
+
+  .card header {
+    align-items: flex-start;
+  }
+
+  .card header strong {
+    max-width: 62%;
+    text-align: right;
+  }
+}
