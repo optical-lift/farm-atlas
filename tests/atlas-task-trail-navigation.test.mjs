@@ -12,7 +12,8 @@ test("the focused task owns one integrated Dominion Trail", () => {
   const trail = read("components/atlas/task-dominion-trail.tsx");
   const styles = read("app/task-dominion-card.css");
 
-  assert.doesNotMatch(layout, /TaskFocusTendingTrail/);
+  assert.doesNotMatch(layout, /import TaskFocusTendingTrail/);
+  assert.doesNotMatch(layout, /^\s*<TaskFocusTendingTrail/m);
   assert.match(layout, /task-dominion-card\.css/);
   assert.match(detail, /atlas-dominion-task-card/);
   assert.match(detail, /<TaskDominionTrail task=\{task\} instruction=\{instruction\} \/>/);
