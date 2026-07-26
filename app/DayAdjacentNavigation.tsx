@@ -18,6 +18,10 @@ function shiftIsoDate(dateIso: string, days: number) {
   return local.toISOString().slice(0, 10);
 }
 
+function dayHref(dateIso: string) {
+  return `/day?date=${encodeURIComponent(dateIso)}&view=work_order`;
+}
+
 export default function DayAdjacentNavigation() {
   const pathname = usePathname();
   const router = useRouter();
@@ -46,14 +50,14 @@ export default function DayAdjacentNavigation() {
 
   function openDay(event: React.MouseEvent<HTMLAnchorElement>, targetDate: string) {
     event.preventDefault();
-    router.push(`/day?date=${encodeURIComponent(targetDate)}`, { scroll: false });
+    router.push(dayHref(targetDate), { scroll: false });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return createPortal(
     <nav className="atlas-day-adjacent-nav" aria-label="Browse adjacent days">
       <a
-        href={`/day?date=${encodeURIComponent(previousDate)}`}
+        href={dayHref(previousDate)}
         aria-label="Open yesterday"
         onClick={(event) => openDay(event, previousDate)}
       >
@@ -61,7 +65,7 @@ export default function DayAdjacentNavigation() {
         <em>Yesterday</em>
       </a>
       <a
-        href={`/day?date=${encodeURIComponent(nextDate)}`}
+        href={dayHref(nextDate)}
         aria-label="Open tomorrow"
         onClick={(event) => openDay(event, nextDate)}
       >
