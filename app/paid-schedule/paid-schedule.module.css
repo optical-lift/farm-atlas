@@ -1,45 +1,27 @@
-.shell {
-  background: var(--atlas-canvas, #f7f4ec);
-}
-
-.phone {
-  min-height: 100vh;
-  background: var(--atlas-canvas, #f7f4ec);
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 22px 28px 16px;
-  border-bottom: 1px solid var(--atlas-border-soft, #ddd5c7);
-  color: var(--atlas-muted, #74766d);
-  font-size: 13px;
-  font-weight: 850;
+.body {
+  display: grid;
+  gap: 14px;
+  padding: 14px 14px 42px;
 }
 
 .back {
+  width: fit-content;
+  margin: 2px 2px 0;
   color: var(--atlas-text, #292d42);
   text-decoration: none;
-}
-
-.body {
-  display: grid;
-  gap: 20px;
-  padding: 24px 22px 42px;
 }
 
 .hero,
 .section,
 .factGrid article {
   border: 1px solid var(--atlas-border-soft, #ddd5c7);
-  border-radius: 28px;
   background: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 10px 24px rgba(58, 46, 30, 0.045);
 }
 
 .hero {
-  padding: 26px;
+  padding: 22px;
+  border-radius: 28px;
   background: var(--atlas-purple, #aeb3df);
   color: var(--atlas-text, #292d42);
 }
@@ -50,7 +32,7 @@
 .paymentGrid span {
   display: block;
   color: var(--atlas-purple-dark, #646b9f);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 950;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -61,8 +43,8 @@
 }
 
 .hero h1 {
-  margin: 8px 0 24px;
-  font-size: clamp(42px, 12vw, 64px);
+  margin: 7px 0 18px;
+  font-size: clamp(40px, 11vw, 54px);
   line-height: 0.95;
   letter-spacing: -0.04em;
 }
@@ -70,26 +52,26 @@
 .heroFacts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .heroFacts p {
   display: grid;
   gap: 5px;
   margin: 0;
-  padding: 14px;
-  border-radius: 18px;
+  padding: 12px;
+  border-radius: 17px;
   background: rgba(255, 255, 255, 0.56);
 }
 
 .heroFacts b {
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .heroFacts strong {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.2;
 }
 
@@ -121,8 +103,9 @@
 
 .section {
   display: grid;
-  gap: 14px;
-  padding: 20px;
+  gap: 12px;
+  padding: 17px;
+  border-radius: 24px;
 }
 
 .sectionHead {
@@ -134,31 +117,31 @@
 
 .sectionHead strong {
   color: var(--atlas-muted, #74766d);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .paymentGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .paymentGrid article {
   display: grid;
-  gap: 8px;
-  padding: 16px;
-  border-radius: 20px;
+  gap: 7px;
+  padding: 13px;
+  border-radius: 18px;
   background: rgba(174, 179, 223, 0.17);
 }
 
 .paymentGrid strong {
-  font-size: 17px;
+  font-size: 15px;
   line-height: 1.15;
 }
 
 .paymentGrid em {
   color: var(--atlas-muted, #74766d);
-  font-size: 12px;
+  font-size: 11px;
   font-style: normal;
   font-weight: 850;
 }
@@ -169,45 +152,50 @@
 
 .timeline article {
   display: grid;
-  grid-template-columns: minmax(92px, 0.8fr) minmax(0, 1.4fr);
-  gap: 16px;
-  padding: 15px 0;
+  grid-template-columns: minmax(88px, 0.8fr) minmax(0, 1.4fr);
+  gap: 14px;
+  padding: 13px 0;
   border-top: 1px solid var(--atlas-border-soft, #ddd5c7);
 }
 
 .timeline time {
   color: var(--atlas-purple-dark, #646b9f);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 950;
 }
 
 .timeline div {
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .timeline strong {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.2;
 }
 
 .timeline span {
   color: var(--atlas-muted, #74766d);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 750;
 }
 
-@media (max-width: 520px) {
-  .heroFacts,
-  .paymentGrid {
-    grid-template-columns: 1fr;
+@media (max-width: 360px) {
+  .body {
+    padding-inline: 12px;
   }
 
-  .factGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .hero {
+    padding: 18px;
+  }
+
+  .heroFacts,
+  .factGrid,
+  .paymentGrid {
+    gap: 6px;
   }
 
   .timeline article {
-    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-columns: 84px minmax(0, 1fr);
   }
 }
