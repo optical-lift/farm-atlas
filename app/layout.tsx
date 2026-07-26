@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import WeekDayNavigation from "./WeekDayNavigation";
 import HomeTodayCompletePatch from "./HomeTodayCompletePatch";
@@ -79,7 +80,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <TendingTaskContext />
         <TaskFocusTendingTrail />
         {children}
-        <DayAdjacentNavigation />
+        <Suspense fallback={null}>
+          <DayAdjacentNavigation />
+        </Suspense>
       </body>
     </html>
   );
