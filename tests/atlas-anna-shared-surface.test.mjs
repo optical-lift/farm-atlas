@@ -93,12 +93,11 @@ test("production plans are shared reads with owner-only controls", () => {
   assert.match(migration, /grant execute .* to authenticated/is);
 });
 
-test("Anna retains the full task outcome vocabulary", () => {
-  const detail = read("components/atlas/canonical-assigned-task-detail.tsx");
+test("Anna retains the full task outcome vocabulary in the Dominion result footer", () => {
+  const detail = read("components/atlas/dominion-assigned-task-detail.tsx");
 
   for (const label of [
-    "Unfinished",
-    "What happened?",
+    "How did this move land?",
     "Partly done",
     "Blocked",
     "Reschedule",
@@ -111,5 +110,8 @@ test("Anna retains the full task outcome vocabulary", () => {
   ]) {
     assert.match(detail, new RegExp(label.replace(/[?]/g, "\\?")));
   }
+  assert.match(detail, /transition\("done"\)/);
+  assert.match(detail, /transition\("partial"/);
+  assert.match(detail, /transition\("blocked"/);
   assert.match(detail, /scheduleIntent: "next_day"/);
 });
