@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 const HOME_SELECTOR = '[data-atlas-home-portal="shared"][data-atlas-viewer-worker="anna"]';
 const LINK_SELECTOR = ".atlas-home-closeout-footer-link";
+const PAID_SCHEDULE_DETAIL = "Started Jul 6 · Next pay Aug 31";
 
 export default function AnnaPaidScheduleHomePatch() {
   useEffect(() => {
@@ -19,16 +20,22 @@ export default function AnnaPaidScheduleHomePatch() {
 
       links.slice(1).forEach((link) => link.remove());
 
-      current.href = "/paid-schedule";
-      current.dataset.annaPaidScheduleLink = "true";
-      current.classList.add("atlas-anna-paid-schedule-link");
-      current.style.gridColumn = "1 / -1";
-      current.setAttribute("aria-label", "Open Anna paid schedule");
-
       const title = current.querySelector("span");
       const detail = current.querySelector("em");
-      if (title) title.textContent = "Paid schedule";
-      if (detail) detail.textContent = "Started Jul 6 · Next pay Aug 31";
+      const alreadyConverted = current.dataset.annaPaidScheduleLink === "true"
+        && current.getAttribute("href") === "/paid-schedule"
+        && title?.textContent === "Paid schedule"
+        && detail?.textContent === PAID_SCHEDULE_DETAIL;
+
+      if (!alreadyConverted) {
+        current.href = "/paid-schedule";
+        current.dataset.annaPaidScheduleLink = "true";
+        current.classList.add("atlas-anna-paid-schedule-link");
+        current.style.gridColumn = "1 / -1";
+        current.setAttribute("aria-label", "Open Anna paid schedule");
+        if (title) title.textContent = "Paid schedule";
+        if (detail) detail.textContent = PAID_SCHEDULE_DETAIL;
+      }
 
       if (current.dataset.annaPaidScheduleNavigation !== "true") {
         current.dataset.annaPaidScheduleNavigation = "true";
