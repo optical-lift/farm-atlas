@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { atlasTasksHaveRooms } from "@/lib/atlas/operational-areas";
 import {
   atlasIsCropCycleTask,
   atlasRouteKeyForTask,
@@ -46,6 +45,18 @@ function dayOnly(dateIso: string) {
   const date = new Date(`${dateIso}T12:00:00`);
   if (Number.isNaN(date.getTime())) return dateIso;
   return date.toLocaleDateString("en-US", { weekday: "long" });
+}
+
+function shiftIsoDate(dateIso: string, days: number) {
+  const date = new Date(`${dateIso}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return dateIso;
+  date.setDate(date.getDate() + days);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function dayHref(dateIso: string) {
+  return `/day?date=${encodeURIComponent(dateIso)}&view=work_order`;
 }
 
 function text(value: unknown) {
@@ -159,8 +170,8 @@ function AtlasDayPageContent() {
 
   useEffect(() => {
     if (requestedView === "zone" || requestedView === "area") setViewMode("zone");
-    else if (requestedView === "work_order") setViewMode("work_order");
-  }, [requestedView]);
+    else setViewMode("work_order");
+  }, [requestedView, dateIso]);
 
   useEffect(() => {
     const requestId = ++requestSequence.current;
@@ -179,7 +190,6 @@ function AtlasDayPageContent() {
 
         const taskCards = response.taskCards ?? [];
         setTasks(taskCards);
-        if (!requestedView && atlasTasksHaveRooms(taskCards)) setViewMode("zone");
       } catch (loadError) {
         if (requestId === requestSequence.current) {
           setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
@@ -190,7 +200,7 @@ function AtlasDayPageContent() {
     }
 
     void load();
-  }, [dateIso, requestedView]);
+  }, [dateIso]);
 
   useEffect(() => {
     async function loadWeather() {
@@ -245,7 +255,9 @@ function AtlasDayPageContent() {
   }, [germinationCollection, standaloneTasks, weedingCollection]);
 
   const zones = useMemo(() => Array.from(new Set(filteredTasks.map(collectionZone))).sort((a, b) => a.localeCompare(b)), [filteredTasks]);
-  const returnTo = routeFilter ? routeHref(dateIso, routeFilter) : `/day?date=${encodeURIComponent(dateIso)}`;
+  const returnTo = routeFilter ? routeHref(dateIso, routeFilter) : dayHref(dateIso);
+  const previousDate = shiftIsoDate(dateIso, -1);
+  const nextDate = shiftIsoDate(dateIso, 1);
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
@@ -259,7 +271,7 @@ function AtlasDayPageContent() {
         <div className="atlas-task-page-body">
           <section className="atlas-task-page-section atlas-route-collection atlas-day-browse">
             <div className="atlas-day-browse-head">
-              <Link href={routeFilter ? `/day?date=${encodeURIComponent(dateIso)}` : "/"} className="atlas-route-back atlas-day-back">{routeFilter ? "← Day plan" : "← Week"}</Link>
+              <Link href={routeFilter ? dayHref(dateIso) : "/"} className="atlas-route-back atlas-day-back">{routeFilter ? "← Day plan" : "← Week"}</Link>
               <div className="atlas-day-browse-title-row"><span>{routeFilter ? routeLabels[routeFilter] : dayOnly(dateIso)}</span><strong>{loading ? "Loading" : `${dayTasks.length} open · ${overdueTasks.length} overdue · ${doneDayTasks.length} done`}</strong></div>
               <p>{loading ? "Loading farm work" : routeFilter ? `${filteredTasks.length} ${filteredTasks.length === 1 ? "task" : "tasks"} in this collection` : `${standaloneTasks.length} regular tasks · ${collectionCount} work collections`}</p>
             </div>
@@ -318,6 +330,13 @@ function AtlasDayPageContent() {
               {!routeFilter && extraCreditTasks.length ? <article className="atlas-day-route-group atlas-day-extra-credit-group"><h3>Extra Credit</h3><div className="atlas-day-zone-group">{extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}</div></article> : null}
               {!routeFilter && doneDayTasks.length ? <article className="atlas-day-route-group atlas-day-complete-group"><h3>Complete</h3><div className="atlas-day-zone-group">{doneDayTasks.map((task) => <TaskCard task={task} complete key={task.task_id} returnTo={returnTo} />)}</div></article> : null}
             </div>
+
+            {!routeFilter ? (
+              <nav className="atlas-day-adjacent-nav" aria-label="Browse adjacent days">
+                <Link href={dayHref(previousDate)} aria-label="Open yesterday"><span aria-hidden="true">←</span><em>Yesterday</em></Link>
+                <Link href={dayHref(nextDate)} aria-label="Open tomorrow"><em>Tomorrow</em><span aria-hidden="true">→</span></Link>
+              </nav>
+            ) : null}
           </section>
         </div>
       </section>
