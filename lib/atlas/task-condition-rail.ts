@@ -78,12 +78,10 @@ const CONDITION_TEMPLATES: Record<AtlasWorkRouteKey, ConditionTemplate> = {
   },
 };
 
-function titleCase(value: string) {
-  return value
-    .replaceAll("_", " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+function sentenceCase(value: string) {
+  const normalized = value.replaceAll("_", " ").replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  return `${normalized.charAt(0).toUpperCase()}${normalized.slice(1).toLowerCase()}`;
 }
 
 function firstObject(task: AtlasTaskCard) {
@@ -183,11 +181,11 @@ function recordedCondition(task: AtlasTaskCard, object: AtlasTaskCardObject | nu
   if (explicit) return explicit;
 
   if (route === "weed" && atlasText(object?.weed_pressure)) {
-    const pressure = titleCase(atlasText(object?.weed_pressure));
+    const pressure = sentenceCase(atlasText(object?.weed_pressure));
     return /pressure$/i.test(pressure) ? pressure : `${pressure} pressure`;
   }
-  if (route === "water" && atlasText(object?.water_status)) return titleCase(atlasText(object?.water_status));
-  if (route === "venue" && atlasText(object?.presentability)) return titleCase(atlasText(object?.presentability));
+  if (route === "water" && atlasText(object?.water_status)) return sentenceCase(atlasText(object?.water_status));
+  if (route === "venue" && atlasText(object?.presentability)) return sentenceCase(atlasText(object?.presentability));
 
   return "";
 }
@@ -196,24 +194,25 @@ export function taskConditionRailModel(task: AtlasTaskCard): TaskConditionRailMo
   const route = atlasRouteKeyForTask(task);
   const object = firstObject(task);
   const template = routeSpecificTemplate(task, route);
-  const points = explicitPoints(task) ?? [...template.points] as [string, string, string];
+  const points = explicitPoints(task) ?? ([...template.points] as [string, string, string]);
   const recorded = recordedCondition(task, object, route);
 
   let currentIndex = metadataIndex(task, "condition_current_index", template.currentIndex);
   const targetIndex = metadataIndex(task, "condition_target_index", template.targetIndex);
+  const storedCurrentIndex = task.metadata?.condition_current_index;
+  const hasExplicitCurrentIndex = storedCurrentIndex !== undefined && storedCurrentIndex !== null;
 
-  if (!task.metadata?.condition_current_index && recorded) {
+  if (!hasExplicitCurrentIndex && recorded) {
     if (route === "water") currentIndex = waterCurrentIndex(recorded);
     else if (route === "venue") currentIndex = venueCurrentIndex(recorded);
     else currentIndex = genericCurrentIndex(recorded);
   }
 
-  const currentOverride = recorded;
   const middleOverride = metadataString(task, ["condition_middle", "intermediate_condition"]);
   const targetOverride = metadataString(task, ["condition_target", "target_condition", "done_condition", "completion_condition"]);
   const label = metadataString(task, ["condition_label", "condition_axis_label"]) || template.label;
 
-  if (currentOverride) points[currentIndex] = titleCase(currentOverride);
+  if (recorded) points[currentIndex] = sentenceCase(recorded);
   if (middleOverride) points[1] = middleOverride;
   if (targetOverride) points[targetIndex] = targetOverride;
 
