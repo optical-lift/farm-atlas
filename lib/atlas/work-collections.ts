@@ -261,3 +261,19 @@ export function atlasBuildWeedingCollectionSummary(
   // Task lineups intentionally do not replace today's exact weeding task with a collection card.
   return null;
 }
+
+export function atlasBuildGerminationCollectionSummary(
+  tasks: AtlasTaskCard[],
+  anchorIso: string,
+  dueMode?: AtlasWorkCollectionDueMode,
+) {
+  return atlasBuildWorkCollectionSummary("germination", tasks, anchorIso, dueMode);
+}
+
+export function atlasBuildPropagationCollectionSummary(
+  tasks: AtlasTaskCard[],
+  anchorIso: string,
+  dueMode?: AtlasWorkCollectionDueMode,
+) {
+  return atlasBuildWorkCollectionSummary("propagation", tasks, anchorIso, dueMode);
+}
