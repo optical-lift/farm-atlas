@@ -20,7 +20,6 @@ import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-
 import { atlasWorkOrderLabel, atlasWorkOrderSortValue } from "@/lib/atlas/work-order";
 import {
   atlasBuildGerminationCollectionSummary,
-  atlasBuildMowingCollectionSummary,
   atlasBuildWeedingCollectionSummary,
   atlasIsGerminationCollectionMember,
   atlasIsMowingCollectionMember,
@@ -123,7 +122,8 @@ function TaskCard({
   const display = atlasTaskDisplay(task);
   const area = atlasTaskOperationalArea(task);
   const category = atlasTaskWorkCategoryLabel(task);
-  const statusLine = context === "area" ? category : `${atlasWorkOrderLabel(task)} · ${area}`;
+  const isGrowRoomCare = task.title === "Grow Room Care" && task.task_type === "grow_room_care";
+  const statusLine = context === "area" ? category : isGrowRoomCare ? area : `${atlasWorkOrderLabel(task)} · ${area}`;
 
   return (
     <Link className={`atlas-day-task-card${complete ? " complete" : ""}${overdue ? " atlas-day-overdue-task-card" : ""}${atlasIsCropCycleTask(task) ? " atlas-crop-cycle-task-card" : ""}`} href={taskHref(task, returnTo)}>
@@ -240,17 +240,15 @@ export default function AtlasDayPage() {
   const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask).filter((task) => !atlasIsGerminationCollectionMember(task)), [allDayTasks]);
   const filteredTasks = useMemo(() => routeFilter ? standaloneTasks.filter((task) => atlasRouteKeyForTask(task) === routeFilter) : standaloneTasks, [routeFilter, standaloneTasks]);
 
-  const mowingCollection = useMemo(() => atlasBuildMowingCollectionSummary(tasks, dateIso), [dateIso, tasks]);
   const weedingCollection = useMemo(() => atlasBuildWeedingCollectionSummary(tasks, dateIso), [dateIso, tasks]);
   const germinationCollection = useMemo(() => atlasBuildGerminationCollectionSummary(tasks, dateIso), [dateIso, tasks]);
   const showWeedingCollection = Boolean(weedingCollection && weedingCollection.dueCount > 0);
   const showGerminationCollection = Boolean(germinationCollection && germinationCollection.dueCount > 0);
-  const showMowingCollection = Boolean(mowingCollection && mowingCollection.dueCount > 0);
-  const collectionCount = Number(showWeedingCollection) + Number(showGerminationCollection) + Number(showMowingCollection);
+  const collectionCount = Number(showWeedingCollection) + Number(showGerminationCollection);
 
   const routeCards = useMemo(() => {
     const regularEntries = routeOrder.map((key) => {
-      const collection = key === "weed" ? weedingCollection : key === "mow" ? mowingCollection : null;
+      const collection = key === "weed" ? weedingCollection : null;
       const routeTasks = standaloneTasks.filter((task) => atlasRouteKeyForTask(task) === key);
       return { key, collection: collection && collection.dueCount > 0 ? collection : null, tasks: routeTasks };
     }).filter((entry) => entry.collection || entry.tasks.length);
@@ -266,7 +264,7 @@ export default function AtlasDayPage() {
       if (b.key === "mow") return -1;
       return routeOrder.indexOf(a.key as RouteKey) - routeOrder.indexOf(b.key as RouteKey);
     });
-  }, [germinationCollection, mowingCollection, standaloneTasks, weedingCollection]);
+  }, [germinationCollection, standaloneTasks, weedingCollection]);
 
   const areas = useMemo(() => Array.from(new Set(filteredTasks.map(atlasTaskOperationalArea))).sort(atlasOperationalAreaSort), [filteredTasks]);
   const returnTo = routeFilter ? routeHref(dateIso, routeFilter) : `/day?date=${encodeURIComponent(dateIso)}`;
@@ -328,7 +326,6 @@ export default function AtlasDayPage() {
                     {showWeedingCollection && weedingCollection ? <WorkCollectionCard collection={weedingCollection} /> : null}
                     {showGerminationCollection && germinationCollection ? <WorkCollectionCard collection={germinationCollection} /> : null}
                     {standaloneTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}
-                    {showMowingCollection && mowingCollection ? <WorkCollectionCard collection={mowingCollection} /> : null}
                     {!collectionCount && !standaloneTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}
                   </div>
                 </article>
@@ -337,7 +334,6 @@ export default function AtlasDayPage() {
                   {showWeedingCollection && weedingCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{weedingCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={weedingCollection} /></div></article> : null}
                   {showGerminationCollection && germinationCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{germinationCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={germinationCollection} /></div></article> : null}
                   {areas.map((area) => <AreaTaskGroup area={area} tasks={filteredTasks.filter((task) => atlasTaskOperationalArea(task) === area)} key={area} returnTo={returnTo} />)}
-                  {showMowingCollection && mowingCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{mowingCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={mowingCollection} /></div></article> : null}
                 </>
               )}
 
