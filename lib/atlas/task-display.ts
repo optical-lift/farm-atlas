@@ -1,4 +1,4 @@
-import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import type { AtlasTaskCard, AtlasTaskCardObject } from "@/lib/atlas/task-cards-client";
 
 export type AtlasWorkRouteKey = "plant" | "weed" | "mow" | "seed" | "crop_cycle" | "harvest" | "build" | "venue" | "water" | "propagation";
 
@@ -164,6 +164,38 @@ function uniqueObjectLabels(task: AtlasTaskCard) {
   return Array.from(new Set((task.objects ?? []).map((object) => object.object_label).filter(Boolean)));
 }
 
+function primaryTaskObject(task: AtlasTaskCard): AtlasTaskCardObject | null {
+  const targetObjectId = atlasMetaString(task, "target_object_id");
+  if (targetObjectId) {
+    const target = (task.objects ?? []).find((object) => object.object_id === targetObjectId);
+    if (target) return target;
+  }
+
+  const bed = (task.objects ?? []).find((object) => object.object_type === "bed");
+  return bed ?? task.objects?.[0] ?? null;
+}
+
+function objectMainCropLabel(task: AtlasTaskCard) {
+  const explicit = atlasMetaString(task, "main_crop_label");
+  if (explicit) return explicit;
+
+  const object = primaryTaskObject(task);
+  return atlasText(object?.state_metadata?.main_crop_label);
+}
+
+function titleWithMainCrop(task: AtlasTaskCard, title: string) {
+  const object = primaryTaskObject(task);
+  const crop = objectMainCropLabel(task);
+  const objectLabel = atlasText(object?.object_label);
+  if (!crop || !objectLabel || title.toLowerCase().includes(crop.toLowerCase())) return title;
+
+  const objectIndex = title.toLowerCase().indexOf(objectLabel.toLowerCase());
+  if (objectIndex < 0) return title;
+
+  const objectEnd = objectIndex + objectLabel.length;
+  return `${title.slice(0, objectEnd)} ${crop}${title.slice(objectEnd)}`;
+}
+
 export function atlasTaskObjectLocation(task: AtlasTaskCard) {
   const labels = uniqueObjectLabels(task);
   if (labels.length === 0) return null;
@@ -199,7 +231,11 @@ export function atlasTaskDetail(task: AtlasTaskCard) {
     return atlasStringList(atlasMetadataValue(task, "detail_lines"))[0] || fallback || task.unlock_text || "Crop-cycle follow-up";
   }
 
-  return atlasStringList(atlasMetadataValue(task, "detail_lines"))[0] || task.unlock_text || atlasMetaString(task, "display_detail") || "Open task";
+  const detailLine = atlasStringList(atlasMetadataValue(task, "detail_lines"))[0];
+  const explicitDetail = atlasMetaString(task, "display_detail").replace(/^one-bed daily weeding block\s*·\s*/i, "").trim();
+  if (task.task_type === "grow_room_care" && !detailLine && !task.unlock_text && !explicitDetail) return "";
+
+  return detailLine || task.unlock_text || explicitDetail || "Open task";
 }
 
 function normalizedStoredTitle(task: AtlasTaskCard) {
@@ -215,10 +251,11 @@ export function atlasTaskDisplay(task: AtlasTaskCard): AtlasTaskDisplay {
   const storedTitle = normalizedStoredTitle(task);
   const action = storedTitle?.split("·")[0]?.trim() || atlasActionForTask(task);
   const subject = storedTitle?.split("·").slice(1).join("·").trim() || atlasTaskSubject(task);
+  const title = titleWithMainCrop(task, storedTitle || `${action} · ${subject}`);
   return {
     action,
     subject,
-    title: storedTitle || `${action} · ${subject}`,
+    title,
     location: atlasTaskLocation(task),
     detail: atlasTaskDetail(task),
     route: atlasRouteKeyForTask(task),
