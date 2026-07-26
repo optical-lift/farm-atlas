@@ -84,6 +84,16 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Upload failing test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-test-failure
+          path: |
+            /tmp/atlas-test-name
+            /tmp/atlas-test.out
+          if-no-files-found: ignore
+
       - name: Build Atlas
         shell: bash
         run: |
