@@ -112,10 +112,6 @@ function isExtraCredit(task: AtlasTaskCard) {
   return mode === "extra_credit" || label.includes("extra credit");
 }
 
-function isStandaloneDayTask(task: AtlasTaskCard) {
-  return !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task) && !atlasIsGerminationCollectionMember(task);
-}
-
 function TaskCard({ task, complete = false, overdue = false, returnTo }: { task: AtlasTaskCard; complete?: boolean; overdue?: boolean; returnTo?: string }) {
   const display = atlasTaskDisplay(task);
   const zone = collectionZone(task);
@@ -220,15 +216,16 @@ function AtlasDayPageContent() {
   const dayTasks = useMemo(() => tasks.filter(isDashboardWork).filter((task) => task.due_date === dateIso).sort((a, b) => atlasWorkOrderSortValue(a).localeCompare(atlasWorkOrderSortValue(b))), [dateIso, tasks]);
   const overdueTasks = useMemo(() => {
     if (dateIso !== todayIso()) return [];
-    return tasks.filter(isDashboardWork).filter((task) => Boolean(task.due_date && task.due_date < dateIso)).filter((task) => !isOwnerOnlyTask(task) && !isExtraCredit(task)).filter(isStandaloneDayTask).sort((a, b) => `${a.due_date ?? ""}-${atlasWorkOrderSortValue(a)}`.localeCompare(`${b.due_date ?? ""}-${atlasWorkOrderSortValue(b)}`));
+    return tasks.filter(isDashboardWork).filter((task) => Boolean(task.due_date && task.due_date < dateIso)).filter((task) => !isOwnerOnlyTask(task) && !isExtraCredit(task)).filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task) && !atlasIsGerminationCollectionMember(task)).sort((a, b) => `${a.due_date ?? ""}-${atlasWorkOrderSortValue(a)}`.localeCompare(`${b.due_date ?? ""}-${atlasWorkOrderSortValue(b)}`));
   }, [dateIso, tasks]);
   const progressTasks = useMemo(() => allDayTasks.filter((task) => !isExtraCredit(task)), [allDayTasks]);
   const requiredTasks = useMemo(() => dayTasks.filter((task) => !isExtraCredit(task)), [dayTasks]);
-  const standaloneTasks = useMemo(() => requiredTasks.filter(isStandaloneDayTask), [requiredTasks]);
-  const workOrderTasks = useMemo(() => progressTasks.filter(isStandaloneDayTask).sort((a, b) => atlasWorkOrderSortValue(a).localeCompare(atlasWorkOrderSortValue(b))), [progressTasks]);
+  const standaloneTasks = useMemo(() => requiredTasks.filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task) && !atlasIsGerminationCollectionMember(task)), [requiredTasks]);
+  const workOrderTasks = useMemo(() => progressTasks.filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task) && !atlasIsGerminationCollectionMember(task)).sort((a, b) => atlasWorkOrderSortValue(a).localeCompare(atlasWorkOrderSortValue(b))), [progressTasks]);
   const extraCreditTasks = useMemo(() => dayTasks.filter(isExtraCredit), [dayTasks]);
-  const doneDayTasks = useMemo(() => progressTasks.filter(isDoneTask), [progressTasks]);
-  const blockedDayTasks = useMemo(() => progressTasks.filter((task) => task.status === "blocked" && !isDoneTask(task)), [progressTasks]);
+  const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask).filter((task) => !atlasIsGerminationCollectionMember(task)), [allDayTasks]);
+  const finishedProgressTasks = useMemo(() => progressTasks.filter(isDoneTask), [progressTasks]);
+  const blockedProgressTasks = useMemo(() => progressTasks.filter((task) => task.status === "blocked" && !isDoneTask(task)), [progressTasks]);
   const doneStandaloneTasks = useMemo(() => workOrderTasks.filter(isDoneTask), [workOrderTasks]);
   const filteredTasks = useMemo(() => routeFilter ? standaloneTasks.filter((task) => atlasRouteKeyForTask(task) === routeFilter) : standaloneTasks, [routeFilter, standaloneTasks]);
 
@@ -294,7 +291,7 @@ function AtlasDayPageContent() {
               </article>
             ) : null}
 
-            {!routeFilter ? <DayTrailSummary loading={loading} completed={doneDayTasks.length} total={progressTasks.length} blocked={blockedDayTasks.length} /> : null}
+            {!routeFilter ? <DayTrailSummary loading={loading} completed={finishedProgressTasks.length} total={progressTasks.length} blocked={blockedProgressTasks.length} /> : null}
 
             {!routeFilter && overdueTasks.length ? (
               <article className="atlas-day-route-group atlas-day-overdue-group" aria-label="Overdue carry-forward work">
