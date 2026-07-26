@@ -1,0 +1,154 @@
+/* The task Trail is chronological. This rail shows the physical condition being changed by the current card. */
+
+.atlas-task-condition-rail {
+  margin: 0 16px 16px;
+  padding: 14px 14px 12px;
+  border: 1px solid rgba(215, 204, 189, 0.74);
+  border-radius: 18px;
+  background: rgba(246, 242, 230, 0.42);
+  display: grid;
+  gap: 12px;
+}
+
+.atlas-task-condition-rail > small {
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.atlas-task-condition-rail ol {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+}
+
+.atlas-task-condition-rail li {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 14px auto 10px;
+  justify-items: center;
+  align-items: start;
+  gap: 6px;
+  color: #86877f;
+  text-align: center;
+}
+
+.atlas-task-condition-rail li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 6px;
+  left: calc(50% + 8px);
+  width: calc(100% - 16px);
+  height: 1px;
+  background: rgba(185, 183, 171, 0.72);
+}
+
+.atlas-task-condition-rail li > i {
+  position: relative;
+  z-index: 1;
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid #a0a199;
+  border-radius: 50%;
+  display: block;
+  background: #fffefa;
+}
+
+.atlas-task-condition-rail li > strong {
+  max-width: 94px;
+  color: inherit;
+  font-size: 11px;
+  line-height: 1.12;
+  font-weight: 880;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.atlas-task-condition-rail li > span {
+  min-height: 10px;
+  color: #858bb8;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.atlas-task-condition-rail li.is-current {
+  color: var(--atlas-text);
+}
+
+.atlas-task-condition-rail li.is-current > i {
+  width: 13px;
+  height: 13px;
+  margin-top: -1px;
+  border: 2px solid #343542;
+  background: #343542;
+  box-shadow: 0 0 0 3px rgba(201, 192, 198, 0.3);
+}
+
+.atlas-task-condition-rail li.is-target {
+  color: #59613c;
+}
+
+.atlas-task-condition-rail li.is-target > i {
+  width: 13px;
+  height: 13px;
+  margin-top: -1px;
+  border: 2px solid #919b62;
+  background: rgba(214, 225, 177, 0.7);
+  box-shadow: 0 0 0 3px rgba(214, 225, 177, 0.34);
+}
+
+.atlas-task-condition-rail li.is-current.is-target > i {
+  border-color: #343542;
+  background: linear-gradient(135deg, #343542 0 50%, #c8d294 50% 100%);
+}
+
+.atlas-task-result-actions.atlas-task-result-actions-simple {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.atlas-task-result-actions-simple button {
+  min-height: 66px;
+  font-size: 14px;
+}
+
+.atlas-task-result-actions-simple button.unfinished {
+  background: rgba(167, 171, 214, 0.16);
+  color: var(--atlas-muted);
+}
+
+.atlas-task-result-actions-simple button.unfinished.is-open {
+  border-color: rgba(139, 145, 194, 0.38);
+  background: rgba(167, 171, 214, 0.26);
+  color: var(--atlas-text);
+}
+
+.atlas-task-result-unfinished {
+  margin: 0;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.atlas-task-result-unfinished .atlas-task-unfinished-grid button {
+  min-height: 46px;
+}
+
+@media (max-width: 480px) {
+  .atlas-task-condition-rail {
+    margin-inline: 14px;
+    padding-inline: 12px;
+  }
+
+  .atlas-task-condition-rail li > strong {
+    font-size: 10px;
+  }
+}
