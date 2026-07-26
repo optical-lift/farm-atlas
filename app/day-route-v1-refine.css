@@ -1,0 +1,63 @@
+/* Day Route v1 refinements: keep the route quiet and let drawers carry secondary history. */
+
+.atlas-day-timeline-group {
+  padding-top: 4px !important;
+}
+
+.atlas-day-complete-drawer {
+  margin-top: 8px;
+  border-color: rgba(139, 145, 194, 0.18);
+  background: rgba(246, 242, 230, 0.52);
+}
+
+.atlas-day-complete-drawer > summary {
+  min-height: 48px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  padding: 10px 12px;
+}
+
+.atlas-day-complete-label {
+  color: var(--atlas-text);
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
+.atlas-day-complete-count {
+  color: var(--atlas-muted);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.atlas-day-complete-body {
+  border-top: 1px solid rgba(139, 145, 194, 0.14);
+  padding: 8px;
+  gap: 7px !important;
+}
+
+.atlas-day-complete-drawer .atlas-day-task-card {
+  padding: 10px 11px !important;
+  gap: 3px !important;
+}
+
+.atlas-day-complete-drawer .atlas-day-task-card > strong,
+.atlas-day-route-spine .atlas-day-task-card > strong {
+  font-size: 15px !important;
+  line-height: 1.04 !important;
+  letter-spacing: -0.035em !important;
+}
+
+.atlas-day-complete-drawer .atlas-day-task-card > span,
+.atlas-day-complete-drawer .atlas-day-task-card > em,
+.atlas-day-route-spine .atlas-day-task-card > span:not(.atlas-day-task-cues),
+.atlas-day-route-spine .atlas-day-task-card > em {
+  font-size: 10px !important;
+  line-height: 1.1 !important;
+}
+
+.atlas-day-complete-drawer[open] > summary b {
+  transform: rotate(180deg);
+}
