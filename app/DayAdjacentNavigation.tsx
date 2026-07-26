@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 function localTodayIso() {
   const now = new Date();
@@ -17,42 +18,26 @@ function shiftIsoDate(dateIso: string, days: number) {
   return local.toISOString().slice(0, 10);
 }
 
-function currentDayDate() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("date") || localTodayIso();
-}
-
 export default function DayAdjacentNavigation() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [target, setTarget] = useState<HTMLElement | null>(null);
-  const [dateIso, setDateIso] = useState(localTodayIso());
+  const dateIso = searchParams.get("date") || localTodayIso();
+  const route = searchParams.get("route");
 
   useEffect(() => {
-    if (window.location.pathname !== "/day") return;
+    if (pathname !== "/day" || route) {
+      setTarget(null);
+      return;
+    }
 
-    const syncFromLocation = () => {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("route")) {
-        setTarget(null);
-        return;
-      }
+    const frame = window.requestAnimationFrame(() => {
+      setTarget(document.querySelector<HTMLElement>(".atlas-day-browse"));
+    });
 
-      setDateIso(currentDayDate());
-      const frame = window.requestAnimationFrame(() => {
-        setTarget(document.querySelector<HTMLElement>(".atlas-day-browse"));
-      });
-      return () => window.cancelAnimationFrame(frame);
-    };
-
-    const cancelFrame = syncFromLocation();
-    window.addEventListener("popstate", syncFromLocation);
-    window.addEventListener("atlas:day-change", syncFromLocation);
-
-    return () => {
-      cancelFrame?.();
-      window.removeEventListener("popstate", syncFromLocation);
-      window.removeEventListener("atlas:day-change", syncFromLocation);
-    };
-  }, []);
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname, route]);
 
   if (!target) return null;
 
@@ -61,10 +46,7 @@ export default function DayAdjacentNavigation() {
 
   function openDay(event: React.MouseEvent<HTMLAnchorElement>, targetDate: string) {
     event.preventDefault();
-    const href = `/day?date=${encodeURIComponent(targetDate)}`;
-    window.history.pushState({}, "", href);
-    setDateIso(targetDate);
-    window.dispatchEvent(new Event("atlas:day-change"));
+    router.push(`/day?date=${encodeURIComponent(targetDate)}`, { scroll: false });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
