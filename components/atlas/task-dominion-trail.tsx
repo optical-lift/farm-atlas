@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import { taskConditionRailModel } from "@/lib/atlas/task-condition-rail";
 import { atlasRouteKeyForTask } from "@/lib/atlas/task-display";
 import { taskDominionModel } from "@/lib/atlas/task-dominion";
 import {
@@ -49,6 +50,7 @@ export default function TaskDominionTrail({ task, instruction }: Props) {
   }, [objectKey, route, task.task_id]);
 
   const model = useMemo(() => taskDominionModel(task, track, instruction), [instruction, task, track]);
+  const condition = useMemo(() => taskConditionRailModel(task), [task]);
 
   return (
     <section className="atlas-task-dominion" aria-label={`${model.placeLabel} task Trail`}>
@@ -85,16 +87,26 @@ export default function TaskDominionTrail({ task, instruction }: Props) {
         </div>
       </section>
 
-      <div className="atlas-task-dominion-cause">
-        <section>
-          <small>Why now</small>
-          <p>{model.whyNow}</p>
-        </section>
-        <section>
-          <small>This move changes</small>
-          <p>{model.stateEffect}</p>
-        </section>
-      </div>
+      <section
+        className="atlas-task-condition-rail"
+        aria-label={`${condition.label}: now ${condition.points[condition.currentIndex]}, target ${condition.points[condition.targetIndex]}`}
+      >
+        <small>{condition.label}</small>
+        <ol>
+          {condition.points.map((point, index) => {
+            const isCurrent = index === condition.currentIndex;
+            const isTarget = index === condition.targetIndex;
+            const marker = isCurrent && isTarget ? "Now · Target" : isCurrent ? "Now" : isTarget ? "Target" : "";
+            return (
+              <li className={`${isCurrent ? "is-current " : ""}${isTarget ? "is-target" : ""}`.trim()} key={`${point}:${index}`}>
+                <i aria-hidden="true" />
+                <strong>{point}</strong>
+                <span>{marker}</span>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
 
       {model.facts.length || track ? (
         <footer className="atlas-task-dominion-facts">
