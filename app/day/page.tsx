@@ -86,11 +86,6 @@ function isDoneTask(task: AtlasTaskCard) {
   return task.status === "done" || text(meta(task, "checklist_status")) === "done" || task.task_outcomes?.[0]?.outcome === "done";
 }
 
-function isKidChore(task: AtlasTaskCard) {
-  const joined = [task.task_type, task.title, text(meta(task, "work_route")), text(meta(task, "work_rhythm")), text(meta(task, "display_action")), text(meta(task, "collection_label"))].filter(Boolean).join(" ").toLowerCase();
-  return joined.includes("kid chore") || joined.includes("kid_chore") || joined.includes("feed chickens");
-}
-
 function isOwnerOnlyTask(task: AtlasTaskCard) {
   const ownerTask = meta(task, "owner_task");
   const assignedTo = text(meta(task, "assigned_to")).toLowerCase();
@@ -220,7 +215,7 @@ function AtlasDayPageContent() {
   const dayTasks = useMemo(() => tasks.filter(isDashboardWork).filter((task) => task.due_date === dateIso).sort((a, b) => atlasWorkOrderSortValue(a).localeCompare(atlasWorkOrderSortValue(b))), [dateIso, tasks]);
   const overdueTasks = useMemo(() => {
     if (dateIso !== todayIso()) return [];
-    return tasks.filter(isDashboardWork).filter((task) => Boolean(task.due_date && task.due_date < dateIso)).filter((task) => !isKidChore(task) && !isOwnerOnlyTask(task) && !isExtraCredit(task)).filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task) && !atlasIsGerminationCollectionMember(task)).sort((a, b) => `${a.due_date ?? ""}-${atlasWorkOrderSortValue(a)}`.localeCompare(`${b.due_date ?? ""}-${atlasWorkOrderSortValue(b)}`));
+    return tasks.filter(isDashboardWork).filter((task) => Boolean(task.due_date && task.due_date < dateIso)).filter((task) => !isOwnerOnlyTask(task) && !isExtraCredit(task)).filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task) && !atlasIsGerminationCollectionMember(task)).sort((a, b) => `${a.due_date ?? ""}-${atlasWorkOrderSortValue(a)}`.localeCompare(`${b.due_date ?? ""}-${atlasWorkOrderSortValue(b)}`));
   }, [dateIso, tasks]);
   const requiredTasks = useMemo(() => dayTasks.filter((task) => !isExtraCredit(task)), [dayTasks]);
   const standaloneTasks = useMemo(() => requiredTasks.filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task) && !atlasIsGerminationCollectionMember(task)), [requiredTasks]);
