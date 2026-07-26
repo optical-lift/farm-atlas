@@ -13,25 +13,29 @@ export default function AnnaPaidScheduleHomePatch() {
       const home = document.querySelector<HTMLElement>(HOME_SELECTOR);
       if (!home) return;
 
-      const current = home.querySelector<HTMLAnchorElement>(LINK_SELECTOR);
-      if (!current || current.dataset.annaPaidScheduleLink === "true") return;
+      const links = Array.from(home.querySelectorAll<HTMLAnchorElement>(LINK_SELECTOR));
+      const current = links[0];
+      if (!current) return;
 
-      const replacement = current.cloneNode(true) as HTMLAnchorElement;
-      replacement.href = "/paid-schedule";
-      replacement.dataset.annaPaidScheduleLink = "true";
-      replacement.setAttribute("aria-label", "Open Anna paid schedule");
+      links.slice(1).forEach((link) => link.remove());
 
-      const title = replacement.querySelector("span");
-      const detail = replacement.querySelector("em");
+      current.href = "/paid-schedule";
+      current.dataset.annaPaidScheduleLink = "true";
+      current.classList.add("atlas-anna-paid-schedule-link");
+      current.setAttribute("aria-label", "Open Anna paid schedule");
+
+      const title = current.querySelector("span");
+      const detail = current.querySelector("em");
       if (title) title.textContent = "Paid schedule";
       if (detail) detail.textContent = "Started Jul 6 · Next pay Aug 31";
 
-      replacement.addEventListener("click", (event) => {
-        event.preventDefault();
-        window.location.assign("/paid-schedule");
-      });
-
-      current.replaceWith(replacement);
+      if (current.dataset.annaPaidScheduleNavigation !== "true") {
+        current.dataset.annaPaidScheduleNavigation = "true";
+        current.addEventListener("click", (event) => {
+          event.preventDefault();
+          window.location.assign("/paid-schedule");
+        });
+      }
     }
 
     function scheduleApply() {
@@ -41,7 +45,7 @@ export default function AnnaPaidScheduleHomePatch() {
 
     apply();
     const observer = new MutationObserver(scheduleApply);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["href", "class"] });
 
     return () => {
       observer.disconnect();
