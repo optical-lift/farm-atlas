@@ -29,16 +29,17 @@ test("Day progress reads exact-date required work without a DOM patch", () => {
   assert.match(css, /\.blocked/);
 });
 
-test("Day Route v1 merges Next with overview and lets the timeline stand on its own", () => {
+test("Day Route v1 keeps Next and overview together, removes the timeline heading, and collapses completed work", () => {
   const page = read("app/day/page.tsx");
   const css = read("app/day-route-v1.css");
+  const refineCss = read("app/day-route-v1-refine.css");
   const layout = read("app/layout.tsx");
   const adapter = read("lib/atlas/day-route.ts");
 
   const commandIndex = page.indexOf('className="atlas-day-command-header"');
   const overviewIndex = page.indexOf('className="atlas-day-overview-drawer atlas-day-command-overview"');
   const workOrderIndex = page.indexOf("standaloneTasks.map");
-  const completeIndex = page.indexOf("doneStandaloneTasks.map");
+  const completeIndex = page.indexOf('className="atlas-day-overview-drawer atlas-day-complete-drawer"');
 
   assert.notEqual(commandIndex, -1);
   assert.notEqual(overviewIndex, -1);
@@ -51,14 +52,18 @@ test("Day Route v1 merges Next with overview and lets the timeline stand on its 
   assert.match(page, /atlasDayIsCarePulse/);
   assert.match(page, /atlas-day-route-spine/);
   assert.match(page, /<details className="atlas-day-overview-drawer atlas-day-command-overview">/);
+  assert.match(page, /<details className="atlas-day-overview-drawer atlas-day-complete-drawer">/);
   assert.match(page, />Timeline<\/button>/);
   assert.match(page, />Zone<\/button>/);
+  assert.doesNotMatch(page, /<h3>Timeline<\/h3>/);
   assert.match(page, /!routeFilter && doneStandaloneTasks\.length/);
   assert.doesNotMatch(page, /atlas-day-route-hero/);
 
   assert.match(adapter, /atlasDayTaskFamily/);
   assert.match(adapter, /atlasDayTaskCues/);
   assert.match(adapter, /atlasDayRouteState/);
+  assert.match(adapter, /durationLabel/);
+  assert.match(adapter, /return `\$\{rounded\} hr`/);
   assert.match(css, /\.atlas-day-view-toggle/);
   assert.match(css, /\.atlas-day-route-current/);
   assert.match(css, /\.atlas-day-route-care/);
@@ -66,7 +71,10 @@ test("Day Route v1 merges Next with overview and lets the timeline stand on its 
   assert.match(css, /\.atlas-day-task-cues/);
   assert.match(css, /\.atlas-day-route-spine > \.atlas-day-task-card[\s\S]*?border: 0 !important/);
   assert.match(css, /\.atlas-day-work-order-group[\s\S]*?background: transparent !important/);
+  assert.match(refineCss, /\.atlas-day-complete-drawer/);
+  assert.match(refineCss, /\.atlas-day-complete-drawer \.atlas-day-task-card > strong/);
 
   assert.doesNotMatch(layout, /DayHeroQuietPatch/);
   assert.match(layout, /day-route-v1\.css/);
+  assert.match(layout, /day-route-v1-refine\.css/);
 });
