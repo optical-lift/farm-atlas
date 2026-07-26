@@ -38,7 +38,7 @@ test("the focused task owns one truthful Dominion Trail and condition rail", () 
   assert.match(model, /taskHasMeaningfulTrail/);
   assert.match(model, /NATURAL_SEQUENCE_ROUTES/);
   assert.match(model, /task_series_key/);
-  assert.match(model, /planned_occurrence_id/);
+  assert.doesNotMatch(model, /planned_occurrence_id/);
   assert.match(model, /Medium pressure|weed_pressure/);
   assert.match(model, /Even moisture/);
   assert.match(model, /conditionTarget|condition_target/);
