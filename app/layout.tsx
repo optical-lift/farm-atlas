@@ -11,6 +11,7 @@ import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
 import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
 import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
 import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
+import AnnaPaidScheduleHomePatch from "./AnnaPaidScheduleHomePatch";
 import TendingTaskContext from "@/components/atlas/tending-task-context";
 import TaskFocusTendingTrail from "@/components/atlas/task-focus-tending-trail";
 import "./globals.css";
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <OwnerTaskReturnPatch />
         <SafeBedCropAccordionPatch />
         <AttachedTaskHistoryPatch />
+        <AnnaPaidScheduleHomePatch />
         <TendingTaskContext />
         <TaskFocusTendingTrail />
         {children}
