@@ -79,6 +79,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AttachedTaskHistoryPatch />
         <AnnaPaidScheduleHomePatch />
         <TendingTaskContext />
+        {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}
       </body>
     </html>
