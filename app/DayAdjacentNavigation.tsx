@@ -50,7 +50,7 @@ export default function DayAdjacentNavigation() {
 
   function openDay(event: React.MouseEvent<HTMLAnchorElement>, targetDate: string) {
     event.preventDefault();
-    router.push(dayHref(targetDate), { scroll: false });
+    router.push(`/day?date=${encodeURIComponent(targetDate)}&view=work_order`, { scroll: false });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
