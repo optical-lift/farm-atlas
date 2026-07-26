@@ -122,8 +122,10 @@ export function atlasIsWorkCollectionMember(task: AtlasTaskCard) {
   return Boolean(atlasWorkCollectionKey(task));
 }
 
-export function atlasIsMowingCollectionMember(task: AtlasTaskCard) {
-  return atlasWorkCollectionKey(task) === "mowing";
+export function atlasIsMowingCollectionMember(_task: AtlasTaskCard) {
+  // Mowing remains a destination collection, but day/week task surfaces show
+  // every released mowing job as an ordinary canonical task.
+  return false;
 }
 
 export function atlasIsWeedingCollectionMember(_task: AtlasTaskCard) {
@@ -258,20 +260,4 @@ export function atlasBuildWeedingCollectionSummary(
   // The harvest-first Tending page still exists at /collections/weeding.
   // Task lineups intentionally do not replace today's exact weeding task with a collection card.
   return null;
-}
-
-export function atlasBuildGerminationCollectionSummary(
-  tasks: AtlasTaskCard[],
-  anchorIso: string,
-  dueMode?: AtlasWorkCollectionDueMode,
-) {
-  return atlasBuildWorkCollectionSummary("germination", tasks, anchorIso, dueMode);
-}
-
-export function atlasBuildPropagationCollectionSummary(
-  tasks: AtlasTaskCard[],
-  anchorIso: string,
-  dueMode?: AtlasWorkCollectionDueMode,
-) {
-  return atlasBuildWorkCollectionSummary("propagation", tasks, anchorIso, dueMode);
 }
