@@ -7,8 +7,8 @@ import TaskDominionTrail from "@/components/atlas/task-dominion-trail";
 import { TaskChildChecklist } from "@/components/atlas/task-child-checklist";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import { taskConditionRailModel } from "@/lib/atlas/task-condition-rail";
 import { atlasRouteKeyForTask, atlasTaskDisplay } from "@/lib/atlas/task-display";
-import { taskDominionOutcomeLabels } from "@/lib/atlas/task-dominion";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
 type Outcome = "done" | "partial" | "blocked" | "not_relevant" | "changed_plan";
@@ -217,6 +217,7 @@ export default function DominionAssignedTaskDetail({ task: initialTask, childTas
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [unfinishedOpen, setUnfinishedOpen] = useState(false);
 
   useEffect(() => {
     void fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" })
@@ -226,6 +227,7 @@ export default function DominionAssignedTaskDetail({ task: initialTask, childTas
   }, []);
 
   const display = useMemo(() => atlasTaskDisplay(task), [task]);
+  const condition = useMemo(() => taskConditionRailModel(task), [task]);
   const production = productionContext(task);
   const timing = timingFacts(detailLines(task), numberValue(task.metadata?.expected_stems));
   const contentLines = timing.rest;
@@ -234,7 +236,6 @@ export default function DominionAssignedTaskDetail({ task: initialTask, childTas
   const procedureLines = !explicitInstruction && contentLines[0] === instruction ? contentLines.slice(1) : contentLines;
   const detailHeading = metaString(task, "detail_heading") || "How to play this card";
   const facts = operatingFacts(task, display.location);
-  const outcomeLabels = taskDominionOutcomeLabels(task);
 
   async function refreshTask() {
     const response = await fetch(`/api/atlas/task-cards?taskId=${encodeURIComponent(task.task_id)}`, {
@@ -259,13 +260,23 @@ export default function DominionAssignedTaskDetail({ task: initialTask, childTas
         reason: note,
         laneKey: task.action_key || undefined,
         workKey: task.action_key || undefined,
-        payload: { workClass: task.work_class, assigneeKey: assignee.key },
+        payload: {
+          workClass: task.work_class,
+          assigneeKey: assignee.key,
+          conditionRail: {
+            label: condition.label,
+            current: condition.points[condition.currentIndex],
+            target: condition.points[condition.targetIndex],
+            targetReached: outcome === "done",
+          },
+        },
       });
       if (outcome === "done" || outcome === "not_relevant" || outcome === "changed_plan") {
         window.location.assign(returnDestination(assignee.listPath));
         return;
       }
       await refreshTask();
+      setUnfinishedOpen(false);
       setMessage("Saved.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Task update failed.");
@@ -376,20 +387,36 @@ export default function DominionAssignedTaskDetail({ task: initialTask, childTas
             <footer className="atlas-task-result-footer">
               <div className="atlas-task-result-heading">
                 <small>Result</small>
-                <strong>How did this move land?</strong>
               </div>
 
-              <div className="atlas-task-result-actions">
+              <div className="atlas-task-result-actions atlas-task-result-actions-simple">
                 <button type="button" className="done" disabled={Boolean(saving)} onClick={() => void transition("done")}>
-                  {saving === "done" ? "Finishing" : outcomeLabels.done}
+                  {saving === "done" ? "Finishing" : "Done"}
                 </button>
-                <button type="button" disabled={Boolean(saving)} onClick={() => void transition("partial", window.prompt("What is left?", "")?.trim() || "Partly done")}>
-                  {saving === "partial" ? "Saving" : outcomeLabels.partial}
-                </button>
-                <button type="button" className="blocked" disabled={Boolean(saving)} onClick={() => void transition("blocked", window.prompt("What blocked it?", "")?.trim() || "Blocked")}>
-                  {saving === "blocked" ? "Saving" : outcomeLabels.blocked}
+                <button
+                  type="button"
+                  className={unfinishedOpen ? "unfinished is-open" : "unfinished"}
+                  aria-expanded={unfinishedOpen}
+                  disabled={Boolean(saving)}
+                  onClick={() => setUnfinishedOpen((open) => !open)}
+                >
+                  Unfinished
                 </button>
               </div>
+
+              {unfinishedOpen ? (
+                <section className="atlas-task-unfinished-panel atlas-task-result-unfinished">
+                  <strong>What happened?</strong>
+                  <div className="atlas-task-unfinished-grid">
+                    <button type="button" disabled={Boolean(saving)} onClick={() => void transition("partial", window.prompt("What is left?", "")?.trim() || "Partly done")}>
+                      {saving === "partial" ? "Saving" : "Partly done"}
+                    </button>
+                    <button type="button" className="blocked" disabled={Boolean(saving)} onClick={() => void transition("blocked", window.prompt("What blocked it?", "")?.trim() || "Blocked")}>
+                      {saving === "blocked" ? "Saving" : "Blocked"}
+                    </button>
+                  </div>
+                </section>
+              ) : null}
 
               <details className="atlas-task-more-outcomes">
                 <summary><span>Move or close this card</span><b aria-hidden="true">⌄</b></summary>
