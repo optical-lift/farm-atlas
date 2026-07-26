@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import PaidScheduleHeader from "./PaidScheduleHeader";
 import styles from "./paid-schedule.module.css";
 import { requireAtlasViewer } from "@/lib/atlas/viewer-context";
 
@@ -31,14 +32,13 @@ export default async function PaidSchedulePage() {
   const viewer = await requireAtlasViewer();
 
   return (
-    <main className={`atlas-phone-shell ${styles.shell}`} data-atlas-person="anna">
-      <section className={`atlas-phone ${styles.phone}`}>
-        <header className={styles.topbar}>
-          <Link href="/" className={styles.back}>← Home</Link>
-          <span>{viewer.farmName}</span>
-        </header>
+    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell" data-atlas-person="anna">
+      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
+        <PaidScheduleHeader farmName={viewer.farmName} />
 
-        <div className={styles.body}>
+        <div className={`atlas-task-page-body ${styles.body}`}>
+          <Link href="/" className={`atlas-route-back ${styles.back}`}>← Home</Link>
+
           <section className={styles.hero}>
             <span>Paid schedule</span>
             <h1>Anna</h1>
