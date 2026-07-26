@@ -53,7 +53,7 @@ export default function TaskDominionTrail({ task, instruction }: Props) {
   const condition = useMemo(() => taskConditionRailModel(task), [task]);
 
   return (
-    <section className="atlas-task-dominion" aria-label={`${model.placeLabel} task Trail`}>
+    <section className="atlas-task-dominion" aria-label={`${model.placeLabel} task`}>
       <header className="atlas-task-dominion-place">
         <div>
           <small>{model.zoneLabel}</small>
@@ -62,18 +62,26 @@ export default function TaskDominionTrail({ task, instruction }: Props) {
         <span>{model.subjectLabel}</span>
       </header>
 
-      <ol className="atlas-task-dominion-track" aria-label={`What came before and what follows ${model.actionLabel}`}>
-        {model.steps.map((step) => (
-          <li
-            className={`step-${step.status}`}
-            aria-current={step.status === "current" || step.status === "blocked" ? "step" : undefined}
-            key={step.key}
-          >
-            <i aria-hidden="true" />
-            <span>{step.label}</span>
-          </li>
-        ))}
-      </ol>
+      {condition.meaningful ? (
+        <ol className="atlas-task-dominion-track" aria-label={`What came before and what follows ${model.actionLabel}`}>
+          {model.steps.map((step) => (
+            <li
+              className={`step-${step.status}`}
+              aria-current={step.status === "current" || step.status === "blocked" ? "step" : undefined}
+              key={step.key}
+            >
+              <i aria-hidden="true" />
+              <span>{step.label}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <div className="atlas-task-dominion-no-trail" aria-label="No linked Trail">
+          <span aria-hidden="true" />
+          <i aria-hidden="true" />
+          <span aria-hidden="true" />
+        </div>
+      )}
 
       <section className="atlas-task-dominion-move">
         <div className="atlas-task-dominion-kicker">
@@ -87,26 +95,28 @@ export default function TaskDominionTrail({ task, instruction }: Props) {
         </div>
       </section>
 
-      <section
-        className="atlas-task-condition-rail"
-        aria-label={`${condition.label}: now ${condition.points[condition.currentIndex]}, target ${condition.points[condition.targetIndex]}`}
-      >
-        <small>{condition.label}</small>
-        <ol>
-          {condition.points.map((point, index) => {
-            const isCurrent = index === condition.currentIndex;
-            const isTarget = index === condition.targetIndex;
-            const marker = isCurrent && isTarget ? "Now · Target" : isCurrent ? "Now" : isTarget ? "Target" : "";
-            return (
-              <li className={`${isCurrent ? "is-current " : ""}${isTarget ? "is-target" : ""}`.trim()} key={`${point}:${index}`}>
-                <i aria-hidden="true" />
-                <strong>{point}</strong>
-                <span>{marker}</span>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
+      {condition.meaningful ? (
+        <section
+          className="atlas-task-condition-rail"
+          aria-label={`${condition.label}: now ${condition.points[condition.currentIndex]}, target ${condition.points[condition.targetIndex]}`}
+        >
+          <small>{condition.label}</small>
+          <ol>
+            {condition.points.map((point, index) => {
+              const isCurrent = index === condition.currentIndex;
+              const isTarget = index === condition.targetIndex;
+              const marker = isCurrent && isTarget ? "Now · Target" : isCurrent ? "Now" : isTarget ? "Target" : "";
+              return (
+                <li className={`${isCurrent ? "is-current " : ""}${isTarget ? "is-target" : ""}`.trim()} key={`${point}:${index}`}>
+                  <i aria-hidden="true" />
+                  <strong>{point}</strong>
+                  <span>{marker}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ) : null}
 
       {model.facts.length || track ? (
         <footer className="atlas-task-dominion-facts">
