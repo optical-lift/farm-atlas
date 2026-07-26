@@ -82,7 +82,20 @@ jobs:
         run: node --test --test-name-pattern="homepage reader" tests/atlas-architecture-traps.test.mjs
 
       - name: Run tests
-        run: npm test
+        shell: bash
+        run: |
+          set +e
+          npm test > atlas-test.log 2>&1
+          status=$?
+          cat atlas-test.log
+          exit "$status"
+
+      - name: Upload failed test log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-test-log
+          path: atlas-test.log
 
       - name: Build Atlas
         shell: bash
