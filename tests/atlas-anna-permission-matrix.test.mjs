@@ -60,7 +60,7 @@ test("Mowing stays a destination collection while the Day plan shows actual mowi
   assert.doesNotMatch(day, /atlasBuildMowingCollectionSummary/);
   assert.doesNotMatch(day, /collection=\{mowingCollection\}/);
   assert.match(day, /atlasIsMowingCollectionMember/);
-  assert.match(day, /standaloneTasks\.map/);
+  assert.match(day, /workOrderTasks\.map/);
   assert.match(day, /atlasBuildWeedingCollectionSummary/);
   assert.match(week, /atlasBuildMowingCollectionSummary/);
   assert.match(week, /atlasBuildWeedingCollectionSummary/);
