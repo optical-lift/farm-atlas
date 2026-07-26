@@ -4,19 +4,41 @@
   padding-top: 4px !important;
 }
 
+/* The route is the summary. Detailed instructions live on the opened task. */
+.atlas-day-route-spine > .atlas-day-task-card > em {
+  display: none !important;
+}
+
 .atlas-day-complete-drawer {
-  margin-top: 8px;
-  border-color: rgba(139, 145, 194, 0.18);
-  background: rgba(246, 242, 230, 0.52);
+  width: 100%;
+  margin-top: 14px;
+  border: 1px solid rgba(139, 145, 194, 0.2);
+  border-radius: 18px;
+  background: rgba(174, 179, 212, 0.1);
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(58, 46, 30, 0.025);
 }
 
 .atlas-day-complete-drawer > summary {
-  min-height: 48px;
+  min-width: 0;
+  min-height: 54px;
+  list-style: none;
+  cursor: pointer;
+  padding: 11px 14px;
+  display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  padding: 10px 12px;
+  align-items: center;
+  gap: 8px;
+}
+
+.atlas-day-complete-drawer > summary::marker,
+.atlas-day-complete-drawer > summary::-webkit-details-marker {
+  display: none;
+  content: "";
 }
 
 .atlas-day-complete-label {
+  min-width: 0;
   color: var(--atlas-text);
   font-size: 14px;
   line-height: 1;
@@ -32,15 +54,38 @@
   white-space: nowrap;
 }
 
+.atlas-day-complete-drawer > summary > b {
+  color: var(--atlas-muted);
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 140ms ease-out;
+}
+
+.atlas-day-complete-drawer[open] > summary > b {
+  transform: rotate(180deg);
+}
+
 .atlas-day-complete-body {
   border-top: 1px solid rgba(139, 145, 194, 0.14);
-  padding: 8px;
-  gap: 7px !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  padding: 4px 12px 8px !important;
+  display: grid !important;
+  gap: 0 !important;
 }
 
 .atlas-day-complete-drawer .atlas-day-task-card {
-  padding: 10px 11px !important;
+  min-width: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  border-top: 1px solid rgba(139, 145, 194, 0.11) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 11px 2px !important;
   gap: 3px !important;
+}
+
+.atlas-day-complete-drawer .atlas-day-task-card:first-child {
+  border-top: 0 !important;
 }
 
 .atlas-day-complete-drawer .atlas-day-task-card > strong,
@@ -52,12 +97,7 @@
 
 .atlas-day-complete-drawer .atlas-day-task-card > span,
 .atlas-day-complete-drawer .atlas-day-task-card > em,
-.atlas-day-route-spine .atlas-day-task-card > span:not(.atlas-day-task-cues),
-.atlas-day-route-spine .atlas-day-task-card > em {
+.atlas-day-route-spine .atlas-day-task-card > span:not(.atlas-day-task-cues) {
   font-size: 10px !important;
   line-height: 1.1 !important;
-}
-
-.atlas-day-complete-drawer[open] > summary b {
-  transform: rotate(180deg);
 }
