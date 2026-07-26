@@ -26,7 +26,7 @@ test("operational overview routes use the viewer-scoped task reader", () => {
   assert.match(route, /p_worker_key: workerKey/);
 });
 
-test("day overview cannot silently fall back to the mixed farm-wide reader", () => {
+test("day and week overviews cannot silently fall back to the mixed farm-wide reader", () => {
   const day = read("app/day/page.tsx");
   const adjacentNavigation = read("app/DayAdjacentNavigation.tsx");
   const week = read("app/overview/week/page.tsx");
@@ -39,9 +39,8 @@ test("day overview cannot silently fall back to the mixed farm-wide reader", () 
   assert.match(adjacentNavigation, /router\.push\(`/);
   assert.doesNotMatch(adjacentNavigation, /history\.pushState/);
 
-  for (const page of [week, month]) {
-    assert.match(page, /fetchAtlasTaskCards\(\)/);
-  }
+  assert.match(week, /fetchAtlasTaskCards\(\{[\s\S]*?viewerScoped:\s*true,[\s\S]*?dueThrough:\s*resolvedEnd,[\s\S]*?doneDate:\s*resolvedAnchor[\s\S]*?\}\)/);
+  assert.match(month, /fetchAtlasTaskCards\(\)/);
 
   for (const page of [day, week, month]) {
     assert.doesNotMatch(page, /scope:\s*"all"/);

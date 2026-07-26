@@ -48,14 +48,26 @@ test("Weeding remains a Tending destination but today's beds stay individual tas
   assert.match(css, /atlas-task-tending-trail/);
 });
 
-test("Week and Month keep their deployed overview shapes", () => {
+test("Week is a daily timeline while Month keeps the aggregate overview", () => {
   const week = read("app/overview/week/page.tsx");
+  const weekCss = read("app/week-route-v1.css");
   const month = read("app/overview/month/page.tsx");
+  const layout = read("app/layout.tsx");
 
-  assert.match(week, /atlas-overview-hero/);
-  assert.match(week, /atlas-overview-stat-grid/);
-  assert.match(week, /CollectionOverviewCard/);
-  assert.match(week, /ZoneSection/);
+  assert.match(week, /atlas-week-route-header/);
+  assert.match(week, /atlas-week-day-rail/);
+  assert.match(week, /atlas-week-day-list/);
+  assert.match(week, /WeekDaySection/);
+  assert.match(week, /WeekTaskCard/);
+  assert.match(week, /Timeline/);
+  assert.match(week, /Zone/);
+  assert.match(week, /Carryover needs placement/);
+  assert.doesNotMatch(week, /atlas-overview-stat-grid/);
+  assert.doesNotMatch(week, /CollectionOverviewCard/);
+  assert.doesNotMatch(week, /ZoneSection/);
+  assert.match(weekCss, /atlas-week-day-section/);
+  assert.match(weekCss, /atlas-week-route-spine/);
+  assert.match(layout, /week-route-v1\.css/);
 
   assert.match(month, /atlas-overview-month-hero/);
   assert.match(month, /atlas-overview-month-progress-row/);
