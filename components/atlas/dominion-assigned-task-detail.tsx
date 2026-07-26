@@ -234,7 +234,7 @@ export default function DominionAssignedTaskDetail({ task: initialTask, childTas
   const explicitInstruction = metaString(task, "display_instruction") || metaString(task, "task_instruction") || metaString(task, "current_move");
   const instruction = explicitInstruction || contentLines[0] || display.title;
   const procedureLines = !explicitInstruction && contentLines[0] === instruction ? contentLines.slice(1) : contentLines;
-  const detailHeading = metaString(task, "detail_heading") || "How to play this card";
+  const detailHeading = "Steps";
   const facts = operatingFacts(task, display.location);
 
   async function refreshTask() {
@@ -263,12 +263,14 @@ export default function DominionAssignedTaskDetail({ task: initialTask, childTas
         payload: {
           workClass: task.work_class,
           assigneeKey: assignee.key,
-          conditionRail: {
-            label: condition.label,
-            current: condition.points[condition.currentIndex],
-            target: condition.points[condition.targetIndex],
-            targetReached: outcome === "done",
-          },
+          ...(condition.meaningful ? {
+            conditionRail: {
+              label: condition.label,
+              current: condition.points[condition.currentIndex],
+              target: condition.points[condition.targetIndex],
+              targetReached: outcome === "done",
+            },
+          } : {}),
         },
       });
       if (outcome === "done" || outcome === "not_relevant" || outcome === "changed_plan") {
@@ -385,10 +387,6 @@ export default function DominionAssignedTaskDetail({ task: initialTask, childTas
             <TaskChildChecklist childTasks={children} onChange={async () => setChildren((current) => [...current])} />
 
             <footer className="atlas-task-result-footer">
-              <div className="atlas-task-result-heading">
-                <small>Result</small>
-              </div>
-
               <div className="atlas-task-result-actions atlas-task-result-actions-simple">
                 <button type="button" className="done" disabled={Boolean(saving)} onClick={() => void transition("done")}>
                   {saving === "done" ? "Finishing" : "Done"}
