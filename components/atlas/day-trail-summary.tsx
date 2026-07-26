@@ -24,9 +24,8 @@ export default function DayTrailSummary({ completed, total, blocked, loading = f
       : "No work planned";
 
   return (
-    <section className={styles.card} aria-label="Today’s Trail">
+    <section className={styles.card} aria-label="Day progress">
       <header>
-        <span>Today’s Trail</span>
         <strong>{valueText}</strong>
       </header>
 
