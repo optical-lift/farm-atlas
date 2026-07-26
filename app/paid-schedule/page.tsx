@@ -19,13 +19,13 @@ const scheduleDates = [
   { date: "July 27", label: "Lease due", status: "Monday" },
   { date: "July 29", label: "Last workday before travel", status: "Scheduled" },
   { date: "July 30–August 3", label: "Away from farm", status: "Unavailable" },
+  { date: "July 31", label: "Payment", status: "Scheduled" },
   { date: "August 4", label: "Returns to farm", status: "Scheduled" },
-  { date: "August 31", label: "Payment", status: "Scheduled" },
 ];
 
 const paymentDates = [
   { date: "July 17, 2026", status: "Paid", kind: "First payment" },
-  { date: "August 31, 2026", status: "Scheduled", kind: "Next payment" },
+  { date: "July 31, 2026", status: "Scheduled", kind: "Next payment" },
 ];
 
 export default async function PaidSchedulePage() {
