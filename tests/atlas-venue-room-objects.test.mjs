@@ -68,16 +68,18 @@ test("room state stays synchronized as linked tasks change", () => {
   assert.match(roomInspection, /object\.state_metadata/);
 });
 
-test("Today becomes room-first whenever the viewer has room work", () => {
+test("Today becomes zone-first whenever the viewer has room work", () => {
   const day = read("app/day/page.tsx");
   const areas = read("lib/atlas/operational-areas.ts");
 
   assert.match(day, /atlasTasksHaveRooms\(taskCards\)/);
   assert.match(day, /setViewMode\("zone"\)/);
-  assert.match(day, />Area<\/button>/);
-  assert.match(day, /AreaTaskGroup/);
-  assert.match(day, /atlasTaskWorkCategoryLabel/);
-  assert.match(day, /data-operational-area/);
+  assert.match(day, />Zone<\/button>/);
+  assert.match(day, /function collectionZone/);
+  assert.match(day, /task\.zone_label/);
+  assert.match(day, /const zones = useMemo/);
+  assert.doesNotMatch(day, /AreaTaskGroup/);
+  assert.doesNotMatch(day, /data-operational-area/);
 
   assert.match(areas, /object\.object_type === "room"/);
   assert.match(areas, /ATLAS_VENUE_ROOM_ORDER/);
