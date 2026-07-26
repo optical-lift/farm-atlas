@@ -138,7 +138,7 @@ export default function AtlasChildrenPage() {
 
   const parentTasks = useMemo(() => tasks.filter((task) => !isChildTask(task)), [tasks]);
   const openParents = useMemo(() => parentTasks.filter(isOpenTask), [parentTasks]);
-  const todayTasks = useMemo(() => openParents.filter((task) => task.due_date === today || !task.due_date), [openParents, today]);
+  const todayTasks = useMemo(() => openParents.filter((task) => !task.due_date || task.due_date <= today), [openParents, today]);
   const weekTasks = useMemo(() => openParents.filter((task) => task.due_date && task.due_date > today && task.due_date <= weekEnd), [openParents, today, weekEnd]);
   const doneTasks = useMemo(() => parentTasks.filter(isDoneTask).slice(0, 8), [parentTasks]);
   const recurringCount = openParents.filter((task) => atlasMetadataValue(task, "recreate_on_done") === true || atlasMetadataValue(task, "recreate_on_done") === "true").length;
