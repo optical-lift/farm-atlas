@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "for f in tests/*.test.mjs; do node --test --test-reporter=dot \"$f\" >/tmp/atlas-test.out 2>&1 || { echo \"FAILED $f\"; cat /tmp/atlas-test.out; exit 1; }; done"
+    "test": "for f in tests/*.test.mjs; do node --test --test-reporter=dot \"$f\" >/tmp/atlas-test.out 2>&1 || { echo \"$f\" >/tmp/atlas-test-name; echo \"FAILED $f\"; cat /tmp/atlas-test.out; exit 1; }; done"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
