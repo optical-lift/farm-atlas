@@ -12,7 +12,6 @@ import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
 import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
 import AnnaPaidScheduleHomePatch from "./AnnaPaidScheduleHomePatch";
 import TendingTaskContext from "@/components/atlas/tending-task-context";
-import TaskFocusTendingTrail from "@/components/atlas/task-focus-tending-trail";
 import "./globals.css";
 import "./home.css";
 import "./zones.css";
@@ -41,6 +40,7 @@ import "./tending-calm.css";
 import "./tending-next-bite.css";
 import "./tending-compact-track.css";
 import "./task-tending-trail.css";
+import "./task-dominion-card.css";
 import "./task-unfinished.css";
 import "./field-log-documentation.css";
 import "./mobile-overflow-guard.css";
@@ -79,7 +79,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AttachedTaskHistoryPatch />
         <AnnaPaidScheduleHomePatch />
         <TendingTaskContext />
-        <TaskFocusTendingTrail />
+        {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}
       </body>
     </html>
