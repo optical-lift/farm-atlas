@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { usePathname, useSearchParams } from "next/navigation";
 
 function localTodayIso() {
   const now = new Date();
@@ -19,29 +18,27 @@ function shiftIsoDate(dateIso: string, days: number) {
 }
 
 export default function DayAdjacentNavigation() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [target, setTarget] = useState<HTMLElement | null>(null);
-
-  const dateIso = searchParams.get("date") || localTodayIso();
-  const route = searchParams.get("route");
-  const previousDate = useMemo(() => shiftIsoDate(dateIso, -1), [dateIso]);
-  const nextDate = useMemo(() => shiftIsoDate(dateIso, 1), [dateIso]);
+  const [dateIso, setDateIso] = useState(localTodayIso());
 
   useEffect(() => {
-    if (pathname !== "/day" || route) {
-      setTarget(null);
-      return;
-    }
+    if (window.location.pathname !== "/day") return;
 
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("route")) return;
+
+    setDateIso(params.get("date") || localTodayIso());
     const frame = window.requestAnimationFrame(() => {
       setTarget(document.querySelector<HTMLElement>(".atlas-day-browse"));
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [pathname, route, dateIso]);
+  }, []);
 
-  if (pathname !== "/day" || route || !target) return null;
+  if (!target) return null;
+
+  const previousDate = shiftIsoDate(dateIso, -1);
+  const nextDate = shiftIsoDate(dateIso, 1);
 
   return createPortal(
     <nav className="atlas-day-adjacent-nav" aria-label="Browse adjacent days">
