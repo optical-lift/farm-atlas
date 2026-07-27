@@ -46,6 +46,29 @@ export type AtlasUniversalFarmScope = {
   lastMovementAt: string | null;
 };
 
+export type AtlasUniversalProjectTask = {
+  taskId: string;
+  projectId: string;
+  projectKey: string;
+  projectTitle: string;
+  farmId: string | null;
+  farmKey: string | null;
+  farmName: string | null;
+  workstream: string;
+  title: string;
+  status: string;
+  priority: string;
+  dueDate: string | null;
+  note: string | null;
+  blockerText: string | null;
+  assignedToViewer: boolean;
+  createdByViewer: boolean;
+  originKind: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+};
+
 export type AtlasUniversalMoveState =
   | "ready"
   | "moving"
@@ -58,7 +81,7 @@ export type AtlasUniversalMoveState =
 
 export type AtlasUniversalMove = {
   key: string;
-  kind: "farm_task" | "collection" | "project" | "attention";
+  kind: "farm_task" | "collection" | "project_task" | "project" | "attention";
   category: string;
   title: string;
   scopeLabel: string;
@@ -74,7 +97,7 @@ export type AtlasUniversalMove = {
 
 export type AtlasUniversalDatedItem = {
   key: string;
-  kind: "farm_task" | "project" | "attention";
+  kind: "farm_task" | "project_task" | "project" | "attention";
   title: string;
   scopeLabel: string;
   date: string;
@@ -98,6 +121,7 @@ export type AtlasUniversalHomeModel = {
   farms: AtlasUniversalFarmScope[];
   organizationHome: AtlasPortfolioHome | null;
   projects: AtlasPortfolioProject[];
+  projectTasks: AtlasUniversalProjectTask[];
   attention: AtlasPortfolioAttention[];
   moves: AtlasUniversalMove[];
   datedItems: AtlasUniversalDatedItem[];
@@ -114,6 +138,7 @@ type UniversalHomeRpc = {
   };
   organizationHome?: AtlasPortfolioHome | null;
   farms?: AtlasUniversalFarmScope[];
+  projectTasks?: AtlasUniversalProjectTask[];
   window?: {
     doneDate?: string;
     dueThrough?: string;
@@ -161,6 +186,13 @@ function projectState(project: AtlasPortfolioProject): AtlasUniversalMoveState {
 
 function attentionState(attention: AtlasPortfolioAttention): AtlasUniversalMoveState {
   return attention.kind === "blocked" ? "blocked" : "attention";
+}
+
+function projectTaskState(task: AtlasUniversalProjectTask, today: string): AtlasUniversalMoveState {
+  if (task.status === "blocked") return "blocked";
+  if (task.status === "done") return "complete";
+  if (task.dueDate && task.dueDate < today) return "attention";
+  return "ready";
 }
 
 function isChildTask(card: AtlasTaskCard) {
@@ -237,6 +269,45 @@ function farmTaskMove(
   };
 }
 
+function projectTaskMove(
+  task: AtlasUniversalProjectTask,
+  project: AtlasPortfolioProject | undefined,
+  today: string,
+): AtlasUniversalMove {
+  const state = projectTaskState(task, today);
+  const overdue = Boolean(task.dueDate && task.dueDate < today);
+  const priority = state === "blocked"
+    ? 0
+    : overdue
+      ? 1
+      : task.dueDate === today
+        ? 2
+        : task.dueDate
+          ? 5
+          : 3;
+  const detail = task.blockerText
+    || task.note
+    || project?.currentMilestone
+    || project?.outcome
+    || "Open this project task.";
+
+  return {
+    key: `project-task:${task.projectId}:${task.taskId}`,
+    kind: "project_task",
+    category: overdue ? "Overdue" : titleCase(task.workstream || "Project work"),
+    title: task.title,
+    scopeLabel: task.farmName || "Feast Guild",
+    meta: `${task.projectTitle}${task.dueDate ? ` · due ${task.dueDate}` : " · current work"}`,
+    detail,
+    href: `/project/${encodeURIComponent(task.projectId)}`,
+    date: task.dueDate,
+    state,
+    farmId: task.farmId,
+    projectId: task.projectId,
+    priority,
+  };
+}
+
 function projectAttentionMove(attention: AtlasPortfolioAttention, today: string): AtlasUniversalMove {
   const overdue = Boolean(attention.dueDate && attention.dueDate < today);
   return {
@@ -252,7 +323,7 @@ function projectAttentionMove(attention: AtlasPortfolioAttention, today: string)
     state: attentionState(attention),
     farmId: null,
     projectId: attention.projectId,
-    priority: attention.kind === "blocked" || overdue ? 0 : 3,
+    priority: attention.kind === "blocked" || overdue ? 0 : 4,
   };
 }
 
@@ -289,6 +360,7 @@ function collectProjects(home: AtlasPortfolioHome | null) {
 function buildMoves(
   farms: AtlasUniversalFarmScope[],
   projects: AtlasPortfolioProject[],
+  projectTasks: AtlasUniversalProjectTask[],
   attention: AtlasPortfolioAttention[],
   today: string,
 ) {
@@ -332,10 +404,20 @@ function buildMoves(
     }
   });
 
+  const projectsById = new Map(projects.map((project) => [project.projectId, project]));
+  const activeProjectTaskIds = new Set<string>();
+  projectTasks
+    .filter((task) => task.status === "open" || task.status === "blocked")
+    .forEach((task) => {
+      activeProjectTaskIds.add(task.projectId);
+      candidates.push(projectTaskMove(task, projectsById.get(task.projectId), today));
+    });
+
   attention.forEach((item) => candidates.push(projectAttentionMove(item, today)));
   const projectsWithAttention = new Set(attention.map((item) => item.projectId));
   projects
     .filter((project) => !projectsWithAttention.has(project.projectId))
+    .filter((project) => !activeProjectTaskIds.has(project.projectId))
     .forEach((project) => candidates.push(projectMove(project)));
 
   const seen = new Set<string>();
@@ -354,7 +436,9 @@ function buildMoves(
 function buildDatedItems(
   farms: AtlasUniversalFarmScope[],
   projects: AtlasPortfolioProject[],
+  projectTasks: AtlasUniversalProjectTask[],
   attention: AtlasPortfolioAttention[],
+  today: string,
 ) {
   const items: AtlasUniversalDatedItem[] = [];
 
@@ -375,6 +459,19 @@ function buildDatedItems(
       });
   });
 
+  projectTasks.forEach((task) => {
+    if (!task.dueDate) return;
+    items.push({
+      key: `project-task:${task.projectId}:${task.taskId}:${task.dueDate}`,
+      kind: "project_task",
+      title: task.title,
+      scopeLabel: task.farmName || "Feast Guild",
+      date: task.dueDate,
+      href: `/project/${encodeURIComponent(task.projectId)}`,
+      state: projectTaskState(task, today),
+    });
+  });
+
   attention.forEach((item) => {
     if (!item.dueDate) return;
     items.push({
@@ -388,8 +485,11 @@ function buildDatedItems(
     });
   });
 
+  const projectsWithDatedTasks = new Set(
+    projectTasks.filter((task) => Boolean(task.dueDate)).map((task) => task.projectId),
+  );
   projects.forEach((project) => {
-    if (!project.targetDate) return;
+    if (!project.targetDate || projectsWithDatedTasks.has(project.projectId)) return;
     items.push({
       key: `project:${project.projectId}:${project.targetDate}`,
       kind: "project",
@@ -404,10 +504,11 @@ function buildDatedItems(
   return items.sort((left, right) => left.date.localeCompare(right.date) || left.title.localeCompare(right.title));
 }
 
-function countVisibleFarms(farms: AtlasUniversalFarmScope[], organizationHome: AtlasPortfolioHome | null) {
-  const ids = new Set(farms.map((farm) => farm.farmId));
-  organizationHome?.farms.forEach((farm) => ids.add(farm.farmId));
-  return ids.size;
+function visibleFarmMap(farms: AtlasUniversalFarmScope[], organizationHome: AtlasPortfolioHome | null) {
+  const visible = new Map<string, string>();
+  farms.forEach((farm) => visible.set(farm.farmId, farm.farmName));
+  organizationHome?.farms.forEach((farm) => visible.set(farm.farmId, farm.farmName));
+  return visible;
 }
 
 export async function readAtlasUniversalHome(
@@ -431,18 +532,20 @@ export async function readAtlasUniversalHome(
   const raw = data as UniversalHomeRpc;
   const farms = Array.isArray(raw.farms) ? raw.farms : [];
   const organizationHome = raw.organizationHome ?? null;
+  const projectTasks = Array.isArray(raw.projectTasks) ? raw.projectTasks : [];
   const activeFarmId = raw.viewer?.activeFarmId ?? options.preferredFarmId ?? viewer.activeFarmId;
   const activeFarm = farms.find((farm) => farm.farmId === activeFarmId) ?? farms[0] ?? null;
   const projects = collectProjects(organizationHome);
   const attention = organizationHome?.attention ?? [];
-  const moves = buildMoves(farms, projects, attention, doneDate);
-  const datedItems = buildDatedItems(farms, projects, attention);
+  const moves = buildMoves(farms, projects, projectTasks, attention, doneDate);
+  const datedItems = buildDatedItems(farms, projects, projectTasks, attention, doneDate);
   const farmAttention = farms.reduce(
     (sum, farm) => sum + farm.blockedTaskCount + farm.overdueTaskCount,
     0,
   );
+  const visibleFarms = visibleFarmMap(farms, organizationHome);
   const metrics: AtlasUniversalHomeMetrics = {
-    farmCount: countVisibleFarms(farms, organizationHome),
+    farmCount: visibleFarms.size,
     projectCount: projects.length,
     openWorkCount: farms.reduce((sum, farm) => sum + farm.openTaskCount, 0)
       + projects.reduce((sum, project) => sum + project.openTaskCount, 0),
@@ -450,11 +553,12 @@ export async function readAtlasUniversalHome(
     movingCount: projects.filter((project) => projectState(project) === "moving").length
       + farms.filter((farm) => farm.dueTodayCount > 0 || farm.openTaskCount > 0).length,
   };
-  const title = organizationHome && (metrics.projectCount > 0 || metrics.farmCount > 1)
-    ? organizationHome.organization.name
-    : activeFarm?.farmName
-      || organizationHome?.organization.name
-      || "Atlas";
+  const singleVisibleFarmName = visibleFarms.size === 1 ? [...visibleFarms.values()][0] : null;
+  const title = singleVisibleFarmName
+    || (visibleFarms.size > 1 ? organizationHome?.organization.name : null)
+    || activeFarm?.farmName
+    || organizationHome?.organization.name
+    || "Atlas";
 
   return {
     title,
@@ -464,6 +568,7 @@ export async function readAtlasUniversalHome(
     farms,
     organizationHome,
     projects,
+    projectTasks,
     attention,
     moves,
     datedItems,
