@@ -18,10 +18,37 @@ type Props = {
   instruction: string;
 };
 
+type ExternalTaskLink = {
+  url: string;
+  label: string;
+};
+
 function trailObjectKey(task: AtlasTaskCard) {
   return task.objects.find((object) => object.object_type === "bed")?.object_key
     ?? task.objects[0]?.object_key
     ?? null;
+}
+
+function externalTaskLink(task: AtlasTaskCard): ExternalTaskLink | null {
+  const value = task.metadata?.external_url ?? task.metadata?.video_url;
+  if (typeof value !== "string" || !value.trim()) return null;
+
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+
+    const hostname = url.hostname.replace(/^www\./, "").toLowerCase();
+    const savedLabel = task.metadata?.link_label;
+    const label = hostname === "instagram.com" || hostname.endsWith(".instagram.com")
+      ? "Open in Instagram"
+      : typeof savedLabel === "string" && savedLabel.trim()
+        ? savedLabel.trim()
+        : "Open link";
+
+    return { url: url.toString(), label };
+  } catch {
+    return null;
+  }
 }
 
 export default function TaskDominionTrail({ task, instruction }: Props) {
@@ -51,6 +78,7 @@ export default function TaskDominionTrail({ task, instruction }: Props) {
 
   const model = useMemo(() => taskDominionModel(task, track, instruction), [instruction, task, track]);
   const condition = useMemo(() => taskConditionRailModel(task), [task]);
+  const externalLink = useMemo(() => externalTaskLink(task), [task]);
 
   return (
     <section className="atlas-task-dominion" aria-label={`${model.placeLabel} task`}>
@@ -118,12 +146,13 @@ export default function TaskDominionTrail({ task, instruction }: Props) {
         </section>
       ) : null}
 
-      {model.facts.length || track ? (
+      {model.facts.length || track || externalLink ? (
         <footer className="atlas-task-dominion-facts">
           {model.facts.map((fact) => (
             <span key={`${fact.label}:${fact.value}`}><small>{fact.label}</small>{fact.value}</span>
           ))}
           {track ? <Link href={tendingBedHref(track)}>Open bed board</Link> : null}
+          {externalLink ? <a href={externalLink.url} rel="external">{externalLink.label}</a> : null}
         </footer>
       ) : null}
     </section>
