@@ -59,6 +59,7 @@ import "./day-route-v1.css";
 import "./day-route-v1-refine.css";
 import "./day-timeline-completion-echo.css";
 import "./week-route-v1.css";
+import "./universal-home-familiar.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
