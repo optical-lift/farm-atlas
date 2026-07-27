@@ -1,0 +1,39 @@
+/*
+  Atlas uses one shell. Mobile browsers are edge-to-edge; the rounded phone frame is
+  reserved for wider desktop presentation. This is viewport behavior, never account behavior.
+*/
+
+[data-project-task-selected="true"] {
+  scroll-margin-block: 96px;
+  outline: 3px solid rgba(139, 145, 194, 0.24);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .atlas-phone-shell,
+  .atlas-app-shell,
+  .atlas-home-shell,
+  .atlas-task-page-shell,
+  .atlas-overview-page-shell {
+    min-height: 100svh !important;
+    padding: 0 !important;
+  }
+
+  .atlas-phone,
+  .atlas-app-frame,
+  .atlas-dashboard-phone,
+  .atlas-task-page-phone,
+  .atlas-overview-page-phone {
+    min-height: 100svh !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .atlas-phone-top,
+  .atlas-topbar,
+  .atlas-dashboard-top {
+    border-radius: 0 !important;
+  }
+}
