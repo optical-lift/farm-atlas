@@ -125,31 +125,37 @@ export default function ProjectTaskTools({
       </section>
 
       {canCreateTasks ? (
-        <section className={styles.createSection} aria-labelledby="create-project-task-title">
-          <div className={styles.sectionHeading}>
-            <div>
-              <span>Originate work</span>
-              <h2 id="create-project-task-title">Add work for myself</h2>
+        <details className={styles.createDetails}>
+          <summary>
+            <span>+</span>
+            <strong>Add work for myself</strong>
+          </summary>
+          <section className={styles.createSection} aria-labelledby="create-project-task-title">
+            <div className={styles.sectionHeading}>
+              <div>
+                <span>Originate work</span>
+                <h2 id="create-project-task-title">New project task</h2>
+              </div>
             </div>
-          </div>
-          <form onSubmit={createTask} className={styles.taskForm}>
-            <label>
-              <span>Task</span>
-              <input name="title" required placeholder="What needs to move next?" />
-            </label>
-            <label>
-              <span>Due date</span>
-              <input name="dueDate" type="date" />
-            </label>
-            <label className={styles.noteField}>
-              <span>Working note</span>
-              <textarea name="note" rows={3} placeholder="Optional context or intended result" />
-            </label>
-            <button type="submit" disabled={saving}>
-              {saving ? "Adding…" : "Add to this project"}
-            </button>
-          </form>
-        </section>
+            <form onSubmit={createTask} className={styles.taskForm}>
+              <label>
+                <span>Task</span>
+                <input name="title" required placeholder="What needs to move next?" />
+              </label>
+              <label>
+                <span>Due date</span>
+                <input name="dueDate" type="date" />
+              </label>
+              <label className={styles.noteField}>
+                <span>Working note</span>
+                <textarea name="note" rows={3} placeholder="Optional context or intended result" />
+              </label>
+              <button type="submit" disabled={saving}>
+                {saving ? "Adding…" : "Add to this project"}
+              </button>
+            </form>
+          </section>
+        </details>
       ) : null}
 
       {finishedTasks.length ? (
