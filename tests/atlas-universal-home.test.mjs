@@ -69,6 +69,9 @@ test("the universal dashboard keeps the familiar Atlas home geometry", () => {
   assert.match(familiarCss, /#work-board/);
   assert.match(familiarCss, /#scope-board/);
   assert.match(familiarCss, /grid-auto-rows:\s*96px/);
+  assert.match(familiarCss, /data-atlas-has-organization-scope="false"\][\s\S]*#scope-board/);
+  assert.match(familiarCss, /atlas-home-closeout-footer-link\[href="#scope-board"\]/);
+  assert.match(familiarCss, /grid-template-columns:\s*minmax\(0, 1fr\)/);
 });
 
 test("the prepared home reader combines farm and organization scope without weakening either", () => {
