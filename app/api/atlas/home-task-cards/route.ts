@@ -34,7 +34,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "home-membership-v2",
+      "X-Atlas-Read-Path": "home-membership-v2-grow-room-doorway",
     },
   });
 }
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
   const rangeEnd = requestedDueThrough ?? addDaysIso(today, 35);
   const doneDate = requestedDoneDate ?? today;
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("home_task_cards_v1", {
+  const { data, error } = await supabase.rpc("home_task_cards_v2", {
     p_farm_id: authorized.access.membership.farmId,
     p_worker_key: workerKey,
     p_due_through: rangeEnd,
