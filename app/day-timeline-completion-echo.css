@@ -1,0 +1,165 @@
+/* Day timeline completion interaction.
+   The visible dot stays small; the button around it is a full mobile tap target. */
+
+.atlas-day-route-spine > .atlas-day-task-entry {
+  position: relative;
+  min-width: 0;
+}
+
+.atlas-day-route-spine > .atlas-day-task-entry > .atlas-day-task-card {
+  position: relative;
+  min-height: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--atlas-text) !important;
+  padding: 8px 4px 18px 10px !important;
+  display: grid !important;
+  gap: 3px !important;
+  overflow: visible !important;
+  text-decoration: none !important;
+}
+
+.atlas-day-task-node,
+.atlas-day-completion-echo > button {
+  position: absolute;
+  z-index: 5;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.atlas-day-route-spine > .atlas-day-task-entry > .atlas-day-task-node {
+  top: 1px;
+  left: -34px;
+}
+
+.atlas-day-task-node > span,
+.atlas-day-completion-echo > button > span {
+  display: block;
+  width: 11px;
+  height: 11px;
+  border: 2px solid rgba(139, 145, 194, 0.72);
+  border-radius: 999px;
+  background: var(--atlas-card);
+  box-shadow: 0 0 0 3px var(--atlas-card);
+  transition: opacity 120ms ease-out, transform 120ms ease-out, background 120ms ease-out;
+}
+
+.atlas-day-task-entry.atlas-day-route-current > .atlas-day-task-node > span {
+  width: 13px;
+  height: 13px;
+  border-width: 3px;
+  border-color: var(--atlas-purple-dark);
+}
+
+.atlas-day-task-entry.atlas-day-route-care > .atlas-day-task-node > span {
+  width: 7px;
+  height: 7px;
+  border-width: 1px;
+  background: rgba(139, 145, 194, 0.26);
+}
+
+.atlas-day-task-entry.atlas-day-route-blocked > .atlas-day-task-node > span {
+  border-radius: 2px;
+  border-style: dashed;
+}
+
+.atlas-day-task-node:focus-visible,
+.atlas-day-completion-echo > button:focus-visible {
+  outline: 2px solid var(--atlas-purple-dark);
+  outline-offset: 1px;
+}
+
+.atlas-day-task-node:active > span,
+.atlas-day-completion-echo > button:active > span {
+  transform: scale(1.2);
+}
+
+.atlas-day-task-node.is-saving > span,
+.atlas-day-completion-echo > button.is-saving > span {
+  opacity: 0.38;
+}
+
+/* A completed task keeps only its place in the day's ordered route. */
+.atlas-day-completion-echo {
+  position: relative;
+  min-height: 20px;
+}
+
+.atlas-day-completion-echo > button {
+  top: -8px;
+  left: -34px;
+}
+
+.atlas-day-completion-echo > button > span,
+.atlas-day-task-node.is-complete > span {
+  width: 6px;
+  height: 6px;
+  border: 0;
+  background: rgba(139, 145, 194, 0.28);
+  box-shadow: 0 0 0 3px var(--atlas-card);
+}
+
+/* Completed drawer rows use the same inverse action without pretending the
+   entire row is a checkbox. */
+.atlas-day-complete-body > .atlas-day-complete-entry {
+  position: relative;
+  min-width: 0;
+  border-top: 1px solid rgba(139, 145, 194, 0.11);
+  padding-left: 27px;
+}
+
+.atlas-day-complete-body > .atlas-day-complete-entry:first-child {
+  border-top: 0;
+}
+
+.atlas-day-complete-body > .atlas-day-complete-entry > .atlas-day-task-node {
+  top: 7px;
+  left: -5px;
+}
+
+.atlas-day-complete-body > .atlas-day-complete-entry > .atlas-day-task-card {
+  min-width: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 11px 2px !important;
+  gap: 3px !important;
+}
+
+.atlas-day-complete-body > .atlas-day-complete-entry > .atlas-day-task-card > strong {
+  font-size: 15px !important;
+  line-height: 1.04 !important;
+  letter-spacing: -0.035em !important;
+}
+
+.atlas-task-result-footer {
+  scroll-margin-top: 82px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .atlas-day-completion-echo {
+    animation: atlas-completion-echo-in 180ms ease-out;
+  }
+}
+
+@keyframes atlas-completion-echo-in {
+  from {
+    min-height: 36px;
+    opacity: 0;
+  }
+  to {
+    min-height: 20px;
+    opacity: 1;
+  }
+}
