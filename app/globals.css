@@ -17,6 +17,7 @@
   --atlas-mauve: #d5c8d4;
   --atlas-blue-soft: #bcc4dc;
   --atlas-butter: #eee9b8;
+  --atlas-shell-max: 430px;
 }
 
 * {
@@ -57,14 +58,14 @@ button {
 }
 
 .atlas-phone {
-  width: min(100%, 430px);
+  width: min(100%, var(--atlas-shell-max, 430px));
   min-height: calc(100svh - 24px);
   margin: 0 auto;
   overflow: hidden;
   border: 1px solid rgba(215, 204, 189, 0.9);
-  border-radius: 34px;
+  border-radius: var(--atlas-radius-shell, 34px);
   background: rgba(251, 250, 244, 0.96);
-  box-shadow: 0 22px 70px rgba(54, 45, 32, 0.11);
+  box-shadow: var(--atlas-shadow-shell, 0 22px 70px rgba(54, 45, 32, 0.11));
 }
 
 .atlas-phone-top {
@@ -74,7 +75,7 @@ button {
   height: 64px;
   padding: 12px 14px;
   border-bottom: 1px solid rgba(215, 204, 189, 0.78);
-  border-radius: 34px 34px 0 0;
+  border-radius: var(--atlas-radius-shell, 34px) var(--atlas-radius-shell, 34px) 0 0;
   background: rgba(251, 250, 244, 0.98);
   backdrop-filter: blur(12px);
 }
