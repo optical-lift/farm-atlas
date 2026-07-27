@@ -44,6 +44,14 @@ type UniversalFarmCard = {
   projectCount: number;
 };
 
+type OverviewRow = {
+  key: string;
+  label: string;
+  sublabel: string;
+  count: number;
+  href: string;
+};
+
 function dateFromIso(value: string) {
   return new Date(`${value}T12:00:00`);
 }
@@ -53,8 +61,47 @@ function isoFromDate(value: Date) {
   return local.toISOString().slice(0, 10);
 }
 
+function addDaysIso(value: string, days: number) {
+  const date = dateFromIso(value);
+  date.setDate(date.getDate() + days);
+  return isoFromDate(date);
+}
+
 function prettyDate(value: string) {
   return dateFromIso(value).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function dayShortLabel(value: string) {
+  return dateFromIso(value).toLocaleDateString("en-US", { weekday: "short" });
+}
+
+function compactDateRange(startIso: string, endIso: string) {
+  const start = dateFromIso(startIso);
+  const end = dateFromIso(endIso);
+  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+  const startLabel = start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const endLabel = sameMonth
+    ? end.toLocaleDateString("en-US", { day: "numeric" })
+    : end.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `${startLabel}–${endLabel}`;
+}
+
+function calendarWeekStartFor(value: string) {
+  const start = dateFromIso(value);
+  start.setDate(start.getDate() - start.getDay());
+  return start;
+}
+
+function countDatedItems(items: AtlasUniversalDatedItem[], startIso: string, endIso = startIso) {
+  return items.filter((item) => item.date >= startIso && item.date <= endIso).length;
+}
+
+function monthProgress(value: string) {
+  const date = dateFromIso(value);
+  return {
+    day: date.getDate(),
+    days: new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate(),
+  };
 }
 
 function titleCase(value: string) {
@@ -91,49 +138,6 @@ function farmState(farm: UniversalFarmCard): AtlasUniversalMoveState {
   return "quiet";
 }
 
-function overviewWindow(items: AtlasUniversalDatedItem[], todayIso: string) {
-  const today = dateFromIso(todayIso);
-  const weekEnd = new Date(today);
-  weekEnd.setDate(weekEnd.getDate() + 7);
-  const weekEndIso = isoFromDate(weekEnd);
-  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 12);
-  const monthEndIso = isoFromDate(monthEnd);
-
-  return {
-    week: items.filter((item) => item.date >= todayIso && item.date <= weekEndIso),
-    month: items.filter((item) => item.date >= todayIso && item.date <= monthEndIso),
-    monthLabel: today.toLocaleDateString("en-US", { month: "long" }),
-  };
-}
-
-function DateOverviewCard({
-  title,
-  summary,
-  items,
-}: {
-  title: string;
-  summary: string;
-  items: AtlasUniversalDatedItem[];
-}) {
-  return (
-    <AtlasCard className={styles.overviewCard}>
-      <div className={styles.overviewHeading}>
-        <strong>{title}</strong>
-        <span>{summary}</span>
-      </div>
-      <div className={styles.overviewList}>
-        {items.length ? items.slice(0, 4).map((item) => (
-          <Link key={item.key} href={item.href}>
-            <b>{item.title}</b>
-            <small>{item.scopeLabel}</small>
-            <em>{prettyDate(item.date)}</em>
-          </Link>
-        )) : <p>No dated items.</p>}
-      </div>
-    </AtlasCard>
-  );
-}
-
 function farmCards(home: AtlasUniversalHomeModel) {
   const cards = new Map<string, UniversalFarmCard>();
   home.organizationHome?.farms.forEach((farm) => {
@@ -168,6 +172,89 @@ function filterHref(farmKey?: string | null, workstream?: string | null) {
   return query ? `/?${query}#scope-board` : "/#scope-board";
 }
 
+function overviewRows(items: AtlasUniversalDatedItem[], todayIso: string) {
+  const dayRows: OverviewRow[] = Array.from({ length: 4 }, (_, index) => {
+    const dateIso = addDaysIso(todayIso, index + 1);
+    return {
+      key: dateIso,
+      label: dayShortLabel(dateIso),
+      sublabel: prettyDate(dateIso),
+      count: countDatedItems(items, dateIso),
+      href: `/day?date=${encodeURIComponent(dateIso)}`,
+    };
+  });
+
+  const weekRows: OverviewRow[] = [];
+  let start = calendarWeekStartFor(todayIso);
+  for (let index = 0; index < 4; index += 1) {
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    const startIso = isoFromDate(start);
+    const endIso = isoFromDate(end);
+    weekRows.push({
+      key: startIso,
+      label: compactDateRange(startIso, endIso),
+      sublabel: "Sun–Sat",
+      count: countDatedItems(items, startIso, endIso),
+      href: `/overview/week?date=${encodeURIComponent(startIso)}&end=${encodeURIComponent(endIso)}`,
+    });
+    start = new Date(end);
+    start.setDate(start.getDate() + 1);
+  }
+
+  const weekEnd = addDaysIso(todayIso, 7);
+  const date = dateFromIso(todayIso);
+  const monthEnd = isoFromDate(new Date(date.getFullYear(), date.getMonth() + 1, 0, 12));
+  return {
+    dayRows,
+    weekRows,
+    weekCount: countDatedItems(items, todayIso, weekEnd),
+    monthCount: countDatedItems(items, todayIso, monthEnd),
+    monthLabel: date.toLocaleDateString("en-US", { month: "long" }),
+    progress: monthProgress(todayIso),
+  };
+}
+
+function UniversalOverviewBoxes({ home }: { home: AtlasUniversalHomeModel }) {
+  const rows = overviewRows(home.datedItems, home.window.doneDate);
+  const dayHrefAvailable = Boolean(home.activeFarm);
+
+  return (
+    <div className="atlas-home-overview-row" aria-label="Week and month overview links">
+      <AtlasCard className="atlas-home-overview-card atlas-home-overview-week">
+        <Link href={dayHrefAvailable ? "/overview/week" : "#work-board"} className="atlas-home-overview-top">
+          <strong>This Week</strong>
+          <span>{rows.weekCount} open</span>
+        </Link>
+        <div className="atlas-home-overview-list">
+          {rows.dayRows.map((row) => (
+            <Link key={row.key} href={dayHrefAvailable ? row.href : "#work-board"} className="atlas-home-overview-row-link">
+              <b>{row.label}</b>
+              <small>{row.sublabel}</small>
+              <em>{row.count}</em>
+            </Link>
+          ))}
+        </div>
+      </AtlasCard>
+      <AtlasCard className="atlas-home-overview-card atlas-home-overview-month">
+        <Link href={dayHrefAvailable ? "/overview/month" : "#work-board"} className="atlas-home-overview-top">
+          <strong>{rows.monthLabel}</strong>
+          <span>{rows.progress.day}/{rows.progress.days} days · {rows.monthCount} open</span>
+        </Link>
+        <div className="atlas-home-overview-list atlas-home-month-week-list">
+          {rows.weekRows.map((row) => (
+            <Link key={row.key} href={dayHrefAvailable ? row.href : "#work-board"} className="atlas-home-overview-row-link">
+              <b>{row.label}</b>
+              <small>{row.sublabel}</small>
+              <em>{row.count}</em>
+            </Link>
+          ))}
+        </div>
+      </AtlasCard>
+    </div>
+  );
+}
+
 export default function AtlasUniversalHome({
   home,
   selectedFarmKey,
@@ -178,7 +265,6 @@ export default function AtlasUniversalHome({
   const [registryZones, setRegistryZones] = useState<AtlasRegistryZone[]>([]);
   const [logSeed, setLogSeed] = useState<AtlasFieldLogSeed | null>(null);
   const todayIso = home.window.doneDate;
-  const overview = useMemo(() => overviewWindow(home.datedItems, todayIso), [home.datedItems, todayIso]);
   const visibleFarms = useMemo(() => farmCards(home), [home]);
   const workstreams = home.organizationHome?.workstreams ?? [];
   const canDocumentActiveFarm = Boolean(
@@ -216,8 +302,7 @@ export default function AtlasUniversalHome({
     setLogSeed({ workKey: "note", zoneKeys: [], objectKeys: [] });
   }
 
-  const headerStatus = weatherLabel
-    || `${home.metrics.movingCount} moving`;
+  const headerStatus = weatherLabel || `${home.metrics.movingCount} moving`;
   const filteredFarms = selectedFarmKey
     ? visibleFarms.filter((farm) => farm.farmKey === selectedFarmKey)
     : visibleFarms;
@@ -227,6 +312,15 @@ export default function AtlasUniversalHome({
     return project.farmKey === selectedFarmKey
       || project.targets.some((target) => target.farmId === filteredFarms[0]?.farmId);
   });
+  const todayDatedCount = home.datedItems.filter((item) => item.date === todayIso).length;
+  const currentMoveLabel = todayDatedCount
+    ? `${todayDatedCount} today`
+    : home.moves.length
+      ? `${home.moves.length} now`
+      : "Complete";
+  const heroHref = home.activeFarm ? `/day?date=${encodeURIComponent(todayIso)}` : "#work-board";
+  const activeSnapshot = home.activeFarm?.snapshot;
+  const showFarmSnapshot = Boolean(activeSnapshot && !home.viewer.hasOrganizationScope);
 
   return (
     <>
@@ -238,27 +332,36 @@ export default function AtlasUniversalHome({
       >
         <AtlasTopBar
           title={home.title}
-          status={<span className={styles.headerStatus}>{headerStatus}</span>}
+          status={<span className="atlas-weather-line">{headerStatus}</span>}
           action={canDocumentActiveFarm ? (
-            <button type="button" className={styles.addButton} aria-label="Document work" onClick={openFieldLog}>+</button>
+            <button type="button" className="atlas-note-plus" aria-label="Document work" onClick={openFieldLog}>+</button>
           ) : home.projects.length ? (
-            <Link href="#work-board" className={styles.addButton} aria-label="Open visible work">+</Link>
+            <Link href="#work-board" className="atlas-note-plus" aria-label="Open visible work">+</Link>
           ) : null}
         />
 
-        <div className={styles.homeBody}>
-          <AtlasCard variant="purple" className={styles.hero} ariaLabelledBy="atlas-today-title">
-            <div className={styles.heroHeader}>
+        <div className="atlas-home-grid">
+          <AtlasCard
+            variant="purple"
+            className="atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller atlas-daily-run-sheet atlas-route-sheet"
+            ariaLabelledBy="atlas-today-title"
+          >
+            <Link href={heroHref} className="atlas-task-controller-head atlas-task-controller-head-link" aria-label="Open today's work">
               <div>
-                <span>Today</span>
-                <strong id="atlas-today-title">{prettyDate(todayIso)}</strong>
+                <span className="atlas-task-kicker">Today</span>
+                <em className="atlas-season-label" id="atlas-today-title">{prettyDate(todayIso)}</em>
               </div>
-              <em>{home.metrics.openWorkCount} open</em>
-            </div>
+              <span className="atlas-task-date">{currentMoveLabel}</span>
+            </Link>
             {home.moves.length ? (
-              <div className={styles.heroGrid}>
+              <div className="atlas-run-sheet-grid atlas-route-sheet-grid" data-universal-move-count={home.moves.length}>
                 {home.moves.map((move) => (
-                  <Link key={move.key} href={move.href} className={styles.heroCard} data-atlas-state={move.state}>
+                  <Link
+                    key={move.key}
+                    href={move.href}
+                    className="atlas-run-sheet-box atlas-route-sheet-box atlas-task-forward-box"
+                    data-atlas-state={move.state}
+                  >
                     <small>{move.category}</small>
                     <strong>{move.title}</strong>
                     <span>{move.scopeLabel} · {move.meta}</span>
@@ -267,32 +370,40 @@ export default function AtlasUniversalHome({
                 ))}
               </div>
             ) : (
-              <div className={styles.heroEmpty}>
+              <Link href={heroHref} className="atlas-run-sheet-empty">
                 <strong>No active move is waiting.</strong>
-                <span>Open the scope board below to inspect farms and projects.</span>
-              </div>
+                <em>Open the scope board below to inspect farms and projects.</em>
+              </Link>
             )}
           </AtlasCard>
 
-          <div className={styles.overviewPair} aria-label="Atlas date windows">
-            <DateOverviewCard title="This Week" summary={`${overview.week.length} dated`} items={overview.week} />
-            <DateOverviewCard title={overview.monthLabel} summary={`${overview.month.length} dated`} items={overview.month} />
-          </div>
+          <UniversalOverviewBoxes home={home} />
 
-          <AtlasMetricStrip href="#scope-board" ariaLabel="Open Atlas scope board">
-            <span><b>{home.metrics.farmCount}</b> farms</span>
-            <span><b>{home.metrics.projectCount}</b> projects</span>
-            <span><b>{home.metrics.openWorkCount}</b> open</span>
-            <span><b>{home.metrics.attentionCount}</b> attention</span>
-          </AtlasMetricStrip>
+          {showFarmSnapshot && activeSnapshot ? (
+            <AtlasMetricStrip href="/zones" className="atlas-farm-snapshot-bar" ariaLabel="Open farm snapshot">
+              <span><b>{activeSnapshot.growingBeds}</b> beds</span>
+              <span><b>{activeSnapshot.activeSqft.toLocaleString()}</b> sq ft</span>
+              <span><b>{activeSnapshot.sowingsLogged}</b> sowings</span>
+              <span><b>{activeSnapshot.stemsLogged}</b> stems</span>
+            </AtlasMetricStrip>
+          ) : (
+            <AtlasMetricStrip href="#scope-board" className="atlas-farm-snapshot-bar" ariaLabel="Open Atlas scope board">
+              <span><b>{home.metrics.farmCount}</b> farms</span>
+              <span><b>{home.metrics.projectCount}</b> projects</span>
+              <span><b>{home.metrics.openWorkCount}</b> open</span>
+              <span><b>{home.metrics.attentionCount}</b> attention</span>
+            </AtlasMetricStrip>
+          )}
 
-          <AtlasFooterActions>
-            <Link href="#scope-board"><span>Farms</span><em>{home.metrics.farmCount} visible</em></Link>
-            {home.projects.length ? (
-              <Link href="#work-board"><span>Projects</span><em>{home.metrics.projectCount} active</em></Link>
-            ) : (
-              <Link href="/closeout"><span>Closeout</span><em>Review changes</em></Link>
-            )}
+          <AtlasFooterActions className="atlas-home-footer-row">
+            <Link href="#scope-board" className="atlas-home-closeout-footer-link">
+              <span>Atlas scope</span>
+              <em>{home.metrics.farmCount} farms visible</em>
+            </Link>
+            <Link href={home.projects.length ? "#work-board" : "/closeout"} className="atlas-owner-footer-link">
+              <span>{home.projects.length ? "Work in motion" : "Closeout"}</span>
+              <em>{home.projects.length ? `${home.metrics.projectCount} projects` : "Review changes"}</em>
+            </Link>
           </AtlasFooterActions>
 
           {home.projects.length || home.attention.length ? (
