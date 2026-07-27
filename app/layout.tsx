@@ -11,6 +11,7 @@ import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
 import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
 import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
 import AnnaPaidScheduleHomePatch from "./AnnaPaidScheduleHomePatch";
+import TaskResultAnchorPatch from "./TaskResultAnchorPatch";
 import TendingTaskContext from "@/components/atlas/tending-task-context";
 import "./globals.css";
 import "./home.css";
@@ -55,6 +56,7 @@ import "./attached-task-history.css";
 import "./venue-rooms.css";
 import "./day-route-v1.css";
 import "./day-route-v1-refine.css";
+import "./day-timeline-completion-echo.css";
 import "./week-route-v1.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -80,6 +82,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <SafeBedCropAccordionPatch />
         <AttachedTaskHistoryPatch />
         <AnnaPaidScheduleHomePatch />
+        <TaskResultAnchorPatch />
         <TendingTaskContext />
         {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}

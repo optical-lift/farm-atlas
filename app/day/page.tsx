@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import DayTrailSummary from "@/components/atlas/day-trail-summary";
 import {
@@ -21,6 +21,7 @@ import {
   type AtlasWorkRouteKey,
 } from "@/lib/atlas/task-display";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 import { atlasWorkOrderLabel, atlasWorkOrderSortValue } from "@/lib/atlas/work-order";
 import {
   atlasBuildGerminationCollectionSummary,
@@ -76,6 +77,10 @@ function meta(task: AtlasTaskCard, key: string) {
   return task.metadata?.[key];
 }
 
+function truthy(value: unknown) {
+  return value === true || value === "true" || value === "yes" || value === "1" || value === 1;
+}
+
 function isChildTask(task: AtlasTaskCard) {
   return Boolean(task.parent_task_id) || meta(task, "is_child_task") === true || meta(task, "is_child_task") === "true";
 }
@@ -92,6 +97,7 @@ function isDashboardWork(task: AtlasTaskCard) {
 }
 
 function isDoneTask(task: AtlasTaskCard) {
+  if (task.task_outcomes?.[0]?.outcome === "reopened") return false;
   return task.status === "done" || text(meta(task, "checklist_status")) === "done" || task.task_outcomes?.[0]?.outcome === "done";
 }
 
@@ -110,6 +116,12 @@ function taskHref(task: AtlasTaskCard, returnTo?: string) {
   return `/task-focus/${encodeURIComponent(task.task_id)}${suffix}`;
 }
 
+function taskResultHref(task: AtlasTaskCard, returnTo?: string, correction = false) {
+  const base = taskHref(task, returnTo);
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${correction ? `${separator}correction=1` : ""}#result`;
+}
+
 function routeHref(dateIso: string, key: RouteKey) {
   return `/day?date=${encodeURIComponent(dateIso)}&route=${encodeURIComponent(key)}`;
 }
@@ -120,24 +132,84 @@ function isExtraCredit(task: AtlasTaskCard) {
   return mode === "extra_credit" || label.includes("extra credit");
 }
 
-function TaskCard({ task, complete = false, overdue = false, returnTo, routeState }: {
+function requiresStructuredResult(task: AtlasTaskCard) {
+  if (truthy(meta(task, "quick_complete_allowed"))) return false;
+  if (meta(task, "quick_complete_allowed") === false || meta(task, "quick_complete_allowed") === "false") return true;
+  if (
+    truthy(meta(task, "structured_result_required"))
+    || truthy(meta(task, "result_capture_required"))
+    || truthy(meta(task, "planting_log_required"))
+    || truthy(meta(task, "requires_result"))
+    || Boolean(meta(task, "capture_kind"))
+  ) return true;
+
+  const route = atlasRouteKeyForTask(task);
+  const joined = `${task.task_type ?? ""} ${task.action_key ?? ""} ${task.generated_from ?? ""}`.toLowerCase();
+  return atlasIsCropCycleTask(task)
+    || route === "seed"
+    || route === "plant"
+    || route === "harvest"
+    || /germination|harvest|transplant|planting|readiness|production/.test(joined);
+}
+
+function objectStateBefore(task: AtlasTaskCard) {
+  return task.objects.map((object) => ({
+    object_id: object.object_id,
+    life_status: object.life_status ?? "open",
+    weed_pressure: object.weed_pressure ?? "unknown",
+    water_status: object.water_status ?? "unknown",
+    last_touched_at: object.last_touched_at ?? null,
+    last_weeded_at: object.last_weeded_at ?? null,
+    last_watered_at: object.last_watered_at ?? null,
+    last_checked_at: object.last_checked_at ?? null,
+    decision_required: object.decision_required ?? false,
+    presentability: object.presentability ?? "unknown",
+  }));
+}
+
+function optimisticTask(task: AtlasTaskCard, outcome: "done" | "reopened") {
+  const done = outcome === "done";
+  return {
+    ...task,
+    status: done ? "done" : "open",
+    metadata: {
+      ...(task.metadata ?? {}),
+      checklist_status: done ? "done" : "open",
+    },
+    task_outcomes: [{
+      event_id: `optimistic:${task.task_id}:${outcome}`,
+      outcome,
+      lane_key: task.action_key,
+      work_key: task.action_key,
+      blocker_reason: null,
+      note: null,
+      created_at: new Date().toISOString(),
+    }, ...(task.task_outcomes ?? [])],
+  } satisfies AtlasTaskCard;
+}
+
+type TaskCardProps = {
   task: AtlasTaskCard;
   complete?: boolean;
   overdue?: boolean;
   returnTo?: string;
   routeState?: AtlasDayRouteState;
-}) {
+  onNodePress?: (task: AtlasTaskCard) => void;
+  nodeSaving?: boolean;
+};
+
+function TaskCard({ task, complete = false, overdue = false, returnTo, routeState, onNodePress, nodeSaving = false }: TaskCardProps) {
   const display = atlasTaskDisplay(task);
   const zone = collectionZone(task);
   const isGrowRoomCare = task.title === "Grow Room Care" && task.task_type === "grow_room_care";
   const statusLine = isGrowRoomCare ? zone : `${atlasWorkOrderLabel(task)} · ${zone}`;
   const family = atlasDayTaskFamily(task);
   const cues = atlasDayTaskCues(task);
-  const routeClass = routeState ? ` atlas-day-route-${routeState}` : "";
+  const routeClass = routeState ? `atlas-day-route-${routeState}` : "";
 
-  return (
+  const card = (
     <Link
-      className={`atlas-day-task-card${complete ? " complete" : ""}${overdue ? " atlas-day-overdue-task-card" : ""}${atlasIsCropCycleTask(task) ? " atlas-crop-cycle-task-card" : ""}${routeClass}`}
+      className={`atlas-day-task-card${complete ? " complete" : ""}${overdue ? " atlas-day-overdue-task-card" : ""}${atlasIsCropCycleTask(task) ? " atlas-crop-cycle-task-card" : ""}${routeClass ? ` ${routeClass}` : ""}`}
       href={taskHref(task, returnTo)}
       aria-current={routeState === "current" ? "step" : undefined}
     >
@@ -148,6 +220,42 @@ function TaskCard({ task, complete = false, overdue = false, returnTo, routeStat
       {display.detail ? <em>{display.detail}</em> : null}
       {!complete && !overdue && cues.length ? <span className="atlas-day-task-cues">{cues.map((cue) => <i key={cue}>{cue}</i>)}</span> : null}
     </Link>
+  );
+
+  if (!onNodePress) return card;
+
+  return (
+    <div className={`atlas-day-task-entry${complete ? " atlas-day-complete-entry" : ""}${routeClass ? ` ${routeClass}` : ""}`}>
+      <button
+        type="button"
+        className={`atlas-day-task-node${complete ? " is-complete" : ""}${nodeSaving ? " is-saving" : ""}`}
+        aria-label={complete ? `Uncomplete ${display.title}` : `Mark ${display.title} done`}
+        aria-pressed={complete}
+        disabled={nodeSaving}
+        onClick={() => onNodePress(task)}
+      >
+        <span aria-hidden="true" />
+      </button>
+      {card}
+    </div>
+  );
+}
+
+function CompletionEcho({ task, saving, onPress }: { task: AtlasTaskCard; saving: boolean; onPress: (task: AtlasTaskCard) => void }) {
+  const label = atlasTaskDisplay(task).title;
+  return (
+    <div className="atlas-day-completion-echo" data-completed-task-id={task.task_id}>
+      <button
+        type="button"
+        className={saving ? "is-saving" : ""}
+        aria-label={`Uncomplete ${label}`}
+        aria-pressed="true"
+        disabled={saving}
+        onClick={() => onPress(task)}
+      >
+        <span aria-hidden="true" />
+      </button>
+    </div>
   );
 }
 
@@ -185,6 +293,7 @@ function AtlasDayPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const [viewMode, setViewMode] = useState<DayViewMode>("work_order");
+  const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
   const requestSequence = useRef(0);
 
   useEffect(() => {
@@ -192,24 +301,27 @@ function AtlasDayPageContent() {
     else setViewMode("work_order");
   }, [requestedView, dateIso]);
 
-  useEffect(() => {
+  const loadTasks = useCallback(async (reset = false) => {
     const requestId = ++requestSequence.current;
-    async function load() {
-      try {
+    try {
+      if (reset) {
         setLoading(true);
-        setError(null);
         setTasks([]);
-        const response = await fetchAtlasTaskCards({ viewerScoped: true, dueThrough: dateIso, doneDate: dateIso });
-        if (requestId !== requestSequence.current) return;
-        setTasks(response.taskCards ?? []);
-      } catch (loadError) {
-        if (requestId === requestSequence.current) setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
-      } finally {
-        if (requestId === requestSequence.current) setLoading(false);
       }
+      setError(null);
+      const response = await fetchAtlasTaskCards({ viewerScoped: true, dueThrough: dateIso, doneDate: dateIso });
+      if (requestId !== requestSequence.current) return;
+      setTasks(response.taskCards ?? []);
+    } catch (loadError) {
+      if (requestId === requestSequence.current) setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
+    } finally {
+      if (requestId === requestSequence.current && reset) setLoading(false);
     }
-    void load();
   }, [dateIso]);
+
+  useEffect(() => {
+    void loadTasks(true);
+  }, [loadTasks]);
 
   useEffect(() => {
     async function loadWeather() {
@@ -239,6 +351,8 @@ function AtlasDayPageContent() {
   const blockedProgressTasks = useMemo(() => progressTasks.filter((task) => task.status === "blocked" && !isDoneTask(task)), [progressTasks]);
   const doneStandaloneTasks = useMemo(() => doneDayTasks.filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task)), [doneDayTasks]);
   const filteredTasks = useMemo(() => routeFilter ? standaloneTasks.filter((task) => atlasRouteKeyForTask(task) === routeFilter) : standaloneTasks, [routeFilter, standaloneTasks]);
+  const timelineTasks = useMemo(() => [...standaloneTasks, ...doneStandaloneTasks].sort((a, b) => atlasWorkOrderSortValue(a).localeCompare(atlasWorkOrderSortValue(b))), [doneStandaloneTasks, standaloneTasks]);
+  const filteredTimelineTasks = useMemo(() => routeFilter ? timelineTasks.filter((task) => atlasRouteKeyForTask(task) === routeFilter) : timelineTasks, [routeFilter, timelineTasks]);
   const currentTask = useMemo(() => atlasDayCurrentTask(standaloneTasks) ?? atlasDayCurrentTask(requiredTasks), [requiredTasks, standaloneTasks]);
   const careTasks = useMemo(() => requiredTasks.filter(atlasDayIsCarePulse).filter((task) => task.task_id !== currentTask?.task_id).slice(0, 3), [currentTask, requiredTasks]);
   const openRequiredCount = useMemo(() => requiredTasks.filter((task) => task.status === "open").length, [requiredTasks]);
@@ -273,6 +387,50 @@ function AtlasDayPageContent() {
   const returnTo = routeFilter ? routeHref(dateIso, routeFilter) : dayHref(dateIso);
   const previousDate = shiftIsoDate(dateIso, -1);
   const nextDate = shiftIsoDate(dateIso, 1);
+
+  async function toggleTaskCompletion(task: AtlasTaskCard) {
+    const complete = isDoneTask(task);
+    if (!complete && requiresStructuredResult(task)) {
+      window.location.assign(taskResultHref(task, returnTo));
+      return;
+    }
+
+    const previousTasks = tasks;
+    const transition = complete ? "reopened" : "done";
+    setSavingTaskId(task.task_id);
+    setError(null);
+    setTasks((current) => current.map((row) => row.task_id === task.task_id ? optimisticTask(row, transition) : row));
+
+    try {
+      await postAtlasTaskTransition({
+        taskId: task.task_id,
+        transition,
+        laneKey: task.action_key || undefined,
+        workKey: task.action_key || undefined,
+        payload: complete ? {
+          completion_source: "day_timeline_completion_echo",
+        } : {
+          completion_source: "day_timeline_quick_complete",
+          objectStateBefore: objectStateBefore(task),
+        },
+      });
+      await loadTasks(false);
+    } catch (transitionError) {
+      setTasks(previousTasks);
+      const message = transitionError instanceof Error ? transitionError.message : "Task update failed.";
+      setError(message);
+      if (complete) window.location.assign(taskResultHref(task, returnTo, true));
+    } finally {
+      setSavingTaskId(null);
+    }
+  }
+
+  function timelineRow(task: AtlasTaskCard) {
+    if (isDoneTask(task)) {
+      return <CompletionEcho key={`echo:${task.task_id}`} task={task} saving={savingTaskId === task.task_id} onPress={(row) => void toggleTaskCompletion(row)} />;
+    }
+    return <TaskCard key={task.task_id} task={task} routeState={atlasDayRouteState(task, currentTask?.task_id ?? null)} returnTo={returnTo} onNodePress={(row) => void toggleTaskCompletion(row)} nodeSaving={savingTaskId === task.task_id} />;
+  }
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
@@ -345,8 +503,8 @@ function AtlasDayPageContent() {
                 <article className="atlas-day-route-group atlas-day-work-order-group">
                   <h3>{routeLabels[routeFilter]}</h3>
                   <div className="atlas-day-work-order-list atlas-day-route-spine">
-                    {filteredTasks.map((task) => <TaskCard task={task} routeState={atlasDayRouteState(task, currentTask?.task_id ?? null)} key={task.task_id} returnTo={returnTo} />)}
-                    {!loading && !filteredTasks.length ? <div className="atlas-day-route-empty">No open tasks in this collection.</div> : null}
+                    {filteredTimelineTasks.map(timelineRow)}
+                    {!loading && !filteredTimelineTasks.length ? <div className="atlas-day-route-empty">No open tasks in this collection.</div> : null}
                   </div>
                 </article>
               ) : viewMode === "work_order" ? (
@@ -354,8 +512,8 @@ function AtlasDayPageContent() {
                   <div className="atlas-day-work-order-list atlas-day-route-spine">
                     {showWeedingCollection && weedingCollection ? <WorkCollectionCard collection={weedingCollection} route /> : null}
                     {showGerminationCollection && germinationCollection ? <WorkCollectionCard collection={germinationCollection} route /> : null}
-                    {standaloneTasks.map((task) => <TaskCard task={task} routeState={atlasDayRouteState(task, currentTask?.task_id ?? null)} key={task.task_id} returnTo={returnTo} />)}
-                    {!loading && !collectionCount && !standaloneTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}
+                    {timelineTasks.map(timelineRow)}
+                    {!loading && !collectionCount && !timelineTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}
                   </div>
                 </article>
               ) : (
@@ -376,7 +534,7 @@ function AtlasDayPageContent() {
                     <b aria-hidden="true">⌄</b>
                   </summary>
                   <div className="atlas-day-complete-body atlas-day-zone-group">
-                    {doneStandaloneTasks.map((task) => <TaskCard task={task} complete key={task.task_id} returnTo={returnTo} />)}
+                    {doneStandaloneTasks.map((task) => <TaskCard task={task} complete key={task.task_id} returnTo={returnTo} onNodePress={(row) => void toggleTaskCompletion(row)} nodeSaving={savingTaskId === task.task_id} />)}
                   </div>
                 </details>
               ) : null}
