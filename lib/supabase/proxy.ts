@@ -29,8 +29,20 @@ function isPublicPath(pathname: string) {
   );
 }
 
+function needsAtlasPortfolioMembership(pathname: string) {
+  return (
+    pathname.startsWith("/api/atlas/projects/") ||
+    pathname.startsWith("/api/atlas/project-tasks/") ||
+    pathname.startsWith("/api/atlas/portfolio/")
+  );
+}
+
 function needsAtlasFarmMembership(pathname: string) {
-  return pathname.startsWith("/api/atlas/") && !pathname.startsWith("/api/atlas/auth/");
+  return (
+    pathname.startsWith("/api/atlas/") &&
+    !pathname.startsWith("/api/atlas/auth/") &&
+    !needsAtlasPortfolioMembership(pathname)
+  );
 }
 
 function legacyMutationDestination(request: NextRequest) {
@@ -90,6 +102,27 @@ export async function updateAtlasSession(request: NextRequest) {
     atlasHomeUrl.pathname = atlasPostLoginPath();
     atlasHomeUrl.search = "";
     return copySessionCookies(response, NextResponse.redirect(atlasHomeUrl));
+  }
+
+  if (authenticated && needsAtlasPortfolioMembership(pathname)) {
+    const { data: membership, error: membershipError } = await supabase
+      .from("organization_memberships")
+      .select("id, organization:organizations!inner(stable_key)")
+      .eq("user_id", userId)
+      .eq("active", true)
+      .eq("organization.stable_key", "feast_guild")
+      .limit(1)
+      .maybeSingle();
+
+    if (membershipError || !membership) {
+      return copySessionCookies(
+        response,
+        NextResponse.json(
+          { ok: false, error: "Active Feast Guild membership required." },
+          { status: 403, headers: { "Cache-Control": "private, no-store" } },
+        ),
+      );
+    }
   }
 
   if (authenticated && needsAtlasFarmMembership(pathname)) {
