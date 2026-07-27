@@ -52,6 +52,14 @@ test("Grow Room round uses the shared Atlas task shell and Dominion card", () =>
   assert.doesNotMatch(page, /`Request \$\{index \+ 1\}`/);
 });
 
+test("released Grow Room logs are directly navigable from their Trail circles", () => {
+  assert.match(page, /selectedAssignmentId/);
+  assert.match(page, /setSelectedAssignmentId\(request\.assignmentId\)/);
+  assert.match(page, /className=\{styles\.logButton\}/);
+  assert.match(page, /aria-pressed=\{current\}/);
+  assert.match(page, /scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/);
+});
+
 test("generic work feeds keep one Grow Room doorway instead of room-task clutter", () => {
   assert.match(feedMigration, /home_task_cards_v2/);
   assert.match(feedMigration, /one Grow Room doorway/i);
