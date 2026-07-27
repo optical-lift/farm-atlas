@@ -1,0 +1,32 @@
+name: Grow Room Trail Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install quietly
+        run: npm ci --silent
+      - name: Report only failing tests
+        shell: bash
+        run: |
+          set +e
+          npm test > test-output.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            grep -n -A35 -B8 -E '^not ok|ERR_|AssertionError|error:' test-output.log | head -n 120 || tail -n 120 test-output.log
+            exit "$status"
+          fi
+          tail -n 12 test-output.log
