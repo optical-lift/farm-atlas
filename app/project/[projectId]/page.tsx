@@ -2,7 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import ProjectTaskTools from "@/components/atlas/portfolio/ProjectTaskTools";
-import { readAtlasProjectDetail } from "@/lib/atlas/portfolio";
+import {
+  readAtlasProjectDetail,
+  type AtlasProjectDetail,
+} from "@/lib/atlas/portfolio";
 import { requireAtlasPortalViewer } from "@/lib/atlas/viewer-context";
 
 import styles from "@/components/atlas/portfolio/project.module.css";
@@ -23,7 +26,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const viewer = await requireAtlasPortalViewer();
   const { projectId } = await params;
 
-  let detail;
+  let detail: AtlasProjectDetail;
   try {
     detail = await readAtlasProjectDetail(projectId);
   } catch {
