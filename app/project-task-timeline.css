@@ -1,0 +1,299 @@
+/* Projects use the same Atlas collection grammar as Day and Week: command header,
+   current position, and a vertical task spine. Project data does not get a second UI. */
+
+.atlas-project-browse {
+  gap: 10px !important;
+}
+
+.atlas-project-browse-head {
+  display: grid;
+  gap: 4px;
+}
+
+.atlas-project-browse-title-row {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.atlas-project-browse-title-row span,
+.atlas-project-browse-title-row strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-project-browse-title-row span {
+  color: var(--atlas-text);
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+}
+
+.atlas-project-browse-title-row strong {
+  color: var(--atlas-muted);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.atlas-project-browse-head > p {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1.15;
+  font-weight: 850;
+}
+
+.atlas-project-command-header {
+  padding-top: 13px;
+}
+
+.atlas-project-command-title {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.atlas-project-command-title small,
+.atlas-project-task-collection-head span {
+  color: var(--atlas-purple-dark);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.atlas-project-command-title h1 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 27px;
+  line-height: 0.98;
+  font-weight: 950;
+  letter-spacing: -0.055em;
+  overflow-wrap: anywhere;
+}
+
+.atlas-project-trail-position {
+  min-width: 0;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.46);
+  padding: 10px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 4px 8px;
+}
+
+.atlas-project-trail-position span {
+  color: var(--atlas-purple-dark);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atlas-project-trail-position strong,
+.atlas-project-trail-position em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-project-trail-position strong {
+  color: var(--atlas-text);
+  font-size: 13px;
+  line-height: 1.05;
+  font-weight: 950;
+}
+
+.atlas-project-trail-position em {
+  grid-column: 2;
+  color: var(--atlas-muted);
+  font-size: 9px;
+  line-height: 1;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.atlas-project-outcome {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
+.atlas-project-attention-strip {
+  border: 1px solid rgba(174, 128, 104, 0.22);
+  border-radius: 18px;
+  background: rgba(245, 232, 223, 0.58);
+  overflow: hidden;
+}
+
+.atlas-project-attention-strip > summary {
+  min-height: 46px;
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.atlas-project-attention-strip > summary::-webkit-details-marker {
+  display: none;
+}
+
+.atlas-project-attention-strip > summary strong {
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.atlas-project-attention-strip > summary span,
+.atlas-project-attention-strip > summary b {
+  color: var(--atlas-muted);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.atlas-project-attention-strip > div {
+  border-top: 1px solid rgba(174, 128, 104, 0.16);
+  padding: 8px 12px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-project-attention-strip article {
+  display: grid;
+  gap: 3px;
+}
+
+.atlas-project-attention-strip article small {
+  color: #8a6457;
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atlas-project-attention-strip article strong {
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.atlas-project-attention-strip article p {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1.3;
+  font-weight: 800;
+}
+
+.atlas-project-task-collection {
+  border: 0;
+  background: transparent;
+  padding: 4px 2px 0;
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-project-task-collection-head {
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px 0 20px;
+}
+
+.atlas-project-task-collection-head > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.atlas-project-task-collection-head h2 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 21px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.atlas-project-task-collection-head > strong {
+  color: var(--atlas-muted);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.atlas-project-route-spine {
+  padding-top: 2px;
+}
+
+.atlas-project-route-spine > .atlas-project-task-entry[data-project-task-selected="true"] {
+  border-radius: 14px;
+  background: rgba(174, 179, 212, 0.12);
+  box-shadow: 0 0 0 3px rgba(139, 145, 194, 0.16);
+}
+
+.atlas-project-route-spine > .atlas-project-task-entry > .atlas-project-task-card {
+  padding-right: 8px !important;
+}
+
+.atlas-project-task-card > em {
+  display: block !important;
+  overflow: hidden;
+  color: var(--atlas-muted) !important;
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+  font-style: normal !important;
+  font-weight: 800 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-project-task-card.complete {
+  opacity: 0.52;
+}
+
+.atlas-project-task-card.complete > strong {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.atlas-project-task-totals {
+  margin-left: 24px;
+  border-top: 1px solid rgba(139, 145, 194, 0.12);
+  padding: 8px 4px 0;
+  display: flex;
+  justify-content: space-between;
+  color: var(--atlas-muted);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+@media (max-width: 430px) {
+  .atlas-project-command-title h1 {
+    font-size: 24px;
+  }
+
+  .atlas-project-browse-title-row {
+    align-items: start;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
