@@ -13,6 +13,7 @@ import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
 import AnnaPaidScheduleHomePatch from "./AnnaPaidScheduleHomePatch";
 import TaskResultAnchorPatch from "./TaskResultAnchorPatch";
 import ProjectTaskDestinationGuard from "./ProjectTaskDestinationGuard";
+import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
 import TendingTaskContext from "@/components/atlas/tending-task-context";
 import "./globals.css";
 import "./atlas-primitives.css";
@@ -90,6 +91,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AnnaPaidScheduleHomePatch />
         <TaskResultAnchorPatch />
         <ProjectTaskDestinationGuard />
+        <UniversalCollectionIdentity />
         <TendingTaskContext />
         {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}
