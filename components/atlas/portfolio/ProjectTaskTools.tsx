@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { AtlasProjectTask } from "@/lib/atlas/portfolio";
@@ -12,6 +12,7 @@ type ProjectTaskToolsProps = {
   tasks: AtlasProjectTask[];
   canCreateTasks: boolean;
   canCompleteAll: boolean;
+  selectedTaskId?: string | null;
 };
 
 export default function ProjectTaskTools({
@@ -19,11 +20,20 @@ export default function ProjectTaskTools({
   tasks,
   canCreateTasks,
   canCompleteAll,
+  selectedTaskId = null,
 }: ProjectTaskToolsProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!selectedTaskId) return;
+    const task = document.getElementById(`project-task-${selectedTaskId}`);
+    if (!task) return;
+    task.scrollIntoView({ behavior: "smooth", block: "center" });
+    task.focus({ preventScroll: true });
+  }, [selectedTaskId]);
 
   async function createTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,8 +103,16 @@ export default function ProjectTaskTools({
           <div className={styles.taskList}>
             {activeTasks.map((task) => {
               const canComplete = canCompleteAll || task.assignedToViewer;
+              const selected = task.taskId === selectedTaskId;
               return (
-                <article key={task.taskId} className={styles.taskCard}>
+                <article
+                  key={task.taskId}
+                  id={`project-task-${task.taskId}`}
+                  className={styles.taskCard}
+                  data-project-task-selected={selected ? "true" : "false"}
+                  aria-current={selected ? "true" : undefined}
+                  tabIndex={-1}
+                >
                   <div>
                     <span>{task.assignedToViewer ? "Your task" : "Project task"}</span>
                     <h3>{task.title}</h3>
@@ -159,10 +177,19 @@ export default function ProjectTaskTools({
       ) : null}
 
       {finishedTasks.length ? (
-        <details className={styles.finishedSection}>
+        <details className={styles.finishedSection} open={finishedTasks.some((task) => task.taskId === selectedTaskId)}>
           <summary>Completed work · {finishedTasks.length}</summary>
           <div className={styles.finishedList}>
-            {finishedTasks.map((task) => <p key={task.taskId}>{task.title}</p>)}
+            {finishedTasks.map((task) => (
+              <p
+                key={task.taskId}
+                id={`project-task-${task.taskId}`}
+                data-project-task-selected={task.taskId === selectedTaskId ? "true" : "false"}
+                tabIndex={-1}
+              >
+                {task.title}
+              </p>
+            ))}
           </div>
         </details>
       ) : null}
