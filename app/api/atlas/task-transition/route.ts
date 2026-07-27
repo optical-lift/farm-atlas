@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
 
 type RpcError = {
   code?: string;
+  message?: string;
 };
 
 type RpcResult = Record<string, unknown>;
@@ -40,6 +41,9 @@ function rpcError(error: RpcError) {
   }
   if (error.code === "P0002") {
     return atlasApiError(404, "task_not_found", "The task was not found.");
+  }
+  if (error.code === "P0003") {
+    return atlasApiError(409, "owner_correction_required", error.message || "This completion has linked farm evidence and needs review before it can be corrected.");
   }
   if (error.code === "22023") {
     return atlasApiError(400, "task_transition_rejected", "The task update was rejected.");
@@ -78,7 +82,23 @@ export async function POST(request: Request) {
   let data: unknown;
   let error: RpcError | null;
 
-  if (rpcName === "worker_record_task_transition_v1") {
+  if (rpcName === "worker_reopen_task_completion_v1") {
+    const response = await supabase.rpc("worker_reopen_task_completion_v1", {
+      p_task_id: input.taskId,
+      p_idempotency_key: input.idempotencyKey,
+      p_payload: input.payload,
+    });
+    data = response.data;
+    error = response.error;
+  } else if (rpcName === "owner_reopen_task_completion_v1") {
+    const response = await supabase.rpc("owner_reopen_task_completion_v1", {
+      p_task_id: input.taskId,
+      p_idempotency_key: input.idempotencyKey,
+      p_payload: input.payload,
+    });
+    data = response.data;
+    error = response.error;
+  } else if (rpcName === "worker_record_task_transition_v1") {
     const response = await supabase.rpc("worker_record_task_transition_v1", {
       p_task_id: input.taskId,
       p_transition: input.transition,
