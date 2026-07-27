@@ -55,9 +55,22 @@ test("the same portfolio home is permission scoped for owners and contributors",
   assert.match(session, /organization_memberships/);
   assert.match(proxy, /needsAtlasPortfolioMembership/);
   assert.match(proxy, /organization_memberships/);
-  assert.match(portfolio, /Portfolio matrix/);
-  assert.match(portfolio, /Needs attention/);
+  assert.match(portfolio, /atlas-phone-shell atlas-home-shell/);
+  assert.match(portfolio, /atlas-phone atlas-dashboard-phone/);
+  assert.match(portfolio, /My Guild Work/);
+  assert.match(portfolio, /Bird's-eye view/);
+  assert.match(portfolio, /Needs attention|attention/i);
   assert.doesNotMatch(portfolio, /displayName|Lex/);
+});
+
+test("project pages use the same Atlas phone and compact work controls", () => {
+  const projectPage = read("app/project/[projectId]/page.tsx");
+  const projectTools = read("components/atlas/portfolio/ProjectTaskTools.tsx");
+  assert.match(projectPage, /atlas-phone-shell/);
+  assert.match(projectPage, /atlas-phone/);
+  assert.match(projectPage, /atlas-phone-top/);
+  assert.match(projectTools, /createDetails/);
+  assert.match(projectTools, /Add work for myself/);
 });
 
 test("seed projects reflect the confirmed portfolio without naming the owner", () => {
