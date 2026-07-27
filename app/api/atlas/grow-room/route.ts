@@ -20,6 +20,17 @@ type GrowRoomActionInput = {
   metadata?: Record<string, unknown> | null;
 };
 
+function centralDateIso(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 function privateJson(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, {
     status,
@@ -94,7 +105,7 @@ export async function POST(request: Request) {
     p_idempotency_key: idempotencyKey,
     p_quantity: input.quantity ?? null,
     p_unit: input.unit ?? null,
-    p_action_date: input.actionDate ?? null,
+    p_action_date: input.actionDate ?? centralDateIso(),
     p_location_object_id: input.locationObjectId ?? null,
     p_destination_object_id: input.destinationObjectId ?? null,
     p_note: input.note ?? null,
