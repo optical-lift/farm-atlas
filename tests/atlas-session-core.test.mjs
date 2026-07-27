@@ -24,6 +24,20 @@ const ownerMembership = {
   },
 };
 
+const organizationMembership = {
+  id: "organization-membership-owner",
+  organization_id: "organization-feast-guild",
+  role: "owner",
+  active: true,
+  permissions: { portfolio_scope: "all" },
+  organization: {
+    id: "organization-feast-guild",
+    stable_key: "feast_guild",
+    name: "Feast Guild",
+    status: "active",
+  },
+};
+
 test("normalizes one authoritative Atlas session shape", () => {
   const session = normalizeAtlasSession({
     user,
@@ -40,6 +54,7 @@ test("normalizes one authoritative Atlas session shape", () => {
     email: "lex@example.com",
     displayName: "Lex",
     activeFarmId: "farm-elm",
+    activeOrganizationId: null,
     memberships: [
       {
         membershipId: "membership-owner",
@@ -52,6 +67,7 @@ test("normalizes one authoritative Atlas session shape", () => {
         permissions: { all_farm_data: true },
       },
     ],
+    organizationMemberships: [],
   });
 });
 
@@ -117,4 +133,34 @@ test("orders owner, manager, and farm-hand memberships consistently", () => {
     session.memberships.map((membership) => membership.role),
     ["owner", "manager", "farm_hand"],
   );
+});
+
+test("an organization-only contributor receives a Feast Guild session without a fake farm", () => {
+  const session = normalizeAtlasSession({
+    user: { ...user, email: "consultant@example.com" },
+    profile: { display_name: "Consultant", default_farm_id: null, active: true },
+    memberships: [],
+    organizationMemberships: [
+      {
+        ...organizationMembership,
+        role: "consultant",
+        organization: [organizationMembership.organization],
+      },
+    ],
+  });
+
+  assert.equal(session.activeFarmId, null);
+  assert.equal(session.memberships.length, 0);
+  assert.equal(session.activeOrganizationId, "organization-feast-guild");
+  assert.deepEqual(session.organizationMemberships, [
+    {
+      membershipId: "organization-membership-owner",
+      organizationId: "organization-feast-guild",
+      organizationKey: "feast_guild",
+      organizationName: "Feast Guild",
+      organizationStatus: "active",
+      role: "consultant",
+      permissions: { portfolio_scope: "all" },
+    },
+  ]);
 });
