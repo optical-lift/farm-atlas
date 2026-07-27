@@ -7,6 +7,7 @@ function read(path) {
 }
 
 const universalMigration = "supabase/migrations/20260728211500_universal_atlas_home_read_model_v1.sql";
+const parityMigration = "supabase/migrations/20260728233500_universal_home_role_parity_v1.sql";
 
 test("root renders one universal Atlas home for every active membership shape", () => {
   const root = read("app/page.tsx");
@@ -29,6 +30,7 @@ test("root renders one universal Atlas home for every active membership shape", 
   assert.match(universalHome, /AtlasSectionHeading/);
   assert.match(universalHome, /AtlasStateBadge/);
   assert.match(universalHome, /data-atlas-home-portal="universal"/);
+  assert.match(universalHome, /data-atlas-single-farm/);
   assert.match(universalHome, /Work in Motion/);
   assert.match(universalHome, /Atlas Scope/);
   assert.doesNotMatch(universalHome, /displayName|Project lead|Lex/);
@@ -39,9 +41,10 @@ test("root renders one universal Atlas home for every active membership shape", 
   assert.match(reader, /universal_home_v1/);
   assert.match(reader, /buildMoves/);
   assert.match(reader, /buildDatedItems/);
+  assert.match(reader, /projectTasks/);
 });
 
-test("the universal dashboard keeps the familiar Atlas home geometry", () => {
+test("the universal dashboard keeps the familiar Atlas home geometry for farm and project members", () => {
   const universalHome = read("components/atlas/home/AtlasUniversalHome.tsx");
   const layout = read("app/layout.tsx");
   const familiarCss = read("app/universal-home-familiar.css");
@@ -69,7 +72,7 @@ test("the universal dashboard keeps the familiar Atlas home geometry", () => {
   assert.match(familiarCss, /#work-board/);
   assert.match(familiarCss, /#scope-board/);
   assert.match(familiarCss, /grid-auto-rows:\s*96px/);
-  assert.match(familiarCss, /data-atlas-has-organization-scope="false"\][\s\S]*#scope-board/);
+  assert.match(familiarCss, /data-atlas-single-farm="true"\][\s\S]*#scope-board/);
   assert.match(familiarCss, /atlas-home-closeout-footer-link\[href="#scope-board"\]/);
   assert.match(familiarCss, /grid-template-columns:\s*minmax\(0, 1fr\)/);
 });
@@ -88,6 +91,31 @@ test("the prepared home reader combines farm and organization scope without weak
   assert.match(migration, /'organizationHome', v_organization_home/i);
   assert.match(migration, /grant execute on function atlas\.universal_home_v1/i);
   assert.doesNotMatch(migration, /worker_key\s*=\s*'anna'/i);
+});
+
+test("project-only contributors receive real task-forward home cards instead of a separate portal", () => {
+  const migration = read(parityMigration);
+  const reader = read("lib/atlas/universal-home.ts");
+  const home = read("components/atlas/home/AtlasUniversalHome.tsx");
+
+  assert.match(migration, /'projectTasks', v_project_tasks/);
+  assert.match(migration, /join atlas\.project_task_links ptl/i);
+  assert.match(migration, /join atlas\.tasks t on t\.id = ptl\.task_id/i);
+  assert.match(migration, /atlas\.can_read_project\(p\.id\)/i);
+  assert.match(migration, /t\.task_scope = 'project'/i);
+  assert.doesNotMatch(migration, /insert into atlas\.tasks/i);
+
+  assert.match(reader, /export type AtlasUniversalProjectTask/);
+  assert.match(reader, /kind: "project_task"/);
+  assert.match(reader, /projectTaskMove/);
+  assert.match(reader, /singleVisibleFarmName/);
+  assert.match(reader, /visibleFarms\.size === 1/);
+
+  assert.match(home, /home\.moves\.map/);
+  assert.match(home, /\$\{home\.moves\.length\} open/);
+  assert.match(home, /home\.moves\[0\]\?\.href/);
+  assert.match(home, /!singleVisibleFarm/);
+  assert.doesNotMatch(home, /FeastGuildPortfolioHome/);
 });
 
 test("legacy Marshall route returns to the universal root", () => {
