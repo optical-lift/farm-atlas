@@ -39,6 +39,8 @@ export default async function TaskFocusLayout({
     .limit(1)
     .maybeSingle();
 
-  if (isGrowRoomDoorway(data as TaskPortalRow | null)) redirect("/grow-room");
+  if (isGrowRoomDoorway(data as TaskPortalRow | null)) {
+    redirect(`/grow-room?visitTaskId=${encodeURIComponent(taskId)}`);
+  }
   return children;
 }
