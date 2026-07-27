@@ -55,6 +55,16 @@
   min-height: 0 !important;
 }
 
+/* A member with only one farm scope does not need a bird's-eye card that repeats the same farm counts. */
+[data-atlas-home-portal="universal"][data-atlas-has-organization-scope="false"] #scope-board,
+[data-atlas-home-portal="universal"][data-atlas-has-organization-scope="false"] .atlas-home-closeout-footer-link[href="#scope-board"] {
+  display: none !important;
+}
+
+[data-atlas-home-portal="universal"][data-atlas-has-organization-scope="false"] .atlas-home-footer-row {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
 @media (max-width: 430px) {
   .atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-grid.atlas-route-sheet-grid {
     grid-auto-rows: 90px !important;
