@@ -27,10 +27,11 @@ export default function ProjectTaskTools({
 
   async function createTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setError("");
     setSaving(true);
 
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     const response = await fetch(`/api/atlas/projects/${encodeURIComponent(projectId)}/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -48,7 +49,7 @@ export default function ProjectTaskTools({
       return;
     }
 
-    event.currentTarget.reset();
+    formElement.reset();
     setSaving(false);
     router.refresh();
   }
