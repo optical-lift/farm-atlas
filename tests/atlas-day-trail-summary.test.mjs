@@ -29,16 +29,17 @@ test("Day progress reads exact-date required work without a DOM patch", () => {
   assert.match(css, /\.blocked/);
 });
 
-test("Day Route v1 keeps Next and overview together, removes the timeline heading, and collapses completed work", () => {
+test("Day Route keeps Next and overview together, preserves completion echoes, and collapses completed cards", () => {
   const page = read("app/day/page.tsx");
   const css = read("app/day-route-v1.css");
   const refineCss = read("app/day-route-v1-refine.css");
+  const echoCss = read("app/day-timeline-completion-echo.css");
   const layout = read("app/layout.tsx");
   const adapter = read("lib/atlas/day-route.ts");
 
   const commandIndex = page.indexOf('className="atlas-day-command-header"');
   const overviewIndex = page.indexOf('className="atlas-day-overview-drawer atlas-day-command-overview"');
-  const workOrderIndex = page.indexOf("standaloneTasks.map");
+  const workOrderIndex = page.indexOf("timelineTasks.map");
   const completeIndex = page.indexOf('className="atlas-day-overview-drawer atlas-day-complete-drawer"');
 
   assert.notEqual(commandIndex, -1);
@@ -51,6 +52,8 @@ test("Day Route v1 keeps Next and overview together, removes the timeline headin
   assert.match(page, /atlasDayCurrentTask/);
   assert.match(page, /atlasDayIsCarePulse/);
   assert.match(page, /atlas-day-route-spine/);
+  assert.match(page, /CompletionEcho/);
+  assert.match(page, /filteredTimelineTasks\.map\(timelineRow\)/);
   assert.match(page, /<details className="atlas-day-overview-drawer atlas-day-command-overview">/);
   assert.match(page, /<details className="atlas-day-overview-drawer atlas-day-complete-drawer">/);
   assert.match(page, />Timeline<\/button>/);
@@ -73,8 +76,11 @@ test("Day Route v1 keeps Next and overview together, removes the timeline headin
   assert.match(css, /\.atlas-day-work-order-group[\s\S]*?background: transparent !important/);
   assert.match(refineCss, /\.atlas-day-complete-drawer/);
   assert.match(refineCss, /\.atlas-day-complete-drawer \.atlas-day-task-card > strong/);
+  assert.match(echoCss, /\.atlas-day-completion-echo/);
+  assert.match(echoCss, /\.atlas-day-task-node/);
 
   assert.doesNotMatch(layout, /DayHeroQuietPatch/);
   assert.match(layout, /day-route-v1\.css/);
   assert.match(layout, /day-route-v1-refine\.css/);
+  assert.match(layout, /day-timeline-completion-echo\.css/);
 });
