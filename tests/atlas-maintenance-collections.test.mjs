@@ -178,16 +178,18 @@ test("Tending opens the exact canonical task with the familiar result controls",
   assert.doesNotMatch(taskRoute, /service_role|createServiceClient/i);
 });
 
-test("The bed page is a dated harvest path with one clickable next step", () => {
+test("The bed page is a dated harvest path with one clickable current move", () => {
   const bed = read("app/collections/weeding/[zoneKey]/[objectKey]/page.tsx");
   const bedRoute = read("app/api/atlas/tending/bed/route.ts");
+  const renderer = read("components/atlas/trail/AtlasTrail.tsx");
   const migration = read("supabase/migrations/20260723154500_tending_next_bite_gates.sql");
 
   assert.match(bed, /fetchTendingBed/);
   assert.match(bed, /HARVEST TRACK/);
   assert.match(bed, /Path to harvest/);
-  assert.match(bed, /gateSymbol/);
-  assert.match(bed, /gate\.status === "current"/);
+  assert.match(bed, /AtlasTrail/);
+  assert.match(bed, /atlasTrailFromTendingTrack\(bed, taskHref\)/);
+  assert.match(renderer, /node\.status === "current" \|\| node\.status === "blocked"/);
   assert.match(bed, /tendingDueLabel/);
   assert.match(bed, /tendingStepLabel/);
   assert.match(bed, /taskTitle/);
@@ -204,6 +206,7 @@ test("The bed page is a dated harvest path with one clickable next step", () => 
   assert.match(migration, /stepsToHarvestCount/);
   assert.match(migration, /currentStepNumber/);
   assert.doesNotMatch(migration, /insert into atlas\.tasks/i);
+  assert.doesNotMatch(bed, /gateSymbol|bed\.gates\.map/);
   assert.doesNotMatch(bed, /Farm Care object hero/);
   assert.doesNotMatch(bed, /Prepared, not released/);
   assert.doesNotMatch(bed, /No executable task is currently released/);
