@@ -34,6 +34,21 @@ export type AtlasPortalViewer = {
   farmMemberships: AtlasSessionMembership[];
 };
 
+export type AtlasUniversalViewer = {
+  userId: string;
+  email: string | null;
+  displayName: string;
+  activeFarmId: string | null;
+  activeOrganizationId: string | null;
+  farmMemberships: AtlasSessionMembership[];
+  organizationMemberships: AtlasSessionOrganizationMembership[];
+  hasFarmScope: boolean;
+  hasOrganizationScope: boolean;
+  canManageAnyFarm: boolean;
+  canUseAnyOwnerTools: boolean;
+  canManageAnyPortfolio: boolean;
+};
+
 export function activeAtlasMembership(session: AtlasSession): AtlasSessionMembership | null {
   return session.memberships.find((membership) => membership.farmId === session.activeFarmId)
     ?? session.memberships[0]
@@ -85,5 +100,28 @@ export function atlasPortalViewerFromSession(session: AtlasSession): AtlasPortal
     permissions: membership.permissions,
     canManagePortfolio: membership.role === "owner",
     farmMemberships: session.memberships,
+  };
+}
+
+export function atlasUniversalViewerFromSession(session: AtlasSession): AtlasUniversalViewer | null {
+  if (session.memberships.length === 0 && session.organizationMemberships.length === 0) return null;
+
+  return {
+    userId: session.userId,
+    email: session.email,
+    displayName: session.displayName,
+    activeFarmId: session.activeFarmId,
+    activeOrganizationId: session.activeOrganizationId,
+    farmMemberships: session.memberships,
+    organizationMemberships: session.organizationMemberships,
+    hasFarmScope: session.memberships.length > 0,
+    hasOrganizationScope: session.organizationMemberships.length > 0,
+    canManageAnyFarm: session.memberships.some(
+      (membership) => membership.role === "owner" || membership.role === "manager",
+    ),
+    canUseAnyOwnerTools: session.memberships.some((membership) => membership.role === "owner"),
+    canManageAnyPortfolio: session.organizationMemberships.some(
+      (membership) => membership.role === "owner",
+    ),
   };
 }
