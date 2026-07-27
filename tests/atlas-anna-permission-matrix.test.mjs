@@ -45,7 +45,7 @@ test("Day, Week, and Month all use the canonical task-card reader", () => {
   }
 
   const client = read("lib/atlas/task-cards-client.ts");
-  assert.match(client, /\/api\/atlas\/home-task-cards/);
+  assert.match(client, /\/api\/atlas\/universal-task-cards/);
   assert.match(client, /\/api\/atlas\/task-cards/);
   assert.match(client, /credentials: "same-origin"/);
   assert.match(client, /cache: "no-store"/);
