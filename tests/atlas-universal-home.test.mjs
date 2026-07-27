@@ -20,14 +20,23 @@ test("root renders one authenticated Atlas home selected by membership scope", (
   assert.doesNotMatch(root, /atlas-home-box-purple/);
   assert.doesNotMatch(root, /TaskLaunchHero/);
 
+  assert.match(farmPortal, /AtlasAppShell/);
+  assert.match(farmPortal, /AtlasTopBar/);
+  assert.match(farmPortal, /AtlasCard/);
+  assert.match(farmPortal, /AtlasMetricStrip/);
+  assert.match(farmPortal, /AtlasFooterActions/);
   assert.match(farmPortal, /data-atlas-home-portal="shared"/);
-  assert.match(farmPortal, /atlas-home-box-purple/);
   assert.match(farmPortal, /viewer\.farmName/);
   assert.match(farmPortal, /data-atlas-viewer-role=\{viewer\.role\}/);
 
+  assert.match(portfolioPortal, /AtlasAppShell/);
+  assert.match(portfolioPortal, /AtlasTopBar/);
+  assert.match(portfolioPortal, /AtlasCard/);
+  assert.match(portfolioPortal, /AtlasMetricStrip/);
+  assert.match(portfolioPortal, /AtlasFooterActions/);
+  assert.match(portfolioPortal, /AtlasSectionHeading/);
+  assert.match(portfolioPortal, /AtlasStateBadge/);
   assert.match(portfolioPortal, /data-feast-guild-portfolio/);
-  assert.match(portfolioPortal, /atlas-phone-shell atlas-home-shell/);
-  assert.match(portfolioPortal, /atlas-phone atlas-dashboard-phone/);
   assert.match(portfolioPortal, /Bird's-eye view/);
   assert.match(portfolioPortal, /attention/i);
   assert.doesNotMatch(portfolioPortal, /displayName|Project lead|Lex/);
