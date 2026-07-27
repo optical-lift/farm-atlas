@@ -6,21 +6,32 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("root renders one authenticated Atlas home portal", () => {
+test("root renders one authenticated Atlas home selected by membership scope", () => {
   const root = read("app/page.tsx");
-  const portal = read("components/atlas/home/AtlasHomePortal.tsx");
+  const farmPortal = read("components/atlas/home/AtlasHomePortal.tsx");
+  const portfolioPortal = read("components/atlas/portfolio/FeastGuildPortfolioHome.tsx");
   const viewerContext = read("lib/atlas/viewer-context.ts");
 
-  assert.match(root, /requireAtlasViewer/);
+  assert.match(root, /getAtlasSession/);
+  assert.match(root, /atlasPortalViewerFromSession/);
+  assert.match(root, /atlasViewerFromSession/);
+  assert.match(root, /<FeastGuildPortfolioHome/);
   assert.match(root, /<AtlasHomePortal viewer=\{viewer\}/);
   assert.doesNotMatch(root, /atlas-home-box-purple/);
   assert.doesNotMatch(root, /TaskLaunchHero/);
 
-  assert.match(portal, /data-atlas-home-portal="shared"/);
-  assert.match(portal, /atlas-home-box-purple/);
-  assert.match(portal, /viewer\.farmName/);
-  assert.match(portal, /data-atlas-viewer-role=\{viewer\.role\}/);
+  assert.match(farmPortal, /data-atlas-home-portal="shared"/);
+  assert.match(farmPortal, /atlas-home-box-purple/);
+  assert.match(farmPortal, /viewer\.farmName/);
+  assert.match(farmPortal, /data-atlas-viewer-role=\{viewer\.role\}/);
+
+  assert.match(portfolioPortal, /data-feast-guild-portfolio/);
+  assert.match(portfolioPortal, /Portfolio matrix/);
+  assert.match(portfolioPortal, /Needs attention/);
+  assert.doesNotMatch(portfolioPortal, /displayName|Project lead|Lex/);
+
   assert.match(viewerContext, /atlasViewerFromSession/);
+  assert.match(viewerContext, /atlasPortalViewerFromSession/);
 });
 
 test("legacy Marshall route returns to the universal root", () => {

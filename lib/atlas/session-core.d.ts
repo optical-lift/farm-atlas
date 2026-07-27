@@ -4,4 +4,5 @@ export function normalizeAtlasSession(input: {
   user: unknown;
   profile: unknown;
   memberships: unknown;
+  organizationMemberships?: unknown;
 }): AtlasSession | null;

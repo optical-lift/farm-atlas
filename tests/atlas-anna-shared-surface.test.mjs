@@ -21,7 +21,8 @@ test("Anna enters the familiar shared Atlas operating surface", () => {
   const authCore = read("lib/atlas/auth-core.js");
   const snapshotRoute = read("app/api/atlas/farm-snapshot/route.ts");
 
-  assert.match(root, /requireAtlasViewer/);
+  assert.match(root, /getAtlasSession/);
+  assert.match(root, /atlasViewerFromSession/);
   assert.match(root, /<AtlasHomePortal viewer=\{viewer\}/);
   assert.doesNotMatch(root, /TaskLaunchHero|atlas-home-box-purple/);
 

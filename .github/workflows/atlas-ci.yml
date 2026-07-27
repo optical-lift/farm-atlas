@@ -81,8 +81,29 @@ jobs:
       - name: Guard homepage membership scope
         run: node --test --test-name-pattern="homepage reader" tests/atlas-architecture-traps.test.mjs
 
+      - name: Guard Feast Guild portfolio
+        run: node --test tests/feast-guild-portfolio.test.mjs
+
       - name: Run tests
-        run: npm test
+        shell: bash
+        run: |
+          set +e
+          npm test > atlas-test.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            tail -n 180 atlas-test.log
+            exit "$status"
+          fi
+          tail -n 30 atlas-test.log
+
+      - name: Upload failing test log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-test-log
+          path: atlas-test.log
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Build Atlas
         shell: bash
@@ -100,3 +121,12 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: atlas-ci-service-role-placeholder
           NEXT_PUBLIC_SUPABASE_URL: https://atlas-ci.supabase.co
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: atlas-ci-publishable-placeholder
+
+      - name: Upload failing build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-build-log
+          path: atlas-build.log
+          if-no-files-found: ignore
+          retention-days: 3
