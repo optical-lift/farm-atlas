@@ -60,7 +60,9 @@ test("Mowing stays a destination collection while Day and Week show actual mowin
   assert.doesNotMatch(day, /atlasBuildMowingCollectionSummary/);
   assert.doesNotMatch(day, /collection=\{mowingCollection\}/);
   assert.match(day, /atlasIsMowingCollectionMember/);
-  assert.match(day, /standaloneTasks\.map/);
+  assert.match(day, /timelineTasks\.map\(timelineRow\)/);
+  assert.match(day, /standaloneTasks/);
+  assert.match(day, /CompletionEcho/);
   assert.match(day, /atlasBuildWeedingCollectionSummary/);
 
   assert.doesNotMatch(week, /atlasBuildMowingCollectionSummary/);
@@ -110,8 +112,11 @@ test("assigned Farm-Hand mutations remain separate from Owner mutations", () => 
   assert.match(route, /x-atlas-intent/);
   assert.match(route, /worker_record_task_transition_v1/);
   assert.match(route, /owner_record_task_transition_v1/);
+  assert.match(route, /worker_reopen_task_completion_v1/);
+  assert.match(route, /owner_reopen_task_completion_v1/);
   assert.match(core, /"done"/);
   assert.match(core, /"blocked"/);
   assert.match(core, /"unfinished"/);
   assert.match(core, /"rescheduled"/);
+  assert.match(core, /"reopened"/);
 });
