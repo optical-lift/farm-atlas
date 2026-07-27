@@ -147,6 +147,17 @@
   scroll-margin-top: 82px;
 }
 
+.atlas-task-correction-note {
+  margin: 0;
+  border-top: 1px solid rgba(139, 145, 194, 0.16);
+  background: rgba(174, 179, 212, 0.12);
+  color: var(--atlas-muted);
+  padding: 12px 16px;
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .atlas-day-completion-echo {
     animation: atlas-completion-echo-in 180ms ease-out;
