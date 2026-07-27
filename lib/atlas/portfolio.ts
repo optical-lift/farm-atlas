@@ -87,6 +87,7 @@ export type AtlasProjectTask = {
   originKind: string;
   createdAt: string;
   updatedAt: string;
+  completedAt?: string | null;
 };
 
 export type AtlasProjectStep = {
@@ -118,6 +119,18 @@ export type AtlasProjectDetail = {
   attention: AtlasProjectAttention[];
 };
 
+export type AtlasProjectTaskFocus = {
+  organizationName: string;
+  project: AtlasPortfolioProject;
+  task: AtlasProjectTask;
+  step: AtlasProjectStep | null;
+  permissions: {
+    canComplete: boolean;
+    canEdit: boolean;
+    isOrganizationOwner: boolean;
+  };
+};
+
 type RpcError = { message?: string };
 
 export async function readAtlasPortfolioHome(
@@ -146,4 +159,17 @@ export async function readAtlasProjectDetail(projectId: string): Promise<AtlasPr
   }
 
   return data as AtlasProjectDetail;
+}
+
+export async function readAtlasProjectTaskFocus(taskId: string): Promise<AtlasProjectTaskFocus | null> {
+  const supabase = await createAtlasServerClient();
+  const { data, error } = await supabase.rpc("project_task_focus_v1", {
+    p_task_id: taskId,
+  });
+
+  if (error) {
+    throw new Error((error as RpcError | null)?.message || "Atlas project task read failed.");
+  }
+
+  return data ? data as AtlasProjectTaskFocus : null;
 }
