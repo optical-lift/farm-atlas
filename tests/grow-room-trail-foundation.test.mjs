@@ -60,6 +60,16 @@ test("released Grow Room logs are directly navigable from their Trail circles", 
   assert.match(page, /scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/);
 });
 
+test("Grow Room log titles are concise action labels without task commentary", () => {
+  assert.match(page, /return "Count live seedlings"/);
+  assert.match(page, /return "Pot up plants"/);
+  assert.match(page, /return "Advance hardening"/);
+  assert.match(page, /return "Check transplant readiness"/);
+  assert.match(page, /requestSubjectLabel\(activeRequest\)/);
+  assert.doesNotMatch(page, /Count what is alive in/);
+  assert.doesNotMatch(page, /Check whether \$\{subject\} is ready/);
+});
+
 test("generic work feeds keep one Grow Room doorway instead of room-task clutter", () => {
   assert.match(feedMigration, /home_task_cards_v2/);
   assert.match(feedMigration, /one Grow Room doorway/i);
@@ -70,7 +80,7 @@ test("generic work feeds keep one Grow Room doorway instead of room-task clutter
 test("only explicit current requests appear on the worker surface", () => {
   assert.match(roundMigration, /limit 3/);
   assert.match(roundMigration, /coalesce\(t\.due_date, v_visit\.due_date\) <=/);
-  assert.match(page, /Count what is alive/);
+  assert.match(page, /Count live seedlings/);
   assert.match(page, /Record live count/);
   assert.match(page, /No germination/);
   assert.match(page, /Not ready yet/);
