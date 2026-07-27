@@ -44,26 +44,32 @@ test("Waiting Room places preserve the property hierarchy", () => {
   assert.doesNotMatch(migration, /'grounds'/i);
 });
 
-test("the same portfolio home is permission scoped for owners and contributors", () => {
+test("the universal home permission-scopes Feast Guild and farm work for every member", () => {
   const page = read("app/page.tsx");
   const session = read("lib/atlas/session.ts");
   const proxy = read("lib/supabase/proxy.ts");
-  const portfolio = read("components/atlas/portfolio/FeastGuildPortfolioHome.tsx");
+  const universalHome = read("components/atlas/home/AtlasUniversalHome.tsx");
+  const reader = read("lib/atlas/universal-home.ts");
 
-  assert.match(page, /atlasPortalViewerFromSession/);
-  assert.match(page, /FeastGuildPortfolioHome/);
+  assert.match(page, /atlasUniversalViewerFromSession/);
+  assert.match(page, /readAtlasUniversalHome/);
+  assert.match(page, /AtlasUniversalHome/);
+  assert.doesNotMatch(page, /FeastGuildPortfolioHome|AtlasHomePortal/);
   assert.match(session, /organization_memberships/);
   assert.match(proxy, /needsAtlasPortfolioMembership/);
   assert.match(proxy, /organization_memberships/);
-  assert.match(portfolio, /AtlasAppShell/);
-  assert.match(portfolio, /AtlasTopBar/);
-  assert.match(portfolio, /AtlasCard/);
-  assert.match(portfolio, /AtlasMetricStrip/);
-  assert.match(portfolio, /AtlasFooterActions/);
-  assert.match(portfolio, /My Guild Work/);
-  assert.match(portfolio, /Bird's-eye view/);
-  assert.match(portfolio, /Needs attention|attention/i);
-  assert.doesNotMatch(portfolio, /displayName|Lex/);
+  assert.match(universalHome, /AtlasAppShell/);
+  assert.match(universalHome, /AtlasTopBar/);
+  assert.match(universalHome, /AtlasCard/);
+  assert.match(universalHome, /AtlasMetricStrip/);
+  assert.match(universalHome, /AtlasFooterActions/);
+  assert.match(universalHome, /Work in Motion/);
+  assert.match(universalHome, /Bird's-eye view/);
+  assert.match(universalHome, /attention/i);
+  assert.doesNotMatch(universalHome, /displayName|Lex/);
+  assert.match(reader, /organizationHome/);
+  assert.match(reader, /farmTaskMove/);
+  assert.match(reader, /projectAttentionMove/);
 });
 
 test("project pages use the same Atlas phone and compact work controls", () => {
