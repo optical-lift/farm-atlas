@@ -6,6 +6,7 @@ export type AtlasTaskTransition =
   | "changed_plan"
   | "rescheduled"
   | "unfinished"
+  | "reopened"
   | "checklist_done"
   | "checklist_open"
   | "note";
