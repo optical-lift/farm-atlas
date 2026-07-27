@@ -37,9 +37,9 @@ export default function LoginPage() {
   return (
     <main className={styles.page}>
       <section className={styles.card} aria-labelledby="atlas-login-title">
-        <p className={styles.eyebrow}>Elm Farm</p>
+        <p className={styles.eyebrow}>Feast Guild</p>
         <h1 id="atlas-login-title">Atlas</h1>
-        <p className={styles.intro}>Sign in to open your farm dashboard.</p>
+        <p className={styles.intro}>Sign in to open your portfolio or farm work.</p>
 
         <form onSubmit={submit} className={styles.form}>
           <label>
