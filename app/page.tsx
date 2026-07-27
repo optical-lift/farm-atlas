@@ -17,6 +17,21 @@ function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] ?? null : value ?? null;
 }
 
+function organizationMembershipForViewer(
+  viewer: NonNullable<ReturnType<typeof atlasUniversalViewerFromSession>>,
+) {
+  return viewer.organizationMemberships.find(
+    (membership) => membership.organizationId === viewer.activeOrganizationId,
+  ) ?? viewer.organizationMemberships[0] ?? null;
+}
+
+function focusedProjectTaskHref(move: Awaited<ReturnType<typeof readAtlasUniversalHome>>["moves"][number]) {
+  if (move.kind !== "project_task" || !move.projectId) return move.href;
+  const taskId = move.key.split(":").at(-1);
+  if (!taskId) return move.href;
+  return `/project/${encodeURIComponent(move.projectId)}?taskId=${encodeURIComponent(taskId)}#project-work`;
+}
+
 export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps) {
   const session = await getAtlasSession();
   if (!session) redirect("/login");
@@ -32,10 +47,24 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
       ?? viewer.activeFarmId
     : viewer.activeFarmId;
   const home = await readAtlasUniversalHome(viewer, { preferredFarmId });
+  const organizationMembership = organizationMembershipForViewer(viewer);
+  const organizationPortal = Boolean(
+    organizationMembership
+      && (organizationMembership.role === "owner" || viewer.farmMemberships.length === 0),
+  );
+  const renderedHome = {
+    ...home,
+    title: organizationPortal
+      ? home.organizationHome?.organization.name
+        || organizationMembership?.organizationName
+        || "Feast Guild"
+      : home.title,
+    moves: home.moves.map((move) => ({ ...move, href: focusedProjectTaskHref(move) })),
+  };
 
   return (
     <AtlasUniversalHome
-      home={home}
+      home={renderedHome}
       selectedFarmKey={selectedFarmKey}
       selectedWorkstream={selectedWorkstream}
     />
