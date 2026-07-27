@@ -41,6 +41,36 @@ test("root renders one universal Atlas home for every active membership shape", 
   assert.match(reader, /buildDatedItems/);
 });
 
+test("the universal dashboard keeps the familiar Atlas home geometry", () => {
+  const universalHome = read("components/atlas/home/AtlasUniversalHome.tsx");
+  const layout = read("app/layout.tsx");
+  const familiarCss = read("app/universal-home-familiar.css");
+
+  for (const marker of [
+    "atlas-home-grid",
+    "atlas-home-task-hero",
+    "atlas-task-controller",
+    "atlas-daily-run-sheet",
+    "atlas-route-sheet",
+    "atlas-run-sheet-grid",
+    "atlas-route-sheet-grid",
+    "atlas-home-overview-row",
+    "atlas-home-overview-week",
+    "atlas-home-overview-month",
+    "atlas-farm-snapshot-bar",
+    "atlas-home-footer-row",
+    "atlas-note-plus",
+  ]) {
+    assert.match(universalHome, new RegExp(marker));
+  }
+
+  assert.doesNotMatch(universalHome, /className=\{styles\.(?:hero|heroCard|overviewPair|overviewCard)\}/);
+  assert.match(layout, /import "\.\/universal-home-familiar\.css"/);
+  assert.match(familiarCss, /#work-board/);
+  assert.match(familiarCss, /#scope-board/);
+  assert.match(familiarCss, /grid-auto-rows:\s*96px/);
+});
+
 test("the prepared home reader combines farm and organization scope without weakening either", () => {
   const migration = read(universalMigration);
 
