@@ -79,20 +79,29 @@ test("next-day intent preserves the familiar Tomorrow action", () => {
   assert.match(result.targetDate, /^\d{4}-\d{2}-\d{2}$/);
 });
 
-test("role routing preserves every familiar assigned-worker outcome", () => {
+test("role routing preserves familiar outcomes and sends reopen through its safe inverse", () => {
   assert.equal(
     atlasTaskTransitionRpcForRole("owner", "rescheduled"),
     "owner_record_task_transition_v1",
   );
+  assert.equal(
+    atlasTaskTransitionRpcForRole("owner", "reopened"),
+    "owner_reopen_task_completion_v1",
+  );
 
   for (const role of ["farm_hand", "manager"]) {
-    for (const transition of ATLAS_FARM_HAND_TRANSITIONS) {
+    for (const transition of ATLAS_FARM_HAND_TRANSITIONS.filter((value) => value !== "reopened")) {
       assert.equal(
         atlasTaskTransitionRpcForRole(role, transition),
         "worker_record_task_transition_v1",
         `${transition} must remain available for assigned ${role} work`,
       );
     }
+    assert.equal(
+      atlasTaskTransitionRpcForRole(role, "reopened"),
+      "worker_reopen_task_completion_v1",
+      `reopened must use the safe inverse for assigned ${role} work`,
+    );
   }
 
   for (const transition of [
@@ -103,6 +112,7 @@ test("role routing preserves every familiar assigned-worker outcome", () => {
     "changed_plan",
     "rescheduled",
     "unfinished",
+    "reopened",
     "checklist_done",
     "checklist_open",
     "note",
@@ -124,6 +134,9 @@ test("task transition route uses cookie auth and forwards the full RPC payload",
   assert.match(route, /createAtlasServerClient/);
   assert.match(route, /owner_record_task_transition_v1/);
   assert.match(route, /worker_record_task_transition_v1/);
+  assert.match(route, /owner_reopen_task_completion_v1/);
+  assert.match(route, /worker_reopen_task_completion_v1/);
+  assert.match(route, /owner_correction_required/);
   assert.match(route, /x-atlas-intent/);
   assert.match(route, /private, no-store/);
   assert.equal((route.match(/p_target_date: input\.targetDate/g) ?? []).length, 2);
