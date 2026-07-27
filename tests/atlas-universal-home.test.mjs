@@ -26,8 +26,10 @@ test("root renders one authenticated Atlas home selected by membership scope", (
   assert.match(farmPortal, /data-atlas-viewer-role=\{viewer\.role\}/);
 
   assert.match(portfolioPortal, /data-feast-guild-portfolio/);
-  assert.match(portfolioPortal, /Portfolio matrix/);
-  assert.match(portfolioPortal, /Needs attention/);
+  assert.match(portfolioPortal, /atlas-phone-shell atlas-home-shell/);
+  assert.match(portfolioPortal, /atlas-phone atlas-dashboard-phone/);
+  assert.match(portfolioPortal, /Bird's-eye view/);
+  assert.match(portfolioPortal, /attention/i);
   assert.doesNotMatch(portfolioPortal, /displayName|Project lead|Lex/);
 
   assert.match(viewerContext, /atlasViewerFromSession/);
