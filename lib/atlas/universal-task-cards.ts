@@ -22,7 +22,7 @@ function projectTaskAsCard(task: AtlasUniversalProjectTask): AtlasTaskCard {
   return {
     farm_key: task.farmKey || "feast_guild",
     task_id: task.taskId,
-    title: task.title,
+    title: "Project work",
     task_type: "project_task",
     status: task.status,
     priority: task.priority,
@@ -45,6 +45,7 @@ function projectTaskAsCard(task: AtlasUniversalProjectTask): AtlasTaskCard {
       project_id: task.projectId,
       project_key: task.projectKey,
       project_title: task.projectTitle,
+      project_task_title: task.title,
       workstream: task.workstream,
       origin_kind: task.originKind,
       assigned_to_viewer: task.assignedToViewer,
