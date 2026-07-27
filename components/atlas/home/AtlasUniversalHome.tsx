@@ -217,18 +217,18 @@ function overviewRows(items: AtlasUniversalDatedItem[], todayIso: string) {
 
 function UniversalOverviewBoxes({ home }: { home: AtlasUniversalHomeModel }) {
   const rows = overviewRows(home.datedItems, home.window.doneDate);
-  const dayHrefAvailable = Boolean(home.activeFarm);
+  const canOpenFarmCalendar = Boolean(home.activeFarm);
 
   return (
     <div className="atlas-home-overview-row" aria-label="Week and month overview links">
       <AtlasCard className="atlas-home-overview-card atlas-home-overview-week">
-        <Link href={dayHrefAvailable ? "/overview/week" : "#work-board"} className="atlas-home-overview-top">
+        <Link href={canOpenFarmCalendar ? "/overview/week" : "#work-board"} className="atlas-home-overview-top">
           <strong>This Week</strong>
           <span>{rows.weekCount} open</span>
         </Link>
         <div className="atlas-home-overview-list">
           {rows.dayRows.map((row) => (
-            <Link key={row.key} href={dayHrefAvailable ? row.href : "#work-board"} className="atlas-home-overview-row-link">
+            <Link key={row.key} href={canOpenFarmCalendar ? row.href : "#work-board"} className="atlas-home-overview-row-link">
               <b>{row.label}</b>
               <small>{row.sublabel}</small>
               <em>{row.count}</em>
@@ -237,13 +237,13 @@ function UniversalOverviewBoxes({ home }: { home: AtlasUniversalHomeModel }) {
         </div>
       </AtlasCard>
       <AtlasCard className="atlas-home-overview-card atlas-home-overview-month">
-        <Link href={dayHrefAvailable ? "/overview/month" : "#work-board"} className="atlas-home-overview-top">
+        <Link href={canOpenFarmCalendar ? "/overview/month" : "#work-board"} className="atlas-home-overview-top">
           <strong>{rows.monthLabel}</strong>
           <span>{rows.progress.day}/{rows.progress.days} days · {rows.monthCount} open</span>
         </Link>
         <div className="atlas-home-overview-list atlas-home-month-week-list">
           {rows.weekRows.map((row) => (
-            <Link key={row.key} href={dayHrefAvailable ? row.href : "#work-board"} className="atlas-home-overview-row-link">
+            <Link key={row.key} href={canOpenFarmCalendar ? row.href : "#work-board"} className="atlas-home-overview-row-link">
               <b>{row.label}</b>
               <small>{row.sublabel}</small>
               <em>{row.count}</em>
@@ -267,6 +267,7 @@ export default function AtlasUniversalHome({
   const todayIso = home.window.doneDate;
   const visibleFarms = useMemo(() => farmCards(home), [home]);
   const workstreams = home.organizationHome?.workstreams ?? [];
+  const singleVisibleFarm = visibleFarms.length === 1;
   const canDocumentActiveFarm = Boolean(
     home.activeFarm
       && home.activeFarm.workerKey
@@ -312,15 +313,19 @@ export default function AtlasUniversalHome({
     return project.farmKey === selectedFarmKey
       || project.targets.some((target) => target.farmId === filteredFarms[0]?.farmId);
   });
-  const todayDatedCount = home.datedItems.filter((item) => item.date === todayIso).length;
+  const todayDatedCount = home.datedItems.filter((item) => item.date === todayIso && item.state !== "complete").length;
   const currentMoveLabel = todayDatedCount
     ? `${todayDatedCount} today`
     : home.moves.length
-      ? `${home.moves.length} now`
+      ? `${home.moves.length} open`
       : "Complete";
-  const heroHref = home.activeFarm ? `/day?date=${encodeURIComponent(todayIso)}` : "#work-board";
+  const heroHref = home.activeFarm
+    ? `/day?date=${encodeURIComponent(todayIso)}`
+    : home.moves[0]?.href || "#work-board";
   const activeSnapshot = home.activeFarm?.snapshot;
   const showFarmSnapshot = Boolean(activeSnapshot && !home.viewer.hasOrganizationScope);
+  const firstProjectHref = home.projects[0] ? `/project/${encodeURIComponent(home.projects[0].projectId)}` : "#work-board";
+  const metricHref = singleVisibleFarm ? (home.projects.length ? "#work-board" : "/zones") : "#scope-board";
 
   return (
     <>
@@ -329,6 +334,7 @@ export default function AtlasUniversalHome({
         data-atlas-home-portal="universal"
         data-atlas-has-farm-scope={home.viewer.hasFarmScope ? "true" : "false"}
         data-atlas-has-organization-scope={home.viewer.hasOrganizationScope ? "true" : "false"}
+        data-atlas-single-farm={singleVisibleFarm ? "true" : "false"}
       >
         <AtlasTopBar
           title={home.title}
@@ -336,7 +342,7 @@ export default function AtlasUniversalHome({
           action={canDocumentActiveFarm ? (
             <button type="button" className="atlas-note-plus" aria-label="Document work" onClick={openFieldLog}>+</button>
           ) : home.projects.length ? (
-            <Link href="#work-board" className="atlas-note-plus" aria-label="Open visible work">+</Link>
+            <Link href={firstProjectHref} className="atlas-note-plus" aria-label="Open current project work">+</Link>
           ) : null}
         />
 
@@ -346,7 +352,7 @@ export default function AtlasUniversalHome({
             className="atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller atlas-daily-run-sheet atlas-route-sheet"
             ariaLabelledBy="atlas-today-title"
           >
-            <Link href={heroHref} className="atlas-task-controller-head atlas-task-controller-head-link" aria-label="Open today's work">
+            <Link href={heroHref} className="atlas-task-controller-head atlas-task-controller-head-link" aria-label="Open current work">
               <div>
                 <span className="atlas-task-kicker">Today</span>
                 <em className="atlas-season-label" id="atlas-today-title">{prettyDate(todayIso)}</em>
@@ -371,8 +377,8 @@ export default function AtlasUniversalHome({
               </div>
             ) : (
               <Link href={heroHref} className="atlas-run-sheet-empty">
-                <strong>No active move is waiting.</strong>
-                <em>Open the scope board below to inspect farms and projects.</em>
+                <strong>All tasks complete</strong>
+                <em>Open the work board below to inspect the next project or farm move.</em>
               </Link>
             )}
           </AtlasCard>
@@ -387,7 +393,7 @@ export default function AtlasUniversalHome({
               <span><b>{activeSnapshot.stemsLogged}</b> stems</span>
             </AtlasMetricStrip>
           ) : (
-            <AtlasMetricStrip href="#scope-board" className="atlas-farm-snapshot-bar" ariaLabel="Open Atlas scope board">
+            <AtlasMetricStrip href={metricHref} className="atlas-farm-snapshot-bar" ariaLabel="Open current Atlas work">
               <span><b>{home.metrics.farmCount}</b> farms</span>
               <span><b>{home.metrics.projectCount}</b> projects</span>
               <span><b>{home.metrics.openWorkCount}</b> open</span>
@@ -396,10 +402,12 @@ export default function AtlasUniversalHome({
           )}
 
           <AtlasFooterActions className="atlas-home-footer-row">
-            <Link href="#scope-board" className="atlas-home-closeout-footer-link">
-              <span>Atlas scope</span>
-              <em>{home.metrics.farmCount} farms visible</em>
-            </Link>
+            {!singleVisibleFarm ? (
+              <Link href="#scope-board" className="atlas-home-closeout-footer-link">
+                <span>Atlas scope</span>
+                <em>{home.metrics.farmCount} farms visible</em>
+              </Link>
+            ) : null}
             <Link href={home.projects.length ? "#work-board" : "/closeout"} className="atlas-owner-footer-link">
               <span>{home.projects.length ? "Work in motion" : "Closeout"}</span>
               <em>{home.projects.length ? `${home.metrics.projectCount} projects` : "Review changes"}</em>
@@ -440,64 +448,66 @@ export default function AtlasUniversalHome({
             </AtlasCard>
           ) : null}
 
-          <AtlasCard as="section" id="scope-board" className={styles.detailSection} ariaLabelledBy="scope-board-title">
-            <AtlasSectionHeading kicker="Bird's-eye view" title="Atlas Scope" count={visibleFarms.length} id="scope-board-title" />
+          {!singleVisibleFarm ? (
+            <AtlasCard as="section" id="scope-board" className={styles.detailSection} ariaLabelledBy="scope-board-title">
+              <AtlasSectionHeading kicker="Bird's-eye view" title="Atlas Scope" count={visibleFarms.length} id="scope-board-title" />
 
-            {(visibleFarms.length > 1 || workstreams.length > 1) ? (
-              <div className={styles.filters} aria-label="Atlas scope filters">
-                {visibleFarms.length > 1 ? (
-                  <div>
-                    <span>Farm</span>
-                    <Link href={filterHref(null, selectedWorkstream)} className={!selectedFarmKey ? styles.activeFilter : undefined}>All</Link>
-                    {visibleFarms.map((farm) => (
-                      <Link key={farm.farmId} href={filterHref(farm.farmKey, selectedWorkstream)} className={selectedFarmKey === farm.farmKey ? styles.activeFilter : undefined}>
-                        {farm.farmName}
-                      </Link>
-                    ))}
-                  </div>
-                ) : null}
-                {workstreams.length > 1 ? (
-                  <div>
-                    <span>Workstream</span>
-                    <Link href={filterHref(selectedFarmKey, null)} className={!selectedWorkstream ? styles.activeFilter : undefined}>All</Link>
-                    {workstreams.map((workstream) => (
-                      <Link key={workstream} href={filterHref(selectedFarmKey, workstream)} className={selectedWorkstream === workstream ? styles.activeFilter : undefined}>
-                        {titleCase(workstream)}
-                      </Link>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+              {(visibleFarms.length > 1 || workstreams.length > 1) ? (
+                <div className={styles.filters} aria-label="Atlas scope filters">
+                  {visibleFarms.length > 1 ? (
+                    <div>
+                      <span>Farm</span>
+                      <Link href={filterHref(null, selectedWorkstream)} className={!selectedFarmKey ? styles.activeFilter : undefined}>All</Link>
+                      {visibleFarms.map((farm) => (
+                        <Link key={farm.farmId} href={filterHref(farm.farmKey, selectedWorkstream)} className={selectedFarmKey === farm.farmKey ? styles.activeFilter : undefined}>
+                          {farm.farmName}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                  {workstreams.length > 1 ? (
+                    <div>
+                      <span>Workstream</span>
+                      <Link href={filterHref(selectedFarmKey, null)} className={!selectedWorkstream ? styles.activeFilter : undefined}>All</Link>
+                      {workstreams.map((workstream) => (
+                        <Link key={workstream} href={filterHref(selectedFarmKey, workstream)} className={selectedWorkstream === workstream ? styles.activeFilter : undefined}>
+                          {titleCase(workstream)}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
-            <div className={styles.farmList}>
-              {filteredFarms.map((farm) => {
-                const state = farmState(farm);
-                const scope = farm.scope;
-                return (
-                  <AtlasCard key={farm.farmId} className={styles.farmCard} variant="cream">
-                    <div className={styles.farmCardHeader}>
-                      <div>
-                        <span>{scope ? titleCase(scope.role) : "Project access"}</span>
-                        <strong>{farm.farmName}</strong>
+              <div className={styles.farmList}>
+                {filteredFarms.map((farm) => {
+                  const state = farmState(farm);
+                  const scope = farm.scope;
+                  return (
+                    <AtlasCard key={farm.farmId} className={styles.farmCard} variant="cream">
+                      <div className={styles.farmCardHeader}>
+                        <div>
+                          <span>{scope ? titleCase(scope.role) : "Project access"}</span>
+                          <strong>{farm.farmName}</strong>
+                        </div>
+                        <AtlasStateBadge state={state}>{stateLabel(state)}</AtlasStateBadge>
                       </div>
-                      <AtlasStateBadge state={state}>{stateLabel(state)}</AtlasStateBadge>
-                    </div>
-                    <div className={styles.farmFacts}>
-                      <span><b>{scope?.openTaskCount ?? 0}</b> open</span>
-                      <span><b>{scope?.blockedTaskCount ?? 0}</b> blocked</span>
-                      <span><b>{scope?.snapshot.growingBeds ?? 0}</b> beds</span>
-                      <span><b>{farm.projectCount}</b> projects</span>
-                    </div>
-                    <div className={styles.farmLinks}>
-                      {scope ? <Link href={farm.farmId === home.activeFarmId ? "/zones" : filterHref(farm.farmKey, selectedWorkstream)}>Open farm</Link> : null}
-                      {farm.projectCount ? <Link href={filterHref(farm.farmKey, selectedWorkstream)}>Open projects</Link> : null}
-                    </div>
-                  </AtlasCard>
-                );
-              })}
-            </div>
-          </AtlasCard>
+                      <div className={styles.farmFacts}>
+                        <span><b>{scope?.openTaskCount ?? 0}</b> open</span>
+                        <span><b>{scope?.blockedTaskCount ?? 0}</b> blocked</span>
+                        <span><b>{scope?.snapshot.growingBeds ?? 0}</b> beds</span>
+                        <span><b>{farm.projectCount}</b> projects</span>
+                      </div>
+                      <div className={styles.farmLinks}>
+                        {scope ? <Link href={farm.farmId === home.activeFarmId ? "/zones" : filterHref(farm.farmKey, selectedWorkstream)}>Open farm</Link> : null}
+                        {farm.projectCount ? <Link href={filterHref(farm.farmKey, selectedWorkstream)}>Open projects</Link> : null}
+                      </div>
+                    </AtlasCard>
+                  );
+                })}
+              </div>
+            </AtlasCard>
+          ) : null}
         </div>
       </AtlasAppShell>
 
