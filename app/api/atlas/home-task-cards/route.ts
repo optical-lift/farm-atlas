@@ -34,7 +34,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "home-membership-v3-grow-room-doorway",
+      "X-Atlas-Read-Path": "home-membership-v2-grow-room-doorway",
     },
   });
 }
