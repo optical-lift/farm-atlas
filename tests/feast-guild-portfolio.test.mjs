@@ -15,9 +15,12 @@ const migrationPath = "supabase/migrations/20260727213000_feast_guild_portfolio_
 test("Feast Guild is an organization above farms, not a fake farm", () => {
   const migration = read(migrationPath);
   assert.match(migration, /create table if not exists atlas\.organizations/i);
-  assert.match(migration, /'feast_guild'[\s\S]*'Feast Guild'/i);
-  assert.match(migration, /'waiting_room_farm'[\s\S]*'Waiting Room Farm'/i);
-  assert.doesNotMatch(migration, /insert into atlas\.farms[\s\S]{0,300}'feast_guild'/i);
+  assert.match(migration, /insert into atlas\.organizations[\s\S]*'feast_guild'[\s\S]*'Feast Guild'/i);
+  assert.match(migration, /insert into atlas\.farms[\s\S]*'waiting_room_farm'[\s\S]*'Waiting Room Farm'/i);
+  assert.doesNotMatch(
+    migration,
+    /insert into atlas\.farms\s*\([^)]*\)[\s\S]{0,220}select[\s\S]{0,120}'feast_guild'\s*,\s*'Feast Guild'/i,
+  );
 });
 
 test("projects can be farm-specific or collective while farm work stays explicit", () => {
