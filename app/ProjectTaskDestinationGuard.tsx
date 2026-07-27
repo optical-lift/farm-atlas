@@ -17,8 +17,9 @@ export default function ProjectTaskDestinationGuard() {
       .then((result: { destination?: { projectId?: string; taskId?: string } | null }) => {
         if (cancelled || !result.destination?.projectId) return;
         const destinationTaskId = result.destination.taskId || taskId;
+        const returnTo = `/project/${encodeURIComponent(result.destination.projectId)}`;
         window.location.replace(
-          `/project/${encodeURIComponent(result.destination.projectId)}?taskId=${encodeURIComponent(destinationTaskId)}#project-work`,
+          `/task-focus/${encodeURIComponent(destinationTaskId)}?returnTo=${encodeURIComponent(returnTo)}`,
         );
       })
       .catch(() => {
