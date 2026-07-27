@@ -63,6 +63,7 @@ import "./day-timeline-completion-echo.css";
 import "./week-route-v1.css";
 import "./universal-home-familiar.css";
 import "./atlas-shell-responsive.css";
+import "./project-task-timeline.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });

@@ -16,28 +16,36 @@ test("organization portals keep the Feast Guild title while farm employees keep 
   assert.doesNotMatch(home, /singleVisibleFarmName/);
 });
 
-test("project tasks open their project workspace instead of the farm-only task route", () => {
-  const home = read("app/page.tsx");
+test("project tasks use the same task-focus route while project pages remain task collections", () => {
   const project = read("app/project/[projectId]/page.tsx");
   const tools = read("components/atlas/portfolio/ProjectTaskTools.tsx");
+  const focusRoute = read("app/task-focus/[taskId]/page.tsx");
+  const focus = read("components/atlas/project-task-focus.tsx");
   const guard = read("app/ProjectTaskDestinationGuard.tsx");
-  const route = read("app/api/atlas/project-tasks/[taskId]/destination/route.ts");
-  const migration = read("supabase/migrations/20260728235500_project_task_destination_v1.sql");
+  const migration = read("supabase/migrations/20260728235900_universal_project_task_focus_and_transitions_v1.sql");
+  const css = read("app/project-task-timeline.css");
 
-  assert.match(home, /move\.kind !== "project_task"/);
-  assert.match(home, /\?taskId=\$\{encodeURIComponent\(taskId\)\}#project-work/);
-  assert.match(project, /selectedTaskId/);
-  assert.match(project, /<ProjectTaskTools[\s\S]*selectedTaskId=\{selectedTaskId\}/);
-  assert.match(tools, /data-project-task-selected/);
-  assert.match(tools, /scrollIntoView/);
+  assert.match(project, /atlas-project-command-header/);
+  assert.match(project, /<ProjectTaskTools[\s\S]*steps=\{detail\.steps\}[\s\S]*trail=\{project\.trail\}/);
+  assert.doesNotMatch(project, /<AtlasTrail/);
+  assert.doesNotMatch(project, /className=\{styles\.hero\}/);
 
-  assert.match(guard, /window\.location\.pathname !== "\/task"/);
-  assert.match(guard, /project-tasks\/\$\{encodeURIComponent\(taskId\)\}\/destination/);
-  assert.match(guard, /window\.location\.replace/);
-  assert.match(route, /project_task_destination_v1/);
+  assert.match(tools, /atlas-day-route-spine atlas-project-route-spine/);
+  assert.match(tools, /atlas-day-task-node atlas-project-task-node/);
+  assert.match(tools, /\/task-focus\/\$\{encodeURIComponent\(task\.taskId\)\}/);
+  assert.doesNotMatch(tools, /complete_project_task|\/complete`|>Done</);
+
+  assert.match(focusRoute, /readAtlasProjectTaskFocus/);
+  assert.match(focusRoute, /<ProjectTaskFocus focus=\{projectFocus\}/);
+  assert.match(focus, /atlas-task-ticket-card atlas-dominion-task-card/);
+  assert.match(focus, /<AtlasTrail context=\{project\.trail\} mode="compact"/);
+  assert.match(focus, /project-tasks\/\$\{encodeURIComponent\(task\.taskId\)\}\/transition/);
+
+  assert.match(guard, /\/task-focus\/\$\{encodeURIComponent\(destinationTaskId\)\}/);
+  assert.match(migration, /atlas\.project_task_focus_v1/i);
+  assert.match(migration, /atlas\.transition_project_task_v1/i);
   assert.match(migration, /atlas\.can_read_project\(p\.id\)/i);
-  assert.match(migration, /t\.task_scope = 'project'/i);
-  assert.doesNotMatch(migration, /insert into atlas\.tasks/i);
+  assert.match(css, /Projects use the same Atlas collection grammar as Day and Week/);
 });
 
 test("mobile shell corners are viewport behavior rather than membership behavior", () => {
