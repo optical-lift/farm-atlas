@@ -13,9 +13,16 @@ import styles from "@/components/atlas/portfolio/project.module.css";
 
 export const dynamic = "force-dynamic";
 
+type ProjectSearchParams = Record<string, string | string[] | undefined>;
+
 type ProjectPageProps = {
   params: Promise<{ projectId: string }>;
+  searchParams?: Promise<ProjectSearchParams>;
 };
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null;
+}
 
 function titleCase(value: string) {
   return value
@@ -23,9 +30,11 @@ function titleCase(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export default async function ProjectPage({ params }: ProjectPageProps) {
+export default async function ProjectPage({ params, searchParams }: ProjectPageProps) {
   const viewer = await requireAtlasPortalViewer();
   const { projectId } = await params;
+  const query: ProjectSearchParams = searchParams ? await searchParams : {};
+  const selectedTaskId = firstParam(query.taskId);
 
   let detail: AtlasProjectDetail;
   try {
@@ -110,6 +119,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 tasks={detail.tasks}
                 canCreateTasks={detail.permissions.canCreateTasks}
                 canCompleteAll={detail.permissions.isOrganizationOwner}
+                selectedTaskId={selectedTaskId}
               />
             </section>
           </div>
