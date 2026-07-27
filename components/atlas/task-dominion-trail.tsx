@@ -3,15 +3,16 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import AtlasTrail from "@/components/atlas/trail/AtlasTrail";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { taskConditionRailModel } from "@/lib/atlas/task-condition-rail";
-import { atlasRouteKeyForTask } from "@/lib/atlas/task-display";
 import { taskDominionModel } from "@/lib/atlas/task-dominion";
 import {
   fetchTendingTaskContext,
   tendingBedHref,
   type TendingBedTrack,
 } from "@/lib/atlas/tending-client";
+import { atlasTrailFromTendingTrack } from "@/lib/atlas/trail";
 
 type Props = {
   task: AtlasTaskCard;
@@ -52,12 +53,11 @@ function externalTaskLink(task: AtlasTaskCard): ExternalTaskLink | null {
 }
 
 export default function TaskDominionTrail({ task, instruction }: Props) {
-  const route = atlasRouteKeyForTask(task);
   const objectKey = trailObjectKey(task);
   const [track, setTrack] = useState<TendingBedTrack | null>(null);
 
   useEffect(() => {
-    if (route !== "weed" || !objectKey) {
+    if (!objectKey) {
       setTrack(null);
       return;
     }
@@ -74,10 +74,11 @@ export default function TaskDominionTrail({ task, instruction }: Props) {
     return () => {
       active = false;
     };
-  }, [objectKey, route, task.task_id]);
+  }, [objectKey, task.task_id]);
 
   const model = useMemo(() => taskDominionModel(task, track, instruction), [instruction, task, track]);
   const condition = useMemo(() => taskConditionRailModel(task), [task]);
+  const trail = useMemo(() => track ? atlasTrailFromTendingTrack(track) : null, [track]);
   const externalLink = useMemo(() => externalTaskLink(task), [task]);
 
   return (
@@ -90,19 +91,8 @@ export default function TaskDominionTrail({ task, instruction }: Props) {
         <span>{model.subjectLabel}</span>
       </header>
 
-      {condition.meaningful ? (
-        <ol className="atlas-task-dominion-track" aria-label={`What came before and what follows ${model.actionLabel}`}>
-          {model.steps.map((step) => (
-            <li
-              className={`step-${step.status}`}
-              aria-current={step.status === "current" || step.status === "blocked" ? "step" : undefined}
-              key={step.key}
-            >
-              <i aria-hidden="true" />
-              <span>{step.label}</span>
-            </li>
-          ))}
-        </ol>
+      {trail ? (
+        <AtlasTrail context={trail} mode="compact" />
       ) : (
         <div className="atlas-task-dominion-no-trail" aria-label="No linked Trail">
           <span aria-hidden="true" />
