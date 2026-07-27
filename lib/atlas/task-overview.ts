@@ -109,7 +109,7 @@ function hasTerminalMetadata(task: AtlasTaskCard) {
 }
 
 export function isRelevantOpenTask(task: AtlasTaskCard) {
-  return task.status === "open" && !isChildTask(task) && !hasTerminalMetadata(task);
+  return (task.status === "open" || task.status === "blocked") && !isChildTask(task) && !hasTerminalMetadata(task);
 }
 
 export function routeForTask(task: AtlasTaskCard): WorkRouteKey {
@@ -149,7 +149,7 @@ export function zoneBucket(value: string) {
   if (lower.includes("garage") || lower.includes("hydrangea")) return "Garage / House Beds";
   if (lower.includes("grow room")) return "Grow Room";
   if (lower.includes("entry") || lower.includes("billboard")) return "Entry Billboard";
-  return value || "Elm Farm";
+  return value || "Atlas";
 }
 
 export function collectionZone(task: AtlasTaskCard) {
