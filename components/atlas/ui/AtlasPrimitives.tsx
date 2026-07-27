@@ -7,12 +7,14 @@ function classes(...values: Array<string | null | undefined | false>) {
 
 type AtlasAppShellProps = Omit<ComponentPropsWithoutRef<"main">, "children"> & {
   children: ReactNode;
+  afterFrame?: ReactNode;
   frameClassName?: string;
   frameProps?: Omit<ComponentPropsWithoutRef<"section">, "children">;
 };
 
 export function AtlasAppShell({
   children,
+  afterFrame,
   className,
   frameClassName,
   frameProps,
@@ -33,6 +35,7 @@ export function AtlasAppShell({
       >
         {children}
       </section>
+      {afterFrame}
     </main>
   );
 }
