@@ -59,6 +59,7 @@ function CollectionOverviewCard({ collection }: { collection: AtlasWorkCollectio
   );
 }
 
+// GroupSection is the universal successor to the farm-only ZoneSection.
 function GroupSection({ group, anchorIso, returnTo }: { group: ZoneTaskOverview; anchorIso: string; returnTo: string }) {
   return (
     <details className="atlas-overview-zone-card">
