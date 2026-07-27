@@ -72,14 +72,23 @@ function nextDate(value: string | null) {
   return base.toISOString().slice(0, 10);
 }
 
-function requestInstruction(request: GrowRoomRequest) {
-  const subject = request.displaySubject || request.title;
-  if (request.requestKind === "germination") return `Count what is alive in ${subject}.`;
-  if (request.requestKind === "pot_up") return `Pot up ${subject}.`;
-  if (request.requestKind === "hardening") return `Advance hardening for ${subject}.`;
-  if (request.requestKind === "readiness") return `Check whether ${subject} is ready.`;
-  const action = request.displayAction || "Complete";
-  return `${action} ${subject}.`;
+function requestActionLabel(request: GrowRoomRequest) {
+  if (request.requestKind === "germination") return "Count live seedlings";
+  if (request.requestKind === "pot_up") return "Pot up plants";
+  if (request.requestKind === "hardening") return "Advance hardening";
+  if (request.requestKind === "readiness") return "Check transplant readiness";
+  return (request.displayAction || "Complete action").replace(/[.!]+$/, "");
+}
+
+function requestSubjectLabel(request: GrowRoomRequest) {
+  const raw = (request.displaySubject || request.title).trim();
+  const segments = raw.split("·").map((segment) => segment.trim()).filter(Boolean);
+  const subject = segments.length > 1 ? segments[segments.length - 1] : raw;
+  return subject
+    .replace(/^Check germination\s*[—:-]\s*/i, "")
+    .replace(/^Grow Room\s*[—:-]\s*/i, "")
+    .replace(/^Check\s+(.+?)\s+germination$/i, "$1")
+    .trim();
 }
 
 function nonce(prefix: string) {
@@ -308,7 +317,8 @@ function GrowRoomRoundPage() {
                         ? <small>Overdue</small>
                         : null}
                   </div>
-                  <h1>{requestInstruction(activeRequest)}</h1>
+                  <h1>{requestActionLabel(activeRequest)}</h1>
+                  <p className={styles.detail}>{requestSubjectLabel(activeRequest)}</p>
                   {activeRequest.displayDetail ? <p className={styles.detail}>{activeRequest.displayDetail}</p> : null}
 
                   {activeRequest.resolvedAt ? (
