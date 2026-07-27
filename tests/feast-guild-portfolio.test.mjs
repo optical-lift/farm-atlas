@@ -55,8 +55,11 @@ test("the same portfolio home is permission scoped for owners and contributors",
   assert.match(session, /organization_memberships/);
   assert.match(proxy, /needsAtlasPortfolioMembership/);
   assert.match(proxy, /organization_memberships/);
-  assert.match(portfolio, /atlas-phone-shell atlas-home-shell/);
-  assert.match(portfolio, /atlas-phone atlas-dashboard-phone/);
+  assert.match(portfolio, /AtlasAppShell/);
+  assert.match(portfolio, /AtlasTopBar/);
+  assert.match(portfolio, /AtlasCard/);
+  assert.match(portfolio, /AtlasMetricStrip/);
+  assert.match(portfolio, /AtlasFooterActions/);
   assert.match(portfolio, /My Guild Work/);
   assert.match(portfolio, /Bird's-eye view/);
   assert.match(portfolio, /Needs attention|attention/i);
