@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
+import AtlasTrail from "@/components/atlas/trail/AtlasTrail";
 import {
   fetchFarmCareObject,
   humanizeCareValue,
@@ -13,15 +14,13 @@ import {
 import {
   fetchTendingBed,
   formatTendingEffort,
-  prettyTendingDate,
   tendingClock,
   tendingDueLabel,
   tendingStepLabel,
-  tendingStepsToHarvestLabel,
   tendingTaskHref,
   type TendingBedTrack,
-  type TendingGate,
 } from "@/lib/atlas/tending-client";
+import { atlasTrailFromTendingTrack } from "@/lib/atlas/trail";
 
 type UpdateResponse = { ok: boolean; object?: FarmCareObject; role?: string; error?: string | { message?: string } };
 
@@ -48,14 +47,6 @@ function errorMessage(error: UpdateResponse["error"], fallback: string) {
   if (typeof error === "string") return error;
   if (error && typeof error.message === "string") return error.message;
   return fallback;
-}
-
-function gateSymbol(gate: TendingGate) {
-  if (gate.status === "complete") return "✓";
-  if (gate.status === "current") return "●";
-  if (gate.status === "blocked") return "!";
-  if (gate.status === "skipped") return "–";
-  return "○";
 }
 
 function HarvestScore({ bed }: { bed: TendingBedTrack }) {
@@ -154,6 +145,7 @@ export default function TendingBedPage() {
   const mayCorrect = role === "owner" || role === "manager";
   const zoneHref = `/collections/weeding/${encodeURIComponent(bed?.zoneKey || params.zoneKey)}`;
   const taskHref = bed ? tendingTaskHref(bed) : null;
+  const trail = bed ? atlasTrailFromTendingTrack(bed, taskHref) : null;
   const results = object?.results ?? [];
   const history = object?.history ?? [];
 
@@ -179,19 +171,7 @@ export default function TendingBedPage() {
                 <div className="atlas-tending-score"><HarvestScore bed={bed} /><span>{tendingClock(bed)}</span></div>
               </section>
 
-              <section className="atlas-tending-gate-board" aria-label={`${bed.bedLabel} harvest path`}>
-                <header><span>Path to harvest</span><strong>{tendingStepsToHarvestLabel(bed)}</strong></header>
-                <ol>
-                  {bed.gates.map((gate, index) => {
-                    const active = gate.status === "current" && gate.taskId && taskHref;
-                    const dateLabel = gate.dueDate
-                      ? gate.status === "current" ? tendingDueLabel(gate.dueDate) : prettyTendingDate(gate.dueDate)
-                      : null;
-                    const content = <><b>{gateSymbol(gate)}</b><span>{gate.label}</span>{dateLabel ? <time>{dateLabel}</time> : null}</>;
-                    return <li key={`${gate.key}:${gate.dueDate ?? index}`} className={`gate-${gate.status}`}>{active ? <Link href={taskHref}>{content}</Link> : content}</li>;
-                  })}
-                </ol>
-              </section>
+              {trail ? <AtlasTrail context={trail} mode="full" title="Path to harvest" /> : null}
 
               {bed.currentGate && taskHref ? (
                 <Link href={taskHref} className="atlas-tending-bed-current">

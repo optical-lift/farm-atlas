@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { AtlasTrailContext } from "@/lib/atlas/trail";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export type AtlasPortfolioTarget = {
@@ -34,6 +35,7 @@ export type AtlasPortfolioProject = {
   blockedTaskCount: number;
   openAttentionCount: number;
   targets: AtlasPortfolioTarget[];
+  trail: AtlasTrailContext | null;
 };
 
 export type AtlasPortfolioFarm = {

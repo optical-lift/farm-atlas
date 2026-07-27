@@ -10,6 +10,7 @@ test("the focused task owns one truthful Dominion Trail and condition rail", () 
   const layout = read("app/layout.tsx");
   const detail = read("components/atlas/dominion-assigned-task-detail.tsx");
   const trail = read("components/atlas/task-dominion-trail.tsx");
+  const renderer = read("components/atlas/trail/AtlasTrail.tsx");
   const model = read("lib/atlas/task-condition-rail.ts");
   const styles = read("app/task-condition-rail.css");
 
@@ -17,6 +18,7 @@ test("the focused task owns one truthful Dominion Trail and condition rail", () 
   assert.doesNotMatch(layout, /^\s*<TaskFocusTendingTrail/m);
   assert.match(layout, /task-dominion-card\.css/);
   assert.match(layout, /task-condition-rail\.css/);
+  assert.match(layout, /atlas-trail\.css/);
   assert.match(detail, /atlas-dominion-task-card/);
   assert.match(detail, /<TaskDominionTrail task=\{task\} instruction=\{instruction\} \/>/);
   assert.match(detail, /const detailHeading = "Steps"/);
@@ -28,13 +30,16 @@ test("the focused task owns one truthful Dominion Trail and condition rail", () 
   assert.doesNotMatch(detail, />Result</);
   assert.match(trail, /fetchTendingTaskContext/);
   assert.match(trail, /condition\.meaningful/);
-  assert.match(trail, /atlas-task-dominion-track/);
+  assert.match(trail, /atlasTrailFromTendingTrack/);
+  assert.match(trail, /<AtlasTrail context=\{trail\} mode="compact"/);
   assert.match(trail, /atlas-task-dominion-no-trail/);
   assert.match(trail, /aria-label="No linked Trail"/);
   assert.match(trail, /atlas-task-condition-rail/);
   assert.match(trail, /Now · Target/);
+  assert.doesNotMatch(trail, /atlas-task-dominion-track/);
   assert.doesNotMatch(trail, />Why now</);
   assert.doesNotMatch(trail, />This move changes</);
+  assert.match(renderer, /node\.status === "current" \|\| node\.status === "blocked"/);
   assert.match(model, /taskHasMeaningfulTrail/);
   assert.match(model, /NATURAL_SEQUENCE_ROUTES/);
   assert.match(model, /task_series_key/);

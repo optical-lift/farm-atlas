@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import ProjectTaskTools from "@/components/atlas/portfolio/ProjectTaskTools";
+import AtlasTrail from "@/components/atlas/trail/AtlasTrail";
 import {
   readAtlasProjectDetail,
   type AtlasProjectDetail,
@@ -36,6 +37,13 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const project = detail.project;
   const placeTargets = project.targets.filter((target) => target.placeLabel);
   const locationLabel = project.farmName || viewer.organizationName;
+  const currentTrailNode = project.trail?.nodes.find((node) => node.nodeId === project.trail?.currentNodeId)
+    ?? project.trail?.nodes.find((node) => node.status === "current" || node.status === "blocked")
+    ?? null;
+  const currentMove = project.trail?.currentMove?.title
+    || currentTrailNode?.label
+    || project.currentMilestone
+    || "Define the next move";
 
   return (
     <main className="atlas-phone-shell">
@@ -45,7 +53,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             <span className="atlas-phone-kicker">Atlas</span>
             <strong className="atlas-phone-title">{viewer.organizationName}</strong>
           </Link>
-          <Link href="/#portfolio-board" className={styles.back}>Portfolio</Link>
+          <Link href="/#work-board" className={styles.back}>Work</Link>
         </header>
 
         <div className={styles.projectBody}>
@@ -58,8 +66,8 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             <h1>{project.title}</h1>
             {project.outcome ? <p>{project.outcome}</p> : null}
             <div className={styles.milestone}>
-              <span>Current milestone</span>
-              <strong>{project.currentMilestone || "Define the next project milestone"}</strong>
+              <span>Current move</span>
+              <strong>{currentMove}</strong>
             </div>
             {placeTargets.length ? (
               <div className={styles.targets}>
@@ -92,34 +100,18 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
               </section>
             ) : null}
 
-            <ProjectTaskTools
-              projectId={project.projectId}
-              tasks={detail.tasks}
-              canCreateTasks={detail.permissions.canCreateTasks}
-              canCompleteAll={detail.permissions.isOrganizationOwner}
-            />
-
-            {detail.steps.length ? (
-              <section className={styles.trailSection} aria-labelledby="project-trail-title">
-                <div className={styles.sectionHeading}>
-                  <div>
-                    <span>Project trail</span>
-                    <h2 id="project-trail-title">Milestones and work</h2>
-                  </div>
-                </div>
-                <ol className={styles.trail}>
-                  {detail.steps.map((step) => (
-                    <li key={step.stepId} data-status={step.status}>
-                      <span aria-hidden="true" />
-                      <div>
-                        <strong>{step.title}</strong>
-                        <small>{titleCase(step.status)}</small>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </section>
+            {project.trail ? (
+              <AtlasTrail context={project.trail} mode="full" title="Project Trail" />
             ) : null}
+
+            <section id="project-work">
+              <ProjectTaskTools
+                projectId={project.projectId}
+                tasks={detail.tasks}
+                canCreateTasks={detail.permissions.canCreateTasks}
+                canCompleteAll={detail.permissions.isOrganizationOwner}
+              />
+            </section>
           </div>
         </div>
       </section>

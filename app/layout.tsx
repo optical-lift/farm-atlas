@@ -15,6 +15,7 @@ import TaskResultAnchorPatch from "./TaskResultAnchorPatch";
 import TendingTaskContext from "@/components/atlas/tending-task-context";
 import "./globals.css";
 import "./atlas-primitives.css";
+import "./atlas-trail.css";
 import "./home.css";
 import "./zones.css";
 import "./task-feed.css";
