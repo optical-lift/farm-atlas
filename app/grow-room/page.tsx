@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import styles from "./grow-room.module.css";
@@ -89,7 +89,9 @@ function nonce(prefix: string) {
 function GrowRoomRoundPage() {
   const searchParams = useSearchParams();
   const requestedVisitTaskId = searchParams.get("visitTaskId")?.trim() || null;
+  const logPanelRef = useRef<HTMLElement | null>(null);
   const [round, setRound] = useState<GrowRoomRound | null>(null);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +99,7 @@ function GrowRoomRoundPage() {
   const [problemOpen, setProblemOpen] = useState(false);
   const [problemNote, setProblemNote] = useState("");
 
-  const loadRound = useCallback(async () => {
+  const loadRound = useCallback(async (preferFirstUnresolved = false) => {
     setError(null);
     const query = requestedVisitTaskId ? `?visitTaskId=${encodeURIComponent(requestedVisitTaskId)}` : "";
     try {
@@ -110,7 +112,14 @@ function GrowRoomRoundPage() {
       if (!response.ok || !data.ok || !data.round) {
         throw new Error(data.error || "The Grow Room round could not be loaded.");
       }
-      setRound(data.round);
+      const loadedRound = data.round;
+      setRound(loadedRound);
+      setSelectedAssignmentId((current) => {
+        const firstUnresolved = loadedRound.requests.find((request) => !request.resolvedAt)?.assignmentId ?? null;
+        if (preferFirstUnresolved) return firstUnresolved;
+        if (current && loadedRound.requests.some((request) => request.assignmentId === current)) return current;
+        return firstUnresolved;
+      });
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "The Grow Room round could not be loaded.");
     } finally {
@@ -122,14 +131,42 @@ function GrowRoomRoundPage() {
     void loadRound();
   }, [loadRound]);
 
-  const activeRequest = useMemo(
-    () => round?.requests.find((request) => !request.resolvedAt) ?? null,
-    [round],
-  );
+  const activeRequest = useMemo(() => {
+    if (!round) return null;
+    if (selectedAssignmentId) {
+      const selected = round.requests.find((request) => request.assignmentId === selectedAssignmentId);
+      if (selected) return selected;
+    }
+    return round.requests.find((request) => !request.resolvedAt) ?? null;
+  }, [round, selectedAssignmentId]);
 
   const returnTo = round?.visitTask?.dueDate
     ? `/day?date=${encodeURIComponent(round.visitTask.dueDate)}`
     : "/";
+
+  function resetLogForm() {
+    setLiveCount("");
+    setProblemOpen(false);
+    setProblemNote("");
+    setError(null);
+  }
+
+  function openLog(request: GrowRoomRequest) {
+    resetLogForm();
+    setSelectedAssignmentId(request.assignmentId);
+    requestAnimationFrame(() => {
+      logPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function openFinish() {
+    if (!round?.summary.canFinish) return;
+    resetLogForm();
+    setSelectedAssignmentId(null);
+    requestAnimationFrame(() => {
+      logPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   async function postRound(body: Record<string, unknown>) {
     const response = await fetch("/api/atlas/grow-room/round", {
@@ -148,7 +185,7 @@ function GrowRoomRoundPage() {
     payload: Record<string, unknown>,
     note: string,
   ) {
-    if (!round?.visitTask || !activeRequest) return;
+    if (!round?.visitTask || !activeRequest || activeRequest.resolvedAt) return;
     setSaving(true);
     setError(null);
     try {
@@ -165,10 +202,8 @@ function GrowRoomRoundPage() {
         payload,
         idempotencyKey: nonce(`${round.visitTask.taskId}:${activeRequest.taskId}:${transition}`),
       });
-      setLiveCount("");
-      setProblemOpen(false);
-      setProblemNote("");
-      await loadRound();
+      resetLogForm();
+      await loadRound(true);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "The Grow Room result could not be saved.");
     } finally {
@@ -232,30 +267,56 @@ function GrowRoomRoundPage() {
                 {(round.requests.length ? round.requests : [{ assignmentId: "care" } as GrowRoomRequest]).map((request, index) => {
                   const complete = Boolean(request.resolvedAt);
                   const current = activeRequest?.assignmentId === request.assignmentId;
-                  const stepClass = complete ? "step-complete" : current ? "step-current" : "step-context";
+                  const stepClass = current ? "step-current" : complete ? "step-complete" : "step-context";
                   return (
                     <li className={stepClass} key={request.assignmentId}>
-                      <i aria-hidden="true" />
-                      <span>{round.requests.length ? `Log ${index + 1}` : "Room care"}</span>
+                      <button
+                        type="button"
+                        className={styles.logButton}
+                        onClick={() => openLog(request)}
+                        aria-label={`Open Log ${index + 1}: ${request.displaySubject || request.title}`}
+                        aria-pressed={current}
+                      >
+                        <i aria-hidden="true" />
+                        <span>{round.requests.length ? `Log ${index + 1}` : "Room care"}</span>
+                      </button>
                     </li>
                   );
                 })}
                 <li className={!activeRequest && round.summary.canFinish ? "step-current" : "step-context"}>
-                  <i aria-hidden="true" />
-                  <span>Finish</span>
+                  <button
+                    type="button"
+                    className={styles.logButton}
+                    disabled={!round.summary.canFinish}
+                    onClick={openFinish}
+                    aria-label="Open finish step"
+                    aria-pressed={!activeRequest && round.summary.canFinish}
+                  >
+                    <i aria-hidden="true" />
+                    <span>Finish</span>
+                  </button>
                 </li>
               </ol>
 
               {activeRequest ? (
-                <section className="atlas-task-dominion-move">
+                <section className="atlas-task-dominion-move" ref={logPanelRef} id="grow-room-log-panel">
                   <div className="atlas-task-dominion-kicker">
                     <span>Log {activeRequest.sortOrder} of {round.summary.total}</span>
-                    {activeRequest.dueDate && activeRequest.dueDate < (round.visitTask.dueDate || "") ? <small>Overdue</small> : null}
+                    {activeRequest.resolvedAt
+                      ? <small>Logged</small>
+                      : activeRequest.dueDate && activeRequest.dueDate < (round.visitTask.dueDate || "")
+                        ? <small>Overdue</small>
+                        : null}
                   </div>
                   <h1>{requestInstruction(activeRequest)}</h1>
                   {activeRequest.displayDetail ? <p className={styles.detail}>{activeRequest.displayDetail}</p> : null}
 
-                  {activeRequest.requestKind === "germination" ? (
+                  {activeRequest.resolvedAt ? (
+                    <div className={styles.loggedState}>
+                      <strong>Log complete</strong>
+                      <span>This result has already been saved.</span>
+                    </div>
+                  ) : activeRequest.requestKind === "germination" ? (
                     <div className={styles.controls}>
                       <label className={styles.countField}>
                         <span>Live seedlings</span>
@@ -292,13 +353,13 @@ function GrowRoomRoundPage() {
                   )}
                 </section>
               ) : round.visitTask.status === "done" ? (
-                <section className={`atlas-task-dominion-move ${styles.finish}`}>
+                <section className={`atlas-task-dominion-move ${styles.finish}`} ref={logPanelRef} id="grow-room-log-panel">
                   <small className="atlas-soft-label">Complete</small>
                   <h1>Grow Room round finished.</h1>
                   <Link href={returnTo}>Return to Today</Link>
                 </section>
               ) : (
-                <section className={`atlas-task-dominion-move ${styles.finish}`}>
+                <section className={`atlas-task-dominion-move ${styles.finish}`} ref={logPanelRef} id="grow-room-log-panel">
                   <small className="atlas-soft-label">Final step</small>
                   <h1>{round.summary.total ? "Finish the Grow Room round." : "Complete the ordinary Grow Room care."}</h1>
                   <button className={styles.primary} type="button" disabled={saving || !round.summary.canFinish} onClick={() => void finishRound()}>
