@@ -78,16 +78,20 @@ test("all task mutations flow through the shared transition route", () => {
 
 test("the homepage reader is membership scoped instead of metadata assigned", () => {
   const route = read("app/api/atlas/home-task-cards/route.ts");
-  const migration = read("supabase/migrations/20260721060200_atlas_add_membership_scoped_home_task_cards_reader.sql");
+  const membershipMigration = read("supabase/migrations/20260721060200_atlas_add_membership_scoped_home_task_cards_reader.sql");
+  const growRoomMigration = read("supabase/migrations/20260727194500_home_task_cards_hide_grow_room_internal_v2.sql");
 
   assert.match(route, /requireAtlasApiAccess/);
   assert.match(route, /createAtlasServerClient/);
-  assert.match(route, /home_task_cards_v1/);
+  assert.match(route, /home_task_cards_v2/);
   assert.doesNotMatch(route, /anna_task|assigned_to|atlasSupabase|SUPABASE_SERVICE_ROLE_KEY/);
 
-  assert.match(migration, /current_farm_role/);
-  assert.match(migration, /current_membership_id/);
-  assert.match(migration, /assigned_membership_id = v_target_membership_id/);
-  assert.match(migration, /visibility_scope = 'farm_shared'/);
-  assert.match(migration, /revoke all .* from public, anon/is);
+  assert.match(membershipMigration, /current_farm_role/);
+  assert.match(membershipMigration, /current_membership_id/);
+  assert.match(membershipMigration, /assigned_membership_id = v_target_membership_id/);
+  assert.match(membershipMigration, /visibility_scope = 'farm_shared'/);
+  assert.match(membershipMigration, /revoke all .* from public, anon/is);
+  assert.match(growRoomMigration, /home_task_cards_v1/);
+  assert.match(growRoomMigration, /is_farm_member|home_task_cards_v1/);
+  assert.match(growRoomMigration, /grant execute .* to authenticated/is);
 });
