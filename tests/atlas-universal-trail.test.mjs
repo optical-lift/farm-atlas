@@ -58,10 +58,12 @@ test("Tending and Dominion tasks render the shared Trail without inventing one-t
   assert.doesNotMatch(dominion, /atlas-task-dominion-track/);
 });
 
-test("projects expose the same Trail and only current work is actionable", () => {
+test("projects expose Trail position through task collections and the opened task", () => {
   const migration = read(migrationPath);
   const portfolio = read("lib/atlas/portfolio.ts");
   const projectPage = read("app/project/[projectId]/page.tsx");
+  const taskTools = read("components/atlas/portfolio/ProjectTaskTools.tsx");
+  const taskFocus = read("components/atlas/project-task-focus.tsx");
   const renderer = read("components/atlas/trail/AtlasTrail.tsx");
 
   assert.match(migration, /'trail', atlas\.project_trail_context_v2\(p\.id\)/i);
@@ -69,10 +71,18 @@ test("projects expose the same Trail and only current work is actionable", () =>
   assert.match(migration, /'nextNode'/i);
   assert.match(migration, /resolved_status in \('current','blocked'\)/i);
   assert.match(portfolio, /trail: AtlasTrailContext \| null/);
-  assert.match(projectPage, /<AtlasTrail context=\{project\.trail\} mode="full" title="Project Trail"/);
+
+  assert.match(projectPage, /atlasTrailCurrentNode\(project\.trail\)/);
+  assert.match(projectPage, /atlas-project-trail-position/);
   assert.match(projectPage, /id="project-work"/);
-  assert.match(projectPage, /Current move/);
-  assert.doesNotMatch(projectPage, /styles\.trail|Milestones and work/);
+  assert.match(projectPage, /steps=\{detail\.steps\}/);
+  assert.match(projectPage, /trail=\{project\.trail\}/);
+  assert.doesNotMatch(projectPage, /<AtlasTrail|styles\.trail|Milestones and work/);
+
+  assert.match(taskTools, /atlas-day-route-spine atlas-project-route-spine/);
+  assert.match(taskTools, /\/task-focus\/\$\{encodeURIComponent\(task\.taskId\)\}/);
+  assert.match(taskFocus, /<AtlasTrail context=\{project\.trail\} mode="compact"/);
+  assert.match(taskFocus, /Current move/);
 
   assert.match(renderer, /const playable = \(node\.status === "current" \|\| node\.status === "blocked"\)/);
   assert.doesNotMatch(renderer, /node\.status === "projected".*<Link/s);
