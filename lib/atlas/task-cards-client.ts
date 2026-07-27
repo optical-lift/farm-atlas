@@ -137,6 +137,14 @@ export type AtlasTaskCard = {
 export type AtlasTaskCardsResponse = {
   ok: boolean;
   farmKey: string;
+  portalLabel?: string;
+  hasFarmScope?: boolean;
+  hasOrganizationScope?: boolean;
+  activeFarmName?: string | null;
+  window?: {
+    doneDate?: string;
+    dueThrough?: string;
+  };
   taskCards: AtlasTaskCard[];
   error?: string;
   details?: string;
@@ -156,6 +164,17 @@ type ViewerOperationalWindow = {
   dueThrough?: string;
   doneDate?: string;
 };
+
+export function atlasTaskCardScope(task: AtlasTaskCard) {
+  const value = task.metadata?.task_scope;
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (task.generated_from === "project" || task.task_type === "project_task") return "project";
+  return "farm_operation";
+}
+
+export function atlasIsProjectTaskCard(task: AtlasTaskCard) {
+  return atlasTaskCardScope(task) === "project";
+}
 
 function currentUrlScope(): AtlasTaskCardScope | null {
   if (typeof window === "undefined") return null;
@@ -253,7 +272,7 @@ export async function fetchAtlasTaskCards(
         const viewerParams = new URLSearchParams();
         if (viewerWindow.dueThrough) viewerParams.set("dueThrough", viewerWindow.dueThrough);
         if (viewerWindow.doneDate) viewerParams.set("doneDate", viewerWindow.doneDate);
-        return `/api/atlas/home-task-cards${viewerParams.toString() ? `?${viewerParams.toString()}` : ""}`;
+        return `/api/atlas/universal-task-cards${viewerParams.toString() ? `?${viewerParams.toString()}` : ""}`;
       })()
     : `/api/atlas/task-cards${params.toString() ? `?${params.toString()}` : ""}`;
 

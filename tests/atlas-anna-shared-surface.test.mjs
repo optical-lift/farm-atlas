@@ -49,7 +49,7 @@ test("Anna enters the familiar shared Atlas operating surface", () => {
   assert.match(reader, /farmTaskMove/);
   assert.doesNotMatch(layout, /AtlasRoleHomeRedirect/);
   assert.match(taskClient, /if \(pathname === "\/"\)/);
-  assert.match(taskClient, /\/api\/atlas\/home-task-cards/);
+  assert.match(taskClient, /\/api\/atlas\/universal-task-cards/);
 
   for (const role of ["owner", "manager", "farm_hand"]) {
     assert.match(authCore, new RegExp(`case "${role}"`));

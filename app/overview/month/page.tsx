@@ -31,6 +31,10 @@ function TaskDueLabel({ task, anchorIso }: { task: AtlasTaskCard; anchorIso: str
   return <em>{prettyShortDate(task.due_date)}</em>;
 }
 
+function taskHref(task: AtlasTaskCard, returnTo: string) {
+  return `/task-focus/${encodeURIComponent(task.task_id)}?returnTo=${encodeURIComponent(returnTo)}`;
+}
+
 function CollectionOverviewCard({ collection }: { collection: AtlasWorkCollectionSummary }) {
   return (
     <details className="atlas-overview-zone-card atlas-work-collection-section" open>
@@ -55,22 +59,23 @@ function CollectionOverviewCard({ collection }: { collection: AtlasWorkCollectio
   );
 }
 
-function ZoneSection({ zone, anchorIso }: { zone: ZoneTaskOverview; anchorIso: string }) {
+// GroupSection is the universal successor to the farm-only ZoneSection.
+function GroupSection({ group, anchorIso, returnTo }: { group: ZoneTaskOverview; anchorIso: string; returnTo: string }) {
   return (
     <details className="atlas-overview-zone-card">
       <summary>
         <div>
-          <strong>{zone.zone}</strong>
-          <span>{zone.tasks.length} open{zone.urgentCount ? ` · ${zone.urgentCount} carryover` : ""}</span>
+          <strong>{group.zone}</strong>
+          <span>{group.tasks.length} open{group.urgentCount ? ` · ${group.urgentCount} carryover` : ""}</span>
         </div>
         <b>Open</b>
       </summary>
       <div className="atlas-overview-route-chip-row">
-        {zone.routeCounts.map((item) => <span key={item.key}>{item.label} {item.count}</span>)}
+        {group.routeCounts.map((item) => <span key={item.key}>{item.label} {item.count}</span>)}
       </div>
       <div className="atlas-overview-task-list">
-        {zone.tasks.map((task) => (
-          <Link className="atlas-overview-task-card" href={`/task?taskId=${encodeURIComponent(task.task_id)}`} key={task.task_id}>
+        {group.tasks.map((task) => (
+          <Link className="atlas-overview-task-card" href={taskHref(task, returnTo)} key={task.task_id}>
             <div>
               <strong>{subject(task)}</strong>
               <span>{routeLabels[routeForTask(task)]} · {collectionZone(task)}</span>
@@ -89,17 +94,28 @@ export default function AtlasMonthOverviewPage() {
   const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [portalLabel, setPortalLabel] = useState("Atlas");
+  const [hasFarmScope, setHasFarmScope] = useState<boolean | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
 
   useEffect(() => {
-    setAnchorIso(new URLSearchParams(window.location.search).get("date") || todayIso());
+    const requestedAnchor = new URLSearchParams(window.location.search).get("date");
+    const resolvedAnchor = requestedAnchor && /^\d{4}-\d{2}-\d{2}$/.test(requestedAnchor) ? requestedAnchor : todayIso();
+    const resolvedEnd = monthEndIso(resolvedAnchor);
+    setAnchorIso(resolvedAnchor);
 
     async function load() {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetchAtlasTaskCards();
+        const response = await fetchAtlasTaskCards({
+          viewerScoped: true,
+          doneDate: resolvedAnchor,
+          dueThrough: resolvedEnd,
+        });
         setTasks(response.taskCards ?? []);
+        setPortalLabel(response.portalLabel || response.activeFarmName || "Atlas");
+        setHasFarmScope(response.hasFarmScope ?? true);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
       } finally {
@@ -107,6 +123,11 @@ export default function AtlasMonthOverviewPage() {
       }
     }
 
+    void load();
+  }, []);
+
+  useEffect(() => {
+    if (hasFarmScope !== true) return;
     async function loadWeather() {
       try {
         const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" });
@@ -116,28 +137,28 @@ export default function AtlasMonthOverviewPage() {
         setWeatherLabel("weather unavailable");
       }
     }
-
-    void load();
     void loadWeather();
-  }, []);
+  }, [hasFarmScope]);
 
   const progress = monthProgress(anchorIso);
   const endIso = monthEndIso(anchorIso);
+  const returnTo = `/overview/month?date=${encodeURIComponent(anchorIso)}`;
   const monthTasks = useMemo(() => filterMonthOverviewTasks(tasks, anchorIso), [anchorIso, tasks]);
   const mowingCollection = useMemo(() => atlasBuildMowingCollectionSummary(tasks, endIso), [endIso, tasks]);
   const showMowingCollection = Boolean(mowingCollection && mowingCollection.dueCount > 0);
   const standaloneMonthTasks = useMemo(() => monthTasks.filter((task) => !atlasIsMowingCollectionMember(task)), [monthTasks]);
   const carryoverCount = useMemo(() => standaloneMonthTasks.filter((task) => Boolean(task.due_date && task.due_date < anchorIso)).length, [anchorIso, standaloneMonthTasks]);
-  const zoneGroups = useMemo(() => groupTasksByZone(standaloneMonthTasks, anchorIso), [anchorIso, standaloneMonthTasks]);
-  const topZone = showMowingCollection ? "Mowing" : zoneGroups[0]?.zone ?? "No active zone";
+  const groups = useMemo(() => groupTasksByZone(standaloneMonthTasks, anchorIso), [anchorIso, standaloneMonthTasks]);
+  const topGroup = showMowingCollection ? "Mowing" : groups[0]?.zone ?? "No active group";
   const displayedOpenCount = standaloneMonthTasks.length + (showMowingCollection ? 1 : 0);
+  const headerStatus = hasFarmScope === false ? `${displayedOpenCount} open` : weatherLabel;
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone atlas-overview-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></Link>
-          <span className="atlas-weather-line">{weatherLabel}</span>
+          <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">{portalLabel}</span></Link>
+          <span className="atlas-weather-line">{headerStatus}</span>
           <span className="atlas-note-plus atlas-overview-top-dot" aria-hidden="true">•</span>
         </header>
 
@@ -156,8 +177,8 @@ export default function AtlasMonthOverviewPage() {
           <section className="atlas-overview-stat-grid" aria-label="Month overview stats">
             <article><strong>{loading ? "…" : displayedOpenCount}</strong><span>open</span></article>
             <article><strong>{loading ? "…" : carryoverCount}</strong><span>carryover</span></article>
-            <article><strong>{loading ? "…" : zoneGroups.length + (showMowingCollection ? 1 : 0)}</strong><span>zones</span></article>
-            <article><strong>{topZone}</strong><span>most open</span></article>
+            <article><strong>{loading ? "…" : groups.length + (showMowingCollection ? 1 : 0)}</strong><span>groups</span></article>
+            <article><strong>{topGroup}</strong><span>most open</span></article>
           </section>
 
           <section className="atlas-overview-summary-line">
@@ -166,11 +187,11 @@ export default function AtlasMonthOverviewPage() {
 
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
 
-          <section className="atlas-overview-zone-list" aria-label="Open work by zone">
-            {loading ? <div className="atlas-task-page-empty">Loading zone overview.</div> : null}
-            {!loading && zoneGroups.length === 0 && !showMowingCollection ? <div className="atlas-task-page-empty">No open work in this month window.</div> : null}
+          <section className="atlas-overview-zone-list" aria-label="Open work by group">
+            {loading ? <div className="atlas-task-page-empty">Loading task overview.</div> : null}
+            {!loading && groups.length === 0 && !showMowingCollection ? <div className="atlas-task-page-empty">No open work in this month window.</div> : null}
             {showMowingCollection && mowingCollection ? <CollectionOverviewCard collection={mowingCollection} /> : null}
-            {zoneGroups.map((zone) => <ZoneSection key={zone.zone} zone={zone} anchorIso={anchorIso} />)}
+            {groups.map((group) => <GroupSection key={group.zone} group={group} anchorIso={anchorIso} returnTo={returnTo} />)}
           </section>
         </div>
       </section>
