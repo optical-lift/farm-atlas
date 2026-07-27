@@ -6,43 +6,55 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("root renders one authenticated Atlas home selected by membership scope", () => {
+const universalMigration = "supabase/migrations/20260728211500_universal_atlas_home_read_model_v1.sql";
+
+test("root renders one universal Atlas home for every active membership shape", () => {
   const root = read("app/page.tsx");
-  const farmPortal = read("components/atlas/home/AtlasHomePortal.tsx");
-  const portfolioPortal = read("components/atlas/portfolio/FeastGuildPortfolioHome.tsx");
-  const viewerContext = read("lib/atlas/viewer-context.ts");
+  const universalHome = read("components/atlas/home/AtlasUniversalHome.tsx");
+  const viewer = read("lib/atlas/viewer.ts");
+  const reader = read("lib/atlas/universal-home.ts");
 
   assert.match(root, /getAtlasSession/);
-  assert.match(root, /atlasPortalViewerFromSession/);
-  assert.match(root, /atlasViewerFromSession/);
-  assert.match(root, /<FeastGuildPortfolioHome/);
-  assert.match(root, /<AtlasHomePortal viewer=\{viewer\}/);
-  assert.doesNotMatch(root, /atlas-home-box-purple/);
-  assert.doesNotMatch(root, /TaskLaunchHero/);
+  assert.match(root, /atlasUniversalViewerFromSession/);
+  assert.match(root, /readAtlasUniversalHome/);
+  assert.match(root, /<AtlasUniversalHome/);
+  assert.doesNotMatch(root, /FeastGuildPortfolioHome|AtlasHomePortal/);
+  assert.doesNotMatch(root, /atlasPortalViewerFromSession|atlasViewerFromSession/);
 
-  assert.match(farmPortal, /AtlasAppShell/);
-  assert.match(farmPortal, /AtlasTopBar/);
-  assert.match(farmPortal, /AtlasCard/);
-  assert.match(farmPortal, /AtlasMetricStrip/);
-  assert.match(farmPortal, /AtlasFooterActions/);
-  assert.match(farmPortal, /data-atlas-home-portal="shared"/);
-  assert.match(farmPortal, /viewer\.farmName/);
-  assert.match(farmPortal, /data-atlas-viewer-role=\{viewer\.role\}/);
+  assert.match(universalHome, /AtlasAppShell/);
+  assert.match(universalHome, /AtlasTopBar/);
+  assert.match(universalHome, /AtlasCard/);
+  assert.match(universalHome, /AtlasMetricStrip/);
+  assert.match(universalHome, /AtlasFooterActions/);
+  assert.match(universalHome, /AtlasSectionHeading/);
+  assert.match(universalHome, /AtlasStateBadge/);
+  assert.match(universalHome, /data-atlas-home-portal="universal"/);
+  assert.match(universalHome, /Work in Motion/);
+  assert.match(universalHome, /Atlas Scope/);
+  assert.doesNotMatch(universalHome, /displayName|Project lead|Lex/);
 
-  assert.match(portfolioPortal, /AtlasAppShell/);
-  assert.match(portfolioPortal, /AtlasTopBar/);
-  assert.match(portfolioPortal, /AtlasCard/);
-  assert.match(portfolioPortal, /AtlasMetricStrip/);
-  assert.match(portfolioPortal, /AtlasFooterActions/);
-  assert.match(portfolioPortal, /AtlasSectionHeading/);
-  assert.match(portfolioPortal, /AtlasStateBadge/);
-  assert.match(portfolioPortal, /data-feast-guild-portfolio/);
-  assert.match(portfolioPortal, /Bird's-eye view/);
-  assert.match(portfolioPortal, /attention/i);
-  assert.doesNotMatch(portfolioPortal, /displayName|Project lead|Lex/);
+  assert.match(viewer, /export type AtlasUniversalViewer/);
+  assert.match(viewer, /farmMemberships: session\.memberships/);
+  assert.match(viewer, /organizationMemberships: session\.organizationMemberships/);
+  assert.match(reader, /universal_home_v1/);
+  assert.match(reader, /buildMoves/);
+  assert.match(reader, /buildDatedItems/);
+});
 
-  assert.match(viewerContext, /atlasViewerFromSession/);
-  assert.match(viewerContext, /atlasPortalViewerFromSession/);
+test("the prepared home reader combines farm and organization scope without weakening either", () => {
+  const migration = read(universalMigration);
+
+  assert.match(migration, /create or replace function atlas\.universal_home_v1/i);
+  assert.match(migration, /atlas\.portfolio_home_v1\(v_organization_id\)/i);
+  assert.match(migration, /atlas\.farm_snapshot_for_member_v1\(v_farm\.farm_id\)/i);
+  assert.match(migration, /atlas\.home_task_cards_v2\(/i);
+  assert.match(migration, /from atlas\.farm_memberships fm/i);
+  assert.match(migration, /fm\.user_id = v_user_id/i);
+  assert.match(migration, /v_farm\.role in \('owner', 'manager'\)/i);
+  assert.match(migration, /'taskCards', v_task_cards/i);
+  assert.match(migration, /'organizationHome', v_organization_home/i);
+  assert.match(migration, /grant execute on function atlas\.universal_home_v1/i);
+  assert.doesNotMatch(migration, /worker_key\s*=\s*'anna'/i);
 });
 
 test("legacy Marshall route returns to the universal root", () => {
@@ -54,7 +66,7 @@ test("legacy Marshall route returns to the universal root", () => {
   assert.doesNotMatch(marshall, /MarshallDashboard|MarshallTodayHero/);
 });
 
-test("home task data follows the signed-in membership", () => {
+test("home task data follows the signed-in farm membership", () => {
   const route = read("app/api/atlas/home-task-cards/route.ts");
   const viewer = read("lib/atlas/viewer.ts");
   const migration = read("supabase/migrations/20260722174500_universal_home_viewer_scope.sql");
