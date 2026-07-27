@@ -6,6 +6,15 @@ import type {
   AtlasPortfolioProject,
 } from "@/lib/atlas/portfolio";
 import type { AtlasPortalViewer } from "@/lib/atlas/viewer";
+import {
+  AtlasAppShell,
+  AtlasCard,
+  AtlasFooterActions,
+  AtlasMetricStrip,
+  AtlasSectionHeading,
+  AtlasStateBadge,
+  AtlasTopBar,
+} from "@/components/atlas/ui/AtlasPrimitives";
 
 import styles from "./portfolio.module.css";
 
@@ -61,6 +70,15 @@ function projectHealthClass(project: AtlasPortfolioProject) {
   return styles.healthMoving;
 }
 
+function projectHealthState(project: AtlasPortfolioProject): "moving" | "waiting" | "blocked" | "complete" | "quiet" | "attention" {
+  if (project.blockedTaskCount > 0 || project.health === "blocked") return "blocked";
+  if (project.openAttentionCount > 0 || project.health === "at_risk") return "attention";
+  if (project.health === "waiting") return "waiting";
+  if (project.health === "quiet") return "quiet";
+  if (project.health === "complete") return "complete";
+  return "moving";
+}
+
 function projectLocation(project: AtlasPortfolioProject) {
   return project.farmName || "Feast Guild";
 }
@@ -71,9 +89,12 @@ function ProjectCard({ project }: { project: AtlasPortfolioProject }) {
     <Link href={`/project/${encodeURIComponent(project.projectId)}`} className={styles.projectCard}>
       <div className={styles.projectCardTop}>
         <span>{projectLocation(project)} · {titleCase(project.workstream)}</span>
-        <em className={`${styles.health} ${projectHealthClass(project)}`}>
+        <AtlasStateBadge
+          state={projectHealthState(project)}
+          className={`${styles.health} ${projectHealthClass(project)}`}
+        >
           {projectHealthLabel(project)}
-        </em>
+        </AtlasStateBadge>
       </div>
       <strong>{project.title}</strong>
       <p>{project.currentMilestone || project.outcome || "Open the project."}</p>
@@ -94,10 +115,7 @@ function activeFilterHref(farm?: string | null, workstream?: string | null) {
   return query ? `/?${query}#portfolio-board` : "/#portfolio-board";
 }
 
-function attentionForProject(
-  attention: AtlasPortfolioAttention[],
-  projectId: string,
-) {
+function attentionForProject(attention: AtlasPortfolioAttention[], projectId: string) {
   return attention.find((item) => item.projectId === projectId) ?? null;
 }
 
@@ -109,10 +127,7 @@ function projectPriority(project: AtlasPortfolioProject, attention: AtlasPortfol
   return 4;
 }
 
-function dueItems(
-  projects: AtlasPortfolioProject[],
-  attention: AtlasPortfolioAttention[],
-) {
+function dueItems(projects: AtlasPortfolioProject[], attention: AtlasPortfolioAttention[]) {
   const items: DatedPortfolioItem[] = [];
   attention.forEach((item) => {
     if (!item.dueDate) return;
@@ -147,7 +162,7 @@ function DateOverviewCard({
   items: DatedPortfolioItem[];
 }) {
   return (
-    <article className={styles.overviewCard}>
+    <AtlasCard className={styles.overviewCard}>
       <div className={styles.overviewHeading}>
         <strong>{title}</strong>
         <span>{summary}</span>
@@ -161,7 +176,7 @@ function DateOverviewCard({
           </Link>
         )) : <p>No dated items.</p>}
       </div>
-    </article>
+    </AtlasCard>
   );
 }
 
@@ -213,187 +228,199 @@ export default function FeastGuildPortfolioHome({
       : portfolio.crossFarmProjects;
 
   return (
-    <main
-      className="atlas-phone-shell atlas-home-shell"
+    <AtlasAppShell
+      className="atlas-home-shell"
       data-feast-guild-portfolio
       data-portfolio-role={viewer.role}
     >
-      <section className="atlas-phone atlas-dashboard-phone">
-        <header className="atlas-phone-top atlas-dashboard-top">
-          <div className="atlas-phone-brand">
-            <span className="atlas-phone-kicker">Atlas</span>
-            <span className="atlas-phone-title">{portfolio.organization.name}</span>
-          </div>
-          <span className={styles.headerStatus}>{movingCount} moving</span>
-          <Link href="#guild-work" className={styles.addButton} aria-label="Open Guild work">+</Link>
-        </header>
-
-        <div className={styles.homeBody}>
-          <section className={`atlas-home-box atlas-home-box-purple ${styles.hero}`} aria-labelledby="guild-today-title">
-            <div className={styles.heroHeader}>
-              <div>
-                <span className={styles.heroKicker}>Today</span>
-                <strong id="guild-today-title">{todayLabel}</strong>
-              </div>
-              <span className={styles.heroCount}>{totalOpen} open</span>
-            </div>
-            {heroProjects.length ? (
-              <div className={styles.heroGrid}>
-                {heroProjects.map((project) => {
-                  const attention = attentionForProject(portfolio.attention, project.projectId);
-                  return (
-                    <Link
-                      key={project.projectId}
-                      href={`/project/${encodeURIComponent(project.projectId)}`}
-                      className={styles.heroCard}
-                    >
-                      <small>{attention ? titleCase(attention.kind) : titleCase(project.workstream)}</small>
-                      <strong>{attention?.title || project.title}</strong>
-                      <span>{projectLocation(project)} · {project.openTaskCount} open</span>
-                      <em>{attention?.detail || project.currentMilestone || project.outcome || "Open the project."}</em>
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className={styles.heroEmpty}>No active Guild work is visible.</p>
-            )}
-          </section>
-
-          <div className={styles.overviewPair} aria-label="Portfolio dates">
-            <DateOverviewCard title="This Week" summary={`${weekItems.length} dated`} items={weekItems} />
-            <DateOverviewCard title={monthLabel} summary={`${monthItems.length} dated`} items={monthItems} />
-          </div>
-
-          <Link href="#portfolio-board" className={styles.snapshotBar} aria-label="Open portfolio board">
-            <span><b>{portfolio.farms.length}</b> farms</span>
-            <span><b>{allProjects.length}</b> projects</span>
-            <span><b>{totalOpen}</b> open</span>
-            <span><b>{portfolio.attention.length}</b> attention</span>
+      <AtlasTopBar
+        title={portfolio.organization.name}
+        status={<span>{movingCount} moving</span>}
+        action={(
+          <Link href="#guild-work" className="atlas-top-action atlas-top-action-task" aria-label="Open Guild work">
+            +
           </Link>
+        )}
+      />
 
-          <div className={styles.footerRow}>
-            <Link href="#portfolio-board"><span>Portfolio</span><em>{allProjects.length} active</em></Link>
-            <Link href="#guild-work"><span>Guild work</span><em>{totalOpen} open</em></Link>
+      <div className={styles.homeBody}>
+        <AtlasCard
+          as="section"
+          variant="purple"
+          className={`atlas-home-box atlas-home-box-purple ${styles.hero}`}
+          ariaLabelledBy="guild-today-title"
+        >
+          <div className={styles.heroHeader}>
+            <div>
+              <span className={styles.heroKicker}>Today</span>
+              <strong id="guild-today-title">{todayLabel}</strong>
+            </div>
+            <span className={styles.heroCount}>{totalOpen} open</span>
           </div>
-
-          <section id="guild-work" className={styles.detailSection} aria-labelledby="guild-work-title">
-            <div className={styles.sectionHeading}>
-              <div>
-                <span>Work in motion</span>
-                <h2 id="guild-work-title">My Guild Work</h2>
-              </div>
-              <strong>{allProjects.length}</strong>
-            </div>
-            {portfolio.attention.length ? (
-              <div className={styles.attentionList}>
-                {portfolio.attention.map((item, index) => (
-                  <Link
-                    key={`${item.attentionId ?? item.projectId}-${index}`}
-                    href={`/project/${encodeURIComponent(item.projectId)}`}
-                  >
-                    <span>{titleCase(item.kind)}</span>
-                    <strong>{item.title}</strong>
-                    <p>{item.detail || item.projectTitle}</p>
-                    <small>{item.farmName || "Feast Guild"} · {item.projectTitle}</small>
-                  </Link>
-                ))}
-              </div>
-            ) : null}
-            <div className={styles.projectList}>
-              {allProjects.map((project) => <ProjectCard key={project.projectId} project={project} />)}
-            </div>
-          </section>
-
-          <section id="portfolio-board" className={styles.detailSection} aria-labelledby="portfolio-board-title">
-            <div className={styles.sectionHeading}>
-              <div>
-                <span>Bird's-eye view</span>
-                <h2 id="portfolio-board-title">Portfolio</h2>
-              </div>
-              <strong>{portfolio.farms.length}</strong>
-            </div>
-
-            <div className={styles.filters} aria-label="Portfolio zoom controls">
-              <div>
-                <span>Farm</span>
-                <Link href={activeFilterHref(null, selectedWorkstream)} className={!selectedFarm ? styles.activeFilter : undefined}>All</Link>
-                {portfolio.farms.map((farm) => (
-                  <Link
-                    key={farm.farmId}
-                    href={activeFilterHref(farm.farmKey, selectedWorkstream)}
-                    className={selectedFarm === farm.farmKey ? styles.activeFilter : undefined}
-                  >
-                    {farm.farmName}
-                  </Link>
-                ))}
-              </div>
-              <div>
-                <span>Workstream</span>
-                <Link href={activeFilterHref(selectedFarm, null)} className={!selectedWorkstream ? styles.activeFilter : undefined}>All</Link>
-                {portfolio.workstreams.map((workstream) => (
-                  <Link
-                    key={workstream}
-                    href={activeFilterHref(selectedFarm, workstream)}
-                    className={selectedWorkstream === workstream ? styles.activeFilter : undefined}
-                  >
-                    {titleCase(workstream)}
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {crossFarmProjects.length ? (
-              <article className={styles.farmCard}>
-                <header>
-                  <div>
-                    <span>Across farms</span>
-                    <h3>Feast Guild</h3>
-                  </div>
-                  <small>{crossFarmProjects.length} active</small>
-                </header>
-                <div className={styles.farmProjects}>
-                  {crossFarmProjects.map((project) => <ProjectCard key={project.projectId} project={project} />)}
-                </div>
-              </article>
-            ) : null}
-
-            <div className={styles.farmList}>
-              {farms.map((farm) => {
-                const visibleProjects = farm.projects.filter((project) => workstreams.includes(project.workstream));
-                const grouped = workstreams
-                  .map((workstream) => ({
-                    workstream,
-                    projects: visibleProjects.filter((project) => project.workstream === workstream),
-                  }))
-                  .filter((group) => group.projects.length > 0);
+          {heroProjects.length ? (
+            <div className={styles.heroGrid}>
+              {heroProjects.map((project) => {
+                const attention = attentionForProject(portfolio.attention, project.projectId);
                 return (
-                  <article key={farm.farmId} className={styles.farmCard}>
-                    <header>
-                      <div>
-                        <span>Active farm</span>
-                        <h3>{farm.farmName}</h3>
-                      </div>
-                      <small>{visibleProjects.length} active</small>
-                    </header>
-                    {grouped.length ? grouped.map((group) => (
-                      <section key={`${farm.farmId}-${group.workstream}`} className={styles.workstreamGroup}>
-                        <div className={styles.workstreamHeading}>
-                          <strong>{titleCase(group.workstream)}</strong>
-                          <span>{group.projects.length}</span>
-                        </div>
-                        <div className={styles.farmProjects}>
-                          {group.projects.map((project) => <ProjectCard key={project.projectId} project={project} />)}
-                        </div>
-                      </section>
-                    )) : <p className={styles.emptyState}>No active projects in this view.</p>}
-                  </article>
+                  <Link
+                    key={project.projectId}
+                    href={`/project/${encodeURIComponent(project.projectId)}`}
+                    className={styles.heroCard}
+                  >
+                    <small>{attention ? titleCase(attention.kind) : titleCase(project.workstream)}</small>
+                    <strong>{attention?.title || project.title}</strong>
+                    <span>{projectLocation(project)} · {project.openTaskCount} open</span>
+                    <em>{attention?.detail || project.currentMilestone || project.outcome || "Open the project."}</em>
+                  </Link>
                 );
               })}
             </div>
-          </section>
+          ) : (
+            <p className={styles.heroEmpty}>No active Guild work is visible.</p>
+          )}
+        </AtlasCard>
+
+        <div className={styles.overviewPair} aria-label="Portfolio dates">
+          <DateOverviewCard title="This Week" summary={`${weekItems.length} dated`} items={weekItems} />
+          <DateOverviewCard title={monthLabel} summary={`${monthItems.length} dated`} items={monthItems} />
         </div>
-      </section>
-    </main>
+
+        <AtlasMetricStrip href="#portfolio-board" ariaLabel="Open portfolio board">
+          <span><b>{portfolio.farms.length}</b> farms</span>
+          <span><b>{allProjects.length}</b> projects</span>
+          <span><b>{totalOpen}</b> open</span>
+          <span><b>{portfolio.attention.length}</b> attention</span>
+        </AtlasMetricStrip>
+
+        <AtlasFooterActions>
+          <Link href="#portfolio-board"><span>Portfolio</span><em>{allProjects.length} active</em></Link>
+          <Link href="#guild-work"><span>Guild work</span><em>{totalOpen} open</em></Link>
+        </AtlasFooterActions>
+
+        <section id="guild-work" className={styles.detailSection} aria-labelledby="guild-work-title">
+          <AtlasSectionHeading
+            kicker="Work in motion"
+            title="My Guild Work"
+            id="guild-work-title"
+            count={allProjects.length}
+          />
+          {portfolio.attention.length ? (
+            <div className={styles.attentionList}>
+              {portfolio.attention.map((item, index) => (
+                <Link
+                  key={`${item.attentionId ?? item.projectId}-${index}`}
+                  href={`/project/${encodeURIComponent(item.projectId)}`}
+                >
+                  <span>{titleCase(item.kind)}</span>
+                  <strong>{item.title}</strong>
+                  <p>{item.detail || item.projectTitle}</p>
+                  <small>{item.farmName || "Feast Guild"} · {item.projectTitle}</small>
+                </Link>
+              ))}
+            </div>
+          ) : null}
+          <div className={styles.projectList}>
+            {allProjects.map((project) => <ProjectCard key={project.projectId} project={project} />)}
+          </div>
+        </section>
+
+        <section id="portfolio-board" className={styles.detailSection} aria-labelledby="portfolio-board-title">
+          <AtlasSectionHeading
+            kicker="Bird's-eye view"
+            title="Portfolio"
+            id="portfolio-board-title"
+            count={portfolio.farms.length}
+          />
+
+          <div className={styles.filters} aria-label="Portfolio zoom controls">
+            <div>
+              <span>Farm</span>
+              <Link
+                href={activeFilterHref(null, selectedWorkstream)}
+                className={!selectedFarm ? styles.activeFilter : undefined}
+              >
+                All
+              </Link>
+              {portfolio.farms.map((farm) => (
+                <Link
+                  key={farm.farmId}
+                  href={activeFilterHref(farm.farmKey, selectedWorkstream)}
+                  className={selectedFarm === farm.farmKey ? styles.activeFilter : undefined}
+                >
+                  {farm.farmName}
+                </Link>
+              ))}
+            </div>
+            <div>
+              <span>Workstream</span>
+              <Link
+                href={activeFilterHref(selectedFarm, null)}
+                className={!selectedWorkstream ? styles.activeFilter : undefined}
+              >
+                All
+              </Link>
+              {portfolio.workstreams.map((workstream) => (
+                <Link
+                  key={workstream}
+                  href={activeFilterHref(selectedFarm, workstream)}
+                  className={selectedWorkstream === workstream ? styles.activeFilter : undefined}
+                >
+                  {titleCase(workstream)}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {crossFarmProjects.length ? (
+            <article className={styles.farmCard}>
+              <header>
+                <div>
+                  <span>Across farms</span>
+                  <h3>Feast Guild</h3>
+                </div>
+                <small>{crossFarmProjects.length} active</small>
+              </header>
+              <div className={styles.farmProjects}>
+                {crossFarmProjects.map((project) => <ProjectCard key={project.projectId} project={project} />)}
+              </div>
+            </article>
+          ) : null}
+
+          <div className={styles.farmList}>
+            {farms.map((farm) => {
+              const visibleProjects = farm.projects.filter((project) => workstreams.includes(project.workstream));
+              const grouped = workstreams
+                .map((workstream) => ({
+                  workstream,
+                  projects: visibleProjects.filter((project) => project.workstream === workstream),
+                }))
+                .filter((group) => group.projects.length > 0);
+              return (
+                <article key={farm.farmId} className={styles.farmCard}>
+                  <header>
+                    <div>
+                      <span>Active farm</span>
+                      <h3>{farm.farmName}</h3>
+                    </div>
+                    <small>{visibleProjects.length} active</small>
+                  </header>
+                  {grouped.length ? grouped.map((group) => (
+                    <section key={`${farm.farmId}-${group.workstream}`} className={styles.workstreamGroup}>
+                      <div className={styles.workstreamHeading}>
+                        <strong>{titleCase(group.workstream)}</strong>
+                        <span>{group.projects.length}</span>
+                      </div>
+                      <div className={styles.farmProjects}>
+                        {group.projects.map((project) => <ProjectCard key={project.projectId} project={project} />)}
+                      </div>
+                    </section>
+                  )) : <p className={styles.emptyState}>No active projects in this view.</p>}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+    </AtlasAppShell>
   );
 }
