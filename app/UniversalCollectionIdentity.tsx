@@ -55,6 +55,7 @@ export default function UniversalCollectionIdentity() {
     if (!windowRange) return;
 
     let cancelled = false;
+    let observer: MutationObserver | null = null;
     const params = new URLSearchParams(windowRange);
     fetch(`/api/atlas/universal-task-cards?${params.toString()}`, {
       headers: { Accept: "application/json" },
@@ -68,14 +69,15 @@ export default function UniversalCollectionIdentity() {
         taskCards?: Array<{ status?: string }>;
       }) => {
         if (cancelled || !result.ok) return;
+        const openCount = (result.taskCards ?? []).filter((task) => task.status === "open" || task.status === "blocked").length;
         const applyIdentity = () => {
           document.querySelectorAll<HTMLElement>(".atlas-phone-title").forEach((title) => {
-            if (result.portalLabel) title.textContent = result.portalLabel;
+            if (result.portalLabel && title.textContent !== result.portalLabel) title.textContent = result.portalLabel;
           });
           if (result.hasFarmScope === false) {
-            const openCount = (result.taskCards ?? []).filter((task) => task.status === "open" || task.status === "blocked").length;
+            const label = `${openCount} open`;
             document.querySelectorAll<HTMLElement>(".atlas-weather-line").forEach((status) => {
-              status.textContent = `${openCount} open`;
+              if (status.textContent !== label) status.textContent = label;
             });
           }
           document.documentElement.dataset.atlasCollectionScope = result.hasFarmScope === false ? "organization" : "farm";
@@ -83,6 +85,8 @@ export default function UniversalCollectionIdentity() {
 
         applyIdentity();
         window.requestAnimationFrame(applyIdentity);
+        observer = new MutationObserver(applyIdentity);
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
       })
       .catch(() => {
         // The collection itself owns its visible error state.
@@ -90,6 +94,7 @@ export default function UniversalCollectionIdentity() {
 
     return () => {
       cancelled = true;
+      observer?.disconnect();
       delete document.documentElement.dataset.atlasCollectionScope;
     };
   }, []);
