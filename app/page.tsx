@@ -8,8 +8,10 @@ import { atlasPortalViewerFromSession, atlasViewerFromSession } from "@/lib/atla
 
 export const dynamic = "force-dynamic";
 
+type AtlasHomeSearchParams = Record<string, string | string[] | undefined>;
+
 type AtlasHomePageProps = {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  searchParams?: Promise<AtlasHomeSearchParams>;
 };
 
 function firstParam(value: string | string[] | undefined) {
@@ -22,10 +24,8 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
 
   const portalViewer = atlasPortalViewerFromSession(session);
   if (portalViewer) {
-    const [portfolio, params] = await Promise.all([
-      readAtlasPortfolioHome(portalViewer.organizationId),
-      searchParams ?? Promise.resolve({}),
-    ]);
+    const params: AtlasHomeSearchParams = searchParams ? await searchParams : {};
+    const portfolio = await readAtlasPortfolioHome(portalViewer.organizationId);
 
     return (
       <FeastGuildPortfolioHome
