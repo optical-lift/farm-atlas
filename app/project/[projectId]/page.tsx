@@ -2,14 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import ProjectTaskTools from "@/components/atlas/portfolio/ProjectTaskTools";
-import AtlasTrail from "@/components/atlas/trail/AtlasTrail";
 import {
   readAtlasProjectDetail,
   type AtlasProjectDetail,
 } from "@/lib/atlas/portfolio";
+import { atlasTrailCurrentNode } from "@/lib/atlas/trail";
 import { requireAtlasPortalViewer } from "@/lib/atlas/viewer-context";
-
-import styles from "@/components/atlas/portfolio/project.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -44,85 +42,100 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
   }
 
   const project = detail.project;
-  const placeTargets = project.targets.filter((target) => target.placeLabel);
-  const locationLabel = project.farmName || viewer.organizationName;
-  const currentTrailNode = project.trail?.nodes.find((node) => node.nodeId === project.trail?.currentNodeId)
-    ?? project.trail?.nodes.find((node) => node.status === "current" || node.status === "blocked")
-    ?? null;
+  const currentNode = atlasTrailCurrentNode(project.trail);
+  const nextNode = project.trail?.nextNode ?? null;
+  const activeTasks = detail.tasks.filter((task) => task.status === "open" || task.status === "blocked");
+  const completeTasks = detail.tasks.filter((task) => task.status === "done" || task.status === "skipped");
+  const blockedTasks = detail.tasks.filter((task) => task.status === "blocked");
   const currentMove = project.trail?.currentMove?.title
-    || currentTrailNode?.label
+    || activeTasks[0]?.title
+    || currentNode?.label
     || project.currentMilestone
-    || "Define the next move";
+    || "Define the next task";
+  const placeTargets = project.targets.filter((target) => target.placeLabel);
 
   return (
-    <main className="atlas-phone-shell">
-      <section className={`atlas-phone ${styles.projectPhone}`}>
-        <header className={`atlas-phone-top ${styles.topbar}`}>
-          <Link href="/" className={styles.brand}>
+    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
+      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
+        <header className="atlas-phone-top atlas-dashboard-top">
+          <Link href="/" className="atlas-phone-brand atlas-task-header-brand">
             <span className="atlas-phone-kicker">Atlas</span>
-            <strong className="atlas-phone-title">{viewer.organizationName}</strong>
+            <span className="atlas-phone-title">{viewer.organizationName}</span>
           </Link>
-          <Link href="/#work-board" className={styles.back}>Work</Link>
+          <span className="atlas-weather-line">Project</span>
+          <Link href="/" className="atlas-note-plus" aria-label="Back to Atlas home">↩</Link>
         </header>
 
-        <div className={styles.projectBody}>
-          <section className={styles.hero}>
-            <div className={styles.heroMeta}>
-              <span>{locationLabel}</span>
-              <span>{titleCase(project.workstream)}</span>
-              <span>{titleCase(project.health)}</span>
-            </div>
-            <h1>{project.title}</h1>
-            {project.outcome ? <p>{project.outcome}</p> : null}
-            <div className={styles.milestone}>
-              <span>Current move</span>
-              <strong>{currentMove}</strong>
-            </div>
-            {placeTargets.length ? (
-              <div className={styles.targets}>
-                {placeTargets.map((target) => (
-                  <span key={target.placeId || target.placeLabel}>{target.placeLabel}</span>
-                ))}
+        <div className="atlas-task-page-body">
+          <section className="atlas-task-page-section atlas-route-collection atlas-day-browse atlas-project-browse">
+            <div className="atlas-day-browse-head atlas-project-browse-head">
+              <Link href="/" className="atlas-route-back atlas-day-back">← Atlas</Link>
+              <div className="atlas-project-browse-title-row">
+                <span>{titleCase(project.workstream)}</span>
+                <strong>{activeTasks.length} open · {blockedTasks.length} blocked · {completeTasks.length} done</strong>
               </div>
-            ) : null}
-          </section>
+              <p>{project.farmName || viewer.organizationName}</p>
+            </div>
 
-          <div className={styles.body}>
-            {detail.attention.length ? (
-              <section className={styles.attentionSection} aria-labelledby="project-attention-title">
-                <div className={styles.sectionHeading}>
-                  <div>
-                    <span>Exceptions</span>
-                    <h2 id="project-attention-title">Needs attention</h2>
+            <article className="atlas-day-command-header atlas-project-command-header">
+              <div className="atlas-project-command-title">
+                <small>Project</small>
+                <h1>{project.title}</h1>
+              </div>
+
+              <div className="atlas-project-trail-position" aria-label="Current Project Trail position">
+                <span>Current</span>
+                <strong>{currentNode?.label || currentMove}</strong>
+                {nextNode ? <em>Next · {nextNode.label}</em> : <em>{project.health === "complete" ? "Trail complete" : "No next node released"}</em>}
+              </div>
+
+              <details className="atlas-day-overview-drawer atlas-day-command-overview atlas-project-command-overview">
+                <summary>
+                  <span className="atlas-day-next-label">Next task</span>
+                  <div className="atlas-day-next-copy">
+                    <strong>{currentMove}</strong>
+                    <em>{currentNode?.label || titleCase(project.workstream)}</em>
                   </div>
-                  <strong>{detail.attention.length}</strong>
+                  <b aria-hidden="true">⌄</b>
+                </summary>
+                <div className="atlas-day-command-overview-body">
+                  {project.outcome ? <p className="atlas-project-outcome">{project.outcome}</p> : null}
+                  <div className="atlas-day-overview-pills" aria-label="Project context">
+                    <span>{titleCase(project.health)}</span>
+                    <span>{activeTasks.length} open</span>
+                    {placeTargets.map((target) => <span key={target.placeId || target.placeLabel}>{target.placeLabel}</span>)}
+                  </div>
                 </div>
-                <div className={styles.attentionList}>
+              </details>
+            </article>
+
+            {detail.attention.length ? (
+              <details className="atlas-project-attention-strip" open={detail.attention.some((item) => item.kind === "blocked")}>
+                <summary><strong>Needs attention</strong><span>{detail.attention.length}</span><b aria-hidden="true">⌄</b></summary>
+                <div>
                   {detail.attention.map((item) => (
                     <article key={item.attentionId}>
-                      <span>{titleCase(item.kind)}</span>
+                      <small>{titleCase(item.kind)}</small>
                       <strong>{item.title}</strong>
                       {item.detail ? <p>{item.detail}</p> : null}
                     </article>
                   ))}
                 </div>
-              </section>
-            ) : null}
-
-            {project.trail ? (
-              <AtlasTrail context={project.trail} mode="full" title="Project Trail" />
+              </details>
             ) : null}
 
             <section id="project-work">
               <ProjectTaskTools
                 projectId={project.projectId}
+                projectTitle={project.title}
                 tasks={detail.tasks}
+                steps={detail.steps}
+                trail={project.trail}
                 canCreateTasks={detail.permissions.canCreateTasks}
-                canCompleteAll={detail.permissions.isOrganizationOwner}
                 selectedTaskId={selectedTaskId}
               />
             </section>
-          </div>
+          </section>
         </div>
       </section>
     </main>
