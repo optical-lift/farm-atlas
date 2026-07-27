@@ -1,30 +1,49 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import type { AtlasProjectTask } from "@/lib/atlas/portfolio";
+import type { AtlasProjectStep, AtlasProjectTask } from "@/lib/atlas/portfolio";
+import type { AtlasTrailContext } from "@/lib/atlas/trail";
 
 import styles from "./project.module.css";
 
 type ProjectTaskToolsProps = {
   projectId: string;
+  projectTitle: string;
   tasks: AtlasProjectTask[];
+  steps: AtlasProjectStep[];
+  trail: AtlasTrailContext | null;
   canCreateTasks: boolean;
-  canCompleteAll: boolean;
   selectedTaskId?: string | null;
 };
 
+function prettyDate(value: string | null) {
+  if (!value) return "No date";
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function titleCase(value: string) {
+  return value
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export default function ProjectTaskTools({
   projectId,
+  projectTitle,
   tasks,
+  steps,
+  trail,
   canCreateTasks,
-  canCompleteAll,
   selectedTaskId = null,
 }: ProjectTaskToolsProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
-  const [completingId, setCompletingId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -64,81 +83,77 @@ export default function ProjectTaskTools({
     router.refresh();
   }
 
-  async function completeTask(taskId: string) {
-    setError("");
-    setCompletingId(taskId);
-    const response = await fetch(
-      `/api/atlas/project-tasks/${encodeURIComponent(taskId)}/complete`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      },
-    );
-    const result = await response.json().catch(() => null) as { error?: string } | null;
-    if (!response.ok) {
-      setError(result?.error || "The project task could not be completed.");
-      setCompletingId(null);
-      return;
-    }
-    setCompletingId(null);
-    router.refresh();
-  }
-
-  const activeTasks = tasks.filter((task) => task.status === "open" || task.status === "blocked");
-  const finishedTasks = tasks.filter((task) => task.status !== "open" && task.status !== "blocked");
+  const stepByTask = useMemo(() => new Map(
+    steps.filter((step) => step.linkedTaskId).map((step) => [step.linkedTaskId as string, step]),
+  ), [steps]);
+  const currentTaskId = trail?.currentMove?.taskId
+    || steps.find((step) => {
+      const node = trail?.nodes[step.stepOrder - 1];
+      return node?.nodeId === trail?.currentNodeId || node?.status === "current" || node?.status === "blocked";
+    })?.linkedTaskId
+    || tasks.find((task) => task.status === "open" || task.status === "blocked")?.taskId
+    || null;
+  const orderedTasks = useMemo(() => [...tasks].sort((a, b) => {
+    const aStep = stepByTask.get(a.taskId)?.stepOrder ?? Number.MAX_SAFE_INTEGER;
+    const bStep = stepByTask.get(b.taskId)?.stepOrder ?? Number.MAX_SAFE_INTEGER;
+    if (aStep !== bStep) return aStep - bStep;
+    return `${a.dueDate ?? "9999-12-31"}-${a.createdAt}`.localeCompare(`${b.dueDate ?? "9999-12-31"}-${b.createdAt}`);
+  }), [stepByTask, tasks]);
+  const openCount = tasks.filter((task) => task.status === "open" || task.status === "blocked").length;
+  const doneCount = tasks.filter((task) => task.status === "done" || task.status === "skipped").length;
+  const returnTo = `/project/${encodeURIComponent(projectId)}`;
 
   return (
     <>
-      <section className={styles.taskSection} aria-labelledby="project-work-title">
-        <div className={styles.sectionHeading}>
+      <section className="atlas-project-task-collection" aria-labelledby="project-work-title">
+        <div className="atlas-project-task-collection-head">
           <div>
-            <span>Project work</span>
-            <h2 id="project-work-title">On the plate</h2>
+            <span>Project tasks</span>
+            <h2 id="project-work-title">Timeline</h2>
           </div>
-          <strong>{activeTasks.length}</strong>
+          <strong>{openCount} open</strong>
         </div>
 
-        {activeTasks.length ? (
-          <div className={styles.taskList}>
-            {activeTasks.map((task) => {
-              const canComplete = canCompleteAll || task.assignedToViewer;
+        {orderedTasks.length ? (
+          <div className="atlas-day-route-spine atlas-project-route-spine" aria-label={`${projectTitle} task timeline`}>
+            {orderedTasks.map((task) => {
+              const step = stepByTask.get(task.taskId);
+              const complete = task.status === "done" || task.status === "skipped";
+              const current = task.taskId === currentTaskId && !complete;
+              const blocked = task.status === "blocked";
+              const state = blocked ? "blocked" : current ? "current" : complete ? "complete" : "future";
               const selected = task.taskId === selectedTaskId;
+              const family = step?.title || (current ? "Current project move" : "Project task");
+              const href = `/task-focus/${encodeURIComponent(task.taskId)}?returnTo=${encodeURIComponent(returnTo)}`;
+
               return (
-                <article
+                <div
                   key={task.taskId}
                   id={`project-task-${task.taskId}`}
-                  className={styles.taskCard}
+                  className={`atlas-day-task-entry atlas-project-task-entry atlas-day-route-${state}${complete ? " atlas-day-complete-entry" : ""}`}
                   data-project-task-selected={selected ? "true" : "false"}
-                  aria-current={selected ? "true" : undefined}
                   tabIndex={-1}
                 >
-                  <div>
-                    <span>{task.assignedToViewer ? "Your task" : "Project task"}</span>
-                    <h3>{task.title}</h3>
-                    {task.note ? <p>{task.note}</p> : null}
-                    <small>
-                      {task.status === "blocked" ? "Blocked" : "Open"}
-                      {task.dueDate ? ` · Due ${task.dueDate}` : ""}
-                    </small>
-                  </div>
-                  {canComplete && task.status === "open" ? (
-                    <button
-                      type="button"
-                      onClick={() => completeTask(task.taskId)}
-                      disabled={completingId === task.taskId}
-                    >
-                      {completingId === task.taskId ? "Saving…" : "Done"}
-                    </button>
-                  ) : null}
-                </article>
+                  <span className={`atlas-day-task-node atlas-project-task-node${complete ? " is-complete" : ""}`} aria-hidden="true"><span /></span>
+                  <Link
+                    className={`atlas-day-task-card atlas-project-task-card atlas-day-route-${state}${complete ? " complete" : ""}`}
+                    href={href}
+                    aria-current={current ? "step" : undefined}
+                  >
+                    <small className="atlas-day-task-family">{current ? `Current · ${family}` : blocked ? `Blocked · ${family}` : complete ? `Complete · ${family}` : family}</small>
+                    <strong>{task.title}</strong>
+                    <span>{titleCase(task.status)}{task.dueDate ? ` · ${prettyDate(task.dueDate)}` : ""}</span>
+                    {task.blockerText ? <em>{task.blockerText}</em> : task.note ? <em>{task.note}</em> : null}
+                  </Link>
+                </div>
               );
             })}
           </div>
         ) : (
-          <p className={styles.emptyState}>No open project work.</p>
+          <p className={styles.emptyState}>No project tasks yet.</p>
         )}
 
+        <div className="atlas-project-task-totals"><span>{doneCount} complete</span><span>{openCount} open</span></div>
         {error ? <p className={styles.error} role="alert">{error}</p> : null}
       </section>
 
@@ -173,24 +188,6 @@ export default function ProjectTaskTools({
               </button>
             </form>
           </section>
-        </details>
-      ) : null}
-
-      {finishedTasks.length ? (
-        <details className={styles.finishedSection} open={finishedTasks.some((task) => task.taskId === selectedTaskId)}>
-          <summary>Completed work · {finishedTasks.length}</summary>
-          <div className={styles.finishedList}>
-            {finishedTasks.map((task) => (
-              <p
-                key={task.taskId}
-                id={`project-task-${task.taskId}`}
-                data-project-task-selected={task.taskId === selectedTaskId ? "true" : "false"}
-                tabIndex={-1}
-              >
-                {task.title}
-              </p>
-            ))}
-          </div>
         </details>
       ) : null}
     </>
