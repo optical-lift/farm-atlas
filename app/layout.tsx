@@ -63,8 +63,8 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Atlas · Elm Farm",
-  description: "Elm Farm task hand and field registry",
+  title: "Atlas · Feast Guild",
+  description: "Feast Guild farm portfolio, projects, and field operations",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
