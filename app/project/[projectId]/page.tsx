@@ -13,9 +13,11 @@ import styles from "@/components/atlas/portfolio/project.module.css";
 
 export const dynamic = "force-dynamic";
 
+type ProjectSearchParams = Record<string, string | string[] | undefined>;
+
 type ProjectPageProps = {
   params: Promise<{ projectId: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  searchParams?: Promise<ProjectSearchParams>;
 };
 
 function firstParam(value: string | string[] | undefined) {
@@ -31,7 +33,7 @@ function titleCase(value: string) {
 export default async function ProjectPage({ params, searchParams }: ProjectPageProps) {
   const viewer = await requireAtlasPortalViewer();
   const { projectId } = await params;
-  const query = searchParams ? await searchParams : {};
+  const query: ProjectSearchParams = searchParams ? await searchParams : {};
   const selectedTaskId = firstParam(query.taskId);
 
   let detail: AtlasProjectDetail;
