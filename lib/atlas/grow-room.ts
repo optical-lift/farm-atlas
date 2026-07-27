@@ -32,7 +32,7 @@ export type GrowRoomBatch = {
   containerKind: string;
   blockSizeIn: number | null;
   trayCount: number;
-  seedsSown: number;
+  seedsSown: number | null;
   seedUnit: string;
   status: string;
   sownDate: string | null;
@@ -49,6 +49,9 @@ export type GrowRoomBatch = {
   lastObservedAt: string | null;
   lastActionAt: string | null;
   destinationObjectId: string | null;
+  destinationLabel: string | null;
+  sourceObjectId: string | null;
+  cropProfileId: string | null;
   cropLabel: string;
   variety: string | null;
   lotLabel: string;
@@ -85,6 +88,27 @@ export type GrowRoomVisitTask = {
   status: string;
 };
 
+export type GrowRoomCropProfile = {
+  cropProfileId: string;
+  stableKey: string;
+  cropLabel: string;
+  variety: string | null;
+  daysToGerminationMin: number | null;
+  daysToGerminationMax: number | null;
+};
+
+export type GrowRoomDestination = {
+  objectId: string;
+  objectKey: string;
+  label: string;
+  objectType: string;
+  objectMode: string | null;
+  zoneId: string | null;
+  zoneKey: string | null;
+  zoneLabel: string | null;
+  sortOrder: number;
+};
+
 export type GrowRoomState = {
   farmId: string;
   zone: GrowRoomZone | null;
@@ -93,10 +117,13 @@ export type GrowRoomState = {
   batches: GrowRoomBatch[];
   actions: GrowRoomAction[];
   visitTask: GrowRoomVisitTask | null;
+  cropProfiles: GrowRoomCropProfile[];
+  destinations: GrowRoomDestination[];
   rules?: {
     wateringLogged?: boolean;
     ordinaryCareIsHabit?: boolean;
     onlyActionBearingChangesAreRecorded?: boolean;
+    unknownSowingFactsStayUnknown?: boolean;
   };
 };
 
@@ -166,6 +193,8 @@ export function growRoomActionLabel(actionKey: string | null) {
     replacement_requested: "Replace failed batch",
     replacement_decision: "Decide replacement",
     re_sow: "Re-sow batch",
+    thin_or_separate: "Thin or separate",
+    begin_hardening: "Begin hardening",
     mark_pot_up_needed: "Mark for pot-up",
     pot_up: "Pot up",
     pot_up_completed: "Pot-up complete",
@@ -176,6 +205,7 @@ export function growRoomActionLabel(actionKey: string | null) {
     transplanted: "Record plant-out",
     count_adjusted: "Correct live count",
     moved: "Move batch",
+    destination_assigned: "Destination linked",
     closed: "Close batch",
   };
   return actionKey ? labels[actionKey] ?? actionKey.replaceAll("_", " ") : "No action due";
@@ -183,7 +213,23 @@ export function growRoomActionLabel(actionKey: string | null) {
 
 export function isGrowRoomStructuralObject(object: GrowRoomObject) {
   const joined = `${object.objectType} ${object.objectMode ?? ""} ${object.objectKey}`.toLowerCase();
-  return /rack|shelf|seed_room|grow_room/.test(joined);
+  return /rack|shelf|seed_room|grow_room|hardening_area/.test(joined);
+}
+
+export function isGrowRoomRack(object: GrowRoomObject) {
+  return object.objectMode === "rack";
+}
+
+export function isGrowRoomBatchLocation(object: GrowRoomObject) {
+  return object.objectMode === "shelf"
+    || object.objectMode === "hardening_area"
+    || object.objectMode === "seed_room"
+    || object.objectType === "seed_room";
+}
+
+export function isCanonicalIntakeSource(object: GrowRoomObject) {
+  return typeof object.metadata?.canonical_tray_batch_id === "string"
+    && object.metadata.canonical_tray_batch_id.length > 0;
 }
 
 export function isRoutineWaterAction(actionKey: string | null) {
