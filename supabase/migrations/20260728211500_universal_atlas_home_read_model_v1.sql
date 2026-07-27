@@ -123,15 +123,15 @@ begin
         and t.status <> 'archived';
     else
       select
-        count(*) filter (where item ->> 'status' in ('open', 'blocked'))::integer,
-        count(*) filter (where item ->> 'status' = 'blocked')::integer,
+        count(*) filter (where (item ->> 'status') in ('open', 'blocked'))::integer,
+        count(*) filter (where (item ->> 'status') = 'blocked')::integer,
         count(*) filter (
-          where item ->> 'status' = 'open'
+          where (item ->> 'status') = 'open'
             and nullif(item ->> 'due_date', '') is not null
             and (item ->> 'due_date')::date < p_done_date
         )::integer,
         count(*) filter (
-          where item ->> 'status' in ('open', 'blocked')
+          where (item ->> 'status') in ('open', 'blocked')
             and nullif(item ->> 'due_date', '') is not null
             and (item ->> 'due_date')::date = p_done_date
         )::integer
