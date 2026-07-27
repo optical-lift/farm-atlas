@@ -1,0 +1,80 @@
+/* Universal Atlas home keeps the familiar farm-dashboard proportions while all accounts use one data model. */
+
+.atlas-home-grid > .atlas-home-overview-row {
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+  order: 2 !important;
+}
+
+.atlas-home-grid > .atlas-farm-snapshot-bar {
+  grid-column: 1 / -1 !important;
+  grid-row: 3 !important;
+  order: 3 !important;
+}
+
+.atlas-home-grid > .atlas-home-footer-row {
+  grid-column: 1 / -1 !important;
+  grid-row: 4 !important;
+  order: 4 !important;
+}
+
+.atlas-home-grid > #work-board,
+.atlas-home-grid > #scope-board {
+  grid-column: 1 / -1 !important;
+  width: 100%;
+}
+
+.atlas-home-grid > #work-board {
+  order: 5 !important;
+}
+
+.atlas-home-grid > #scope-board {
+  order: 6 !important;
+}
+
+.atlas-home-grid .atlas-home-task-hero.atlas-route-sheet {
+  min-height: 0 !important;
+}
+
+.atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-grid.atlas-route-sheet-grid {
+  grid-auto-rows: 96px !important;
+  gap: 8px !important;
+}
+
+.atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-box.atlas-route-sheet-box {
+  min-height: 96px !important;
+  height: 96px !important;
+  padding: 10px !important;
+}
+
+.atlas-home-grid .atlas-home-task-hero .atlas-task-controller-head {
+  margin-bottom: 0 !important;
+}
+
+.atlas-home-grid .atlas-home-overview-card {
+  min-height: 0 !important;
+}
+
+@media (max-width: 430px) {
+  .atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-grid.atlas-route-sheet-grid {
+    grid-auto-rows: 90px !important;
+  }
+
+  .atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-box.atlas-route-sheet-box {
+    min-height: 90px !important;
+    height: 90px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-grid.atlas-route-sheet-grid {
+    grid-auto-rows: 84px !important;
+    gap: 7px !important;
+  }
+
+  .atlas-home-grid .atlas-home-task-hero.atlas-route-sheet .atlas-run-sheet-box.atlas-route-sheet-box {
+    min-height: 84px !important;
+    height: 84px !important;
+    padding: 9px !important;
+  }
+}
