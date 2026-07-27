@@ -41,6 +41,17 @@ test("Grow Room Care opens the exact focused daily round", () => {
   assert.match(page, /Finish Grow Room round/);
 });
 
+test("Grow Room round uses the shared Atlas task shell and Dominion card", () => {
+  assert.match(page, /atlas-task-page-shell/);
+  assert.match(page, /atlas-task-page-phone/);
+  assert.match(page, /atlas-phone-top/);
+  assert.match(page, /atlas-dominion-task-card/);
+  assert.match(page, /atlas-task-dominion-track/);
+  assert.match(page, /`Log \$\{index \+ 1\}`/);
+  assert.match(page, /Log \{activeRequest\.sortOrder\} of/);
+  assert.doesNotMatch(page, /`Request \$\{index \+ 1\}`/);
+});
+
 test("generic work feeds keep one Grow Room doorway instead of room-task clutter", () => {
   assert.match(feedMigration, /home_task_cards_v2/);
   assert.match(feedMigration, /one Grow Room doorway/i);

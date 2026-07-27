@@ -207,115 +207,123 @@ function GrowRoomRoundPage() {
   }
 
   return (
-    <main className={styles.shell}>
-      <article className={styles.card}>
-        <header className={styles.topbar}>
-          <Link href="/" className={styles.brand}><small>Atlas</small><strong>Elm Farm</strong></Link>
+    <main className="atlas-task-page-shell">
+      <article className="atlas-task-page-phone">
+        <header className={`atlas-phone-top ${styles.topbar}`}>
+          <Link href="/" className="atlas-task-header-brand atlas-phone-brand">
+            <span className="atlas-phone-kicker">Atlas</span>
+            <strong className="atlas-phone-title">Elm Farm</strong>
+          </Link>
           <Link href={returnTo} className={styles.back}>← Today</Link>
         </header>
 
-        {loading ? <div className={styles.loading}>Opening Grow Room Care…</div> : null}
-        {error ? <div className={styles.error} role="alert">{error}</div> : null}
+        <div className={`atlas-task-page-body ${styles.body}`}>
+          {loading ? <div className={styles.loading}>Opening Grow Room Care…</div> : null}
+          {error ? <div className={styles.error} role="alert">{error}</div> : null}
 
-        {!loading && round?.visitTask ? (
-          <>
-            <section className={styles.place}>
-              <div><small>Grow Room</small><strong>Grow Room Care</strong></div>
-              <span>{prettyDate(round.visitTask.dueDate)}</span>
-            </section>
+          {!loading && round?.visitTask ? (
+            <section className="atlas-task-page-active atlas-dominion-task-card">
+              <section className="atlas-task-dominion-place">
+                <div><small>Grow Room</small><strong>Grow Room Care</strong></div>
+                <span>{prettyDate(round.visitTask.dueDate)}</span>
+              </section>
 
-            <ol className={styles.progress} aria-label="Grow Room requests">
-              {(round.requests.length ? round.requests : [{ assignmentId: "care" } as GrowRoomRequest]).map((request, index) => {
-                const complete = Boolean(request.resolvedAt);
-                const current = activeRequest?.assignmentId === request.assignmentId;
-                return (
-                  <li className={complete ? styles.complete : current ? styles.current : styles.future} key={request.assignmentId}>
-                    <i aria-hidden="true" />
-                    <span>{round.requests.length ? `Request ${index + 1}` : "Room care"}</span>
-                  </li>
-                );
-              })}
-              <li className={!activeRequest && round.summary.canFinish ? styles.current : styles.future}>
-                <i aria-hidden="true" />
-                <span>Finish</span>
-              </li>
-            </ol>
+              <ol className="atlas-task-dominion-track" aria-label="Grow Room logs">
+                {(round.requests.length ? round.requests : [{ assignmentId: "care" } as GrowRoomRequest]).map((request, index) => {
+                  const complete = Boolean(request.resolvedAt);
+                  const current = activeRequest?.assignmentId === request.assignmentId;
+                  const stepClass = complete ? "step-complete" : current ? "step-current" : "step-context";
+                  return (
+                    <li className={stepClass} key={request.assignmentId}>
+                      <i aria-hidden="true" />
+                      <span>{round.requests.length ? `Log ${index + 1}` : "Room care"}</span>
+                    </li>
+                  );
+                })}
+                <li className={!activeRequest && round.summary.canFinish ? "step-current" : "step-context"}>
+                  <i aria-hidden="true" />
+                  <span>Finish</span>
+                </li>
+              </ol>
 
-            {activeRequest ? (
-              <section className={styles.request}>
-                <div className={styles.kicker}>
-                  <span>Request {activeRequest.sortOrder} of {round.summary.total}</span>
-                  {activeRequest.dueDate && activeRequest.dueDate < (round.visitTask.dueDate || "") ? <small>Overdue</small> : null}
-                </div>
-                <h1>{requestInstruction(activeRequest)}</h1>
-                {activeRequest.displayDetail ? <p className={styles.detail}>{activeRequest.displayDetail}</p> : null}
-
-                {activeRequest.requestKind === "germination" ? (
-                  <div className={styles.controls}>
-                    <label className={styles.countField}>
-                      <span>Live seedlings</span>
-                      <input
-                        type="number"
-                        min="0"
-                        inputMode="numeric"
-                        value={liveCount}
-                        onChange={(event) => setLiveCount(event.target.value)}
-                        placeholder="0"
-                      />
-                    </label>
-                    <button className={styles.primary} type="button" disabled={saving} onClick={() => void recordLiveCount()}>
-                      Record live count
-                    </button>
-                    <div className={styles.secondaryRow}>
-                      <button type="button" disabled={saving} onClick={() => void resolveRequest("done", { growRoomResult: "no_germination", liveCount: 0 }, "No germination recorded.")}>No germination</button>
-                      <button type="button" disabled={saving} onClick={() => void resolveRequest("rescheduled", { growRoomResult: "not_ready_to_count" }, "Not ready to count yet.")}>Not ready yet</button>
-                    </div>
+              {activeRequest ? (
+                <section className="atlas-task-dominion-move">
+                  <div className="atlas-task-dominion-kicker">
+                    <span>Log {activeRequest.sortOrder} of {round.summary.total}</span>
+                    {activeRequest.dueDate && activeRequest.dueDate < (round.visitTask.dueDate || "") ? <small>Overdue</small> : null}
                   </div>
-                ) : (
-                  <div className={styles.controls}>
-                    <button className={styles.primary} type="button" disabled={saving} onClick={() => void resolveRequest("done", { growRoomResult: "done" }, `${activeRequest.displayAction} completed.`)}>Done</button>
-                    <button className={styles.secondary} type="button" disabled={saving} onClick={() => void resolveRequest("rescheduled", { growRoomResult: "needs_another_day" }, "Needs another day.")}>Needs another day</button>
-                    {!problemOpen ? (
-                      <button className={styles.textButton} type="button" disabled={saving} onClick={() => setProblemOpen(true)}>Problem found</button>
-                    ) : (
-                      <div className={styles.problemBox}>
-                        <label><span>What stopped this?</span><input value={problemNote} onChange={(event) => setProblemNote(event.target.value)} /></label>
-                        <button type="button" disabled={saving || !problemNote.trim()} onClick={() => void resolveRequest("blocked", { growRoomResult: "problem_found", problem: problemNote.trim() }, problemNote.trim())}>Save problem</button>
+                  <h1>{requestInstruction(activeRequest)}</h1>
+                  {activeRequest.displayDetail ? <p className={styles.detail}>{activeRequest.displayDetail}</p> : null}
+
+                  {activeRequest.requestKind === "germination" ? (
+                    <div className={styles.controls}>
+                      <label className={styles.countField}>
+                        <span>Live seedlings</span>
+                        <input
+                          type="number"
+                          min="0"
+                          inputMode="numeric"
+                          value={liveCount}
+                          onChange={(event) => setLiveCount(event.target.value)}
+                          placeholder="0"
+                        />
+                      </label>
+                      <button className={styles.primary} type="button" disabled={saving} onClick={() => void recordLiveCount()}>
+                        Record live count
+                      </button>
+                      <div className={styles.secondaryRow}>
+                        <button type="button" disabled={saving} onClick={() => void resolveRequest("done", { growRoomResult: "no_germination", liveCount: 0 }, "No germination recorded.")}>No germination</button>
+                        <button type="button" disabled={saving} onClick={() => void resolveRequest("rescheduled", { growRoomResult: "not_ready_to_count" }, "Not ready to count yet.")}>Not ready yet</button>
                       </div>
-                    )}
-                  </div>
-                )}
-              </section>
-            ) : round.visitTask.status === "done" ? (
-              <section className={styles.finish}>
-                <small>Complete</small>
-                <h1>Grow Room round finished.</h1>
-                <Link href={returnTo}>Return to Today</Link>
-              </section>
-            ) : (
-              <section className={styles.finish}>
-                <small>Final step</small>
-                <h1>{round.summary.total ? "Finish the Grow Room round." : "Complete the ordinary Grow Room care."}</h1>
-                <button className={styles.primary} type="button" disabled={saving || !round.summary.canFinish} onClick={() => void finishRound()}>
-                  Finish Grow Room round
-                </button>
-              </section>
-            )}
-          </>
-        ) : null}
+                    </div>
+                  ) : (
+                    <div className={styles.controls}>
+                      <button className={styles.primary} type="button" disabled={saving} onClick={() => void resolveRequest("done", { growRoomResult: "done" }, `${activeRequest.displayAction} completed.`)}>Done</button>
+                      <button className={styles.secondary} type="button" disabled={saving} onClick={() => void resolveRequest("rescheduled", { growRoomResult: "needs_another_day" }, "Needs another day.")}>Needs another day</button>
+                      {!problemOpen ? (
+                        <button className={styles.textButton} type="button" disabled={saving} onClick={() => setProblemOpen(true)}>Problem found</button>
+                      ) : (
+                        <div className={styles.problemBox}>
+                          <label><span>What stopped this?</span><input value={problemNote} onChange={(event) => setProblemNote(event.target.value)} /></label>
+                          <button type="button" disabled={saving || !problemNote.trim()} onClick={() => void resolveRequest("blocked", { growRoomResult: "problem_found", problem: problemNote.trim() }, problemNote.trim())}>Save problem</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </section>
+              ) : round.visitTask.status === "done" ? (
+                <section className={`atlas-task-dominion-move ${styles.finish}`}>
+                  <small className="atlas-soft-label">Complete</small>
+                  <h1>Grow Room round finished.</h1>
+                  <Link href={returnTo}>Return to Today</Link>
+                </section>
+              ) : (
+                <section className={`atlas-task-dominion-move ${styles.finish}`}>
+                  <small className="atlas-soft-label">Final step</small>
+                  <h1>{round.summary.total ? "Finish the Grow Room round." : "Complete the ordinary Grow Room care."}</h1>
+                  <button className={styles.primary} type="button" disabled={saving || !round.summary.canFinish} onClick={() => void finishRound()}>
+                    Finish Grow Room round
+                  </button>
+                </section>
+              )}
+            </section>
+          ) : null}
 
-        {!loading && !round?.visitTask ? (
-          <section className={styles.finish}>
-            <small>No round assigned</small>
-            <h1>There is no Grow Room Care task to complete.</h1>
-            <Link href="/">Return to Today</Link>
-          </section>
-        ) : null}
+          {!loading && !round?.visitTask ? (
+            <section className="atlas-task-page-active atlas-dominion-task-card">
+              <section className={`atlas-task-dominion-move ${styles.finish}`}>
+                <small className="atlas-soft-label">No round assigned</small>
+                <h1>There is no Grow Room Care task to complete.</h1>
+                <Link href="/">Return to Today</Link>
+              </section>
+            </section>
+          ) : null}
+        </div>
       </article>
     </main>
   );
 }
 
 export default function GrowRoomPage() {
-  return <Suspense fallback={<main className={styles.shell}><div className={styles.loading}>Opening Grow Room Care…</div></main>}><GrowRoomRoundPage /></Suspense>;
+  return <Suspense fallback={<main className="atlas-task-page-shell"><div className={styles.loading}>Opening Grow Room Care…</div></main>}><GrowRoomRoundPage /></Suspense>;
 }
