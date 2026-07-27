@@ -1,4 +1,10 @@
-import type { AtlasFarmRole, AtlasSession, AtlasSessionMembership } from "@/lib/atlas/session";
+import type {
+  AtlasFarmRole,
+  AtlasOrganizationRole,
+  AtlasSession,
+  AtlasSessionMembership,
+  AtlasSessionOrganizationMembership,
+} from "@/lib/atlas/session";
 
 export type AtlasViewer = {
   userId: string;
@@ -15,9 +21,32 @@ export type AtlasViewer = {
   canUseOwnerTools: boolean;
 };
 
+export type AtlasPortalViewer = {
+  userId: string;
+  email: string | null;
+  organizationId: string;
+  organizationKey: string | null;
+  organizationName: string;
+  membershipId: string;
+  role: AtlasOrganizationRole;
+  permissions: Record<string, unknown>;
+  canManagePortfolio: boolean;
+  farmMemberships: AtlasSessionMembership[];
+};
+
 export function activeAtlasMembership(session: AtlasSession): AtlasSessionMembership | null {
   return session.memberships.find((membership) => membership.farmId === session.activeFarmId)
     ?? session.memberships[0]
+    ?? null;
+}
+
+export function activeAtlasOrganizationMembership(
+  session: AtlasSession,
+): AtlasSessionOrganizationMembership | null {
+  return session.organizationMemberships.find(
+    (membership) => membership.organizationId === session.activeOrganizationId,
+  )
+    ?? session.organizationMemberships[0]
     ?? null;
 }
 
@@ -38,5 +67,23 @@ export function atlasViewerFromSession(session: AtlasSession): AtlasViewer | nul
     permissions: membership.permissions,
     canManageFarm: membership.role === "owner" || membership.role === "manager",
     canUseOwnerTools: membership.role === "owner",
+  };
+}
+
+export function atlasPortalViewerFromSession(session: AtlasSession): AtlasPortalViewer | null {
+  const membership = activeAtlasOrganizationMembership(session);
+  if (!membership) return null;
+
+  return {
+    userId: session.userId,
+    email: session.email,
+    organizationId: membership.organizationId,
+    organizationKey: membership.organizationKey,
+    organizationName: membership.organizationName || "Feast Guild",
+    membershipId: membership.membershipId,
+    role: membership.role,
+    permissions: membership.permissions,
+    canManagePortfolio: membership.role === "owner",
+    farmMemberships: session.memberships,
   };
 }
