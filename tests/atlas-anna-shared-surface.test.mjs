@@ -15,35 +15,38 @@ function functionBody(source, name, nextName) {
 
 test("Anna enters the familiar shared Atlas operating surface", () => {
   const root = read("app/page.tsx");
-  const home = read("components/atlas/home/AtlasHomePortal.tsx");
+  const home = read("components/atlas/home/AtlasUniversalHome.tsx");
+  const reader = read("lib/atlas/universal-home.ts");
   const layout = read("app/layout.tsx");
   const taskClient = read("lib/atlas/task-cards-client.ts");
   const authCore = read("lib/atlas/auth-core.js");
   const snapshotRoute = read("app/api/atlas/farm-snapshot/route.ts");
 
   assert.match(root, /getAtlasSession/);
-  assert.match(root, /atlasViewerFromSession/);
-  assert.match(root, /<AtlasHomePortal viewer=\{viewer\}/);
-  assert.doesNotMatch(root, /TaskLaunchHero|atlas-home-box-purple/);
+  assert.match(root, /atlasUniversalViewerFromSession/);
+  assert.match(root, /readAtlasUniversalHome/);
+  assert.match(root, /<AtlasUniversalHome/);
+  assert.doesNotMatch(root, /AtlasHomePortal|FeastGuildPortfolioHome/);
 
   for (const marker of [
-    "TaskLaunchHero",
-    "atlas-home-box-purple",
-    "atlas-home-task-hero",
-    "atlas-home-overview-week",
-    "atlas-home-overview-month",
-    "atlas-farm-snapshot-bar",
-    "/overview/week",
-    "/overview/month",
+    "AtlasAppShell",
+    "AtlasTopBar",
+    "AtlasCard",
+    "AtlasMetricStrip",
+    "AtlasFooterActions",
+    "Today",
+    "This Week",
+    "Atlas Scope",
     "/zones",
-    "/production",
     "FieldLogDrawer",
-    "fetchAtlasCloseout",
+    "fetchAtlasZoneRegistry",
   ]) {
     assert.match(home, new RegExp(marker.replaceAll("/", "\\/")));
   }
 
-  assert.match(home, /data-atlas-home-portal="shared"/);
+  assert.match(home, /data-atlas-home-portal="universal"/);
+  assert.match(reader, /home_task_cards_v2|universal_home_v1/);
+  assert.match(reader, /farmTaskMove/);
   assert.doesNotMatch(layout, /AtlasRoleHomeRedirect/);
   assert.match(taskClient, /if \(pathname === "\/"\)/);
   assert.match(taskClient, /\/api\/atlas\/home-task-cards/);

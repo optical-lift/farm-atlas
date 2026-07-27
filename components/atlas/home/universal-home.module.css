@@ -1,0 +1,545 @@
+.homeBody {
+  padding: var(--atlas-space-2);
+  display: grid;
+  gap: var(--atlas-space-2);
+}
+
+.headerStatus {
+  display: block;
+  max-width: 145px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addButton {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--atlas-purple-deep);
+  border-radius: 18px;
+  background: var(--atlas-purple);
+  color: white;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  font: inherit;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 950;
+  box-shadow: 0 8px 18px rgba(58, 46, 30, 0.08);
+  cursor: pointer;
+}
+
+.hero {
+  padding: 14px;
+  display: grid;
+  gap: 11px;
+}
+
+.heroHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--atlas-space-3);
+}
+
+.heroHeader > div {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.heroHeader span {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+.heroHeader strong {
+  color: white;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+}
+
+.heroHeader > em {
+  flex: 0 0 auto;
+  border-radius: var(--atlas-radius-card);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--atlas-text);
+  padding: 9px 12px;
+  font-size: 11px;
+  line-height: 1;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--atlas-space-2);
+}
+
+.heroCard {
+  min-width: 0;
+  min-height: 118px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--atlas-radius-card);
+  background: rgba(126, 132, 187, 0.32);
+  color: white;
+  text-decoration: none;
+  padding: 10px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.heroCard[data-atlas-state="blocked"],
+.heroCard[data-atlas-state="attention"] {
+  background: rgba(116, 86, 92, 0.28);
+  border-color: rgba(255, 223, 214, 0.4);
+}
+
+.heroCard[data-atlas-state="ready"]:first-child,
+.heroCard[data-atlas-state="moving"]:first-child {
+  background: rgba(255, 255, 255, 0.17);
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.heroCard small,
+.heroCard strong,
+.heroCard span,
+.heroCard em {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heroCard small {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.heroCard strong {
+  color: white;
+  font-size: 14px;
+  line-height: 1.02;
+  font-weight: 950;
+  letter-spacing: -0.025em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.heroCard span {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 8.5px;
+  line-height: 1.06;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.heroCard em {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 10px;
+  line-height: 1.12;
+  font-style: normal;
+  font-weight: 900;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.heroEmpty {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--atlas-radius-card);
+  background: rgba(255, 255, 255, 0.13);
+  padding: 14px;
+  display: grid;
+  gap: 5px;
+}
+
+.heroEmpty strong {
+  color: white;
+  font-size: 14px;
+  line-height: 1.1;
+  font-weight: 950;
+}
+
+.heroEmpty span {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 800;
+}
+
+.overviewPair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--atlas-space-2);
+}
+
+.overviewCard {
+  padding: 11px;
+  display: grid;
+  gap: var(--atlas-space-2);
+}
+
+.overviewHeading {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.overviewHeading strong,
+.overviewHeading span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overviewHeading strong {
+  color: var(--atlas-text);
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.overviewHeading span {
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.overviewList {
+  display: grid;
+  gap: 5px;
+}
+
+.overviewList a {
+  min-width: 0;
+  border: 1px solid #e1d8ca;
+  border-radius: var(--atlas-radius-small);
+  background: var(--atlas-cream);
+  padding: 6px 7px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 5px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.overviewList b,
+.overviewList small,
+.overviewList em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overviewList b {
+  grid-column: 1 / -1;
+  color: var(--atlas-text);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.overviewList small,
+.overviewList em,
+.overviewList p {
+  color: #666252;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.overviewList em {
+  font-style: normal;
+}
+
+.overviewList p {
+  margin: 0;
+  border-radius: var(--atlas-radius-small);
+  background: var(--atlas-cream);
+  padding: 9px;
+}
+
+.detailSection {
+  scroll-margin-top: 74px;
+  padding: var(--atlas-space-3);
+  display: grid;
+  gap: 10px;
+}
+
+.attentionList,
+.projectList,
+.farmList {
+  display: grid;
+  gap: var(--atlas-space-2);
+}
+
+.attentionList a {
+  border: 1px solid rgba(174, 128, 104, 0.22);
+  border-radius: 17px;
+  background: rgba(245, 232, 223, 0.66);
+  color: inherit;
+  text-decoration: none;
+  padding: 11px;
+  display: grid;
+  gap: 4px;
+}
+
+.attentionList span {
+  color: #8d6553;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.attentionList strong {
+  color: var(--atlas-text);
+  font-size: 14px;
+  line-height: 1.08;
+  font-weight: 950;
+}
+
+.attentionList p,
+.attentionList small {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.projectCard {
+  min-width: 0;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: var(--atlas-radius-card);
+  background: rgba(246, 242, 230, 0.58);
+  color: var(--atlas-text);
+  text-decoration: none;
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.projectCard > div {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--atlas-space-2);
+}
+
+.projectCard > div > span {
+  min-width: 0;
+  color: var(--atlas-purple-deep);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectCard > strong {
+  color: var(--atlas-text);
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.projectCard p {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.projectCard > small {
+  color: #666252;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.filters {
+  display: grid;
+  gap: var(--atlas-space-2);
+}
+
+.filters > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.filters > div > span {
+  width: 100%;
+  color: var(--atlas-muted);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.filters a {
+  border: 1px solid #e1d8ca;
+  border-radius: var(--atlas-radius-pill);
+  background: var(--atlas-cream);
+  color: #666252;
+  padding: 6px 8px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.filters a.activeFilter {
+  border-color: var(--atlas-purple-deep);
+  background: var(--atlas-purple);
+  color: white;
+}
+
+.farmCard {
+  padding: 11px;
+  display: grid;
+  gap: 10px;
+}
+
+.farmCardHeader {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--atlas-space-2);
+}
+
+.farmCardHeader > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.farmCardHeader span {
+  color: var(--atlas-purple-deep);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.farmCardHeader strong {
+  color: var(--atlas-text);
+  font-size: 20px;
+  line-height: 0.96;
+  font-weight: 950;
+  letter-spacing: -0.05em;
+}
+
+.farmFacts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.farmFacts span {
+  min-width: 0;
+  border: 1px solid rgba(215, 204, 189, 0.72);
+  border-radius: var(--atlas-radius-small);
+  background: rgba(255, 255, 255, 0.58);
+  padding: 7px 4px;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  color: var(--atlas-muted);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.farmFacts b {
+  color: var(--atlas-text);
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.farmLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.farmLinks a {
+  border: 1px solid #e1d8ca;
+  border-radius: var(--atlas-radius-pill);
+  background: white;
+  color: var(--atlas-text);
+  padding: 7px 10px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+@media (max-width: 390px) {
+  .heroCard {
+    min-height: 112px;
+    padding: 9px;
+  }
+
+  .farmFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .addButton,
+  .heroCard,
+  .overviewList a,
+  .attentionList a,
+  .projectCard,
+  .filters a,
+  .farmLinks a {
+    transition: transform var(--atlas-motion-fast) ease, box-shadow var(--atlas-motion-standard) ease;
+  }
+
+  .heroCard:hover,
+  .overviewList a:hover,
+  .attentionList a:hover,
+  .projectCard:hover,
+  .farmLinks a:hover {
+    transform: translateY(-1px);
+  }
+}
