@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { atlasSupabase } from "@/lib/atlas/supabase-server";
 import CanonicalAssignedTaskDetail from "@/components/atlas/canonical-assigned-task-detail";
+import ProjectTaskFocus from "@/components/atlas/project-task-focus";
+import { readAtlasProjectTaskFocus } from "@/lib/atlas/portfolio";
 import { resolveTaskAssignee } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import GerminationFocusPage from "./GerminationFocusPage";
@@ -13,6 +15,7 @@ type TaskRow = {
   id: string;
   title: string;
   task_type: string | null;
+  task_scope: string | null;
   due_date: string | null;
   metadata: Record<string, unknown> | null;
 };
@@ -74,6 +77,7 @@ function firstValue(value: string | string[] | undefined) {
 function safeReturnPath(value: string | undefined) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
   const pathname = value.split(/[?#]/, 1)[0];
+  if (/^\/project\/[^/]+$/.test(pathname)) return value;
   return SAFE_RETURN_PATHS.has(pathname) ? value : null;
 }
 
@@ -103,7 +107,7 @@ async function loadTask(taskId: string) {
   const { data, error } = await atlasSupabase
     .schema("atlas")
     .from("tasks")
-    .select("id, title, task_type, due_date, metadata")
+    .select("id, title, task_type, task_scope, due_date, metadata")
     .eq("id", taskId)
     .limit(1)
     .maybeSingle();
@@ -291,8 +295,11 @@ export default async function TaskFocusPage({
 }) {
   const [{ taskId }, query] = await Promise.all([params, searchParams]);
   const returnTo = safeReturnPath(firstValue(query.returnTo));
+  const projectFocus = await readAtlasProjectTaskFocus(taskId).catch(() => null);
+  if (projectFocus) return <ProjectTaskFocus focus={projectFocus} returnTo={returnTo} />;
+
   const task = await loadTask(taskId);
-  if (!task) notFound();
+  if (!task || task.task_scope === "project") notFound();
 
   if (isProductionSowingTask(task)) {
     const productionTask = await loadProductionSowingTask(task);
