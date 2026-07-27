@@ -1,0 +1,196 @@
+.intakeSection {
+  background: rgba(244, 240, 229, 0.42);
+}
+
+.notice {
+  margin: 14px 16px;
+  border: 1px solid rgba(105, 126, 83, 0.24);
+  border-radius: 17px;
+  background: rgba(224, 234, 206, 0.58);
+  padding: 13px 14px;
+  color: #526144;
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 750;
+}
+
+.drawer {
+  border: 1px solid rgba(124, 116, 94, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 254, 250, 0.8);
+  overflow: hidden;
+}
+
+.drawer summary {
+  min-height: 58px;
+  padding: 13px 14px;
+  cursor: pointer;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.drawer summary::-webkit-details-marker {
+  display: none;
+}
+
+.drawer summary strong {
+  color: #494b44;
+  font-size: 14px;
+  line-height: 1.15;
+}
+
+.drawer summary span {
+  color: #7b7c75;
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 650;
+}
+
+.drawer[open] summary {
+  border-bottom: 1px solid rgba(124, 116, 94, 0.14);
+  background: rgba(237, 232, 216, 0.52);
+}
+
+.form {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.form label {
+  min-width: 0;
+  color: #666860;
+  font-size: 11px;
+  font-weight: 800;
+  display: grid;
+  gap: 6px;
+}
+
+.form input,
+.form select,
+.form textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(124, 116, 94, 0.24);
+  border-radius: 12px;
+  background: #fffefa;
+  color: #41433f;
+  padding: 10px 11px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.form textarea {
+  min-height: 78px;
+  resize: vertical;
+}
+
+.form button {
+  min-height: 42px;
+  border: 1px solid rgba(89, 101, 67, 0.28);
+  border-radius: 14px;
+  background: rgba(215, 222, 187, 0.72);
+  color: #48523a;
+  padding: 10px 13px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.form button:disabled {
+  opacity: 0.55;
+}
+
+.fullRow,
+.form > button,
+.formRule {
+  grid-column: 1 / -1;
+}
+
+.formRule {
+  margin: 0;
+  color: #81827b;
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 650;
+}
+
+.rack {
+  border: 1px solid rgba(107, 110, 77, 0.18);
+  border-radius: 22px;
+  background: rgba(230, 232, 207, 0.36);
+  padding: 10px;
+  display: grid;
+  gap: 9px;
+}
+
+.rackHeading {
+  padding: 3px 4px 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rackHeading strong {
+  color: #4d5243;
+  font-size: 15px;
+}
+
+.rackHeading span {
+  color: #727668;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.batchActionList {
+  display: grid;
+  gap: 7px;
+}
+
+.batchActionList a {
+  border: 1px solid rgba(173, 136, 75, 0.24);
+  border-radius: 15px;
+  background: rgba(239, 221, 185, 0.46);
+  padding: 11px 12px;
+  color: #655334;
+  text-decoration: none;
+  display: grid;
+  gap: 3px;
+}
+
+.batchActionList strong {
+  font-size: 12px;
+  line-height: 1.1;
+}
+
+.batchActionList span {
+  font-size: 11px;
+  line-height: 1.2;
+  color: #746544;
+}
+
+.useRecordButton {
+  margin-top: 4px;
+  min-height: 34px;
+  border: 1px solid rgba(108, 112, 82, 0.22);
+  border-radius: 999px;
+  background: rgba(222, 225, 197, 0.58);
+  color: #535943;
+  padding: 7px 9px;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+@media (max-width: 520px) {
+  .form {
+    grid-template-columns: 1fr;
+  }
+
+  .fullRow,
+  .form > button,
+  .formRule {
+    grid-column: auto;
+  }
+}

@@ -51,5 +51,5 @@ test("generic work feeds keep one Grow Room doorway instead of room-task clutter
 
 test("planned starts do not masquerade as living tray inventory", () => {
   assert.match(page, /No verified tray batches are entered yet/);
-  assert.match(page, /Planned sowings do not count as living plants/);
+  assert.match(page, /Planned sowings (?:still )?do not count as living plants/);
 });
