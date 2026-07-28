@@ -46,7 +46,6 @@ export default function TendingAreaPage() {
     [cards],
   );
   const zoneLabel = cards[0]?.zoneLabel ?? humanizeZoneKey(params.zoneKey);
-  const returnTo = `/collections/weeding/${encodeURIComponent(params.zoneKey)}`;
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-tending-shell">
@@ -70,7 +69,7 @@ export default function TendingAreaPage() {
           {!loading && !error ? (
             <TendingTaskTimeline
               tracks={cards}
-              returnTo={returnTo}
+              returnTo="/collections/weeding"
               showZone={false}
               emptyLabel="No Tending tasks are released in this area."
             />
