@@ -171,16 +171,10 @@ export function formatTendingEffort(minutes: number | null | undefined) {
   return rest ? `${hours}h ${rest}m` : `${hours}h`;
 }
 
-export function tendingTaskHref(track: TendingBedTrack) {
+export function tendingTaskHref(track: TendingBedTrack, returnTo = tendingBedHref(track)) {
   if (!track.releasedTaskId) return null;
-  const boardPath = `/collections/weeding/${encodeURIComponent(track.zoneKey)}/${encodeURIComponent(track.bedKey)}`;
-  const params = new URLSearchParams({
-    taskId: track.releasedTaskId,
-    from: "tending",
-    bedKey: track.bedKey,
-    returnTo: boardPath,
-  });
-  return `/task?${params.toString()}`;
+  const suffix = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : "";
+  return `/task-focus/${encodeURIComponent(track.releasedTaskId)}${suffix}`;
 }
 
 export function tendingBedHref(track: Pick<TendingBedTrack, "zoneKey" | "bedKey">) {
