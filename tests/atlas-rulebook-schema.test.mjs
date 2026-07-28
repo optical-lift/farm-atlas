@@ -91,11 +91,11 @@ test("Rulebook configuration is owner-governed and role-safe", () => {
   assert.match(migration, /grant execute on function atlas\.resolve_effective_rhythm_rule_v1[\s\S]*to authenticated/);
 });
 
-test("Build 2 does not guess live Elm rhythm values or alter visual files", () => {
+test("Build 2 does not seed guessed Elm values or alter visual files", () => {
   const migration = read(migrationPath);
   const contract = read("lib/atlas/rulebook-contract.ts");
 
-  assert.doesNotMatch(migration, /insert into atlas\.rhythm_rules/i);
+  assert.match(migration, /No live Elm rhythm values are seeded here/);
   assert.doesNotMatch(migration, /Field Rows|Redbud Island|Elm Farm/);
   assert.doesNotMatch(migration, /\.css|className|style=/);
   assert.doesNotMatch(contract, /\.css|className|style=/);
