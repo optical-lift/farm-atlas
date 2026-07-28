@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { atlasSupabase } from "@/lib/atlas/supabase-server";
 import CanonicalAssignedTaskDetail from "@/components/atlas/canonical-assigned-task-detail";
+import GrowRoomTaskFocus from "@/components/atlas/grow-room/GrowRoomTaskFocus";
 import ProjectTaskFocus from "@/components/atlas/project-task-focus";
 import { readAtlasProjectTaskFocus } from "@/lib/atlas/portfolio";
 import { resolveTaskAssignee } from "@/lib/atlas/task-assignment";
@@ -64,10 +65,15 @@ const SAFE_RETURN_PATHS = new Set([
   "/day",
   "/overview/week",
   "/overview/month",
+  "/grow-room",
 ]);
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function truthy(value: unknown) {
+  return value === true || value === "true" || value === "yes" || value === "1" || value === 1;
 }
 
 function firstValue(value: string | string[] | undefined) {
@@ -91,6 +97,13 @@ function spacingFromProfile(metadata: Record<string, unknown> | null | undefined
     if (match) return Number(match[1]);
   }
   return null;
+}
+
+function isGrowRoomRoundTask(task: TaskRow) {
+  const metadata = task.metadata ?? {};
+  return task.task_type === "grow_room_care"
+    && task.title.trim().toLowerCase() === "grow room care"
+    && (truthy(metadata.round_completion_required) || truthy(metadata.manual_top_level_card));
 }
 
 function isGerminationTask(task: TaskRow) {
@@ -300,6 +313,11 @@ export default async function TaskFocusPage({
 
   const task = await loadTask(taskId);
   if (!task || task.task_scope === "project") notFound();
+
+  if (isGrowRoomRoundTask(task)) {
+    const defaultReturnTo = task.due_date ? `/day?date=${encodeURIComponent(task.due_date)}` : "/";
+    return <GrowRoomTaskFocus visitTaskId={task.id} returnTo={returnTo || defaultReturnTo} />;
+  }
 
   if (isProductionSowingTask(task)) {
     const productionTask = await loadProductionSowingTask(task);
