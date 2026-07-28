@@ -3,63 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import TendingMiniTrack from "@/components/atlas/tending-mini-track";
+import TendingTaskTimeline from "@/components/atlas/tending/TendingTaskTimeline";
 import {
   fetchTendingBoard,
-  formatTendingEffort,
   prettyTendingDate,
-  tendingBedHref,
-  tendingClock,
-  tendingDueLabel,
-  tendingStepLabel,
-  tendingStepsToHarvestLabel,
-  tendingTaskHref,
-  type TendingBedTrack,
   type TendingBoard,
-  type TendingSectionKey,
 } from "@/lib/atlas/tending-client";
-
-const SECTIONS: Array<{ key: TendingSectionKey; label: string; detail: string }> = [
-  { key: "harvest_now", label: "Harvest now", detail: "Beds ready to give" },
-  { key: "unlock_next", label: "Unlock next", detail: "One next step toward a crop" },
-  { key: "protect_harvests", label: "Protect harvests", detail: "Tending active crops" },
-  { key: "needs_a_look", label: "Needs a look", detail: "A quick check decides what follows" },
-];
-
-function GateCard({ track }: { track: TendingBedTrack }) {
-  const taskHref = tendingTaskHref(track);
-  const bedHref = tendingBedHref(track);
-  const gate = track.currentGate;
-
-  return (
-    <article className="atlas-tending-card">
-      <Link href={bedHref} className="atlas-tending-card-head">
-        <span>{track.zoneLabel}</span>
-        <strong>{track.bedLabel}</strong>
-      </Link>
-      <TendingMiniTrack track={track} />
-      {taskHref && gate ? (
-        <Link href={taskHref} className="atlas-tending-current-gate">
-          <div className="atlas-tending-step-meta">
-            <small>Next step</small>
-            <time>{tendingDueLabel(track.taskDueDate || gate.dueDate)}</time>
-          </div>
-          <strong>{track.taskTitle || gate.label}</strong>
-          <footer>
-            <span>{tendingStepLabel(track)}</span>
-            <em>unlocks {track.unlockLabel}</em>
-          </footer>
-        </Link>
-      ) : null}
-      <div className="atlas-tending-card-data">
-        <span>{tendingClock(track)}</span>
-        <span>{tendingStepsToHarvestLabel(track)}</span>
-        <span>{formatTendingEffort(track.taskEffortMinutes)}</span>
-      </div>
-      <Link href={bedHref} className="atlas-tending-board-link">Open bed board <span aria-hidden="true">›</span></Link>
-    </article>
-  );
-}
 
 export default function TendingCollectionPage() {
   const [board, setBoard] = useState<TendingBoard | null>(null);
@@ -83,12 +32,10 @@ export default function TendingCollectionPage() {
     void load();
   }, []);
 
-  const grouped = useMemo(() => {
-    const groups = new Map<TendingSectionKey, TendingBedTrack[]>();
-    for (const section of SECTIONS) groups.set(section.key, []);
-    for (const card of board?.cards ?? []) groups.get(card.sectionKey)?.push(card);
-    return groups;
-  }, [board]);
+  const releasedCount = useMemo(
+    () => (board?.cards ?? []).filter((track) => Boolean(track.releasedTaskId && track.currentGate)).length,
+    [board],
+  );
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-tending-shell">
@@ -106,7 +53,7 @@ export default function TendingCollectionPage() {
           <header className="atlas-tending-page-title">
             <div>
               <h1>Tending</h1>
-              <p>{loading ? "Loading open steps…" : `${board?.bedCount ?? 0} beds with a next step`}</p>
+              <p>{loading ? "Loading released tasks…" : `${releasedCount} ${releasedCount === 1 ? "task" : "tasks"} released`}</p>
             </div>
             {!loading && board?.nextHarvestOn ? (
               <span><small>Next harvest</small><strong>{prettyTendingDate(board.nextHarvestOn)}</strong></span>
@@ -116,23 +63,13 @@ export default function TendingCollectionPage() {
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
           {loading ? <div className="atlas-task-page-empty">Loading Tending…</div> : null}
 
-          {!loading && board && board.cards.length === 0 ? (
-            <div className="atlas-task-page-empty">No Tending steps are open.</div>
+          {!loading && board ? (
+            <TendingTaskTimeline
+              tracks={board.cards}
+              returnTo="/collections/weeding"
+              emptyLabel="No Tending tasks are released. Crop Trails remain visible on their bed pages."
+            />
           ) : null}
-
-          {!loading && board ? SECTIONS.map((section) => {
-            const cards = grouped.get(section.key) ?? [];
-            if (!cards.length) return null;
-            return (
-              <section key={section.key} className="atlas-tending-section" data-tending-section={section.key}>
-                <header>
-                  <div><span>{section.detail}</span><h2>{section.label}</h2></div>
-                  <b>{cards.length}</b>
-                </header>
-                <div className="atlas-tending-card-list">{cards.map((track) => <GateCard key={`${track.bedKey}:${track.releasedTaskId}`} track={track} />)}</div>
-              </section>
-            );
-          }) : null}
         </div>
       </section>
     </main>
