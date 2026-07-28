@@ -4,7 +4,9 @@ import Link from "next/link";
 import React, { useEffect, useState } from "react";
 
 import { VenueZoneLandingCard } from "@/components/atlas/room-inspection";
+import AtlasTrailPosition from "@/components/atlas/trail/AtlasTrailPosition";
 import { ZoneLandingCard } from "@/components/atlas/zone-inspection";
+import { atlasPrimaryTrailForZone } from "@/lib/atlas/object-trail";
 import {
   fetchAtlasZoneRegistry,
   type AtlasRegistryZone,
@@ -20,6 +22,18 @@ function ZoneCard({ zone }: { zone: AtlasRegistryZone }) {
   return zone.stable_key === "venue"
     ? <VenueZoneLandingCard zone={zone} />
     : <ZoneLandingCard zone={zone} />;
+}
+
+function ZoneTrailPosition({ zone }: { zone: AtlasRegistryZone }) {
+  const trail = atlasPrimaryTrailForZone(zone);
+  if (!trail) return null;
+  return (
+    <AtlasTrailPosition
+      context={trail}
+      label={`${trail.subject.label} Trail`}
+      className="atlas-zone-trail-position"
+    />
+  );
 }
 
 export default function AtlasZonesPage() {
@@ -70,6 +84,7 @@ export default function AtlasZonesPage() {
                 return (
                   <Link href={`/zones/${zone.stable_key}`} key={zone.id} className="atlas-zone-landing-link">
                     <ZoneCard zone={zone} />
+                    <ZoneTrailPosition zone={zone} />
                   </Link>
                 );
               }
@@ -77,6 +92,7 @@ export default function AtlasZonesPage() {
               return (
                 <article key={zone.id} className="atlas-zone-card-with-actions">
                   <ZoneCard zone={zone} />
+                  <ZoneTrailPosition zone={zone} />
                   <div className="atlas-zone-card-actions">
                     <Link
                       href={`/zones/${zone.stable_key}`}
