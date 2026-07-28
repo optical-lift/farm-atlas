@@ -12,11 +12,14 @@ const policy = read(
 const enrollment = read(
   "supabase/migrations/20260729070100_weeding_rhythm_pilot_enrollment_v1.sql",
 );
-const reader = read(
+const initialReader = read(
   "supabase/migrations/20260729070200_weeding_rhythm_pilot_reader_v1.sql",
 );
+const reader = read(
+  "supabase/migrations/20260729070300_weeding_pilot_physical_condition_truth_v1.sql",
+);
 const contract = read("lib/atlas/weeding-rhythm-pilot-contract.ts");
-const sql = `${policy}\n${enrollment}\n${reader}`;
+const sql = `${policy}\n${enrollment}\n${initialReader}\n${reader}`;
 
 test("the approved pilot is exactly FR8, FR15, and North Redbud Island", () => {
   assert.match(policy, /'fr_8'::text/);
@@ -90,6 +93,14 @@ test("pilot subjects leave generic recurrence and expose an explainable prepared
   assert.match(reader, /unobserved_physical_condition/);
   assert.match(reader, /atlas\.can_read_rhythm_state_v1/);
   assert.match(reader, /grant execute on function atlas\.weeding_rhythm_pilot_v1\(uuid\) to authenticated/);
+});
+
+test("legacy condition defaults remain unknown until a dated observation exists", () => {
+  assert.match(reader, /'known', maintenance\.condition_reported_at is not null/);
+  assert.match(reader, /case when maintenance\.condition_reported_at is not null then maintenance\.condition else null end/);
+  assert.match(reader, /case when maintenance\.condition_reported_at is not null then maintenance\.estimate_source else null end/);
+  assert.match(reader, /'inferredFromClock', false/);
+  assert.match(contract, /known: boolean/);
 });
 
 test("Build 4 does not alter the visual shell", () => {
