@@ -171,7 +171,7 @@ export function formatTendingEffort(minutes: number | null | undefined) {
   return rest ? `${hours}h ${rest}m` : `${hours}h`;
 }
 
-export function tendingTaskHref(track: TendingBedTrack, returnTo = tendingBedHref(track)) {
+export function tendingTaskHref(track: TendingBedTrack, returnTo = "/collections/weeding") {
   if (!track.releasedTaskId) return null;
   const suffix = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : "";
   return `/task-focus/${encodeURIComponent(track.releasedTaskId)}${suffix}`;
