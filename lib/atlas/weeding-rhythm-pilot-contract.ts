@@ -63,6 +63,7 @@ export type AtlasWeedingPilotSubject = {
     physicalConditionClaim: "unknown_until_observed";
   };
   physicalCondition: {
+    known: boolean;
     value: string | null;
     reportedAt: string | null;
     source: string | null;
