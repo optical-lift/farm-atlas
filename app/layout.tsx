@@ -61,6 +61,8 @@ import "./day-route-v1.css";
 import "./day-route-v1-refine.css";
 import "./day-timeline-completion-echo.css";
 import "./living-journal.css";
+import "./journal-page.css";
+import "./day-task-only.css";
 import "./week-route-v1.css";
 import "./universal-home-familiar.css";
 import "./atlas-shell-responsive.css";

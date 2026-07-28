@@ -1,0 +1,54 @@
+/* Day is a task list. Living Journal material belongs on the separate Journal route. */
+
+.atlas-day-browse .atlas-journal-carried,
+.atlas-day-browse .atlas-journal-goals,
+.atlas-day-browse .atlas-journal-events,
+.atlas-day-browse .atlas-journal-unlocked,
+.atlas-day-browse .atlas-journal-completion-summary,
+.atlas-day-browse .atlas-journal-loading,
+.atlas-day-browse .atlas-journal-read-error,
+.atlas-day-browse .atlas-day-complete-drawer {
+  display: none !important;
+}
+
+/* Completed tasks keep their point on the route without taking task-card space. */
+.atlas-day-route-spine > .atlas-day-completion-echo {
+  min-height: 18px !important;
+  height: 18px;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.atlas-day-route-spine > .atlas-day-completion-echo > button {
+  top: -9px;
+}
+
+.atlas-day-route-spine .atlas-journal-completion-echo-copy {
+  min-width: 0;
+  height: 18px;
+  margin: 0 0 0 4px;
+  border: 0;
+  pointer-events: none;
+}
+
+.atlas-day-route-spine .atlas-journal-completion-echo-copy > summary {
+  min-height: 18px;
+  height: 18px;
+  padding: 0 4px 0 5px;
+  display: flex;
+  align-items: center;
+}
+
+.atlas-day-route-spine .atlas-journal-completion-echo-copy > summary strong {
+  color: rgba(111, 114, 104, 0.58);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.atlas-day-route-spine .atlas-journal-completion-echo-copy > summary span,
+.atlas-day-route-spine .atlas-journal-completion-echo-copy > summary b,
+.atlas-day-route-spine .atlas-journal-completion-echo-copy > div {
+  display: none !important;
+}
