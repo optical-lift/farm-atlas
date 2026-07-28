@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { FieldLogDrawer, type AtlasFieldLogSeed } from "@/components/atlas/field-log-builder";
+import AtlasTrailPulseBoard from "@/components/atlas/home/AtlasTrailPulseBoard";
 import {
   AtlasAppShell,
   AtlasCard,
@@ -413,6 +414,8 @@ export default function AtlasUniversalHome({
               <em>{home.projects.length ? `${home.metrics.projectCount} projects` : "Review changes"}</em>
             </Link>
           </AtlasFooterActions>
+
+          <AtlasTrailPulseBoard />
 
           {home.projects.length || home.attention.length ? (
             <AtlasCard as="section" id="work-board" className={styles.detailSection} ariaLabelledBy="work-board-title">
