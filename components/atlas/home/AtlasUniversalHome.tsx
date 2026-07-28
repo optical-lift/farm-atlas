@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { FieldLogDrawer, type AtlasFieldLogSeed } from "@/components/atlas/field-log-builder";
+import AtlasPortfolioMatrix from "@/components/atlas/home/AtlasPortfolioMatrix";
 import AtlasTrailPulseBoard from "@/components/atlas/home/AtlasTrailPulseBoard";
 import {
   AtlasAppShell,
@@ -269,6 +270,7 @@ export default function AtlasUniversalHome({
   const visibleFarms = useMemo(() => farmCards(home), [home]);
   const workstreams = home.organizationHome?.workstreams ?? [];
   const singleVisibleFarm = visibleFarms.length === 1;
+  const showOwnerPortfolio = Boolean(home.organizationHome?.viewer.isOwner && home.projects.length);
   const canDocumentActiveFarm = Boolean(
     home.activeFarm
       && home.activeFarm.workerKey
@@ -326,7 +328,11 @@ export default function AtlasUniversalHome({
   const activeSnapshot = home.activeFarm?.snapshot;
   const showFarmSnapshot = Boolean(activeSnapshot && !home.viewer.hasOrganizationScope);
   const firstProjectHref = home.projects[0] ? `/project/${encodeURIComponent(home.projects[0].projectId)}` : "#work-board";
-  const metricHref = singleVisibleFarm ? (home.projects.length ? "#work-board" : "/zones") : "#scope-board";
+  const metricHref = showOwnerPortfolio
+    ? "#portfolio-matrix"
+    : singleVisibleFarm
+      ? (home.projects.length ? "#work-board" : "/zones")
+      : "#scope-board";
 
   return (
     <>
@@ -403,7 +409,12 @@ export default function AtlasUniversalHome({
           )}
 
           <AtlasFooterActions className="atlas-home-footer-row">
-            {!singleVisibleFarm ? (
+            {showOwnerPortfolio ? (
+              <Link href="#portfolio-matrix" className="atlas-home-closeout-footer-link">
+                <span>Portfolio</span>
+                <em>{home.metrics.projectCount} projects across {home.metrics.farmCount} farms</em>
+              </Link>
+            ) : !singleVisibleFarm ? (
               <Link href="#scope-board" className="atlas-home-closeout-footer-link">
                 <span>Atlas scope</span>
                 <em>{home.metrics.farmCount} farms visible</em>
@@ -416,6 +427,8 @@ export default function AtlasUniversalHome({
           </AtlasFooterActions>
 
           <AtlasTrailPulseBoard />
+
+          {showOwnerPortfolio ? <AtlasPortfolioMatrix home={home} /> : null}
 
           {home.projects.length || home.attention.length ? (
             <AtlasCard as="section" id="work-board" className={styles.detailSection} ariaLabelledBy="work-board-title">
@@ -451,7 +464,7 @@ export default function AtlasUniversalHome({
             </AtlasCard>
           ) : null}
 
-          {!singleVisibleFarm ? (
+          {!singleVisibleFarm && !showOwnerPortfolio ? (
             <AtlasCard as="section" id="scope-board" className={styles.detailSection} ariaLabelledBy="scope-board-title">
               <AtlasSectionHeading kicker="Bird's-eye view" title="Atlas Scope" count={visibleFarms.length} id="scope-board-title" />
 
