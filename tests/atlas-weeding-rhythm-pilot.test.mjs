@@ -18,8 +18,11 @@ const initialReader = read(
 const reader = read(
   "supabase/migrations/20260729070300_weeding_pilot_physical_condition_truth_v1.sql",
 );
+const taskIdentity = read(
+  "supabase/migrations/20260729070400_rhythm_task_escalation_identity_v1.sql",
+);
 const contract = read("lib/atlas/weeding-rhythm-pilot-contract.ts");
-const sql = `${policy}\n${enrollment}\n${initialReader}\n${reader}`;
+const sql = `${policy}\n${enrollment}\n${initialReader}\n${reader}\n${taskIdentity}`;
 
 test("the approved pilot is exactly FR8, FR15, and North Redbud Island", () => {
   assert.match(policy, /'fr_8'::text/);
@@ -62,6 +65,18 @@ test("failure releases explicit restoration work and preserves the approved scop
   assert.match(policy, /'\[\]'::jsonb/);
   assert.match(policy, /unrelated crop production/);
   assert.match(policy, /'physicalConditionClaim', 'unknown_until_observed'/);
+});
+
+test("due and failure preserve one occurrence and one canonical task identity", () => {
+  assert.match(taskIdentity, /rename to ensure_rhythm_task_v1_base/);
+  assert.match(taskIdentity, /v_state\.current_task_id/);
+  assert.match(taskIdentity, /v_state\.current_occurrence_id/);
+  assert.match(taskIdentity, /'rhythm_task_identity_preserved', true/);
+  assert.match(taskIdentity, /'escalated_current_task'/);
+  assert.match(taskIdentity, /'updated_current_occurrence_awaiting_capacity'/);
+  assert.match(taskIdentity, /title = v_template ->> 'title'/);
+  assert.match(taskIdentity, /priority = coalesce\(nullif\(v_template ->> 'priority'/);
+  assert.match(taskIdentity, /return atlas\.ensure_rhythm_task_v1_base/);
 });
 
 test("notification routing records the approved Bell and push policy without inventing delivery", () => {
