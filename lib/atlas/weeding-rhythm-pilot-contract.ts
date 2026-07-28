@@ -1,4 +1,4 @@
-import type { AtlasRhythmState } from "./rhythm-clock-contract";
+import type { AtlasRhythmClockState } from "./rhythm-clock-contract";
 
 export type AtlasWeedingPilotRuleClass =
   | "fast_production_soil"
@@ -22,7 +22,7 @@ export type AtlasWeedingPilotSubject = {
   zoneId: string | null;
   zoneKey: string | null;
   zoneLabel: string | null;
-  state: AtlasRhythmState;
+  state: AtlasRhythmClockState;
   leaseStartedAt: string | null;
   warningAt: string | null;
   dueAt: string | null;
