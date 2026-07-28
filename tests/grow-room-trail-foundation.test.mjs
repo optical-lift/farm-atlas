@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const page = readFileSync(new URL("../app/grow-room/page.tsx", import.meta.url), "utf8");
+const doorway = readFileSync(new URL("../app/grow-room/page.tsx", import.meta.url), "utf8");
+const page = readFileSync(new URL("../components/atlas/grow-room/GrowRoomTaskFocus.tsx", import.meta.url), "utf8");
+const focusPage = readFileSync(new URL("../app/task-focus/[taskId]/page.tsx", import.meta.url), "utf8");
 const api = readFileSync(new URL("../app/api/atlas/grow-room/route.ts", import.meta.url), "utf8");
 const roundApi = readFileSync(new URL("../app/api/atlas/grow-room/round/route.ts", import.meta.url), "utf8");
 const contract = readFileSync(new URL("../lib/atlas/grow-room.ts", import.meta.url), "utf8");
@@ -33,12 +35,12 @@ test("routine watering remains absent from worker evidence", () => {
   assert.doesNotMatch(page, /water|watering/i);
 });
 
-test("Grow Room Care opens the exact focused daily round", () => {
-  assert.match(focusLayout, /visitTaskId=/);
-  assert.match(focusLayout, /encodeURIComponent\(taskId\)/);
+test("Grow Room Care opens as an exact specialized universal task", () => {
+  assert.match(focusPage, /import GrowRoomTaskFocus/);
+  assert.match(focusPage, /<GrowRoomTaskFocus visitTaskId=\{task\.id\}/);
   assert.match(roundApi, /grow_room_round_v1/);
   assert.match(page, /Grow Room Care/);
-  assert.match(page, /Finish Grow Room round/);
+  assert.match(page, /Finish task/);
 });
 
 test("Grow Room round uses the shared Atlas task shell and Dominion card", () => {
@@ -47,12 +49,12 @@ test("Grow Room round uses the shared Atlas task shell and Dominion card", () =>
   assert.match(page, /atlas-phone-top/);
   assert.match(page, /atlas-dominion-task-card/);
   assert.match(page, /atlas-task-dominion-track/);
-  assert.match(page, /`Log \$\{index \+ 1\}`/);
-  assert.match(page, /Log \{activeRequest\.sortOrder\} of/);
+  assert.match(page, /`Step \$\{index \+ 1\}`/);
+  assert.match(page, /Step \{activeRequest\.sortOrder\} of/);
   assert.doesNotMatch(page, /`Request \$\{index \+ 1\}`/);
 });
 
-test("released Grow Room logs are directly navigable from their Trail circles", () => {
+test("released Grow Room steps are directly navigable from their task track", () => {
   assert.match(page, /selectedAssignmentId/);
   assert.match(page, /setSelectedAssignmentId\(request\.assignmentId\)/);
   assert.match(page, /className=\{styles\.logButton\}/);
@@ -60,7 +62,7 @@ test("released Grow Room logs are directly navigable from their Trail circles", 
   assert.match(page, /scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/);
 });
 
-test("Grow Room log titles are concise action labels without task commentary", () => {
+test("Grow Room step titles are concise action labels without task commentary", () => {
   assert.match(page, /return "Count live seedlings"/);
   assert.match(page, /return "Pot up plants"/);
   assert.match(page, /return "Advance hardening"/);
@@ -70,11 +72,12 @@ test("Grow Room log titles are concise action labels without task commentary", (
   assert.doesNotMatch(page, /Check whether \$\{subject\} is ready/);
 });
 
-test("generic work feeds keep one Grow Room doorway instead of room-task clutter", () => {
+test("generic work feeds keep one Grow Room doorway that resolves to task focus", () => {
   assert.match(feedMigration, /home_task_cards_v2/);
   assert.match(feedMigration, /one Grow Room doorway/i);
   assert.match(homeApi, /supabase\.rpc\("home_task_cards_v2"/);
-  assert.match(focusLayout, /redirect\(`\/grow-room\?visitTaskId=/);
+  assert.match(doorway, /redirect\(taskFocusHref/);
+  assert.doesNotMatch(focusLayout, /redirect\(`\/grow-room\?visitTaskId=/);
 });
 
 test("only explicit current requests appear on the worker surface", () => {
