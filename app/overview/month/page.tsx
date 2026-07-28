@@ -59,7 +59,6 @@ function CollectionOverviewCard({ collection }: { collection: AtlasWorkCollectio
   );
 }
 
-// GroupSection is the universal successor to the farm-only ZoneSection.
 function GroupSection({ group, anchorIso, returnTo }: { group: ZoneTaskOverview; anchorIso: string; returnTo: string }) {
   return (
     <details className="atlas-overview-zone-card">
@@ -159,7 +158,7 @@ export default function AtlasMonthOverviewPage() {
         <header className="atlas-phone-top atlas-dashboard-top">
           <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">{portalLabel}</span></Link>
           <span className="atlas-weather-line">{headerStatus}</span>
-          <span className="atlas-note-plus atlas-overview-top-dot" aria-hidden="true">•</span>
+          <Link href={`/journal?date=${encodeURIComponent(anchorIso)}`} className="atlas-note-plus atlas-overview-top-dot" aria-label="Open Farm Journal">J</Link>
         </header>
 
         <div className="atlas-task-page-body atlas-overview-body">
