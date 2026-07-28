@@ -121,6 +121,14 @@ export default function OwnerDashboardClient({
           </section>
 
           <section className="atlas-overview-zone-list atlas-owner-list" aria-label="Owner task list">
+            <Link className="atlas-overview-task-card atlas-owner-task-card" href="/owner/lineage">
+              <div>
+                <strong>Trail Lineage Audit</strong>
+                <span>owner evidence review</span>
+              </div>
+              <em>Open</em>
+              <p>Confirm or reject proposed links between completed records and earlier Trail points.</p>
+            </Link>
             <OwnerSection title="Overdue" tasks={ownerActions.overdue} empty="No overdue owner tasks." />
             <OwnerSection title="Today" tasks={ownerActions.today} empty="No owner tasks due today." />
             <OwnerSection title="This Week" tasks={ownerActions.thisWeek} empty="No owner tasks later this week." />
