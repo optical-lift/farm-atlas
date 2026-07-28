@@ -1,0 +1,77 @@
+/* Dedicated home for goals, carried consequences, and canonical farm changes. */
+
+.atlas-journal-page-body {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.atlas-journal-page-intro {
+  border: 1px solid rgba(139, 145, 194, 0.16);
+  border-radius: 18px;
+  background: rgba(174, 179, 212, 0.1);
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.atlas-journal-page-intro span {
+  color: var(--atlas-purple-dark);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.atlas-journal-page-intro h1 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.atlas-journal-page-intro p {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
+.atlas-journal-page-actions {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.atlas-journal-page-actions a {
+  min-height: 38px;
+  border: 1px solid rgba(139, 145, 194, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.52);
+  color: var(--atlas-purple-dark);
+  padding: 8px 10px;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.atlas-journal-page-actions a:first-child {
+  justify-self: start;
+}
+
+.atlas-journal-page-actions a:last-child {
+  justify-self: end;
+}
+
+.atlas-journal-page-actions .atlas-journal-day-link {
+  border-color: rgba(139, 145, 194, 0.24);
+  background: rgba(174, 179, 212, 0.14);
+}
