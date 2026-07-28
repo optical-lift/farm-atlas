@@ -1,0 +1,637 @@
+/* Shared Living Journal primitives: carried consequences, expandable task rows,
+   ghost goals, Journal dots, unlocks, and the resolved-page summary. */
+
+.atlas-journal-read-error,
+.atlas-journal-loading {
+  border: 1px solid rgba(139, 145, 194, 0.16);
+  border-radius: 14px;
+  background: rgba(174, 179, 212, 0.08);
+  color: var(--atlas-muted);
+  padding: 9px 11px;
+  font-size: 10px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.atlas-journal-section {
+  margin-top: 10px;
+  border: 1px solid rgba(139, 145, 194, 0.16);
+  border-radius: 18px;
+  background: rgba(246, 242, 230, 0.54);
+  padding: 11px 12px 12px;
+  display: grid;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.atlas-journal-carried {
+  border-color: rgba(166, 111, 82, 0.24);
+  background: rgba(239, 225, 209, 0.42);
+}
+
+.atlas-journal-section-head {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.atlas-journal-section-head > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.atlas-journal-section-head span,
+.atlas-journal-completion-summary > span {
+  color: var(--atlas-purple-dark);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.atlas-journal-section-head h3,
+.atlas-journal-completion-summary h3 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 16px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+}
+
+.atlas-journal-section-head > b {
+  min-width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(174, 179, 212, 0.18);
+  color: var(--atlas-purple-dark);
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-journal-section > p {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1.3;
+  font-weight: 750;
+}
+
+.atlas-journal-spine {
+  position: relative;
+  padding-left: 20px;
+  display: grid;
+  gap: 0;
+}
+
+.atlas-journal-spine::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  bottom: 15px;
+  left: 6px;
+  width: 1px;
+  background: rgba(139, 145, 194, 0.25);
+}
+
+.atlas-journal-entry,
+.atlas-ghost-goal {
+  min-width: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(139, 145, 194, 0.12);
+  background: transparent;
+}
+
+.atlas-journal-entry:last-child,
+.atlas-ghost-goal:last-child {
+  border-bottom: 0;
+}
+
+.atlas-journal-entry > summary,
+.atlas-ghost-goal > summary,
+.atlas-journal-task-row > summary,
+.atlas-journal-completion-echo-copy > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.atlas-journal-entry > summary::-webkit-details-marker,
+.atlas-ghost-goal > summary::-webkit-details-marker,
+.atlas-journal-task-row > summary::-webkit-details-marker,
+.atlas-journal-completion-echo-copy > summary::-webkit-details-marker {
+  display: none;
+}
+
+.atlas-journal-entry > summary,
+.atlas-ghost-goal > summary {
+  position: relative;
+  min-width: 0;
+  min-height: 58px;
+  padding: 10px 2px 10px 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.atlas-journal-entry > summary > div,
+.atlas-ghost-goal-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.atlas-journal-entry > summary strong,
+.atlas-ghost-goal > summary strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--atlas-text);
+  font-size: 13px;
+  line-height: 1.08;
+  font-weight: 950;
+  letter-spacing: -0.025em;
+  text-overflow: ellipsis;
+}
+
+.atlas-journal-entry > summary em,
+.atlas-ghost-goal > summary em,
+.atlas-ghost-goal > summary small {
+  color: var(--atlas-muted);
+  font-size: 9px;
+  line-height: 1.1;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.atlas-ghost-goal > summary small {
+  color: var(--atlas-purple-dark);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.atlas-journal-entry > summary > b {
+  color: var(--atlas-muted);
+  font-size: 12px;
+  transition: transform 140ms ease-out;
+}
+
+.atlas-journal-entry[open] > summary > b,
+.atlas-journal-task-row[open] .atlas-journal-row-caret,
+.atlas-journal-completion-echo-copy[open] > summary > b {
+  transform: rotate(180deg);
+}
+
+.atlas-journal-dot {
+  position: absolute;
+  top: 22px;
+  left: -18px;
+  z-index: 2;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--atlas-purple-deep);
+  border-radius: 999px;
+  background: var(--atlas-card);
+  box-shadow: 0 0 0 3px var(--atlas-card);
+}
+
+.atlas-journal-entry-fallen_out_of_rhythm .atlas-journal-dot {
+  border-color: #a95d50;
+  background: rgba(169, 93, 80, 0.12);
+}
+
+.atlas-journal-entry-recovering .atlas-journal-dot {
+  border-color: #b78b43;
+  background: rgba(183, 139, 67, 0.14);
+}
+
+.atlas-journal-entry-decision .atlas-journal-dot,
+.atlas-journal-event-attention .atlas-journal-dot {
+  border-radius: 2px;
+  border-color: #aa8140;
+}
+
+.atlas-journal-event-critical .atlas-journal-dot {
+  border-color: #a95d50;
+  background: #a95d50;
+}
+
+.atlas-journal-event-quiet .atlas-journal-dot {
+  width: 6px;
+  height: 6px;
+  top: 24px;
+  left: -16px;
+  border-width: 1px;
+  opacity: 0.72;
+}
+
+.atlas-journal-entry-body,
+.atlas-ghost-goal-body {
+  border-top: 1px solid rgba(139, 145, 194, 0.11);
+  padding: 10px 4px 12px 8px;
+  display: grid;
+  gap: 7px;
+}
+
+.atlas-journal-entry-body p,
+.atlas-ghost-goal-body p {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 750;
+}
+
+.atlas-journal-entry-body > span,
+.atlas-ghost-window,
+.atlas-ghost-waiting {
+  color: var(--atlas-muted);
+  font-size: 9px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.atlas-journal-entry-body a,
+.atlas-ghost-next-move {
+  width: fit-content;
+  color: var(--atlas-purple-dark);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.atlas-ghost-goal {
+  opacity: 0.82;
+}
+
+.atlas-ghost-goal-nearly_unlocked,
+.atlas-ghost-goal-in_production,
+.atlas-ghost-goal-realized {
+  opacity: 1;
+}
+
+.atlas-ghost-goal-locked .atlas-journal-dot {
+  border-style: dashed;
+  border-color: #aaa18e;
+}
+
+.atlas-ghost-goal-tracking .atlas-journal-dot {
+  border-color: #8394b7;
+}
+
+.atlas-ghost-goal-nearly_unlocked .atlas-journal-dot {
+  border-color: #b78b43;
+  background: rgba(183, 139, 67, 0.14);
+}
+
+.atlas-ghost-goal-in_production .atlas-journal-dot {
+  border-color: #718b67;
+  background: rgba(113, 139, 103, 0.14);
+}
+
+.atlas-ghost-goal-realized .atlas-journal-dot {
+  border-color: #718b67;
+  background: #718b67;
+}
+
+.atlas-ghost-goal-progress {
+  min-width: 34px;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--atlas-purple-dark);
+  padding: 5px 6px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  text-align: center;
+}
+
+.atlas-ghost-requirements {
+  display: grid;
+  gap: 5px;
+}
+
+.atlas-ghost-requirement {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+}
+
+.atlas-ghost-requirement > span {
+  width: 8px;
+  height: 8px;
+  margin-top: 2px;
+  border: 1px solid #aaa18e;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.atlas-ghost-requirement.is-satisfied > span {
+  border-color: #718b67;
+  background: #718b67;
+}
+
+.atlas-ghost-requirement.is-partial > span {
+  border-color: #b78b43;
+  background: linear-gradient(90deg, #b78b43 50%, transparent 50%);
+}
+
+.atlas-ghost-requirement.is-waiting > span {
+  border-color: #8394b7;
+  border-style: dashed;
+}
+
+.atlas-ghost-requirement > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.atlas-ghost-requirement strong,
+.atlas-ghost-requirement em {
+  color: var(--atlas-text);
+  font-size: 9px;
+  line-height: 1.25;
+  font-weight: 850;
+  font-style: normal;
+}
+
+.atlas-ghost-requirement em {
+  color: var(--atlas-muted);
+  font-weight: 750;
+}
+
+.atlas-ghost-blocker {
+  border-left: 2px solid rgba(183, 139, 67, 0.52);
+  padding-left: 7px;
+  color: #776246 !important;
+}
+
+/* Task rows stay in the existing Day spine. Tapping the row opens context;
+   the separate dot remains the completion control. */
+.atlas-day-route-spine > .atlas-day-task-entry > .atlas-journal-task-row {
+  padding: 0 !important;
+  display: block !important;
+}
+
+.atlas-journal-task-row > summary {
+  position: relative;
+  min-width: 0;
+  min-height: 56px;
+  padding: 8px 24px 18px 10px;
+  display: grid;
+  gap: 3px;
+}
+
+.atlas-journal-task-row > summary > strong {
+  color: var(--atlas-text);
+  font-size: 15px;
+  line-height: 1.04;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+}
+
+.atlas-journal-task-row > summary > span:not(.atlas-day-task-cues) {
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 800;
+}
+
+.atlas-journal-task-row > summary > em {
+  display: none;
+}
+
+.atlas-journal-row-caret {
+  position: absolute;
+  top: 20px;
+  right: 5px;
+  color: var(--atlas-muted);
+  font-size: 11px;
+  line-height: 1;
+  transition: transform 140ms ease-out;
+}
+
+.atlas-journal-task-detail {
+  margin: -10px 3px 12px 10px;
+  border: 1px solid rgba(139, 145, 194, 0.14);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.4);
+  padding: 9px;
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-journal-task-detail dl {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.atlas-journal-task-detail dl > div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 7px;
+}
+
+.atlas-journal-task-detail dt,
+.atlas-journal-task-detail dd {
+  margin: 0;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.atlas-journal-task-detail dt {
+  color: var(--atlas-purple-dark);
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.atlas-journal-task-detail dd {
+  color: var(--atlas-muted);
+  font-weight: 800;
+}
+
+.atlas-journal-task-detail > a {
+  width: fit-content;
+  color: var(--atlas-purple-dark);
+  font-size: 10px;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+/* A completed row remains compact but keeps a readable echo of its effect. */
+.atlas-day-completion-echo {
+  min-height: 42px !important;
+}
+
+.atlas-journal-completion-echo-copy {
+  min-width: 0;
+  margin: 0 0 4px 5px;
+  border-bottom: 1px solid rgba(139, 145, 194, 0.08);
+}
+
+.atlas-journal-completion-echo-copy > summary {
+  position: relative;
+  min-height: 38px;
+  padding: 5px 22px 7px 5px;
+  display: grid;
+  gap: 2px;
+}
+
+.atlas-journal-completion-echo-copy > summary strong,
+.atlas-journal-completion-echo-copy > summary span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-journal-completion-echo-copy > summary strong {
+  color: var(--atlas-text);
+  font-size: 11px;
+  line-height: 1.05;
+  font-weight: 900;
+}
+
+.atlas-journal-completion-echo-copy > summary span,
+.atlas-journal-completion-echo-copy > div span {
+  color: var(--atlas-muted);
+  font-size: 8px;
+  line-height: 1.15;
+  font-weight: 800;
+}
+
+.atlas-journal-completion-echo-copy > summary > b {
+  position: absolute;
+  top: 14px;
+  right: 5px;
+  color: var(--atlas-muted);
+  font-size: 9px;
+  transition: transform 140ms ease-out;
+}
+
+.atlas-journal-completion-echo-copy > div {
+  padding: 0 5px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.atlas-journal-completion-echo-copy > div a {
+  color: var(--atlas-purple-dark);
+  font-size: 9px;
+  font-weight: 950;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.atlas-journal-unlock-list {
+  display: grid;
+  gap: 5px;
+}
+
+.atlas-journal-unlock-list > a,
+.atlas-journal-unlock-list > div {
+  border: 1px solid rgba(183, 139, 67, 0.2);
+  border-radius: 12px;
+  background: rgba(238, 233, 184, 0.26);
+  color: var(--atlas-text);
+  padding: 8px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.atlas-journal-unlock-list strong,
+.atlas-journal-unlock-list span {
+  font-size: 9px;
+  line-height: 1.15;
+  font-weight: 900;
+}
+
+.atlas-journal-unlock-list span {
+  color: var(--atlas-muted);
+  white-space: nowrap;
+}
+
+.atlas-journal-completion-summary {
+  margin-top: 12px;
+  border: 1px solid rgba(113, 139, 103, 0.2);
+  border-radius: 18px;
+  background: rgba(207, 214, 175, 0.18);
+  padding: 12px;
+  display: grid;
+  gap: 7px;
+}
+
+.atlas-journal-completion-summary > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.atlas-journal-completion-summary > div p {
+  margin: 0;
+  border: 1px solid rgba(113, 139, 103, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.48);
+  padding: 5px 7px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.atlas-journal-completion-summary p strong,
+.atlas-journal-completion-summary p em {
+  color: var(--atlas-text);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  font-style: normal;
+}
+
+.atlas-journal-completion-summary p em {
+  color: var(--atlas-muted);
+  font-weight: 850;
+}
+
+.atlas-journal-no-change {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+@media (max-width: 360px) {
+  .atlas-journal-section {
+    padding-inline: 10px;
+  }
+
+  .atlas-journal-task-detail dl > div {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas-journal-entry > summary > b,
+  .atlas-journal-row-caret,
+  .atlas-journal-completion-echo-copy > summary > b {
+    transition: none;
+  }
+}
