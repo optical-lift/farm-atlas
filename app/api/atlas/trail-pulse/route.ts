@@ -20,6 +20,13 @@ export async function GET() {
   const viewer = atlasUniversalViewerFromSession(session);
   if (!viewer) return privateJson({ ok: false, error: "Atlas membership is required." }, 403);
 
+  // Trail Pulse is the Feast Guild portfolio lens. Farm-only members keep the
+  // task-forward farm home and do not inherit project Pulse rows merely because
+  // a project happens to target their farm.
+  if (!viewer.hasOrganizationScope || !viewer.activeOrganizationId) {
+    return privateJson({ ok: true, pulse: [] });
+  }
+
   const supabase = await createAtlasServerClient();
   const { data, error } = await supabase.rpc("universal_trail_pulse_v1", {
     p_organization_id: viewer.activeOrganizationId,
