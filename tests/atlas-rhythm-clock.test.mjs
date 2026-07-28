@@ -16,6 +16,7 @@ const migrationPaths = [
   "supabase/migrations/20260729060600_rhythm_clock_result_effects_v1.sql",
   "supabase/migrations/20260729060700_rhythm_clock_owner_override_and_tick_v1.sql",
   "supabase/migrations/20260729060800_rhythm_clock_workflow_source_kind_v1.sql",
+  "supabase/migrations/20260729060900_rhythm_history_internal_delete_v1.sql",
 ];
 
 function migration() {
@@ -33,6 +34,7 @@ test("Clock stores one current lease plus append-only satisfaction and transitio
   assert.match(sql, /current_task_id/);
   assert.match(sql, /prevent_rhythm_history_mutation_v1/);
   assert.match(sql, /Rhythm transition and satisfaction history is append-only/);
+  assert.match(sql, /if tg_op = 'DELETE' then[\s\S]*return old/);
 });
 
 test("Clock resolves the effective inheritance winner on every evaluation", () => {
