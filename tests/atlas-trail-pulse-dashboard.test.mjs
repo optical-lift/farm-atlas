@@ -11,15 +11,20 @@ test("the universal home displays the shared Trail Pulse board inside the existi
   assert.match(home, /import AtlasTrailPulseBoard/);
   assert.match(home, /<AtlasTrailPulseBoard \/>/);
   assert.match(home, /<AtlasFooterActions[\s\S]*?<AtlasTrailPulseBoard \/>[\s\S]*?id="work-board"/);
-  assert.doesNotMatch(home, /data-atlas-has-organization-scope=.*AtlasTrailPulseBoard/);
 });
 
-test("Trail Pulse is permission-scoped by the existing server session and Trail read RPC", () => {
+test("Trail Pulse is limited to Feast Guild organization scope before the Trail RPC runs", () => {
   assert.match(route, /getAtlasSession\(\)/);
   assert.match(route, /atlasUniversalViewerFromSession\(session\)/);
+  assert.match(route, /!viewer\.hasOrganizationScope \|\| !viewer\.activeOrganizationId/);
+  assert.match(route, /return privateJson\(\{ ok: true, pulse: \[\] \}\)/);
   assert.match(route, /universal_trail_pulse_v1/);
   assert.match(route, /p_organization_id: viewer\.activeOrganizationId/);
   assert.match(route, /Cache-Control": "private, no-store"/);
+  assert.ok(
+    route.indexOf("!viewer.hasOrganizationScope") < route.indexOf("universal_trail_pulse_v1"),
+    "farm-only sessions must be returned before the organization Pulse RPC runs",
+  );
 });
 
 test("the visible pulse returns every current Trail state to a normal Atlas destination", () => {
