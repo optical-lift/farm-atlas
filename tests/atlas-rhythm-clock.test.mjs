@@ -7,9 +7,14 @@ function read(path) {
 }
 
 const migrationPaths = [
-  "supabase/migrations/20260729060000_rhythm_clock_schema_v1.sql",
-  "supabase/migrations/20260729060100_rhythm_clock_evaluator_v1.sql",
-  "supabase/migrations/20260729060200_rhythm_clock_results_and_cron_v1.sql",
+  "supabase/migrations/20260729060000_rhythm_clock_state_schema_v1.sql",
+  "supabase/migrations/20260729060100_rhythm_clock_evidence_matching_v1.sql",
+  "supabase/migrations/20260729060200_rhythm_clock_rule_resolution_v1.sql",
+  "supabase/migrations/20260729060300_rhythm_clock_state_and_history_v1.sql",
+  "supabase/migrations/20260729060400_rhythm_clock_task_release_v1.sql",
+  "supabase/migrations/20260729060500_rhythm_clock_evaluator_v1.sql",
+  "supabase/migrations/20260729060600_rhythm_clock_result_effects_v1.sql",
+  "supabase/migrations/20260729060700_rhythm_clock_owner_override_and_tick_v1.sql",
 ];
 
 function migration() {
