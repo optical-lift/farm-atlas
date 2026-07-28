@@ -14,7 +14,6 @@ import AnnaPaidScheduleHomePatch from "./AnnaPaidScheduleHomePatch";
 import TaskResultAnchorPatch from "./TaskResultAnchorPatch";
 import ProjectTaskDestinationGuard from "./ProjectTaskDestinationGuard";
 import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
-import TendingTaskContext from "@/components/atlas/tending-task-context";
 import "./globals.css";
 import "./atlas-primitives.css";
 import "./atlas-trail.css";
@@ -65,6 +64,7 @@ import "./week-route-v1.css";
 import "./universal-home-familiar.css";
 import "./atlas-shell-responsive.css";
 import "./project-task-timeline.css";
+import "./tending-task-timeline.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -92,7 +92,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <TaskResultAnchorPatch />
         <ProjectTaskDestinationGuard />
         <UniversalCollectionIdentity />
-        <TendingTaskContext />
         {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}
       </body>
