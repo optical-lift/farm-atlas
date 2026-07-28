@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CropObservationPanel } from "@/components/atlas/crop-observation-panel";
 import { ObjectQuickLog } from "@/components/atlas/object-quick-log";
+import AtlasTrail from "@/components/atlas/trail/AtlasTrail";
+import { atlasTrailFromObjectWorkbench } from "@/lib/atlas/object-trail";
 import {
   fetchAtlasObjectWorkbench,
   type AtlasObjectCropCycle,
@@ -13,7 +15,6 @@ import {
   type AtlasObjectTimelineEvent,
   type AtlasObjectWorkbenchObject,
   type AtlasOperationalTimeline,
-  type AtlasOperationalTimelineItem,
 } from "@/lib/atlas/object-workbench-client";
 
 const EVENT_LABELS: Record<string, string> = {
@@ -37,13 +38,6 @@ function prettyDate(value: string | null | undefined) {
   const date = new Date(`${value}T12:00:00`);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
-function shortDate(value: string | null | undefined) {
-  if (!value) return null;
-  const date = new Date(`${value}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function prettyState(value: string | null | undefined) {
@@ -84,51 +78,6 @@ function stateChips(object: AtlasObjectWorkbenchObject) {
     prettyState(object.presentability) ? `presentation: ${prettyState(object.presentability)}` : null,
     object.decision_required ? "decision needed" : null,
   ].filter((value): value is string => Boolean(value));
-}
-
-function timelineDate(item: AtlasOperationalTimelineItem) {
-  const start = shortDate(item.startDate);
-  const end = shortDate(item.endDate);
-  if (start && end && start !== end) return `${start}–${end}`;
-  return start ?? end ?? "Current";
-}
-
-function OperationalTimelineItem({ item }: { item: AtlasOperationalTimelineItem }) {
-  const blocker = typeof item.metadata?.blocker_text === "string" ? item.metadata.blocker_text : null;
-  return (
-    <article className={`atlas-operational-item state-${item.state}`}>
-      <div className="atlas-operational-date">{timelineDate(item)}</div>
-      <div className="atlas-operational-copy">
-        <span>{item.action}</span>
-        <strong>{item.subject}</strong>
-        {item.detail ? <p>{item.detail}</p> : null}
-        {blocker ? <p className="atlas-operational-blocker">Waiting: {blocker}</p> : null}
-      </div>
-    </article>
-  );
-}
-
-function OperationalTimelineSection({
-  label,
-  items,
-}: {
-  label: "Now" | "Next" | "Later";
-  items: AtlasOperationalTimelineItem[];
-}) {
-  if (items.length === 0) return null;
-  return (
-    <section className={`atlas-operational-group atlas-operational-${label.toLowerCase()}`}>
-      <h3>{label}</h3>
-      <div className="atlas-operational-list">
-        {items.map((item, index) => (
-          <OperationalTimelineItem
-            key={`${item.kind}-${item.taskId ?? item.eventId ?? item.cropCycleId ?? index}-${item.startDate ?? "current"}`}
-            item={item}
-          />
-        ))}
-      </div>
-    </section>
-  );
 }
 
 function TimelineCard({ event }: { event: AtlasObjectTimelineEvent }) {
@@ -179,9 +128,12 @@ export default function AtlasObjectPage() {
   }, [loadObject]);
 
   const chips = object ? stateChips(object) : [];
-  const timelineCount = operationalTimeline
-    ? operationalTimeline.now.length + operationalTimeline.next.length + operationalTimeline.later.length
-    : 0;
+  const trail = useMemo(() => object ? atlasTrailFromObjectWorkbench({
+    object,
+    cropCycles,
+    events,
+    operationalTimeline,
+  }) : null, [cropCycles, events, object, operationalTimeline]);
 
   return (
     <main className="atlas-phone-shell atlas-route-shell">
@@ -262,22 +214,27 @@ export default function AtlasObjectPage() {
                 ) : null}
               </section>
 
-              <section className="atlas-object-panel atlas-operational-panel">
+              <section className="atlas-object-panel atlas-object-trail-panel">
                 <div className="atlas-object-section-head">
                   <div>
-                    <span className="atlas-home-kicker">Working timeline</span>
-                    <h2>What happens next</h2>
+                    <span className="atlas-home-kicker">Trail</span>
+                    <h2>Path through this place</h2>
                   </div>
-                  <span>{timelineCount}</span>
+                  <span>{trail?.nodes.length ?? 0}</span>
                 </div>
-                {operationalTimeline ? (
-                  <div className="atlas-operational-groups">
-                    <OperationalTimelineSection label="Now" items={operationalTimeline.now} />
-                    <OperationalTimelineSection label="Next" items={operationalTimeline.next} />
-                    <OperationalTimelineSection label="Later" items={operationalTimeline.later} />
-                  </div>
+                {trail ? (
+                  <>
+                    <AtlasTrail context={trail} mode="full" />
+                    {trail.currentMove?.href ? (
+                      <Link className="atlas-object-current-task-link" href={trail.currentMove.href}>
+                        <span>Current task</span>
+                        <strong>{trail.currentMove.title}</strong>
+                        <b aria-hidden="true">→</b>
+                      </Link>
+                    ) : null}
+                  </>
                 ) : (
-                  <p className="atlas-object-empty">No operational timeline is available yet.</p>
+                  <p className="atlas-object-empty">No Trail is available for this object yet.</p>
                 )}
               </section>
 
