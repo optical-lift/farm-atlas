@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { RoomInspectorRow } from "@/components/atlas/room-inspection";
 import { TaskPhysicalSpaces } from "@/components/atlas/task-physical-spaces";
 import { DocumentWorkCard, FieldLogDrawer, type AtlasFieldLogSeed } from "@/components/atlas/field-log-builder";
+import AtlasTrailPosition from "@/components/atlas/trail/AtlasTrailPosition";
 import {
   BedInspectorRow,
   ZoneRegistryFactCard,
@@ -14,6 +15,7 @@ import {
   stageLabel,
   zoneShortMode,
 } from "@/components/atlas/zone-inspection";
+import { atlasTrailFromRegistryObject } from "@/lib/atlas/object-trail";
 import {
   fetchAtlasTaskCards,
   type AtlasTaskCard,
@@ -33,6 +35,47 @@ function statusLabel(status: string) {
 
 function objectTasks(object: AtlasRegistryObject, tasks: AtlasTaskCard[]) {
   return tasks.filter((task) => task.objects.some((taskObject) => taskObject.object_id === object.id));
+}
+
+function ZoneObjectRow({
+  object,
+  tasks,
+  onTaskSelect,
+  onDocumentObject,
+}: {
+  object: AtlasRegistryObject;
+  tasks: AtlasTaskCard[];
+  onTaskSelect: (task: AtlasTaskCard) => void;
+  onDocumentObject: (object: AtlasRegistryObject) => void;
+}) {
+  const attachedTasks = objectTasks(object, tasks);
+  const trail = atlasTrailFromRegistryObject(object, attachedTasks);
+
+  return (
+    <div id={`object-${object.stable_key}`} className="atlas-zone-object-with-trail">
+      {object.object_type === "room" ? (
+        <RoomInspectorRow
+          object={object}
+          tasks={attachedTasks}
+          onTaskSelect={onTaskSelect}
+          onDocumentObject={onDocumentObject}
+        />
+      ) : (
+        <BedInspectorRow
+          object={object}
+          tasks={attachedTasks}
+          onTaskSelect={onTaskSelect}
+          onDocumentObject={onDocumentObject}
+        />
+      )}
+      <AtlasTrailPosition
+        context={trail}
+        label="Trail position"
+        href={`/objects/${encodeURIComponent(object.stable_key)}`}
+        className="atlas-object-list-trail-position"
+      />
+    </div>
+  );
 }
 
 export default function AtlasZoneDetailPage() {
@@ -173,23 +216,13 @@ export default function AtlasZoneDetailPage() {
                 ) : null}
 
                 {zone.objects.map((object) => (
-                  <div id={`object-${object.stable_key}`} key={object.id}>
-                    {object.object_type === "room" ? (
-                      <RoomInspectorRow
-                        object={object}
-                        tasks={objectTasks(object, tasks)}
-                        onTaskSelect={setSelectedTask}
-                        onDocumentObject={openObjectLog}
-                      />
-                    ) : (
-                      <BedInspectorRow
-                        object={object}
-                        tasks={objectTasks(object, tasks)}
-                        onTaskSelect={setSelectedTask}
-                        onDocumentObject={openObjectLog}
-                      />
-                    )}
-                  </div>
+                  <ZoneObjectRow
+                    key={object.id}
+                    object={object}
+                    tasks={tasks}
+                    onTaskSelect={setSelectedTask}
+                    onDocumentObject={openObjectLog}
+                  />
                 ))}
               </section>
 
