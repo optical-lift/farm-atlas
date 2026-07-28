@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+
 import DayTrailSummary from "@/components/atlas/day-trail-summary";
+import {
+  LivingDayCarried,
+  LivingDayCompletionSummary,
+  LivingDayGoals,
+  LivingDayJournal,
+  LivingDayUnlocked,
+} from "@/components/atlas/living-day-primitives";
 import {
   atlasDayCurrentTask,
   atlasDayIsCarePulse,
@@ -12,6 +20,9 @@ import {
   atlasDayTaskFamily,
   type AtlasDayRouteState,
 } from "@/lib/atlas/day-route";
+import { fetchAtlasLivingDay } from "@/lib/atlas/living-day-client";
+import type { AtlasLivingDay } from "@/lib/atlas/living-day-contract";
+import type { AtlasJournalEvent } from "@/lib/atlas/journal-contract";
 import {
   atlasIsCropCycleTask,
   atlasRouteKeyForTask,
@@ -172,10 +183,7 @@ function optimisticTask(task: AtlasTaskCard, outcome: "done" | "reopened") {
   return {
     ...task,
     status: done ? "done" : "open",
-    metadata: {
-      ...(task.metadata ?? {}),
-      checklist_status: done ? "done" : "open",
-    },
+    metadata: { ...(task.metadata ?? {}), checklist_status: done ? "done" : "open" },
     task_outcomes: [{
       event_id: `optimistic:${task.task_id}:${outcome}`,
       outcome,
@@ -188,17 +196,26 @@ function optimisticTask(task: AtlasTaskCard, outcome: "done" | "reopened") {
   } satisfies AtlasTaskCard;
 }
 
+function latestEvidence(task: AtlasTaskCard) {
+  const outcome = task.task_outcomes?.[0];
+  if (outcome) return outcome.note || outcome.blocker_reason || outcome.outcome.replaceAll("_", " ");
+  const transition = task.task_transitions?.[0];
+  if (transition) return transition.note || transition.reason || transition.transition.replaceAll("_", " ");
+  return "No result has been recorded yet.";
+}
+
 type TaskCardProps = {
   task: AtlasTaskCard;
   complete?: boolean;
   overdue?: boolean;
+  expandable?: boolean;
   returnTo?: string;
   routeState?: AtlasDayRouteState;
   onNodePress?: (task: AtlasTaskCard) => void;
   nodeSaving?: boolean;
 };
 
-function TaskCard({ task, complete = false, overdue = false, returnTo, routeState, onNodePress, nodeSaving = false }: TaskCardProps) {
+function TaskCard({ task, complete = false, overdue = false, expandable = false, returnTo, routeState, onNodePress, nodeSaving = false }: TaskCardProps) {
   const display = atlasTaskDisplay(task);
   const zone = collectionZone(task);
   const isGrowRoomCare = task.title === "Grow Room Care" && task.task_type === "grow_room_care";
@@ -206,24 +223,39 @@ function TaskCard({ task, complete = false, overdue = false, returnTo, routeStat
   const family = atlasDayTaskFamily(task);
   const cues = atlasDayTaskCues(task);
   const routeClass = routeState ? `atlas-day-route-${routeState}` : "";
+  const className = `atlas-day-task-card${complete ? " complete" : ""}${overdue ? " atlas-day-overdue-task-card" : ""}${atlasIsCropCycleTask(task) ? " atlas-crop-cycle-task-card" : ""}${routeClass ? ` ${routeClass}` : ""}`;
 
-  const card = (
-    <Link
-      className={`atlas-day-task-card${complete ? " complete" : ""}${overdue ? " atlas-day-overdue-task-card" : ""}${atlasIsCropCycleTask(task) ? " atlas-crop-cycle-task-card" : ""}${routeClass ? ` ${routeClass}` : ""}`}
-      href={taskHref(task, returnTo)}
-      aria-current={routeState === "current" ? "step" : undefined}
-    >
+  const summaryContent = (
+    <>
       {overdue ? <b className="atlas-day-overdue-badge">Overdue</b> : null}
       {!complete && !overdue ? <small className="atlas-day-task-family">{routeState === "current" ? `Current · ${family}` : family}</small> : null}
       <strong>{display.title}</strong>
       <span>{overdue ? `Due ${prettyDate(task.due_date ?? "")}` : complete ? "Complete" : statusLine}</span>
       {display.detail ? <em>{display.detail}</em> : null}
       {!complete && !overdue && cues.length ? <span className="atlas-day-task-cues">{cues.map((cue) => <i key={cue}>{cue}</i>)}</span> : null}
+    </>
+  );
+
+  const card = expandable ? (
+    <details className={`${className} atlas-journal-task-row`} aria-current={routeState === "current" ? "step" : undefined}>
+      <summary>{summaryContent}<b className="atlas-journal-row-caret" aria-hidden="true">⌄</b></summary>
+      <div className="atlas-journal-task-detail">
+        <dl>
+          <div><dt>Place</dt><dd>{task.objects.length ? task.objects.map((object) => object.object_label).join(" · ") : zone}</dd></div>
+          <div><dt>Time</dt><dd>{task.due_date ? prettyDate(task.due_date) : "No date recorded"}</dd></div>
+          <div><dt>Evidence</dt><dd>{latestEvidence(task)}</dd></div>
+          <div><dt>Effect</dt><dd>{task.unlock_text || task.blocker_text || "No secondary effect is recorded."}</dd></div>
+        </dl>
+        <Link href={taskHref(task, returnTo)}>Open full task <span aria-hidden="true">→</span></Link>
+      </div>
+    </details>
+  ) : (
+    <Link className={className} href={taskHref(task, returnTo)} aria-current={routeState === "current" ? "step" : undefined}>
+      {summaryContent}
     </Link>
   );
 
   if (!onNodePress) return card;
-
   return (
     <div className={`atlas-day-task-entry${complete ? " atlas-day-complete-entry" : ""}${routeClass ? ` ${routeClass}` : ""}`}>
       <button
@@ -233,28 +265,22 @@ function TaskCard({ task, complete = false, overdue = false, returnTo, routeStat
         aria-pressed={complete}
         disabled={nodeSaving}
         onClick={() => onNodePress(task)}
-      >
-        <span aria-hidden="true" />
-      </button>
+      ><span aria-hidden="true" /></button>
       {card}
     </div>
   );
 }
 
-function CompletionEcho({ task, saving, onPress }: { task: AtlasTaskCard; saving: boolean; onPress: (task: AtlasTaskCard) => void }) {
+function CompletionEcho({ task, event, saving, returnTo, onPress }: { task: AtlasTaskCard; event?: AtlasJournalEvent; saving: boolean; returnTo: string; onPress: (task: AtlasTaskCard) => void }) {
   const label = atlasTaskDisplay(task).title;
+  const effect = event?.detail || task.task_outcomes?.[0]?.note || task.task_outcomes?.[0]?.outcome || "Completed";
   return (
     <div className="atlas-day-completion-echo" data-completed-task-id={task.task_id}>
-      <button
-        type="button"
-        className={saving ? "is-saving" : ""}
-        aria-label={`Uncomplete ${label}`}
-        aria-pressed="true"
-        disabled={saving}
-        onClick={() => onPress(task)}
-      >
-        <span aria-hidden="true" />
-      </button>
+      <button type="button" className={saving ? "is-saving" : ""} aria-label={`Uncomplete ${label}`} aria-pressed="true" disabled={saving} onClick={() => onPress(task)}><span aria-hidden="true" /></button>
+      <details className="atlas-journal-completion-echo-copy">
+        <summary><strong>{label}</strong><span>{effect.replaceAll("_", " ")}</span><b aria-hidden="true">⌄</b></summary>
+        <div><span>{event ? `Journal · ${event.sourceEvent.replaceAll("_", " ")}` : "Canonical task result"}</span><Link href={taskHref(task, returnTo)}>Open result <span aria-hidden="true">→</span></Link></div>
+      </details>
     </div>
   );
 }
@@ -266,9 +292,7 @@ function WorkCollectionCard({ collection, route = false }: { collection: AtlasWo
   return (
     <Link className={`atlas-day-task-card atlas-work-collection-day-card${route ? " atlas-day-route-collection" : ""}`} href={collection.href}>
       {route ? <small className="atlas-day-task-family">Collection</small> : null}
-      <strong>{collection.label}</strong>
-      <span>{status}</span>
-      <em>{collection.preview}</em>
+      <strong>{collection.label}</strong><span>{status}</span><em>{collection.preview}</em>
     </Link>
   );
 }
@@ -289,12 +313,16 @@ function AtlasDayPageContent() {
   const requestedView = searchParams.get("view");
   const routeFilter = requestedRoute && routeOrder.includes(requestedRoute as RouteKey) ? requestedRoute as RouteKey : null;
   const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
+  const [livingDay, setLivingDay] = useState<AtlasLivingDay | null>(null);
   const [loading, setLoading] = useState(true);
+  const [livingLoading, setLivingLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [livingError, setLivingError] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const [viewMode, setViewMode] = useState<DayViewMode>("work_order");
   const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
   const requestSequence = useRef(0);
+  const livingRequestSequence = useRef(0);
 
   useEffect(() => {
     if (requestedView === "zone" || requestedView === "area") setViewMode("zone");
@@ -304,10 +332,7 @@ function AtlasDayPageContent() {
   const loadTasks = useCallback(async (reset = false) => {
     const requestId = ++requestSequence.current;
     try {
-      if (reset) {
-        setLoading(true);
-        setTasks([]);
-      }
+      if (reset) { setLoading(true); setTasks([]); }
       setError(null);
       const response = await fetchAtlasTaskCards({ viewerScoped: true, dueThrough: dateIso, doneDate: dateIso });
       if (requestId !== requestSequence.current) return;
@@ -319,9 +344,22 @@ function AtlasDayPageContent() {
     }
   }, [dateIso]);
 
-  useEffect(() => {
-    void loadTasks(true);
-  }, [loadTasks]);
+  const loadLivingDay = useCallback(async (reset = false) => {
+    const requestId = ++livingRequestSequence.current;
+    try {
+      if (reset) { setLivingLoading(true); setLivingDay(null); }
+      setLivingError(null);
+      const response = await fetchAtlasLivingDay(dateIso);
+      if (requestId !== livingRequestSequence.current) return;
+      setLivingDay(response);
+    } catch (loadError) {
+      if (requestId === livingRequestSequence.current) setLivingError(loadError instanceof Error ? loadError.message : "Journal failed.");
+    } finally {
+      if (requestId === livingRequestSequence.current && reset) setLivingLoading(false);
+    }
+  }, [dateIso]);
+
+  useEffect(() => { void loadTasks(true); void loadLivingDay(true); }, [loadLivingDay, loadTasks]);
 
   useEffect(() => {
     async function loadWeather() {
@@ -329,9 +367,7 @@ function AtlasDayPageContent() {
         const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" });
         const data = (await response.json()) as WeatherResponse;
         setWeatherLabel(response.ok && data.ok && data.label ? data.label : "weather unavailable");
-      } catch {
-        setWeatherLabel("weather unavailable");
-      }
+      } catch { setWeatherLabel("weather unavailable"); }
     }
     void loadWeather();
   }, []);
@@ -387,49 +423,49 @@ function AtlasDayPageContent() {
   const returnTo = routeFilter ? routeHref(dateIso, routeFilter) : dayHref(dateIso);
   const previousDate = shiftIsoDate(dateIso, -1);
   const nextDate = shiftIsoDate(dateIso, 1);
+  const completionEventByTask = useMemo(() => {
+    const map = new Map<string, AtlasJournalEvent>();
+    for (const event of livingDay?.journal.events ?? []) {
+      if (!event.taskId) continue;
+      const current = map.get(event.taskId);
+      if (!current || event.occurredAt > current.occurredAt) map.set(event.taskId, event);
+    }
+    return map;
+  }, [livingDay]);
+  const standaloneJournalEvents = useMemo(() => (livingDay?.journal.events ?? []).filter((event) => !event.taskId && event.eventKind !== "unlock"), [livingDay]);
+  const pageResolved = !loading && progressTasks.length > 0 && finishedProgressTasks.length === progressTasks.length;
 
   async function toggleTaskCompletion(task: AtlasTaskCard) {
     const complete = isDoneTask(task);
-    if (!complete && requiresStructuredResult(task)) {
-      window.location.assign(taskResultHref(task, returnTo));
-      return;
-    }
+    if (!complete && requiresStructuredResult(task)) { window.location.assign(taskResultHref(task, returnTo)); return; }
 
     const previousTasks = tasks;
     const transition = complete ? "reopened" : "done";
     setSavingTaskId(task.task_id);
     setError(null);
     setTasks((current) => current.map((row) => row.task_id === task.task_id ? optimisticTask(row, transition) : row));
-
     try {
       await postAtlasTaskTransition({
         taskId: task.task_id,
         transition,
         laneKey: task.action_key || undefined,
         workKey: task.action_key || undefined,
-        payload: complete ? {
-          completion_source: "day_timeline_completion_echo",
-        } : {
-          completion_source: "day_timeline_quick_complete",
-          objectStateBefore: objectStateBefore(task),
-        },
+        payload: complete ? { completion_source: "day_timeline_completion_echo" } : { completion_source: "day_timeline_quick_complete", objectStateBefore: objectStateBefore(task) },
       });
-      await loadTasks(false);
+      await Promise.all([loadTasks(false), loadLivingDay(false)]);
     } catch (transitionError) {
       setTasks(previousTasks);
       const message = transitionError instanceof Error ? transitionError.message : "Task update failed.";
       setError(message);
       if (complete) window.location.assign(taskResultHref(task, returnTo, true));
-    } finally {
-      setSavingTaskId(null);
-    }
+    } finally { setSavingTaskId(null); }
   }
 
   function timelineRow(task: AtlasTaskCard) {
     if (isDoneTask(task)) {
-      return <CompletionEcho key={`echo:${task.task_id}`} task={task} saving={savingTaskId === task.task_id} onPress={(row) => void toggleTaskCompletion(row)} />;
+      return <CompletionEcho key={`echo:${task.task_id}`} task={task} event={completionEventByTask.get(task.task_id)} saving={savingTaskId === task.task_id} returnTo={returnTo} onPress={(row) => void toggleTaskCompletion(row)} />;
     }
-    return <TaskCard key={task.task_id} task={task} routeState={atlasDayRouteState(task, currentTask?.task_id ?? null)} returnTo={returnTo} onNodePress={(row) => void toggleTaskCompletion(row)} nodeSaving={savingTaskId === task.task_id} />;
+    return <TaskCard key={task.task_id} task={task} expandable routeState={atlasDayRouteState(task, currentTask?.task_id ?? null)} returnTo={returnTo} onNodePress={(row) => void toggleTaskCompletion(row)} nodeSaving={savingTaskId === task.task_id} />;
   }
 
   return (
@@ -450,45 +486,30 @@ function AtlasDayPageContent() {
             </div>
 
             {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
+            {livingError ? <div className="atlas-journal-read-error">Journal view unavailable. Today’s tasks remain usable.</div> : null}
 
             {!routeFilter ? (
-              <article className="atlas-day-command-header">
+              <article className="atlas-day-command-header" data-day-denominator={`${finishedProgressTasks.length}/${progressTasks.length}`}>
                 <div className="atlas-day-command-topline">
-                  <div className="atlas-day-command-date">
-                    <strong>{prettyDate(dateIso)}</strong>
-                    <span>{loading ? "Loading" : `${openRequiredCount} open${blockedProgressTasks.length ? ` · ${blockedProgressTasks.length} blocked` : ""}`}</span>
-                  </div>
+                  <div className="atlas-day-command-date"><strong>{prettyDate(dateIso)}</strong><span>{loading ? "Loading" : `${openRequiredCount} open${blockedProgressTasks.length ? ` · ${blockedProgressTasks.length} blocked` : ""}`}</span></div>
                   <ViewToggle viewMode={viewMode} onChange={setViewMode} />
                 </div>
-
                 <DayTrailSummary compact loading={loading} completed={finishedProgressTasks.length} total={progressTasks.length} blocked={blockedProgressTasks.length} />
-
                 <details className="atlas-day-overview-drawer atlas-day-command-overview">
-                  <summary>
-                    <span className="atlas-day-next-label">Next</span>
-                    <div className="atlas-day-next-copy">
-                      <strong>{currentTask ? atlasTaskDisplay(currentTask).title : loading ? "Loading the day" : "The day is clear"}</strong>
-                      <em>{currentTask ? collectionZone(currentTask) : "No open required work"}</em>
-                    </div>
-                    <b aria-hidden="true">⌄</b>
-                  </summary>
-
+                  <summary><span className="atlas-day-next-label">Next</span><div className="atlas-day-next-copy"><strong>{currentTask ? atlasTaskDisplay(currentTask).title : loading ? "Loading the day" : "The day is clear"}</strong><em>{currentTask ? collectionZone(currentTask) : "No open required work"}</em></div><b aria-hidden="true">⌄</b></summary>
                   <div className="atlas-day-command-overview-body">
                     {currentTask ? <Link className="atlas-day-open-current" href={taskHref(currentTask, returnTo)}>Open current task <span aria-hidden="true">→</span></Link> : null}
                     {careTasks.length ? <div className="atlas-day-care-lane"><span>Care today</span><p>{careTasks.map((task) => atlasTaskDisplay(task).title).join(" · ")}</p></div> : null}
-                    <div className="atlas-day-overview-pills" aria-label="Day work groups">
-                      {routeCards.map((entry) => <span key={entry.key}>{entry.key === "germination" ? "Check" : routeLabels[entry.key as RouteKey]} {entry.collection?.dueCount ?? entry.tasks.length}</span>)}
-                    </div>
-                    <div className="atlas-day-route-grid">
-                      {routeCards.length ? routeCards.map((entry) => {
-                        if (entry.collection) return <Link key={entry.key} className="atlas-day-route-box" href={entry.collection.href}><strong>{entry.collection.label}</strong><span>{entry.collection.dueCount} due</span><em>{entry.collection.preview}</em></Link>;
-                        return <Link key={entry.key} className="atlas-day-route-box" href={routeHref(dateIso, entry.key as RouteKey)}><strong>{routeLabels[entry.key as RouteKey]}</strong><span>{entry.tasks.length} {entry.tasks.length === 1 ? "task" : "tasks"}</span><em>{entry.tasks.slice(0, 2).map((task) => atlasTaskDisplay(task).title).join(" · ")}</em></Link>;
-                      }) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div>}
-                    </div>
+                    <div className="atlas-day-overview-pills" aria-label="Day work groups">{routeCards.map((entry) => <span key={entry.key}>{entry.key === "germination" ? "Check" : routeLabels[entry.key as RouteKey]} {entry.collection?.dueCount ?? entry.tasks.length}</span>)}</div>
+                    <div className="atlas-day-route-grid">{routeCards.length ? routeCards.map((entry) => entry.collection
+                      ? <Link key={entry.key} className="atlas-day-route-box" href={entry.collection.href}><strong>{entry.collection.label}</strong><span>{entry.collection.dueCount} due</span><em>{entry.collection.preview}</em></Link>
+                      : <Link key={entry.key} className="atlas-day-route-box" href={routeHref(dateIso, entry.key as RouteKey)}><strong>{routeLabels[entry.key as RouteKey]}</strong><span>{entry.tasks.length} {entry.tasks.length === 1 ? "task" : "tasks"}</span><em>{entry.tasks.slice(0, 2).map((task) => atlasTaskDisplay(task).title).join(" · ")}</em></Link>) : <div className="atlas-day-route-empty">{loading ? "Loading farm tasks." : "No open farm tasks planned for this day."}</div>}</div>
                   </div>
                 </details>
               </article>
             ) : null}
+
+            {!routeFilter && livingDay ? <LivingDayCarried rhythms={livingDay.carriedRhythms} decisions={livingDay.ownerDecisions} returnTo={returnTo} /> : null}
 
             {!routeFilter && overdueTasks.length ? (
               <article className="atlas-day-route-group atlas-day-overdue-group" aria-label="Overdue carry-forward work">
@@ -500,52 +521,27 @@ function AtlasDayPageContent() {
 
             <div className="atlas-day-task-groups">
               {routeFilter ? (
-                <article className="atlas-day-route-group atlas-day-work-order-group">
-                  <h3>{routeLabels[routeFilter]}</h3>
-                  <div className="atlas-day-work-order-list atlas-day-route-spine">
-                    {filteredTimelineTasks.map(timelineRow)}
-                    {!loading && !filteredTimelineTasks.length ? <div className="atlas-day-route-empty">No open tasks in this collection.</div> : null}
-                  </div>
-                </article>
+                <article className="atlas-day-route-group atlas-day-work-order-group"><h3>{routeLabels[routeFilter]}</h3><div className="atlas-day-work-order-list atlas-day-route-spine">{filteredTimelineTasks.map(timelineRow)}{!loading && !filteredTimelineTasks.length ? <div className="atlas-day-route-empty">No open tasks in this collection.</div> : null}</div></article>
               ) : viewMode === "work_order" ? (
-                <article className="atlas-day-route-group atlas-day-work-order-group atlas-day-timeline-group">
-                  <div className="atlas-day-work-order-list atlas-day-route-spine">
-                    {showWeedingCollection && weedingCollection ? <WorkCollectionCard collection={weedingCollection} route /> : null}
-                    {showGerminationCollection && germinationCollection ? <WorkCollectionCard collection={germinationCollection} route /> : null}
-                    {timelineTasks.map(timelineRow)}
-                    {!loading && !collectionCount && !timelineTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}
-                  </div>
-                </article>
+                <article className="atlas-day-route-group atlas-day-work-order-group atlas-day-timeline-group"><h3>Today</h3><div className="atlas-day-work-order-list atlas-day-route-spine">{showWeedingCollection && weedingCollection ? <WorkCollectionCard collection={weedingCollection} route /> : null}{showGerminationCollection && germinationCollection ? <WorkCollectionCard collection={germinationCollection} route /> : null}{timelineTasks.map(timelineRow)}{!loading && !collectionCount && !timelineTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}</div></article>
               ) : (
-                <>
-                  {showWeedingCollection && weedingCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{weedingCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={weedingCollection} /></div></article> : null}
-                  {showGerminationCollection && germinationCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{germinationCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={germinationCollection} /></div></article> : null}
-                  {zones.map((zone) => <article className="atlas-day-route-group" key={zone}><h3>{zone}</h3><div className="atlas-day-zone-group">{filteredTasks.filter((task) => collectionZone(task) === zone).map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}</div></article>)}
-                </>
+                <>{showWeedingCollection && weedingCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{weedingCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={weedingCollection} /></div></article> : null}{showGerminationCollection && germinationCollection ? <article className="atlas-day-route-group atlas-day-work-collection-group"><h3>{germinationCollection.label}</h3><div className="atlas-day-zone-group"><WorkCollectionCard collection={germinationCollection} /></div></article> : null}{zones.map((zone) => <article className="atlas-day-route-group" key={zone}><h3>{zone}</h3><div className="atlas-day-zone-group">{filteredTasks.filter((task) => collectionZone(task) === zone).map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}</div></article>)}</>
               )}
+
+              {!routeFilter && livingDay ? <LivingDayGoals goals={livingDay.goals} returnTo={returnTo} /> : null}
+              {!routeFilter && livingDay ? <LivingDayJournal events={standaloneJournalEvents} /> : null}
+              {!routeFilter && livingDay ? <LivingDayUnlocked unlocks={livingDay.unlockedToday} returnTo={returnTo} /> : null}
+              {!routeFilter && pageResolved && livingDay ? <LivingDayCompletionSummary summary={livingDay.completionSummary} /> : null}
+              {!routeFilter && livingLoading ? <div className="atlas-journal-loading">Loading Journal and goals…</div> : null}
 
               {!routeFilter && extraCreditTasks.length ? <article className="atlas-day-route-group atlas-day-extra-credit-group"><h3>Extra Credit</h3><div className="atlas-day-zone-group">{extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}</div></article> : null}
 
               {!routeFilter && doneStandaloneTasks.length ? (
-                <details className="atlas-day-overview-drawer atlas-day-complete-drawer">
-                  <summary>
-                    <span className="atlas-day-complete-label">Complete</span>
-                    <span className="atlas-day-complete-count">{doneStandaloneTasks.length} {doneStandaloneTasks.length === 1 ? "task" : "tasks"}</span>
-                    <b aria-hidden="true">⌄</b>
-                  </summary>
-                  <div className="atlas-day-complete-body atlas-day-zone-group">
-                    {doneStandaloneTasks.map((task) => <TaskCard task={task} complete key={task.task_id} returnTo={returnTo} onNodePress={(row) => void toggleTaskCompletion(row)} nodeSaving={savingTaskId === task.task_id} />)}
-                  </div>
-                </details>
+                <details className="atlas-day-overview-drawer atlas-day-complete-drawer"><summary><span className="atlas-day-complete-label">Complete</span><span className="atlas-day-complete-count">{doneStandaloneTasks.length} {doneStandaloneTasks.length === 1 ? "task" : "tasks"}</span><b aria-hidden="true">⌄</b></summary><div className="atlas-day-complete-body atlas-day-zone-group">{doneStandaloneTasks.map((task) => <TaskCard task={task} complete key={task.task_id} returnTo={returnTo} onNodePress={(row) => void toggleTaskCompletion(row)} nodeSaving={savingTaskId === task.task_id} />)}</div></details>
               ) : null}
             </div>
 
-            {!routeFilter ? (
-              <nav className="atlas-day-adjacent-nav" aria-label="Browse adjacent days">
-                <Link href={dayHref(previousDate)} aria-label="Open yesterday"><span aria-hidden="true">←</span><em>Yesterday</em></Link>
-                <Link href={dayHref(nextDate)} aria-label="Open tomorrow"><em>Tomorrow</em><span aria-hidden="true">→</span></Link>
-              </nav>
-            ) : null}
+            {!routeFilter ? <nav className="atlas-day-adjacent-nav" aria-label="Browse adjacent days"><Link href={dayHref(previousDate)} aria-label="Open yesterday"><span aria-hidden="true">←</span><em>Yesterday</em></Link><Link href={dayHref(nextDate)} aria-label="Open tomorrow"><em>Tomorrow</em><span aria-hidden="true">→</span></Link></nav> : null}
           </section>
         </div>
       </section>
@@ -554,23 +550,9 @@ function AtlasDayPageContent() {
 }
 
 function DayPageFallback() {
-  return (
-    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
-      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
-        <div className="atlas-task-page-body">
-          <section className="atlas-task-page-section atlas-route-collection atlas-day-browse">
-            <div className="atlas-day-route-empty">Loading farm tasks.</div>
-          </section>
-        </div>
-      </section>
-    </main>
-  );
+  return <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell"><section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone"><div className="atlas-task-page-body"><section className="atlas-task-page-section atlas-route-collection atlas-day-browse"><div className="atlas-day-route-empty">Loading farm tasks.</div></section></div></section></main>;
 }
 
 export default function AtlasDayPage() {
-  return (
-    <Suspense fallback={<DayPageFallback />}>
-      <AtlasDayPageContent />
-    </Suspense>
-  );
+  return <Suspense fallback={<DayPageFallback />}><AtlasDayPageContent /></Suspense>;
 }
