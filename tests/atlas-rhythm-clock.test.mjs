@@ -17,6 +17,7 @@ const migrationPaths = [
   "supabase/migrations/20260729060700_rhythm_clock_owner_override_and_tick_v1.sql",
   "supabase/migrations/20260729060800_rhythm_clock_workflow_source_kind_v1.sql",
   "supabase/migrations/20260729060900_rhythm_history_internal_delete_v1.sql",
+  "supabase/migrations/20260729061000_rhythm_workflow_trigger_isolation_v1.sql",
 ];
 
 function migration() {
@@ -124,6 +125,17 @@ test("canonical workflow results evaluate immediately and the server-owned tick 
   assert.match(sql, /select atlas\.farm_rhythm_tick_v1\(\);/);
   assert.match(sql, /'rhythm_state'/);
   assert.match(sql, /workflow_events_source_kind_check/);
+});
+
+test("a Clock failure cannot roll back the canonical workflow result", () => {
+  const sql = migration();
+
+  assert.match(sql, /A Clock evaluation problem must never roll back the canonical task result/);
+  assert.match(sql, /exception when others/);
+  assert.match(sql, /last_result_clock_error/);
+  assert.match(sql, /last_result_workflow_event_id/);
+  assert.match(sql, /raise warning 'Rhythm Clock result evaluation failed/);
+  assert.match(sql, /return new/);
 });
 
 test("Build 3 does not seed Elm assumptions or alter the visual layer", () => {
