@@ -19,9 +19,9 @@ const contract = read("lib/atlas/weeding-rhythm-pilot-contract.ts");
 const sql = `${policy}\n${enrollment}\n${reader}`;
 
 test("the approved pilot is exactly FR8, FR15, and North Redbud Island", () => {
-  assert.match(policy, /stable_key = 'fr_8'/);
-  assert.match(policy, /stable_key = 'fr_15'/);
-  assert.match(policy, /stable_key = 'redbud_island_right'/);
+  assert.match(policy, /'fr_8'::text/);
+  assert.match(policy, /'fr_15'::text/);
+  assert.match(policy, /'redbud_island_right'::text/);
   assert.match(policy, /elm_weeding_fr8_subject/);
   assert.match(policy, /elm_weeding_fr15_subject/);
   assert.match(policy, /elm_weeding_north_redbud_subject/);
@@ -46,25 +46,26 @@ test("full work renews, inspection extends, and partial work only recovers", () 
   assert.match(policy, /weed:fully_completed/);
   assert.match(policy, /weed:partially_completed/);
   assert.match(policy, /weed_inspection_acceptable/);
-  assert.match(policy, /'actionKey', 'cultivate'/);
-  assert.match(policy, /'actionKey', 'mulch'/);
+  assert.match(policy, /then 'mulch' else 'cultivate'/);
+  assert.match(policy, /action:cultivate/);
+  assert.match(policy, /action:mulch/);
 });
 
 test("failure releases explicit restoration work and preserves the approved scope", () => {
   assert.match(policy, /Restore Field Row 8/);
   assert.match(policy, /Restore Field Row 15/);
   assert.match(policy, /Restore North Redbud Island/);
-  assert.match(policy, /'blocksActionKeys', jsonb_build_array\('bed_prep', 'sow', 'direct_sow', 'plant', 'transplant', 'succession'\)/);
-  assert.match(policy, /'blocksActionKeys', jsonb_build_array\(\)/);
+  assert.match(policy, /\["bed_prep","sow","direct_sow","plant","transplant","succession"\]/);
+  assert.match(policy, /'\[\]'::jsonb/);
   assert.match(policy, /unrelated crop production/);
-  assert.match(policy, /physicalConditionClaim', 'unknown_until_observed'/);
+  assert.match(policy, /'physicalConditionClaim', 'unknown_until_observed'/);
 });
 
 test("notification routing records the approved Bell and push policy without inventing delivery", () => {
   assert.match(policy, /'warning', jsonb_build_object\('bell', true, 'push', false/);
   assert.match(policy, /'due', jsonb_build_object\('bell', true, 'push', true/);
   assert.match(policy, /'failure', jsonb_build_object\('bell', true, 'push', true/);
-  assert.match(policy, /assigned_farm_hand', 'owner'/);
+  assert.match(policy, /assigned_farm_hand','owner'/);
   assert.match(policy, /direct_calm_restorative/);
   assert.doesNotMatch(sql, /insert into atlas\.(bell|push|notification)/i);
 });
