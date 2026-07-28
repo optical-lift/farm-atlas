@@ -8,6 +8,7 @@ function read(path) {
 
 const reconciliation = read("supabase/migrations/20260729080000_living_day_fr15_sowing_reconciliation_v1.sql");
 const reader = read("supabase/migrations/20260729080100_living_day_reader_v1.sql");
+const ownerDecisionScope = read("supabase/migrations/20260729080200_living_day_owner_decision_scope_v1.sql");
 const contract = read("lib/atlas/living-day-contract.ts");
 const client = read("lib/atlas/living-day-client.ts");
 const route = read("app/api/atlas/living-day/route.ts");
@@ -15,7 +16,7 @@ const primitives = read("components/atlas/living-day-primitives.tsx");
 const day = read("app/day/page.tsx");
 const css = read("app/living-journal.css");
 const layout = read("app/layout.tsx");
-const sql = `${reconciliation}\n${reader}`;
+const sql = `${reconciliation}\n${reader}\n${ownerDecisionScope}`;
 
 const approvedGoalKeys = [
   "elm_eb1_eb6_procut_open_v1",
@@ -56,6 +57,15 @@ test("the goals advance only from canonical blockers results cycles and observat
   assert.match(reader, /partialDoesNotSatisfy', true/);
   assert.match(reader, /timeDoesNotConfirmStand', true/);
   assert.match(reader, /timeDoesNotProveHarvest', true/);
+});
+
+test("Owner decisions stay bounded to the two FR and EB pilot decisions", () => {
+  assert.match(ownerDecisionScope, /rename to living_day_base_v1/);
+  assert.match(ownerDecisionScope, /owner_20260726_mark_spray_eb1_6/);
+  assert.match(ownerDecisionScope, /entry_billboard_pollenless_2026_s1_parent/);
+  assert.match(ownerDecisionScope, /task\.parent_task_id is null/);
+  assert.match(ownerDecisionScope, /'excludedFromDenominator', true/);
+  assert.doesNotMatch(ownerDecisionScope, /due_date <=/);
 });
 
 test("carried failures and goals stay outside the bounded Day denominator", () => {
