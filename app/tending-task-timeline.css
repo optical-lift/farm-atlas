@@ -1,0 +1,70 @@
+/* Tending is a filtered collection of canonical Atlas tasks. The same Day/Week
+   spine, dots, and task-card grammar remains primary; crop and bed data is context. */
+
+.atlas-tending-task-timelines {
+  display: grid;
+  gap: 16px;
+}
+
+.atlas-tending-task-collection {
+  padding-top: 6px;
+}
+
+.atlas-tending-task-collection-head {
+  padding-left: 22px;
+}
+
+.atlas-tending-route-spine {
+  padding-top: 2px;
+}
+
+.atlas-tending-task-entry {
+  padding-bottom: 5px;
+}
+
+.atlas-tending-route-spine > .atlas-tending-task-entry > .atlas-tending-task-card {
+  padding-right: 4px !important;
+  padding-bottom: 7px !important;
+}
+
+.atlas-tending-task-card > strong,
+.atlas-tending-task-card > span,
+.atlas-tending-task-card > em {
+  overflow-wrap: anywhere;
+}
+
+.atlas-tending-task-card.complete {
+  opacity: 0.52;
+}
+
+.atlas-tending-task-card.complete > strong {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.atlas-tending-task-context-link {
+  width: max-content;
+  max-width: calc(100% - 12px);
+  margin: -3px 0 9px 10px;
+  color: var(--atlas-muted);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.atlas-tending-task-context-link::after {
+  content: " ›";
+}
+
+.atlas-tending-task-context-link:focus-visible {
+  outline: 2px solid var(--atlas-purple-dark);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (max-width: 360px) {
+  .atlas-tending-task-collection-head {
+    padding-left: 20px;
+  }
+}
