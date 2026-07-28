@@ -155,7 +155,6 @@ begin
       and atlas.can_read_task_in_journal_v1(task.id);
   end if;
 
-  -- Goal 1: Open EB1-EB6 for ProCut Orange.
   select id into v_eb_mark_task_id
   from atlas.tasks
   where farm_id = p_farm_id
@@ -277,7 +276,6 @@ begin
     )
   );
 
-  -- Goal 2: Put FR11-FR14 October sunflower block in the ground.
   select count(distinct object.stable_key)::integer
   into v_fr_sown_count
   from atlas.growing_objects object
@@ -378,7 +376,6 @@ begin
     )
   );
 
-  -- Goal 3: Confirm the FR15 ProCut Horizon stand.
   select
     cycle.id,
     cycle.lifecycle_status = 'active' and cycle.cycle_state in ('sown','growing') and cycle.sown_date is not null,
@@ -479,7 +476,6 @@ begin
     )
   );
 
-  -- Goal 4: Bring FR4-FR6 to first zinnia cut.
   select count(*)::integer
   into v_zinnia_weeded_count
   from (values ('fr_4'::text), ('fr_5'::text), ('fr_6'::text)) row(object_key)
@@ -622,7 +618,6 @@ begin
     )
   );
 
-  -- Nearest movement first: one observation remaining, then active production runs.
   v_goals := jsonb_build_array(v_fr15_goal, v_fr_goal, v_zinnia_goal, v_eb_goal);
 
   select
@@ -664,7 +659,7 @@ begin
   from atlas.rhythm_transitions transition
   where transition.farm_id = p_farm_id
     and transition.transition_kind in ('restored','renewed')
-    and (transition.occurred_at at time zone 'America/Chicago')::date = v_day;
+    and (transition.created_at at time zone 'America/Chicago')::date = v_day;
 
   select count(*)::integer into v_advanced
   from atlas.journal_event_index event
