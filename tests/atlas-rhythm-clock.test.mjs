@@ -15,6 +15,7 @@ const migrationPaths = [
   "supabase/migrations/20260729060500_rhythm_clock_evaluator_v1.sql",
   "supabase/migrations/20260729060600_rhythm_clock_result_effects_v1.sql",
   "supabase/migrations/20260729060700_rhythm_clock_owner_override_and_tick_v1.sql",
+  "supabase/migrations/20260729060800_rhythm_clock_workflow_source_kind_v1.sql",
 ];
 
 function migration() {
@@ -119,6 +120,8 @@ test("canonical workflow results evaluate immediately and the server-owned tick 
   assert.match(sql, /atlas-farm-rhythm-clock-v1/);
   assert.match(sql, /'17 \* \* \* \*'/);
   assert.match(sql, /select atlas\.farm_rhythm_tick_v1\(\);/);
+  assert.match(sql, /'rhythm_state'/);
+  assert.match(sql, /workflow_events_source_kind_check/);
 });
 
 test("Build 3 does not seed Elm assumptions or alter the visual layer", () => {
