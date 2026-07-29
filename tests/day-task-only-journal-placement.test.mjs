@@ -25,6 +25,13 @@ test("Day remains a task timeline while Living Journal sections are visually abs
   assert.match(dayCss, /display: none !important/);
 });
 
+test("Day carry-forward keeps every unfinished task visible to the signed-in viewer", () => {
+  assert.match(day, /const overdueTasks = useMemo/);
+  assert.match(day, /task\.due_date < dateIso/);
+  assert.match(day, /atlas-day-overdue-group/);
+  assert.doesNotMatch(day, /isOwnerOnlyTask/);
+});
+
 test("completed work collapses to a dot and faint one-line title", () => {
   assert.match(dayCss, /min-height: 18px !important/);
   assert.match(dayCss, /height: 18px/);
