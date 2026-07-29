@@ -1,0 +1,4 @@
+-- Applied in production to restore pre-card last_weeded truth after legacy
+-- partial transitions and to place continuation work after the later of the
+-- work date or served-task date. Final idempotent definitions live in
+-- 20260729014000_weed_card_final_contract_v1.sql.
