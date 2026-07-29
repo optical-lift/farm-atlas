@@ -1,39 +1,33 @@
 .root {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.16rem;
-  margin-top: 0.9rem;
+  margin-top: 0.72rem;
   color: var(--atlas-ink-soft, #74776d);
 }
 
-.topDirection,
-.bottomDirection {
-  justify-self: center;
-  color: var(--atlas-ink-muted, #8b8d85);
-  font-size: 0.68rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.horizontalMap {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.38rem;
-}
-
-.sideDirection {
-  color: var(--atlas-ink-muted, #8b8d85);
-  font-size: 0.68rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .bed {
+  position: relative;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--atlas-ink-muted, #8b8d85) 38%, transparent);
   border-radius: 0.8rem;
   background: color-mix(in srgb, var(--atlas-paper, #fbfaf4) 92%, white);
+}
+
+.endDirection {
+  position: absolute;
+  inset-block-start: 0.28rem;
+  z-index: 2;
+  color: color-mix(in srgb, var(--atlas-ink-muted, #8b8d85) 72%, transparent);
+  font-size: 0.54rem;
+  font-weight: 750;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.leftDirection {
+  inset-inline-start: 0.42rem;
+}
+
+.rightDirection {
+  inset-inline-end: 0.42rem;
 }
 
 .bedBody {
@@ -144,21 +138,11 @@
   border-style: dashed;
 }
 
-.unknownOrientation .topDirection,
-.unknownOrientation .bottomDirection,
-.unknownOrientation .sideDirection {
+.unknownOrientation .endDirection {
   opacity: 0.62;
 }
 
 @media (max-width: 390px) {
-  .horizontalMap {
-    gap: 0.24rem;
-  }
-
-  .sideDirection {
-    font-size: 0.62rem;
-  }
-
   .bedBody {
     min-height: 5.8rem;
   }

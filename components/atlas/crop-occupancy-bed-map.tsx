@@ -15,6 +15,10 @@ function edgeLabel(edge: AtlasMapEdge | null | undefined) {
   return edge ? edge.slice(0, 1).toUpperCase() : "?";
 }
 
+function edgeName(edge: AtlasMapEdge | null | undefined) {
+  return edge ?? "unknown";
+}
+
 function numberLabel(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, "");
 }
@@ -131,57 +135,57 @@ export default function CropOccupancyBedMap({ map }: Props) {
   const looseGroups = loosePlacements.length <= 3
     ? loosePlacements.map((placement) => [placement])
     : chunks(loosePlacements, 3);
+  const orientationDescription = `${edgeName(map.leftEdge)} is left, ${edgeName(map.rightEdge)} is right, ${edgeName(map.topEdge)} is above, and ${edgeName(map.bottomEdge)} is below`;
 
   return (
-    <section className={`${styles.root} ${map.orientationKnown ? "" : styles.unknownOrientation}`.trim()} aria-label={`Oriented planting map for ${map.objectLabel}`}>
-      <div className={styles.topDirection}>{edgeLabel(map.topEdge)}</div>
-      <div className={styles.horizontalMap}>
-        <span className={styles.sideDirection}>{edgeLabel(map.leftEdge)} ←</span>
-        <div className={styles.bed}>
-          {topAnchored.length ? <div className={`${styles.crossBand} ${styles.topBand}`}>{topAnchored.map((item) => item.displayLabel).join(" · ")}</div> : null}
-          <div className={styles.bedBody}>
-            <EdgeBand placements={leftAnchored} edge="left" lengthFt={map.lengthFt} />
-            <div className={styles.rows}>
-              {!rowPlacements.length && !looseGroups.length ? <div className={styles.emptyBed} aria-hidden="true">—</div> : null}
-              {rowPlacements.map((placement) => {
-                const count = rowCount(placement);
-                const uncertain = placement.positionConfidence === "unknown" || placement.positionConfidence === "low";
-                return Array.from({ length: count }, (_, index) => (
-                  <div
-                    className={`${styles.row} ${uncertain ? styles.uncertain : ""}`.trim()}
-                    key={`${placement.placementId}:${index}`}
-                    style={rowStyle(placement, map.lengthFt)}
-                  >
-                    <i aria-hidden="true" />
-                    {index === Math.floor(count / 2) ? <span>{placementText(placement)}</span> : <span aria-hidden="true">&nbsp;</span>}
-                    <i aria-hidden="true" />
-                  </div>
-                ));
-              })}
-              {looseGroups.map((group, index) => {
-                const placement = group[0];
-                const uncertain = group.length > 1 || placement.positionConfidence === "unknown" || placement.positionConfidence === "low";
-                const text = group.length === 1 ? placementText(placement) : group.map(compactPlacementText).join(" · ");
-                return (
-                  <div
-                    className={`${styles.row} ${styles.looseRow} ${uncertain ? styles.uncertain : ""}`.trim()}
-                    key={`loose:${group.map((item) => item.placementId).join(":")}:${index}`}
-                    style={group.length === 1 ? rowStyle(placement, map.lengthFt) : undefined}
-                  >
-                    <i aria-hidden="true" />
-                    <span>{text}</span>
-                    <i aria-hidden="true" />
-                  </div>
-                );
-              })}
-            </div>
-            <EdgeBand placements={rightAnchored} edge="right" lengthFt={map.lengthFt} />
+    <section
+      className={`${styles.root} ${map.orientationKnown ? "" : styles.unknownOrientation}`.trim()}
+      aria-label={`Planting map for ${map.objectLabel}; ${orientationDescription}.`}
+    >
+      <div className={styles.bed}>
+        <span className={`${styles.endDirection} ${styles.leftDirection}`} aria-hidden="true">{edgeLabel(map.leftEdge)}</span>
+        <span className={`${styles.endDirection} ${styles.rightDirection}`} aria-hidden="true">{edgeLabel(map.rightEdge)}</span>
+        {topAnchored.length ? <div className={`${styles.crossBand} ${styles.topBand}`}>{topAnchored.map((item) => item.displayLabel).join(" · ")}</div> : null}
+        <div className={styles.bedBody}>
+          <EdgeBand placements={leftAnchored} edge="left" lengthFt={map.lengthFt} />
+          <div className={styles.rows}>
+            {!rowPlacements.length && !looseGroups.length ? <div className={styles.emptyBed} aria-hidden="true">—</div> : null}
+            {rowPlacements.map((placement) => {
+              const count = rowCount(placement);
+              const uncertain = placement.positionConfidence === "unknown" || placement.positionConfidence === "low";
+              return Array.from({ length: count }, (_, index) => (
+                <div
+                  className={`${styles.row} ${uncertain ? styles.uncertain : ""}`.trim()}
+                  key={`${placement.placementId}:${index}`}
+                  style={rowStyle(placement, map.lengthFt)}
+                >
+                  <i aria-hidden="true" />
+                  {index === Math.floor(count / 2) ? <span>{placementText(placement)}</span> : <span aria-hidden="true">&nbsp;</span>}
+                  <i aria-hidden="true" />
+                </div>
+              ));
+            })}
+            {looseGroups.map((group, index) => {
+              const placement = group[0];
+              const uncertain = group.length > 1 || placement.positionConfidence === "unknown" || placement.positionConfidence === "low";
+              const text = group.length === 1 ? placementText(placement) : group.map(compactPlacementText).join(" · ");
+              return (
+                <div
+                  className={`${styles.row} ${styles.looseRow} ${uncertain ? styles.uncertain : ""}`.trim()}
+                  key={`loose:${group.map((item) => item.placementId).join(":")}:${index}`}
+                  style={group.length === 1 ? rowStyle(placement, map.lengthFt) : undefined}
+                >
+                  <i aria-hidden="true" />
+                  <span>{text}</span>
+                  <i aria-hidden="true" />
+                </div>
+              );
+            })}
           </div>
-          {bottomAnchored.length ? <div className={`${styles.crossBand} ${styles.bottomBand}`}>{bottomAnchored.map((item) => item.displayLabel).join(" · ")}</div> : null}
+          <EdgeBand placements={rightAnchored} edge="right" lengthFt={map.lengthFt} />
         </div>
-        <span className={styles.sideDirection}>→ {edgeLabel(map.rightEdge)}</span>
+        {bottomAnchored.length ? <div className={`${styles.crossBand} ${styles.bottomBand}`}>{bottomAnchored.map((item) => item.displayLabel).join(" · ")}</div> : null}
       </div>
-      <div className={styles.bottomDirection}>{edgeLabel(map.bottomEdge)}</div>
     </section>
   );
 }

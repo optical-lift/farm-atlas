@@ -69,7 +69,7 @@ test("haphazard owner notes have one idempotent structured ingestion contract", 
   assert.match(ingest, /Only the farm owner may record crop occupancy/);
 });
 
-test("the Weed Card renders a compact text map with explicit cardinal orientation", () => {
+test("the Weed Card renders a compact text map with quiet cardinal orientation", () => {
   const migration = read("supabase/migrations/20260729163000_oriented_bed_map_v1.sql");
   const component = read("components/atlas/crop-occupancy-bed-map.tsx");
   const css = read("components/atlas/crop-occupancy-bed-map.module.css");
@@ -84,9 +84,13 @@ test("the Weed Card renders a compact text map with explicit cardinal orientatio
   assert.match(migration, /object_crop_bed_map_v1/);
   assert.match(component, /edgeLabel\(map\.leftEdge\)/);
   assert.match(component, /edgeLabel\(map\.rightEdge\)/);
+  assert.match(component, /orientationDescription/);
+  assert.match(component, /styles\.endDirection/);
+  assert.doesNotMatch(component, /styles\.topDirection|styles\.bottomDirection|styles\.sideDirection/);
   assert.match(component, /placementText\(placement\)/);
   assert.match(component, /styles\.uncertain/);
-  assert.match(css, /grid-template-columns: auto minmax\(0, 1fr\) auto/);
+  assert.match(css, /\.endDirection\s*\{[\s\S]*position: absolute/);
+  assert.match(css, /font-size: 0\.54rem/);
   assert.match(css, /border-top-style: dashed/);
   assert.match(focus, /<CropOccupancyBedMap map=\{card\.bedMap\} \/>/);
   assert.match(route, /object_crop_bed_map_v1/);
