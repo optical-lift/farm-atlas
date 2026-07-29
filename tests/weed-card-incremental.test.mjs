@@ -48,7 +48,7 @@ test("legacy time remains optional evidence while the live Weed Card is state-fi
   assert.doesNotMatch(focus, /QUICK_MINUTES|Add time|<span>Time<\/span>|atlas-weed-invested/);
 });
 
-test("the Weed Card presents state outcomes plus a truthful Do tomorrow disposition", () => {
+test("the Weed Card presents state outcomes plus a Clock-governed Move drawer", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
@@ -72,14 +72,18 @@ test("the Weed Card presents state outcomes plus a truthful Do tomorrow disposit
   assert.match(focus, />\s*Partly finished\s*</);
   assert.match(focus, /postAtlasFinishPartialWeedCardDay/);
   assert.match(focus, /conditionAfter: "clear"/);
-  assert.match(focus, /postAtlasTaskSetAsideToday/);
-  assert.match(focus, /Do tomorrow/);
+  assert.match(focus, /atlas-task-move-drawer atlas-weed-move-drawer/);
+  assert.match(focus, />\s*Tomorrow\s*</);
+  assert.match(focus, /Choose date/);
+  assert.match(focus, /type="date"/);
+  assert.match(focus, /postAtlasTaskSetAsideToday\(task\.task_id, requestedReturnDate\)/);
+  assert.doesNotMatch(focus, />\s*Do tomorrow\s*</);
   assert.doesNotMatch(focus, /That’s all for today|>\s*Unfinished\s*<|>Log a pass/);
   assert.match(trail, /presentation\?: "default" \| "field-sheet" \| "weed-sheet"/);
   assert.match(trail, /moveDetails\?: ReactNode/);
   assert.match(client, /weed-card-partial-v1/);
   assert.match(client, /\/api\/atlas\/weed-card-partial/);
-  assert.match(setAsideClient, /task-set-aside-v1/);
+  assert.match(setAsideClient, /task-set-aside-v2/);
   assert.match(passApi, /record_weed_card_pass_v1/);
   assert.match(partialApi, /finish_partial_weed_card_day_v1/);
   assert.match(partialApi, /conditionAfter === "clear"/);

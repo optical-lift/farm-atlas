@@ -1,22 +1,99 @@
-.atlas-task-set-aside-button {
-  width: 100%;
+.atlas-task-move-drawer {
+  margin: 0;
   border: 0;
   border-top: 1px solid rgba(111, 101, 82, 0.12);
   background: transparent;
+}
+
+.atlas-task-move-drawer > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 12px;
+  align-items: center;
+  min-height: 39px;
+  padding: 9px 4px 2px;
   color: #777970;
-  padding: 11px 4px 2px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.atlas-task-move-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.atlas-task-move-drawer > summary span {
+  justify-self: center;
+  font-size: 11px;
+  font-weight: 780;
+}
+
+.atlas-task-move-drawer > summary b {
+  color: #a5a49c;
+  font-size: 11px;
+  font-weight: 700;
+  transition: transform 140ms ease;
+}
+
+.atlas-task-move-drawer[open] > summary b {
+  transform: rotate(180deg);
+}
+
+.atlas-task-move-options {
+  display: grid;
+  gap: 8px;
+  padding: 9px 2px 4px;
+}
+
+.atlas-task-move-options > button,
+.atlas-task-move-options label {
+  min-height: 38px;
+  border: 1px solid rgba(190, 185, 174, 0.68);
+  border-radius: 13px;
+  background: rgba(251, 250, 244, 0.72);
+  color: #64665f;
   font: inherit;
   font-size: 11px;
   font-weight: 780;
+}
+
+.atlas-task-move-options > button {
+  padding: 8px 12px;
   text-align: center;
 }
 
-.atlas-task-set-aside-button:disabled {
+.atlas-task-move-options label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px 5px 12px;
+}
+
+.atlas-task-move-options label span {
+  color: #777970;
+}
+
+.atlas-task-move-options input[type="date"] {
+  max-width: 145px;
+  border: 0;
+  background: transparent;
+  color: #55574f;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.atlas-task-move-options > button:disabled,
+.atlas-task-move-options input:disabled {
   opacity: 0.55;
 }
 
+.atlas-task-move-date-button {
+  border-color: rgba(133, 139, 192, 0.34) !important;
+  background: rgba(133, 139, 192, 0.08) !important;
+}
+
 .atlas-task-set-aside-message {
-  margin: 0;
+  margin: 6px 0 0;
   color: #5f615a;
   font-size: 11px;
   line-height: 1.35;

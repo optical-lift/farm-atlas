@@ -6,7 +6,7 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Set aside today is an append-only daily disposition, not a reschedule", () => {
+test("Set aside remains an append-only daily disposition, not a reschedule", () => {
   const migration = read("supabase/migrations/20260729204500_task_day_set_aside_v1.sql");
 
   assert.match(migration, /create table if not exists atlas\.task_day_dispositions/);
@@ -21,36 +21,52 @@ test("Set aside today is an append-only daily disposition, not a reschedule", ()
   assert.doesNotMatch(migration, /record_task_transition_v1/);
 });
 
-test("Clock and biological windows make the consequence visible without blocking emotional closure", () => {
-  const migration = read("supabase/migrations/20260729204500_task_day_set_aside_v1.sql");
+test("the move drawer records a requested checklist return date while the Clock controls the real return", () => {
+  const migration = read("supabase/migrations/20260729215500_task_move_drawer_return_dates_v2.sql");
 
-  assert.match(migration, /task_safe_boundary_date_v1/);
-  assert.match(migration, /latest_safe_sow_date/);
-  assert.match(migration, /latest_useful_sow_date/);
-  assert.match(migration, /sowing_window_end/);
-  assert.match(migration, /rs\.failure_at/);
-  assert.match(migration, /fallen_out_of_rhythm/);
-  assert.match(migration, /This work is past its safe window and will return tomorrow at risk/);
-  assert.match(migration, /This work remains overdue and will return tomorrow/);
-  assert.match(migration, /deferral_number/);
+  assert.match(migration, /requested_return_date date/);
+  assert.match(migration, /set_task_aside_today_v2/);
+  assert.match(migration, /p_requested_return_date date/);
+  assert.match(migration, /when v_consequence in \('overdue','at_risk'\) then v_local_date \+ 1/);
+  assert.match(migration, /least\(v_requested_return, v_safe_boundary\)/);
+  assert.match(migration, /'request_honored',v_request_honored/);
+  assert.match(migration, /'due_date_unchanged',true/);
+  assert.doesNotMatch(migration, /update atlas\.tasks\s+set due_date/i);
 });
 
-test("Anna receives Do tomorrow while Owner scheduling remains outside the disposition contract", () => {
+test("set-aside visibility lasts until the actual return date", () => {
+  const migration = read("supabase/migrations/20260729215500_task_move_drawer_return_dates_v2.sql");
+
+  assert.match(migration, /d\.service_date <= coalesce\(p_day/);
+  assert.match(migration, /d\.returns_on > coalesce\(p_day/);
+  assert.match(migration, /distinct on \(d\.task_id\)/);
+  assert.match(migration, /'requestedReturnDate',coalesce\(d\.requested_return_date,d\.returns_on\)/);
+});
+
+test("Anna receives a compact Move drawer with Tomorrow and a date picker", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const control = read("components/atlas/task-set-aside-control.tsx");
   const weed = read("components/atlas/weed-card-task-focus.tsx");
   const client = read("lib/atlas/task-set-aside-client.ts");
   const route = read("app/api/atlas/task-set-aside/route.ts");
+  const css = read("app/task-day-set-aside.css");
 
   assert.match(canonical, /props\.assignee\.key === "anna"/);
   assert.match(canonical, /TaskSetAsideControl/);
-  assert.match(control, /atlas-task-more-outcomes/);
-  assert.match(control, /Do tomorrow/);
-  assert.match(control, /postAtlasTaskSetAsideToday/);
-  assert.match(weed, /Do tomorrow/);
-  assert.match(client, /task-set-aside-v1:\$\{taskId\}:\$\{serviceDate\}/);
-  assert.match(route, /set_task_aside_today_v1/);
-  assert.match(route, /viewer_task_day_dispositions_v1/);
+  assert.match(control, /atlas-task-move-drawer/);
+  assert.match(control, />\s*Tomorrow\s*</);
+  assert.match(control, /Choose date/);
+  assert.match(control, /type="date"/);
+  assert.match(control, /postAtlasTaskSetAsideToday\(taskId, requestedReturnDate\)/);
+  assert.match(weed, /atlas-task-move-drawer atlas-weed-move-drawer/);
+  assert.match(weed, />\s*Tomorrow\s*</);
+  assert.match(weed, /type="date"/);
+  assert.doesNotMatch(weed, />\s*Do tomorrow\s*</);
+  assert.match(client, /task-set-aside-v2:\$\{taskId\}:\$\{serviceDate\}:\$\{requestedReturnDate\}/);
+  assert.match(route, /set_task_aside_today_v2/);
+  assert.match(route, /p_requested_return_date: requestedReturnDate/);
+  assert.match(css, /\.atlas-task-move-drawer/);
+  assert.match(css, /\.atlas-task-move-options/);
 });
 
 test("The selected day and home cover omit accepted set-asides while the journal keeps a quiet record", () => {
@@ -63,8 +79,9 @@ test("The selected day and home cover omit accepted set-asides while the journal
   assert.match(taskCardsRoute, /!setAsideTaskIds\.has\(card\.task_id\)/);
   assert.match(home, /readAtlasSetAsideTaskIds/);
   assert.match(home, /taskCards: farm\.taskCards\.filter/);
-  assert.match(dayPatch, /Set aside today/);
+  assert.match(dayPatch, /<strong>Set aside<\/strong>/);
   assert.match(dayPatch, /still overdue/);
+  assert.match(dayPatch, /returns \$\{prettyDate\(row\.returnsOn\)\}/);
   assert.match(dayPatch, /set aside \$\{row\.deferralCount\}×/);
   assert.match(css, /Overdue remains a timeline state/);
   assert.match(css, /background: transparent !important/);
