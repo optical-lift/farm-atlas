@@ -1,0 +1,4 @@
+-- Applied in production to preserve `clear` inside the Weed Card condition
+-- domain while mapping completed maintenance to `maintained`. Final
+-- idempotent definitions live in
+-- 20260729014000_weed_card_final_contract_v1.sql.

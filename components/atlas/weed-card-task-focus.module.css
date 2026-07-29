@@ -1,0 +1,247 @@
+.root :global(.atlas-weed-card-task-card) {
+  overflow: hidden;
+}
+
+.root :global(.atlas-weed-card) {
+  margin: 20px 28px 0;
+  padding: 18px;
+  border: 1px solid rgba(111, 101, 82, 0.24);
+  border-radius: 24px;
+  background: rgba(247, 244, 235, 0.76);
+}
+
+.root :global(.atlas-weed-card) > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.root :global(.atlas-weed-card) > header div {
+  display: grid;
+  gap: 4px;
+}
+
+.root :global(.atlas-weed-card) > header small {
+  color: #858bc0;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.root :global(.atlas-weed-card) > header strong {
+  color: #303244;
+  font-size: 23px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.root :global(.atlas-weed-card) > header > span {
+  max-width: 110px;
+  color: #6d725f;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.15;
+  text-align: right;
+}
+
+.root :global(.atlas-weed-condition-scale) {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  margin: 18px 0 16px;
+}
+
+.root :global(.atlas-weed-condition-scale) span {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(122, 122, 112, 0.16);
+}
+
+.root :global(.atlas-weed-condition-scale) span:global(.is-reached) {
+  background: rgba(137, 158, 126, 0.62);
+}
+
+.root :global(.atlas-weed-condition-scale) span:global(.is-current) {
+  box-shadow: 0 0 0 3px rgba(137, 158, 126, 0.2);
+}
+
+.root :global(.atlas-weed-condition-scale) span:global(.is-target) {
+  outline: 1px solid rgba(107, 119, 77, 0.45);
+  outline-offset: 2px;
+}
+
+.root :global(.atlas-weed-invested) {
+  display: grid;
+  gap: 8px;
+}
+
+.root :global(.atlas-weed-invested-head) {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.root :global(.atlas-weed-invested-head) strong {
+  color: #303244;
+  font-size: 17px;
+}
+
+.root :global(.atlas-weed-invested-head) span {
+  color: #88887e;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.root :global(.atlas-weed-invested-rail) {
+  display: grid;
+  grid-template-columns: repeat(18, 1fr);
+  gap: 3px;
+}
+
+.root :global(.atlas-weed-invested-rail) i {
+  height: 12px;
+  border-radius: 3px;
+  background: rgba(128, 126, 114, 0.12);
+}
+
+.root :global(.atlas-weed-invested-rail) i:global(.is-filled) {
+  background: rgba(126, 132, 187, 0.74);
+}
+
+.root :global(.atlas-weed-session-history) {
+  display: grid;
+  gap: 7px;
+  margin: 16px 0 0;
+  padding: 14px 0 0;
+  border-top: 1px solid rgba(111, 101, 82, 0.14);
+  list-style: none;
+}
+
+.root :global(.atlas-weed-session-history) li {
+  display: grid;
+  grid-template-columns: 54px 48px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  color: #74756c;
+  font-size: 11px;
+}
+
+.root :global(.atlas-weed-session-history) strong {
+  color: #343647;
+}
+
+.root :global(.atlas-weed-session-history) small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.root :global(.atlas-weed-session-entry) {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 20px 28px 28px;
+  border-top: 1px solid rgba(111, 101, 82, 0.2);
+}
+
+.root :global(.atlas-weed-minute-rail) {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) 1.2fr;
+  gap: 6px;
+}
+
+.root :global(.atlas-weed-minute-rail) button,
+.root :global(.atlas-weed-minute-rail) input,
+.root :global(.atlas-weed-condition-buttons) button,
+.root :global(.atlas-weed-note),
+.root :global(.atlas-weed-session-save) {
+  border: 1px solid rgba(103, 101, 88, 0.22);
+  border-radius: 14px;
+  background: rgba(250, 248, 240, 0.94);
+  color: #3a3b49;
+  font: inherit;
+}
+
+.root :global(.atlas-weed-minute-rail) button,
+.root :global(.atlas-weed-minute-rail) input {
+  min-width: 0;
+  height: 42px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.root :global(.atlas-weed-minute-rail) input {
+  width: 100%;
+}
+
+.root :global(.atlas-weed-minute-rail) button:global(.is-selected),
+.root :global(.atlas-weed-condition-buttons) button:global(.is-selected) {
+  border-color: rgba(116, 123, 78, 0.48);
+  background: #eef1d6;
+  box-shadow: inset 0 0 0 1px rgba(116, 123, 78, 0.16);
+}
+
+.root :global(.atlas-weed-condition-buttons) {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.root :global(.atlas-weed-condition-buttons)::-webkit-scrollbar {
+  display: none;
+}
+
+.root :global(.atlas-weed-condition-buttons) button {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.root :global(.atlas-weed-note) {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 12px;
+}
+
+.root :global(.atlas-weed-session-save) {
+  min-height: 54px;
+  border-color: rgba(181, 185, 54, 0.7);
+  background: #e6ec4d;
+  color: #2e3041;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.root :global(.atlas-weed-session-save):disabled,
+.root :global(.atlas-weed-minute-rail) button:disabled,
+.root :global(.atlas-weed-condition-buttons) button:disabled,
+.root :global(.atlas-weed-note):disabled,
+.root :global(.atlas-weed-minute-rail) input:disabled {
+  opacity: 0.56;
+}
+
+@media (max-width: 420px) {
+  .root :global(.atlas-weed-card) {
+    margin-inline: 20px;
+    padding: 16px;
+  }
+
+  .root :global(.atlas-weed-session-entry) {
+    padding-inline: 20px;
+  }
+
+  .root :global(.atlas-weed-card) > header strong {
+    font-size: 21px;
+  }
+}
