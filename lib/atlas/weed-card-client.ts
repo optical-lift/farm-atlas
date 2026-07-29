@@ -1,13 +1,32 @@
 import type {
+  AtlasFinishWeedCardDayInput,
+  AtlasFinishWeedCardDayResult,
   AtlasWeedCardSessionInput,
   AtlasWeedCardSessionResult,
 } from "@/lib/atlas/weed-card-contract";
 
-function sessionKey(taskId: string) {
+function mutationKey(kind: string, taskId: string) {
   const nonce = typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  return `weed-card:${taskId}:${nonce}`;
+  return `weed-card:${kind}:${taskId}:${nonce}`;
+}
+
+async function readMutationResponse<T>(response: Response, fallback: string): Promise<T> {
+  const data = await response.json() as T & {
+    ok?: boolean;
+    error?: string | { message?: string };
+    details?: string;
+  };
+
+  if (!response.ok || !data.ok) {
+    const message = data.details
+      || (typeof data.error === "string" ? data.error : data.error?.message)
+      || fallback;
+    throw new Error(message);
+  }
+
+  return data;
 }
 
 export async function postAtlasWeedCardSession(
@@ -18,27 +37,34 @@ export async function postAtlasWeedCardSession(
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
-      "x-atlas-intent": "weed-card-session-v1",
+      "x-atlas-intent": "weed-card-pass-v1",
     },
     cache: "no-store",
     body: JSON.stringify({
       ...input,
-      idempotencyKey: input.idempotencyKey || sessionKey(input.taskId),
+      idempotencyKey: input.idempotencyKey || mutationKey("pass", input.taskId),
     }),
   });
 
-  const data = await response.json() as AtlasWeedCardSessionResult & {
-    ok?: boolean;
-    error?: string | { message?: string };
-    details?: string;
-  };
+  return readMutationResponse<AtlasWeedCardSessionResult>(response, "Weed Card pass failed.");
+}
 
-  if (!response.ok || !data.ok) {
-    const message = data.details
-      || (typeof data.error === "string" ? data.error : data.error?.message)
-      || "Weed Card session failed.";
-    throw new Error(message);
-  }
+export async function postAtlasFinishWeedCardDay(
+  input: AtlasFinishWeedCardDayInput,
+): Promise<AtlasFinishWeedCardDayResult> {
+  const response = await fetch("/api/atlas/weed-card-day", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "x-atlas-intent": "weed-card-day-v1",
+    },
+    cache: "no-store",
+    body: JSON.stringify({
+      ...input,
+      idempotencyKey: input.idempotencyKey || mutationKey("day", input.taskId),
+    }),
+  });
 
-  return data;
+  return readMutationResponse<AtlasFinishWeedCardDayResult>(response, "Atlas could not close today's Weed Card.");
 }
