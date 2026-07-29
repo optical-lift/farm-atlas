@@ -132,6 +132,24 @@
   color: rgba(255, 232, 224, 0.86);
 }
 
+/* The journal-cover reader marks unfinished work from an earlier date as
+   attention. In the current and next slots that state means overdue work,
+   so restore the dark-purple carry-forward signal used by the original Home. */
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(-n + 2)[data-atlas-state="attention"] {
+  background: var(--atlas-purple-dark) !important;
+  border-color: rgba(255, 255, 255, 0.66) !important;
+  box-shadow: 0 8px 18px rgba(47, 49, 76, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(-n + 2)[data-atlas-state="attention"] > small,
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(-n + 2)[data-atlas-state="attention"] > strong {
+  color: white !important;
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(-n + 2)[data-atlas-state="attention"] > em {
+  color: rgba(255, 255, 255, 0.84) !important;
+}
+
 .atlas-home-task-hero .atlas-run-sheet-box[data-atlas-state="quiet"] > small,
 .atlas-home-task-hero .atlas-run-sheet-box[data-atlas-state="quiet"] > strong,
 .atlas-home-task-hero .atlas-run-sheet-box[data-atlas-state="quiet"] > em {
