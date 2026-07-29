@@ -29,6 +29,10 @@ test("the owner can switch among live worker dashboards without changing routes"
   assert.match(switcher, /Operating as/);
   assert.match(switcher, /window\.location\.reload\(\)/);
   assert.match(switcher, /Actions change live farm data/);
+  assert.match(switcher, /if \(!context\) return null/);
+  assert.match(switcher, /const operatorContext = context/);
+  assert.match(switcher, /membershipId === operatorContext\.effective\.membershipId/);
+  assert.doesNotMatch(switcher, /membershipId === context\.effective\.membershipId/);
   assert.match(layout, /<OwnerOperatorMode context=\{operatorContext\} \/>/);
   assert.match(layout, /owner-operator-mode\.css/);
 });
