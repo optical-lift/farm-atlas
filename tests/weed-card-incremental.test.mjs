@@ -52,10 +52,11 @@ test("clear closes the pass and returns the permanent card to its maintenance rh
   assert.match(finalMigration, /weed_card_session_task',true/);
 });
 
-test("the linked task serves the card instead of the generic binary footer", () => {
+test("the linked task serves a concise field sheet instead of a generic binary footer", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
+  const trail = read("components/atlas/task-dominion-trail.tsx");
   const api = read("app/api/atlas/weed-card-session/route.ts");
 
   assert.match(canonical, /weed_card_session_task/);
@@ -63,8 +64,13 @@ test("the linked task serves the card instead of the generic binary footer", () 
   assert.match(loader, /\/api\/atlas\/weed-card\?taskId=/);
   assert.match(focus, /QUICK_MINUTES = \[10, 20, 30, 45\]/);
   assert.match(focus, /ATLAS_WEED_CONDITIONS/);
-  assert.match(focus, /Log session/);
+  assert.match(focus, /const actionTitle = `Weed \$\{card\.objectLabel\}`/);
+  assert.match(focus, /presentation="field-sheet"/);
+  assert.match(focus, /Log work/);
   assert.match(focus, /Finish pass/);
+  assert.doesNotMatch(focus, /Continue the recovery|Return the row to production|<small>Weed Card<\/small>/);
+  assert.match(trail, /presentation\?: "default" \| "field-sheet"/);
+  assert.match(trail, /!isFieldSheet/);
   assert.match(api, /record_weed_card_session_v1/);
 });
 
