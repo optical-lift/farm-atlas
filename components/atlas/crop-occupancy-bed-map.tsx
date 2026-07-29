@@ -41,8 +41,19 @@ function placementText(placement: AtlasBedMapPlacement) {
     .join(" · ");
 }
 
+function compactPlacementText(placement: AtlasBedMapPlacement) {
+  const quantity = quantityLabel(placement);
+  return [placement.displayLabel, quantity, placement.stageLabel]
+    .filter((value): value is string => Boolean(value))
+    .join("—");
+}
+
+function isRowPlacement(placement: AtlasBedMapPlacement) {
+  return placement.placementMode === "full_rows" || placement.placementMode === "partial_rows";
+}
+
 function rowCount(placement: AtlasBedMapPlacement) {
-  if (placement.placementMode === "full_rows" || placement.placementMode === "partial_rows") {
+  if (isRowPlacement(placement)) {
     return Math.max(1, Math.min(4, Math.round(placement.rowCount ?? 1)));
   }
   return 1;
@@ -50,29 +61,64 @@ function rowCount(placement: AtlasBedMapPlacement) {
 
 function rowStyle(placement: AtlasBedMapPlacement, lengthFt: number | null) {
   if (!lengthFt || lengthFt <= 0) return undefined;
-  const start = placement.longStartFt ?? 0;
-  const knownEnd = placement.longEndFt;
-  const span = knownEnd != null
-    ? Math.max(0.5, knownEnd - start)
+
+  const hasStart = placement.longStartFt != null;
+  const hasEnd = placement.longEndFt != null;
+  let start = placement.longStartFt ?? 0;
+  let span = hasEnd
+    ? Math.max(0.5, (placement.longEndFt ?? start + 0.5) - start)
     : placement.rowLengthFt ?? lengthFt;
+
+  if (!hasStart && !hasEnd && !isRowPlacement(placement)) {
+    if (placement.placementMode === "scattered") span = Math.max(4, lengthFt * 0.58);
+    else span = Math.max(3, lengthFt * 0.26);
+    start = Math.max(0, (lengthFt - span) / 2);
+  }
+
+  const startPercent = Math.max(0, Math.min(96, (start / lengthFt) * 100));
+  const availablePercent = Math.max(4, 100 - startPercent);
+  const widthPercent = Math.max(12, Math.min(availablePercent, (span / lengthFt) * 100));
+
   return {
-    marginInlineStart: `${Math.max(0, Math.min(96, (start / lengthFt) * 100))}%`,
-    width: `${Math.max(12, Math.min(100, (span / lengthFt) * 100))}%`,
+    marginInlineStart: `${startPercent}%`,
+    width: `${widthPercent}%`,
   };
 }
 
-function EdgeBand({ placements, edge }: { placements: AtlasBedMapPlacement[]; edge: "left" | "right" }) {
+function edgeBandBasis(placements: AtlasBedMapPlacement[], lengthFt: number | null) {
+  if (!lengthFt || lengthFt <= 0) return 18;
+  const knownSpans = placements
+    .map((placement) => {
+      if (placement.longStartFt == null || placement.longEndFt == null) return null;
+      return Math.max(0, placement.longEndFt - placement.longStartFt);
+    })
+    .filter((value): value is number => value != null && value > 0);
+  if (!knownSpans.length) return 18;
+  return Math.max(13, Math.min(28, (Math.max(...knownSpans) / lengthFt) * 100));
+}
+
+function EdgeBand({ placements, edge, lengthFt }: { placements: AtlasBedMapPlacement[]; edge: "left" | "right"; lengthFt: number | null }) {
   if (!placements.length) return null;
   const names = Array.from(new Set(placements.map((placement) => placement.displayLabel)));
   return (
-    <div className={`${styles.edgeBand} ${edge === "left" ? styles.leftBand : styles.rightBand}`}>
+    <div
+      className={`${styles.edgeBand} ${edge === "left" ? styles.leftBand : styles.rightBand}`}
+      style={{ flexBasis: `${edgeBandBasis(placements, lengthFt)}%` }}
+      title={names.join(" · ")}
+    >
       <span>{names.join(" · ")}</span>
     </div>
   );
 }
 
+function chunks<T>(items: T[], size: number) {
+  const result: T[][] = [];
+  for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size));
+  return result;
+}
+
 export default function CropOccupancyBedMap({ map }: Props) {
-  if (!map || !map.placements.length) return null;
+  if (!map) return null;
 
   const leftAnchored = map.placements.filter((placement) => placement.anchorEdge === map.leftEdge);
   const rightAnchored = map.placements.filter((placement) => placement.anchorEdge === map.rightEdge);
@@ -80,18 +126,24 @@ export default function CropOccupancyBedMap({ map }: Props) {
   const bottomAnchored = map.placements.filter((placement) => placement.anchorEdge === map.bottomEdge);
   const anchoredIds = new Set([...leftAnchored, ...rightAnchored, ...topAnchored, ...bottomAnchored].map((placement) => placement.placementId));
   const bodyPlacements = map.placements.filter((placement) => !anchoredIds.has(placement.placementId));
+  const rowPlacements = bodyPlacements.filter(isRowPlacement);
+  const loosePlacements = bodyPlacements.filter((placement) => !isRowPlacement(placement));
+  const looseGroups = loosePlacements.length <= 3
+    ? loosePlacements.map((placement) => [placement])
+    : chunks(loosePlacements, 3);
 
   return (
-    <section className={styles.root} aria-label={`Oriented planting map for ${map.objectLabel}`}>
+    <section className={`${styles.root} ${map.orientationKnown ? "" : styles.unknownOrientation}`.trim()} aria-label={`Oriented planting map for ${map.objectLabel}`}>
       <div className={styles.topDirection}>{edgeLabel(map.topEdge)}</div>
       <div className={styles.horizontalMap}>
         <span className={styles.sideDirection}>{edgeLabel(map.leftEdge)} ←</span>
         <div className={styles.bed}>
           {topAnchored.length ? <div className={`${styles.crossBand} ${styles.topBand}`}>{topAnchored.map((item) => item.displayLabel).join(" · ")}</div> : null}
           <div className={styles.bedBody}>
-            <EdgeBand placements={leftAnchored} edge="left" />
+            <EdgeBand placements={leftAnchored} edge="left" lengthFt={map.lengthFt} />
             <div className={styles.rows}>
-              {bodyPlacements.map((placement) => {
+              {!rowPlacements.length && !looseGroups.length ? <div className={styles.emptyBed} aria-hidden="true">—</div> : null}
+              {rowPlacements.map((placement) => {
                 const count = rowCount(placement);
                 const uncertain = placement.positionConfidence === "unknown" || placement.positionConfidence === "low";
                 return Array.from({ length: count }, (_, index) => (
@@ -106,8 +158,24 @@ export default function CropOccupancyBedMap({ map }: Props) {
                   </div>
                 ));
               })}
+              {looseGroups.map((group, index) => {
+                const placement = group[0];
+                const uncertain = group.length > 1 || placement.positionConfidence === "unknown" || placement.positionConfidence === "low";
+                const text = group.length === 1 ? placementText(placement) : group.map(compactPlacementText).join(" · ");
+                return (
+                  <div
+                    className={`${styles.row} ${styles.looseRow} ${uncertain ? styles.uncertain : ""}`.trim()}
+                    key={`loose:${group.map((item) => item.placementId).join(":")}:${index}`}
+                    style={group.length === 1 ? rowStyle(placement, map.lengthFt) : undefined}
+                  >
+                    <i aria-hidden="true" />
+                    <span>{text}</span>
+                    <i aria-hidden="true" />
+                  </div>
+                );
+              })}
             </div>
-            <EdgeBand placements={rightAnchored} edge="right" />
+            <EdgeBand placements={rightAnchored} edge="right" lengthFt={map.lengthFt} />
           </div>
           {bottomAnchored.length ? <div className={`${styles.crossBand} ${styles.bottomBand}`}>{bottomAnchored.map((item) => item.displayLabel).join(" · ")}</div> : null}
         </div>
