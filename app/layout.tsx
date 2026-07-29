@@ -68,6 +68,7 @@ import "./universal-home-familiar.css";
 import "./atlas-shell-responsive.css";
 import "./project-task-timeline.css";
 import "./tending-task-timeline.css";
+import "./home-cover-v1.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });

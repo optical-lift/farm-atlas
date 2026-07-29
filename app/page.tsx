@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHome";
+import { readAtlasJournalCover } from "@/lib/atlas/journal-cover-home";
 import { getAtlasSession } from "@/lib/atlas/session";
 import { readAtlasUniversalHome } from "@/lib/atlas/universal-home";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
@@ -47,6 +48,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
       ?? viewer.activeFarmId
     : viewer.activeFarmId;
   const home = await readAtlasUniversalHome(viewer, { preferredFarmId });
+  const coverMoves = await readAtlasJournalCover(home);
   const organizationMembership = organizationMembershipForViewer(viewer);
   const organizationPortal = Boolean(
     organizationMembership
@@ -59,7 +61,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
         || organizationMembership?.organizationName
         || "Feast Guild"
       : home.title,
-    moves: home.moves.map((move) => ({ ...move, href: focusedProjectTaskHref(move) })),
+    moves: coverMoves.map((move) => ({ ...move, href: focusedProjectTaskHref(move) })),
   };
 
   return (
