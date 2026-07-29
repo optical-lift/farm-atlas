@@ -49,6 +49,14 @@ function timeLabel(minutes: number) {
   return rest ? `${hours}h ${rest}m` : `${hours}h`;
 }
 
+function shortObjectLabel(objectKey: string, objectLabel: string) {
+  const keyMatch = objectKey.match(/^fr[_-]?(\d+)$/i);
+  if (keyMatch) return `FR${keyMatch[1]}`;
+
+  const labelMatch = objectLabel.match(/^Field Row\s+(\d+)$/i);
+  return labelMatch ? `FR${labelMatch[1]}` : objectLabel;
+}
+
 export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   const currentIndex = ATLAS_WEED_CONDITIONS.indexOf(card.condition);
   const availableConditions = ATLAS_WEED_CONDITIONS.slice(Math.max(0, currentIndex));
@@ -73,7 +81,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
     : minutes
       ? `${minutes}m`
       : "Add time";
-  const actionTitle = `Weed ${card.objectLabel}`;
+  const actionTitle = `Weed ${shortObjectLabel(card.objectKey, card.objectLabel)}`;
 
   async function savePass() {
     if (!Number.isInteger(selectedMinutes) || selectedMinutes < 0 || selectedMinutes > 480) {
@@ -137,6 +145,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
               task={task}
               instruction={actionTitle}
               showCondition={false}
+              showZoneLabel={false}
               presentation="field-sheet"
             />
 
@@ -182,10 +191,24 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
 
             <footer className="atlas-weed-session-entry">
               {!logOpen ? (
-                <div className="atlas-weed-rest-actions">
-                  <button type="button" disabled={saving} onClick={() => setLogOpen(true)}>Log a pass</button>
-                  <button type="button" disabled={saving} onClick={() => void finishToday()}>That’s all for today</button>
-                </div>
+                <>
+                  <div className="atlas-weed-rest-actions">
+                    <button type="button" disabled={saving} onClick={() => setLogOpen(true)}>Log a pass</button>
+                  </div>
+                  <div className="atlas-task-result-actions atlas-task-result-actions-simple atlas-weed-day-actions">
+                    <button type="button" className="done" disabled={saving} onClick={() => void finishToday()}>
+                      {saving ? "Finishing" : "That’s all for today"}
+                    </button>
+                    <button
+                      type="button"
+                      className="unfinished"
+                      disabled={saving}
+                      onClick={() => window.location.assign(assignee.listPath)}
+                    >
+                      Unfinished
+                    </button>
+                  </div>
+                </>
               ) : (
                 <section className="atlas-weed-log-drawer" aria-label="Log a weed pass">
                   <button
