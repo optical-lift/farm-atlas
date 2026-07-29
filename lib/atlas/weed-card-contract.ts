@@ -4,6 +4,7 @@ export type AtlasWeedSession = {
   id: string;
   workDate: string;
   minutes: number;
+  minutesKnown: boolean;
   conditionBefore: AtlasWeedCondition;
   conditionAfter: AtlasWeedCondition;
   note: string | null;
