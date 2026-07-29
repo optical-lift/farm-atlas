@@ -1,5 +1,6 @@
 "use client";
 
+import ConciseWeedTaskDetail from "@/components/atlas/concise-weed-task-detail";
 import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
@@ -16,8 +17,14 @@ function isWeedCardTask(task: AtlasTaskCard) {
   return value === true || value === "true";
 }
 
+function isWeedTask(task: AtlasTaskCard) {
+  return task.action_key === "weed"
+    || task.task_type === "weed"
+    || /^weed\b/i.test(task.title.trim());
+}
+
 export default function CanonicalAssignedTaskDetail(props: Props) {
-  return isWeedCardTask(props.task)
-    ? <WeedCardTaskLoader {...props} />
-    : <DominionAssignedTaskDetail {...props} />;
+  if (isWeedCardTask(props.task)) return <WeedCardTaskLoader {...props} />;
+  if (isWeedTask(props.task)) return <ConciseWeedTaskDetail {...props} />;
+  return <DominionAssignedTaskDetail {...props} />;
 }
