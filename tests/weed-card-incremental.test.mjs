@@ -41,7 +41,7 @@ test("time is optional evidence while physical condition remains required", () =
   assert.match(contract, /taskClosed: boolean/);
 });
 
-test("the Weed Card rests as two choices and pulls condition before time", () => {
+test("the Weed Card uses the known task footer and identifies the place once", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
@@ -53,15 +53,19 @@ test("the Weed Card rests as two choices and pulls condition before time", () =>
   assert.match(canonical, /weed_card_session_task/);
   assert.match(canonical, /WeedCardTaskLoader/);
   assert.match(loader, /\/api\/atlas\/weed-card\?taskId=/);
-  assert.match(focus, /const actionTitle = `Weed \$\{card\.objectLabel\}`/);
-  assert.match(focus, /presentation="field-sheet"/);
+  assert.match(focus, /const actionTitle = `Weed \$\{shortObjectLabel\(card\.objectKey, card\.objectLabel\)\}`/);
+  assert.match(focus, /showZoneLabel=\{false\}/);
+  assert.match(focus, /atlas-task-result-actions atlas-task-result-actions-simple atlas-weed-day-actions/);
+  assert.match(focus, /className="done"/);
+  assert.match(focus, />\s*Unfinished\s*</);
   assert.match(focus, />Log a pass</);
-  assert.match(focus, />That’s all for today</);
+  assert.match(focus, /That’s all for today/);
   assert.ok(focus.indexOf("<span>Condition</span>") < focus.indexOf("<span>Time</span>"));
   assert.match(focus, /postAtlasFinishWeedCardDay/);
   assert.match(focus, /conditionAfter === "clear" \? "Finish pass" : "Save pass"/);
   assert.doesNotMatch(focus, /Continue the recovery|Return the row to production|<small>Weed Card<\/small>/);
-  assert.match(trail, /presentation\?: "default" \| "field-sheet"/);
+  assert.match(trail, /showZoneLabel\?: boolean/);
+  assert.match(trail, /showZoneLabel \? <small>\{model\.zoneLabel\}<\/small> : null/);
   assert.match(client, /weed-card-pass-v1/);
   assert.match(client, /weed-card-day-v1/);
   assert.match(passApi, /record_weed_card_pass_v1/);
