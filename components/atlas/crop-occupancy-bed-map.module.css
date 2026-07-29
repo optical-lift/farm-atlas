@@ -38,7 +38,7 @@
 
 .bedBody {
   display: flex;
-  min-height: 6.9rem;
+  min-height: 6.2rem;
 }
 
 .rows {
@@ -47,7 +47,7 @@
   flex: 1 1 auto;
   min-width: 0;
   gap: 0.22rem;
-  padding: 0.55rem 0.45rem;
+  padding: 0.5rem 0.42rem;
 }
 
 .row {
@@ -74,6 +74,11 @@
   text-overflow: ellipsis;
 }
 
+.looseRow span {
+  max-width: 86%;
+  font-size: 0.96em;
+}
+
 .uncertain i {
   border-top-style: dashed;
   opacity: 0.68;
@@ -83,17 +88,31 @@
   color: var(--atlas-ink-muted, #8b8d85);
 }
 
+.emptyBed {
+  align-self: center;
+  justify-self: stretch;
+  color: color-mix(in srgb, var(--atlas-ink-muted, #8b8d85) 55%, transparent);
+  font-size: 0.82rem;
+  line-height: 1;
+  text-align: center;
+}
+
 .edgeBand {
   display: grid;
   align-items: center;
   flex: 0 0 clamp(4.6rem, 22%, 6.1rem);
-  padding: 0.45rem;
+  min-width: 0;
+  padding: 0.42rem 0.28rem;
   background: color-mix(in srgb, var(--atlas-accent-soft, #858bc0) 8%, transparent);
   color: var(--atlas-ink-soft, #74776d);
-  font-size: clamp(0.64rem, 2.55vw, 0.72rem);
+  font-size: clamp(0.61rem, 2.4vw, 0.7rem);
   font-weight: 650;
-  line-height: 1.25;
+  line-height: 1.22;
   text-align: center;
+}
+
+.edgeBand span {
+  overflow-wrap: anywhere;
 }
 
 .leftBand {
@@ -121,6 +140,16 @@
   border-top: 1px solid color-mix(in srgb, var(--atlas-ink-muted, #8b8d85) 30%, transparent);
 }
 
+.unknownOrientation .bed {
+  border-style: dashed;
+}
+
+.unknownOrientation .topDirection,
+.unknownOrientation .bottomDirection,
+.unknownOrientation .sideDirection {
+  opacity: 0.62;
+}
+
 @media (max-width: 390px) {
   .horizontalMap {
     gap: 0.24rem;
@@ -131,10 +160,11 @@
   }
 
   .bedBody {
-    min-height: 6.2rem;
+    min-height: 5.8rem;
   }
 
   .edgeBand {
-    flex-basis: 4.8rem;
+    min-width: 3.3rem;
+    padding-inline: 0.2rem;
   }
 }

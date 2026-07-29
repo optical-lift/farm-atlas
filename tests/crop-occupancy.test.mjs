@@ -92,3 +92,22 @@ test("the Weed Card renders a compact text map with explicit cardinal orientatio
   assert.match(route, /object_crop_bed_map_v1/);
   assert.doesNotMatch(component, /Perennial|Date unknown|Observed/);
 });
+
+test("every Weed Card receives a map frame and known long beds keep real directions", () => {
+  const universal = read("supabase/migrations/20260729175000_universal_weed_card_maps_v1.sql");
+  const component = read("components/atlas/crop-occupancy-bed-map.tsx");
+  const focus = read("components/atlas/weed-card-task-focus.tsx");
+
+  assert.match(universal, /\^fr_\[0-9\]\+\$/);
+  assert.match(universal, /\^bb_\[0-9\]\+\$/);
+  assert.match(universal, /\^u_pick_\(bed\|walkway\)_\[0-9\]\+\$/);
+  assert.match(universal, /'north_south','north','south','west','east'/);
+  assert.match(universal, /orientation_not_yet_mapped/);
+  assert.match(universal, /from atlas\.weed_cards wc/);
+  assert.match(universal, /full_row_equals_recorded_bed_length/);
+  assert.match(component, /if \(!map\) return null/);
+  assert.doesNotMatch(component, /!map\.placements\.length/);
+  assert.match(component, /styles\.emptyBed/);
+  assert.match(component, /edgeBandBasis/);
+  assert.match(focus, /const occupancy = card\.bedMap\s*\?/);
+});
