@@ -56,7 +56,7 @@ test("the Weed Card uses the known task footer and identifies the place once", (
   assert.match(focus, /const actionTitle = `Weed \$\{shortObjectLabel\(card\.objectKey, card\.objectLabel\)\}`/);
   assert.match(focus, /showZoneLabel=\{false\}/);
   assert.match(focus, /showSubjectLabel=\{false\}/);
-  assert.match(focus, /plantLabels=\{plantLabels\}/);
+  assert.match(focus, /<CropOccupancyList groups=\{card\.occupancyGroups\} \/>/);
   assert.match(focus, /atlas-task-result-actions atlas-task-result-actions-simple atlas-weed-day-actions/);
   assert.match(focus, /className="done"/);
   assert.match(focus, />\s*Unfinished\s*</);
@@ -67,7 +67,7 @@ test("the Weed Card uses the known task footer and identifies the place once", (
   assert.match(focus, /conditionAfter === "clear" \? "Finish pass" : "Save pass"/);
   assert.doesNotMatch(focus, /Continue the recovery|Return the row to production|<small>Weed Card<\/small>/);
   assert.match(trail, /showZoneLabel\?: boolean/);
-  assert.match(trail, /showZoneLabel \? <small>\{model\.zoneLabel\}<\/small> : null/);
+  assert.match(trail, /moveDetails\?: ReactNode/);
   assert.match(client, /weed-card-pass-v1/);
   assert.match(client, /weed-card-day-v1/);
   assert.match(passApi, /record_weed_card_pass_v1/);

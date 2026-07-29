@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import AtlasTrail from "@/components/atlas/trail/AtlasTrail";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -22,6 +22,7 @@ type Props = {
   showZoneLabel?: boolean;
   showSubjectLabel?: boolean;
   plantLabels?: string[];
+  moveDetails?: ReactNode;
   presentation?: "default" | "field-sheet";
 };
 
@@ -93,6 +94,7 @@ export default function TaskDominionTrail({
   showZoneLabel = true,
   showSubjectLabel = true,
   plantLabels = [],
+  moveDetails = null,
   presentation = "default",
 }: Props) {
   const objectKey = trailObjectKey(task);
@@ -157,6 +159,7 @@ export default function TaskDominionTrail({
           </div>
         ) : null}
         <h1>{model.instruction}</h1>
+        {moveDetails}
         {plantLabels.length ? (
           <ul className={plantStyles.list} aria-label="Plants in this bed">
             {plantLabels.map((label) => <li className={plantStyles.item} key={label}>{label}</li>)}

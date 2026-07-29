@@ -11,14 +11,44 @@ export type AtlasWeedSession = {
   recordedAt: string;
 };
 
-export type AtlasWeedPlant = {
-  contentId: string;
-  contentLabel: string;
+export type AtlasCropOccupancyCohort = {
+  cropCycleId: string;
+  cropLabel: string;
   displayLabel: string;
-  variety: string | null;
-  contentType: string;
-  status: string;
-  displayOrder: number;
+  variety?: string | null;
+  lifeCycle: string;
+  establishmentDate?: string | null;
+  dateSource: string;
+  stage?: string | null;
+  stageLabel: string;
+  placementId?: string | null;
+  placementMode?: string | null;
+  placementLabel?: string | null;
+  placementSummary?: string | null;
+  rowCount?: number | null;
+  rowLengthFt?: number | null;
+  areaSqft?: number | null;
+  cellCount?: number | null;
+  spacingIn?: number | null;
+  plantsPerSqft?: number | null;
+  expectedQuantity?: number | null;
+  expectedQuantityKind?: "recorded" | "calculated" | "unknown" | null;
+  expectedQuantityUnit?: string | null;
+  expectedQuantityBasis?: string | null;
+  observedQuantity?: number | null;
+  observedQuantityUnit?: string | null;
+  observedQuantityKind?: string | null;
+  observedQuantityDate?: string | null;
+  standPercent?: number | null;
+  condition?: string | null;
+  confidence: string;
+};
+
+export type AtlasCropOccupancyGroup = {
+  groupKind: "dated" | "observed" | "perennial" | "unknown";
+  groupDate: string | null;
+  groupLabel: string;
+  cohorts: AtlasCropOccupancyCohort[];
 };
 
 export type AtlasWeedCardContext = {
@@ -32,8 +62,7 @@ export type AtlasWeedCardContext = {
   objectKey: string;
   objectLabel: string;
   zoneLabel: string;
-  cropLabel: string;
-  plants: AtlasWeedPlant[];
+  occupancyGroups: AtlasCropOccupancyGroup[];
   condition: AtlasWeedCondition;
   targetCondition: AtlasWeedCondition;
   totalMinutes: number;
