@@ -128,12 +128,12 @@ export default function TaskDominionTrail({
         <span>{model.subjectLabel}</span>
       </header>
 
-      {visibleTrail ? (
-        <AtlasTrail
-          context={visibleTrail}
-          mode="compact"
-          className={isFieldSheet ? "atlas-trail-field-sheet" : ""}
-        />
+      {trail ? (
+        isFieldSheet && visibleTrail ? (
+          <AtlasTrail context={visibleTrail} mode="compact" className="atlas-trail-field-sheet" />
+        ) : (
+          <AtlasTrail context={trail} mode="compact" />
+        )
       ) : (
         <div className="atlas-task-dominion-no-trail" aria-label="No linked Trail">
           <span aria-hidden="true" />
