@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
+import ConciseWeedTaskDetail from "@/components/atlas/concise-weed-task-detail";
 import WeedCardTaskFocus from "@/components/atlas/weed-card-task-focus";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -39,7 +39,7 @@ export default function WeedCardTaskLoader({ task, childTasks, assignee }: Props
   }, [task.task_id]);
 
   if (card) return <WeedCardTaskFocus task={task} card={card} assignee={assignee} />;
-  if (failed) return <DominionAssignedTaskDetail task={task} childTasks={childTasks} assignee={assignee} />;
+  if (failed) return <ConciseWeedTaskDetail task={task} childTasks={childTasks} assignee={assignee} />;
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
