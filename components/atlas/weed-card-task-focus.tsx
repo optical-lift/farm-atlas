@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import CropOccupancyList from "@/components/atlas/crop-occupancy-list";
 import TaskDominionTrail from "@/components/atlas/task-dominion-trail";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -93,10 +94,6 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
     () => card.sessions.filter((session) => !session.minutesKnown).length,
     [card.sessions],
   );
-  const plantLabels = useMemo(
-    () => Array.from(new Set(card.plants.map((plant) => plant.displayLabel).filter(Boolean))),
-    [card.plants],
-  );
   const selectedMinutes = customMinutes.trim() ? Number(customMinutes) : minutes ?? 0;
   const selectedTimeLabel = customMinutes.trim()
     ? `${customMinutes}m`
@@ -169,7 +166,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
               showCondition={false}
               showZoneLabel={false}
               showSubjectLabel={false}
-              plantLabels={plantLabels}
+              moveDetails={<CropOccupancyList groups={card.occupancyGroups} />}
               presentation="field-sheet"
             />
 
