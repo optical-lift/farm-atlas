@@ -18,7 +18,7 @@ type DayDispositionResponse = {
   details?: string;
 };
 
-function centralDateIso() {
+export function centralDateIso() {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Chicago",
     year: "numeric",
@@ -29,6 +29,11 @@ function centralDateIso() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+export function addDaysIso(dateIso: string, days: number) {
+  const [year, month, day] = dateIso.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
 function errorMessage(data: { error?: AtlasApiError; details?: string }, fallback: string) {
   if (data.details) return data.details;
   if (typeof data.error === "string") return data.error;
@@ -36,19 +41,23 @@ function errorMessage(data: { error?: AtlasApiError; details?: string }, fallbac
   return fallback;
 }
 
-export async function postAtlasTaskSetAsideToday(taskId: string): Promise<AtlasTaskSetAsideResult> {
+export async function postAtlasTaskSetAsideToday(
+  taskId: string,
+  requestedReturnDate = addDaysIso(centralDateIso(), 1),
+): Promise<AtlasTaskSetAsideResult> {
   const serviceDate = centralDateIso();
   const response = await fetch("/api/atlas/task-set-aside", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
-      "x-atlas-intent": "task-set-aside-v1",
+      "x-atlas-intent": "task-set-aside-v2",
     },
     cache: "no-store",
     body: JSON.stringify({
       taskId,
-      idempotencyKey: `task-set-aside-v1:${taskId}:${serviceDate}`,
+      requestedReturnDate,
+      idempotencyKey: `task-set-aside-v2:${taskId}:${serviceDate}:${requestedReturnDate}`,
     }),
   });
   const data = await response.json() as SetAsideResponse;
