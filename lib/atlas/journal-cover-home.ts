@@ -24,6 +24,13 @@ type CoverRole = "current" | "next" | "unlock" | "blocker";
 
 type LivingDayRpcError = { message?: string };
 
+const coverMark: Record<CoverRole, string> = {
+  current: "●",
+  next: "○",
+  unlock: "~",
+  blocker: "!",
+};
+
 function isChildTask(card: AtlasTaskCard) {
   return Boolean(card.parent_task_id)
     || atlasMetadataValue(card, "is_child_task") === true
@@ -44,6 +51,76 @@ function isPlayableTask(card: AtlasTaskCard) {
       || joined.includes("walk field rows"));
 }
 
+function compactPlace(value: string) {
+  return value
+    .replace(/^Field Row\s+/i, "FR")
+    .replace(/^Entry Billboard Bed\s+/i, "EB")
+    .replace(/^Entry Billboard Beds\s+/i, "EB")
+    .replace(/\s*-\s*/g, "–")
+    .trim();
+}
+
+function looksLikePlace(value: string) {
+  return /^(Field Row|FR\d|Entry Billboard|EB\d|MG\d|Main Garden|Grow Room|Barn|Berry Walk|Redbud|Mailbox)/i.test(value);
+}
+
+function cropLabel(card: AtlasTaskCard) {
+  return atlasMetaString(card, "main_crop_label")
+    || atlasMetaString(card, "crop_variety")
+    || atlasMetaString(card, "crop_label")
+    || atlasMetaString(card, "variety")
+    || null;
+}
+
+function lowerGenericCrop(value: string) {
+  if (/^(ProCut|Potomac|Queensland|Italian|White Lite)/.test(value)) return value;
+  return value.charAt(0).toLowerCase() + value.slice(1);
+}
+
+function taskSubject(card: AtlasTaskCard) {
+  const displaySubject = atlasMetaString(card, "display_subject") ?? "";
+  const displayDetail = atlasMetaString(card, "display_detail") ?? "";
+  const crop = cropLabel(card);
+  const place = looksLikePlace(displaySubject)
+    ? compactPlace(displaySubject)
+    : looksLikePlace(displayDetail)
+      ? compactPlace(displayDetail)
+      : compactPlace(
+        card.title
+          .replace(/^(Weed|Mow|Water|Sow|Plant|Transplant|Check|Harvest watch\s*[—-]?)\s+/i, "")
+          .replace(/\s+(zinnias|sunflowers|cosmos|dahlias)$/i, ""),
+      );
+  const namedCrop = crop || (!looksLikePlace(displaySubject) ? displaySubject : "");
+  if (place && namedCrop && !place.toLowerCase().includes(namedCrop.toLowerCase())) {
+    return `${place} ${lowerGenericCrop(namedCrop)}`;
+  }
+  return place || namedCrop || atlasTaskDisplay(card).title;
+}
+
+function taskMovement(card: AtlasTaskCard) {
+  const action = (card.action_key
+    || atlasMetaString(card, "display_action")
+    || card.task_type
+    || "").toLowerCase();
+  const partial = /partly|partial|continue/i.test(card.note ?? "")
+    || (atlasMetaString(card, "checklist_status") ?? "").toLowerCase() === "partial";
+  const crop = cropLabel(card);
+
+  if (action.includes("weed")) {
+    if (partial) return "Continue the recovery block";
+    if (crop) return "Return the row to production";
+    return "Return the place to rhythm";
+  }
+  if (action.includes("sow")) return "Put the block in production";
+  if (action.includes("transplant") || action.includes("plant")) return "Set the crop in place";
+  if (action.includes("harvest")) return "First usable cut will open harvest";
+  if (action.includes("mow")) return "Return the route to rhythm";
+  if (action.includes("water")) return "Carry the crop through the day";
+  if (action.includes("owner") || action.includes("decide")) return "A decision holds the next move";
+  if (card.blocker_text) return "A prerequisite holds the next move";
+  return "Move the farm one state forward";
+}
+
 function taskState(card: AtlasTaskCard, dateIso: string): AtlasUniversalMoveState {
   if (card.status === "blocked") return "blocked";
   if (card.due_date && card.due_date < dateIso) return "attention";
@@ -60,10 +137,10 @@ function taskMove(
     key: `farm-task:${farmId}:${card.task_id}`,
     kind: "farm_task",
     category: "",
-    title: atlasTaskDisplay(card).title,
+    title: taskSubject(card),
     scopeLabel: farmName,
     meta: "",
-    detail: "",
+    detail: taskMovement(card),
     href: `/task-focus/${encodeURIComponent(card.task_id)}?returnTo=${encodeURIComponent("/")}`,
     date: card.due_date,
     state: taskState(card, dateIso),
@@ -127,21 +204,66 @@ function compareGoal(left: AtlasLivingDayGoal, right: AtlasLivingDayGoal) {
     || leftRank[3].localeCompare(rightRank[3]);
 }
 
-function goalMove(goal: AtlasLivingDayGoal, farmId: string, dateIso: string): AtlasUniversalMove {
-  const returnTo = `/journal?date=${encodeURIComponent(dateIso)}`;
+function goalJournalCopy(goal: AtlasLivingDayGoal) {
+  if (goal.goalKey === "elm_fr15_procut_horizon_stand_v1") {
+    return {
+      title: "FR15 Horizon",
+      detail: goal.window?.state === "satisfied" || goal.state === "realized"
+        ? "Stand confirmed"
+        : goal.window?.state === "passed_without_observation"
+          ? "The stand needs a field decision"
+          : "Emergence will confirm the stand",
+    };
+  }
+  if (goal.goalKey === "elm_eb1_eb6_procut_open_v1") {
+    return {
+      title: "EB1–6 ProCut",
+      detail: goal.state === "nearly_unlocked" || goal.state === "in_production"
+        ? "The production block is opening"
+        : "Clearance + approval hold the block",
+    };
+  }
+  if (goal.goalKey === "elm_fr11_fr14_october_sunflowers_v1") {
+    return {
+      title: "FR11–14 sunflowers",
+      detail: goal.state === "realized"
+        ? "October block established"
+        : "Each sown bed advances the October block",
+    };
+  }
   return {
-    key: `goal:${goal.goalKey}`,
+    title: "FR4–6 zinnias",
+    detail: goal.state === "realized"
+      ? "First cut opened"
+      : "Protected rows will open the first cut",
+  };
+}
+
+function goalMove(
+  goal: AtlasLivingDayGoal,
+  farmId: string,
+  dateIso: string,
+  mode: "unlock" | "blocker" = "unlock",
+): AtlasUniversalMove {
+  const returnTo = `/journal?date=${encodeURIComponent(dateIso)}`;
+  const copy = goalJournalCopy(goal);
+  return {
+    key: `goal:${goal.goalKey}:${mode}`,
     kind: "attention",
     category: "",
-    title: goal.title,
+    title: copy.title,
     scopeLabel: "",
     meta: "",
-    detail: "",
+    detail: copy.detail,
     href: goal.nextMove
       ? `/task-focus/${encodeURIComponent(goal.nextMove.taskId)}?returnTo=${encodeURIComponent(returnTo)}`
       : returnTo,
     date: goal.window?.start ?? null,
-    state: goal.state === "nearly_unlocked" || goal.state === "in_production" ? "moving" : "waiting",
+    state: mode === "blocker"
+      ? "blocked"
+      : goal.state === "nearly_unlocked" || goal.state === "in_production"
+        ? "moving"
+        : "waiting",
     farmId,
     projectId: null,
     priority: 0,
@@ -150,14 +272,19 @@ function goalMove(goal: AtlasLivingDayGoal, farmId: string, dateIso: string): At
 
 function ownerDecisionMove(entry: AtlasLivingDayOwnerDecision, farmId: string, dateIso: string): AtlasUniversalMove {
   const returnTo = `/journal?date=${encodeURIComponent(dateIso)}`;
+  const entryTitle = entry.title
+    .replace(/^Owner\s*[—-]\s*/i, "")
+    .replace(/^Decide\s+/i, "")
+    .replace(/^2026\s+/i, "");
+  const title = /Entry Billboard.*ProCut/i.test(entryTitle) ? "EB1–6 ProCut" : entryTitle;
   return {
     key: `decision:${entry.entryKey}`,
     kind: "attention",
     category: "",
-    title: entry.title,
+    title,
     scopeLabel: "",
     meta: "",
-    detail: "",
+    detail: "A decision holds the next move",
     href: `/task-focus/${encodeURIComponent(entry.taskId)}?returnTo=${encodeURIComponent(returnTo)}`,
     date: entry.dueDate,
     state: "blocked",
@@ -173,10 +300,12 @@ function rhythmMove(entry: AtlasLivingDayCarriedRhythm, farmId: string, dateIso:
     key: `rhythm:${entry.entryKey}`,
     kind: "attention",
     category: "",
-    title: entry.title,
+    title: compactPlace(entry.objectLabel),
     scopeLabel: "",
     meta: "",
-    detail: "",
+    detail: entry.state === "fallen_out_of_rhythm"
+      ? "The stewardship lease has fallen out of rhythm"
+      : "Partial work is restoring the lease",
     href: entry.currentTask
       ? `/task-focus/${encodeURIComponent(entry.currentTask.taskId)}?returnTo=${encodeURIComponent(returnTo)}`
       : returnTo,
@@ -198,6 +327,10 @@ function closestUnlock(livingDay: AtlasLivingDay | null, dateIso: string) {
 
 function activeBlocker(home: AtlasUniversalHomeModel, livingDay: AtlasLivingDay | null, dateIso: string) {
   const farm = home.activeFarm;
+  const blockedGoal = livingDay?.goals
+    .filter((goal) => goal.state !== "realized" && Boolean(goal.blocker))
+    .sort((left, right) => left.progress.satisfied - right.progress.satisfied || compareGoal(left, right))[0];
+  if (blockedGoal && livingDay) return goalMove(blockedGoal, livingDay.farmId, dateIso, "blocker");
   if (livingDay?.ownerDecisions.length) {
     const decision = [...livingDay.ownerDecisions]
       .sort((left, right) => (left.dueDate ?? "9999-12-31").localeCompare(right.dueDate ?? "9999-12-31"))[0];
@@ -238,7 +371,11 @@ function quietMove(role: CoverRole, dateIso: string): AtlasUniversalMove {
 
 function withRole(role: CoverRole, move: AtlasUniversalMove | null, dateIso: string) {
   const resolved = move ?? quietMove(role, dateIso);
-  return { ...resolved, key: `cover:${role}:${resolved.key}` };
+  return {
+    ...resolved,
+    key: `cover:${role}:${resolved.key}`,
+    category: coverMark[role],
+  };
 }
 
 export function buildAtlasJournalCover(

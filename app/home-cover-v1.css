@@ -32,39 +32,72 @@
   min-height: 112px;
   border-radius: 18px;
   padding: 14px 12px 12px;
-  display: flex;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: end;
+  align-items: baseline;
+  column-gap: 6px;
+  row-gap: 7px;
   overflow: hidden;
   isolation: isolate;
 }
 
-.atlas-home-task-hero .atlas-run-sheet-box > small,
-.atlas-home-task-hero .atlas-run-sheet-box > span,
-.atlas-home-task-hero .atlas-run-sheet-box > em {
-  display: none !important;
+.atlas-home-task-hero .atlas-run-sheet-box > small {
+  grid-column: 1;
+  grid-row: 1;
+  display: block;
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
 }
 
 .atlas-home-task-hero .atlas-run-sheet-box > strong {
+  grid-column: 2;
+  grid-row: 1;
   position: relative;
   z-index: 2;
+  min-width: 0;
   width: 100%;
   color: white;
-  font-size: 15px;
-  line-height: 1.04;
+  font-size: 14px;
+  line-height: 1.08;
   font-weight: 950;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.025em;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box > span {
+  display: none !important;
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box > em {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: -webkit-box;
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 10.5px;
+  line-height: 1.18;
+  font-style: normal;
+  font-weight: 760;
+  letter-spacing: -0.01em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
 }
 
 .atlas-home-task-hero .atlas-run-sheet-box::before,
 .atlas-home-task-hero .atlas-run-sheet-box::after {
-  content: "";
-  position: absolute;
-  z-index: 1;
-  pointer-events: none;
+  content: none !important;
 }
 
 .atlas-home-task-hero .atlas-run-sheet-box:nth-child(1) {
@@ -73,36 +106,14 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
-.atlas-home-task-hero .atlas-run-sheet-box:nth-child(1)::before {
-  top: 13px;
-  left: 13px;
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: white;
-  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.1);
-}
-
 .atlas-home-task-hero .atlas-run-sheet-box:nth-child(2) {
   background: rgba(126, 132, 187, 0.26);
   border-color: rgba(255, 255, 255, 0.24);
 }
 
-.atlas-home-task-hero .atlas-run-sheet-box:nth-child(2)::before {
-  top: 13px;
-  left: 13px;
-  width: 12px;
-  height: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.7);
-  border-radius: 999px;
-}
-
-.atlas-home-task-hero .atlas-run-sheet-box:nth-child(2)::after {
-  top: 18px;
-  left: 26px;
-  width: 25px;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.34);
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(2) > small,
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(3) > small {
+  color: rgba(255, 255, 255, 0.76);
 }
 
 .atlas-home-task-hero .atlas-run-sheet-box:nth-child(3) {
@@ -111,48 +122,19 @@
   border-color: rgba(255, 255, 255, 0.34);
 }
 
-.atlas-home-task-hero .atlas-run-sheet-box:nth-child(3)::before {
-  top: 12px;
-  left: 12px;
-  width: 15px;
-  height: 15px;
-  border: 2px dashed rgba(255, 255, 255, 0.68);
-  border-radius: 999px;
-}
-
-.atlas-home-task-hero .atlas-run-sheet-box:nth-child(3)::after {
-  top: 17px;
-  left: 17px;
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.8);
-}
-
 .atlas-home-task-hero .atlas-run-sheet-box:nth-child(4) {
   background: rgba(116, 86, 92, 0.24);
   border-color: rgba(255, 223, 214, 0.44);
 }
 
-.atlas-home-task-hero .atlas-run-sheet-box:nth-child(4)::before {
-  top: 12px;
-  left: 13px;
-  width: 4px;
-  height: 18px;
-  border-radius: 999px;
-  background: rgba(255, 232, 224, 0.84);
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(4) > small,
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(4) > em {
+  color: rgba(255, 232, 224, 0.86);
 }
 
-.atlas-home-task-hero .atlas-run-sheet-box:nth-child(4)::after {
-  top: 34px;
-  left: 13px;
-  width: 4px;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(255, 232, 224, 0.84);
-}
-
-.atlas-home-task-hero .atlas-run-sheet-box[data-atlas-state="quiet"] > strong {
+.atlas-home-task-hero .atlas-run-sheet-box[data-atlas-state="quiet"] > small,
+.atlas-home-task-hero .atlas-run-sheet-box[data-atlas-state="quiet"] > strong,
+.atlas-home-task-hero .atlas-run-sheet-box[data-atlas-state="quiet"] > em {
   display: none;
 }
 
