@@ -18,6 +18,7 @@ type Props = {
   task: AtlasTaskCard;
   instruction: string;
   showCondition?: boolean;
+  showZoneLabel?: boolean;
   presentation?: "default" | "field-sheet";
 };
 
@@ -86,6 +87,7 @@ export default function TaskDominionTrail({
   task,
   instruction,
   showCondition = true,
+  showZoneLabel = true,
   presentation = "default",
 }: Props) {
   const objectKey = trailObjectKey(task);
@@ -122,7 +124,7 @@ export default function TaskDominionTrail({
     <section className={`atlas-task-dominion${isFieldSheet ? " is-field-sheet" : ""}`} aria-label={`${model.placeLabel} task`}>
       <header className="atlas-task-dominion-place">
         <div>
-          <small>{model.zoneLabel}</small>
+          {showZoneLabel ? <small>{model.zoneLabel}</small> : null}
           <strong>{model.placeLabel}</strong>
         </div>
         <span>{model.subjectLabel}</span>
