@@ -17,6 +17,7 @@ import { atlasTrailFromTendingTrack } from "@/lib/atlas/trail";
 type Props = {
   task: AtlasTaskCard;
   instruction: string;
+  showCondition?: boolean;
 };
 
 type ExternalTaskLink = {
@@ -52,7 +53,7 @@ function externalTaskLink(task: AtlasTaskCard): ExternalTaskLink | null {
   }
 }
 
-export default function TaskDominionTrail({ task, instruction }: Props) {
+export default function TaskDominionTrail({ task, instruction, showCondition = true }: Props) {
   const objectKey = trailObjectKey(task);
   const [track, setTrack] = useState<TendingBedTrack | null>(null);
 
@@ -113,7 +114,7 @@ export default function TaskDominionTrail({ task, instruction }: Props) {
         </div>
       </section>
 
-      {condition.meaningful ? (
+      {showCondition && condition.meaningful ? (
         <section
           className="atlas-task-condition-rail"
           aria-label={`${condition.label}: now ${condition.points[condition.currentIndex]}, target ${condition.points[condition.targetIndex]}`}
