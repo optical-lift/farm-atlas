@@ -18,6 +18,7 @@ const projectCreateRoute = read("app/api/atlas/projects/[projectId]/tasks/route.
 const portfolio = read("lib/atlas/portfolio.ts");
 const layout = read("app/layout.tsx");
 const farmMigration = read("supabase/migrations/20260729183500_atlas_owner_operator_mode_foundation.sql");
+const accountMigration = read("supabase/migrations/20260729200356_atlas_owner_operator_dynamic_accounts_v1.sql");
 
 test("owner operator mode keeps one authenticated owner session and a secure account cookie", () => {
   assert.match(context, /ATLAS_OPERATOR_COOKIE = "atlas_operator_account"/);
@@ -27,6 +28,15 @@ test("owner operator mode keeps one authenticated owner session and a secure acc
   assert.match(selectionRoute, /httpOnly: true/);
   assert.match(selectionRoute, /sameSite: "lax"/);
   assert.match(selectionRoute, /context\.effective\.accountId/);
+});
+
+test("new active farm and organization accounts populate the operator selector automatically", () => {
+  assert.match(accountMigration, /from atlas\.farm_memberships fm/);
+  assert.match(accountMigration, /union\s+select om\.user_id[\s\S]*from atlas\.organization_memberships om/i);
+  assert.match(accountMigration, /where fm\.active = true/);
+  assert.match(accountMigration, /where om\.active = true/);
+  assert.match(accountMigration, /'accountId', ar\.user_id/);
+  assert.doesNotMatch(accountMigration, /Katie|Anna|Marshall/);
 });
 
 test("the owner can switch among every discovered Atlas account without changing routes", () => {
@@ -58,4 +68,5 @@ test("farm and project mutations preserve the real actor and selected account", 
   assert.match(farmMigration, /'operator_mode', true/);
   assert.match(farmMigration, /'actor_membership_id', v_actor_membership_id/);
   assert.match(farmMigration, /'effective_membership_id', v_effective_membership_id/);
+  assert.match(accountMigration, /'effective_account_id', v_effective_user_id/);
 });
