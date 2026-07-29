@@ -69,15 +69,26 @@ test("haphazard owner notes have one idempotent structured ingestion contract", 
   assert.match(ingest, /Only the farm owner may record crop occupancy/);
 });
 
-test("the Weed Card presents farm facts without explanatory prose", () => {
-  const component = read("components/atlas/crop-occupancy-list.tsx");
+test("the Weed Card renders a compact text map with explicit cardinal orientation", () => {
+  const migration = read("supabase/migrations/20260729163000_oriented_bed_map_v1.sql");
+  const component = read("components/atlas/crop-occupancy-bed-map.tsx");
+  const css = read("components/atlas/crop-occupancy-bed-map.module.css");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
+  const route = read("app/api/atlas/weed-card/route.ts");
 
-  assert.match(component, /group\.groupLabel/);
-  assert.match(component, /cohort\.displayLabel/);
-  assert.match(component, /cohort\.placementSummary/);
-  assert.match(component, /~\$\{amount\} expected/);
-  assert.match(component, /cohort\.stageLabel/);
-  assert.match(focus, /moveDetails=\{<CropOccupancyList groups=\{card\.occupancyGroups\} \/>\}/);
-  assert.doesNotMatch(component, /Plants in this bed|Keep|Protect|Current move|This means/);
+  assert.match(migration, /create table if not exists atlas\.object_map_frames/);
+  assert.match(migration, /'north_south','north','south','west','east'/);
+  assert.match(migration, /go\.stable_key='eb_sunflower_7'/);
+  assert.match(migration, /anchor_edge='north'/);
+  assert.match(migration, /long_end_ft=3/);
+  assert.match(migration, /object_crop_bed_map_v1/);
+  assert.match(component, /edgeLabel\(map\.leftEdge\)/);
+  assert.match(component, /edgeLabel\(map\.rightEdge\)/);
+  assert.match(component, /placementText\(placement\)/);
+  assert.match(component, /styles\.uncertain/);
+  assert.match(css, /grid-template-columns: auto minmax\(0, 1fr\) auto/);
+  assert.match(css, /border-top-style: dashed/);
+  assert.match(focus, /<CropOccupancyBedMap map=\{card\.bedMap\} \/>/);
+  assert.match(route, /object_crop_bed_map_v1/);
+  assert.doesNotMatch(component, /Perennial|Date unknown|Observed/);
 });

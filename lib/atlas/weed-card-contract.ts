@@ -51,6 +51,51 @@ export type AtlasCropOccupancyGroup = {
   cohorts: AtlasCropOccupancyCohort[];
 };
 
+export type AtlasMapEdge = "north" | "south" | "east" | "west";
+
+export type AtlasBedMapPlacement = {
+  placementId: string;
+  cropCycleId: string;
+  displayLabel: string;
+  stage?: string | null;
+  stageLabel: string;
+  lifeCycle: string;
+  placementMode?: string | null;
+  placementLabel?: string | null;
+  rowCount?: number | null;
+  rowLengthFt?: number | null;
+  areaSqft?: number | null;
+  explicitPlantCount?: number | null;
+  clumpCount?: number | null;
+  expectedQuantity?: number | null;
+  expectedQuantityKind?: "recorded" | "calculated" | "unknown" | null;
+  observedQuantity?: number | null;
+  observedQuantityUnit?: string | null;
+  standPercent?: number | null;
+  anchorEdge?: AtlasMapEdge | null;
+  longStartFt?: number | null;
+  longEndFt?: number | null;
+  crossStartFt?: number | null;
+  crossEndFt?: number | null;
+  positionConfidence: "unknown" | "low" | "medium" | "high";
+};
+
+export type AtlasBedMap = {
+  objectId: string;
+  objectKey: string;
+  objectLabel: string;
+  lengthFt: number | null;
+  widthFt: number | null;
+  orientationKnown: boolean;
+  longAxis: "north_south" | "east_west" | "unknown";
+  leftEdge: AtlasMapEdge | null;
+  rightEdge: AtlasMapEdge | null;
+  topEdge: AtlasMapEdge | null;
+  bottomEdge: AtlasMapEdge | null;
+  orientationSource?: string | null;
+  placements: AtlasBedMapPlacement[];
+};
+
 export type AtlasWeedCardContext = {
   taskId: string;
   taskStatus: string;
@@ -63,6 +108,7 @@ export type AtlasWeedCardContext = {
   objectLabel: string;
   zoneLabel: string;
   occupancyGroups: AtlasCropOccupancyGroup[];
+  bedMap?: AtlasBedMap | null;
   condition: AtlasWeedCondition;
   targetCondition: AtlasWeedCondition;
   totalMinutes: number;

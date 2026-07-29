@@ -24,7 +24,16 @@ export async function GET(request: Request) {
   if (error?.code === "42501") return atlasApiError(403, "weed_card_forbidden", "This Weed Card is not available to the signed-in farm member.");
   if (error?.code === "P0002") return atlasApiError(404, "weed_card_not_found", "The Weed Card was not found.");
   if (error) return atlasApiError(500, "weed_card_read_failed", "Atlas could not load the Weed Card.");
-  if (!data) return atlasApiError(404, "weed_card_not_found", "The Weed Card was not found.");
+  if (!data || typeof data !== "object" || Array.isArray(data)) return atlasApiError(404, "weed_card_not_found", "The Weed Card was not found.");
 
-  return privateJson({ ok: true, card: data });
+  const card = data as Record<string, unknown>;
+  const objectId = typeof card.objectId === "string" ? card.objectId : "";
+  let bedMap: unknown = null;
+
+  if (objectId) {
+    const mapResult = await supabase.rpc("object_crop_bed_map_v1", { p_object_id: objectId });
+    if (!mapResult.error) bedMap = mapResult.data;
+  }
+
+  return privateJson({ ok: true, card: { ...card, bedMap } });
 }
