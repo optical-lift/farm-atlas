@@ -1,5 +1,9 @@
 import "server-only";
 
+import {
+  effectiveOperatorAccountId,
+  readAtlasOwnerOperatorContext,
+} from "@/lib/atlas/operator-context";
 import type { AtlasTrailContext } from "@/lib/atlas/trail";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
@@ -59,15 +63,8 @@ export type AtlasPortfolioAttention = {
 };
 
 export type AtlasPortfolioHome = {
-  organization: {
-    organizationId: string;
-    organizationKey: string;
-    name: string;
-  };
-  viewer: {
-    role: string;
-    isOwner: boolean;
-  };
+  organization: { organizationId: string; organizationKey: string; name: string };
+  viewer: { role: string; isOwner: boolean };
   workstreams: string[];
   attention: AtlasPortfolioAttention[];
   crossFarmProjects: AtlasPortfolioProject[];
@@ -110,10 +107,7 @@ export type AtlasProjectAttention = {
 
 export type AtlasProjectDetail = {
   project: AtlasPortfolioProject;
-  permissions: {
-    canCreateTasks: boolean;
-    isOrganizationOwner: boolean;
-  };
+  permissions: { canCreateTasks: boolean; isOrganizationOwner: boolean };
   tasks: AtlasProjectTask[];
   steps: AtlasProjectStep[];
   attention: AtlasProjectAttention[];
@@ -124,52 +118,58 @@ export type AtlasProjectTaskFocus = {
   project: AtlasPortfolioProject;
   task: AtlasProjectTask;
   step: AtlasProjectStep | null;
-  permissions: {
-    canComplete: boolean;
-    canEdit: boolean;
-    isOrganizationOwner: boolean;
-  };
+  permissions: { canComplete: boolean; canEdit: boolean; isOrganizationOwner: boolean };
 };
 
 type RpcError = { message?: string };
+type OperatorHomeResult = { organizationHome?: AtlasPortfolioHome | null };
 
-export async function readAtlasPortfolioHome(
-  organizationId: string,
-): Promise<AtlasPortfolioHome> {
+export async function readAtlasPortfolioHome(organizationId: string): Promise<AtlasPortfolioHome> {
+  const operatorContext = await readAtlasOwnerOperatorContext();
+  const effectiveAccountId = effectiveOperatorAccountId(operatorContext);
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("portfolio_home_v1", {
-    p_organization_id: organizationId,
-  });
+  const { data, error } = effectiveAccountId
+    ? await supabase.rpc("owner_operator_organization_home_v1", {
+        p_effective_account_id: effectiveAccountId,
+        p_organization_id: organizationId,
+      })
+    : await supabase.rpc("portfolio_home_v1", { p_organization_id: organizationId });
 
-  if (error || !data) {
-    throw new Error((error as RpcError | null)?.message || "Feast Guild portfolio read failed.");
+  if (error || !data) throw new Error((error as RpcError | null)?.message || "Feast Guild portfolio read failed.");
+  if (effectiveAccountId) {
+    const home = (data as OperatorHomeResult).organizationHome;
+    if (!home) throw new Error("The selected account has no visible portfolio.");
+    return home;
   }
-
   return data as AtlasPortfolioHome;
 }
 
 export async function readAtlasProjectDetail(projectId: string): Promise<AtlasProjectDetail> {
+  const operatorContext = await readAtlasOwnerOperatorContext();
+  const effectiveAccountId = effectiveOperatorAccountId(operatorContext);
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("project_detail_v1", {
-    p_project_id: projectId,
-  });
+  const { data, error } = effectiveAccountId
+    ? await supabase.rpc("owner_operator_project_detail_v1", {
+        p_effective_account_id: effectiveAccountId,
+        p_project_id: projectId,
+      })
+    : await supabase.rpc("project_detail_v1", { p_project_id: projectId });
 
-  if (error || !data) {
-    throw new Error((error as RpcError | null)?.message || "Atlas project read failed.");
-  }
-
+  if (error || !data) throw new Error((error as RpcError | null)?.message || "Atlas project read failed.");
   return data as AtlasProjectDetail;
 }
 
 export async function readAtlasProjectTaskFocus(taskId: string): Promise<AtlasProjectTaskFocus | null> {
+  const operatorContext = await readAtlasOwnerOperatorContext();
+  const effectiveAccountId = effectiveOperatorAccountId(operatorContext);
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("project_task_focus_v1", {
-    p_task_id: taskId,
-  });
+  const { data, error } = effectiveAccountId
+    ? await supabase.rpc("owner_operator_project_task_focus_v1", {
+        p_effective_account_id: effectiveAccountId,
+        p_task_id: taskId,
+      })
+    : await supabase.rpc("project_task_focus_v1", { p_task_id: taskId });
 
-  if (error) {
-    throw new Error((error as RpcError | null)?.message || "Atlas project task read failed.");
-  }
-
+  if (error) throw new Error((error as RpcError | null)?.message || "Atlas project task read failed.");
   return data ? data as AtlasProjectTaskFocus : null;
 }
