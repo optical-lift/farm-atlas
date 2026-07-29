@@ -132,6 +132,7 @@ test("task transition route uses cookie auth and forwards the full RPC payload",
   const route = read("app/api/atlas/task-transition/route.ts");
   assert.match(route, /requireAtlasApiAccess/);
   assert.match(route, /createAtlasServerClient/);
+  assert.match(route, /owner_operator_record_task_transition_v1/);
   assert.match(route, /owner_record_task_transition_v1/);
   assert.match(route, /worker_record_task_transition_v1/);
   assert.match(route, /owner_reopen_task_completion_v1/);
@@ -139,10 +140,10 @@ test("task transition route uses cookie auth and forwards the full RPC payload",
   assert.match(route, /owner_correction_required/);
   assert.match(route, /x-atlas-intent/);
   assert.match(route, /private, no-store/);
-  assert.equal((route.match(/p_target_date: input\.targetDate/g) ?? []).length, 2);
-  assert.equal((route.match(/p_lane_key: input\.laneKey/g) ?? []).length, 2);
-  assert.equal((route.match(/p_work_key: input\.workKey/g) ?? []).length, 2);
-  assert.equal((route.match(/p_existing_field_log_id: input\.existingFieldLogId/g) ?? []).length, 2);
+  assert.equal((route.match(/p_target_date: input\.targetDate/g) ?? []).length, 3);
+  assert.equal((route.match(/p_lane_key: input\.laneKey/g) ?? []).length, 3);
+  assert.equal((route.match(/p_work_key: input\.workKey/g) ?? []).length, 3);
+  assert.equal((route.match(/p_existing_field_log_id: input\.existingFieldLogId/g) ?? []).length, 3);
   assert.doesNotMatch(route, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.doesNotMatch(route, /atlasSupabase/);
   assert.doesNotMatch(route, /supabase\.rpc\("record_task_transition_v1"/);
