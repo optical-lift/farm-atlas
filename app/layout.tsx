@@ -16,6 +16,7 @@ import TaskResultAnchorPatch from "./TaskResultAnchorPatch";
 import ProjectTaskDestinationGuard from "./ProjectTaskDestinationGuard";
 import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
 import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
+import TaskSetAsideDayPatch from "./TaskSetAsideDayPatch";
 import OwnerOperatorMode from "./OwnerOperatorMode";
 import "./globals.css";
 import "./atlas-primitives.css";
@@ -74,6 +75,7 @@ import "./project-task-timeline.css";
 import "./tending-task-timeline.css";
 import "./home-cover-v1.css";
 import "./weed-card-grazer.css";
+import "./task-day-set-aside.css";
 import "./owner-operator-mode.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -106,6 +108,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <ProjectTaskDestinationGuard />
         <UniversalCollectionIdentity />
         <DayTaskTitleLinkPatch />
+        <TaskSetAsideDayPatch />
         {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}
       </body>
