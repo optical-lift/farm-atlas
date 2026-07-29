@@ -13,6 +13,7 @@ import {
   type AtlasWeedCondition,
 } from "@/lib/atlas/weed-card-contract";
 import { postAtlasWeedCardSession } from "@/lib/atlas/weed-card-client";
+import styles from "./weed-card-task-focus.module.css";
 
 type Props = {
   task: AtlasTaskCard;
@@ -89,7 +90,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   }
 
   return (
-    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-weed-card-page-shell">
+    <main className={`${styles.root} atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-weed-card-page-shell`}>
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
           <Link href={assignee.listPath} className="atlas-phone-brand atlas-task-header-brand">
