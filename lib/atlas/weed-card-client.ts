@@ -49,6 +49,26 @@ export async function postAtlasWeedCardSession(
   return readMutationResponse<AtlasWeedCardSessionResult>(response, "Weed Card pass failed.");
 }
 
+export async function postAtlasFinishPartialWeedCardDay(
+  input: AtlasWeedCardSessionInput,
+): Promise<AtlasWeedCardSessionResult> {
+  const response = await fetch("/api/atlas/weed-card-partial", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "x-atlas-intent": "weed-card-partial-v1",
+    },
+    cache: "no-store",
+    body: JSON.stringify({
+      ...input,
+      idempotencyKey: input.idempotencyKey || mutationKey("partial", input.taskId),
+    }),
+  });
+
+  return readMutationResponse<AtlasWeedCardSessionResult>(response, "Atlas could not save the partial Weed Card work.");
+}
+
 export async function postAtlasFinishWeedCardDay(
   input: AtlasFinishWeedCardDayInput,
 ): Promise<AtlasFinishWeedCardDayResult> {
