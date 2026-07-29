@@ -17,12 +17,23 @@ function currentChecklistDone(task: AtlasTaskCard) {
   return task.status === "done" || checklistStatus === "done";
 }
 
+function actionButtons(item: Element) {
+  return Array.from(item.querySelectorAll<HTMLButtonElement>(".atlas-plant-check__actions button"));
+}
+
 function visibleToggleButton(item: Element, done: boolean) {
   const wanted = done ? "reopen" : "mark done";
-  const buttons = Array.from(item.querySelectorAll<HTMLButtonElement>(".atlas-plant-check__actions button"));
+  const buttons = actionButtons(item);
   return buttons.find((button) => button.textContent?.trim().toLowerCase() === wanted)
     ?? buttons.at(-1)
     ?? null;
+}
+
+function visibleNotesButton(item: Element) {
+  return actionButtons(item).find((button) => {
+    const label = button.textContent?.trim().toLowerCase() ?? "";
+    return label.includes("company notes") || label === "close notes";
+  }) ?? null;
 }
 
 export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: Props) {
@@ -42,14 +53,23 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
     const rootElement = rootRef.current as HTMLDivElement;
     if (!rootElement) return;
 
-    function enhanceMarks() {
-      rootElement.querySelectorAll<HTMLElement>(".atlas-plant-check__mark").forEach((mark) => {
-        const item = mark.closest(".atlas-plant-check__item");
-        const done = Boolean(item?.classList.contains("is-done"));
-        mark.setAttribute("role", "button");
-        mark.setAttribute("tabindex", "0");
-        mark.setAttribute("aria-pressed", String(done));
-        mark.setAttribute("aria-label", done ? "Reopen subtask" : "Mark subtask complete");
+    function enhanceRows() {
+      rootElement.querySelectorAll<HTMLElement>(".atlas-plant-check__item").forEach((item) => {
+        const done = item.classList.contains("is-done");
+        const mark = item.querySelector<HTMLElement>(".atlas-plant-check__mark");
+        if (mark) {
+          mark.setAttribute("role", "button");
+          mark.setAttribute("tabindex", "0");
+          mark.setAttribute("aria-pressed", String(done));
+          mark.setAttribute("aria-label", done ? "Reopen subtask" : "Mark subtask complete");
+        }
+
+        const content = item.querySelector<HTMLElement>(".atlas-plant-check__content");
+        if (content && visibleNotesButton(item)) {
+          content.setAttribute("role", "button");
+          content.setAttribute("tabindex", "0");
+          content.setAttribute("aria-label", "Open company findings for this input");
+        }
       });
     }
 
@@ -60,25 +80,54 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
       visibleToggleButton(item, done)?.click();
     }
 
+    function activateNotes(target: Element) {
+      const item = target.closest(".atlas-plant-check__item");
+      if (!item) return;
+      visibleNotesButton(item)?.click();
+    }
+
+    function isNativeControl(target: Element) {
+      return Boolean(target.closest("button, a, input, textarea, select, option, label, form"));
+    }
+
     function onClick(event: MouseEvent) {
       const target = event.target as Element | null;
-      const mark = target?.closest<HTMLElement>(".atlas-plant-check__mark");
-      if (!mark || !rootElement.contains(mark)) return;
+      if (!target || !rootElement.contains(target)) return;
+
+      const mark = target.closest<HTMLElement>(".atlas-plant-check__mark");
+      if (mark) {
+        event.preventDefault();
+        activateMark(mark);
+        return;
+      }
+
+      if (isNativeControl(target)) return;
+      const content = target.closest<HTMLElement>(".atlas-plant-check__content");
+      if (!content) return;
       event.preventDefault();
-      activateMark(mark);
+      activateNotes(content);
     }
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Enter" && event.key !== " ") return;
       const target = event.target as Element | null;
-      const mark = target?.closest<HTMLElement>(".atlas-plant-check__mark");
-      if (!mark || !rootElement.contains(mark)) return;
+      if (!target || !rootElement.contains(target)) return;
+
+      const mark = target.closest<HTMLElement>(".atlas-plant-check__mark");
+      if (mark) {
+        event.preventDefault();
+        activateMark(mark);
+        return;
+      }
+
+      const content = target.closest<HTMLElement>(".atlas-plant-check__content");
+      if (!content || isNativeControl(target)) return;
       event.preventDefault();
-      activateMark(mark);
+      activateNotes(content);
     }
 
-    enhanceMarks();
-    const observer = new MutationObserver(enhanceMarks);
+    enhanceRows();
+    const observer = new MutationObserver(enhanceRows);
     observer.observe(rootElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
     rootElement.addEventListener("click", onClick);
     rootElement.addEventListener("keydown", onKeyDown);
@@ -101,15 +150,18 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
           grid-column: 1 !important;
           width: 100% !important;
           padding-right: 18px !important;
+          cursor: pointer !important;
+          touch-action: manipulation;
+        }
+        .atlas-network-input-task .atlas-plant-check__content:focus-visible,
+        .atlas-network-input-task .atlas-plant-check__mark:focus-visible {
+          outline: 3px solid rgba(85, 90, 134, .38);
+          outline-offset: 4px;
         }
         .atlas-network-input-task .atlas-plant-check__mark {
           cursor: pointer !important;
           pointer-events: auto !important;
           touch-action: manipulation;
-        }
-        .atlas-network-input-task .atlas-plant-check__mark:focus-visible {
-          outline: 3px solid rgba(85, 90, 134, .38);
-          outline-offset: 4px;
         }
         .atlas-network-input-task .atlas-plant-check__actions,
         .atlas-network-input-task .atlas-plant-check__actions.has-two-actions {
