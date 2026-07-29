@@ -20,8 +20,9 @@ test("every weed task routes to the occupancy-aware persistent Weed Card", () =>
   assert.match(focus, /<CropOccupancyList groups=\{card\.occupancyGroups\} \/>/);
   assert.match(focus, /showSubjectLabel=\{false\}/);
   assert.match(focus, /moveDetails=/);
-  assert.match(focus, /presentation="field-sheet"/);
+  assert.match(focus, /presentation="weed-sheet"/);
   assert.match(trail, /moveDetails\?: ReactNode/);
+  assert.match(trail, /atlas-task-dominion-weed-map/);
   assert.match(occupancy, /group\.groupLabel/);
   assert.match(occupancy, /cohort\.placementSummary/);
   assert.match(occupancy, /cohort\.stageLabel/);

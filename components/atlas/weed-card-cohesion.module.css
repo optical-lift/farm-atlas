@@ -1,0 +1,164 @@
+.cohesive :global(.atlas-weed-card-top) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.cohesive :global(.atlas-weed-card-top .atlas-note-plus) {
+  justify-self: end;
+}
+
+.cohesive :global(.atlas-task-dominion.is-weed-sheet) {
+  padding: 18px 18px 0;
+}
+
+.cohesive :global(.atlas-task-dominion-weed-heading) {
+  display: grid;
+  gap: 7px;
+}
+
+.cohesive :global(.atlas-task-dominion-weed-meta) {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  color: #777970;
+}
+
+.cohesive :global(.atlas-task-dominion-weed-meta strong),
+.cohesive :global(.atlas-task-dominion-weed-meta time) {
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 860;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.cohesive :global(.atlas-task-dominion-weed-meta strong) {
+  overflow: hidden;
+  color: #696b63;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cohesive :global(.atlas-task-dominion-weed-meta time) {
+  flex: 0 0 auto;
+  color: #85877e;
+  letter-spacing: 0.08em;
+}
+
+.cohesive :global(.atlas-task-dominion-weed-heading h1) {
+  margin: 0;
+  color: #303243;
+  font-size: clamp(31px, 9vw, 39px);
+  line-height: 0.98;
+  font-weight: 940;
+  letter-spacing: -0.055em;
+}
+
+.cohesive :global(.atlas-trail-weed-sheet) {
+  margin-top: 15px;
+  padding: 0 0 12px;
+}
+
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  overflow: visible;
+  padding: 0;
+}
+
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li) {
+  min-width: 0;
+  flex: none;
+  gap: 3px;
+  color: #85877e;
+}
+
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li:not(:last-child)::after) {
+  top: 4px;
+  left: calc(50% + 5px);
+  width: calc(100% - 10px);
+  height: 1px;
+  background: rgba(190, 185, 174, 0.62);
+}
+
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li > i),
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li > a > i) {
+  width: 9px;
+  height: 9px;
+  border-width: 1px;
+  border-color: rgba(153, 151, 141, 0.8);
+  background: #fffdf9;
+  box-shadow: none;
+}
+
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li[data-status="complete"]),
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li[data-status="current"]),
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li[data-status="blocked"]) {
+  color: #696b63;
+}
+
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li[data-status="complete"] > i),
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li[data-status="complete"] > a > i) {
+  border-color: rgba(127, 143, 119, 0.72);
+  background: rgba(127, 143, 119, 0.34);
+}
+
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li[data-status="complete"]:not(:last-child)::after) {
+  background: rgba(141, 151, 133, 0.52);
+}
+
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li[data-status="current"] > i),
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li[data-status="current"] > a > i) {
+  border-color: rgba(126, 132, 187, 0.85);
+  background: #fffdf9;
+  box-shadow: 0 0 0 2px rgba(126, 132, 187, 0.14);
+}
+
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li[data-status="blocked"] > i),
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li[data-status="blocked"] > a > i) {
+  border-color: rgba(147, 110, 97, 0.72);
+  background: rgba(147, 110, 97, 0.12);
+}
+
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li > span),
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li > a > span) {
+  max-width: 100%;
+  font-size: 8px;
+  line-height: 1.05;
+  font-weight: 760;
+}
+
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li > time),
+.cohesive :global(.atlas-trail-weed-sheet .atlas-trail-track li > a > time) {
+  max-width: 100%;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.cohesive :global(.atlas-task-dominion-weed-no-trail) {
+  margin: 15px 0 12px;
+}
+
+.cohesive :global(.atlas-task-dominion-weed-map) {
+  padding: 0 0 16px;
+}
+
+.cohesive :global(.atlas-weed-pass) {
+  margin-top: 0;
+  padding-top: 16px;
+  border-top-color: rgba(190, 185, 174, 0.62);
+}
+
+@media (max-width: 360px) {
+  .cohesive :global(.atlas-task-dominion.is-weed-sheet) {
+    padding-inline: 15px;
+  }
+
+  .cohesive :global(.atlas-task-dominion-weed-heading h1) {
+    font-size: 31px;
+  }
+}

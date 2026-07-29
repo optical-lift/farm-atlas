@@ -57,9 +57,10 @@ test("the Weed Card presents Clear and Partly finished as its two outcomes", () 
   assert.match(canonical, /isWeedTask/);
   assert.match(canonical, /WeedCardTaskLoader/);
   assert.match(loader, /\/api\/atlas\/weed-card\?taskId=/);
-  assert.match(focus, /const actionTitle = `Weed \$\{shortObjectLabel\(card\.objectKey, card\.objectLabel\)\}`/);
-  assert.match(focus, /showZoneLabel=\{false\}/);
-  assert.match(focus, /showSubjectLabel=\{false\}/);
+  assert.match(focus, /instruction="Weed"/);
+  assert.match(focus, /presentation="weed-sheet"/);
+  assert.match(focus, /variant="notebook"/);
+  assert.doesNotMatch(focus, /atlas-weather-line/);
   assert.match(focus, /<CropOccupancyList groups=\{card\.occupancyGroups\} \/>/);
   assert.match(focus, /atlas-task-result-actions atlas-task-result-actions-simple atlas-weed-day-actions/);
   assert.match(focus, /className="done"/);
@@ -69,14 +70,37 @@ test("the Weed Card presents Clear and Partly finished as its two outcomes", () 
   assert.match(focus, /conditionAfter: "clear"/);
   assert.match(focus, /Save partial/);
   assert.ok(focus.indexOf("<span>Condition</span>") < focus.indexOf("<span>Time</span>"));
-  assert.doesNotMatch(focus, /That’s all for today|>\s*Unfinished\s*<|>Log a pass</);
-  assert.match(trail, /showZoneLabel\?: boolean/);
+  assert.doesNotMatch(focus, /That’s all for today|>\s*Unfinished\s*<|>Log a pass/);
+  assert.match(trail, /presentation\?: "default" \| "field-sheet" \| "weed-sheet"/);
   assert.match(trail, /moveDetails\?: ReactNode/);
   assert.match(client, /weed-card-partial-v1/);
   assert.match(client, /\/api\/atlas\/weed-card-partial/);
   assert.match(passApi, /record_weed_card_pass_v1/);
   assert.match(partialApi, /finish_partial_weed_card_day_v1/);
   assert.match(partialApi, /conditionAfter === "clear"/);
+});
+
+test("the Weed Card reads as place, action, Trail, map, then condition", () => {
+  const focus = read("components/atlas/weed-card-task-focus.tsx");
+  const trail = read("components/atlas/task-dominion-trail.tsx");
+  const cohesion = read("components/atlas/weed-card-cohesion.module.css");
+  const map = read("components/atlas/crop-occupancy-bed-map.tsx");
+  const mapCss = read("components/atlas/crop-occupancy-bed-map.module.css");
+
+  assert.match(trail, /atlas-task-dominion-weed-meta/);
+  assert.match(trail, /<h1>\{model\.instruction\}<\/h1>/);
+  assert.match(trail, /atlas-trail-weed-sheet/);
+  assert.match(trail, /atlas-task-dominion-weed-map/);
+  assert.ok(trail.indexOf("atlas-task-dominion-weed-heading") < trail.indexOf("atlas-trail-weed-sheet"));
+  assert.ok(trail.indexOf("atlas-trail-weed-sheet") < trail.indexOf("atlas-task-dominion-weed-map"));
+  assert.match(trail, /sheetDateLabel\(model\.dueLabel\)/);
+  assert.doesNotMatch(focus, /Today ·/);
+  assert.match(cohesion, /\.cohesive :global\(\.atlas-task-dominion-weed-meta\)/);
+  assert.match(cohesion, /\.cohesive :global\(\.atlas-trail-weed-sheet \.atlas-trail-track li:not\(:last-child\)::after\)/);
+  assert.match(map, /compactCropLabel/);
+  assert.match(map, /return "FMN"/);
+  assert.match(mapCss, /\.notebook \.bed/);
+  assert.match(mapCss, /rgba\(190, 185, 174, 0\.62\)/);
 });
 
 test("Partly finished closes one daily serving and releases one same-card continuation", () => {

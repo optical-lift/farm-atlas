@@ -9,6 +9,7 @@ import styles from "./crop-occupancy-bed-map.module.css";
 
 type Props = {
   map: AtlasBedMap | null | undefined;
+  variant?: "default" | "notebook";
 };
 
 function edgeLabel(edge: AtlasMapEdge | null | undefined) {
@@ -60,6 +61,13 @@ function compactPlacementText(placement: AtlasBedMapPlacement) {
     .join("—");
 }
 
+function compactCropLabel(value: string) {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "forget-me-not" || normalized === "forget me not") return "FMN";
+  if (normalized === "italian white sunflower") return "Italian White";
+  return value;
+}
+
 function isRowPlacement(placement: AtlasBedMapPlacement) {
   return placement.placementMode === "full_rows" || placement.placementMode === "partial_rows";
 }
@@ -106,14 +114,14 @@ function edgeBandBasis(placements: AtlasBedMapPlacement[], lengthFt: number | nu
     })
     .filter((value): value is number => value != null && value > 0);
   if (!knownSpans.length) return 18;
-  return Math.max(13, Math.min(28, (Math.max(...knownSpans) / lengthFt) * 100));
+  return Math.max(10, Math.min(24, (Math.max(...knownSpans) / lengthFt) * 100));
 }
 
 function EdgeBand({ placements, edge, lengthFt }: { placements: AtlasBedMapPlacement[]; edge: "left" | "right"; lengthFt: number | null }) {
   if (!placements.length) return null;
-  const names = Array.from(new Set(placements.map((placement) => placement.displayLabel)));
+  const names = Array.from(new Set(placements.map((placement) => compactCropLabel(placement.displayLabel))));
   const visibleText = placements.length === 1
-    ? [placements[0].displayLabel, establishmentDateLabel(placements[0].establishmentDate)]
+    ? [compactCropLabel(placements[0].displayLabel), establishmentDateLabel(placements[0].establishmentDate)]
         .filter((value): value is string => Boolean(value))
         .join(" · ")
     : names.join(" · ");
@@ -134,7 +142,7 @@ function chunks<T>(items: T[], size: number) {
   return result;
 }
 
-export default function CropOccupancyBedMap({ map }: Props) {
+export default function CropOccupancyBedMap({ map, variant = "default" }: Props) {
   if (!map) return null;
 
   const leftAnchored = map.placements.filter((placement) => placement.anchorEdge === map.leftEdge);
@@ -152,7 +160,7 @@ export default function CropOccupancyBedMap({ map }: Props) {
 
   return (
     <section
-      className={`${styles.root} ${map.orientationKnown ? "" : styles.unknownOrientation}`.trim()}
+      className={`${styles.root} ${variant === "notebook" ? styles.notebook : ""} ${map.orientationKnown ? "" : styles.unknownOrientation}`.trim()}
       aria-label={`Planting map for ${map.objectLabel}; ${orientationDescription}.`}
     >
       <div className={styles.bed}>

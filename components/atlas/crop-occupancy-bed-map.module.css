@@ -142,6 +142,75 @@
   opacity: 0.62;
 }
 
+.notebook {
+  margin-top: 0;
+  color: #85877e;
+}
+
+.notebook .bed {
+  border-color: rgba(190, 185, 174, 0.62);
+  border-radius: 0.36rem;
+  background: transparent;
+}
+
+.notebook .bedBody {
+  min-height: 5.35rem;
+}
+
+.notebook .rows {
+  gap: 0.28rem;
+  padding: 0.56rem 0.42rem 0.46rem;
+}
+
+.notebook .row {
+  color: #777970;
+  font-size: clamp(0.67rem, 2.7vw, 0.75rem);
+  font-weight: 720;
+}
+
+.notebook .row i {
+  border-top-color: rgba(190, 185, 174, 0.68);
+}
+
+.notebook .uncertain span {
+  color: #85877e;
+}
+
+.notebook .endDirection {
+  inset-block-start: 0.24rem;
+  color: rgba(133, 135, 126, 0.84);
+  font-size: 0.5rem;
+  font-weight: 780;
+}
+
+.notebook .edgeBand {
+  padding: 0.46rem 0.22rem 0.34rem;
+  background: transparent;
+  color: #777970;
+  font-size: clamp(0.56rem, 2.15vw, 0.64rem);
+  font-weight: 740;
+  line-height: 1.18;
+}
+
+.notebook .leftBand {
+  border-right-color: rgba(190, 185, 174, 0.62);
+}
+
+.notebook .rightBand {
+  border-left-color: rgba(190, 185, 174, 0.62);
+}
+
+.notebook .crossBand {
+  color: #777970;
+  font-size: 0.62rem;
+  font-weight: 720;
+}
+
+.notebook .topBand,
+.notebook .bottomBand {
+  border-color: rgba(190, 185, 174, 0.62);
+}
+
 @media (max-width: 390px) {
   .bedBody {
     min-height: 5.8rem;
@@ -150,5 +219,13 @@
   .edgeBand {
     min-width: 3.3rem;
     padding-inline: 0.2rem;
+  }
+
+  .notebook .bedBody {
+    min-height: 5.1rem;
+  }
+
+  .notebook .edgeBand {
+    min-width: 2.9rem;
   }
 }

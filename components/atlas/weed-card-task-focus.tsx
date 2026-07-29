@@ -18,6 +18,7 @@ import {
   postAtlasFinishPartialWeedCardDay,
   postAtlasWeedCardSession,
 } from "@/lib/atlas/weed-card-client";
+import cohesionStyles from "./weed-card-cohesion.module.css";
 import styles from "./weed-card-task-focus.module.css";
 
 type Props = {
@@ -51,32 +52,6 @@ function timeLabel(minutes: number) {
   return rest ? `${hours}h ${rest}m` : `${hours}h`;
 }
 
-function shortObjectLabel(objectKey: string, objectLabel: string) {
-  const keyPatterns: Array<[RegExp, string]> = [
-    [/^fr[_-]?(\d+)$/i, "FR"],
-    [/^eb(?:_sunflower)?[_-]?(\d+)$/i, "EB"],
-    [/^bb[_-]?(\d+)$/i, "BB"],
-    [/^bw[_-]?(\d+)$/i, "BW"],
-  ];
-  for (const [pattern, prefix] of keyPatterns) {
-    const match = objectKey.match(pattern);
-    if (match) return `${prefix}${match[1]}`;
-  }
-
-  const labelPatterns: Array<[RegExp, string]> = [
-    [/^Field Row\s+(\d+)$/i, "FR"],
-    [/^Entry Billboard Bed\s+(\d+)$/i, "EB"],
-    [/^Barn Bed\s+(\d+)$/i, "BB"],
-    [/^Berry Walk(?: Flower)? Bed\s+(\d+)$/i, "BW"],
-  ];
-  for (const [pattern, prefix] of labelPatterns) {
-    const match = objectLabel.match(pattern);
-    if (match) return `${prefix}${match[1]}`;
-  }
-
-  return objectLabel;
-}
-
 export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   const currentIndex = ATLAS_WEED_CONDITIONS.indexOf(card.condition);
   const availableConditions = ATLAS_WEED_CONDITIONS
@@ -103,9 +78,8 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
     : minutes
       ? `${minutes}m`
       : "Add time";
-  const actionTitle = `Weed ${shortObjectLabel(card.objectKey, card.objectLabel)}`;
   const occupancy = card.bedMap
-    ? <CropOccupancyBedMap map={card.bedMap} />
+    ? <CropOccupancyBedMap map={card.bedMap} variant="notebook" />
     : <CropOccupancyList groups={card.occupancyGroups} />;
 
   async function savePartial() {
@@ -155,14 +129,13 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   }
 
   return (
-    <main className={`${styles.root} atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-weed-card-page-shell`}>
+    <main className={`${styles.root} ${cohesionStyles.cohesive} atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-weed-card-page-shell`}>
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
-        <header className="atlas-phone-top atlas-dashboard-top">
+        <header className="atlas-phone-top atlas-dashboard-top atlas-weed-card-top">
           <Link href={assignee.listPath} className="atlas-phone-brand atlas-task-header-brand">
             <span className="atlas-phone-kicker">Atlas</span>
             <span className="atlas-phone-title">{assignee.label}</span>
           </Link>
-          <span className="atlas-weather-line">{ATLAS_WEED_CONDITION_LABELS[card.condition]}</span>
           <Link href={assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
         </header>
 
@@ -170,12 +143,12 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
           <article className="atlas-task-page-active atlas-task-ticket-card atlas-dominion-task-card atlas-weed-card-task-card">
             <TaskDominionTrail
               task={task}
-              instruction={actionTitle}
+              instruction="Weed"
               showCondition={false}
               showZoneLabel={false}
               showSubjectLabel={false}
               moveDetails={occupancy}
-              presentation="field-sheet"
+              presentation="weed-sheet"
             />
 
             <section className="atlas-weed-pass" aria-label={`${card.objectLabel} weed progress`}>
