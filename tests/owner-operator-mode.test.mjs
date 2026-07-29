@@ -13,41 +13,49 @@ const selectionRoute = read("app/api/atlas/operator-context/route.ts");
 const datedRoute = read("app/api/atlas/universal-task-cards/route.ts");
 const taskRoute = read("app/api/atlas/task-cards/route.ts");
 const transitionRoute = read("app/api/atlas/task-transition/route.ts");
+const projectTransitionRoute = read("app/api/atlas/project-tasks/[taskId]/transition/route.ts");
+const projectCreateRoute = read("app/api/atlas/projects/[projectId]/tasks/route.ts");
+const portfolio = read("lib/atlas/portfolio.ts");
 const layout = read("app/layout.tsx");
-const migration = read("supabase/migrations/20260729183500_atlas_owner_operator_mode_foundation.sql");
+const farmMigration = read("supabase/migrations/20260729183500_atlas_owner_operator_mode_foundation.sql");
 
-test("owner operator mode keeps one authenticated owner session and a secure worker cookie", () => {
-  assert.match(context, /ATLAS_OPERATOR_COOKIE = "atlas_operator_membership"/);
-  assert.match(context, /owner_operator_context_v1/);
-  assert.match(context, /session\?\.memberships\.some\(\(membership\) => membership\.role === "owner"\)/);
+test("owner operator mode keeps one authenticated owner session and a secure account cookie", () => {
+  assert.match(context, /ATLAS_OPERATOR_COOKIE = "atlas_operator_account"/);
+  assert.match(context, /LEGACY_ATLAS_OPERATOR_COOKIE = "atlas_operator_membership"/);
+  assert.match(context, /owner_operator_accounts_v1/);
+  assert.match(context, /organizationMemberships\.some\(\(membership\) => membership\.role === "owner"\)/);
   assert.match(selectionRoute, /httpOnly: true/);
   assert.match(selectionRoute, /sameSite: "lax"/);
-  assert.match(selectionRoute, /context\.effective\.membershipId/);
+  assert.match(selectionRoute, /context\.effective\.accountId/);
 });
 
-test("the owner can switch among live worker dashboards without changing routes", () => {
+test("the owner can switch among every discovered Atlas account without changing routes", () => {
   assert.match(switcher, /Operating as/);
+  assert.match(switcher, /option\.accountId/);
   assert.match(switcher, /window\.location\.reload\(\)/);
-  assert.match(switcher, /Actions change live farm data/);
+  assert.match(switcher, /Actions change live Atlas data/);
   assert.match(layout, /<OwnerOperatorMode context=\{operatorContext\} \/>/);
   assert.match(layout, /owner-operator-mode\.css/);
 });
 
-test("Home and dated task readers use the effective worker membership", () => {
+test("farm and organization dashboards use the selected account scope", () => {
   assert.match(operatorHome, /owner_operator_universal_home_v1/);
-  assert.match(operatorHome, /organizationMemberships: \[\]/);
-  assert.match(operatorHome, /canUseAnyOwnerTools: role === "owner"/);
+  assert.match(operatorHome, /owner_operator_organization_home_v1/);
+  assert.match(operatorHome, /effectiveOrganizationViewer/);
+  assert.match(datedRoute, /effectiveOperatorAccountId\(operatorContext\)/);
   assert.match(datedRoute, /effectiveOperatorMembershipId\(operatorContext\)/);
   assert.match(taskRoute, /owner_operator_task_cards_v1/);
-  assert.match(taskRoute, /operatorContext\.effective\.role/);
+  assert.match(taskRoute, /effective\.farmRole/);
+  assert.match(portfolio, /owner_operator_project_detail_v1/);
+  assert.match(portfolio, /owner_operator_project_task_focus_v1/);
 });
 
-test("operator mutations change live task data while preserving actor and effective identities", () => {
+test("farm and project mutations preserve the real actor and selected account", () => {
   assert.match(transitionRoute, /owner_operator_record_task_transition_v1/);
   assert.match(transitionRoute, /owner_operator_reopen_task_completion_v1/);
-  assert.match(migration, /'operator_mode', true/);
-  assert.match(migration, /'actor_membership_id', v_actor_membership_id/);
-  assert.match(migration, /'effective_membership_id', v_effective_membership_id/);
-  assert.match(migration, /target_membership\.farm_id = owner_membership\.farm_id/);
-  assert.match(migration, /owner_membership\.role = 'owner'/);
+  assert.match(projectTransitionRoute, /owner_operator_transition_project_task_v1/);
+  assert.match(projectCreateRoute, /owner_operator_create_project_task_v1/);
+  assert.match(farmMigration, /'operator_mode', true/);
+  assert.match(farmMigration, /'actor_membership_id', v_actor_membership_id/);
+  assert.match(farmMigration, /'effective_membership_id', v_effective_membership_id/);
 });
