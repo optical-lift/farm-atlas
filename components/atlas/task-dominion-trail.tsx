@@ -23,7 +23,7 @@ type Props = {
   showSubjectLabel?: boolean;
   plantLabels?: string[];
   moveDetails?: ReactNode;
-  presentation?: "default" | "field-sheet";
+  presentation?: "default" | "field-sheet" | "weed-sheet";
 };
 
 type ExternalTaskLink = {
@@ -87,6 +87,12 @@ function fieldSheetTrail(context: AtlasTrailContext | null) {
   };
 }
 
+function sheetDateLabel(value: string) {
+  return value
+    .replace(/^(?:Today|Tomorrow)\s*·\s*/i, "")
+    .replace(/^Due\s+/i, "");
+}
+
 export default function TaskDominionTrail({
   task,
   instruction,
@@ -100,6 +106,7 @@ export default function TaskDominionTrail({
   const objectKey = trailObjectKey(task);
   const [track, setTrack] = useState<TendingBedTrack | null>(null);
   const isFieldSheet = presentation === "field-sheet";
+  const isWeedSheet = presentation === "weed-sheet";
 
   useEffect(() => {
     if (!objectKey) {
@@ -124,8 +131,44 @@ export default function TaskDominionTrail({
   const model = useMemo(() => taskDominionModel(task, track, instruction), [instruction, task, track]);
   const condition = useMemo(() => taskConditionRailModel(task), [task]);
   const trail = useMemo(() => track ? atlasTrailFromTendingTrack(track) : null, [track]);
-  const visibleTrail = useMemo(() => isFieldSheet ? fieldSheetTrail(trail) : trail, [isFieldSheet, trail]);
+  const visibleTrail = useMemo(
+    () => isFieldSheet || isWeedSheet ? fieldSheetTrail(trail) : trail,
+    [isFieldSheet, isWeedSheet, trail],
+  );
   const externalLink = useMemo(() => externalTaskLink(task), [task]);
+
+  if (isWeedSheet) {
+    return (
+      <section className="atlas-task-dominion is-weed-sheet" aria-label={`${model.placeLabel} task`}>
+        <header className="atlas-task-dominion-weed-heading">
+          <div className="atlas-task-dominion-weed-meta">
+            <strong>{model.placeLabel}</strong>
+            <time>{sheetDateLabel(model.dueLabel)}</time>
+          </div>
+          <h1>{model.instruction}</h1>
+        </header>
+
+        {visibleTrail ? (
+          <AtlasTrail context={visibleTrail} mode="compact" className="atlas-trail-weed-sheet" />
+        ) : (
+          <div className="atlas-task-dominion-no-trail atlas-task-dominion-weed-no-trail" aria-label="No linked Trail">
+            <span aria-hidden="true" />
+            <i aria-hidden="true" />
+            <span aria-hidden="true" />
+          </div>
+        )}
+
+        <section className="atlas-task-dominion-weed-map">
+          {moveDetails}
+          {plantLabels.length ? (
+            <ul className={plantStyles.list} aria-label="Plants in this bed">
+              {plantLabels.map((label) => <li className={plantStyles.item} key={label}>{label}</li>)}
+            </ul>
+          ) : null}
+        </section>
+      </section>
+    );
+  }
 
   return (
     <section className={`atlas-task-dominion${isFieldSheet ? " is-field-sheet" : ""}`} aria-label={`${model.placeLabel} task`}>
