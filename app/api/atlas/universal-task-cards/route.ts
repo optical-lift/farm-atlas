@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 
+import {
+  effectiveOperatorMembershipId,
+  readAtlasOwnerOperatorContext,
+} from "@/lib/atlas/operator-context";
+import { readAtlasOperatorUniversalHome } from "@/lib/atlas/operator-universal-home";
 import { getAtlasSession } from "@/lib/atlas/session";
-import { readAtlasUniversalHome } from "@/lib/atlas/universal-home";
 import {
   atlasUniversalPortalLabel,
   atlasUniversalTaskCards,
@@ -64,7 +68,12 @@ export async function GET(request: Request) {
   }
 
   try {
-    const home = await readAtlasUniversalHome(viewer, { doneDate, dueThrough });
+    const operatorContext = await readAtlasOwnerOperatorContext();
+    const home = await readAtlasOperatorUniversalHome(viewer, {
+      doneDate,
+      dueThrough,
+      effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
+    });
     const taskCards = atlasUniversalTaskCards(home);
     return privateJson({
       ok: true,
@@ -73,6 +82,9 @@ export async function GET(request: Request) {
       hasFarmScope: home.viewer.hasFarmScope,
       hasOrganizationScope: home.viewer.hasOrganizationScope,
       activeFarmName: home.activeFarm?.farmName ?? null,
+      role: home.activeFarm?.role ?? null,
+      operatorMode: operatorContext?.isOperating ?? false,
+      effectiveMembershipId: operatorContext?.isOperating ? operatorContext.effective.membershipId : null,
       taskCards,
       window: { doneDate, dueThrough },
     });
