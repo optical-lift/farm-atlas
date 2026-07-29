@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { getAtlasSession } from "@/lib/atlas/session";
 import type { AtlasLivingDay } from "@/lib/atlas/living-day-contract";
+import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
+import { getAtlasSession } from "@/lib/atlas/session";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,10 @@ export async function GET(request: Request) {
   const session = await getAtlasSession();
   if (!session) return privateJson({ ok: false, error: "Sign in required." }, 401);
 
-  const farmId = session.activeFarmId ?? session.memberships[0]?.farmId ?? null;
+  const operatorContext = await readAtlasOwnerOperatorContext();
+  const farmId = operatorContext?.isOperating
+    ? operatorContext.farmId
+    : session.activeFarmId ?? session.memberships[0]?.farmId ?? null;
   if (!farmId) return privateJson({ ok: false, error: "An active farm membership is required." }, 403);
 
   const requestedDate = new URL(request.url).searchParams.get("date");
@@ -51,7 +55,17 @@ export async function GET(request: Request) {
       p_day: dateIso,
     });
     if (error) throw error;
-    return privateJson({ ok: true, livingDay: data as AtlasLivingDay });
+
+    const livingDay = data as AtlasLivingDay;
+    const effectiveLivingDay = operatorContext?.isOperating && operatorContext.effective.role !== "owner"
+      ? { ...livingDay, ownerDecisions: [] }
+      : livingDay;
+
+    return privateJson({
+      ok: true,
+      livingDay: effectiveLivingDay,
+      operatorMode: operatorContext?.isOperating ?? false,
+    });
   } catch (error) {
     console.error("Atlas Living Day read failed:", error);
     return privateJson({ ok: false, error: "The Living Day could not be loaded." }, 500);
