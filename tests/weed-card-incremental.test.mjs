@@ -125,3 +125,21 @@ test("Clear closes the pass and returns the permanent card to its maintenance rh
   assert.match(migration, /active=p_condition_after='clear'/);
   assert.match(migration, /when 'clear' then 'maintained'/);
 });
+
+test("legacy weed work is backfilled only into still-open physical passes", () => {
+  const migration = read("supabase/migrations/20260729193000_legacy_weed_history_backfill_v1.sql");
+
+  assert.match(migration, /wc\.current_condition <> 'clear'/);
+  assert.match(migration, /mh\.outcome = 'partially_completed'/);
+  assert.match(migration, /mh\.actual_minutes is not null and mh\.actual_minutes > 0 as minutes_known/);
+  assert.match(migration, /Historical weed work · time unrecorded/);
+  assert.match(migration, /legacy_weed_history_backfill_v1/);
+  assert.match(migration, /backfill:maintenance_history:/);
+  assert.match(migration, /backfill:task_outcome:/);
+  assert.match(migration, /ws\.metadata ->> 'maintenance_history_id'/);
+  assert.match(migration, /sum\(ws\.minutes\)::integer as total_minutes/);
+  assert.match(migration, /day_closed/);
+  assert.match(migration, /reopened/);
+  assert.match(migration, /legacy_weed_history_unmapped_reason/);
+  assert.doesNotMatch(migration, /estimated_minutes/);
+});
