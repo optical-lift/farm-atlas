@@ -50,11 +50,13 @@ test("the Weed Card uses the known task footer and identifies the place once", (
   const passApi = read("app/api/atlas/weed-card-session/route.ts");
   const dayApi = read("app/api/atlas/weed-card-day/route.ts");
 
-  assert.match(canonical, /weed_card_session_task/);
+  assert.match(canonical, /isWeedTask/);
   assert.match(canonical, /WeedCardTaskLoader/);
   assert.match(loader, /\/api\/atlas\/weed-card\?taskId=/);
   assert.match(focus, /const actionTitle = `Weed \$\{shortObjectLabel\(card\.objectKey, card\.objectLabel\)\}`/);
   assert.match(focus, /showZoneLabel=\{false\}/);
+  assert.match(focus, /showSubjectLabel=\{false\}/);
+  assert.match(focus, /plantLabels=\{plantLabels\}/);
   assert.match(focus, /atlas-task-result-actions atlas-task-result-actions-simple atlas-weed-day-actions/);
   assert.match(focus, /className="done"/);
   assert.match(focus, />\s*Unfinished\s*</);
