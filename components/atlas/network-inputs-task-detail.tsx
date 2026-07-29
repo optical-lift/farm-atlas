@@ -197,6 +197,7 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
                           onClick={() => setOpenId(open ? null : input.task_id)}
                         >
                           <strong>{inputLabel(input)}</strong>
+                          <small>Tap to log info</small>
                           {saved ? <span>{saved}</span> : null}
                         </button>
                       </div>
@@ -250,6 +251,7 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
         .atlas-network-input.is-done .atlas-network-input__check { border-color: rgba(185,204,124,.9); background: rgba(222,233,183,.96); }
         .atlas-network-input__open { min-width: 0; padding: 18px 18px 18px 8px; border: 0; background: transparent; color: var(--atlas-text); text-align: left; touch-action: manipulation; }
         .atlas-network-input__open strong { display: block; font-size: 22px; line-height: 1.06; font-weight: 950; letter-spacing: -.035em; }
+        .atlas-network-input__open small { display: block; margin-top: 7px; color: var(--atlas-purple-dark); font-size: 12px; line-height: 1.2; font-weight: 900; letter-spacing: .02em; }
         .atlas-network-input__open span { display: block; margin-top: 9px; color: var(--atlas-muted); font-size: 14px; line-height: 1.35; font-weight: 750; white-space: pre-wrap; }
         .atlas-network-input__check:focus-visible, .atlas-network-input__open:focus-visible { outline: 3px solid rgba(85,90,134,.38); outline-offset: -3px; }
         .atlas-network-input__form { display: grid; gap: 10px; margin: 0 12px 12px; padding: 12px; border: 1px solid rgba(91,99,71,.18); border-radius: 16px; background: rgba(246,242,230,.82); }
