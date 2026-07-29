@@ -80,14 +80,8 @@ test("next-day intent preserves the familiar Tomorrow action", () => {
 });
 
 test("role routing preserves familiar outcomes and sends reopen through its safe inverse", () => {
-  assert.equal(
-    atlasTaskTransitionRpcForRole("owner", "rescheduled"),
-    "owner_record_task_transition_v1",
-  );
-  assert.equal(
-    atlasTaskTransitionRpcForRole("owner", "reopened"),
-    "owner_reopen_task_completion_v1",
-  );
+  assert.equal(atlasTaskTransitionRpcForRole("owner", "rescheduled"), "owner_record_task_transition_v1");
+  assert.equal(atlasTaskTransitionRpcForRole("owner", "reopened"), "owner_reopen_task_completion_v1");
 
   for (const role of ["farm_hand", "manager"]) {
     for (const transition of ATLAS_FARM_HAND_TRANSITIONS.filter((value) => value !== "reopened")) {
@@ -105,17 +99,8 @@ test("role routing preserves familiar outcomes and sends reopen through its safe
   }
 
   for (const transition of [
-    "done",
-    "partial",
-    "blocked",
-    "not_relevant",
-    "changed_plan",
-    "rescheduled",
-    "unfinished",
-    "reopened",
-    "checklist_done",
-    "checklist_open",
-    "note",
+    "done", "partial", "blocked", "not_relevant", "changed_plan", "rescheduled",
+    "unfinished", "reopened", "checklist_done", "checklist_open", "note",
   ]) {
     assert.ok(ATLAS_FARM_HAND_TRANSITIONS.includes(transition));
   }
@@ -133,6 +118,7 @@ test("task transition route uses cookie auth and forwards the full RPC payload",
   assert.match(route, /requireAtlasApiAccess/);
   assert.match(route, /createAtlasServerClient/);
   assert.match(route, /readAtlasOwnerOperatorContext/);
+  assert.match(route, /effectiveOperatorMembershipId/);
   assert.match(route, /owner_operator_record_task_transition_v1/);
   assert.match(route, /owner_operator_reopen_task_completion_v1/);
   assert.match(route, /owner_record_task_transition_v1/);
@@ -146,7 +132,8 @@ test("task transition route uses cookie auth and forwards the full RPC payload",
   assert.equal((route.match(/p_lane_key: input\.laneKey/g) ?? []).length, 3);
   assert.equal((route.match(/p_work_key: input\.workKey/g) ?? []).length, 3);
   assert.equal((route.match(/p_existing_field_log_id: input\.existingFieldLogId/g) ?? []).length, 3);
-  assert.match(route, /p_effective_membership_id: operatorContext\.effective\.membershipId/);
+  assert.match(route, /p_effective_membership_id: operatorMembershipId/);
+  assert.match(route, /farm_scope_required/);
   assert.doesNotMatch(route, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.doesNotMatch(route, /atlasSupabase/);
   assert.doesNotMatch(route, /supabase\.rpc\("record_task_transition_v1"/);
