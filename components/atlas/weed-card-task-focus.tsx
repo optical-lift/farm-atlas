@@ -46,12 +46,6 @@ function timeLabel(minutes: number) {
   return rest ? `${hours}h ${rest}m` : `${hours}h`;
 }
 
-function instruction(card: AtlasWeedCardContext) {
-  if (card.condition === "clear") return "Row returned to production";
-  if (card.totalMinutes > 0 || card.sessionCount > 0) return "Continue the recovery";
-  return "Return the row to production";
-}
-
 export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   const currentIndex = ATLAS_WEED_CONDITIONS.indexOf(card.condition);
   const availableConditions = ATLAS_WEED_CONDITIONS.slice(Math.max(0, currentIndex));
@@ -73,6 +67,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
     : unquantifiedSessions > 0
       ? "work recorded"
       : "new pass";
+  const actionTitle = `Weed ${card.objectLabel}`;
 
   async function saveSession() {
     if (!Number.isInteger(selectedMinutes) || selectedMinutes < 1 || selectedMinutes > 480) {
@@ -112,18 +107,21 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
 
         <div className="atlas-task-page-body">
           <article className="atlas-task-page-active atlas-task-ticket-card atlas-dominion-task-card atlas-weed-card-task-card">
-            <TaskDominionTrail task={task} instruction={instruction(card)} showCondition={false} />
+            <TaskDominionTrail
+              task={task}
+              instruction={actionTitle}
+              showCondition={false}
+              presentation="field-sheet"
+            />
 
-            <section className="atlas-weed-card" aria-label={`${card.objectLabel} Weed Card`}>
-              <header>
-                <div>
-                  <small>Weed Card</small>
-                  <strong>{card.objectLabel}</strong>
-                </div>
-                <span>{ATLAS_WEED_CONDITION_LABELS[card.condition]}</span>
-              </header>
+            <section className="atlas-weed-pass" aria-label={`${card.objectLabel} weed progress`}>
+              <div className="atlas-weed-condition-summary">
+                <strong>{ATLAS_WEED_CONDITION_LABELS[card.condition]}</strong>
+                <span aria-hidden="true">→</span>
+                <small>{ATLAS_WEED_CONDITION_LABELS[card.targetCondition]}</small>
+              </div>
 
-              <div className="atlas-weed-condition-scale" aria-label={`Current condition ${ATLAS_WEED_CONDITION_LABELS[card.condition]}; target clear`}>
+              <div className="atlas-weed-condition-scale" aria-label={`Current condition ${ATLAS_WEED_CONDITION_LABELS[card.condition]}; target ${ATLAS_WEED_CONDITION_LABELS[card.targetCondition]}`}>
                 {ATLAS_WEED_CONDITIONS.map((condition, index) => (
                   <span
                     key={condition}
@@ -145,7 +143,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
 
               {card.sessions.length ? (
                 <ol className="atlas-weed-session-history">
-                  {card.sessions.slice(0, 5).map((session) => (
+                  {card.sessions.slice(0, 4).map((session) => (
                     <li key={session.id}>
                       <span>{prettyDate(session.workDate)}</span>
                       <strong>{session.minutesKnown ? timeLabel(session.minutes) : "time unrecorded"}</strong>
@@ -199,14 +197,14 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
               <input
                 className="atlas-weed-note"
                 aria-label="Session note"
-                placeholder="Optional note"
+                placeholder="Note"
                 value={note}
                 disabled={saving}
                 onChange={(event) => setNote(event.target.value)}
               />
 
               <button type="button" className="atlas-weed-session-save" disabled={saving} onClick={() => void saveSession()}>
-                {saving ? "Saving" : conditionAfter === "clear" ? "Finish pass" : "Log session"}
+                {saving ? "Saving" : conditionAfter === "clear" ? "Finish pass" : "Log work"}
               </button>
 
               {message ? <p className="atlas-task-page-message">{message}</p> : null}
