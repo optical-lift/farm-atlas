@@ -172,3 +172,76 @@ button {
   visibility: visible !important;
   opacity: 1 !important;
 }
+
+/* Network-source checklist rows need two explicit touch targets. The legacy
+   checklist styling turns action buttons into one unlabeled chevron, which
+   hides the company-notes action and can stack both buttons on the same spot. */
+.atlas-plant-check__item[data-checklist-action="network-log"] {
+  overflow: visible !important;
+}
+
+.atlas-plant-check__item[data-checklist-action="network-log"] .atlas-plant-check__actions {
+  position: relative !important;
+  inset: auto !important;
+  z-index: 4 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+  padding: 0 14px 14px !important;
+  pointer-events: auto !important;
+}
+
+.atlas-plant-check__item[data-checklist-action="network-log"] .atlas-plant-check__actions button {
+  position: relative !important;
+  inset: auto !important;
+  z-index: 5 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 46px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 10px 12px !important;
+  border: 1px solid rgba(85, 90, 134, 0.28) !important;
+  border-radius: 14px !important;
+  background: rgba(174, 179, 212, 0.2) !important;
+  color: var(--atlas-text) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  overflow: visible !important;
+  text-indent: 0 !important;
+  white-space: normal !important;
+  font-size: 13px !important;
+  line-height: 1.15 !important;
+  font-weight: 850 !important;
+  letter-spacing: 0 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+.atlas-plant-check__item[data-checklist-action="network-log"] .atlas-plant-check__actions button::before,
+.atlas-plant-check__item[data-checklist-action="network-log"] .atlas-plant-check__actions button::after {
+  content: none !important;
+  display: none !important;
+}
+
+.atlas-plant-check__item[data-checklist-action="network-log"] .atlas-network-log-form {
+  position: relative !important;
+  z-index: 6 !important;
+  pointer-events: auto !important;
+}
+
+@media (max-width: 430px) {
+  .atlas-plant-check__item[data-checklist-action="network-log"] .atlas-plant-check__actions {
+    grid-template-columns: 1fr !important;
+    padding-inline: 10px !important;
+  }
+}
