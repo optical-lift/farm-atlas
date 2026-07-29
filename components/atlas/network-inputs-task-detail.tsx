@@ -39,11 +39,11 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
   }), [childTasks]);
 
   useEffect(() => {
-    const container = rootRef.current;
-    if (!container) return;
+    const rootElement = rootRef.current as HTMLDivElement;
+    if (!rootElement) return;
 
     function enhanceMarks() {
-      container.querySelectorAll<HTMLElement>(".atlas-plant-check__mark").forEach((mark) => {
+      rootElement.querySelectorAll<HTMLElement>(".atlas-plant-check__mark").forEach((mark) => {
         const item = mark.closest(".atlas-plant-check__item");
         const done = Boolean(item?.classList.contains("is-done"));
         mark.setAttribute("role", "button");
@@ -63,7 +63,7 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
     function onClick(event: MouseEvent) {
       const target = event.target as Element | null;
       const mark = target?.closest<HTMLElement>(".atlas-plant-check__mark");
-      if (!mark || !container.contains(mark)) return;
+      if (!mark || !rootElement.contains(mark)) return;
       event.preventDefault();
       activateMark(mark);
     }
@@ -72,21 +72,21 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
       if (event.key !== "Enter" && event.key !== " ") return;
       const target = event.target as Element | null;
       const mark = target?.closest<HTMLElement>(".atlas-plant-check__mark");
-      if (!mark || !container.contains(mark)) return;
+      if (!mark || !rootElement.contains(mark)) return;
       event.preventDefault();
       activateMark(mark);
     }
 
     enhanceMarks();
     const observer = new MutationObserver(enhanceMarks);
-    observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
-    container.addEventListener("click", onClick);
-    container.addEventListener("keydown", onKeyDown);
+    observer.observe(rootElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+    rootElement.addEventListener("click", onClick);
+    rootElement.addEventListener("keydown", onKeyDown);
 
     return () => {
       observer.disconnect();
-      container.removeEventListener("click", onClick);
-      container.removeEventListener("keydown", onKeyDown);
+      rootElement.removeEventListener("click", onClick);
+      rootElement.removeEventListener("keydown", onKeyDown);
     };
   }, []);
 
