@@ -15,7 +15,7 @@ test("Home reads a four-slot journal cover without releasing work", () => {
   assert.match(reader, /withRole\("next"/);
   assert.match(reader, /withRole\("unlock"/);
   assert.match(reader, /withRole\("blocker"/);
-  assert.match(reader, /goal\.state !== "realized"/);
+  assert.match(reader, /entry\.state !== "realized"/);
   assert.match(reader, /ownerDecisions/);
   assert.match(reader, /carriedRhythms/);
   assert.doesNotMatch(reader, /insert\s+into|update\s+atlas\.|delete\s+from|\.insert\(|\.update\(|\.delete\(/i);
