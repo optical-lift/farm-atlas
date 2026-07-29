@@ -48,7 +48,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (request.headers.get("x-atlas-intent") !== "task-set-aside-v1") {
+  if (request.headers.get("x-atlas-intent") !== "task-set-aside-v2") {
     return atlasApiError(400, "task_set_aside_intent_required", "A valid Atlas set-aside intent is required.");
   }
 
@@ -60,16 +60,19 @@ export async function POST(request: Request) {
   }
 
   const taskId = typeof body.taskId === "string" ? body.taskId.trim() : "";
+  const requestedReturnDate = typeof body.requestedReturnDate === "string" ? body.requestedReturnDate.trim() : "";
   const idempotencyKey = typeof body.idempotencyKey === "string" ? body.idempotencyKey.trim() : "";
   if (!UUID_PATTERN.test(taskId)) return atlasApiError(400, "invalid_task_id", "A valid task id is required.");
-  if (!idempotencyKey || idempotencyKey.length > 160) return atlasApiError(400, "invalid_idempotency_key", "A valid idempotency key is required.");
+  if (!DATE_PATTERN.test(requestedReturnDate)) return atlasApiError(400, "invalid_return_date", "Choose a valid return date.");
+  if (!idempotencyKey || idempotencyKey.length > 180) return atlasApiError(400, "invalid_idempotency_key", "A valid idempotency key is required.");
 
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
 
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("set_task_aside_today_v1", {
+  const { data, error } = await supabase.rpc("set_task_aside_today_v2", {
     p_task_id: taskId,
+    p_requested_return_date: requestedReturnDate,
     p_idempotency_key: idempotencyKey,
   });
   if (error) return rpcFailure(error);
