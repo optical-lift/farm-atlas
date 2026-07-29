@@ -15,8 +15,8 @@ export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
   if (!context) return null;
   const activeContext = context;
 
-  async function selectMembership(membershipId: string) {
-    if (saving || membershipId === activeContext.effective.membershipId) return;
+  async function selectAccount(accountId: string) {
+    if (saving || accountId === activeContext.effective.accountId) return;
     setSaving(true);
     setError(null);
 
@@ -28,13 +28,13 @@ export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
           Accept: "application/json",
         },
         cache: "no-store",
-        body: JSON.stringify({ membershipId }),
+        body: JSON.stringify({ accountId }),
       });
       const data = await response.json() as { ok?: boolean; error?: string };
-      if (!response.ok || !data.ok) throw new Error(data.error || "Atlas could not switch worker context.");
+      if (!response.ok || !data.ok) throw new Error(data.error || "Atlas could not switch account context.");
       window.location.reload();
     } catch (selectionError) {
-      setError(selectionError instanceof Error ? selectionError.message : "Atlas could not switch worker context.");
+      setError(selectionError instanceof Error ? selectionError.message : "Atlas could not switch account context.");
       setSaving(false);
     }
   }
@@ -43,18 +43,18 @@ export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
     <aside
       className={`atlas-owner-operator${activeContext.isOperating ? " is-operating" : ""}`}
       aria-label="Owner operator mode"
-      data-effective-membership-id={activeContext.effective.membershipId}
+      data-effective-account-id={activeContext.effective.accountId}
     >
       <div className="atlas-owner-operator__control">
         <label htmlFor="atlas-owner-operator-select">Operating as</label>
         <select
           id="atlas-owner-operator-select"
-          value={activeContext.effective.membershipId}
+          value={activeContext.effective.accountId}
           disabled={saving}
-          onChange={(event) => void selectMembership(event.target.value)}
+          onChange={(event) => void selectAccount(event.target.value)}
         >
           {activeContext.options.map((option) => (
-            <option key={option.membershipId} value={option.membershipId}>
+            <option key={option.accountId} value={option.accountId}>
               {option.displayName}
             </option>
           ))}
@@ -65,7 +65,7 @@ export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
       {activeContext.isOperating ? (
         <div className="atlas-owner-operator__notice">
           <strong>Operating {activeContext.effective.displayName}&apos;s Atlas</strong>
-          <span>Actions change live farm data and are recorded as {activeContext.actor.displayName} operating for {activeContext.effective.displayName}.</span>
+          <span>Actions change live Atlas data and are recorded as {activeContext.actor.displayName} operating for {activeContext.effective.displayName}.</span>
         </div>
       ) : null}
 
