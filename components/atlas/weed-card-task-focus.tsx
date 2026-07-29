@@ -104,7 +104,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
       ? `${minutes}m`
       : "Add time";
   const actionTitle = `Weed ${shortObjectLabel(card.objectKey, card.objectLabel)}`;
-  const occupancy = card.bedMap?.placements.length
+  const occupancy = card.bedMap
     ? <CropOccupancyBedMap map={card.bedMap} />
     : <CropOccupancyList groups={card.occupancyGroups} />;
 
