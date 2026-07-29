@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import CropOccupancyBedMap from "@/components/atlas/crop-occupancy-bed-map";
 import CropOccupancyList from "@/components/atlas/crop-occupancy-list";
 import TaskDominionTrail from "@/components/atlas/task-dominion-trail";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
@@ -103,6 +104,9 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
       ? `${minutes}m`
       : "Add time";
   const actionTitle = `Weed ${shortObjectLabel(card.objectKey, card.objectLabel)}`;
+  const occupancy = card.bedMap?.placements.length
+    ? <CropOccupancyBedMap map={card.bedMap} />
+    : <CropOccupancyList groups={card.occupancyGroups} />;
 
   async function savePartial() {
     if (!Number.isInteger(selectedMinutes) || selectedMinutes < 0 || selectedMinutes > 480) {
@@ -170,7 +174,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
               showCondition={false}
               showZoneLabel={false}
               showSubjectLabel={false}
-              moveDetails={<CropOccupancyList groups={card.occupancyGroups} />}
+              moveDetails={occupancy}
               presentation="field-sheet"
             />
 
