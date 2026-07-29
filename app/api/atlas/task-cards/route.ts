@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireAtlasApiAccess } from "@/lib/atlas/api-access";
+import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -28,11 +29,18 @@ export async function GET(request: NextRequest) {
     return privateJson({ ok: false, error: "A valid task ID is required." }, 400);
   }
 
+  const operatorContext = await readAtlasOwnerOperatorContext();
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("task_cards_v1", {
-    p_farm_id: authorized.access.membership.farmId,
-    p_task_id: taskId,
-  });
+  const response = operatorContext?.isOperating
+    ? await supabase.rpc("owner_operator_task_cards_v1", {
+        p_effective_membership_id: operatorContext.effective.membershipId,
+        p_task_id: taskId,
+      })
+    : await supabase.rpc("task_cards_v1", {
+        p_farm_id: authorized.access.membership.farmId,
+        p_task_id: taskId,
+      });
+  const { data, error } = response;
 
   if (error) {
     const rpcError = error as RpcError;
@@ -50,8 +58,14 @@ export async function GET(request: NextRequest) {
 
   return privateJson({
     ok: true,
-    farmKey: authorized.access.membership.farmKey ?? "elm_farm",
-    role: authorized.access.membership.role,
+    farmKey: operatorContext?.isOperating
+      ? operatorContext.farmKey ?? "elm_farm"
+      : authorized.access.membership.farmKey ?? "elm_farm",
+    role: operatorContext?.isOperating
+      ? operatorContext.effective.role
+      : authorized.access.membership.role,
+    operatorMode: operatorContext?.isOperating ?? false,
+    effectiveMembershipId: operatorContext?.isOperating ? operatorContext.effective.membershipId : null,
     taskCards,
   });
 }
