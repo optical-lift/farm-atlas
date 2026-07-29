@@ -14,6 +14,7 @@ import AnnaPaidScheduleHomePatch from "./AnnaPaidScheduleHomePatch";
 import TaskResultAnchorPatch from "./TaskResultAnchorPatch";
 import ProjectTaskDestinationGuard from "./ProjectTaskDestinationGuard";
 import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
+import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
 import "./globals.css";
 import "./atlas-primitives.css";
 import "./atlas-trail.css";
@@ -63,6 +64,7 @@ import "./day-timeline-completion-echo.css";
 import "./living-journal.css";
 import "./journal-page.css";
 import "./day-task-only.css";
+import "./day-task-title-link.css";
 import "./week-route-v1.css";
 import "./universal-home-familiar.css";
 import "./atlas-shell-responsive.css";
@@ -97,6 +99,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <TaskResultAnchorPatch />
         <ProjectTaskDestinationGuard />
         <UniversalCollectionIdentity />
+        <DayTaskTitleLinkPatch />
         {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}
       </body>
