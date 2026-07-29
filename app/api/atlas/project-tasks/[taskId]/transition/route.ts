@@ -1,21 +1,19 @@
 import { NextResponse } from "next/server";
 
+import {
+  effectiveOperatorAccountId,
+  readAtlasOwnerOperatorContext,
+} from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-type RouteContext = {
-  params: Promise<{ taskId: string }>;
-};
-
+type RouteContext = { params: Promise<{ taskId: string }> };
 type ProjectTransition = "done" | "partial" | "blocked" | "not_relevant" | "changed_plan";
 
 function privateJson(body: Record<string, unknown>, status = 200) {
-  return NextResponse.json(body, {
-    status,
-    headers: { "Cache-Control": "private, no-store" },
-  });
+  return NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 }
 
 function isTransition(value: unknown): value is ProjectTransition {
@@ -46,17 +44,32 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const note = typeof input.note === "string" && input.note.trim() ? input.note.trim() : null;
+  const operatorContext = await readAtlasOwnerOperatorContext();
+  const effectiveAccountId = effectiveOperatorAccountId(operatorContext);
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("transition_project_task_v1", {
-    p_task_id: taskId,
-    p_transition: input.transition,
-    p_note: note,
-  });
+  const { data, error } = effectiveAccountId
+    ? await supabase.rpc("owner_operator_transition_project_task_v1", {
+        p_effective_account_id: effectiveAccountId,
+        p_task_id: taskId,
+        p_transition: input.transition,
+        p_note: note,
+      })
+    : await supabase.rpc("transition_project_task_v1", {
+        p_task_id: taskId,
+        p_transition: input.transition,
+        p_note: note,
+      });
 
   if (error) {
     const status = error.code === "42501" ? 403 : error.code === "P0002" ? 404 : 400;
     return privateJson({ ok: false, error: error.message || "Project task update failed." }, status);
   }
 
-  return privateJson({ ok: true, taskId: data, transition: input.transition });
+  return privateJson({
+    ok: true,
+    taskId: data,
+    transition: input.transition,
+    operatorMode: Boolean(effectiveAccountId),
+    effectiveAccountId,
+  });
 }
