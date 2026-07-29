@@ -11,6 +11,7 @@ import { getAtlasSession } from "@/lib/atlas/session";
 import { readAtlasSetAsideTaskIds } from "@/lib/atlas/task-day-dispositions-server";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
 
+// readAtlasOperatorUniversalHome delegates to readAtlasUniversalHome outside Owner operator mode.
 export const dynamic = "force-dynamic";
 
 type AtlasHomeSearchParams = Record<string, string | string[] | undefined>;
