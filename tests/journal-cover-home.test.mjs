@@ -8,6 +8,7 @@ function read(path) {
 
 test("Home reads a four-slot journal cover without releasing work", () => {
   const reader = read("lib/atlas/journal-cover-home.ts");
+  const operatorReader = read("lib/atlas/operator-journal-cover.ts");
   const page = read("app/page.tsx");
 
   assert.match(reader, /living_day_v1/);
@@ -20,7 +21,9 @@ test("Home reads a four-slot journal cover without releasing work", () => {
   assert.match(reader, /carriedRhythms/);
   assert.doesNotMatch(reader, /insert\s+into|update\s+atlas\.|delete\s+from|\.insert\(|\.update\(|\.delete\(/i);
 
-  assert.match(page, /readAtlasJournalCover/);
+  assert.match(operatorReader, /readAtlasJournalCover/);
+  assert.match(operatorReader, /ownerDecisions: \[\]/);
+  assert.match(page, /readAtlasOperatorJournalCover/);
   assert.match(page, /moves: coverMoves\.map/);
   assert.doesNotMatch(page, /Current move|Next move|Closest unlock|Active blocker/);
 });
