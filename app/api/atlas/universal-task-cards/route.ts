@@ -12,6 +12,7 @@ import {
   atlasUniversalTaskCards,
 } from "@/lib/atlas/universal-task-cards";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
+import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +77,17 @@ export async function GET(request: Request) {
       effectiveAccountId: effectiveOperatorAccountId(operatorContext),
       effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
     });
-    const taskCards = atlasUniversalTaskCards(home);
+    const supabase = await createAtlasServerClient();
+    const dispositionResponse = await supabase.rpc("viewer_task_day_dispositions_v1", {
+      p_day: doneDate,
+    });
+    if (dispositionResponse.error) throw dispositionResponse.error;
+    const setAsideTaskIds = new Set(
+      (Array.isArray(dispositionResponse.data) ? dispositionResponse.data : [])
+        .map((row) => row && typeof row === "object" && !Array.isArray(row) ? String((row as { taskId?: unknown }).taskId ?? "") : "")
+        .filter(Boolean),
+    );
+    const taskCards = atlasUniversalTaskCards(home).filter((card) => !setAsideTaskIds.has(card.task_id));
     return privateJson({
       ok: true,
       farmKey: home.activeFarm?.farmKey || "feast_guild",

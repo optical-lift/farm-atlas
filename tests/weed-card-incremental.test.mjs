@@ -34,23 +34,27 @@ test("pass logging and day completion remain separate canonical mutations", () =
   assert.match(partial, /'passClosed', false/);
 });
 
-test("time is optional evidence while physical condition remains required", () => {
+test("legacy time remains optional evidence while the live Weed Card is state-first", () => {
   const migration = read("supabase/migrations/20260729022500_weed_card_grazer_logging_v1.sql");
   const contract = read("lib/atlas/weed-card-contract.ts");
+  const focus = read("components/atlas/weed-card-task-focus.tsx");
 
   assert.match(migration, /v_minutes integer := coalesce\(p_minutes,0\)/);
   assert.match(migration, /minutes_known/);
-  assert.match(migration, /Add time, change the condition, or add a note/);
   assert.match(contract, /minutes\?: number \| null/);
-  assert.match(contract, /taskClosed: boolean/);
+  assert.match(focus, /minutes: null/);
+  assert.match(focus, /Bed now/);
+  assert.match(focus, /Save state/);
+  assert.doesNotMatch(focus, /QUICK_MINUTES|Add time|<span>Time<\/span>|atlas-weed-invested/);
 });
 
-test("the Weed Card presents Clear and Partly finished as its two outcomes", () => {
+test("the Weed Card presents state outcomes plus a truthful Do tomorrow disposition", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
   const trail = read("components/atlas/task-dominion-trail.tsx");
   const client = read("lib/atlas/weed-card-client.ts");
+  const setAsideClient = read("lib/atlas/task-set-aside-client.ts");
   const passApi = read("app/api/atlas/weed-card-session/route.ts");
   const partialApi = read("app/api/atlas/weed-card-partial/route.ts");
 
@@ -68,13 +72,14 @@ test("the Weed Card presents Clear and Partly finished as its two outcomes", () 
   assert.match(focus, />\s*Partly finished\s*</);
   assert.match(focus, /postAtlasFinishPartialWeedCardDay/);
   assert.match(focus, /conditionAfter: "clear"/);
-  assert.match(focus, /Save partial/);
-  assert.ok(focus.indexOf("<span>Condition</span>") < focus.indexOf("<span>Time</span>"));
+  assert.match(focus, /postAtlasTaskSetAsideToday/);
+  assert.match(focus, /Do tomorrow/);
   assert.doesNotMatch(focus, /That’s all for today|>\s*Unfinished\s*<|>Log a pass/);
   assert.match(trail, /presentation\?: "default" \| "field-sheet" \| "weed-sheet"/);
   assert.match(trail, /moveDetails\?: ReactNode/);
   assert.match(client, /weed-card-partial-v1/);
   assert.match(client, /\/api\/atlas\/weed-card-partial/);
+  assert.match(setAsideClient, /task-set-aside-v1/);
   assert.match(passApi, /record_weed_card_pass_v1/);
   assert.match(partialApi, /finish_partial_weed_card_day_v1/);
   assert.match(partialApi, /conditionAfter === "clear"/);
