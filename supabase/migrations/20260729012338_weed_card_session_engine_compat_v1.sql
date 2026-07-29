@@ -1,0 +1,5 @@
+-- Applied in production as the compatibility transition from the original
+-- Weed Card pilot function to the final governed contract. The complete,
+-- idempotent final definitions are consolidated in
+-- 20260729014000_weed_card_final_contract_v1.sql so fresh databases and
+-- production converge on the same function bodies.
