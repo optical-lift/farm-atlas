@@ -1,0 +1,3 @@
+-- Applied in production to map the five-state Weed Card scale into the
+-- maintenance_objects condition domain. Final idempotent definitions live in
+-- 20260729014000_weed_card_final_contract_v1.sql.
