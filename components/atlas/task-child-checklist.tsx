@@ -112,6 +112,15 @@ function needsPlantingLog(task: AtlasTaskCard) {
   return boolish(meta(task, "planting_log_required"));
 }
 
+function needsNetworkLog(task: AtlasTaskCard) {
+  return boolish(meta(task, "network_log_enabled"));
+}
+
+function networkLogPrompt(task: AtlasTaskCard) {
+  return text(meta(task, "network_log_prompt"))
+    || "Company — contact — what they have — quantity/frequency — free or price — pickup details";
+}
+
 function objectRequired(task: AtlasTaskCard) {
   return meta(task, "planting_log_object_required") !== false && meta(task, "planting_log_object_required") !== "false";
 }
@@ -172,7 +181,14 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
   const [registryLoading, setRegistryLoading] = useState(false);
   const [registryError, setRegistryError] = useState<string | null>(null);
   const [activeLogId, setActiveLogId] = useState<string | null>(null);
+  const [activeNetworkLogId, setActiveNetworkLogId] = useState<string | null>(null);
   const [forms, setForms] = useState<Record<string, PlantLogForm>>({});
+  const [networkDrafts, setNetworkDrafts] = useState<Record<string, string>>(() => Object.fromEntries(
+    childTasks.map((task) => [task.task_id, task.note ?? ""]),
+  ));
+  const [savedNetworkNotes, setSavedNetworkNotes] = useState<Record<string, string>>(() => Object.fromEntries(
+    childTasks.map((task) => [task.task_id, task.note ?? ""]),
+  ));
   const [savingId, setSavingId] = useState<string | null>(null);
   const [rowMessages, setRowMessages] = useState<Record<string, string | null>>({});
 
@@ -226,9 +242,20 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
 
   function openPlantingLog(task: AtlasTaskCard) {
     const initial = formFor(task);
+    setActiveNetworkLogId(null);
     setActiveLogId(task.task_id);
     setRowMessages((current) => ({ ...current, [task.task_id]: null }));
     setForms((current) => ({ ...current, [task.task_id]: initial }));
+  }
+
+  function openNetworkLog(task: AtlasTaskCard) {
+    setActiveLogId(null);
+    setActiveNetworkLogId(task.task_id);
+    setRowMessages((current) => ({ ...current, [task.task_id]: null }));
+    setNetworkDrafts((current) => ({
+      ...current,
+      [task.task_id]: current[task.task_id] ?? savedNetworkNotes[task.task_id] ?? task.note ?? "",
+    }));
   }
 
   async function togglePlain(task: AtlasTaskCard, checklistStatus: "open" | "done") {
@@ -237,9 +264,43 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
       setRowMessages((current) => ({ ...current, [task.task_id]: null }));
       await postChildToggle(task.task_id, checklistStatus);
       setActiveLogId(null);
+      setActiveNetworkLogId(null);
       await onChange();
     } catch (error) {
       setRowMessages((current) => ({ ...current, [task.task_id]: error instanceof Error ? error.message : "Checklist failed." }));
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function saveNetworkLog(task: AtlasTaskCard) {
+    const note = (networkDrafts[task.task_id] ?? "").trim();
+    if (!note) {
+      setRowMessages((current) => ({ ...current, [task.task_id]: "Add at least one company or finding first." }));
+      return;
+    }
+
+    try {
+      setSavingId(task.task_id);
+      setRowMessages((current) => ({ ...current, [task.task_id]: "Saving…" }));
+      await postAtlasTaskTransition({
+        taskId: task.task_id,
+        transition: "note",
+        note,
+        laneKey: "network",
+        workKey: "input_findings",
+        payload: {
+          completion_source: "inline_subtask_note",
+          note_kind: "network_input_findings",
+          parent_task_id: task.parent_task_id,
+          input_key: text(meta(task, "network_input_key")),
+        },
+      });
+      setSavedNetworkNotes((current) => ({ ...current, [task.task_id]: note }));
+      setActiveNetworkLogId(null);
+      setRowMessages((current) => ({ ...current, [task.task_id]: "Company findings saved." }));
+    } catch (error) {
+      setRowMessages((current) => ({ ...current, [task.task_id]: error instanceof Error ? error.message : "Company findings could not be saved." }));
     } finally {
       setSavingId(null);
     }
@@ -286,16 +347,29 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
         .atlas-plant-check__history + .atlas-plant-check__history { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(91, 99, 71, .18); }
         .atlas-plant-check__history b { font-size: .78em; letter-spacing: .08em; text-transform: uppercase; }
         .atlas-plant-check__history em { font-style: normal; font-weight: 700; }
+        .atlas-network-findings { white-space: pre-wrap; line-height: 1.42; }
+        .atlas-network-log-form { grid-column: 1 / -1; display: grid; gap: 10px; margin: 10px 12px 12px; padding: 12px; border-radius: 14px; background: rgba(255,255,255,.58); border: 1px solid rgba(91, 99, 71, .18); }
+        .atlas-network-log-form label { display: grid; gap: 6px; }
+        .atlas-network-log-form label > span { font-size: .78rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+        .atlas-network-log-form textarea { width: 100%; min-height: 132px; resize: vertical; border: 1px solid rgba(91, 99, 71, .28); border-radius: 10px; padding: 10px 11px; font: inherit; line-height: 1.4; background: rgba(255,255,255,.9); }
+        .atlas-network-log-form small { line-height: 1.35; opacity: .78; }
+        .atlas-network-log-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .atlas-network-log-actions button { min-height: 38px; }
+        .atlas-plant-check__actions.has-two-actions { display: flex; flex-wrap: wrap; gap: 6px; }
         @media (max-width: 430px) {
           .atlas-plant-check__item.is-simple .atlas-plant-check__content { padding-right: 12px !important; }
+          .atlas-network-log-form { margin-inline: 8px; }
         }
       `}</style>
       <h3>Checklist</h3>
       <div className="atlas-plant-check__list">
         {childTasks.map((task) => {
           const done = isDone(task);
-          const interactive = needsPlantingLog(task);
+          const plantingLog = needsPlantingLog(task);
+          const networkLog = needsNetworkLog(task);
+          const interactive = plantingLog || networkLog;
           const active = activeLogId === task.task_id;
+          const activeNetwork = activeNetworkLogId === task.task_id;
           const form = formFor(task);
           const selectedZone = zoneById(zones, form.zoneId);
           const objects = visibleObjects(selectedZone);
@@ -305,13 +379,14 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
           const source = sowingContext(task, "source_sowing") ?? legacySourceSowing(task);
           const gapFill = sowingContext(task, "gap_fill_sowing");
           const fallbackLines = !gapFill ? detailLines(task) : [];
+          const savedNetworkNote = savedNetworkNotes[task.task_id] ?? task.note ?? "";
 
           return (
             <article
               key={task.task_id}
               className={`atlas-plant-check__item${interactive ? " has-inline-action" : " is-simple"}${done ? " is-done" : ""}${isSaving ? " is-saving" : ""}`}
               data-child-task-id={task.task_id}
-              data-checklist-action={interactive ? "inline-form" : "simple"}
+              data-checklist-action={plantingLog ? "inline-form" : networkLog ? "network-log" : "simple"}
             >
               <div className="atlas-plant-check__content">
                 <span className="atlas-plant-check__mark">{done ? "✓" : ""}</span>
@@ -333,18 +408,38 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
                     </div>
                   ) : null}
                   {fallbackLines.map((line) => <span key={line}>{line}</span>)}
+                  {savedNetworkNote ? (
+                    <div className="atlas-plant-check__history">
+                      <b>Company findings</b>
+                      <span className="atlas-network-findings">{savedNetworkNote}</span>
+                    </div>
+                  ) : null}
                   {summary ? <em>{summary}</em> : null}
                   {rowMessage ? <em>{rowMessage}</em> : null}
                 </div>
               </div>
 
-              <div className="atlas-plant-check__actions">
-                {done ? (
+              <div className={`atlas-plant-check__actions${networkLog ? " has-two-actions" : ""}`}>
+                {done && networkLog ? (
+                  <>
+                    <button type="button" aria-expanded={activeNetwork} disabled={Boolean(savingId)} onClick={() => activeNetwork ? setActiveNetworkLogId(null) : openNetworkLog(task)}>
+                      {activeNetwork ? "Close notes" : "Edit company notes"}
+                    </button>
+                    <button type="button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "open")}>{isSaving ? "Saving" : "Reopen"}</button>
+                  </>
+                ) : done ? (
                   <button type="button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "open")}>{isSaving ? "Saving" : "Reopen"}</button>
-                ) : interactive ? (
+                ) : plantingLog ? (
                   <button type="button" aria-expanded={active} disabled={Boolean(savingId)} onClick={() => active ? setActiveLogId(null) : openPlantingLog(task)}>
                     {active ? "Close planting log" : "Open planting log"}
                   </button>
+                ) : networkLog ? (
+                  <>
+                    <button type="button" aria-expanded={activeNetwork} disabled={Boolean(savingId)} onClick={() => activeNetwork ? setActiveNetworkLogId(null) : openNetworkLog(task)}>
+                      {activeNetwork ? "Close notes" : savedNetworkNote ? "Edit company notes" : "Add company notes"}
+                    </button>
+                    <button type="button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "done")}>{isSaving ? "Saving" : "Mark done"}</button>
+                  </>
                 ) : (
                   <button type="button" disabled={Boolean(savingId)} onClick={() => void togglePlain(task, "done")}>{isSaving ? "Saving" : "Mark done"}</button>
                 )}
@@ -377,6 +472,28 @@ export function TaskChildChecklist({ childTasks, onChange }: { childTasks: Atlas
                     <button type="button" disabled={isSaving} onClick={() => setActiveLogId(null)}>Cancel</button>
                   </div>
                   <p aria-live="polite">{form.message ?? registryError ?? ""}</p>
+                </form>
+              ) : null}
+
+              {activeNetwork ? (
+                <form className="atlas-network-log-form" onSubmit={(event) => { event.preventDefault(); void saveNetworkLog(task); }}>
+                  <label>
+                    <span>Companies + findings</span>
+                    <textarea
+                      name="networkFindings"
+                      value={networkDrafts[task.task_id] ?? ""}
+                      placeholder={networkLogPrompt(task)}
+                      onChange={(event) => {
+                        setNetworkDrafts((current) => ({ ...current, [task.task_id]: event.target.value }));
+                        setRowMessages((current) => ({ ...current, [task.task_id]: null }));
+                      }}
+                    />
+                  </label>
+                  <small>Use a new line for each company. Save while you research; marking the subtask done is separate.</small>
+                  <div className="atlas-network-log-actions">
+                    <button type="submit" disabled={isSaving}>{isSaving ? "Saving" : "Save company findings"}</button>
+                    <button type="button" disabled={isSaving} onClick={() => setActiveNetworkLogId(null)}>Cancel</button>
+                  </div>
                 </form>
               ) : null}
             </article>
