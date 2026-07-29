@@ -53,6 +53,8 @@ test("The mark and subject share the first line while movement sits below", () =
   assert.match(css, /nth-child\(2\)/);
   assert.match(css, /nth-child\(3\)/);
   assert.match(css, /nth-child\(4\)/);
+  assert.match(css, /nth-child\(-n \+ 2\)\[data-atlas-state="attention"\]/);
+  assert.match(css, /background: var\(--atlas-purple-dark\) !important/);
   assert.match(css, /\.atlas-task-kicker,[\s\S]*\.atlas-task-date[\s\S]*display: none !important/);
   assert.match(layout, /home-cover-v1\.css/);
 });
