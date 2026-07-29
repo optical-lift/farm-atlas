@@ -12,12 +12,13 @@ import {
   tendingBedHref,
   type TendingBedTrack,
 } from "@/lib/atlas/tending-client";
-import { atlasTrailFromTendingTrack } from "@/lib/atlas/trail";
+import { atlasTrailFromTendingTrack, type AtlasTrailContext } from "@/lib/atlas/trail";
 
 type Props = {
   task: AtlasTaskCard;
   instruction: string;
   showCondition?: boolean;
+  presentation?: "default" | "field-sheet";
 };
 
 type ExternalTaskLink = {
@@ -53,9 +54,43 @@ function externalTaskLink(task: AtlasTaskCard): ExternalTaskLink | null {
   }
 }
 
-export default function TaskDominionTrail({ task, instruction, showCondition = true }: Props) {
+function fieldSheetTrail(context: AtlasTrailContext | null) {
+  if (!context) return null;
+
+  const visible = context.nodes.filter((node) => node.status !== "skipped");
+  if (visible.length <= 3) return { ...context, nodes: visible };
+
+  const currentIndex = visible.findIndex((node) => (
+    node.nodeId === context.currentNodeId
+    || node.status === "current"
+    || node.status === "blocked"
+  ));
+  const anchor = currentIndex >= 0 ? currentIndex : 0;
+  const start = Math.max(0, Math.min(anchor - 1, visible.length - 3));
+  const nodes = visible.slice(start, start + 3);
+  const current = nodes.find((node) => node.nodeId === context.currentNodeId)
+    ?? nodes.find((node) => node.status === "current" || node.status === "blocked")
+    ?? null;
+  const localCurrentIndex = current ? nodes.findIndex((node) => node.nodeId === current.nodeId) : -1;
+  const nextNode = nodes.slice(localCurrentIndex + 1).find((node) => node.status === "projected") ?? null;
+
+  return {
+    ...context,
+    nodes,
+    currentNodeId: current?.nodeId ?? context.currentNodeId,
+    nextNode,
+  };
+}
+
+export default function TaskDominionTrail({
+  task,
+  instruction,
+  showCondition = true,
+  presentation = "default",
+}: Props) {
   const objectKey = trailObjectKey(task);
   const [track, setTrack] = useState<TendingBedTrack | null>(null);
+  const isFieldSheet = presentation === "field-sheet";
 
   useEffect(() => {
     if (!objectKey) {
@@ -80,10 +115,11 @@ export default function TaskDominionTrail({ task, instruction, showCondition = t
   const model = useMemo(() => taskDominionModel(task, track, instruction), [instruction, task, track]);
   const condition = useMemo(() => taskConditionRailModel(task), [task]);
   const trail = useMemo(() => track ? atlasTrailFromTendingTrack(track) : null, [track]);
+  const visibleTrail = useMemo(() => isFieldSheet ? fieldSheetTrail(trail) : trail, [isFieldSheet, trail]);
   const externalLink = useMemo(() => externalTaskLink(task), [task]);
 
   return (
-    <section className="atlas-task-dominion" aria-label={`${model.placeLabel} task`}>
+    <section className={`atlas-task-dominion${isFieldSheet ? " is-field-sheet" : ""}`} aria-label={`${model.placeLabel} task`}>
       <header className="atlas-task-dominion-place">
         <div>
           <small>{model.zoneLabel}</small>
@@ -92,8 +128,12 @@ export default function TaskDominionTrail({ task, instruction, showCondition = t
         <span>{model.subjectLabel}</span>
       </header>
 
-      {trail ? (
-        <AtlasTrail context={trail} mode="compact" />
+      {visibleTrail ? (
+        <AtlasTrail
+          context={visibleTrail}
+          mode="compact"
+          className={isFieldSheet ? "atlas-trail-field-sheet" : ""}
+        />
       ) : (
         <div className="atlas-task-dominion-no-trail" aria-label="No linked Trail">
           <span aria-hidden="true" />
@@ -103,13 +143,15 @@ export default function TaskDominionTrail({ task, instruction, showCondition = t
       )}
 
       <section className="atlas-task-dominion-move">
-        <div className="atlas-task-dominion-kicker">
-          <span>Current move</span>
-          <small>{model.familyLabel}</small>
-        </div>
+        {!isFieldSheet ? (
+          <div className="atlas-task-dominion-kicker">
+            <span>Current move</span>
+            <small>{model.familyLabel}</small>
+          </div>
+        ) : null}
         <h1>{model.instruction}</h1>
         <div className="atlas-task-dominion-time">
-          <span>{model.actionLabel}</span>
+          {!isFieldSheet ? <span>{model.actionLabel}</span> : null}
           <span>{model.dueLabel}</span>
         </div>
       </section>
@@ -137,7 +179,7 @@ export default function TaskDominionTrail({ task, instruction, showCondition = t
         </section>
       ) : null}
 
-      {model.facts.length || track || externalLink ? (
+      {!isFieldSheet && (model.facts.length || track || externalLink) ? (
         <footer className="atlas-task-dominion-facts">
           {model.facts.map((fact) => (
             <span key={`${fact.label}:${fact.value}`}><small>{fact.label}</small>{fact.value}</span>
