@@ -50,11 +50,29 @@ function timeLabel(minutes: number) {
 }
 
 function shortObjectLabel(objectKey: string, objectLabel: string) {
-  const keyMatch = objectKey.match(/^fr[_-]?(\d+)$/i);
-  if (keyMatch) return `FR${keyMatch[1]}`;
+  const keyPatterns: Array<[RegExp, string]> = [
+    [/^fr[_-]?(\d+)$/i, "FR"],
+    [/^eb(?:_sunflower)?[_-]?(\d+)$/i, "EB"],
+    [/^bb[_-]?(\d+)$/i, "BB"],
+    [/^bw[_-]?(\d+)$/i, "BW"],
+  ];
+  for (const [pattern, prefix] of keyPatterns) {
+    const match = objectKey.match(pattern);
+    if (match) return `${prefix}${match[1]}`;
+  }
 
-  const labelMatch = objectLabel.match(/^Field Row\s+(\d+)$/i);
-  return labelMatch ? `FR${labelMatch[1]}` : objectLabel;
+  const labelPatterns: Array<[RegExp, string]> = [
+    [/^Field Row\s+(\d+)$/i, "FR"],
+    [/^Entry Billboard Bed\s+(\d+)$/i, "EB"],
+    [/^Barn Bed\s+(\d+)$/i, "BB"],
+    [/^Berry Walk(?: Flower)? Bed\s+(\d+)$/i, "BW"],
+  ];
+  for (const [pattern, prefix] of labelPatterns) {
+    const match = objectLabel.match(pattern);
+    if (match) return `${prefix}${match[1]}`;
+  }
+
+  return objectLabel;
 }
 
 export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
@@ -74,6 +92,10 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   const unquantifiedSessions = useMemo(
     () => card.sessions.filter((session) => !session.minutesKnown).length,
     [card.sessions],
+  );
+  const plantLabels = useMemo(
+    () => Array.from(new Set(card.plants.map((plant) => plant.displayLabel).filter(Boolean))),
+    [card.plants],
   );
   const selectedMinutes = customMinutes.trim() ? Number(customMinutes) : minutes ?? 0;
   const selectedTimeLabel = customMinutes.trim()
@@ -146,6 +168,8 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
               instruction={actionTitle}
               showCondition={false}
               showZoneLabel={false}
+              showSubjectLabel={false}
+              plantLabels={plantLabels}
               presentation="field-sheet"
             />
 
