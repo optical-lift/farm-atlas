@@ -18,11 +18,19 @@ function centralDateIso() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function prettyDate(value: string) {
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function consequenceLabel(row: AtlasTaskDayDisposition) {
-  if (row.consequence === "at_risk") return "still at risk";
-  if (row.consequence === "overdue") return `still overdue${row.overdueDays ? ` ${row.overdueDays}d` : ""}`;
-  if (row.consequence === "due") return "still due";
-  return "returns tomorrow";
+  const returnLabel = `returns ${prettyDate(row.returnsOn)}`;
+  if (row.consequence === "at_risk") return `still at risk · ${returnLabel}`;
+  if (row.consequence === "overdue") return `still overdue${row.overdueDays ? ` ${row.overdueDays}d` : ""} · ${returnLabel}`;
+  if (row.consequence === "due") return `still due · ${returnLabel}`;
+  return returnLabel;
 }
 
 function hideSetAsideRows(taskIds: Set<string>) {
@@ -45,16 +53,18 @@ function hideSetAsideRows(taskIds: Set<string>) {
 
 export default function TaskSetAsideDayPatch() {
   const [rows, setRows] = useState<AtlasTaskDayDisposition[]>([]);
+  const [day, setDay] = useState(centralDateIso());
   const [target, setTarget] = useState<Element | null>(null);
   const taskIds = useMemo(() => new Set(rows.map((row) => row.taskId)), [rows]);
 
   useEffect(() => {
     if (window.location.pathname !== "/day") return;
     const params = new URLSearchParams(window.location.search);
-    const day = params.get("date") || centralDateIso();
+    const selectedDay = params.get("date") || centralDateIso();
+    setDay(selectedDay);
     let cancelled = false;
 
-    void fetchAtlasTaskDayDispositions(day)
+    void fetchAtlasTaskDayDispositions(selectedDay)
       .then((result) => {
         if (!cancelled) setRows(result);
       })
@@ -86,12 +96,12 @@ export default function TaskSetAsideDayPatch() {
 
   if (!target || !rows.length) return null;
 
-  const returnTo = `/day?date=${encodeURIComponent(rows[0].serviceDate)}&view=work_order`;
+  const returnTo = `/day?date=${encodeURIComponent(day)}&view=work_order`;
   return createPortal(
     <details className="atlas-day-set-aside-drawer">
       <summary>
         <span className="atlas-day-set-aside-mark" aria-hidden="true">→</span>
-        <strong>Set aside today</strong>
+        <strong>Set aside</strong>
         <small>{rows.length}</small>
         <b aria-hidden="true">⌄</b>
       </summary>
