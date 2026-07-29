@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireAtlasApiAccess } from "@/lib/atlas/api-access";
-import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
+import {
+  effectiveOperatorMembershipId,
+  readAtlasOwnerOperatorContext,
+} from "@/lib/atlas/operator-context";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -111,10 +114,15 @@ export async function GET(request: NextRequest) {
   if (taskId && !UUID_PATTERN.test(taskId)) return privateJson({ ok: false, error: "A valid task id is required." }, 400);
 
   const operatorContext = await readAtlasOwnerOperatorContext();
+  const operatorMembershipId = effectiveOperatorMembershipId(operatorContext);
+  if (operatorContext?.isOperating && !operatorMembershipId) {
+    return privateJson({ ok: false, error: "The selected account has no farm germination scope." }, 403);
+  }
+
   const supabase = await createAtlasServerClient();
-  const response = operatorContext?.isOperating
+  const response = operatorMembershipId
     ? await supabase.rpc("owner_operator_germination_check_source_v1", {
-        p_effective_membership_id: operatorContext.effective.membershipId,
+        p_effective_membership_id: operatorMembershipId,
         p_task_id: taskId,
         p_task_title: taskTitle,
       })
@@ -191,10 +199,15 @@ export async function POST(request: NextRequest) {
   }
 
   const operatorContext = await readAtlasOwnerOperatorContext();
+  const operatorMembershipId = effectiveOperatorMembershipId(operatorContext);
+  if (operatorContext?.isOperating && !operatorMembershipId) {
+    return privateJson({ ok: false, error: "The selected account has no farm germination scope." }, 403);
+  }
+
   const supabase = await createAtlasServerClient();
-  const response = operatorContext?.isOperating
+  const response = operatorMembershipId
     ? await supabase.rpc("owner_operator_record_germination_check_v1", {
-        p_effective_membership_id: operatorContext.effective.membershipId,
+        p_effective_membership_id: operatorMembershipId,
         p_task_id: taskId,
         p_action: action,
         p_spacing_outcome: action === "germinated" ? spacingOutcome : null,
@@ -219,6 +232,6 @@ export async function POST(request: NextRequest) {
     ...(data as Record<string, unknown>),
     ok: true,
     operatorMode: operatorContext?.isOperating ?? false,
-    effectiveMembershipId: operatorContext?.isOperating ? operatorContext.effective.membershipId : null,
+    effectiveMembershipId: operatorMembershipId,
   });
 }
