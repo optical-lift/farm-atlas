@@ -69,6 +69,14 @@ function taskTransitionError(data: AtlasTaskTransitionResponse) {
   return "Task update failed.";
 }
 
+function checklistToggleButton(row: HTMLElement) {
+  const buttons = Array.from(row.querySelectorAll<HTMLButtonElement>(".atlas-plant-check__actions button"));
+  return buttons.find((button) => {
+    const label = button.textContent?.trim().toLowerCase();
+    return label === "mark done" || label === "reopen";
+  }) ?? buttons.at(-1) ?? null;
+}
+
 function applyChecklistVisualState(taskId: string, state: ChecklistVisualState) {
   if (typeof document === "undefined") return;
 
@@ -80,9 +88,13 @@ function applyChecklistVisualState(taskId: string, state: ChecklistVisualState) 
   row.dataset.optimisticChecklistStatus = state;
 
   const mark = row.querySelector<HTMLElement>(".atlas-plant-check__mark");
-  if (mark) mark.textContent = done ? "✓" : "";
+  if (mark) {
+    mark.textContent = done ? "✓" : "";
+    mark.setAttribute("aria-pressed", String(done));
+    mark.setAttribute("aria-label", done ? "Reopen subtask" : "Mark subtask complete");
+  }
 
-  const button = row.querySelector<HTMLButtonElement>(".atlas-plant-check__actions button");
+  const button = checklistToggleButton(row);
   if (button) {
     button.textContent = done ? "Reopen" : "Mark done";
     button.setAttribute("aria-label", done ? "Reopen subtask" : "Mark subtask complete");
