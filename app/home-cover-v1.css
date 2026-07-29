@@ -1,0 +1,161 @@
+.atlas-home-task-hero .atlas-task-controller-head {
+  min-height: 28px;
+  padding-bottom: 2px;
+  justify-content: flex-start;
+}
+
+.atlas-home-task-hero .atlas-task-controller-head > div {
+  display: block;
+}
+
+.atlas-home-task-hero .atlas-task-kicker,
+.atlas-home-task-hero .atlas-task-date {
+  display: none !important;
+}
+
+.atlas-home-task-hero .atlas-season-label {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 10px;
+  line-height: 1;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.atlas-home-task-hero .atlas-run-sheet-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box {
+  position: relative;
+  min-height: 112px;
+  border-radius: 18px;
+  padding: 14px 12px 12px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box > small,
+.atlas-home-task-hero .atlas-run-sheet-box > span,
+.atlas-home-task-hero .atlas-run-sheet-box > em {
+  display: none !important;
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box > strong {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  color: white;
+  font-size: 15px;
+  line-height: 1.04;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box::before,
+.atlas-home-task-hero .atlas-run-sheet-box::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(1) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.44);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(1)::before {
+  top: 13px;
+  left: 13px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: white;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.1);
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(2) {
+  background: rgba(126, 132, 187, 0.26);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(2)::before {
+  top: 13px;
+  left: 13px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(2)::after {
+  top: 18px;
+  left: 26px;
+  width: 25px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(3) {
+  background: rgba(126, 132, 187, 0.19);
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(3)::before {
+  top: 12px;
+  left: 12px;
+  width: 15px;
+  height: 15px;
+  border: 2px dashed rgba(255, 255, 255, 0.68);
+  border-radius: 999px;
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(3)::after {
+  top: 17px;
+  left: 17px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(4) {
+  background: rgba(116, 86, 92, 0.24);
+  border-color: rgba(255, 223, 214, 0.44);
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(4)::before {
+  top: 12px;
+  left: 13px;
+  width: 4px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 232, 224, 0.84);
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box:nth-child(4)::after {
+  top: 34px;
+  left: 13px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 232, 224, 0.84);
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box[data-atlas-state="quiet"] > strong {
+  display: none;
+}
+
+.atlas-home-task-hero .atlas-run-sheet-box[data-atlas-state="quiet"] {
+  opacity: 0.58;
+}
