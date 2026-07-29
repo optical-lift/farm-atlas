@@ -21,7 +21,10 @@ function isWeedTask(task: AtlasTaskCard) {
 
 function isNetworkInputsTask(task: AtlasTaskCard) {
   return task.metadata?.network_input_research === true
-    || task.metadata?.task_key === "anna_20260728_call_local_companies_florist_buckets";
+    || task.metadata?.network_input_master_task === true
+    || task.metadata?.checklist_mode === "network_input_research"
+    || task.metadata?.task_key === "anna_20260728_call_local_companies_florist_buckets"
+    || task.metadata?.task_key === "anna_20260730_source_free_farm_inputs";
 }
 
 export default function CanonicalAssignedTaskDetail(props: Props) {
