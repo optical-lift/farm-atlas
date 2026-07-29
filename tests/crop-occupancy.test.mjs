@@ -115,3 +115,19 @@ test("every Weed Card receives a map frame and known long beds keep real directi
   assert.match(component, /edgeBandBasis/);
   assert.match(focus, /const occupancy = card\.bedMap\s*\?/);
 });
+
+test("bed maps show establishment dates and FR4 forget-me-not is on the south endcap", () => {
+  const migration = read("supabase/migrations/20260729181500_bed_map_establishment_dates_and_fr4_endcap_v1.sql");
+  const component = read("components/atlas/crop-occupancy-bed-map.tsx");
+  const contract = read("lib/atlas/weed-card-contract.ts");
+
+  assert.match(migration, /'establishmentDate',q\.establishment_date/);
+  assert.match(migration, /coalesce\(cc\.planted_date,cc\.sown_date\) establishment_date/);
+  assert.match(migration, /go\.stable_key='fr_4'/);
+  assert.match(migration, /anchor_edge='south'/);
+  assert.match(migration, /placement_label='south endcap'/);
+  assert.match(component, /establishmentDateLabel/);
+  assert.match(component, /placement\.establishmentDate/);
+  assert.doesNotMatch(component, /placement\.stageLabel/);
+  assert.match(contract, /establishmentKind\?: "planted" \| "sown" \| null/);
+});

@@ -23,6 +23,14 @@ function numberLabel(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, "");
 }
 
+function establishmentDateLabel(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(`${value.slice(0, 10)}T12:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function quantityLabel(placement: AtlasBedMapPlacement) {
   if (placement.observedQuantity != null) {
     const unit = placement.observedQuantityUnit === "clumps"
@@ -40,14 +48,14 @@ function quantityLabel(placement: AtlasBedMapPlacement) {
 }
 
 function placementText(placement: AtlasBedMapPlacement) {
-  return [placement.displayLabel, quantityLabel(placement), placement.stageLabel]
+  return [placement.displayLabel, quantityLabel(placement), establishmentDateLabel(placement.establishmentDate)]
     .filter((value): value is string => Boolean(value))
     .join(" · ");
 }
 
 function compactPlacementText(placement: AtlasBedMapPlacement) {
   const quantity = quantityLabel(placement);
-  return [placement.displayLabel, quantity, placement.stageLabel]
+  return [placement.displayLabel, quantity, establishmentDateLabel(placement.establishmentDate)]
     .filter((value): value is string => Boolean(value))
     .join("—");
 }
@@ -104,13 +112,18 @@ function edgeBandBasis(placements: AtlasBedMapPlacement[], lengthFt: number | nu
 function EdgeBand({ placements, edge, lengthFt }: { placements: AtlasBedMapPlacement[]; edge: "left" | "right"; lengthFt: number | null }) {
   if (!placements.length) return null;
   const names = Array.from(new Set(placements.map((placement) => placement.displayLabel)));
+  const visibleText = placements.length === 1
+    ? [placements[0].displayLabel, establishmentDateLabel(placements[0].establishmentDate)]
+        .filter((value): value is string => Boolean(value))
+        .join(" · ")
+    : names.join(" · ");
   return (
     <div
       className={`${styles.edgeBand} ${edge === "left" ? styles.leftBand : styles.rightBand}`}
       style={{ flexBasis: `${edgeBandBasis(placements, lengthFt)}%` }}
-      title={names.join(" · ")}
+      title={placements.map(placementText).join(" · ")}
     >
-      <span>{names.join(" · ")}</span>
+      <span>{visibleText}</span>
     </div>
   );
 }
