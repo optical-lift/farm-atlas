@@ -9,6 +9,7 @@ function read(path) {
 test("Day Week and Month read one permission-scoped farm and project task collection", () => {
   const client = read("lib/atlas/task-cards-client.ts");
   const route = read("app/api/atlas/universal-task-cards/route.ts");
+  const operatorReader = read("lib/atlas/operator-universal-home.ts");
   const adapter = read("lib/atlas/universal-task-cards.ts");
   const day = read("app/day/page.tsx");
   const week = read("app/overview/week/page.tsx");
@@ -20,7 +21,8 @@ test("Day Week and Month read one permission-scoped farm and project task collec
 
   assert.match(route, /getAtlasSession/);
   assert.match(route, /atlasUniversalViewerFromSession/);
-  assert.match(route, /readAtlasUniversalHome/);
+  assert.match(route, /readAtlasOperatorUniversalHome/);
+  assert.match(operatorReader, /readAtlasUniversalHome/);
   assert.match(route, /atlasUniversalTaskCards/);
   assert.match(route, /atlasUniversalPortalLabel/);
   assert.doesNotMatch(route, /requireAtlasApiAccess/);
