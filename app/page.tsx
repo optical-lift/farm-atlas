@@ -8,6 +8,7 @@ import {
 import { readAtlasOperatorJournalCover } from "@/lib/atlas/operator-journal-cover";
 import { readAtlasOperatorUniversalHome } from "@/lib/atlas/operator-universal-home";
 import { getAtlasSession } from "@/lib/atlas/session";
+import { readAtlasSetAsideTaskIds } from "@/lib/atlas/task-day-dispositions-server";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
 
 export const dynamic = "force-dynamic";
@@ -58,20 +59,46 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     preferredFarmId,
     effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
   });
-  const coverMoves = await readAtlasOperatorJournalCover(home);
-  const renderedViewer = home.viewer;
+
+  let setAsideTaskIds = new Set<string>();
+  try {
+    setAsideTaskIds = await readAtlasSetAsideTaskIds(home.window.doneDate);
+  } catch {
+    setAsideTaskIds = new Set<string>();
+  }
+
+  const visibleFarms = home.farms.map((farm) => ({
+    ...farm,
+    taskCards: farm.taskCards.filter((task) => !setAsideTaskIds.has(task.task_id)),
+  }));
+  const visibleActiveFarm = home.activeFarm
+    ? visibleFarms.find((farm) => farm.farmId === home.activeFarm?.farmId) ?? home.activeFarm
+    : null;
+  const visibleHome = {
+    ...home,
+    farms: visibleFarms,
+    activeFarm: visibleActiveFarm,
+    moves: home.moves.filter((move) => {
+      if (move.kind !== "farm_task") return true;
+      const taskId = move.key.split(":").at(-1) ?? "";
+      return !setAsideTaskIds.has(taskId);
+    }),
+  };
+
+  const coverMoves = await readAtlasOperatorJournalCover(visibleHome);
+  const renderedViewer = visibleHome.viewer;
   const organizationMembership = organizationMembershipForViewer(renderedViewer);
   const organizationPortal = Boolean(
     organizationMembership
       && (organizationMembership.role === "owner" || renderedViewer.farmMemberships.length === 0),
   );
   const renderedHome = {
-    ...home,
+    ...visibleHome,
     title: organizationPortal
-      ? home.organizationHome?.organization.name
+      ? visibleHome.organizationHome?.organization.name
         || organizationMembership?.organizationName
         || "Feast Guild"
-      : home.title,
+      : visibleHome.title,
     moves: coverMoves.map((move) => ({ ...move, href: focusedProjectTaskHref(move) })),
   };
 
