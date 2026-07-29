@@ -2,8 +2,12 @@ import { redirect } from "next/navigation";
 
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHome";
 import { readAtlasJournalCover } from "@/lib/atlas/journal-cover-home";
+import {
+  effectiveOperatorMembershipId,
+  readAtlasOwnerOperatorContext,
+} from "@/lib/atlas/operator-context";
+import { readAtlasOperatorUniversalHome } from "@/lib/atlas/operator-universal-home";
 import { getAtlasSession } from "@/lib/atlas/session";
-import { readAtlasUniversalHome } from "@/lib/atlas/universal-home";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +30,7 @@ function organizationMembershipForViewer(
   ) ?? viewer.organizationMemberships[0] ?? null;
 }
 
-function focusedProjectTaskHref(move: Awaited<ReturnType<typeof readAtlasUniversalHome>>["moves"][number]) {
+function focusedProjectTaskHref(move: Awaited<ReturnType<typeof readAtlasOperatorUniversalHome>>["moves"][number]) {
   if (move.kind !== "project_task" || !move.projectId) return move.href;
   const taskId = move.key.split(":").at(-1);
   if (!taskId) return move.href;
@@ -40,19 +44,26 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
   const viewer = atlasUniversalViewerFromSession(session);
   if (!viewer) redirect("/auth/error?reason=membership_required");
 
-  const params: AtlasHomeSearchParams = searchParams ? await searchParams : {};
+  const [params, operatorContext] = await Promise.all([
+    searchParams ? searchParams : Promise.resolve({} as AtlasHomeSearchParams),
+    readAtlasOwnerOperatorContext(),
+  ]);
   const selectedFarmKey = firstParam(params.farm);
   const selectedWorkstream = firstParam(params.workstream);
   const preferredFarmId = selectedFarmKey
     ? viewer.farmMemberships.find((membership) => membership.farmKey === selectedFarmKey)?.farmId
       ?? viewer.activeFarmId
     : viewer.activeFarmId;
-  const home = await readAtlasUniversalHome(viewer, { preferredFarmId });
+  const home = await readAtlasOperatorUniversalHome(viewer, {
+    preferredFarmId,
+    effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
+  });
   const coverMoves = await readAtlasJournalCover(home);
-  const organizationMembership = organizationMembershipForViewer(viewer);
+  const renderedViewer = home.viewer;
+  const organizationMembership = organizationMembershipForViewer(renderedViewer);
   const organizationPortal = Boolean(
     organizationMembership
-      && (organizationMembership.role === "owner" || viewer.farmMemberships.length === 0),
+      && (organizationMembership.role === "owner" || renderedViewer.farmMemberships.length === 0),
   );
   const renderedHome = {
     ...home,
