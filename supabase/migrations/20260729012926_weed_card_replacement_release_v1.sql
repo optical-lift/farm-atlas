@@ -1,0 +1,4 @@
+-- Applied in production to let a completed daily Weed Card session release
+-- only its same-card continuation even while the farm is above the global
+-- active-task ceiling. Final idempotent definitions live in
+-- 20260729014000_weed_card_final_contract_v1.sql.
