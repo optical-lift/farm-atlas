@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHome";
 import {
+  effectiveOperatorAccountId,
   effectiveOperatorMembershipId,
   readAtlasOwnerOperatorContext,
 } from "@/lib/atlas/operator-context";
@@ -56,6 +57,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     : viewer.activeFarmId;
   const home = await readAtlasOperatorUniversalHome(viewer, {
     preferredFarmId,
+    effectiveAccountId: effectiveOperatorAccountId(operatorContext),
     effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
   });
   const coverMoves = await readAtlasOperatorJournalCover(home);
