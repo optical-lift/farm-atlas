@@ -5,6 +5,7 @@ import {
   readAtlasJsonBody,
   requireAtlasApiAccess,
 } from "@/lib/atlas/api-access";
+import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import {
   AtlasTaskTransitionInputError,
   atlasTaskTransitionRpcForRole,
@@ -67,10 +68,13 @@ export async function POST(request: Request) {
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
 
+  const operatorContext = await readAtlasOwnerOperatorContext();
+  const operating = Boolean(operatorContext?.isOperating);
+
   let rpcName;
   try {
     rpcName = atlasTaskTransitionRpcForRole(
-      authorized.access.membership.role,
+      operating ? "owner" : authorized.access.membership.role,
       input.transition,
     );
   } catch (error) {
@@ -82,7 +86,34 @@ export async function POST(request: Request) {
   let data: unknown;
   let error: RpcError | null;
 
-  if (rpcName === "worker_reopen_task_completion_v1") {
+  if (operating && operatorContext) {
+    if (input.transition === "reopened") {
+      const response = await supabase.rpc("owner_operator_reopen_task_completion_v1", {
+        p_effective_membership_id: operatorContext.effective.membershipId,
+        p_task_id: input.taskId,
+        p_idempotency_key: input.idempotencyKey,
+        p_payload: input.payload,
+      });
+      data = response.data;
+      error = response.error;
+    } else {
+      const response = await supabase.rpc("owner_operator_record_task_transition_v1", {
+        p_effective_membership_id: operatorContext.effective.membershipId,
+        p_task_id: input.taskId,
+        p_transition: input.transition,
+        p_idempotency_key: input.idempotencyKey,
+        p_target_date: input.targetDate,
+        p_note: input.note,
+        p_reason: input.reason,
+        p_lane_key: input.laneKey,
+        p_work_key: input.workKey,
+        p_payload: input.payload,
+        p_existing_field_log_id: input.existingFieldLogId,
+      });
+      data = response.data;
+      error = response.error;
+    }
+  } else if (rpcName === "worker_reopen_task_completion_v1") {
     const response = await supabase.rpc("worker_reopen_task_completion_v1", {
       p_task_id: input.taskId,
       p_idempotency_key: input.idempotencyKey,
@@ -139,6 +170,8 @@ export async function POST(request: Request) {
   return privateJson({
     ...result,
     ok: true,
+    operatorMode: operating,
+    effectiveMembershipId: operating ? operatorContext?.effective.membershipId ?? null : null,
     warnings: Array.isArray(result.warnings) ? result.warnings : [],
   });
 }
