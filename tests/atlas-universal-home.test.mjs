@@ -14,10 +14,12 @@ test("root renders one universal Atlas home for every active membership shape", 
   const universalHome = read("components/atlas/home/AtlasUniversalHome.tsx");
   const viewer = read("lib/atlas/viewer.ts");
   const reader = read("lib/atlas/universal-home.ts");
+  const operatorReader = read("lib/atlas/operator-universal-home.ts");
 
   assert.match(root, /getAtlasSession/);
   assert.match(root, /atlasUniversalViewerFromSession/);
-  assert.match(root, /readAtlasUniversalHome/);
+  assert.match(root, /readAtlasOperatorUniversalHome/);
+  assert.match(operatorReader, /readAtlasUniversalHome/);
   assert.match(root, /<AtlasUniversalHome/);
   assert.doesNotMatch(root, /FeastGuildPortfolioHome|AtlasHomePortal/);
   assert.doesNotMatch(root, /atlasPortalViewerFromSession|atlasViewerFromSession/);
