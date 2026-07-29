@@ -50,9 +50,11 @@ test("the universal home permission-scopes Feast Guild and farm work for every m
   const proxy = read("lib/supabase/proxy.ts");
   const universalHome = read("components/atlas/home/AtlasUniversalHome.tsx");
   const reader = read("lib/atlas/universal-home.ts");
+  const operatorReader = read("lib/atlas/operator-universal-home.ts");
 
   assert.match(page, /atlasUniversalViewerFromSession/);
-  assert.match(page, /readAtlasUniversalHome/);
+  assert.match(page, /readAtlasOperatorUniversalHome/);
+  assert.match(operatorReader, /readAtlasUniversalHome/);
   assert.match(page, /AtlasUniversalHome/);
   assert.doesNotMatch(page, /FeastGuildPortfolioHome|AtlasHomePortal/);
   assert.match(session, /organization_memberships/);
@@ -70,6 +72,7 @@ test("the universal home permission-scopes Feast Guild and farm work for every m
   assert.match(reader, /organizationHome/);
   assert.match(reader, /farmTaskMove/);
   assert.match(reader, /projectAttentionMove/);
+  assert.match(operatorReader, /owner_operator_universal_home_v1/);
 });
 
 test("project pages use the same Atlas phone and compact work controls", () => {

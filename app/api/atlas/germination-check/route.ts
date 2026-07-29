@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireAtlasApiAccess } from "@/lib/atlas/api-access";
+import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ACTIONS = new Set(["not_yet", "germinated"]);
+const SPACING_OUTCOMES = new Set(["thin", "on_target", "patch"]);
 
 type SourceTask = {
   id: string;
@@ -34,7 +39,15 @@ type GerminationSource = {
   profile?: SourceProfile | null;
 };
 
-type RpcError = { code?: string };
+type GerminationBody = {
+  taskId?: unknown;
+  taskTitle?: unknown;
+  action?: unknown;
+  spacingOutcome?: unknown;
+  targetSpacingInches?: unknown;
+};
+
+type RpcError = { code?: string; message?: string };
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -74,6 +87,20 @@ function privateJson(body: Record<string, unknown>, status = 200) {
   });
 }
 
+function rpcFailure(error: RpcError, fallback: string) {
+  if (error.code === "42501") {
+    return privateJson({ ok: false, error: "This germination task is outside the active worker context." }, 403);
+  }
+  if (error.code === "P0002") {
+    return privateJson({ ok: false, error: "Germination check task was not found." }, 404);
+  }
+  if (error.code === "22023" || error.code === "22P02") {
+    return privateJson({ ok: false, error: error.message || "The germination result was rejected." }, 400);
+  }
+  console.error(fallback, error);
+  return privateJson({ ok: false, error: fallback }, 500);
+}
+
 export async function GET(request: NextRequest) {
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
@@ -81,25 +108,24 @@ export async function GET(request: NextRequest) {
   const taskId = clean(request.nextUrl.searchParams.get("taskId")) || null;
   const taskTitle = clean(request.nextUrl.searchParams.get("taskTitle")) || null;
   if (!taskId && !taskTitle) return privateJson({ ok: false, error: "Task id or title is required." }, 400);
+  if (taskId && !UUID_PATTERN.test(taskId)) return privateJson({ ok: false, error: "A valid task id is required." }, 400);
 
+  const operatorContext = await readAtlasOwnerOperatorContext();
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("germination_check_source_v1", {
-    p_farm_id: authorized.access.membership.farmId,
-    p_task_id: taskId,
-    p_task_title: taskTitle,
-  });
+  const response = operatorContext?.isOperating
+    ? await supabase.rpc("owner_operator_germination_check_source_v1", {
+        p_effective_membership_id: operatorContext.effective.membershipId,
+        p_task_id: taskId,
+        p_task_title: taskTitle,
+      })
+    : await supabase.rpc("germination_check_source_v1", {
+        p_farm_id: authorized.access.membership.farmId,
+        p_task_id: taskId,
+        p_task_title: taskTitle,
+      });
+  const { data, error } = response;
 
-  if (error) {
-    const rpcError = error as RpcError;
-    if (rpcError.code === "42501") {
-      return privateJson({ ok: false, error: "This germination task is outside the active membership scope." }, 403);
-    }
-    if (rpcError.code === "P0002") {
-      return privateJson({ ok: false, error: "Germination check task was not found." }, 404);
-    }
-    console.error("Atlas germination check lookup failed:", error);
-    return privateJson({ ok: false, error: "Germination check lookup failed." }, 500);
-  }
+  if (error) return rpcFailure(error as RpcError, "Germination check lookup failed.");
 
   const source = (data ?? {}) as GerminationSource;
   const task = source.task;
@@ -116,6 +142,7 @@ export async function GET(request: NextRequest) {
   return privateJson({
     ok: true,
     germinationCheck: true,
+    operatorMode: operatorContext?.isOperating ?? false,
     task: {
       id: task.id,
       title: task.title,
@@ -128,5 +155,70 @@ export async function GET(request: NextRequest) {
       expectedMaxDays: profile.days_to_germination_max,
       notYetCount: positiveInteger(metadata.not_yet_count) ?? 0,
     },
+  });
+}
+
+export async function POST(request: NextRequest) {
+  const requestOrigin = request.headers.get("origin");
+  if (!requestOrigin || requestOrigin !== request.nextUrl.origin) {
+    return privateJson({ ok: false, error: "Germination results require a same-origin Atlas request." }, 403);
+  }
+
+  const authorized = await requireAtlasApiAccess();
+  if (!authorized.ok) return authorized.response;
+
+  let body: GerminationBody;
+  try {
+    body = await request.json() as GerminationBody;
+  } catch {
+    return privateJson({ ok: false, error: "A JSON germination result is required." }, 400);
+  }
+
+  const taskId = clean(body.taskId);
+  const taskTitle = clean(body.taskTitle) || null;
+  const action = clean(body.action);
+  const spacingOutcome = clean(body.spacingOutcome) || null;
+  const targetSpacingInches = positiveNumber(body.targetSpacingInches);
+
+  if (!UUID_PATTERN.test(taskId)) {
+    return privateJson({ ok: false, error: "A valid task id is required." }, 400);
+  }
+  if (!ACTIONS.has(action)) {
+    return privateJson({ ok: false, error: "Choose not yet or germinated." }, 400);
+  }
+  if (action === "germinated" && (!spacingOutcome || !SPACING_OUTCOMES.has(spacingOutcome))) {
+    return privateJson({ ok: false, error: "Choose thin, on target, or patch." }, 400);
+  }
+
+  const operatorContext = await readAtlasOwnerOperatorContext();
+  const supabase = await createAtlasServerClient();
+  const response = operatorContext?.isOperating
+    ? await supabase.rpc("owner_operator_record_germination_check_v1", {
+        p_effective_membership_id: operatorContext.effective.membershipId,
+        p_task_id: taskId,
+        p_action: action,
+        p_spacing_outcome: action === "germinated" ? spacingOutcome : null,
+        p_target_spacing_inches: action === "germinated" ? targetSpacingInches : null,
+      })
+    : await supabase.rpc("record_germination_check_for_member_v1", {
+        p_farm_id: authorized.access.membership.farmId,
+        p_task_id: taskId,
+        p_task_title: taskTitle,
+        p_action: action,
+        p_spacing_outcome: action === "germinated" ? spacingOutcome : null,
+        p_target_spacing_inches: action === "germinated" ? targetSpacingInches : null,
+      });
+  const { data, error } = response;
+
+  if (error) return rpcFailure(error as RpcError, "Germination result failed.");
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return privateJson({ ok: false, error: "Atlas returned an invalid germination result." }, 500);
+  }
+
+  return privateJson({
+    ...(data as Record<string, unknown>),
+    ok: true,
+    operatorMode: operatorContext?.isOperating ?? false,
+    effectiveMembershipId: operatorContext?.isOperating ? operatorContext.effective.membershipId : null,
   });
 }

@@ -10,7 +10,7 @@ test("organization portals keep the Feast Guild title while farm employees keep 
   const home = read("app/page.tsx");
 
   assert.match(home, /organizationMembership\.role === "owner"/);
-  assert.match(home, /viewer\.farmMemberships\.length === 0/);
+  assert.match(home, /renderedViewer\.farmMemberships\.length === 0/);
   assert.match(home, /home\.organizationHome\?\.organization\.name/);
   assert.match(home, /"Feast Guild"/);
   assert.doesNotMatch(home, /singleVisibleFarmName/);

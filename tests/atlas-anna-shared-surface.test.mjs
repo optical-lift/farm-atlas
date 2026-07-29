@@ -17,6 +17,7 @@ test("Anna enters the familiar shared Atlas operating surface", () => {
   const root = read("app/page.tsx");
   const home = read("components/atlas/home/AtlasUniversalHome.tsx");
   const reader = read("lib/atlas/universal-home.ts");
+  const operatorReader = read("lib/atlas/operator-universal-home.ts");
   const layout = read("app/layout.tsx");
   const taskClient = read("lib/atlas/task-cards-client.ts");
   const authCore = read("lib/atlas/auth-core.js");
@@ -24,7 +25,8 @@ test("Anna enters the familiar shared Atlas operating surface", () => {
 
   assert.match(root, /getAtlasSession/);
   assert.match(root, /atlasUniversalViewerFromSession/);
-  assert.match(root, /readAtlasUniversalHome/);
+  assert.match(root, /readAtlasOperatorUniversalHome/);
+  assert.match(operatorReader, /readAtlasUniversalHome/);
   assert.match(root, /<AtlasUniversalHome/);
   assert.doesNotMatch(root, /AtlasHomePortal|FeastGuildPortfolioHome/);
 
@@ -47,6 +49,7 @@ test("Anna enters the familiar shared Atlas operating surface", () => {
   assert.match(home, /data-atlas-home-portal="universal"/);
   assert.match(reader, /home_task_cards_v2|universal_home_v1/);
   assert.match(reader, /farmTaskMove/);
+  assert.match(operatorReader, /owner_operator_universal_home_v1/);
   assert.doesNotMatch(layout, /AtlasRoleHomeRedirect/);
   assert.match(taskClient, /if \(pathname === "\/"\)/);
   assert.match(taskClient, /\/api\/atlas\/universal-task-cards/);
