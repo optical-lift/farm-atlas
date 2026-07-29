@@ -9,6 +9,8 @@ type OwnerSectionProps = {
   title: string;
   tasks: OwnerAction[];
   empty: string;
+  referenceDate?: string;
+  overdue?: boolean;
 };
 
 function prettyDate(dateIso: string | null | undefined) {
@@ -16,6 +18,13 @@ function prettyDate(dateIso: string | null | undefined) {
   const date = new Date(`${dateIso}T12:00:00`);
   if (Number.isNaN(date.getTime())) return dateIso;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function daysBetween(startIso: string, endIso: string) {
+  const start = new Date(`${startIso}T12:00:00Z`);
+  const end = new Date(`${endIso}T12:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  return Math.max(0, Math.round((end.getTime() - start.getTime()) / 86_400_000));
 }
 
 function taskDetail(task: OwnerAction) {
@@ -26,26 +35,44 @@ function taskDetail(task: OwnerAction) {
   return task.detail;
 }
 
-function OwnerTaskCard({ task }: { task: OwnerAction }) {
+function OwnerTaskCard({
+  task,
+  referenceDate,
+  overdue = false,
+}: {
+  task: OwnerAction;
+  referenceDate?: string;
+  overdue?: boolean;
+}) {
   const detail = taskDetail(task);
+  const daysLate = overdue && task.dueDate && referenceDate
+    ? daysBetween(task.dueDate, referenceDate)
+    : null;
+  const dateLabel = overdue && task.dueDate
+    ? `Overdue since ${prettyDate(task.dueDate)}${daysLate ? ` · ${daysLate}d` : ""}`
+    : prettyDate(task.dueDate);
   const content = (
     <>
       <div>
         <strong>{task.title}</strong>
         <span>{task.taskType.replaceAll("_", " ")}</span>
       </div>
-      <em>{prettyDate(task.dueDate)}</em>
+      <em>{dateLabel}</em>
       {detail ? <p>{detail}</p> : null}
     </>
   );
 
   if (!task.id) {
-    return <article className="atlas-overview-task-card atlas-owner-task-card">{content}</article>;
+    return (
+      <article className={`atlas-overview-task-card atlas-owner-task-card${overdue ? " atlas-owner-overdue-card" : ""}`}>
+        {content}
+      </article>
+    );
   }
 
   return (
     <Link
-      className="atlas-overview-task-card atlas-owner-task-card"
+      className={`atlas-overview-task-card atlas-owner-task-card${overdue ? " atlas-owner-overdue-card" : ""}`}
       href={`/owner/tasks/${encodeURIComponent(task.id)}`}
     >
       {content}
@@ -53,15 +80,21 @@ function OwnerTaskCard({ task }: { task: OwnerAction }) {
   );
 }
 
-function OwnerSection({ title, tasks, empty }: OwnerSectionProps) {
+function OwnerSection({
+  title,
+  tasks,
+  empty,
+  referenceDate,
+  overdue = false,
+}: OwnerSectionProps) {
   return (
-    <section className="atlas-overview-zone-card atlas-owner-section">
+    <section className={`atlas-overview-zone-card atlas-owner-section${overdue ? " atlas-owner-overdue-section" : ""}`}>
       <summary>
         <div>
           <strong>{title}</strong>
           <span>{tasks.length} {tasks.length === 1 ? "task" : "tasks"}</span>
         </div>
-        <b>Owner</b>
+        <b>{overdue ? "Needs attention" : "Owner"}</b>
       </summary>
       <div className="atlas-overview-task-list">
         {tasks.length ? (
@@ -69,6 +102,8 @@ function OwnerSection({ title, tasks, empty }: OwnerSectionProps) {
             <OwnerTaskCard
               key={task.id ?? `${task.title}-${task.dueDate ?? "none"}`}
               task={task}
+              referenceDate={referenceDate}
+              overdue={overdue}
             />
           ))
         ) : (
@@ -94,7 +129,7 @@ export default function OwnerDashboardClient({
             <span className="atlas-phone-kicker">{dashboard.farm.name}</span>
             <span className="atlas-phone-title">Owner</span>
           </Link>
-          <span className="atlas-weather-line">{counts.open} open actions</span>
+          <span className="atlas-weather-line">{counts.overdue} overdue</span>
           <Link
             href="/owner/members"
             className="atlas-note-plus atlas-overview-top-dot"
@@ -110,8 +145,16 @@ export default function OwnerDashboardClient({
               <strong>Owner Work</strong>
               <span>{prettyDate(dashboard.generatedForDate)}–{prettyDate(dashboard.weekEndDate)}</span>
             </div>
-            <p>{counts.open} open owner tasks · {counts.blocked} blocked</p>
+            <p>{counts.overdue} overdue · {counts.today} due today · {counts.open} open total</p>
           </section>
+
+          <OwnerSection
+            title="Fallen Through the Cracks"
+            tasks={ownerActions.overdue}
+            empty="No overdue owner tasks."
+            referenceDate={dashboard.generatedForDate}
+            overdue
+          />
 
           <section className="atlas-overview-stat-grid" aria-label="Owner task stats">
             <article><strong>{counts.overdue}</strong><span>overdue</span></article>
@@ -121,6 +164,9 @@ export default function OwnerDashboardClient({
           </section>
 
           <section className="atlas-overview-zone-list atlas-owner-list" aria-label="Owner task list">
+            <OwnerSection title="Today" tasks={ownerActions.today} empty="No owner tasks due today." />
+            <OwnerSection title="This Week" tasks={ownerActions.thisWeek} empty="No owner tasks later this week." />
+            <OwnerSection title="Later" tasks={ownerActions.later} empty="No later owner tasks." />
             <Link className="atlas-overview-task-card atlas-owner-task-card" href="/owner/lineage">
               <div>
                 <strong>Trail Lineage Audit</strong>
@@ -129,10 +175,6 @@ export default function OwnerDashboardClient({
               <em>Open</em>
               <p>Confirm or reject proposed links between completed records and earlier Trail points.</p>
             </Link>
-            <OwnerSection title="Overdue" tasks={ownerActions.overdue} empty="No overdue owner tasks." />
-            <OwnerSection title="Today" tasks={ownerActions.today} empty="No owner tasks due today." />
-            <OwnerSection title="This Week" tasks={ownerActions.thisWeek} empty="No owner tasks later this week." />
-            <OwnerSection title="Later" tasks={ownerActions.later} empty="No later owner tasks." />
             {ownerActions.recentlyDone.length ? (
               <OwnerSection
                 title="Recently Done"
