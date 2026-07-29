@@ -2,6 +2,7 @@
 
 import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
+import TaskSetAsideControl from "@/components/atlas/task-set-aside-control";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -30,5 +31,12 @@ function isNetworkInputsTask(task: AtlasTaskCard) {
 export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
-  return <DominionAssignedTaskDetail {...props} />;
+  return (
+    <>
+      <DominionAssignedTaskDetail {...props} />
+      {props.assignee.key === "anna" ? (
+        <TaskSetAsideControl taskId={props.task.task_id} returnTo={props.assignee.listPath} />
+      ) : null}
+    </>
+  );
 }
