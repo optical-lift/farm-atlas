@@ -25,15 +25,34 @@ test("Home reads a four-slot journal cover without releasing work", () => {
   assert.doesNotMatch(page, /Current move|Next move|Closest unlock|Active blocker/);
 });
 
-test("The cover communicates roles through position and shape rather than visible labels", () => {
+test("The four boxes speak in bullet-journal marks and farm-state movement", () => {
+  const reader = read("lib/atlas/journal-cover-home.ts");
+
+  assert.match(reader, /current: "●"/);
+  assert.match(reader, /next: "○"/);
+  assert.match(reader, /unlock: "~"/);
+  assert.match(reader, /blocker: "!"/);
+  assert.match(reader, /Return the row to production/);
+  assert.match(reader, /Continue the recovery block/);
+  assert.match(reader, /Emergence will confirm the stand/);
+  assert.match(reader, /Clearance \+ approval hold the block/);
+  assert.match(reader, /category: coverMark\[role\]/);
+});
+
+test("The mark and subject share the first line while movement sits below", () => {
   const css = read("app/home-cover-v1.css");
   const layout = read("app/layout.tsx");
 
+  assert.match(css, /grid-template-columns: auto minmax\(0, 1fr\)/);
+  assert.match(css, /> small \{[\s\S]*grid-column: 1;[\s\S]*grid-row: 1;/);
+  assert.match(css, /> strong \{[\s\S]*grid-column: 2;[\s\S]*grid-row: 1;/);
+  assert.match(css, /> em \{[\s\S]*grid-column: 1 \/ -1;[\s\S]*grid-row: 2;/);
+  assert.match(css, /> span \{[\s\S]*display: none !important/);
+  assert.match(css, /::before,[\s\S]*::after[\s\S]*content: none !important/);
   assert.match(css, /nth-child\(1\)/);
   assert.match(css, /nth-child\(2\)/);
   assert.match(css, /nth-child\(3\)/);
   assert.match(css, /nth-child\(4\)/);
-  assert.match(css, /> small,[\s\S]*> span,[\s\S]*> em[\s\S]*display: none !important/);
   assert.match(css, /\.atlas-task-kicker,[\s\S]*\.atlas-task-date[\s\S]*display: none !important/);
   assert.match(layout, /home-cover-v1\.css/);
 });
