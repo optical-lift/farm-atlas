@@ -57,6 +57,8 @@ export type AtlasBedMapPlacement = {
   placementId: string;
   cropCycleId: string;
   displayLabel: string;
+  establishmentDate?: string | null;
+  establishmentKind?: "planted" | "sown" | null;
   stage?: string | null;
   stageLabel: string;
   lifeCycle: string;
