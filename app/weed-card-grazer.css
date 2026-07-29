@@ -1,0 +1,135 @@
+.atlas-weed-card-page-shell .atlas-weed-session-entry {
+  gap: 10px;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-rest-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-rest-actions button {
+  min-height: 46px;
+  border: 1px solid rgba(118, 116, 103, 0.2);
+  border-radius: 14px;
+  background: rgba(246, 244, 237, 0.72);
+  color: var(--atlas-text);
+  font-size: 13px;
+  font-weight: 880;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-rest-actions button:first-child {
+  border-color: rgba(132, 137, 187, 0.28);
+  background: rgba(235, 235, 246, 0.58);
+}
+
+.atlas-weed-card-page-shell .atlas-weed-rest-actions button:last-child {
+  min-height: 38px;
+  border-color: transparent;
+  background: transparent;
+  color: #777970;
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-log-drawer {
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-log-row {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-bottom: 1px solid rgba(111, 101, 82, 0.12);
+  background: transparent;
+  color: var(--atlas-text);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 12px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2px;
+  text-align: left;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-log-row span {
+  color: #7a7c73;
+  font-size: 11px;
+  font-weight: 780;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-log-row strong {
+  color: #44464f;
+  font-size: 12px;
+  font-weight: 880;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-log-row b {
+  color: #98988f;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-condition-buttons,
+.atlas-weed-card-page-shell .atlas-weed-minute-rail {
+  margin: 2px 0 7px;
+  padding: 7px;
+  border: 1px solid rgba(111, 101, 82, 0.12);
+  border-radius: 13px;
+  background: rgba(247, 244, 235, 0.52);
+}
+
+.atlas-weed-card-page-shell .atlas-weed-condition-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-minute-rail {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-condition-buttons button,
+.atlas-weed-card-page-shell .atlas-weed-minute-rail button,
+.atlas-weed-card-page-shell .atlas-weed-minute-rail input {
+  min-height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 254, 249, 0.72);
+  font-size: 10px;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-note {
+  margin-top: 2px;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-log-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.5fr);
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-log-actions > button {
+  min-height: 46px;
+  border: 1px solid rgba(103, 101, 88, 0.18);
+  border-radius: 13px;
+  background: rgba(250, 248, 240, 0.72);
+  color: #66685f;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-log-actions .atlas-weed-session-save {
+  border-color: rgba(181, 185, 54, 0.62);
+  background: #e6ec4d;
+  color: #2e3041;
+  font-size: 13px;
+  font-weight: 930;
+}
+
+.atlas-weed-card-page-shell .atlas-weed-rest-actions button:disabled,
+.atlas-weed-card-page-shell .atlas-weed-log-row:disabled,
+.atlas-weed-card-page-shell .atlas-weed-log-actions button:disabled {
+  opacity: 0.56;
+}

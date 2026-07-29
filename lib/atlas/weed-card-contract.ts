@@ -33,7 +33,7 @@ export type AtlasWeedCardContext = {
 
 export type AtlasWeedCardSessionInput = {
   taskId: string;
-  minutes: number;
+  minutes?: number | null;
   conditionAfter: AtlasWeedCondition;
   workDate: string;
   note?: string;
@@ -47,9 +47,28 @@ export type AtlasWeedCardSessionResult = {
   cardId: string;
   passId: string;
   minutes: number;
+  minutesKnown: boolean;
   conditionAfter: AtlasWeedCondition;
   passClosed: boolean;
+  taskClosed: boolean;
   nextReviewOn: string | null;
+  deduplicated: boolean;
+};
+
+export type AtlasFinishWeedCardDayInput = {
+  taskId: string;
+  workDate: string;
+  idempotencyKey?: string;
+};
+
+export type AtlasFinishWeedCardDayResult = {
+  taskId: string;
+  nextTaskId: string | null;
+  cardId?: string;
+  passId?: string | null;
+  conditionAfter?: AtlasWeedCondition;
+  passClosed?: boolean;
+  taskClosed: boolean;
   deduplicated: boolean;
 };
 

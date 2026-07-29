@@ -39,12 +39,13 @@ function text(value: unknown) {
 function rpcError(error: RpcError) {
   if (error.code === "42501") return atlasApiError(403, "weed_card_forbidden", "This Weed Card is not assigned to the signed-in farm member.");
   if (error.code === "P0002") return atlasApiError(404, "weed_card_not_found", "The Weed Card was not found.");
-  if (error.code === "22023") return atlasApiError(400, "weed_card_session_rejected", error.message || "The Weed Card session was rejected.");
-  return atlasApiError(500, "weed_card_session_failed", "Atlas could not save the Weed Card session.");
+  if (error.code === "22023") return atlasApiError(400, "weed_card_pass_rejected", error.message || "The Weed Card pass was rejected.");
+  return atlasApiError(500, "weed_card_pass_failed", "Atlas could not save the Weed Card pass.");
 }
 
 export async function POST(request: Request) {
-  if (request.headers.get("x-atlas-intent") !== "weed-card-session-v1") {
+  const intent = request.headers.get("x-atlas-intent");
+  if (intent !== "weed-card-pass-v1" && intent !== "weed-card-session-v1") {
     return atlasApiError(400, "weed_card_intent_required", "A valid Weed Card intent is required.");
   }
 
@@ -55,28 +56,29 @@ export async function POST(request: Request) {
   try {
     body = await readAtlasJsonBody(request) as Body;
   } catch {
-    return atlasApiError(400, "invalid_weed_card_session", "The Weed Card session request is invalid.");
+    return atlasApiError(400, "invalid_weed_card_pass", "The Weed Card pass request is invalid.");
   }
 
   const taskId = text(body.taskId);
   const idempotencyKey = text(body.idempotencyKey);
   const workDate = text(body.workDate);
   const note = text(body.note);
-  const minutes = typeof body.minutes === "number" ? body.minutes : Number(body.minutes);
+  const rawMinutes = body.minutes;
+  const minutes = rawMinutes == null || rawMinutes === "" ? 0 : Number(rawMinutes);
   const conditionAfter = text(body.conditionAfter) as AtlasWeedCondition;
 
   if (!taskId || !idempotencyKey || !/^\d{4}-\d{2}-\d{2}$/.test(workDate)) {
-    return atlasApiError(400, "invalid_weed_card_session", "Task, date, and idempotency key are required.");
+    return atlasApiError(400, "invalid_weed_card_pass", "Task, date, and idempotency key are required.");
   }
-  if (!Number.isInteger(minutes) || minutes < 1 || minutes > 480) {
-    return atlasApiError(400, "invalid_weed_card_minutes", "Minutes must be a whole number between 1 and 480.");
+  if (!Number.isInteger(minutes) || minutes < 0 || minutes > 480) {
+    return atlasApiError(400, "invalid_weed_card_minutes", "Minutes must be a whole number between 0 and 480.");
   }
   if (!ATLAS_WEED_CONDITIONS.includes(conditionAfter)) {
     return atlasApiError(400, "invalid_weed_card_condition", "Choose a valid bed condition.");
   }
 
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("record_weed_card_session_v1", {
+  const { data, error } = await supabase.rpc("record_weed_card_pass_v1", {
     p_task_id: taskId,
     p_minutes: minutes,
     p_condition_after: conditionAfter,

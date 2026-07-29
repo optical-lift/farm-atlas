@@ -12,7 +12,10 @@ import {
   type AtlasWeedCardContext,
   type AtlasWeedCondition,
 } from "@/lib/atlas/weed-card-contract";
-import { postAtlasWeedCardSession } from "@/lib/atlas/weed-card-client";
+import {
+  postAtlasFinishWeedCardDay,
+  postAtlasWeedCardSession,
+} from "@/lib/atlas/weed-card-client";
 import styles from "./weed-card-task-focus.module.css";
 
 type Props = {
@@ -49,7 +52,10 @@ function timeLabel(minutes: number) {
 export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   const currentIndex = ATLAS_WEED_CONDITIONS.indexOf(card.condition);
   const availableConditions = ATLAS_WEED_CONDITIONS.slice(Math.max(0, currentIndex));
-  const [minutes, setMinutes] = useState<number>(20);
+  const [logOpen, setLogOpen] = useState(false);
+  const [conditionOpen, setConditionOpen] = useState(false);
+  const [timeOpen, setTimeOpen] = useState(false);
+  const [minutes, setMinutes] = useState<number | null>(null);
   const [customMinutes, setCustomMinutes] = useState("");
   const [conditionAfter, setConditionAfter] = useState<AtlasWeedCondition>(card.condition);
   const [note, setNote] = useState("");
@@ -61,17 +67,21 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
     () => card.sessions.filter((session) => !session.minutesKnown).length,
     [card.sessions],
   );
-  const selectedMinutes = customMinutes.trim() ? Number(customMinutes) : minutes;
-  const passLabel = card.totalMinutes > 0
-    ? `${timeLabel(card.totalMinutes)} this pass`
-    : unquantifiedSessions > 0
-      ? "work recorded"
-      : "new pass";
+  const selectedMinutes = customMinutes.trim() ? Number(customMinutes) : minutes ?? 0;
+  const selectedTimeLabel = customMinutes.trim()
+    ? `${customMinutes}m`
+    : minutes
+      ? `${minutes}m`
+      : "Add time";
   const actionTitle = `Weed ${card.objectLabel}`;
 
-  async function saveSession() {
-    if (!Number.isInteger(selectedMinutes) || selectedMinutes < 1 || selectedMinutes > 480) {
-      setMessage("Choose 1–480 minutes.");
+  async function savePass() {
+    if (!Number.isInteger(selectedMinutes) || selectedMinutes < 0 || selectedMinutes > 480) {
+      setMessage("Choose 1–480 minutes, or leave time blank.");
+      return;
+    }
+    if (selectedMinutes === 0 && conditionAfter === card.condition && !note.trim()) {
+      setMessage("Add time or change the condition.");
       return;
     }
 
@@ -80,14 +90,30 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
       setMessage(null);
       await postAtlasWeedCardSession({
         taskId: task.task_id,
-        minutes: selectedMinutes,
+        minutes: selectedMinutes || null,
         conditionAfter,
         workDate: todayIso(),
         note,
       });
       window.location.assign(assignee.listPath);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Weed Card session failed.");
+      setMessage(error instanceof Error ? error.message : "Weed Card pass failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function finishToday() {
+    try {
+      setSaving(true);
+      setMessage(null);
+      await postAtlasFinishWeedCardDay({
+        taskId: task.task_id,
+        workDate: todayIso(),
+      });
+      window.location.assign(assignee.listPath);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Atlas could not close today's Weed Card.");
     } finally {
       setSaving(false);
     }
@@ -101,7 +127,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
             <span className="atlas-phone-kicker">Atlas</span>
             <span className="atlas-phone-title">{assignee.label}</span>
           </Link>
-          <span className="atlas-weather-line">{passLabel}</span>
+          <span className="atlas-weather-line">{ATLAS_WEED_CONDITION_LABELS[card.condition]}</span>
           <Link href={assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
         </header>
 
@@ -155,57 +181,95 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
             </section>
 
             <footer className="atlas-weed-session-entry">
-              <div className="atlas-weed-minute-rail" aria-label="Minutes worked">
-                {QUICK_MINUTES.map((value) => (
+              {!logOpen ? (
+                <div className="atlas-weed-rest-actions">
+                  <button type="button" disabled={saving} onClick={() => setLogOpen(true)}>Log a pass</button>
+                  <button type="button" disabled={saving} onClick={() => void finishToday()}>That’s all for today</button>
+                </div>
+              ) : (
+                <section className="atlas-weed-log-drawer" aria-label="Log a weed pass">
                   <button
                     type="button"
-                    key={value}
-                    className={!customMinutes && minutes === value ? "is-selected" : ""}
-                    disabled={saving}
-                    onClick={() => { setMinutes(value); setCustomMinutes(""); }}
+                    className="atlas-weed-log-row"
+                    aria-expanded={conditionOpen}
+                    onClick={() => setConditionOpen((value) => !value)}
                   >
-                    {value}m
+                    <span>Condition</span>
+                    <strong>{ATLAS_WEED_CONDITION_LABELS[conditionAfter]}</strong>
+                    <b aria-hidden="true">›</b>
                   </button>
-                ))}
-                <input
-                  aria-label="Custom minutes"
-                  inputMode="numeric"
-                  min="1"
-                  max="480"
-                  placeholder="Other"
-                  type="number"
-                  value={customMinutes}
-                  disabled={saving}
-                  onChange={(event) => setCustomMinutes(event.target.value)}
-                />
-              </div>
 
-              <div className="atlas-weed-condition-buttons" aria-label="Condition after this session">
-                {availableConditions.map((condition) => (
+                  {conditionOpen ? (
+                    <div className="atlas-weed-condition-buttons" aria-label="Condition after this pass">
+                      {availableConditions.map((condition) => (
+                        <button
+                          type="button"
+                          key={condition}
+                          className={conditionAfter === condition ? "is-selected" : ""}
+                          disabled={saving}
+                          onClick={() => { setConditionAfter(condition); setConditionOpen(false); }}
+                        >
+                          {ATLAS_WEED_CONDITION_LABELS[condition]}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+
                   <button
                     type="button"
-                    key={condition}
-                    className={conditionAfter === condition ? "is-selected" : ""}
-                    disabled={saving}
-                    onClick={() => setConditionAfter(condition)}
+                    className="atlas-weed-log-row"
+                    aria-expanded={timeOpen}
+                    onClick={() => setTimeOpen((value) => !value)}
                   >
-                    {ATLAS_WEED_CONDITION_LABELS[condition]}
+                    <span>Time</span>
+                    <strong>{selectedTimeLabel}</strong>
+                    <b aria-hidden="true">›</b>
                   </button>
-                ))}
-              </div>
 
-              <input
-                className="atlas-weed-note"
-                aria-label="Session note"
-                placeholder="Note"
-                value={note}
-                disabled={saving}
-                onChange={(event) => setNote(event.target.value)}
-              />
+                  {timeOpen ? (
+                    <div className="atlas-weed-minute-rail" aria-label="Minutes worked">
+                      {QUICK_MINUTES.map((value) => (
+                        <button
+                          type="button"
+                          key={value}
+                          className={!customMinutes && minutes === value ? "is-selected" : ""}
+                          disabled={saving}
+                          onClick={() => { setMinutes(value); setCustomMinutes(""); setTimeOpen(false); }}
+                        >
+                          {value}m
+                        </button>
+                      ))}
+                      <input
+                        aria-label="Custom minutes"
+                        inputMode="numeric"
+                        min="1"
+                        max="480"
+                        placeholder="Other"
+                        type="number"
+                        value={customMinutes}
+                        disabled={saving}
+                        onChange={(event) => { setCustomMinutes(event.target.value); setMinutes(null); }}
+                      />
+                    </div>
+                  ) : null}
 
-              <button type="button" className="atlas-weed-session-save" disabled={saving} onClick={() => void saveSession()}>
-                {saving ? "Saving" : conditionAfter === "clear" ? "Finish pass" : "Log work"}
-              </button>
+                  <input
+                    className="atlas-weed-note"
+                    aria-label="Pass note"
+                    placeholder="Note"
+                    value={note}
+                    disabled={saving}
+                    onChange={(event) => setNote(event.target.value)}
+                  />
+
+                  <div className="atlas-weed-log-actions">
+                    <button type="button" disabled={saving} onClick={() => { setLogOpen(false); setMessage(null); }}>Cancel</button>
+                    <button type="button" className="atlas-weed-session-save" disabled={saving} onClick={() => void savePass()}>
+                      {saving ? "Saving" : conditionAfter === "clear" ? "Finish pass" : "Save pass"}
+                    </button>
+                  </div>
+                </section>
+              )}
 
               {message ? <p className="atlas-task-page-message">{message}</p> : null}
             </footer>
