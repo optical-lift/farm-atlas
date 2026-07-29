@@ -96,7 +96,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
   const renderedHome = {
     ...visibleHome,
     title: organizationPortal
-      ? visibleHome.organizationHome?.organization.name
+      ? home.organizationHome?.organization.name
         || organizationMembership?.organizationName
         || "Feast Guild"
       : visibleHome.title,
