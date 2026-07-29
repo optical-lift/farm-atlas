@@ -9,6 +9,7 @@ function read(path) {
 test("operational overview routes use the universal viewer-scoped task reader", () => {
   const client = read("lib/atlas/task-cards-client.ts");
   const route = read("app/api/atlas/universal-task-cards/route.ts");
+  const operatorReader = read("lib/atlas/operator-universal-home.ts");
 
   for (const pathname of ["/day", "/overview/week", "/overview/month"]) {
     assert.match(client, new RegExp(`pathname === "${pathname.replaceAll("/", "\\/")}"`));
@@ -24,7 +25,9 @@ test("operational overview routes use the universal viewer-scoped task reader", 
   assert.match(route, /searchParams\.get\("dueThrough"\)/);
   assert.match(route, /searchParams\.get\("doneDate"\)/);
   assert.match(route, /atlasUniversalViewerFromSession/);
-  assert.match(route, /readAtlasUniversalHome/);
+  assert.match(route, /readAtlasOperatorUniversalHome/);
+  assert.match(operatorReader, /readAtlasUniversalHome/);
+  assert.match(operatorReader, /owner_operator_universal_home_v1/);
 });
 
 test("day week and month cannot silently fall back to a mixed farm-wide reader", () => {
