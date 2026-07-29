@@ -1,0 +1,140 @@
+.root {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.16rem;
+  margin-top: 0.9rem;
+  color: var(--atlas-ink-soft, #74776d);
+}
+
+.topDirection,
+.bottomDirection {
+  justify-self: center;
+  color: var(--atlas-ink-muted, #8b8d85);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.horizontalMap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+.sideDirection {
+  color: var(--atlas-ink-muted, #8b8d85);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bed {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--atlas-ink-muted, #8b8d85) 38%, transparent);
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--atlas-paper, #fbfaf4) 92%, white);
+}
+
+.bedBody {
+  display: flex;
+  min-height: 6.9rem;
+}
+
+.rows {
+  display: grid;
+  align-content: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 0.22rem;
+  padding: 0.55rem 0.45rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  color: var(--atlas-ink-soft, #74776d);
+  font-size: clamp(0.69rem, 2.8vw, 0.78rem);
+  font-weight: 650;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.row i {
+  flex: 1 1 0;
+  min-width: 0.35rem;
+  border-top: 1px solid color-mix(in srgb, var(--atlas-ink-muted, #8b8d85) 58%, transparent);
+}
+
+.row span {
+  overflow: hidden;
+  max-width: 78%;
+  padding: 0 0.32rem;
+  text-overflow: ellipsis;
+}
+
+.uncertain i {
+  border-top-style: dashed;
+  opacity: 0.68;
+}
+
+.uncertain span {
+  color: var(--atlas-ink-muted, #8b8d85);
+}
+
+.edgeBand {
+  display: grid;
+  align-items: center;
+  flex: 0 0 clamp(4.6rem, 22%, 6.1rem);
+  padding: 0.45rem;
+  background: color-mix(in srgb, var(--atlas-accent-soft, #858bc0) 8%, transparent);
+  color: var(--atlas-ink-soft, #74776d);
+  font-size: clamp(0.64rem, 2.55vw, 0.72rem);
+  font-weight: 650;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.leftBand {
+  border-right: 1px solid color-mix(in srgb, var(--atlas-ink-muted, #8b8d85) 32%, transparent);
+}
+
+.rightBand {
+  border-left: 1px solid color-mix(in srgb, var(--atlas-ink-muted, #8b8d85) 32%, transparent);
+}
+
+.crossBand {
+  padding: 0.28rem 0.5rem;
+  color: var(--atlas-ink-soft, #74776d);
+  font-size: 0.67rem;
+  font-weight: 650;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.topBand {
+  border-bottom: 1px solid color-mix(in srgb, var(--atlas-ink-muted, #8b8d85) 30%, transparent);
+}
+
+.bottomBand {
+  border-top: 1px solid color-mix(in srgb, var(--atlas-ink-muted, #8b8d85) 30%, transparent);
+}
+
+@media (max-width: 390px) {
+  .horizontalMap {
+    gap: 0.24rem;
+  }
+
+  .sideDirection {
+    font-size: 0.62rem;
+  }
+
+  .bedBody {
+    min-height: 6.2rem;
+  }
+
+  .edgeBand {
+    flex-basis: 4.8rem;
+  }
+}
