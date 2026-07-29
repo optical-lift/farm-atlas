@@ -1,0 +1,162 @@
+.atlas-task-set-aside-button {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid rgba(111, 101, 82, 0.12);
+  background: transparent;
+  color: #777970;
+  padding: 11px 4px 2px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 780;
+  text-align: center;
+}
+
+.atlas-task-set-aside-button:disabled {
+  opacity: 0.55;
+}
+
+.atlas-task-set-aside-message {
+  margin: 0;
+  color: #5f615a;
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.atlas-day-set-aside-drawer {
+  margin: 8px 0 0;
+  border: 0;
+  border-top: 1px solid rgba(117, 112, 101, 0.16);
+  background: transparent;
+}
+
+.atlas-day-set-aside-drawer > summary {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto 12px;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 8px 2px;
+  color: #74766e;
+  cursor: pointer;
+  list-style: none;
+}
+
+.atlas-day-set-aside-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.atlas-day-set-aside-drawer > summary strong {
+  font-size: 11px;
+  font-weight: 830;
+  letter-spacing: 0.02em;
+}
+
+.atlas-day-set-aside-drawer > summary small {
+  color: #96978f;
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.atlas-day-set-aside-drawer > summary > b {
+  color: #a5a49c;
+  font-size: 11px;
+  font-weight: 700;
+  transition: transform 140ms ease;
+}
+
+.atlas-day-set-aside-drawer[open] > summary > b {
+  transform: rotate(180deg);
+}
+
+.atlas-day-set-aside-mark {
+  color: #96978f;
+  font-size: 13px;
+  text-align: center;
+}
+
+.atlas-day-set-aside-list {
+  display: grid;
+  padding: 0 0 10px 16px;
+}
+
+.atlas-day-set-aside-list a {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 1px 7px;
+  padding: 7px 0;
+  border-bottom: 1px dotted rgba(117, 112, 101, 0.15);
+  color: #5f615a;
+  text-decoration: none;
+}
+
+.atlas-day-set-aside-list a:last-child {
+  border-bottom: 0;
+}
+
+.atlas-day-set-aside-list a > span {
+  grid-row: 1 / span 2;
+  color: #9a9b93;
+  font-size: 9px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.atlas-day-set-aside-list a > strong {
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 790;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-day-set-aside-list a > small {
+  color: #8a8c84;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+/* Overdue remains a timeline state, not a second purple card system. */
+.atlas-day-overdue-group {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.atlas-day-overdue-group-head {
+  min-height: 0 !important;
+  padding: 6px 0 !important;
+  border-bottom: 1px solid rgba(117, 112, 101, 0.16) !important;
+  background: transparent !important;
+  color: #65675f !important;
+}
+
+.atlas-day-overdue-group-head h3,
+.atlas-day-overdue-group-head span,
+.atlas-day-overdue-group-head b {
+  color: inherit !important;
+}
+
+.atlas-day-overdue-group > p {
+  display: none;
+}
+
+.atlas-day-overdue-task-card {
+  border: 0 !important;
+  border-bottom: 1px dotted rgba(117, 112, 101, 0.17) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.atlas-day-overdue-badge {
+  display: inline-flex !important;
+  width: max-content;
+  border: 0 !important;
+  background: transparent !important;
+  color: #7f625d !important;
+  padding: 0 !important;
+  font-size: 9px !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
