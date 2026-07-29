@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   ATLAS_OPERATOR_COOKIE,
+  LEGACY_ATLAS_OPERATOR_COOKIE,
   readAtlasOwnerOperatorContext,
   resolveAtlasOwnerOperatorContext,
 } from "@/lib/atlas/operator-context";
@@ -35,23 +36,31 @@ export async function POST(request: Request) {
     return privateJson({ ok: false, error: "A valid operator selection is required." }, 400);
   }
 
-  const rawMembershipId = (body as { membershipId?: unknown }).membershipId;
-  const membershipId = rawMembershipId === null || rawMembershipId === ""
+  const input = body as { accountId?: unknown; membershipId?: unknown };
+  const rawAccountId = input.accountId ?? input.membershipId;
+  const accountId = rawAccountId === null || rawAccountId === ""
     ? null
-    : typeof rawMembershipId === "string" && UUID_PATTERN.test(rawMembershipId)
-      ? rawMembershipId
+    : typeof rawAccountId === "string" && UUID_PATTERN.test(rawAccountId)
+      ? rawAccountId
       : undefined;
 
-  if (membershipId === undefined) {
-    return privateJson({ ok: false, error: "A valid Atlas membership is required." }, 400);
+  if (accountId === undefined) {
+    return privateJson({ ok: false, error: "A valid Atlas account is required." }, 400);
   }
 
-  const context = await resolveAtlasOwnerOperatorContext(membershipId);
-  if (!context) return privateJson({ ok: false, error: "This worker context is not available to the signed-in owner." }, 403);
+  const context = await resolveAtlasOwnerOperatorContext(accountId);
+  if (!context) return privateJson({ ok: false, error: "This account is not available to the signed-in owner." }, 403);
 
   const response = privateJson({ ok: true, context });
+  response.cookies.set(LEGACY_ATLAS_OPERATOR_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
   if (context.isOperating) {
-    response.cookies.set(ATLAS_OPERATOR_COOKIE, context.effective.membershipId, {
+    response.cookies.set(ATLAS_OPERATOR_COOKIE, context.effective.accountId, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
