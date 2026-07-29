@@ -38,9 +38,9 @@ export async function GET(request: Request) {
 
   const operatorContext = await readAtlasOwnerOperatorContext();
   const farmId = operatorContext?.isOperating
-    ? operatorContext.farmId
+    ? operatorContext.effective.farmId
     : session.activeFarmId ?? session.memberships[0]?.farmId ?? null;
-  if (!farmId) return privateJson({ ok: false, error: "An active farm membership is required." }, 403);
+  if (!farmId) return privateJson({ ok: false, error: "The selected account has no active farm membership." }, 403);
 
   const requestedDate = new URL(request.url).searchParams.get("date");
   if (requestedDate && !validDateIso(requestedDate)) {
@@ -57,7 +57,7 @@ export async function GET(request: Request) {
     if (error) throw error;
 
     const livingDay = data as AtlasLivingDay;
-    const effectiveLivingDay = operatorContext?.isOperating && operatorContext.effective.role !== "owner"
+    const effectiveLivingDay = operatorContext?.isOperating && operatorContext.effective.farmRole !== "owner"
       ? { ...livingDay, ownerDecisions: [] }
       : livingDay;
 
