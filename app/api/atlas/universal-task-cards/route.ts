@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
+  effectiveOperatorAccountId,
   effectiveOperatorMembershipId,
   readAtlasOwnerOperatorContext,
 } from "@/lib/atlas/operator-context";
@@ -72,6 +73,7 @@ export async function GET(request: Request) {
     const home = await readAtlasOperatorUniversalHome(viewer, {
       doneDate,
       dueThrough,
+      effectiveAccountId: effectiveOperatorAccountId(operatorContext),
       effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
     });
     const taskCards = atlasUniversalTaskCards(home);
@@ -82,9 +84,10 @@ export async function GET(request: Request) {
       hasFarmScope: home.viewer.hasFarmScope,
       hasOrganizationScope: home.viewer.hasOrganizationScope,
       activeFarmName: home.activeFarm?.farmName ?? null,
-      role: home.activeFarm?.role ?? null,
+      role: home.activeFarm?.role ?? home.organizationHome?.viewer.role ?? null,
       operatorMode: operatorContext?.isOperating ?? false,
-      effectiveMembershipId: operatorContext?.isOperating ? operatorContext.effective.membershipId : null,
+      effectiveAccountId: effectiveOperatorAccountId(operatorContext),
+      effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
       taskCards,
       window: { doneDate, dueThrough },
     });
