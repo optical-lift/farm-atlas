@@ -1,6 +1,7 @@
 "use client";
 
 import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
+import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -18,7 +19,13 @@ function isWeedTask(task: AtlasTaskCard) {
     || /^weed\b/i.test(task.title.trim());
 }
 
+function isNetworkInputsTask(task: AtlasTaskCard) {
+  return task.metadata?.network_input_research === true
+    || task.metadata?.task_key === "anna_20260728_call_local_companies_florist_buckets";
+}
+
 export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
+  if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
   return <DominionAssignedTaskDetail {...props} />;
 }
