@@ -5,7 +5,10 @@ import {
   readAtlasJsonBody,
   requireAtlasApiAccess,
 } from "@/lib/atlas/api-access";
-import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
+import {
+  effectiveOperatorMembershipId,
+  readAtlasOwnerOperatorContext,
+} from "@/lib/atlas/operator-context";
 import {
   AtlasTaskTransitionInputError,
   atlasTaskTransitionRpcForRole,
@@ -15,40 +18,23 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-type RpcError = {
-  code?: string;
-  message?: string;
-};
-
+type RpcError = { code?: string; message?: string };
 type RpcResult = Record<string, unknown>;
 
 function privateJson(body: Record<string, unknown>, status = 200) {
-  return NextResponse.json(body, {
-    status,
-    headers: { "Cache-Control": "private, no-store" },
-  });
+  return NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 }
 
 function inputError(error: unknown) {
-  if (error instanceof AtlasTaskTransitionInputError) {
-    return atlasApiError(error.status, error.code, error.message);
-  }
+  if (error instanceof AtlasTaskTransitionInputError) return atlasApiError(error.status, error.code, error.message);
   return atlasApiError(400, "invalid_transition_request", "The task update request is invalid.");
 }
 
 function rpcError(error: RpcError) {
-  if (error.code === "42501") {
-    return atlasApiError(403, "task_transition_forbidden", "This task cannot be changed by the signed-in user.");
-  }
-  if (error.code === "P0002") {
-    return atlasApiError(404, "task_not_found", "The task was not found.");
-  }
-  if (error.code === "P0003") {
-    return atlasApiError(409, "owner_correction_required", error.message || "This completion has linked farm evidence and needs review before it can be corrected.");
-  }
-  if (error.code === "22023") {
-    return atlasApiError(400, "task_transition_rejected", "The task update was rejected.");
-  }
+  if (error.code === "42501") return atlasApiError(403, "task_transition_forbidden", "This task cannot be changed by the selected account.");
+  if (error.code === "P0002") return atlasApiError(404, "task_not_found", "The task was not found.");
+  if (error.code === "P0003") return atlasApiError(409, "owner_correction_required", error.message || "This completion has linked farm evidence and needs review before it can be corrected.");
+  if (error.code === "22023") return atlasApiError(400, "task_transition_rejected", "The task update was rejected.");
   return atlasApiError(500, "task_transition_failed", "Atlas could not update the task.");
 }
 
@@ -59,8 +45,7 @@ export async function POST(request: Request) {
 
   let input;
   try {
-    const body = await readAtlasJsonBody(request);
-    input = normalizeAtlasTaskTransitionInput(body);
+    input = normalizeAtlasTaskTransitionInput(await readAtlasJsonBody(request));
   } catch (error) {
     return inputError(error);
   }
@@ -69,27 +54,27 @@ export async function POST(request: Request) {
   if (!authorized.ok) return authorized.response;
 
   const operatorContext = await readAtlasOwnerOperatorContext();
+  const operatorMembershipId = effectiveOperatorMembershipId(operatorContext);
   const operating = Boolean(operatorContext?.isOperating);
+  if (operating && !operatorMembershipId) {
+    return atlasApiError(403, "farm_scope_required", "The selected account has no farm task scope.");
+  }
 
   let rpcName;
   try {
-    rpcName = atlasTaskTransitionRpcForRole(
-      operating ? "owner" : authorized.access.membership.role,
-      input.transition,
-    );
+    rpcName = atlasTaskTransitionRpcForRole(operating ? "owner" : authorized.access.membership.role, input.transition);
   } catch (error) {
     return inputError(error);
   }
 
   const supabase = await createAtlasServerClient();
-
   let data: unknown;
   let error: RpcError | null;
 
-  if (operating && operatorContext) {
+  if (operating && operatorMembershipId) {
     if (input.transition === "reopened") {
       const response = await supabase.rpc("owner_operator_reopen_task_completion_v1", {
-        p_effective_membership_id: operatorContext.effective.membershipId,
+        p_effective_membership_id: operatorMembershipId,
         p_task_id: input.taskId,
         p_idempotency_key: input.idempotencyKey,
         p_payload: input.payload,
@@ -98,7 +83,7 @@ export async function POST(request: Request) {
       error = response.error;
     } else {
       const response = await supabase.rpc("owner_operator_record_task_transition_v1", {
-        p_effective_membership_id: operatorContext.effective.membershipId,
+        p_effective_membership_id: operatorMembershipId,
         p_task_id: input.taskId,
         p_transition: input.transition,
         p_idempotency_key: input.idempotencyKey,
@@ -171,7 +156,7 @@ export async function POST(request: Request) {
     ...result,
     ok: true,
     operatorMode: operating,
-    effectiveMembershipId: operating ? operatorContext?.effective.membershipId ?? null : null,
+    effectiveMembershipId: operatorMembershipId,
     warnings: Array.isArray(result.warnings) ? result.warnings : [],
   });
 }
