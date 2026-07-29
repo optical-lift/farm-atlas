@@ -1,0 +1,110 @@
+.atlas-owner-operator {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+  border-bottom: 1px solid rgba(85, 90, 134, 0.22);
+  background: rgba(248, 247, 242, 0.96);
+  backdrop-filter: blur(12px);
+  color: var(--atlas-text, #2f3042);
+  display: grid;
+  gap: 5px;
+  padding: 7px max(12px, env(safe-area-inset-left)) 7px max(12px, env(safe-area-inset-right));
+  box-shadow: 0 4px 14px rgba(47, 48, 66, 0.06);
+}
+
+.atlas-owner-operator.is-operating {
+  border-bottom-color: rgba(82, 68, 139, 0.54);
+  background: rgba(76, 62, 126, 0.97);
+  color: white;
+  box-shadow: 0 6px 18px rgba(50, 39, 92, 0.22);
+}
+
+.atlas-owner-operator__control {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.atlas-owner-operator__control label {
+  flex: 0 0 auto;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atlas-owner-operator__control select {
+  min-width: 0;
+  flex: 1 1 auto;
+  height: 34px;
+  border: 1px solid rgba(85, 90, 134, 0.28);
+  border-radius: 999px;
+  background: white;
+  color: #2f3042;
+  padding: 0 34px 0 13px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.atlas-owner-operator.is-operating .atlas-owner-operator__control select {
+  border-color: rgba(255, 255, 255, 0.44);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.atlas-owner-operator__control > span {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 800;
+  opacity: 0.76;
+}
+
+.atlas-owner-operator__notice {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.atlas-owner-operator__notice strong {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.atlas-owner-operator__notice span {
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 680;
+}
+
+.atlas-owner-operator > p {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  color: #9b2f3f;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+@media (max-width: 560px) {
+  .atlas-owner-operator {
+    gap: 4px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .atlas-owner-operator__notice {
+    display: grid;
+    gap: 2px;
+  }
+
+  .atlas-owner-operator__notice span {
+    font-size: 9px;
+  }
+}
