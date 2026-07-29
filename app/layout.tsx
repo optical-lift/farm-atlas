@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import WeekDayNavigation from "./WeekDayNavigation";
 import HomeTodayCompletePatch from "./HomeTodayCompletePatch";
 import HomeQuietTaskHeroPatch from "./HomeQuietTaskHeroPatch";
@@ -15,6 +16,7 @@ import TaskResultAnchorPatch from "./TaskResultAnchorPatch";
 import ProjectTaskDestinationGuard from "./ProjectTaskDestinationGuard";
 import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
 import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
+import OwnerOperatorMode from "./OwnerOperatorMode";
 import "./globals.css";
 import "./atlas-primitives.css";
 import "./atlas-trail.css";
@@ -72,6 +74,7 @@ import "./project-task-timeline.css";
 import "./tending-task-timeline.css";
 import "./home-cover-v1.css";
 import "./weed-card-grazer.css";
+import "./owner-operator-mode.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -81,10 +84,13 @@ export const metadata: Metadata = {
   description: "Feast Guild farm portfolio, projects, and field operations",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const operatorContext = await readAtlasOwnerOperatorContext();
+
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
+        <OwnerOperatorMode context={operatorContext} />
         <WeekDayNavigation />
         <HomeTodayCompletePatch />
         <HomeQuietTaskHeroPatch />
