@@ -18,6 +18,7 @@ import {
   postAtlasFinishPartialWeedCardDay,
   postAtlasWeedCardSession,
 } from "@/lib/atlas/weed-card-client";
+import cohesionStyles from "./weed-card-cohesion.module.css";
 import styles from "./weed-card-task-focus.module.css";
 
 type Props = {
@@ -128,7 +129,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   }
 
   return (
-    <main className={`${styles.root} atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-weed-card-page-shell`}>
+    <main className={`${styles.root} ${cohesionStyles.cohesive} atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-weed-card-page-shell`}>
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top atlas-weed-card-top">
           <Link href={assignee.listPath} className="atlas-phone-brand atlas-task-header-brand">
