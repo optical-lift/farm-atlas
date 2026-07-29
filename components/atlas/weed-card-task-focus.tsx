@@ -1,14 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import CropOccupancyBedMap from "@/components/atlas/crop-occupancy-bed-map";
 import CropOccupancyList from "@/components/atlas/crop-occupancy-list";
 import TaskDominionTrail from "@/components/atlas/task-dominion-trail";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import { postAtlasTaskSetAsideToday } from "@/lib/atlas/task-set-aside-client";
+import {
+  addDaysIso,
+  centralDateIso,
+  postAtlasTaskSetAsideToday,
+} from "@/lib/atlas/task-set-aside-client";
 import {
   ATLAS_WEED_CONDITIONS,
   ATLAS_WEED_CONDITION_LABELS,
@@ -51,9 +55,11 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   const availableConditions = ATLAS_WEED_CONDITIONS
     .slice(Math.max(0, currentIndex))
     .filter((condition) => condition !== "clear");
+  const tomorrow = useMemo(() => addDaysIso(centralDateIso(), 1), []);
   const [logOpen, setLogOpen] = useState(false);
   const [conditionOpen, setConditionOpen] = useState(false);
   const [conditionAfter, setConditionAfter] = useState<AtlasWeedCondition>(card.condition);
+  const [moveDate, setMoveDate] = useState(tomorrow);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState<SavingAction>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -103,11 +109,11 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
     }
   }
 
-  async function setAsideToday() {
+  async function setAsideToday(requestedReturnDate: string) {
     try {
       setSaving("set_aside");
       setMessage(null);
-      const result = await postAtlasTaskSetAsideToday(task.task_id);
+      const result = await postAtlasTaskSetAsideToday(task.task_id, requestedReturnDate);
       setMessage(result.message);
       window.setTimeout(() => window.location.assign(assignee.listPath), 1200);
     } catch (error) {
@@ -185,14 +191,39 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
                       Partly finished
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    className="atlas-task-set-aside-button"
-                    disabled={Boolean(saving)}
-                    onClick={() => void setAsideToday()}
-                  >
-                    {saving === "set_aside" ? "Setting aside" : "Do tomorrow"}
-                  </button>
+                  <details className="atlas-task-move-drawer atlas-weed-move-drawer">
+                    <summary>
+                      <span>Move</span>
+                      <b aria-hidden="true">⌄</b>
+                    </summary>
+                    <div className="atlas-task-move-options">
+                      <button
+                        type="button"
+                        disabled={Boolean(saving)}
+                        onClick={() => void setAsideToday(tomorrow)}
+                      >
+                        Tomorrow
+                      </button>
+                      <label>
+                        <span>Choose date</span>
+                        <input
+                          type="date"
+                          min={tomorrow}
+                          value={moveDate}
+                          disabled={Boolean(saving)}
+                          onChange={(event) => setMoveDate(event.target.value)}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="atlas-task-move-date-button"
+                        disabled={Boolean(saving) || !moveDate}
+                        onClick={() => void setAsideToday(moveDate)}
+                      >
+                        {saving === "set_aside" ? "Moving" : `Move to ${prettyDate(moveDate)}`}
+                      </button>
+                    </div>
+                  </details>
                 </>
               ) : (
                 <section className="atlas-weed-log-drawer" aria-label="Partly finished">
