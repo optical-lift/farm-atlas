@@ -11,6 +11,16 @@ export type AtlasWeedSession = {
   recordedAt: string;
 };
 
+export type AtlasWeedPlant = {
+  contentId: string;
+  contentLabel: string;
+  displayLabel: string;
+  variety: string | null;
+  contentType: string;
+  status: string;
+  displayOrder: number;
+};
+
 export type AtlasWeedCardContext = {
   taskId: string;
   taskStatus: string;
@@ -23,6 +33,7 @@ export type AtlasWeedCardContext = {
   objectLabel: string;
   zoneLabel: string;
   cropLabel: string;
+  plants: AtlasWeedPlant[];
   condition: AtlasWeedCondition;
   targetCondition: AtlasWeedCondition;
   totalMinutes: number;
