@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireAtlasApiAccess } from "@/lib/atlas/api-access";
-import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
+import {
+  effectiveOperatorMembershipId,
+  readAtlasOwnerOperatorContext,
+} from "@/lib/atlas/operator-context";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -30,10 +33,15 @@ export async function GET(request: NextRequest) {
   }
 
   const operatorContext = await readAtlasOwnerOperatorContext();
+  const operatorMembershipId = effectiveOperatorMembershipId(operatorContext);
+  if (operatorContext?.isOperating && !operatorMembershipId) {
+    return privateJson({ ok: false, error: "The selected account has no farm task scope." }, 403);
+  }
+
   const supabase = await createAtlasServerClient();
-  const response = operatorContext?.isOperating
+  const response = operatorMembershipId
     ? await supabase.rpc("owner_operator_task_cards_v1", {
-        p_effective_membership_id: operatorContext.effective.membershipId,
+        p_effective_membership_id: operatorMembershipId,
         p_task_id: taskId,
       })
     : await supabase.rpc("task_cards_v1", {
@@ -58,14 +66,14 @@ export async function GET(request: NextRequest) {
 
   return privateJson({
     ok: true,
-    farmKey: operatorContext?.isOperating
-      ? operatorContext.farmKey ?? "elm_farm"
+    farmKey: operatorMembershipId
+      ? operatorContext?.effective.farmKey ?? "elm_farm"
       : authorized.access.membership.farmKey ?? "elm_farm",
-    role: operatorContext?.isOperating
-      ? operatorContext.effective.role
+    role: operatorMembershipId
+      ? operatorContext?.effective.farmRole ?? operatorContext?.effective.role
       : authorized.access.membership.role,
     operatorMode: operatorContext?.isOperating ?? false,
-    effectiveMembershipId: operatorContext?.isOperating ? operatorContext.effective.membershipId : null,
+    effectiveMembershipId: operatorMembershipId,
     taskCards,
   });
 }
