@@ -25,6 +25,9 @@ test("the focused task owns one truthful Dominion Trail and condition rail", () 
   assert.doesNotMatch(detail, /How to play this card/);
   assert.match(detail, /Done/);
   assert.match(detail, /Unfinished/);
+  assert.match(detail, /Partly done/);
+  assert.match(detail, /Problem found/);
+  assert.doesNotMatch(detail, />Blocked</);
   assert.match(detail, /Move or close this card/);
   assert.match(detail, /condition\.meaningful/);
   assert.doesNotMatch(detail, />Result</);
