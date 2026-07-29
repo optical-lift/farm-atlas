@@ -114,6 +114,11 @@ function uniqueTasks(tasks: ScheduleTask[]) {
   return Array.from(byId.values());
 }
 
+function isOwnerTask(task: ScheduleTask, ownerMembershipId: string) {
+  return task.visibilityScope === "owner"
+    || task.assignee.membershipId === ownerMembershipId;
+}
+
 export async function getOwnerDashboard(
   access: AtlasRoleAccess,
 ): Promise<OwnerDashboardProjection> {
@@ -125,6 +130,7 @@ export async function getOwnerDashboard(
   const weekEnd = addDaysIso(today, 6);
   const horizonEnd = addDaysIso(today, 30);
   const recentStart = addDaysIso(today, -14);
+  const ownerMembershipId = access.membership.membershipId;
 
   const [farmState, schedule, recentSchedule] = await Promise.all([
     getFarmOperationalState(access),
@@ -150,7 +156,7 @@ export async function getOwnerDashboard(
   ];
   const currentTasks = uniqueTasks([...scheduled, ...carryover]);
   const ownerTasks = currentTasks
-    .filter((task) => task.visibilityScope === "owner")
+    .filter((task) => isOwnerTask(task, ownerMembershipId))
     .sort(taskDateSort);
   const openOwnerTasks = ownerTasks.filter((task) => task.status === "open" || task.status === "blocked");
 
@@ -162,7 +168,7 @@ export async function getOwnerDashboard(
   const later = openOwnerTasks.filter((task) => !task.dueDate || task.dueDate > weekEnd);
   const recentlyDone = recentSchedule.days
     .flatMap((day) => day.tasks)
-    .filter((task) => task.visibilityScope === "owner" && task.status === "done")
+    .filter((task) => isOwnerTask(task, ownerMembershipId) && task.status === "done")
     .sort((left, right) => (right.dueDate ?? "").localeCompare(left.dueDate ?? ""))
     .slice(0, 8);
 
