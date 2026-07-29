@@ -108,7 +108,7 @@ test("Anna gets cut-and-dry task results with detail behind Unfinished", () => {
     "Unfinished",
     "What happened?",
     "Partly done",
-    "Blocked",
+    "Problem found",
     "Move or close this card",
     "Reschedule",
     "Tomorrow",

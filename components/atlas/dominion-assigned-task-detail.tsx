@@ -409,8 +409,8 @@ export default function DominionAssignedTaskDetail({ task: initialTask, childTas
                     <button type="button" disabled={Boolean(saving)} onClick={() => void transition("partial", window.prompt("What is left?", "")?.trim() || "Partly done")}>
                       {saving === "partial" ? "Saving" : "Partly done"}
                     </button>
-                    <button type="button" className="blocked" disabled={Boolean(saving)} onClick={() => void transition("blocked", window.prompt("What blocked it?", "")?.trim() || "Blocked")}>
-                      {saving === "blocked" ? "Saving" : "Blocked"}
+                    <button type="button" className="blocked" disabled={Boolean(saving)} onClick={() => void transition("blocked", window.prompt("What problem did you find?", "")?.trim() || "Problem found")}>
+                      {saving === "blocked" ? "Saving" : "Problem found"}
                     </button>
                   </div>
                 </section>
