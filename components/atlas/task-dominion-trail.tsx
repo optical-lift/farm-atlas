@@ -13,12 +13,15 @@ import {
   type TendingBedTrack,
 } from "@/lib/atlas/tending-client";
 import { atlasTrailFromTendingTrack, type AtlasTrailContext } from "@/lib/atlas/trail";
+import plantStyles from "./task-plant-contents.module.css";
 
 type Props = {
   task: AtlasTaskCard;
   instruction: string;
   showCondition?: boolean;
   showZoneLabel?: boolean;
+  showSubjectLabel?: boolean;
+  plantLabels?: string[];
   presentation?: "default" | "field-sheet";
 };
 
@@ -88,6 +91,8 @@ export default function TaskDominionTrail({
   instruction,
   showCondition = true,
   showZoneLabel = true,
+  showSubjectLabel = true,
+  plantLabels = [],
   presentation = "default",
 }: Props) {
   const objectKey = trailObjectKey(task);
@@ -127,7 +132,7 @@ export default function TaskDominionTrail({
           {showZoneLabel ? <small>{model.zoneLabel}</small> : null}
           <strong>{model.placeLabel}</strong>
         </div>
-        <span>{model.subjectLabel}</span>
+        {showSubjectLabel ? <span>{model.subjectLabel}</span> : null}
       </header>
 
       {trail ? (
@@ -152,6 +157,11 @@ export default function TaskDominionTrail({
           </div>
         ) : null}
         <h1>{model.instruction}</h1>
+        {plantLabels.length ? (
+          <ul className={plantStyles.list} aria-label="Plants in this bed">
+            {plantLabels.map((label) => <li className={plantStyles.item} key={label}>{label}</li>)}
+          </ul>
+        ) : null}
         <div className="atlas-task-dominion-time">
           {!isFieldSheet ? <span>{model.actionLabel}</span> : null}
           <span>{model.dueLabel}</span>
