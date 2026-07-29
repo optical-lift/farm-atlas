@@ -48,7 +48,7 @@ function timeLabel(minutes: number) {
 
 function instruction(card: AtlasWeedCardContext) {
   if (card.condition === "clear") return "Row returned to production";
-  if (card.totalMinutes > 0) return "Continue the recovery";
+  if (card.totalMinutes > 0 || card.sessionCount > 0) return "Continue the recovery";
   return "Return the row to production";
 }
 
@@ -63,7 +63,16 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   const [message, setMessage] = useState<string | null>(null);
 
   const investedBlocks = useMemo(() => Math.min(18, Math.ceil(card.totalMinutes / 10)), [card.totalMinutes]);
+  const unquantifiedSessions = useMemo(
+    () => card.sessions.filter((session) => !session.minutesKnown).length,
+    [card.sessions],
+  );
   const selectedMinutes = customMinutes.trim() ? Number(customMinutes) : minutes;
+  const passLabel = card.totalMinutes > 0
+    ? `${timeLabel(card.totalMinutes)} this pass`
+    : unquantifiedSessions > 0
+      ? "work recorded"
+      : "new pass";
 
   async function saveSession() {
     if (!Number.isInteger(selectedMinutes) || selectedMinutes < 1 || selectedMinutes > 480) {
@@ -97,7 +106,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
             <span className="atlas-phone-kicker">Atlas</span>
             <span className="atlas-phone-title">{assignee.label}</span>
           </Link>
-          <span className="atlas-weather-line">{timeLabel(card.totalMinutes)} this pass</span>
+          <span className="atlas-weather-line">{passLabel}</span>
           <Link href={assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
         </header>
 
@@ -126,10 +135,10 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
 
               <div className="atlas-weed-invested">
                 <div className="atlas-weed-invested-head">
-                  <strong>{timeLabel(card.totalMinutes)}</strong>
+                  <strong>{card.totalMinutes > 0 ? timeLabel(card.totalMinutes) : unquantifiedSessions > 0 ? "Time unrecorded" : "0m"}</strong>
                   <span>{card.sessionCount} {card.sessionCount === 1 ? "session" : "sessions"}</span>
                 </div>
-                <div className="atlas-weed-invested-rail" aria-label={`${card.totalMinutes} minutes invested in this pass`}>
+                <div className="atlas-weed-invested-rail" aria-label={`${card.totalMinutes} recorded minutes invested in this pass`}>
                   {Array.from({ length: 18 }, (_, index) => <i className={index < investedBlocks ? "is-filled" : ""} key={index} />)}
                 </div>
               </div>
@@ -139,7 +148,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
                   {card.sessions.slice(0, 5).map((session) => (
                     <li key={session.id}>
                       <span>{prettyDate(session.workDate)}</span>
-                      <strong>{timeLabel(session.minutes)}</strong>
+                      <strong>{session.minutesKnown ? timeLabel(session.minutes) : "time unrecorded"}</strong>
                       <small>{ATLAS_WEED_CONDITION_LABELS[session.conditionAfter]}</small>
                     </li>
                   ))}
