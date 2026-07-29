@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHome";
-import { readAtlasJournalCover } from "@/lib/atlas/journal-cover-home";
 import {
   effectiveOperatorMembershipId,
   readAtlasOwnerOperatorContext,
 } from "@/lib/atlas/operator-context";
+import { readAtlasOperatorJournalCover } from "@/lib/atlas/operator-journal-cover";
 import { readAtlasOperatorUniversalHome } from "@/lib/atlas/operator-universal-home";
 import { getAtlasSession } from "@/lib/atlas/session";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
@@ -58,7 +58,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     preferredFarmId,
     effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
   });
-  const coverMoves = await readAtlasJournalCover(home);
+  const coverMoves = await readAtlasOperatorJournalCover(home);
   const renderedViewer = home.viewer;
   const organizationMembership = organizationMembershipForViewer(renderedViewer);
   const organizationPortal = Boolean(
