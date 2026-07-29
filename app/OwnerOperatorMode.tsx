@@ -13,9 +13,10 @@ export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
   const [error, setError] = useState<string | null>(null);
 
   if (!context) return null;
+  const operatorContext = context;
 
   async function selectMembership(membershipId: string) {
-    if (saving || membershipId === context.effective.membershipId) return;
+    if (saving || membershipId === operatorContext.effective.membershipId) return;
     setSaving(true);
     setError(null);
 
@@ -40,19 +41,19 @@ export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
 
   return (
     <aside
-      className={`atlas-owner-operator${context.isOperating ? " is-operating" : ""}`}
+      className={`atlas-owner-operator${operatorContext.isOperating ? " is-operating" : ""}`}
       aria-label="Owner operator mode"
-      data-effective-membership-id={context.effective.membershipId}
+      data-effective-membership-id={operatorContext.effective.membershipId}
     >
       <div className="atlas-owner-operator__control">
         <label htmlFor="atlas-owner-operator-select">Operating as</label>
         <select
           id="atlas-owner-operator-select"
-          value={context.effective.membershipId}
+          value={operatorContext.effective.membershipId}
           disabled={saving}
           onChange={(event) => void selectMembership(event.target.value)}
         >
-          {context.options.map((option) => (
+          {operatorContext.options.map((option) => (
             <option key={option.membershipId} value={option.membershipId}>
               {option.displayName}
             </option>
@@ -61,10 +62,10 @@ export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
         {saving ? <span>Switching…</span> : null}
       </div>
 
-      {context.isOperating ? (
+      {operatorContext.isOperating ? (
         <div className="atlas-owner-operator__notice">
-          <strong>Operating {context.effective.displayName}&apos;s Atlas</strong>
-          <span>Actions change live farm data and are recorded as {context.actor.displayName} operating for {context.effective.displayName}.</span>
+          <strong>Operating {operatorContext.effective.displayName}&apos;s Atlas</strong>
+          <span>Actions change live farm data and are recorded as {operatorContext.actor.displayName} operating for {operatorContext.effective.displayName}.</span>
         </div>
       ) : null}
 
