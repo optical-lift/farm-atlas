@@ -92,7 +92,7 @@ test("the Weed Card renders a compact text map with quiet cardinal orientation",
   assert.match(css, /\.endDirection\s*\{[\s\S]*position: absolute/);
   assert.match(css, /font-size: 0\.54rem/);
   assert.match(css, /border-top-style: dashed/);
-  assert.match(focus, /<CropOccupancyBedMap map=\{card\.bedMap\} \/>/);
+  assert.match(focus, /<CropOccupancyBedMap map=\{card\.bedMap\} variant="notebook" \/>/);
   assert.match(route, /object_crop_bed_map_v1/);
   assert.doesNotMatch(component, /Perennial|Date unknown|Observed/);
 });
