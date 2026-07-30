@@ -69,6 +69,15 @@ function addDaysIso(value: string, days: number) {
   return isoFromDate(date);
 }
 
+function daysUntilFirstFrost(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (![year, month, day].every(Number.isFinite)) return 0;
+  const frostYear = month > 11 || (month === 11 && day > 1) ? year + 1 : year;
+  const today = Date.UTC(year, month - 1, day);
+  const frost = Date.UTC(frostYear, 10, 1);
+  return Math.max(0, Math.round((frost - today) / 86400000));
+}
+
 function prettyDate(value: string) {
   return dateFromIso(value).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
@@ -267,6 +276,7 @@ export default function AtlasUniversalHome({
   const [registryZones, setRegistryZones] = useState<AtlasRegistryZone[]>([]);
   const [logSeed, setLogSeed] = useState<AtlasFieldLogSeed | null>(null);
   const todayIso = home.window.doneDate;
+  const frostDays = daysUntilFirstFrost(todayIso);
   const visibleFarms = useMemo(() => farmCards(home), [home]);
   const workstreams = home.organizationHome?.workstreams ?? [];
   const singleVisibleFarm = visibleFarms.length === 1;
@@ -424,6 +434,10 @@ export default function AtlasUniversalHome({
               <span>{home.projects.length ? "Work in motion" : "Closeout"}</span>
               <em>{home.projects.length ? `${home.metrics.projectCount} projects` : "Review changes"}</em>
             </Link>
+            <div className="atlas-home-frost-countdown" aria-label={`${frostDays} days until first frost target on November 1`}>
+              <span>First frost</span>
+              <em>{frostDays} days · Nov 1</em>
+            </div>
           </AtlasFooterActions>
 
           <AtlasTrailPulseBoard />
