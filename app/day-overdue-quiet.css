@@ -1,0 +1,28 @@
+/* Keep overdue carry-forward readable without repeating the state above every title. */
+
+.atlas-day-overdue-group
+  .atlas-day-overdue-task-card[data-atlas-day-consequence="overdue"]
+  .atlas-day-consequence-kicker {
+  display: none !important;
+}
+
+.atlas-day-overdue-group
+  .atlas-day-overdue-task-card[data-atlas-day-consequence="overdue"] {
+  align-content: start !important;
+  row-gap: 4px !important;
+}
+
+.atlas-day-overdue-group
+  .atlas-day-overdue-task-card[data-atlas-day-consequence="overdue"]
+  > strong {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.12 !important;
+}
+
+.atlas-day-overdue-group
+  .atlas-day-overdue-task-card[data-atlas-day-consequence="overdue"]
+  .atlas-day-consequence-detail {
+  margin-top: 1px !important;
+}
