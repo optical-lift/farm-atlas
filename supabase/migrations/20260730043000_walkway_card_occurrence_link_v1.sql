@@ -53,3 +53,74 @@ where occurrence.farm_id = card.farm_id
       coalesce(occurrence.task_payload->'metadata'->'walkway_card_keys', '[]'::jsonb)
     )
   );
+
+create or replace function atlas.walkway_cards_v1(
+  p_farm_id uuid,
+  p_object_key text default null,
+  p_as_of timestamptz default now()
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = pg_catalog, atlas
+as $$
+declare
+  v_cards jsonb;
+begin
+  if not atlas.is_farm_member(p_farm_id) then
+    raise exception 'This farm is outside the current membership.' using errcode = '42501';
+  end if;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'cardId', card.id,
+    'cardKey', card.card_key,
+    'farmId', card.farm_id,
+    'zoneId', card.zone_id,
+    'zoneKey', zone.stable_key,
+    'zoneLabel', zone.label,
+    'objectId', object.id,
+    'objectKey', object.stable_key,
+    'objectLabel', object.label,
+    'objectType', object.object_type,
+    'strategy', card.strategy,
+    'targetCondition', card.target_condition,
+    'lastStrategyAt', card.last_strategy_at,
+    'diebackIntervalSeconds', card.dieback_interval_seconds,
+    'diebackReviewAt', card.dieback_review_at,
+    'observedCondition', card.observed_condition,
+    'observedAt', card.observed_at,
+    'currentOccurrenceId', occurrence.id,
+    'currentOccurrenceTitle', occurrence.title,
+    'currentOccurrenceState', occurrence.state,
+    'currentTaskId', coalesce(task.id, occurrence.released_task_id),
+    'currentTaskTitle', coalesce(task.title, occurrence.title),
+    'currentTaskStatus', coalesce(task.status, case when occurrence.state = 'released' then 'open' else occurrence.state end),
+    'metadata', card.metadata,
+    'derived', atlas.walkway_card_state_v1(card.id, p_as_of)
+      || jsonb_build_object(
+        'releaseState', occurrence.state,
+        'releaseCapacityBlocked', occurrence.state = 'eligible' and occurrence.released_task_id is null
+      )
+  ) order by coalesce(object.metadata->>'clock_position', lpad(object.sort_order::text, 8, '0')), object.label), '[]'::jsonb)
+  into v_cards
+  from atlas.walkway_cards card
+  join atlas.growing_objects object on object.id = card.object_id
+  left join atlas.zones zone on zone.id = card.zone_id
+  left join atlas.planned_work_occurrences occurrence on occurrence.id = card.current_occurrence_id
+  left join atlas.tasks task on task.id = card.current_task_id
+  where card.farm_id = p_farm_id
+    and card.active
+    and (p_object_key is null or object.stable_key = p_object_key);
+
+  return jsonb_build_object(
+    'contractVersion', 'walkway_cards_v1',
+    'farmId', p_farm_id,
+    'asOf', coalesce(p_as_of, now()),
+    'cards', v_cards
+  );
+end;
+$$;
+
+revoke all on function atlas.walkway_cards_v1(uuid, text, timestamptz) from public;
+grant execute on function atlas.walkway_cards_v1(uuid, text, timestamptz) to authenticated;
