@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import AtlasPwaBridge from "@/components/atlas/pwa/AtlasPwaBridge";
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import WeekDayNavigation from "./WeekDayNavigation";
 import HomeTodayCompletePatch from "./HomeTodayCompletePatch";
@@ -82,6 +83,7 @@ import "./day-consequence-timeline.css";
 import "./day-overdue-quiet.css";
 import "./owner-operator-mode.css";
 import "./bell.css";
+import "./pwa.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -89,6 +91,33 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "Atlas · Feast Guild",
   description: "Feast Guild farm portfolio, projects, and field operations",
+  applicationName: "Atlas",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Atlas",
+    statusBarStyle: "default",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: [
+      { url: "/api/pwa/icon?size=192", sizes: "192x192", type: "image/png" },
+      { url: "/api/pwa/icon?size=512", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/api/pwa/icon?size=180", sizes: "180x180", type: "image/png" },
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  colorScheme: "light",
+  themeColor: "#f7f4e9",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -97,6 +126,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
+        <AtlasPwaBridge />
         <OwnerOperatorMode context={operatorContext} />
         <WeekDayNavigation />
         <HomeTodayCompletePatch />

@@ -6,6 +6,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AtlasBell, AtlasBellItem } from "@/lib/atlas/bell-contract";
 import { fetchAtlasBell, updateAtlasBell } from "@/lib/atlas/bell-client";
+import { setAtlasAppBadge } from "@/lib/atlas/pwa-client";
 
 function timeLabel(value: string) {
   const date = new Date(value);
@@ -104,6 +105,10 @@ function AtlasBellPageContent() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (bell) void setAtlasAppBadge(bell.badgeCount);
+  }, [bell]);
+
   function acknowledgeLocal(item: AtlasBellItem) {
     setBell((current) => current ? {
       ...current,
@@ -158,6 +163,7 @@ function AtlasBellPageContent() {
 
           <footer className="atlas-bell-footer">
             <Link href="/">Journal cover</Link>
+            <Link href="/install">Atlas app</Link>
             <Link href="/journal">Farm Journal</Link>
           </footer>
         </div>
