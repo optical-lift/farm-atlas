@@ -24,13 +24,6 @@ function titleCase(value: string) {
   return words(value).replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function durationLabel(minutes: number) {
-  if (minutes < 60) return `${Math.round(minutes)} min`;
-  const hours = minutes / 60;
-  const rounded = Number.isInteger(hours) ? hours.toFixed(0) : hours.toFixed(1).replace(/\.0$/, "");
-  return `${rounded} hr`;
-}
-
 function taskSearchText(task: AtlasTaskCard) {
   return `${task.action_key ?? ""} ${task.task_type ?? ""} ${task.work_class ?? ""} ${task.title ?? ""}`.toLowerCase();
 }
@@ -75,9 +68,8 @@ export function atlasDayTaskCues(task: AtlasTaskCard) {
     cues.push(clean);
   };
 
-  const estimatedMinutes = numberValue(metadata.estimated_minutes ?? metadata.duration_minutes);
-  if (estimatedMinutes) add(durationLabel(estimatedMinutes));
-
+  // Atlas may retain duration estimates for internal capacity math, but the player-facing
+  // lineup describes effort qualitatively instead of displaying clock-hour promises.
   const equipment = text(metadata.equipment_label) || text(metadata.equipment_group);
   if (equipment) add(titleCase(equipment));
 
