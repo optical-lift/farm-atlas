@@ -1,0 +1,549 @@
+.frame {
+  background: #fbf9f1;
+}
+
+.home {
+  width: 100%;
+  display: grid;
+  gap: 14px;
+  padding: 12px 12px 22px;
+}
+
+.hero {
+  min-height: 0;
+  border-radius: 24px;
+  padding: 18px;
+  overflow: hidden;
+}
+
+.heroHead {
+  margin: 0 0 14px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.heroHead > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.heroHead > div > span {
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.heroHead > div > em {
+  color: white;
+  font-size: 23px;
+  line-height: 1;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.heroHead > span {
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.heroMove {
+  min-height: 112px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 17px;
+  background: rgba(70, 73, 133, 0.12);
+  color: white;
+  padding: 12px;
+  text-decoration: none;
+}
+
+.heroMove small,
+.heroMove span,
+.heroMove em {
+  display: block;
+}
+
+.heroMove small,
+.heroMove span {
+  display: none;
+}
+
+.heroMove strong {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: white;
+  font-size: 15px;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.heroMove em {
+  margin-top: 5px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 10px;
+  line-height: 1.18;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.heroEmpty {
+  min-height: 116px;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 17px;
+  color: white;
+  padding: 18px;
+  text-decoration: none;
+}
+
+.heroEmpty strong,
+.heroEmpty em {
+  display: block;
+}
+
+.heroEmpty em {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 10px;
+  font-style: normal;
+}
+
+.timeRail {
+  border: 1px solid rgba(96, 90, 112, 0.13);
+  border-radius: 20px;
+  background: #fffdf7;
+  padding: 12px;
+  box-shadow: 0 5px 16px rgba(48, 49, 67, 0.035);
+}
+
+.timeRailHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px 8px;
+}
+
+.timeRailHead > span {
+  color: #30324a;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.timeRailHead > a {
+  color: #77786f;
+  font-size: 9px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.days > a {
+  position: relative;
+  min-width: 0;
+  min-height: 62px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  color: #73746d;
+  text-decoration: none;
+}
+
+.days > a small {
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.days > a strong {
+  color: #30324a;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.days > a em {
+  min-width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #f0eff6;
+  color: #555779;
+  font-size: 8px;
+  line-height: 1;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.days > a[data-blocked="true"]::after,
+.days > a[data-attention="true"]::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #9c7067;
+}
+
+.days > a[data-blocked="true"]::after {
+  border-radius: 2px;
+  background: #77728f;
+}
+
+.days > a.today {
+  border-color: rgba(120, 111, 171, 0.28);
+  background: #efedf8;
+  color: #55508b;
+}
+
+.days > a.today strong {
+  color: #4f4a82;
+}
+
+.days > a.today em {
+  background: #7770a8;
+  color: white;
+}
+
+.timeRoutes {
+  margin-top: 9px;
+  padding-top: 9px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid rgba(87, 86, 104, 0.09);
+}
+
+.timeRoutes a {
+  overflow: hidden;
+  color: #666860;
+  padding: 4px 3px;
+  text-align: center;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 8.5px;
+  font-weight: 900;
+}
+
+.timeRoutes a:nth-child(2) {
+  color: #55508b;
+}
+
+.lenses {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.lens {
+  min-width: 0;
+  border-radius: 20px;
+  padding: 14px;
+  background: #fffdf7;
+}
+
+.lensHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(86, 85, 104, 0.09);
+}
+
+.lensHeader > div {
+  min-width: 0;
+}
+
+.lensHeader span {
+  display: block;
+  color: #8881b7;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lensHeader h2 {
+  margin: 4px 0 0;
+  color: #30324a;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.lensHeader > a {
+  flex: 0 0 auto;
+  min-width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #f0eff6;
+  color: #555779;
+  padding: 0 7px;
+  font-size: 8px;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.lensList,
+.projectRows {
+  display: grid;
+  gap: 0;
+}
+
+.lensList > a,
+.projectRows > a {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(86, 85, 104, 0.075);
+  color: inherit;
+  padding: 10px 0;
+  text-decoration: none;
+}
+
+.lensList > a:last-child,
+.projectRows > a:last-child {
+  border-bottom: 0;
+}
+
+.lensList > a > div,
+.projectRows > a > div {
+  min-width: 0;
+}
+
+.lensList small,
+.projectRows small {
+  display: block;
+  color: #85867e;
+  font-size: 7.5px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lensList strong,
+.projectRows strong {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin-top: 4px;
+  color: #30324a;
+  font-size: 12px;
+  line-height: 1.1;
+}
+
+.lensList span,
+.projectRows span {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin-top: 4px;
+  color: #77786f;
+  font-size: 8.5px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.lensList b {
+  color: #8b84b5;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.projectRows > a > b {
+  min-width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #f1f0f5;
+  color: #555779;
+  font-size: 8px;
+}
+
+.projectRows > a[data-state="blocked"] > b,
+.projectRows > a[data-state="attention"] > b {
+  background: #f3e8e3;
+  color: #835f58;
+}
+
+.lensFooter {
+  display: block;
+  margin-top: 4px;
+  color: #5b5685;
+  padding-top: 6px;
+  font-size: 8.5px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.pulse {
+  border: 1px solid rgba(96, 90, 112, 0.12);
+  border-radius: 20px;
+  background: #f8f4e8;
+  padding: 12px;
+}
+
+.pulseHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px 9px;
+}
+
+.pulseHead > span {
+  color: #30324a;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.pulseHead > a {
+  color: #6d6987;
+  font-size: 8.5px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.pulseMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.pulseMetrics > a {
+  min-width: 0;
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  border-radius: 12px;
+  background: #fffdf7;
+  color: #30324a;
+  padding: 7px 3px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.pulseMetrics b {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.pulseMetrics span {
+  overflow: hidden;
+  max-width: 100%;
+  color: #77786f;
+  font-size: 7.5px;
+  line-height: 1;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .home {
+    gap: 12px;
+    padding: 10px 11px calc(18px + var(--atlas-context-footer-height));
+  }
+
+  .hero {
+    border-radius: 23px;
+    padding: 16px;
+  }
+
+  .lenses {
+    grid-template-columns: 1fr;
+  }
+
+  .lensHeader h2 {
+    font-size: 21px;
+  }
+}
+
+@media (max-width: 380px) {
+  .home {
+    padding-inline: 9px;
+  }
+
+  .heroGrid {
+    gap: 8px;
+  }
+
+  .heroMove {
+    min-height: 106px;
+    padding: 10px;
+  }
+
+  .heroMove strong {
+    font-size: 14px;
+  }
+
+  .days {
+    gap: 2px;
+  }
+
+  .days > a {
+    min-height: 58px;
+    border-radius: 11px;
+  }
+
+  .days > a strong {
+    font-size: 16px;
+  }
+
+  .timeRoutes a {
+    font-size: 8px;
+  }
+
+  .pulseMetrics span {
+    font-size: 7px;
+  }
+}
