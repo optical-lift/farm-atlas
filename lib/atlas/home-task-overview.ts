@@ -1,7 +1,7 @@
 import "server-only";
 
 import { atlasDayTaskCues, atlasDayTaskFamily } from "@/lib/atlas/day-route";
-import type { AtlasLivingDay } from "@/lib/atlas/living-day-contract";
+import type { AtlasLivingDay, AtlasLivingDayTaskRef } from "@/lib/atlas/living-day-contract";
 import {
   atlasMetadataValue,
   atlasMetaString,
@@ -51,8 +51,21 @@ function isOpenTask(card: AtlasTaskCard) {
     && !isQuietTask(card);
 }
 
+function isOpenTaskRef(task: AtlasLivingDayTaskRef) {
+  return task.status === "open" || task.status === "blocked";
+}
+
 function clean(value: string | null | undefined) {
   return (value ?? "").trim();
+}
+
+function titleCase(value: string) {
+  return value
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function usefulDetail(card: AtlasTaskCard, title: string, location: string) {
@@ -105,6 +118,39 @@ function taskMove(
   };
 }
 
+function taskRefMove(
+  task: AtlasLivingDayTaskRef,
+  farmId: string,
+  farmName: string,
+  index: number,
+): AtlasUniversalMove {
+  const state: AtlasUniversalMoveState = task.status === "blocked" ? "blocked" : "ready";
+  const family = titleCase(task.actionKey || task.taskType || task.workClass || "Work");
+  const effort = clean(task.workClass);
+  const priority = clean(task.priority);
+  const cue = effort && !["standard", "required", "manual"].includes(effort.toLowerCase())
+    ? titleCase(effort)
+    : priority && !["normal", "medium"].includes(priority.toLowerCase())
+      ? titleCase(priority)
+      : "";
+
+  return {
+    key: `farm-task:${farmId}:${task.taskId}`,
+    kind: "farm_task",
+    category: `${roleLabel(index, state)} · ${family}`,
+    title: task.title,
+    scopeLabel: farmName,
+    meta: cue,
+    detail: clean(task.blockerText),
+    href: `/task-focus/${encodeURIComponent(task.taskId)}?returnTo=${encodeURIComponent("/")}`,
+    date: task.dueDate,
+    state,
+    farmId,
+    projectId: null,
+    priority: index,
+  };
+}
+
 function orderedCards(cards: AtlasTaskCard[]) {
   return [...cards].sort((left, right) => atlasWorkOrderSortValue(left).localeCompare(atlasWorkOrderSortValue(right)));
 }
@@ -137,8 +183,20 @@ function overviewFromLivingDay(home: AtlasUniversalHomeModel, livingDay: AtlasLi
   const farm = home.activeFarm;
   if (!farm) return fallbackOverview(home);
 
-  const plannedIds = new Set(livingDay.journal.planned.map((task) => task.taskId));
-  const cards = orderedCards(farm.taskCards.filter((card) => plannedIds.has(card.task_id) && isOpenTask(card)));
+  const cardsById = new Map(
+    farm.taskCards
+      .filter(isOpenTask)
+      .map((card) => [card.task_id, card]),
+  );
+  const preparedOpen = livingDay.journal.planned.filter(isOpenTaskRef);
+  const moves = preparedOpen
+    .slice(0, 4)
+    .map((task, index) => {
+      const card = cardsById.get(task.taskId);
+      return card
+        ? taskMove(card, farm.farmId, farm.farmName, index)
+        : taskRefMove(task, farm.farmId, farm.farmName, index);
+    });
   const completion = livingDay.completionSummary;
   const plannedTotal = Math.max(
     completion.plannedOpen + completion.plannedDone,
@@ -147,7 +205,7 @@ function overviewFromLivingDay(home: AtlasUniversalHomeModel, livingDay: AtlasLi
   const carryForwardCount = livingDay.journal.carried.filter((task) => task.status !== "done" && task.status !== "archived").length;
 
   return {
-    moves: cards.slice(0, 4).map((card, index) => taskMove(card, farm.farmId, farm.farmName, index)),
+    moves,
     summary: {
       prepared: true,
       plannedTotal,
