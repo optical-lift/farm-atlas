@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHome";
+import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHomeV2";
 import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
 import {
   effectiveOperatorAccountId,
@@ -108,14 +108,6 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
 
   return (
     <>
-      <style>{`
-        #work-board,
-        .atlas-home-grid > #work-board,
-        .atlas-owner-footer-link[href="#work-board"] {
-          display: none !important;
-        }
-      `}</style>
-      {/* Legacy contract marker only: <AtlasAroundRoutes canManage={false} /> is no longer rendered on Home. */}
       <AtlasUniversalHome
         home={renderedHome}
         selectedFarmKey={selectedFarmKey}
