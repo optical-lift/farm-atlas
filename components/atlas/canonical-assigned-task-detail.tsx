@@ -2,7 +2,7 @@
 
 import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
-import TaskSetAsideControl from "@/components/atlas/task-set-aside-control";
+import StructuredUnfinishedControl from "@/components/atlas/structured-unfinished-control";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -35,7 +35,11 @@ export default function CanonicalAssignedTaskDetail(props: Props) {
     <>
       <DominionAssignedTaskDetail {...props} />
       {props.assignee.key === "anna" ? (
-        <TaskSetAsideControl taskId={props.task.task_id} returnTo={props.assignee.listPath} />
+        <StructuredUnfinishedControl
+          task={props.task}
+          childTasks={props.childTasks}
+          assignee={props.assignee}
+        />
       ) : null}
     </>
   );

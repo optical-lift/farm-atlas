@@ -1,0 +1,123 @@
+.atlas-structured-unfinished-panel {
+  margin-top: 12px;
+  padding: 14px 2px 2px;
+  border-top: 1px solid rgba(111, 101, 82, 0.12);
+  display: grid;
+  gap: 13px;
+  color: var(--atlas-text);
+}
+
+.atlas-structured-unfinished-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.atlas-structured-unfinished-heading small,
+.atlas-structured-unfinished-section > span {
+  color: #858bb8;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atlas-structured-unfinished-heading strong {
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.atlas-structured-unfinished-outcomes,
+.atlas-structured-unfinished-return {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.atlas-structured-unfinished-outcomes.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.atlas-structured-unfinished-outcomes button,
+.atlas-structured-unfinished-reasons button,
+.atlas-structured-unfinished-return button,
+.atlas-structured-unfinished-return label,
+.atlas-structured-unfinished-save {
+  min-height: 42px;
+  border: 1px solid rgba(190, 185, 174, 0.68);
+  border-radius: 13px;
+  background: rgba(251, 250, 244, 0.72);
+  color: #64665f;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 790;
+}
+
+.atlas-structured-unfinished-outcomes button,
+.atlas-structured-unfinished-reasons button,
+.atlas-structured-unfinished-return button,
+.atlas-structured-unfinished-save {
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.atlas-structured-unfinished-outcomes button.is-selected,
+.atlas-structured-unfinished-reasons button.is-selected,
+.atlas-structured-unfinished-return button.is-selected {
+  border-color: rgba(133, 139, 192, 0.46);
+  background: rgba(133, 139, 192, 0.14);
+  color: #454752;
+}
+
+.atlas-structured-unfinished-section {
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-structured-unfinished-reasons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.atlas-structured-unfinished-return label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px 5px 11px;
+}
+
+.atlas-structured-unfinished-return label span {
+  color: #777970;
+  font-size: 10px;
+}
+
+.atlas-structured-unfinished-return input[type="date"] {
+  min-width: 0;
+  max-width: 137px;
+  border: 0;
+  background: transparent;
+  color: #55574f;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.atlas-structured-unfinished-save {
+  width: 100%;
+  border-color: rgba(133, 139, 192, 0.42);
+  background: rgba(133, 139, 192, 0.12);
+  color: #4f5261;
+}
+
+.atlas-structured-unfinished-panel button:disabled,
+.atlas-structured-unfinished-panel input:disabled {
+  opacity: 0.52;
+}
+
+@media (max-width: 420px) {
+  .atlas-structured-unfinished-reasons,
+  .atlas-structured-unfinished-return {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
