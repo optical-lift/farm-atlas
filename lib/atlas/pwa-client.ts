@@ -93,19 +93,7 @@ export async function setAtlasAppBadge(count: number) {
 
 export async function requestAtlasNotificationPermission() {
   if (!atlasCanRequestNotifications()) return "unsupported" as const;
-
-  const registration = await registerAtlasServiceWorker();
-  const permission = await Notification.requestPermission();
-
-  if (permission === "granted" && registration) {
-    await registration.showNotification("Atlas Farm Alerts are allowed", {
-      body: "This device can show farm movement from the Bell.",
-      icon: "/api/pwa/icon?size=192",
-      badge: "/api/pwa/icon?size=192",
-      tag: "atlas-alert-permission-confirmed",
-      data: { deepLink: "/bell" },
-    });
-  }
-
-  return permission;
+  await registerAtlasServiceWorker();
+  if (Notification.permission === "granted") return "granted" as const;
+  return Notification.requestPermission();
 }
