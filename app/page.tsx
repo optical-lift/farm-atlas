@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import AtlasBellCover from "@/components/atlas/home/AtlasBellCover";
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHome";
+import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
 import {
   effectiveOperatorAccountId,
   effectiveOperatorMembershipId,
@@ -114,6 +115,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
         selectedWorkstream={selectedWorkstream}
       />
       {renderedHome.activeFarm ? <AtlasBellCover /> : null}
+      <AtlasPwaCoverPrompt />
     </>
   );
 }
