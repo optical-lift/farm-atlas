@@ -67,7 +67,8 @@ export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
 
       {activeContext.isOperating ? (
         <div className="atlas-owner-operator__notice" aria-live="polite">
-          Operating for {activeContext.effective.displayName}
+          <strong>Operating for {activeContext.effective.displayName}</strong>
+          <span>Actions change live Atlas data and remain recorded as {activeContext.actor.displayName} operating for {activeContext.effective.displayName}.</span>
         </div>
       ) : null}
 
