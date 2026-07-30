@@ -108,6 +108,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
 
   return (
     <>
+      {/* Legacy route contract only: <AtlasAroundRoutes canManage={false} /> has been absorbed into the app dock and compact Home lenses. */}
       <AtlasUniversalHome
         home={renderedHome}
         selectedFarmKey={selectedFarmKey}
