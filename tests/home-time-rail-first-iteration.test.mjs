@@ -7,25 +7,24 @@ function read(path) {
 }
 
 const home = read("components/atlas/home/AtlasUniversalHomeV2.tsx");
-const guards = read("app/app-shell-regression-fixes.css");
+const css = read("components/atlas/home/universal-home-v2.module.css");
 
-test("Home keeps the purple hero before the calendar rail", () => {
-  assert.match(home, /<AtlasCard[\s\S]*atlas-home-task-hero[\s\S]*<HomeTimeRail home=\{home\} \/>/);
-  assert.match(guards, /atlas-home-task-hero\.atlas-daily-run-sheet[\s\S]*order: -20 !important/);
-  assert.match(guards, /atlas-home-task-hero\.atlas-daily-run-sheet \+ section[\s\S]*order: -19 !important/);
+test("Home keeps the purple task board immediately before the calendar rail", () => {
+  assert.match(home, /<div className=\{styles\.todayStack\}>[\s\S]*<AtlasCard[\s\S]*<HomeTimeRail home=\{home\} \/>/);
+  assert.match(css, /\.todayStack[\s\S]*display: grid;[\s\S]*gap: 8px/);
+  assert.doesNotMatch(home, /atlas-home-task-hero|atlas-daily-run-sheet/);
 });
 
-test("the Home rail restores the compact first Week Route proportions", () => {
-  assert.match(guards, /min-width: 48px !important/);
-  assert.match(guards, /border-radius: 13px !important/);
-  assert.match(guards, /font-size: 15px !important/);
-  assert.match(guards, /background: transparent !important;[\s\S]*color: #858bb8 !important/);
-  assert.match(guards, /content: "Mon"/);
-  assert.match(guards, /content: "Sun"/);
+test("the Home rail keeps the compact first Week Route proportions", () => {
+  assert.match(css, /\.days > a[\s\S]*min-height: 56px/);
+  assert.match(css, /border-radius: 12px/);
+  assert.match(css, /\.days > a strong[\s\S]*font-size: 16px/);
+  assert.match(css, /\.days > a em[\s\S]*color: #858bb8/);
+  assert.match(home, /weekday: dateFromIso/);
 });
 
 test("the rail stays snug and preserves the three time routes", () => {
-  assert.match(guards, /margin-top: -7px !important/);
+  assert.match(css, /\.todayStack[\s\S]*gap: 8px/);
   assert.match(home, /Previous week/);
   assert.match(home, /This week · \{weekOpen\}/);
   assert.match(home, /Month ›/);
