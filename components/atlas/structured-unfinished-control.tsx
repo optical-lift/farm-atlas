@@ -128,7 +128,7 @@ export default function StructuredUnfinishedControl({ task, childTasks, assignee
         taskId: task.task_id,
         transition: outcome,
         idempotencyKey,
-        note: outcomeLabel,
+        note: selectedReason.label,
         reason: selectedReason.label,
         laneKey: task.action_key || undefined,
         workKey: task.action_key || undefined,
