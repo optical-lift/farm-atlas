@@ -1,6 +1,5 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 
@@ -10,60 +9,12 @@ type OwnerOperatorModeProps = {
   context: AtlasOwnerOperatorContext | null;
 };
 
-const logoutButtonStyle: CSSProperties = {
-  appearance: "none",
-  border: 0,
-  background: "transparent",
-  color: "inherit",
-  cursor: "pointer",
-  font: "inherit",
-  fontSize: "10px",
-  fontWeight: 800,
-  lineHeight: 1,
-  minHeight: "32px",
-  padding: "0 5px",
-  textDecoration: "underline",
-  textDecorationThickness: "1px",
-  textUnderlineOffset: "3px",
-  opacity: 0.72,
-};
-
-const logoutOnlyStyle: CSSProperties = {
-  position: "fixed",
-  right: "max(12px, env(safe-area-inset-right))",
-  bottom: "max(6px, env(safe-area-inset-bottom))",
-  zIndex: 90,
-  margin: 0,
-  borderRadius: "999px",
-  background: "rgba(248, 247, 242, 0.9)",
-  color: "#666a70",
-  padding: "0 3px",
-  boxShadow: "0 -1px 6px rgba(47, 48, 66, 0.06)",
-};
-
-function LogoutForm({ standalone = false }: { standalone?: boolean }) {
-  return (
-    <form
-      action="/api/atlas/auth/logout"
-      method="post"
-      style={standalone ? logoutOnlyStyle : { marginLeft: "auto" }}
-    >
-      <button type="submit" aria-label="Log out of Atlas" style={logoutButtonStyle}>
-        Log out
-      </button>
-    </form>
-  );
-}
-
 export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
   const pathname = usePathname();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!context) {
-    if (pathname === "/login" || pathname.startsWith("/auth/")) return null;
-    return <LogoutForm standalone />;
-  }
+  if (!context || pathname === "/login" || pathname.startsWith("/auth/")) return null;
   const activeContext = context;
 
   async function selectAccount(accountId: string) {
@@ -102,6 +53,7 @@ export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
           id="atlas-owner-operator-select"
           value={activeContext.effective.accountId}
           disabled={saving}
+          aria-label="Operating as"
           onChange={(event) => void selectAccount(event.target.value)}
         >
           {activeContext.options.map((option) => (
@@ -111,13 +63,11 @@ export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
           ))}
         </select>
         {saving ? <span>Switching…</span> : null}
-        <LogoutForm />
       </div>
 
       {activeContext.isOperating ? (
-        <div className="atlas-owner-operator__notice">
-          <strong>Operating {activeContext.effective.displayName}&apos;s Atlas</strong>
-          <span>Actions change live Atlas data and are recorded as {activeContext.actor.displayName} operating for {activeContext.effective.displayName}.</span>
+        <div className="atlas-owner-operator__notice" aria-live="polite">
+          Operating for {activeContext.effective.displayName}
         </div>
       ) : null}
 
