@@ -1,7 +1,5 @@
 import Link from "next/link";
 
-export const dynamic = "force-static";
-
 export default function AtlasOfflinePage() {
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
