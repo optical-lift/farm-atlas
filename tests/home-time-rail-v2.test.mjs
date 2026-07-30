@@ -8,8 +8,9 @@ function read(path) {
 
 const page = read("app/page.tsx");
 const home = read("components/atlas/home/AtlasUniversalHomeV2.tsx");
+const seasons = read("lib/atlas/home-farm-seasons.ts");
 const css = read("components/atlas/home/universal-home-v2.module.css");
-const build = `${page}\n${home}\n${css}`;
+const build = `${page}\n${home}\n${seasons}\n${css}`;
 
 test("Home uses the compact day rail instead of large Week and Month dashboard cards", () => {
   assert.match(page, /AtlasUniversalHomeV2/);
@@ -30,14 +31,27 @@ test("every day in the current Monday-through-Sunday rail opens its Living Day",
   assert.match(home, /data-atlas-home-time-rail="true"/);
 });
 
-test("Home is a prepared task cover followed by Needs you and the farms", () => {
-  assert.match(home, /Today at/);
+test("Home is a task cover followed by Needs you and untitled farm cards", () => {
+  assert.match(home, /Today at|Today across/);
   assert.match(home, /dealt with/);
   assert.match(home, /carry forward/);
   assert.match(home, /Needs you/);
-  assert.match(home, /The farms/);
-  assert.match(home, /days to frost/);
+  assert.match(home, /<TheFarms home=\{home\} farmSeasons=\{farmSeasons\} \/>/);
+  assert.doesNotMatch(home, />The farms</);
+  assert.doesNotMatch(home, /Growing season/);
   assert.doesNotMatch(home, /Farm pulse|known gaps|Moving now|AtlasPortfolioMatrix|AtlasTrailPulseBoard|Work in Motion|Current moves/);
+});
+
+test("farm cards use each farm's location and frost profile", () => {
+  assert.match(page, /readAtlasHomeFarmSeasonProfiles/);
+  assert.match(page, /farmSeasons=\{farmSeasons\}/);
+  assert.match(home, /season\?\.locationLabel/);
+  assert.match(home, /profile\.frostBoundaryMonth/);
+  assert.match(home, /profile\.frostBoundaryDay/);
+  assert.match(home, /frost date unknown/);
+  assert.match(home, /First season · frost unknown/);
+  assert.match(seasons, /frost_status/);
+  assert.match(seasons, /location_label/);
 });
 
 test("the farm section shows every visible farm through physical and seasonal measures", () => {
@@ -46,8 +60,6 @@ test("the farm section shows every visible farm through physical and seasonal me
   assert.match(home, /sq ft active/);
   assert.match(home, /stems this year/);
   assert.match(home, /sowings recorded this year/);
-  assert.match(home, /FIRST_KILLING_FREEZE_DAY = 1/);
-  assert.match(home, /FIRST_KILLING_FREEZE_MONTH_INDEX = 10/);
   assert.match(css, /\.farmCards[\s\S]*grid-template-columns: repeat\(2/);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.farmCards[\s\S]*grid-template-columns: 1fr/);
 });
