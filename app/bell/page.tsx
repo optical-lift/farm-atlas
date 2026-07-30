@@ -8,15 +8,10 @@ import type { AtlasBell, AtlasBellItem } from "@/lib/atlas/bell-contract";
 import { fetchAtlasBell, updateAtlasBell } from "@/lib/atlas/bell-client";
 import { setAtlasAppBadge } from "@/lib/atlas/pwa-client";
 
-function timeLabel(value: string) {
+function dateLabel(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function eventLabel(item: AtlasBellItem) {
@@ -59,30 +54,39 @@ function BellItemRow({
       className="atlas-bell-item"
       data-atlas-bell-importance={item.importance}
       data-atlas-bell-unread={item.unread ? "true" : "false"}
+      data-atlas-bell-baseline={item.baseline ? "true" : "false"}
     >
       <Link href={item.deepLink} className="atlas-bell-item-main" onClick={markRead}>
         <span className="atlas-bell-symbol" aria-hidden="true">{item.symbol}</span>
         <div>
-          <small>{eventLabel(item)} · {timeLabel(item.occurredAt)}</small>
+          <small>{eventLabel(item)} · {dateLabel(item.occurredAt)}</small>
           <strong>{item.title}</strong>
           {item.detail ? <p>{item.detail}</p> : null}
+          <p className="atlas-bell-why"><b>Why you’re seeing this</b>{item.why}</p>
         </div>
       </Link>
       <div className="atlas-bell-item-state">
-        {item.requiresAction ? <span>Needs attention</span> : item.whileAway ? <span>While away</span> : null}
+        {item.baseline ? <span>Known at monitoring start</span> : item.requiresAction ? <span>Needs you</span> : item.whileAway ? <span>While away</span> : <span>Farm movement</span>}
         {!item.acknowledged ? (
           <button type="button" onClick={acknowledge} disabled={saving}>
-            {saving ? "Saving…" : "Acknowledge"}
+            {saving ? "Saving…" : item.baseline ? "Mark reviewed" : "Acknowledge"}
           </button>
-        ) : <em>Acknowledged</em>}
+        ) : <em>{item.baseline ? "Reviewed" : "Acknowledged"}</em>}
       </div>
     </article>
   );
 }
 
+type BellView = "all" | "needs" | "rhythms" | "movement" | "baseline";
+
+function normalizedView(value: string | null): BellView {
+  if (value === "needs" || value === "rhythms" || value === "movement" || value === "baseline") return value;
+  return "all";
+}
+
 function AtlasBellPageContent() {
   const searchParams = useSearchParams();
-  const whileAwayOnly = searchParams.get("view") === "while-away";
+  const view = normalizedView(searchParams.get("view"));
   const [bell, setBell] = useState<AtlasBell | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +95,7 @@ function AtlasBellPageContent() {
     try {
       setLoading(true);
       setError(null);
-      const result = await fetchAtlasBell(80);
+      const result = await fetchAtlasBell(100);
       setBell(result);
       await updateAtlasBell({ action: "visit", seenThrough: result.preparedAt });
     } catch (loadError) {
@@ -112,7 +116,7 @@ function AtlasBellPageContent() {
   function acknowledgeLocal(item: AtlasBellItem) {
     setBell((current) => current ? {
       ...current,
-      badgeCount: item.requiresAction ? Math.max(0, current.badgeCount - 1) : current.badgeCount,
+      badgeCount: item.requiresAction && !item.baseline ? Math.max(0, current.badgeCount - 1) : current.badgeCount,
       unreadCount: item.unread ? Math.max(0, current.unreadCount - 1) : current.unreadCount,
       items: current.items.map((entry) => entry.eventId === item.eventId
         ? { ...entry, unread: false, acknowledged: true }
@@ -120,10 +124,14 @@ function AtlasBellPageContent() {
     } : current);
   }
 
-  const items = useMemo(
-    () => whileAwayOnly ? (bell?.items ?? []).filter((item) => item.whileAway) : bell?.items ?? [],
-    [bell, whileAwayOnly],
-  );
+  const items = useMemo(() => {
+    const source = bell?.items ?? [];
+    if (view === "baseline") return source.filter((item) => item.baseline);
+    if (view === "needs") return source.filter((item) => !item.baseline && item.requiresAction && item.section !== "rhythms");
+    if (view === "rhythms") return source.filter((item) => !item.baseline && item.section === "rhythms");
+    if (view === "movement") return source.filter((item) => !item.baseline && item.section === "farm_movement");
+    return source.filter((item) => !item.baseline);
+  }, [bell, view]);
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
@@ -133,38 +141,50 @@ function AtlasBellPageContent() {
             <span className="atlas-phone-kicker">Atlas</span>
             <span className="atlas-phone-title">Bell</span>
           </Link>
-          <span className="atlas-weather-line">{bell ? `${bell.badgeCount} need attention` : "Farm changes"}</span>
-          <Link href="/journal" className="atlas-note-plus" aria-label="Open Farm Journal">–</Link>
+          <span className="atlas-weather-line">{bell ? `${bell.badgeCount} need you` : "Meaningful changes"}</span>
+          <Link href="/install" className="atlas-note-plus" aria-label="Open Farm Alerts settings">⋯</Link>
         </header>
 
         <div className="atlas-bell-page-body">
           <section className="atlas-bell-summary">
-            <span>{whileAwayOnly ? "While you were away" : "Bell history"}</span>
-            <h1>{bell ? `${bell.whileAwayCount} recent · ${bell.badgeCount} unresolved` : "Farm movement"}</h1>
-            <p>The Bell is a read of the Farm Journal. Acknowledging an item removes its slip, not the event or its consequence.</p>
+            <span>{view === "baseline" ? "Monitoring baseline" : "Current obligations"}</span>
+            <h1>{bell ? `${bell.badgeCount} need you · ${bell.whileAwayCount} new` : "Listening to Atlas"}</h1>
+            <p>The Bell points into the work, place, crop or project where the change belongs. It is not a second task list or a separate history dumping ground.</p>
           </section>
 
+          {bell && bell.baselineSummary.totalCount > 0 ? (
+            <section className="atlas-bell-baseline-card">
+              <span>{bell.baselineSummary.label}</span>
+              <strong>{bell.baselineSummary.totalCount} known obligations</strong>
+              <p>{bell.baselineSummary.failureCount} fallen out of rhythm · {bell.baselineSummary.dueCount} due. These remain true in Atlas, but they do not count as new notifications.</p>
+              <Link href="/bell?view=baseline">Review the existing baseline</Link>
+            </section>
+          ) : null}
+
           <nav className="atlas-bell-filters" aria-label="Bell filters">
-            <Link href="/bell" aria-current={!whileAwayOnly ? "page" : undefined}>All</Link>
-            <Link href="/bell?view=while-away" aria-current={whileAwayOnly ? "page" : undefined}>While away</Link>
+            <Link href="/bell" aria-current={view === "all" ? "page" : undefined}>Current</Link>
+            <Link href="/bell?view=needs" aria-current={view === "needs" ? "page" : undefined}>Needs you</Link>
+            <Link href="/bell?view=rhythms" aria-current={view === "rhythms" ? "page" : undefined}>Rhythms</Link>
+            <Link href="/bell?view=movement" aria-current={view === "movement" ? "page" : undefined}>Movement</Link>
+            <Link href="/bell?view=baseline" aria-current={view === "baseline" ? "page" : undefined}>Baseline</Link>
           </nav>
 
-          {loading ? <div className="atlas-bell-loading">Listening for farm changes…</div> : null}
+          {loading ? <div className="atlas-bell-loading">Listening for meaningful Atlas changes…</div> : null}
           {error ? <div className="atlas-bell-error">{error}</div> : null}
           {!loading && !error && items.length === 0 ? (
-            <div className="atlas-bell-empty">No Bell entries in this view.</div>
+            <div className="atlas-bell-empty">Nothing belongs in this Bell view right now.</div>
           ) : null}
 
           <section className="atlas-bell-list" aria-label="Bell entries">
             {items.map((item) => (
-              <BellItemRow key={item.eventId} item={item} onAcknowledged={acknowledgeLocal} />
+              <BellItemRow key={item.obligationKey} item={item} onAcknowledged={acknowledgeLocal} />
             ))}
           </section>
 
           <footer className="atlas-bell-footer">
-            <Link href="/">Journal cover</Link>
-            <Link href="/install">Atlas app</Link>
-            <Link href="/journal">Farm Journal</Link>
+            <Link href="/">Home</Link>
+            <Link href="/install">Farm Alerts</Link>
+            <Link href="/more">More</Link>
           </footer>
         </div>
       </section>
@@ -173,7 +193,7 @@ function AtlasBellPageContent() {
 }
 
 function BellFallback() {
-  return <main className="atlas-phone-shell"><div className="atlas-bell-loading">Listening for farm changes…</div></main>;
+  return <main className="atlas-phone-shell"><div className="atlas-bell-loading">Listening for meaningful Atlas changes…</div></main>;
 }
 
 export default function AtlasBellPage() {
