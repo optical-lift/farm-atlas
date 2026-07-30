@@ -1,0 +1,208 @@
+/* Living Day consequence grammar: consequences live on the route, not in purple alert cards. */
+
+.atlas-day-task-card[data-atlas-day-consequence] .atlas-day-task-family,
+.atlas-day-task-card[data-atlas-day-consequence] .atlas-day-overdue-badge {
+  display: none !important;
+}
+
+.atlas-day-task-card[data-atlas-day-consequence] > span:not(.atlas-day-consequence-detail):not(.atlas-day-task-cues),
+.atlas-day-task-card[data-atlas-day-consequence] > em,
+.atlas-day-task-card[data-atlas-day-consequence] > summary > span:not(.atlas-day-consequence-detail):not(.atlas-day-task-cues),
+.atlas-day-task-card[data-atlas-day-consequence] > summary > em {
+  display: none !important;
+}
+
+.atlas-day-consequence-kicker {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #7d8177;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.atlas-day-consequence-detail {
+  display: block !important;
+  color: #777970 !important;
+  font-size: 9px !important;
+  line-height: 1.15 !important;
+  font-weight: 800 !important;
+  white-space: normal !important;
+}
+
+.atlas-day-task-card[data-atlas-day-consequence="continued"] .atlas-day-consequence-kicker {
+  color: #747a69;
+}
+
+.atlas-day-task-card[data-atlas-day-consequence="returned"] .atlas-day-consequence-kicker {
+  color: #727a91;
+}
+
+.atlas-day-task-card[data-atlas-day-consequence="overdue"] .atlas-day-consequence-kicker,
+.atlas-day-task-card[data-atlas-day-consequence="at_risk"] .atlas-day-consequence-kicker {
+  color: #7c625d;
+}
+
+/* Timeline nodes carry the state quietly. */
+.atlas-day-task-entry[data-atlas-day-consequence="continued"] > .atlas-day-task-node > span {
+  border-color: rgba(115, 122, 102, 0.72);
+  background: linear-gradient(90deg, rgba(115, 122, 102, 0.52) 50%, var(--atlas-card) 50%);
+}
+
+.atlas-day-task-entry[data-atlas-day-consequence="returned"] > .atlas-day-task-node > span {
+  border-color: rgba(114, 122, 145, 0.76);
+  border-radius: 3px;
+  background: var(--atlas-card);
+}
+
+.atlas-day-task-entry[data-atlas-day-consequence="overdue"] > .atlas-day-task-node > span,
+.atlas-day-task-entry[data-atlas-day-consequence="at_risk"] > .atlas-day-task-node > span {
+  width: 7px;
+  height: 7px;
+  border: 0;
+  background: #8b6962;
+}
+
+/* Carry-forward is another journal lane, not an alert panel. */
+.atlas-day-overdue-group {
+  margin-top: 8px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 4px 2px 0 !important;
+  box-shadow: none !important;
+}
+
+.atlas-day-overdue-group-head {
+  min-height: 0 !important;
+  margin: 0 0 7px 20px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.atlas-day-overdue-group-head > div {
+  display: flex !important;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.atlas-day-overdue-group-head span,
+.atlas-day-overdue-group-head h3 {
+  color: #858bb8 !important;
+  font-size: 9px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+}
+
+.atlas-day-overdue-group-head h3 {
+  margin: 0 !important;
+}
+
+.atlas-day-overdue-group-head b {
+  min-width: 0 !important;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #8c8d87 !important;
+  padding: 0 !important;
+  font-size: 9px !important;
+  font-weight: 850 !important;
+}
+
+.atlas-day-overdue-group > .atlas-day-work-order-list {
+  position: relative;
+  padding-left: 24px;
+  display: grid;
+  gap: 0 !important;
+}
+
+.atlas-day-overdue-group > .atlas-day-work-order-list::before {
+  content: "";
+  position: absolute;
+  top: 13px;
+  bottom: 15px;
+  left: 8px;
+  width: 1px;
+  background: rgba(124, 98, 93, 0.24);
+}
+
+.atlas-day-overdue-group .atlas-day-overdue-task-card {
+  position: relative;
+  min-height: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--atlas-text) !important;
+  padding: 8px 4px 18px 10px !important;
+  display: grid !important;
+  gap: 3px !important;
+  overflow: visible !important;
+  text-decoration: none !important;
+}
+
+.atlas-day-overdue-group .atlas-day-overdue-task-card::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  left: -18px;
+  z-index: 2;
+  width: 7px;
+  height: 7px;
+  border: 0;
+  border-radius: 999px;
+  background: #8b6962;
+  box-shadow: 0 0 0 3px var(--atlas-card);
+}
+
+.atlas-day-overdue-group .atlas-day-overdue-task-card strong {
+  color: var(--atlas-text) !important;
+  font-size: 15px !important;
+  line-height: 1.04 !important;
+  letter-spacing: -0.035em !important;
+}
+
+/* Set-aside remains present as a folded timeline note. */
+.atlas-day-set-aside-drawer {
+  margin-top: 5px !important;
+  border-top-style: dotted !important;
+}
+
+.atlas-day-set-aside-list {
+  position: relative;
+  padding-left: 24px !important;
+}
+
+.atlas-day-set-aside-list::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  bottom: 12px;
+  left: 8px;
+  width: 1px;
+  background: rgba(117, 112, 101, 0.18);
+}
+
+.atlas-day-set-aside-list a > span {
+  position: relative;
+  color: #8c8e86 !important;
+}
+
+@media (max-width: 420px) {
+  .atlas-day-overdue-group {
+    padding-inline: 0 !important;
+  }
+
+  .atlas-day-consequence-detail {
+    font-size: 8px !important;
+  }
+}
