@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import {
   atlasDayTaskConsequence,
   atlasIsCarriedDayTask,
-  atlasIsDayExtraCredit,
+  atlasIsDayDenominatorExcluded,
   atlasIsDayWorkTask,
   atlasIsFlexibleDayDeal,
 } from "@/lib/atlas/day-consequence";
@@ -111,7 +111,7 @@ export async function GET(request: Request) {
       });
 
     const ordinaryDueCards = dueCards
-      .filter((card) => !atlasIsDayExtraCredit(card))
+      .filter((card) => !atlasIsDayDenominatorExcluded(card))
       .filter((card) => !atlasIsCarriedDayTask(card, dateIso));
     const flexibleCards = ordinaryDueCards.filter(atlasIsFlexibleDayDeal);
 
