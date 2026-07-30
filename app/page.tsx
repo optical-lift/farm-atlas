@@ -2,12 +2,12 @@ import { redirect } from "next/navigation";
 
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHomeV2";
 import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
+import { readAtlasOperatorHomeTaskOverview } from "@/lib/atlas/home-task-overview";
 import {
   effectiveOperatorAccountId,
   effectiveOperatorMembershipId,
   readAtlasOwnerOperatorContext,
 } from "@/lib/atlas/operator-context";
-import { readAtlasOperatorJournalCover } from "@/lib/atlas/operator-journal-cover";
 import { readAtlasOperatorUniversalHome } from "@/lib/atlas/operator-universal-home";
 import { getAtlasSession } from "@/lib/atlas/session";
 import { readAtlasSetAsideTaskIds } from "@/lib/atlas/task-day-dispositions-server";
@@ -34,13 +34,6 @@ function organizationMembershipForViewer(
   ) ?? viewer.organizationMemberships[0] ?? null;
 }
 
-function focusedProjectTaskHref(move: Awaited<ReturnType<typeof readAtlasOperatorUniversalHome>>["moves"][number]) {
-  if (move.kind !== "project_task" || !move.projectId) return move.href;
-  const taskId = move.key.split(":").at(-1);
-  if (!taskId) return move.href;
-  return `/project/${encodeURIComponent(move.projectId)}?taskId=${encodeURIComponent(taskId)}#project-work`;
-}
-
 export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps) {
   const session = await getAtlasSession();
   if (!session) redirect("/login");
@@ -53,7 +46,6 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     readAtlasOwnerOperatorContext(),
   ]);
   const selectedFarmKey = firstParam(params.farm);
-  const selectedWorkstream = firstParam(params.workstream);
   const preferredFarmId = selectedFarmKey
     ? viewer.farmMemberships.find((membership) => membership.farmKey === selectedFarmKey)?.farmId
       ?? viewer.activeFarmId
@@ -89,12 +81,11 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     }),
   };
 
-  const coverMoves = await readAtlasOperatorJournalCover(visibleHome);
-  const renderedViewer = visibleHome.viewer;
-  const organizationMembership = organizationMembershipForViewer(renderedViewer);
+  const taskOverview = await readAtlasOperatorHomeTaskOverview(visibleHome);
+  const organizationMembership = organizationMembershipForViewer(visibleHome.viewer);
   const organizationPortal = Boolean(
     organizationMembership
-      && (organizationMembership.role === "owner" || renderedViewer.farmMemberships.length === 0),
+      && (organizationMembership.role === "owner" || visibleHome.viewer.farmMemberships.length === 0),
   );
   const renderedHome = {
     ...visibleHome,
@@ -103,7 +94,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
         || organizationMembership?.organizationName
         || "Feast Guild"
       : visibleHome.title,
-    moves: coverMoves.map((move) => ({ ...move, href: focusedProjectTaskHref(move) })),
+    moves: taskOverview.moves,
   };
 
   return (
@@ -111,8 +102,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
       {/* Legacy route contract only: <AtlasAroundRoutes canManage={false} /> has been absorbed into the app dock and compact Home lenses. */}
       <AtlasUniversalHome
         home={renderedHome}
-        selectedFarmKey={selectedFarmKey}
-        selectedWorkstream={selectedWorkstream}
+        dayOverview={taskOverview.summary}
       />
       <AtlasPwaCoverPrompt />
     </>
