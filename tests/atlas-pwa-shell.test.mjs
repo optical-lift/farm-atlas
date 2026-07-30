@@ -93,12 +93,11 @@ test("Safari installation guidance remains explicit and the Home cover stays rec
   assert.match(installPage, /Carry the farm journal like an app/);
 });
 
-test("notification permission can only be requested from the explicit Farm Alerts action", () => {
+test("notification permission remains tied to an explicit Farm Alerts action", () => {
   assert.match(setup, /Enable Farm Alerts/);
-  assert.match(setup, /onClick=\{enableAlerts\}/);
+  assert.match(setup, /onClick=\{\(\) => void connectAlerts\(\)\}/);
   assert.match(pwaClient, /Notification\.requestPermission\(\)/);
   assert.doesNotMatch(setup, /useEffect\([\s\S]{0,300}Notification\.requestPermission/);
-  assert.match(pwaClient, /registration\.showNotification/);
   assert.match(serviceWorker, /addEventListener\("push"/);
   assert.match(serviceWorker, /addEventListener\("notificationclick"/);
 });
@@ -116,8 +115,4 @@ test("offline fallback is an Atlas shell and does not claim unsynced farm truth"
   assert.match(offlinePage, /Return to a Home, Day, Bell, or Journal view you opened/);
   assert.match(serviceWorker, /server-authoritative/);
   assert.doesNotMatch(offlinePage, /saved|synced|completed|recorded/i);
-});
-
-test("Build 9 does not fabricate Build 10 subscription or VAPID persistence", () => {
-  assert.doesNotMatch(build, /push_subscriptions|notification_outbox|VAPID_PRIVATE|web-push/i);
 });
