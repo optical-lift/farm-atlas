@@ -1,0 +1,72 @@
+/*
+  Final shell guards for installed iOS Atlas.
+
+  Horizontal overflow must be clipped without creating a scrolling ancestor. Safari
+  will not keep a sticky child attached to the viewport when any ancestor uses
+  overflow-x: hidden, because that ancestor becomes the sticky containing block.
+*/
+html,
+body {
+  overflow-x: clip !important;
+  overflow-y: visible !important;
+}
+
+body > .atlas-phone-shell,
+body > .atlas-app-shell,
+.atlas-phone-shell,
+.atlas-app-shell,
+.atlas-home-shell,
+.atlas-task-page-shell,
+.atlas-overview-page-shell,
+.atlas-phone,
+.atlas-app-frame,
+.atlas-dashboard-phone,
+.atlas-task-page-phone,
+.atlas-overview-page-phone {
+  overflow-x: clip !important;
+  overflow-y: visible !important;
+}
+
+.atlas-phone-top,
+.atlas-topbar,
+.atlas-dashboard-top {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 980 !important;
+  align-self: start !important;
+  isolation: isolate;
+}
+
+/*
+  Overdue is already communicated by its carry-forward lane and due-date line.
+  Never stack the legacy absolute badge with the Living Day consequence kicker.
+*/
+.atlas-day-overdue-group .atlas-day-overdue-task-card .atlas-day-overdue-badge,
+.atlas-day-overdue-group .atlas-day-overdue-task-card .atlas-day-consequence-kicker {
+  display: none !important;
+}
+
+.atlas-day-overdue-group .atlas-day-overdue-task-card,
+.atlas-day-overdue-group .atlas-day-overdue-task-card[data-atlas-day-consequence="overdue"] {
+  padding: 8px 4px 18px 10px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-content: start !important;
+  row-gap: 4px !important;
+}
+
+.atlas-day-overdue-group .atlas-day-overdue-task-card > strong,
+.atlas-day-overdue-group .atlas-day-overdue-task-card[data-atlas-day-consequence="overdue"] > strong {
+  position: static !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.12 !important;
+}
+
+.atlas-day-overdue-group .atlas-day-overdue-task-card > span,
+.atlas-day-overdue-group .atlas-day-overdue-task-card > em,
+.atlas-day-overdue-group .atlas-day-overdue-task-card .atlas-day-consequence-detail {
+  position: static !important;
+  margin: 0 !important;
+}
