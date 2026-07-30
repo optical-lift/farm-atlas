@@ -10,6 +10,7 @@ const layout = read("app/layout.tsx");
 const page = read("app/page.tsx");
 const frame = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
 const around = read("components/atlas/home/AtlasAroundRoutes.tsx");
+const universalHome = read("components/atlas/home/AtlasUniversalHome.tsx");
 const bellCover = read("components/atlas/home/AtlasBellCover.tsx");
 const bellPage = read("app/bell/page.tsx");
 const bellRoute = read("app/api/atlas/bell/route.ts");
@@ -33,6 +34,13 @@ test("Atlas gains a contextual fixed shell without a separate Journal destinatio
   assert.match(shellCss, /atlas-phone-top[\s\S]*position: sticky/);
 });
 
+test("the app footer is an opaque rectangular dock that covers the bottom edge", () => {
+  assert.match(shellCss, /\.atlas-context-footer \{[\s\S]*background: #faf7ed/);
+  assert.match(shellCss, /\.atlas-context-footer__rail \{[\s\S]*width: 100%/);
+  assert.match(shellCss, /\.atlas-context-footer__rail \{[\s\S]*border-radius: 0/);
+  assert.match(shellCss, /padding-bottom: calc\(var\(--atlas-context-footer-height\) \+ env\(safe-area-inset-bottom\)/);
+});
+
 test("Home stays recognizable and gains routes into the rest of Atlas", () => {
   assert.match(page, /<AtlasUniversalHome/);
   assert.match(page, /<AtlasAroundRoutes/);
@@ -41,6 +49,17 @@ test("Home stays recognizable and gains routes into the rest of Atlas", () => {
   assert.match(around, /See the farm/);
   assert.match(around, /Govern Atlas/);
   assert.doesNotMatch(around, /Farm Journal|Journal history/);
+});
+
+test("unfinished Portfolio Matrix and Trail Pulse surfaces stay off Home", () => {
+  assert.match(universalHome, /id="work-board"/);
+  assert.match(shellCss, /#portfolio-matrix/);
+  assert.match(shellCss, /#trail-pulse/);
+  assert.match(shellCss, /display: none !important/);
+  assert.doesNotMatch(frame, /#portfolio-matrix/);
+  assert.doesNotMatch(around, /Portfolio Matrix/);
+  assert.match(frame, /\/#work-board/);
+  assert.match(around, /\/#work-board/);
 });
 
 test("the floating Bell is global, header-aware, and disappears when nothing needs attention", () => {
