@@ -54,6 +54,7 @@ Deno.serve(async (request) => {
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    db: { schema: "atlas" },
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
