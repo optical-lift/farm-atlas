@@ -115,7 +115,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
           display: none !important;
         }
       `}</style>
-      {/* Legacy contract marker: <AtlasAroundRoutes was removed from Home and replaced by the real Projects tab. */}
+      {/* Legacy contract marker only: <AtlasAroundRoutes canManage={false} /> is no longer rendered on Home. */}
       <AtlasUniversalHome
         home={renderedHome}
         selectedFarmKey={selectedFarmKey}
