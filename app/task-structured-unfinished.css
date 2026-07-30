@@ -13,7 +13,8 @@
 }
 
 .atlas-structured-unfinished-heading small,
-.atlas-structured-unfinished-section > span {
+.atlas-structured-unfinished-section > span,
+.atlas-structured-unfinished-problem > span {
   color: #858bb8;
   font-size: 9px;
   font-weight: 900;
@@ -38,7 +39,6 @@
 }
 
 .atlas-structured-unfinished-outcomes button,
-.atlas-structured-unfinished-reasons button,
 .atlas-structured-unfinished-return button,
 .atlas-structured-unfinished-return label,
 .atlas-structured-unfinished-save {
@@ -53,7 +53,6 @@
 }
 
 .atlas-structured-unfinished-outcomes button,
-.atlas-structured-unfinished-reasons button,
 .atlas-structured-unfinished-return button,
 .atlas-structured-unfinished-save {
   padding: 8px 10px;
@@ -61,22 +60,16 @@
 }
 
 .atlas-structured-unfinished-outcomes button.is-selected,
-.atlas-structured-unfinished-reasons button.is-selected,
 .atlas-structured-unfinished-return button.is-selected {
   border-color: rgba(133, 139, 192, 0.46);
   background: rgba(133, 139, 192, 0.14);
   color: #454752;
 }
 
-.atlas-structured-unfinished-section {
+.atlas-structured-unfinished-section,
+.atlas-structured-unfinished-problem {
   display: grid;
   gap: 8px;
-}
-
-.atlas-structured-unfinished-reasons {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
 }
 
 .atlas-structured-unfinished-return label {
@@ -103,6 +96,31 @@
   font-weight: 760;
 }
 
+.atlas-structured-unfinished-problem textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid rgba(190, 185, 174, 0.74);
+  border-radius: 13px;
+  background: rgba(255, 254, 250, 0.82);
+  color: #454752;
+  padding: 11px 12px;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.atlas-structured-unfinished-problem textarea::placeholder {
+  color: #999a92;
+}
+
+.atlas-structured-unfinished-owner-note {
+  margin: -3px 2px 0;
+  color: #777970;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
 .atlas-structured-unfinished-save {
   width: 100%;
   border-color: rgba(133, 139, 192, 0.42);
@@ -111,12 +129,12 @@
 }
 
 .atlas-structured-unfinished-panel button:disabled,
-.atlas-structured-unfinished-panel input:disabled {
+.atlas-structured-unfinished-panel input:disabled,
+.atlas-structured-unfinished-panel textarea:disabled {
   opacity: 0.52;
 }
 
 @media (max-width: 420px) {
-  .atlas-structured-unfinished-reasons,
   .atlas-structured-unfinished-return {
     grid-template-columns: minmax(0, 1fr);
   }
