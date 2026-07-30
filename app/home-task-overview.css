@@ -1,16 +1,24 @@
 /* Home purple cover: the prepared Living Day at a glance. */
 
 .atlas-home-task-overview {
+  width: 100% !important;
+  height: auto !important;
   min-height: 0 !important;
   padding: 16px !important;
   display: grid !important;
+  grid-template-rows: auto auto !important;
+  align-content: start !important;
   gap: 12px !important;
+  flex: none !important;
 }
 
 .atlas-home-task-overview-head {
   margin: 0 !important;
   min-width: 0;
+  min-height: 0 !important;
+  padding: 0 !important;
   align-items: end !important;
+  justify-content: space-between !important;
   gap: 12px !important;
 }
 
@@ -40,46 +48,63 @@
 }
 
 .atlas-home-task-overview-status {
-  flex: 0 0 auto;
-  max-width: 45%;
+  flex: 0 1 48%;
+  min-width: 0;
+  max-width: 48%;
   display: grid !important;
   justify-items: end;
-  gap: 4px;
+  gap: 5px;
   text-align: right;
+  white-space: normal !important;
 }
 
 .atlas-home-task-overview-status b,
 .atlas-home-task-overview-status em {
-  display: block;
+  display: block !important;
+  max-width: 100%;
   font-style: normal;
+  white-space: normal !important;
 }
 
 .atlas-home-task-overview-status b {
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(255, 255, 255, 0.9);
   font-size: 9px;
-  line-height: 1.15;
+  line-height: 1.2;
   font-weight: 900;
 }
 
 .atlas-home-task-overview-status em {
   color: rgba(255, 255, 255, 0.66);
   font-size: 8px;
-  line-height: 1;
+  line-height: 1.05;
   font-weight: 850;
 }
 
 .atlas-home-task-overview-grid {
+  width: 100% !important;
   height: auto !important;
-  grid-auto-rows: minmax(142px, auto) !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-auto-rows: minmax(158px, auto) !important;
+  align-content: start !important;
   gap: 9px !important;
+}
+
+.atlas-home-task-overview-grid[data-universal-move-count="1"] {
+  grid-template-columns: minmax(0, 1fr) !important;
 }
 
 .atlas-home-task-overview-card {
   position: relative !important;
+  width: 100% !important;
   height: auto !important;
-  min-height: 142px !important;
+  min-height: 158px !important;
   overflow: hidden !important;
-  display: block !important;
+  display: grid !important;
+  grid-template-rows: minmax(0, 1fr) auto !important;
+  align-content: stretch !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   border-radius: 18px !important;
   background: rgba(66, 69, 129, 0.14) !important;
@@ -89,8 +114,8 @@
 }
 
 .atlas-home-task-overview-card[data-atlas-position="current"] {
-  border-color: rgba(255, 255, 255, 0.38) !important;
-  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.11) !important;
 }
 
 .atlas-home-task-overview-card[data-atlas-state="blocked"] {
@@ -105,11 +130,13 @@
 }
 
 .atlas-home-task-overview-card-body {
-  min-height: 142px;
-  display: flex;
+  min-width: 0;
+  min-height: 0;
+  display: flex !important;
   flex-direction: column;
+  align-content: start;
   color: inherit;
-  padding: 12px 12px 42px;
+  padding: 12px 12px 7px;
   text-decoration: none;
 }
 
@@ -119,6 +146,7 @@
 .atlas-home-task-overview-card-body em {
   display: block !important;
   min-width: 0;
+  max-width: 100%;
 }
 
 .atlas-home-task-overview-card-body small {
@@ -128,6 +156,7 @@
   font-weight: 950 !important;
   letter-spacing: 0.1em !important;
   text-transform: uppercase !important;
+  white-space: normal !important;
 }
 
 .atlas-home-task-overview-card-body strong {
@@ -140,21 +169,21 @@
   font-weight: 950 !important;
   letter-spacing: -0.025em !important;
   text-overflow: clip !important;
+  overflow-wrap: anywhere;
   white-space: normal !important;
   -webkit-line-clamp: unset !important;
 }
 
 .atlas-home-task-overview-card-body span {
   margin-top: 7px !important;
-  overflow: hidden;
-  display: -webkit-box !important;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  color: rgba(255, 255, 255, 0.78) !important;
+  overflow: visible !important;
+  display: block !important;
+  color: rgba(255, 255, 255, 0.8) !important;
   font-size: 8.5px !important;
   line-height: 1.18 !important;
   font-weight: 850 !important;
   white-space: normal !important;
+  -webkit-line-clamp: unset !important;
 }
 
 .atlas-home-task-overview-card-body em {
@@ -163,7 +192,7 @@
   display: -webkit-box !important;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  color: rgba(255, 255, 255, 0.64) !important;
+  color: rgba(255, 255, 255, 0.65) !important;
   font-size: 8px !important;
   line-height: 1.18 !important;
   font-style: normal !important;
@@ -172,18 +201,21 @@
 }
 
 .atlas-home-task-overview-action {
-  position: absolute;
-  right: 10px;
-  bottom: 9px;
-  min-height: 25px;
+  position: static !important;
+  right: auto !important;
+  bottom: auto !important;
+  min-height: 27px;
+  justify-self: end;
+  align-self: end;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  margin: 0 10px 10px;
   border: 1px solid rgba(255, 255, 255, 0.34);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.16);
   color: #fff;
-  padding: 0 10px;
+  padding: 0 11px;
   font-size: 8px;
   line-height: 1;
   font-weight: 950;
@@ -193,6 +225,121 @@
 
 .atlas-home-task-overview-empty {
   min-height: 128px !important;
+}
+
+/* Restore the compact seven-day rail after the earlier regression guard's DOM assumptions changed. */
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  align-self: start !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(139, 145, 194, 0.17) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.78) !important;
+  padding: 6px 6px 0 !important;
+  box-shadow: 0 7px 18px rgba(58, 46, 30, 0.025) !important;
+}
+
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > div:first-child {
+  min-height: 0 !important;
+  display: flex !important;
+  grid-template-columns: none !important;
+  gap: 4px !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}
+
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > div:first-child::-webkit-scrollbar {
+  display: none !important;
+}
+
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > div:first-child > a {
+  position: relative !important;
+  min-width: 48px !important;
+  min-height: 54px !important;
+  flex: 1 0 48px !important;
+  border: 1px solid transparent !important;
+  border-radius: 13px !important;
+  background: transparent !important;
+  color: var(--atlas-muted) !important;
+  padding: 6px 5px !important;
+  display: grid !important;
+  justify-items: center !important;
+  align-content: center !important;
+  gap: 2px !important;
+  text-decoration: none !important;
+}
+
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > div:first-child > a[aria-current="date"] {
+  border-color: rgba(139, 145, 194, 0.23) !important;
+  background: rgba(174, 179, 212, 0.17) !important;
+  color: var(--atlas-text) !important;
+}
+
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > div:first-child small,
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > div:first-child strong,
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > div:first-child em {
+  display: block !important;
+  min-width: 0 !important;
+  height: auto !important;
+  line-height: 1 !important;
+  font-style: normal !important;
+}
+
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > div:first-child small {
+  color: #73746d !important;
+  font-size: 8px !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+}
+
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > div:first-child strong {
+  color: var(--atlas-text) !important;
+  font-size: 15px !important;
+  font-weight: 950 !important;
+}
+
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > div:first-child em {
+  min-width: 18px !important;
+  background: transparent !important;
+  color: #858bb8 !important;
+  font-size: 8px !important;
+  font-weight: 900 !important;
+}
+
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > nav {
+  margin: 5px -6px 0 !important;
+  border-top: 1px solid rgba(139, 145, 194, 0.13) !important;
+  padding: 6px 4px 7px !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > nav a {
+  overflow: hidden !important;
+  color: #666860 !important;
+  padding: 4px 2px !important;
+  text-align: center !important;
+  text-decoration: none !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 8.5px !important;
+  font-weight: 900 !important;
+}
+
+[data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > nav a:nth-child(2) {
+  color: #55508b !important;
+}
+
+/* Farm Pulse should size to its contents; older Home grids stretched generic sections. */
+[data-atlas-home-portal="universal-v2"] section[aria-labelledby="atlas-home-pulse-title"] {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  align-self: start !important;
+  grid-row: auto !important;
+  padding-bottom: 12px !important;
 }
 
 /* Moving Now belongs exclusively to the Projects tab. */
@@ -210,24 +357,33 @@
   }
 
   .atlas-home-task-overview-status {
-    max-width: 48%;
+    max-width: 50%;
   }
 
   .atlas-home-task-overview-grid {
-    grid-auto-rows: minmax(136px, auto) !important;
+    grid-auto-rows: minmax(150px, auto) !important;
     gap: 8px !important;
   }
 
-  .atlas-home-task-overview-card,
-  .atlas-home-task-overview-card-body {
-    min-height: 136px !important;
+  .atlas-home-task-overview-card {
+    min-height: 150px !important;
   }
 
   .atlas-home-task-overview-card-body {
-    padding: 11px 10px 40px;
+    padding: 11px 10px 7px;
   }
 
   .atlas-home-task-overview-card-body strong {
     font-size: 14px !important;
+  }
+
+  [data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > div:first-child {
+    gap: 2px !important;
+  }
+
+  [data-atlas-home-portal="universal-v2"] section[aria-label="Days in this week"] > div:first-child > a {
+    min-width: 44px !important;
+    flex-basis: 44px !important;
+    padding-inline: 3px !important;
   }
 }
