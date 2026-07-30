@@ -85,6 +85,7 @@ import "./owner-operator-mode.css";
 import "./bell.css";
 import "./bell-cover-quiet.css";
 import "./pwa.css";
+import "./web-push.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
