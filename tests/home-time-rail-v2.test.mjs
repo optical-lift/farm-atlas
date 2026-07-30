@@ -30,22 +30,33 @@ test("every day in the current Monday-through-Sunday rail opens its Living Day",
   assert.match(home, /data-atlas-home-time-rail="true"/);
 });
 
-test("Home is a prepared task cover followed by Needs you and Farm pulse", () => {
+test("Home is a prepared task cover followed by Needs you and the farms", () => {
   assert.match(home, /Today at/);
   assert.match(home, /dealt with/);
   assert.match(home, /carry forward/);
   assert.match(home, /Needs you/);
-  assert.match(home, /Farm pulse/);
-  assert.match(home, /known gaps/);
-  assert.doesNotMatch(home, /Moving now|AtlasPortfolioMatrix|AtlasTrailPulseBoard|Work in Motion|Current moves/);
+  assert.match(home, /The farms/);
+  assert.match(home, /days to frost/);
+  assert.doesNotMatch(home, /Farm pulse|known gaps|Moving now|AtlasPortfolioMatrix|AtlasTrailPulseBoard|Work in Motion|Current moves/);
+});
+
+test("the farm section shows every visible farm through physical and seasonal measures", () => {
+  assert.match(home, /home\.farms\.map/);
+  assert.match(home, /beds growing/);
+  assert.match(home, /sq ft active/);
+  assert.match(home, /stems this year/);
+  assert.match(home, /sowings recorded this year/);
+  assert.match(home, /FIRST_KILLING_FREEZE_DAY = 1/);
+  assert.match(home, /FIRST_KILLING_FREEZE_MONTH_INDEX = 10/);
+  assert.match(css, /\.farmCards[\s\S]*grid-template-columns: repeat\(2/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.farmCards[\s\S]*grid-template-columns: 1fr/);
 });
 
 test("broad open-work and project-movement totals no longer dominate Home", () => {
   assert.doesNotMatch(home, /home\.metrics\.openWorkCount/);
   assert.doesNotMatch(home, /projects moving/);
-  assert.match(home, /today&apos;s hand/);
-  assert.match(home, /carry forward/);
-  assert.match(home, /home\.metrics\.farmCount/);
+  assert.doesNotMatch(home, /home\.metrics\.attentionCount/);
+  assert.doesNotMatch(home, /home\.metrics\.farmCount/);
 });
 
 test("the compact home remains inside the sticky Atlas app shell", () => {
