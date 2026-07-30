@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import type { AtlasBell } from "@/lib/atlas/bell-contract";
-import { fetchAtlasBell, updateAtlasBell } from "@/lib/atlas/bell-client";
+import { fetchAtlasBell } from "@/lib/atlas/bell-client";
 
 function countLabel(value: number) {
   return value > 99 ? "99+" : String(value);
@@ -17,9 +17,7 @@ export default function AtlasBellCover() {
     let active = true;
     void fetchAtlasBell(6)
       .then((result) => {
-        if (!active) return;
-        setBell(result);
-        return updateAtlasBell({ action: "visit", seenThrough: result.preparedAt });
+        if (active) setBell(result);
       })
       .catch(() => undefined);
     return () => {
