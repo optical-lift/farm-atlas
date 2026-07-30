@@ -18,6 +18,8 @@ const iconRoute = read("app/api/pwa/icon/route.tsx");
 const home = read("app/page.tsx");
 const bellCover = read("components/atlas/home/AtlasBellCover.tsx");
 const bellPage = read("app/bell/page.tsx");
+const authProxy = read("lib/supabase/proxy.ts");
+const proxy = read("proxy.ts");
 
 const build = [
   manifest,
@@ -32,6 +34,8 @@ const build = [
   home,
   bellCover,
   bellPage,
+  authProxy,
+  proxy,
 ].join("\n");
 
 test("Build 9 ships a stable standalone Atlas manifest and icon set", () => {
@@ -47,6 +51,16 @@ test("Build 9 ships a stable standalone Atlas manifest and icon set", () => {
   assert.match(layout, /manifest: "\/manifest\.webmanifest"/);
   assert.match(layout, /appleWebApp/);
   assert.match(layout, /viewportFit: "cover"/);
+});
+
+test("PWA discovery assets remain public before Atlas authentication", () => {
+  assert.match(authProxy, /pathname === "\/manifest\.webmanifest"/);
+  assert.match(authProxy, /pathname === "\/sw\.js"/);
+  assert.match(authProxy, /pathname === "\/offline"/);
+  assert.match(authProxy, /pathname\.startsWith\("\/api\/pwa\/icon"\)/);
+  assert.match(proxy, /manifest\.webmanifest/);
+  assert.match(proxy, /sw\.js/);
+  assert.match(proxy, /api\/pwa\/icon/);
 });
 
 test("the service worker keeps a prepared shell without intercepting canonical writes", () => {
