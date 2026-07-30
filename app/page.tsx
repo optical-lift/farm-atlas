@@ -82,10 +82,11 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
   };
 
   const taskOverview = await readAtlasOperatorHomeTaskOverview(visibleHome);
-  const organizationMembership = organizationMembershipForViewer(visibleHome.viewer);
+  const renderedViewer = visibleHome.viewer;
+  const organizationMembership = organizationMembershipForViewer(renderedViewer);
   const organizationPortal = Boolean(
     organizationMembership
-      && (organizationMembership.role === "owner" || visibleHome.viewer.farmMemberships.length === 0),
+      && (organizationMembership.role === "owner" || renderedViewer.farmMemberships.length === 0),
   );
   const renderedHome = {
     ...visibleHome,
