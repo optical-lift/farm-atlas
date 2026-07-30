@@ -22,9 +22,17 @@ export type OwnerTaskDetailRow = {
   work_class: string | null;
 };
 
+export type OwnerTaskProblemHandoff = {
+  id: string;
+  issueText: string;
+  openedAt: string;
+  openedByMembershipId: string | null;
+};
+
 export type OwnerTaskDetail = {
   task: OwnerTaskDetailRow;
   children: OwnerTaskDetailRow[];
+  problemHandoff: OwnerTaskProblemHandoff | null;
 };
 
 const DETAIL_FIELDS =
@@ -55,7 +63,7 @@ export async function getOwnerTaskDetail(
   const supabase = await createAtlasServerClient();
   const farmId = access.membership.farmId;
 
-  const [taskResult, relationalChildrenResult, legacyChildrenResult] = await Promise.all([
+  const [taskResult, relationalChildrenResult, legacyChildrenResult, handoffResult] = await Promise.all([
     supabase
       .from("tasks")
       .select(DETAIL_FIELDS)
@@ -76,12 +84,22 @@ export async function getOwnerTaskDetail(
       .contains("metadata", { parent_task_id: taskId })
       .neq("status", "archived")
       .order("created_at", { ascending: true }),
+    supabase
+      .from("task_problem_handoffs")
+      .select("id, issue_text, opened_at, opened_by_membership_id")
+      .eq("farm_id", farmId)
+      .eq("task_id", taskId)
+      .eq("status", "open")
+      .order("opened_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (taskResult.error) throw new Error("Atlas Owner task detail read failed.");
   if (relationalChildrenResult.error || legacyChildrenResult.error) {
     throw new Error("Atlas Owner checklist read failed.");
   }
+  if (handoffResult.error) throw new Error("Atlas worker problem handoff read failed.");
   if (!taskResult.data) return null;
 
   const children = new Map<string, OwnerTaskDetailRow>();
@@ -89,8 +107,21 @@ export async function getOwnerTaskDetail(
     children.set(row.id as string, row as OwnerTaskDetailRow);
   }
 
+  const handoff = handoffResult.data as {
+    id: string;
+    issue_text: string;
+    opened_at: string;
+    opened_by_membership_id: string | null;
+  } | null;
+
   return {
     task: taskResult.data as OwnerTaskDetailRow,
     children: [...children.values()],
+    problemHandoff: handoff ? {
+      id: handoff.id,
+      issueText: handoff.issue_text,
+      openedAt: handoff.opened_at,
+      openedByMembershipId: handoff.opened_by_membership_id,
+    } : null,
   };
 }
