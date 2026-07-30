@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import type { AtlasBell } from "@/lib/atlas/bell-contract";
 import { fetchAtlasBell } from "@/lib/atlas/bell-client";
+import { setAtlasAppBadge } from "@/lib/atlas/pwa-client";
 
 function countLabel(value: number) {
   return value > 99 ? "99+" : String(value);
@@ -17,7 +18,9 @@ export default function AtlasBellCover() {
     let active = true;
     void fetchAtlasBell(6)
       .then((result) => {
-        if (active) setBell(result);
+        if (!active) return;
+        setBell(result);
+        void setAtlasAppBadge(result.badgeCount);
       })
       .catch(() => undefined);
     return () => {
