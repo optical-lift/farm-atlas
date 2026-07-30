@@ -25,6 +25,10 @@ function isPublicPath(pathname: string) {
     pathname === "/login" ||
     pathname === "/auth/confirm" ||
     pathname === "/auth/error" ||
+    pathname === "/manifest.webmanifest" ||
+    pathname === "/sw.js" ||
+    pathname === "/offline" ||
+    pathname.startsWith("/api/pwa/icon") ||
     pathname.startsWith("/api/atlas/auth/")
   );
 }
