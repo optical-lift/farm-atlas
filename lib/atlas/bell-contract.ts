@@ -1,4 +1,13 @@
 export type AtlasBellImportance = "quiet" | "normal" | "attention" | "critical";
+export type AtlasBellSection = "needs_you" | "rhythms" | "farm_movement";
+
+export type AtlasBellBaselineSummary = {
+  startedAt: string;
+  totalCount: number;
+  dueCount: number;
+  failureCount: number;
+  label: string;
+};
 
 export type AtlasBellItem = {
   eventId: string;
@@ -22,11 +31,15 @@ export type AtlasBellItem = {
   acknowledged: boolean;
   requiresAction: boolean;
   whileAway: boolean;
+  baseline: boolean;
+  obligationKey: string;
+  section: AtlasBellSection;
+  why: string;
   payload: Record<string, unknown>;
 };
 
 export type AtlasBell = {
-  contractVersion: "atlas_bell_v1";
+  contractVersion: "atlas_bell_v2";
   farmId: string;
   effectiveUserId: string;
   effectiveMembershipId: string;
@@ -37,9 +50,11 @@ export type AtlasBell = {
   whileAwayCount: number;
   unreadCount: number;
   badgeCount: number;
+  baselineSummary: AtlasBellBaselineSummary;
   items: AtlasBellItem[];
   eventTruth: "journal_event_index";
   receiptTruth: "bell_event_receipts";
+  obligationTruth: "latest_worthy_event_per_obligation";
 };
 
 export type AtlasBellAction = "read" | "acknowledge" | "visit";
