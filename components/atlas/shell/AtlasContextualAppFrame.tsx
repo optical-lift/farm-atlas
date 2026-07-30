@@ -42,11 +42,11 @@ export default function AtlasContextualAppFrame() {
   if (hidden) return null;
 
   const items = [
-    { key: "home", label: "Home", href: "/" },
-    { key: "work", label: "Work", href: workHref },
-    { key: "places", label: "Places", href: "/zones" },
-    { key: "projects", label: "Projects", href: "/#work-board" },
-    { key: "more", label: "More", href: "/more" },
+    { key: "home", label: "Home", icon: "⌂", href: "/" },
+    { key: "work", label: "Work", icon: "✓", href: workHref },
+    { key: "places", label: "Places", icon: "⌖", href: "/zones" },
+    { key: "projects", label: "Projects", icon: "◇", href: "/#work-board" },
+    { key: "more", label: "More", icon: "•••", href: "/more" },
   ];
 
   return (
@@ -59,7 +59,7 @@ export default function AtlasContextualAppFrame() {
             className="atlas-context-footer__item"
             aria-current={active === item.key ? "page" : undefined}
           >
-            <span aria-hidden="true" />
+            <span className="atlas-context-footer__icon" aria-hidden="true">{item.icon}</span>
             <strong>{item.label}</strong>
           </Link>
         ))}
