@@ -51,7 +51,8 @@ test("while-away uses a durable per-player visit boundary", () => {
   assert.match(migration, /last_visited_at/);
   assert.match(migration, /record_bell_visit_v1/);
   assert.match(migration, /event\.occurred_at > v_since_at/);
-  assert.match(client, /action: "visit"/);
+  assert.match(contract, /"read" \| "acknowledge" \| "visit"/);
+  assert.match(page, /action: "visit"/);
   assert.match(cover, /While you were away/);
 });
 
