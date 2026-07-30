@@ -48,16 +48,38 @@
   color: #7c625d;
 }
 
+.atlas-day-task-card[data-atlas-day-consequence="added"] .atlas-day-consequence-kicker,
+.atlas-day-task-card[data-atlas-day-consequence="withheld"] .atlas-day-consequence-kicker {
+  color: #89877d;
+}
+
 /* Timeline nodes carry the state quietly. */
+.atlas-day-timeline-group .atlas-day-route-spine {
+  display: flex !important;
+  flex-direction: column;
+}
+
 .atlas-day-task-entry[data-atlas-day-consequence="continued"] > .atlas-day-task-node > span {
   border-color: rgba(115, 122, 102, 0.72);
   background: linear-gradient(90deg, rgba(115, 122, 102, 0.52) 50%, var(--atlas-card) 50%);
 }
 
 .atlas-day-task-entry[data-atlas-day-consequence="returned"] > .atlas-day-task-node > span {
+  position: relative;
   border-color: rgba(114, 122, 145, 0.76);
   border-radius: 3px;
   background: var(--atlas-card);
+}
+
+.atlas-day-task-entry[data-atlas-day-consequence="returned"] > .atlas-day-task-node > span::after {
+  content: "?";
+  position: absolute;
+  inset: -4px;
+  display: grid;
+  place-items: center;
+  color: #727a91;
+  font-size: 8px;
+  font-weight: 950;
 }
 
 .atlas-day-task-entry[data-atlas-day-consequence="overdue"] > .atlas-day-task-node > span,
@@ -66,6 +88,30 @@
   height: 7px;
   border: 0;
   background: #8b6962;
+}
+
+.atlas-day-task-entry[data-atlas-day-plan-state="added"],
+.atlas-day-task-entry[data-atlas-day-plan-state="withheld"] {
+  opacity: 0.76;
+}
+
+.atlas-day-task-entry[data-atlas-day-plan-state="withheld"] > .atlas-day-task-node {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.atlas-day-task-card[data-atlas-day-plan-state="added"],
+.atlas-day-task-card[data-atlas-day-plan-state="withheld"] {
+  border-top-style: dotted !important;
+}
+
+.atlas-day-plan-contract-note {
+  margin: 5px 2px 0 !important;
+  color: #85847c;
+  font-size: 8px;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 /* Carry-forward is another journal lane, not an alert panel. */
@@ -116,6 +162,13 @@
   padding: 0 !important;
   font-size: 9px !important;
   font-weight: 850 !important;
+}
+
+.atlas-day-overdue-group > p {
+  margin: -2px 0 5px 20px !important;
+  color: #8a8982 !important;
+  font-size: 8px !important;
+  line-height: 1.2 !important;
 }
 
 .atlas-day-overdue-group > .atlas-day-work-order-list {
