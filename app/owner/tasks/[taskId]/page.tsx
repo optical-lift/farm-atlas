@@ -19,6 +19,12 @@ function prettyDate(dateIso: string | null | undefined) {
   });
 }
 
+function prettyDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
 function statusLabel(status: string) {
   return status.replaceAll("_", " ");
 }
@@ -33,7 +39,7 @@ export default async function OwnerTaskPage({
   const detail = await getOwnerTaskDetail(access, taskId);
   if (!detail) notFound();
 
-  const { task, children } = detail;
+  const { task, children, problemHandoff } = detail;
   const taskText = task.note || task.unlock_text;
 
   return (
@@ -56,6 +62,14 @@ export default async function OwnerTaskPage({
           </div>
         </section>
 
+        {problemHandoff ? (
+          <section className={`${styles.card} ${styles.blocker}`}>
+            <h2>Anna found a problem</h2>
+            <p>{problemHandoff.issueText}</p>
+            <small>Sent {prettyDateTime(problemHandoff.openedAt)}</small>
+          </section>
+        ) : null}
+
         {taskText ? (
           <section className={styles.card}>
             <h2>Task details</h2>
@@ -63,7 +77,7 @@ export default async function OwnerTaskPage({
           </section>
         ) : null}
 
-        {task.blocker_text ? (
+        {!problemHandoff && task.blocker_text ? (
           <section className={`${styles.card} ${styles.blocker}`}>
             <h2>Current blocker</h2>
             <p>{task.blocker_text}</p>
@@ -84,7 +98,14 @@ export default async function OwnerTaskPage({
           </section>
         ) : null}
 
-        <OwnerTaskActions taskId={task.id} status={task.status} />
+        <OwnerTaskActions
+          taskId={task.id}
+          status={task.status}
+          problemHandoff={problemHandoff ? {
+            id: problemHandoff.id,
+            issueText: problemHandoff.issueText,
+          } : null}
+        />
       </section>
     </main>
   );
