@@ -83,6 +83,7 @@ import "./day-consequence-timeline.css";
 import "./day-overdue-quiet.css";
 import "./owner-operator-mode.css";
 import "./bell.css";
+import "./bell-cover-quiet.css";
 import "./pwa.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
