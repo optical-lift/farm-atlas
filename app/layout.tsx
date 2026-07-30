@@ -81,6 +81,7 @@ import "./task-structured-unfinished.css";
 import "./day-consequence-timeline.css";
 import "./day-overdue-quiet.css";
 import "./owner-operator-mode.css";
+import "./bell.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
