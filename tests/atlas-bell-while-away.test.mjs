@@ -18,7 +18,7 @@ const layout = read("app/layout.tsx");
 
 const ui = `${cover}\n${page}\n${css}\n${home}\n${layout}`;
 
-test("Bell receipts never become a second Journal truth", () => {
+test("Bell receipts never become a second Atlas event truth", () => {
   assert.match(migration, /references atlas\.journal_event_index\(id\)/);
   assert.match(migration, /Per-player read and acknowledgement state/);
   assert.match(migration, /eventTruth', 'journal_event_index'/);
@@ -67,20 +67,21 @@ test("Bell entries carry safe canonical deep links and acknowledgement state", (
   assert.match(page, /Acknowledge/);
 });
 
-test("the journal cover and Bell history expose the new loop without replacing Home", () => {
+test("Home stays recognizable while the floating Bell belongs to the global app shell", () => {
   assert.match(home, /<AtlasUniversalHome/);
-  assert.match(home, /<AtlasBellCover/);
+  assert.doesNotMatch(home, /<AtlasBellCover/);
+  assert.match(layout, /<AtlasBellCover \/>/);
   assert.match(cover, /atlas-bell-edge-tab/);
   assert.match(cover, /atlas-while-away-slip/);
-  assert.match(page, /Bell history/);
-  assert.match(page, /Farm Journal/);
+  assert.match(page, /Current obligations/);
+  assert.match(page, /Why you’re seeing this/);
   assert.match(layout, /import "\.\/bell\.css"/);
   assert.match(css, /\.atlas-bell-cover/);
   assert.match(css, /\.atlas-bell-item/);
 });
 
-test("Build 8 remains in-app and does not pretend Web Push or PWA delivery exists", () => {
+test("the original Bell foundation remains in-app and separate from Web Push transport", () => {
   assert.doesNotMatch(migration, /push_subscription|service_worker|web_push/i);
-  assert.doesNotMatch(ui, /Notification\.requestPermission|navigator\.serviceWorker|PushManager/);
   assert.doesNotMatch(route, /sendPush|push endpoint/i);
+  assert.match(ui, /AtlasBellCover|Atlas Bell/);
 });

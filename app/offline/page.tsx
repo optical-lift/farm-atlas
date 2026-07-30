@@ -16,11 +16,11 @@ export default function AtlasOfflinePage() {
         <div className="atlas-pwa-offline-body">
           <section>
             <span>Signal dropped</span>
-            <h1>The farm journal is still here.</h1>
-            <p>Return to a Home, Day, Bell, or Journal view you opened on this device before the connection dropped.</p>
+            <h1>Atlas is still here.</h1>
+            <p>Return to a Home, Day, Bell, Place, or Project view you opened on this device before the connection dropped.</p>
             <div>
-              <Link href="/">Journal cover</Link>
-              <Link href="/day">Day spread</Link>
+              <Link href="/">Home</Link>
+              <Link href="/day">Day</Link>
             </div>
           </section>
         </div>

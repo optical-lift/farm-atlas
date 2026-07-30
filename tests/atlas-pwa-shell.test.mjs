@@ -88,7 +88,7 @@ test("Safari installation guidance remains explicit and the Home cover stays rec
   assert.match(setup, /Add to Home Screen/);
   assert.match(setup, /AtlasPwaCoverPrompt/);
   assert.match(home, /<AtlasUniversalHome/);
-  assert.match(home, /<AtlasBellCover/);
+  assert.match(layout, /<AtlasBellCover \/>/);
   assert.match(home, /<AtlasPwaCoverPrompt/);
   assert.match(installPage, /Carry the farm journal like an app/);
 });
@@ -111,8 +111,8 @@ test("Bell badge truth reaches the installed app without becoming a second task 
 });
 
 test("offline fallback is an Atlas shell and does not claim unsynced farm truth", () => {
-  assert.match(offlinePage, /The farm journal is still here/);
-  assert.match(offlinePage, /Return to a Home, Day, Bell, or Journal view you opened/);
+  assert.match(offlinePage, /Atlas is still here/);
+  assert.match(offlinePage, /Return to a Home, Day, Bell, Place, or Project view you opened/);
   assert.match(serviceWorker, /server-authoritative/);
   assert.doesNotMatch(offlinePage, /saved|synced|completed|recorded/i);
 });
