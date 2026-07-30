@@ -36,7 +36,7 @@ export default function AtlasAroundRoutes({ todayIso, canManage }: AtlasAroundRo
   ];
   const see = [
     { label: "Places + maps", detail: "Beds, gardens, rooms and objects", href: "/zones" },
-    { label: "Projects", detail: "Open the Portfolio Matrix", href: "/#portfolio-matrix" },
+    { label: "Projects", detail: "Open current project work", href: "/#work-board" },
     { label: "Production", detail: "Crops, cycles and active production", href: "/production" },
   ];
   const govern = canManage
