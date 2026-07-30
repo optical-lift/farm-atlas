@@ -2,12 +2,16 @@
 
 import { useEffect } from "react";
 
+import {
+  atlasDayTaskConsequence,
+  atlasIsDayTaskDone,
+  type AtlasDayConsequence,
+} from "@/lib/atlas/day-consequence";
+import type { AtlasLivingDayPlan, AtlasLivingDayPlanResponse } from "@/lib/atlas/day-plan-contract";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
-type ConsequenceKind = "continued" | "returned" | "overdue" | "at_risk";
-
-type Consequence = {
-  kind: ConsequenceKind;
+type PresentationConsequence = AtlasDayConsequence | {
+  kind: "added" | "withheld";
   kicker: string;
   detail: string;
 };
@@ -23,108 +27,19 @@ function centralDateIso(date = new Date()) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-function dateIsoFromTimestamp(value: string | null | undefined) {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : centralDateIso(date);
-}
-
-function shortDate(value: string | null | undefined) {
-  if (!value) return "no date";
-  const date = new Date(`${value}T12:00:00`);
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function daysBetween(startIso: string, endIso: string) {
-  const start = new Date(`${startIso}T12:00:00Z`);
-  const end = new Date(`${endIso}T12:00:00Z`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
-  return Math.max(0, Math.round((end.getTime() - start.getTime()) / 86_400_000));
-}
-
-function metadataRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-}
-
-function metadataText(record: Record<string, unknown> | null, key: string) {
-  const value = record?.[key];
-  return typeof value === "string" && value.trim() ? value.trim() : "";
-}
-
-function isDone(task: AtlasTaskCard) {
-  return task.status === "done" || task.task_outcomes?.[0]?.outcome === "done";
-}
-
-function explicitAtRisk(task: AtlasTaskCard) {
-  const values = [
-    task.metadata?.clock_consequence,
-    task.metadata?.clock_state,
-    task.metadata?.risk_state,
-    task.metadata?.day_consequence,
-  ];
-  return values.some((value) => typeof value === "string" && value.toLowerCase() === "at_risk");
-}
-
-function taskConsequence(task: AtlasTaskCard, selectedDay: string): Consequence | null {
-  if (isDone(task)) return null;
-
-  const dueDate = task.due_date;
-  const overdueDays = dueDate && dueDate < selectedDay ? daysBetween(dueDate, selectedDay) : 0;
-  const latestOutcome = task.task_outcomes?.[0] ?? null;
-  const latestTransition = task.task_transitions?.[0] ?? null;
-  const partialCount = (task.task_outcomes ?? []).filter((event) => event.outcome === "partial").length;
-
-  if (latestOutcome?.outcome === "partial" || latestTransition?.transition === "partial") {
-    const occurredOn = dateIsoFromTimestamp(latestOutcome?.created_at ?? latestTransition?.created_at) ?? dueDate;
-    const carry = overdueDays
-      ? `overdue ${overdueDays}d · due ${shortDate(dueDate)}`
-      : dueDate ? `original due ${shortDate(dueDate)}` : "still open";
-    return {
-      kind: "continued",
-      kicker: `Continuing from ${shortDate(occurredOn)}`,
-      detail: `Partly done${partialCount > 1 ? ` ${partialCount}×` : ""} · ${carry}`,
-    };
+async function fetchLivingDayPlan(dateIso: string): Promise<AtlasLivingDayPlan> {
+  const params = new URLSearchParams({ date: dateIso });
+  const response = await fetch(`/api/atlas/living-day-plan?${params.toString()}`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  const data = (await response.json()) as AtlasLivingDayPlanResponse;
+  if (!response.ok || !data.ok || !data.plan) {
+    throw new Error(data.details || data.error || "The finite Living Day plan could not be loaded.");
   }
-
-  const handoff = metadataRecord(task.metadata?.last_owner_problem_handoff);
-  const returnedFromOwner = Boolean(handoff) && (
-    latestOutcome?.outcome === "reopened"
-    || latestTransition?.transition === "checklist_open"
-    || latestTransition?.work_class === "owner_resolution"
-  );
-  if (returnedFromOwner) {
-    const response = metadataText(handoff, "owner_response");
-    const carry = overdueDays
-      ? `overdue ${overdueDays}d · due ${shortDate(dueDate)}`
-      : dueDate ? `original due ${shortDate(dueDate)}` : "returned open";
-    return {
-      kind: "returned",
-      kicker: "Returned from Owner",
-      detail: `${response ? "Owner response recorded" : "Problem resolved"} · ${carry}`,
-    };
-  }
-
-  if (explicitAtRisk(task)) {
-    return {
-      kind: "at_risk",
-      kicker: "At risk",
-      detail: overdueDays ? `Overdue ${overdueDays}d · due ${shortDate(dueDate)}` : `Due ${shortDate(dueDate)}`,
-    };
-  }
-
-  if (overdueDays) {
-    return {
-      kind: "overdue",
-      kicker: "Carry forward",
-      detail: `Overdue ${overdueDays}d · due ${shortDate(dueDate)}`,
-    };
-  }
-
-  return null;
+  return data.plan;
 }
 
 function taskIdFromCard(card: HTMLElement) {
@@ -141,24 +56,51 @@ function contentRoot(card: HTMLElement) {
     : card;
 }
 
+function taskEntry(card: HTMLElement) {
+  return card.closest<HTMLElement>(".atlas-day-task-entry") ?? card;
+}
+
 function removeDecoration(card: HTMLElement) {
   delete card.dataset.atlasDayConsequence;
-  card.closest<HTMLElement>(".atlas-day-task-entry")?.removeAttribute("data-atlas-day-consequence");
+  delete card.dataset.atlasDayPlanState;
+  const entry = taskEntry(card);
+  entry.removeAttribute("data-atlas-day-consequence");
+  entry.removeAttribute("data-atlas-day-plan-state");
+  entry.style.removeProperty("order");
   const root = contentRoot(card);
   root?.querySelector(".atlas-day-consequence-kicker")?.remove();
   root?.querySelector(".atlas-day-consequence-detail")?.remove();
 }
 
-function decorateCard(card: HTMLElement, consequence: Consequence | null) {
-  if (!consequence) {
+function decorateCard(
+  card: HTMLElement,
+  consequence: PresentationConsequence | null,
+  planState: "planned" | "carried" | "added" | "withheld" | null,
+) {
+  if (!consequence && !planState) {
     removeDecoration(card);
     return;
   }
 
-  card.dataset.atlasDayConsequence = consequence.kind;
-  card.closest<HTMLElement>(".atlas-day-task-entry")?.setAttribute("data-atlas-day-consequence", consequence.kind);
+  if (consequence) card.dataset.atlasDayConsequence = consequence.kind;
+  else delete card.dataset.atlasDayConsequence;
+  if (planState) card.dataset.atlasDayPlanState = planState;
+  else delete card.dataset.atlasDayPlanState;
+
+  const entry = taskEntry(card);
+  if (consequence) entry.dataset.atlasDayConsequence = consequence.kind;
+  else entry.removeAttribute("data-atlas-day-consequence");
+  if (planState) entry.dataset.atlasDayPlanState = planState;
+  else entry.removeAttribute("data-atlas-day-plan-state");
+
   const root = contentRoot(card);
   if (!root) return;
+
+  if (!consequence) {
+    root.querySelector(".atlas-day-consequence-kicker")?.remove();
+    root.querySelector(".atlas-day-consequence-detail")?.remove();
+    return;
+  }
 
   let kicker = root.querySelector<HTMLElement>(".atlas-day-consequence-kicker");
   if (!kicker) {
@@ -179,13 +121,151 @@ function decorateCard(card: HTMLElement, consequence: Consequence | null) {
   if (detail.textContent !== consequence.detail) detail.textContent = consequence.detail;
 }
 
-function applyConsequences(tasks: Map<string, AtlasTaskCard>, selectedDay: string) {
+function planPresentation(
+  task: AtlasTaskCard,
+  selectedDay: string,
+  plan: AtlasLivingDayPlan | null,
+): { consequence: PresentationConsequence | null; state: "planned" | "carried" | "added" | "withheld" | null } {
+  const canonical = atlasDayTaskConsequence(task, selectedDay);
+  if (!plan) return { consequence: canonical, state: canonical ? "carried" : null };
+
+  if (plan.withheldFlexibleTaskIds.includes(task.task_id)) {
+    return {
+      state: "withheld",
+      consequence: {
+        kind: "withheld",
+        kicker: "Held outside today’s hand",
+        detail: "Carryover protected the finite plan · due date unchanged",
+      },
+    };
+  }
+
+  if (plan.addedAfterPlanTaskIds.includes(task.task_id)) {
+    return {
+      state: "added",
+      consequence: {
+        kind: "added",
+        kicker: "Added after morning plan",
+        detail: "Visible today · outside the original denominator",
+      },
+    };
+  }
+
+  if (plan.carriedTaskIds.includes(task.task_id)) {
+    return { state: "carried", consequence: canonical };
+  }
+
+  if (plan.plannedTaskIds.includes(task.task_id)) {
+    return { state: "planned", consequence: canonical };
+  }
+
+  return { state: canonical ? "carried" : null, consequence: canonical };
+}
+
+function timelineOrder(
+  task: AtlasTaskCard,
+  selectedDay: string,
+  plan: AtlasLivingDayPlan | null,
+  planState: "planned" | "carried" | "added" | "withheld" | null,
+) {
+  const consequence = atlasDayTaskConsequence(task, selectedDay);
+  if (consequence?.kind === "continued") return 100;
+  if (consequence?.kind === "returned") return 200;
+  if (consequence?.kind === "at_risk") return 250;
+  if (planState === "planned") {
+    const index = plan?.plannedTaskIds.indexOf(task.task_id) ?? -1;
+    return 300 + Math.max(0, index);
+  }
+  if (planState === "added") return 700;
+  if (planState === "withheld") return 800;
+  if (atlasIsDayTaskDone(task)) return 900;
+  return 600;
+}
+
+function applyPlanProgress(plan: AtlasLivingDayPlan | null) {
+  if (!plan) return;
+  const command = document.querySelector<HTMLElement>(".atlas-day-command-header");
+  if (!command) return;
+
+  command.dataset.dayDenominator = `${plan.resolvedCount}/${plan.denominator}`;
+  command.dataset.atlasDayPlanFrozen = String(plan.frozen);
+
+  const progress = command.querySelector<HTMLElement>('[aria-label="Day progress"]');
+  const value = progress?.querySelector<HTMLElement>("header strong");
+  const rail = progress?.querySelector<HTMLElement>('[role="progressbar"]');
+  const fill = rail?.querySelector<HTMLElement>("span");
+  const valueText = plan.denominator
+    ? `${plan.resolvedCount} of ${plan.denominator} dealt with`
+    : "No work in the morning plan";
+  const percent = plan.denominator
+    ? Math.max(0, Math.min(100, Math.round((plan.resolvedCount / plan.denominator) * 100)))
+    : 0;
+
+  if (value && value.textContent !== valueText) value.textContent = valueText;
+  if (rail) {
+    rail.setAttribute("aria-valuemax", String(plan.denominator || 1));
+    rail.setAttribute("aria-valuenow", String(plan.resolvedCount));
+    rail.setAttribute("aria-valuetext", valueText);
+  }
+  if (fill && fill.style.width !== `${percent}%`) fill.style.width = `${percent}%`;
+
+  const openLine = command.querySelector<HTMLElement>(".atlas-day-command-date span");
+  if (openLine) openLine.textContent = `${plan.openCount} in morning plan`;
+
+  const meaningful = plan.flexibleReduction > 0 || plan.addedAfterPlanTaskIds.length > 0;
+  let note = command.querySelector<HTMLElement>(".atlas-day-plan-contract-note");
+  if (!meaningful) {
+    note?.remove();
+    return;
+  }
+  if (!note) {
+    note = document.createElement("p");
+    note.className = "atlas-day-plan-contract-note";
+    progress?.insertAdjacentElement("afterend", note);
+  }
+  const parts: string[] = [];
+  if (plan.flexibleReduction > 0) {
+    parts.push(`${plan.carryoverCountAtPreparation} carried ${plan.carryoverCountAtPreparation === 1 ? "item" : "items"} held ${plan.flexibleReduction} flexible ${plan.flexibleReduction === 1 ? "move" : "moves"} outside the hand`);
+  }
+  if (plan.addedAfterPlanTaskIds.length > 0) {
+    parts.push(`${plan.addedAfterPlanTaskIds.length} later ${plan.addedAfterPlanTaskIds.length === 1 ? "addition is" : "additions are"} visible but not counted`);
+  }
+  parts.push("due dates unchanged");
+  note.textContent = parts.join(" · ");
+}
+
+function applyOverdueHeading() {
+  const group = document.querySelector<HTMLElement>(".atlas-day-overdue-group");
+  if (!group) return;
+  const kicker = group.querySelector<HTMLElement>(".atlas-day-overdue-group-head span");
+  const title = group.querySelector<HTMLElement>(".atlas-day-overdue-group-head h3");
+  const copy = group.querySelector<HTMLElement>(":scope > p");
+  if (kicker) kicker.textContent = "Carry forward";
+  if (title) title.textContent = "Fallen out of rhythm";
+  if (copy) copy.textContent = "Still waiting · outside the morning denominator.";
+}
+
+function applyConsequences(
+  tasks: Map<string, AtlasTaskCard>,
+  selectedDay: string,
+  plan: AtlasLivingDayPlan | null,
+) {
   document.querySelectorAll<HTMLElement>(".atlas-day-task-card").forEach((card) => {
     const taskId = taskIdFromCard(card);
-    if (!taskId) return;
+    if (!taskId) {
+      if (card.closest(".atlas-day-timeline-group")) taskEntry(card).style.order = "300";
+      return;
+    }
     const task = tasks.get(taskId);
-    decorateCard(card, task ? taskConsequence(task, selectedDay) : null);
+    if (!task) return;
+    const presentation = planPresentation(task, selectedDay, plan);
+    decorateCard(card, presentation.consequence, presentation.state);
+    if (card.closest(".atlas-day-timeline-group")) {
+      taskEntry(card).style.order = String(timelineOrder(task, selectedDay, plan, presentation.state));
+    }
   });
+  applyPlanProgress(plan);
+  applyOverdueHeading();
 }
 
 export default function DayConsequenceTimelinePatch() {
@@ -197,24 +277,27 @@ export default function DayConsequenceTimelinePatch() {
     let cancelled = false;
     let frame = 0;
     let taskMap = new Map<string, AtlasTaskCard>();
+    let plan: AtlasLivingDayPlan | null = null;
 
     function scheduleApply() {
       if (frame) return;
       frame = window.requestAnimationFrame(() => {
         frame = 0;
-        if (!cancelled) applyConsequences(taskMap, selectedDay);
+        if (!cancelled) applyConsequences(taskMap, selectedDay, plan);
       });
     }
 
-    void fetchAtlasTaskCards({ viewerScoped: true, dueThrough: selectedDay, doneDate: selectedDay })
-      .then((response) => {
-        if (cancelled) return;
-        taskMap = new Map((response.taskCards ?? []).map((task) => [task.task_id, task]));
-        scheduleApply();
-      })
-      .catch(() => {
-        taskMap = new Map();
-      });
+    void Promise.allSettled([
+      fetchAtlasTaskCards({ viewerScoped: true, dueThrough: selectedDay, doneDate: selectedDay }),
+      fetchLivingDayPlan(selectedDay),
+    ]).then(([tasksResult, planResult]) => {
+      if (cancelled) return;
+      if (tasksResult.status === "fulfilled") {
+        taskMap = new Map((tasksResult.value.taskCards ?? []).map((task) => [task.task_id, task]));
+      }
+      if (planResult.status === "fulfilled") plan = planResult.value;
+      scheduleApply();
+    });
 
     const observer = new MutationObserver(scheduleApply);
     observer.observe(document.body, { childList: true, subtree: true });
