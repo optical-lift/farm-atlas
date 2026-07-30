@@ -118,7 +118,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
         selectedFarmKey={selectedFarmKey}
         selectedWorkstream={selectedWorkstream}
       />
-      <AtlasAroundRoutes todayIso={renderedHome.window.doneDate} canManage={canManage} />
+      <AtlasAroundRoutes canManage={canManage} />
       <AtlasPwaCoverPrompt />
     </>
   );
