@@ -57,17 +57,20 @@ test("task cards show complete real task data and keep the action horizontal", (
   assert.match(css, /min-width: 72px/);
 });
 
-test("the task hero, compact week rail, and pulse size to their contents", () => {
+test("the task hero, compact week rail, and farm stories size to their contents", () => {
   assert.match(css, /grid-auto-rows: max-content/);
   assert.match(css, /align-content: start/);
   assert.match(css, /\.todayStack[\s\S]*gap: 8px/);
   assert.match(css, /\.days[\s\S]*grid-template-columns: repeat\(7/);
-  assert.match(css, /\.pulse[\s\S]*min-height: 0/);
+  assert.match(css, /\.farmsSection[\s\S]*display: grid/);
   assert.match(component, /data-atlas-home-time-rail="true"/);
 });
 
-test("Farm pulse uses the same bounded Living Day counts as the hero", () => {
-  assert.match(component, /dayOverview\.openCount/);
-  assert.match(component, /dayOverview\.carryForwardCount/);
-  assert.match(component, /today&apos;s hand/);
+test("the lower Home surface uses canonical farm snapshots instead of generic pulse totals", () => {
+  assert.match(component, /farm\.snapshot/);
+  assert.match(component, /snapshot\.growingBeds/);
+  assert.match(component, /snapshot\.activeSqft/);
+  assert.match(component, /snapshot\.stemsLogged/);
+  assert.match(component, /snapshot\.sowingsLogged/);
+  assert.doesNotMatch(component, /FarmPulse|known gaps|today&apos;s hand/);
 });
