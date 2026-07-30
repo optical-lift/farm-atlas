@@ -1,0 +1,233 @@
+/* Home purple cover: the prepared Living Day at a glance. */
+
+.atlas-home-task-overview {
+  min-height: 0 !important;
+  padding: 16px !important;
+  display: grid !important;
+  gap: 12px !important;
+}
+
+.atlas-home-task-overview-head {
+  margin: 0 !important;
+  min-width: 0;
+  align-items: end !important;
+  gap: 12px !important;
+}
+
+.atlas-home-task-overview-head > div {
+  min-width: 0;
+}
+
+.atlas-home-task-overview-head .atlas-task-kicker {
+  display: block !important;
+  color: rgba(255, 255, 255, 0.72) !important;
+  font-size: 8px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.13em !important;
+  text-transform: uppercase !important;
+}
+
+.atlas-home-task-overview-head .atlas-season-label {
+  display: block !important;
+  margin-top: 4px !important;
+  color: #fff !important;
+  font-size: clamp(20px, 5.8vw, 27px) !important;
+  line-height: 0.98 !important;
+  font-style: normal !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.045em !important;
+}
+
+.atlas-home-task-overview-status {
+  flex: 0 0 auto;
+  max-width: 45%;
+  display: grid !important;
+  justify-items: end;
+  gap: 4px;
+  text-align: right;
+}
+
+.atlas-home-task-overview-status b,
+.atlas-home-task-overview-status em {
+  display: block;
+  font-style: normal;
+}
+
+.atlas-home-task-overview-status b {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 9px;
+  line-height: 1.15;
+  font-weight: 900;
+}
+
+.atlas-home-task-overview-status em {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.atlas-home-task-overview-grid {
+  height: auto !important;
+  grid-auto-rows: minmax(142px, auto) !important;
+  gap: 9px !important;
+}
+
+.atlas-home-task-overview-card {
+  position: relative !important;
+  height: auto !important;
+  min-height: 142px !important;
+  overflow: hidden !important;
+  display: block !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 18px !important;
+  background: rgba(66, 69, 129, 0.14) !important;
+  color: #fff !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.atlas-home-task-overview-card[data-atlas-position="current"] {
+  border-color: rgba(255, 255, 255, 0.38) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.atlas-home-task-overview-card[data-atlas-state="blocked"] {
+  border-color: rgba(255, 226, 211, 0.42) !important;
+  background: rgba(126, 78, 77, 0.2) !important;
+}
+
+.atlas-home-task-overview-card::before,
+.atlas-home-task-overview-card::after {
+  display: none !important;
+  content: none !important;
+}
+
+.atlas-home-task-overview-card-body {
+  min-height: 142px;
+  display: flex;
+  flex-direction: column;
+  color: inherit;
+  padding: 12px 12px 42px;
+  text-decoration: none;
+}
+
+.atlas-home-task-overview-card-body small,
+.atlas-home-task-overview-card-body strong,
+.atlas-home-task-overview-card-body span,
+.atlas-home-task-overview-card-body em {
+  display: block !important;
+  min-width: 0;
+}
+
+.atlas-home-task-overview-card-body small {
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 7.5px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+}
+
+.atlas-home-task-overview-card-body strong {
+  margin-top: 7px !important;
+  overflow: visible !important;
+  display: block !important;
+  color: #fff !important;
+  font-size: clamp(14px, 3.8vw, 17px) !important;
+  line-height: 1.06 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.025em !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+  -webkit-line-clamp: unset !important;
+}
+
+.atlas-home-task-overview-card-body span {
+  margin-top: 7px !important;
+  overflow: hidden;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: rgba(255, 255, 255, 0.78) !important;
+  font-size: 8.5px !important;
+  line-height: 1.18 !important;
+  font-weight: 850 !important;
+  white-space: normal !important;
+}
+
+.atlas-home-task-overview-card-body em {
+  margin-top: 5px !important;
+  overflow: hidden;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: rgba(255, 255, 255, 0.64) !important;
+  font-size: 8px !important;
+  line-height: 1.18 !important;
+  font-style: normal !important;
+  font-weight: 700 !important;
+  white-space: normal !important;
+}
+
+.atlas-home-task-overview-action {
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  min-height: 25px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  padding: 0 10px;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.atlas-home-task-overview-empty {
+  min-height: 128px !important;
+}
+
+/* Moving Now belongs exclusively to the Projects tab. */
+.atlas-home-shell [aria-labelledby="atlas-home-moving-title"] {
+  display: none !important;
+}
+
+@media (max-width: 380px) {
+  .atlas-home-task-overview {
+    padding: 14px !important;
+  }
+
+  .atlas-home-task-overview-head {
+    align-items: start !important;
+  }
+
+  .atlas-home-task-overview-status {
+    max-width: 48%;
+  }
+
+  .atlas-home-task-overview-grid {
+    grid-auto-rows: minmax(136px, auto) !important;
+    gap: 8px !important;
+  }
+
+  .atlas-home-task-overview-card,
+  .atlas-home-task-overview-card-body {
+    min-height: 136px !important;
+  }
+
+  .atlas-home-task-overview-card-body {
+    padding: 11px 10px 40px;
+  }
+
+  .atlas-home-task-overview-card-body strong {
+    font-size: 14px !important;
+  }
+}
