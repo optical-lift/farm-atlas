@@ -1,51 +1,146 @@
 :root {
-  --atlas-context-footer-height: 66px;
+  --atlas-context-footer-height: 58px;
   --atlas-context-header-offset: 0px;
+  --atlas-context-header-height: 68px;
+}
+
+html {
+  scroll-padding-top: calc(var(--atlas-context-header-height) + env(safe-area-inset-top) + 8px);
 }
 
 body {
-  padding-bottom: calc(var(--atlas-context-footer-height) + env(safe-area-inset-bottom) + 16px);
+  padding-bottom: calc(var(--atlas-context-footer-height) + env(safe-area-inset-bottom) + 12px);
 }
 
 body:has(.atlas-owner-operator) {
-  --atlas-context-header-offset: 44px;
+  --atlas-context-header-offset: 0px;
 }
 
-.atlas-owner-operator {
-  min-height: 44px;
-  padding-top: max(5px, env(safe-area-inset-top));
-  padding-bottom: 5px;
+/* The Owner selector is part of the visible app header, not a second toolbar. */
+.atlas-owner-operator,
+.atlas-owner-operator.is-operating {
+  position: fixed;
+  z-index: 1005;
+  top: 0;
+  left: 0;
+  width: 104px;
+  min-height: 0;
+  margin: 0;
+  padding: calc(env(safe-area-inset-top) + 12px) 0 0 max(10px, env(safe-area-inset-left));
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #303243;
+  display: block;
+  pointer-events: none;
 }
 
 .atlas-owner-operator__control {
-  min-height: 34px;
+  width: 90px;
+  min-height: 0;
+  margin: 0;
+  display: block;
+  pointer-events: auto;
 }
 
 .atlas-owner-operator__control label,
+.atlas-owner-operator__control > span,
 .atlas-owner-operator__notice {
   display: none;
 }
 
 .atlas-owner-operator__control select {
-  flex: 0 1 auto;
-  width: auto;
-  max-width: min(48vw, 210px);
-  height: 32px;
-  padding-left: 13px;
+  width: 90px;
+  max-width: 90px;
+  height: 38px;
+  margin: 0;
+  border: 1px solid rgba(85, 90, 134, 0.28);
+  border-radius: 999px;
+  background: #fbfaf4;
+  color: #303243;
+  padding: 0 28px 0 12px;
   font-size: 13px;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(47, 48, 66, 0.06);
 }
 
+.atlas-owner-operator.is-operating .atlas-owner-operator__control select {
+  border: 2px solid #786fab;
+  background: #f4f0ff;
+}
+
+.atlas-owner-operator > p {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 54px);
+  left: 10px;
+  width: min(260px, calc(100vw - 20px));
+  margin: 0;
+  border-radius: 10px;
+  background: #fff7f5;
+  color: #9b2f3f;
+  padding: 7px 9px;
+  font-size: 10px;
+  font-weight: 850;
+  pointer-events: auto;
+}
+
+/* One compact contextual header remains in flow and stays visible. */
 .atlas-phone-top,
 .atlas-topbar,
 .atlas-dashboard-top {
-  position: sticky;
-  top: var(--atlas-context-header-offset);
+  position: sticky !important;
+  top: var(--atlas-context-header-offset) !important;
   z-index: 820;
-  background: rgba(248, 247, 242, 0.96);
+  height: auto !important;
+  min-height: calc(var(--atlas-context-header-height) + env(safe-area-inset-top));
+  padding-top: calc(env(safe-area-inset-top) + 9px) !important;
+  padding-bottom: 8px !important;
+  background: rgba(251, 250, 244, 0.98) !important;
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
+  box-shadow: 0 4px 14px rgba(47, 48, 66, 0.045);
 }
 
+.atlas-dashboard-phone {
+  grid-template-rows: auto 1fr !important;
+}
+
+body:has(.atlas-owner-operator) .atlas-topbar {
+  grid-template-columns: 98px minmax(0, 1fr) 54px !important;
+  grid-template-rows: auto auto;
+  column-gap: 7px !important;
+  row-gap: 2px !important;
+  padding-right: 9px !important;
+  padding-left: 9px !important;
+}
+
+body:has(.atlas-owner-operator) .atlas-topbar .atlas-topbar-brand {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+}
+
+body:has(.atlas-owner-operator) .atlas-topbar .atlas-topbar-status {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  font-size: 10px;
+}
+
+body:has(.atlas-owner-operator) .atlas-topbar .atlas-topbar-action {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
+body:has(.atlas-owner-operator) .atlas-phone-top:not(.atlas-topbar) {
+  padding-left: max(112px, calc(env(safe-area-inset-left) + 112px)) !important;
+}
+
+.atlas-home-grid {
+  padding-top: 10px !important;
+}
+
+/* Solid native-style dock: no scrolling page is visible beneath it. */
 .atlas-context-footer {
   position: fixed;
   z-index: 930;
@@ -55,7 +150,7 @@ body:has(.atlas-owner-operator) {
   padding: 0;
   background: #faf7ed;
   border-top: 1px solid rgba(83, 83, 111, 0.14);
-  box-shadow: 0 -10px 28px rgba(43, 44, 66, 0.12);
+  box-shadow: 0 -8px 24px rgba(43, 44, 66, 0.1);
   pointer-events: auto;
 }
 
@@ -63,7 +158,7 @@ body:has(.atlas-owner-operator) {
   width: 100%;
   min-height: var(--atlas-context-footer-height);
   margin: 0;
-  padding: 0 max(0px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(0px, env(safe-area-inset-left));
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: stretch;
@@ -72,27 +167,44 @@ body:has(.atlas-owner-operator) {
   background: #faf7ed;
   box-shadow: none;
   overflow: hidden;
-  pointer-events: auto;
 }
 
 .atlas-context-footer__item {
+  position: relative;
   min-width: 0;
-  min-height: 58px;
+  min-height: 56px;
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 5px;
-  color: #73736c;
+  gap: 2px;
+  color: #77776f;
   text-decoration: none;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 900;
 }
 
-.atlas-context-footer__item > span {
-  width: 18px;
-  height: 4px;
-  border-radius: 999px;
+.atlas-context-footer__item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 20px;
+  height: 3px;
+  border-radius: 0 0 999px 999px;
   background: transparent;
+  transform: translateX(-50%);
+}
+
+.atlas-context-footer__icon {
+  min-width: 22px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  color: inherit;
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 850;
+  letter-spacing: -0.08em;
 }
 
 .atlas-context-footer__item strong {
@@ -103,11 +215,11 @@ body:has(.atlas-owner-operator) {
 }
 
 .atlas-context-footer__item[aria-current="page"] {
-  color: #3d3c69;
-  background: #ece8f8;
+  color: #55508b;
+  background: transparent;
 }
 
-.atlas-context-footer__item[aria-current="page"] > span {
+.atlas-context-footer__item[aria-current="page"]::before {
   background: #786fab;
 }
 
@@ -127,15 +239,20 @@ body:has(.atlas-owner-operator) {
   display: none !important;
 }
 
+/* Home route deck is a contents list, not another dashboard card. */
 .atlas-around-routes {
-  width: min(calc(100% - 24px), 760px);
-  margin: 16px auto 24px;
-  padding: 20px;
-  border: 1px solid rgba(93, 91, 121, 0.13);
-  border-radius: 28px;
-  background: #f8f4e8;
+  width: min(calc(100% - 28px), 760px);
+  margin: 20px auto 20px;
+  padding: 0 0 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: #30324a;
-  box-shadow: 0 10px 28px rgba(47, 48, 66, 0.06);
+  box-shadow: none;
+}
+
+.atlas-around-routes > header {
+  padding: 0 2px 12px;
 }
 
 .atlas-around-routes > header > span,
@@ -149,26 +266,24 @@ body:has(.atlas-owner-operator) {
 
 .atlas-around-routes > header h2,
 .atlas-more-page__intro h1 {
-  margin: 5px 0 5px;
-  font-size: clamp(25px, 7vw, 36px);
+  margin: 5px 0 0;
+  font-size: clamp(24px, 6.5vw, 34px);
   line-height: 1;
 }
 
-.atlas-around-routes > header p,
 .atlas-more-page__intro p {
   max-width: 60ch;
-  margin: 0;
+  margin: 7px 0 0;
   color: #77786f;
   font-size: 11px;
-  line-height: 1.45;
+  line-height: 1.4;
   font-weight: 700;
 }
 
 .atlas-around-routes__grid {
-  margin-top: 18px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 11px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .atlas-around-routes__group {
@@ -176,7 +291,7 @@ body:has(.atlas-owner-operator) {
 }
 
 .atlas-around-routes__group h3 {
-  margin: 0 0 7px;
+  margin: 0 2px 7px;
   color: #686a64;
   font-size: 9px;
   font-weight: 950;
@@ -193,16 +308,23 @@ body:has(.atlas-owner-operator) {
 .atlas-around-routes__group a,
 .atlas-more-page__list a {
   min-width: 0;
+  min-height: 68px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   border: 1px solid rgba(88, 87, 111, 0.11);
-  border-radius: 16px;
-  background: rgba(255, 253, 246, 0.92);
+  border-radius: 14px;
+  background: #fffdf7;
   color: inherit;
-  padding: 11px 12px;
+  padding: 11px 13px;
   text-decoration: none;
+  box-shadow: 0 4px 12px rgba(47, 48, 66, 0.035);
+}
+
+.atlas-around-routes__group a > div,
+.atlas-more-page__list a > div {
+  min-width: 0;
 }
 
 .atlas-around-routes__group a strong,
@@ -215,7 +337,7 @@ body:has(.atlas-owner-operator) {
 .atlas-around-routes__group a strong,
 .atlas-more-page__list a strong {
   color: #30324a;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.15;
 }
 
@@ -245,11 +367,38 @@ body:has(.atlas-owner-operator) {
 }
 
 .atlas-more-page__intro {
-  padding: 24px 20px 16px;
+  padding: 20px 18px 14px;
 }
 
 .atlas-more-page__list {
-  padding: 0 16px 24px;
+  padding: 0 16px 12px;
+}
+
+.atlas-more-page__logout {
+  padding: 4px 16px 24px;
+}
+
+.atlas-more-page__logout button {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(88, 87, 111, 0.14);
+  border-radius: 14px;
+  background: transparent;
+  color: #6d6d68;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+/* Let the date range, rather than a repeated Sun–Sat label, own narrow Month rows. */
+.atlas-home-month-week-list .atlas-home-overview-row-link small {
+  display: none !important;
+}
+
+.atlas-home-overview-row-link b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .atlas-bell-baseline-card {
@@ -307,10 +456,26 @@ body:has(.atlas-owner-operator) {
 @media (max-width: 640px) {
   .atlas-around-routes__grid {
     grid-template-columns: 1fr;
+    gap: 15px;
   }
 
   .atlas-around-routes {
-    margin-bottom: 24px;
-    padding: 18px 15px;
+    margin-bottom: 18px;
+  }
+}
+
+@media (max-width: 380px) {
+  body:has(.atlas-owner-operator) .atlas-topbar {
+    grid-template-columns: 92px minmax(0, 1fr) 48px !important;
+  }
+
+  .atlas-owner-operator__control,
+  .atlas-owner-operator__control select {
+    width: 84px;
+    max-width: 84px;
+  }
+
+  .atlas-context-footer__item {
+    font-size: 8.5px;
   }
 }
