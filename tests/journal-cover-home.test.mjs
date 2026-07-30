@@ -6,9 +6,10 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Home reads a four-slot journal cover without releasing work", () => {
+test("the legacy journal cover remains a read-only lens while Home uses the prepared task overview", () => {
   const reader = read("lib/atlas/journal-cover-home.ts");
   const operatorReader = read("lib/atlas/operator-journal-cover.ts");
+  const overviewReader = read("lib/atlas/home-task-overview.ts");
   const page = read("app/page.tsx");
 
   assert.match(reader, /living_day_v1/);
@@ -23,12 +24,13 @@ test("Home reads a four-slot journal cover without releasing work", () => {
 
   assert.match(operatorReader, /readAtlasJournalCover/);
   assert.match(operatorReader, /ownerDecisions: \[\]/);
-  assert.match(page, /readAtlasOperatorJournalCover/);
-  assert.match(page, /moves: coverMoves\.map/);
-  assert.doesNotMatch(page, /Current move|Next move|Closest unlock|Active blocker/);
+  assert.match(overviewReader, /livingDay\.journal\.planned/);
+  assert.match(page, /readAtlasOperatorHomeTaskOverview/);
+  assert.match(page, /moves: taskOverview\.moves/);
+  assert.doesNotMatch(page, /readAtlasOperatorJournalCover/);
 });
 
-test("The four boxes speak in bullet-journal marks and farm-state movement", () => {
+test("The legacy four-box journal lens still speaks in bullet-journal marks and farm-state movement", () => {
   const reader = read("lib/atlas/journal-cover-home.ts");
 
   assert.match(reader, /current: "●"/);
@@ -42,7 +44,7 @@ test("The four boxes speak in bullet-journal marks and farm-state movement", () 
   assert.match(reader, /category: coverMark\[role\]/);
 });
 
-test("The mark and subject share the first line while movement sits below", () => {
+test("The legacy cover CSS remains available for journal surfaces", () => {
   const css = read("app/home-cover-v1.css");
   const layout = read("app/layout.tsx");
 
@@ -60,4 +62,5 @@ test("The mark and subject share the first line while movement sits below", () =
   assert.match(css, /background: var\(--atlas-purple-dark\) !important/);
   assert.match(css, /\.atlas-task-kicker,[\s\S]*\.atlas-task-date[\s\S]*display: none !important/);
   assert.match(layout, /home-cover-v1\.css/);
+  assert.match(layout, /home-task-overview\.css/);
 });
