@@ -36,7 +36,7 @@ export default async function AtlasMorePage() {
         <section className="atlas-more-page__intro">
           <span>Elsewhere in Atlas</span>
           <h1>Controls and deeper views</h1>
-          <p>Atlas itself is the farm record. These routes open particular parts of it rather than sending history to a separate dumping ground.</p>
+          <p>Open the parts of Atlas that do not need a permanent place in the app dock.</p>
         </section>
 
         <nav className="atlas-more-page__list" aria-label="More Atlas destinations">
@@ -50,6 +50,10 @@ export default async function AtlasMorePage() {
             </Link>
           ))}
         </nav>
+
+        <form className="atlas-more-page__logout" action="/api/atlas/auth/logout" method="post">
+          <button type="submit">Log out</button>
+        </form>
       </section>
     </main>
   );
