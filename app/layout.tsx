@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import AtlasBellCover from "@/components/atlas/home/AtlasBellCover";
 import AtlasPwaBridge from "@/components/atlas/pwa/AtlasPwaBridge";
+import AtlasContextualAppFrame from "@/components/atlas/shell/AtlasContextualAppFrame";
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import WeekDayNavigation from "./WeekDayNavigation";
 import HomeTodayCompletePatch from "./HomeTodayCompletePatch";
@@ -86,6 +88,7 @@ import "./bell.css";
 import "./bell-cover-quiet.css";
 import "./pwa.css";
 import "./web-push.css";
+import "./contextual-app-shell.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -130,6 +133,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className="min-h-full flex flex-col">
         <AtlasPwaBridge />
         <OwnerOperatorMode context={operatorContext} />
+        <AtlasContextualAppFrame />
+        <AtlasBellCover />
         <WeekDayNavigation />
         <HomeTodayCompletePatch />
         <HomeQuietTaskHeroPatch />
