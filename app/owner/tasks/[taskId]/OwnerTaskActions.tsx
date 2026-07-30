@@ -3,9 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { resolveAtlasTaskProblemHandoff } from "@/lib/atlas/task-problem-handoff-client";
 import styles from "./task.module.css";
 
 type Transition = "done" | "blocked" | "rescheduled" | "note";
+
+type ProblemHandoff = {
+  id: string;
+  issueText: string;
+};
 
 function idempotencyKey(taskId: string, transition: Transition) {
   const nonce = typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -17,15 +23,34 @@ function idempotencyKey(taskId: string, transition: Transition) {
 export default function OwnerTaskActions({
   taskId,
   status,
+  problemHandoff,
 }: {
   taskId: string;
   status: string;
+  problemHandoff?: ProblemHandoff | null;
 }) {
   const router = useRouter();
   const [note, setNote] = useState("");
-  const [working, setWorking] = useState<Transition | null>(null);
+  const [working, setWorking] = useState<Transition | "send_back" | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  async function sendBackToAnna() {
+    setWorking("send_back");
+    setError("");
+    setMessage("");
+    try {
+      const result = await resolveAtlasTaskProblemHandoff(taskId, note.trim());
+      setMessage(result.message || "Sent back to Anna.");
+      window.setTimeout(() => {
+        router.push("/owner");
+        router.refresh();
+      }, 900);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Atlas could not send this task back to Anna.");
+      setWorking(null);
+    }
+  }
 
   async function apply(transition: Transition) {
     if (transition === "blocked" && !note.trim()) {
@@ -76,6 +101,32 @@ export default function OwnerTaskActions({
     setNote("");
     setWorking(null);
     router.refresh();
+  }
+
+  if (problemHandoff) {
+    return (
+      <section className={styles.actions} aria-labelledby="owner-problem-actions-title">
+        <h2 id="owner-problem-actions-title">Handle this problem</h2>
+        <label>
+          <span>What changed or what should Anna know?</span>
+          <textarea
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            rows={4}
+            maxLength={2000}
+            placeholder="Optional instruction or resolution"
+          />
+        </label>
+        <p>The task keeps its original due date and returns to Anna as soon as you send it back.</p>
+        {error ? <p className={styles.error} role="alert">{error}</p> : null}
+        {message ? <p className={styles.success} role="status">{message}</p> : null}
+        <div className={styles.actionGrid}>
+          <button type="button" onClick={() => void sendBackToAnna()} disabled={working !== null}>
+            {working === "send_back" ? "Sending back…" : "Send back to Anna"}
+          </button>
+        </div>
+      </section>
+    );
   }
 
   if (status === "done") {
