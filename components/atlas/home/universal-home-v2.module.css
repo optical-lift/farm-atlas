@@ -452,70 +452,244 @@
   text-decoration: none;
 }
 
-.pulse {
-  min-height: 0;
-  border: 1px solid rgba(96, 90, 112, 0.12);
-  border-radius: 20px;
-  background: #f8f4e8;
-  padding: 12px;
+.farmsSection {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
 }
 
-.pulseHead {
+.farmsHead {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.farmsHead > div {
+  min-width: 0;
+}
+
+.farmsHead span {
+  display: block;
+  color: #8881b7;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.farmsHead h2 {
+  margin: 5px 0 0;
+  color: #30324a;
+  font-size: 22px;
+  line-height: 0.95;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.farmsHead small {
+  color: #77786f;
+  font-size: 8.5px;
+  font-weight: 900;
+}
+
+.farmCards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.farmCard {
+  min-width: 0;
+  border: 1px solid rgba(96, 90, 112, 0.12);
+  border-radius: 21px;
+  background: #fffdf7;
+  padding: 14px;
+  box-shadow: 0 8px 22px rgba(58, 46, 30, 0.035);
+}
+
+.farmCard[data-has-growing-beds="true"] {
+  background: linear-gradient(180deg, #fffdf7 0%, #faf7ea 100%);
+}
+
+.farmCardHead {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.farmCardHead > div {
+  min-width: 0;
+}
+
+.farmCardHead small {
+  display: block;
+  color: #8881b7;
+  font-size: 7.5px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.farmCardHead h3 {
+  margin: 5px 0 0;
+  color: #30324a;
+  font-size: 18px;
+  line-height: 0.98;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.frostBadge {
+  flex: 0 0 auto;
+  min-width: 68px;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  border: 1px solid rgba(205, 207, 82, 0.58);
+  border-radius: 15px;
+  background: rgba(229, 231, 76, 0.18);
+  padding: 8px 9px;
+  color: #4d4c35;
+}
+
+.frostBadge b,
+.frostBadge em {
+  display: block;
+  font-style: normal;
+}
+
+.frostBadge b {
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.frostBadge em {
+  color: #71705e;
+  font-size: 6.8px;
+  line-height: 1;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.farmMetrics {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.farmMetrics > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  border-radius: 14px;
+  background: #f7f4eb;
+  padding: 9px 7px;
+  text-align: center;
+}
+
+.farmMetrics b,
+.farmMetrics span {
+  display: block;
+  min-width: 0;
+}
+
+.farmMetrics b {
+  color: #30324a;
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.farmMetrics span {
+  color: #77786f;
+  font-size: 7px;
+  line-height: 1.1;
+  font-weight: 850;
+}
+
+.bedProgress {
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.bedProgress > div {
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 0 2px 9px;
 }
 
-.pulseHead > span {
-  color: #30324a;
-  font-size: 12px;
-  font-weight: 950;
-}
-
-.pulseHead > a {
-  color: #6d6987;
-  font-size: 8.5px;
-  font-weight: 900;
-  text-decoration: none;
-}
-
-.pulseMetrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 5px;
-}
-
-.pulseMetrics > a {
-  min-width: 0;
-  min-height: 52px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 3px;
-  border-radius: 12px;
-  background: #fffdf7;
-  color: #30324a;
-  padding: 7px 3px;
-  text-align: center;
-  text-decoration: none;
-}
-
-.pulseMetrics b {
-  font-size: 15px;
+.bedProgress span,
+.bedProgress b {
+  display: block;
+  color: #72736b;
+  font-size: 7.5px;
   line-height: 1;
+  font-weight: 900;
 }
 
-.pulseMetrics span {
+.bedProgress b {
+  flex: 0 0 auto;
+  color: #5d5887;
+}
+
+.bedProgress i {
+  height: 5px;
+  display: block;
   overflow: hidden;
-  max-width: 100%;
+  border-radius: 999px;
+  background: #ece9df;
+}
+
+.bedProgress i span {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: #8f88bb;
+}
+
+.firstBed {
+  margin: 12px 0 0;
+  border-radius: 14px;
+  background: #f7f4eb;
+  color: #6f7068;
+  padding: 10px 11px;
+  font-size: 8.5px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.farmCardFoot {
+  margin-top: 12px;
+  padding-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid rgba(86, 85, 104, 0.08);
+}
+
+.farmCardFoot span,
+.farmCardFoot b {
+  display: block;
   color: #77786f;
   font-size: 7.5px;
-  line-height: 1.05;
+  line-height: 1.1;
   font-weight: 850;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.farmCardFoot b {
+  flex: 0 0 auto;
+  color: #5d5887;
 }
 
 @media (max-width: 640px) {
@@ -527,6 +701,10 @@
   .hero {
     border-radius: 23px;
     padding: 15px;
+  }
+
+  .farmCards {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -577,7 +755,25 @@
     font-size: 8px;
   }
 
-  .pulseMetrics span {
-    font-size: 7px;
+  .farmCard {
+    padding: 13px;
+  }
+
+  .farmCardHead h3 {
+    font-size: 17px;
+  }
+
+  .farmMetrics > div {
+    padding-inline: 5px;
+  }
+
+  .farmMetrics b {
+    font-size: 16px;
+  }
+
+  .farmMetrics span,
+  .farmCardFoot span,
+  .farmCardFoot b {
+    font-size: 6.8px;
   }
 }
