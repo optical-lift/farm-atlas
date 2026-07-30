@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { FieldLogDrawer, type AtlasFieldLogSeed } from "@/components/atlas/field-log-builder";
 import {
@@ -10,19 +10,22 @@ import {
   AtlasCard,
   AtlasTopBar,
 } from "@/components/atlas/ui/AtlasPrimitives";
-import type {
-  AtlasUniversalDatedItem,
-  AtlasUniversalHomeModel,
-  AtlasUniversalMoveState,
-} from "@/lib/atlas/universal-home";
+import type { AtlasUniversalDatedItem, AtlasUniversalHomeModel } from "@/lib/atlas/universal-home";
 import { fetchAtlasZoneRegistry, type AtlasRegistryZone } from "@/lib/atlas/zone-registry-client";
 
 import styles from "./universal-home-v2.module.css";
 
+type AtlasHomeDayOverview = {
+  prepared: boolean;
+  plannedTotal: number;
+  dealtCount: number;
+  openCount: number;
+  carryForwardCount: number;
+};
+
 type AtlasUniversalHomeProps = {
   home: AtlasUniversalHomeModel;
-  selectedFarmKey?: string | null;
-  selectedWorkstream?: string | null;
+  dayOverview: AtlasHomeDayOverview;
 };
 
 type WeatherResponse = {
@@ -55,8 +58,12 @@ function addDaysIso(value: string, days: number) {
   return isoFromDate(date);
 }
 
-function prettyDate(value: string) {
-  return dateFromIso(value).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+function prettyDay(value: string) {
+  return dateFromIso(value).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function weekStartMonday(value: string) {
@@ -70,24 +77,6 @@ function titleCase(value: string) {
   return value
     .replaceAll("_", " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function projectState(project: AtlasUniversalHomeModel["projects"][number]): AtlasUniversalMoveState {
-  if (project.blockedTaskCount > 0 || project.health === "blocked") return "blocked";
-  if (project.openAttentionCount > 0 || project.health === "at_risk") return "attention";
-  if (project.health === "waiting") return "waiting";
-  if (project.health === "complete") return "complete";
-  if (project.health === "quiet") return "quiet";
-  return "moving";
-}
-
-function projectStateLabel(state: AtlasUniversalMoveState) {
-  if (state === "blocked") return "Blocked";
-  if (state === "attention") return "Needs action";
-  if (state === "waiting") return "Waiting";
-  if (state === "complete") return "Complete";
-  if (state === "quiet") return "Quiet";
-  return "Moving";
 }
 
 function openDatedItem(item: AtlasUniversalDatedItem) {
@@ -117,6 +106,10 @@ function dayMarker(day: DayRailItem) {
   return "—";
 }
 
+function taskIdFromMoveKey(key: string) {
+  return key.startsWith("farm-task:") ? key.split(":").at(-1) ?? "" : "";
+}
+
 function HomeTimeRail({ home }: { home: AtlasUniversalHomeModel }) {
   const todayIso = home.window.doneDate;
   const days = dayRail(home.datedItems, todayIso);
@@ -127,13 +120,7 @@ function HomeTimeRail({ home }: { home: AtlasUniversalHomeModel }) {
   const previousWeekEnd = addDaysIso(previousWeek, 6);
 
   return (
-    <section className={styles.timeRail} aria-labelledby="atlas-home-time-title">
-      <div className={styles.timeRailHead}>
-        <span id="atlas-home-time-title">The week</span>
-        <Link href={`/overview/week?date=${encodeURIComponent(weekStart)}&end=${encodeURIComponent(weekEnd)}`}>
-          {weekOpen} open
-        </Link>
-      </div>
+    <section className={styles.timeRail} aria-label="Days in this week">
       <div className={styles.days} aria-label="Open a day in this week">
         {days.map((day) => (
           <Link
@@ -171,7 +158,7 @@ function NeedsYou({ home }: { home: AtlasUniversalHomeModel }) {
           <span>Owner lane</span>
           <h2 id="atlas-home-needs-title">Needs you</h2>
         </div>
-        <Link href="/projects">{home.attention.length}</Link>
+        <Link href="/bell?view=needs">{home.attention.length}</Link>
       </header>
       <div className={styles.lensList}>
         {items.map((item, index) => (
@@ -185,57 +172,7 @@ function NeedsYou({ home }: { home: AtlasUniversalHomeModel }) {
           </Link>
         ))}
       </div>
-      {home.attention.length > items.length ? <Link className={styles.lensFooter} href="/projects">See all {home.attention.length} items</Link> : null}
-    </AtlasCard>
-  );
-}
-
-function MovingNow({ projects }: { projects: AtlasUniversalHomeModel["projects"] }) {
-  const ranked = [...projects]
-    .filter((project) => projectState(project) !== "complete" && projectState(project) !== "quiet")
-    .sort((left, right) => {
-      const rank: Record<AtlasUniversalMoveState, number> = {
-        blocked: 0,
-        attention: 1,
-        moving: 2,
-        ready: 3,
-        waiting: 4,
-        review: 5,
-        quiet: 6,
-        complete: 7,
-      };
-      return rank[projectState(left)] - rank[projectState(right)]
-        || (right.lastMovementAt ?? "").localeCompare(left.lastMovementAt ?? "")
-        || left.title.localeCompare(right.title);
-    })
-    .slice(0, 3);
-
-  if (!ranked.length) return null;
-
-  return (
-    <AtlasCard as="section" className={styles.lens} ariaLabelledBy="atlas-home-moving-title">
-      <header className={styles.lensHeader}>
-        <div>
-          <span>Projects</span>
-          <h2 id="atlas-home-moving-title">Moving now</h2>
-        </div>
-        <Link href="/projects">Open</Link>
-      </header>
-      <div className={styles.projectRows}>
-        {ranked.map((project) => {
-          const state = projectState(project);
-          return (
-            <Link key={project.projectId} href={`/project/${encodeURIComponent(project.projectId)}`} data-state={state}>
-              <div>
-                <small>{project.farmName || "Feast Guild"} · {projectStateLabel(state)}</small>
-                <strong>{project.title}</strong>
-                <span>{project.currentMilestone || project.outcome || "Open the project."}</span>
-              </div>
-              <b>{project.openTaskCount}</b>
-            </Link>
-          );
-        })}
-      </div>
+      {home.attention.length > items.length ? <Link className={styles.lensFooter} href="/bell?view=needs">See all {home.attention.length} items</Link> : null}
     </AtlasCard>
   );
 }
@@ -244,10 +181,6 @@ function FarmPulse({ home }: { home: AtlasUniversalHomeModel }) {
   const todayIso = home.window.doneDate;
   const todayCount = home.datedItems.filter((item) => item.date === todayIso && openDatedItem(item)).length;
   const carryoverCount = home.datedItems.filter((item) => item.date < todayIso && openDatedItem(item)).length;
-  const movingProjects = home.projects.filter((project) => {
-    const state = projectState(project);
-    return state === "moving" || state === "blocked" || state === "attention" || state === "waiting";
-  }).length;
 
   return (
     <section className={styles.pulse} aria-labelledby="atlas-home-pulse-title">
@@ -258,18 +191,14 @@ function FarmPulse({ home }: { home: AtlasUniversalHomeModel }) {
       <div className={styles.pulseMetrics}>
         <Link href={`/day?date=${encodeURIComponent(todayIso)}&view=work_order`}><b>{todayCount}</b><span>today</span></Link>
         <Link href="/overview/week"><b>{carryoverCount}</b><span>carried</span></Link>
-        <Link href="/projects"><b>{movingProjects}</b><span>projects moving</span></Link>
+        <Link href="/more"><b>{home.metrics.farmCount}</b><span>farms</span></Link>
         <Link href="/bell?view=baseline"><b>{home.metrics.attentionCount}</b><span>known gaps</span></Link>
       </div>
     </section>
   );
 }
 
-export default function AtlasUniversalHome({
-  home,
-  selectedFarmKey,
-  selectedWorkstream,
-}: AtlasUniversalHomeProps) {
+export default function AtlasUniversalHome({ home, dayOverview }: AtlasUniversalHomeProps) {
   const router = useRouter();
   const [weatherLabel, setWeatherLabel] = useState<string | null>(null);
   const [registryZones, setRegistryZones] = useState<AtlasRegistryZone[]>([]);
@@ -311,18 +240,13 @@ export default function AtlasUniversalHome({
   }
 
   const headerStatus = weatherLabel || `${home.metrics.movingCount} moving`;
-  const filteredProjects = useMemo(() => home.projects.filter((project) => {
-    if (selectedWorkstream && project.workstream !== selectedWorkstream) return false;
-    if (selectedFarmKey && project.farmKey !== selectedFarmKey) return false;
-    return true;
-  }), [home.projects, selectedFarmKey, selectedWorkstream]);
-  const todayOpen = home.datedItems.filter((item) => item.date === todayIso && openDatedItem(item)).length;
   const heroHref = home.activeFarm
     ? `/day?date=${encodeURIComponent(todayIso)}&view=work_order`
-    : home.moves[0]?.href || "/projects";
-  const coverLabel = home.activeFarm && home.title === home.activeFarm.farmName
-    ? `Today at ${home.activeFarm.farmName}`
-    : "Across the Guild";
+    : "/work/today";
+  const coverLabel = home.activeFarm ? `Today at ${home.activeFarm.farmName}` : "Today";
+  const progressLabel = dayOverview.plannedTotal > 0
+    ? `${dayOverview.dealtCount} of ${dayOverview.plannedTotal} dealt with · ${dayOverview.openCount} open`
+    : "Day clear";
 
   return (
     <>
@@ -346,47 +270,61 @@ export default function AtlasUniversalHome({
         <div className={styles.home}>
           <AtlasCard
             variant="purple"
-            className={`${styles.hero} atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller atlas-daily-run-sheet atlas-route-sheet`}
+            className={`${styles.hero} atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller atlas-daily-run-sheet atlas-route-sheet atlas-home-task-overview`}
             ariaLabelledBy="atlas-today-title"
           >
-            <Link href={heroHref} className={`${styles.heroHead} atlas-task-controller-head atlas-task-controller-head-link`} aria-label="Open current work">
+            <Link href={heroHref} className={`${styles.heroHead} atlas-task-controller-head atlas-task-controller-head-link atlas-home-task-overview-head`} aria-label="Open today's full work lineup">
               <div>
                 <span className="atlas-task-kicker">{coverLabel}</span>
-                <em className="atlas-season-label" id="atlas-today-title">{prettyDate(todayIso)}</em>
+                <em className="atlas-season-label" id="atlas-today-title">{prettyDay(todayIso)}</em>
               </div>
-              <span className="atlas-task-date">{todayOpen ? `${todayOpen} in hand` : "Day clear"}</span>
+              <span className="atlas-home-task-overview-status">
+                <b>{progressLabel}</b>
+                {dayOverview.carryForwardCount > 0 ? <em>{dayOverview.carryForwardCount} carry forward</em> : null}
+              </span>
             </Link>
+
             {home.moves.length ? (
-              <div className={`${styles.heroGrid} atlas-run-sheet-grid atlas-route-sheet-grid`} data-universal-move-count={home.moves.length}>
-                {home.moves.map((move) => (
-                  <Link
-                    key={move.key}
-                    href={move.href}
-                    className={`${styles.heroMove} atlas-run-sheet-box atlas-route-sheet-box atlas-task-forward-box`}
-                    data-atlas-state={move.state}
-                  >
-                    <small>{move.category}</small>
-                    <strong>{move.title}</strong>
-                    <span>{move.scopeLabel} · {move.meta}</span>
-                    <em>{move.detail}</em>
-                  </Link>
-                ))}
+              <div className={`${styles.heroGrid} atlas-run-sheet-grid atlas-route-sheet-grid atlas-home-task-overview-grid`} data-universal-move-count={home.moves.length}>
+                {home.moves.map((move, index) => {
+                  const taskId = taskIdFromMoveKey(move.key);
+                  return (
+                    <article
+                      key={move.key}
+                      className={`${styles.heroMove} atlas-run-sheet-box atlas-route-sheet-box atlas-task-forward-box atlas-home-task-overview-card`}
+                      data-atlas-state={move.state}
+                      data-atlas-position={index === 0 ? "current" : index === 1 ? "next" : "later"}
+                    >
+                      <Link
+                        href={move.href}
+                        className="atlas-home-task-overview-card-body"
+                        data-single-task-id={taskId || undefined}
+                      >
+                        <small>{move.category}</small>
+                        <strong>{move.title}</strong>
+                        <span>{move.scopeLabel}{move.meta ? ` · ${move.meta}` : ""}</span>
+                        {move.detail ? <em>{move.detail}</em> : null}
+                      </Link>
+                      {index === 0 ? (
+                        <Link className="atlas-home-task-overview-action" href={move.href}>
+                          {move.state === "blocked" ? "Review" : "Finish"}
+                        </Link>
+                      ) : null}
+                    </article>
+                  );
+                })}
               </div>
             ) : (
-              <Link href={heroHref} className={styles.heroEmpty}>
+              <Link href={heroHref} className={`${styles.heroEmpty} atlas-home-task-overview-empty`}>
                 <strong>The day is clear</strong>
-                <em>Open Work to inspect the next useful move.</em>
+                <em>Open Work to inspect the next planned day.</em>
               </Link>
             )}
           </AtlasCard>
 
           <HomeTimeRail home={home} />
 
-          <div className={styles.lenses}>
-            <NeedsYou home={home} />
-            <MovingNow projects={filteredProjects} />
-          </div>
-
+          <NeedsYou home={home} />
           <FarmPulse home={home} />
         </div>
       </AtlasAppShell>
