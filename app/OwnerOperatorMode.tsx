@@ -1,6 +1,8 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 
 import type { AtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 
@@ -8,11 +10,60 @@ type OwnerOperatorModeProps = {
   context: AtlasOwnerOperatorContext | null;
 };
 
+const logoutButtonStyle: CSSProperties = {
+  appearance: "none",
+  border: 0,
+  background: "transparent",
+  color: "inherit",
+  cursor: "pointer",
+  font: "inherit",
+  fontSize: "10px",
+  fontWeight: 800,
+  lineHeight: 1,
+  minHeight: "32px",
+  padding: "0 5px",
+  textDecoration: "underline",
+  textDecorationThickness: "1px",
+  textUnderlineOffset: "3px",
+  opacity: 0.72,
+};
+
+const logoutOnlyStyle: CSSProperties = {
+  position: "fixed",
+  top: "7px",
+  right: "max(9px, env(safe-area-inset-right))",
+  zIndex: 1100,
+  margin: 0,
+  borderRadius: "999px",
+  background: "rgba(248, 247, 242, 0.9)",
+  color: "#555a86",
+  padding: "0 3px",
+  boxShadow: "0 2px 8px rgba(47, 48, 66, 0.08)",
+};
+
+function LogoutForm({ standalone = false }: { standalone?: boolean }) {
+  return (
+    <form
+      action="/api/atlas/auth/logout"
+      method="post"
+      style={standalone ? logoutOnlyStyle : { marginLeft: "auto" }}
+    >
+      <button type="submit" aria-label="Log out of Atlas" style={logoutButtonStyle}>
+        Log out
+      </button>
+    </form>
+  );
+}
+
 export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
+  const pathname = usePathname();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!context) return null;
+  if (!context) {
+    if (pathname === "/login" || pathname.startsWith("/auth/")) return null;
+    return <LogoutForm standalone />;
+  }
   const activeContext = context;
 
   async function selectAccount(accountId: string) {
@@ -60,6 +111,7 @@ export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
           ))}
         </select>
         {saving ? <span>Switching…</span> : null}
+        <LogoutForm />
       </div>
 
       {activeContext.isOperating ? (
