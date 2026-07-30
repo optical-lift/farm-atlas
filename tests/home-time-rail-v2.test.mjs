@@ -9,9 +9,7 @@ function read(path) {
 const page = read("app/page.tsx");
 const home = read("components/atlas/home/AtlasUniversalHomeV2.tsx");
 const css = read("components/atlas/home/universal-home-v2.module.css");
-const taskCss = read("app/home-task-overview.css");
-
-const build = `${page}\n${home}\n${css}\n${taskCss}`;
+const build = `${page}\n${home}\n${css}`;
 
 test("Home uses the compact day rail instead of large Week and Month dashboard cards", () => {
   assert.match(page, /AtlasUniversalHomeV2/);
@@ -29,6 +27,7 @@ test("every day in the current Monday-through-Sunday rail opens its Living Day",
   assert.match(home, /\/day\?date=/);
   assert.match(home, /aria-current=\{day\.dateIso === todayIso \? "date"/);
   assert.match(css, /grid-template-columns: repeat\(7/);
+  assert.match(home, /data-atlas-home-time-rail="true"/);
 });
 
 test("Home is a prepared task cover followed by Needs you and Farm pulse", () => {
@@ -44,8 +43,8 @@ test("Home is a prepared task cover followed by Needs you and Farm pulse", () =>
 test("broad open-work and project-movement totals no longer dominate Home", () => {
   assert.doesNotMatch(home, /home\.metrics\.openWorkCount/);
   assert.doesNotMatch(home, /projects moving/);
-  assert.match(home, /today/);
-  assert.match(home, /carried/);
+  assert.match(home, /today&apos;s hand/);
+  assert.match(home, /carry forward/);
   assert.match(home, /home\.metrics\.farmCount/);
 });
 
@@ -54,5 +53,5 @@ test("the compact home remains inside the sticky Atlas app shell", () => {
   assert.match(home, /<AtlasTopBar/);
   assert.match(css, /padding: 10px 11px calc\(18px \+ var\(--atlas-context-footer-height\)\)/);
   assert.match(build, /atlas-note-plus/);
-  assert.match(build, /atlas-home-task-overview/);
+  assert.match(build, /data-atlas-home-task-board="true"/);
 });
