@@ -183,7 +183,8 @@ function applyConsequences(tasks: Map<string, AtlasTaskCard>, selectedDay: strin
   document.querySelectorAll<HTMLElement>(".atlas-day-task-card").forEach((card) => {
     const taskId = taskIdFromCard(card);
     if (!taskId) return;
-    decorateCard(card, taskConsequence(tasks.get(taskId) as AtlasTaskCard, selectedDay));
+    const task = tasks.get(taskId);
+    decorateCard(card, task ? taskConsequence(task, selectedDay) : null);
   });
 }
 
