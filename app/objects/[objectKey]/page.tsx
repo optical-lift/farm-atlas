@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CropObservationPanel } from "@/components/atlas/crop-observation-panel";
 import { ObjectQuickLog } from "@/components/atlas/object-quick-log";
 import AtlasTrail from "@/components/atlas/trail/AtlasTrail";
+import { WalkwayCardPanel } from "@/components/atlas/walkway-card-panel";
 import { atlasTrailFromObjectWorkbench } from "@/lib/atlas/object-trail";
 import {
   fetchAtlasObjectWorkbench,
@@ -171,6 +172,8 @@ export default function AtlasObjectPage() {
                   {object.last_checked_at ? <span>Checked <strong>{prettyDate(object.last_checked_at)}</strong></span> : null}
                 </div>
               </section>
+
+              <WalkwayCardPanel objectKey={object.object_key} />
 
               <section className="atlas-object-panel atlas-object-contents">
                 <div className="atlas-object-section-head">
