@@ -90,6 +90,7 @@ import "./pwa.css";
 import "./web-push.css";
 import "./contextual-app-shell.css";
 import "./app-shell-regression-fixes.css";
+import "./home-task-overview.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
