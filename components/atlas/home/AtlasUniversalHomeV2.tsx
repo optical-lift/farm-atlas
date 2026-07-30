@@ -43,6 +43,10 @@ type DayRailItem = {
   attention: boolean;
 };
 
+const FIRST_KILLING_FREEZE_MONTH_INDEX = 10;
+const FIRST_KILLING_FREEZE_DAY = 1;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 function dateFromIso(value: string) {
   return new Date(`${value}T12:00:00`);
 }
@@ -108,6 +112,32 @@ function dayMarker(day: DayRailItem) {
 
 function taskIdFromMoveKey(key: string) {
   return key.startsWith("farm-task:") ? key.split(":").at(-1) ?? "" : "";
+}
+
+function formatCount(value: number) {
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.max(0, value || 0));
+}
+
+function frostRunway(todayIso: string) {
+  const today = dateFromIso(todayIso);
+  let boundary = new Date(
+    today.getFullYear(),
+    FIRST_KILLING_FREEZE_MONTH_INDEX,
+    FIRST_KILLING_FREEZE_DAY,
+    12,
+  );
+  if (boundary.getTime() < today.getTime()) {
+    boundary = new Date(
+      today.getFullYear() + 1,
+      FIRST_KILLING_FREEZE_MONTH_INDEX,
+      FIRST_KILLING_FREEZE_DAY,
+      12,
+    );
+  }
+  return {
+    days: Math.max(0, Math.ceil((boundary.getTime() - today.getTime()) / DAY_MS)),
+    label: boundary.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+  };
 }
 
 function HomeTimeRail({ home }: { home: AtlasUniversalHomeModel }) {
@@ -177,18 +207,72 @@ function NeedsYou({ home }: { home: AtlasUniversalHomeModel }) {
   );
 }
 
-function FarmPulse({ home, dayOverview }: { home: AtlasUniversalHomeModel; dayOverview: AtlasHomeDayOverview }) {
+function TheFarms({ home }: { home: AtlasUniversalHomeModel }) {
+  const runway = frostRunway(home.window.doneDate);
+
   return (
-    <section className={styles.pulse} aria-labelledby="atlas-home-pulse-title">
-      <div className={styles.pulseHead}>
-        <span id="atlas-home-pulse-title">Farm pulse</span>
-        <Link href="/more">Deeper views ›</Link>
-      </div>
-      <div className={styles.pulseMetrics}>
-        <Link href={`/day?date=${encodeURIComponent(home.window.doneDate)}&view=work_order`}><b>{dayOverview.openCount}</b><span>today&apos;s hand</span></Link>
-        <Link href="/overview/week"><b>{dayOverview.carryForwardCount}</b><span>carry forward</span></Link>
-        <Link href="/more"><b>{home.metrics.farmCount}</b><span>farms</span></Link>
-        <Link href="/bell?view=baseline"><b>{home.metrics.attentionCount}</b><span>known gaps</span></Link>
+    <section className={styles.farmsSection} aria-labelledby="atlas-home-farms-title">
+      <header className={styles.farmsHead}>
+        <div>
+          <span>Growing season</span>
+          <h2 id="atlas-home-farms-title">The farms</h2>
+        </div>
+        <small>{home.farms.length} {home.farms.length === 1 ? "farm" : "farms"}</small>
+      </header>
+
+      <div className={styles.farmCards}>
+        {home.farms.map((farm) => {
+          const snapshot = farm.snapshot;
+          const activePercent = snapshot.totalBeds > 0
+            ? Math.min(100, Math.round((snapshot.growingBeds / snapshot.totalBeds) * 100))
+            : 0;
+          return (
+            <article className={styles.farmCard} key={farm.farmId} data-has-growing-beds={snapshot.growingBeds > 0 ? "true" : "false"}>
+              <header className={styles.farmCardHead}>
+                <div>
+                  <small>{farm.role === "owner" ? "Stewarding" : "Working at"}</small>
+                  <h3>{farm.farmName}</h3>
+                </div>
+                <span className={styles.frostBadge}>
+                  <b>{runway.days}</b>
+                  <em>days to frost</em>
+                </span>
+              </header>
+
+              <div className={styles.farmMetrics}>
+                <div>
+                  <b>{formatCount(snapshot.growingBeds)}</b>
+                  <span>beds growing</span>
+                </div>
+                <div>
+                  <b>{formatCount(snapshot.activeSqft)}</b>
+                  <span>sq ft active</span>
+                </div>
+                <div>
+                  <b>{formatCount(snapshot.stemsLogged)}</b>
+                  <span>stems this year</span>
+                </div>
+              </div>
+
+              {snapshot.totalBeds > 0 ? (
+                <div className={styles.bedProgress}>
+                  <div>
+                    <span>{snapshot.growingBeds} of {snapshot.totalBeds} mapped beds growing</span>
+                    <b>{activePercent}%</b>
+                  </div>
+                  <i aria-hidden="true"><span style={{ width: `${activePercent}%` }} /></i>
+                </div>
+              ) : (
+                <p className={styles.firstBed}>Ready for its first mapped growing bed.</p>
+              )}
+
+              <footer className={styles.farmCardFoot}>
+                <span>{formatCount(snapshot.sowingsLogged)} sowings recorded this year</span>
+                <b>{runway.label} boundary</b>
+              </footer>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
@@ -323,7 +407,7 @@ export default function AtlasUniversalHome({ home, dayOverview }: AtlasUniversal
           </div>
 
           <NeedsYou home={home} />
-          <FarmPulse home={home} dayOverview={dayOverview} />
+          <TheFarms home={home} />
         </div>
       </AtlasAppShell>
 
