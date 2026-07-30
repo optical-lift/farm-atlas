@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import AtlasBellCover from "@/components/atlas/home/AtlasBellCover";
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHome";
 import {
   effectiveOperatorAccountId,
@@ -106,10 +107,13 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
   };
 
   return (
-    <AtlasUniversalHome
-      home={renderedHome}
-      selectedFarmKey={selectedFarmKey}
-      selectedWorkstream={selectedWorkstream}
-    />
+    <>
+      <AtlasUniversalHome
+        home={renderedHome}
+        selectedFarmKey={selectedFarmKey}
+        selectedWorkstream={selectedWorkstream}
+      />
+      {renderedHome.activeFarm ? <AtlasBellCover /> : null}
+    </>
   );
 }
