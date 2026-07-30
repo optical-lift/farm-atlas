@@ -69,6 +69,12 @@ export function atlasIsDayExtraCredit(task: AtlasTaskCard) {
   return mode === "extra_credit" || label.includes("extra credit");
 }
 
+export function atlasIsDayDenominatorExcluded(task: AtlasTaskCard) {
+  return atlasIsDayExtraCredit(task)
+    || truthy(metadataValue(task, "day_denominator_excluded"))
+    || truthy(metadataValue(task, "unlocked_outside_day_plan"));
+}
+
 export function atlasIsDayWorkTask(task: AtlasTaskCard) {
   const child = Boolean(task.parent_task_id)
     || truthy(metadataValue(task, "is_child_task"));
@@ -84,7 +90,7 @@ export function atlasIsDayWorkTask(task: AtlasTaskCard) {
 }
 
 export function atlasIsFlexibleDayDeal(task: AtlasTaskCard) {
-  if (atlasIsDayExtraCredit(task)) return true;
+  if (atlasIsDayDenominatorExcluded(task)) return true;
 
   const mode = String(metadataValue(task, "day_work_order_mode") ?? metadataValue(task, "work_order_mode") ?? "").trim().toLowerCase();
   const protectedWork = task.priority === "high"
