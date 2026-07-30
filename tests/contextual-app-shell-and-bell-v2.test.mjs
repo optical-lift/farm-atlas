@@ -10,6 +10,8 @@ const layout = read("app/layout.tsx");
 const page = read("app/page.tsx");
 const frame = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
 const around = read("components/atlas/home/AtlasAroundRoutes.tsx");
+const operator = read("app/OwnerOperatorMode.tsx");
+const morePage = read("app/more/page.tsx");
 const universalHome = read("components/atlas/home/AtlasUniversalHome.tsx");
 const bellCover = read("components/atlas/home/AtlasBellCover.tsx");
 const bellPage = read("app/bell/page.tsx");
@@ -18,7 +20,7 @@ const bellContract = read("lib/atlas/bell-contract.ts");
 const shellCss = read("app/contextual-app-shell.css");
 const migration = read("supabase/migrations/20260730180100_bell_monitoring_baseline_and_obligations_v2.sql");
 
-const shell = `${layout}\n${page}\n${frame}\n${around}\n${shellCss}`;
+const shell = `${layout}\n${page}\n${frame}\n${around}\n${operator}\n${morePage}\n${shellCss}`;
 const bell = `${bellCover}\n${bellPage}\n${bellRoute}\n${bellContract}\n${migration}`;
 
 test("Atlas gains a contextual fixed shell without a separate Journal destination", () => {
@@ -31,7 +33,7 @@ test("Atlas gains a contextual fixed shell without a separate Journal destinatio
   assert.doesNotMatch(frame, />Journal</);
   assert.match(shellCss, /position: fixed/);
   assert.match(shellCss, /atlas-context-footer/);
-  assert.match(shellCss, /atlas-phone-top[\s\S]*position: sticky/);
+  assert.match(shellCss, /atlas-phone-top,[\s\S]*position: sticky/);
 });
 
 test("the app footer is an opaque rectangular dock that covers the bottom edge", () => {
@@ -39,16 +41,31 @@ test("the app footer is an opaque rectangular dock that covers the bottom edge",
   assert.match(shellCss, /\.atlas-context-footer__rail \{[\s\S]*width: 100%/);
   assert.match(shellCss, /\.atlas-context-footer__rail \{[\s\S]*border-radius: 0/);
   assert.match(shellCss, /padding-bottom: calc\(var\(--atlas-context-footer-height\) \+ env\(safe-area-inset-bottom\)/);
+  assert.match(frame, /atlas-context-footer__icon/);
+  assert.match(shellCss, /\.atlas-context-footer__item\[aria-current="page"\][\s\S]*background: transparent/);
 });
 
-test("Home stays recognizable and gains routes into the rest of Atlas", () => {
+test("Owner operator mode is folded into the compact header and logout moves to More", () => {
+  assert.match(operator, /aria-label="Operating as"/);
+  assert.doesNotMatch(operator, /<LogoutForm/);
+  assert.match(shellCss, /The Owner selector is part of the visible app header/);
+  assert.match(shellCss, /\.atlas-owner-operator,[\s\S]*position: fixed/);
+  assert.match(shellCss, /body:has\(\.atlas-owner-operator\) \.atlas-topbar/);
+  assert.match(morePage, /action="\/api\/atlas\/auth\/logout"/);
+  assert.match(morePage, />Log out</);
+});
+
+test("Home stays recognizable and gains compact deeper routes without duplicating the dock", () => {
   assert.match(page, /<AtlasUniversalHome/);
-  assert.match(page, /<AtlasAroundRoutes/);
+  assert.match(page, /<AtlasAroundRoutes canManage=/);
   assert.match(around, /Around Atlas/);
-  assert.match(around, /Work with the farm/);
-  assert.match(around, /See the farm/);
+  assert.match(around, /See more of the farm/);
   assert.match(around, /Govern Atlas/);
+  assert.match(around, /Week \+ month/);
+  assert.doesNotMatch(around, /Work with the farm|Places \+ maps|Open current project work/);
   assert.doesNotMatch(around, /Farm Journal|Journal history/);
+  assert.match(shellCss, /Home route deck is a contents list, not another dashboard card/);
+  assert.match(shellCss, /\.atlas-around-routes \{[\s\S]*border: 0/);
 });
 
 test("unfinished Portfolio Matrix and Trail Pulse surfaces stay off Home", () => {
@@ -59,7 +76,12 @@ test("unfinished Portfolio Matrix and Trail Pulse surfaces stay off Home", () =>
   assert.doesNotMatch(frame, /#portfolio-matrix/);
   assert.doesNotMatch(around, /Portfolio Matrix/);
   assert.match(frame, /\/#work-board/);
-  assert.match(around, /\/#work-board/);
+  assert.doesNotMatch(around, /\/#work-board/);
+});
+
+test("narrow Home date rows prioritize the useful range over repeated labels", () => {
+  assert.match(shellCss, /atlas-home-month-week-list[\s\S]*small[\s\S]*display: none/);
+  assert.match(shellCss, /atlas-home-overview-row-link b[\s\S]*text-overflow: ellipsis/);
 });
 
 test("the floating Bell is global, header-aware, and disappears when nothing needs attention", () => {
