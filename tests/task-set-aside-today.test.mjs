@@ -43,13 +43,15 @@ test("set-aside visibility lasts until the actual return date", () => {
   assert.match(migration, /'requestedReturnDate',coalesce\(d\.requested_return_date,d\.returns_on\)/);
 });
 
-test("regular Anna tasks move only through a structured Unfinished disposition", () => {
+test("regular Anna tasks split partial progress from Owner problem handoffs", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const control = read("components/atlas/structured-unfinished-control.tsx");
   const weed = read("components/atlas/weed-card-task-focus.tsx");
   const display = read("lib/atlas/task-display.ts");
-  const client = read("lib/atlas/task-set-aside-client.ts");
-  const route = read("app/api/atlas/task-set-aside/route.ts");
+  const handoffClient = read("lib/atlas/task-problem-handoff-client.ts");
+  const handoffRoute = read("app/api/atlas/task-problem-handoff/route.ts");
+  const handoffMigration = read("supabase/migrations/20260730012500_task_problem_handoff_v1.sql");
+  const ownerActions = read("app/owner/tasks/[taskId]/OwnerTaskActions.tsx");
   const css = read("app/task-structured-unfinished.css");
 
   assert.match(canonical, /props\.assignee\.key === "anna"/);
@@ -57,29 +59,36 @@ test("regular Anna tasks move only through a structured Unfinished disposition",
   assert.doesNotMatch(canonical, /TaskSetAsideControl/);
   assert.match(control, /Partly done/);
   assert.match(control, /Problem found/);
-  assert.match(control, /Weather changed/);
-  assert.match(control, /Larger than expected/);
-  assert.match(control, /Need supplies/);
-  assert.match(control, /Need a decision/);
+  assert.match(control, /Move it to/);
   assert.match(control, /Tomorrow/);
   assert.match(control, /Choose date/);
-  assert.match(control, /Save unfinished/);
-  assert.match(control, /postAtlasTaskTransition/);
+  assert.match(control, /Partial progress logged/);
   assert.match(control, /postAtlasTaskSetAsideToday\(task\.task_id, returnDate\)/);
+  assert.match(control, /What is the problem\?/);
+  assert.match(control, /<textarea/);
+  assert.match(control, /openAtlasTaskProblemHandoff/);
+  assert.match(control, /leave your schedule until the Owner handles the problem/);
+  assert.doesNotMatch(control, /Weather changed/);
+  assert.doesNotMatch(control, /Need supplies/);
   assert.doesNotMatch(control, /window\.prompt/);
   assert.match(control, /route === "mow" \|\| route === "build" \|\| route === "harvest"/);
   assert.match(control, /route === "seed" \|\| route === "plant" \|\| route === "water"/);
+  assert.match(handoffClient, /task-problem-handoff-v1/);
+  assert.match(handoffRoute, /worker_open_task_problem_handoff_v1/);
+  assert.match(handoffRoute, /owner_resolve_task_problem_handoff_v1/);
+  assert.match(handoffMigration, /create table if not exists atlas\.task_problem_handoffs/);
+  assert.match(handoffMigration, /assigned_membership_id = v_owner_membership_id/);
+  assert.match(handoffMigration, /original_assigned_membership_id/);
+  assert.match(handoffMigration, /original due date is unchanged/i);
+  assert.doesNotMatch(handoffMigration, /set due_date\s*=/i);
+  assert.match(ownerActions, /Send back to Anna/);
+  assert.match(ownerActions, /resolveAtlasTaskProblemHandoff/);
   assert.match(weed, /atlas-task-move-drawer atlas-weed-move-drawer/);
   assert.match(weed, />\s*Tomorrow\s*</);
   assert.match(weed, /type="date"/);
   assert.doesNotMatch(weed, />\s*Do tomorrow\s*</);
   assert.match(display, /Continued/);
-  assert.match(display, /latest\.outcome === "partial" \? "Partly done" : "Problem found"/);
-  assert.match(client, /task-set-aside-v2:\$\{taskId\}:\$\{serviceDate\}:\$\{requestedReturnDate\}/);
-  assert.match(route, /set_task_aside_today_v2/);
-  assert.match(route, /p_requested_return_date: requestedReturnDate/);
-  assert.match(css, /\.atlas-structured-unfinished-panel/);
-  assert.match(css, /\.atlas-structured-unfinished-save/);
+  assert.match(css, /\.atlas-structured-unfinished-problem textarea/);
 });
 
 test("The selected day and home cover omit accepted set-asides while the journal keeps a quiet record", () => {
