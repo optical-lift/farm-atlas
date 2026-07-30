@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHomeV2";
 import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
+import { readAtlasHomeFarmSeasonProfiles } from "@/lib/atlas/home-farm-seasons";
 import { readAtlasOperatorHomeTaskOverview } from "@/lib/atlas/home-task-overview";
 import {
   effectiveOperatorAccountId,
@@ -81,7 +82,10 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     }),
   };
 
-  const taskOverview = await readAtlasOperatorHomeTaskOverview(visibleHome);
+  const [taskOverview, farmSeasons] = await Promise.all([
+    readAtlasOperatorHomeTaskOverview(visibleHome),
+    readAtlasHomeFarmSeasonProfiles(visibleFarms.map((farm) => farm.farmId)),
+  ]);
   const renderedViewer = visibleHome.viewer;
   const organizationMembership = organizationMembershipForViewer(renderedViewer);
   const organizationPortal = Boolean(
@@ -96,6 +100,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
         || "Feast Guild"
       : visibleHome.title,
     moves: taskOverview.moves,
+    datedItems: taskOverview.datedItems,
   };
 
   return (
@@ -104,6 +109,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
       <AtlasUniversalHome
         home={renderedHome}
         dayOverview={taskOverview.summary}
+        farmSeasons={farmSeasons}
       />
       <AtlasPwaCoverPrompt />
     </>
