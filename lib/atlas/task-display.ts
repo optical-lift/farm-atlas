@@ -221,7 +221,25 @@ export function atlasTaskLocation(task: AtlasTaskCard) {
     || "Elm Farm";
 }
 
+export function atlasTaskContinuation(task: AtlasTaskCard) {
+  const latest = task.task_outcomes?.[0];
+  if (!latest || (latest.outcome !== "partial" && latest.outcome !== "blocked")) return "";
+
+  const outcomeLabel = latest.outcome === "partial" ? "Partly done" : "Problem found";
+  const reason = atlasCleanLabel(latest.blocker_reason || latest.note || "");
+  const normalizedReason = reason.toLowerCase();
+  const normalizedOutcome = outcomeLabel.toLowerCase();
+  return [
+    "Continued",
+    outcomeLabel,
+    reason && normalizedReason !== normalizedOutcome ? reason : "",
+  ].filter(Boolean).join(" · ");
+}
+
 export function atlasTaskDetail(task: AtlasTaskCard) {
+  const continuation = atlasTaskContinuation(task);
+  if (continuation) return continuation;
+
   if (atlasIsCropCycleTask(task)) {
     const crop = [atlasMetaString(task, "crop_variety"), atlasMetaString(task, "crop_label")].filter(Boolean).join(" ");
     const object = atlasTaskObjectLocation(task) || usableCollectionLocation(task);
