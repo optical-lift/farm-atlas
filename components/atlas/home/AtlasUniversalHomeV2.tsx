@@ -120,7 +120,7 @@ function HomeTimeRail({ home }: { home: AtlasUniversalHomeModel }) {
   const previousWeekEnd = addDaysIso(previousWeek, 6);
 
   return (
-    <section className={styles.timeRail} aria-label="Days in this week">
+    <section className={styles.timeRail} aria-label="Days in this week" data-atlas-home-time-rail="true">
       <div className={styles.days} aria-label="Open a day in this week">
         {days.map((day) => (
           <Link
@@ -177,11 +177,7 @@ function NeedsYou({ home }: { home: AtlasUniversalHomeModel }) {
   );
 }
 
-function FarmPulse({ home }: { home: AtlasUniversalHomeModel }) {
-  const todayIso = home.window.doneDate;
-  const todayCount = home.datedItems.filter((item) => item.date === todayIso && openDatedItem(item)).length;
-  const carryoverCount = home.datedItems.filter((item) => item.date < todayIso && openDatedItem(item)).length;
-
+function FarmPulse({ home, dayOverview }: { home: AtlasUniversalHomeModel; dayOverview: AtlasHomeDayOverview }) {
   return (
     <section className={styles.pulse} aria-labelledby="atlas-home-pulse-title">
       <div className={styles.pulseHead}>
@@ -189,8 +185,8 @@ function FarmPulse({ home }: { home: AtlasUniversalHomeModel }) {
         <Link href="/more">Deeper views ›</Link>
       </div>
       <div className={styles.pulseMetrics}>
-        <Link href={`/day?date=${encodeURIComponent(todayIso)}&view=work_order`}><b>{todayCount}</b><span>today</span></Link>
-        <Link href="/overview/week"><b>{carryoverCount}</b><span>carried</span></Link>
+        <Link href={`/day?date=${encodeURIComponent(home.window.doneDate)}&view=work_order`}><b>{dayOverview.openCount}</b><span>today&apos;s hand</span></Link>
+        <Link href="/overview/week"><b>{dayOverview.carryForwardCount}</b><span>carry forward</span></Link>
         <Link href="/more"><b>{home.metrics.farmCount}</b><span>farms</span></Link>
         <Link href="/bell?view=baseline"><b>{home.metrics.attentionCount}</b><span>known gaps</span></Link>
       </div>
@@ -268,64 +264,66 @@ export default function AtlasUniversalHome({ home, dayOverview }: AtlasUniversal
         />
 
         <div className={styles.home}>
-          <AtlasCard
-            variant="purple"
-            className={`${styles.hero} atlas-home-box atlas-home-box-purple atlas-home-task-hero atlas-task-controller atlas-daily-run-sheet atlas-route-sheet atlas-home-task-overview`}
-            ariaLabelledBy="atlas-today-title"
-          >
-            <Link href={heroHref} className={`${styles.heroHead} atlas-task-controller-head atlas-task-controller-head-link atlas-home-task-overview-head`} aria-label="Open today's full work lineup">
-              <div>
-                <span className="atlas-task-kicker">{coverLabel}</span>
-                <em className="atlas-season-label" id="atlas-today-title">{prettyDay(todayIso)}</em>
-              </div>
-              <span className="atlas-home-task-overview-status">
-                <b>{progressLabel}</b>
-                {dayOverview.carryForwardCount > 0 ? <em>{dayOverview.carryForwardCount} carry forward</em> : null}
-              </span>
-            </Link>
-
-            {home.moves.length ? (
-              <div className={`${styles.heroGrid} atlas-run-sheet-grid atlas-route-sheet-grid atlas-home-task-overview-grid`} data-universal-move-count={home.moves.length}>
-                {home.moves.map((move, index) => {
-                  const taskId = taskIdFromMoveKey(move.key);
-                  return (
-                    <article
-                      key={move.key}
-                      className={`${styles.heroMove} atlas-run-sheet-box atlas-route-sheet-box atlas-task-forward-box atlas-home-task-overview-card`}
-                      data-atlas-state={move.state}
-                      data-atlas-position={index === 0 ? "current" : index === 1 ? "next" : "later"}
-                    >
-                      <Link
-                        href={move.href}
-                        className="atlas-home-task-overview-card-body"
-                        data-single-task-id={taskId || undefined}
-                      >
-                        <small>{move.category}</small>
-                        <strong>{move.title}</strong>
-                        <span>{move.scopeLabel}{move.meta ? ` · ${move.meta}` : ""}</span>
-                        {move.detail ? <em>{move.detail}</em> : null}
-                      </Link>
-                      {index === 0 ? (
-                        <Link className="atlas-home-task-overview-action" href={move.href}>
-                          {move.state === "blocked" ? "Review" : "Finish"}
-                        </Link>
-                      ) : null}
-                    </article>
-                  );
-                })}
-              </div>
-            ) : (
-              <Link href={heroHref} className={`${styles.heroEmpty} atlas-home-task-overview-empty`}>
-                <strong>The day is clear</strong>
-                <em>Open Work to inspect the next planned day.</em>
+          <div className={styles.todayStack}>
+            <AtlasCard
+              variant="purple"
+              className={styles.hero}
+              ariaLabelledBy="atlas-today-title"
+            >
+              <Link href={heroHref} className={styles.heroHead} aria-label="Open today's full work lineup">
+                <div className={styles.heroIdentity}>
+                  <span>{coverLabel}</span>
+                  <em id="atlas-today-title">{prettyDay(todayIso)}</em>
+                </div>
+                <span className={styles.heroStatus}>
+                  <b>{progressLabel}</b>
+                  {dayOverview.carryForwardCount > 0 ? <em>{dayOverview.carryForwardCount} carry forward</em> : null}
+                </span>
               </Link>
-            )}
-          </AtlasCard>
 
-          <HomeTimeRail home={home} />
+              {home.moves.length ? (
+                <div className={styles.heroGrid} data-task-count={home.moves.length} data-atlas-home-task-board="true">
+                  {home.moves.map((move, index) => {
+                    const taskId = taskIdFromMoveKey(move.key);
+                    return (
+                      <article
+                        key={move.key}
+                        className={styles.heroMove}
+                        data-state={move.state}
+                        data-position={index === 0 ? "current" : index === 1 ? "next" : "later"}
+                      >
+                        <Link
+                          href={move.href}
+                          className={styles.heroMoveBody}
+                          data-single-task-id={taskId || undefined}
+                        >
+                          <small>{move.category}</small>
+                          <strong>{move.title}</strong>
+                          <span>{move.scopeLabel}{move.meta ? ` · ${move.meta}` : ""}</span>
+                          {move.detail ? <em>{move.detail}</em> : null}
+                        </Link>
+                        {index === 0 ? (
+                          <Link className={styles.heroAction} href={move.href}>
+                            {move.state === "blocked" ? "Review" : "Finish"}
+                          </Link>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Link href={heroHref} className={styles.heroEmpty}>
+                  <strong>The day is clear</strong>
+                  <em>Open Work to inspect the next planned day.</em>
+                </Link>
+              )}
+            </AtlasCard>
+
+            <HomeTimeRail home={home} />
+          </div>
 
           <NeedsYou home={home} />
-          <FarmPulse home={home} />
+          <FarmPulse home={home} dayOverview={dayOverview} />
         </div>
       </AtlasAppShell>
 
