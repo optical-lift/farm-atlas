@@ -44,7 +44,7 @@ test("The legacy four-box journal lens still speaks in bullet-journal marks and 
   assert.match(reader, /category: coverMark\[role\]/);
 });
 
-test("The legacy cover CSS remains available for journal surfaces", () => {
+test("The legacy cover CSS remains available for journal surfaces without styling Home", () => {
   const css = read("app/home-cover-v1.css");
   const layout = read("app/layout.tsx");
 
@@ -62,5 +62,5 @@ test("The legacy cover CSS remains available for journal surfaces", () => {
   assert.match(css, /background: var\(--atlas-purple-dark\) !important/);
   assert.match(css, /\.atlas-task-kicker,[\s\S]*\.atlas-task-date[\s\S]*display: none !important/);
   assert.match(layout, /home-cover-v1\.css/);
-  assert.match(layout, /home-task-overview\.css/);
+  assert.doesNotMatch(layout, /home-task-overview\.css/);
 });
