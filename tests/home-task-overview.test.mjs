@@ -21,7 +21,7 @@ test("the purple cover is a four-task overview in canonical work order", () => {
   assert.match(overview, /Next/);
   assert.match(overview, /Later/);
   assert.match(component, /atlas-home-task-overview-card/);
-  assert.match(component, />Finish</);
+  assert.match(component, /"Finish"/);
 });
 
 test("Home reports the bounded plan and leaves project movement in Projects", () => {
