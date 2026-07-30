@@ -10,6 +10,7 @@ import {
   AtlasCard,
   AtlasTopBar,
 } from "@/components/atlas/ui/AtlasPrimitives";
+import type { AtlasHomeFarmSeasonProfile } from "@/lib/atlas/home-farm-seasons";
 import type { AtlasUniversalDatedItem, AtlasUniversalHomeModel } from "@/lib/atlas/universal-home";
 import { fetchAtlasZoneRegistry, type AtlasRegistryZone } from "@/lib/atlas/zone-registry-client";
 
@@ -21,11 +22,15 @@ type AtlasHomeDayOverview = {
   dealtCount: number;
   openCount: number;
   carryForwardCount: number;
+  personalScope: boolean;
+  farmCount: number;
+  staffLaneCount: number;
 };
 
 type AtlasUniversalHomeProps = {
   home: AtlasUniversalHomeModel;
   dayOverview: AtlasHomeDayOverview;
+  farmSeasons: Record<string, AtlasHomeFarmSeasonProfile>;
 };
 
 type WeatherResponse = {
@@ -43,8 +48,12 @@ type DayRailItem = {
   attention: boolean;
 };
 
-const FIRST_KILLING_FREEZE_MONTH_INDEX = 10;
-const FIRST_KILLING_FREEZE_DAY = 1;
+type FarmFrostRunway = {
+  known: boolean;
+  days: number | null;
+  label: string | null;
+};
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function dateFromIso(value: string) {
@@ -118,23 +127,36 @@ function formatCount(value: number) {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.max(0, value || 0));
 }
 
-function frostRunway(todayIso: string) {
+function frostRunway(
+  todayIso: string,
+  profile: AtlasHomeFarmSeasonProfile | undefined,
+): FarmFrostRunway {
+  if (
+    !profile
+    || profile.frostStatus !== "known"
+    || !profile.frostBoundaryMonth
+    || !profile.frostBoundaryDay
+  ) {
+    return { known: false, days: null, label: null };
+  }
+
   const today = dateFromIso(todayIso);
   let boundary = new Date(
     today.getFullYear(),
-    FIRST_KILLING_FREEZE_MONTH_INDEX,
-    FIRST_KILLING_FREEZE_DAY,
+    profile.frostBoundaryMonth - 1,
+    profile.frostBoundaryDay,
     12,
   );
   if (boundary.getTime() < today.getTime()) {
     boundary = new Date(
       today.getFullYear() + 1,
-      FIRST_KILLING_FREEZE_MONTH_INDEX,
-      FIRST_KILLING_FREEZE_DAY,
+      profile.frostBoundaryMonth - 1,
+      profile.frostBoundaryDay,
       12,
     );
   }
   return {
+    known: true,
     days: Math.max(0, Math.ceil((boundary.getTime() - today.getTime()) / DAY_MS)),
     label: boundary.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
   };
@@ -207,35 +229,37 @@ function NeedsYou({ home }: { home: AtlasUniversalHomeModel }) {
   );
 }
 
-function TheFarms({ home }: { home: AtlasUniversalHomeModel }) {
-  const runway = frostRunway(home.window.doneDate);
-
+function TheFarms({
+  home,
+  farmSeasons,
+}: {
+  home: AtlasUniversalHomeModel;
+  farmSeasons: Record<string, AtlasHomeFarmSeasonProfile>;
+}) {
   return (
-    <section className={styles.farmsSection} aria-labelledby="atlas-home-farms-title">
-      <header className={styles.farmsHead}>
-        <div>
-          <span>Growing season</span>
-          <h2 id="atlas-home-farms-title">The farms</h2>
-        </div>
-        <small>{home.farms.length} {home.farms.length === 1 ? "farm" : "farms"}</small>
-      </header>
-
+    <section className={styles.farmsSection} aria-label="Farm seasons">
       <div className={styles.farmCards}>
         {home.farms.map((farm) => {
           const snapshot = farm.snapshot;
+          const season = farmSeasons[farm.farmId];
+          const runway = frostRunway(home.window.doneDate, season);
           const activePercent = snapshot.totalBeds > 0
             ? Math.min(100, Math.round((snapshot.growingBeds / snapshot.totalBeds) * 100))
             : 0;
+          const roleLabel = farm.role === "owner" ? "Stewarding" : "Working at";
+          const identityLine = season?.locationLabel
+            ? `${roleLabel} · ${season.locationLabel}`
+            : roleLabel;
           return (
             <article className={styles.farmCard} key={farm.farmId} data-has-growing-beds={snapshot.growingBeds > 0 ? "true" : "false"}>
               <header className={styles.farmCardHead}>
                 <div>
-                  <small>{farm.role === "owner" ? "Stewarding" : "Working at"}</small>
+                  <small>{identityLine}</small>
                   <h3>{farm.farmName}</h3>
                 </div>
-                <span className={styles.frostBadge}>
-                  <b>{runway.days}</b>
-                  <em>days to frost</em>
+                <span className={styles.frostBadge} data-frost-known={runway.known ? "true" : "false"}>
+                  <b>{runway.known ? runway.days : "?"}</b>
+                  <em>{runway.known ? "days to frost" : "frost date unknown"}</em>
                 </span>
               </header>
 
@@ -268,7 +292,7 @@ function TheFarms({ home }: { home: AtlasUniversalHomeModel }) {
 
               <footer className={styles.farmCardFoot}>
                 <span>{formatCount(snapshot.sowingsLogged)} sowings recorded this year</span>
-                <b>{runway.label} boundary</b>
+                <b>{runway.known ? `${runway.label} boundary` : "First season · frost unknown"}</b>
               </footer>
             </article>
           );
@@ -278,7 +302,7 @@ function TheFarms({ home }: { home: AtlasUniversalHomeModel }) {
   );
 }
 
-export default function AtlasUniversalHome({ home, dayOverview }: AtlasUniversalHomeProps) {
+export default function AtlasUniversalHome({ home, dayOverview, farmSeasons }: AtlasUniversalHomeProps) {
   const router = useRouter();
   const [weatherLabel, setWeatherLabel] = useState<string | null>(null);
   const [registryZones, setRegistryZones] = useState<AtlasRegistryZone[]>([]);
@@ -320,13 +344,27 @@ export default function AtlasUniversalHome({ home, dayOverview }: AtlasUniversal
   }
 
   const headerStatus = weatherLabel || `${home.metrics.movingCount} moving`;
-  const heroHref = home.activeFarm
-    ? `/day?date=${encodeURIComponent(todayIso)}&view=work_order`
-    : "/work/today";
-  const coverLabel = home.activeFarm ? `Today at ${home.activeFarm.farmName}` : "Today";
+  const multiFarmPersonal = dayOverview.personalScope && dayOverview.farmCount > 1;
+  const heroHref = multiFarmPersonal
+    ? "/work/today"
+    : home.activeFarm
+      ? `/day?date=${encodeURIComponent(todayIso)}&view=work_order`
+      : "/work/today";
+  const coverLabel = multiFarmPersonal
+    ? `Today across ${dayOverview.farmCount} farms`
+    : home.activeFarm
+      ? `Today at ${home.activeFarm.farmName}`
+      : "Today";
   const progressLabel = dayOverview.plannedTotal > 0
-    ? `${dayOverview.dealtCount} of ${dayOverview.plannedTotal} dealt with · ${dayOverview.openCount} open`
-    : "Day clear";
+    ? dayOverview.personalScope
+      ? `${dayOverview.dealtCount} of ${dayOverview.plannedTotal} personal tasks dealt with · ${dayOverview.openCount} open`
+      : `${dayOverview.dealtCount} of ${dayOverview.plannedTotal} dealt with · ${dayOverview.openCount} open`
+    : dayOverview.personalScope
+      ? "No personal tasks due"
+      : "Day clear";
+  const carryForwardLabel = dayOverview.carryForwardCount > 0
+    ? `${dayOverview.carryForwardCount}${dayOverview.personalScope ? " personal" : ""} carry forward`
+    : null;
 
   return (
     <>
@@ -361,7 +399,7 @@ export default function AtlasUniversalHome({ home, dayOverview }: AtlasUniversal
                 </div>
                 <span className={styles.heroStatus}>
                   <b>{progressLabel}</b>
-                  {dayOverview.carryForwardCount > 0 ? <em>{dayOverview.carryForwardCount} carry forward</em> : null}
+                  {carryForwardLabel ? <em>{carryForwardLabel}</em> : null}
                 </span>
               </Link>
 
@@ -369,12 +407,15 @@ export default function AtlasUniversalHome({ home, dayOverview }: AtlasUniversal
                 <div className={styles.heroGrid} data-task-count={home.moves.length} data-atlas-home-task-board="true">
                   {home.moves.map((move, index) => {
                     const taskId = taskIdFromMoveKey(move.key);
+                    const taskPosition = move.kind === "farm_task"
+                      ? index === 0 ? "current" : index === 1 ? "next" : "later"
+                      : "oversight";
                     return (
                       <article
                         key={move.key}
                         className={styles.heroMove}
                         data-state={move.state}
-                        data-position={index === 0 ? "current" : index === 1 ? "next" : "later"}
+                        data-position={taskPosition}
                       >
                         <Link
                           href={move.href}
@@ -386,7 +427,7 @@ export default function AtlasUniversalHome({ home, dayOverview }: AtlasUniversal
                           <span>{move.scopeLabel}{move.meta ? ` · ${move.meta}` : ""}</span>
                           {move.detail ? <em>{move.detail}</em> : null}
                         </Link>
-                        {index === 0 ? (
+                        {index === 0 && move.kind === "farm_task" ? (
                           <Link className={styles.heroAction} href={move.href}>
                             {move.state === "blocked" ? "Review" : "Finish"}
                           </Link>
@@ -397,7 +438,7 @@ export default function AtlasUniversalHome({ home, dayOverview }: AtlasUniversal
                 </div>
               ) : (
                 <Link href={heroHref} className={styles.heroEmpty}>
-                  <strong>The day is clear</strong>
+                  <strong>{dayOverview.personalScope ? "No personal work is due today" : "The day is clear"}</strong>
                   <em>Open Work to inspect the next planned day.</em>
                 </Link>
               )}
@@ -407,7 +448,7 @@ export default function AtlasUniversalHome({ home, dayOverview }: AtlasUniversal
           </div>
 
           <NeedsYou home={home} />
-          <TheFarms home={home} />
+          <TheFarms home={home} farmSeasons={farmSeasons} />
         </div>
       </AtlasAppShell>
 
