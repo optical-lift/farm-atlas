@@ -1,7 +1,8 @@
 import "server-only";
 
 import { atlasDayTaskCues, atlasDayTaskFamily } from "@/lib/atlas/day-route";
-import type { AtlasLivingDay, AtlasLivingDayTaskRef } from "@/lib/atlas/living-day-contract";
+import type { AtlasJournalTask } from "@/lib/atlas/journal-contract";
+import type { AtlasLivingDay } from "@/lib/atlas/living-day-contract";
 import {
   atlasMetadataValue,
   atlasMetaString,
@@ -51,7 +52,7 @@ function isOpenTask(card: AtlasTaskCard) {
     && !isQuietTask(card);
 }
 
-function isOpenTaskRef(task: AtlasLivingDayTaskRef) {
+function isOpenTaskRef(task: AtlasJournalTask) {
   return task.status === "open" || task.status === "blocked";
 }
 
@@ -119,13 +120,13 @@ function taskMove(
 }
 
 function taskRefMove(
-  task: AtlasLivingDayTaskRef,
+  task: AtlasJournalTask,
   farmId: string,
   farmName: string,
   index: number,
 ): AtlasUniversalMove {
   const state: AtlasUniversalMoveState = task.status === "blocked" ? "blocked" : "ready";
-  const family = titleCase(task.actionKey || task.taskType || task.workClass || "Work");
+  const family = titleCase(task.taskType || task.workClass || "Work");
   const effort = clean(task.workClass);
   const priority = clean(task.priority);
   const cue = effort && !["standard", "required", "manual"].includes(effort.toLowerCase())
@@ -141,7 +142,7 @@ function taskRefMove(
     title: task.title,
     scopeLabel: farmName,
     meta: cue,
-    detail: clean(task.blockerText),
+    detail: "",
     href: `/task-focus/${encodeURIComponent(task.taskId)}?returnTo=${encodeURIComponent("/")}`,
     date: task.dueDate,
     state,
