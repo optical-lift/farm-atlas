@@ -24,8 +24,8 @@ test("the purple cover is a four-task overview in canonical work order", () => {
   assert.match(component, /"Finish"/);
 });
 
-test("prepared task refs fill overview slots when the farm-card cache is incomplete", () => {
-  assert.match(overview, /AtlasLivingDayTaskRef/);
+test("prepared journal tasks fill overview slots when the farm-card cache is incomplete", () => {
+  assert.match(overview, /AtlasJournalTask/);
   assert.match(overview, /cardsById/);
   assert.match(overview, /taskRefMove/);
   assert.match(overview, /preparedOpen/);
