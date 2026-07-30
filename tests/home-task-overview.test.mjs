@@ -24,6 +24,13 @@ test("the purple cover is a four-task overview in canonical work order", () => {
   assert.match(component, /"Finish"/);
 });
 
+test("prepared task refs fill overview slots when the farm-card cache is incomplete", () => {
+  assert.match(overview, /AtlasLivingDayTaskRef/);
+  assert.match(overview, /cardsById/);
+  assert.match(overview, /taskRefMove/);
+  assert.match(overview, /preparedOpen/);
+});
+
 test("Home reports the bounded plan and leaves project movement in Projects", () => {
   assert.match(component, /dealt with/);
   assert.match(component, /carry forward/);
@@ -37,4 +44,14 @@ test("task cards show useful real task data without clipping every title", () =>
   assert.match(overview, /display\.location/);
   assert.match(css, /-webkit-line-clamp: unset/);
   assert.match(css, /atlas-home-task-overview-action/);
+  assert.match(css, /grid-template-rows: minmax\(0, 1fr\) auto/);
+  assert.match(css, /position: static !important/);
+});
+
+test("the task hero and compact week rail size to their real contents", () => {
+  assert.match(css, /\.atlas-home-task-overview[\s\S]*height: auto !important/);
+  assert.match(css, /grid-template-rows: auto auto !important/);
+  assert.match(css, /section\[aria-label="Days in this week"\][\s\S]*height: auto !important/);
+  assert.match(css, /section\[aria-label="Days in this week"\] > div:first-child[\s\S]*display: flex !important/);
+  assert.match(css, /section\[aria-labelledby="atlas-home-pulse-title"\][\s\S]*min-height: 0 !important/);
 });
