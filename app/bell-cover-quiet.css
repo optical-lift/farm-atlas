@@ -1,0 +1,78 @@
+/* Quiet journal-cover Bell treatment. The Bell remains visible without becoming a sticky-note overlay. */
+
+.atlas-bell-cover {
+  right: max(0px, env(safe-area-inset-right));
+  gap: 4px;
+}
+
+.atlas-bell-cover .atlas-bell-edge-tab,
+.atlas-bell-cover .atlas-while-away-slip {
+  box-shadow: 0 4px 12px rgba(42, 43, 66, 0.09);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.atlas-bell-cover .atlas-bell-edge-tab {
+  min-height: 36px;
+  border-right: 0;
+  background: rgba(247, 244, 233, 0.96);
+  padding: 5px 8px 5px 11px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+.atlas-bell-cover .atlas-bell-edge-tab > span {
+  font-size: 14px;
+}
+
+.atlas-bell-cover .atlas-bell-edge-tab > b {
+  min-width: 19px;
+  height: 19px;
+  font-size: 8px;
+}
+
+.atlas-bell-cover .atlas-while-away-slip {
+  position: relative;
+  width: min(190px, calc(100vw - 24px));
+  gap: 1px;
+  border: 1px solid rgba(95, 86, 139, 0.16);
+  border-right: 0;
+  border-radius: 14px 0 0 14px;
+  background: rgba(247, 244, 233, 0.97);
+  color: #31324b;
+  padding: 8px 11px 9px 23px;
+  transform: none;
+}
+
+.atlas-bell-cover .atlas-while-away-slip::before {
+  content: "";
+  position: absolute;
+  top: 11px;
+  left: 10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #d7da4f;
+}
+
+.atlas-bell-cover .atlas-while-away-slip > span {
+  color: #77728f;
+  font-size: 7px;
+  line-height: 1.05;
+  letter-spacing: 0.12em;
+}
+
+.atlas-bell-cover .atlas-while-away-slip > strong {
+  font-size: 11px;
+  line-height: 1.15;
+}
+
+.atlas-bell-cover .atlas-while-away-slip > em {
+  display: none;
+}
+
+@media (max-width: 430px) {
+  .atlas-bell-cover .atlas-while-away-slip {
+    width: min(176px, calc(100vw - 18px));
+  }
+}
