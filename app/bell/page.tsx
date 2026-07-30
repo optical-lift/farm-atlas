@@ -28,7 +28,13 @@ function eventLabel(item: AtlasBellItem) {
   return "Farm change";
 }
 
-function BellItemRow({ item, refresh }: { item: AtlasBellItem; refresh: () => Promise<void> }) {
+function BellItemRow({
+  item,
+  onAcknowledged,
+}: {
+  item: AtlasBellItem;
+  onAcknowledged: (item: AtlasBellItem) => void;
+}) {
   const [saving, setSaving] = useState(false);
 
   async function acknowledge() {
@@ -36,7 +42,7 @@ function BellItemRow({ item, refresh }: { item: AtlasBellItem; refresh: () => Pr
     try {
       setSaving(true);
       await updateAtlasBell({ action: "acknowledge", eventId: item.eventId });
-      await refresh();
+      onAcknowledged(item);
     } finally {
       setSaving(false);
     }
@@ -98,6 +104,17 @@ function AtlasBellPageContent() {
     void load();
   }, [load]);
 
+  function acknowledgeLocal(item: AtlasBellItem) {
+    setBell((current) => current ? {
+      ...current,
+      badgeCount: item.requiresAction ? Math.max(0, current.badgeCount - 1) : current.badgeCount,
+      unreadCount: item.unread ? Math.max(0, current.unreadCount - 1) : current.unreadCount,
+      items: current.items.map((entry) => entry.eventId === item.eventId
+        ? { ...entry, unread: false, acknowledged: true }
+        : entry),
+    } : current);
+  }
+
   const items = useMemo(
     () => whileAwayOnly ? (bell?.items ?? []).filter((item) => item.whileAway) : bell?.items ?? [],
     [bell, whileAwayOnly],
@@ -134,7 +151,9 @@ function AtlasBellPageContent() {
           ) : null}
 
           <section className="atlas-bell-list" aria-label="Bell entries">
-            {items.map((item) => <BellItemRow key={item.eventId} item={item} refresh={load} />)}
+            {items.map((item) => (
+              <BellItemRow key={item.eventId} item={item} onAcknowledged={acknowledgeLocal} />
+            ))}
           </section>
 
           <footer className="atlas-bell-footer">
