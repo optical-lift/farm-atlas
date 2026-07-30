@@ -45,7 +45,7 @@ export default function AtlasContextualAppFrame() {
     { key: "home", label: "Home", href: "/" },
     { key: "work", label: "Work", href: workHref },
     { key: "places", label: "Places", href: "/zones" },
-    { key: "projects", label: "Projects", href: "/#portfolio-matrix" },
+    { key: "projects", label: "Projects", href: "/#work-board" },
     { key: "more", label: "More", href: "/more" },
   ];
 
