@@ -30,15 +30,15 @@ const logoutButtonStyle: CSSProperties = {
 
 const logoutOnlyStyle: CSSProperties = {
   position: "fixed",
-  top: "7px",
-  right: "max(9px, env(safe-area-inset-right))",
-  zIndex: 1100,
+  right: "max(12px, env(safe-area-inset-right))",
+  bottom: "max(6px, env(safe-area-inset-bottom))",
+  zIndex: 90,
   margin: 0,
   borderRadius: "999px",
   background: "rgba(248, 247, 242, 0.9)",
-  color: "#555a86",
+  color: "#666a70",
   padding: "0 3px",
-  boxShadow: "0 2px 8px rgba(47, 48, 66, 0.08)",
+  boxShadow: "0 -1px 6px rgba(47, 48, 66, 0.06)",
 };
 
 function LogoutForm({ standalone = false }: { standalone?: boolean }) {
