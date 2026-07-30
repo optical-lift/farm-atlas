@@ -65,8 +65,9 @@ test("Day Route keeps Next and overview together, preserves completion echoes, a
   assert.match(adapter, /atlasDayTaskFamily/);
   assert.match(adapter, /atlasDayTaskCues/);
   assert.match(adapter, /atlasDayRouteState/);
-  assert.match(adapter, /durationLabel/);
-  assert.match(adapter, /return `\$\{rounded\} hr`/);
+  assert.match(adapter, /workClass/);
+  assert.doesNotMatch(adapter, /durationLabel/);
+  assert.doesNotMatch(adapter, /estimated_minutes|duration_minutes/);
   assert.match(css, /\.atlas-day-view-toggle/);
   assert.match(css, /\.atlas-day-route-current/);
   assert.match(css, /\.atlas-day-route-care/);
