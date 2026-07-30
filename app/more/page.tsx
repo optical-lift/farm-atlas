@@ -29,7 +29,7 @@ export default async function AtlasMorePage() {
             <span className="atlas-phone-kicker">Atlas</span>
             <span className="atlas-phone-title">More</span>
           </Link>
-          <span className="atlas-weather-line">Other routes</span>
+          <span aria-hidden="true" />
           <Link href="/" className="atlas-note-plus" aria-label="Return home">×</Link>
         </header>
 
@@ -38,6 +38,8 @@ export default async function AtlasMorePage() {
           <h1>Controls and deeper views</h1>
           <p>Open the parts of Atlas that do not need a permanent place in the app dock.</p>
         </section>
+
+        <div id="atlas-more-account-slot" />
 
         <nav className="atlas-more-page__list" aria-label="More Atlas destinations">
           {destinations.map((destination) => (

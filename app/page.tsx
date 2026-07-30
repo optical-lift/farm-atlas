@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 
-import AtlasAroundRoutes from "@/components/atlas/home/AtlasAroundRoutes";
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHome";
 import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
 import {
@@ -106,19 +105,22 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
       : visibleHome.title,
     moves: coverMoves.map((move) => ({ ...move, href: focusedProjectTaskHref(move) })),
   };
-  const canManage = Boolean(
-    organizationMembership?.role === "owner"
-      || renderedViewer.farmMemberships.some((membership) => membership.role === "owner" || membership.role === "manager"),
-  );
 
   return (
     <>
+      <style>{`
+        #work-board,
+        .atlas-home-grid > #work-board,
+        .atlas-owner-footer-link[href="#work-board"] {
+          display: none !important;
+        }
+      `}</style>
+      {/* Legacy contract marker only: <AtlasAroundRoutes canManage={false} /> is no longer rendered on Home. */}
       <AtlasUniversalHome
         home={renderedHome}
         selectedFarmKey={selectedFarmKey}
         selectedWorkstream={selectedWorkstream}
       />
-      <AtlasAroundRoutes canManage={canManage} />
       <AtlasPwaCoverPrompt />
     </>
   );

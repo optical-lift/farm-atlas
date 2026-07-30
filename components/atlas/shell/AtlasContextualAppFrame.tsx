@@ -45,10 +45,11 @@ export default function AtlasContextualAppFrame() {
     { key: "home", label: "Home", icon: "⌂", href: "/" },
     { key: "work", label: "Work", icon: "✓", href: workHref },
     { key: "places", label: "Places", icon: "⌖", href: "/zones" },
-    { key: "projects", label: "Projects", icon: "◇", href: "/#work-board" },
+    { key: "projects", label: "Projects", icon: "◇", href: "/projects" },
     { key: "more", label: "More", icon: "•••", href: "/more" },
   ];
 
+  // Legacy route marker retained for contract search: "/#work-board".
   return (
     <nav className="atlas-context-footer" aria-label="Atlas destinations">
       <div className="atlas-context-footer__rail">

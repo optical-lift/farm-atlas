@@ -17,6 +17,7 @@
   .atlas-overview-page-shell {
     min-height: 100svh !important;
     padding: 0 !important;
+    overflow-y: visible !important;
   }
 
   .atlas-phone,
@@ -29,11 +30,16 @@
     border-right: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+    overflow-x: clip !important;
+    overflow-y: visible !important;
   }
 
   .atlas-phone-top,
   .atlas-topbar,
   .atlas-dashboard-top {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 920 !important;
     border-radius: 0 !important;
   }
 }
