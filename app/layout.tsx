@@ -79,6 +79,7 @@ import "./weed-card-grazer.css";
 import "./task-day-set-aside.css";
 import "./task-structured-unfinished.css";
 import "./day-consequence-timeline.css";
+import "./day-overdue-quiet.css";
 import "./owner-operator-mode.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
