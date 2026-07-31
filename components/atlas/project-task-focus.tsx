@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import ProjectReviewTaskFocus from "@/components/atlas/portfolio/ProjectReviewTaskFocus";
 import AtlasTrail from "@/components/atlas/trail/AtlasTrail";
 import type { AtlasProjectTaskFocus } from "@/lib/atlas/portfolio";
 import { atlasTrailCurrentNode } from "@/lib/atlas/trail";
@@ -28,7 +29,7 @@ function titleCase(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export default function ProjectTaskFocus({ focus, returnTo }: Props) {
+function OrdinaryProjectTaskFocus({ focus, returnTo }: Props) {
   const [saving, setSaving] = useState<Outcome | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
@@ -181,4 +182,11 @@ export default function ProjectTaskFocus({ focus, returnTo }: Props) {
       </section>
     </main>
   );
+}
+
+export default function ProjectTaskFocus(props: Props) {
+  if (props.focus.task.taskType === "project_review" || props.focus.task.metadata?.task_style === "project_review") {
+    return <ProjectReviewTaskFocus {...props} />;
+  }
+  return <OrdinaryProjectTaskFocus {...props} />;
 }
