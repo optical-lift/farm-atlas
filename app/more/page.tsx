@@ -14,6 +14,7 @@ export default async function AtlasMorePage() {
   const destinations = [
     { label: "Bell", detail: "Future gaps, handoffs and meaningful farm movement", href: "/bell" },
     { label: "Production", detail: "Crop cycles and production state", href: "/production" },
+    { label: "Seed inventory", detail: "Verified counts, freshness and crop commitments", href: "/inventory/seeds" },
     ...(canManage ? [
       { label: "People + roles", detail: "Farm membership and authority", href: "/owner/members" },
       { label: "Farm management", detail: "Blockers, assignment and schedule risk", href: "/manage" },
