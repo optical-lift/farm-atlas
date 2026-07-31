@@ -12,6 +12,7 @@ import GerminationFocusPage from "./GerminationFocusPage";
 import GuestReadinessFocusPage, { type GuestReadinessRoom } from "./GuestReadinessFocusPage";
 import HarvestCutFocusPage from "./HarvestCutFocusPage";
 import HarvestWatchFocusPage from "./HarvestWatchFocusPage";
+import MowingFocusPage, { type MowingFocusTask } from "./MowingFocusPage";
 import SowingFocusPage, { type ProductionSowingTask } from "./SowingFocusPage";
 import "./focused-task-only.css";
 
@@ -80,6 +81,28 @@ type GuestRoomState = {
   note?: string | null;
 };
 
+type MowingStateRow = {
+  subject_id?: string | null;
+  state?: string | null;
+  warning_at?: string | null;
+  due_at?: string | null;
+  failure_at?: string | null;
+};
+
+type MowingObjectRow = {
+  label?: string | null;
+  zone_id?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+type MowingAreaRow = {
+  status?: string | null;
+  last_mowed_at?: string | null;
+  last_observed_at?: string | null;
+  next_check_date?: string | null;
+  note?: string | null;
+};
+
 const SAFE_RETURN_PATHS = new Set([
   "/",
   "/owner",
@@ -109,6 +132,12 @@ function text(value: unknown) {
 
 function truthy(value: unknown) {
   return value === true || value === "true" || value === "yes" || value === "1" || value === 1;
+}
+
+function numberOrNull(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  return null;
 }
 
 function firstValue(value: string | string[] | undefined) {
@@ -158,6 +187,12 @@ function isCropHarvestTask(task: TaskRow) {
 function isGuestReadinessTask(task: TaskRow) {
   return task.task_type === "guest_readiness_round"
     && (truthy(task.metadata?.clock_managed) || text(task.metadata?.task_style) === "guest_readiness_round");
+}
+
+function isMowingTask(task: TaskRow) {
+  return task.task_type === "mowing"
+    && text(task.metadata?.task_style) === "mowing_round"
+    && truthy(task.metadata?.clock_managed);
 }
 
 function isProductionSowingTask(task: TaskRow) {
@@ -232,12 +267,65 @@ async function loadGuestReadinessRooms(taskId: string): Promise<GuestReadinessRo
     .map(({ stableKey: _stableKey, ...room }) => room);
 }
 
-async function canCloseGuestRooms(task: TaskRow) {
+async function canMakeManagementDecision(task: TaskRow) {
   const [operatorContext, session] = await Promise.all([readAtlasOwnerOperatorContext(), getAtlasSession()]);
   const role = operatorContext?.isOperating && operatorContext.effective.farmId === task.farm_id
     ? operatorContext.effective.farmRole
     : session?.memberships.find((membership) => membership.farmId === task.farm_id)?.role ?? null;
   return role === "owner" || role === "manager";
+}
+
+async function loadMowingFocus(task: TaskRow): Promise<MowingFocusTask | null> {
+  const stateId = text(task.metadata?.rhythm_state_id);
+  if (!stateId) return null;
+
+  const { data: stateData, error: stateError } = await atlasSupabase
+    .schema("atlas").from("rhythm_state")
+    .select("subject_id, state, warning_at, due_at, failure_at")
+    .eq("id", stateId).limit(1).maybeSingle();
+  if (stateError) throw new Error(stateError.message);
+  const state = stateData as MowingStateRow | null;
+  const objectId = text(state?.subject_id);
+  if (!objectId) return null;
+
+  const [{ data: objectData, error: objectError }, { data: areaData, error: areaError }] = await Promise.all([
+    atlasSupabase.schema("atlas").from("growing_objects").select("label, zone_id, metadata").eq("id", objectId).limit(1).maybeSingle(),
+    atlasSupabase.schema("atlas").from("mowing_area_state").select("status, last_mowed_at, last_observed_at, next_check_date, note").eq("object_id", objectId).limit(1).maybeSingle(),
+  ]);
+  if (objectError) throw new Error(objectError.message);
+  if (areaError) throw new Error(areaError.message);
+  const object = objectData as MowingObjectRow | null;
+  const area = areaData as MowingAreaRow | null;
+  if (!object) return null;
+
+  let zoneLabel = text(object.metadata?.zone_label) || "Elm Farm";
+  const zoneId = text(object.zone_id);
+  if (zoneId) {
+    const { data: zone, error: zoneError } = await atlasSupabase.schema("atlas").from("zones").select("label").eq("id", zoneId).limit(1).maybeSingle();
+    if (zoneError) throw new Error(zoneError.message);
+    zoneLabel = text((zone as { label?: string | null } | null)?.label) || zoneLabel;
+  }
+
+  return {
+    id: task.id,
+    title: task.title,
+    dueDate: task.due_date,
+    routeLabel: text(object.label) || text(task.metadata?.display_subject) || "Mowing route",
+    zoneLabel,
+    equipmentGroup: text(object.metadata?.equipment_group) || text(task.metadata?.equipment_group) || null,
+    targetCutHeightInches: numberOrNull(object.metadata?.target_cut_height_inches ?? task.metadata?.target_cut_height_inches),
+    rhythmState: text(state?.state) || "uninitialized",
+    warningAt: text(state?.warning_at) || null,
+    dueAt: text(state?.due_at) || null,
+    failureAt: text(state?.failure_at) || null,
+    areaStatus: text(area?.status) || "unassessed",
+    lastMowedAt: text(area?.last_mowed_at) || null,
+    lastObservedAt: text(area?.last_observed_at) || null,
+    nextCheckDate: text(area?.next_check_date) || null,
+    currentNote: text(area?.note) || null,
+    canCloseRoute: await canMakeManagementDecision(task),
+    returnTo: null,
+  };
 }
 
 async function loadProductionSowingTask(task: TaskRow): Promise<ProductionSowingTask | null> {
@@ -373,7 +461,7 @@ export default async function TaskFocusPage({ params, searchParams }: { params: 
   }
 
   if (isGuestReadinessTask(task)) {
-    const [rooms, canCloseRooms] = await Promise.all([loadGuestReadinessRooms(task.id), canCloseGuestRooms(task)]);
+    const [rooms, canCloseRooms] = await Promise.all([loadGuestReadinessRooms(task.id), canMakeManagementDecision(task)]);
     if (!rooms.length) notFound();
     return <GuestReadinessFocusPage task={{
       id: task.id,
@@ -385,6 +473,12 @@ export default async function TaskFocusPage({ params, searchParams }: { params: 
       initialAcceptance: truthy(task.metadata?.initial_guest_readiness_acceptance),
       returnTo,
     }} />;
+  }
+
+  if (isMowingTask(task)) {
+    const mowingTask = await loadMowingFocus(task);
+    if (!mowingTask) notFound();
+    return <MowingFocusPage task={{ ...mowingTask, returnTo: returnTo || "/collections/mowing" }} />;
   }
 
   if (isHarvestWatchTask(task) || isCropHarvestTask(task)) {
