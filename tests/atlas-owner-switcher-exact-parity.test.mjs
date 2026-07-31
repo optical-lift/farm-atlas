@@ -54,7 +54,7 @@ test("switched farm-hand Home uses the effective Living Day instead of the Owner
   const page = read("app/page.tsx");
   const reader = read("lib/atlas/switched-account-home-overview.ts");
 
-  assert.match(page, /operatorContext\?\.effective\.farmRole === "farm_hand"/);
+  assert.match(page, /operatorContext\?\.isOperating[\s\S]*operatorContext\.effective\.farmRole === "farm_hand"/);
   assert.match(page, /readAtlasSwitchedFarmHandHomeOverview/);
   assert.match(reader, /owner_operator_home_day_v1/);
   assert.match(reader, /p_effective_membership_id: effectiveMembershipId/);
