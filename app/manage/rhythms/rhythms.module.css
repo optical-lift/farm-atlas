@@ -1,0 +1,381 @@
+.shell,
+.frame {
+  background: #fbf9f1;
+}
+
+.page {
+  display: grid;
+  gap: 16px;
+  padding: 14px 12px calc(24px + var(--atlas-context-footer-height));
+}
+
+.back {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(92, 87, 121, 0.16);
+  border-radius: 999px;
+  background: #fffdf7;
+  color: #555078;
+  padding: 0 12px;
+  font-size: 9px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.farmTabs {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 1px 1px 2px;
+  scrollbar-width: none;
+}
+
+.farmTabs::-webkit-scrollbar {
+  display: none;
+}
+
+.farmTabs a {
+  flex: 0 0 auto;
+  border: 1px solid rgba(100, 94, 125, 0.14);
+  border-radius: 999px;
+  background: #fffdf7;
+  color: #77736d;
+  padding: 8px 12px;
+  font-size: 9px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.farmTabs a[aria-current="page"] {
+  border-color: rgba(113, 105, 161, 0.3);
+  background: #eeedf6;
+  color: #57517e;
+}
+
+.intro {
+  border: 1px solid rgba(98, 92, 118, 0.11);
+  border-radius: 22px;
+  background: #fffdf7;
+  padding: 17px;
+}
+
+.intro span {
+  display: block;
+  color: #8a82b6;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.intro h1 {
+  margin: 6px 0 0;
+  color: #30324a;
+  font-size: 25px;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.intro p {
+  max-width: 620px;
+  margin: 11px 0 0;
+  color: #6f7068;
+  font-size: 10.5px;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.groups,
+.group,
+.cards {
+  display: grid;
+  gap: 10px;
+}
+
+.group {
+  gap: 9px;
+}
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.groupHead h2 {
+  margin: 0;
+  color: #30324a;
+  font-size: 19px;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.groupHead span {
+  min-width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #efedf5;
+  color: #5d5882;
+  padding: 0 7px;
+  font-size: 8px;
+  font-weight: 950;
+}
+
+.cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rhythmCard {
+  min-width: 0;
+  border: 1px solid rgba(95, 91, 111, 0.12);
+  border-radius: 21px;
+  background: #fffdf7;
+  padding: 14px;
+  box-shadow: 0 8px 22px rgba(58, 46, 30, 0.03);
+}
+
+.rhythmCard[data-state="due"],
+.rhythmCard[data-state="fallen"] {
+  border-color: rgba(156, 112, 103, 0.26);
+}
+
+.rhythmCard[data-state="warning"] {
+  border-color: rgba(179, 159, 80, 0.24);
+}
+
+.rhythmCard[data-state="paused"] {
+  opacity: 0.76;
+}
+
+.cardHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+}
+
+.cardHead > div {
+  min-width: 0;
+}
+
+.cardHead small {
+  display: block;
+  color: #8881b3;
+  font-size: 7.5px;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.cardHead h3 {
+  margin: 6px 0 0;
+  color: #30324a;
+  font-size: 16px;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+
+.cardHead > span {
+  max-width: 92px;
+  border-radius: 999px;
+  background: #efedf5;
+  color: #5c577e;
+  padding: 7px 9px;
+  text-align: center;
+  font-size: 7.5px;
+  line-height: 1.1;
+  font-weight: 950;
+}
+
+.rhythmCard[data-state="due"] .cardHead > span,
+.rhythmCard[data-state="fallen"] .cardHead > span {
+  background: #f3e9e5;
+  color: #77584f;
+}
+
+.why {
+  margin: 12px 0 0;
+  color: #71726a;
+  font-size: 9px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.boundaries {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.boundaries span {
+  border-radius: 999px;
+  background: #f5f2e9;
+  color: #6e6f67;
+  padding: 6px 8px;
+  font-size: 7.5px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.workNote {
+  margin: 10px 0 0;
+  border-radius: 13px;
+  background: #eeedf6;
+  color: #5c587a;
+  padding: 8px 10px;
+  font-size: 8px;
+  line-height: 1.25;
+  font-weight: 850;
+}
+
+.controls {
+  margin-top: 12px;
+  border-top: 1px solid rgba(87, 84, 102, 0.08);
+  padding-top: 10px;
+}
+
+.controls summary {
+  cursor: pointer;
+  color: #57527e;
+  font-size: 8.5px;
+  font-weight: 950;
+}
+
+.controlBody {
+  display: grid;
+  gap: 10px;
+  padding-top: 11px;
+}
+
+.controlBody label,
+.revision label {
+  display: grid;
+  gap: 5px;
+}
+
+.controlBody label > span,
+.revision label > span {
+  color: #77786f;
+  font-size: 7.5px;
+  font-weight: 950;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.controlBody textarea,
+.revision input {
+  width: 100%;
+  border: 1px solid rgba(93, 88, 113, 0.17);
+  border-radius: 13px;
+  background: #fffefa;
+  color: #30324a;
+  padding: 10px;
+  font: inherit;
+  font-size: 10px;
+}
+
+.controlBody textarea {
+  resize: vertical;
+}
+
+.controlButtons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.controlButtons button,
+.revision > button {
+  min-height: 38px;
+  border: 1px solid rgba(94, 88, 124, 0.18);
+  border-radius: 13px;
+  background: #f1eff7;
+  color: #57517d;
+  padding: 8px;
+  font-size: 8px;
+  line-height: 1.15;
+  font-weight: 950;
+}
+
+.controlButtons button:disabled,
+.revision > button:disabled {
+  opacity: 0.5;
+}
+
+.revision {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  border-radius: 15px;
+  background: #f8f5ec;
+  padding: 10px;
+}
+
+.revision > button {
+  grid-column: 1 / -1;
+}
+
+.scopeNote,
+.message {
+  margin: 0;
+  color: #787970;
+  font-size: 7.8px;
+  line-height: 1.35;
+  font-weight: 750;
+}
+
+.message {
+  color: #5b5681;
+  font-weight: 900;
+}
+
+.empty {
+  margin: 0;
+  border: 1px solid rgba(98, 92, 118, 0.11);
+  border-radius: 20px;
+  background: #fffdf7;
+  color: #71726a;
+  padding: 18px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+@media (max-width: 680px) {
+  .page {
+    gap: 13px;
+    padding: 11px 10px calc(20px + var(--atlas-context-footer-height));
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 380px) {
+  .page {
+    padding-inline: 8px;
+  }
+
+  .intro,
+  .rhythmCard {
+    padding: 13px;
+  }
+
+  .revision {
+    grid-template-columns: 1fr;
+  }
+
+  .revision > button {
+    grid-column: auto;
+  }
+}
