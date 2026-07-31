@@ -31,10 +31,13 @@ test("every day in the current Monday-through-Sunday rail opens its Living Day",
   assert.match(home, /data-atlas-home-time-rail="true"/);
 });
 
-test("Home is a task cover followed by Needs you and untitled farm cards", () => {
+test("Home is an unresolved-work cover followed by Needs you and untitled farm cards", () => {
   assert.match(home, /Today at|Today across/);
   assert.match(home, /dealt with/);
-  assert.match(home, /carry forward/);
+  assert.match(home, /carryForwardCount/);
+  assert.match(home, /hasCarryForward/);
+  assert.match(home, /overdueLabel/);
+  assert.match(home, /tasks"} overdue/);
   assert.match(home, /Needs you/);
   assert.match(home, /<TheFarms home=\{home\} farmSeasons=\{farmSeasons\} \/>/);
   assert.doesNotMatch(home, />The farms</);

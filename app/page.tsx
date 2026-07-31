@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHomeV2";
 import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
+import { withAtlasHomeCarryForward } from "@/lib/atlas/home-carry-forward";
 import { readAtlasHomeFarmSeasonProfiles } from "@/lib/atlas/home-farm-seasons";
 import { readAtlasOperatorHomeTaskOverview } from "@/lib/atlas/home-task-overview";
 import {
@@ -89,12 +90,13 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
       && selectedMembershipId,
   );
 
-  const [taskOverview, farmSeasons] = await Promise.all([
+  const [baseTaskOverview, farmSeasons] = await Promise.all([
     switchedFarmHand && selectedMembershipId
       ? readAtlasSwitchedFarmHandHomeOverview(visibleHome, selectedMembershipId)
       : readAtlasOperatorHomeTaskOverview(visibleHome),
     readAtlasHomeFarmSeasonProfiles(visibleFarms.map((farm) => farm.farmId)),
   ]);
+  const taskOverview = withAtlasHomeCarryForward(visibleHome, baseTaskOverview);
   const renderedViewer = visibleHome.viewer;
   const organizationMembership = organizationMembershipForViewer(renderedViewer);
   const organizationPortal = Boolean(

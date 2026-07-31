@@ -355,15 +355,19 @@ export default function AtlasUniversalHome({ home, dayOverview, farmSeasons }: A
     : home.activeFarm
       ? `Today at ${home.activeFarm.farmName}`
       : "Today";
+  const hasCarryForward = dayOverview.carryForwardCount > 0;
+  const overdueLabel = `${dayOverview.carryForwardCount}${dayOverview.personalScope ? " personal" : ""} ${dayOverview.carryForwardCount === 1 ? "task" : "tasks"} overdue`;
   const progressLabel = dayOverview.plannedTotal > 0
     ? dayOverview.personalScope
       ? `${dayOverview.dealtCount} of ${dayOverview.plannedTotal} personal tasks dealt with · ${dayOverview.openCount} open`
       : `${dayOverview.dealtCount} of ${dayOverview.plannedTotal} dealt with · ${dayOverview.openCount} open`
-    : dayOverview.personalScope
-      ? "No personal tasks due"
-      : "Day clear";
-  const carryForwardLabel = dayOverview.carryForwardCount > 0
-    ? `${dayOverview.carryForwardCount}${dayOverview.personalScope ? " personal" : ""} carry forward`
+    : hasCarryForward
+      ? overdueLabel
+      : dayOverview.personalScope
+        ? "No personal tasks due"
+        : "Day clear";
+  const carryForwardLabel = dayOverview.plannedTotal > 0 && hasCarryForward
+    ? overdueLabel
     : null;
 
   return (
@@ -438,8 +442,8 @@ export default function AtlasUniversalHome({ home, dayOverview, farmSeasons }: A
                 </div>
               ) : (
                 <Link href={heroHref} className={styles.heroEmpty}>
-                  <strong>{dayOverview.personalScope ? "No personal work is due today" : "The day is clear"}</strong>
-                  <em>Open Work to inspect the next planned day.</em>
+                  <strong>{hasCarryForward ? overdueLabel : dayOverview.personalScope ? "No personal work is due today" : "The day is clear"}</strong>
+                  <em>{hasCarryForward ? "Open the day overview to work through the oldest unfinished tasks." : "Open Work to inspect the next planned day."}</em>
                 </Link>
               )}
             </AtlasCard>
