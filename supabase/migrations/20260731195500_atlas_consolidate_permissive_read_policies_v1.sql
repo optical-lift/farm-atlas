@@ -55,7 +55,7 @@ BEGIN
         expected.table_name, expected.policy_name;
     END IF;
 
-    normalized_qual := regexp_replace(current_policy.qual, E'\\s+', ' ', 'g');
+    normalized_qual := regexp_replace(current_policy.qual, '[[:space:]]+', ' ', 'g');
     IF normalized_qual <> expected.expected_qual THEN
       RAISE EXCEPTION 'Reviewed Atlas policy %.% has drifted: %',
         expected.table_name, expected.policy_name, normalized_qual;
