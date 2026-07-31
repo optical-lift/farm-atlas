@@ -24,8 +24,8 @@ test("germination cards record biological observations in the selected worker co
   assert.doesNotMatch(route, /SUPABASE_SERVICE_ROLE_KEY|atlasSupabase/);
 
   assert.match(focus, /"Beginning"/);
-  assert.match(focus, /"Failed or uncertain"/);
-  assert.match(focus, /"Problem found"/);
+  assert.match(focus, /Failed or uncertain/);
+  assert.match(focus, /Problem found/);
   assert.match(focus, /Send to Owner/);
   assert.match(focus, /Atlas advanced the crop/);
 
