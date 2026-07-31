@@ -2,6 +2,7 @@
 
 import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
+import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import StructuredUnfinishedControl from "@/components/atlas/structured-unfinished-control";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
@@ -20,6 +21,12 @@ function isWeedTask(task: AtlasTaskCard) {
     || /^weed\b/i.test(task.title.trim());
 }
 
+function isSeedInventoryTask(task: AtlasTaskCard) {
+  return task.task_type === "seed_inventory_recount"
+    || task.action_key === "recount_seed_inventory"
+    || task.metadata?.task_style === "seed_inventory_recount";
+}
+
 function isNetworkInputsTask(task: AtlasTaskCard) {
   return task.metadata?.network_input_research === true
     || task.metadata?.network_input_master_task === true
@@ -30,6 +37,7 @@ function isNetworkInputsTask(task: AtlasTaskCard) {
 
 export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
+  if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
   return (
     <>
