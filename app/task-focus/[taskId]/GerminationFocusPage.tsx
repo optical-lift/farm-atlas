@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type GerminationOutcome = "thin" | "on_target" | "patch";
+type GerminationAction = "not_yet" | "beginning" | "germinated" | "failed_or_uncertain" | "problem_found";
+type GerminationIssueAction = Extract<GerminationAction, "failed_or_uncertain" | "problem_found">;
 
 type GerminationTask = {
   id: string;
@@ -127,8 +129,17 @@ function containerSummary(metadata: Record<string, unknown>) {
   return count && count > 1 ? `${count} × ${kind}` : kind;
 }
 
+function resultMessage(action: GerminationAction, nextDate?: string) {
+  if (action === "not_yet") return `Not yet recorded. Check again ${nextDate ?? "tomorrow"}.`;
+  if (action === "beginning") return `Beginning to germinate recorded. Check again ${nextDate ?? "tomorrow"}.`;
+  if (action === "germinated") return "Germination recorded. Atlas advanced the crop.";
+  return "Returned to the Owner for review.";
+}
+
 export default function GerminationFocusPage({ task }: { task: GerminationTask }) {
   const [outcomeOpen, setOutcomeOpen] = useState(false);
+  const [issueAction, setIssueAction] = useState<GerminationIssueAction | null>(null);
+  const [issueNote, setIssueNote] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
@@ -197,19 +208,19 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
     return () => { active = false; };
   }, [task.id]);
 
-  async function submit(action: "not_yet" | "germinated", spacingOutcome?: GerminationOutcome) {
+  async function submit(action: GerminationAction, spacingOutcome?: GerminationOutcome, note?: string) {
     try {
       setSaving(spacingOutcome || action);
       setMessage(null);
       const response = await fetch("/api/atlas/germination-check", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ taskId: task.id, action, spacingOutcome, targetSpacingInches: target }),
+        body: JSON.stringify({ taskId: task.id, action, spacingOutcome, targetSpacingInches: target, note }),
       });
       const data = (await response.json()) as { ok?: boolean; nextDate?: string; error?: string; details?: string };
       if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Germination update failed.");
-      setMessage(action === "not_yet" ? `Not yet logged. Check again ${data.nextDate ?? "tomorrow"}.` : "Germination logged.");
-      window.setTimeout(() => window.location.assign(returnDestination()), 650);
+      setMessage(resultMessage(action, data.nextDate));
+      window.setTimeout(() => window.location.assign(returnDestination()), 700);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Germination update failed.");
     } finally {
@@ -251,12 +262,25 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
               </section>
             ) : null}
             <section className="atlas-germination-check-panel">
-              {!outcomeOpen ? (
-                <div className="atlas-germination-actions atlas-germination-primary-actions">
-                  <button type="button" className="good" disabled={Boolean(saving)} onClick={() => setOutcomeOpen(true)}>Germinated</button>
-                  <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => void submit("not_yet")}>{saving === "not_yet" ? "Saving…" : "Not yet"}</button>
+              {issueAction ? (
+                <div className="atlas-germination-inline-log">
+                  <div className="atlas-germination-check-head">
+                    <span>Owner handoff</span>
+                    <strong>{issueAction === "problem_found" ? "What problem did you find?" : "What looks failed or uncertain?"}</strong>
+                  </div>
+                  <textarea
+                    value={issueNote}
+                    onChange={(event) => setIssueNote(event.target.value)}
+                    placeholder="Describe what you can actually see."
+                    rows={4}
+                    style={{ width: "100%", borderRadius: "15px", border: "1px solid rgba(111, 97, 76, .28)", padding: "12px", font: "inherit", resize: "vertical" }}
+                  />
+                  <div className="atlas-germination-actions atlas-germination-stand-actions">
+                    <button type="button" className="poor" disabled={Boolean(saving) || !issueNote.trim()} onClick={() => void submit(issueAction, undefined, issueNote.trim())}>{saving === issueAction ? "Sending…" : "Send to Owner"}</button>
+                    <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => { setIssueAction(null); setIssueNote(""); }}>Back</button>
+                  </div>
                 </div>
-              ) : (
+              ) : outcomeOpen ? (
                 <div className="atlas-germination-inline-log">
                   <div className="atlas-germination-check-head"><span>{isLettuceContainer ? `${displayCrop} pots` : `${displayCrop} spacing`}</span><strong>{isLettuceContainer ? "How did the seven lettuce pots germinate?" : target ? `How does the stand compare with the ${target}-inch target?` : "How does the stand look?"}</strong></div>
                   <div className="atlas-germination-actions atlas-germination-stand-actions">
@@ -265,6 +289,14 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
                     <button type="button" className="poor" disabled={Boolean(saving)} onClick={() => void submit("germinated", "patch")}>{saving === "patch" ? "Saving…" : isLettuceContainer ? "Poor · empty or failed pots · Reseed" : `Poor · wider than ${target ?? "target"} in · Patch seed`}</button>
                     <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => setOutcomeOpen(false)}>Back</button>
                   </div>
+                </div>
+              ) : (
+                <div className="atlas-germination-actions atlas-germination-primary-actions">
+                  <button type="button" className="good" disabled={Boolean(saving)} onClick={() => setOutcomeOpen(true)}>Germinated</button>
+                  <button type="button" className="spotty" disabled={Boolean(saving)} onClick={() => void submit("beginning")}>{saving === "beginning" ? "Saving…" : "Beginning"}</button>
+                  <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => void submit("not_yet")}>{saving === "not_yet" ? "Saving…" : "Not yet"}</button>
+                  <button type="button" className="poor" disabled={Boolean(saving)} onClick={() => setIssueAction("failed_or_uncertain")}>Failed or uncertain</button>
+                  <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => setIssueAction("problem_found")}>Problem found</button>
                 </div>
               )}
               {message ? <p className="atlas-task-page-message">{message}</p> : null}
