@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+// fetchAtlasTaskCards was retired here: the collection now reads permanent route Clock state from /api/atlas/mowing.
+
 type WeatherResponse = { ok: boolean; label?: string };
 
 type MowingRoute = {
@@ -165,13 +167,13 @@ export default function MowingCollectionPage() {
         <div className="atlas-task-page-body atlas-overview-body atlas-work-collection-body">
           <section className="atlas-overview-hero atlas-work-collection-hero">
             <div><strong>Mowing Routes</strong><span>{prettyDate(today)}</span></div>
-            <p>{loading ? "Loading route clocks" : `${due.length} need attention · ${resting.length} in rhythm · ${upcoming.length} approaching`}</p>
+            <p>{loading ? "Loading route clocks" : `${due.length} need attention · ${resting.length} in rhythm · ${upcoming.length} upcoming`}</p>
           </section>
 
           <section className="atlas-overview-stat-grid" aria-label="Mowing route stats">
             <article><strong>{loading ? "…" : due.length}</strong><span>need attention</span></article>
-            <article><strong>{loading ? "…" : resting.length}</strong><span>in rhythm</span></article>
-            <article><strong>{loading ? "…" : upcoming.length}</strong><span>approaching</span></article>
+            <article><strong>{loading ? "…" : resting.length}</strong><span>resting</span></article>
+            <article><strong>{loading ? "…" : upcoming.length}</strong><span>upcoming</span></article>
             <article><strong>{loading ? "…" : prettyDate(nextDue)}</strong><span>next boundary</span></article>
           </section>
 
@@ -185,9 +187,9 @@ export default function MowingCollectionPage() {
           {!loading ? (
             <section className="atlas-overview-zone-list atlas-work-collection-list" aria-label="Mowing routes">
               <RouteSection title="Needs Attention" routes={due} empty="No mowing routes need attention." tone="due" />
-              <RouteSection title="Approaching / Scheduled" routes={upcoming} empty="No mowing routes are approaching." tone="upcoming" />
-              <RouteSection title="In Rhythm" routes={resting} empty="No routes are resting." tone="done" />
-              <RouteSection title="Paused" routes={paused} empty="No mowing routes are paused." tone="paused" />
+              <RouteSection title="Upcoming / Scheduled" routes={upcoming} empty="No upcoming mowing routes." tone="upcoming" />
+              <RouteSection title="Recently Done / Resting" routes={resting} empty="No routes are resting." tone="done" />
+              <RouteSection title="Not Ready / Paused" routes={paused} empty="No mowing routes are paused." tone="paused" />
             </section>
           ) : null}
         </div>
