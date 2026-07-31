@@ -54,7 +54,7 @@ test("legacy mowing work becomes governed baselines without reviving date recrea
   assert.match(baselines, /mowing-owner-delay/);
   assert.match(baselines, /'game_master'/);
   assert.match(baselines, /ensure_rhythm_task_v1/);
-  assert.match(baselines, /planned_work_occurrences/);
+  assert.match(baselines, /planned_occurrence_id/);
   assert.doesNotMatch(baselines, /insert into atlas\.tasks/i);
 });
 
