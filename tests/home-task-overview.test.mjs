@@ -6,6 +6,7 @@ const page = readFileSync("app/page.tsx", "utf8");
 const layout = readFileSync("app/layout.tsx", "utf8");
 const component = readFileSync("components/atlas/home/AtlasUniversalHomeV2.tsx", "utf8");
 const overview = readFileSync("lib/atlas/home-task-overview.ts", "utf8");
+const carryForward = readFileSync("lib/atlas/home-carry-forward.ts", "utf8");
 const css = readFileSync("components/atlas/home/universal-home-v2.module.css", "utf8");
 
 test("farm-hand Home uses the prepared Living Day instead of journal-cover miscellany", () => {
@@ -18,7 +19,8 @@ test("farm-hand Home uses the prepared Living Day instead of journal-cover misce
 
 test("the purple cover is a four-card overview in canonical work order", () => {
   assert.match(overview, /atlasWorkOrderSortValue/);
-  assert.match(overview, /slice\(0, 4\)/);
+  assert.match(carryForward, /atlasWorkOrderSortValue/);
+  assert.match(carryForward, /slice\(0, 4\)/);
   assert.match(overview, /Current/);
   assert.match(overview, /Next/);
   assert.match(overview, /Later/);
@@ -55,9 +57,12 @@ test("Lex can see personal work across farms without leaking employee tasks as p
   assert.match(component, /data-position=\{taskPosition\}/);
 });
 
-test("Home reports the bounded personal plan and leaves project movement in Projects", () => {
+test("Home reports today's bounded plan plus unresolved overdue work and leaves project movement in Projects", () => {
   assert.match(component, /dealt with/);
-  assert.match(component, /carry forward/);
+  assert.match(component, /overdueLabel/);
+  assert.match(component, /hasCarryForward/);
+  assert.match(carryForward, /item\.date < today/);
+  assert.match(carryForward, /\.\.\.overview\.summary/);
   assert.doesNotMatch(component, /function MovingNow/);
 });
 
