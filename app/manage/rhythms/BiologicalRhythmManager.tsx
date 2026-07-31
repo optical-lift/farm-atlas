@@ -9,7 +9,7 @@ export type BiologicalRhythmItem = {
   stateId: string;
   bindingId: string;
   ruleId: string;
-  rhythmKey: "grow_room_care" | "germination_watch" | "harvest_watch" | string;
+  rhythmKey: "grow_room_care" | "germination_watch" | "harvest_watch" | "guest_readiness" | string;
   ruleKey: string;
   ruleLabel: string;
   ruleVersion: number;
@@ -42,6 +42,7 @@ function titleForRhythm(key: string) {
   if (key === "grow_room_care") return "Grow Room care";
   if (key === "germination_watch") return "Germination watches";
   if (key === "harvest_watch") return "Harvest watches";
+  if (key === "guest_readiness") return "Guest readiness";
   return key.replaceAll("_", " ");
 }
 
@@ -85,6 +86,7 @@ function defaultDraft(item: BiologicalRhythmItem): Draft {
 function scopeNote(item: BiologicalRhythmItem) {
   if (item.rhythmKey === "germination_watch") return "Pause or cadence revision applies to this germination-stage rule, not only this one crop. Extend and forgive apply only to this crop’s current watch.";
   if (item.rhythmKey === "harvest_watch") return "Pause or cadence revision applies to the Harvest Watch stage rule. Extend and forgive apply only to this crop’s current observation lease.";
+  if (item.rhythmKey === "guest_readiness") return "Pause or cadence revision applies to the indoor venue’s Guest Readiness rule. Extend and forgive apply only to the current room-walk lease.";
   return "Pause or cadence revision applies to the Grow Room care rule. Extend and forgive apply only to the current care lease.";
 }
 
@@ -154,6 +156,6 @@ export default function BiologicalRhythmManager({ dashboard }: { dashboard: Biol
     return [...result.entries()];
   }, [dashboard.items]);
 
-  if (!groups.length) return <p className={styles.empty}>No biological rhythms are enrolled for this farm yet.</p>;
+  if (!groups.length) return <p className={styles.empty}>No farm rhythms are enrolled for this farm yet.</p>;
   return <div className={styles.groups}>{groups.map(([key, items]) => <section className={styles.group} key={key} aria-labelledby={`rhythm-${key}`}><header className={styles.groupHead}><h2 id={`rhythm-${key}`}>{titleForRhythm(key)}</h2><span>{items.length}</span></header><div className={styles.cards}>{items.map((item) => <RhythmCard key={item.stateId} item={item} />)}</div></section>)}</div>;
 }
