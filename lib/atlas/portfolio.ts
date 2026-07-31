@@ -79,6 +79,9 @@ export type AtlasProjectTask = {
   dueDate: string | null;
   note: string | null;
   blockerText: string | null;
+  taskType?: string | null;
+  taskScope?: string | null;
+  metadata?: Record<string, unknown> | null;
   assignedToViewer: boolean;
   createdByViewer: boolean;
   originKind: string;
