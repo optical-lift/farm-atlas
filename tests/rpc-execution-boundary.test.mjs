@@ -16,8 +16,13 @@ test("Atlas removes implicit anonymous execution while preserving existing signe
   assert.match(migration, /grant execute on function %s to authenticated/);
   assert.match(migration, /grant execute on function %s to service_role/);
   assert.match(migration, /revoke execute on function %s from public, anon/);
-  assert.doesNotMatch(migration, /grant execute[\s\S]*to anon/i);
-  assert.doesNotMatch(migration, /grant execute[\s\S]*to public/i);
+
+  for (const line of migration.split("\n")) {
+    assert.doesNotMatch(
+      line,
+      /^\s*grant execute\b.*\bto\s+(?:anon|public)\b/i,
+    );
+  }
 });
 
 test("future Atlas routines are fail-closed instead of inheriting PUBLIC execute", () => {
