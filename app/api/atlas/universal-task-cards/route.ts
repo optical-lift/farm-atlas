@@ -7,12 +7,12 @@ import {
 } from "@/lib/atlas/operator-context";
 import { readAtlasOperatorUniversalHome } from "@/lib/atlas/operator-universal-home";
 import { getAtlasSession } from "@/lib/atlas/session";
+import { readAtlasTaskDayDispositions } from "@/lib/atlas/task-day-dispositions-server";
 import {
   atlasUniversalPortalLabel,
   atlasUniversalTaskCards,
 } from "@/lib/atlas/universal-task-cards";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
-import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -77,16 +77,8 @@ export async function GET(request: Request) {
       effectiveAccountId: effectiveOperatorAccountId(operatorContext),
       effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
     });
-    const supabase = await createAtlasServerClient();
-    const dispositionResponse = await supabase.rpc("viewer_task_day_dispositions_v1", {
-      p_day: doneDate,
-    });
-    if (dispositionResponse.error) throw dispositionResponse.error;
-    const setAsideTaskIds = new Set(
-      (Array.isArray(dispositionResponse.data) ? dispositionResponse.data : [])
-        .map((row) => row && typeof row === "object" && !Array.isArray(row) ? String((row as { taskId?: unknown }).taskId ?? "") : "")
-        .filter(Boolean),
-    );
+    const dispositions = await readAtlasTaskDayDispositions(doneDate);
+    const setAsideTaskIds = new Set(dispositions.map((row) => row.taskId));
     const taskCards = atlasUniversalTaskCards(home).filter((card) => !setAsideTaskIds.has(card.task_id));
     return privateJson({
       ok: true,

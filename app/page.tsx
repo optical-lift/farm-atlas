@@ -11,6 +11,7 @@ import {
 } from "@/lib/atlas/operator-context";
 import { readAtlasOperatorUniversalHome } from "@/lib/atlas/operator-universal-home";
 import { getAtlasSession } from "@/lib/atlas/session";
+import { readAtlasSwitchedFarmHandHomeOverview } from "@/lib/atlas/switched-account-home-overview";
 import { readAtlasSetAsideTaskIds } from "@/lib/atlas/task-day-dispositions-server";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
 
@@ -51,10 +52,11 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     ? viewer.farmMemberships.find((membership) => membership.farmKey === selectedFarmKey)?.farmId
       ?? viewer.activeFarmId
     : viewer.activeFarmId;
+  const selectedMembershipId = effectiveOperatorMembershipId(operatorContext);
   const home = await readAtlasOperatorUniversalHome(viewer, {
     preferredFarmId,
     effectiveAccountId: effectiveOperatorAccountId(operatorContext),
-    effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
+    effectiveMembershipId: selectedMembershipId,
   });
 
   let setAsideTaskIds = new Set<string>();
@@ -81,9 +83,16 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
       return !setAsideTaskIds.has(taskId);
     }),
   };
+  const switchedFarmHand = Boolean(
+    operatorContext?.isOperating
+      && operatorContext.effective.farmRole === "farm_hand"
+      && selectedMembershipId,
+  );
 
   const [taskOverview, farmSeasons] = await Promise.all([
-    readAtlasOperatorHomeTaskOverview(visibleHome),
+    switchedFarmHand && selectedMembershipId
+      ? readAtlasSwitchedFarmHandHomeOverview(visibleHome, selectedMembershipId)
+      : readAtlasOperatorHomeTaskOverview(visibleHome),
     readAtlasHomeFarmSeasonProfiles(visibleFarms.map((farm) => farm.farmId)),
   ]);
   const renderedViewer = visibleHome.viewer;
