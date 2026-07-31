@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import ProjectReviewPanel from "@/components/atlas/portfolio/ProjectReviewPanel";
 import ProjectTaskTools from "@/components/atlas/portfolio/ProjectTaskTools";
 import {
   readAtlasProjectDetail,
@@ -108,6 +109,8 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
                 </div>
               </details>
             </article>
+
+            <ProjectReviewPanel projectId={project.projectId} />
 
             {detail.attention.length ? (
               <details className="atlas-project-attention-strip" open={detail.attention.some((item) => item.kind === "blocked")}>
