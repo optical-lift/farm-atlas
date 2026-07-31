@@ -101,6 +101,7 @@ BEGIN
         ON caller_namespace.oid = caller.pronamespace
        AND caller_namespace.nspname = 'atlas'
       WHERE caller.oid <> helper_oid
+        AND caller.prokind = 'f'
         AND (
           position(
             lower(expected.helper_name) || '('
@@ -125,6 +126,7 @@ BEGIN
         ON caller_namespace.oid = caller.pronamespace
        AND caller_namespace.nspname = 'atlas'
       WHERE caller.oid <> helper_oid
+        AND caller.prokind = 'f'
         AND NOT caller.prosecdef
         AND (
           position(
