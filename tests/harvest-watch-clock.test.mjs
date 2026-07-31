@@ -70,7 +70,7 @@ test("actual harvest keeps marketable seconds and discarded quantities separate"
   assert.match(cutRoute, /p_marketable/);
   assert.match(cutRoute, /p_seconds/);
   assert.match(cutRoute, /p_discarded/);
-  assert.match(cutPage, /More remains/);
+  assert.match(cutPage, /Is there more to harvest from this crop\?/);
 });
 
 test("Harvest Watch and crop cuts use focused structured result pages", () => {
