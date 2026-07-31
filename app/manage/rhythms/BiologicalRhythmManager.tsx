@@ -9,7 +9,7 @@ export type BiologicalRhythmItem = {
   stateId: string;
   bindingId: string;
   ruleId: string;
-  rhythmKey: "grow_room_care" | "germination_watch" | "harvest_watch" | "guest_readiness" | string;
+  rhythmKey: "grow_room_care" | "germination_watch" | "harvest_watch" | "guest_readiness" | "mowing" | string;
   ruleKey: string;
   ruleLabel: string;
   ruleVersion: number;
@@ -43,6 +43,7 @@ function titleForRhythm(key: string) {
   if (key === "germination_watch") return "Germination watches";
   if (key === "harvest_watch") return "Harvest watches";
   if (key === "guest_readiness") return "Guest readiness";
+  if (key === "mowing") return "Mowing routes";
   return key.replaceAll("_", " ");
 }
 
@@ -87,6 +88,7 @@ function scopeNote(item: BiologicalRhythmItem) {
   if (item.rhythmKey === "germination_watch") return "Pause or cadence revision applies to this germination-stage rule, not only this one crop. Extend and forgive apply only to this crop’s current watch.";
   if (item.rhythmKey === "harvest_watch") return "Pause or cadence revision applies to the Harvest Watch stage rule. Extend and forgive apply only to this crop’s current observation lease.";
   if (item.rhythmKey === "guest_readiness") return "Pause or cadence revision applies to the indoor venue’s Guest Readiness rule. Extend and forgive apply only to the current room-walk lease.";
+  if (item.rhythmKey === "mowing") return "Pause or cadence revision applies only to this permanent mowing route. Extend and forgive apply to this route’s current observation lease without claiming anything about grass condition.";
   return "Pause or cadence revision applies to the Grow Room care rule. Extend and forgive apply only to the current care lease.";
 }
 
