@@ -6,6 +6,11 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AtlasBell, AtlasBellItem } from "@/lib/atlas/bell-contract";
 import { fetchAtlasBell, updateAtlasBell } from "@/lib/atlas/bell-client";
+import {
+  atlasBellItemsForView,
+  atlasBellViewSummary,
+  type AtlasBellView,
+} from "@/lib/atlas/bell-view";
 import { setAtlasAppBadge } from "@/lib/atlas/pwa-client";
 
 function dateLabel(value: string) {
@@ -77,9 +82,7 @@ function BellItemRow({
   );
 }
 
-type BellView = "all" | "needs" | "rhythms" | "movement" | "baseline";
-
-function normalizedView(value: string | null): BellView {
+function normalizedView(value: string | null): AtlasBellView {
   if (value === "needs" || value === "rhythms" || value === "movement" || value === "baseline") return value;
   return "all";
 }
@@ -124,14 +127,14 @@ function AtlasBellPageContent() {
     } : current);
   }
 
-  const items = useMemo(() => {
-    const source = bell?.items ?? [];
-    if (view === "baseline") return source.filter((item) => item.baseline);
-    if (view === "needs") return source.filter((item) => !item.baseline && item.requiresAction && item.section !== "rhythms");
-    if (view === "rhythms") return source.filter((item) => !item.baseline && item.section === "rhythms");
-    if (view === "movement") return source.filter((item) => !item.baseline && item.section === "farm_movement");
-    return source.filter((item) => !item.baseline);
-  }, [bell, view]);
+  const items = useMemo(
+    () => atlasBellItemsForView(bell?.items ?? [], view),
+    [bell, view],
+  );
+  const summary = useMemo(
+    () => bell ? atlasBellViewSummary(bell, view, items) : null,
+    [bell, items, view],
+  );
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
@@ -141,14 +144,14 @@ function AtlasBellPageContent() {
             <span className="atlas-phone-kicker">Atlas</span>
             <span className="atlas-phone-title">Bell</span>
           </Link>
-          <span className="atlas-weather-line">{bell ? `${bell.badgeCount} need you` : "Meaningful changes"}</span>
+          <span className="atlas-weather-line">{summary?.status ?? "Meaningful changes"}</span>
           <Link href="/install" className="atlas-note-plus" aria-label="Open Farm Alerts settings">⋯</Link>
         </header>
 
         <div className="atlas-bell-page-body">
           <section className="atlas-bell-summary">
-            <span>{view === "baseline" ? "Monitoring baseline" : "Current obligations"}</span>
-            <h1>{bell ? `${bell.badgeCount} need you · ${bell.whileAwayCount} new` : "Listening to Atlas"}</h1>
+            <span>{summary?.eyebrow ?? "Current obligations"}</span>
+            <h1>{summary?.title ?? "Listening to Atlas"}</h1>
             <p>The Bell points into the work, place, crop or project where the change belongs. It is not a second task list or a separate history dumping ground.</p>
           </section>
 
@@ -172,7 +175,7 @@ function AtlasBellPageContent() {
           {loading ? <div className="atlas-bell-loading">Listening for meaningful Atlas changes…</div> : null}
           {error ? <div className="atlas-bell-error">{error}</div> : null}
           {!loading && !error && items.length === 0 ? (
-            <div className="atlas-bell-empty">Nothing belongs in this Bell view right now.</div>
+            <div className="atlas-bell-empty">{summary?.emptyMessage ?? "Nothing belongs in this Bell view right now."}</div>
           ) : null}
 
           <section className="atlas-bell-list" aria-label="Bell entries">
