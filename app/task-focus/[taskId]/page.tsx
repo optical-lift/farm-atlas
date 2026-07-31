@@ -7,6 +7,8 @@ import { readAtlasProjectTaskFocus } from "@/lib/atlas/portfolio";
 import { resolveTaskAssignee } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import GerminationFocusPage from "./GerminationFocusPage";
+import HarvestCutFocusPage from "./HarvestCutFocusPage";
+import HarvestWatchFocusPage from "./HarvestWatchFocusPage";
 import SowingFocusPage, { type ProductionSowingTask } from "./SowingFocusPage";
 import "./focused-task-only.css";
 
@@ -22,6 +24,7 @@ type TaskRow = {
 };
 
 type CycleRow = {
+  id?: string | null;
   crop_profile_id?: string | null;
   crop_label?: string | null;
   variety?: string | null;
@@ -42,6 +45,7 @@ type ProfileRow = {
 };
 
 type CropContext = {
+  cropCycleId: string | null;
   cropLabel: string;
   variety: string | null;
   sownDate: string | null;
@@ -53,6 +57,11 @@ type CropContext = {
   expectedHarvestStart: string | null;
   expectedHarvestEnd: string | null;
   targetSpacingInches: number | null;
+};
+
+type HarvestAvailability = {
+  estimated_quantity?: number | string | null;
+  unit?: string | null;
 };
 
 const SAFE_RETURN_PATHS = new Set([
@@ -111,6 +120,15 @@ function isGerminationTask(task: TaskRow) {
   return task.task_type === "germination_check" || text(metadata.task_style) === "germination_check" || text(metadata.milestone) === "germination_check";
 }
 
+function isHarvestWatchTask(task: TaskRow) {
+  const metadata = task.metadata ?? {};
+  return task.task_type === "harvest_watch" && (truthy(metadata.clock_managed) || text(metadata.rhythm_key) === "harvest_watch" || text(metadata.task_style) === "harvest_watch");
+}
+
+function isCropHarvestTask(task: TaskRow) {
+  return task.task_type === "crop_harvest" && truthy(task.metadata?.crop_harvest_clock);
+}
+
 function isProductionSowingTask(task: TaskRow) {
   const metadata = task.metadata ?? {};
   return task.task_type === "production_sowing" && Boolean(text(metadata.production_succession_id));
@@ -131,43 +149,18 @@ async function loadTask(taskId: string) {
 
 async function loadGenericTaskDetail(taskId: string) {
   const [{ data: taskCard, error: taskError }, { data: childCards, error: childrenError }] = await Promise.all([
-    atlasSupabase
-      .schema("atlas")
-      .from("v_task_cards")
-      .select("*")
-      .eq("farm_key", "elm_farm")
-      .eq("task_id", taskId)
-      .limit(1)
-      .maybeSingle(),
-    atlasSupabase
-      .schema("atlas")
-      .from("v_task_cards")
-      .select("*")
-      .eq("farm_key", "elm_farm")
-      .eq("parent_task_id", taskId)
-      .neq("status", "archived")
-      .order("created_at", { ascending: true }),
+    atlasSupabase.schema("atlas").from("v_task_cards").select("*").eq("farm_key", "elm_farm").eq("task_id", taskId).limit(1).maybeSingle(),
+    atlasSupabase.schema("atlas").from("v_task_cards").select("*").eq("farm_key", "elm_farm").eq("parent_task_id", taskId).neq("status", "archived").order("created_at", { ascending: true }),
   ]);
 
   if (taskError) throw new Error(taskError.message);
   if (childrenError) throw new Error(childrenError.message);
   if (!taskCard) return null;
-
-  return {
-    task: taskCard as AtlasTaskCard,
-    children: (childCards ?? []) as AtlasTaskCard[],
-  };
+  return { task: taskCard as AtlasTaskCard, children: (childCards ?? []) as AtlasTaskCard[] };
 }
 
 async function loadObjectLabel(taskId: string) {
-  const { data } = await atlasSupabase
-    .schema("atlas")
-    .from("task_objects")
-    .select("growing_objects(label)")
-    .eq("task_id", taskId)
-    .limit(1)
-    .maybeSingle();
-
+  const { data } = await atlasSupabase.schema("atlas").from("task_objects").select("growing_objects(label)").eq("task_id", taskId).limit(1).maybeSingle();
   const row = data as unknown as { growing_objects?: { label?: string } | null } | null;
   return text(row?.growing_objects?.label) || "Elm Farm";
 }
@@ -180,18 +173,14 @@ async function loadProductionSowingTask(task: TaskRow): Promise<ProductionSowing
     .schema("atlas")
     .from("production_successions")
     .select("id, production_plan_id, sequence_number, planned_window_start, planned_window_end, late_window_end, skip_after_date, projected_germination_start, projected_germination_end, projected_harvest_start, projected_harvest_end, projected_clear_date, state")
-    .eq("id", successionId)
-    .limit(1)
-    .maybeSingle();
+    .eq("id", successionId).limit(1).maybeSingle();
   if (successionError) throw new Error(successionError.message);
   if (!succession) return null;
 
   const { data: plan, error: planError } = await atlasSupabase
-    .schema("atlas")
-    .from("production_plans")
+    .schema("atlas").from("production_plans")
     .select("id, crop_profile_id, succession_count, missed_strategy, protect_final_succession, final_biological_sow_date, intended_uses")
-    .eq("id", succession.production_plan_id)
-    .single();
+    .eq("id", succession.production_plan_id).single();
   if (planError) throw new Error(planError.message);
 
   const [{ data: profile, error: profileError }, { data: next, error: nextError }] = await Promise.all([
@@ -235,56 +224,40 @@ async function loadCropContext(task: TaskRow): Promise<CropContext> {
   if (!cycleId) {
     const cycleKey = text(metadata.crop_cycle_key);
     if (cycleKey) {
-      const { data } = await atlasSupabase
-        .schema("atlas")
-        .from("crop_cycles")
-        .select("id")
-        .eq("crop_cycle_key", cycleKey)
-        .limit(1)
-        .maybeSingle();
+      const { data } = await atlasSupabase.schema("atlas").from("crop_cycles").select("id").eq("crop_cycle_key", cycleKey).limit(1).maybeSingle();
       cycleId = text((data as { id?: string } | null)?.id);
     }
+  }
+  if (!cycleId) {
+    const { data } = await atlasSupabase.schema("atlas").from("task_crop_cycles").select("crop_cycle_id").eq("task_id", task.id).limit(1).maybeSingle();
+    cycleId = text((data as { crop_cycle_id?: string } | null)?.crop_cycle_id);
   }
 
   let cycle: CycleRow | null = null;
   if (cycleId) {
     const { data } = await atlasSupabase
-      .schema("atlas")
-      .from("crop_cycles")
-      .select("crop_profile_id, crop_label, variety, sown_date, planted_date, cycle_state, expected_germination_start, expected_germination_end, expected_harvest_watch_start, expected_harvest_watch_end, planting_claim_id")
-      .eq("id", cycleId)
-      .limit(1)
-      .maybeSingle();
+      .schema("atlas").from("crop_cycles")
+      .select("id, crop_profile_id, crop_label, variety, sown_date, planted_date, cycle_state, expected_germination_start, expected_germination_end, expected_harvest_watch_start, expected_harvest_watch_end, planting_claim_id")
+      .eq("id", cycleId).limit(1).maybeSingle();
     cycle = data as CycleRow | null;
     profileId = profileId || text(cycle?.crop_profile_id);
   }
 
   let profile: ProfileRow | null = null;
   if (profileId) {
-    const { data } = await atlasSupabase
-      .schema("atlas")
-      .from("crop_profiles")
-      .select("crop_label, variety, metadata")
-      .eq("id", profileId)
-      .limit(1)
-      .maybeSingle();
+    const { data } = await atlasSupabase.schema("atlas").from("crop_profiles").select("crop_label, variety, metadata").eq("id", profileId).limit(1).maybeSingle();
     profile = data as ProfileRow | null;
   }
 
   let plantingMethod: string | null = null;
   const plantingClaimId = text(cycle?.planting_claim_id);
   if (plantingClaimId) {
-    const { data } = await atlasSupabase
-      .schema("atlas")
-      .from("planting_claims")
-      .select("planting_method")
-      .eq("id", plantingClaimId)
-      .limit(1)
-      .maybeSingle();
+    const { data } = await atlasSupabase.schema("atlas").from("planting_claims").select("planting_method").eq("id", plantingClaimId).limit(1).maybeSingle();
     plantingMethod = text((data as { planting_method?: string | null } | null)?.planting_method) || null;
   }
 
   return {
+    cropCycleId: text(cycle?.id) || cycleId || null,
     cropLabel: text(profile?.crop_label) || text(cycle?.crop_label) || text(metadata.crop_label) || text(metadata.crop) || task.title.split("—").pop()?.split("·")[0]?.trim() || "Crop",
     variety: text(profile?.variety) || text(cycle?.variety) || text(metadata.variety) || null,
     sownDate: text(cycle?.sown_date) || null,
@@ -299,13 +272,13 @@ async function loadCropContext(task: TaskRow): Promise<CropContext> {
   };
 }
 
-export default async function TaskFocusPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ taskId: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+async function loadHarvestAvailability(cropCycleId: string | null) {
+  if (!cropCycleId) return null;
+  const { data } = await atlasSupabase.schema("atlas").from("crop_harvest_availability").select("estimated_quantity, unit").eq("crop_cycle_id", cropCycleId).limit(1).maybeSingle();
+  return data as HarvestAvailability | null;
+}
+
+export default async function TaskFocusPage({ params, searchParams }: { params: Promise<{ taskId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ taskId }, query] = await Promise.all([params, searchParams]);
   const returnTo = safeReturnPath(firstValue(query.returnTo));
   const projectFocus = await readAtlasProjectTaskFocus(taskId).catch(() => null);
@@ -324,41 +297,27 @@ export default async function TaskFocusPage({
     if (productionTask) return <SowingFocusPage task={productionTask} />;
   }
 
+  if (isHarvestWatchTask(task) || isCropHarvestTask(task)) {
+    const [objectLabel, crop] = await Promise.all([loadObjectLabel(task.id), loadCropContext(task)]);
+    if (isHarvestWatchTask(task)) {
+      return <HarvestWatchFocusPage task={{ id: task.id, cropLabel: crop.cropLabel, variety: crop.variety, objectLabel, dueDate: task.due_date, cycleState: crop.cycleState, expectedHarvestStart: crop.expectedHarvestStart, expectedHarvestEnd: crop.expectedHarvestEnd, returnTo }} />;
+    }
+    const availability = await loadHarvestAvailability(crop.cropCycleId);
+    const estimate = availability?.estimated_quantity === null || availability?.estimated_quantity === undefined ? null : Number(availability.estimated_quantity);
+    return <HarvestCutFocusPage task={{ id: task.id, cropLabel: crop.cropLabel, variety: crop.variety, objectLabel, dueDate: task.due_date, estimatedQuantity: Number.isFinite(estimate) ? estimate : null, estimatedUnit: text(availability?.unit) || null, returnTo }} />;
+  }
+
   if (!isGerminationTask(task)) {
     const detail = await loadGenericTaskDetail(task.id);
     if (!detail) notFound();
     const assignee = resolveTaskAssignee(task);
-    return (
-      <CanonicalAssignedTaskDetail
-        task={detail.task}
-        childTasks={detail.children}
-        assignee={returnTo ? { ...assignee, listPath: returnTo } : assignee}
-      />
-    );
+    return <CanonicalAssignedTaskDetail task={detail.task} childTasks={detail.children} assignee={returnTo ? { ...assignee, listPath: returnTo } : assignee} />;
   }
 
   const [objectLabel, crop] = await Promise.all([loadObjectLabel(task.id), loadCropContext(task)]);
-
   return (
     <div className="atlas-focused-task-only">
-      <GerminationFocusPage
-        task={{
-          id: task.id,
-          cropLabel: crop.cropLabel,
-          variety: crop.variety,
-          objectLabel,
-          dueDate: task.due_date,
-          sownDate: crop.sownDate,
-          plantedDate: crop.plantedDate,
-          plantingMethod: crop.plantingMethod,
-          cycleState: crop.cycleState,
-          expectedGerminationStart: crop.expectedGerminationStart,
-          expectedGerminationEnd: crop.expectedGerminationEnd,
-          expectedHarvestStart: crop.expectedHarvestStart,
-          expectedHarvestEnd: crop.expectedHarvestEnd,
-          targetSpacingInches: crop.targetSpacingInches,
-        }}
-      />
+      <GerminationFocusPage task={{ id: task.id, cropLabel: crop.cropLabel, variety: crop.variety, objectLabel, dueDate: task.due_date, sownDate: crop.sownDate, plantedDate: crop.plantedDate, plantingMethod: crop.plantingMethod, cycleState: crop.cycleState, expectedGerminationStart: crop.expectedGerminationStart, expectedGerminationEnd: crop.expectedGerminationEnd, expectedHarvestStart: crop.expectedHarvestStart, expectedHarvestEnd: crop.expectedHarvestEnd, targetSpacingInches: crop.targetSpacingInches }} />
     </div>
   );
 }
