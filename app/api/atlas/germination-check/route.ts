@@ -9,8 +9,14 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const ACTIONS = new Set(["not_yet", "germinated"]);
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+const ACTIONS = new Set([
+  "not_yet",
+  "beginning",
+  "germinated",
+  "failed_or_uncertain",
+  "problem_found",
+]);
 const SPACING_OUTCOMES = new Set(["thin", "on_target", "patch"]);
 
 type SourceTask = {
@@ -48,6 +54,7 @@ type GerminationBody = {
   action?: unknown;
   spacingOutcome?: unknown;
   targetSpacingInches?: unknown;
+  note?: unknown;
 };
 
 type RpcError = { code?: string; message?: string };
@@ -85,7 +92,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "germination-check-membership-v1",
+      "X-Atlas-Read-Path": "germination-observation-clock-v2",
     },
   });
 }
@@ -187,12 +194,13 @@ export async function POST(request: NextRequest) {
   const action = clean(body.action);
   const spacingOutcome = clean(body.spacingOutcome) || null;
   const targetSpacingInches = positiveNumber(body.targetSpacingInches);
+  const note = clean(body.note) || null;
 
   if (!UUID_PATTERN.test(taskId)) {
     return privateJson({ ok: false, error: "A valid task id is required." }, 400);
   }
   if (!ACTIONS.has(action)) {
-    return privateJson({ ok: false, error: "Choose not yet or germinated." }, 400);
+    return privateJson({ ok: false, error: "Choose not yet, beginning, germinated, failed or uncertain, or problem found." }, 400);
   }
   if (action === "germinated" && (!spacingOutcome || !SPACING_OUTCOMES.has(spacingOutcome))) {
     return privateJson({ ok: false, error: "Choose thin, on target, or patch." }, 400);
@@ -206,26 +214,28 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createAtlasServerClient();
   const response = operatorMembershipId
-    ? await supabase.rpc("owner_operator_record_germination_check_v1", {
+    ? await supabase.rpc("owner_operator_record_germination_observation_v2", {
         p_effective_membership_id: operatorMembershipId,
         p_task_id: taskId,
         p_action: action,
         p_spacing_outcome: action === "germinated" ? spacingOutcome : null,
         p_target_spacing_inches: action === "germinated" ? targetSpacingInches : null,
+        p_note: note,
       })
-    : await supabase.rpc("record_germination_check_for_member_v1", {
+    : await supabase.rpc("record_germination_observation_for_member_v2", {
         p_farm_id: authorized.access.membership.farmId,
         p_task_id: taskId,
         p_task_title: taskTitle,
         p_action: action,
         p_spacing_outcome: action === "germinated" ? spacingOutcome : null,
         p_target_spacing_inches: action === "germinated" ? targetSpacingInches : null,
+        p_note: note,
       });
   const { data, error } = response;
 
-  if (error) return rpcFailure(error as RpcError, "Germination result failed.");
+  if (error) return rpcFailure(error as RpcError, "Germination observation failed.");
   if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return privateJson({ ok: false, error: "Atlas returned an invalid germination result." }, 500);
+    return privateJson({ ok: false, error: "Atlas returned an invalid germination observation." }, 500);
   }
 
   return privateJson({
