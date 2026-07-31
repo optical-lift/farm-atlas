@@ -3,22 +3,40 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import { atlasMetaString, atlasTaskDisplay } from "@/lib/atlas/task-display";
-import {
-  atlasBuildMowingCollectionSummary,
-  atlasCollectionTaskSortValue,
-  atlasIsDoneTask,
-  atlasIsMowingCollectionMember,
-  atlasIsNotReadyCollectionTask,
-  atlasVisibleCollectionTasks,
-} from "@/lib/atlas/work-collections";
-
 type WeatherResponse = { ok: boolean; label?: string };
 
-type CollectionSectionProps = {
+type MowingRoute = {
+  objectId: string;
+  objectKey: string;
+  label: string;
+  zoneId: string | null;
+  zoneLabel: string | null;
+  equipmentGroup: string | null;
+  targetCutHeightInches: string | number | null;
+  cadenceDays: string | number | null;
+  stateId: string;
+  rhythmState: string;
+  warningAt: string | null;
+  dueAt: string | null;
+  failureAt: string | null;
+  currentTaskId: string | null;
+  areaStatus: string;
+  lastMowedAt: string | null;
+  lastObservedAt: string | null;
+  nextCheckDate: string | null;
+  note: string | null;
+  bindingActive: boolean;
+};
+
+type DashboardResponse = {
+  ok?: boolean;
+  error?: string;
+  items?: MowingRoute[];
+};
+
+type RouteSectionProps = {
   title: string;
-  tasks: AtlasTaskCard[];
+  routes: MowingRoute[];
   empty: string;
   tone?: "due" | "done" | "paused" | "upcoming";
 };
@@ -29,60 +47,71 @@ function todayIso() {
   return local.toISOString().slice(0, 10);
 }
 
-function prettyDate(dateIso: string | null | undefined) {
-  if (!dateIso) return "No date";
-  const date = new Date(`${dateIso}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return dateIso;
+function prettyDate(value: string | null) {
+  if (!value) return "Not recorded";
+  const date = new Date(value.includes("T") ? value : `${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function taskHref(task: AtlasTaskCard) {
-  return `/task?taskId=${encodeURIComponent(task.task_id)}`;
+function rhythmLabel(route: MowingRoute) {
+  if (!route.bindingActive || route.rhythmState === "paused") return "Paused";
+  if (route.areaStatus === "problem") return "Owner attention";
+  if (route.areaStatus === "too_wet") return route.nextCheckDate ? `Wet · return ${prettyDate(route.nextCheckDate)}` : "Too wet";
+  if (route.areaStatus === "partial") return "Partly mowed · route remains open";
+  if (route.rhythmState === "fallen_out_of_rhythm") return "Restore now";
+  if (route.rhythmState === "due") return route.currentTaskId ? "Due now" : "Due · waiting behind work capacity";
+  if (route.rhythmState === "recovering") return "Recovering";
+  if (route.currentTaskId) return `Scheduled ${prettyDate(route.dueAt)}`;
+  if (route.rhythmState === "coming_due") return `Coming due ${prettyDate(route.dueAt)}`;
+  return `In rhythm · returns ${prettyDate(route.dueAt)}`;
 }
 
-function statusLine(task: AtlasTaskCard) {
-  if (atlasIsNotReadyCollectionTask(task)) return atlasMetaString(task, "not_ready_reason") || task.blocker_text || "Not ready";
-  if (atlasIsDoneTask(task)) return "Done";
-  if (task.status === "blocked") return task.blocker_text || "Waiting";
-  if (task.due_date) return task.due_date <= todayIso() ? "Due now" : `Due ${prettyDate(task.due_date)}`;
-  return "Open";
+function routeDetail(route: MowingRoute) {
+  const equipment = route.equipmentGroup || "Equipment not recorded";
+  const height = route.targetCutHeightInches ? `${route.targetCutHeightInches} in target` : "route height standard";
+  return `${equipment} · ${height} · last full mow ${prettyDate(route.lastMowedAt)}`;
 }
 
-function MowingTaskCard({ task, tone }: { task: AtlasTaskCard; tone?: CollectionSectionProps["tone"] }) {
-  const display = atlasTaskDisplay(task);
-  const equipment = atlasMetaString(task, "equipment_group")?.replaceAll("_", " ");
-
-  return (
-    <Link className={`atlas-overview-task-card atlas-work-collection-task-card ${tone ?? ""}`} href={taskHref(task)}>
+function MowingRouteCard({ route, tone }: { route: MowingRoute; tone?: RouteSectionProps["tone"] }) {
+  const body = (
+    <>
       <div>
-        <strong>{display.title}</strong>
-        <span>{display.location}</span>
+        <strong>{route.label}</strong>
+        <span>{route.zoneLabel || "Elm Farm"}</span>
       </div>
-      <em>{statusLine(task)}</em>
-      <p>{equipment ? `${equipment} · ${display.detail}` : display.detail}</p>
+      <em>{rhythmLabel(route)}</em>
+      <p>{routeDetail(route)}{route.note ? ` · ${route.note}` : ""}</p>
+    </>
+  );
+
+  return route.currentTaskId ? (
+    <Link className={`atlas-overview-task-card atlas-work-collection-task-card ${tone ?? ""}`} href={`/task-focus/${encodeURIComponent(route.currentTaskId)}?returnTo=${encodeURIComponent("/collections/mowing")}`}>
+      {body}
     </Link>
+  ) : (
+    <article className={`atlas-overview-task-card atlas-work-collection-task-card ${tone ?? ""}`}>
+      {body}
+    </article>
   );
 }
 
-function CollectionSection({ title, tasks, empty, tone }: CollectionSectionProps) {
+function RouteSection({ title, routes, empty, tone }: RouteSectionProps) {
   return (
     <section className="atlas-overview-zone-card atlas-work-collection-section">
       <summary>
-        <div>
-          <strong>{title}</strong>
-          <span>{tasks.length} {tasks.length === 1 ? "area" : "areas"}</span>
-        </div>
-        <b>Mowing</b>
+        <div><strong>{title}</strong><span>{routes.length} {routes.length === 1 ? "route" : "routes"}</span></div>
+        <b>Clock</b>
       </summary>
       <div className="atlas-overview-task-list">
-        {tasks.length ? tasks.map((task) => <MowingTaskCard key={task.task_id} task={task} tone={tone} />) : <p className="atlas-task-page-muted">{empty}</p>}
+        {routes.length ? routes.map((route) => <MowingRouteCard key={route.objectId} route={route} tone={tone} />) : <p className="atlas-task-page-muted">{empty}</p>}
       </div>
     </section>
   );
 }
 
 export default function MowingCollectionPage() {
-  const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
+  const [routes, setRoutes] = useState<MowingRoute[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
@@ -93,11 +122,10 @@ export default function MowingCollectionPage() {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetchAtlasTaskCards();
-        const mowingTasks = (response.taskCards ?? [])
-          .filter(atlasIsMowingCollectionMember)
-          .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b)));
-        setTasks(atlasVisibleCollectionTasks(mowingTasks));
+        const response = await fetch("/api/atlas/mowing", { headers: { Accept: "application/json" }, cache: "no-store" });
+        const data = await response.json() as DashboardResponse;
+        if (!response.ok || !data.ok) throw new Error(data.error || "Mowing routes failed.");
+        setRoutes(Array.isArray(data.items) ? data.items : []);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Mowing collection failed.");
       } finally {
@@ -108,7 +136,7 @@ export default function MowingCollectionPage() {
     async function loadWeather() {
       try {
         const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" });
-        const data = (await response.json()) as WeatherResponse;
+        const data = await response.json() as WeatherResponse;
         setWeatherLabel(response.ok && data.ok && data.label ? data.label : "weather unavailable");
       } catch {
         setWeatherLabel("weather unavailable");
@@ -119,18 +147,11 @@ export default function MowingCollectionPage() {
     void loadWeather();
   }, []);
 
-  const summary = useMemo(() => atlasBuildMowingCollectionSummary(tasks, today), [tasks, today]);
-  const notReady = useMemo(() => tasks.filter(atlasIsNotReadyCollectionTask), [tasks]);
-  const dueNow = useMemo(() => tasks
-    .filter((task) => (task.status === "open" || task.status === "blocked") && !atlasIsNotReadyCollectionTask(task))
-    .filter((task) => !task.due_date || task.due_date <= today)
-    .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b))), [tasks, today]);
-  const upcoming = useMemo(() => tasks
-    .filter((task) => task.status === "open" && task.due_date && task.due_date > today)
-    .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b))), [tasks, today]);
-  const recentlyDone = useMemo(() => tasks
-    .filter(atlasIsDoneTask)
-    .sort((a, b) => atlasCollectionTaskSortValue(a).localeCompare(atlasCollectionTaskSortValue(b))), [tasks]);
+  const due = useMemo(() => routes.filter((route) => ["due", "fallen_out_of_rhythm", "recovering"].includes(route.rhythmState) || ["partial", "too_wet", "problem"].includes(route.areaStatus)), [routes]);
+  const upcoming = useMemo(() => routes.filter((route) => !due.includes(route) && route.bindingActive && (route.rhythmState === "coming_due" || Boolean(route.currentTaskId))), [routes, due]);
+  const resting = useMemo(() => routes.filter((route) => !due.includes(route) && !upcoming.includes(route) && route.bindingActive && route.rhythmState === "resting"), [routes, due, upcoming]);
+  const paused = useMemo(() => routes.filter((route) => !route.bindingActive || route.rhythmState === "paused"), [routes]);
+  const nextDue = useMemo(() => routes.map((route) => route.dueAt).filter((value): value is string => Boolean(value)).sort()[0] ?? null, [routes]);
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-work-collection-page-shell">
@@ -143,33 +164,30 @@ export default function MowingCollectionPage() {
 
         <div className="atlas-task-page-body atlas-overview-body atlas-work-collection-body">
           <section className="atlas-overview-hero atlas-work-collection-hero">
-            <div>
-              <strong>Mowing Collection</strong>
-              <span>{prettyDate(today)}</span>
-            </div>
-            <p>{loading ? "Loading mowing areas" : summary ? `${summary.dueCount} due · ${summary.doneRecentCount} resting · ${summary.notReadyCount} not ready` : "No mowing areas found"}</p>
+            <div><strong>Mowing Routes</strong><span>{prettyDate(today)}</span></div>
+            <p>{loading ? "Loading route clocks" : `${due.length} need attention · ${resting.length} in rhythm · ${upcoming.length} approaching`}</p>
           </section>
 
-          <section className="atlas-overview-stat-grid" aria-label="Mowing collection stats">
-            <article><strong>{loading ? "…" : summary?.dueCount ?? 0}</strong><span>due</span></article>
-            <article><strong>{loading ? "…" : summary?.doneRecentCount ?? 0}</strong><span>resting</span></article>
-            <article><strong>{loading ? "…" : summary?.notReadyCount ?? 0}</strong><span>not ready</span></article>
-            <article><strong>{loading ? "…" : summary?.nextDueLabel ?? "none"}</strong><span>next due</span></article>
+          <section className="atlas-overview-stat-grid" aria-label="Mowing route stats">
+            <article><strong>{loading ? "…" : due.length}</strong><span>need attention</span></article>
+            <article><strong>{loading ? "…" : resting.length}</strong><span>in rhythm</span></article>
+            <article><strong>{loading ? "…" : upcoming.length}</strong><span>approaching</span></article>
+            <article><strong>{loading ? "…" : prettyDate(nextDue)}</strong><span>next boundary</span></article>
           </section>
 
           <section className="atlas-overview-summary-line">
-            <p>{summary?.preview ?? "No active mowing areas."}</p>
+            <p>Time returns a route for attention. Only a field result may say it was mowed, remains acceptable, is too wet, or has a problem.</p>
           </section>
 
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
-          {loading ? <div className="atlas-task-page-empty">Loading mowing collection.</div> : null}
+          {loading ? <div className="atlas-task-page-empty">Loading mowing routes.</div> : null}
 
           {!loading ? (
-            <section className="atlas-overview-zone-list atlas-work-collection-list" aria-label="Mowing areas">
-              <CollectionSection title="Due Now" tasks={dueNow} empty="No mowing areas due now." tone="due" />
-              <CollectionSection title="Upcoming" tasks={upcoming} empty="No upcoming mowing areas scheduled." tone="upcoming" />
-              <CollectionSection title="Recently Done / Resting" tasks={recentlyDone} empty="No mowing areas recently completed." tone="done" />
-              <CollectionSection title="Not Ready" tasks={notReady} empty="No mowing areas are paused." tone="paused" />
+            <section className="atlas-overview-zone-list atlas-work-collection-list" aria-label="Mowing routes">
+              <RouteSection title="Needs Attention" routes={due} empty="No mowing routes need attention." tone="due" />
+              <RouteSection title="Approaching / Scheduled" routes={upcoming} empty="No mowing routes are approaching." tone="upcoming" />
+              <RouteSection title="In Rhythm" routes={resting} empty="No routes are resting." tone="done" />
+              <RouteSection title="Paused" routes={paused} empty="No mowing routes are paused." tone="paused" />
             </section>
           ) : null}
         </div>
