@@ -66,10 +66,29 @@
 .toggle button { min-height: 47px; border: 1px solid rgba(82, 70, 101, .18); border-radius: 14px; background: white; color: inherit; font-weight: 850; }
 .toggle button[data-active="true"] { border-color: #695486; background: #eee9f5; }
 
+.roomList { display: grid; gap: 10px; padding: 6px 16px 18px; }
+.roomCard { display: grid; gap: 11px; border: 1px solid rgba(82, 70, 101, .14); border-radius: 19px; background: #fff; padding: 14px; }
+.roomHead { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 10px; }
+.roomHead small { display: block; margin-bottom: 2px; color: #817990; font-size: 9px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.roomHead h3 { margin: 0; font-size: 20px; line-height: 1.05; letter-spacing: -.035em; }
+.roomHead > span { max-width: 130px; border-radius: 999px; background: #f0edf4; padding: 6px 9px; color: #62596c; font-size: 9px; font-weight: 850; line-height: 1.15; text-align: center; }
+.roomHead > span[data-status="ready"] { background: #e9efd7; color: #53603a; }
+.roomHead > span[data-status="small_reset_needed"] { background: #f6edcf; color: #705f2e; }
+.roomHead > span[data-status="not_guest_ready"],
+.roomHead > span[data-status="problem"] { background: #f3dfd9; color: #774d43; }
+.roomHead > span[data-status="closed"] { background: #eceae5; color: #69655e; }
+.roomHistory { margin: -3px 0 0; color: #7b7483; font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+.roomField { display: grid; gap: 5px; }
+.roomField > span { color: #746c7e; font-size: 9px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.roomField select, .roomField textarea { width: 100%; border: 1px solid rgba(82, 70, 101, .22); border-radius: 13px; background: #fffdf8; color: inherit; padding: 11px 12px; font: inherit; }
+.roomField textarea { resize: vertical; }
+
 @media (max-width: 390px) {
   .body { padding-inline: 9px; }
   .hero { padding-inline: 17px; }
-  .facts, .choices, .form { padding-inline: 12px; }
+  .facts, .choices, .form, .roomList { padding-inline: 12px; }
   .choices { grid-template-columns: 1fr 1fr; }
   .countGrid { grid-template-columns: 1fr; }
+  .roomHead { grid-template-columns: minmax(0, 1fr); }
+  .roomHead > span { justify-self: start; max-width: none; }
 }
