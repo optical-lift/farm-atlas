@@ -10,12 +10,16 @@ export default async function AtlasMorePage() {
   if (!session) redirect("/login");
 
   const canManage = session.memberships.some((membership) => membership.role === "owner" || membership.role === "manager");
+  const isFarmOwner = session.memberships.some((membership) => membership.role === "owner");
   const destinations = [
     { label: "Bell", detail: "Future gaps, handoffs and meaningful farm movement", href: "/bell" },
     { label: "Production", detail: "Crop cycles and production state", href: "/production" },
     ...(canManage ? [
       { label: "People + roles", detail: "Farm membership and authority", href: "/owner/members" },
       { label: "Farm management", detail: "Blockers, assignment and schedule risk", href: "/manage" },
+    ] : []),
+    ...(isFarmOwner ? [
+      { label: "Rulebook + Clock", detail: "Farm rhythms, evidence and Owner controls", href: "/manage/rhythms" },
     ] : []),
     { label: "Atlas app", detail: "Farm Alerts, installation and connected devices", href: "/install" },
     { label: "Account", detail: "Password and sign-in settings", href: "/settings/password" },
