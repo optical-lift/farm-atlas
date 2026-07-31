@@ -9,7 +9,7 @@ export type BiologicalRhythmItem = {
   stateId: string;
   bindingId: string;
   ruleId: string;
-  rhythmKey: "grow_room_care" | "germination_watch" | "harvest_watch" | "guest_readiness" | "mowing" | "project_review" | string;
+  rhythmKey: "grow_room_care" | "germination_watch" | "harvest_watch" | "guest_readiness" | "mowing" | "project_review" | "seed_inventory_freshness" | string;
   ruleKey: string;
   ruleLabel: string;
   ruleVersion: number;
@@ -45,6 +45,7 @@ function titleForRhythm(key: string) {
   if (key === "guest_readiness") return "Guest readiness";
   if (key === "mowing") return "Mowing routes";
   if (key === "project_review") return "Project reviews";
+  if (key === "seed_inventory_freshness") return "Seed inventory freshness";
   return key.replaceAll("_", " ");
 }
 
@@ -91,6 +92,7 @@ function scopeNote(item: BiologicalRhythmItem) {
   if (item.rhythmKey === "guest_readiness") return "Pause or cadence revision applies to the indoor venue’s Guest Readiness rule. Extend and forgive apply only to the current room-walk lease.";
   if (item.rhythmKey === "mowing") return "Pause or cadence revision applies only to this permanent mowing route. Extend and forgive apply to this route’s current observation lease without claiming anything about grass condition.";
   if (item.rhythmKey === "project_review") return "Pause or cadence revision applies only to this farm project. Extend and forgive alter the current review lease; they do not claim that the project is healthy, moving, blocked, or complete.";
+  if (item.rhythmKey === "seed_inventory_freshness") return "Pause or cadence revision applies only to this seed lot’s count-freshness rule. Extend and forgive change the count lease; they never change the physical quantity or create receipt, consumption, loss, or damage evidence.";
   return "Pause or cadence revision applies to the Grow Room care rule. Extend and forgive apply only to the current care lease.";
 }
 
