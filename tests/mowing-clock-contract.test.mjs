@@ -37,7 +37,7 @@ test("Elm mowing enrollment is bounded to five real routes with accepted cadence
   ];
 
   for (const key of keys) assert.match(routes, new RegExp(key));
-  assert.equal((routes.match(/'mowing_[a-z_]+','/g) ?? []).length, 5);
+  assert.equal((routes.match(/^\s*\('mowing_[a-z_]+'/gm) ?? []).length, 5);
   assert.doesNotMatch(routes, /mowing_corral|mowing_front_yard|mowing_barn_beds/);
   assert.match(routes, /'field_rows_front_half',4,1,'Riding mower',4\.0/);
   assert.match(routes, /'follow_me_paths_edges',7,1,'Push mower',4\.0/);
