@@ -7,6 +7,7 @@ function read(path) {
 }
 
 const migrationPath = "supabase/migrations/20260731214500_atlas_owner_operator_exact_portal_parity_v1.sql";
+const contractMigrationPath = "supabase/migrations/20260731214600_atlas_owner_operator_home_day_contract_v1.sql";
 
 test("ordinary and switched Home task cards use one effective-membership reader", () => {
   const migration = read(migrationPath);
@@ -48,6 +49,21 @@ test("membership-targeted helpers remain internal and owner wrappers are registr
   assert.match(migration, /insert into atlas\.authenticated_rpc_registry/i);
   assert.match(migration, /authenticated_rpc_registry_drift_v1/);
   assert.doesNotMatch(migration, /21436a28|23e98e5e|6a503d9f|4cd799e2/i);
+});
+
+test("selected-member Home day keeps the Living Day contract on fresh replays", () => {
+  const migration = read(contractMigrationPath);
+
+  assert.match(migration, /create or replace function atlas\.home_day_for_membership_v1/i);
+  assert.match(migration, /'contractVersion', 'living_day_v1'/);
+  assert.match(migration, /'contractVersion', 'journal_day_v1'/);
+  assert.match(migration, /'denominator', 'bounded_day_plan_only'/);
+  assert.match(migration, /'timeMayExpireStewardshipButNotClaimPhysicalCondition', true/);
+  assert.match(
+    migration,
+    /revoke all on function atlas\.home_day_for_membership_v1\(uuid, date\)[\s\S]*from public, anon, authenticated/i,
+  );
+  assert.match(migration, /authenticated_rpc_registry_drift_v1/);
 });
 
 test("switched farm-hand Home uses the effective Living Day instead of the Owner journal", () => {
