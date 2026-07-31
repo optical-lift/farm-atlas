@@ -8,6 +8,7 @@ function read(path) {
 
 const carryForward = read("lib/atlas/home-carry-forward.ts");
 const page = read("app/page.tsx");
+const home = read("components/atlas/home/AtlasUniversalHomeV2.tsx");
 
 test("the purple Home cover prepends unresolved work from earlier days", () => {
   assert.match(carryForward, /item\.date < today/);
@@ -41,6 +42,14 @@ test("both ordinary and Owner-switched Home pass through one carry-forward queue
   assert.match(page, /withAtlasHomeCarryForward\(visibleHome, baseTaskOverview\)/);
   assert.match(page, /moves: taskOverview\.moves/);
   assert.match(page, /dayOverview=\{taskOverview\.summary\}/);
+});
+
+test("Home never describes a carry-forward day as clear", () => {
+  assert.match(home, /const hasCarryForward = dayOverview\.carryForwardCount > 0/);
+  assert.match(home, /const overdueLabel =/);
+  assert.match(home, /: hasCarryForward\s*\? overdueLabel\s*: dayOverview\.personalScope/);
+  assert.match(home, /hasCarryForward \? overdueLabel : dayOverview\.personalScope/);
+  assert.match(home, /dayOverview\.plannedTotal > 0 && hasCarryForward/);
 });
 
 test("the carry-forward adapter contains no farm or member fixtures", () => {
