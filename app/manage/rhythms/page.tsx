@@ -37,7 +37,7 @@ export default async function BiologicalRhythmsPage({ searchParams }: RhythmPage
   const { data, error } = await supabase.rpc("biological_rhythm_dashboard_v1", {
     p_farm_id: selectedMembership.farmId,
   });
-  if (error) throw new Error("Atlas could not read the biological Rulebook.");
+  if (error) throw new Error("Atlas could not read the farm Rulebook.");
 
   const dashboard = (data ?? {
     contractVersion: "biological_rhythm_dashboard_v1",
@@ -70,8 +70,8 @@ export default async function BiologicalRhythmsPage({ searchParams }: RhythmPage
 
         <header className={styles.intro}>
           <span>Owner controls</span>
-          <h1>Biological rhythms</h1>
-          <p>Atlas may open a care round or observation window when time crosses a boundary. It never uses time alone to claim what is physically happening.</p>
+          <h1>Farm rhythms</h1>
+          <p>Atlas may open care, observation, and readiness work when time crosses a boundary. It never uses time alone to claim what is physically happening.</p>
         </header>
 
         <BiologicalRhythmManager dashboard={dashboard} />
