@@ -77,9 +77,10 @@ test("all seed inventory outcomes preserve physical truth and role boundaries", 
 });
 
 test("trusted seed coverage gates dependent sowing and opens only proven shortfall decisions", () => {
+  const adapter = read("supabase/migrations/20260731174114_seed_inventory_clock_adapter_v1.sql");
   const dependency = read("supabase/migrations/20260731174836_seed_inventory_dependency_gate_v1.sql");
 
-  assert.match(dependency, /create or replace view atlas\.production_seed_readiness_v1/);
+  assert.match(adapter, /create or replace view atlas\.production_seed_readiness_v1/);
   assert.match(dependency, /assert_production_seed_ready_v1/);
   assert.match(dependency, /record_production_sowing_v1/);
   assert.match(dependency, /A current verified physical seed count is required before sowing/);
