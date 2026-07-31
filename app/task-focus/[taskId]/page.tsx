@@ -6,7 +6,10 @@ import ProjectTaskFocus from "@/components/atlas/project-task-focus";
 import { readAtlasProjectTaskFocus } from "@/lib/atlas/portfolio";
 import { resolveTaskAssignee } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
+import { getAtlasSession } from "@/lib/atlas/session";
 import GerminationFocusPage from "./GerminationFocusPage";
+import GuestReadinessFocusPage, { type GuestReadinessRoom } from "./GuestReadinessFocusPage";
 import HarvestCutFocusPage from "./HarvestCutFocusPage";
 import HarvestWatchFocusPage from "./HarvestWatchFocusPage";
 import SowingFocusPage, { type ProductionSowingTask } from "./SowingFocusPage";
@@ -16,6 +19,7 @@ export const dynamic = "force-dynamic";
 
 type TaskRow = {
   id: string;
+  farm_id: string | null;
   title: string;
   task_type: string | null;
   task_scope: string | null;
@@ -64,6 +68,18 @@ type HarvestAvailability = {
   unit?: string | null;
 };
 
+type GuestObjectLink = {
+  object_id?: string | null;
+  growing_objects?: { id?: string | null; stable_key?: string | null; label?: string | null } | null;
+};
+
+type GuestRoomState = {
+  object_id?: string | null;
+  status?: string | null;
+  last_observed_at?: string | null;
+  note?: string | null;
+};
+
 const SAFE_RETURN_PATHS = new Set([
   "/",
   "/owner",
@@ -76,6 +92,16 @@ const SAFE_RETURN_PATHS = new Set([
   "/overview/month",
   "/grow-room",
 ]);
+
+const GUEST_ROOM_ORDER = [
+  "venue_entry",
+  "venue_bathroom",
+  "venue_kitchen",
+  "venue_lounge",
+  "venue_library",
+  "venue_conference_room",
+  "venue_studio",
+];
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -129,6 +155,11 @@ function isCropHarvestTask(task: TaskRow) {
   return task.task_type === "crop_harvest" && truthy(task.metadata?.crop_harvest_clock);
 }
 
+function isGuestReadinessTask(task: TaskRow) {
+  return task.task_type === "guest_readiness_round"
+    && (truthy(task.metadata?.clock_managed) || text(task.metadata?.task_style) === "guest_readiness_round");
+}
+
 function isProductionSowingTask(task: TaskRow) {
   const metadata = task.metadata ?? {};
   return task.task_type === "production_sowing" && Boolean(text(metadata.production_succession_id));
@@ -138,7 +169,7 @@ async function loadTask(taskId: string) {
   const { data, error } = await atlasSupabase
     .schema("atlas")
     .from("tasks")
-    .select("id, title, task_type, task_scope, due_date, metadata")
+    .select("id, farm_id, title, task_type, task_scope, due_date, metadata")
     .eq("id", taskId)
     .limit(1)
     .maybeSingle();
@@ -163,6 +194,50 @@ async function loadObjectLabel(taskId: string) {
   const { data } = await atlasSupabase.schema("atlas").from("task_objects").select("growing_objects(label)").eq("task_id", taskId).limit(1).maybeSingle();
   const row = data as unknown as { growing_objects?: { label?: string } | null } | null;
   return text(row?.growing_objects?.label) || "Elm Farm";
+}
+
+async function loadGuestReadinessRooms(taskId: string): Promise<GuestReadinessRoom[]> {
+  const { data: links, error: linkError } = await atlasSupabase
+    .schema("atlas")
+    .from("task_objects")
+    .select("object_id, growing_objects(id, stable_key, label)")
+    .eq("task_id", taskId)
+    .eq("role", "readiness_room");
+  if (linkError) throw new Error(linkError.message);
+
+  const normalized = (links ?? []) as unknown as GuestObjectLink[];
+  const objectIds = normalized.map((link) => text(link.object_id)).filter(Boolean);
+  const { data: states, error: stateError } = objectIds.length
+    ? await atlasSupabase.schema("atlas").from("guest_readiness_room_state").select("object_id, status, last_observed_at, note").in("object_id", objectIds)
+    : { data: [], error: null };
+  if (stateError) throw new Error(stateError.message);
+
+  const stateByObject = new Map((states as GuestRoomState[]).map((state) => [text(state.object_id), state]));
+  return normalized
+    .map((link) => {
+      const objectId = text(link.object_id) || text(link.growing_objects?.id);
+      const stableKey = text(link.growing_objects?.stable_key);
+      const state = stateByObject.get(objectId);
+      return {
+        objectId,
+        label: text(link.growing_objects?.label) || "Venue room",
+        stableKey,
+        currentStatus: text(state?.status) || "unassessed",
+        lastObservedAt: text(state?.last_observed_at) || null,
+        currentNote: text(state?.note) || null,
+      };
+    })
+    .filter((room) => Boolean(room.objectId))
+    .sort((left, right) => GUEST_ROOM_ORDER.indexOf(left.stableKey) - GUEST_ROOM_ORDER.indexOf(right.stableKey))
+    .map(({ stableKey: _stableKey, ...room }) => room);
+}
+
+async function canCloseGuestRooms(task: TaskRow) {
+  const [operatorContext, session] = await Promise.all([readAtlasOwnerOperatorContext(), getAtlasSession()]);
+  const role = operatorContext?.isOperating && operatorContext.effective.farmId === task.farm_id
+    ? operatorContext.effective.farmRole
+    : session?.memberships.find((membership) => membership.farmId === task.farm_id)?.role ?? null;
+  return role === "owner" || role === "manager";
 }
 
 async function loadProductionSowingTask(task: TaskRow): Promise<ProductionSowingTask | null> {
@@ -295,6 +370,21 @@ export default async function TaskFocusPage({ params, searchParams }: { params: 
   if (isProductionSowingTask(task)) {
     const productionTask = await loadProductionSowingTask(task);
     if (productionTask) return <SowingFocusPage task={productionTask} />;
+  }
+
+  if (isGuestReadinessTask(task)) {
+    const [rooms, canCloseRooms] = await Promise.all([loadGuestReadinessRooms(task.id), canCloseGuestRooms(task)]);
+    if (!rooms.length) notFound();
+    return <GuestReadinessFocusPage task={{
+      id: task.id,
+      title: task.title,
+      dueDate: task.due_date,
+      zoneLabel: text(task.metadata?.venue_zone_label) || "Venue",
+      rooms,
+      canCloseRooms,
+      initialAcceptance: truthy(task.metadata?.initial_guest_readiness_acceptance),
+      returnTo,
+    }} />;
   }
 
   if (isHarvestWatchTask(task) || isCropHarvestTask(task)) {
