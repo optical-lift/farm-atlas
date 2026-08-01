@@ -101,6 +101,22 @@ function smallDate(dateIso: string | null | undefined) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function daysBetweenIso(olderIso: string, newerIso: string) {
+  const older = new Date(`${olderIso}T12:00:00Z`).getTime();
+  const newer = new Date(`${newerIso}T12:00:00Z`).getTime();
+  if (!Number.isFinite(older) || !Number.isFinite(newer)) return 0;
+  return Math.max(0, Math.round((newer - older) / 86_400_000));
+}
+
+function gaugeStatus(conditions: FarmConditionsResponse) {
+  const latest = conditions.rain.gauge.latest;
+  if (!latest) return conditions.rain.statusLabel;
+  const age = daysBetweenIso(latest.observationDate, conditions.observedDate);
+  if (age === 0) return `${latest.amountIn.toFixed(2)}\" gauge reading today`;
+  if (age === 1) return "1 day since gauge read";
+  return `${age} days since gauge read`;
+}
+
 function rainAge(days: number | null) {
   if (days === null) return "No gauge watering-rain history";
   if (days === 0) return "Watering rain logged today";
@@ -215,7 +231,7 @@ function FarmConditionsPanel({
         <article className="atlas-farm-condition-cell atlas-farm-rain-cell">
           <small>Rain at Elm</small>
           <strong>{gaugeLabel}</strong>
-          <span>{conditions.rain.statusLabel}</span>
+          <span>{gaugeStatus(conditions)}</span>
           <p>
             Gauge 7 days {inches(conditions.rain.gauge.sevenDayTotalIn)}
             {conditions.rain.areaEstimate ? ` · Area estimate ${inches(conditions.rain.areaEstimate.sevenDayIn)}` : ""}

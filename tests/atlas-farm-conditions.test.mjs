@@ -67,3 +67,11 @@ test("Home mounts a compact Farm Conditions surface without another vertical scr
   assert.match(home, /Traditional Elm Almanac/);
   assert.doesNotMatch(css, /overflow-y:\s*(?:auto|scroll)/);
 });
+
+test("Rain gauge age is rendered from the farm-local observed date", () => {
+  const home = read("app/AtlasFarmConditionsHomePatch.tsx");
+
+  assert.match(home, /daysBetweenIso\(latest\.observationDate, conditions\.observedDate\)/);
+  assert.match(home, /gaugeStatus\(conditions\)/);
+  assert.doesNotMatch(home, /new Date\(\)\.toISOString\(\)\.slice\(0,\s*10\)/);
+});
