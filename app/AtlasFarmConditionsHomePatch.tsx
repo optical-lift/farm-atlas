@@ -46,6 +46,22 @@ type FarmConditionsResponse = {
       todayIn: number;
       sevenDayIn: number;
       daysSinceWateringRain: number | null;
+      method?: "inverse_distance_weighted_three_point";
+      sourceLabel?: string;
+      stationCount?: number;
+      spreadSevenDayIn?: number;
+      confidence?: "high" | "moderate" | "low";
+      stations?: Array<{
+        key: string;
+        label: string;
+        latitude: number;
+        longitude: number;
+        distanceMiles: number;
+        weight: number;
+        todayIn: number;
+        sevenDayIn: number;
+        daysSinceWateringRain: number | null;
+      }>;
     };
     forecast: null | {
       next48hIn: number;
@@ -191,6 +207,9 @@ function FarmConditionsEmbedded({
   const gaugeLabel = conditions.rain.gauge.latest
     ? `${inches(conditions.rain.gauge.latest.amountIn)} on ${smallDate(conditions.rain.gauge.latest.observationDate)}`
     : "Not read yet";
+  const areaEstimate = conditions.rain.areaEstimate;
+  const rainfallStations = areaEstimate?.stations ?? [];
+  const estimateLabel = areaEstimate?.stationCount === 3 ? "3-station" : "Area estimate";
 
   return (
     <div
@@ -216,7 +235,7 @@ function FarmConditionsEmbedded({
           <span>{gaugeStatus(conditions)}</span>
           <p>
             Gauge 7 days {inches(conditions.rain.gauge.sevenDayTotalIn)}
-            {conditions.rain.areaEstimate ? ` · Area estimate ${inches(conditions.rain.areaEstimate.sevenDayIn)}` : ""}
+            {areaEstimate ? ` · ${estimateLabel} ${inches(areaEstimate.sevenDayIn)}` : ""}
           </p>
         </article>
 
@@ -240,6 +259,32 @@ function FarmConditionsEmbedded({
           {rainAge(conditions.rain.gauge.daysSinceWateringRain)}
         </span>
       </div>
+
+      {rainfallStations.length === 3 && areaEstimate ? (
+        <details className="atlas-farm-lunar-planner atlas-farm-rain-stations">
+          <summary>
+            <span>
+              <small>Triangulated rainfall</small>
+              <strong>{inches(areaEstimate.sevenDayIn)} across three stations</strong>
+            </span>
+            <b aria-hidden="true">⌄</b>
+          </summary>
+          <div className="atlas-farm-lunar-body">
+            <div className="atlas-farm-lunar-actions" aria-label="Rainfall station estimates">
+              {rainfallStations.map((station) => (
+                <span key={station.key}>{station.label} · {inches(station.sevenDayIn)}</span>
+              ))}
+            </div>
+            <p>
+              Atlas weights the three surrounding station locations by distance to this farm. Agreement is {areaEstimate.confidence ?? "unrated"}
+              {typeof areaEstimate.spreadSevenDayIn === "number" ? ` · ${inches(areaEstimate.spreadSevenDayIn)} spread` : ""}.
+            </p>
+            <small className="atlas-farm-condition-source">
+              These are weather-model rainfall readings at the configured station locations, not the physical farm gauge.
+            </small>
+          </div>
+        </details>
+      ) : null}
 
       <details className="atlas-farm-lunar-planner">
         <summary>
