@@ -43,7 +43,7 @@ test("Elm Almanac guidance is task-aware and never outranks farm viability", () 
 });
 
 test("Rain-gauge writes cross the reviewed RPC boundary", () => {
-  const migration = read("supabase/migrations/20260801034500_atlas_farm_rain_and_lunar_profile_v1.sql");
+  const migration = read("supabase/migrations/20260801041000_atlas_farm_rain_and_lunar_profile_v1.sql");
   const api = read("app/api/atlas/farm-conditions/route.ts");
 
   assert.match(migration, /create table if not exists atlas\.farm_rain_observations/);
