@@ -54,7 +54,7 @@ test("Bell cards show action timing, canonical consequence, and destination", ()
 });
 
 test("employee movement cards state repeat movement and current consequence", () => {
-  assert.match(action, /return movementCount === 1 \? "Moved once" : `Moved \$\{movementCount\} times`/);
+  assert.match(action, /const movementLabel = movementCount === 1 \? "Moved once" : `Moved \$\{movementCount\} times`/);
   assert.match(action, /Due today/);
   assert.match(action, /days? overdue/);
   assert.match(action, /label: "Unlocks"/);
