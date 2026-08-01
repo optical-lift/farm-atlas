@@ -81,3 +81,21 @@ test("Rain gauge age is rendered from the farm-local observed date", () => {
   assert.match(home, /gaugeStatus\(conditions\)/);
   assert.doesNotMatch(home, /new Date\(\)\.toISOString\(\)\.slice\(0,\s*10\)/);
 });
+
+test("All-farm conditions triangulate weather and rainfall from three configured stations", () => {
+  const helper = read("lib/atlas/triangulated-rainfall.ts");
+  const allApi = read("app/api/atlas/farm-conditions/all/route.ts");
+  const home = read("app/AtlasFarmConditionsHomePatch.tsx");
+
+  assert.match(helper, /condition_station_points/);
+  assert.match(helper, /inverse_distance_weighted_three_point/);
+  assert.match(helper, /api\.weather\.gov\/stations/);
+  assert.match(helper, /api\.open-meteo\.com\/v1\/forecast/);
+  assert.match(helper, /readTriangulatedFarmConditions/);
+  assert.match(helper, /sourceType:\s*"three_station_triangulation"/);
+  assert.match(allApi, /payload\.weather = triangulated\.weather/);
+  assert.match(allApi, /payload\.rain\.areaEstimate = triangulated\.rainfall/);
+  assert.match(allApi, /payload\.rain\.forecast =/);
+  assert.match(home, /Triangulated rainfall/);
+  assert.match(home, /across three stations/);
+});
