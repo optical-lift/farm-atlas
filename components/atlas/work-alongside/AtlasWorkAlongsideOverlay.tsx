@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePathname, useSearchParams } from "next/navigation";
 
 type Teammate = {
@@ -74,6 +75,12 @@ function shortDate(dateIso: string) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function clearAssigneeIdentity(target: HTMLElement | null, entry: HTMLElement | null) {
+  target?.removeAttribute("data-atlas-assignee-label");
+  target?.removeAttribute("data-atlas-assignee-key");
+  entry?.removeAttribute("data-atlas-assignee-key");
+}
+
 function applyAssigneeBadges(
   taskCards: TaskCard[],
   viewerMembershipId: string,
@@ -96,18 +103,15 @@ function applyAssigneeBadges(
       : cardElement;
     const entry = cardElement.closest<HTMLElement>(".atlas-day-task-entry");
 
-    if (!target || !executorMembershipId) {
-      target?.removeAttribute("data-atlas-assignee-label");
-      target?.removeAttribute("data-atlas-assignee-key");
-      entry?.removeAttribute("data-atlas-assignee-key");
+    if (!target || !executorMembershipId || executorMembershipId === viewerMembershipId) {
+      clearAssigneeIdentity(target, entry);
       return;
     }
 
-    const ownTask = executorMembershipId === viewerMembershipId;
     const teammate = teammateByMembership.get(executorMembershipId);
-    const label = ownTask ? "You" : teammate?.label || executorLabel || "Teammate";
-    const initial = ownTask ? "" : `${label.slice(0, 1).toUpperCase()} `;
-    const workerKey = ownTask ? "viewer" : teammate?.workerKey || executorWorkerKey || "teammate";
+    const label = teammate?.label || executorLabel || "Teammate";
+    const initial = `${label.slice(0, 1).toUpperCase()} `;
+    const workerKey = teammate?.workerKey || executorWorkerKey || "teammate";
 
     target.setAttribute("data-atlas-assignee-label", `${initial}${label}`.trim());
     target.setAttribute("data-atlas-assignee-key", workerKey);
@@ -121,12 +125,14 @@ export default function AtlasWorkAlongsideOverlay() {
   const selectedDate = searchParams.get("date") || localTodayIso();
   const [surface, setSurface] = useState<WorkAlongsideResponse | null>(null);
   const [taskCards, setTaskCards] = useState<TaskCard[]>([]);
-  const [open, setOpen] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teammateMembershipId, setTeammateMembershipId] = useState("");
   const [startsOn, setStartsOn] = useState(selectedDate);
   const [endsOn, setEndsOn] = useState(addDaysIso(selectedDate, 3));
+  const isDay = pathname === "/day";
+  const isMore = pathname === "/more";
 
   useEffect(() => {
     setStartsOn(selectedDate);
@@ -134,21 +140,46 @@ export default function AtlasWorkAlongsideOverlay() {
   }, [selectedDate]);
 
   useEffect(() => {
-    if (pathname !== "/day") return;
+    if (!isMore) {
+      setPortalTarget(null);
+      return;
+    }
+
+    const existing = document.getElementById("atlas-more-work-alongside-slot");
+    if (existing) {
+      setPortalTarget(existing);
+      return;
+    }
+
+    const observer = new MutationObserver(() => {
+      const target = document.getElementById("atlas-more-work-alongside-slot");
+      if (!target) return;
+      setPortalTarget(target);
+      observer.disconnect();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [isMore]);
+
+  useEffect(() => {
+    if (!isDay && !isMore) return;
     let cancelled = false;
 
-    Promise.all([
-      fetch("/api/atlas/work-alongside", {
+    const workAlongsideRequest = fetch("/api/atlas/work-alongside", {
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+      cache: "no-store",
+    }).then((response) => response.json() as Promise<WorkAlongsideResponse>);
+
+    const taskCardsRequest: Promise<TaskCardsResponse> = isDay
+      ? fetch(`/api/atlas/universal-task-cards?dueThrough=${encodeURIComponent(selectedDate)}&doneDate=${encodeURIComponent(selectedDate)}`, {
         headers: { Accept: "application/json" },
         credentials: "same-origin",
         cache: "no-store",
-      }).then((response) => response.json() as Promise<WorkAlongsideResponse>),
-      fetch(`/api/atlas/universal-task-cards?dueThrough=${encodeURIComponent(selectedDate)}&doneDate=${encodeURIComponent(selectedDate)}`, {
-        headers: { Accept: "application/json" },
-        credentials: "same-origin",
-        cache: "no-store",
-      }).then((response) => response.json() as Promise<TaskCardsResponse>),
-    ]).then(([workAlongside, tasks]) => {
+      }).then((response) => response.json() as Promise<TaskCardsResponse>)
+      : Promise.resolve({ ok: true, taskCards: [] });
+
+    Promise.all([workAlongsideRequest, taskCardsRequest]).then(([workAlongside, tasks]) => {
       if (cancelled) return;
       setSurface(workAlongside);
       setTaskCards(tasks.ok ? tasks.taskCards ?? [] : []);
@@ -159,7 +190,7 @@ export default function AtlasWorkAlongsideOverlay() {
     });
 
     return () => { cancelled = true; };
-  }, [pathname, selectedDate]);
+  }, [isDay, isMore, selectedDate]);
 
   const teammateByMembership = useMemo(
     () => new Map((surface?.teammates ?? []).map((teammate) => [teammate.membershipId, teammate])),
@@ -167,19 +198,16 @@ export default function AtlasWorkAlongsideOverlay() {
   );
 
   useEffect(() => {
-    if (pathname !== "/day" || !surface?.ok || !surface.viewerMembershipId) return;
+    if (!isDay || !surface?.ok || !surface.viewerMembershipId) return;
 
     const apply = () => applyAssigneeBadges(taskCards, surface.viewerMembershipId as string, teammateByMembership);
     apply();
     const observer = new MutationObserver(() => window.requestAnimationFrame(apply));
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [pathname, surface?.ok, surface?.viewerMembershipId, taskCards, teammateByMembership]);
+  }, [isDay, surface?.ok, surface?.viewerMembershipId, taskCards, teammateByMembership]);
 
   const activeWindows = surface?.windows ?? [];
-  const activeLabels = [...new Set(activeWindows
-    .map((window) => teammateByMembership.get(window.teammateMembershipId)?.label)
-    .filter((label): label is string => Boolean(label)))];
 
   async function addWindow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -227,59 +255,52 @@ export default function AtlasWorkAlongsideOverlay() {
     }
   }
 
-  if (pathname !== "/day" || !surface?.ok || !surface.viewerMembershipId) return null;
+  if (isDay) return null;
+  if (!isMore || !portalTarget || !surface?.ok || !surface.viewerMembershipId) return null;
 
-  return (
-    <aside className="atlas-work-alongside-overlay" data-open={open ? "true" : "false"}>
-      <button
-        type="button"
-        className="atlas-work-alongside-toggle"
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-      >
-        <span>Work alongside</span>
-        <strong>{activeLabels.length ? activeLabels.join(" + ") : "Choose teammate"}</strong>
-      </button>
+  return createPortal(
+    <section className="atlas-work-alongside-panel atlas-work-alongside-more-card" aria-label="Work alongside settings">
+      <header>
+        <div>
+          <span>Work alongside</span>
+          <strong>Bring a teammate into your Work feed</strong>
+          <p>Their tasks stay assigned to them. You see them only for the dates you choose.</p>
+        </div>
+      </header>
 
-      {open ? (
-        <section className="atlas-work-alongside-panel" aria-label="Work alongside settings">
-          <header>
-            <div><span>Visit mode</span><strong>Share the daily trail</strong></div>
-            <button type="button" aria-label="Close work alongside settings" onClick={() => setOpen(false)}>×</button>
-          </header>
+      {activeWindows.length ? (
+        <div className="atlas-work-alongside-windows">
+          {activeWindows.map((window) => {
+            const teammate = teammateByMembership.get(window.teammateMembershipId);
+            return (
+              <div key={window.windowId}>
+                <span><b>{teammate?.label || "Teammate"}</b>{shortDate(window.startsOn)}–{shortDate(window.endsOn)}</span>
+                <button type="button" disabled={saving} onClick={() => void removeWindow(window.windowId)}>Remove</button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="atlas-work-alongside-empty">No teammate is currently included in your Work feed.</p>
+      )}
 
-          {activeWindows.length ? (
-            <div className="atlas-work-alongside-windows">
-              {activeWindows.map((window) => {
-                const teammate = teammateByMembership.get(window.teammateMembershipId);
-                return (
-                  <div key={window.windowId}>
-                    <span><b>{teammate?.label || "Teammate"}</b>{shortDate(window.startsOn)}–{shortDate(window.endsOn)}</span>
-                    <button type="button" disabled={saving} onClick={() => void removeWindow(window.windowId)}>Remove</button>
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-
-          <form onSubmit={addWindow}>
-            <label>
-              <span>Teammate</span>
-              <select value={teammateMembershipId} onChange={(event) => setTeammateMembershipId(event.target.value)} required>
-                {(surface.teammates ?? []).map((teammate) => (
-                  <option key={teammate.membershipId} value={teammate.membershipId}>{teammate.label}</option>
-                ))}
-              </select>
-            </label>
-            <div className="atlas-work-alongside-dates">
-              <label><span>From</span><input type="date" value={startsOn} onChange={(event) => setStartsOn(event.target.value)} required /></label>
-              <label><span>Through</span><input type="date" value={endsOn} min={startsOn} onChange={(event) => setEndsOn(event.target.value)} required /></label>
-            </div>
-            {error ? <p>{error}</p> : null}
-            <button type="submit" disabled={saving || !(surface.teammates ?? []).length}>{saving ? "Saving…" : "Add to my Work feed"}</button>
-          </form>
-        </section>
-      ) : null}
-    </aside>
+      <form onSubmit={addWindow}>
+        <label>
+          <span>Teammate</span>
+          <select value={teammateMembershipId} onChange={(event) => setTeammateMembershipId(event.target.value)} required>
+            {(surface.teammates ?? []).map((teammate) => (
+              <option key={teammate.membershipId} value={teammate.membershipId}>{teammate.label}</option>
+            ))}
+          </select>
+        </label>
+        <div className="atlas-work-alongside-dates">
+          <label><span>From</span><input type="date" value={startsOn} onChange={(event) => setStartsOn(event.target.value)} required /></label>
+          <label><span>Through</span><input type="date" value={endsOn} min={startsOn} onChange={(event) => setEndsOn(event.target.value)} required /></label>
+        </div>
+        {error ? <p>{error}</p> : null}
+        <button type="submit" disabled={saving || !(surface.teammates ?? []).length}>{saving ? "Saving…" : "Add to my Work feed"}</button>
+      </form>
+    </section>,
+    portalTarget,
   );
 }

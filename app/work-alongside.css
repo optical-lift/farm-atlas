@@ -1,6 +1,6 @@
 /* Work-alongside keeps task ownership intact while giving an Owner a temporary
-   shared trail. Assignee identity is a separate visual layer, never part of the
-   task title or operational category. */
+   shared trail. Only teammate work receives an assignee badge; the Owner's own
+   cards remain visually quiet. */
 
 [data-atlas-assignee-label] {
   position: relative !important;
@@ -29,11 +29,6 @@
   white-space: nowrap;
 }
 
-[data-atlas-assignee-key="viewer"]::after {
-  background: rgba(174, 179, 212, 0.12);
-  color: #777b73;
-}
-
 [data-atlas-assignee-key="marshall"]::after {
   border-color: rgba(85, 90, 134, 0.24);
   background: rgba(188, 196, 220, 0.32);
@@ -56,81 +51,27 @@
   background: rgba(207, 214, 175, 0.2) !important;
 }
 
-.atlas-day-task-entry[data-atlas-assignee-key="viewer"] .atlas-day-task-node {
-  border-color: rgba(139, 145, 194, 0.72) !important;
-}
-
-.atlas-work-alongside-overlay {
-  position: fixed;
-  left: 50%;
-  bottom: calc(86px + env(safe-area-inset-bottom));
-  z-index: 1300;
-  width: min(calc(100vw - 28px), 402px);
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.atlas-work-alongside-toggle {
-  width: auto;
-  max-width: 100%;
-  min-height: 42px;
-  margin-left: auto;
-  border: 1px solid rgba(139, 145, 194, 0.28);
-  border-radius: 16px;
-  background: rgba(251, 250, 244, 0.96);
-  box-shadow: 0 10px 28px rgba(49, 43, 35, 0.12);
-  color: var(--atlas-text);
-  padding: 8px 12px;
-  display: grid;
-  gap: 2px;
-  text-align: left;
-  pointer-events: auto;
-  backdrop-filter: blur(14px);
-}
-
-.atlas-work-alongside-toggle span {
-  color: var(--atlas-purple-dark);
-  font-size: 8px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-}
-
-.atlas-work-alongside-toggle strong {
-  overflow: hidden;
-  font-size: 12px;
-  line-height: 1.05;
-  font-weight: 900;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+#atlas-more-work-alongside-slot {
+  padding: 0 16px 12px;
 }
 
 .atlas-work-alongside-panel {
-  margin-top: 8px;
   overflow: hidden;
-  border: 1px solid rgba(139, 145, 194, 0.28);
-  border-radius: 20px;
-  background: rgba(251, 250, 244, 0.99);
-  box-shadow: 0 18px 48px rgba(49, 43, 35, 0.18);
-  pointer-events: auto;
-  backdrop-filter: blur(18px);
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 18px;
+  background: #fffdf7;
+  box-shadow: 0 4px 12px rgba(47, 48, 66, 0.035);
 }
 
 .atlas-work-alongside-panel > header {
-  min-height: 54px;
-  border-bottom: 1px solid rgba(139, 145, 194, 0.14);
-  padding: 11px 12px 10px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid rgba(139, 145, 194, 0.12);
 }
 
 .atlas-work-alongside-panel > header div {
   min-width: 0;
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 
 .atlas-work-alongside-panel > header span,
@@ -144,34 +85,32 @@
 }
 
 .atlas-work-alongside-panel > header strong {
-  font-size: 15px;
-  line-height: 1.05;
+  color: var(--atlas-text);
+  font-size: 14px;
+  line-height: 1.1;
   font-weight: 950;
 }
 
-.atlas-work-alongside-panel > header button {
-  width: 34px;
-  height: 34px;
-  border: 0;
-  border-radius: 12px;
-  background: rgba(174, 179, 212, 0.14);
-  color: var(--atlas-text);
-  font-size: 22px;
-  line-height: 1;
+.atlas-work-alongside-panel > header p {
+  margin: 1px 0 0;
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 700;
 }
 
 .atlas-work-alongside-windows {
   border-bottom: 1px solid rgba(139, 145, 194, 0.12);
-  padding: 7px 12px;
+  padding: 8px 12px;
   display: grid;
-  gap: 5px;
+  gap: 6px;
 }
 
 .atlas-work-alongside-windows > div {
   min-width: 0;
   border-radius: 12px;
   background: rgba(174, 179, 212, 0.1);
-  padding: 8px 9px;
+  padding: 9px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -182,7 +121,7 @@
   min-width: 0;
   color: var(--atlas-muted);
   font-size: 10px;
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 .atlas-work-alongside-windows b {
@@ -199,6 +138,15 @@
   padding: 4px;
   font-size: 10px;
   font-weight: 850;
+}
+
+.atlas-work-alongside-empty {
+  margin: 0;
+  padding: 11px 13px 0;
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 700;
 }
 
 .atlas-work-alongside-panel form {
