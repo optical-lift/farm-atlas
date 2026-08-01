@@ -1,14 +1,11 @@
 export type AtlasMoonDirection = "waxing" | "waning" | "boundary";
-
 export type AtlasMoonSignQuality = "fruitful" | "productive" | "barren";
-
 export type AtlasLunarActionFamily =
   | "aboveground_planting"
   | "belowground_planting"
   | "maintenance"
   | "aboveground_harvest"
   | "belowground_harvest";
-
 export type AtlasLunarFit = "favored" | "neutral" | "caution";
 
 export type AtlasLunarClock = {
@@ -104,12 +101,10 @@ function nthSunday(year: number, monthIndex: number, occurrence: number) {
 function usesUsDaylightTimeOn(dateIso: string) {
   const parts = parseIsoParts(dateIso);
   if (!parts) return false;
-  const marchStart = nthSunday(parts.year, 2, 2);
-  const novemberEnd = nthSunday(parts.year, 10, 1);
   if (parts.month < 3 || parts.month > 11) return false;
   if (parts.month > 3 && parts.month < 11) return true;
-  if (parts.month === 3) return parts.day >= marchStart;
-  return parts.day < novemberEnd;
+  if (parts.month === 3) return parts.day >= nthSunday(parts.year, 2, 2);
+  return parts.day < nthSunday(parts.year, 10, 1);
 }
 
 export function localNoonUtc(
@@ -217,15 +212,12 @@ export function classifyLunarTask(task: AtlasLunarTaskInput): AtlasLunarActionFa
   const harvest = /\b(harvest|dig|lift|pull|cut)\b/.test(joined);
   if (harvest && belowground) return "belowground_harvest";
   if (harvest) return "aboveground_harvest";
-
   if (/\b(weed|cultivat|prune|thin|mow|pest|clear|cleanup|clean up|remove|deadhead)\b/.test(joined)) {
     return "maintenance";
   }
-
   if (/\b(sow|seed|plant|transplant|divide|pot up|pot-up|set out)\b/.test(joined)) {
     return belowground ? "belowground_planting" : "aboveground_planting";
   }
-
   return null;
 }
 
@@ -247,12 +239,15 @@ export function lunarGuidance(clock: AtlasLunarClock): AtlasLunarGuidance {
   }
 
   if (clock.direction === "waxing") {
+    const signDetail = fruitful
+      ? `, strengthened by fruitful ${clock.sign}`
+      : `; ${clock.sign} is treated as moderately productive`;
     return {
       profileKey: "elm_almanac_v1",
       traditional: true,
       strength: fruitful ? "strong" : "moderate",
       headline: fruitful ? "Strong aboveground planting window" : "Aboveground planting window",
-      detail: `${clock.phase} traditionally favors annual flowers and crops that grow or bear above ground${fruitful ? `, strengthened by fruitful ${clock.sign}` : `; ${clock.sign} is treated as moderately productive`}.",
+      detail: `${clock.phase} traditionally favors annual flowers and crops that grow or bear above ground${signDetail}.`,
       favoredFamilies: ["aboveground_planting", "aboveground_harvest"],
       favoredActions: ["sow annual flowers", "transplant aboveground crops", "harvest flowers and fruit"],
     };
@@ -260,12 +255,13 @@ export function lunarGuidance(clock: AtlasLunarClock): AtlasLunarGuidance {
 
   if (clock.direction === "waning") {
     const lateWaning = phase.includes("last quarter") || phase.includes("waning crescent");
+    const signDetail = fruitful ? `; fruitful ${clock.sign} strengthens planting work` : "";
     return {
       profileKey: "elm_almanac_v1",
       traditional: true,
       strength: fruitful ? "strong" : lateWaning ? "work_window" : "moderate",
       headline: lateWaning ? "Roots, bulbs, and clearing work" : "Roots, bulbs, and perennial work",
-      detail: `${clock.phase} traditionally favors belowground crops, bulbs, divisions, and root-establishing work${lateWaning ? ", with the late waning period also used for weeding and pruning" : ""}${fruitful ? `; fruitful ${clock.sign} strengthens planting work` : ""}.",
+      detail: `${clock.phase} traditionally favors belowground crops, bulbs, divisions, and root-establishing work${lateWaning ? ", with the late waning period also used for weeding and pruning" : ""}${signDetail}.`,
       favoredFamilies: lateWaning
         ? ["belowground_planting", "belowground_harvest", "maintenance"]
         : ["belowground_planting", "belowground_harvest"],
@@ -315,12 +311,11 @@ export function lunarTaskHint(task: AtlasLunarTaskInput, clock: AtlasLunarClock)
       : signCaution
         ? "caution"
         : "neutral";
-
   const reason = fit === "favored"
     ? `${clock.phase} and ${clock.sign} align with this traditional work family.`
     : fit === "caution"
       ? `${clock.sign} is traditionally used for clearing work; keep the crop and weather window ahead of the lunar preference.`
-      : `The lunar window is neutral for this task; agronomic timing and field conditions remain primary.`;
+      : "The lunar window is neutral for this task; agronomic timing and field conditions remain primary.";
 
   return {
     taskId: task.id,
