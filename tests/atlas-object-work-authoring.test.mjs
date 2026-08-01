@@ -11,8 +11,9 @@ const taskRoute = readFileSync(new URL("../app/api/atlas/object-work/route.ts", 
 const core = readFileSync(new URL("../supabase/migrations/20260801130000_atlas_object_work_core_v1.sql", import.meta.url), "utf8");
 const authoring = readFileSync(new URL("../supabase/migrations/20260801130100_atlas_object_work_authoring_v1.sql", import.meta.url), "utf8");
 const bridge = readFileSync(new URL("../supabase/migrations/20260801130200_atlas_object_work_bridge_and_governance_v1.sql", import.meta.url), "utf8");
+const fkIndexes = readFileSync(new URL("../supabase/migrations/20260801130300_atlas_object_work_fk_indexes_v1.sql", import.meta.url), "utf8");
 
-const allSql = `${core}\n${authoring}\n${bridge}`;
+const allSql = `${core}\n${authoring}\n${bridge}\n${fkIndexes}`;
 
 test("ordinary work authoring starts from a canonical object page", () => {
   assert.match(page, /import ObjectWorkComposer/);
@@ -128,4 +129,10 @@ test("new foreign keys have leading-column indexes", () => {
     "object_work_steps_item_idx",
     "object_work_crop_cycles_cycle_idx",
   ]) assert.match(core, new RegExp(index));
+
+  for (const index of [
+    "object_work_items_organization_idx",
+    "object_work_items_created_by_user_idx",
+    "object_work_steps_completed_by_user_idx",
+  ]) assert.match(fkIndexes, new RegExp(index));
 });
