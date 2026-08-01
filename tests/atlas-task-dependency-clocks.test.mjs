@@ -28,7 +28,7 @@ test("elapsed clocks satisfy the existing planned-work gate instead of creating 
   assert.match(core, /gate_satisfied_at = v_clock\.ready_at/);
   assert.match(core, /perform atlas\.release_eligible_work_v1/);
   assert.match(core, /downstream_task_id = v_occurrence\.released_task_id/);
-  assert.match(core, /state = 'completed'/);
+  assert.match(core, /case when new\.status = 'done' then 'completed' else 'cancelled' end/);
   assert.match(continuation, /planned_occurrence_id/);
   assert.match(continuation, /release_policy_id/);
   assert.match(continuation, /restore_task_relation_payload_v1/);
