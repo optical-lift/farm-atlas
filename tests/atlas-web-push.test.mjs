@@ -29,8 +29,8 @@ test("Build 10 stores one user-and-device subscription without exposing VAPID se
 });
 
 test("permission and PushManager subscription require the explicit installed-app action", () => {
-  assert.match(setup, /Connect Farm Alerts/);
-  assert.match(setup, /Enable Farm Alerts/);
+  assert.match(setup, /Connect lockscreen delivery/);
+  assert.match(setup, /Enable Atlas notifications/);
   assert.match(setup, /connectAlerts/);
   assert.match(client, /pushManager\.subscribe/);
   assert.match(client, /userVisibleOnly: true/);
@@ -40,7 +40,7 @@ test("permission and PushManager subscription require the explicit installed-app
   assert.doesNotMatch(route, /effectiveMembershipId|operatorContext/);
 });
 
-test("the Journal remains notification truth and creates a deduplicated outbox", () => {
+test("the Journal remains event-notification truth and creates a deduplicated outbox", () => {
   assert.match(migration, /journal_event_id uuid references atlas\.journal_event_index/);
   assert.match(migration, /create table if not exists atlas\.notification_outbox/);
   assert.match(migration, /dedupe_key text not null unique/);
@@ -51,7 +51,7 @@ test("the Journal remains notification truth and creates a deduplicated outbox",
   assert.doesNotMatch(migration, /create table if not exists atlas\.notification_events/);
 });
 
-test("push recipients and categories are resolved from farm roles, assignment, visibility, and preferences", () => {
+test("push recipients and event categories are resolved from farm roles, assignment, visibility, and preferences", () => {
   assert.match(migration, /new\.assigned_user_id is not null and fm\.user_id = new\.assigned_user_id/);
   assert.match(migration, /fm\.role in \('owner','manager'\)/);
   assert.match(migration, /notification_can_user_read_event_v1/);
@@ -63,14 +63,15 @@ test("push recipients and categories are resolved from farm roles, assignment, v
   assert.match(migration, /v_user\.user_id = new\.actor_user_id/);
 });
 
-test("quiet hours delay transport without removing the Bell event", () => {
+test("quiet hours delay optional transport while required work timing remains deliverable", () => {
   assert.match(migration, /create table if not exists atlas\.notification_preferences/);
   assert.match(migration, /quiet_start time/);
   assert.match(migration, /quiet_end time/);
   assert.match(migration, /notification_next_available_at_v1/);
   assert.match(migration, /not_before/);
-  assert.match(setup, /Use Atlas quiet hours/);
-  assert.match(setup, /Save alert choices/);
+  assert.match(setup, /Use quiet hours for optional notifications/);
+  assert.match(setup, /Required process timers, work releases, and closing-window warnings may still arrive during quiet hours/);
+  assert.match(setup, /Save optional choices/);
 });
 
 test("the dispatcher leases deliveries, sends encrypted Web Push, retries transient failures, and retires stale devices", () => {
