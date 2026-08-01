@@ -1,0 +1,539 @@
+[data-atlas-farm-conditions-host] {
+  min-width: 0;
+  margin-bottom: 10px;
+}
+
+.atlas-farm-conditions-card {
+  min-width: 0;
+  border: 1px solid rgba(96, 90, 112, 0.13);
+  border-radius: 22px;
+  background: #fffdf7;
+  padding: 14px;
+  display: grid;
+  gap: 11px;
+  box-shadow: 0 8px 22px rgba(58, 46, 30, 0.035);
+}
+
+.atlas-farm-conditions-card.is-loading,
+.atlas-farm-conditions-card.is-error {
+  min-height: 86px;
+  align-items: center;
+  color: #686961;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.atlas-farm-conditions-card.is-error {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.atlas-farm-conditions-card.is-error small,
+.atlas-farm-conditions-card.is-error strong {
+  display: block;
+}
+
+.atlas-farm-conditions-card.is-error small {
+  color: #8881b7;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atlas-farm-conditions-card.is-error strong {
+  margin-top: 4px;
+  color: #30324a;
+  font-size: 12px;
+}
+
+.atlas-farm-conditions-card.is-error button {
+  border: 1px solid rgba(139, 145, 194, 0.24);
+  border-radius: 999px;
+  background: #f1eff6;
+  color: #55508b;
+  padding: 8px 11px;
+  font-size: 9px;
+  font-weight: 950;
+}
+
+.atlas-farm-conditions-head {
+  min-width: 0;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.atlas-farm-conditions-head > div {
+  min-width: 0;
+}
+
+.atlas-farm-conditions-head small,
+.atlas-farm-conditions-head h2,
+.atlas-farm-conditions-head > span {
+  display: block;
+  min-width: 0;
+}
+
+.atlas-farm-conditions-head small {
+  color: #8881b7;
+  font-size: 7.5px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.atlas-farm-conditions-head h2 {
+  margin: 5px 0 0;
+  color: #30324a;
+  font-size: 21px;
+  line-height: 0.98;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.atlas-farm-conditions-head > span {
+  flex: 0 1 auto;
+  overflow: hidden;
+  color: #696a62;
+  font-size: 9px;
+  line-height: 1.1;
+  font-weight: 900;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-farm-conditions-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.atlas-farm-condition-cell {
+  min-width: 0;
+  min-height: 118px;
+  border: 1px solid rgba(96, 90, 112, 0.09);
+  border-radius: 16px;
+  background: #f7f4eb;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+.atlas-farm-condition-cell small,
+.atlas-farm-condition-cell strong,
+.atlas-farm-condition-cell span,
+.atlas-farm-condition-cell p {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.atlas-farm-condition-cell small {
+  color: #8580ad;
+  font-size: 7px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.atlas-farm-condition-cell strong {
+  margin-top: 7px;
+  color: #30324a;
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+
+.atlas-farm-condition-cell span {
+  margin-top: 5px;
+  color: #64665d;
+  font-size: 8px;
+  line-height: 1.15;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.atlas-farm-condition-cell p {
+  margin: auto 0 0;
+  padding-top: 8px;
+  color: #7c7d75;
+  font-size: 7.2px;
+  line-height: 1.25;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.atlas-farm-weather-cell strong {
+  font-size: 24px;
+}
+
+.atlas-farm-rain-cell {
+  background: #f4f4ed;
+}
+
+.atlas-farm-moon-cell {
+  background: #f2f0f7;
+}
+
+.atlas-farm-moon-cell[data-moon-direction="waning"] {
+  background: linear-gradient(145deg, #f4f2f8, #ecebf2);
+}
+
+.atlas-farm-moon-cell[data-moon-direction="waxing"] {
+  background: linear-gradient(145deg, #f7f4e9, #efedf6);
+}
+
+.atlas-farm-condition-summary-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.atlas-farm-condition-summary-row > span {
+  min-width: 0;
+  border: 1px solid rgba(96, 90, 112, 0.08);
+  border-radius: 13px;
+  background: rgba(247, 244, 235, 0.7);
+  color: #6f7068;
+  padding: 8px 9px;
+  font-size: 7.8px;
+  line-height: 1.22;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.atlas-farm-condition-summary-row b {
+  display: block;
+  margin-bottom: 3px;
+  color: #4f5062;
+  font-size: 7px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.atlas-farm-lunar-planner,
+.atlas-farm-rain-log {
+  min-width: 0;
+  border-top: 1px solid rgba(86, 85, 104, 0.09);
+}
+
+.atlas-farm-lunar-planner > summary,
+.atlas-farm-rain-log > summary {
+  min-width: 0;
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 1px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.atlas-farm-lunar-planner > summary::-webkit-details-marker,
+.atlas-farm-rain-log > summary::-webkit-details-marker {
+  display: none;
+}
+
+.atlas-farm-lunar-planner > summary span,
+.atlas-farm-rain-log > summary span {
+  min-width: 0;
+}
+
+.atlas-farm-lunar-planner > summary small,
+.atlas-farm-lunar-planner > summary strong,
+.atlas-farm-rain-log > summary small,
+.atlas-farm-rain-log > summary strong {
+  display: block;
+}
+
+.atlas-farm-lunar-planner > summary small,
+.atlas-farm-rain-log > summary small {
+  color: #8881b7;
+  font-size: 7px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.atlas-farm-lunar-planner > summary strong,
+.atlas-farm-rain-log > summary strong {
+  margin-top: 4px;
+  color: #30324a;
+  font-size: 12px;
+  line-height: 1.05;
+  font-weight: 950;
+}
+
+.atlas-farm-lunar-planner > summary > b,
+.atlas-farm-rain-log > summary > b {
+  color: #8783a5;
+  font-size: 15px;
+  transition: transform 140ms ease-out;
+}
+
+.atlas-farm-lunar-planner[open] > summary > b,
+.atlas-farm-rain-log[open] > summary > b {
+  transform: rotate(180deg);
+}
+
+.atlas-farm-lunar-body {
+  padding: 10px 0 2px;
+  display: grid;
+  gap: 9px;
+}
+
+.atlas-farm-lunar-body > p {
+  margin: 0;
+  color: #66675f;
+  font-size: 9px;
+  line-height: 1.35;
+  font-weight: 750;
+}
+
+.atlas-farm-lunar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.atlas-farm-lunar-actions span {
+  border: 1px solid rgba(139, 145, 194, 0.17);
+  border-radius: 999px;
+  background: #f2f0f7;
+  color: #58547f;
+  padding: 5px 7px;
+  font-size: 7.5px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.atlas-farm-lunar-task-list {
+  min-width: 0;
+  display: grid;
+}
+
+.atlas-farm-lunar-task-list h3 {
+  margin: 2px 0 3px;
+  color: #77786f;
+  font-size: 7.5px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.atlas-farm-lunar-task-list > a {
+  min-width: 0;
+  border-top: 1px solid rgba(86, 85, 104, 0.075);
+  color: inherit;
+  padding: 9px 1px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.atlas-farm-lunar-task-list > a > span {
+  min-width: 0;
+}
+
+.atlas-farm-lunar-task-list small,
+.atlas-farm-lunar-task-list strong,
+.atlas-farm-lunar-task-list em {
+  display: block;
+  min-width: 0;
+}
+
+.atlas-farm-lunar-task-list small {
+  color: #77786f;
+  font-size: 7px;
+  line-height: 1;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.atlas-farm-lunar-task-list a[data-lunar-fit="favored"] small {
+  color: #5d6b50;
+}
+
+.atlas-farm-lunar-task-list a[data-lunar-fit="caution"] small {
+  color: #8a665a;
+}
+
+.atlas-farm-lunar-task-list strong {
+  margin-top: 4px;
+  color: #30324a;
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 950;
+}
+
+.atlas-farm-lunar-task-list em {
+  margin-top: 4px;
+  color: #77786f;
+  font-size: 7.5px;
+  line-height: 1.25;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.atlas-farm-lunar-task-list > a > b {
+  color: #8b84b5;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.atlas-farm-lunar-precedence {
+  border-radius: 12px;
+  background: #f7f4eb;
+  padding: 8px 9px;
+}
+
+.atlas-farm-condition-source {
+  color: #898a82;
+  font-size: 6.8px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.atlas-farm-lunar-empty {
+  border-radius: 12px;
+  background: #f7f4eb;
+  padding: 9px;
+}
+
+.atlas-farm-rain-log form {
+  padding: 10px 0 1px;
+  display: grid;
+  gap: 7px;
+}
+
+.atlas-farm-rain-log label {
+  color: #555660;
+  font-size: 8.5px;
+  font-weight: 900;
+}
+
+.atlas-farm-rain-log form > div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.atlas-farm-rain-log input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(96, 90, 112, 0.17);
+  border-radius: 12px;
+  background: #fff;
+  color: #30324a;
+  padding: 9px 10px;
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.atlas-farm-rain-log form > div > span {
+  color: #77786f;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.atlas-farm-rain-log button {
+  border: 1px solid rgba(139, 145, 194, 0.28);
+  border-radius: 999px;
+  background: #e9e7f2;
+  color: #514d7b;
+  padding: 9px 12px;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.atlas-farm-rain-log button:disabled {
+  opacity: 0.55;
+}
+
+.atlas-farm-rain-log form > p,
+.atlas-farm-rain-log output {
+  margin: 0;
+  color: #7b7c74;
+  font-size: 7.5px;
+  line-height: 1.25;
+  font-weight: 750;
+}
+
+.atlas-farm-rain-log output {
+  color: #55508b;
+  font-weight: 900;
+}
+
+@media (max-width: 640px) {
+  .atlas-farm-conditions-card {
+    border-radius: 21px;
+    padding: 13px;
+  }
+
+  .atlas-farm-conditions-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .atlas-farm-condition-cell {
+    min-height: 116px;
+    padding: 9px 8px;
+  }
+}
+
+@media (max-width: 380px) {
+  .atlas-farm-conditions-card {
+    padding: 12px;
+  }
+
+  .atlas-farm-conditions-head {
+    align-items: start;
+  }
+
+  .atlas-farm-conditions-head > span {
+    max-width: 145px;
+    font-size: 8px;
+  }
+
+  .atlas-farm-condition-cell {
+    min-height: 112px;
+    border-radius: 14px;
+    padding: 8px 7px;
+  }
+
+  .atlas-farm-condition-cell strong {
+    font-size: 14px;
+  }
+
+  .atlas-farm-weather-cell strong {
+    font-size: 21px;
+  }
+
+  .atlas-farm-condition-cell span {
+    font-size: 7.2px;
+  }
+
+  .atlas-farm-condition-cell p {
+    font-size: 6.6px;
+  }
+
+  .atlas-farm-condition-summary-row {
+    grid-template-columns: 1fr;
+  }
+}
