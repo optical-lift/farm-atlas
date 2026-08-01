@@ -11,15 +11,15 @@ export default function AtlasInstallPage() {
             <span className="atlas-phone-kicker">Atlas</span>
             <span className="atlas-phone-title">App</span>
           </Link>
-          <span className="atlas-weather-line">Home Screen · offline shell · alerts</span>
+          <span className="atlas-weather-line">Home Screen · offline shell · lockscreen delivery</span>
           <Link href="/bell" className="atlas-note-plus" aria-label="Open Bell">⌁</Link>
         </header>
 
         <div className="atlas-pwa-page-body">
           <section className="atlas-pwa-page-intro">
             <span>Atlas on this device</span>
-            <h1>Carry the farm journal like an app.</h1>
-            <p>Install Atlas from Safari, keep the last opened work spread close in weak signal, and choose when this device may show Farm Alerts.</p>
+            <h1>Let Atlas carry the workday.</h1>
+            <p>Install Atlas from Safari so assigned work reaches this lockscreen when it becomes actionable. Required work delivery stays on; optional reminder types remain yours to choose.</p>
           </section>
 
           <AtlasPwaSetupPanel />

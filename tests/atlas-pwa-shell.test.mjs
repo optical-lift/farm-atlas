@@ -90,11 +90,12 @@ test("Safari installation guidance remains explicit and the Home cover stays rec
   assert.match(home, /<AtlasUniversalHome/);
   assert.match(layout, /<AtlasBellCover \/>/);
   assert.match(home, /<AtlasPwaCoverPrompt/);
-  assert.match(installPage, /Carry the farm journal like an app/);
+  assert.match(installPage, /Let Atlas carry the workday/);
 });
 
-test("notification permission remains tied to an explicit Farm Alerts action", () => {
-  assert.match(setup, /Enable Farm Alerts/);
+test("notification permission remains tied to an explicit lockscreen-delivery action", () => {
+  assert.match(setup, /Enable Atlas notifications/);
+  assert.match(setup, /Connect lockscreen delivery/);
   assert.match(setup, /onClick=\{\(\) => void connectAlerts\(\)\}/);
   assert.match(pwaClient, /Notification\.requestPermission\(\)/);
   assert.doesNotMatch(setup, /useEffect\([\s\S]{0,300}Notification\.requestPermission/);
