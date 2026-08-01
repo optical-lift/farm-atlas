@@ -135,7 +135,6 @@ declare
   v_outbox_id uuid;
   v_notifications_enabled boolean;
   v_category_enabled boolean;
-  v_followup_minutes integer;
   v_released integer := 0;
   v_waiting_capacity integer := 0;
   v_initial_notifications integer := 0;
@@ -340,6 +339,18 @@ begin
       continue;
     end if;
 
+    select coalesce(preference.enabled, true),
+           coalesce((preference.categories ->> 'dependency_ready')::boolean, true)
+    into v_notifications_enabled, v_category_enabled
+    from (select 1) seed
+    left join atlas.notification_preferences preference
+      on preference.user_id = v_user_id
+     and preference.farm_id = v_clock.farm_id;
+
+    if not v_notifications_enabled or not v_category_enabled then
+      continue;
+    end if;
+
     v_outbox_id := atlas.enqueue_direct_push_v1(
       v_clock.farm_id,
       v_user_id,
@@ -541,7 +552,7 @@ insert into atlas.authenticated_rpc_registry(
 ) values (
   'atlas.task_dependency_status_v1(uuid)',
   'app_endpoint',
-  'reviewed',
+  'verified',
   'active',
   true,
   true,
