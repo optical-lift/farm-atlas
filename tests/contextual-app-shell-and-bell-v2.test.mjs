@@ -86,18 +86,19 @@ test("narrow Home date rows prioritize the useful range over repeated labels", (
   assert.match(shellCss, /atlas-home-overview-row-link b[\s\S]*text-overflow: ellipsis/);
 });
 
-test("the floating Bell is global, header-aware, and disappears when no action is waiting", () => {
+test("the floating Bell is global, header-aware, role-aware, and disappears when no action is waiting", () => {
   assert.match(layout, /<AtlasBellCover \/>/);
   assert.doesNotMatch(page, /AtlasBellCover/);
   assert.match(bellCover, /visibleHeaderBottom/);
   assert.match(bellCover, /bell\.badgeCount <= 0/);
   assert.match(bellCover, /pathname === "\/bell"/);
   assert.match(bellCover, /actions are waiting/);
+  assert.match(bellCover, /moved tasks need finishing/);
   assert.match(bellCover, /atlasBellActionTitle\(newest\)/);
-  assert.match(bellCover, />Do next</);
+  assert.match(bellCover, /management \? "Do next" : "Follow through"/);
 });
 
-test("Bell v2 establishes a monitoring baseline and groups one current event per obligation", () => {
+test("Bell v2 establishes a monitoring baseline and groups one current event per management obligation", () => {
   assert.match(migration, /create table if not exists atlas\.bell_monitoring_baselines/);
   assert.match(migration, /bell_event_obligation_key_v2/);
   assert.match(migration, /distinct on \(eligible\.obligation_key\)/);
@@ -107,12 +108,13 @@ test("Bell v2 establishes a monitoring baseline and groups one current event per
   assert.match(bellContract, /atlas_bell_v2/);
 });
 
-test("known gaps remain available as older actions without masquerading as new work", () => {
+test("known gaps remain available to management as older actions without masquerading as employee work", () => {
   assert.match(migration, /Existing Atlas gaps acknowledged at Bell v2 monitoring start/);
   assert.match(migration, /item\.occurred_at <= v_baseline_at and item\.requires_action/);
   assert.match(bellView, /item\.baseline && item\.requiresAction/);
   assert.match(bellView, /eyebrow: "Older work"/);
   assert.match(bellPage, /view=older/);
+  assert.match(bellPage, /management \? \(/);
   assert.doesNotMatch(bellPage, /known obligations/);
   assert.doesNotMatch(bellPage, /do not count as new notifications/);
 });
@@ -127,9 +129,10 @@ test("Bell retains explanation truth in its contract without displaying descript
   assert.doesNotMatch(bellPage, /Why you’re seeing this/);
 });
 
-test("Bell is an action lens over Atlas truth rather than a second history surface", () => {
+test("Bell is a role-aware action lens over Atlas truth rather than a second history surface", () => {
   assert.match(bellPage, /atlasBellActionTitle\(item\)/);
   assert.match(bellPage, /atlasBellActionTiming\(item\)/);
+  assert.match(bellPage, /atlasBellConsequence\(item\)/);
   assert.match(bellPage, /atlasBellOpenLabel\(item\)/);
   assert.match(bellView, /"now" \| "next" \| "older"/);
   assert.match(bellContract, /eventTruth: "journal_event_index"/);
