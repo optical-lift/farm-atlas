@@ -1,0 +1,33 @@
+[data-atlas-farm-conditions-host] {
+  min-width: 0;
+  margin: 14px 0 0;
+}
+
+.atlas-farm-conditions-embedded {
+  min-width: 0;
+  display: grid;
+  gap: 11px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(86, 85, 104, 0.09);
+}
+
+.atlas-farm-conditions-embedded .atlas-farm-lunar-planner,
+.atlas-farm-conditions-embedded .atlas-farm-rain-log {
+  margin: 0;
+}
+
+.atlas-farm-conditions-embedded .atlas-farm-lunar-planner > summary,
+.atlas-farm-conditions-embedded .atlas-farm-rain-log > summary {
+  padding-top: 10px;
+}
+
+@media (max-width: 640px) {
+  [data-atlas-farm-conditions-host] {
+    margin-top: 13px;
+  }
+
+  .atlas-farm-conditions-embedded {
+    gap: 10px;
+    padding-top: 13px;
+  }
+}

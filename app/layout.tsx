@@ -98,6 +98,7 @@ import "./dependency-release-flash.css";
 import "./work-alongside.css";
 import "./day-single-scroll.css";
 import "./farm-conditions-home.css";
+import "./farm-conditions-merged.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });

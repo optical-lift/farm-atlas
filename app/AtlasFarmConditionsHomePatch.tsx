@@ -89,6 +89,17 @@ type FarmConditionsResponse = {
   precedence: string[];
 };
 
+type FarmConditionsCollectionResponse = {
+  ok: boolean;
+  conditions?: FarmConditionsResponse[];
+  error?: string;
+};
+
+type FarmConditionsHost = {
+  farmId: string;
+  node: HTMLElement;
+};
+
 function inches(value: number | null | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "—";
   return `${value.toFixed(2)}\"`;
@@ -124,21 +135,16 @@ function rainAge(days: number | null) {
   return `${days} days since watering rain`;
 }
 
-function weatherValue(conditions: FarmConditionsResponse) {
-  if (!conditions.weather) return "Weather unavailable";
-  const temp = conditions.weather.temperatureF === null ? "" : ` · ${conditions.weather.temperatureF}°`;
-  return `${conditions.weather.condition}${temp}`;
+function sameHosts(left: FarmConditionsHost[], right: FarmConditionsHost[]) {
+  return left.length === right.length
+    && left.every((host, index) => host.farmId === right[index]?.farmId && host.node === right[index]?.node);
 }
 
-function FarmConditionsPanel({
+function FarmConditionsEmbedded({
   conditions,
-  loading,
-  error,
   onReload,
 }: {
-  conditions: FarmConditionsResponse | null;
-  loading: boolean;
-  error: string | null;
+  conditions: FarmConditionsResponse;
   onReload: () => void;
 }) {
   const [amount, setAmount] = useState("");
@@ -147,7 +153,7 @@ function FarmConditionsPanel({
 
   async function recordRain(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!conditions || saving) return;
+    if (saving) return;
     const parsed = Number(amount);
     if (!Number.isFinite(parsed) || parsed < 0 || parsed > 30) {
       setSaveMessage("Enter a rain-gauge amount between 0 and 30 inches.");
@@ -169,33 +175,13 @@ function FarmConditionsPanel({
       const payload = await response.json() as { ok?: boolean; error?: string };
       if (!response.ok || !payload.ok) throw new Error(payload.error || "Rain reading could not be saved.");
       setAmount("");
-      setSaveMessage("Elm rain gauge recorded.");
+      setSaveMessage(`${conditions.farm.name} rain gauge recorded.`);
       onReload();
     } catch (saveError) {
       setSaveMessage(saveError instanceof Error ? saveError.message : "Rain reading could not be saved.");
     } finally {
       setSaving(false);
     }
-  }
-
-  if (loading && !conditions) {
-    return (
-      <section className="atlas-farm-conditions-card is-loading" aria-label="Farm conditions loading">
-        <span>Reading farm conditions…</span>
-      </section>
-    );
-  }
-
-  if (!conditions) {
-    return (
-      <section className="atlas-farm-conditions-card is-error" aria-label="Farm conditions unavailable">
-        <div>
-          <small>Farm conditions</small>
-          <strong>{error || "Conditions are temporarily unavailable."}</strong>
-        </div>
-        <button type="button" onClick={onReload}>Try again</button>
-      </section>
-    );
   }
 
   const moonTimes = [
@@ -207,15 +193,11 @@ function FarmConditionsPanel({
     : "Not read yet";
 
   return (
-    <section className="atlas-farm-conditions-card" aria-labelledby="atlas-farm-conditions-title">
-      <header className="atlas-farm-conditions-head">
-        <div>
-          <small>Farm conditions · {conditions.farm.locationLabel}</small>
-          <h2 id="atlas-farm-conditions-title">{conditions.farm.name}</h2>
-        </div>
-        <span>{weatherValue(conditions)}</span>
-      </header>
-
+    <div
+      className="atlas-farm-conditions-embedded"
+      aria-label={`${conditions.farm.name} weather, rain, and lunar conditions`}
+      data-farm-id={conditions.farm.id}
+    >
       <div className="atlas-farm-conditions-grid">
         <article className="atlas-farm-condition-cell atlas-farm-weather-cell">
           <small>Weather now</small>
@@ -229,7 +211,7 @@ function FarmConditionsPanel({
         </article>
 
         <article className="atlas-farm-condition-cell atlas-farm-rain-cell">
-          <small>Rain at Elm</small>
+          <small>Rain here</small>
           <strong>{gaugeLabel}</strong>
           <span>{gaugeStatus(conditions)}</span>
           <p>
@@ -262,7 +244,7 @@ function FarmConditionsPanel({
       <details className="atlas-farm-lunar-planner">
         <summary>
           <span>
-            <small>Traditional Elm Almanac</small>
+            <small>Traditional farm almanac</small>
             <strong>{conditions.moon.guidance.headline}</strong>
           </span>
           <b aria-hidden="true">⌄</b>
@@ -295,7 +277,7 @@ function FarmConditionsPanel({
             Atlas keeps the decision order: {conditions.precedence.join(" → ")}. Lunar timing advises; it does not move a viable crop window on its own.
           </p>
           <small className="atlas-farm-condition-source">
-            Astronomy: {conditions.moon.astronomySourceLabel}. Guidance: {conditions.moon.ruleSourceLabel}. Weather and rainfall estimates are separate from the Elm gauge.
+            Astronomy: {conditions.moon.astronomySourceLabel}. Guidance: {conditions.moon.ruleSourceLabel}. Weather and rainfall estimates are separate from the farm gauge.
           </small>
         </div>
       </details>
@@ -304,15 +286,15 @@ function FarmConditionsPanel({
         <summary>
           <span>
             <small>Farm memory</small>
-            <strong>Log the Elm rain gauge</strong>
+            <strong>Log this farm’s rain gauge</strong>
           </span>
           <b aria-hidden="true">⌄</b>
         </summary>
         <form onSubmit={recordRain}>
-          <label htmlFor="atlas-rain-gauge-amount">Amount since the last reading</label>
+          <label htmlFor={`atlas-rain-gauge-amount-${conditions.farm.id}`}>Amount since the last reading</label>
           <div>
             <input
-              id="atlas-rain-gauge-amount"
+              id={`atlas-rain-gauge-amount-${conditions.farm.id}`}
               type="number"
               inputMode="decimal"
               min="0"
@@ -321,30 +303,61 @@ function FarmConditionsPanel({
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               placeholder="0.00"
-              aria-describedby="atlas-rain-gauge-unit"
+              aria-describedby={`atlas-rain-gauge-unit-${conditions.farm.id}`}
             />
-            <span id="atlas-rain-gauge-unit">inches</span>
+            <span id={`atlas-rain-gauge-unit-${conditions.farm.id}`}>inches</span>
             <button type="submit" disabled={saving}>{saving ? "Saving…" : "Record"}</button>
           </div>
-          <p>Use the physical Elm gauge here. Atlas keeps this separate from the Marshfield-area estimate and the forecast.</p>
+          <p>Use this farm’s physical gauge. Atlas keeps it separate from the area estimate and forecast.</p>
           {saveMessage ? <output aria-live="polite">{saveMessage}</output> : null}
         </form>
       </details>
-    </section>
+    </div>
   );
 }
 
 export default function AtlasFarmConditionsHomePatch() {
   const pathname = usePathname();
-  const [host, setHost] = useState<HTMLElement | null>(null);
-  const [conditions, setConditions] = useState<FarmConditionsResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [conditions, setConditions] = useState<FarmConditionsResponse[]>([]);
+  const [hosts, setHosts] = useState<FarmConditionsHost[]>([]);
   const [reloadVersion, setReloadVersion] = useState(0);
 
   useEffect(() => {
     if (pathname !== "/") {
-      setHost(null);
+      setConditions([]);
+      return;
+    }
+
+    let active = true;
+    fetch("/api/atlas/farm-conditions/all", {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const payload = await response.json() as FarmConditionsCollectionResponse;
+        if (!response.ok || !payload.ok) throw new Error(payload.error || "Farm conditions are unavailable.");
+        return payload.conditions ?? [];
+      })
+      .then((payload) => {
+        if (active) setConditions(payload);
+      })
+      .catch(() => {
+        if (active) setConditions([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [pathname, reloadVersion]);
+
+  const farmIdentityKey = useMemo(
+    () => conditions.map((entry) => `${entry.farm.id}:${entry.farm.name}`).sort().join("|"),
+    [conditions],
+  );
+
+  useEffect(() => {
+    if (pathname !== "/" || !conditions.length) {
+      setHosts([]);
       return;
     }
 
@@ -354,14 +367,35 @@ export default function AtlasFarmConditionsHomePatch() {
     const mount = () => {
       if (cancelled) return;
       const section = document.querySelector<HTMLElement>('section[aria-label="Farm seasons"]');
-      if (!section) return;
-      let node = section.querySelector<HTMLElement>(":scope > [data-atlas-farm-conditions-host]");
-      if (!node) {
-        node = document.createElement("div");
-        node.dataset.atlasFarmConditionsHost = "true";
-        section.prepend(node);
+      const cardContainer = section?.firstElementChild;
+      if (!cardContainer) return;
+
+      const farmCards = Array.from(cardContainer.children)
+        .filter((element): element is HTMLElement => element instanceof HTMLElement && element.tagName === "ARTICLE");
+      const nextHosts: FarmConditionsHost[] = [];
+
+      for (const conditionsEntry of conditions) {
+        const farmCard = farmCards.find((card) => {
+          const title = card.querySelector(":scope > header h3")?.textContent?.trim();
+          return title === conditionsEntry.farm.name;
+        });
+        if (!farmCard) continue;
+
+        let node = Array.from(farmCard.children).find(
+          (child): child is HTMLElement => child instanceof HTMLElement
+            && child.dataset.atlasFarmConditionsHost === conditionsEntry.farm.id,
+        ) ?? null;
+        if (!node) {
+          node = document.createElement("div");
+          node.dataset.atlasFarmConditionsHost = conditionsEntry.farm.id;
+          const cardHeader = farmCard.querySelector(":scope > header");
+          if (cardHeader) cardHeader.after(node);
+          else farmCard.prepend(node);
+        }
+        nextHosts.push({ farmId: conditionsEntry.farm.id, node });
       }
-      setHost(node);
+
+      setHosts((current) => sameHosts(current, nextHosts) ? current : nextHosts);
     };
 
     mount();
@@ -371,56 +405,27 @@ export default function AtlasFarmConditionsHomePatch() {
     return () => {
       cancelled = true;
       observer?.disconnect();
-      document.querySelectorAll("[data-atlas-farm-conditions-host]").forEach((node) => node.remove());
-      setHost(null);
+      document.querySelectorAll<HTMLElement>("[data-atlas-farm-conditions-host]").forEach((node) => node.remove());
+      setHosts([]);
     };
-  }, [pathname]);
+  }, [pathname, farmIdentityKey, conditions]);
 
-  useEffect(() => {
-    if (pathname !== "/") return;
-    let active = true;
-    setLoading(true);
-    setError(null);
-    fetch("/api/atlas/farm-conditions", {
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-    })
-      .then(async (response) => {
-        const payload = await response.json() as FarmConditionsResponse & { error?: string };
-        if (!response.ok || !payload.ok) throw new Error(payload.error || "Farm conditions are unavailable.");
-        return payload;
-      })
-      .then((payload) => {
-        if (!active) return;
-        setConditions(payload);
-        const topLine = document.querySelector<HTMLElement>(".atlas-weather-line");
-        if (topLine) {
-          topLine.textContent = payload.headerLabel;
-          topLine.dataset.atlasFarmConditions = "true";
-        }
-      })
-      .catch((loadError) => {
-        if (!active) return;
-        setError(loadError instanceof Error ? loadError.message : "Farm conditions are unavailable.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+  if (pathname !== "/" || !hosts.length) return null;
 
-    return () => {
-      active = false;
-    };
-  }, [pathname, reloadVersion]);
-
-  const panel = useMemo(() => (
-    <FarmConditionsPanel
-      conditions={conditions}
-      loading={loading}
-      error={error}
-      onReload={() => setReloadVersion((value) => value + 1)}
-    />
-  ), [conditions, loading, error]);
-
-  if (!host || pathname !== "/") return null;
-  return createPortal(panel, host);
+  return (
+    <>
+      {hosts.map((host) => {
+        const entry = conditions.find((candidate) => candidate.farm.id === host.farmId);
+        if (!entry) return null;
+        return createPortal(
+          <FarmConditionsEmbedded
+            conditions={entry}
+            onReload={() => setReloadVersion((value) => value + 1)}
+          />,
+          host.node,
+          host.farmId,
+        );
+      })}
+    </>
+  );
 }

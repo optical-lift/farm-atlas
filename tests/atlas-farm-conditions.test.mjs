@@ -14,8 +14,8 @@ test("Farm Conditions keeps gauge observations separate from area estimates and 
   assert.match(api, /sourceType:\s*"area_model_estimate"/);
   assert.match(api, /areaEstimate:/);
   assert.match(api, /forecast:/);
-  assert.match(home, /Weather and rainfall estimates are separate from the Elm gauge/);
-  assert.match(home, /Use the physical Elm gauge here/);
+  assert.match(home, /Weather and rainfall estimates are separate from the farm gauge/);
+  assert.match(home, /Use this farm’s physical gauge/);
 });
 
 test("Farm Conditions uses authoritative astronomy with a transparent fallback", () => {
@@ -29,7 +29,7 @@ test("Farm Conditions uses authoritative astronomy with a transparent fallback",
   assert.match(lunar, /approximateMoon/);
 });
 
-test("Elm Almanac guidance is task-aware and never outranks farm viability", () => {
+test("Farm almanac guidance is task-aware and never outranks farm viability", () => {
   const api = read("app/api/atlas/farm-conditions/route.ts");
   const lunar = read("lib/atlas/farm-lunar-clock.ts");
   const home = read("app/AtlasFarmConditionsHomePatch.tsx");
@@ -55,17 +55,23 @@ test("Rain-gauge writes cross the reviewed RPC boundary", () => {
   assert.doesNotMatch(api, /\.from\("farm_rain_observations"\)\s*\.insert/);
 });
 
-test("Home mounts a compact Farm Conditions surface without another vertical scroller", () => {
+test("Home merges conditions into each visible farm overview card", () => {
   const layout = read("app/layout.tsx");
-  const css = read("app/farm-conditions-home.css");
+  const baseCss = read("app/farm-conditions-home.css");
+  const mergedCss = read("app/farm-conditions-merged.css");
   const home = read("app/AtlasFarmConditionsHomePatch.tsx");
+  const allApi = read("app/api/atlas/farm-conditions/all/route.ts");
 
   assert.match(layout, /AtlasFarmConditionsHomePatch/);
-  assert.match(layout, /import "\.\/farm-conditions-home\.css";/);
-  assert.match(home, /Weather now/);
-  assert.match(home, /Rain at Elm/);
-  assert.match(home, /Traditional Elm Almanac/);
-  assert.doesNotMatch(css, /overflow-y:\s*(?:auto|scroll)/);
+  assert.match(layout, /import "\.\/farm-conditions-merged\.css";/);
+  assert.match(allApi, /session\.memberships\.map/);
+  assert.match(allApi, /GET as readFarmConditions/);
+  assert.match(home, /\/api\/atlas\/farm-conditions\/all/);
+  assert.match(home, /section\[aria-label="Farm seasons"\]/);
+  assert.match(home, /cardHeader\.after\(node\)/);
+  assert.match(home, /atlas-farm-conditions-embedded/);
+  assert.doesNotMatch(home, /section\.prepend\(node\)/);
+  assert.doesNotMatch(baseCss + mergedCss, /overflow-y:\s*(?:auto|scroll)/);
 });
 
 test("Rain gauge age is rendered from the farm-local observed date", () => {
