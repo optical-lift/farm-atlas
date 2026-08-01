@@ -24,6 +24,29 @@ export type AtlasTaskTransitionRequest = {
   existingFieldLogId?: string | null;
 };
 
+export type AtlasTaskDependency = {
+  clockId: string;
+  direction: "downstream" | "upstream";
+  state: "waiting" | "counting" | "ready" | "released" | "completed" | "cancelled";
+  sourceTaskId: string;
+  sourceTaskTitle: string;
+  downstreamOccurrenceId: string;
+  downstreamTaskId: string | null;
+  downstreamTitle: string;
+  sourceSatisfiedAt: string | null;
+  readyAt: string | null;
+  releasedAt: string | null;
+  delaySeconds: number;
+  resultGatePath: string[] | null;
+  resultGateEquals: unknown;
+  notificationPolicy: Record<string, unknown>;
+};
+
+export type AtlasTaskDependencyStatus = {
+  taskId: string;
+  dependencies: AtlasTaskDependency[];
+};
+
 type AtlasApiError = string | {
   code?: string;
   message?: string;
@@ -41,6 +64,7 @@ export type AtlasTaskTransitionResponse = {
   nextTaskId: string | null;
   deduplicated: boolean;
   warnings: string[];
+  dependencyStatus?: AtlasTaskDependencyStatus | null;
   error?: AtlasApiError;
   details?: string;
 };
