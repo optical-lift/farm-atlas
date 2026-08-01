@@ -9,6 +9,7 @@ function read(path) {
 const migration = read("supabase/migrations/20260801004500_atlas_employee_bell_follow_through_v1.sql");
 const visibilityMigration = read("supabase/migrations/20260801005200_atlas_employee_bell_assigned_movement_visibility_v1.sql");
 const resultMigration = read("supabase/migrations/20260801005800_atlas_employee_bell_completion_results_v1.sql");
+const precedenceMigration = read("supabase/migrations/20260801010400_atlas_employee_bell_result_precedence_v1.sql");
 const page = read("app/bell/page.tsx");
 const view = read("lib/atlas/bell-view.ts");
 const action = read("lib/atlas/bell-action.ts");
@@ -66,6 +67,13 @@ test("missing explicit consequences derive concrete completion results from cano
   assert.match(resultMigration, /returned to its weeding rhythm/);
 });
 
+test("action-derived completion state takes priority over equipment and resource instructions", () => {
+  assert.match(precedenceMigration, /Prefer explicit downstream unlocks, then explicit or action-derived completion results/);
+  assert.match(precedenceMigration, /v_case_position >= v_detail_position/);
+  assert.match(precedenceMigration, /Employee Bell result precedence postcondition failed/);
+  assert.match(precedenceMigration, /Expected one result-precedence fragment and one case ending/);
+});
+
 test("employee UI removes planning queues and exposes follow-through consequences", () => {
   assert.match(view, /eyebrow: "Follow through"/);
   assert.match(view, /No moved work needs finishing/);
@@ -85,5 +93,7 @@ test("follow-through migrations are fail-closed and fixture-free", () => {
   assert.match(visibilityMigration, /Employee assigned-movement visibility postcondition failed/);
   assert.match(resultMigration, /do \$migration\$/);
   assert.match(resultMigration, /Employee Bell completion-result postcondition failed/);
-  assert.doesNotMatch(`${migration}\n${visibilityMigration}\n${resultMigration}\n${ui}`, /6a503d9f|21436a28|23e98e5e|4cd799e2/i);
+  assert.match(precedenceMigration, /do \$migration\$/);
+  assert.match(precedenceMigration, /do \$postcondition\$/);
+  assert.doesNotMatch(`${migration}\n${visibilityMigration}\n${resultMigration}\n${precedenceMigration}\n${ui}`, /6a503d9f|21436a28|23e98e5e|4cd799e2/i);
 });
