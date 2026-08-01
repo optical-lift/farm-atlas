@@ -8,6 +8,7 @@ function read(path) {
 
 const migration = read("supabase/migrations/20260801004500_atlas_employee_bell_follow_through_v1.sql");
 const visibilityMigration = read("supabase/migrations/20260801005200_atlas_employee_bell_assigned_movement_visibility_v1.sql");
+const resultMigration = read("supabase/migrations/20260801005800_atlas_employee_bell_completion_results_v1.sql");
 const page = read("app/bell/page.tsx");
 const view = read("lib/atlas/bell-view.ts");
 const action = read("lib/atlas/bell-action.ts");
@@ -52,6 +53,19 @@ test("employee movement payload carries count, due date, result, and unlock targ
   assert.match(migration, /task\.metadata ->> 'owner_review_task_id'/);
 });
 
+test("missing explicit consequences derive concrete completion results from canonical task metadata", () => {
+  assert.match(resultMigration, /task\.metadata -> 'detail_lines' ->> -1/);
+  assert.match(resultMigration, /task\.action_key = 'mow'/);
+  assert.match(resultMigration, /task\.action_key = 'weed'/);
+  assert.match(resultMigration, /task\.action_key = 'germination_check'/);
+  assert.match(resultMigration, /task\.action_key = 'support'/);
+  assert.match(resultMigration, /task\.action_key = 'put_away'/);
+  assert.match(resultMigration, /task\.action_key = 'harvest'/);
+  assert.match(resultMigration, /task\.action_key = 'clean'/);
+  assert.match(resultMigration, /crop cycle can advance when ready/);
+  assert.match(resultMigration, /returned to its weeding rhythm/);
+});
+
 test("employee UI removes planning queues and exposes follow-through consequences", () => {
   assert.match(view, /eyebrow: "Follow through"/);
   assert.match(view, /No moved work needs finishing/);
@@ -67,10 +81,9 @@ test("employee UI removes planning queues and exposes follow-through consequence
 test("follow-through migrations are fail-closed and fixture-free", () => {
   assert.match(migration, /do \$preflight\$/);
   assert.match(migration, /do \$postcondition\$/);
-  assert.match(migration, /raise exception 'atlas\.bell_history_v2 no longer matches/);
-  assert.match(migration, /raise exception 'Employee Bell follow-through postcondition failed'/);
   assert.match(visibilityMigration, /do \$migration\$/);
-  assert.match(visibilityMigration, /do \$postcondition\$/);
   assert.match(visibilityMigration, /Employee assigned-movement visibility postcondition failed/);
-  assert.doesNotMatch(`${migration}\n${visibilityMigration}\n${ui}`, /6a503d9f|21436a28|23e98e5e|4cd799e2/i);
+  assert.match(resultMigration, /do \$migration\$/);
+  assert.match(resultMigration, /Employee Bell completion-result postcondition failed/);
+  assert.doesNotMatch(`${migration}\n${visibilityMigration}\n${resultMigration}\n${ui}`, /6a503d9f|21436a28|23e98e5e|4cd799e2/i);
 });
