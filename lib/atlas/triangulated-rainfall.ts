@@ -2,37 +2,6 @@ const DAY_MS = 86_400_000;
 const WATERING_RAIN_THRESHOLD_IN = 0.2;
 const MAX_OBSERVATION_AGE_MS = 4 * 60 * 60 * 1000;
 
-const weatherCodeLabels: Record<number, string> = {
-  0: "Clear",
-  1: "Mostly clear",
-  2: "Partly cloudy",
-  3: "Cloudy",
-  45: "Fog",
-  48: "Fog",
-  51: "Drizzle",
-  53: "Drizzle",
-  55: "Drizzle",
-  56: "Freezing drizzle",
-  57: "Freezing drizzle",
-  61: "Rain",
-  63: "Rain",
-  65: "Heavy rain",
-  66: "Freezing rain",
-  67: "Freezing rain",
-  71: "Snow",
-  73: "Snow",
-  75: "Heavy snow",
-  77: "Snow grains",
-  80: "Showers",
-  81: "Showers",
-  82: "Heavy showers",
-  85: "Snow showers",
-  86: "Snow showers",
-  95: "Thunderstorm",
-  96: "Thunderstorm",
-  99: "Thunderstorm",
-};
-
 type FarmMetadata = Record<string, unknown>;
 
 type OpenMeteoResponse = {
@@ -65,6 +34,37 @@ type NwsObservationResponse = {
     relativeHumidity?: NwsMeasure;
     windSpeed?: NwsMeasure;
   };
+};
+
+const weatherCodeLabels: Record<number, string> = {
+  0: "Clear",
+  1: "Mostly clear",
+  2: "Partly cloudy",
+  3: "Cloudy",
+  45: "Fog",
+  48: "Fog",
+  51: "Drizzle",
+  53: "Drizzle",
+  55: "Drizzle",
+  56: "Freezing drizzle",
+  57: "Freezing drizzle",
+  61: "Rain",
+  63: "Rain",
+  65: "Heavy rain",
+  66: "Freezing rain",
+  67: "Freezing rain",
+  71: "Snow",
+  73: "Snow",
+  75: "Heavy snow",
+  77: "Snow grains",
+  80: "Showers",
+  81: "Showers",
+  82: "Heavy showers",
+  85: "Snow showers",
+  86: "Snow showers",
+  95: "Thunderstorm",
+  96: "Thunderstorm",
+  99: "Thunderstorm",
 };
 
 export type AtlasRainfallStationPoint = {
@@ -146,7 +146,7 @@ type StationModel = AtlasRainfallStationPoint & {
   daily: DailyReading[];
 };
 
-type StationCurrent = {
+type StationConditions = StationModel & {
   weatherSource: "nws_observation" | "model_fallback";
   observedAt: string | null;
   condition: string;
@@ -156,14 +156,14 @@ type StationCurrent = {
   windMph: number | null;
 };
 
-type StationConditions = StationModel & StationCurrent;
-
 function numeric(value: unknown, fallback = 0) {
+  if (value === null || value === undefined || value === "") return fallback;
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function nullableNumeric(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -215,6 +215,7 @@ function stationPoints(metadata: FarmMetadata): AtlasRainfallStationPoint[] {
     ?? metadata.weather_station_points
     ?? metadata.rainfall_station_points;
   if (!Array.isArray(raw)) return [];
+
   return raw
     .map((entry, index) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
@@ -253,20 +254,18 @@ function stationModelUrl(point: AtlasRainfallStationPoint, timezone: string) {
   return url;
 }
 
-function nwsObservationUrl(point: AtlasRainfallStationPoint) {
-  return new URL(`https://api.weather.gov/stations/${encodeURIComponent(point.stationId)}/observations/latest`);
-}
-
 async function readStationModel(point: AtlasRainfallStationPoint, timezone: string): Promise<StationModel> {
   const response = await fetch(stationModelUrl(point, timezone), {
     headers: { Accept: "application/json" },
     next: { revalidate: 900 },
   });
   if (!response.ok) throw new Error(`Weather point ${point.key} failed.`);
+
   const payload = await response.json() as OpenMeteoResponse;
   const dates = payload.daily?.time ?? [];
   const amounts = payload.daily?.precipitation_sum ?? [];
   const chances = payload.daily?.precipitation_probability_max ?? [];
+
   return {
     ...point,
     current: {
@@ -284,15 +283,13 @@ async function readStationModel(point: AtlasRainfallStationPoint, timezone: stri
   };
 }
 
-function measureToFahrenheit(measure: NwsMeasure | undefined) {
+function fahrenheit(measure: NwsMeasure | undefined) {
   const value = nullableNumeric(measure?.value);
   if (value === null) return null;
-  const unit = measure?.unitCode ?? "";
-  if (unit.includes("degF")) return value;
-  return value * 9 / 5 + 32;
+  return (measure?.unitCode ?? "").includes("degF") ? value : value * 9 / 5 + 32;
 }
 
-function measureToMph(measure: NwsMeasure | undefined) {
+function mph(measure: NwsMeasure | undefined) {
   const value = nullableNumeric(measure?.value);
   if (value === null) return null;
   const unit = measure?.unitCode ?? "";
@@ -301,51 +298,52 @@ function measureToMph(measure: NwsMeasure | undefined) {
   return value * 0.621371;
 }
 
-async function readStationCurrent(model: StationModel): Promise<StationCurrent> {
+async function readStationConditions(point: AtlasRainfallStationPoint, timezone: string): Promise<StationConditions> {
+  const model = await readStationModel(point, timezone);
+
   try {
-    const response = await fetch(nwsObservationUrl(model), {
-      headers: {
-        Accept: "application/geo+json, application/json",
-        "User-Agent": "Atlas Farm Conditions (atlas.elmfarm.co)",
+    const response = await fetch(
+      `https://api.weather.gov/stations/${encodeURIComponent(point.stationId)}/observations/latest`,
+      {
+        headers: {
+          Accept: "application/geo+json, application/json",
+          "User-Agent": "Atlas Farm Conditions (atlas.elmfarm.co)",
+        },
+        next: { revalidate: 600 },
       },
-      next: { revalidate: 600 },
-    });
-    if (!response.ok) throw new Error(`NWS station ${model.stationId} failed.`);
+    );
+    if (!response.ok) throw new Error(`NWS station ${point.stationId} failed.`);
+
     const payload = await response.json() as NwsObservationResponse;
     const properties = payload.properties;
     const observedAt = properties?.timestamp ?? null;
     const observedMs = observedAt ? Date.parse(observedAt) : Number.NaN;
     if (!Number.isFinite(observedMs) || Date.now() - observedMs > MAX_OBSERVATION_AGE_MS) {
-      throw new Error(`NWS station ${model.stationId} is stale.`);
+      throw new Error(`NWS station ${point.stationId} is stale.`);
     }
-    const temperatureF = measureToFahrenheit(properties?.temperature);
-    const heatIndexF = measureToFahrenheit(properties?.heatIndex);
-    const windChillF = measureToFahrenheit(properties?.windChill);
+
+    const observedTemperatureF = fahrenheit(properties?.temperature);
+    const heatIndexF = fahrenheit(properties?.heatIndex);
+    const windChillF = fahrenheit(properties?.windChill);
+
     return {
+      ...model,
       weatherSource: "nws_observation",
       observedAt,
       condition: text(properties?.textDescription, model.current.condition),
-      temperatureF: temperatureF ?? model.current.temperatureF,
+      temperatureF: observedTemperatureF ?? model.current.temperatureF,
       feelsLikeF: heatIndexF ?? windChillF ?? model.current.feelsLikeF,
       humidityPct: nullableNumeric(properties?.relativeHumidity?.value) ?? model.current.humidityPct,
-      windMph: measureToMph(properties?.windSpeed) ?? model.current.windMph,
+      windMph: mph(properties?.windSpeed) ?? model.current.windMph,
     };
   } catch {
     return {
+      ...model,
       weatherSource: "model_fallback",
       observedAt: null,
       ...model.current,
     };
   }
-}
-
-async function readStationConditions(
-  point: AtlasRainfallStationPoint,
-  timezone: string,
-): Promise<StationConditions> {
-  const model = await readStationModel(point, timezone);
-  const current = await readStationCurrent(model);
-  return { ...model, ...current };
 }
 
 function weightedAverage(values: Array<{ value: number; weight: number }>) {
@@ -356,19 +354,21 @@ function weightedAverage(values: Array<{ value: number; weight: number }>) {
 
 function weightedNullable(values: Array<{ value: number | null; weight: number }>) {
   const available = values.filter((row): row is { value: number; weight: number } => row.value !== null);
-  if (!available.length) return null;
-  return weightedAverage(available);
+  return available.length ? weightedAverage(available) : null;
 }
 
 function stationDaily(station: StationConditions, dateIso: string) {
   return station.daily.find((row) => row.date === dateIso) ?? { date: dateIso, amount: 0, chance: 0 };
 }
 
-function mostRecentWateringRain(
-  stations: StationConditions[],
-  weights: number[],
-  todayIso: string,
-) {
+function stationWateringRainAge(station: StationConditions, todayIso: string) {
+  const latest = [...station.daily]
+    .filter((row) => row.date <= todayIso && row.amount >= WATERING_RAIN_THRESHOLD_IN)
+    .sort((left, right) => right.date.localeCompare(left.date))[0];
+  return latest ? daysBetween(latest.date, todayIso) : null;
+}
+
+function mostRecentWateringRain(stations: StationConditions[], weights: number[], todayIso: string) {
   for (let offset = 0; offset <= 14; offset += 1) {
     const dateIso = addDaysIso(todayIso, -offset);
     const amount = weightedAverage(stations.map((station, index) => ({
@@ -380,21 +380,14 @@ function mostRecentWateringRain(
   return null;
 }
 
-function stationWateringRainAge(station: StationConditions, todayIso: string) {
-  const latest = [...station.daily]
-    .filter((row) => row.date <= todayIso && row.amount >= WATERING_RAIN_THRESHOLD_IN)
-    .sort((left, right) => right.date.localeCompare(left.date))[0];
-  return latest ? daysBetween(latest.date, todayIso) : null;
-}
-
 function spread(values: Array<number | null>) {
   const available = values.filter((value): value is number => value !== null);
   return available.length ? Math.max(...available) - Math.min(...available) : null;
 }
 
-function rainfallConfidence(spreadSevenDayIn: number) {
-  if (spreadSevenDayIn <= 0.15) return "high" as const;
-  if (spreadSevenDayIn <= 0.4) return "moderate" as const;
+function rainfallConfidence(value: number) {
+  if (value <= 0.15) return "high" as const;
+  if (value <= 0.4) return "moderate" as const;
   return "low" as const;
 }
 
@@ -431,11 +424,12 @@ export async function readTriangulatedFarmConditions(
   const tomorrowIso = addDaysIso(todayIso, 1);
 
   const readings = stations.map((station, index): AtlasRainfallStationReading => {
+    const today = stationDaily(station, todayIso);
+    const tomorrow = stationDaily(station, tomorrowIso);
     const sevenDayIn = station.daily
       .filter((row) => row.date >= start7Iso && row.date <= todayIso)
       .reduce((sum, row) => sum + row.amount, 0);
-    const today = stationDaily(station, todayIso);
-    const tomorrow = stationDaily(station, tomorrowIso);
+
     return {
       key: station.key,
       stationId: station.stationId,
@@ -459,54 +453,38 @@ export async function readTriangulatedFarmConditions(
     };
   });
 
-  const todayIn = weightedAverage(readings.map((reading, index) => ({
-    value: reading.todayIn,
-    weight: weights[index],
-  })));
-  const sevenDayIn = weightedAverage(readings.map((reading, index) => ({
-    value: reading.sevenDayIn,
-    weight: weights[index],
-  })));
-  const forecast48hIn = weightedAverage(readings.map((reading, index) => ({
-    value: reading.forecast48hIn,
-    weight: weights[index],
-  })));
-  const forecastChancePct = weightedAverage(readings.map((reading, index) => ({
-    value: reading.forecastChancePct,
-    weight: weights[index],
-  })));
-  const temperatureF = weightedNullable(readings.map((reading, index) => ({
-    value: reading.temperatureF,
-    weight: weights[index],
-  })));
-  const feelsLikeF = weightedNullable(readings.map((reading, index) => ({
-    value: reading.feelsLikeF,
-    weight: weights[index],
-  })));
-  const humidityPct = weightedNullable(readings.map((reading, index) => ({
-    value: reading.humidityPct,
-    weight: weights[index],
-  })));
-  const windMph = weightedNullable(readings.map((reading, index) => ({
-    value: reading.windMph,
-    weight: weights[index],
-  })));
+  const weighted = (key: "todayIn" | "sevenDayIn" | "forecast48hIn" | "forecastChancePct") => weightedAverage(
+    readings.map((reading, index) => ({ value: reading[key], weight: weights[index] })),
+  );
+  const weightedCurrent = (key: "temperatureF" | "feelsLikeF" | "humidityPct" | "windMph") => weightedNullable(
+    readings.map((reading, index) => ({ value: reading[key], weight: weights[index] })),
+  );
+
+  const todayIn = weighted("todayIn");
+  const sevenDayIn = weighted("sevenDayIn");
+  const forecast48hIn = weighted("forecast48hIn");
+  const forecastChancePct = weighted("forecastChancePct");
+  const temperatureF = weightedCurrent("temperatureF");
+  const feelsLikeF = weightedCurrent("feelsLikeF");
+  const humidityPct = weightedCurrent("humidityPct");
+  const windMph = weightedCurrent("windMph");
   const sevenDayValues = readings.map((reading) => reading.sevenDayIn);
   const spreadSevenDayIn = Math.max(...sevenDayValues) - Math.min(...sevenDayValues);
   const temperatureSpreadF = spread(readings.map((reading) => reading.temperatureF));
-  const nearestIndex = weights.indexOf(Math.max(...weights));
+  const nearestIndex = distances.indexOf(Math.min(...distances));
   const observedCount = stations.filter((station) => station.weatherSource === "nws_observation").length;
-  const weatherSourceLabel = observedCount === 3
+  const daysSinceWateringRain = mostRecentWateringRain(stations, weights, todayIso);
+
+  const sourceLabel = observedCount === 3
     ? "Three-station NWS observation blend"
     : observedCount > 0
       ? "Three-station blend with NWS observations and model fallback"
       : "Three-station weather-model blend";
-  const daysSinceWateringRain = mostRecentWateringRain(stations, weights, todayIso);
 
   return {
     weather: {
       sourceType: "three_station_triangulation",
-      sourceLabel: weatherSourceLabel,
+      sourceLabel,
       method: "inverse_distance_weighted_three_point",
       stationCount: 3,
       condition: readings[nearestIndex]?.condition ?? "Weather",
