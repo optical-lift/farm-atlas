@@ -45,6 +45,7 @@ export default async function AtlasMorePage() {
         </section>
 
         <div id="atlas-more-account-slot" />
+        {isFarmOwner ? <div id="atlas-more-work-alongside-slot" /> : null}
 
         <nav className="atlas-more-page__list" aria-label="More Atlas destinations">
           {destinations.map((destination) => (
