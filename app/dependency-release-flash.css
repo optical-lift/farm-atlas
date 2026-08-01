@@ -1,0 +1,60 @@
+.atlas-dependency-release-flash {
+  position: fixed;
+  z-index: 120;
+  left: max(1rem, env(safe-area-inset-left));
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(6.75rem + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 42rem;
+  margin-inline: auto;
+  padding: 1rem 1rem 1.05rem 1.1rem;
+  border: 1px solid rgba(82, 76, 142, 0.24);
+  border-left: 0.45rem solid #8d86c9;
+  border-radius: 1.35rem;
+  background: rgba(250, 248, 238, 0.98);
+  box-shadow: 0 1.1rem 2.8rem rgba(43, 43, 67, 0.18);
+  color: #2d3154;
+}
+
+.atlas-dependency-release-flash div {
+  min-width: 0;
+}
+
+.atlas-dependency-release-flash span {
+  display: block;
+  margin-bottom: 0.28rem;
+  color: #756eaf;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atlas-dependency-release-flash strong {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.atlas-dependency-release-flash p {
+  margin: 0.32rem 0 0;
+  color: #65655e;
+  font-size: 0.92rem;
+  line-height: 1.38;
+}
+
+.atlas-dependency-release-flash button {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(117, 110, 175, 0.1);
+  color: #504b82;
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+}
