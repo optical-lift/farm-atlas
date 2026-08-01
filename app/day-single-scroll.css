@@ -1,0 +1,25 @@
+/*
+  Living Day is one continuous work surface. The carry-forward lane and the
+  selected day's trail must participate in the same document scroll rather than
+  creating a second vertical scroller inside the page.
+*/
+
+.atlas-day-browse,
+.atlas-day-task-groups,
+.atlas-day-route-group,
+.atlas-day-timeline-group,
+.atlas-day-work-order-list,
+.atlas-day-route-spine {
+  height: auto !important;
+  max-height: none !important;
+  overflow-y: visible !important;
+  overscroll-behavior-y: auto !important;
+  scrollbar-width: auto !important;
+}
+
+.atlas-day-task-groups::-webkit-scrollbar,
+.atlas-day-timeline-group::-webkit-scrollbar,
+.atlas-day-work-order-list::-webkit-scrollbar,
+.atlas-day-route-spine::-webkit-scrollbar {
+  display: none !important;
+}
