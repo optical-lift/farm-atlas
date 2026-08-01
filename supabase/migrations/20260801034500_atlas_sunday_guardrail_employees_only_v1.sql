@@ -91,9 +91,18 @@ grant execute on function atlas.enforce_no_sunday_task_due_date() to service_rol
 do $postcondition$
 declare
   v_definition text;
+  v_security_definer boolean;
+  v_fixed_search_path boolean;
 begin
-  select pg_get_functiondef(routine.oid)
-  into v_definition
+  select
+    pg_get_functiondef(routine.oid),
+    routine.prosecdef,
+    exists (
+      select 1
+      from unnest(coalesce(routine.proconfig, '{}'::text[])) setting
+      where setting = 'search_path=pg_catalog, atlas'
+    )
+  into v_definition, v_security_definer, v_fixed_search_path
   from pg_proc routine
   join pg_namespace namespace on namespace.oid = routine.pronamespace
   where namespace.nspname = 'atlas'
@@ -102,7 +111,8 @@ begin
 
   if v_definition not like '%v_assigned_role is distinct from ''farm_hand''%'
     or v_definition not like '%Sunday guardrail applies only to employee-assigned work%'
-    or v_definition not like '%set search_path TO ''pg_catalog'', ''atlas''%'
+    or v_security_definer is not true
+    or v_fixed_search_path is not true
   then
     raise exception 'Employee-only Sunday guardrail postcondition failed.';
   end if;
