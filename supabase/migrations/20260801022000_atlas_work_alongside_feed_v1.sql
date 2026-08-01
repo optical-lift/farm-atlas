@@ -127,7 +127,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON atlas.work_alongside_windows TO authenti
 GRANT ALL ON atlas.work_alongside_windows TO service_role;
 
 -- Keep a stable executor identity on each task card without changing the title
--- or category vocabulary. The UI can render this as an independent badge.
+-- or category vocabulary. The UI renders this as an independent badge.
 CREATE OR REPLACE FUNCTION atlas.decorate_task_executor_v1()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -186,6 +186,8 @@ CREATE TRIGGER zz_tasks_decorate_executor_v1
 BEFORE INSERT OR UPDATE OF assigned_membership_id ON atlas.tasks
 FOR EACH ROW EXECUTE FUNCTION atlas.decorate_task_executor_v1();
 
+-- Backfill only top-level live cards. Updating historical checklist children can
+-- invoke their workflow guard even though their assignment is not changing.
 UPDATE atlas.tasks task
 SET metadata = coalesce(task.metadata, '{}'::jsonb)
   - 'executor_membership_id'
@@ -205,7 +207,9 @@ SET metadata = coalesce(task.metadata, '{}'::jsonb)
 FROM atlas.farm_memberships membership
 LEFT JOIN atlas.user_profiles profile
   ON profile.user_id = membership.user_id
-WHERE task.assigned_membership_id = membership.id;
+WHERE task.assigned_membership_id = membership.id
+  AND task.parent_task_id IS NULL
+  AND task.status <> 'archived';
 
 -- Preserve the established membership reader and add one narrow Owner overlay:
 -- an assigned-worker task is visible when its executor is selected in an
@@ -262,12 +266,12 @@ BEGIN
         AND task.due_date IS NOT NULL
         AND EXISTS (
           SELECT 1
-          FROM atlas.work_alongside_windows window
-          WHERE window.farm_id = p_farm_id
-            AND window.observer_membership_id = p_membership_id
-            AND window.teammate_membership_id = task.assigned_membership_id
-            AND window.status = 'active'
-            AND task.due_date BETWEEN window.starts_on AND window.ends_on
+          FROM atlas.work_alongside_windows alongside_window
+          WHERE alongside_window.farm_id = p_farm_id
+            AND alongside_window.observer_membership_id = p_membership_id
+            AND alongside_window.teammate_membership_id = task.assigned_membership_id
+            AND alongside_window.status = 'active'
+            AND task.due_date BETWEEN alongside_window.starts_on AND alongside_window.ends_on
         )
       )
     )
