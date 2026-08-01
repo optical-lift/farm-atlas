@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import type { AtlasBell } from "@/lib/atlas/bell-contract";
-import { atlasBellActionTitle } from "@/lib/atlas/bell-action";
+import { atlasBellActionTiming, atlasBellActionTitle } from "@/lib/atlas/bell-action";
 import { fetchAtlasBell } from "@/lib/atlas/bell-client";
+import { atlasBellIsManagementRole } from "@/lib/atlas/bell-view";
 import { setAtlasAppBadge } from "@/lib/atlas/pwa-client";
 
 function countLabel(value: number) {
@@ -70,6 +71,11 @@ export default function AtlasBellCover() {
   if (!bell || bell.badgeCount <= 0) return null;
   if (pathname === "/bell" || pathname.startsWith("/bell/") || pathname === "/login" || pathname.startsWith("/auth/")) return null;
 
+  const management = atlasBellIsManagementRole(bell.effectiveRole);
+  const ariaSummary = management
+    ? `${bell.badgeCount} actions are waiting.`
+    : `${bell.badgeCount} moved tasks need finishing.`;
+
   return (
     <aside
       className="atlas-bell-cover"
@@ -77,7 +83,7 @@ export default function AtlasBellCover() {
       data-expanded={expanded ? "true" : "false"}
       style={{ top }}
     >
-      <Link href="/bell" className="atlas-bell-edge-tab" aria-label={`Open Bell. ${bell.badgeCount} actions are waiting.`}>
+      <Link href="/bell" className="atlas-bell-edge-tab" aria-label={`Open Bell. ${ariaSummary}`}>
         <span aria-hidden="true">⌁</span>
         <strong>Bell</strong>
         <b>{countLabel(bell.badgeCount)}</b>
@@ -85,8 +91,9 @@ export default function AtlasBellCover() {
 
       {expanded && newest ? (
         <Link href="/bell" className="atlas-while-away-slip">
-          <span>Do next</span>
+          <span>{management ? "Do next" : "Follow through"}</span>
           <strong>{atlasBellActionTitle(newest)}</strong>
+          {!management ? <em>{atlasBellActionTiming(newest)}</em> : null}
         </Link>
       ) : null}
     </aside>
