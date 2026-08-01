@@ -95,6 +95,7 @@ import "./contextual-app-shell.css";
 import "./app-shell-regression-fixes.css";
 import "./dependency-release-flash.css";
 import "./work-alongside.css";
+import "./day-single-scroll.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
