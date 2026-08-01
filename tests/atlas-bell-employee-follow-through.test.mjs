@@ -7,6 +7,7 @@ function read(path) {
 }
 
 const migration = read("supabase/migrations/20260801004500_atlas_employee_bell_follow_through_v1.sql");
+const visibilityMigration = read("supabase/migrations/20260801005200_atlas_employee_bell_assigned_movement_visibility_v1.sql");
 const page = read("app/bell/page.tsx");
 const view = read("lib/atlas/bell-view.ts");
 const action = read("lib/atlas/bell-action.ts");
@@ -18,6 +19,7 @@ test("owner and manager retain the management Bell contract", () => {
   assert.match(migration, /where v_is_management/);
   assert.match(migration, /atlas\.bell_event_is_worthy_v1\(event\.id\)/);
   assert.match(migration, /latest_worthy_event_per_obligation/);
+  assert.match(visibilityMigration, /v_helper_occurrences <> 1/);
   assert.match(page, /management \? \(/);
   assert.match(page, />Coming up</);
   assert.match(page, />Older work</);
@@ -33,6 +35,8 @@ test("employee Bell is assigned current movement rather than another overdue lis
   assert.match(migration, /task\.assigned_user_id = v_user_id/);
   assert.match(migration, /'movement:' \|\| event\.task_id::text/);
   assert.match(migration, /current_assigned_task_movement_per_task/);
+  assert.match(visibilityMigration, /event\.visibility_scope = 'assigned_worker'/);
+  assert.match(visibilityMigration, /Expected exactly one employee movement visibility fragment/);
   assert.doesNotMatch(view, /No overdue work/);
 });
 
@@ -60,10 +64,13 @@ test("employee UI removes planning queues and exposes follow-through consequence
   assert.match(action, /return "Go to task"/);
 });
 
-test("follow-through migration is fail-closed and fixture-free", () => {
+test("follow-through migrations are fail-closed and fixture-free", () => {
   assert.match(migration, /do \$preflight\$/);
   assert.match(migration, /do \$postcondition\$/);
   assert.match(migration, /raise exception 'atlas\.bell_history_v2 no longer matches/);
   assert.match(migration, /raise exception 'Employee Bell follow-through postcondition failed'/);
-  assert.doesNotMatch(`${migration}\n${ui}`, /6a503d9f|21436a28|23e98e5e|4cd799e2/i);
+  assert.match(visibilityMigration, /do \$migration\$/);
+  assert.match(visibilityMigration, /do \$postcondition\$/);
+  assert.match(visibilityMigration, /Employee assigned-movement visibility postcondition failed/);
+  assert.doesNotMatch(`${migration}\n${visibilityMigration}\n${ui}`, /6a503d9f|21436a28|23e98e5e|4cd799e2/i);
 });
