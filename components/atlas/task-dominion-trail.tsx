@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import AtlasTrail from "@/components/atlas/trail/AtlasTrail";
+import ObjectWorkTaskStrip from "@/components/atlas/object-work-task-strip";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { taskConditionRailModel } from "@/lib/atlas/task-condition-rail";
 import { taskDominionModel } from "@/lib/atlas/task-dominion";
@@ -193,6 +194,8 @@ export default function TaskDominionTrail({
           <span aria-hidden="true" />
         </div>
       )}
+
+      {!isFieldSheet ? <ObjectWorkTaskStrip taskId={task.task_id} /> : null}
 
       <section className="atlas-task-dominion-move">
         {!isFieldSheet ? (
