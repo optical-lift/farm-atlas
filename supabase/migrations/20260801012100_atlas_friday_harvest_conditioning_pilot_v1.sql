@@ -22,19 +22,30 @@ begin
     raise exception 'Elm Farm was not found for the harvest-conditioning pilot.';
   end if;
 
-  select count(*)::integer, min(task.id), min(task.due_date)
-  into v_source_count, v_source_task_id, v_source_due_date
+  select count(*)::integer
+  into v_source_count
   from atlas.tasks task
   where task.farm_id = v_farm_id
     and task.status in ('open','blocked')
     and task.metadata ->> 'task_key' = 'anna_harvest_friday_weekly_20260807';
 
-  if v_source_count <> 1 or v_source_task_id is null or v_source_due_date is null then
+  if v_source_count <> 1 then
     raise exception 'Expected exactly one open Friday harvest source task, found %.', v_source_count;
   end if;
 
-  select count(*)::integer, min(membership.id)
-  into v_anna_count, v_anna_membership_id
+  select task.id, task.due_date
+  into v_source_task_id, v_source_due_date
+  from atlas.tasks task
+  where task.farm_id = v_farm_id
+    and task.status in ('open','blocked')
+    and task.metadata ->> 'task_key' = 'anna_harvest_friday_weekly_20260807';
+
+  if v_source_task_id is null or v_source_due_date is null then
+    raise exception 'Friday harvest source task is missing its id or due date.';
+  end if;
+
+  select count(*)::integer
+  into v_anna_count
   from atlas.farm_memberships membership
   join atlas.user_profiles profile on profile.user_id = membership.user_id
   where membership.farm_id = v_farm_id
@@ -42,8 +53,21 @@ begin
     and membership.role = 'farm_hand'
     and profile.display_name = 'Anna';
 
-  if v_anna_count <> 1 or v_anna_membership_id is null then
+  if v_anna_count <> 1 then
     raise exception 'Expected exactly one active Anna farm-hand membership, found %.', v_anna_count;
+  end if;
+
+  select membership.id
+  into v_anna_membership_id
+  from atlas.farm_memberships membership
+  join atlas.user_profiles profile on profile.user_id = membership.user_id
+  where membership.farm_id = v_farm_id
+    and membership.active = true
+    and membership.role = 'farm_hand'
+    and profile.display_name = 'Anna';
+
+  if v_anna_membership_id is null then
+    raise exception 'Anna farm-hand membership could not be resolved.';
   end if;
 
   insert into atlas.work_definitions(
