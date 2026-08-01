@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAtlasSession } from "@/lib/atlas/session";
-import { readTriangulatedRainfall } from "@/lib/atlas/triangulated-rainfall";
+import { readTriangulatedFarmConditions } from "@/lib/atlas/triangulated-rainfall";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 import { GET as readFarmConditions } from "../route";
 
@@ -19,9 +19,11 @@ type ConditionsPayload = {
     id?: string;
     timezone?: string;
   };
+  weather?: unknown;
   rain?: {
     statusLabel?: string;
     areaEstimate?: unknown;
+    forecast?: unknown;
   };
 };
 
@@ -64,13 +66,20 @@ export async function GET(request: NextRequest) {
     const timezone = payload.farm?.timezone;
     if (observedDate && timezone) {
       try {
-        const triangulated = await readTriangulatedRainfall(metadata, observedDate, timezone);
-        if (triangulated && payload.rain) {
-          payload.rain.areaEstimate = triangulated;
-          payload.rain.statusLabel = triangulatedStatus(triangulated.daysSinceWateringRain);
+        const triangulated = await readTriangulatedFarmConditions(metadata, observedDate, timezone);
+        if (triangulated) {
+          payload.weather = triangulated.weather;
+          if (payload.rain) {
+            payload.rain.areaEstimate = triangulated.rainfall;
+            payload.rain.forecast = {
+              next48hIn: triangulated.weather.forecast48hIn,
+              chancePct: triangulated.weather.forecastChancePct,
+            };
+            payload.rain.statusLabel = triangulatedStatus(triangulated.rainfall.daysSinceWateringRain);
+          }
         }
       } catch {
-        // Keep the single-location estimate from the base farm-conditions endpoint.
+        // Keep the farm-point weather estimate from the base endpoint if the three-station blend fails.
       }
     }
 
