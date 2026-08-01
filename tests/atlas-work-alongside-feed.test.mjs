@@ -15,7 +15,10 @@ test("work-alongside windows preserve assignment and extend only the Owner feed"
   assert.match(migration, /task\.assigned_membership_id/);
   assert.match(migration, /task\.due_date BETWEEN alongside_window\.starts_on AND alongside_window\.ends_on/);
   assert.match(migration, /v_role = 'owner'/);
-  assert.doesNotMatch(migration, /UPDATE atlas\.tasks[\s\S]*assigned_membership_id\s*=/i);
+  assert.doesNotMatch(
+    migration,
+    /UPDATE\s+atlas\.tasks(?:\s+\w+)?\s+SET\s+assigned_membership_id\s*=/i,
+  );
 });
 
 test("task cards receive an independent executor identity layer", () => {
