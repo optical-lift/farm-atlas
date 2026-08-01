@@ -1,4 +1,5 @@
 import type { AtlasBell, AtlasBellItem } from "@/lib/atlas/bell-contract";
+import { atlasBellIsMovementItem } from "@/lib/atlas/bell-action";
 
 export type AtlasBellView = "now" | "next" | "older";
 
@@ -23,18 +24,26 @@ function unresolved(item: AtlasBellItem) {
   return !item.acknowledged;
 }
 
-function isNow(item: AtlasBellItem) {
+export function atlasBellIsManagementRole(role: string | null | undefined) {
+  return role === "owner" || role === "manager";
+}
+
+function isManagementNow(item: AtlasBellItem) {
   return !item.baseline && item.requiresAction && unresolved(item);
 }
 
-function isNext(item: AtlasBellItem) {
+function isManagementNext(item: AtlasBellItem) {
   return !item.baseline
     && item.eventKind === "rhythm_warning"
     && unresolved(item);
 }
 
-function isOlder(item: AtlasBellItem) {
+function isManagementOlder(item: AtlasBellItem) {
   return item.baseline && item.requiresAction && unresolved(item);
+}
+
+function isEmployeeFollowThrough(item: AtlasBellItem) {
+  return atlasBellIsMovementItem(item) && item.requiresAction;
 }
 
 function payloadDate(item: AtlasBellItem, key: string) {
@@ -42,6 +51,11 @@ function payloadDate(item: AtlasBellItem, key: string) {
   if (typeof value !== "string") return Number.POSITIVE_INFINITY;
   const timestamp = Date.parse(value);
   return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
+}
+
+function payloadNumber(item: AtlasBellItem, key: string) {
+  const value = item.payload?.[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
 function actionPriority(item: AtlasBellItem) {
@@ -53,7 +67,7 @@ function actionPriority(item: AtlasBellItem) {
   return 5;
 }
 
-function sortNow(items: AtlasBellItem[]) {
+function sortManagementNow(items: AtlasBellItem[]) {
   return [...items].sort((left, right) => {
     const priority = actionPriority(left) - actionPriority(right);
     if (priority !== 0) return priority;
@@ -65,26 +79,57 @@ function sortNext(items: AtlasBellItem[]) {
   return [...items].sort((left, right) => payloadDate(left, "dueAt") - payloadDate(right, "dueAt"));
 }
 
-export function atlasBellQueueCounts(items: AtlasBellItem[]): AtlasBellQueueCounts {
+function sortEmployeeFollowThrough(items: AtlasBellItem[]) {
+  return [...items].sort((left, right) => {
+    const movements = payloadNumber(right, "movementCount") - payloadNumber(left, "movementCount");
+    if (movements !== 0) return movements;
+    const due = payloadDate(left, "dueDate") - payloadDate(right, "dueDate");
+    if (due !== 0) return due;
+    return Date.parse(right.occurredAt) - Date.parse(left.occurredAt);
+  });
+}
+
+export function atlasBellQueueCounts(items: AtlasBellItem[], role?: string | null): AtlasBellQueueCounts {
+  if (!atlasBellIsManagementRole(role)) {
+    return {
+      now: items.filter(isEmployeeFollowThrough).length,
+      next: 0,
+      older: 0,
+    };
+  }
+
   return {
-    now: items.filter(isNow).length,
-    next: items.filter(isNext).length,
-    older: items.filter(isOlder).length,
+    now: items.filter(isManagementNow).length,
+    next: items.filter(isManagementNext).length,
+    older: items.filter(isManagementOlder).length,
   };
 }
 
-export function atlasBellItemsForView(items: AtlasBellItem[], view: AtlasBellView) {
-  if (view === "next") return sortNext(items.filter(isNext));
-  if (view === "older") return sortNow(items.filter(isOlder));
-  return sortNow(items.filter(isNow));
+export function atlasBellItemsForView(items: AtlasBellItem[], view: AtlasBellView, role?: string | null) {
+  if (!atlasBellIsManagementRole(role)) {
+    return sortEmployeeFollowThrough(items.filter(isEmployeeFollowThrough));
+  }
+
+  if (view === "next") return sortNext(items.filter(isManagementNext));
+  if (view === "older") return sortManagementNow(items.filter(isManagementOlder));
+  return sortManagementNow(items.filter(isManagementNow));
 }
 
 export function atlasBellViewSummary(
   bell: AtlasBell,
   view: AtlasBellView,
-  visibleItems = atlasBellItemsForView(bell.items, view),
+  visibleItems = atlasBellItemsForView(bell.items, view, bell.effectiveRole),
 ): AtlasBellViewSummary {
   const count = visibleItems.length;
+
+  if (!atlasBellIsManagementRole(bell.effectiveRole)) {
+    return {
+      eyebrow: "Follow through",
+      status: `${count} need finishing`,
+      title: count === 1 ? "1 moved task needs finishing" : `${count} moved tasks need finishing`,
+      emptyMessage: "No moved work needs finishing.",
+    };
+  }
 
   if (view === "next") {
     return {

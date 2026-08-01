@@ -12,34 +12,36 @@ const action = read("lib/atlas/bell-action.ts");
 const cover = read("components/atlas/home/AtlasBellCover.tsx");
 const styles = read("app/bell.css");
 const migration = read("supabase/migrations/20260731231500_atlas_quiet_routine_bell_results_v1.sql");
+const followThroughMigration = read("supabase/migrations/20260801004500_atlas_employee_bell_follow_through_v1.sql");
 
-test("Bell list, queue counts, and selected heading share one action contract", () => {
-  assert.match(page, /atlasBellItemsForView\(bell\?\.items \?\? \[\], view\)/);
-  assert.match(page, /atlasBellQueueCounts\(bell\?\.items \?\? \[\]\)/);
+test("Bell list, queue counts, and selected heading share one role-aware contract", () => {
+  assert.match(page, /atlasBellItemsForView\(bell\?\.items \?\? \[\], view, bell\?\.effectiveRole\)/);
+  assert.match(page, /atlasBellQueueCounts\(bell\?\.items \?\? \[\], bell\?\.effectiveRole\)/);
   assert.match(page, /atlasBellViewSummary\(bell, view, items\)/);
   assert.match(page, /summary\?\.status/);
   assert.match(page, /summary\?\.title/);
   assert.match(page, /summary\?\.emptyMessage/);
 });
 
-test("Bell navigation is organized by what the member should do", () => {
-  assert.match(view, /"now" \| "next" \| "older"/);
-  assert.match(view, /!item\.baseline && item\.requiresAction/);
-  assert.match(view, /item\.eventKind === "rhythm_warning"/);
-  assert.match(view, /item\.baseline && item\.requiresAction/);
-  assert.match(view, /eyebrow: "Do now"/);
-  assert.match(view, /eyebrow: "Plan ahead"/);
-  assert.match(view, /eyebrow: "Older work"/);
-  assert.match(page, />Do now</);
+test("management keeps planning queues while employees receive one follow-through queue", () => {
+  assert.match(view, /role === "owner" \|\| role === "manager"/);
+  assert.match(view, /atlasBellIsMovementItem\(item\) && item\.requiresAction/);
+  assert.match(view, /eyebrow: "Follow through"/);
+  assert.match(view, /moved tasks need finishing/);
+  assert.match(page, /management \? \(/);
   assert.match(page, />Coming up</);
   assert.match(page, />Older work</);
+  assert.match(page, /data-atlas-bell-mode=\{management \? "management" : "follow-through"\}/);
   assert.doesNotMatch(page, />Movement</);
   assert.doesNotMatch(page, />Baseline</);
 });
 
-test("Bell cards show only the action, timing, and destination", () => {
+test("Bell cards show action timing, canonical consequence, and destination", () => {
   assert.match(page, /atlasBellActionTiming\(item\)/);
   assert.match(page, /atlasBellActionTitle\(item\)/);
+  assert.match(page, /atlasBellConsequence\(item\)/);
+  assert.match(page, /consequence\.label/);
+  assert.match(page, /consequence\.text/);
   assert.match(page, /atlasBellOpenLabel\(item\)/);
   assert.doesNotMatch(page, /item\.detail/);
   assert.doesNotMatch(page, /item\.why/);
@@ -51,7 +53,19 @@ test("Bell cards show only the action, timing, and destination", () => {
   assert.doesNotMatch(styles, /atlas-bell-summary p/);
 });
 
-test("Bell titles are verb-led instructions instead of event-history statements", () => {
+test("employee movement cards state repeat movement and current consequence", () => {
+  assert.match(action, /const movementLabel = movementCount === 1 \? "Moved once" : `Moved \$\{movementCount\} times`/);
+  assert.match(action, /Due today/);
+  assert.match(action, /dayDifference === 1 \? "day" : "days"/);
+  assert.match(action, /\} overdue`/);
+  assert.match(action, /label: "Unlocks"/);
+  assert.match(action, /label: "Result"/);
+  assert.match(action, /return "Go to task"/);
+  assert.match(styles, /\.atlas-bell-consequence/);
+  assert.match(styles, /data-atlas-bell-mode="follow-through"/);
+});
+
+test("management Bell titles remain verb-led instructions", () => {
   assert.match(action, /return `Weed \$\{subject\}`/);
   assert.match(action, /return `Mow \$\{location\.join/);
   assert.match(action, /return "Check germination trays"/);
@@ -60,34 +74,27 @@ test("Bell titles are verb-led instructions instead of event-history statements"
   assert.match(action, /return `Resolve the block on \$\{taskTitle\}`/);
   assert.match(action, /return `Finish \$\{taskTitle\}`/);
   assert.match(action, /return `Start \$\{taskTitle\}`/);
-  assert.match(action, /return "Overdue"/);
-  assert.match(action, /return "Due now"/);
 });
 
-test("Bell cover opens the action queue and previews the next action", () => {
+test("Bell cover previews management action or employee follow-through", () => {
   assert.match(cover, /href="\/bell"/);
   assert.match(cover, /atlasBellActionTitle\(newest\)/);
-  assert.match(cover, />Do next</);
+  assert.match(cover, /management \? "Do next" : "Follow through"/);
+  assert.match(cover, /atlasBellActionTiming\(newest\)/);
   assert.doesNotMatch(cover, /newest\.title/);
   assert.doesNotMatch(cover, /While you were away/);
 });
 
-test("routine task and maintenance results remain history instead of Bell notifications", () => {
+test("routine results stay out of management Bell while employee movement is selected inside Bell history", () => {
   assert.match(migration, /event\.event_kind = 'task_result'/);
   assert.match(migration, /event\.source_event in \('reopened', 'blocked'\)/);
   assert.doesNotMatch(migration, /'task_result', 'maintenance_result'/);
-  assert.doesNotMatch(migration, /or event\.event_kind = 'maintenance_result'/);
-  assert.match(migration, /Routine done, partial, rescheduled, changed-plan, and maintenance result records remain in the Journal and Trail/);
-});
-
-test("exceptional Bell signals remain worthy", () => {
-  assert.match(migration, /event\.importance in \('attention', 'critical'\)/);
-  assert.match(migration, /'rhythm_warning', 'rhythm_due', 'rhythm_failure'/);
-  assert.match(migration, /'unlock', 'production_change', 'owner_decision'/);
-  assert.match(migration, /'reopened', 'blocked'/);
+  assert.match(followThroughMigration, /where not v_is_management/);
+  assert.match(followThroughMigration, /event\.event_kind = 'task_result'/);
+  assert.match(followThroughMigration, /event\.source_event = 'rescheduled'/);
 });
 
 test("Bell redesign contains no live farm or member fixtures", () => {
-  const build = `${page}\n${view}\n${action}\n${cover}\n${styles}\n${migration}`;
+  const build = `${page}\n${view}\n${action}\n${cover}\n${styles}\n${migration}\n${followThroughMigration}`;
   assert.doesNotMatch(build, /6a503d9f|21436a28|23e98e5e|4cd799e2/i);
 });

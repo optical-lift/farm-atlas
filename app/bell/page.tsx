@@ -10,10 +10,12 @@ import {
   atlasBellActionSymbol,
   atlasBellActionTiming,
   atlasBellActionTitle,
+  atlasBellConsequence,
   atlasBellOpenLabel,
 } from "@/lib/atlas/bell-action";
 import { fetchAtlasBell, updateAtlasBell } from "@/lib/atlas/bell-client";
 import {
+  atlasBellIsManagementRole,
   atlasBellItemsForView,
   atlasBellQueueCounts,
   atlasBellViewSummary,
@@ -22,6 +24,8 @@ import {
 import { setAtlasAppBadge } from "@/lib/atlas/pwa-client";
 
 function BellItemRow({ item }: { item: AtlasBellItem }) {
+  const consequence = atlasBellConsequence(item);
+
   function markRead() {
     if (!item.unread) return;
     void updateAtlasBell({ action: "read", eventId: item.eventId }).catch(() => undefined);
@@ -39,6 +43,12 @@ function BellItemRow({ item }: { item: AtlasBellItem }) {
         <div className="atlas-bell-action-copy">
           <small>{atlasBellActionTiming(item)}</small>
           <strong>{atlasBellActionTitle(item)}</strong>
+          {consequence ? (
+            <p className="atlas-bell-consequence">
+              <span>{consequence.label}</span>
+              {consequence.text}
+            </p>
+          ) : null}
         </div>
         <span className="atlas-bell-open">
           {atlasBellOpenLabel(item)} <b aria-hidden="true">›</b>
@@ -56,7 +66,7 @@ function normalizedView(value: string | null): AtlasBellView {
 
 function AtlasBellPageContent() {
   const searchParams = useSearchParams();
-  const view = normalizedView(searchParams.get("view"));
+  const requestedView = normalizedView(searchParams.get("view"));
   const [bell, setBell] = useState<AtlasBell | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,12 +93,14 @@ function AtlasBellPageContent() {
     if (bell) void setAtlasAppBadge(bell.badgeCount);
   }, [bell]);
 
+  const management = atlasBellIsManagementRole(bell?.effectiveRole);
+  const view: AtlasBellView = management ? requestedView : "now";
   const items = useMemo(
-    () => atlasBellItemsForView(bell?.items ?? [], view),
+    () => atlasBellItemsForView(bell?.items ?? [], view, bell?.effectiveRole),
     [bell, view],
   );
   const counts = useMemo(
-    () => atlasBellQueueCounts(bell?.items ?? []),
+    () => atlasBellQueueCounts(bell?.items ?? [], bell?.effectiveRole),
     [bell],
   );
   const summary = useMemo(
@@ -108,26 +120,28 @@ function AtlasBellPageContent() {
           <Link href="/install" className="atlas-note-plus" aria-label="Open Farm Alerts settings">⋯</Link>
         </header>
 
-        <div className="atlas-bell-page-body">
+        <div className="atlas-bell-page-body" data-atlas-bell-mode={management ? "management" : "follow-through"}>
           <section className="atlas-bell-action-summary">
             <span>{summary?.eyebrow ?? "Do now"}</span>
             <h1>{summary?.title ?? "Loading actions"}</h1>
           </section>
 
-          <nav className="atlas-bell-action-tabs" aria-label="Bell action queues">
-            <Link href="/bell" aria-current={view === "now" ? "page" : undefined}>
-              <strong>Do now</strong>
-              <span>{counts.now}</span>
-            </Link>
-            <Link href="/bell?view=next" aria-current={view === "next" ? "page" : undefined}>
-              <strong>Coming up</strong>
-              <span>{counts.next}</span>
-            </Link>
-            <Link href="/bell?view=older" aria-current={view === "older" ? "page" : undefined}>
-              <strong>Older work</strong>
-              <span>{counts.older}</span>
-            </Link>
-          </nav>
+          {management ? (
+            <nav className="atlas-bell-action-tabs" aria-label="Bell action queues">
+              <Link href="/bell" aria-current={view === "now" ? "page" : undefined}>
+                <strong>Do now</strong>
+                <span>{counts.now}</span>
+              </Link>
+              <Link href="/bell?view=next" aria-current={view === "next" ? "page" : undefined}>
+                <strong>Coming up</strong>
+                <span>{counts.next}</span>
+              </Link>
+              <Link href="/bell?view=older" aria-current={view === "older" ? "page" : undefined}>
+                <strong>Older work</strong>
+                <span>{counts.older}</span>
+              </Link>
+            </nav>
+          ) : null}
 
           {loading ? <div className="atlas-bell-loading">Loading actions…</div> : null}
           {error ? <div className="atlas-bell-error">{error}</div> : null}

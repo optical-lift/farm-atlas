@@ -54,7 +54,7 @@ export type AtlasBell = {
   items: AtlasBellItem[];
   eventTruth: "journal_event_index";
   receiptTruth: "bell_event_receipts";
-  obligationTruth: "latest_worthy_event_per_obligation";
+  obligationTruth: "latest_worthy_event_per_obligation" | "current_assigned_task_movement_per_task";
 };
 
 export type AtlasBellAction = "read" | "acknowledge" | "visit";
