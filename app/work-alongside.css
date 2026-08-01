@@ -1,0 +1,273 @@
+/* Work-alongside keeps task ownership intact while giving an Owner a temporary
+   shared trail. Assignee identity is a separate visual layer, never part of the
+   task title or operational category. */
+
+[data-atlas-assignee-label] {
+  position: relative !important;
+  padding-right: 84px !important;
+}
+
+[data-atlas-assignee-label]::after {
+  content: attr(data-atlas-assignee-label);
+  position: absolute;
+  top: 2px;
+  right: 22px;
+  z-index: 2;
+  max-width: 74px;
+  overflow: hidden;
+  border: 1px solid rgba(85, 90, 134, 0.18);
+  border-radius: 999px;
+  background: rgba(174, 179, 212, 0.18);
+  color: #555a86;
+  padding: 4px 7px 3px;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.07em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+[data-atlas-assignee-key="viewer"]::after {
+  background: rgba(174, 179, 212, 0.12);
+  color: #777b73;
+}
+
+[data-atlas-assignee-key="marshall"]::after {
+  border-color: rgba(85, 90, 134, 0.24);
+  background: rgba(188, 196, 220, 0.32);
+  color: #4f567f;
+}
+
+[data-atlas-assignee-key="anna"]::after {
+  border-color: rgba(113, 125, 87, 0.22);
+  background: rgba(207, 214, 175, 0.36);
+  color: #626d4e;
+}
+
+.atlas-day-task-entry[data-atlas-assignee-key="marshall"] .atlas-day-task-node {
+  border-color: #8b91c2 !important;
+  background: rgba(188, 196, 220, 0.16) !important;
+}
+
+.atlas-day-task-entry[data-atlas-assignee-key="anna"] .atlas-day-task-node {
+  border-color: #9aa678 !important;
+  background: rgba(207, 214, 175, 0.2) !important;
+}
+
+.atlas-day-task-entry[data-atlas-assignee-key="viewer"] .atlas-day-task-node {
+  border-color: rgba(139, 145, 194, 0.72) !important;
+}
+
+.atlas-work-alongside-overlay {
+  position: fixed;
+  left: 50%;
+  bottom: calc(86px + env(safe-area-inset-bottom));
+  z-index: 1300;
+  width: min(calc(100vw - 28px), 402px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.atlas-work-alongside-toggle {
+  width: auto;
+  max-width: 100%;
+  min-height: 42px;
+  margin-left: auto;
+  border: 1px solid rgba(139, 145, 194, 0.28);
+  border-radius: 16px;
+  background: rgba(251, 250, 244, 0.96);
+  box-shadow: 0 10px 28px rgba(49, 43, 35, 0.12);
+  color: var(--atlas-text);
+  padding: 8px 12px;
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  pointer-events: auto;
+  backdrop-filter: blur(14px);
+}
+
+.atlas-work-alongside-toggle span {
+  color: var(--atlas-purple-dark);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.atlas-work-alongside-toggle strong {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.05;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-work-alongside-panel {
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(139, 145, 194, 0.28);
+  border-radius: 20px;
+  background: rgba(251, 250, 244, 0.99);
+  box-shadow: 0 18px 48px rgba(49, 43, 35, 0.18);
+  pointer-events: auto;
+  backdrop-filter: blur(18px);
+}
+
+.atlas-work-alongside-panel > header {
+  min-height: 54px;
+  border-bottom: 1px solid rgba(139, 145, 194, 0.14);
+  padding: 11px 12px 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.atlas-work-alongside-panel > header div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.atlas-work-alongside-panel > header span,
+.atlas-work-alongside-panel label > span {
+  color: var(--atlas-purple-dark);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atlas-work-alongside-panel > header strong {
+  font-size: 15px;
+  line-height: 1.05;
+  font-weight: 950;
+}
+
+.atlas-work-alongside-panel > header button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(174, 179, 212, 0.14);
+  color: var(--atlas-text);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.atlas-work-alongside-windows {
+  border-bottom: 1px solid rgba(139, 145, 194, 0.12);
+  padding: 7px 12px;
+  display: grid;
+  gap: 5px;
+}
+
+.atlas-work-alongside-windows > div {
+  min-width: 0;
+  border-radius: 12px;
+  background: rgba(174, 179, 212, 0.1);
+  padding: 8px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.atlas-work-alongside-windows span {
+  min-width: 0;
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.atlas-work-alongside-windows b {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--atlas-text);
+  font-size: 12px;
+}
+
+.atlas-work-alongside-windows button {
+  border: 0;
+  background: transparent;
+  color: #7e6670;
+  padding: 4px;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.atlas-work-alongside-panel form {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.atlas-work-alongside-panel label {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.atlas-work-alongside-panel select,
+.atlas-work-alongside-panel input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 12px;
+  background: white;
+  color: var(--atlas-text);
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.atlas-work-alongside-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.atlas-work-alongside-panel form > p {
+  margin: 0;
+  color: #8a6267;
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 750;
+}
+
+.atlas-work-alongside-panel form > button {
+  min-height: 44px;
+  border: 1px solid #8b91c2;
+  border-radius: 14px;
+  background: var(--atlas-purple);
+  color: #303243;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.atlas-work-alongside-panel button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+@media (max-width: 360px) {
+  [data-atlas-assignee-label] {
+    padding-right: 72px !important;
+  }
+
+  [data-atlas-assignee-label]::after {
+    right: 18px;
+    max-width: 62px;
+    padding-inline: 6px;
+  }
+
+  .atlas-work-alongside-dates {
+    grid-template-columns: 1fr;
+  }
+}
