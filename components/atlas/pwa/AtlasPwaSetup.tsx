@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import type { AtlasPushCategory, AtlasPushPreferences, AtlasPushSetup } from "@/lib/atlas/push-contract";
+import type {
+  AtlasPushCategory,
+  AtlasPushCategoryPolicy,
+  AtlasPushPreferences,
+  AtlasPushSetup,
+} from "@/lib/atlas/push-contract";
 import {
   connectAtlasPush,
   currentAtlasPushSubscription,
@@ -26,14 +31,52 @@ import {
 const INSTALL_DISMISSED_KEY = "atlas:pwa-install-dismissed:v1";
 const INSTALL_DISMISS_DAYS = 14;
 
-const CATEGORY_LABELS: Array<{ key: AtlasPushCategory; label: string }> = [
-  { key: "rhythm_warning", label: "Coming-due warnings" },
-  { key: "rhythm_due", label: "Moves that become due" },
-  { key: "rhythm_failure", label: "Rhythms that fall behind" },
-  { key: "unlock", label: "Newly unlocked work" },
-  { key: "owner_decision", label: "Owner decisions" },
-  { key: "other_player_result", label: "Important results from another player" },
+const CATEGORY_ORDER: AtlasPushCategory[] = [
+  "tomorrow_covered",
+  "day_plan",
+  "work_window",
+  "dependency_ready",
+  "task_nudge",
+  "window_closing",
+  "day_wrap",
+  "rhythm_warning",
+  "rhythm_due",
+  "rhythm_failure",
+  "unlock",
+  "owner_decision",
+  "other_player_result",
 ];
+
+const FALLBACK_LABELS: Record<AtlasPushCategory, string> = {
+  tomorrow_covered: "Tomorrow coverage",
+  day_plan: "Morning plan",
+  work_window: "Work ready now",
+  dependency_ready: "Process timers and dependent work",
+  task_nudge: "Friendly untouched reminders",
+  window_closing: "Closing-window warnings",
+  day_wrap: "End-of-day wrap-up",
+  rhythm_warning: "Coming-due rhythm warnings",
+  rhythm_due: "Rhythm work due now",
+  rhythm_failure: "Missed rhythm boundaries",
+  unlock: "Newly unlocked work",
+  owner_decision: "Required handoffs and decisions",
+  other_player_result: "Important results from another person",
+};
+
+const FALLBACK_POLICY: AtlasPushCategoryPolicy = {
+  requiredCategories: [
+    "work_window",
+    "window_closing",
+    "dependency_ready",
+    "rhythm_due",
+    "rhythm_failure",
+    "unlock",
+    "owner_decision",
+  ],
+  optionalCategories: ["day_plan", "task_nudge", "day_wrap", "rhythm_warning", "other_player_result"],
+  canPauseAll: false,
+  labels: FALLBACK_LABELS,
+};
 
 function recentDismissal() {
   try {
@@ -183,6 +226,22 @@ function alertStatusLabel(
   return "Not enabled";
 }
 
+function formatCoverageTime(value: string | null, timeZone: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+  }).format(date);
+}
+
+function orderedCategories(categories: AtlasPushCategory[]) {
+  const included = new Set(categories);
+  return CATEGORY_ORDER.filter((category) => included.has(category));
+}
+
 export default function AtlasPwaSetupPanel() {
   const state = useAtlasPwaState();
   const [working, setWorking] = useState<"install" | "connect" | "disconnect" | "test" | "preferences" | null>(null);
@@ -198,6 +257,11 @@ export default function AtlasPwaSetupPanel() {
     [alertsNeedInstallation, state.hydrated],
   );
   const connected = Boolean(subscription && setup?.subscriptions.length);
+  const policy = setup?.categoryPolicy ?? FALLBACK_POLICY;
+  const requiredCategories = orderedCategories(policy.requiredCategories);
+  const optionalCategories = orderedCategories(policy.optionalCategories);
+  const coverage = setup?.tomorrowCoverage;
+  const coverageTime = formatCoverageTime(coverage?.firstNotificationAt ?? null, preferences?.timeZone ?? "America/Chicago");
 
   useEffect(() => {
     if (!state.hydrated || alertsNeedInstallation) return;
@@ -240,8 +304,8 @@ export default function AtlasPwaSetupPanel() {
       state.setPermission(nextPermission);
       if (nextPermission !== "granted") {
         setMessage(nextPermission === "denied"
-          ? "Farm Alerts are blocked in iPhone settings."
-          : "Farm Alerts are not available in this browser.");
+          ? "Atlas notifications are blocked in iPhone settings."
+          : "Atlas notifications are not available in this browser.");
         return;
       }
       const baseSetup = setup ?? await fetchAtlasPushSetup();
@@ -250,9 +314,9 @@ export default function AtlasPwaSetupPanel() {
       setPreferences(connectedResult.setup.preferences);
       setSubscription(connectedResult.subscription);
       setQuietEnabled(Boolean(connectedResult.setup.preferences.quietStart && connectedResult.setup.preferences.quietEnd));
-      setMessage("This iPhone is connected. A test alert is on its way.");
+      setMessage("This iPhone is connected. A test notification is on its way.");
     } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : "Atlas could not connect Farm Alerts on this device.");
+      setMessage(caught instanceof Error ? caught.message : "Atlas could not connect notifications on this device.");
     } finally {
       setWorking(null);
     }
@@ -266,7 +330,7 @@ export default function AtlasPwaSetupPanel() {
       const nextSetup = await disconnectAtlasPush(subscription);
       setSubscription(null);
       if (nextSetup) setSetup(nextSetup);
-      setMessage("Farm Alerts are disconnected from this device.");
+      setMessage("This device is disconnected. Atlas cannot deliver assigned work to its lockscreen.");
     } catch (caught) {
       setMessage(caught instanceof Error ? caught.message : "Atlas could not disconnect this device.");
     } finally {
@@ -281,9 +345,9 @@ export default function AtlasPwaSetupPanel() {
     try {
       const nextSetup = await sendAtlasPushTest();
       if (nextSetup) setSetup(nextSetup);
-      setMessage("Test alert queued. It should arrive shortly even after you close Atlas.");
+      setMessage("Test notification queued. It should arrive shortly even after you close Atlas.");
     } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : "Atlas could not send the test alert.");
+      setMessage(caught instanceof Error ? caught.message : "Atlas could not send the test notification.");
     } finally {
       setWorking(null);
     }
@@ -296,6 +360,7 @@ export default function AtlasPwaSetupPanel() {
     try {
       const nextPreferences: AtlasPushPreferences = {
         ...preferences,
+        enabled: true,
         quietStart: quietEnabled ? preferences.quietStart || "21:00" : null,
         quietEnd: quietEnabled ? preferences.quietEnd || "07:00" : null,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || preferences.timeZone,
@@ -305,9 +370,9 @@ export default function AtlasPwaSetupPanel() {
         setSetup(nextSetup);
         setPreferences(nextSetup.preferences);
       }
-      setMessage("Farm Alert preferences saved.");
+      setMessage("Optional notification choices saved. Required work delivery remains on.");
     } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : "Atlas could not save Farm Alert preferences.");
+      setMessage(caught instanceof Error ? caught.message : "Atlas could not save notification choices.");
     } finally {
       setWorking(null);
     }
@@ -346,21 +411,21 @@ export default function AtlasPwaSetupPanel() {
 
       <section className="atlas-pwa-setup-card">
         <header>
-          <span>Farm Alerts</span>
+          <span>Lockscreen delivery</span>
           <b>{alertStatusLabel(state.permission, connected)}</b>
         </header>
         {alertsNeedInstallation ? (
-          <p>Add Atlas to the Home Screen before enabling Farm Alerts on this iPhone or iPad.</p>
+          <p>Add Atlas to the Home Screen before enabling lockscreen delivery on this iPhone or iPad.</p>
         ) : state.permission === "denied" ? (
-          <p>Farm Alerts are blocked. Open iPhone Settings → Notifications → Atlas and allow notifications.</p>
+          <p>Atlas notifications are blocked. Open iPhone Settings → Notifications → Atlas and allow notifications.</p>
         ) : state.permission === "unsupported" ? (
-          <p>This browser does not offer Atlas notification delivery.</p>
+          <p>This browser cannot receive Atlas lockscreen notifications.</p>
         ) : connected ? (
           <>
-            <p>This installed device is subscribed to calm, role-specific changes from the Bell.</p>
+            <p>Atlas will deliver assigned work to this lockscreen when its real work window opens.</p>
             <div className="atlas-pwa-inline-actions">
               <button type="button" onClick={() => void testAlerts()} disabled={working !== null}>
-                {working === "test" ? "Sending…" : "Send test alert"}
+                {working === "test" ? "Sending…" : "Send test notification"}
               </button>
               <button type="button" className="quiet" onClick={() => void disconnectAlerts()} disabled={working !== null}>
                 {working === "disconnect" ? "Disconnecting…" : "Disconnect device"}
@@ -370,47 +435,79 @@ export default function AtlasPwaSetupPanel() {
         ) : (
           <>
             <p>{state.permission === "granted"
-              ? "Notification permission is allowed. Connect this iPhone to receive real Bell changes while Atlas is closed."
-              : "Permission and device subscription are created only when you press the button."}</p>
+              ? "Notification permission is allowed. Connect this iPhone so Atlas can deliver the workday while the app is closed."
+              : "Enable notifications so assigned work reaches this lockscreen at the right time."}</p>
             <button type="button" onClick={() => void connectAlerts()} disabled={!canRequestAlerts || working !== null || !setup}>
-              {working === "connect" ? "Connecting…" : state.permission === "granted" ? "Connect Farm Alerts" : "Enable Farm Alerts"}
+              {working === "connect" ? "Connecting…" : state.permission === "granted" ? "Connect lockscreen delivery" : "Enable Atlas notifications"}
             </button>
           </>
         )}
       </section>
 
+      {setup ? (
+        <section className="atlas-pwa-setup-card atlas-tomorrow-coverage">
+          <header>
+            <span>Tomorrow</span>
+            <b>{coverage?.covered ? "Covered" : coverage?.taskCount ? "Needs attention" : "Clear"}</b>
+          </header>
+          {coverage?.covered ? (
+            <p>
+              <strong>Tomorrow is covered.</strong> {coverage.taskCount} task{coverage.taskCount === 1 ? "" : "s"} are staged across {coverage.momentCount} notification moments.
+              {coverageTime ? ` First notification: ${coverageTime}.` : ""}
+            </p>
+          ) : coverage?.taskCount ? (
+            <p>
+              {coverage.deviceConnected
+                ? `${coverage.uncoveredTaskCount} tomorrow task${coverage.uncoveredTaskCount === 1 ? " has" : "s have"} no work-window notification yet.`
+                : "Tomorrow has assigned work, but this account has no connected notification device."}
+            </p>
+          ) : (
+            <p>No assigned tasks are currently due tomorrow.</p>
+          )}
+        </section>
+      ) : null}
+
       {connected && preferences ? (
         <section className="atlas-pwa-setup-card atlas-push-preferences">
           <header>
-            <span>Alert choices</span>
-            <b>{preferences.enabled ? "On" : "Paused"}</b>
+            <span>Notification delivery</span>
+            <b>Required work stays on</b>
           </header>
-          <label className="atlas-push-master">
-            <input
-              type="checkbox"
-              checked={preferences.enabled}
-              onChange={(event) => setPreferences({ ...preferences, enabled: event.target.checked })}
-            />
-            <span>Allow Atlas Farm Alerts</span>
-          </label>
-          <div className="atlas-push-category-list">
-            {CATEGORY_LABELS.map((category) => (
-              <label key={category.key}>
-                <input
-                  type="checkbox"
-                  checked={preferences.categories[category.key]}
-                  onChange={(event) => setPreferences({
-                    ...preferences,
-                    categories: { ...preferences.categories, [category.key]: event.target.checked },
-                  })}
-                />
-                <span>{category.label}</span>
+          <p>Atlas must be able to tell you when assigned work becomes actionable or is about to miss its useful window.</p>
+
+          <div className="atlas-push-category-list" aria-label="Required notification types">
+            {requiredCategories.map((category) => (
+              <label key={category}>
+                <input type="checkbox" checked readOnly disabled />
+                <span>{policy.labels[category] ?? FALLBACK_LABELS[category]} · Required</span>
               </label>
             ))}
           </div>
+
+          {optionalCategories.length ? (
+            <>
+              <p><strong>Optional extras</strong></p>
+              <div className="atlas-push-category-list" aria-label="Optional notification types">
+                {optionalCategories.map((category) => (
+                  <label key={category}>
+                    <input
+                      type="checkbox"
+                      checked={preferences.categories[category] !== false}
+                      onChange={(event) => setPreferences({
+                        ...preferences,
+                        categories: { ...preferences.categories, [category]: event.target.checked },
+                      })}
+                    />
+                    <span>{policy.labels[category] ?? FALLBACK_LABELS[category]}</span>
+                  </label>
+                ))}
+              </div>
+            </>
+          ) : null}
+
           <label className="atlas-push-master">
             <input type="checkbox" checked={quietEnabled} onChange={(event) => setQuietEnabled(event.target.checked)} />
-            <span>Use Atlas quiet hours</span>
+            <span>Use quiet hours for optional notifications</span>
           </label>
           {quietEnabled ? (
             <div className="atlas-push-quiet-hours">
@@ -418,8 +515,9 @@ export default function AtlasPwaSetupPanel() {
               <label><span>Until</span><input type="time" value={preferences.quietEnd || "07:00"} onChange={(event) => setPreferences({ ...preferences, quietEnd: event.target.value })} /></label>
             </div>
           ) : null}
+          <p>Required process timers, work releases, and closing-window warnings may still arrive during quiet hours.</p>
           <button type="button" onClick={() => void savePreferences()} disabled={working !== null}>
-            {working === "preferences" ? "Saving…" : "Save alert choices"}
+            {working === "preferences" ? "Saving…" : "Save optional choices"}
           </button>
         </section>
       ) : null}
