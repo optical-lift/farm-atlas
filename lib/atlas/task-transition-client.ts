@@ -47,6 +47,13 @@ export type AtlasTaskDependencyStatus = {
   dependencies: AtlasTaskDependency[];
 };
 
+export type AtlasDependencyReleaseFlash = {
+  sourceTitle: string;
+  downstreamTitle: string;
+  state: AtlasTaskDependency["state"];
+  readyAt: string | null;
+};
+
 type AtlasApiError = string | {
   code?: string;
   message?: string;
@@ -70,6 +77,8 @@ export type AtlasTaskTransitionResponse = {
 };
 
 type ChecklistVisualState = "done" | "open";
+
+export const ATLAS_DEPENDENCY_RELEASE_FLASH_KEY = "atlas:dependency-release-flash:v1";
 
 const checklistVisualStates = new Map<string, ChecklistVisualState>();
 let checklistObserver: MutationObserver | null = null;
@@ -149,6 +158,23 @@ function rememberChecklistVisualState(taskId: string, state: ChecklistVisualStat
   }, 10000);
 }
 
+function rememberDependencyReleaseFlash(data: AtlasTaskTransitionResponse) {
+  if (typeof window === "undefined") return;
+  const dependency = data.dependencyStatus?.dependencies.find((item) => (
+    item.direction === "downstream"
+    && (item.state === "counting" || item.state === "ready" || item.state === "released")
+  ));
+  if (!dependency) return;
+
+  const flash: AtlasDependencyReleaseFlash = {
+    sourceTitle: dependency.sourceTaskTitle,
+    downstreamTitle: dependency.downstreamTitle,
+    state: dependency.state,
+    readyAt: dependency.readyAt,
+  };
+  window.sessionStorage.setItem(ATLAS_DEPENDENCY_RELEASE_FLASH_KEY, JSON.stringify(flash));
+}
+
 export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest): Promise<AtlasTaskTransitionResponse> {
   const response = await fetch("/api/atlas/task-transition", {
     method: "POST",
@@ -170,6 +196,10 @@ export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest)
     rememberChecklistVisualState(input.taskId, "done");
   } else if (typeof window !== "undefined" && input.transition === "checklist_open") {
     rememberChecklistVisualState(input.taskId, "open");
+  }
+
+  if (input.transition === "done" || input.transition === "checklist_done") {
+    rememberDependencyReleaseFlash(data);
   }
 
   return data;
