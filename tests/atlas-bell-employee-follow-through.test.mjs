@@ -68,7 +68,7 @@ test("missing explicit consequences derive concrete completion results from cano
 });
 
 test("action-derived completion state takes priority over equipment and resource instructions", () => {
-  assert.match(precedenceMigration, /Prefer explicit downstream unlocks, then explicit or action-derived completion results/);
+  assert.match(precedenceMigration, /prefer explicit downstream unlocks, then explicit or action-derived completion results/i);
   assert.match(precedenceMigration, /v_case_position >= v_detail_position/);
   assert.match(precedenceMigration, /Employee Bell result precedence postcondition failed/);
   assert.match(precedenceMigration, /Expected one result-precedence fragment and one case ending/);
