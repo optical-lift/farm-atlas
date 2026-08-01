@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import MaintenanceDirectiveStrip from "@/components/atlas/maintenance-directive-strip";
 import styles from "./HarvestFocus.module.css";
 
 export type MowingFocusTask = {
@@ -29,7 +30,7 @@ export type MowingFocusTask = {
 type Outcome = "mowed_full" | "mowed_partial" | "acceptable_no_cut" | "too_wet" | "equipment_or_area_problem" | "closed_not_mowable";
 
 const choices: Array<{ value: Outcome; title: string; detail: string; tone?: string }> = [
-  { value: "mowed_full", title: "Mowed fully", detail: "The whole route is cut" , tone: "ready"},
+  { value: "mowed_full", title: "Mowed fully", detail: "The whole route is cut", tone: "ready" },
   { value: "mowed_partial", title: "Mowed partly", detail: "Record what remains" },
   { value: "acceptable_no_cut", title: "Still acceptable", detail: "Observed; no cut needed" },
   { value: "too_wet", title: "Too wet to mow", detail: "Keep the route and choose a return date" },
@@ -126,6 +127,8 @@ export default function MowingFocusPage({ task }: { task: MowingFocusTask }) {
             <h1>{task.routeLabel}</h1>
             <p>{task.zoneLabel}</p>
           </section>
+
+          <MaintenanceDirectiveStrip taskId={task.id} />
 
           <section className={styles.facts} aria-label="Mowing route facts">
             <div className={`${styles.fact} ${styles.factWide}`}><small>What time means</small><strong>This route has returned for attention. Time does not claim the grass is long, dry, or safe to mow.</strong></div>

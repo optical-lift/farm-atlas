@@ -1,0 +1,307 @@
+.panel {
+  display: grid;
+  gap: 14px;
+  margin: 18px;
+  padding: 18px;
+  border: 1px solid rgba(67, 91, 62, 0.2);
+  border-radius: 22px;
+  background: rgba(240, 246, 232, 0.9);
+  color: #30362f;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.header div {
+  display: grid;
+  gap: 3px;
+}
+
+.header span,
+.composer legend,
+.composer label > span {
+  color: #697365;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.05;
+}
+
+.header > button,
+.stepEntry button,
+.saveRow > button {
+  border: 0;
+  border-radius: 999px;
+  background: #52634b;
+  color: white;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  padding: 10px 14px;
+}
+
+.activeList,
+.composer,
+.effectList,
+.cropChoices {
+  display: grid;
+  gap: 10px;
+}
+
+.activeDirective {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid rgba(67, 91, 62, 0.16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.activeDirective small {
+  color: #75806f;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.activeDirective > strong {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.activeDirective > span,
+.activeDirective > em {
+  color: #6c7369;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.activeDirective footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.activeDirective footer a {
+  color: #40513c;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.activeDirective footer button {
+  border: 0;
+  background: transparent;
+  color: #8a685f;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.composer {
+  padding-top: 14px;
+  border-top: 1px solid rgba(67, 91, 62, 0.16);
+}
+
+.sentence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  padding: 13px;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.pill {
+  border: 1px solid rgba(71, 91, 64, 0.25);
+  border-radius: 999px;
+  background: #edf3e8;
+  color: #3d4b39;
+  font: inherit;
+  font-weight: 900;
+  padding: 6px 9px;
+}
+
+.composer fieldset,
+.composer label {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.composer fieldset > p,
+.saveRow p {
+  margin: 0;
+  color: #6f776d;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.composer input,
+.composer textarea,
+.composer select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(67, 91, 62, 0.22);
+  border-radius: 13px;
+  background: white;
+  color: #30362f;
+  font: inherit;
+  font-size: 14px;
+  padding: 12px;
+}
+
+.composer textarea {
+  resize: vertical;
+}
+
+.twoColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.choices button,
+.cropChoices button,
+.effectList button {
+  border: 1px solid rgba(67, 91, 62, 0.18);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #414b3e;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.choices button[data-selected="true"],
+.cropChoices button[data-selected="true"],
+.effectList button[data-selected="true"] {
+  border-color: rgba(75, 101, 66, 0.62);
+  background: #dfead8;
+  box-shadow: inset 0 0 0 1px rgba(75, 101, 66, 0.15);
+}
+
+.effectList button,
+.cropChoices button {
+  display: grid;
+  gap: 4px;
+}
+
+.effectList button strong,
+.cropChoices button strong {
+  font-size: 13px;
+}
+
+.effectList button span,
+.cropChoices button span {
+  color: #70776d;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.cropChoices {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+}
+
+.steps button {
+  border: 0;
+  background: transparent;
+  color: #80685f;
+  font: inherit;
+  font-size: 16px;
+}
+
+.stepEntry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.stepEntry button {
+  border-radius: 12px;
+}
+
+.saveRow {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(67, 91, 62, 0.15);
+}
+
+.saveRow > button {
+  width: 100%;
+  padding: 13px 16px;
+}
+
+.saveRow > button:disabled {
+  opacity: 0.45;
+}
+
+.message {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #53604f;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+@media (max-width: 520px) {
+  .panel {
+    margin: 14px;
+    padding: 16px;
+  }
+
+  .twoColumns,
+  .cropChoices {
+    grid-template-columns: 1fr;
+  }
+}

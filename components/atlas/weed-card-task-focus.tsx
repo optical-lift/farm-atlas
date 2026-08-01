@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import CropOccupancyBedMap from "@/components/atlas/crop-occupancy-bed-map";
 import CropOccupancyList from "@/components/atlas/crop-occupancy-list";
+import MaintenanceDirectiveStrip from "@/components/atlas/maintenance-directive-strip";
 import TaskDominionTrail from "@/components/atlas/task-dominion-trail";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -144,6 +145,8 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
               moveDetails={occupancy}
               presentation="weed-sheet"
             />
+
+            <MaintenanceDirectiveStrip taskId={task.task_id} />
 
             <section className="atlas-weed-pass" aria-label={`${card.objectLabel} weed state`}>
               <div className="atlas-weed-condition-summary">
