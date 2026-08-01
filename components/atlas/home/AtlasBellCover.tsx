@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import type { AtlasBell } from "@/lib/atlas/bell-contract";
+import { atlasBellActionTitle } from "@/lib/atlas/bell-action";
 import { fetchAtlasBell } from "@/lib/atlas/bell-client";
 import { setAtlasAppBadge } from "@/lib/atlas/pwa-client";
 
@@ -60,8 +61,8 @@ export default function AtlasBellCover() {
   }, [pathname, bell?.preparedAt]);
 
   const newest = useMemo(
-    () => bell?.items.find((item) => item.whileAway && item.requiresAction && !item.baseline)
-      ?? bell?.items.find((item) => item.requiresAction && !item.baseline)
+    () => bell?.items.find((item) => item.whileAway && item.requiresAction && !item.baseline && !item.acknowledged)
+      ?? bell?.items.find((item) => item.requiresAction && !item.baseline && !item.acknowledged)
       ?? null,
     [bell],
   );
@@ -76,17 +77,16 @@ export default function AtlasBellCover() {
       data-expanded={expanded ? "true" : "false"}
       style={{ top }}
     >
-      <Link href="/bell?view=needs" className="atlas-bell-edge-tab" aria-label={`Open Bell. ${bell.badgeCount} current obligations need attention.`}>
+      <Link href="/bell" className="atlas-bell-edge-tab" aria-label={`Open Bell. ${bell.badgeCount} actions are waiting.`}>
         <span aria-hidden="true">⌁</span>
         <strong>Bell</strong>
         <b>{countLabel(bell.badgeCount)}</b>
       </Link>
 
-      {expanded && bell.whileAwayCount > 0 ? (
-        <Link href="/bell?view=needs" className="atlas-while-away-slip">
-          <span>While you were away</span>
-          <strong>{bell.whileAwayCount} {bell.whileAwayCount === 1 ? "thing needs" : "things need"} you</strong>
-          {newest ? <em>{newest.symbol} {newest.title}</em> : null}
+      {expanded && newest ? (
+        <Link href="/bell" className="atlas-while-away-slip">
+          <span>Do next</span>
+          <strong>{atlasBellActionTitle(newest)}</strong>
         </Link>
       ) : null}
     </aside>
