@@ -13,6 +13,14 @@ export type AtlasMaintenanceMembership = {
   displayName: string;
 };
 
+export type AtlasMaintenanceDirectiveStep = {
+  id: string;
+  position: number;
+  title: string;
+  complete: boolean;
+  completedAt: string | null;
+};
+
 export type AtlasMaintenanceDirective = {
   id: string;
   maintenanceKind: AtlasMaintenanceKind;
@@ -29,7 +37,7 @@ export type AtlasMaintenanceDirective = {
   servingTaskId: string | null;
   prerequisiteTaskId: string | null;
   assignee: AtlasMaintenanceMembership;
-  steps: Array<{ id: string; position: number; title: string }>;
+  steps: AtlasMaintenanceDirectiveStep[];
   cropCycles: Array<{
     id: string;
     label: string;
@@ -44,8 +52,9 @@ export type AtlasMaintenanceDirective = {
 export type AtlasMaintenanceDirectiveContext = {
   object: { id: string; key: string; label: string; type: string };
   viewerRole: string;
+  viewerMembershipId: string;
   canAuthor: boolean;
-  capabilities?: { weed?: boolean; mow?: boolean };
+  capabilities: { weed: boolean; mow: boolean };
   cards: {
     weed?: {
       cardId: string | null;
@@ -135,4 +144,18 @@ export async function fetchAtlasMaintenanceDirectivesForTask(taskId: string) {
   });
   const data = await json<{ ok: boolean; directives: AtlasMaintenanceDirective[] }>(response);
   return data.directives;
+}
+
+export async function setAtlasMaintenanceDirectiveStep(stepId: string, completed: boolean) {
+  const response = await fetch("/api/atlas/maintenance-directives", {
+    method: "PATCH",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Atlas-Intent": "maintenance-directive-step-v1",
+    },
+    body: JSON.stringify({ stepId, completed }),
+  });
+  const data = await json<{ ok: boolean; directive: AtlasMaintenanceDirective }>(response);
+  return data.directive;
 }
