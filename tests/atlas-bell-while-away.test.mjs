@@ -12,11 +12,13 @@ const client = read("lib/atlas/bell-client.ts");
 const route = read("app/api/atlas/bell/route.ts");
 const cover = read("components/atlas/home/AtlasBellCover.tsx");
 const page = read("app/bell/page.tsx");
+const action = read("lib/atlas/bell-action.ts");
+const view = read("lib/atlas/bell-view.ts");
 const css = read("app/bell.css");
 const home = read("app/page.tsx");
 const layout = read("app/layout.tsx");
 
-const ui = `${cover}\n${page}\n${css}\n${home}\n${layout}`;
+const ui = `${cover}\n${page}\n${action}\n${view}\n${css}\n${home}\n${layout}`;
 
 test("Bell receipts never become a second Atlas event truth", () => {
   assert.match(migration, /references atlas\.journal_event_index\(id\)/);
@@ -45,7 +47,7 @@ test("badge count follows unresolved player obligations rather than all open tas
   assert.doesNotMatch(migration, /count\(\*\).*from atlas\.tasks[\s\S]*badge_count/i);
 });
 
-test("while-away uses a durable per-player visit boundary", () => {
+test("while-away uses a durable per-player visit boundary while the cover previews the next action", () => {
   assert.match(migration, /create table if not exists atlas\.bell_visit_state/);
   assert.match(migration, /previous_visited_at/);
   assert.match(migration, /last_visited_at/);
@@ -53,10 +55,12 @@ test("while-away uses a durable per-player visit boundary", () => {
   assert.match(migration, /event\.occurred_at > v_since_at/);
   assert.match(contract, /"read" \| "acknowledge" \| "visit"/);
   assert.match(page, /action: "visit"/);
-  assert.match(cover, /While you were away/);
+  assert.match(cover, /atlasBellActionTitle\(newest\)/);
+  assert.match(cover, />Do next</);
+  assert.doesNotMatch(cover, /While you were away/);
 });
 
-test("Bell entries carry safe canonical deep links and acknowledgement state", () => {
+test("Bell entries carry safe canonical deep links while the action UI opens the real destination", () => {
   assert.match(migration, /bell_event_deep_link_v1/);
   assert.match(migration, /\/task-focus\//);
   assert.match(migration, /\/project\//);
@@ -64,17 +68,22 @@ test("Bell entries carry safe canonical deep links and acknowledgement state", (
   assert.match(migration, /\/journal\?date=/);
   assert.match(migration, /mark_bell_event_v1/);
   assert.match(migration, /p_action not in \('read', 'acknowledge'\)/);
-  assert.match(page, /Acknowledge/);
+  assert.match(page, /href=\{item\.deepLink\}/);
+  assert.match(page, /atlasBellOpenLabel\(item\)/);
+  assert.doesNotMatch(page, /Acknowledge|Mark reviewed/);
 });
 
-test("Home stays recognizable while the floating Bell belongs to the global app shell", () => {
+test("Home stays recognizable while the floating Bell and action queues belong to the global app shell", () => {
   assert.match(home, /<AtlasUniversalHome/);
   assert.doesNotMatch(home, /<AtlasBellCover/);
   assert.match(layout, /<AtlasBellCover \/>/);
   assert.match(cover, /atlas-bell-edge-tab/);
   assert.match(cover, /atlas-while-away-slip/);
-  assert.match(page, /Current obligations/);
-  assert.match(page, /Why you’re seeing this/);
+  assert.match(page, />Do now</);
+  assert.match(page, />Coming up</);
+  assert.match(page, />Older work</);
+  assert.match(page, /atlasBellActionTitle\(item\)/);
+  assert.doesNotMatch(page, /Why you’re seeing this|Current obligations/);
   assert.match(layout, /import "\.\/bell\.css"/);
   assert.match(css, /\.atlas-bell-cover/);
   assert.match(css, /\.atlas-bell-item/);
