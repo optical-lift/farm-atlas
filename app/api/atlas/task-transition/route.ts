@@ -152,11 +152,22 @@ export async function POST(request: Request) {
   }
 
   const result = data as RpcResult;
+  let dependencyStatus: unknown = null;
+  if (input.transition === "done" || input.transition === "checklist_done") {
+    const dependencyResponse = await supabase.rpc("task_dependency_status_v1", {
+      p_task_id: input.taskId,
+    });
+    if (!dependencyResponse.error && dependencyResponse.data && typeof dependencyResponse.data === "object") {
+      dependencyStatus = dependencyResponse.data;
+    }
+  }
+
   return privateJson({
     ...result,
     ok: true,
     operatorMode: operating,
     effectiveMembershipId: operatorMembershipId,
+    dependencyStatus,
     warnings: Array.isArray(result.warnings) ? result.warnings : [],
   });
 }
