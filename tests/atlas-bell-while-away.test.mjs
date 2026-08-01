@@ -56,7 +56,8 @@ test("while-away uses a durable per-player visit boundary while the cover previe
   assert.match(contract, /"read" \| "acknowledge" \| "visit"/);
   assert.match(page, /action: "visit"/);
   assert.match(cover, /atlasBellActionTitle\(newest\)/);
-  assert.match(cover, />Do next</);
+  assert.match(cover, /management \? "Do next" : "Follow through"/);
+  assert.match(cover, /atlasBellActionTiming\(newest\)/);
   assert.doesNotMatch(cover, /While you were away/);
 });
 
@@ -73,7 +74,7 @@ test("Bell entries carry safe canonical deep links while the action UI opens the
   assert.doesNotMatch(page, /Acknowledge|Mark reviewed/);
 });
 
-test("Home stays recognizable while the floating Bell and action queues belong to the global app shell", () => {
+test("Home stays recognizable while the floating Bell and role-aware action queues belong to the global app shell", () => {
   assert.match(home, /<AtlasUniversalHome/);
   assert.doesNotMatch(home, /<AtlasBellCover/);
   assert.match(layout, /<AtlasBellCover \/>/);
@@ -82,6 +83,8 @@ test("Home stays recognizable while the floating Bell and action queues belong t
   assert.match(page, />Do now</);
   assert.match(page, />Coming up</);
   assert.match(page, />Older work</);
+  assert.match(page, /management \? \(/);
+  assert.match(page, /data-atlas-bell-mode=\{management \? "management" : "follow-through"\}/);
   assert.match(page, /atlasBellActionTitle\(item\)/);
   assert.doesNotMatch(page, /Why you’re seeing this|Current obligations/);
   assert.match(layout, /import "\.\/bell\.css"/);
