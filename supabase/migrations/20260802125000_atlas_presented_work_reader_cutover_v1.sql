@@ -281,4 +281,34 @@ grant execute on function atlas.journal_day_for_membership_v1(uuid, uuid, date) 
 revoke execute on function atlas.journal_day_v1(uuid, date) from public, anon;
 grant execute on function atlas.journal_day_v1(uuid, date) to authenticated, service_role;
 
+delete from atlas.authenticated_rpc_registry
+where signature = 'atlas.journal_day_legacy_v1(uuid, date)';
+
+insert into atlas.authenticated_rpc_registry(
+  signature, classification, confidence, review_status,
+  authenticated_execute_expected, security_definer_expected, service_execute_expected,
+  caller_count, policy_reference_count, evidence, registered_at, reviewed_at
+) values
+(
+  'atlas.journal_day_for_membership_v1(uuid, uuid, date)', 'app_endpoint', 'verified', 'active',
+  true, true, true, 1, 0,
+  jsonb_build_object('source','presented_work_reader_cutover_v1','call_site','Living Day API','authorization','self or farm management','reviewed_date','2026-08-02'), now(), now()
+),
+(
+  'atlas.journal_day_v1(uuid, date)', 'app_endpoint', 'verified', 'active',
+  true, true, true, 1, 0,
+  jsonb_build_object('source','presented_work_reader_cutover_v1','call_site','canonical journal readers','authorization','current active farm membership','reviewed_date','2026-08-02'), now(), now()
+)
+on conflict (signature) do update
+set classification=excluded.classification,
+    confidence=excluded.confidence,
+    review_status=excluded.review_status,
+    authenticated_execute_expected=excluded.authenticated_execute_expected,
+    security_definer_expected=excluded.security_definer_expected,
+    service_execute_expected=excluded.service_execute_expected,
+    caller_count=excluded.caller_count,
+    policy_reference_count=excluded.policy_reference_count,
+    evidence=excluded.evidence,
+    reviewed_at=excluded.reviewed_at;
+
 commit;
