@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo } from "react";
 
 import GlobalAtlasAdd from "@/components/atlas/global-atlas-add";
+import HomeGreenPlusBridge from "@/components/atlas/home-green-plus-bridge";
 
 function todayHref() {
   const date = new Date();
@@ -55,6 +56,7 @@ export default function AtlasContextualAppFrame() {
   return (
     <>
       <GlobalAtlasAdd />
+      <HomeGreenPlusBridge />
       <nav className="atlas-context-footer" aria-label="Atlas destinations">
         <div className="atlas-context-footer__rail">
           {items.map((item) => (
