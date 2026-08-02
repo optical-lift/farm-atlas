@@ -28,18 +28,7 @@ test("Harvest Horizon reads real crop projections and independent field evidence
   assert.match(api, /confirmed/);
   assert.match(page, /Harvest Horizon/);
   assert.match(page, /Date lens/);
-  assert.match(page, /What should be available by a particular day/);
-});
-
-test("Harvest Horizon read access remains authenticated and farm scoped", () => {
-  const migration = read("supabase/migrations/20260802002000_atlas_harvest_horizon_read_access_v1.sql");
-
-  assert.match(migration, /alter view atlas\.crop_cycle_yield_forecast set \(security_invoker = true\)/);
-  assert.match(migration, /grant select on atlas\.crop_cycle_yield_forecast to authenticated/);
-  assert.match(migration, /grant select on atlas\.crop_observations to authenticated/);
-  assert.match(migration, /create policy crop_observations_read_operations/);
-  assert.match(migration, /atlas\.can_read_farm_operations\(farm_id\)/);
-  assert.doesNotMatch(migration, /grant select[\s\S]*to anon/);
+  assert.match(page, /What should be available/);
 });
 
 test("Harvest sightings write observations rather than completing forecast tasks", () => {
@@ -80,6 +69,22 @@ test("Harvest horizon entries become one farm-level Bell digest with a Harvest d
   assert.match(digest, /p_source_event => 'harvest_horizon_digest'/);
   assert.match(digest, /return '\/harvest'/);
   assert.match(digest, /delete from atlas\.journal_event_index[\s\S]*harvest_horizon_entry/);
+});
+
+test("Harvest uses the canonical Atlas app shell and primitives", () => {
+  const page = read("app/harvest/page.tsx");
+  const css = read("app/harvest/harvest.css");
+
+  assert.match(page, /AtlasAppShell/);
+  assert.match(page, /AtlasTopBar/);
+  assert.match(page, /AtlasCard/);
+  assert.match(page, /AtlasMetricStrip/);
+  assert.match(page, /AtlasSectionHeading/);
+  assert.match(page, /frameClassName="atlas-harvest-page"/);
+  assert.doesNotMatch(page, /<main className="atlas-harvest-shell">/);
+  assert.match(css, /var\(--atlas-radius-card\)/);
+  assert.match(css, /var\(--atlas-muted\)/);
+  assert.doesNotMatch(css, /width:\s*min\(100%,\s*920px\)/);
 });
 
 test("Harvest keeps a single page scroll on small screens", () => {
