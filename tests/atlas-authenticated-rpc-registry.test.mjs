@@ -4,6 +4,8 @@ import test from "node:test";
 
 const migrationName =
   "20260731211500_atlas_authenticated_rpc_registry_v1.sql";
+const presentedWorkRegistryMigrationName =
+  "20260802133000_atlas_presented_work_rpc_registry_v1.sql";
 const migrationPath = new URL(
   `../supabase/migrations/${migrationName}`,
   import.meta.url,
@@ -89,6 +91,13 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const laterMigrations = readdirSync(migrationsDirectory, { encoding: "utf8" })
     .filter((name) => name.endsWith(".sql") && name > migrationName)
     .sort();
+  const batchedPresentedWorkMigrations = new Set([
+    "20260802124000_atlas_presented_work_contract_v1.sql",
+    "20260802125000_atlas_presented_work_reader_cutover_v1.sql",
+    "20260802130000_atlas_work_reservoir_backlog_reconciliation_v1.sql",
+    "20260802131000_atlas_owner_tomorrow_preflight_v1.sql",
+  ]);
+  const presentedWorkRegistry = readMigration(presentedWorkRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -97,11 +106,14 @@ test("future authenticated EXECUTE changes must update the registry", () => {
         sql,
       );
 
-    if (changesAuthenticatedExecute) {
-      assert.match(
-        sql,
-        /atlas\.authenticated_rpc_registry/i,
+    if (changesAuthenticatedExecute && !/atlas\.authenticated_rpc_registry/i.test(sql)) {
+      assert.ok(
+        batchedPresentedWorkMigrations.has(name),
         `${name} changes authenticated EXECUTE without updating the registry`,
+      );
+      assert.ok(
+        name < presentedWorkRegistryMigrationName,
+        `${name} must be followed by the ordered Presented Work registry reconciliation`,
       );
     }
 
@@ -110,6 +122,19 @@ test("future authenticated EXECUTE changes must update the registry", () => {
       /GRANT\s+EXECUTE\s+ON\s+ALL\s+FUNCTIONS[\s\S]{0,200}\bauthenticated\b/i,
       `${name} must not broadly grant authenticated function execution`,
     );
+  }
+
+  for (const signature of [
+    "atlas.member_day_load_v1(uuid, uuid, date)",
+    "atlas.object_work_context_v2(uuid, text, uuid, date)",
+    "atlas.create_object_work_v2(uuid, text, text, text, text, text, text, text, uuid, date, text, text, boolean, uuid[], text[], text)",
+    "atlas.presented_work_v1(uuid, uuid, date)",
+    "atlas.journal_day_for_membership_v1(uuid, uuid, date)",
+    "atlas.journal_day_v1(uuid, date)",
+    "atlas.resolve_work_reservoir_decision_v1(uuid, text, date, text)",
+    "atlas.owner_tomorrow_preflight_v1(uuid, date)",
+  ]) {
+    assert.ok(presentedWorkRegistry.includes(signature));
   }
 });
 

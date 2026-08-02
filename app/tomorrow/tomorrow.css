@@ -1,0 +1,592 @@
+.tomorrow-shell {
+  min-height: 100vh;
+  padding: 32px clamp(18px, 4vw, 64px) 80px;
+  background:
+    radial-gradient(circle at top right, rgba(123, 92, 145, 0.2), transparent 34%),
+    linear-gradient(180deg, #f7f3ea 0%, #efe9dc 100%);
+  color: #23221f;
+}
+
+.tomorrow-hero,
+.tomorrow-date-banner,
+.tomorrow-section-heading,
+.tomorrow-member__header,
+.tomorrow-task__topline,
+.tomorrow-task__footer,
+.tomorrow-decision__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tomorrow-hero {
+  align-items: flex-end;
+  max-width: 1320px;
+  margin: 0 auto 22px;
+  padding: clamp(24px, 5vw, 54px);
+  border: 1px solid rgba(48, 42, 35, 0.14);
+  border-radius: 30px;
+  background: #302737;
+  color: #fffaf1;
+  box-shadow: 0 22px 54px rgba(53, 41, 60, 0.18);
+}
+
+.tomorrow-hero h1 {
+  margin: 4px 0 10px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.35rem, 6vw, 5.3rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 0.94;
+}
+
+.tomorrow-hero p {
+  max-width: 760px;
+  margin: 0;
+  color: rgba(255, 250, 241, 0.76);
+  font-size: clamp(1rem, 1.6vw, 1.18rem);
+  line-height: 1.55;
+}
+
+.tomorrow-eyebrow {
+  margin: 0;
+  color: #7e6f5e;
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.tomorrow-hero .tomorrow-eyebrow {
+  color: #d5c4dc;
+}
+
+.tomorrow-hero__controls {
+  display: grid;
+  min-width: min(100%, 220px);
+  gap: 12px;
+}
+
+.tomorrow-hero__controls label,
+.tomorrow-decision__actions label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tomorrow-hero__controls input,
+.tomorrow-decision__actions input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font: inherit;
+  color-scheme: dark;
+}
+
+.tomorrow-hero__controls a,
+.tomorrow-date-banner a {
+  color: inherit;
+  font-weight: 800;
+  text-underline-offset: 4px;
+}
+
+.tomorrow-date-banner,
+.tomorrow-summary,
+.tomorrow-decisions,
+.tomorrow-members {
+  max-width: 1320px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.tomorrow-date-banner {
+  padding: 20px 6px 14px;
+}
+
+.tomorrow-date-banner h2,
+.tomorrow-section-heading h2 {
+  margin: 4px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.65rem, 3vw, 2.75rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+
+.tomorrow-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.tomorrow-summary > div {
+  display: grid;
+  gap: 4px;
+  padding: 18px;
+  border: 1px solid rgba(48, 42, 35, 0.13);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.tomorrow-summary strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.tomorrow-summary span {
+  color: #6e665c;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tomorrow-summary__warn {
+  background: #fff1cc !important;
+}
+
+.tomorrow-summary__danger {
+  background: #f9dcd5 !important;
+}
+
+.tomorrow-decisions,
+.tomorrow-members {
+  display: grid;
+  gap: 16px;
+  margin-top: 34px;
+}
+
+.tomorrow-section-heading {
+  align-items: flex-end;
+  padding: 0 4px 6px;
+}
+
+.tomorrow-section-heading > span {
+  min-width: 42px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #302737;
+  color: white;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.tomorrow-decision,
+.tomorrow-member {
+  border: 1px solid rgba(48, 42, 35, 0.14);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 14px 32px rgba(71, 60, 45, 0.08);
+}
+
+.tomorrow-decision {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.54fr);
+  gap: 28px;
+  padding: 24px;
+}
+
+.tomorrow-decision h3,
+.tomorrow-task h4 {
+  margin: 5px 0 8px;
+  line-height: 1.18;
+}
+
+.tomorrow-decision h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+
+.tomorrow-decision p {
+  margin: 0;
+  color: #655d54;
+  line-height: 1.5;
+}
+
+.tomorrow-decision__meta {
+  justify-content: flex-start;
+  margin-top: 14px;
+  color: #7a7167;
+  font-size: 0.83rem;
+  font-weight: 700;
+}
+
+.tomorrow-decision__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  align-content: start;
+}
+
+.tomorrow-decision__actions label {
+  grid-column: 1 / -1;
+  color: #675e55;
+}
+
+.tomorrow-decision__actions input {
+  border-color: rgba(48, 42, 35, 0.18);
+  background: white;
+  color: #23221f;
+  color-scheme: light;
+}
+
+.tomorrow-decision button {
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid rgba(48, 42, 35, 0.18);
+  border-radius: 12px;
+  background: #f1ece2;
+  color: #2c2924;
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tomorrow-decision button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #e7dece;
+}
+
+.tomorrow-decision button:disabled {
+  cursor: wait;
+  opacity: 0.54;
+}
+
+.tomorrow-danger-button {
+  border-color: #c99489 !important;
+  color: #7e3326 !important;
+}
+
+.tomorrow-member {
+  overflow: hidden;
+}
+
+.tomorrow-member--overload {
+  border-color: #cf9f4f;
+}
+
+.tomorrow-member__header {
+  padding: 24px 24px 17px;
+}
+
+.tomorrow-member__header h2 {
+  margin: 4px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.8rem, 3vw, 2.65rem);
+  font-weight: 500;
+}
+
+.tomorrow-member__load {
+  display: grid;
+  text-align: right;
+}
+
+.tomorrow-member__load strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.7rem;
+  font-weight: 500;
+}
+
+.tomorrow-member__load span {
+  color: #766d63;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tomorrow-load-track {
+  height: 7px;
+  margin: 0 24px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8e1d5;
+}
+
+.tomorrow-load-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #695274;
+}
+
+.tomorrow-member--overload .tomorrow-load-track span {
+  background: #bc7730;
+}
+
+.tomorrow-member__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 13px 24px 20px;
+  color: #736a60;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tomorrow-warning,
+.tomorrow-error {
+  margin: 0 24px 20px;
+  padding: 13px 15px;
+  border-radius: 14px;
+  background: #fff0c9;
+  color: #75501d;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.tomorrow-warning--danger,
+.tomorrow-error {
+  background: #f7ddd6;
+  color: #782f22;
+}
+
+.tomorrow-error {
+  max-width: 1288px;
+  margin: 18px auto;
+}
+
+.tomorrow-member__columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid rgba(48, 42, 35, 0.12);
+}
+
+.tomorrow-work-list {
+  min-width: 0;
+  padding: 20px;
+}
+
+.tomorrow-work-list + .tomorrow-work-list {
+  border-left: 1px solid rgba(48, 42, 35, 0.12);
+}
+
+.tomorrow-work-list__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.tomorrow-work-list__header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tomorrow-work-list__header span,
+.tomorrow-held summary span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #ece5da;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.tomorrow-task {
+  padding: 15px 0;
+  border-top: 1px solid rgba(48, 42, 35, 0.1);
+}
+
+.tomorrow-task:first-of-type {
+  border-top: 0;
+}
+
+.tomorrow-task--blocked {
+  padding-right: 12px;
+  padding-left: 12px;
+  border-radius: 14px;
+  background: #fff1d7;
+}
+
+.tomorrow-task__topline,
+.tomorrow-task__footer {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  color: #786f65;
+  font-size: 0.73rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tomorrow-task h4 {
+  font-size: 1rem;
+}
+
+.tomorrow-task p {
+  margin: 6px 0 0;
+  color: #655e55;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.tomorrow-task__reason {
+  color: #826c8d !important;
+  font-weight: 800;
+}
+
+.tomorrow-task__blocker {
+  color: #8b4b23 !important;
+  font-weight: 700;
+}
+
+.tomorrow-task__footer {
+  margin-top: 10px;
+}
+
+.tomorrow-lane {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #ece5da;
+  color: #504940;
+}
+
+.tomorrow-lane--required {
+  background: #eed1c8;
+  color: #74382b;
+}
+
+.tomorrow-lane--process_continuation {
+  background: #d9e4d8;
+  color: #35563a;
+}
+
+.tomorrow-lane--rhythm {
+  background: #dcd4e3;
+  color: #584363;
+}
+
+.tomorrow-lane--discretionary {
+  background: #e9e3d7;
+  color: #665f54;
+}
+
+.tomorrow-notification {
+  color: #3f6748;
+}
+
+.tomorrow-notification--missing {
+  color: #a33d2f;
+}
+
+.tomorrow-held {
+  border-top: 1px solid rgba(48, 42, 35, 0.12);
+  background: #f4efe6;
+}
+
+.tomorrow-held summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 17px 24px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tomorrow-held__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 18px;
+  padding: 0 24px 24px;
+}
+
+.tomorrow-empty {
+  margin: 0;
+  padding: 18px 0;
+  color: #81776c;
+  font-style: italic;
+}
+
+.tomorrow-empty--large {
+  padding: 34px;
+  border: 1px dashed rgba(48, 42, 35, 0.2);
+  border-radius: 20px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .tomorrow-hero,
+  .tomorrow-decision {
+    grid-template-columns: 1fr;
+  }
+
+  .tomorrow-hero {
+    display: grid;
+    align-items: start;
+  }
+
+  .tomorrow-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tomorrow-member__columns,
+  .tomorrow-held__list {
+    grid-template-columns: 1fr;
+  }
+
+  .tomorrow-work-list + .tomorrow-work-list {
+    border-top: 1px solid rgba(48, 42, 35, 0.12);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .tomorrow-shell {
+    padding: 14px 12px 60px;
+  }
+
+  .tomorrow-hero {
+    padding: 24px 20px;
+    border-radius: 22px;
+  }
+
+  .tomorrow-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tomorrow-summary > div:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .tomorrow-date-banner,
+  .tomorrow-section-heading,
+  .tomorrow-member__header {
+    align-items: flex-start;
+  }
+
+  .tomorrow-date-banner,
+  .tomorrow-section-heading,
+  .tomorrow-member__header,
+  .tomorrow-task__topline,
+  .tomorrow-task__footer,
+  .tomorrow-decision__meta {
+    flex-wrap: wrap;
+  }
+
+  .tomorrow-decision {
+    padding: 18px;
+  }
+
+  .tomorrow-decision__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .tomorrow-decision__actions label {
+    grid-column: auto;
+  }
+
+  .tomorrow-member__load {
+    text-align: left;
+  }
+}
