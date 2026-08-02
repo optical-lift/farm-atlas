@@ -4,10 +4,12 @@ import test from "node:test";
 
 const page = readFileSync(new URL("../app/objects/[objectKey]/page.tsx", import.meta.url), "utf8");
 const composer = readFileSync(new URL("../components/atlas/object-work-composer.tsx", import.meta.url), "utf8");
+const client = readFileSync(new URL("../lib/atlas/object-work-client.ts", import.meta.url), "utf8");
 const taskStrip = readFileSync(new URL("../components/atlas/object-work-task-strip.tsx", import.meta.url), "utf8");
 const taskTrail = readFileSync(new URL("../components/atlas/task-dominion-trail.tsx", import.meta.url), "utf8");
 const route = readFileSync(new URL("../app/api/atlas/objects/[objectKey]/work/route.ts", import.meta.url), "utf8");
 const taskRoute = readFileSync(new URL("../app/api/atlas/object-work/route.ts", import.meta.url), "utf8");
+const reservoir = readFileSync(new URL("../docs/atlas-work-reservoir-execution-window.md", import.meta.url), "utf8");
 const core = readFileSync(new URL("../supabase/migrations/20260801130000_atlas_object_work_core_v1.sql", import.meta.url), "utf8");
 const authoring = readFileSync(new URL("../supabase/migrations/20260801130100_atlas_object_work_authoring_v1.sql", import.meta.url), "utf8");
 const bridge = readFileSync(new URL("../supabase/migrations/20260801130200_atlas_object_work_bridge_and_governance_v1.sql", import.meta.url), "utf8");
@@ -43,14 +45,19 @@ test("object work is a durable plan with one canonical released task", () => {
   assert.doesNotMatch(authoring, /insert into atlas\.bell_/);
 });
 
-test("manual release and capacity-held planning are explicit, different states", () => {
-  assert.match(core, /release_mode in \('put_in_work','hold_for_capacity'\)/);
-  assert.match(composer, /Put in Work/);
-  assert.match(composer, /Hold as planned/);
-  assert.match(composer, /next\.capacity\.farmAtCapacity[\s\S]*hold_for_capacity/);
-  assert.match(authoring, /if p_release_mode = 'put_in_work' then/);
-  assert.match(authoring, /manual_object_work_capacity_override/);
-  assert.match(authoring, /capacityAtAuthoring/);
+test("farm-day commitment replaces the visible global capacity choice", () => {
+  assert.match(composer, /Must happen that day/);
+  assert.match(composer, /Can float around that day/);
+  assert.match(composer, /Bring into Work now/);
+  assert.doesNotMatch(composer, />Put in Work</);
+  assert.doesNotMatch(composer, />Hold as planned</);
+  assert.match(client, /AtlasObjectWorkDateCommitment = "hard_date" \| "floating"/);
+  assert.match(client, /object-work-authoring-v2/);
+  assert.match(route, /create_object_work_v2/);
+  assert.match(route, /p_date_commitment: dateCommitment/);
+  assert.match(route, /p_bring_into_work_now: body\.bringIntoWorkNow === true/);
+  assert.match(reservoir, /Capacity may control what Atlas presents next/);
+  assert.match(reservoir, /maximum_active_safety_tasks/);
 });
 
 test("every card has a physical done definition and task-side result context", () => {
