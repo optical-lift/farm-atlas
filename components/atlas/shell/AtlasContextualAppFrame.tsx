@@ -23,7 +23,7 @@ function routeGroup(pathname: string) {
     || pathname.startsWith("/paid-schedule")
   ) return "work";
   if (pathname.startsWith("/zones") || pathname.startsWith("/objects")) return "places";
-  if (pathname.startsWith("/project")) return "projects";
+  if (pathname.startsWith("/harvest")) return "harvest";
   return "more";
 }
 
@@ -48,7 +48,7 @@ export default function AtlasContextualAppFrame() {
     { key: "home", label: "Home", icon: "⌂", href: "/" },
     { key: "work", label: "Work", icon: "✓", href: workHref },
     { key: "places", label: "Places", icon: "⌖", href: "/zones" },
-    { key: "projects", label: "Projects", icon: "◇", href: "/projects" },
+    { key: "harvest", label: "Harvest", icon: "✂", href: "/harvest" },
     { key: "more", label: "More", icon: "•••", href: "/more" },
   ];
 
