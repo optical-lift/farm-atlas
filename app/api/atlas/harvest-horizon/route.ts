@@ -5,7 +5,6 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const DAY_MS = 86_400_000;
 const HORIZON_DAYS = 21;
 const QUICK_OBSERVATIONS = new Set([
   "vegetative",
@@ -17,19 +16,6 @@ const QUICK_OBSERVATIONS = new Set([
   "slowing",
   "finished",
 ]);
-
-const NEAR_HARVEST_STAGES = new Set([
-  "budding",
-  "flowering",
-  "blooming",
-  "fruit_set",
-  "fruiting",
-  "podding",
-  "harvesting",
-  "first_harvest",
-  "peak_harvest",
-]);
-
 const CONFIRMED_STAGES = new Set(["harvesting", "first_harvest", "peak_harvest"]);
 
 type ForecastRow = {
@@ -88,8 +74,9 @@ type FarmRow = {
   id: string;
   stable_key: string;
   name: string;
-  metadata: Record<string, unknown> | null;
 };
+
+type EvidenceState = "calculated" | "seen" | "confirmed";
 
 type CycleHorizon = {
   cropCycleId: string;
@@ -103,7 +90,7 @@ type CycleHorizon = {
   windowEnd: string;
   cycleState: string;
   forecastState: string;
-  evidenceState: "calculated" | "seen" | "confirmed";
+  evidenceState: EvidenceState;
   latestStage: string | null;
   latestCondition: string | null;
   latestObservationDate: string | null;
@@ -148,20 +135,20 @@ function normalizeLabel(value: string | null | undefined) {
     .toLowerCase()
     .replace(/\bzinnias\b/g, "zinnia")
     .replace(/\bsunflowers\b/g, "sunflower")
+    .replace(/\bbeans\b/g, "bean")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
 
 function meaningfulVariety(value: string | null | undefined) {
   const normalized = normalizeLabel(value);
-  if (!normalized || ["zinnia", "sunflower", "okra", "bean", "beans"].includes(normalized)) return null;
+  if (!normalized || ["zinnia", "sunflower", "okra", "bean"].includes(normalized)) return null;
   return value?.trim() || null;
 }
 
-function displayCrop(row: ForecastRow) {
-  const crop = row.crop_label?.trim() || "Crop";
-  const variety = meaningfulVariety(row.variety);
-  return variety ? `${crop} · ${variety}` : crop;
+function displayCrop(cropLabel: string, variety: string | null) {
+  const usableVariety = meaningfulVariety(variety);
+  return usableVariety ? `${cropLabel} · ${usableVariety}` : cropLabel;
 }
 
 function waveKey(cycle: CycleHorizon) {
@@ -181,25 +168,25 @@ function latestByCycle<T extends { crop_cycle_id: string }>(rows: T[]) {
   return map;
 }
 
-function cycleEvidence(
+function evidenceFor(
   row: ForecastRow,
   observation: ObservationRow | undefined,
   cycle: CycleRow | undefined,
   harvestEvent: HarvestEventRow | undefined,
-) {
+): EvidenceState {
   const stage = (observation?.stage || row.cycle_state || "").toLowerCase();
-  if (cycle?.harvest_started_date || harvestEvent || CONFIRMED_STAGES.has(stage)) return "confirmed" as const;
-  if (observation) return "seen" as const;
-  return "calculated" as const;
+  if (cycle?.harvest_started_date || harvestEvent || CONFIRMED_STAGES.has(stage)) return "confirmed";
+  if (observation) return "seen";
+  return "calculated";
 }
 
-function strongestEvidence(values: CycleHorizon["evidenceState"][]) {
-  if (values.includes("confirmed")) return "confirmed" as const;
-  if (values.includes("seen")) return "seen" as const;
-  return "calculated" as const;
+function strongestEvidence(values: EvidenceState[]): EvidenceState {
+  if (values.includes("confirmed")) return "confirmed";
+  if (values.includes("seen")) return "seen";
+  return "calculated";
 }
 
-function waveBucket(start: string, end: string, evidence: CycleHorizon["evidenceState"], asOf: string) {
+function waveBucket(start: string, end: string, evidence: EvidenceState, asOf: string) {
   if (evidence === "confirmed") return "cutting";
   if (start <= asOf && end >= asOf) return "now";
   if (start <= addDays(asOf, 7)) return "week1";
@@ -207,33 +194,23 @@ function waveBucket(start: string, end: string, evidence: CycleHorizon["evidence
   return "week3";
 }
 
-function outlookForDate(cycle: CycleHorizon, dateIso: string) {
-  if (cycle.evidenceState === "confirmed" && dateIso <= cycle.windowEnd) return "confirmed" as const;
-  if (dateIso < cycle.windowStart) {
-    const delta = Math.round((new Date(`${cycle.windowStart}T12:00:00Z`).getTime() - new Date(`${dateIso}T12:00:00Z`).getTime()) / DAY_MS);
-    return delta <= 3 ? "possible" as const : "too_early" as const;
-  }
-  if (dateIso > cycle.windowEnd) return "past_window" as const;
-  if (cycle.evidenceState === "seen" && NEAR_HARVEST_STAGES.has((cycle.latestStage || cycle.cycleState).toLowerCase())) return "likely" as const;
-  return "possible" as const;
-}
-
 function buildWaves(cycles: CycleHorizon[], asOf: string) {
-  const groups = new Map<string, CycleHorizon[]>();
+  const grouped = new Map<string, CycleHorizon[]>();
   for (const cycle of cycles) {
     const key = waveKey(cycle);
-    groups.set(key, [...(groups.get(key) ?? []), cycle]);
+    grouped.set(key, [...(grouped.get(key) ?? []), cycle]);
   }
 
-  return Array.from(groups.values()).map((members) => {
+  return Array.from(grouped.values()).map((members) => {
     const first = members[0];
     const evidenceState = strongestEvidence(members.map((member) => member.evidenceState));
-    const bankableStems = members.reduce((sum, member) => sum + Math.max(0, member.bankableStems ?? 0), 0);
-    const estimatedRemainingStems = members.reduce((sum, member) => sum + Math.max(0, member.estimatedRemainingStems ?? 0), 0);
     const latestObservation = [...members]
       .filter((member) => member.latestObservationDate || member.latestStage)
       .sort((left, right) => (right.latestObservationDate ?? "").localeCompare(left.latestObservationDate ?? ""))[0] ?? null;
-    const objectLabels = Array.from(new Set(members.map((member) => member.objectLabel))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    const objectLabels = Array.from(new Set(members.map((member) => member.objectLabel)))
+      .sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
+    const bankableStems = members.reduce((sum, member) => sum + Math.max(0, member.bankableStems ?? 0), 0);
+    const estimatedRemainingStems = members.reduce((sum, member) => sum + Math.max(0, member.estimatedRemainingStems ?? 0), 0);
     const forecastState = members.some((member) => member.forecastState === "assessment_required")
       ? "assessment_required"
       : members.some((member) => ["stressed", "partial_stand", "sparse_germination", "browsed_alive"].includes(member.cycleState))
@@ -243,11 +220,7 @@ function buildWaves(cycles: CycleHorizon[], asOf: string) {
     return {
       id: waveKey(first),
       farmId: "",
-      cropLabel: displayCrop({
-        ...({} as ForecastRow),
-        crop_label: first.cropLabel,
-        variety: first.variety,
-      }),
+      cropLabel: displayCrop(first.cropLabel, first.variety),
       baseCropLabel: first.cropLabel,
       variety: meaningfulVariety(first.variety),
       windowStart: first.windowStart,
@@ -267,16 +240,18 @@ function buildWaves(cycles: CycleHorizon[], asOf: string) {
   }).sort((left, right) => left.windowStart.localeCompare(right.windowStart) || left.cropLabel.localeCompare(right.cropLabel));
 }
 
-async function readHorizon(asOf: string) {
+export async function GET(request: Request) {
   const session = await getAtlasSession();
-  if (!session) return { response: privateJson({ ok: false, error: "unauthorized" }, 401) };
+  if (!session) return privateJson({ ok: false, error: "unauthorized" }, 401);
 
+  const requestedDate = isoDate(new URL(request.url).searchParams.get("asOf"));
+  const asOf = requestedDate ?? localToday();
+  const horizonEnd = addDays(asOf, HORIZON_DAYS);
   const farmIds = Array.from(new Set(session.memberships.map((membership) => membership.farmId)));
   const supabase = await createAtlasServerClient();
-  const horizonEnd = addDays(asOf, HORIZON_DAYS);
 
-  const [{ data: farmRows, error: farmError }, { data: forecastRows, error: forecastError }] = await Promise.all([
-    supabase.from("farms").select("id, stable_key, name, metadata").in("id", farmIds),
+  const [farmResult, forecastResult] = await Promise.all([
+    supabase.from("farms").select("id, stable_key, name").in("id", farmIds),
     supabase
       .from("crop_cycle_yield_forecast")
       .select("crop_cycle_id, farm_id, object_id, object_stable_key, object_label, crop_profile_stable_key, crop_label, variety, expected_harvest_watch_start, expected_harvest_watch_end, cycle_state, forecast_state, bankable_stems, estimated_remaining_stems")
@@ -288,11 +263,14 @@ async function readHorizon(asOf: string) {
       .order("expected_harvest_watch_start", { ascending: true }),
   ]);
 
-  if (farmError || forecastError) {
-    return { response: privateJson({ ok: false, error: "Harvest Horizon could not be loaded." }, 500) };
+  if (farmResult.error || forecastResult.error) {
+    return privateJson({ ok: false, error: "Harvest Horizon could not be loaded." }, 500);
   }
 
-  const forecasts = (forecastRows ?? []) as ForecastRow[];
+  const forecasts = ((forecastResult.data ?? []) as ForecastRow[]).filter((row) => (
+    !row.object_stable_key?.startsWith("grow_room_")
+    && !["failed", "cleared", "finished", "finished_harvest"].includes((row.cycle_state ?? "").toLowerCase())
+  ));
   const cycleIds = forecasts.map((row) => row.crop_cycle_id);
   let observations: ObservationRow[] = [];
   let cycles: CycleRow[] = [];
@@ -317,14 +295,14 @@ async function readHorizon(asOf: string) {
         .in("crop_cycle_id", cycleIds),
       supabase
         .from("crop_harvest_events")
-        .select("crop_cycle_id, observed_date, event_kind, outcome, marketable_quantity, unit, more_available")
+        .select("crop_cycle_id, observed_date, event_kind, outcome, marketable_quantity, unit, more_available, created_at")
         .in("crop_cycle_id", cycleIds)
         .order("observed_date", { ascending: false })
         .order("created_at", { ascending: false }),
     ]);
 
     if (observationResult.error || cycleResult.error || availabilityResult.error || eventResult.error) {
-      return { response: privateJson({ ok: false, error: "Harvest evidence could not be loaded." }, 500) };
+      return privateJson({ ok: false, error: "Harvest evidence could not be loaded." }, 500);
     }
     observations = (observationResult.data ?? []) as ObservationRow[];
     cycles = (cycleResult.data ?? []) as CycleRow[];
@@ -336,15 +314,13 @@ async function readHorizon(asOf: string) {
   const cycleById = new Map(cycles.map((cycle) => [cycle.id, cycle]));
   const availabilityByCycle = new Map(availability.map((row) => [row.crop_cycle_id, row]));
   const eventByCycle = latestByCycle(harvestEvents);
-
   const cyclesByFarm = new Map<string, CycleHorizon[]>();
+
   for (const row of forecasts) {
-    const windowStart = row.expected_harvest_watch_start;
-    const windowEnd = row.expected_harvest_watch_end ?? addDays(windowStart ?? asOf, 21);
-    if (!windowStart) continue;
+    if (!row.expected_harvest_watch_start) continue;
     const observation = observationByCycle.get(row.crop_cycle_id);
     const cycle = cycleById.get(row.crop_cycle_id);
-    const event = eventByCycle.get(row.crop_cycle_id);
+    const harvestEvent = eventByCycle.get(row.crop_cycle_id);
     const available = availabilityByCycle.get(row.crop_cycle_id);
     const member: CycleHorizon = {
       cropCycleId: row.crop_cycle_id,
@@ -354,11 +330,11 @@ async function readHorizon(asOf: string) {
       cropProfileKey: row.crop_profile_stable_key,
       cropLabel: row.crop_label?.trim() || "Crop",
       variety: meaningfulVariety(row.variety),
-      windowStart,
-      windowEnd,
+      windowStart: row.expected_harvest_watch_start,
+      windowEnd: row.expected_harvest_watch_end ?? addDays(row.expected_harvest_watch_start, 21),
       cycleState: row.cycle_state || "growing",
       forecastState: row.forecast_state || "baseline",
-      evidenceState: cycleEvidence(row, observation, cycle, event),
+      evidenceState: evidenceFor(row, observation, cycle, harvestEvent),
       latestStage: observation?.stage ?? null,
       latestCondition: observation?.condition ?? null,
       latestObservationDate: observation?.observed_date ?? null,
@@ -368,16 +344,16 @@ async function readHorizon(asOf: string) {
       harvestStartedDate: cycle?.harvest_started_date ?? null,
       lastHarvestDate: cycle?.last_harvest_date ?? null,
       availabilityStatus: available?.status ?? null,
-      latestHarvestQuantity: event?.marketable_quantity ?? null,
-      latestHarvestUnit: event?.unit ?? null,
+      latestHarvestQuantity: harvestEvent?.marketable_quantity ?? null,
+      latestHarvestUnit: harvestEvent?.unit ?? null,
     };
     cyclesByFarm.set(row.farm_id, [...(cyclesByFarm.get(row.farm_id) ?? []), member]);
   }
 
-  const farms = ((farmRows ?? []) as FarmRow[])
+  const farms = ((farmResult.data ?? []) as FarmRow[])
     .map((farm) => {
-      const farmCycles = cyclesByFarm.get(farm.id) ?? [];
-      const waves = buildWaves(farmCycles, asOf).map((wave) => ({ ...wave, farmId: farm.id }));
+      const waves = buildWaves(cyclesByFarm.get(farm.id) ?? [], asOf)
+        .map((wave) => ({ ...wave, farmId: farm.id }));
       return {
         id: farm.id,
         key: farm.stable_key,
@@ -395,20 +371,12 @@ async function readHorizon(asOf: string) {
     })
     .sort((left, right) => left.name.localeCompare(right.name));
 
-  return { session, supabase, farms };
-}
-
-export async function GET(request: Request) {
-  const requestedDate = isoDate(new URL(request.url).searchParams.get("asOf"));
-  const asOf = requestedDate ?? localToday();
-  const result = await readHorizon(asOf);
-  if (result.response) return result.response;
   return privateJson({
     ok: true,
     asOf,
-    horizonEnd: addDays(asOf, HORIZON_DAYS),
+    horizonEnd,
     horizonDays: HORIZON_DAYS,
-    farms: result.farms,
+    farms,
     observationOptions: [
       { key: "vegetative", label: "Still green" },
       { key: "budding", label: "Budding" },
@@ -445,7 +413,9 @@ export async function POST(request: Request) {
   const note = typeof body.note === "string" ? body.note.trim().slice(0, 1000) : "";
   const membership = membershipForFarm(session, farmId);
 
-  if (!membership || !membership.farmKey) return privateJson({ ok: false, error: "This farm is not visible to the signed-in account." }, 403);
+  if (!membership?.farmKey) {
+    return privateJson({ ok: false, error: "This farm is not visible to the signed-in account." }, 403);
+  }
   if (!cropCycleId || !objectKey || !QUICK_OBSERVATIONS.has(observationKey)) {
     return privateJson({ ok: false, error: "Choose a crop and a supported field sighting." }, 400);
   }
@@ -468,8 +438,8 @@ export async function POST(request: Request) {
     p_idempotency_key: idempotencyKey,
   });
 
-  if (error) return privateJson({ ok: false, error: error.message || "The field sighting could not be recorded." }, 400);
+  if (error) {
+    return privateJson({ ok: false, error: error.message || "The field sighting could not be recorded." }, 400);
+  }
   return privateJson({ ok: true, observation: data });
 }
-
-export { outlookForDate };
