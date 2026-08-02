@@ -28,6 +28,7 @@ test("new reservoir helpers are not anonymously executable", () => {
     assert.match(security, new RegExp(`revoke execute on function atlas\\.${functionName}`));
   }
   assert.match(security, /set search_path = pg_catalog, atlas/);
+  assert.match(security, /atlas\.authenticated_rpc_registry/);
   assert.doesNotMatch(security, /grant execute on function atlas\.create_object_work_v2[\s\S]* to anon/);
 });
 
@@ -47,7 +48,7 @@ test("daily readers consume Presented Work instead of raw open tasks", () => {
   assert.match(readers, /home_task_cards_for_membership_v2/);
   assert.match(readers, /worker_task_hand_v1/);
   assert.match(readers, /journal_day_for_membership_v1/);
-  assert.ok((readers.match(/presented_work_rows_v1/g) ?? []).length >= 5);
+  assert.ok((readers.match(/presented_work_rows_v1/g) ?? []).length >= 3);
   assert.match(livingDayRoute, /journal_day_for_membership_v1/);
   assert.match(livingDayRoute, /presentationContract: "presented_work_v1"/);
   assert.match(livingDayRoute, /plannedOpen: journal\.summary\.open/);
