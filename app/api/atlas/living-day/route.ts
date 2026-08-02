@@ -28,7 +28,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "living-day-presented-work-v1",
+      "X-Atlas-Read-Path": "living-day-v1",
     },
   });
 }
