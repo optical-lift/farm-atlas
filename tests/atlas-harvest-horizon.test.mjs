@@ -31,6 +31,17 @@ test("Harvest Horizon reads real crop projections and independent field evidence
   assert.match(page, /What should be available by a particular day/);
 });
 
+test("Harvest Horizon read access remains authenticated and farm scoped", () => {
+  const migration = read("supabase/migrations/20260802002000_atlas_harvest_horizon_read_access_v1.sql");
+
+  assert.match(migration, /alter view atlas\.crop_cycle_yield_forecast set \(security_invoker = true\)/);
+  assert.match(migration, /grant select on atlas\.crop_cycle_yield_forecast to authenticated/);
+  assert.match(migration, /grant select on atlas\.crop_observations to authenticated/);
+  assert.match(migration, /create policy crop_observations_read_operations/);
+  assert.match(migration, /atlas\.can_read_farm_operations\(farm_id\)/);
+  assert.doesNotMatch(migration, /grant select[\s\S]*to anon/);
+});
+
 test("Harvest sightings write observations rather than completing forecast tasks", () => {
   const api = read("app/api/atlas/harvest-horizon/route.ts");
   const page = read("app/harvest/page.tsx");
