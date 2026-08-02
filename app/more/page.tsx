@@ -13,6 +13,7 @@ export default async function AtlasMorePage() {
   const isFarmOwner = session.memberships.some((membership) => membership.role === "owner");
   const destinations = [
     { label: "Bell", detail: "Future gaps, handoffs and meaningful farm movement", href: "/bell" },
+    { label: "Projects", detail: "Builds, venue work and multi-step initiatives", href: "/projects" },
     { label: "Production", detail: "Crop cycles and production state", href: "/production" },
     { label: "Seed inventory", detail: "Verified counts, freshness and crop commitments", href: "/inventory/seeds" },
     ...(canManage ? [
