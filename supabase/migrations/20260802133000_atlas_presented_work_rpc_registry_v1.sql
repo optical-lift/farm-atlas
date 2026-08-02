@@ -5,7 +5,7 @@ begin;
 -- the canonical authenticated RPC registry before any later migration may alter
 -- the signed-in surface.
 
-with desired(signature, classification, call_site, authorization) as (
+with desired(signature, classification, call_site, authorization_rule) as (
   values
     ('atlas.member_day_load_v1(uuid, uuid, date)', 'policy_or_composition_helper', 'Work Card day-load preview and Presented Work', 'self or farm management'),
     ('atlas.object_work_context_v2(uuid, text, uuid, date)', 'app_endpoint', 'object Work Card composer', 'active same-farm member'),
@@ -53,7 +53,7 @@ select
   jsonb_build_object(
     'source', 'presented_work_rpc_registry_v1',
     'call_site', desired.call_site,
-    'authorization', desired.authorization,
+    'authorization', desired.authorization_rule,
     'reviewed_date', '2026-08-02'
   ),
   now(),
