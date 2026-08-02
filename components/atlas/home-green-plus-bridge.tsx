@@ -3,6 +3,8 @@
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
+import styles from "./home-green-plus-bridge.module.css";
+
 const HOME_TRIGGER = '.atlas-topbar-action .atlas-note-plus[aria-label="Document work"]';
 const GLOBAL_TRIGGER = 'button[aria-label="Add to Atlas"]';
 
@@ -50,5 +52,5 @@ export default function HomeGreenPlusBridge() {
     };
   }, [pathname]);
 
-  return null;
+  return <span className={styles.bridge} aria-hidden="true" />;
 }
