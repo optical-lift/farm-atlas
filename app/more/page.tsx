@@ -17,6 +17,7 @@ export default async function AtlasMorePage() {
     { label: "Production", detail: "Crop cycles and production state", href: "/production" },
     { label: "Seed inventory", detail: "Verified counts, freshness and crop commitments", href: "/inventory/seeds" },
     ...(canManage ? [
+      { label: "Tomorrow preflight", detail: "Review each person's real day, overload and held work", href: "/tomorrow" },
       { label: "People + roles", detail: "Farm membership and authority", href: "/owner/members" },
       { label: "Farm management", detail: "Blockers, assignment and schedule risk", href: "/manage" },
     ] : []),
