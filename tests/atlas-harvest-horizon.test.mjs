@@ -56,15 +56,19 @@ test("Forecast-only harvest watch cards are suppressed without hiding real harve
   assert.doesNotMatch(migration, /create or replace function atlas\.ensure_crop_harvest_task_v1/);
 });
 
-test("Harvest horizon entries become grouped Bell movement with a Harvest deep link", () => {
-  const migration = read("supabase/migrations/20260801213000_atlas_harvest_horizon_v1.sql");
+test("Harvest horizon entries become one farm-level Bell digest with a Harvest deep link", () => {
+  const baseline = read("supabase/migrations/20260801213000_atlas_harvest_horizon_v1.sql");
+  const digest = read("supabase/migrations/20260801215500_atlas_harvest_horizon_bell_digest_v1.sql");
 
-  assert.match(migration, /create or replace function atlas\.harvest_horizon_tick_v1/);
-  assert.match(migration, /group by farm_id, organization_id, crop_key, variety, window_start, window_end/);
-  assert.match(migration, /p_event_kind => 'production_change'/);
-  assert.match(migration, /p_source_event => 'harvest_horizon_entry'/);
-  assert.match(migration, /return '\/harvest'/);
-  assert.match(migration, /atlas-harvest-horizon-daily-v1/);
+  assert.match(baseline, /create or replace function atlas\.harvest_horizon_tick_v1/);
+  assert.match(baseline, /atlas-harvest-horizon-daily-v1/);
+  assert.match(digest, /announced_cycles/);
+  assert.match(digest, /group by farm_id, organization_id/);
+  assert.match(digest, /count\(distinct wave_key\)/);
+  assert.match(digest, /p_event_kind => 'production_change'/);
+  assert.match(digest, /p_source_event => 'harvest_horizon_digest'/);
+  assert.match(digest, /return '\/harvest'/);
+  assert.match(digest, /delete from atlas\.journal_event_index[\s\S]*harvest_horizon_entry/);
 });
 
 test("Harvest keeps a single page scroll on small screens", () => {
