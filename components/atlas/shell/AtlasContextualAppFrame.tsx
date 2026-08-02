@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo } from "react";
 
+import GlobalAtlasAdd from "@/components/atlas/global-atlas-add";
+
 function todayHref() {
   const date = new Date();
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
@@ -51,20 +53,23 @@ export default function AtlasContextualAppFrame() {
 
   // Legacy route marker retained for contract search: "/#work-board".
   return (
-    <nav className="atlas-context-footer" aria-label="Atlas destinations">
-      <div className="atlas-context-footer__rail">
-        {items.map((item) => (
-          <Link
-            key={item.key}
-            href={item.href}
-            className="atlas-context-footer__item"
-            aria-current={active === item.key ? "page" : undefined}
-          >
-            <span className="atlas-context-footer__icon" aria-hidden="true">{item.icon}</span>
-            <strong>{item.label}</strong>
-          </Link>
-        ))}
-      </div>
-    </nav>
+    <>
+      <GlobalAtlasAdd />
+      <nav className="atlas-context-footer" aria-label="Atlas destinations">
+        <div className="atlas-context-footer__rail">
+          {items.map((item) => (
+            <Link
+              key={item.key}
+              href={item.href}
+              className="atlas-context-footer__item"
+              aria-current={active === item.key ? "page" : undefined}
+            >
+              <span className="atlas-context-footer__icon" aria-hidden="true">{item.icon}</span>
+              <strong>{item.label}</strong>
+            </Link>
+          ))}
+        </div>
+      </nav>
+    </>
   );
 }
