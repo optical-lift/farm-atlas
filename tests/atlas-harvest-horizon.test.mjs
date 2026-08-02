@@ -39,10 +39,10 @@ test("Harvest sightings write observations rather than completing forecast tasks
   assert.match(api, /harvest-horizon-observation-v1/);
   assert.match(api, /first_harvest/);
   assert.match(api, /peak_harvest/);
+  assert.match(api, /label:\s*"Still green"/);
+  assert.match(api, /label:\s*"First cut \/ pick"/);
   assert.doesNotMatch(api, /record_task_transition/);
   assert.match(page, /Record what the field is doing/);
-  assert.match(page, /Still green/);
-  assert.match(page, /First cut \/ pick/);
 });
 
 test("Forecast-only harvest watch cards are suppressed without hiding real harvest work", () => {
