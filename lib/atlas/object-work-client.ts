@@ -10,7 +10,8 @@ export type AtlasObjectWorkActionKind =
   | "deliver"
   | "other";
 
-export type AtlasObjectWorkReleaseMode = "put_in_work" | "hold_for_capacity";
+export type AtlasObjectWorkDateCommitment = "hard_date" | "floating";
+export type AtlasObjectWorkLane = "required" | "process_continuation" | "rhythm" | "discretionary";
 export type AtlasObjectWorkEffort = "light" | "standard" | "heavy";
 
 export type AtlasObjectWorkMembership = {
@@ -19,6 +20,24 @@ export type AtlasObjectWorkMembership = {
   workerKey: string | null;
   displayName: string;
   activeTaskCount: number;
+};
+
+export type AtlasObjectWorkDayLoad = {
+  membershipId: string;
+  workDate: string;
+  role: string;
+  lightCount: number;
+  standardCount: number;
+  heavyCount: number;
+  activeUnits: number;
+  reservoirUnits: number;
+  totalUnits: number;
+  requiredUnits: number;
+  discretionaryUnits: number;
+  dailyUnitBudget: number;
+  budgetEnforced: boolean;
+  overloaded: boolean;
+  remainingDiscretionaryUnits: number;
 };
 
 export type AtlasObjectWorkStep = {
@@ -38,11 +57,15 @@ export type AtlasObjectWorkItem = {
   doneDefinition: string;
   unlockText: string | null;
   effortClass: AtlasObjectWorkEffort;
+  effortUnits: number;
   dueDate: string;
   workWindowKey: string;
   releaseLocalTime: string;
   closeLocalTime: string | null;
-  releaseMode: AtlasObjectWorkReleaseMode;
+  releaseMode: "put_in_work" | "hold_for_capacity";
+  dateCommitment: AtlasObjectWorkDateCommitment;
+  workLane: AtlasObjectWorkLane;
+  bringIntoWorkNow: boolean;
   status: "planned" | "released" | "completed" | "cancelled";
   plannedOccurrenceId: string | null;
   taskId: string | null;
@@ -66,13 +89,12 @@ export type AtlasObjectWorkContext = {
   viewerRole: string;
   viewerMembershipId: string;
   canAuthor: boolean;
-  capacity: {
+  systemSafety: {
     activeTopLevel: number;
-    maximumTopLevel: number;
-    highestMemberActive: number;
-    maximumPerMember: number;
-    farmAtCapacity: boolean;
+    circuitBreaker: number;
+    circuitBreakerReached: boolean;
   };
+  dayLoad: AtlasObjectWorkDayLoad | null;
   memberships: AtlasObjectWorkMembership[];
   workItems: AtlasObjectWorkItem[];
 };
@@ -87,7 +109,8 @@ export type CreateAtlasObjectWorkInput = {
   assignedMembershipId: string;
   dueDate: string;
   workWindowKey: "first_thing" | "morning" | "midday" | "afternoon" | "evening";
-  releaseMode: AtlasObjectWorkReleaseMode;
+  dateCommitment: AtlasObjectWorkDateCommitment;
+  bringIntoWorkNow: boolean;
   cropCycleIds?: string[];
   steps?: string[];
 };
@@ -103,8 +126,16 @@ async function json<T>(response: Response): Promise<T> {
   return data;
 }
 
-export async function fetchAtlasObjectWorkContext(objectKey: string) {
-  const response = await fetch(`/api/atlas/objects/${encodeURIComponent(objectKey)}/work`, {
+export async function fetchAtlasObjectWorkContext(
+  objectKey: string,
+  assignedMembershipId?: string,
+  dueDate?: string,
+) {
+  const params = new URLSearchParams();
+  if (assignedMembershipId) params.set("membershipId", assignedMembershipId);
+  if (dueDate) params.set("dueDate", dueDate);
+  const query = params.size ? `?${params.toString()}` : "";
+  const response = await fetch(`/api/atlas/objects/${encodeURIComponent(objectKey)}/work${query}`, {
     headers: { Accept: "application/json" },
     cache: "no-store",
   });
@@ -118,14 +149,20 @@ export async function createAtlasObjectWork(objectKey: string, input: CreateAtla
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      "X-Atlas-Intent": "object-work-authoring-v1",
+      "X-Atlas-Intent": "object-work-authoring-v2",
     },
     body: JSON.stringify({
       ...input,
       idempotencyKey: `object-work:${objectKey}:${Date.now()}:${crypto.randomUUID()}`,
     }),
   });
-  return json<{ ok: boolean; workItem: AtlasObjectWorkItem; taskId: string | null; plannedOccurrenceId: string }>(response);
+  return json<{
+    ok: boolean;
+    workItem: AtlasObjectWorkItem;
+    taskId: string | null;
+    plannedOccurrenceId: string;
+    dayLoad: AtlasObjectWorkDayLoad;
+  }>(response);
 }
 
 export async function cancelAtlasObjectWorkPlan(objectKey: string, workItemId: string) {

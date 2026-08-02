@@ -22,6 +22,14 @@ function stringList(value: unknown) {
     : [];
 }
 
+function validUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function validDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 function rpcResponse(error: RpcError, fallback: string) {
   if (error.code === "42501") return atlasApiError(403, "object_work_forbidden", error.message || "This work action is not available to this account.");
   if (error.code === "P0002") return atlasApiError(404, "object_work_not_found", error.message || "The place or work card was not found.");
@@ -31,24 +39,33 @@ function rpcResponse(error: RpcError, fallback: string) {
   return atlasApiError(500, "object_work_failed", fallback);
 }
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
   const { objectKey } = await context.params;
   const key = objectKey.trim();
   if (!key || key.length > 160) return atlasApiError(400, "invalid_object_key", "A valid object key is required.");
 
+  const url = new URL(request.url);
+  const membershipId = text(url.searchParams.get("membershipId"));
+  const dueDate = text(url.searchParams.get("dueDate"));
+  if ((membershipId && !validUuid(membershipId)) || (dueDate && !validDate(dueDate))) {
+    return atlasApiError(400, "invalid_day_load", "Choose a valid assignee and farm day.");
+  }
+
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("object_work_context_v1", {
+  const { data, error } = await supabase.rpc("object_work_context_v2", {
     p_farm_id: authorized.access.membership.farmId,
     p_object_key: key,
+    p_membership_id: membershipId || null,
+    p_work_date: dueDate || null,
   });
   if (error) return rpcResponse(error as RpcError, "Atlas could not load work for this place.");
   return privateJson({ ok: true, context: data });
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  if (request.headers.get("x-atlas-intent") !== "object-work-authoring-v1") {
+  if (request.headers.get("x-atlas-intent") !== "object-work-authoring-v2") {
     return atlasApiError(400, "object_work_intent_required", "A valid object-work intent is required.");
   }
   const authorized = await requireAtlasApiAccess({ allowedRoles: ["owner", "manager"] });
@@ -66,13 +83,17 @@ export async function POST(request: Request, context: RouteContext) {
   const doneDefinition = text(body.doneDefinition);
   const dueDate = text(body.dueDate);
   const assignedMembershipId = text(body.assignedMembershipId);
+  const dateCommitment = text(body.dateCommitment);
   const idempotencyKey = text(body.idempotencyKey);
-  if (!title || !doneDefinition || !assignedMembershipId || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || !idempotencyKey) {
+  if (!title || !doneDefinition || !validUuid(assignedMembershipId) || !validDate(dueDate) || !idempotencyKey) {
     return atlasApiError(400, "invalid_object_work", "Title, done definition, assignee, due date, and idempotency key are required.");
+  }
+  if (dateCommitment !== "hard_date" && dateCommitment !== "floating") {
+    return atlasApiError(400, "invalid_date_commitment", "Choose whether this must happen that day or may float around that day.");
   }
 
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("create_object_work_v1", {
+  const { data, error } = await supabase.rpc("create_object_work_v2", {
     p_farm_id: authorized.access.membership.farmId,
     p_object_key: objectKey.trim(),
     p_action_kind: text(body.actionKind),
@@ -84,7 +105,8 @@ export async function POST(request: Request, context: RouteContext) {
     p_assigned_membership_id: assignedMembershipId,
     p_due_date: dueDate,
     p_work_window_key: text(body.workWindowKey),
-    p_release_mode: text(body.releaseMode),
+    p_date_commitment: dateCommitment,
+    p_bring_into_work_now: body.bringIntoWorkNow === true,
     p_crop_cycle_ids: stringList(body.cropCycleIds),
     p_steps: stringList(body.steps),
     p_idempotency_key: idempotencyKey,

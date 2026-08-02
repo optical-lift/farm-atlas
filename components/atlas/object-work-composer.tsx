@@ -10,8 +10,8 @@ import {
   fetchAtlasObjectWorkContext,
   type AtlasObjectWorkActionKind,
   type AtlasObjectWorkContext,
+  type AtlasObjectWorkDateCommitment,
   type AtlasObjectWorkEffort,
-  type AtlasObjectWorkReleaseMode,
 } from "@/lib/atlas/object-work-client";
 
 import styles from "./object-work-composer.module.css";
@@ -89,27 +89,41 @@ export default function ObjectWorkComposer({ objectKey, cropCycles, onSaved }: P
   const [assigneeId, setAssigneeId] = useState("");
   const [dueDate, setDueDate] = useState(centralDate(1));
   const [windowKey, setWindowKey] = useState<WorkWindow>("morning");
-  const [releaseMode, setReleaseMode] = useState<AtlasObjectWorkReleaseMode>("put_in_work");
+  const [dateCommitment, setDateCommitment] = useState<AtlasObjectWorkDateCommitment>("hard_date");
+  const [bringIntoWorkNow, setBringIntoWorkNow] = useState(false);
   const [selectedCycles, setSelectedCycles] = useState<string[]>([]);
   const [stepDraft, setStepDraft] = useState("");
   const [steps, setSteps] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function load() {
+  async function load(membershipId = assigneeId, workDate = dueDate) {
     try {
-      const next = await fetchAtlasObjectWorkContext(objectKey);
+      const next = await fetchAtlasObjectWorkContext(
+        objectKey,
+        membershipId || undefined,
+        membershipId ? workDate : undefined,
+      );
       setContext(next);
       setAssigneeId((current) => current || next.viewerMembershipId || next.memberships[0]?.membershipId || "");
-      setReleaseMode((current) => next.capacity.farmAtCapacity && current === "put_in_work" ? "hold_for_capacity" : current);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not load object-first work.");
     }
   }
 
   useEffect(() => {
-    void load();
+    void load("", dueDate);
   }, [objectKey]);
+
+  useEffect(() => {
+    if (!assigneeId || !dueDate) return;
+    const timer = window.setTimeout(() => {
+      void fetchAtlasObjectWorkContext(objectKey, assigneeId, dueDate)
+        .then(setContext)
+        .catch((error) => setMessage(error instanceof Error ? error.message : "Atlas could not calculate this farm day."));
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [assigneeId, dueDate, objectKey]);
 
   const activeCrops = useMemo(
     () => cropCycles.filter((cycle) => cycle.lifecycle_status !== "archived" && cycle.cycle_state !== "superseded"),
@@ -117,6 +131,7 @@ export default function ObjectWorkComposer({ objectKey, cropCycles, onSaved }: P
   );
   const action = actions.find((option) => option.key === actionKind) ?? actions[0];
   const assignee = context?.memberships.find((membership) => membership.membershipId === assigneeId);
+  const dayLoad = context?.dayLoad;
   const canSave = Boolean(context?.canAuthor && title.trim() && doneDefinition.trim() && assigneeId && dueDate);
 
   function toggleCycle(id: string) {
@@ -140,6 +155,8 @@ export default function ObjectWorkComposer({ objectKey, cropCycles, onSaved }: P
     setEffortClass("standard");
     setDueDate(centralDate(1));
     setWindowKey("morning");
+    setDateCommitment("hard_date");
+    setBringIntoWorkNow(false);
     setSelectedCycles([]);
     setSteps([]);
     setStepDraft("");
@@ -160,15 +177,18 @@ export default function ObjectWorkComposer({ objectKey, cropCycles, onSaved }: P
         assignedMembershipId: assigneeId,
         dueDate,
         workWindowKey: windowKey,
-        releaseMode,
+        dateCommitment,
+        bringIntoWorkNow,
         cropCycleIds: selectedCycles,
         steps,
       });
       setMessage(result.taskId
         ? `${action.label} card is in Work for ${result.workItem.assignee.displayName} on ${prettyDate(result.workItem.dueDate)}.`
-        : `${action.label} card is planned and will wait outside Work until capacity admits it.`);
+        : dateCommitment === "hard_date"
+          ? `${action.label} is committed for ${prettyDate(result.workItem.dueDate)}. Atlas will prepare it and notify ${result.workItem.assignee.displayName} even if the day is overloaded.`
+          : `${action.label} is safely held in the Work Reservoir and will enter Work when its farm day has room.`);
       reset();
-      await load();
+      await load(assigneeId, dueDate);
       await onSaved?.();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not create this work card.");
@@ -181,7 +201,7 @@ export default function ObjectWorkComposer({ objectKey, cropCycles, onSaved }: P
     try {
       setMessage(null);
       await cancelAtlasObjectWorkPlan(objectKey, workItemId);
-      await load();
+      await load(assigneeId, dueDate);
       setMessage("The planned card was cancelled before it entered Work.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not cancel this plan.");
@@ -208,12 +228,12 @@ export default function ObjectWorkComposer({ objectKey, cropCycles, onSaved }: P
         <div className={styles.activeList}>
           {context.workItems.map((item) => (
             <article key={item.id} className={styles.activeCard} data-status={item.status}>
-              <small>{item.actionLabel} · {item.status === "released" ? "In Work" : "Planned"}</small>
+              <small>{item.actionLabel} · {item.status === "released" ? "In Work" : item.dateCommitment === "hard_date" ? "Committed" : "Reservoir"}</small>
               <strong>{item.title}</strong>
               <span>{item.assignee.displayName} · {prettyDate(item.dueDate)} · {item.workWindowKey.replaceAll("_", " ")}</span>
               <p><b>Done means:</b> {item.doneDefinition}</p>
               <footer>
-                {item.taskId ? <Link href={`/task-focus/${encodeURIComponent(item.taskId)}?returnTo=${encodeURIComponent(`/objects/${objectKey}`)}`}>Open work ›</Link> : <span>Waiting outside Work</span>}
+                {item.taskId ? <Link href={`/task-focus/${encodeURIComponent(item.taskId)}?returnTo=${encodeURIComponent(`/objects/${objectKey}`)}`}>Open work ›</Link> : <span>Held safely in the Work Reservoir</span>}
                 {context.canAuthor && item.status === "planned" ? <button type="button" onClick={() => void cancel(item.id)}>Cancel plan</button> : null}
               </footer>
             </article>
@@ -273,21 +293,21 @@ export default function ObjectWorkComposer({ objectKey, cropCycles, onSaved }: P
               <select value={assigneeId} onChange={(event) => setAssigneeId(event.target.value)}>
                 {context.memberships.map((membership) => (
                   <option key={membership.membershipId} value={membership.membershipId}>
-                    {membership.displayName} · {membership.role.replaceAll("_", " ")} · {membership.activeTaskCount} active
+                    {membership.displayName} · {membership.role.replaceAll("_", " ")}
                   </option>
                 ))}
               </select>
             </label>
             <label>
               <span>Farm day</span>
-              <input type="date" min={centralDate()} max={centralDate(180)} value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+              <input type="date" min={centralDate()} max={centralDate(1825)} value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
             </label>
           </div>
 
           <fieldset>
             <legend>Lockscreen window</legend>
             <div className={styles.choices}>
-              {windows.map((window) => <button key={window.key} type="button" data-selected={windowKey === window.key} onClick={() => setWindowKey(window.key)}>{window.label}</button>)}
+              {windows.map((windowOption) => <button key={windowOption.key} type="button" data-selected={windowKey === windowOption.key} onClick={() => setWindowKey(windowOption.key)}>{windowOption.label}</button>)}
             </div>
           </fieldset>
 
@@ -303,20 +323,30 @@ export default function ObjectWorkComposer({ objectKey, cropCycles, onSaved }: P
           </fieldset>
 
           <fieldset>
-            <legend>Where should the card live?</legend>
+            <legend>How firm is this farm day?</legend>
             <div className={styles.releaseGrid}>
-              <button type="button" data-selected={releaseMode === "put_in_work"} onClick={() => setReleaseMode("put_in_work")}>
-                <strong>Put in Work</strong>
-                <span>Owner or manager explicitly admits this card now, even when the farm is already carrying too much.</span>
+              <button type="button" data-selected={dateCommitment === "hard_date"} onClick={() => setDateCommitment("hard_date")}>
+                <strong>Must happen that day</strong>
+                <span>Atlas commits the obligation, prepares it beforehand, and never hides its notification because the day is full.</span>
               </button>
-              <button type="button" data-selected={releaseMode === "hold_for_capacity"} onClick={() => setReleaseMode("hold_for_capacity")}>
-                <strong>Hold as planned</strong>
-                <span>Keep the decision attached to this place, but do not add another active task until the release engine has capacity.</span>
+              <button type="button" data-selected={dateCommitment === "floating"} onClick={() => setDateCommitment("floating")}>
+                <strong>Can float around that day</strong>
+                <span>Atlas remembers the decision and admits it when the person’s presented workload has room.</span>
               </button>
             </div>
-            <p className={styles.capacity} data-over={context.capacity.farmAtCapacity}>
-              Farm Work is carrying {context.capacity.activeTopLevel} top-level cards against a limit of {context.capacity.maximumTopLevel}.
-            </p>
+            {dayLoad ? (
+              <p className={styles.capacity} data-over={dayLoad.overloaded}>
+                {dateCommitment === "hard_date" && dayLoad.overloaded
+                  ? `${prettyDate(dueDate)} is currently overloaded for ${assignee?.displayName || "this person"}. This obligation will still appear and notify.`
+                  : dateCommitment === "floating" && dayLoad.overloaded
+                    ? `${prettyDate(dueDate)} is currently overloaded for ${assignee?.displayName || "this person"}. Atlas will keep this card in the reservoir until there is room.`
+                    : `${prettyDate(dueDate)} currently contains ${dayLoad.lightCount} light, ${dayLoad.standardCount} standard, and ${dayLoad.heavyCount} heavy obligations for ${assignee?.displayName || "this person"}.`}
+              </p>
+            ) : null}
+            <label>
+              <span><input type="checkbox" checked={bringIntoWorkNow} onChange={(event) => setBringIntoWorkNow(event.target.checked)} /> Bring into Work now</span>
+              <small>Use this only when the card needs to be visible immediately instead of waiting for its normal committed or floating release.</small>
+            </label>
           </fieldset>
 
           {activeCrops.length ? (
@@ -350,7 +380,7 @@ export default function ObjectWorkComposer({ objectKey, cropCycles, onSaved }: P
           </fieldset>
 
           <button className={styles.save} type="button" disabled={!canSave || saving} onClick={() => void save()}>
-            {saving ? "Creating card…" : releaseMode === "put_in_work" ? "Put card in Work" : "Save planned card"}
+            {saving ? "Creating card…" : bringIntoWorkNow ? "Bring card into Work" : dateCommitment === "hard_date" ? "Save hard-date card" : "Save to Work Reservoir"}
           </button>
         </div>
       ) : null}

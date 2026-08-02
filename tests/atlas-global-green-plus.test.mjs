@@ -33,7 +33,7 @@ test("global authoring chooses one canonical place before creating work", () => 
   assert.match(client, /\/api\/atlas\/objects\/\$\{encodeURIComponent\(objectKey\)\}\/work/);
 });
 
-test("real crop cycles, people, dates, windows, effort, release state, and checklists remain attached", () => {
+test("real crop cycles, people, dates, windows, effort, commitment, and checklists remain attached", () => {
   for (const marker of [
     "Real crop cycles",
     "Assigned to",
@@ -41,11 +41,15 @@ test("real crop cycles, people, dates, windows, effort, release state, and check
     "Lockscreen window",
     "Physical size",
     "Checkable steps",
-    "Put in Work",
-    "Hold as planned",
+    "Must happen that day",
+    "Can float around that day",
+    "Bring into Work now",
     "doneDefinition",
     "cropCycleIds",
+    "dateCommitment",
   ]) assert.match(add, new RegExp(marker));
+  assert.doesNotMatch(add, />Put in Work</);
+  assert.doesNotMatch(add, />Hold as planned</);
 });
 
 test("Weed and Mow route to persistent maintenance instead of cloning ordinary cards", () => {
