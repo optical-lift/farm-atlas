@@ -97,4 +97,25 @@ $function$;
 revoke execute on function atlas.owner_tomorrow_preflight_v1(uuid, date) from public, anon;
 grant execute on function atlas.owner_tomorrow_preflight_v1(uuid, date) to authenticated, service_role;
 
+insert into atlas.authenticated_rpc_registry(
+  signature, classification, confidence, review_status,
+  authenticated_execute_expected, security_definer_expected, service_execute_expected,
+  caller_count, policy_reference_count, evidence, registered_at, reviewed_at
+) values (
+  'atlas.owner_tomorrow_preflight_v1(uuid, date)', 'owner_admin_endpoint', 'verified', 'active',
+  true, true, true, 2, 0,
+  jsonb_build_object('source','owner_tomorrow_preflight_v1','call_site','Tomorrow Preflight page and API','authorization','owner or manager','reviewed_date','2026-08-02'), now(), now()
+)
+on conflict (signature) do update
+set classification=excluded.classification,
+    confidence=excluded.confidence,
+    review_status=excluded.review_status,
+    authenticated_execute_expected=excluded.authenticated_execute_expected,
+    security_definer_expected=excluded.security_definer_expected,
+    service_execute_expected=excluded.service_execute_expected,
+    caller_count=excluded.caller_count,
+    policy_reference_count=excluded.policy_reference_count,
+    evidence=excluded.evidence,
+    reviewed_at=excluded.reviewed_at;
+
 commit;
