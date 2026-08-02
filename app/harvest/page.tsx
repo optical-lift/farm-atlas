@@ -2,6 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+import {
+  AtlasAppShell,
+  AtlasCard,
+  AtlasMetricStrip,
+  AtlasSectionHeading,
+  AtlasTopBar,
+} from "@/components/atlas/ui/AtlasPrimitives";
 import "./harvest.css";
 
 type EvidenceState = "calculated" | "seen" | "confirmed";
@@ -288,25 +296,31 @@ export default function HarvestHorizonPage() {
     }));
   }, [data, targetDate]);
 
-  return (
-    <main className="atlas-harvest-shell">
-      <section className="atlas-harvest-page">
-        <header className="atlas-harvest-header">
-          <Link href="/" className="atlas-harvest-brand">
-            <span>Atlas</span>
-            <strong>Harvest</strong>
-          </Link>
-          <div>
-            <small>Farm horizon</small>
-            <b>{data?.asOf ? `${pretty(data.asOf)}–${pretty(data.horizonEnd)}` : "Next 21 days"}</b>
-          </div>
-        </header>
+  const totalNow = (data?.farms ?? []).reduce((sum, farm) => sum + farm.counts.cutting + farm.counts.now, 0);
+  const totalAhead = (data?.farms ?? []).reduce((sum, farm) => sum + farm.counts.week1 + farm.counts.week2 + farm.counts.week3, 0);
+  const totalConfirmation = (data?.farms ?? []).reduce((sum, farm) => sum + farm.counts.needsConfirmation, 0);
 
-        <section className="atlas-harvest-intro">
-          <span>What is entering the routine</span>
-          <h1>Harvest Horizon</h1>
+  return (
+    <AtlasAppShell className="atlas-harvest-shell" frameClassName="atlas-harvest-page">
+      <AtlasTopBar
+        title="Harvest"
+        status={data?.asOf ? `${pretty(data.asOf)}–${pretty(data.horizonEnd)}` : "Next 21 days"}
+      />
+
+      <div className="atlas-harvest-body">
+        <AtlasCard as="section" variant="cream" className="atlas-harvest-intro" ariaLabelledBy="atlas-harvest-title">
+          <AtlasSectionHeading kicker="What is entering the routine" title="Harvest Horizon" id="atlas-harvest-title" />
           <p>Forecasts live here. Work receives only actual cutting, picking, clearing or decision-making.</p>
-        </section>
+        </AtlasCard>
+
+        {data ? (
+          <AtlasMetricStrip className="atlas-harvest-summary" ariaLabel="Harvest Horizon totals">
+            <span><b>{totalNow}</b> now</span>
+            <span><b>{totalAhead}</b> ahead</span>
+            <span><b>{totalConfirmation}</b> check</span>
+            <span><b>{data.farms?.length ?? 0}</b> farms</span>
+          </AtlasMetricStrip>
+        ) : null}
 
         {notice ? <output className="atlas-harvest-notice" aria-live="polite">{notice}</output> : null}
         {error ? <div className="atlas-harvest-error">{error}<button type="button" onClick={() => void load()}>Try again</button></div> : null}
@@ -314,10 +328,9 @@ export default function HarvestHorizonPage() {
 
         {data ? (
           <>
-            <section className="atlas-harvest-date-lens">
-              <div>
-                <span>Date lens</span>
-                <h2>What should be available by a particular day?</h2>
+            <AtlasCard as="section" className="atlas-harvest-date-lens" ariaLabelledBy="atlas-harvest-date-title">
+              <div className="atlas-harvest-date-lens__heading">
+                <AtlasSectionHeading kicker="Date lens" title="What should be available?" id="atlas-harvest-date-title" />
                 <p>Use this for Thursday events, delivery rounds, bouquet plans or buyer conversations.</p>
               </div>
               <label>
@@ -338,12 +351,12 @@ export default function HarvestHorizonPage() {
                   </article>
                 ))}
               </div>
-            </section>
+            </AtlasCard>
 
             {(data.farms ?? []).map((farm) => (
-              <section className="atlas-harvest-farm" key={farm.id}>
+              <AtlasCard as="section" className="atlas-harvest-farm" key={farm.id} ariaLabelledBy={`atlas-harvest-farm-${farm.id}`}>
                 <header className="atlas-harvest-farm__header">
-                  <div><span>21-day outlook</span><h2>{farm.name}</h2></div>
+                  <AtlasSectionHeading kicker="21-day outlook" title={farm.name} id={`atlas-harvest-farm-${farm.id}`} />
                   <div className="atlas-harvest-farm__counts">
                     <span><b>{farm.counts.cutting + farm.counts.now}</b> now</span>
                     <span><b>{farm.counts.week1 + farm.counts.week2 + farm.counts.week3}</b> ahead</span>
@@ -372,11 +385,11 @@ export default function HarvestHorizonPage() {
                     </section>
                   );
                 })}
-              </section>
+              </AtlasCard>
             ))}
           </>
         ) : null}
-      </section>
-    </main>
+      </div>
+    </AtlasAppShell>
   );
 }
