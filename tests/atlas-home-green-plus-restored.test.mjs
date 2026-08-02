@@ -9,15 +9,15 @@ const styles = readFileSync(new URL("../components/atlas/home-green-plus-bridge.
 test("Home keeps its familiar header plus while using the global builder", () => {
   assert.match(shell, /import HomeGreenPlusBridge/);
   assert.match(shell, /<HomeGreenPlusBridge\s*\/>/);
-  assert.match(bridge, /aria-label=\\"Document work\\"/);
-  assert.match(bridge, /button\[aria-label=\\"Add to Atlas\\"\]/);
+  assert.ok(bridge.includes('aria-label="Document work"'));
+  assert.ok(bridge.includes('button[aria-label="Add to Atlas"]'));
   assert.match(bridge, /globalTrigger\.click\(\)/);
 });
 
 test("the duplicate floating plus is hidden only when the Home header trigger exists", () => {
   assert.match(bridge, /dataset\.atlasHomeAddTrigger = "true"/);
   assert.match(styles, /visibility: visible !important/);
-  assert.match(styles, /body\[data-atlas-home-add-trigger="true"\] button\[aria-label="Add to Atlas"\]/);
+  assert.ok(styles.includes('body[data-atlas-home-add-trigger="true"] button[aria-label="Add to Atlas"]'));
   assert.match(styles, /display: none !important/);
 });
 
