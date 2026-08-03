@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import AtlasHomeServerRefresh from "@/components/atlas/home/AtlasHomeServerRefresh";
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHomeV2";
 import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
 import { withAtlasHomeCarryForward } from "@/lib/atlas/home-carry-forward";
@@ -116,6 +117,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
 
   return (
     <>
+      <AtlasHomeServerRefresh />
       {/* Legacy route contract only: <AtlasAroundRoutes canManage={false} /> has been absorbed into the app dock and compact Home lenses. */}
       <AtlasUniversalHome
         home={renderedHome}
