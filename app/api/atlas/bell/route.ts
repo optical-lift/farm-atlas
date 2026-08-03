@@ -17,7 +17,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, no-store",
-      "X-Atlas-Read-Path": "bell-v2",
+      "X-Atlas-Read-Path": "bell-v3",
     },
   });
 }
@@ -43,7 +43,7 @@ async function requestContext() {
 
 async function readBell(farmId: string, effectiveMembershipId: string | null, limit: number) {
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("bell_history_v2", {
+  const { data, error } = await supabase.rpc("bell_history_v3", {
     p_farm_id: farmId,
     p_effective_membership_id: effectiveMembershipId,
     p_limit: limit,

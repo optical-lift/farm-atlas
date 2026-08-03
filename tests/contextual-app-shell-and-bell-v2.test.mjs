@@ -100,13 +100,13 @@ test("the floating Bell is global, header-aware, role-aware, and disappears when
   assert.match(bellCover, /management \? "Do next" : "Follow through"/);
 });
 
-test("Bell v2 establishes a monitoring baseline and groups one current event per management obligation", () => {
+test("Bell preserves the v2 monitoring baseline while the API reads the additive v3 wrapper", () => {
   assert.match(migration, /create table if not exists atlas\.bell_monitoring_baselines/);
   assert.match(migration, /bell_event_obligation_key_v2/);
   assert.match(migration, /distinct on \(eligible\.obligation_key\)/);
   assert.match(migration, /item\.occurred_at > v_baseline_at/);
   assert.match(migration, /latest_worthy_event_per_obligation/);
-  assert.match(bellRoute, /bell_history_v2/);
+  assert.match(bellRoute, /bell_history_v3/);
   assert.match(bellContract, /atlas_bell_v2/);
 });
 
