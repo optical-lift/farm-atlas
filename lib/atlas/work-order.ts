@@ -17,7 +17,7 @@ function text(value: unknown) {
 }
 
 function lower(value: unknown) {
-  return text(value).toLowerCase();
+  return text(value).toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
 }
 
 export function atlasMetaNumber(task: AtlasTaskCard, ...keys: string[]) {
@@ -36,47 +36,41 @@ function explicitAnchor(task: AtlasTaskCard): AtlasWorkOrderAnchor | null {
     || lower(atlasMetadataValue(task, "work_order_mode"));
   const label = `${lower(atlasMetadataValue(task, "day_work_order_label"))} ${lower(atlasMetadataValue(task, "work_order_label"))} ${lower(atlasMetadataValue(task, "work_order_bucket"))}`;
 
-  if (raw === "bottom" || raw === "last" || raw === "last_thing" || label.includes("last thing")) return "bottom";
+  if (raw === "bottom" || raw === "last" || raw === "last_thing" || label.includes("last_thing")) return "bottom";
   if (raw === "evening" || raw === "lower" || label.includes("evening")) return "evening";
   if (raw === "visibility" || raw === "visibility_prep" || raw === "anchored" || label.includes("visibility")) return "visibility";
   if (raw === "midday" || raw === "midday_flex" || label.includes("midday")) return "midday";
   if (raw === "morning" || raw === "upper" || label.includes("morning")) return "morning";
-  if (raw === "top" || raw === "first" || label.includes("top of list")) return "top";
+  if (raw === "top" || raw === "first" || label.includes("top_of_list")) return "top";
 
   return null;
 }
 
-function taskText(task: AtlasTaskCard) {
-  const display = atlasTaskDisplay(task);
-  const details = Array.isArray(atlasMetadataValue(task, "detail_lines")) ? (atlasMetadataValue(task, "detail_lines") as unknown[]).join(" ") : "";
-  return [
-    task.task_type,
-    task.title,
-    task.unlock_text,
-    task.note,
-    task.zone_label,
-    atlasMetaString(task, "collection_zone"),
-    atlasMetaString(task, "collection_label"),
-    atlasMetaString(task, "work_rhythm"),
-    atlasMetaString(task, "display_action"),
-    atlasMetaString(task, "display_subject"),
-    display.route,
-    display.title,
-    details,
-  ].filter(Boolean).join(" ").toLowerCase();
-}
-
+/**
+ * Fallback ordering is allowed to use controlled task fields only. Title prose
+ * is presentation, not an operational clock or work-class source.
+ */
 export function atlasInferredWorkOrderAnchor(task: AtlasTaskCard): AtlasWorkOrderAnchor {
   const route = atlasRouteKeyForTask(task);
-  const joined = taskText(task);
+  const action = lower(task.action_key);
+  const taskType = lower(task.task_type);
+  const rhythm = lower(atlasMetaString(task, "work_rhythm"));
+  const category = lower(atlasMetaString(task, "work_category_key"));
+  const collection = lower(atlasMetaString(task, "work_collection_key"));
 
-  if (joined.includes("mow") || joined.includes("mowing") || atlasMetaString(task, "work_collection_key") === "mowing") return "bottom";
-  if (joined.includes("transplant") || joined.includes("planting") || route === "plant") return "evening";
-  if (joined.includes("trash") || joined.includes("sweep porches") || joined.includes("porch") || joined.includes("guest") || joined.includes("venue reset") || joined.includes("visibility")) return "visibility";
-  if (joined.includes("soil block") || joined.includes("blocking") || joined.includes("seed sowing") || joined.includes("sow ") || route === "seed") return "midday";
-  if (joined.includes("weed") || joined.includes("ragweed") || joined.includes("hoe") || route === "weed") return "morning";
-  if (joined.includes("harvest") || joined.includes("postharvest") || route === "harvest") return "morning";
-  if (joined.includes("grow room") || joined.includes("water") || joined.includes("germination") || joined.includes("check trays") || route === "water" || route === "crop_cycle") return "top";
+  if (route === "mow" || action === "mow" || collection === "mowing") return "bottom";
+  if (route === "plant" || action === "plant" || action === "transplant") return "evening";
+  if (["signage_safety", "hospitality", "guest_readiness", "venue_reset"].includes(category)) return "visibility";
+  if (route === "seed" || action === "sow" || action === "seed" || rhythm === "seed_sowing") return "midday";
+  if (route === "weed" || action === "weed" || collection === "weeding") return "morning";
+  if (route === "harvest" || action === "harvest" || taskType === "postharvest") return "morning";
+  if (
+    route === "water"
+    || route === "crop_cycle"
+    || action === "water"
+    || taskType === "grow_room_care"
+    || taskType === "germination_check"
+  ) return "top";
 
   return "midday";
 }
