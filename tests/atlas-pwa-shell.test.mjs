@@ -63,20 +63,21 @@ test("PWA discovery assets remain public before Atlas authentication", () => {
   assert.match(proxy, /api\/pwa\/icon/);
 });
 
-test("the service worker keeps a prepared shell without intercepting canonical writes", () => {
-  assert.match(serviceWorker, /atlas-pwa-shell-v1/);
+test("the service worker keeps only the offline shell and never caches active Atlas work", () => {
+  assert.match(serviceWorker, /atlas-pwa-shell-v2/);
   assert.match(serviceWorker, /SHELL_CACHE/);
-  assert.match(serviceWorker, /PAGE_CACHE/);
-  assert.match(serviceWorker, /DATA_CACHE/);
+  assert.match(serviceWorker, /STATIC_CACHE/);
   assert.match(serviceWorker, /request\.mode === "navigate"/);
-  assert.match(serviceWorker, /latestCachedDay/);
-  assert.match(serviceWorker, /\/api\/atlas\/living-day/);
-  assert.match(serviceWorker, /\/api\/atlas\/living-day-plan/);
+  assert.match(serviceWorker, /url\.pathname\.startsWith\("\/api\/atlas\/"\)\) return/);
+  assert.doesNotMatch(serviceWorker, /PAGE_CACHE|DATA_CACHE|preparedDataResponse|latestCachedDay/);
   assert.match(serviceWorker, /if \(request\.method !== "GET"\) return/);
   assert.doesNotMatch(serviceWorker, /respondWith\([^\n]*POST|queue.*mutation/i);
 });
 
-test("private prepared caches clear when the browser returns to authentication", () => {
+test("activation removes every earlier prepared-page and prepared-data cache", () => {
+  assert.match(serviceWorker, /PRIVATE_CACHE_SUFFIXES/);
+  assert.match(serviceWorker, /key\.startsWith\("atlas-pwa-"\)/);
+  assert.match(serviceWorker, /!keep\.has\(key\)/);
   assert.match(serviceWorker, /ATLAS_CLEAR_PRIVATE_CACHES/);
   assert.match(serviceWorker, /finalUrl\.pathname === "\/login"/);
   assert.match(bridge, /pathname === "\/login"/);
