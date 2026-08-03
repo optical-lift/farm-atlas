@@ -1,5 +1,8 @@
 /* Atlas PWA shell. Canonical farm truth remains server-authoritative. */
-const ATLAS_PWA_VERSION = "atlas-pwa-shell-v2";
+// Bump this version whenever the offline document or global app chrome changes.
+// The version boundary forces installed devices to discard an older shell rather
+// than preserving retired navigation in the field fallback.
+const ATLAS_PWA_VERSION = "atlas-pwa-shell-v3";
 const SHELL_CACHE = `${ATLAS_PWA_VERSION}:shell`;
 const STATIC_CACHE = `${ATLAS_PWA_VERSION}:static`;
 const PRIVATE_CACHE_SUFFIXES = [":pages", ":prepared-data"];

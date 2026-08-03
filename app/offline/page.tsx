@@ -17,10 +17,10 @@ export default function AtlasOfflinePage() {
           <section>
             <span>Signal dropped</span>
             <h1>Atlas is still here.</h1>
-            <p>Return to a Home, Day, Bell, Place, or Project view you opened on this device before the connection dropped.</p>
+            <p>Return to a Home, Work, Bell, Zone Registry, or Project view you opened on this device before the connection dropped.</p>
             <div>
               <Link href="/">Home</Link>
-              <Link href="/day">Day</Link>
+              <Link href="/day">Work</Link>
             </div>
           </section>
         </div>
