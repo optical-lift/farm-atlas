@@ -74,6 +74,97 @@ const SIGNS = [
   { name: "Pisces", symbol: "♓︎", quality: "fruitful" as const },
 ];
 
+const LUNAR_FAMILIES = new Set<AtlasLunarActionFamily>([
+  "aboveground_planting",
+  "belowground_planting",
+  "maintenance",
+  "aboveground_harvest",
+  "belowground_harvest",
+]);
+
+const FAMILY_LABELS: Record<AtlasLunarActionFamily, string> = {
+  aboveground_planting: "Aboveground planting",
+  belowground_planting: "Roots + bulbs",
+  maintenance: "Maintenance",
+  aboveground_harvest: "Flower + fruit harvest",
+  belowground_harvest: "Root + bulb harvest",
+};
+
+const ACTION_FAMILIES: Record<string, AtlasLunarActionFamily> = {
+  sow: "aboveground_planting",
+  seed: "aboveground_planting",
+  plant: "aboveground_planting",
+  transplant: "aboveground_planting",
+  pot_up: "aboveground_planting",
+  set_out: "aboveground_planting",
+  plant_bulbs: "belowground_planting",
+  plant_roots: "belowground_planting",
+  divide: "belowground_planting",
+  harvest: "aboveground_harvest",
+  cut_flowers: "aboveground_harvest",
+  dig: "belowground_harvest",
+  lift: "belowground_harvest",
+  pull_roots: "belowground_harvest",
+  weed: "maintenance",
+  weeding: "maintenance",
+  cultivate: "maintenance",
+  cultivation: "maintenance",
+  prune: "maintenance",
+  pruning: "maintenance",
+  thin: "maintenance",
+  thinning: "maintenance",
+  mow: "maintenance",
+  mowing: "maintenance",
+  spray: "maintenance",
+  respray: "maintenance",
+  manage_pests: "maintenance",
+  pest_control: "maintenance",
+  clear: "maintenance",
+  cleanup: "maintenance",
+  clean_up: "maintenance",
+  remove: "maintenance",
+  deadhead: "maintenance",
+  cut_back: "maintenance",
+  tree_removal: "maintenance",
+  maintenance: "maintenance",
+};
+
+const TASK_TYPE_FAMILIES: Record<string, AtlasLunarActionFamily> = {
+  sowing: "aboveground_planting",
+  planting: "aboveground_planting",
+  transplanting: "aboveground_planting",
+  pot_up: "aboveground_planting",
+  bulb_planting: "belowground_planting",
+  root_planting: "belowground_planting",
+  division: "belowground_planting",
+  harvest: "aboveground_harvest",
+  flower_harvest: "aboveground_harvest",
+  root_harvest: "belowground_harvest",
+  bulb_harvest: "belowground_harvest",
+  maintenance: "maintenance",
+  mowing: "maintenance",
+  grounds_mowing: "maintenance",
+  weed_control: "maintenance",
+  garden_cleanup: "maintenance",
+  cleanup: "maintenance",
+  bed_prep: "maintenance",
+  grounds_tree_work: "maintenance",
+  marshall_tree_work: "maintenance",
+};
+
+const BELOWGROUND_PARTS = new Set([
+  "root",
+  "roots",
+  "bulb",
+  "bulbs",
+  "rhizome",
+  "rhizomes",
+  "tuber",
+  "tubers",
+  "corm",
+  "corms",
+]);
+
 function normalizeDegrees(value: number) {
   return ((value % 360) + 360) % 360;
 }
@@ -192,33 +283,70 @@ export function moonDirection(phase: string): AtlasMoonDirection {
   return "boundary";
 }
 
-function metadataText(metadata: Record<string, unknown> | null | undefined, key: string) {
+function metadataString(metadata: Record<string, unknown> | null | undefined, key: string) {
   const value = metadata?.[key];
-  return typeof value === "string" ? value.trim().toLowerCase() : "";
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+function normalizeKey(value: string | null | undefined) {
+  return (value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function explicitLunarFamily(task: AtlasLunarTaskInput) {
+  const value = normalizeKey(metadataString(task.metadata, "lunar_family"));
+  return LUNAR_FAMILIES.has(value as AtlasLunarActionFamily)
+    ? value as AtlasLunarActionFamily
+    : null;
+}
+
+function isBelowground(task: AtlasLunarTaskInput) {
+  const part = normalizeKey(metadataString(task.metadata, "plant_part"));
+  return BELOWGROUND_PARTS.has(part);
+}
+
+function withPlantPart(
+  family: AtlasLunarActionFamily | null,
+  belowground: boolean,
+): AtlasLunarActionFamily | null {
+  if (!family || !belowground) return family;
+  if (family === "aboveground_planting") return "belowground_planting";
+  if (family === "aboveground_harvest") return "belowground_harvest";
+  return family;
 }
 
 export function classifyLunarTask(task: AtlasLunarTaskInput): AtlasLunarActionFamily | null {
-  const joined = [
-    task.title,
-    task.actionKey,
-    task.taskType,
-    metadataText(task.metadata, "display_action"),
-    metadataText(task.metadata, "display_subject"),
-    metadataText(task.metadata, "crop_family"),
-    metadataText(task.metadata, "plant_part"),
-  ].filter(Boolean).join(" ").toLowerCase();
+  const explicit = explicitLunarFamily(task);
+  if (explicit) return explicit;
 
-  const belowground = /\b(root|bulb|tulip|garlic|onion|iris|rhizome|tuber|corm|dahlia|carrot|beet|radish|turnip|potato)\b/.test(joined);
-  const harvest = /\b(harvest|dig|lift|pull|cut)\b/.test(joined);
-  if (harvest && belowground) return "belowground_harvest";
-  if (harvest) return "aboveground_harvest";
-  if (/\b(weed|cultivat|prune|thin|mow|pest|clear|cleanup|clean up|remove|deadhead)\b/.test(joined)) {
-    return "maintenance";
+  const action = normalizeKey(task.actionKey)
+    || normalizeKey(metadataString(task.metadata, "display_action"));
+  const taskType = normalizeKey(task.taskType);
+  const family = ACTION_FAMILIES[action] ?? TASK_TYPE_FAMILIES[taskType] ?? null;
+  return withPlantPart(family, isBelowground(task));
+}
+
+function displayTitle(task: AtlasLunarTaskInput) {
+  const action = metadataString(task.metadata, "display_action");
+  const subject = metadataString(task.metadata, "display_subject");
+  if (action && subject) {
+    const duplicateAction = subject.toLowerCase().startsWith(`${action.toLowerCase()} `);
+    return duplicateAction ? subject : `${action} ${subject}`;
   }
-  if (/\b(sow|seed|plant|transplant|divide|pot up|pot-up|set out)\b/.test(joined)) {
-    return belowground ? "belowground_planting" : "aboveground_planting";
-  }
-  return null;
+  return subject || task.title;
+}
+
+function displayContext(task: AtlasLunarTaskInput, family: AtlasLunarActionFamily) {
+  const familyLabel = metadataString(task.metadata, "display_family")
+    || metadataString(task.metadata, "work_category_label")
+    || FAMILY_LABELS[family];
+  const location = metadataString(task.metadata, "display_location")
+    || metadataString(task.metadata, "location_label")
+    || metadataString(task.metadata, "collection_zone");
+  return [...new Set([familyLabel, location].filter(Boolean))].join(" · ");
 }
 
 export function lunarGuidance(clock: AtlasLunarClock): AtlasLunarGuidance {
@@ -232,22 +360,19 @@ export function lunarGuidance(clock: AtlasLunarClock): AtlasLunarGuidance {
       traditional: true,
       strength: "work_window",
       headline: `${clock.sign} favors clearing work`,
-      detail: "Traditional almanac practice treats this Moon sign as better for weeding, cultivating, pruning, pest work, and general farm work than for sowing.",
+      detail: `${clock.phase} · ${clock.sign} · maintenance and clearing`,
       favoredFamilies: ["maintenance"],
       favoredActions: ["weed", "cultivate", "prune", "manage pests"],
     };
   }
 
   if (clock.direction === "waxing") {
-    const signDetail = fruitful
-      ? `, strengthened by fruitful ${clock.sign}`
-      : `; ${clock.sign} is treated as moderately productive`;
     return {
       profileKey: "elm_almanac_v1",
       traditional: true,
       strength: fruitful ? "strong" : "moderate",
       headline: fruitful ? "Strong aboveground planting window" : "Aboveground planting window",
-      detail: `${clock.phase} traditionally favors annual flowers and crops that grow or bear above ground${signDetail}.`,
+      detail: `${clock.phase} · ${clock.sign} · annual flowers and aboveground crops`,
       favoredFamilies: ["aboveground_planting", "aboveground_harvest"],
       favoredActions: ["sow annual flowers", "transplant aboveground crops", "harvest flowers and fruit"],
     };
@@ -255,13 +380,12 @@ export function lunarGuidance(clock: AtlasLunarClock): AtlasLunarGuidance {
 
   if (clock.direction === "waning") {
     const lateWaning = phase.includes("last quarter") || phase.includes("waning crescent");
-    const signDetail = fruitful ? `; fruitful ${clock.sign} strengthens planting work` : "";
     return {
       profileKey: "elm_almanac_v1",
       traditional: true,
       strength: fruitful ? "strong" : lateWaning ? "work_window" : "moderate",
       headline: lateWaning ? "Roots, bulbs, and clearing work" : "Roots, bulbs, and perennial work",
-      detail: `${clock.phase} traditionally favors belowground crops, bulbs, divisions, and root-establishing work${lateWaning ? ", with the late waning period also used for weeding and pruning" : ""}${signDetail}.`,
+      detail: `${clock.phase} · ${clock.sign} · roots, bulbs, and divisions${lateWaning ? " · weeding and pruning" : ""}`,
       favoredFamilies: lateWaning
         ? ["belowground_planting", "belowground_harvest", "maintenance"]
         : ["belowground_planting", "belowground_harvest"],
@@ -277,7 +401,7 @@ export function lunarGuidance(clock: AtlasLunarClock): AtlasLunarGuidance {
       traditional: true,
       strength: fruitful ? "strong" : "moderate",
       headline: "Full-Moon turning point",
-      detail: "The traditional calendar is turning from aboveground planting toward roots, bulbs, divisions, and belowground work after the Full Moon peak.",
+      detail: `${clock.phase} · ${clock.sign} · turning toward roots, bulbs, and divisions`,
       favoredFamilies: ["belowground_planting", "belowground_harvest"],
       favoredActions: ["prepare bulb and root work", "divide perennials", "finish time-sensitive aboveground planting"],
     };
@@ -288,7 +412,7 @@ export function lunarGuidance(clock: AtlasLunarClock): AtlasLunarGuidance {
     traditional: true,
     strength: fruitful ? "strong" : "moderate",
     headline: "New-Moon planting turn",
-    detail: "The traditional calendar is opening a waxing period for annual flowers and other aboveground crops, while field readiness and weather remain the controlling conditions.",
+    detail: `${clock.phase} · ${clock.sign} · opening aboveground planting work`,
     favoredFamilies: ["aboveground_planting"],
     favoredActions: ["sow annual flowers", "plant aboveground crops", "begin new successions"],
   };
@@ -300,29 +424,20 @@ export function lunarTaskHint(task: AtlasLunarTaskInput, clock: AtlasLunarClock)
   const guidance = lunarGuidance(clock);
   const phaseFavored = guidance.favoredFamilies.includes(family);
   const planting = family === "aboveground_planting" || family === "belowground_planting";
-  const signBoost = planting && clock.signQuality === "fruitful";
   const signCaution = planting && clock.signQuality === "barren";
-  const maintenanceBoost = family === "maintenance" && clock.signQuality === "barren";
 
-  const fit: AtlasLunarFit = phaseFavored && (signBoost || maintenanceBoost)
+  const fit: AtlasLunarFit = phaseFavored
     ? "favored"
-    : phaseFavored
-      ? "favored"
-      : signCaution
-        ? "caution"
-        : "neutral";
-  const reason = fit === "favored"
-    ? `${clock.phase} and ${clock.sign} align with this traditional work family.`
-    : fit === "caution"
-      ? `${clock.sign} is traditionally used for clearing work; keep the crop and weather window ahead of the lunar preference.`
-      : "The lunar window is neutral for this task; agronomic timing and field conditions remain primary.";
+    : signCaution
+      ? "caution"
+      : "neutral";
 
   return {
     taskId: task.id,
-    title: task.title,
+    title: displayTitle(task),
     dueDate: task.dueDate ?? null,
     family,
     fit,
-    reason,
+    reason: displayContext(task, family),
   };
 }
