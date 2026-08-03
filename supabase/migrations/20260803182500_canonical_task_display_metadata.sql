@@ -64,15 +64,20 @@ before insert or update of metadata on atlas.tasks
 for each row
 execute function atlas.normalize_task_display_metadata_trigger_v1();
 
--- Normalize the existing task record without changing operational state.
+-- Existing checklist-child rows predate the downstream-workflow guard and are
+-- deliberately untouched. Canonical top-level work is normalized in place.
 update atlas.tasks
 set metadata = atlas.normalize_task_display_metadata_v1(metadata),
     updated_at = updated_at
-where metadata ? 'display_action'
-   or metadata ? 'display_subject'
-   or metadata ? 'work_category_label'
-   or metadata ? 'venue_room_label'
-   or metadata ? 'location_label';
+where parent_task_id is null
+  and (
+    metadata ? 'display_action'
+    or metadata ? 'display_subject'
+    or metadata ? 'work_category_label'
+    or metadata ? 'venue_room_label'
+    or metadata ? 'location_label'
+  )
+  and metadata is distinct from atlas.normalize_task_display_metadata_v1(metadata);
 
 -- Remaining trim work spans rooms rather than one room object. Its truthful
 -- operational container is the existing Farmhouse Interior work zone.
@@ -83,7 +88,8 @@ set zone_id = z.id,
       || jsonb_build_object('display_location', z.label)
     )
 from atlas.zones z
-where z.farm_id = t.farm_id
+where t.parent_task_id is null
+  and z.farm_id = t.farm_id
   and z.stable_key = 'farmhouse_interior'
   and coalesce(t.metadata ->> 'work_category_key', '') = 'trim_finish'
   and coalesce(t.metadata ->> 'venue_room_key', '') = '';
