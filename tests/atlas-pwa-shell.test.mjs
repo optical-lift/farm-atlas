@@ -112,6 +112,16 @@ test("Bell badge truth reaches the installed app without becoming a second task 
   assert.doesNotMatch(build, /total open tasks.*setAppBadge/i);
 });
 
+test("the installed Bell badge refreshes whenever Atlas resumes or regains connectivity", () => {
+  assert.match(bellCover, /addEventListener\("focus", refreshNow\)/);
+  assert.match(bellCover, /addEventListener\("pageshow", refreshNow\)/);
+  assert.match(bellCover, /addEventListener\("online", refreshNow\)/);
+  assert.match(bellCover, /addEventListener\("visibilitychange", refreshWhenVisible\)/);
+  assert.match(bellCover, /addEventListener\("controllerchange", refreshNow\)/);
+  assert.match(bellCover, /setInterval\(refreshWhenVisible, 60_000\)/);
+  assert.match(bellCover, /requestId !== requestSequence/);
+});
+
 test("offline fallback is an Atlas shell and does not claim unsynced farm truth", () => {
   assert.match(offlinePage, /Atlas is still here/);
   assert.match(offlinePage, /Return to a Home, Work, Bell, Zone Registry, or Project view you opened/);

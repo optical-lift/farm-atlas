@@ -33,16 +33,50 @@ export default function AtlasBellCover() {
 
   useEffect(() => {
     let active = true;
-    void fetchAtlasBell(10)
-      .then((result) => {
-        if (!active) return;
+    let requestSequence = 0;
+
+    async function refreshBell(expandOnSuccess = false) {
+      const requestId = ++requestSequence;
+      try {
+        const result = await fetchAtlasBell(10);
+        if (!active || requestId !== requestSequence) return;
         setBell(result);
-        setExpanded(result.badgeCount > 0 && result.whileAwayCount > 0);
-        void setAtlasAppBadge(result.badgeCount);
-      })
-      .catch(() => undefined);
+        if (expandOnSuccess) {
+          setExpanded(result.badgeCount > 0 && result.whileAwayCount > 0);
+        }
+        await setAtlasAppBadge(result.badgeCount);
+      } catch {
+        // Keep the last server-authoritative Bell visible until the next refresh succeeds.
+      }
+    }
+
+    function refreshWhenVisible() {
+      if (document.visibilityState === "visible") {
+        void refreshBell(false);
+      }
+    }
+
+    function refreshNow() {
+      void refreshBell(false);
+    }
+
+    void refreshBell(true);
+    window.addEventListener("focus", refreshNow);
+    window.addEventListener("pageshow", refreshNow);
+    window.addEventListener("online", refreshNow);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    navigator.serviceWorker?.addEventListener("controllerchange", refreshNow);
+    const refreshTimer = window.setInterval(refreshWhenVisible, 60_000);
+
     return () => {
       active = false;
+      requestSequence += 1;
+      window.removeEventListener("focus", refreshNow);
+      window.removeEventListener("pageshow", refreshNow);
+      window.removeEventListener("online", refreshNow);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      navigator.serviceWorker?.removeEventListener("controllerchange", refreshNow);
+      window.clearInterval(refreshTimer);
     };
   }, [pathname]);
 

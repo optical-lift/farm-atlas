@@ -13,6 +13,7 @@ const cover = read("components/atlas/home/AtlasBellCover.tsx");
 const styles = read("app/bell.css");
 const migration = read("supabase/migrations/20260731231500_atlas_quiet_routine_bell_results_v1.sql");
 const followThroughMigration = read("supabase/migrations/20260801004500_atlas_employee_bell_follow_through_v1.sql");
+const currentObligationMigration = read("supabase/migrations/20260803234500_bell_current_obligation_truth_v1.sql");
 
 test("Bell list, queue counts, and selected heading share one role-aware contract", () => {
   assert.match(page, /atlasBellItemsForView\(bell\?\.items \?\? \[\], view, bell\?\.effectiveRole\)/);
@@ -94,7 +95,16 @@ test("routine results stay out of management Bell while employee movement is sel
   assert.match(followThroughMigration, /event\.source_event = 'rescheduled'/);
 });
 
+test("Bell badge action truth follows the current rhythm obligation", () => {
+  assert.match(currentObligationMigration, /v_rhythm_state\.current_task_id/);
+  assert.match(currentObligationMigration, /v_rhythm_state\.state not in \('due', 'fallen_out_of_rhythm', 'recovering'\)/);
+  assert.match(currentObligationMigration, /return v_task_status in \('open', 'blocked'\)/);
+  assert.match(currentObligationMigration, /cycle\.lifecycle_status/);
+  assert.match(currentObligationMigration, /not in \('archived', 'cancelled', 'retired', 'superseded'\)/);
+  assert.doesNotMatch(currentObligationMigration, /return true;\s*--.*historical task/s);
+});
+
 test("Bell redesign contains no live farm or member fixtures", () => {
-  const build = `${page}\n${view}\n${action}\n${cover}\n${styles}\n${migration}\n${followThroughMigration}`;
+  const build = `${page}\n${view}\n${action}\n${cover}\n${styles}\n${migration}\n${followThroughMigration}\n${currentObligationMigration}`;
   assert.doesNotMatch(build, /6a503d9f|21436a28|23e98e5e|4cd799e2/i);
 });
