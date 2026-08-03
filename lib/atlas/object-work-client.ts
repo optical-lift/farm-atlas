@@ -55,6 +55,10 @@ export type AtlasObjectWorkItem = {
   title: string;
   instructions: string | null;
   doneDefinition: string;
+  currentTruth: string | null;
+  afterTruth: string | null;
+  currentTruthAppliedAt: string | null;
+  afterTruthAppliedAt: string | null;
   unlockText: string | null;
   effortClass: AtlasObjectWorkEffort;
   effortUnits: number;
@@ -102,8 +106,8 @@ export type AtlasObjectWorkContext = {
 export type CreateAtlasObjectWorkInput = {
   actionKind: AtlasObjectWorkActionKind;
   title: string;
-  instructions?: string;
-  doneDefinition: string;
+  currentTruth: string;
+  afterTruth: string;
   unlockText?: string;
   effortClass: AtlasObjectWorkEffort;
   assignedMembershipId: string;
@@ -112,7 +116,6 @@ export type CreateAtlasObjectWorkInput = {
   dateCommitment: AtlasObjectWorkDateCommitment;
   bringIntoWorkNow: boolean;
   cropCycleIds?: string[];
-  steps?: string[];
 };
 
 type AtlasErrorShape = { error?: string | { message?: string }; details?: string };
@@ -149,7 +152,7 @@ export async function createAtlasObjectWork(objectKey: string, input: CreateAtla
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      "X-Atlas-Intent": "object-work-authoring-v2",
+      "X-Atlas-Intent": "object-work-state-change-v1",
     },
     body: JSON.stringify({
       ...input,
