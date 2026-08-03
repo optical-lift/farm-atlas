@@ -29,9 +29,10 @@ test("Atlas gains a contextual fixed shell without a separate Journal destinatio
   assert.match(layout, /<AtlasContextualAppFrame \/>/);
   assert.match(frame, /Home/);
   assert.match(frame, /Work/);
-  assert.match(frame, /Places/);
   assert.match(frame, /Harvest/);
   assert.match(frame, /More/);
+  assert.doesNotMatch(frame, /Places/);
+  assert.match(morePage, /label:\s*"Zone Registry"/);
   assert.doesNotMatch(frame, />Journal</);
   assert.doesNotMatch(frame, /key:\s*"projects"/);
   assert.match(morePage, /label:\s*"Projects"/);
