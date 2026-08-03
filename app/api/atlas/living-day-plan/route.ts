@@ -114,20 +114,41 @@ export async function GET(request: Request) {
       .filter((card) => !atlasIsDayDenominatorExcluded(card))
       .filter((card) => !atlasIsCarriedDayTask(card, dateIso));
     const flexibleCards = ordinaryDueCards.filter(atlasIsFlexibleDayDeal);
-
-    const { data, error } = await supabase.rpc("prepare_living_day_plan_v1", {
+    const planInput = {
       p_farm_id: farmId,
       p_membership_id: membershipId,
       p_day: dateIso,
       p_candidate_task_ids: ordinaryDueCards.map((card) => card.task_id),
       p_flexible_task_ids: flexibleCards.map((card) => card.task_id),
       p_carryover_task_ids: carriedCards.map((card) => card.task_id),
+    };
+
+    const prepared = await supabase.rpc("prepare_living_day_plan_v1", planInput);
+    if (prepared.error) throw prepared.error;
+    let plan = prepared.data as AtlasLivingDayPlan;
+
+    const reconciliation = await supabase.rpc("repair_late_living_day_snapshot_v1", {
+      p_farm_id: farmId,
+      p_membership_id: membershipId,
+      p_day: dateIso,
     });
-    if (error) throw error;
+    if (reconciliation.error) throw reconciliation.error;
+
+    const repaired = Boolean(
+      reconciliation.data
+        && typeof reconciliation.data === "object"
+        && !Array.isArray(reconciliation.data)
+        && (reconciliation.data as { repaired?: unknown }).repaired === true,
+    );
+    if (repaired) {
+      const refreshed = await supabase.rpc("prepare_living_day_plan_v1", planInput);
+      if (refreshed.error) throw refreshed.error;
+      plan = refreshed.data as AtlasLivingDayPlan;
+    }
 
     return privateJson({
       ok: true,
-      plan: data as AtlasLivingDayPlan,
+      plan,
       operatorMode: operatorContext?.isOperating ?? false,
     });
   } catch (error) {
