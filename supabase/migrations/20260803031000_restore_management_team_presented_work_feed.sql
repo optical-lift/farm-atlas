@@ -84,3 +84,58 @@ $function$;
 
 revoke all on function atlas.home_task_cards_v2(uuid, text, date, date) from public;
 grant execute on function atlas.home_task_cards_v2(uuid, text, date, date) to authenticated;
+
+with actual as (
+  select
+    format('%I.%I(%s)', n.nspname, p.proname, oidvectortypes(p.proargtypes)) as signature,
+    p.prosecdef as security_definer,
+    has_function_privilege('authenticated', p.oid, 'execute') as authenticated_execute,
+    has_function_privilege('service_role', p.oid, 'execute') as service_execute
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'atlas'
+    and p.proname = 'home_task_cards_v2'
+    and oidvectortypes(p.proargtypes) = 'uuid, text, date, date'
+)
+insert into atlas.authenticated_rpc_registry(
+  signature,
+  classification,
+  confidence,
+  review_status,
+  authenticated_execute_expected,
+  security_definer_expected,
+  service_execute_expected,
+  caller_count,
+  policy_reference_count,
+  evidence,
+  registered_at,
+  reviewed_at
+)
+select
+  actual.signature,
+  'policy_or_composition_helper',
+  'verified',
+  'active',
+  actual.authenticated_execute,
+  actual.security_definer,
+  actual.service_execute,
+  0,
+  0,
+  jsonb_build_object(
+    'source', 'management_team_presented_work_feed',
+    'call_site', 'Home and dated Work readers',
+    'authorization', 'self; management receives deduplicated team Presented Work',
+    'reviewed_date', '2026-08-02'
+  ),
+  now(),
+  now()
+from actual
+on conflict (signature) do update
+set classification = excluded.classification,
+    confidence = excluded.confidence,
+    review_status = excluded.review_status,
+    authenticated_execute_expected = excluded.authenticated_execute_expected,
+    security_definer_expected = excluded.security_definer_expected,
+    service_execute_expected = excluded.service_execute_expected,
+    evidence = atlas.authenticated_rpc_registry.evidence || excluded.evidence,
+    reviewed_at = excluded.reviewed_at;
