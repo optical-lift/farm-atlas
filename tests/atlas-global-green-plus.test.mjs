@@ -33,21 +33,29 @@ test("global authoring chooses one canonical place before creating work", () => 
   assert.match(client, /\/api\/atlas\/objects\/\$\{encodeURIComponent\(objectKey\)\}\/work/);
 });
 
-test("real crop cycles, people, dates, windows, effort, commitment, and checklists remain attached", () => {
+test("global task creators define the state change instead of a checklist", () => {
   for (const marker of [
+    "The state change",
+    "Current truth",
+    "Truth after completion",
+    "currentTruth",
+    "afterTruth",
     "Real crop cycles",
     "Assigned to",
     "Farm day",
     "Lockscreen window",
     "Physical size",
-    "Checkable steps",
     "Must happen that day",
     "Can float around that day",
     "Bring into Work now",
-    "doneDefinition",
     "cropCycleIds",
     "dateCommitment",
   ]) assert.match(add, new RegExp(marker));
+  assert.match(add, /currentTruth\.trim\(\) !== afterTruth\.trim\(\)/);
+  assert.doesNotMatch(add, /Checkable steps/);
+  assert.doesNotMatch(add, /addStep/);
+  assert.doesNotMatch(add, /doneDefinition/);
+  assert.doesNotMatch(add, /instructions:/);
   assert.doesNotMatch(add, />Put in Work</);
   assert.doesNotMatch(add, />Hold as planned</);
 });
