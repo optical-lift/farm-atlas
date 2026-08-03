@@ -64,11 +64,11 @@ export default function AtlasZonesPage() {
         <header className="atlas-phone-top atlas-route-top">
           <div className="atlas-phone-brand">
             <span className="atlas-phone-kicker">Atlas</span>
-            <span className="atlas-phone-title">Zones</span>
+            <span className="atlas-phone-title">Zone Registry</span>
           </div>
 
-          <Link className="atlas-soft-badge atlas-link-badge" href="/">
-            Home
+          <Link className="atlas-soft-badge atlas-link-badge" href="/more">
+            More
           </Link>
         </header>
 
@@ -76,7 +76,7 @@ export default function AtlasZonesPage() {
           {loading ? <div className="atlas-route-loading">Loading zones...</div> : null}
           {error ? <div className="atlas-route-error">{error}</div> : null}
 
-          <section className="atlas-zone-landing-grid" aria-label="Atlas zones">
+          <section className="atlas-zone-landing-grid" aria-label="Atlas Zone Registry">
             {zones.map((zone) => {
               const mapRoute = MAP_ROUTES[zone.stable_key];
 
