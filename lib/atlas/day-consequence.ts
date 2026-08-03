@@ -59,6 +59,45 @@ function truthy(value: unknown) {
   return value === true || value === "true" || value === "yes" || value === "1" || value === 1;
 }
 
+function normalized(value: unknown) {
+  return typeof value === "string"
+    ? value.trim().toLowerCase().replaceAll(" ", "_").replaceAll("-", "_")
+    : "";
+}
+
+const GENERIC_ACTIONS = new Set(["", "owner", "marshall", "venue", "work", "manual", "standard"]);
+const NON_EXECUTION_ACTIONS = new Set([
+  "verify",
+  "check",
+  "confirm",
+  "count",
+  "observe",
+  "observation",
+  "scout",
+  "scouting",
+  "walkthrough",
+  "walk_through",
+]);
+const NON_EXECUTION_TASK_TYPES = new Set([
+  "verification",
+  "observation",
+  "germination_check",
+  "readiness_check",
+  "crop_check",
+  "field_check",
+  "inventory_count",
+]);
+
+function canonicalAction(task: AtlasTaskCard) {
+  const action = normalized(task.action_key);
+  if (!GENERIC_ACTIONS.has(action)) return action;
+
+  const workRoute = normalized(metadataValue(task, "work_route"));
+  if (!GENERIC_ACTIONS.has(workRoute)) return workRoute;
+
+  return normalized(metadataValue(task, "display_action"));
+}
+
 export function atlasIsDayTaskDone(task: AtlasTaskCard) {
   return task.status === "done" || task.task_outcomes?.[0]?.outcome === "done";
 }
@@ -75,18 +114,22 @@ export function atlasIsDayDenominatorExcluded(task: AtlasTaskCard) {
     || truthy(metadataValue(task, "unlocked_outside_day_plan"));
 }
 
+/**
+ * Playability is determined by controlled operational fields. A title is prose
+ * and cannot decide whether a task is work, a check, a harvest, or anything else.
+ */
 export function atlasIsDayWorkTask(task: AtlasTaskCard) {
   const child = Boolean(task.parent_task_id)
     || truthy(metadataValue(task, "is_child_task"));
-  const joined = `${task.task_type ?? ""} ${task.title} ${task.unlock_text ?? ""}`.toLowerCase();
   if (task.status === "archived" || task.status === "skipped" || child) return false;
-  if (task.work_class === "crop_cycle" || task.task_type === "crop_cycle") return true;
-  return !(joined.includes("verify")
-    || joined.includes("check")
-    || joined.includes("confirm")
-    || joined.includes("count")
-    || joined.includes("germin")
-    || joined.includes("walk field rows"));
+
+  const workClass = normalized(task.work_class || metadataValue(task, "work_class"));
+  const taskType = normalized(task.task_type);
+  if (workClass === "crop_cycle" || taskType === "crop_cycle") return true;
+
+  const action = canonicalAction(task);
+  return !NON_EXECUTION_ACTIONS.has(action)
+    && !NON_EXECUTION_TASK_TYPES.has(taskType);
 }
 
 export function atlasIsFlexibleDayDeal(task: AtlasTaskCard) {
