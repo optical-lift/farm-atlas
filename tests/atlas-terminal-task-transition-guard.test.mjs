@@ -12,7 +12,7 @@ test("already-completed tasks return a terminal no-op before farm evidence is wr
   assert.match(migration, /'terminalStateNoop', true/);
   assert.match(migration, /'deduplicated', true/);
   const guardPosition = migration.indexOf("p_transition in ('done', 'checklist_done')");
-  const legacyCallPosition = migration.indexOf("record_task_transition_v1_internal_legacy(");
+  const legacyCallPosition = migration.indexOf("return atlas.record_task_transition_v1_internal_legacy(", guardPosition);
   assert.ok(guardPosition >= 0 && legacyCallPosition > guardPosition);
 });
 
