@@ -64,7 +64,7 @@ as $$
 $$;
 
 revoke all on function atlas.work_occurrence_existing_preparation_v1(uuid) from public;
-grant execute on function atlas.work_occurrence_existing_preparation_v1(uuid) to authenticated;
+revoke all on function atlas.work_occurrence_existing_preparation_v1(uuid) from authenticated;
 
 do $$
 declare
