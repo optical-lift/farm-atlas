@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import type { WorkerHandTask } from "@/lib/atlas-data/worker-hand";
 import { getWorkerHand } from "@/lib/atlas-data/worker-hand";
@@ -7,6 +8,21 @@ import WorkerTaskActions from "./WorkerTaskActions";
 import styles from "./work.module.css";
 
 export const dynamic = "force-dynamic";
+
+type WorkerTodayPageProps = {
+  searchParams: Promise<{ inspect?: string }>;
+};
+
+function centralTodayIso(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
 function prettyDate(dateIso: string | null) {
   if (!dateIso) return "No due date";
@@ -71,8 +87,17 @@ function WorkerSection({
   );
 }
 
-export default async function WorkerTodayPage() {
+export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageProps) {
   const access = await requireAtlasRole(["owner", "manager", "farm_hand"]);
+  const params = await searchParams;
+
+  // /work/today is the Farm Hand's compact hand, not the universal Work tab.
+  // Management restored onto this legacy deep route should return to Living Day.
+  // The explicit inspect flag preserves intentional read-only worker inspection.
+  if (access.membership.role !== "farm_hand" && params.inspect !== "1") {
+    redirect(`/day?date=${encodeURIComponent(centralTodayIso())}&view=work_order`);
+  }
+
   const hand = await getWorkerHand(access);
 
   return (
