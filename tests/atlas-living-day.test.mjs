@@ -68,7 +68,7 @@ test("Owner decisions stay bounded to the two FR and EB pilot decisions", () => 
   assert.doesNotMatch(ownerDecisionScope, /due_date <=/);
 });
 
-test("carried failures and goals stay outside the bounded Day denominator", () => {
+test("carried failures and goals stay outside the bounded Day denominator internally", () => {
   assert.match(reader, /state\.state in \('fallen_out_of_rhythm', 'recovering'\)/);
   assert.match(reader, /'excludedFromDenominator', true/);
   assert.match(reader, /'denominator', 'bounded_day_plan_only'/);
@@ -77,6 +77,7 @@ test("carried failures and goals stay outside the bounded Day denominator", () =
   assert.match(reader, /'unlockedTodayExcluded', true/);
   assert.match(day, /data-day-denominator=\{`\$\{finishedProgressTasks\.length\}\/\$\{progressTasks\.length\}`\}/);
   assert.match(day, /completed=\{finishedProgressTasks\.length\} total=\{progressTasks\.length\}/);
+  assert.doesNotMatch(primitives, /denominator/i);
 });
 
 test("the Living Day API remains private membership-scoped and failure-isolated from task loading", () => {
@@ -110,22 +111,23 @@ test("completion echoes remain compact but say what changed", () => {
   assert.match(css, /atlas-day-completion-echo \{/);
 });
 
-test("ghost goals show unmet requirements and only link to existing work", () => {
-  assert.match(primitives, /Ghost goals/);
+test("farm goals show unmet requirements and only link to existing work", () => {
+  assert.match(primitives, /Farm goals/);
   assert.match(primitives, /goal\.requirements\.map/);
-  assert.match(primitives, /Open next existing move/);
-  assert.match(primitives, /No new task is released by this goal/);
+  assert.match(primitives, /Open next move/);
+  assert.match(primitives, /Waiting for the next recorded condition/);
   assert.match(reader, /'playability', 'existing_task_only'/);
   assert.doesNotMatch(sql, /insert into atlas\.tasks/i);
   assert.doesNotMatch(sql, /release_eligible_work_v1/i);
 });
 
-test("Journal dots, unlocked today, and resolved-page summary are present without rebuilding Home", () => {
+test("Journal dots, state changes, and day summary are present without rebuilding Home", () => {
   assert.match(day, /<LivingDayJournal/);
   assert.match(day, /<LivingDayUnlocked/);
   assert.match(day, /<LivingDayCompletionSummary/);
   assert.match(primitives, /What changed today/);
-  assert.match(primitives, /New valid moves/);
+  assert.match(primitives, /Newly available/);
+  assert.match(primitives, /unlocks\.filter\(\(unlock\) => !unlock\.taskId\)/);
   assert.match(primitives, /What the day changed/);
   assert.match(layout, /\.\/living-journal\.css/);
   assert.match(css, /Shared Living Journal primitives/);
