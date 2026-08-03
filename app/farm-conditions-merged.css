@@ -21,6 +21,36 @@
   padding-top: 10px;
 }
 
+/* The lunar area is an operating view, not an explanation of Atlas internals. */
+.atlas-farm-conditions-embedded
+  .atlas-farm-lunar-planner:not(.atlas-farm-rain-stations)
+  .atlas-farm-lunar-precedence,
+.atlas-farm-conditions-embedded
+  .atlas-farm-lunar-planner:not(.atlas-farm-rain-stations)
+  .atlas-farm-condition-source {
+  display: none;
+}
+
+.atlas-farm-conditions-embedded
+  .atlas-farm-lunar-planner:not(.atlas-farm-rain-stations)
+  .atlas-farm-lunar-body > p:first-child {
+  color: #77786f;
+  font-size: 8px;
+  line-height: 1.15;
+  font-weight: 850;
+}
+
+.atlas-farm-conditions-embedded .atlas-farm-lunar-task-list > a {
+  padding-block: 8px;
+}
+
+.atlas-farm-conditions-embedded .atlas-farm-lunar-task-list em {
+  margin-top: 3px;
+  color: #6f7068;
+  font-size: 7.5px;
+  font-weight: 800;
+}
+
 @media (max-width: 640px) {
   [data-atlas-farm-conditions-host] {
     margin-top: 13px;
