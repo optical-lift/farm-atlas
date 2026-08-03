@@ -36,10 +36,10 @@ test("carry-forward display does not corrupt today's completion denominator", ()
 });
 
 test("both ordinary and Owner-switched Home pass through one carry-forward queue", () => {
-  assert.match(page, /const \[baseTaskOverview, farmSeasons\]/);
+  assert.match(page, /const \[baseTaskOverview, farmSeasons, personalDayProgress\]/);
   assert.match(page, /readAtlasSwitchedFarmHandHomeOverview/);
   assert.match(page, /readAtlasOperatorHomeTaskOverview/);
-  assert.match(page, /withAtlasHomeCarryForward\(visibleHome, baseTaskOverview\)/);
+  assert.match(page, /withAtlasHomeCarryForward\(visibleHome, reconciledTaskOverview\)/);
   assert.match(page, /moves: taskOverview\.moves/);
   assert.match(page, /dayOverview=\{taskOverview\.summary\}/);
 });
