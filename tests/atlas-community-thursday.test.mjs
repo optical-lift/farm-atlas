@@ -24,7 +24,8 @@ test("Thursdays at Elm owns a canonical program and dated events", () => {
   assert.match(program, /time '11:30'/);
   assert.match(program, /time '18:30'/);
   assert.match(program, /time '20:30'/);
-  assert.match(program, /thursdays_at_elm_2026_08_06_morning/);
+  assert.match(program, /format\('thursdays_at_elm_%s_%s'/);
+  assert.match(program, /date '2026-08-06'/);
 });
 
 test("Anna setup work follows only first and third Thursday community mornings", () => {
