@@ -31,6 +31,8 @@ function routeGroup(pathname: string) {
 function DockIcon({ kind }: { kind: DockIconKey }) {
   const common = {
     viewBox: "0 0 24 24",
+    width: 22,
+    height: 22,
     fill: "none",
     stroke: "currentColor",
     strokeWidth: 1.9,
@@ -109,7 +111,7 @@ export default function AtlasContextualAppFrame() {
       <GlobalAtlasAdd />
       <HomeGreenPlusBridge />
       <nav className="atlas-context-footer" aria-label="Atlas destinations">
-        <div className="atlas-context-footer__rail">
+        <div className="atlas-context-footer__rail" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
           {items.map((item) => (
             <Link
               key={item.key}
