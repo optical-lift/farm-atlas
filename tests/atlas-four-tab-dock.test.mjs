@@ -40,6 +40,6 @@ test("More now contains the Zone Registry destination", () => {
 test("the former Zones page identifies itself as Zone Registry and returns to More", () => {
   assert.match(zones, /atlas-phone-title">Zone Registry</);
   assert.match(zones, /href="\/more"/);
-  assert.match(zones, />More<\/Link>/);
+  assert.match(zones, />\s*More\s*<\/Link>/);
   assert.match(zones, /aria-label="Atlas Zone Registry"/);
 });
