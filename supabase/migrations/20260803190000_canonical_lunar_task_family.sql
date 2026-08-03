@@ -111,7 +111,9 @@ execute function atlas.normalize_task_lunar_family_trigger_v1();
 
 update atlas.tasks
 set metadata = atlas.normalize_task_lunar_family_v1(action_key, task_type, metadata),
-    updated_at = updated_at;
+    updated_at = updated_at
+where parent_task_id is null
+  and metadata is distinct from atlas.normalize_task_lunar_family_v1(action_key, task_type, metadata);
 
 comment on function atlas.normalize_task_lunar_family_v1(text, text, jsonb) is
   'Persists lunar work family from controlled task fields. Task titles and display subjects are never classification inputs.';
