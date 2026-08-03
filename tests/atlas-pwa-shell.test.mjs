@@ -64,7 +64,7 @@ test("PWA discovery assets remain public before Atlas authentication", () => {
 });
 
 test("the service worker keeps only the offline shell and never caches active Atlas work", () => {
-  assert.match(serviceWorker, /atlas-pwa-shell-v2/);
+  assert.match(serviceWorker, /atlas-pwa-shell-v3/);
   assert.match(serviceWorker, /SHELL_CACHE/);
   assert.match(serviceWorker, /STATIC_CACHE/);
   assert.match(serviceWorker, /request\.mode === "navigate"/);
@@ -114,7 +114,7 @@ test("Bell badge truth reaches the installed app without becoming a second task 
 
 test("offline fallback is an Atlas shell and does not claim unsynced farm truth", () => {
   assert.match(offlinePage, /Atlas is still here/);
-  assert.match(offlinePage, /Return to a Home, Day, Bell, Place, or Project view you opened/);
+  assert.match(offlinePage, /Return to a Home, Work, Bell, Zone Registry, or Project view you opened/);
   assert.match(serviceWorker, /server-authoritative/);
   assert.doesNotMatch(offlinePage, /saved|synced|completed|recorded/i);
 });
