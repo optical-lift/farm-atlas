@@ -5,6 +5,7 @@ import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHomeV2";
 import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
 import { withAtlasHomeCarryForward } from "@/lib/atlas/home-carry-forward";
 import { readAtlasHomeFarmSeasonProfiles } from "@/lib/atlas/home-farm-seasons";
+import { readAtlasPersonalDayProgress } from "@/lib/atlas/home-personal-day-progress";
 import { readAtlasOperatorHomeTaskOverview } from "@/lib/atlas/home-task-overview";
 import {
   effectiveOperatorAccountId,
@@ -91,13 +92,29 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
       && selectedMembershipId,
   );
 
-  const [baseTaskOverview, farmSeasons] = await Promise.all([
+  const [baseTaskOverview, farmSeasons, personalDayProgress] = await Promise.all([
     switchedFarmHand && selectedMembershipId
       ? readAtlasSwitchedFarmHandHomeOverview(visibleHome, selectedMembershipId)
       : readAtlasOperatorHomeTaskOverview(visibleHome),
     readAtlasHomeFarmSeasonProfiles(visibleFarms.map((farm) => farm.farmId)),
+    switchedFarmHand ? Promise.resolve(null) : readAtlasPersonalDayProgress(visibleHome),
   ]);
-  const taskOverview = withAtlasHomeCarryForward(visibleHome, baseTaskOverview);
+  const reconciledTaskOverview = personalDayProgress && baseTaskOverview.summary.personalScope
+    ? {
+        ...baseTaskOverview,
+        summary: {
+          ...baseTaskOverview.summary,
+          plannedTotal: personalDayProgress.plannedTotal,
+          dealtCount: personalDayProgress.dealtCount,
+          openCount: personalDayProgress.openCount,
+          carryForwardCount: Math.max(
+            baseTaskOverview.summary.carryForwardCount,
+            personalDayProgress.carryForwardCount,
+          ),
+        },
+      }
+    : baseTaskOverview;
+  const taskOverview = withAtlasHomeCarryForward(visibleHome, reconciledTaskOverview);
   const renderedViewer = visibleHome.viewer;
   const organizationMembership = organizationMembershipForViewer(renderedViewer);
   const organizationPortal = Boolean(
