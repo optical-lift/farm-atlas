@@ -28,9 +28,9 @@ function dateTimeLabel(value: string | null) {
 function goalStateLabel(goal: AtlasLivingDayGoal) {
   if (goal.state === "realized") return "Realized";
   if (goal.state === "in_production") return "In production";
-  if (goal.state === "nearly_unlocked") return "Nearly unlocked";
+  if (goal.state === "nearly_unlocked") return "Nearly ready";
   if (goal.state === "tracking") return "Waiting on biology";
-  return "Locked";
+  return "Not ready";
 }
 
 export function LivingDayCarried({
@@ -46,24 +46,23 @@ export function LivingDayCarried({
   if (!entries.length) return null;
 
   return (
-    <article className="atlas-journal-section atlas-journal-carried" aria-label="Carried into today">
+    <article className="atlas-journal-section atlas-journal-carried" aria-label="Still active">
       <div className="atlas-journal-section-head">
-        <div><span>Carried into today</span><h3>Unresolved consequences</h3></div>
+        <div><span>Still active</span><h3>Needs resolution</h3></div>
         <b>{entries.length}</b>
       </div>
-      <p>These remain visible across dates and stay outside today’s bounded denominator.</p>
+      <p>These remain active until the underlying condition is resolved.</p>
       <div className="atlas-journal-spine">
         {rhythms.map((entry) => (
           <details className={`atlas-journal-entry atlas-journal-entry-${entry.state}`} key={entry.entryKey}>
             <summary>
               <span className="atlas-journal-dot" aria-hidden="true" />
-              <div><strong>{entry.title}</strong><em>{entry.state === "recovering" ? "Recovering" : "Failed rhythm"}</em></div>
+              <div><strong>{entry.title}</strong><em>{entry.state === "recovering" ? "Recovering" : "Missed rhythm"}</em></div>
               <b aria-hidden="true">⌄</b>
             </summary>
             <div className="atlas-journal-entry-body">
               <p>{entry.detail}</p>
-              {entry.failureAt ? <span>Failed {dateTimeLabel(entry.failureAt)}</span> : null}
-              <span>Physical condition is not inferred from elapsed time.</span>
+              {entry.failureAt ? <span>Missed {dateTimeLabel(entry.failureAt)}</span> : null}
               {entry.currentTask ? <Link href={taskHref(entry.currentTask.taskId, returnTo)}>Open restoration task <span aria-hidden="true">→</span></Link> : null}
             </div>
           </details>
@@ -92,10 +91,10 @@ export function LivingDayGoals({ goals, returnTo }: { goals: AtlasLivingDayGoal[
   return (
     <article className="atlas-journal-section atlas-journal-goals" aria-label="Goals in motion">
       <div className="atlas-journal-section-head">
-        <div><span>Ghost goals</span><h3>Goals in motion</h3></div>
+        <div><span>Farm goals</span><h3>Goals in motion</h3></div>
         <b>{goals.length}</b>
       </div>
-      <p>Visible now, but only existing canonical work is playable.</p>
+      <p>Progress reflects recorded farm work and crop state.</p>
       <div className="atlas-journal-spine">
         {goals.map((goal) => (
           <details className={`atlas-ghost-goal atlas-ghost-goal-${goal.state}`} key={goal.goalKey} data-goal-key={goal.goalKey}>
@@ -122,7 +121,7 @@ export function LivingDayGoals({ goals, returnTo }: { goals: AtlasLivingDayGoal[
               </div>
               {goal.blocker ? <p className="atlas-ghost-blocker">{goal.blocker}</p> : null}
               {goal.window?.start ? <span className="atlas-ghost-window">{goal.window.kind === "germination" ? "Germination" : "Harvest"} window · {goal.window.start}{goal.window.end ? `–${goal.window.end}` : " onward"}</span> : null}
-              {goal.nextMove ? <Link className="atlas-ghost-next-move" href={taskHref(goal.nextMove.taskId, returnTo)}>Open next existing move <span aria-hidden="true">→</span></Link> : <span className="atlas-ghost-waiting">No new task is released by this goal.</span>}
+              {goal.nextMove ? <Link className="atlas-ghost-next-move" href={taskHref(goal.nextMove.taskId, returnTo)}>Open next move <span aria-hidden="true">→</span></Link> : <span className="atlas-ghost-waiting">Waiting for the next recorded condition.</span>}
             </div>
           </details>
         ))}
@@ -150,7 +149,6 @@ export function LivingDayJournal({ events }: { events: AtlasJournalEvent[] }) {
             <div className="atlas-journal-entry-body">
               {event.detail ? <p>{event.detail}</p> : null}
               <span>{dateTimeLabel(event.occurredAt)}</span>
-              <span>Source · {event.provenance.source_table}</span>
             </div>
           </details>
         ))}
@@ -159,19 +157,26 @@ export function LivingDayJournal({ events }: { events: AtlasJournalEvent[] }) {
   );
 }
 
-export function LivingDayUnlocked({ unlocks, returnTo }: { unlocks: AtlasJournalUnlock[]; returnTo: string }) {
-  if (!unlocks.length) return null;
+export function LivingDayUnlocked({ unlocks }: { unlocks: AtlasJournalUnlock[]; returnTo: string }) {
+  // Task-bearing unlocks belong in the ordinary work trail. This section is only
+  // for state changes that have no separate executable task.
+  const stateChanges = unlocks.filter((unlock) => !unlock.taskId);
+  if (!stateChanges.length) return null;
+
   return (
-    <article className="atlas-journal-section atlas-journal-unlocked" aria-label="Unlocked today">
+    <article className="atlas-journal-section atlas-journal-unlocked" aria-label="Newly ready changes today">
       <div className="atlas-journal-section-head">
-        <div><span>Unlocked today</span><h3>New valid moves</h3></div>
-        <b>{unlocks.length}</b>
+        <div><span>Ready now</span><h3>Newly available</h3></div>
+        <b>{stateChanges.length}</b>
       </div>
-      <p>These became valid today and are not added to the bounded denominator automatically.</p>
+      <p>These conditions became ready after work recorded today.</p>
       <div className="atlas-journal-unlock-list">
-        {unlocks.map((unlock) => unlock.taskId
-          ? <Link href={taskHref(unlock.taskId, returnTo)} key={unlock.eventId}><strong>{unlock.title}</strong><span>Open move →</span></Link>
-          : <div key={unlock.eventId}><strong>{unlock.title}</strong><span>{dateTimeLabel(unlock.occurredAt)}</span></div>)}
+        {stateChanges.map((unlock) => (
+          <div key={unlock.eventId}>
+            <strong>{unlock.title}</strong>
+            <span>{dateTimeLabel(unlock.occurredAt)}</span>
+          </div>
+        ))}
       </div>
     </article>
   );
@@ -181,18 +186,18 @@ export function LivingDayCompletionSummary({ summary }: { summary: AtlasLivingDa
   const rows = [
     ["Completed", summary.completed],
     ["Partial", summary.partial],
-    ["Migrated", summary.migrated],
+    ["Moved", summary.migrated],
     ["Blocked", summary.blocked],
     ["Restored", summary.restored],
     ["Advanced", summary.advanced],
-    ["Unlocked", summary.unlocked],
+    ["Newly ready", summary.unlocked],
   ] as const;
   return (
     <article className="atlas-journal-completion-summary" aria-label="Day completion summary">
-      <span>Page resolved</span>
+      <span>Day results</span>
       <h3>What the day changed</h3>
       <div>{rows.filter(([, count]) => count > 0).map(([label, count]) => <p key={label}><strong>{count}</strong><em>{label}</em></p>)}</div>
-      {!rows.some(([, count]) => count > 0) ? <p className="atlas-journal-no-change">No canonical state changes were recorded.</p> : null}
+      {!rows.some(([, count]) => count > 0) ? <p className="atlas-journal-no-change">No changes were recorded today.</p> : null}
     </article>
   );
 }
