@@ -68,6 +68,25 @@ test("Lunar task rows show canonical action, subject, family, and location witho
   assert.match(mergedCss, /display:\s*none/);
 });
 
+test("Lunar work ranks farm pressure and unfinished urgency before lunar preference", () => {
+  const api = read("app/api/atlas/farm-conditions/route.ts");
+  const start = api.indexOf("function compareLunarTaskCandidates");
+  const end = api.indexOf("async function readFarmConditions", start);
+  const sorter = api.slice(start, end);
+
+  assert.match(api, /priority:\s*string \| null/);
+  assert.match(api, /select\("id, title, priority, action_key, task_type, due_date, metadata"\)/);
+  assert.match(sorter, /dynamic_priority_score/);
+  assert.match(sorter, /taskPriorityRank/);
+  assert.match(sorter, /taskConditionRank/);
+  assert.match(sorter, /aOverdue/);
+  assert.ok(sorter.indexOf("dynamic_priority_score") < sorter.indexOf("lunarFitRank"));
+  assert.ok(sorter.indexOf("taskPriorityRank") < sorter.indexOf("lunarFitRank"));
+  assert.ok(sorter.indexOf("taskConditionRank") < sorter.indexOf("lunarFitRank"));
+  assert.doesNotMatch(api, /\.gte\("due_date", todayIso\)/);
+  assert.match(api, /\.limit\(300\)/);
+});
+
 test("Rain-gauge writes cross the reviewed RPC boundary", () => {
   const migration = read("supabase/migrations/20260801041000_atlas_farm_rain_and_lunar_profile_v1.sql");
   const api = read("app/api/atlas/farm-conditions/route.ts");
