@@ -116,8 +116,8 @@ export default function GlobalAtlasAdd() {
   const [loadingObject, setLoadingObject] = useState(false);
   const [actionKind, setActionKind] = useState<AtlasObjectWorkActionKind>("check");
   const [title, setTitle] = useState("");
-  const [instructions, setInstructions] = useState("");
-  const [doneDefinition, setDoneDefinition] = useState("");
+  const [currentTruth, setCurrentTruth] = useState("");
+  const [afterTruth, setAfterTruth] = useState("");
   const [unlockText, setUnlockText] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [dueDate, setDueDate] = useState(centralDate(1));
@@ -126,8 +126,6 @@ export default function GlobalAtlasAdd() {
   const [dateCommitment, setDateCommitment] = useState<AtlasObjectWorkDateCommitment>("hard_date");
   const [bringIntoWorkNow, setBringIntoWorkNow] = useState(false);
   const [selectedCycles, setSelectedCycles] = useState<string[]>([]);
-  const [stepDraft, setStepDraft] = useState("");
-  const [steps, setSteps] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -140,11 +138,14 @@ export default function GlobalAtlasAdd() {
     () => cropCycles.filter((cycle) => cycle.lifecycle_status !== "archived" && cycle.cycle_state !== "superseded"),
     [cropCycles],
   );
+  const hasRealChange = currentTruth.trim() !== afterTruth.trim();
   const canSave = Boolean(
     context?.canAuthor
       && objectKey
       && title.trim()
-      && doneDefinition.trim()
+      && currentTruth.trim()
+      && afterTruth.trim()
+      && hasRealChange
       && assigneeId
       && dueDate,
   );
@@ -242,13 +243,6 @@ export default function GlobalAtlasAdd() {
     setSelectedCycles((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
   }
 
-  function addStep() {
-    const value = stepDraft.trim();
-    if (!value || steps.length >= 20) return;
-    setSteps((current) => [...current, value]);
-    setStepDraft("");
-  }
-
   function resetCard() {
     setZoneKey("");
     setObjectKey("");
@@ -256,8 +250,8 @@ export default function GlobalAtlasAdd() {
     setCropCycles([]);
     setActionKind("check");
     setTitle("");
-    setInstructions("");
-    setDoneDefinition("");
+    setCurrentTruth("");
+    setAfterTruth("");
     setUnlockText("");
     setAssigneeId("");
     setDueDate(centralDate(1));
@@ -266,8 +260,6 @@ export default function GlobalAtlasAdd() {
     setDateCommitment("hard_date");
     setBringIntoWorkNow(false);
     setSelectedCycles([]);
-    setSteps([]);
-    setStepDraft("");
   }
 
   async function save() {
@@ -278,8 +270,8 @@ export default function GlobalAtlasAdd() {
       const result = await createAtlasObjectWork(objectKey, {
         actionKind,
         title: title.trim(),
-        instructions: instructions.trim() || undefined,
-        doneDefinition: doneDefinition.trim(),
+        currentTruth: currentTruth.trim(),
+        afterTruth: afterTruth.trim(),
         unlockText: unlockText.trim() || undefined,
         effortClass,
         assignedMembershipId: assigneeId,
@@ -288,7 +280,6 @@ export default function GlobalAtlasAdd() {
         dateCommitment,
         bringIntoWorkNow,
         cropCycleIds: selectedCycles,
-        steps,
       });
       setMessage(result.taskId
         ? `${selectedAction.label} card is in Work for ${result.workItem.assignee.displayName} on ${prettyDate(result.workItem.dueDate)}.`
@@ -409,10 +400,11 @@ export default function GlobalAtlasAdd() {
               {context?.canAuthor ? (
                 <>
                   <section className={styles.section}>
-                    <header><span>4</span><div><strong>The card</strong><small>Say what to do and what physical state proves it is done.</small></div></header>
+                    <header><span>4</span><div><strong>The state change</strong><small>The person making the card defines what Done will make true.</small></div></header>
                     <label><span>Title</span><input value={title} maxLength={180} onChange={(event) => setTitle(event.target.value)} placeholder={`${selectedAction.label} what?`} /></label>
-                    <label><span>Instruction</span><textarea rows={3} value={instructions} maxLength={3000} onChange={(event) => setInstructions(event.target.value)} placeholder="What should be done, noticed, preserved, or left alone?" /></label>
-                    <label><span>Done means</span><textarea rows={2} value={doneDefinition} maxLength={600} onChange={(event) => setDoneDefinition(event.target.value)} placeholder="Describe what must be physically true afterward." /></label>
+                    <label><span>Current truth</span><textarea rows={3} value={currentTruth} maxLength={600} onChange={(event) => setCurrentTruth(event.target.value)} placeholder={`What is true about ${selectedObject?.label || "this place"} now?`} /></label>
+                    <label><span>Truth after completion</span><textarea rows={3} value={afterTruth} maxLength={600} onChange={(event) => setAfterTruth(event.target.value)} placeholder="What becomes true when the worker taps Done?" /></label>
+                    {currentTruth.trim() && afterTruth.trim() && !hasRealChange ? <p className={styles.error}>Current truth and after truth must describe a real change.</p> : null}
                     <label><span>Unlocks or protects</span><input value={unlockText} maxLength={600} onChange={(event) => setUnlockText(event.target.value)} placeholder="Optional consequence or next move" /></label>
                   </section>
 
@@ -434,13 +426,7 @@ export default function GlobalAtlasAdd() {
                   ) : null}
 
                   <section className={styles.section}>
-                    <header><span>{activeCycles.length ? "7" : "6"}</span><div><strong>Checkable steps</strong><small>Optional small pieces inside the same card.</small></div></header>
-                    <div className={styles.stepEntry}><input value={stepDraft} maxLength={240} onChange={(event) => setStepDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addStep(); } }} placeholder="Add a step" /><button type="button" onClick={addStep}>Add</button></div>
-                    {steps.length ? <ol className={styles.steps}>{steps.map((step, index) => <li key={`${step}:${index}`}><span>{step}</span><button type="button" onClick={() => setSteps((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Remove</button></li>)}</ol> : null}
-                  </section>
-
-                  <section className={styles.section}>
-                    <header><span>{activeCycles.length ? "8" : "7"}</span><div><strong>How firm is this farm day?</strong><small>Atlas remembers every decision. This choice controls commitment and presentation.</small></div></header>
+                    <header><span>{activeCycles.length ? "7" : "6"}</span><div><strong>How firm is this farm day?</strong><small>Atlas remembers every decision. This choice controls commitment and presentation.</small></div></header>
                     <div className={styles.releaseGrid}>
                       <button type="button" data-selected={dateCommitment === "hard_date"} onClick={() => setDateCommitment("hard_date")}><strong>Must happen that day</strong><span>Atlas commits the card, prepares it the evening before, and does not suppress its notification.</span></button>
                       <button type="button" data-selected={dateCommitment === "floating"} onClick={() => setDateCommitment("floating")}><strong>Can float around that day</strong><span>Atlas keeps it in the Work Reservoir and presents it when the person’s day can carry it.</span></button>
