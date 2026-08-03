@@ -32,14 +32,40 @@ test("Farm Conditions uses authoritative astronomy with a transparent fallback",
 test("Farm almanac guidance is task-aware and never outranks farm viability", () => {
   const api = read("app/api/atlas/farm-conditions/route.ts");
   const lunar = read("lib/atlas/farm-lunar-clock.ts");
-  const home = read("app/AtlasFarmConditionsHomePatch.tsx");
 
   assert.match(lunar, /aboveground_planting/);
   assert.match(lunar, /belowground_planting/);
   assert.match(lunar, /maintenance/);
-  assert.match(lunar, /Traditional almanac practice/);
   assert.match(api, /\["crop window", "field readiness", "weather", "lunar preference"\]/);
-  assert.match(home, /Lunar timing advises; it does not move a viable crop window on its own/);
+});
+
+test("Lunar task classification reads controlled fields instead of task-title prose", () => {
+  const lunar = read("lib/atlas/farm-lunar-clock.ts");
+  const start = lunar.indexOf("export function classifyLunarTask");
+  const end = lunar.indexOf("function displayTitle", start);
+  const classifier = lunar.slice(start, end);
+
+  assert.match(classifier, /explicitLunarFamily\(task\)/);
+  assert.match(classifier, /ACTION_FAMILIES\[action\]/);
+  assert.match(classifier, /TASK_TYPE_FAMILIES\[taskType\]/);
+  assert.doesNotMatch(classifier, /task\.title/);
+  assert.doesNotMatch(classifier, /display_subject/);
+  assert.doesNotMatch(classifier, /crop_family/);
+});
+
+test("Lunar task rows show canonical action, subject, family, and location without repeated commentary", () => {
+  const lunar = read("lib/atlas/farm-lunar-clock.ts");
+  const mergedCss = read("app/farm-conditions-merged.css");
+
+  assert.match(lunar, /metadataString\(task\.metadata, "display_action"\)/);
+  assert.match(lunar, /metadataString\(task\.metadata, "display_subject"\)/);
+  assert.match(lunar, /metadataString\(task\.metadata, "display_family"\)/);
+  assert.match(lunar, /metadataString\(task\.metadata, "display_location"\)/);
+  assert.match(lunar, /reason: displayContext\(task, family\)/);
+  assert.doesNotMatch(lunar, /align with this traditional work family/);
+  assert.match(mergedCss, /atlas-farm-lunar-precedence/);
+  assert.match(mergedCss, /atlas-farm-condition-source/);
+  assert.match(mergedCss, /display:\s*none/);
 });
 
 test("Rain-gauge writes cross the reviewed RPC boundary", () => {
