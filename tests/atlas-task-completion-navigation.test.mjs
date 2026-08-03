@@ -26,3 +26,14 @@ test("subtask completion stays in the checklist instead of leaving the parent ta
   assert.equal(leaveCallCount, 1);
   assert.match(transitionClient, /input\.transition === "checklist_done"[\s\S]*rememberChecklistVisualState/);
 });
+
+test("subtasks paint their new state before the request and keep it through React rerenders", () => {
+  const optimisticPaint = transitionClient.indexOf("if (optimisticChecklistState) rememberChecklistVisualState");
+  const request = transitionClient.indexOf("const response = await fetch");
+  assert.ok(optimisticPaint >= 0 && request > optimisticPaint);
+  assert.match(transitionClient, /attributes: true/);
+  assert.match(transitionClient, /attributeFilter: \["class"\]/);
+  assert.match(transitionClient, /characterData: true/);
+  assert.match(transitionClient, /row\.classList\.contains\("is-done"\) !== done/);
+  assert.match(transitionClient, /catch \(error\)[\s\S]*previousChecklistState[\s\S]*forgetChecklistVisualState/);
+});
