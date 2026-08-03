@@ -65,8 +65,8 @@ export async function GET(request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  if (request.headers.get("x-atlas-intent") !== "object-work-authoring-v2") {
-    return atlasApiError(400, "object_work_intent_required", "A valid object-work intent is required.");
+  if (request.headers.get("x-atlas-intent") !== "object-work-state-change-v1") {
+    return atlasApiError(400, "object_work_intent_required", "A valid object-work state-change intent is required.");
   }
   const authorized = await requireAtlasApiAccess({ allowedRoles: ["owner", "manager"] });
   if (!authorized.ok) return authorized.response;
@@ -80,26 +80,31 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const title = text(body.title);
-  const doneDefinition = text(body.doneDefinition);
+  const currentTruth = text(body.currentTruth);
+  const afterTruth = text(body.afterTruth);
   const dueDate = text(body.dueDate);
   const assignedMembershipId = text(body.assignedMembershipId);
   const dateCommitment = text(body.dateCommitment);
   const idempotencyKey = text(body.idempotencyKey);
-  if (!title || !doneDefinition || !validUuid(assignedMembershipId) || !validDate(dueDate) || !idempotencyKey) {
-    return atlasApiError(400, "invalid_object_work", "Title, done definition, assignee, due date, and idempotency key are required.");
+
+  if (!title || !currentTruth || !afterTruth || !validUuid(assignedMembershipId) || !validDate(dueDate) || !idempotencyKey) {
+    return atlasApiError(400, "invalid_object_work", "Title, current truth, truth after completion, assignee, due date, and idempotency key are required.");
+  }
+  if (currentTruth === afterTruth) {
+    return atlasApiError(400, "unchanged_object_truth", "The current truth and truth after completion must describe a real change.");
   }
   if (dateCommitment !== "hard_date" && dateCommitment !== "floating") {
     return atlasApiError(400, "invalid_date_commitment", "Choose whether this must happen that day or may float around that day.");
   }
 
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("create_object_work_v2", {
+  const { data, error } = await supabase.rpc("create_object_work_v3", {
     p_farm_id: authorized.access.membership.farmId,
     p_object_key: objectKey.trim(),
     p_action_kind: text(body.actionKind),
     p_title: title,
-    p_instructions: text(body.instructions) || null,
-    p_done_definition: doneDefinition,
+    p_current_truth: currentTruth,
+    p_after_truth: afterTruth,
     p_unlock_text: text(body.unlockText) || null,
     p_effort_class: text(body.effortClass),
     p_assigned_membership_id: assignedMembershipId,
@@ -108,7 +113,6 @@ export async function POST(request: Request, context: RouteContext) {
     p_date_commitment: dateCommitment,
     p_bring_into_work_now: body.bringIntoWorkNow === true,
     p_crop_cycle_ids: stringList(body.cropCycleIds),
-    p_steps: stringList(body.steps),
     p_idempotency_key: idempotencyKey,
   });
   if (error) return rpcResponse(error as RpcError, "Atlas could not create this work card.");

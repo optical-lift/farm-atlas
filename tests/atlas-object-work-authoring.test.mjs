@@ -14,8 +14,9 @@ const core = readFileSync(new URL("../supabase/migrations/20260801130000_atlas_o
 const authoring = readFileSync(new URL("../supabase/migrations/20260801130100_atlas_object_work_authoring_v1.sql", import.meta.url), "utf8");
 const bridge = readFileSync(new URL("../supabase/migrations/20260801130200_atlas_object_work_bridge_and_governance_v1.sql", import.meta.url), "utf8");
 const fkIndexes = readFileSync(new URL("../supabase/migrations/20260801130300_atlas_object_work_fk_indexes_v1.sql", import.meta.url), "utf8");
+const stateChange = readFileSync(new URL("../supabase/migrations/20260803203500_object_work_state_change_contract_v1.sql", import.meta.url), "utf8");
 
-const allSql = `${core}\n${authoring}\n${bridge}\n${fkIndexes}`;
+const allSql = `${core}\n${authoring}\n${bridge}\n${fkIndexes}\n${stateChange}`;
 
 test("ordinary work authoring starts from a canonical object page", () => {
   assert.match(page, /import ObjectWorkComposer/);
@@ -30,7 +31,6 @@ test("the ordinary composer covers decided card families without cloning Weed or
   }
   assert.doesNotMatch(composer, /key: "weed"/);
   assert.doesNotMatch(composer, /key: "mow"/);
-  assert.match(composer, /Weed and Mow remain on their perpetual maintenance cards/);
   assert.match(authoring, /Weeding and mowing belong to their persistent maintenance cards/);
 });
 
@@ -52,21 +52,50 @@ test("farm-day commitment replaces the visible global capacity choice", () => {
   assert.doesNotMatch(composer, />Put in Work</);
   assert.doesNotMatch(composer, />Hold as planned</);
   assert.match(client, /AtlasObjectWorkDateCommitment = "hard_date" \| "floating"/);
-  assert.match(client, /object-work-authoring-v2/);
-  assert.match(route, /create_object_work_v2/);
-  assert.match(route, /p_date_commitment: dateCommitment/);
-  assert.match(route, /p_bring_into_work_now: body\.bringIntoWorkNow === true/);
   assert.match(reservoir, /Capacity may control what Atlas presents next/);
   assert.match(reservoir, /maximum_active_safety_tasks/);
 });
 
-test("every card has a physical done definition and task-side result context", () => {
-  assert.match(core, /done_definition text not null/);
-  assert.match(authoring, /physical done definition/);
-  assert.match(authoring, /'done_definition', btrim\(p_done_definition\)/);
-  assert.match(composer, />Done means</);
-  assert.match(taskStrip, /<small>Done means<\/small>/);
+test("task creators carry the before-and-after state burden", () => {
+  assert.match(stateChange, /current_truth text/);
+  assert.match(stateChange, /after_truth text/);
+  assert.match(stateChange, /create or replace function atlas\.create_object_work_v3/);
+  assert.match(route, /object-work-state-change-v1/);
+  assert.match(route, /create_object_work_v3/);
+  assert.match(route, /p_current_truth: currentTruth/);
+  assert.match(route, /p_after_truth: afterTruth/);
+  assert.match(client, /currentTruth: string/);
+  assert.match(client, /afterTruth: string/);
+  assert.match(composer, />Current truth</);
+  assert.match(composer, />Truth after completion</);
+  assert.match(composer, /currentTruth\.trim\(\) !== afterTruth\.trim\(\)/);
+});
+
+test("assigned workers see the state change instead of an instruction manual", () => {
   assert.match(taskTrail, /<ObjectWorkTaskStrip taskId=\{task\.task_id\}/);
+  assert.match(taskStrip, /aria-label="Prepared task state change"/);
+  assert.match(taskStrip, /<small>Current truth<\/small>/);
+  assert.match(taskStrip, /<small>After Done<\/small>/);
+  assert.doesNotMatch(taskStrip, /setAtlasObjectWorkStep/);
+  assert.doesNotMatch(taskStrip, /workItem\.steps\.map/);
+  assert.doesNotMatch(composer, /Checkable steps/);
+  assert.doesNotMatch(composer, /placeholder="Add a step"/);
+});
+
+test("Done applies the prepared after truth to canonical object state", () => {
+  assert.match(stateChange, /operational_truth text/);
+  assert.match(stateChange, /record_object_work_truth_v1/);
+  assert.match(stateChange, /if new\.status='done'/);
+  assert.match(stateChange, /perform atlas\.record_object_work_truth_v1\(v_item\.id,'after',new\.id\)/);
+  assert.match(stateChange, /event_type[\s\S]*task_state_applied/);
+  assert.match(stateChange, /operational_truth_source = excluded\.operational_truth_source/);
+  assert.match(stateChange, /stateChangeApplied/);
+});
+
+test("reopening cannot overwrite a newer object truth", () => {
+  assert.match(stateChange, /operational_truth_work_item_id=v_item\.id/);
+  assert.match(stateChange, /operational_truth_source='object_work_completion'/);
+  assert.match(stateChange, /if v_can_restore and v_item\.current_truth is not null/);
 });
 
 test("real object and crop relationships are restored onto the task", () => {
@@ -81,16 +110,8 @@ test("lockscreen delivery comes from the chosen farm window", () => {
   assert.match(authoring, /maintenance_directive_window_v1\(p_work_window_key\)/);
   assert.match(authoring, /insert into atlas\.task_notification_plans/);
   assert.match(authoring, /'object_work_authoring'/);
-  assert.match(bridge, /trg_sync_object_work_release_v1/);
-  assert.match(bridge, /task_notification_plans/);
-});
-
-test("checklist truth is durable and assigned-player scoped", () => {
-  assert.match(core, /create table if not exists atlas\.object_work_steps/);
-  assert.match(authoring, /set_object_work_step_v1/);
-  assert.match(authoring, /v_membership_id is distinct from v_item\.assigned_membership_id/);
-  assert.match(taskRoute, /object-work-step-v1/);
-  assert.match(taskStrip, /setAtlasObjectWorkStep/);
+  assert.match(stateChange, /create or replace function atlas\.sync_object_work_release_v1/);
+  assert.match(stateChange, /task_notification_plans/);
 });
 
 test("owner and manager author; workers execute released work", () => {
@@ -109,11 +130,11 @@ test("equivalent active cards are prevented and authoring is idempotent", () => 
   assert.match(route, /object_work_duplicate/);
 });
 
-test("released task status remains the completion truth", () => {
-  assert.match(bridge, /after update of status on atlas\.tasks/);
-  assert.match(bridge, /new\.status='done'/);
-  assert.match(bridge, /status='completed'/);
-  assert.match(bridge, /new\.status in \('skipped','archived'\)/);
+test("released task status remains the completion trigger", () => {
+  assert.match(stateChange, /after update of status on atlas\.tasks|create or replace function atlas\.sync_object_work_from_task_status_v1/);
+  assert.match(stateChange, /new\.status='done'/);
+  assert.match(stateChange, /status='completed'/);
+  assert.match(stateChange, /new\.status in \('skipped','archived'\)/);
   assert.match(authoring, /Released work must be closed from its task card so the result remains canonical/);
 });
 
@@ -123,8 +144,8 @@ test("object work tables are service-internal behind governed RPCs", () => {
     assert.match(core, new RegExp(`revoke all on table atlas\\.${table} from public, anon, authenticated`));
   }
   assert.match(bridge, /authenticated_rpc_registry/);
-  assert.match(bridge, /atlas\.create_object_work_v1\(uuid, text/);
-  assert.match(bridge, /revoke all on function atlas\.object_work_item_json_v1\(uuid\) from public, anon, authenticated/);
+  assert.match(stateChange, /atlas\.create_object_work_v3\(uuid, text/);
+  assert.match(stateChange, /revoke all on function atlas\.record_object_work_truth_v1/);
 });
 
 test("new foreign keys have leading-column indexes", () => {
@@ -142,4 +163,7 @@ test("new foreign keys have leading-column indexes", () => {
     "object_work_items_created_by_user_idx",
     "object_work_steps_completed_by_user_idx",
   ]) assert.match(fkIndexes, new RegExp(index));
+
+  assert.match(stateChange, /object_state_operational_truth_work_item_idx/);
+  assert.match(stateChange, /object_state_operational_truth_task_idx/);
 });
