@@ -6,6 +6,10 @@ function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalized(value: unknown) {
+  return text(value).toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
+}
+
 function numberValue(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
@@ -24,32 +28,109 @@ function titleCase(value: string) {
   return words(value).replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function taskSearchText(task: AtlasTaskCard) {
-  return `${task.action_key ?? ""} ${task.task_type ?? ""} ${task.work_class ?? ""} ${task.title ?? ""}`.toLowerCase();
+function metadataString(task: AtlasTaskCard, key: string) {
+  return text(task.metadata?.[key]);
 }
 
+const ACTION_FAMILIES: Record<string, string> = {
+  sow: "Sow",
+  sowing: "Sow",
+  seed: "Sow",
+  seeding: "Sow",
+  transplant: "Transplant",
+  transplanting: "Transplant",
+  plant: "Plant",
+  planting: "Plant",
+  weed: "Weed",
+  weeding: "Weed",
+  mow: "Mow",
+  mowing: "Mow",
+  water: "Water",
+  watering: "Water",
+  harvest: "Harvest",
+  postharvest: "Postharvest",
+  propagation: "Propagation",
+  propagate: "Propagation",
+  check: "Check",
+  verify: "Check",
+  inspect: "Check",
+  germination_check: "Germination check",
+  move: "Move",
+  deliver: "Deliver",
+  delivery: "Deliver",
+  repair: "Repair",
+  install: "Install",
+  finish: "Finish",
+  paint: "Paint",
+  stain: "Stain",
+  clean: "Clean",
+  prep: "Prepare",
+  prepare: "Prepare",
+  build: "Build",
+};
+
+const GENERIC_ACTION_KEYS = new Set([
+  "",
+  "owner",
+  "marshall",
+  "venue",
+  "work",
+  "standard",
+  "manual",
+  "required",
+]);
+
+function canonicalActionKey(task: AtlasTaskCard) {
+  const actionKey = normalized(task.action_key);
+  if (actionKey) return actionKey;
+  const workRoute = normalized(task.metadata?.work_route);
+  if (workRoute) return workRoute;
+  return normalized(task.task_type);
+}
+
+function explicitFamily(task: AtlasTaskCard) {
+  return metadataString(task, "display_family")
+    || metadataString(task, "work_category_label");
+}
+
+/**
+ * The day family is presentation of stored operational fields. It must never be
+ * guessed from prose in a task title: "cut trim" is venue finish work, while
+ * "cut sunflowers" may be harvest work, and the title alone cannot decide.
+ */
 export function atlasDayTaskFamily(task: AtlasTaskCard) {
-  const value = taskSearchText(task);
+  const category = explicitFamily(task);
+  if (category) return category;
 
-  if (value.includes("thin")) return "Thin";
-  if (value.includes("weed")) return "Weed";
-  if (value.includes("transplant") || value.includes("plant out") || value.includes("plant_")) return "Transplant";
-  if (value.includes("sow") || value.includes("seed")) return "Sow";
-  if (value.includes("harvest") || value.includes("cut") || value.includes("bundle")) return "Harvest";
-  if (value.includes("mow")) return "Mow";
-  if (value.includes("water") || value.includes("grow_room_care") || value.includes("farm care")) return "Care";
-  if (value.includes("check") || value.includes("inspect") || value.includes("germin")) return "Check";
-  if (value.includes("paint") || value.includes("clean") || value.includes("venue") || value.includes("reset")) return "Venue";
-  if (value.includes("repair") || value.includes("fix")) return "Repair";
-  if (value.includes("call") || value.includes("pickup") || value.includes("pick up") || value.includes("errand") || value.includes("buy")) return "Errand";
-  if (value.includes("deliver") || value.includes("network")) return "Deliver";
+  const actionKey = canonicalActionKey(task);
+  const mappedAction = ACTION_FAMILIES[actionKey];
+  if (mappedAction) return mappedAction;
 
-  return titleCase(task.action_key || task.task_type || "Work");
+  if (GENERIC_ACTION_KEYS.has(actionKey)) {
+    const displayAction = metadataString(task, "display_action");
+    if (displayAction) return displayAction;
+  }
+
+  const workClass = text(task.work_class || task.metadata?.work_class);
+  if (workClass && !GENERIC_ACTION_KEYS.has(normalized(workClass))) return titleCase(workClass);
+
+  const rhythm = metadataString(task, "work_rhythm");
+  if (rhythm && !["owner work", "marshall work", "farm work"].includes(rhythm.toLowerCase())) return rhythm;
+
+  const displayAction = metadataString(task, "display_action");
+  if (displayAction) return displayAction;
+
+  return titleCase(task.task_type || task.action_key || "Work");
 }
 
 export function atlasDayIsCarePulse(task: AtlasTaskCard) {
-  const value = taskSearchText(task);
-  return value.includes("grow_room_care") || value.includes("water") || value.includes("scout") || value.includes("daily care");
+  const action = canonicalActionKey(task);
+  const taskType = normalized(task.task_type);
+  const rhythm = normalized(task.metadata?.work_rhythm);
+
+  return ["water", "watering", "water_check", "grow_room_round", "grow_room_care", "farm_care", "scout"].includes(action)
+    || ["water", "watering", "water_check", "grow_room_care", "farm_care", "scouting"].includes(taskType)
+    || ["grow_room_care", "daily_care", "watering"].includes(rhythm);
 }
 
 export function atlasDayRouteState(task: AtlasTaskCard, currentTaskId: string | null): AtlasDayRouteState {
