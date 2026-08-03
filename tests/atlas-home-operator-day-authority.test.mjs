@@ -12,7 +12,7 @@ test("operator Home day uses the same Presented Work journal as Day", async () =
 
   assert.match(sql, /create or replace function atlas\.home_day_for_membership_v1/i);
   assert.match(sql, /atlas\.journal_day_for_membership_v1\s*\(/i);
-  assert.match(sql, /'presentationContract'/i, "the journal carries the Presented Work contract");
+  assert.match(sql, /'journal',\s*v_journal/i);
   assert.doesNotMatch(
     sql,
     /from\s+atlas\.tasks\s+task[\s\S]*task\.due_date\s*=\s*v_day/i,
