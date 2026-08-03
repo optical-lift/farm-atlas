@@ -175,6 +175,39 @@ function rememberDependencyReleaseFlash(data: AtlasTaskTransitionResponse) {
   window.sessionStorage.setItem(ATLAS_DEPENDENCY_RELEASE_FLASH_KEY, JSON.stringify(flash));
 }
 
+function safeAtlasReturnPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/task")) return null;
+  return value;
+}
+
+function completedTaskReturnPath() {
+  const params = new URLSearchParams(window.location.search);
+  const requested = safeAtlasReturnPath(params.get("returnTo"));
+  if (requested) return requested;
+
+  if (document.referrer) {
+    try {
+      const referrer = new URL(document.referrer);
+      const path = safeAtlasReturnPath(`${referrer.pathname}${referrer.search}${referrer.hash}`);
+      if (referrer.origin === window.location.origin && path) return path;
+    } catch {
+      // Ignore malformed or cross-origin referrers and use the canonical Work return.
+    }
+  }
+
+  return "/";
+}
+
+function leaveCompletedTaskPage() {
+  if (typeof window === "undefined" || window.location.pathname !== "/task") return;
+  const destination = completedTaskReturnPath();
+
+  // A fresh document navigation is intentional. Safari and installed PWAs may
+  // restore the previous feed from the back-forward cache when history.back()
+  // is used, leaving a successfully completed task visible and clickable.
+  window.setTimeout(() => window.location.replace(destination), 0);
+}
+
 export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest): Promise<AtlasTaskTransitionResponse> {
   const response = await fetch("/api/atlas/task-transition", {
     method: "POST",
@@ -200,6 +233,9 @@ export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest)
 
   if (input.transition === "done" || input.transition === "checklist_done") {
     rememberDependencyReleaseFlash(data);
+  }
+  if (input.transition === "done") {
+    leaveCompletedTaskPage();
   }
 
   return data;
