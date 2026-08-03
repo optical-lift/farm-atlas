@@ -52,6 +52,25 @@ const weatherCodeLabels: Record<number, string> = {
   99: "Thunderstorm",
 };
 
+const taskPriorityRank: Record<string, number> = {
+  high: 0,
+  normal: 1,
+  low: 2,
+};
+
+const taskConditionRank: Record<string, number> = {
+  severe: 0,
+  reset: 0,
+  heavy: 1,
+  moderate: 2,
+  medium: 2,
+  light: 3,
+  low: 3,
+  maintained: 4,
+};
+
+const lunarFitRank = { favored: 0, neutral: 1, caution: 2 } as const;
+
 type FarmRow = {
   id: string;
   name: string;
@@ -70,10 +89,16 @@ type RainRow = {
 type TaskRow = {
   id: string;
   title: string;
+  priority: string | null;
   action_key: string | null;
   task_type: string | null;
   due_date: string | null;
   metadata: Record<string, unknown> | null;
+};
+
+type LunarTaskCandidate = {
+  row: TaskRow;
+  hint: NonNullable<ReturnType<typeof lunarTaskHint>>;
 };
 
 type OpenMeteoResponse = {
@@ -400,6 +425,47 @@ function taskInput(row: TaskRow): AtlasLunarTaskInput {
   };
 }
 
+function taskMetadataNumber(row: TaskRow, key: string) {
+  const value = row.metadata?.[key];
+  return typeof value === "number" || typeof value === "string" ? numeric(value) : 0;
+}
+
+function taskMetadataText(row: TaskRow, key: string) {
+  const value = row.metadata?.[key];
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function compareLunarTaskCandidates(
+  a: LunarTaskCandidate,
+  b: LunarTaskCandidate,
+  todayIso: string,
+) {
+  const dynamicPriorityDifference = taskMetadataNumber(b.row, "dynamic_priority_score")
+    - taskMetadataNumber(a.row, "dynamic_priority_score");
+  if (dynamicPriorityDifference !== 0) return dynamicPriorityDifference;
+
+  const priorityDifference = (taskPriorityRank[a.row.priority ?? "normal"] ?? 1)
+    - (taskPriorityRank[b.row.priority ?? "normal"] ?? 1);
+  if (priorityDifference !== 0) return priorityDifference;
+
+  const conditionDifference = (taskConditionRank[taskMetadataText(a.row, "condition")] ?? 3)
+    - (taskConditionRank[taskMetadataText(b.row, "condition")] ?? 3);
+  if (conditionDifference !== 0) return conditionDifference;
+
+  const aOverdue = a.row.due_date && a.row.due_date < todayIso ? 0 : 1;
+  const bOverdue = b.row.due_date && b.row.due_date < todayIso ? 0 : 1;
+  if (aOverdue !== bOverdue) return aOverdue - bOverdue;
+
+  const dueDifference = (a.row.due_date ?? "9999-12-31")
+    .localeCompare(b.row.due_date ?? "9999-12-31");
+  if (dueDifference !== 0) return dueDifference;
+
+  const fitDifference = lunarFitRank[a.hint.fit] - lunarFitRank[b.hint.fit];
+  if (fitDifference !== 0) return fitDifference;
+
+  return a.row.title.localeCompare(b.row.title);
+}
+
 async function readFarmConditions(requestedFarmId: string | null) {
   const session = await getAtlasSession();
   if (!session) return { error: "unauthorized" as const, status: 401 };
@@ -441,13 +507,12 @@ async function readFarmConditions(requestedFarmId: string | null) {
       .limit(60),
     supabase
       .from("tasks")
-      .select("id, title, action_key, task_type, due_date, metadata")
+      .select("id, title, priority, action_key, task_type, due_date, metadata")
       .eq("farm_id", farmId)
       .in("status", ["open", "blocked"])
-      .gte("due_date", todayIso)
       .lte("due_date", dueThrough)
       .order("due_date", { ascending: true })
-      .limit(120),
+      .limit(300),
   ]);
 
   const rainRows = rainResult.error ? [] : (rainResult.data ?? []) as RainRow[];
@@ -455,15 +520,14 @@ async function readFarmConditions(requestedFarmId: string | null) {
   const gauge = gaugeSummary(rainRows, todayIso);
   const guidance = lunarGuidance(moon);
   const taskHints = taskRows
-    .map((row) => lunarTaskHint(taskInput(row), moon))
-    .filter((hint): hint is NonNullable<typeof hint> => Boolean(hint))
-    .sort((a, b) => {
-      const rank = { favored: 0, neutral: 1, caution: 2 };
-      const fitDifference = rank[a.fit] - rank[b.fit];
-      if (fitDifference !== 0) return fitDifference;
-      return (a.dueDate ?? "9999-12-31").localeCompare(b.dueDate ?? "9999-12-31");
+    .map((row): LunarTaskCandidate | null => {
+      const hint = lunarTaskHint(taskInput(row), moon);
+      return hint ? { row, hint } : null;
     })
-    .slice(0, 4);
+    .filter((candidate): candidate is LunarTaskCandidate => candidate !== null)
+    .sort((a, b) => compareLunarTaskCandidates(a, b, todayIso))
+    .slice(0, 4)
+    .map((candidate) => candidate.hint);
 
   const headerLabel = weatherResult?.temperatureF === null || weatherResult?.temperatureF === undefined
     ? `${weatherResult?.condition ?? "Farm conditions"} · ${moon.phase}`
