@@ -1,40 +1,14 @@
 /* Atlas PWA shell. Canonical farm truth remains server-authoritative. */
-const ATLAS_PWA_VERSION = "atlas-pwa-shell-v1";
+const ATLAS_PWA_VERSION = "atlas-pwa-shell-v2";
 const SHELL_CACHE = `${ATLAS_PWA_VERSION}:shell`;
-const PAGE_CACHE = `${ATLAS_PWA_VERSION}:pages`;
-const DATA_CACHE = `${ATLAS_PWA_VERSION}:prepared-data`;
 const STATIC_CACHE = `${ATLAS_PWA_VERSION}:static`;
-const PRIVATE_CACHES = [PAGE_CACHE, DATA_CACHE];
+const PRIVATE_CACHE_SUFFIXES = [":pages", ":prepared-data"];
 
 const SHELL_ASSETS = [
   "/offline",
   "/manifest.webmanifest",
   "/api/pwa/icon?size=192",
   "/api/pwa/icon?size=512",
-];
-
-const PREPARED_DATA_PATHS = [
-  "/api/atlas/bell",
-  "/api/atlas/home-task-cards",
-  "/api/atlas/living-day",
-  "/api/atlas/living-day-plan",
-  "/api/atlas/operator-context",
-  "/api/atlas/task-cards",
-  "/api/atlas/trail-pulse",
-  "/api/atlas/universal-task-cards",
-  "/api/atlas/weather",
-];
-
-const CACHEABLE_PAGE_PREFIXES = [
-  "/",
-  "/bell",
-  "/day",
-  "/journal",
-  "/objects/",
-  "/overview/",
-  "/project/",
-  "/task-focus/",
-  "/zones/",
 ];
 
 self.addEventListener("install", (event) => {
@@ -44,30 +18,30 @@ self.addEventListener("install", (event) => {
       try {
         await cache.add(new Request(asset, { cache: "reload", credentials: "same-origin" }));
       } catch {
-        // One missing optional asset must not prevent the service worker from installing.
+        // One missing optional asset must not prevent the worker from installing.
       }
     }));
     await self.skipWaiting();
   })());
 });
 
+async function clearPrivateCaches() {
+  const keys = await caches.keys();
+  await Promise.all(keys
+    .filter((key) => key.startsWith("atlas-pwa-") && PRIVATE_CACHE_SUFFIXES.some((suffix) => key.endsWith(suffix)))
+    .map((key) => caches.delete(key)));
+}
+
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
-    const keep = new Set([SHELL_CACHE, PAGE_CACHE, DATA_CACHE, STATIC_CACHE]);
+    const keep = new Set([SHELL_CACHE, STATIC_CACHE]);
     const keys = await caches.keys();
-    await Promise.all(keys.filter((key) => key.startsWith("atlas-pwa-") && !keep.has(key)).map((key) => caches.delete(key)));
+    await Promise.all(keys
+      .filter((key) => key.startsWith("atlas-pwa-") && !keep.has(key))
+      .map((key) => caches.delete(key)));
     await self.clients.claim();
   })());
 });
-
-function isCacheablePage(pathname) {
-  if (pathname === "/") return true;
-  return CACHEABLE_PAGE_PREFIXES.some((prefix) => prefix !== "/" && pathname.startsWith(prefix));
-}
-
-function isPreparedData(pathname) {
-  return PREPARED_DATA_PATHS.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-}
 
 function isStaticAsset(url) {
   return url.pathname.startsWith("/_next/static/")
@@ -85,83 +59,21 @@ async function putQuietly(cache, request, response) {
   try {
     await cache.put(request, response);
   } catch {
-    // Vary:* and transient browser cache failures should never break the live request.
+    // Browser cache failures must not break the live request.
   }
-}
-
-async function clearPrivateCaches() {
-  await Promise.all(PRIVATE_CACHES.map((name) => caches.delete(name)));
-}
-
-async function fetchWithTimeout(request, milliseconds) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), milliseconds);
-  try {
-    return await fetch(request, { signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function latestCachedDay(cache) {
-  const keys = await cache.keys();
-  for (let index = keys.length - 1; index >= 0; index -= 1) {
-    const url = new URL(keys[index].url);
-    if (url.pathname === "/day") return cache.match(keys[index]);
-  }
-  return null;
 }
 
 async function navigationResponse(request) {
-  const pageCache = await caches.open(PAGE_CACHE);
   try {
-    const response = await fetchWithTimeout(request, 5500);
+    const response = await fetch(request);
     const finalUrl = new URL(response.url || request.url);
     if (finalUrl.pathname === "/login" || finalUrl.pathname.startsWith("/auth/")) {
       await clearPrivateCaches();
-      return response;
-    }
-    if (responseCanBeCached(response) && isCacheablePage(finalUrl.pathname)) {
-      await putQuietly(pageCache, request, response.clone());
     }
     return response;
   } catch {
-    const exact = await pageCache.match(request);
-    if (exact) return exact;
-
-    const requestUrl = new URL(request.url);
-    if (requestUrl.pathname === "/day") {
-      const day = await latestCachedDay(pageCache);
-      if (day) return day;
-    }
-
-    const home = await pageCache.match("/");
-    if (home) return home;
-
     const shell = await caches.open(SHELL_CACHE);
     return (await shell.match("/offline")) || Response.error();
-  }
-}
-
-async function preparedDataResponse(request) {
-  const cache = await caches.open(DATA_CACHE);
-  try {
-    const response = await fetchWithTimeout(request, 4500);
-    if (response.status === 401 || response.status === 403) {
-      await clearPrivateCaches();
-      return response;
-    }
-    if (responseCanBeCached(response)) await putQuietly(cache, request, response.clone());
-    return response;
-  } catch {
-    return (await cache.match(request)) || new Response(JSON.stringify({
-      offline: true,
-      cached: false,
-      message: "No prepared Atlas record is cached for this view yet.",
-    }), {
-      status: 503,
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-    });
   }
 }
 
@@ -187,14 +99,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (isPreparedData(url.pathname)) {
-    event.respondWith(preparedDataResponse(request));
-    return;
-  }
+  // Active Atlas data is deliberately never intercepted or cached. Home, Day,
+  // task cards, and other work readers must always reflect server truth.
+  if (url.pathname.startsWith("/api/atlas/")) return;
 
-  if (isStaticAsset(url)) {
-    event.respondWith(staticResponse(request));
-  }
+  if (isStaticAsset(url)) event.respondWith(staticResponse(request));
 });
 
 async function setAtlasBadge(value) {
