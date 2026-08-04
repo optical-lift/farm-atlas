@@ -1,8 +1,8 @@
 /* Atlas PWA shell. Canonical farm truth remains server-authoritative. */
 // This byte change refreshes the installed offline document and any open stale client.
 // Bump this version whenever the offline document or global app chrome changes.
-// v5 replaces clients parked on the v4 fallback and installs the role-aware Manager dock.
-const ATLAS_PWA_VERSION = "atlas-pwa-shell-v5";
+// v6 removes Manager task-prefetch pressure and retries a real navigation before fallback.
+const ATLAS_PWA_VERSION = "atlas-pwa-shell-v6";
 const SHELL_CACHE = `${ATLAS_PWA_VERSION}:shell`;
 const STATIC_CACHE = `${ATLAS_PWA_VERSION}:static`;
 const PRIVATE_CACHE_SUFFIXES = [":pages", ":prepared-data"];
@@ -80,17 +80,31 @@ async function putQuietly(cache, request, response) {
   }
 }
 
+async function finishNavigationResponse(response, requestUrl) {
+  const finalUrl = new URL(response.url || requestUrl);
+  if (finalUrl.pathname === "/login" || finalUrl.pathname.startsWith("/auth/")) {
+    await clearPrivateCaches();
+  }
+  return response;
+}
+
 async function navigationResponse(request) {
   try {
-    const response = await fetch(request);
-    const finalUrl = new URL(response.url || request.url);
-    if (finalUrl.pathname === "/login" || finalUrl.pathname.startsWith("/auth/")) {
-      await clearPrivateCaches();
-    }
-    return response;
+    return await finishNavigationResponse(await fetch(request), request.url);
   } catch {
-    const shell = await caches.open(SHELL_CACHE);
-    return (await shell.match("/offline")) || Response.error();
+    try {
+      const retry = new Request(request.url, {
+        method: "GET",
+        headers: request.headers,
+        credentials: "same-origin",
+        cache: "reload",
+        redirect: "follow",
+      });
+      return await finishNavigationResponse(await fetch(retry), request.url);
+    } catch {
+      const shell = await caches.open(SHELL_CACHE);
+      return (await shell.match("/offline")) || Response.error();
+    }
   }
 }
 
