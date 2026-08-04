@@ -48,7 +48,7 @@ test("the four task identities match the owner's requested work clusters", () =>
     assert.ok(clusters.includes(`'${series}'`), `${series} is a distinct recurring series`);
   }
 
-  assert.match(clusters, /maximum_active_instances, 1/);
+  assert.match(clusters, /maximum_active_instances = 1/);
   assert.match(split, /supersededBy','thursday_morning_clusters_v2/);
 });
 
