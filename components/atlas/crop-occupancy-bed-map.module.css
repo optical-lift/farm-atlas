@@ -158,14 +158,27 @@
 }
 
 .notebook .rows {
-  gap: 0.28rem;
+  gap: 0.34rem;
   padding: 0.56rem 0.42rem 0.46rem;
 }
 
 .notebook .row {
+  align-items: center;
   color: #777970;
   font-size: clamp(0.67rem, 2.7vw, 0.75rem);
   font-weight: 720;
+  line-height: 1.18;
+  white-space: normal;
+}
+
+.notebook .row span,
+.notebook .looseRow span {
+  overflow: visible;
+  max-width: min(100%, 16rem);
+  padding-inline: 0.42rem;
+  text-align: center;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
 }
 
 .notebook .row i {
