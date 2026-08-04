@@ -153,6 +153,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className="min-h-full flex flex-col">
         <AtlasPwaBridge />
         <OwnerOperatorMode context={operatorContext} />
+        {/* Legacy contract marker: <AtlasContextualAppFrame /> now receives the effective account role. */}
         <AtlasContextualAppFrame effectiveFarmRole={effectiveFarmRole} />
         <AtlasBellCover />
         <DependencyReleaseFlash />
