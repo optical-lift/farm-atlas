@@ -12,6 +12,7 @@ const reminder = migration("20260803033407_community_thursday_member_reminder_v1
 const bell = migration("20260803033437_bell_history_community_notice_v3.sql");
 const completion = migration("20260803033502_complete_community_thursday_owner_build_task_v1.sql");
 const receiptFix = migration("20260803033639_fix_bell_history_v3_receipt_key.sql");
+const reviewBadge = migration("20260804012000_bell_review_badge_contract_v1.sql");
 const bellRoute = readFileSync(new URL("../app/api/atlas/bell/route.ts", import.meta.url), "utf8");
 
 test("Thursdays at Elm owns a canonical program and dated events", () => {
@@ -45,15 +46,17 @@ test("the August 5 reminder is farm-wide, future-dated, and idempotent", () => {
   assert.match(reminder, /\/day\?date=2026-08-06/);
 });
 
-test("Bell v3 adds community notices for every active membership", () => {
+test("Bell keeps v3 community notices inside the v4 review badge contract", () => {
   assert.match(bell, /create or replace function atlas\.bell_history_v3/i);
   assert.match(bell, /community_event_notice/);
   assert.match(bell, /grant execute[\s\S]*authenticated, service_role/i);
   assert.match(bell, /atlas\.authenticated_rpc_registry/i);
   assert.match(receiptFix, /receipt\.journal_event_id = event\.id/i);
   assert.doesNotMatch(receiptFix, /receipt\.event_id = event\.id/i);
-  assert.match(bellRoute, /supabase\.rpc\("bell_history_v3"/);
-  assert.match(bellRoute, /X-Atlas-Read-Path": "bell-v3"/);
+  assert.match(reviewBadge, /v_base := atlas\.bell_history_v3/);
+  assert.match(reviewBadge, /create or replace function atlas\.bell_history_v4/);
+  assert.match(bellRoute, /supabase\.rpc\("bell_history_v4"/);
+  assert.match(bellRoute, /X-Atlas-Read-Path": "bell-v4"/);
 });
 
 test("the Owner build card closes only after operational proof exists", () => {
