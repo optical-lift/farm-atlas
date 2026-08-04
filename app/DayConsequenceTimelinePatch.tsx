@@ -4,17 +4,13 @@ import { useEffect } from "react";
 
 import {
   atlasDayTaskConsequence,
-  atlasIsDayTaskDone,
   type AtlasDayConsequence,
 } from "@/lib/atlas/day-consequence";
 import type { AtlasLivingDayPlan, AtlasLivingDayPlanResponse } from "@/lib/atlas/day-plan-contract";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
-type PresentationConsequence = AtlasDayConsequence | {
-  kind: "added" | "withheld";
-  kicker: string;
-  detail: string;
-};
+type PresentationConsequence = AtlasDayConsequence;
+type PlanState = "planned" | "carried" | "added" | "withheld" | null;
 
 function centralDateIso(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -60,6 +56,12 @@ function taskEntry(card: HTMLElement) {
   return card.closest<HTMLElement>(".atlas-day-task-entry") ?? card;
 }
 
+function removeConsequenceCopy(card: HTMLElement) {
+  const root = contentRoot(card);
+  root?.querySelector(".atlas-day-consequence-kicker")?.remove();
+  root?.querySelector(".atlas-day-consequence-detail")?.remove();
+}
+
 function removeDecoration(card: HTMLElement) {
   delete card.dataset.atlasDayConsequence;
   delete card.dataset.atlasDayPlanState;
@@ -67,15 +69,13 @@ function removeDecoration(card: HTMLElement) {
   entry.removeAttribute("data-atlas-day-consequence");
   entry.removeAttribute("data-atlas-day-plan-state");
   entry.style.removeProperty("order");
-  const root = contentRoot(card);
-  root?.querySelector(".atlas-day-consequence-kicker")?.remove();
-  root?.querySelector(".atlas-day-consequence-detail")?.remove();
+  removeConsequenceCopy(card);
 }
 
 function decorateCard(
   card: HTMLElement,
   consequence: PresentationConsequence | null,
-  planState: "planned" | "carried" | "added" | "withheld" | null,
+  planState: PlanState,
 ) {
   if (!consequence && !planState) {
     removeDecoration(card);
@@ -92,15 +92,19 @@ function decorateCard(
   else entry.removeAttribute("data-atlas-day-consequence");
   if (planState) entry.dataset.atlasDayPlanState = planState;
   else entry.removeAttribute("data-atlas-day-plan-state");
+  entry.style.removeProperty("order");
+
+  const quietInMixedTimeline = Boolean(
+    consequence?.kind === "overdue"
+      && card.closest(".atlas-day-mixed-timeline"),
+  );
+  if (quietInMixedTimeline || !consequence) {
+    removeConsequenceCopy(card);
+    return;
+  }
 
   const root = contentRoot(card);
   if (!root) return;
-
-  if (!consequence) {
-    root.querySelector(".atlas-day-consequence-kicker")?.remove();
-    root.querySelector(".atlas-day-consequence-detail")?.remove();
-    return;
-  }
 
   let kicker = root.querySelector<HTMLElement>(".atlas-day-consequence-kicker");
   if (!kicker) {
@@ -125,61 +129,23 @@ function planPresentation(
   task: AtlasTaskCard,
   selectedDay: string,
   plan: AtlasLivingDayPlan | null,
-): { consequence: PresentationConsequence | null; state: "planned" | "carried" | "added" | "withheld" | null } {
+): { consequence: PresentationConsequence | null; state: PlanState } {
   const canonical = atlasDayTaskConsequence(task, selectedDay);
   if (!plan) return { consequence: canonical, state: canonical ? "carried" : null };
 
   if (plan.withheldFlexibleTaskIds.includes(task.task_id)) {
-    return {
-      state: "withheld",
-      consequence: {
-        kind: "withheld",
-        kicker: "Held outside today’s hand",
-        detail: "Carryover protected the finite plan · due date unchanged",
-      },
-    };
+    return { state: "withheld", consequence: canonical };
   }
-
   if (plan.addedAfterPlanTaskIds.includes(task.task_id)) {
-    return {
-      state: "added",
-      consequence: {
-        kind: "added",
-        kicker: "Added after morning plan",
-        detail: "Visible today · outside the original denominator",
-      },
-    };
+    return { state: "added", consequence: canonical };
   }
-
   if (plan.carriedTaskIds.includes(task.task_id)) {
     return { state: "carried", consequence: canonical };
   }
-
   if (plan.plannedTaskIds.includes(task.task_id)) {
     return { state: "planned", consequence: canonical };
   }
-
   return { state: canonical ? "carried" : null, consequence: canonical };
-}
-
-function timelineOrder(
-  task: AtlasTaskCard,
-  selectedDay: string,
-  plan: AtlasLivingDayPlan | null,
-  planState: "planned" | "carried" | "added" | "withheld" | null,
-) {
-  const consequence = atlasDayTaskConsequence(task, selectedDay);
-  if (consequence?.kind === "continued") return 100;
-  if (consequence?.kind === "returned") return 200;
-  if (consequence?.kind === "at_risk") return 250;
-  if (planState === "planned") {
-    const index = plan?.plannedTaskIds.indexOf(task.task_id) ?? -1;
-    return 300 + Math.max(0, index);
-  }
-  if (planState === "added") return 700;
-  if (planState === "withheld") return 800;
-  if (atlasIsDayTaskDone(task)) return 900;
-  return 600;
 }
 
 function applyPlanProgress(plan: AtlasLivingDayPlan | null) {
@@ -196,7 +162,7 @@ function applyPlanProgress(plan: AtlasLivingDayPlan | null) {
   const fill = rail?.querySelector<HTMLElement>("span");
   const valueText = plan.denominator
     ? `${plan.resolvedCount} of ${plan.denominator} dealt with`
-    : "No work in the morning plan";
+    : "No work in the day";
   const percent = plan.denominator
     ? Math.max(0, Math.min(100, Math.round((plan.resolvedCount / plan.denominator) * 100)))
     : 0;
@@ -209,40 +175,7 @@ function applyPlanProgress(plan: AtlasLivingDayPlan | null) {
   }
   if (fill && fill.style.width !== `${percent}%`) fill.style.width = `${percent}%`;
 
-  const openLine = command.querySelector<HTMLElement>(".atlas-day-command-date span");
-  if (openLine) openLine.textContent = `${plan.openCount} in morning plan`;
-
-  const meaningful = plan.flexibleReduction > 0 || plan.addedAfterPlanTaskIds.length > 0;
-  let note = command.querySelector<HTMLElement>(".atlas-day-plan-contract-note");
-  if (!meaningful) {
-    note?.remove();
-    return;
-  }
-  if (!note) {
-    note = document.createElement("p");
-    note.className = "atlas-day-plan-contract-note";
-    progress?.insertAdjacentElement("afterend", note);
-  }
-  const parts: string[] = [];
-  if (plan.flexibleReduction > 0) {
-    parts.push(`${plan.carryoverCountAtPreparation} carried ${plan.carryoverCountAtPreparation === 1 ? "item" : "items"} held ${plan.flexibleReduction} flexible ${plan.flexibleReduction === 1 ? "move" : "moves"} outside the hand`);
-  }
-  if (plan.addedAfterPlanTaskIds.length > 0) {
-    parts.push(`${plan.addedAfterPlanTaskIds.length} later ${plan.addedAfterPlanTaskIds.length === 1 ? "addition is" : "additions are"} visible but not counted`);
-  }
-  parts.push("due dates unchanged");
-  note.textContent = parts.join(" · ");
-}
-
-function applyOverdueHeading() {
-  const group = document.querySelector<HTMLElement>(".atlas-day-overdue-group");
-  if (!group) return;
-  const kicker = group.querySelector<HTMLElement>(".atlas-day-overdue-group-head span");
-  const title = group.querySelector<HTMLElement>(".atlas-day-overdue-group-head h3");
-  const copy = group.querySelector<HTMLElement>(":scope > p");
-  if (kicker) kicker.textContent = "Carry forward";
-  if (title) title.textContent = "Fallen out of rhythm";
-  if (copy) copy.textContent = "Still waiting · outside the morning denominator.";
+  command.querySelector(".atlas-day-plan-contract-note")?.remove();
 }
 
 function applyConsequences(
@@ -252,20 +185,13 @@ function applyConsequences(
 ) {
   document.querySelectorAll<HTMLElement>(".atlas-day-task-card").forEach((card) => {
     const taskId = taskIdFromCard(card);
-    if (!taskId) {
-      if (card.closest(".atlas-day-timeline-group")) taskEntry(card).style.order = "300";
-      return;
-    }
+    if (!taskId) return;
     const task = tasks.get(taskId);
     if (!task) return;
     const presentation = planPresentation(task, selectedDay, plan);
     decorateCard(card, presentation.consequence, presentation.state);
-    if (card.closest(".atlas-day-timeline-group")) {
-      taskEntry(card).style.order = String(timelineOrder(task, selectedDay, plan, presentation.state));
-    }
   });
   applyPlanProgress(plan);
-  applyOverdueHeading();
 }
 
 export default function DayConsequenceTimelinePatch() {
