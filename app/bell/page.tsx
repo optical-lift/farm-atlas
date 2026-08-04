@@ -64,20 +64,49 @@ function normalizedView(value: string | null): AtlasBellView {
   return "now";
 }
 
+function locallyReviewedBell(bell: AtlasBell): AtlasBell {
+  const reviewedThrough = Date.parse(bell.preparedAt);
+  return {
+    ...bell,
+    badgeCount: 0,
+    newAttentionCount: 0,
+    items: bell.items.map((item) => (
+      Date.parse(item.occurredAt) <= reviewedThrough
+        ? { ...item, unread: false, whileAway: false }
+        : item
+    )),
+  };
+}
+
 function AtlasBellPageContent() {
   const searchParams = useSearchParams();
   const requestedView = normalizedView(searchParams.get("view"));
   const [bell, setBell] = useState<AtlasBell | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reviewed, setReviewed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
+      setReviewed(false);
       setError(null);
-      const result = await fetchAtlasBell(100);
-      setBell(result);
-      await updateAtlasBell({ action: "visit", seenThrough: result.preparedAt });
+
+      const initial = await fetchAtlasBell(100);
+      await updateAtlasBell({ action: "visit", seenThrough: initial.preparedAt });
+
+      const localReview = locallyReviewedBell(initial);
+      setBell(localReview);
+      setReviewed(true);
+      await setAtlasAppBadge(0);
+
+      try {
+        const current = await fetchAtlasBell(100);
+        setBell(current);
+        await setAtlasAppBadge(current.badgeCount);
+      } catch {
+        // The review was saved. Keep the locally reviewed copy until the next live refresh.
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "The Bell could not be loaded.");
     } finally {
@@ -108,6 +137,12 @@ function AtlasBellPageContent() {
     [bell, items, view],
   );
 
+  const reviewedMessage = reviewed && bell && view === "now" && counts.now > 0
+    ? management
+      ? `Reviewed now. These ${counts.now} current ${counts.now === 1 ? "action remains" : "actions remain"} here until the underlying work or decision is resolved.`
+      : `Reviewed now. These ${counts.now} unfinished ${counts.now === 1 ? "task remains" : "tasks remain"} in Work until finished, moved, blocked, or reassigned.`
+    : null;
+
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
@@ -124,6 +159,7 @@ function AtlasBellPageContent() {
           <section className="atlas-bell-action-summary">
             <span>{summary?.eyebrow ?? "Do now"}</span>
             <h1>{summary?.title ?? "Loading actions"}</h1>
+            {reviewedMessage ? <p className="atlas-bell-reviewed-note">{reviewedMessage}</p> : null}
           </section>
 
           {management ? (
