@@ -52,6 +52,11 @@ export default function AtlasOfflineRecovery() {
 
   useEffect(() => {
     document.body.dataset.atlasOfflineFallback = "true";
+    const hidden = Array.from(document.querySelectorAll<HTMLElement>(".atlas-context-footer, .atlas-bell-cover"));
+    const priorDisplay = hidden.map((element) => element.style.display);
+    hidden.forEach((element) => {
+      element.style.display = "none";
+    });
 
     const initial = window.setTimeout(() => void retry(), 500);
     const interval = window.setInterval(() => {
@@ -69,6 +74,9 @@ export default function AtlasOfflineRecovery() {
 
     return () => {
       delete document.body.dataset.atlasOfflineFallback;
+      hidden.forEach((element, index) => {
+        element.style.display = priorDisplay[index] || "";
+      });
       window.clearTimeout(initial);
       window.clearInterval(interval);
       window.removeEventListener("online", resume);
@@ -85,11 +93,32 @@ export default function AtlasOfflineRecovery() {
       : "Atlas will reopen automatically when the connection returns.";
 
   return (
-    <div className="atlas-pwa-offline-recovery" data-state={state}>
-      <button type="button" onClick={() => void retry()} disabled={state === "checking" || state === "restoring"}>
+    <div
+      className="atlas-pwa-offline-recovery"
+      data-state={state}
+      style={{ display: "grid", gap: 8, marginTop: 15 }}
+    >
+      <button
+        type="button"
+        onClick={() => void retry()}
+        disabled={state === "checking" || state === "restoring"}
+        style={{
+          minHeight: 38,
+          justifySelf: "start",
+          border: "1px solid rgba(87, 81, 127, 0.18)",
+          borderRadius: 999,
+          background: "#ede8fa",
+          color: "#4d486f",
+          padding: "0 14px",
+          fontSize: 10,
+          fontWeight: 900,
+        }}
+      >
         Try again
       </button>
-      <small role="status" aria-live="polite">{message}</small>
+      <small role="status" aria-live="polite" style={{ color: "#71726c", fontSize: 10, fontWeight: 750 }}>
+        {message}
+      </small>
     </div>
   );
 }
