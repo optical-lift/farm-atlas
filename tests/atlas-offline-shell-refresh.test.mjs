@@ -11,8 +11,8 @@ const offline = read("app/offline/page.tsx");
 const frame = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
 
 test("dock and client-version changes invalidate the previously cached offline shell", () => {
-  assert.match(worker, /atlas-pwa-shell-v7/);
-  assert.match(worker, /restores the canonical Work-page shell and compact assignee badges in Manager/);
+  assert.match(worker, /atlas-pwa-shell-v8/);
+  assert.match(worker, /moves installed clients onto the live all-visible-work day counter/);
   assert.match(worker, /Bump this version whenever the offline document or global app chrome changes/);
   assert.match(worker, /cache: "reload"/);
   assert.match(worker, /reloadOpenAtlasClients/);
