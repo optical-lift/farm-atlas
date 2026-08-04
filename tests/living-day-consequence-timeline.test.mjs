@@ -6,14 +6,17 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Living Day renders consequences as timeline states instead of alert cards", () => {
+test("Living Day keeps consequence truth while mixing recovery work into accomplish windows", () => {
+  const page = read("app/day/page.tsx");
   const patch = read("app/DayConsequenceTimelinePatch.tsx");
   const grammar = read("lib/atlas/day-consequence.ts");
-  const css = read("app/day-consequence-timeline.css");
+  const consequenceCss = read("app/day-consequence-timeline.css");
+  const recoveryCss = read("app/day-overdue-quiet.css");
   const layout = read("app/layout.tsx");
 
   assert.match(layout, /DayConsequenceTimelinePatch/);
   assert.match(layout, /day-consequence-timeline\.css/);
+  assert.match(layout, /day-overdue-quiet\.css/);
   assert.match(grammar, /Continuing from/);
   assert.match(grammar, /Returned from Owner/);
   assert.match(grammar, /Fallen out of rhythm/);
@@ -21,13 +24,29 @@ test("Living Day renders consequences as timeline states instead of alert cards"
   assert.match(grammar, /Partly done\$\{partialCount > 1/);
   assert.match(grammar, /last_owner_problem_handoff/);
   assert.match(grammar, /latestOutcome\?\.outcome === "reopened"/);
-  assert.match(patch, /Carry forward/);
-  assert.match(patch, /morning plan/);
-  assert.match(css, /data-atlas-day-consequence="continued"/);
-  assert.match(css, /linear-gradient\(90deg/);
-  assert.match(css, /Carry-forward is another journal lane/);
-  assert.match(css, /background: transparent !important/);
-  assert.doesNotMatch(css, /background: var\(--atlas-purple-deep\)/);
+
+  assert.match(page, /atlas-day-recovery-overview/);
+  assert.match(page, /Fallen out of rhythm/);
+  assert.match(page, /Morning recovery/);
+  assert.match(page, /Afternoon recovery/);
+  assert.match(page, /Evening recovery/);
+  assert.match(page, /atlas-day-mixed-timeline/);
+  assert.match(page, /mixedDaySortValue/);
+  assert.match(page, /isOverdueTask\(task, dateIso\)/);
+  assert.doesNotMatch(page, /atlas-day-overdue-group/);
+
+  assert.match(patch, /quietInMixedTimeline/);
+  assert.match(patch, /removeConsequenceCopy/);
+  assert.doesNotMatch(patch, /Added after morning plan/);
+  assert.doesNotMatch(patch, /timelineOrder/);
+  assert.doesNotMatch(patch, /applyOverdueHeading/);
+
+  assert.match(consequenceCss, /data-atlas-day-consequence="continued"/);
+  assert.match(recoveryCss, /atlas-day-command-header-with-recovery/);
+  assert.match(recoveryCss, /atlas-day-recovery-count/);
+  assert.match(recoveryCss, /atlas-day-window-marker/);
+  assert.match(recoveryCss, /atlas-day-overdue-entry/);
+  assert.match(recoveryCss, /background: transparent !important/);
 });
 
 test("Living Day consequence reader preserves canonical task data", () => {
