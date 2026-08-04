@@ -28,12 +28,13 @@ test("Day progress reads the complete visible day without a DOM patch", () => {
   assert.match(css, /\.blocked/);
 });
 
-test("Day Route keeps the recovery command together, preserves completion echoes, and mixes work by timeframe", () => {
+test("Day Route keeps the overdue command together, preserves completion echoes, and mixes work by timeframe", () => {
   const page = read("app/day/page.tsx");
   const css = read("app/day-route-v1.css");
   const refineCss = read("app/day-route-v1-refine.css");
   const echoCss = read("app/day-timeline-completion-echo.css");
-  const recoveryCss = read("app/day-overdue-quiet.css");
+  const overdueCss = read("app/day-overdue-quiet.css");
+  const patch = read("app/DayConsequenceTimelinePatch.tsx");
   const layout = read("app/layout.tsx");
   const adapter = read("lib/atlas/day-route.ts");
 
@@ -78,8 +79,10 @@ test("Day Route keeps the recovery command together, preserves completion echoes
   assert.match(refineCss, /\.atlas-day-complete-drawer/);
   assert.match(echoCss, /\.atlas-day-completion-echo/);
   assert.match(echoCss, /\.atlas-day-task-node/);
-  assert.match(recoveryCss, /\.atlas-day-recovery-overview/);
-  assert.match(recoveryCss, /\.atlas-day-window-marker/);
+  assert.match(patch, /label\.textContent = "Overdue"/);
+  assert.match(overdueCss, /intentionally inherit the original Day Route styling/);
+  assert.doesNotMatch(overdueCss, /\.atlas-day-recovery-overview\s*\{/);
+  assert.doesNotMatch(overdueCss, /\.atlas-day-window-marker\s*\{/);
 
   assert.doesNotMatch(layout, /DayHeroQuietPatch/);
   assert.match(layout, /day-route-v1\.css/);
