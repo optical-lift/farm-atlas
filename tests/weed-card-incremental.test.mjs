@@ -61,7 +61,7 @@ test("the Weed Card presents state outcomes plus a Clock-governed Move drawer", 
   assert.match(canonical, /isWeedTask/);
   assert.match(canonical, /WeedCardTaskLoader/);
   assert.match(loader, /\/api\/atlas\/weed-card\?taskId=/);
-  assert.match(focus, /instruction="Weed"/);
+  assert.match(focus, /instruction=\{`Weed \$\{card\.objectLabel\}`\}/);
   assert.match(focus, /presentation="weed-sheet"/);
   assert.match(focus, /variant="notebook"/);
   assert.doesNotMatch(focus, /atlas-weather-line/);
