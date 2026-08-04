@@ -8,8 +8,9 @@ function read(path) {
 
 const layout = read("app/layout.tsx");
 const fixes = read("app/app-shell-regression-fixes.css");
-const recovery = read("app/day-overdue-quiet.css");
+const overdue = read("app/day-overdue-quiet.css");
 const day = read("app/day/page.tsx");
+const patch = read("app/DayConsequenceTimelinePatch.tsx");
 
 test("the installed Atlas header stays attached to the viewport without overflow ancestors", () => {
   assert.match(layout, /import "\.\/contextual-app-shell\.css";[\s\S]*import "\.\/app-shell-regression-fixes\.css";/);
@@ -19,14 +20,16 @@ test("the installed Atlas header stays attached to the viewport without overflow
   assert.match(fixes, /top: 0 !important/);
 });
 
-test("the recovery drawer carries the warning while overdue task rows stay readable", () => {
+test("the drawer is called Overdue while its original Day Route styling remains authoritative", () => {
   assert.match(day, /atlas-day-recovery-count/);
   assert.match(day, /atlas-day-recovery-overview/);
   assert.match(day, /atlas-day-overdue-entry/);
-  assert.doesNotMatch(day, /atlas-day-overdue-badge/);
-  assert.match(recovery, /\.atlas-day-mixed-timeline \.atlas-day-overdue-badge/);
-  assert.match(recovery, /\.atlas-day-mixed-timeline \.atlas-day-consequence-kicker/);
-  assert.match(recovery, /display: none !important/);
-  assert.match(recovery, /atlas-day-overdue-task-card[\s\S]*padding: 8px 4px 18px 10px !important/);
-  assert.match(recovery, /background: transparent !important/);
+  assert.match(patch, /function applyOverdueCopy/);
+  assert.match(patch, /label\.textContent = "Overdue"/);
+  assert.match(overdue, /Keep overdue carry-forward readable/);
+  assert.match(overdue, /intentionally inherit the original Day Route styling/);
+  assert.doesNotMatch(overdue, /\.atlas-day-command-header-with-recovery\s*\{/);
+  assert.doesNotMatch(overdue, /\.atlas-day-recovery-overview\s*\{/);
+  assert.doesNotMatch(overdue, /\.atlas-day-window-marker\s*\{/);
+  assert.doesNotMatch(overdue, /\.atlas-day-mixed-timeline\s+\.atlas-day-overdue-task-card\s*\{/);
 });
