@@ -21,9 +21,10 @@ const bellRoute = read("app/api/atlas/bell/route.ts");
 const bellContract = read("lib/atlas/bell-contract.ts");
 const shellCss = read("app/contextual-app-shell.css");
 const migration = read("supabase/migrations/20260730180100_bell_monitoring_baseline_and_obligations_v2.sql");
+const reviewMigration = read("supabase/migrations/20260804012000_bell_review_badge_contract_v1.sql");
 
 const shell = `${layout}\n${page}\n${frame}\n${around}\n${operator}\n${morePage}\n${shellCss}`;
-const bell = `${bellCover}\n${bellPage}\n${bellView}\n${bellAction}\n${bellRoute}\n${bellContract}\n${migration}`;
+const bell = `${bellCover}\n${bellPage}\n${bellView}\n${bellAction}\n${bellRoute}\n${bellContract}\n${migration}\n${reviewMigration}`;
 
 test("Atlas gains a contextual fixed shell without a separate Journal destination", () => {
   assert.match(layout, /<AtlasContextualAppFrame \/>/);
@@ -89,26 +90,28 @@ test("narrow Home date rows prioritize the useful range over repeated labels", (
   assert.match(shellCss, /atlas-home-overview-row-link b[\s\S]*text-overflow: ellipsis/);
 });
 
-test("the floating Bell is global, header-aware, role-aware, and disappears when no action is waiting", () => {
+test("the floating Bell is global, header-aware, role-aware, and disappears when no new attention is waiting", () => {
   assert.match(layout, /<AtlasBellCover \/>/);
   assert.doesNotMatch(page, /AtlasBellCover/);
   assert.match(bellCover, /visibleHeaderBottom/);
   assert.match(bellCover, /bell\.badgeCount <= 0/);
   assert.match(bellCover, /pathname === "\/bell"/);
-  assert.match(bellCover, /actions are waiting/);
-  assert.match(bellCover, /moved tasks need finishing/);
+  assert.match(bellCover, /your attention/);
   assert.match(bellCover, /atlasBellActionTitle\(newest\)/);
-  assert.match(bellCover, /management \? "Do next" : "Follow through"/);
+  assert.match(bellCover, /management \? "New attention" : "New follow-through"/);
+  assert.match(bellCover, /item\.unread/);
 });
 
-test("Bell preserves the v2 monitoring baseline while the API reads the additive v3 wrapper", () => {
+test("Bell preserves the v2 monitoring baseline while the API reads the additive v4 review contract", () => {
   assert.match(migration, /create table if not exists atlas\.bell_monitoring_baselines/);
   assert.match(migration, /bell_event_obligation_key_v2/);
   assert.match(migration, /distinct on \(eligible\.obligation_key\)/);
   assert.match(migration, /item\.occurred_at > v_baseline_at/);
   assert.match(migration, /latest_worthy_event_per_obligation/);
-  assert.match(bellRoute, /bell_history_v3/);
-  assert.match(bellContract, /atlas_bell_v2/);
+  assert.match(bellRoute, /bell_history_v4/);
+  assert.match(bellContract, /atlas_bell_v4/);
+  assert.match(reviewMigration, /unreviewed_attention/);
+  assert.match(reviewMigration, /current_actionable_work/);
 });
 
 test("known gaps remain available to management as older actions without masquerading as employee work", () => {
@@ -140,6 +143,7 @@ test("Bell is a role-aware action lens over Atlas truth rather than a second his
   assert.match(bellView, /"now" \| "next" \| "older"/);
   assert.match(bellContract, /eventTruth: "journal_event_index"/);
   assert.match(bellContract, /receiptTruth: "bell_event_receipts"/);
+  assert.match(bellPage, /Reviewed now\./);
   assert.doesNotMatch(bell, /create table if not exists atlas\.bell_events/);
   assert.doesNotMatch(bellPage, /Acknowledge|Mark reviewed|Movement|Baseline/);
 });
