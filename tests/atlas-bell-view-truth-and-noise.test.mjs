@@ -14,6 +14,7 @@ const styles = read("app/bell.css");
 const migration = read("supabase/migrations/20260731231500_atlas_quiet_routine_bell_results_v1.sql");
 const followThroughMigration = read("supabase/migrations/20260801004500_atlas_employee_bell_follow_through_v1.sql");
 const currentObligationMigration = read("supabase/migrations/20260803234500_bell_current_obligation_truth_v1.sql");
+const reviewBadgeMigration = read("supabase/migrations/20260804012000_bell_review_badge_contract_v1.sql");
 
 test("Bell list, queue counts, and selected heading share one role-aware contract", () => {
   assert.match(page, /atlasBellItemsForView\(bell\?\.items \?\? \[\], view, bell\?\.effectiveRole\)/);
@@ -77,10 +78,12 @@ test("management Bell titles remain verb-led instructions", () => {
   assert.match(action, /return `Start \$\{taskTitle\}`/);
 });
 
-test("Bell cover previews management action or employee follow-through", () => {
+test("Bell cover previews only new management attention or employee follow-through", () => {
   assert.match(cover, /href="\/bell"/);
   assert.match(cover, /atlasBellActionTitle\(newest\)/);
-  assert.match(cover, /management \? "Do next" : "Follow through"/);
+  assert.match(cover, /management \? "New attention" : "New follow-through"/);
+  assert.match(cover, /item\.requiresAction && !item\.baseline && item\.unread/);
+  assert.match(cover, /new .*items need.*attention/);
   assert.match(cover, /atlasBellActionTiming\(newest\)/);
   assert.doesNotMatch(cover, /newest\.title/);
   assert.doesNotMatch(cover, /While you were away/);
@@ -104,7 +107,19 @@ test("Bell badge action truth follows the current rhythm obligation", () => {
   assert.doesNotMatch(currentObligationMigration, /return true;\s*--.*historical task/s);
 });
 
+test("reviewing Bell clears new attention without resolving current work", () => {
+  assert.match(reviewBadgeMigration, /latest\.requires_action and latest\.read_at is null/);
+  assert.match(reviewBadgeMigration, /'newAttentionCount'/);
+  assert.match(reviewBadgeMigration, /'currentActionCount'/);
+  assert.match(reviewBadgeMigration, /insert into atlas\.bell_event_receipts/);
+  assert.match(reviewBadgeMigration, /read_at = coalesce/);
+  assert.match(reviewBadgeMigration, /acknowledged_at/);
+  assert.match(reviewBadgeMigration, /'badgeMeaning', 'unreviewed_attention'/);
+  assert.match(page, /Reviewed now\./);
+  assert.match(page, /remain.*until.*resolved/);
+});
+
 test("Bell redesign contains no live farm or member fixtures", () => {
-  const build = `${page}\n${view}\n${action}\n${cover}\n${styles}\n${migration}\n${followThroughMigration}\n${currentObligationMigration}`;
+  const build = `${page}\n${view}\n${action}\n${cover}\n${styles}\n${migration}\n${followThroughMigration}\n${currentObligationMigration}\n${reviewBadgeMigration}`;
   assert.doesNotMatch(build, /6a503d9f|21436a28|23e98e5e|4cd799e2/i);
 });
