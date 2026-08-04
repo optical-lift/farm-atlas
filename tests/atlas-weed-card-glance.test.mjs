@@ -8,6 +8,7 @@ const focus = read("components/atlas/weed-card-task-focus.tsx");
 const mapCss = read("components/atlas/crop-occupancy-bed-map.module.css");
 const migration = read("supabase/migrations/20260804075000_weed_cards_require_physical_need_and_canonical_titles.sql");
 const rhythmMigration = read("supabase/migrations/20260804075100_weed_rhythm_requires_physical_need.sql");
+const cleanupMigration = read("supabase/migrations/20260804075200_retire_existing_clear_weed_work.sql");
 
 test("the Weed field sheet says the complete canonical action and bed name", () => {
   assert.match(focus, /instruction=\{`Weed \$\{card\.objectLabel\}`\}/);
@@ -56,4 +57,13 @@ test("Field Row 8 is repaired from current Owner-observed physical truth", () =>
   assert.match(migration, /satisfaction_kind,[\s\S]*'full'/);
   assert.match(migration, /care_source_kind = 'observation'/);
   assert.match(migration, /evaluate_rhythm_binding_v1/);
+});
+
+test("already released ordinary Weed work is retired when the card is clear", () => {
+  assert.match(cleanupMigration, /card\.current_condition = 'clear'/);
+  assert.match(cleanupMigration, /directive\.status = 'active'/);
+  assert.match(cleanupMigration, /set_config\('atlas\.reservoir_migration', 'on', true\)/);
+  assert.match(cleanupMigration, /SET status = 'skipped'/);
+  assert.match(cleanupMigration, /current_task_id = null/);
+  assert.match(cleanupMigration, /A clear Weed Card still has ordinary active Weed work/);
 });
