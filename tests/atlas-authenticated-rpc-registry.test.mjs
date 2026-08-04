@@ -6,6 +6,10 @@ const migrationName =
   "20260731211500_atlas_authenticated_rpc_registry_v1.sql";
 const presentedWorkRegistryMigrationName =
   "20260802133000_atlas_presented_work_rpc_registry_v1.sql";
+const thursdayChecklistMigrationName =
+  "20260804070500_thursday_morning_execution_checklist_v1.sql";
+const thursdayChecklistRegistryMigrationName =
+  "20260804070700_thursday_morning_execution_checklist_rpc_registry_v1.sql";
 const migrationPath = new URL(
   `../supabase/migrations/${migrationName}`,
   import.meta.url,
@@ -98,6 +102,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
     "20260802131000_atlas_owner_tomorrow_preflight_v1.sql",
   ]);
   const presentedWorkRegistry = readMigration(presentedWorkRegistryMigrationName);
+  const thursdayChecklistRegistry = readMigration(thursdayChecklistRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -107,13 +112,19 @@ test("future authenticated EXECUTE changes must update the registry", () => {
       );
 
     if (changesAuthenticatedExecute && !/atlas\.authenticated_rpc_registry/i.test(sql)) {
+      const pairedRegistryName = batchedPresentedWorkMigrations.has(name)
+        ? presentedWorkRegistryMigrationName
+        : name === thursdayChecklistMigrationName
+          ? thursdayChecklistRegistryMigrationName
+          : null;
+
       assert.ok(
-        batchedPresentedWorkMigrations.has(name),
+        pairedRegistryName,
         `${name} changes authenticated EXECUTE without updating the registry`,
       );
       assert.ok(
-        name < presentedWorkRegistryMigrationName,
-        `${name} must be followed by the ordered Presented Work registry reconciliation`,
+        name < pairedRegistryName,
+        `${name} must be followed by its ordered RPC registry reconciliation`,
       );
     }
 
@@ -135,6 +146,13 @@ test("future authenticated EXECUTE changes must update the registry", () => {
     "atlas.owner_tomorrow_preflight_v1(uuid, date)",
   ]) {
     assert.ok(presentedWorkRegistry.includes(signature));
+  }
+
+  for (const signature of [
+    "atlas.task_execution_checklist_v1(uuid, uuid)",
+    "atlas.record_task_execution_check_v1(uuid, text, boolean, text, uuid)",
+  ]) {
+    assert.ok(thursdayChecklistRegistry.includes(signature));
   }
 });
 
