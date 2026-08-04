@@ -337,4 +337,31 @@ revoke all on function atlas.owner_capacity_plan_v1(uuid,uuid,date)
 grant execute on function atlas.owner_capacity_plan_v1(uuid,uuid,date)
   to authenticated, service_role;
 
+-- CREATE OR REPLACE preserves the existing signed-in endpoint ACL. Record that
+-- this owner-only reader was re-reviewed, and fail closed if its governed RPC
+-- registry entry is missing or no longer expects authenticated execution.
+update atlas.authenticated_rpc_registry
+set evidence = evidence || jsonb_build_object(
+      'source', 'show_overdue_noncounting_reschedules',
+      'authorization', 'owner farm membership required',
+      'reviewed_date', '2026-08-04'
+    ),
+    reviewed_at = now()
+where signature = 'atlas.owner_capacity_plan_v1(uuid, uuid, date)'
+  and authenticated_execute_expected;
+
+do $verify_registry$
+begin
+  if not exists (
+    select 1
+    from atlas.authenticated_rpc_registry
+    where signature = 'atlas.owner_capacity_plan_v1(uuid, uuid, date)'
+      and authenticated_execute_expected
+      and security_definer_expected
+  ) then
+    raise exception 'owner_capacity_plan_v1 authenticated RPC registry reconciliation is incomplete.';
+  end if;
+end;
+$verify_registry$;
+
 commit;
