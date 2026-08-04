@@ -165,8 +165,8 @@ join atlas.tasks room_task
  and room_task.task_series_key = 'community_thursday_wednesday_rooms'
 join thursday_morning_v1_check_state prior
   on prior.task_id = room_task.id
- and prior.item_key = item.item_key
 where item.task_id = cluster_task.id
+  and prior.item_key = item.item_key
   and cluster_task.task_series_key in (
     'community_thursday_wednesday_outdoor',
     'community_thursday_wednesday_coffee_water',
