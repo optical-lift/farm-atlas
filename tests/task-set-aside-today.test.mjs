@@ -43,36 +43,41 @@ test("set-aside visibility lasts until the actual return date", () => {
   assert.match(migration, /'requestedReturnDate',coalesce\(d\.requested_return_date,d\.returns_on\)/);
 });
 
-test("regular Anna tasks split partial progress from Owner problem handoffs", () => {
+test("regular Anna tasks use the same canonical unfinished and move actions", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
-  const control = read("components/atlas/structured-unfinished-control.tsx");
+  const dominion = read("components/atlas/dominion-assigned-task-detail.tsx");
   const weed = read("components/atlas/weed-card-task-focus.tsx");
   const display = read("lib/atlas/task-display.ts");
+
+  assert.doesNotMatch(canonical, /props\.assignee\.key === "anna"/);
+  assert.doesNotMatch(canonical, /StructuredUnfinishedControl/);
+  assert.match(canonical, /return <DominionAssignedTaskDetail \{\.\.\.props\} \/>/);
+  assert.match(dominion, /"Partly done"/);
+  assert.match(dominion, /"Problem found"/);
+  assert.match(dominion, /Move or close this card/);
+  assert.match(dominion, />Tomorrow</);
+  assert.match(dominion, />Next week</);
+  assert.match(dominion, />Pick a date</);
+  assert.match(dominion, />Changed plan</);
+  assert.match(dominion, />Not relevant</);
+  assert.match(weed, /atlas-task-move-drawer atlas-weed-move-drawer/);
+  assert.match(weed, />\s*Tomorrow\s*</);
+  assert.match(weed, /type="date"/);
+  assert.doesNotMatch(weed, />\s*Do tomorrow\s*</);
+  assert.match(display, /Continued/);
+});
+
+test("problem handoff infrastructure remains governed for any specialized flow that still uses it", () => {
+  const control = read("components/atlas/structured-unfinished-control.tsx");
   const handoffClient = read("lib/atlas/task-problem-handoff-client.ts");
   const handoffRoute = read("app/api/atlas/task-problem-handoff/route.ts");
   const handoffMigration = read("supabase/migrations/20260730012500_task_problem_handoff_v1.sql");
   const ownerActions = read("app/owner/tasks/[taskId]/OwnerTaskActions.tsx");
   const css = read("app/task-structured-unfinished.css");
 
-  assert.match(canonical, /props\.assignee\.key === "anna"/);
-  assert.match(canonical, /StructuredUnfinishedControl/);
-  assert.doesNotMatch(canonical, /TaskSetAsideControl/);
-  assert.match(control, /Partly done/);
-  assert.match(control, /Problem found/);
-  assert.match(control, /Move it to/);
-  assert.match(control, /Tomorrow/);
-  assert.match(control, /Choose date/);
-  assert.match(control, /Partial progress logged/);
-  assert.match(control, /postAtlasTaskSetAsideToday\(task\.task_id, returnDate\)/);
+  assert.match(control, /openAtlasTaskProblemHandoff/);
   assert.match(control, /What is the problem\?/);
   assert.match(control, /<textarea/);
-  assert.match(control, /openAtlasTaskProblemHandoff/);
-  assert.match(control, /leave your schedule until the Owner handles the problem/);
-  assert.doesNotMatch(control, /Weather changed/);
-  assert.doesNotMatch(control, /Need supplies/);
-  assert.doesNotMatch(control, /window\.prompt/);
-  assert.match(control, /route === "mow" \|\| route === "build" \|\| route === "harvest"/);
-  assert.match(control, /route === "seed" \|\| route === "plant" \|\| route === "water"/);
   assert.match(handoffClient, /task-problem-handoff-v1/);
   assert.match(handoffRoute, /worker_open_task_problem_handoff_v1/);
   assert.match(handoffRoute, /owner_resolve_task_problem_handoff_v1/);
@@ -83,11 +88,6 @@ test("regular Anna tasks split partial progress from Owner problem handoffs", ()
   assert.doesNotMatch(handoffMigration, /set due_date\s*=/i);
   assert.match(ownerActions, /Send back to Anna/);
   assert.match(ownerActions, /resolveAtlasTaskProblemHandoff/);
-  assert.match(weed, /atlas-task-move-drawer atlas-weed-move-drawer/);
-  assert.match(weed, />\s*Tomorrow\s*</);
-  assert.match(weed, /type="date"/);
-  assert.doesNotMatch(weed, />\s*Do tomorrow\s*</);
-  assert.match(display, /Continued/);
   assert.match(css, /\.atlas-structured-unfinished-problem textarea/);
 });
 
