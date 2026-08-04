@@ -92,7 +92,7 @@ test("the Living Day API remains private membership-scoped and failure-isolated 
 });
 
 test("task rows expand inline while the separate completion dot keeps its action", () => {
-  assert.match(day, /<details className=\{`\$\{className\} atlas-journal-task-row`\}/);
+  assert.match(day, /<details id=\{onNodePress \? undefined : taskAnchorId\(task\)\} className=\{`\$\{className\} atlas-journal-task-row`\}/);
   assert.match(day, /<dl>/);
   assert.match(day, /<dt>Place<\/dt>/);
   assert.match(day, /<dt>Time<\/dt>/);
@@ -100,6 +100,7 @@ test("task rows expand inline while the separate completion dot keeps its action
   assert.match(day, /<dt>Effect<\/dt>/);
   assert.match(day, /className=\{`atlas-day-task-node/);
   assert.match(day, /onClick=\{\(\) => onNodePress\(task\)\}/);
+  assert.match(day, /atlas-day-mixed-timeline/);
   assert.match(css, /Tapping the row opens context/);
 });
 
