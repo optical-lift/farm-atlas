@@ -10,7 +10,6 @@ import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasTaskDisplay } from "@/lib/atlas/task-display";
 import { atlasWorkOrderLabel } from "@/lib/atlas/work-order";
 import { createAtlasServerClient } from "@/lib/supabase/server";
-import styles from "./farm-day.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +48,7 @@ function prettyDate(dateIso: string) {
   const date = new Date(`${dateIso}T12:00:00`);
   return date.toLocaleDateString("en-US", {
     weekday: "long",
-    month: "long",
+    month: "short",
     day: "numeric",
   });
 }
@@ -86,10 +85,6 @@ function taskSort(left: AtlasTaskCard, right: AtlasTaskCard) {
     || left.title.localeCompare(right.title);
 }
 
-function AssigneeTag({ executor }: { executor: Executor }) {
-  return <span className={styles.assigneeTag} data-assignee-key={executor.key}>{executor.label}</span>;
-}
-
 function ManagerTimelineTask({
   task,
   currentTaskId,
@@ -109,19 +104,18 @@ function ManagerTimelineTask({
 
   return (
     <div
-      className={`atlas-day-task-entry ${routeClass} ${styles.entry}`}
+      className={`atlas-day-task-entry ${routeClass}`}
       data-atlas-assignee-key={executor.key}
       data-status={task.status}
     >
       <span className="atlas-day-task-node" aria-hidden="true"><span /></span>
       <details className={`atlas-day-task-card atlas-journal-task-row ${routeClass}`} aria-current={routeState === "current" ? "step" : undefined}>
-        <summary className={styles.taskSummary} data-atlas-assignee-key={executor.key}>
+        <summary data-atlas-assignee-label={executor.label} data-atlas-assignee-key={executor.key}>
           <small className="atlas-day-task-family">{routeState === "current" ? `Current · ${family}` : family}</small>
           <strong>{display.title}</strong>
           <span>{atlasWorkOrderLabel(task)} · {taskLocation(task)}</span>
           {display.detail ? <em>{display.detail}</em> : null}
           {cues.length ? <span className="atlas-day-task-cues">{cues.map((cue) => <i key={cue}>{cue}</i>)}</span> : null}
-          <AssigneeTag executor={executor} />
           <b className="atlas-journal-row-caret" aria-hidden="true">⌄</b>
         </summary>
         <div className="atlas-journal-task-detail">
@@ -147,7 +141,8 @@ function ManagerOverdueTask({ task, returnTo }: { task: AtlasTaskCard; returnTo:
   return (
     <Link
       prefetch={false}
-      className={`atlas-day-task-card atlas-day-overdue-task-card ${styles.overdueCard}`}
+      className="atlas-day-task-card atlas-day-overdue-task-card"
+      data-atlas-assignee-label={executor.label}
       data-atlas-assignee-key={executor.key}
       data-status={task.status}
       href={taskUrl}
@@ -156,7 +151,6 @@ function ManagerOverdueTask({ task, returnTo }: { task: AtlasTaskCard; returnTo:
       <strong>{display.title}</strong>
       <span>Due {prettyDate(task.due_date ?? "")}</span>
       {display.detail ? <em>{display.detail}</em> : null}
-      <AssigneeTag executor={executor} />
     </Link>
   );
 }
@@ -167,12 +161,17 @@ function ManagerCompleteTask({ task, returnTo }: { task: AtlasTaskCard; returnTo
   const taskUrl = `/task-focus/${encodeURIComponent(task.task_id)}?returnTo=${encodeURIComponent(returnTo)}`;
 
   return (
-    <div className={`atlas-day-task-entry atlas-day-complete-entry ${styles.entry}`} data-atlas-assignee-key={executor.key}>
+    <div className="atlas-day-task-entry atlas-day-complete-entry" data-atlas-assignee-key={executor.key}>
       <span className="atlas-day-task-node is-complete" aria-hidden="true"><span /></span>
-      <Link prefetch={false} className={`atlas-day-task-card complete ${styles.completeCard}`} href={taskUrl}>
+      <Link
+        prefetch={false}
+        className="atlas-day-task-card complete"
+        data-atlas-assignee-label={executor.label}
+        data-atlas-assignee-key={executor.key}
+        href={taskUrl}
+      >
         <strong>{display.title}</strong>
         <span>Complete</span>
-        <AssigneeTag executor={executor} />
       </Link>
     </div>
   );
@@ -216,98 +215,100 @@ export default async function FarmDayPage({ searchParams }: FarmDayPageProps) {
   const currentExecutor = currentTask ? taskExecutor(currentTask) : null;
 
   return (
-    <main className={styles.page}>
-      <section className={styles.shell} aria-labelledby="farm-day-title">
-        <header className={styles.header}>
-          <div>
-            <p className={styles.eyebrow}>Manager</p>
-            <h1 id="farm-day-title">{access.farmName}</h1>
-            <p>Every person’s assigned work, in the same day feed they use themselves.</p>
-          </div>
-          <Link className={styles.close} href="/" aria-label="Close Manager">×</Link>
+    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
+      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone" aria-labelledby="farm-day-title">
+        <header className="atlas-phone-top atlas-dashboard-top">
+          <Link href="/" className="atlas-phone-brand atlas-task-header-brand">
+            <span className="atlas-phone-kicker">Manager</span>
+            <span className="atlas-phone-title" id="farm-day-title">{access.farmName}</span>
+          </Link>
+          <span className="atlas-weather-line">All assigned work</span>
+          <Link href="/" className="atlas-note-plus" aria-label="Back to today">+</Link>
         </header>
 
-        <section className={`atlas-task-page-section atlas-route-collection atlas-day-browse ${styles.dayBody}`}>
-          <div className="atlas-day-browse-head">
-            <div className="atlas-day-browse-title-row">
-              <span>Farm day</span>
-              <strong>{counts.open} open · {counts.blocked} blocked · {counts.done} done</strong>
-            </div>
-            <p>{counts.total} tasks across {peopleCount} {peopleCount === 1 ? "person" : "people"}</p>
-          </div>
-
-          <article className="atlas-day-command-header">
-            <div className="atlas-day-command-topline">
-              <div className="atlas-day-command-date">
-                <strong>{prettyDate(dateIso)}</strong>
-                <span>{carriedTasks.length ? `${carriedTasks.length} carry forward · ` : ""}{todayTasks.length} today</span>
+        <div className="atlas-task-page-body">
+          <section className="atlas-task-page-section atlas-route-collection atlas-day-browse">
+            <div className="atlas-day-browse-head">
+              <Link href="/" className="atlas-route-back atlas-day-back">← Home</Link>
+              <div className="atlas-day-browse-title-row">
+                <span>Manager</span>
+                <strong>{counts.open} open · {counts.blocked} blocked · {counts.done} done</strong>
               </div>
-              <span className={styles.peoplePill}>{peopleCount} {peopleCount === 1 ? "person" : "people"}</span>
+              <p>{counts.total} tasks across {peopleCount} {peopleCount === 1 ? "person" : "people"}</p>
             </div>
-            <details className="atlas-day-overview-drawer atlas-day-command-overview">
-              <summary>
-                <span className="atlas-day-next-label">Next</span>
-                <div className="atlas-day-next-copy">
-                  <strong>{currentTask ? atlasTaskDisplay(currentTask).title : "The day is clear"}</strong>
-                  <em>{currentTask && currentExecutor ? `${currentExecutor.label} · ${taskLocation(currentTask)}` : "No open assigned work"}</em>
-                </div>
-                <b aria-hidden="true">⌄</b>
-              </summary>
-              <div className="atlas-day-command-overview-body">
-                {currentTask ? (
-                  <Link
-                    prefetch={false}
-                    className="atlas-day-open-current"
-                    href={`/task-focus/${encodeURIComponent(currentTask.task_id)}?returnTo=${encodeURIComponent(returnTo)}`}
-                  >Open current task <span aria-hidden="true">→</span></Link>
-                ) : null}
-                <div className="atlas-day-overview-pills" aria-label="Work by assignee">
-                  {peopleList.map((person) => <span key={person.key}>{person.label} {person.count}</span>)}
-                </div>
-                <div className="atlas-day-route-grid">
-                  <div className="atlas-day-route-box"><strong>Open</strong><span>{counts.open} tasks</span><em>Still active</em></div>
-                  <div className="atlas-day-route-box"><strong>Carry forward</strong><span>{carriedTasks.length} tasks</span><em>Unfinished earlier work</em></div>
-                  <div className="atlas-day-route-box"><strong>Blocked</strong><span>{counts.blocked} tasks</span><em>Needs a decision or dependency</em></div>
-                  <div className="atlas-day-route-box"><strong>Complete</strong><span>{counts.done} tasks</span><em>Recorded for this day</em></div>
+
+            <article className="atlas-day-command-header">
+              <div className="atlas-day-command-topline">
+                <div className="atlas-day-command-date">
+                  <strong>{prettyDate(dateIso)}</strong>
+                  <span>{carriedTasks.length ? `${carriedTasks.length} carry forward · ` : ""}{todayTasks.length} today</span>
                 </div>
               </div>
-            </details>
-          </article>
-
-          {error ? <div className="atlas-task-page-empty error">The farm-wide day could not be loaded.</div> : null}
-          {!error && !tasks.length ? <div className="atlas-day-route-empty">No assigned farm work is due or carried into this day.</div> : null}
-
-          {!error && carriedTasks.length ? (
-            <article className="atlas-day-route-group atlas-day-overdue-group" aria-label="Overdue carry-forward work">
-              <div className="atlas-day-overdue-group-head"><div><span>Carry forward</span><h3>Overdue</h3></div><b>{carriedTasks.length}</b></div>
-              <p>These unfinished tasks remain ahead of this day’s regular work.</p>
-              <div className="atlas-day-work-order-list">{carriedTasks.map((task) => <ManagerOverdueTask key={task.task_id} task={task} returnTo={returnTo} />)}</div>
+              <details className="atlas-day-overview-drawer atlas-day-command-overview">
+                <summary>
+                  <span className="atlas-day-next-label">Next</span>
+                  <div className="atlas-day-next-copy">
+                    <strong>{currentTask ? atlasTaskDisplay(currentTask).title : "The day is clear"}</strong>
+                    <em>{currentTask && currentExecutor ? `${currentExecutor.label} · ${taskLocation(currentTask)}` : "No open assigned work"}</em>
+                  </div>
+                  <b aria-hidden="true">⌄</b>
+                </summary>
+                <div className="atlas-day-command-overview-body">
+                  {currentTask ? (
+                    <Link
+                      prefetch={false}
+                      className="atlas-day-open-current"
+                      href={`/task-focus/${encodeURIComponent(currentTask.task_id)}?returnTo=${encodeURIComponent(returnTo)}`}
+                    >Open current task <span aria-hidden="true">→</span></Link>
+                  ) : null}
+                  <div className="atlas-day-overview-pills" aria-label="Work by assignee">
+                    {peopleList.map((person) => <span key={person.key}>{person.label} {person.count}</span>)}
+                  </div>
+                  <div className="atlas-day-route-grid">
+                    <div className="atlas-day-route-box"><strong>Open</strong><span>{counts.open} tasks</span><em>Still active</em></div>
+                    <div className="atlas-day-route-box"><strong>Carry forward</strong><span>{carriedTasks.length} tasks</span><em>Unfinished earlier work</em></div>
+                    <div className="atlas-day-route-box"><strong>Blocked</strong><span>{counts.blocked} tasks</span><em>Needs a decision or dependency</em></div>
+                    <div className="atlas-day-route-box"><strong>Complete</strong><span>{counts.done} tasks</span><em>Recorded for this day</em></div>
+                  </div>
+                </div>
+              </details>
             </article>
-          ) : null}
 
-          {!error && todayTasks.length ? (
-            <div className="atlas-day-task-groups">
-              <article className="atlas-day-route-group atlas-day-work-order-group atlas-day-timeline-group">
-                <h3>Today</h3>
-                <div className="atlas-day-work-order-list atlas-day-route-spine">
-                  {todayTasks.map((task) => <ManagerTimelineTask key={task.task_id} task={task} currentTaskId={currentTask?.task_id ?? null} returnTo={returnTo} />)}
-                </div>
+            {error ? <div className="atlas-task-page-empty error">The farm-wide day could not be loaded.</div> : null}
+            {!error && !tasks.length ? <div className="atlas-day-route-empty">No assigned farm work is due or carried into this day.</div> : null}
+
+            {!error && carriedTasks.length ? (
+              <article className="atlas-day-route-group atlas-day-overdue-group" aria-label="Overdue carry-forward work">
+                <div className="atlas-day-overdue-group-head"><div><span>Carry forward</span><h3>Overdue</h3></div><b>{carriedTasks.length}</b></div>
+                <p>These unfinished tasks remain ahead of this day’s regular work.</p>
+                <div className="atlas-day-work-order-list">{carriedTasks.map((task) => <ManagerOverdueTask key={task.task_id} task={task} returnTo={returnTo} />)}</div>
               </article>
-            </div>
-          ) : null}
+            ) : null}
 
-          {!error && doneTasks.length ? (
-            <details className="atlas-day-overview-drawer atlas-day-complete-drawer">
-              <summary><span className="atlas-day-complete-label">Complete</span><span className="atlas-day-complete-count">{doneTasks.length} {doneTasks.length === 1 ? "task" : "tasks"}</span><b aria-hidden="true">⌄</b></summary>
-              <div className="atlas-day-complete-body atlas-day-zone-group">{doneTasks.map((task) => <ManagerCompleteTask key={task.task_id} task={task} returnTo={returnTo} />)}</div>
-            </details>
-          ) : null}
+            {!error && todayTasks.length ? (
+              <div className="atlas-day-task-groups">
+                <article className="atlas-day-route-group atlas-day-work-order-group atlas-day-timeline-group">
+                  <h3>Today</h3>
+                  <div className="atlas-day-work-order-list atlas-day-route-spine">
+                    {todayTasks.map((task) => <ManagerTimelineTask key={task.task_id} task={task} currentTaskId={currentTask?.task_id ?? null} returnTo={returnTo} />)}
+                  </div>
+                </article>
+              </div>
+            ) : null}
 
-          <nav className="atlas-day-adjacent-nav" aria-label="Browse adjacent farm days">
-            <Link href={`/manage/day?date=${previousDate}`} aria-label="Open previous farm day"><span aria-hidden="true">←</span><em>Previous</em></Link>
-            <Link href={`/manage/day?date=${nextDate}`} aria-label="Open next farm day"><em>Next</em><span aria-hidden="true">→</span></Link>
-          </nav>
-        </section>
+            {!error && doneTasks.length ? (
+              <details className="atlas-day-overview-drawer atlas-day-complete-drawer">
+                <summary><span className="atlas-day-complete-label">Complete</span><span className="atlas-day-complete-count">{doneTasks.length} {doneTasks.length === 1 ? "task" : "tasks"}</span><b aria-hidden="true">⌄</b></summary>
+                <div className="atlas-day-complete-body atlas-day-zone-group">{doneTasks.map((task) => <ManagerCompleteTask key={task.task_id} task={task} returnTo={returnTo} />)}</div>
+              </details>
+            ) : null}
+
+            <nav className="atlas-day-adjacent-nav" aria-label="Browse adjacent farm days">
+              <Link href={`/manage/day?date=${previousDate}`} aria-label="Open previous farm day"><span aria-hidden="true">←</span><em>Previous</em></Link>
+              <Link href={`/manage/day?date=${nextDate}`} aria-label="Open next farm day"><em>Next</em><span aria-hidden="true">→</span></Link>
+            </nav>
+          </section>
+        </div>
       </section>
     </main>
   );
