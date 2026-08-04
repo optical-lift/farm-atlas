@@ -23,6 +23,7 @@ type WorkAlongsideResponse = {
   ok: boolean;
   farmId?: string;
   viewerMembershipId?: string;
+  viewerRole?: string;
   teammates?: Teammate[];
   windows?: WorkAlongsideWindow[];
   error?: string;
@@ -125,7 +126,8 @@ export default function AtlasWorkAlongsideOverlay() {
   const selectedDate = searchParams.get("date") || localTodayIso();
   const [surface, setSurface] = useState<WorkAlongsideResponse | null>(null);
   const [taskCards, setTaskCards] = useState<TaskCard[]>([]);
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const [morePortalTarget, setMorePortalTarget] = useState<HTMLElement | null>(null);
+  const [dayPortalTarget, setDayPortalTarget] = useState<HTMLElement | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teammateMembershipId, setTeammateMembershipId] = useState("");
@@ -141,25 +143,60 @@ export default function AtlasWorkAlongsideOverlay() {
 
   useEffect(() => {
     if (!isMore) {
-      setPortalTarget(null);
+      setMorePortalTarget(null);
       return;
     }
 
     const existing = document.getElementById("atlas-more-work-alongside-slot");
     if (existing) {
-      setPortalTarget(existing);
+      setMorePortalTarget(existing);
       return;
     }
 
     const observer = new MutationObserver(() => {
       const target = document.getElementById("atlas-more-work-alongside-slot");
       if (!target) return;
-      setPortalTarget(target);
+      setMorePortalTarget(target);
       observer.disconnect();
     });
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, [isMore]);
+
+  useEffect(() => {
+    if (!isDay || searchParams.get("route")) {
+      setDayPortalTarget(null);
+      return;
+    }
+
+    let createdSlot: HTMLElement | null = null;
+    const attach = () => {
+      const existing = document.getElementById("atlas-day-management-lens-slot");
+      if (existing) {
+        setDayPortalTarget(existing);
+        return true;
+      }
+      const command = document.querySelector<HTMLElement>(".atlas-day-command-header");
+      if (!command?.parentElement) return false;
+      const slot = document.createElement("div");
+      slot.id = "atlas-day-management-lens-slot";
+      command.parentElement.insertBefore(slot, command);
+      createdSlot = slot;
+      setDayPortalTarget(slot);
+      return true;
+    };
+
+    if (attach()) return () => createdSlot?.remove();
+    const observer = new MutationObserver(() => {
+      if (!attach()) return;
+      observer.disconnect();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      createdSlot?.remove();
+    };
+  }, [isDay, searchParams]);
 
   useEffect(() => {
     if (!isDay && !isMore) return;
@@ -208,6 +245,7 @@ export default function AtlasWorkAlongsideOverlay() {
   }, [isDay, surface?.ok, surface?.viewerMembershipId, taskCards, teammateByMembership]);
 
   const activeWindows = surface?.windows ?? [];
+  const canManage = surface?.viewerRole === "owner" || surface?.viewerRole === "manager";
 
   async function addWindow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -255,8 +293,18 @@ export default function AtlasWorkAlongsideOverlay() {
     }
   }
 
-  if (isDay) return null;
-  if (!isMore || !portalTarget || !surface?.ok || !surface.viewerMembershipId) return null;
+  if (isDay) {
+    if (!dayPortalTarget || !surface?.ok || !canManage) return null;
+    return createPortal(
+      <nav className="atlas-day-management-lens-tabs" aria-label="Work scope">
+        <span aria-current="page">My work</span>
+        <a href={`/manage/day?date=${encodeURIComponent(selectedDate)}`}>Big picture</a>
+      </nav>,
+      dayPortalTarget,
+    );
+  }
+
+  if (!isMore || !morePortalTarget || !surface?.ok || !surface.viewerMembershipId || !canManage) return null;
 
   return createPortal(
     <section className="atlas-work-alongside-panel atlas-work-alongside-more-card" aria-label="Work alongside settings">
@@ -301,6 +349,6 @@ export default function AtlasWorkAlongsideOverlay() {
         <button type="submit" disabled={saving || !(surface.teammates ?? []).length}>{saving ? "Saving…" : "Add to my Work feed"}</button>
       </form>
     </section>,
-    portalTarget,
+    morePortalTarget,
   );
 }

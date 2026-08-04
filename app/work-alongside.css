@@ -1,6 +1,6 @@
-/* Work-alongside keeps task ownership intact while giving an Owner a temporary
-   shared trail. Only teammate work receives an assignee badge; the Owner's own
-   cards remain visually quiet. */
+/* Work-alongside keeps task ownership intact while giving farm management a
+   temporary shared trail. Only teammate work receives an assignee badge; the
+   signed-in person's own cards remain visually quiet. */
 
 [data-atlas-assignee-label] {
   position: relative !important;
@@ -49,6 +49,39 @@
 .atlas-day-task-entry[data-atlas-assignee-key="anna"] .atlas-day-task-node {
   border-color: #9aa678 !important;
   background: rgba(207, 214, 175, 0.2) !important;
+}
+
+#atlas-day-management-lens-slot {
+  margin: 0 0 10px;
+}
+
+.atlas-day-management-lens-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(85, 90, 134, 0.14);
+  border-radius: 15px;
+  background: rgba(255, 253, 247, 0.82);
+}
+
+.atlas-day-management-lens-tabs span,
+.atlas-day-management-lens-tabs a {
+  display: grid;
+  min-height: 38px;
+  place-items: center;
+  border-radius: 11px;
+  color: var(--atlas-muted);
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.atlas-day-management-lens-tabs span[aria-current="page"] {
+  background: var(--atlas-purple);
+  color: #303243;
+  box-shadow: 0 3px 10px rgba(85, 90, 134, 0.12);
 }
 
 #atlas-more-work-alongside-slot {

@@ -64,27 +64,31 @@ function titleCase(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function ownerMembership(session: AtlasSession, requestedFarmId?: string | null) {
+function isManagementRole(role: string) {
+  return role === "owner" || role === "manager";
+}
+
+function managementMembership(session: AtlasSession, requestedFarmId?: string | null) {
   if (requestedFarmId) {
     const requested = session.memberships.find(
-      (membership) => membership.farmId === requestedFarmId && membership.role === "owner",
+      (membership) => membership.farmId === requestedFarmId && isManagementRole(membership.role),
     );
     if (requested) return requested;
   }
 
   if (session.activeFarmId) {
     const active = session.memberships.find(
-      (membership) => membership.farmId === session.activeFarmId && membership.role === "owner",
+      (membership) => membership.farmId === session.activeFarmId && isManagementRole(membership.role),
     );
     if (active) return active;
   }
 
-  return session.memberships.find((membership) => membership.role === "owner") ?? null;
+  return session.memberships.find((membership) => isManagementRole(membership.role)) ?? null;
 }
 
 async function readWorkAlongsideSurface(session: AtlasSession, requestedFarmId?: string | null) {
-  const observer = ownerMembership(session, requestedFarmId);
-  if (!observer) throw new Error("Owner farm membership required.");
+  const observer = managementMembership(session, requestedFarmId);
+  if (!observer) throw new Error("Farm management membership required.");
 
   const supabase = await createAtlasServerClient();
   const [membershipResponse, windowResponse] = await Promise.all([
@@ -123,7 +127,7 @@ async function readWorkAlongsideSurface(session: AtlasSession, requestedFarmId?:
 
   const teammates = memberships
     .filter((membership) => membership.id !== observer.membershipId)
-    .filter((membership) => membership.role === "manager" || membership.role === "farm_hand")
+    .filter((membership) => membership.role === "owner" || membership.role === "manager" || membership.role === "farm_hand")
     .map((membership) => ({
       membershipId: membership.id,
       workerKey: membership.worker_key,
@@ -150,6 +154,7 @@ export async function GET(request: Request) {
       ok: true,
       farmId: surface.observer.farmId,
       viewerMembershipId: surface.observer.membershipId,
+      viewerRole: surface.observer.role,
       teammates: surface.teammates,
       windows: surface.windows.map((window) => ({
         windowId: window.id,
@@ -161,7 +166,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Work-alongside settings could not be read.";
-    const status = message === "Owner farm membership required." ? 403 : 500;
+    const status = message === "Farm management membership required." ? 403 : 500;
     return privateJson({ ok: false, error: message }, status);
   }
 }
