@@ -28,8 +28,6 @@ BEGIN
   FROM atlas.weed_cards card
   WHERE card.object_id = p_object_id;
 
-  -- Time may make a bed worth inspecting. It may not silently turn a recorded
-  -- clear bed into a claim that the bed physically needs weeding.
   IF v_condition = 'clear' THEN
     RETURN false;
   END IF;
@@ -242,8 +240,6 @@ BEGIN
     END IF;
   END IF;
 
-  -- Existing tasks already have their canonical object links when this trigger
-  -- runs during the repair pass. This is the final source of identity.
   IF v_object_id IS NULL AND NEW.id IS NOT NULL THEN
     SELECT linked.object_id
     INTO v_object_id
@@ -364,9 +360,6 @@ ON atlas.planned_work_occurrences
 FOR EACH ROW
 EXECUTE FUNCTION atlas.canonicalize_weed_occurrence_title_v1();
 
--- Repair Field Row 8 from the Owner's current physical observation. IDs are
--- resolved from stable farm/object identity; no generated record ID is baked
--- into the migration.
 DO $repair$
 DECLARE
   v_today date := (now() at time zone 'America/Chicago')::date;
@@ -387,18 +380,14 @@ BEGIN
   WHERE farm.stable_key = 'elm_farm'
     AND object.stable_key = 'fr_8';
 
-  IF v_object_id IS NULL THEN
-    RETURN;
-  END IF;
+  IF v_object_id IS NULL THEN RETURN; END IF;
 
   SELECT card.id, card.maintenance_object_id
   INTO v_card_id, v_maintenance_id
   FROM atlas.weed_cards card
   WHERE card.object_id = v_object_id;
 
-  IF v_card_id IS NULL THEN
-    RETURN;
-  END IF;
+  IF v_card_id IS NULL THEN RETURN; END IF;
 
   SELECT coalesce(maintenance.normal_return_interval_days, 21)
   INTO v_return_days
@@ -584,6 +573,7 @@ BEGIN
       satisfaction_kind,
       satisfied_at,
       source_kind,
+      source_id,
       source_event,
       source_object_id,
       policy_match,
@@ -601,6 +591,7 @@ BEGIN
       'full',
       now(),
       'owner_current_physical_observation',
+      v_object_id,
       'already_weeded_clear',
       v_object_id,
       jsonb_build_object(
@@ -641,8 +632,6 @@ BEGIN
 END;
 $repair$;
 
--- Re-run the canonicalizers over existing records. The updates preserve result
--- truth and only normalize the visible title/metadata.
 UPDATE atlas.tasks task
 SET title = task.title
 WHERE (
