@@ -1,6 +1,6 @@
--- Keep each signed-in person's normal Work feed personal, while preserving
--- explicit work-alongside windows and adding a separate management-only farm-day
--- reader for the big-picture view.
+-- Keep each signed-in person's normal Work feed personal, allow farm Managers
+-- to configure explicit Work Alongside windows, and add a separate management-
+-- only farm-day reader for the big-picture view.
 
 CREATE OR REPLACE FUNCTION atlas.validate_work_alongside_window_v1()
 RETURNS trigger
@@ -73,156 +73,10 @@ ON atlas.work_alongside_windows
 FOR DELETE TO authenticated
 USING (atlas.is_farm_manager_or_owner(farm_id));
 
-CREATE OR REPLACE FUNCTION atlas.home_task_cards_for_membership_v2(
-  p_farm_id uuid,
-  p_membership_id uuid,
-  p_due_through date DEFAULT NULL,
-  p_done_date date DEFAULT NULL
-)
-RETURNS SETOF atlas.v_task_cards
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
-SET search_path = pg_catalog, atlas, auth
-AS $function$
-DECLARE
-  v_role text;
-  v_user_id uuid;
-  v_worker_key text;
-  v_day date := coalesce(p_done_date, (now() at time zone 'America/Chicago')::date);
-  v_due_through date := coalesce(p_due_through, v_day + 35);
-BEGIN
-  SELECT fm.role, fm.user_id, nullif(lower(btrim(fm.worker_key)), '')
-  INTO v_role, v_user_id, v_worker_key
-  FROM atlas.farm_memberships fm
-  WHERE fm.id = p_membership_id
-    AND fm.farm_id = p_farm_id
-    AND fm.active = true;
-
-  IF v_role IS NULL THEN
-    RAISE EXCEPTION 'Active farm membership required.' USING ERRCODE = '42501';
-  END IF;
-
-  IF v_user_id IS DISTINCT FROM auth.uid()
-     AND NOT atlas.is_farm_manager_or_owner(p_farm_id) THEN
-    RAISE EXCEPTION 'Only farm management may read another member''s work.' USING ERRCODE = '42501';
-  END IF;
-
-  RETURN QUERY
-  WITH chosen AS (
-    SELECT row.task_id, 0 AS surface_group, row.lane_order, row.selection_rank
-    FROM atlas.presented_work_rows_v1(p_farm_id, p_membership_id, v_day) row
-    WHERE row.presentation_state IN ('attention', 'presented')
-
-    UNION ALL
-
-    SELECT t.id, 1, 1, row_number() OVER (ORDER BY t.due_date, t.priority, t.created_at)
-    FROM atlas.tasks t
-    WHERE t.farm_id = p_farm_id
-      AND t.status IN ('open', 'blocked')
-      AND t.parent_task_id IS NULL
-      AND nullif(t.metadata ->> 'parent_task_id', '') IS NULL
-      AND nullif(t.metadata ->> 'parentTaskId', '') IS NULL
-      AND lower(coalesce(t.metadata ->> 'is_child_task', 'false')) <> 'true'
-      AND t.work_lane = 'required'
-      AND t.commitment_kind = 'hard_date'
-      AND t.due_date > v_day
-      AND t.due_date <= v_due_through
-      AND (
-        t.assigned_membership_id = p_membership_id
-        OR t.assigned_user_id = v_user_id
-        OR t.metadata ->> 'executor_membership_id' = p_membership_id::text
-        OR (
-          jsonb_typeof(t.metadata -> 'shared_with_membership_ids') = 'array'
-          AND (t.metadata -> 'shared_with_membership_ids') ? p_membership_id::text
-        )
-        OR (
-          v_worker_key IS NOT NULL
-          AND lower(coalesce(
-            nullif(t.metadata ->> 'executor_worker_key', ''),
-            nullif(t.metadata ->> 'assignee_key', ''),
-            nullif(t.metadata ->> 'assigned_to', '')
-          )) = v_worker_key
-        )
-        OR (
-          v_role = 'owner'
-          AND lower(coalesce(t.metadata ->> 'owner_task', 'false')) = 'true'
-        )
-      )
-
-    UNION ALL
-
-    -- Explicit temporary overlay only. A Manager or Owner sees a teammate's
-    -- assigned cards only when a same-farm work-alongside window covers the
-    -- task date. Task ownership remains unchanged.
-    SELECT
-      t.id,
-      2,
-      1,
-      row_number() OVER (ORDER BY t.due_date, t.priority, t.created_at)
-    FROM atlas.work_alongside_windows w
-    JOIN atlas.tasks t
-      ON t.farm_id = w.farm_id
-     AND t.assigned_membership_id = w.teammate_membership_id
-    WHERE v_role IN ('owner', 'manager')
-      AND w.farm_id = p_farm_id
-      AND w.observer_membership_id = p_membership_id
-      AND w.status = 'active'
-      AND t.visibility_scope = 'assigned_worker'
-      AND t.parent_task_id IS NULL
-      AND nullif(t.metadata ->> 'parent_task_id', '') IS NULL
-      AND nullif(t.metadata ->> 'parentTaskId', '') IS NULL
-      AND lower(coalesce(t.metadata ->> 'is_child_task', 'false')) <> 'true'
-      AND t.due_date BETWEEN w.starts_on AND w.ends_on
-      AND (
-        (
-          t.status IN ('open', 'blocked')
-          AND t.due_date <= v_due_through
-        )
-        OR (
-          t.status = 'done'
-          AND p_done_date IS NOT NULL
-          AND t.due_date = p_done_date
-        )
-      )
-  ), deduped AS (
-    SELECT DISTINCT ON (task_id)
-      task_id,
-      surface_group,
-      lane_order,
-      selection_rank
-    FROM chosen
-    ORDER BY task_id, surface_group, lane_order, selection_rank
-  )
-  SELECT card.*
-  FROM deduped selected
-  JOIN atlas.v_task_cards card ON card.task_id = selected.task_id
-  WHERE card.status IN ('open', 'blocked', 'done')
-    AND (
-      (
-        card.task_type = 'grow_room_care'
-        AND lower(card.title) IN ('grow room care', 'water + check grow room', 'check grow room')
-      )
-      OR NOT (
-        coalesce(card.zone_key, '') = 'grow_room'
-        OR coalesce(card.zone_label, '') ILIKE '%grow room%'
-        OR coalesce(card.metadata ->> 'collection_zone', '') ILIKE '%grow room%'
-        OR coalesce(card.metadata ->> 'location_label', '') ILIKE '%grow room%'
-        OR coalesce(card.metadata ->> 'work_route', '') IN (
-          'grow_room_check', 'grow_room_audit', 'pot_up', 'hardening_off',
-          'soil_block', 'grow_room_setup', 'grow_room_care'
-        )
-      )
-    )
-  ORDER BY selected.surface_group, selected.lane_order, selected.selection_rank;
-END;
-$function$;
-
-REVOKE ALL ON FUNCTION atlas.home_task_cards_for_membership_v2(uuid, uuid, date, date)
-  FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION atlas.home_task_cards_for_membership_v2(uuid, uuid, date, date)
-  TO service_role;
-
+-- The public Home/Day entry point resolves the authenticated user's membership.
+-- It may not accept a different worker key and may not aggregate other farm
+-- memberships. Explicit Work Alongside overlays are handled by the membership
+-- reader installed in the immediately following strict-scope migration.
 CREATE OR REPLACE FUNCTION atlas.home_task_cards_v2(
   p_farm_id uuid,
   p_worker_key text,
@@ -302,43 +156,42 @@ BEGIN
     WHERE fm.farm_id = p_farm_id
       AND fm.active = true
   ), chosen AS (
-    -- Every assigned scheduled card that is due today or still carried forward.
-    SELECT t.id AS task_id, 0 AS source_rank, t.due_date, t.priority, t.created_at
-    FROM atlas.tasks t
-    WHERE t.farm_id = p_farm_id
-      AND t.task_scope = 'farm_operation'
-      AND t.parent_task_id IS NULL
-      AND nullif(t.metadata ->> 'parent_task_id', '') IS NULL
-      AND nullif(t.metadata ->> 'parentTaskId', '') IS NULL
-      AND lower(coalesce(t.metadata ->> 'is_child_task', 'false')) <> 'true'
+    -- Scheduled work due on this date or still carried forward.
+    SELECT task.id AS task_id, 0 AS source_rank, task.due_date, task.priority, task.created_at
+    FROM atlas.tasks task
+    WHERE task.farm_id = p_farm_id
+      AND task.task_scope = 'farm_operation'
+      AND task.parent_task_id IS NULL
+      AND nullif(task.metadata ->> 'parent_task_id', '') IS NULL
+      AND nullif(task.metadata ->> 'parentTaskId', '') IS NULL
+      AND lower(coalesce(task.metadata ->> 'is_child_task', 'false')) <> 'true'
       AND EXISTS (
         SELECT 1
         FROM active_memberships member
-        WHERE t.assigned_membership_id = member.id
-           OR t.assigned_user_id = member.user_id
-           OR t.metadata ->> 'executor_membership_id' = member.id::text
+        WHERE task.assigned_membership_id = member.id
+           OR task.assigned_user_id = member.user_id
+           OR task.metadata ->> 'executor_membership_id' = member.id::text
            OR (
              member.worker_key IS NOT NULL
              AND lower(coalesce(
-               nullif(t.metadata ->> 'executor_worker_key', ''),
-               nullif(t.metadata ->> 'assignee_key', ''),
-               nullif(t.metadata ->> 'assigned_to', '')
+               nullif(task.metadata ->> 'executor_worker_key', ''),
+               nullif(task.metadata ->> 'assignee_key', ''),
+               nullif(task.metadata ->> 'assigned_to', '')
              )) = member.worker_key
            )
       )
       AND (
-        (t.status IN ('open', 'blocked') AND t.due_date IS NOT NULL AND t.due_date <= p_work_date)
-        OR (t.status = 'done' AND t.due_date = p_work_date)
+        (task.status IN ('open', 'blocked') AND task.due_date IS NOT NULL AND task.due_date <= p_work_date)
+        OR (task.status = 'done' AND task.due_date = p_work_date)
       )
 
     UNION ALL
 
-    -- Include capacity-selected undated work that genuinely belongs in a
-    -- member's hand for this date.
-    SELECT row.task_id, 1, NULL::date, 'normal'::text, now()
+    -- Capacity-selected undated work genuinely in a person's hand that day.
+    SELECT presented.task_id, 1, NULL::date, 'normal'::text, now()
     FROM active_memberships member
-    CROSS JOIN LATERAL atlas.presented_work_rows_v1(p_farm_id, member.id, p_work_date) row
-    WHERE row.presentation_state IN ('attention', 'presented')
+    CROSS JOIN LATERAL atlas.presented_work_rows_v1(p_farm_id, member.id, p_work_date) presented
+    WHERE presented.presentation_state IN ('attention', 'presented')
   ), picked AS (
     SELECT DISTINCT ON (task_id) task_id, source_rank, due_date, priority, created_at
     FROM chosen
@@ -361,15 +214,50 @@ REVOKE ALL ON FUNCTION atlas.farm_day_task_cards_v1(uuid, date)
 GRANT EXECUTE ON FUNCTION atlas.farm_day_task_cards_v1(uuid, date)
   TO authenticated, service_role;
 
+-- Keep the repository-governed authenticated RPC registry synchronized with
+-- this new management endpoint. The later repair migration repeats this UPSERT
+-- safely for already-applied production databases.
+INSERT INTO atlas.authenticated_rpc_registry (
+  signature,
+  classification,
+  confidence,
+  review_status,
+  authenticated_execute_expected,
+  security_definer_expected,
+  service_execute_expected,
+  caller_count,
+  policy_reference_count,
+  evidence,
+  reviewed_at
+)
+VALUES (
+  'atlas.farm_day_task_cards_v1(uuid, date)',
+  'owner_admin_endpoint',
+  'verified',
+  'active',
+  true,
+  true,
+  true,
+  0,
+  0,
+  jsonb_build_object(
+    'source', 'manager_farm_day_build',
+    'registered_by_migration', '20260804052000_atlas_personal_work_and_manager_big_picture_v1.sql'
+  ),
+  now()
+)
+ON CONFLICT (signature) DO UPDATE
+SET classification = EXCLUDED.classification,
+    confidence = EXCLUDED.confidence,
+    review_status = EXCLUDED.review_status,
+    authenticated_execute_expected = EXCLUDED.authenticated_execute_expected,
+    security_definer_expected = EXCLUDED.security_definer_expected,
+    service_execute_expected = EXCLUDED.service_execute_expected,
+    evidence = atlas.authenticated_rpc_registry.evidence || EXCLUDED.evidence,
+    reviewed_at = now();
+
 DO $verification$
 BEGIN
-  IF position(
-    'work_alongside_windows'
-    IN pg_get_functiondef('atlas.home_task_cards_for_membership_v2(uuid,uuid,date,date)'::regprocedure)
-  ) = 0 THEN
-    RAISE EXCEPTION 'Personal membership reader lost the explicit work-alongside overlay.';
-  END IF;
-
   IF position(
     'membership.id'
     IN pg_get_functiondef('atlas.home_task_cards_v2(uuid,text,date,date)'::regprocedure)
@@ -387,6 +275,17 @@ BEGIN
     'EXECUTE'
   ) THEN
     RAISE EXCEPTION 'Management farm-day reader is not callable by authenticated sessions.';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM atlas.authenticated_rpc_registry
+    WHERE signature = 'atlas.farm_day_task_cards_v1(uuid, date)'
+      AND authenticated_execute_expected = true
+      AND security_definer_expected = true
+      AND review_status = 'active'
+  ) THEN
+    RAISE EXCEPTION 'Management farm-day reader is missing from the authenticated RPC registry.';
   END IF;
 END
 $verification$;
