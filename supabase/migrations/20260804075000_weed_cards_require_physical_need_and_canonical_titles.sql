@@ -24,8 +24,6 @@ BEGIN
   FROM atlas.weed_cards card
   WHERE card.object_id = p_object_id;
 
-  -- The Clock may ask for a new observation, but it may not turn elapsed time
-  -- into a claim that a physically clear bed needs weeding.
   IF v_condition = 'clear' THEN
     RETURN false;
   END IF;
@@ -47,8 +45,7 @@ BEGIN
     AND NEW.source_id IS NOT NULL
     AND NEW.state IN ('planned', 'eligible', 'failed', 'releasing')
   THEN
-    SELECT object_id
-    INTO v_object_id
+    SELECT object_id INTO v_object_id
     FROM atlas.maintenance_objects
     WHERE id = NEW.source_id;
 
@@ -85,8 +82,7 @@ BEGIN
     AND NEW.generated_from_id IS NOT NULL
     AND NEW.status IN ('open', 'blocked')
   THEN
-    SELECT object_id
-    INTO v_object_id
+    SELECT object_id INTO v_object_id
     FROM atlas.maintenance_objects
     WHERE id = NEW.generated_from_id;
 
@@ -276,10 +272,6 @@ ON atlas.planned_work_occurrences
 FOR EACH ROW
 EXECUTE FUNCTION atlas.canonicalize_weed_occurrence_title_v1();
 
--- Repair Field Row 8 from the Owner's current physical observation without
--- hardcoding generated record IDs. This records a zero-minute, time-unknown
--- clear observation, removes the unnecessary serving, and renews the governed
--- rhythm from the observed clear state.
 DO $repair$
 DECLARE
   v_today date := (now() at time zone 'America/Chicago')::date;
@@ -291,25 +283,19 @@ DECLARE
   v_satisfaction_id uuid;
   v_return_days integer := 21;
 BEGIN
-  SELECT object.id
-  INTO v_object_id
+  SELECT object.id INTO v_object_id
   FROM atlas.growing_objects object
   JOIN atlas.farms farm ON farm.id = object.farm_id
   WHERE farm.stable_key = 'elm_farm'
     AND object.stable_key = 'fr_8';
 
-  IF v_object_id IS NULL THEN
-    RETURN;
-  END IF;
+  IF v_object_id IS NULL THEN RETURN; END IF;
 
-  SELECT card.id, card.maintenance_object_id
-  INTO v_card_id, v_task_id
+  SELECT card.id INTO v_card_id
   FROM atlas.weed_cards card
   WHERE card.object_id = v_object_id;
 
-  IF v_card_id IS NULL THEN
-    RETURN;
-  END IF;
+  IF v_card_id IS NULL THEN RETURN; END IF;
 
   SELECT coalesce(maintenance.normal_return_interval_days, 21)
   INTO v_return_days
@@ -317,16 +303,14 @@ BEGIN
   JOIN atlas.maintenance_objects maintenance ON maintenance.id = card.maintenance_object_id
   WHERE card.id = v_card_id;
 
-  SELECT pass.id
-  INTO v_pass_id
+  SELECT pass.id INTO v_pass_id
   FROM atlas.weed_passes pass
   WHERE pass.weed_card_id = v_card_id
     AND pass.status = 'active'
   ORDER BY pass.opened_at DESC
   LIMIT 1;
 
-  SELECT task.id
-  INTO v_task_id
+  SELECT task.id INTO v_task_id
   FROM atlas.tasks task
   JOIN atlas.task_objects link ON link.task_id = task.id
   WHERE link.object_id = v_object_id
@@ -340,34 +324,17 @@ BEGIN
 
   IF v_pass_id IS NOT NULL THEN
     INSERT INTO atlas.weed_sessions (
-      weed_card_id,
-      weed_pass_id,
-      task_id,
-      work_date,
-      minutes,
-      minutes_known,
-      condition_before,
-      condition_after,
-      note,
-      idempotency_key,
-      metadata
+      weed_card_id, weed_pass_id, task_id, work_date, minutes, minutes_known,
+      condition_before, condition_after, note, idempotency_key, metadata
     ) VALUES (
-      v_card_id,
-      v_pass_id,
-      v_task_id,
-      v_today,
-      0,
-      false,
-      'clear',
-      'clear',
+      v_card_id, v_pass_id, v_task_id, v_today, 0, false, 'clear', 'clear',
       'Owner confirmed Field Row 8 was already weeded and remains clearer than beds that need work.',
       'owner-observation:elm:fr_8:' || v_today::text || ':already-clear',
       jsonb_build_object(
         'source', 'owner_current_physical_observation',
         'repair', 'weed_cards_require_physical_need_and_canonical_titles'
       )
-    )
-    ON CONFLICT (idempotency_key) DO NOTHING;
+    ) ON CONFLICT (idempotency_key) DO NOTHING;
 
     UPDATE atlas.weed_passes
     SET status = 'closed',
@@ -406,7 +373,7 @@ BEGIN
       care_pressure = 'none',
       care_freshness = 'observed',
       care_observed_at = now(),
-      care_source_kind = 'owner_observation',
+      care_source_kind = 'observation',
       metadata = coalesce(metadata, '{}'::jsonb)
         || jsonb_build_object(
           'owner_observation', 'Field Row 8 is already weeded and clear.',
@@ -446,9 +413,7 @@ BEGIN
         ),
       updated_at = now()
   WHERE task.id IN (
-    SELECT linked.task_id
-    FROM atlas.task_objects linked
-    WHERE linked.object_id = v_object_id
+    SELECT linked.task_id FROM atlas.task_objects linked WHERE linked.object_id = v_object_id
   )
     AND task.status IN ('open', 'blocked')
     AND (
@@ -474,8 +439,7 @@ BEGIN
       AND coalesce(task.metadata ->> 'weed_card_id', '') = v_card_id::text
   );
 
-  SELECT state.*
-  INTO v_state
+  SELECT state.* INTO v_state
   FROM atlas.rhythm_state state
   WHERE state.subject_kind = 'growing_object'
     AND state.subject_id = v_object_id
@@ -484,37 +448,17 @@ BEGIN
 
   IF v_state.id IS NOT NULL THEN
     INSERT INTO atlas.rhythm_satisfactions (
-      organization_id,
-      farm_id,
-      rhythm_state_id,
-      rhythm_binding_id,
-      rhythm_rule_id,
-      rhythm_key,
-      subject_kind,
-      subject_id,
-      satisfaction_key,
-      satisfaction_kind,
-      satisfied_at,
-      source_kind,
-      source_event,
-      source_object_id,
-      policy_match,
-      evidence
+      organization_id, farm_id, rhythm_state_id, rhythm_binding_id,
+      rhythm_rule_id, rhythm_key, subject_kind, subject_id,
+      satisfaction_key, satisfaction_kind, satisfied_at, source_kind,
+      source_event, source_object_id, policy_match, evidence
     ) VALUES (
-      v_state.organization_id,
-      v_state.farm_id,
-      v_state.id,
-      v_state.rhythm_binding_id,
-      v_state.rhythm_rule_id,
-      v_state.rhythm_key,
-      v_state.subject_kind,
-      v_state.subject_id,
+      v_state.organization_id, v_state.farm_id, v_state.id,
+      v_state.rhythm_binding_id, v_state.rhythm_rule_id, v_state.rhythm_key,
+      v_state.subject_kind, v_state.subject_id,
       'owner-observation:elm:fr_8:' || v_today::text || ':clear',
-      'owner_observation',
-      now(),
-      'owner_current_physical_observation',
-      'already_weeded_clear',
-      v_object_id,
+      'owner_observation', now(), 'owner_current_physical_observation',
+      'already_weeded_clear', v_object_id,
       jsonb_build_object(
         'matchKind', 'owner_current_physical_observation',
         'physicalCondition', 'clear'
@@ -530,8 +474,7 @@ BEGIN
     RETURNING id INTO v_satisfaction_id;
 
     IF v_satisfaction_id IS NULL THEN
-      SELECT satisfaction.id
-      INTO v_satisfaction_id
+      SELECT satisfaction.id INTO v_satisfaction_id
       FROM atlas.rhythm_satisfactions satisfaction
       WHERE satisfaction.farm_id = v_state.farm_id
         AND satisfaction.satisfaction_key = 'owner-observation:elm:fr_8:' || v_today::text || ':clear';
@@ -546,29 +489,23 @@ BEGIN
     WHERE id = v_state.id;
 
     PERFORM atlas.evaluate_rhythm_binding_v1(
-      v_state.id,
-      now(),
-      'owner_current_physical_observation'
+      v_state.id, now(), 'owner_current_physical_observation'
     );
   END IF;
 END;
 $repair$;
 
--- Canonicalize every existing linked Weed serving without changing its result.
 UPDATE atlas.tasks task
 SET title = task.title,
     updated_at = task.updated_at
-WHERE (
-  lower(coalesce(task.action_key, '')) IN ('weed', 'weeding')
-  OR coalesce(task.metadata ->> 'weed_card_managed', 'false') = 'true'
-);
+WHERE lower(coalesce(task.action_key, '')) IN ('weed', 'weeding')
+   OR coalesce(task.metadata ->> 'weed_card_managed', 'false') = 'true';
 
 DO $verify$
 DECLARE
   v_object_id uuid;
 BEGIN
-  SELECT object.id
-  INTO v_object_id
+  SELECT object.id INTO v_object_id
   FROM atlas.growing_objects object
   JOIN atlas.farms farm ON farm.id = object.farm_id
   WHERE farm.stable_key = 'elm_farm'
@@ -590,9 +527,7 @@ BEGIN
     FROM atlas.tasks task
     WHERE lower(coalesce(task.action_key, '')) IN ('weed', 'weeding')
       AND EXISTS (
-        SELECT 1
-        FROM atlas.task_objects linked
-        WHERE linked.task_id = task.id
+        SELECT 1 FROM atlas.task_objects linked WHERE linked.task_id = task.id
       )
       AND task.title !~ '^Weed .+'
   ) THEN
