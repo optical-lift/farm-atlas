@@ -7,6 +7,7 @@ function read(path) {
 }
 
 const migration = read("supabase/migrations/20260730134847_bell_and_while_away_foundation_v1.sql");
+const reviewMigration = read("supabase/migrations/20260804012000_bell_review_badge_contract_v1.sql");
 const contract = read("lib/atlas/bell-contract.ts");
 const client = read("lib/atlas/bell-client.ts");
 const route = read("app/api/atlas/bell/route.ts");
@@ -39,24 +40,32 @@ test("Bell reads are farm, role, assignment, project, and operator scoped", () =
   assert.match(route, /operatorContext\.effective\.farmMembershipId/);
 });
 
-test("badge count follows unresolved player obligations rather than all open tasks", () => {
-  assert.match(migration, /bell_event_requires_action_v1/);
-  assert.match(migration, /'due', 'fallen_out_of_rhythm', 'recovering'/);
-  assert.match(migration, /receipt\.acknowledged_at is null/);
+test("badge count means unread current attention while current work remains separately countable", () => {
+  assert.match(reviewMigration, /bell_attention_counts_v1/);
+  assert.match(reviewMigration, /latest\.requires_action and latest\.read_at is null/);
+  assert.match(reviewMigration, /'newAttentionCount'/);
+  assert.match(reviewMigration, /'currentActionCount'/);
+  assert.match(reviewMigration, /'badgeMeaning', 'unreviewed_attention'/);
   assert.match(contract, /badgeCount: number/);
-  assert.doesNotMatch(migration, /count\(\*\).*from atlas\.tasks[\s\S]*badge_count/i);
+  assert.match(contract, /newAttentionCount: number/);
+  assert.match(contract, /currentActionCount: number/);
+  assert.doesNotMatch(reviewMigration, /count\(\*\).*from atlas\.tasks[\s\S]*badge_count/i);
 });
 
-test("while-away uses a durable per-player visit boundary while the cover previews the next action", () => {
+test("while-away keeps a durable visit boundary while review clears only new attention", () => {
   assert.match(migration, /create table if not exists atlas\.bell_visit_state/);
   assert.match(migration, /previous_visited_at/);
   assert.match(migration, /last_visited_at/);
-  assert.match(migration, /record_bell_visit_v1/);
-  assert.match(migration, /event\.occurred_at > v_since_at/);
+  assert.match(reviewMigration, /record_bell_visit_v1/);
+  assert.match(reviewMigration, /insert into atlas\.bell_event_receipts/);
+  assert.match(reviewMigration, /read_at = coalesce/);
   assert.match(contract, /"read" \| "acknowledge" \| "visit"/);
   assert.match(page, /action: "visit"/);
+  assert.match(page, /setAtlasAppBadge\(0\)/);
+  assert.match(page, /Reviewed now\./);
   assert.match(cover, /atlasBellActionTitle\(newest\)/);
-  assert.match(cover, /management \? "Do next" : "Follow through"/);
+  assert.match(cover, /management \? "New attention" : "New follow-through"/);
+  assert.match(cover, /item\.unread/);
   assert.match(cover, /atlasBellActionTiming\(newest\)/);
   assert.doesNotMatch(cover, /While you were away/);
 });
