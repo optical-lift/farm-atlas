@@ -1,9 +1,9 @@
 /* Atlas PWA shell. Canonical farm truth remains server-authoritative. */
-// This byte change refreshes the installed offline document with automatic recovery.
+// This byte change refreshes the installed offline document and any open stale client.
 // Bump this version whenever the offline document or global app chrome changes.
 // The version boundary forces installed devices to discard an older shell rather
-// than preserving retired navigation in the field fallback.
-const ATLAS_PWA_VERSION = "atlas-pwa-shell-v3";
+// than preserving retired navigation or presentation code in memory.
+const ATLAS_PWA_VERSION = "atlas-pwa-shell-v4";
 const SHELL_CACHE = `${ATLAS_PWA_VERSION}:shell`;
 const STATIC_CACHE = `${ATLAS_PWA_VERSION}:static`;
 const PRIVATE_CACHE_SUFFIXES = [":pages", ":prepared-data"];
@@ -36,14 +36,28 @@ async function clearPrivateCaches() {
     .map((key) => caches.delete(key)));
 }
 
+async function reloadOpenAtlasClients() {
+  const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+  await Promise.all(windows.map(async (client) => {
+    if (!("navigate" in client)) return;
+    try {
+      await client.navigate(client.url);
+    } catch {
+      // A client can close between matchAll and navigate without blocking activation.
+    }
+  }));
+}
+
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     const keep = new Set([SHELL_CACHE, STATIC_CACHE]);
     const keys = await caches.keys();
+    const replacingEarlierShell = keys.some((key) => key.startsWith("atlas-pwa-") && !keep.has(key));
     await Promise.all(keys
       .filter((key) => key.startsWith("atlas-pwa-") && !keep.has(key))
       .map((key) => caches.delete(key)));
     await self.clients.claim();
+    if (replacingEarlierShell) await reloadOpenAtlasClients();
   })());
 });
 

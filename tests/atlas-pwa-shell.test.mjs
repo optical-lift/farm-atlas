@@ -16,6 +16,7 @@ const offlineRecovery = read("components/atlas/pwa/AtlasOfflineRecovery.tsx");
 const installPage = read("app/install/page.tsx");
 const offlinePage = read("app/offline/page.tsx");
 const iconRoute = read("app/api/pwa/icon/route.tsx");
+const buildVersionRoute = read("app/api/atlas/build-version/route.ts");
 const home = read("app/page.tsx");
 const bellCover = read("components/atlas/home/AtlasBellCover.tsx");
 const bellPage = read("app/bell/page.tsx");
@@ -33,6 +34,7 @@ const build = [
   installPage,
   offlinePage,
   iconRoute,
+  buildVersionRoute,
   home,
   bellCover,
   bellPage,
@@ -66,7 +68,7 @@ test("PWA discovery assets remain public before Atlas authentication", () => {
 });
 
 test("the service worker keeps only the offline shell and never caches active Atlas work", () => {
-  assert.match(serviceWorker, /atlas-pwa-shell-v3/);
+  assert.match(serviceWorker, /atlas-pwa-shell-v4/);
   assert.match(serviceWorker, /SHELL_CACHE/);
   assert.match(serviceWorker, /STATIC_CACHE/);
   assert.match(serviceWorker, /request\.mode === "navigate"/);
@@ -84,6 +86,21 @@ test("activation removes every earlier prepared-page and prepared-data cache", (
   assert.match(serviceWorker, /finalUrl\.pathname === "\/login"/);
   assert.match(bridge, /pathname === "\/login"/);
   assert.match(bridge, /clearAtlasPrivateCaches/);
+});
+
+test("installed Atlas clients leave stale deployment code behind", () => {
+  assert.match(serviceWorker, /reloadOpenAtlasClients/);
+  assert.match(serviceWorker, /replacingEarlierShell/);
+  assert.match(serviceWorker, /client\.navigate\(client\.url\)/);
+  assert.match(buildVersionRoute, /VERCEL_GIT_COMMIT_SHA/);
+  assert.match(buildVersionRoute, /VERCEL_URL/);
+  assert.match(buildVersionRoute, /no-store/);
+  assert.match(bridge, /LOADED_BUILD_KEY/);
+  assert.match(bridge, /fetch\("\/api\/atlas\/build-version"/);
+  assert.match(bridge, /cache: "no-store"/);
+  assert.match(bridge, /window\.location\.reload\(\)/);
+  assert.match(bridge, /addEventListener\("pageshow", refreshNow\)/);
+  assert.match(bridge, /addEventListener\("visibilitychange", refreshWhenVisible\)/);
 });
 
 test("Safari installation guidance remains explicit and the Home cover stays recognizable", () => {
