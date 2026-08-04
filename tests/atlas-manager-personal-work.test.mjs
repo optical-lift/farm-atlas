@@ -57,17 +57,31 @@ test("management is a separate role-aware dock destination rather than an inner 
   assert.doesNotMatch(morePage, /label: "Farm day"/);
 });
 
-test("Manager reuses the Work timeline and identifies every card by assignee", () => {
+test("Manager uses the actual Day overview and task-row grammar", () => {
+  assert.match(farmDayPage, /atlas-day-browse-head/);
+  assert.match(farmDayPage, /atlas-day-command-header/);
+  assert.match(farmDayPage, /atlas-day-command-overview/);
+  assert.match(farmDayPage, /atlas-day-overdue-group/);
+  assert.match(farmDayPage, /atlas-day-work-order-group atlas-day-timeline-group/);
   assert.match(farmDayPage, /atlas-day-route-spine/);
   assert.match(farmDayPage, /atlas-day-task-entry/);
   assert.match(farmDayPage, /atlas-day-task-node/);
-  assert.match(farmDayPage, /atlas-day-task-card/);
-  assert.match(farmDayPage, /data-atlas-assignee-label=\{executor\.label\}/);
+  assert.match(farmDayPage, /atlas-day-task-card atlas-journal-task-row/);
+  assert.match(farmDayPage, /atlas-journal-task-detail/);
+  assert.doesNotMatch(farmDayCss, /\.dayControls\s*\{/);
+  assert.doesNotMatch(farmDayCss, /\.feedHeader\s*\{/);
+});
+
+test("every Manager task carries a visible assignee tag and avoids link-prefetch storms", () => {
+  assert.match(farmDayPage, /function AssigneeTag/);
+  assert.match(farmDayPage, /styles\.assigneeTag/);
+  assert.match(farmDayPage, /data-assignee-key=\{executor\.key\}/);
   assert.match(farmDayPage, /data-atlas-assignee-key=\{executor\.key\}/);
-  assert.doesNotMatch(farmDayPage, /styles\.groupHeader/);
-  assert.doesNotMatch(farmDayCss, /\.group\s*\{/);
-  assert.match(farmDayCss, /\.dayControls\s*\{/);
-  assert.match(farmDayCss, /\.feedHeader\s*\{/);
+  assert.match(farmDayPage, /<dt>Assigned to<\/dt><dd>\{executor\.label\}<\/dd>/);
+  assert.match(farmDayPage, /prefetch=\{false\}/);
+  assert.match(farmDayCss, /\.assigneeTag\s*\{/);
+  assert.match(farmDayCss, /\.assigneeTag\[data-assignee-key="anna"\]/);
+  assert.match(farmDayCss, /\.assigneeTag\[data-assignee-key="marshall"\]/);
 });
 
 test("effective management access and More mirror the switched identity", () => {
