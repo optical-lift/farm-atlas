@@ -1,16 +1,26 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function AtlasMorePage() {
-  const session = await getAtlasSession();
+  const [session, operatorContext] = await Promise.all([
+    getAtlasSession(),
+    readAtlasOwnerOperatorContext(),
+  ]);
   if (!session) redirect("/login");
 
-  const canManage = session.memberships.some((membership) => membership.role === "owner" || membership.role === "manager");
-  const isFarmOwner = session.memberships.some((membership) => membership.role === "owner");
+  const activeMembership = session.memberships.find((membership) => membership.farmId === session.activeFarmId)
+    ?? session.memberships[0]
+    ?? null;
+  const effectiveRole = operatorContext?.isOperating
+    ? operatorContext.effective.farmRole
+    : activeMembership?.role ?? null;
+  const canManage = effectiveRole === "owner" || effectiveRole === "manager";
+  const isFarmOwner = effectiveRole === "owner";
   const destinations = [
     { label: "Zone Registry", detail: "Beds, rooms, gardens and every canonical farm place", href: "/zones" },
     { label: "Bell", detail: "Future gaps, handoffs and meaningful farm movement", href: "/bell" },
@@ -18,7 +28,6 @@ export default async function AtlasMorePage() {
     { label: "Production", detail: "Crop cycles and production state", href: "/production" },
     { label: "Seed inventory", detail: "Verified counts, freshness and crop commitments", href: "/inventory/seeds" },
     ...(canManage ? [
-      { label: "Farm day", detail: "Big picture of today’s assigned work by person", href: "/manage/day" },
       { label: "Tomorrow preflight", detail: "Review each person's real day, overload and held work", href: "/tomorrow" },
       { label: "People + roles", detail: "Farm membership and authority", href: "/owner/members" },
       { label: "Farm management", detail: "Blockers, assignment and schedule risk", href: "/manage" },
