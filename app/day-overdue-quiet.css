@@ -1,4 +1,5 @@
-/* Keep overdue carry-forward readable without repeating the state above every title. */
+/* Keep overdue carry-forward readable without repeating the state above every title.
+   atlas-day-window-marker and the recovery drawer intentionally inherit the original Day Route styling. */
 
 .atlas-day-overdue-group
   .atlas-day-overdue-task-card[data-atlas-day-consequence="overdue"]
