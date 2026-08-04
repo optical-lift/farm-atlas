@@ -138,7 +138,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
           <article className="atlas-task-page-active atlas-task-ticket-card atlas-dominion-task-card atlas-weed-card-task-card">
             <TaskDominionTrail
               task={task}
-              instruction="Weed"
+              instruction={`Weed ${card.objectLabel}`}
               showCondition={false}
               showZoneLabel={false}
               showSubjectLabel={false}
