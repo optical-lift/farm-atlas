@@ -45,14 +45,12 @@ test("Living Day keeps consequence truth while mixing overdue work into accompli
   assert.doesNotMatch(patch, /applyOverdueHeading/);
 
   assert.match(consequenceCss, /data-atlas-day-consequence="continued"/);
-  assert.match(overdueCss, /Keep overdue carry-forward readable/);
-  assert.match(overdueCss, /intentionally inherit the original Day Route styling/);
-  assert.match(overdueCss, /atlas-day-overdue-group/);
-  assert.match(overdueCss, /background: transparent !important|display: none !important/);
+  assert.match(overdueCss, /exact compact Day Route geometry/);
+  assert.match(overdueCss, /\.atlas-day-recovery-count/);
+  assert.match(overdueCss, /content: "Overdue"/);
+  assert.match(overdueCss, /\.atlas-day-window-marker/);
+  assert.match(overdueCss, /\.atlas-day-mixed-timeline \.atlas-day-overdue-task-card/);
   assert.doesNotMatch(overdueCss, /\.atlas-day-command-header-with-recovery\s*\{/);
-  assert.doesNotMatch(overdueCss, /\.atlas-day-recovery-count\s*\{/);
-  assert.doesNotMatch(overdueCss, /\.atlas-day-window-marker\s*\{/);
-  assert.doesNotMatch(overdueCss, /\.atlas-day-overdue-entry\s*\{/);
 });
 
 test("Living Day consequence reader preserves canonical task data", () => {
