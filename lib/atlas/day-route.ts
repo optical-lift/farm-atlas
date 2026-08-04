@@ -85,10 +85,15 @@ const GENERIC_ACTION_KEYS = new Set([
 
 function canonicalActionKey(task: AtlasTaskCard) {
   const actionKey = normalized(task.action_key);
-  if (actionKey) return actionKey;
+  if (actionKey && !GENERIC_ACTION_KEYS.has(actionKey)) return actionKey;
+
+  const displayAction = normalized(task.metadata?.display_action);
+  if (displayAction) return displayAction;
+
   const workRoute = normalized(task.metadata?.work_route);
-  if (workRoute) return workRoute;
-  return normalized(task.task_type);
+  if (workRoute && !GENERIC_ACTION_KEYS.has(workRoute)) return workRoute;
+
+  return normalized(task.task_type) || actionKey || workRoute;
 }
 
 function explicitFamily(task: AtlasTaskCard) {
