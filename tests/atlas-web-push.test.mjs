@@ -97,7 +97,8 @@ test("the dispatcher uses custom server authentication and never accepts caller-
 
 test("notification taps keep exact Atlas deep links and Bell-derived badges", () => {
   assert.match(serviceWorker, /payload\.deepLink/);
-  assert.match(serviceWorker, /event\.notification\.data\.deepLink/);
+  assert.match(serviceWorker, /const deepLink = data\.deepLink \|\| "\/bell"/);
+  assert.match(serviceWorker, /openAtlasDestination\(deepLink\)/);
   assert.match(serviceWorker, /setAtlasBadge\(badgeCount\)/);
   assert.match(migration, /bell_badge_count_for_user_v1/);
   assert.doesNotMatch(build, /total open tasks.*badge/i);
