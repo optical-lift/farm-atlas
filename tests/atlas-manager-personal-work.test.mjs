@@ -11,6 +11,7 @@ const shell = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
 const layout = read("app/layout.tsx");
 const morePage = read("app/more/page.tsx");
 const farmDayPage = read("app/manage/day/page.tsx");
+const farmDayCss = read("app/manage/day/farm-day.module.css");
 const effectiveAccess = read("lib/atlas/effective-management-access.ts");
 
 const personalReader = personalMigration.match(
@@ -54,6 +55,19 @@ test("management is a separate role-aware dock destination rather than an inner 
   assert.doesNotMatch(farmDayPage, />Big picture</);
   assert.doesNotMatch(workAlongsideOverlay, /atlas-day-management-lens-tabs/);
   assert.doesNotMatch(morePage, /label: "Farm day"/);
+});
+
+test("Manager reuses the Work timeline and identifies every card by assignee", () => {
+  assert.match(farmDayPage, /atlas-day-route-spine/);
+  assert.match(farmDayPage, /atlas-day-task-entry/);
+  assert.match(farmDayPage, /atlas-day-task-node/);
+  assert.match(farmDayPage, /atlas-day-task-card/);
+  assert.match(farmDayPage, /data-atlas-assignee-label=\{executor\.label\}/);
+  assert.match(farmDayPage, /data-atlas-assignee-key=\{executor\.key\}/);
+  assert.doesNotMatch(farmDayPage, /styles\.groupHeader/);
+  assert.doesNotMatch(farmDayCss, /\.group\s*\{/);
+  assert.match(farmDayCss, /\.dayControls\s*\{/);
+  assert.match(farmDayCss, /\.feedHeader\s*\{/);
 });
 
 test("effective management access and More mirror the switched identity", () => {
