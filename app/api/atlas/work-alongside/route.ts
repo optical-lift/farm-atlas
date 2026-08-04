@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession, type AtlasSession } from "@/lib/atlas/session";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
@@ -20,6 +21,13 @@ type MembershipRow = {
   role: string;
   worker_key: string | null;
   active: boolean;
+};
+
+type ManagementMembership = {
+  membershipId: string;
+  farmId: string;
+  role: "owner" | "manager";
+  workerKey: string | null;
 };
 
 type ProfileRow = {
@@ -64,30 +72,52 @@ function titleCase(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function isManagementRole(role: string) {
+function isManagementRole(role: string | null | undefined): role is "owner" | "manager" {
   return role === "owner" || role === "manager";
 }
 
-function managementMembership(session: AtlasSession, requestedFarmId?: string | null) {
-  if (requestedFarmId) {
-    const requested = session.memberships.find(
-      (membership) => membership.farmId === requestedFarmId && isManagementRole(membership.role),
-    );
-    if (requested) return requested;
+async function managementMembership(
+  session: AtlasSession,
+  requestedFarmId?: string | null,
+): Promise<ManagementMembership | null> {
+  const operatorContext = await readAtlasOwnerOperatorContext();
+  if (operatorContext?.isOperating) {
+    const effective = operatorContext.effective;
+    if (
+      effective.farmMembershipId
+      && effective.farmId
+      && isManagementRole(effective.farmRole)
+      && (!requestedFarmId || requestedFarmId === effective.farmId)
+    ) {
+      return {
+        membershipId: effective.farmMembershipId,
+        farmId: effective.farmId,
+        role: effective.farmRole,
+        workerKey: effective.workerKey,
+      };
+    }
+    return null;
   }
 
-  if (session.activeFarmId) {
-    const active = session.memberships.find(
-      (membership) => membership.farmId === session.activeFarmId && isManagementRole(membership.role),
-    );
-    if (active) return active;
-  }
+  const direct = requestedFarmId
+    ? session.memberships.find(
+        (membership) => membership.farmId === requestedFarmId && isManagementRole(membership.role),
+      )
+    : session.memberships.find(
+        (membership) => membership.farmId === session.activeFarmId && isManagementRole(membership.role),
+      ) ?? session.memberships.find((membership) => isManagementRole(membership.role));
 
-  return session.memberships.find((membership) => isManagementRole(membership.role)) ?? null;
+  if (!direct || !isManagementRole(direct.role)) return null;
+  return {
+    membershipId: direct.membershipId,
+    farmId: direct.farmId,
+    role: direct.role,
+    workerKey: direct.workerKey,
+  };
 }
 
 async function readWorkAlongsideSurface(session: AtlasSession, requestedFarmId?: string | null) {
-  const observer = managementMembership(session, requestedFarmId);
+  const observer = await managementMembership(session, requestedFarmId);
   if (!observer) throw new Error("Farm management membership required.");
 
   const supabase = await createAtlasServerClient();
