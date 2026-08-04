@@ -31,7 +31,7 @@ test("partnering changes presentation order without rewriting task dates", () =>
   const page = read("app/day/page.tsx");
 
   assert.match(page, /task\.due_date === selectedDay \|\| isOverdueTask\(task, selectedDay\)/);
-  assert.doesNotMatch(page, /task\.due_date\s*=/);
+  assert.doesNotMatch(page, /task\.due_date\s*=(?!=)/);
   assert.doesNotMatch(page, /update.*due_date/i);
   assert.doesNotMatch(page, /title\.toLowerCase\(\).*partner/i);
 });
