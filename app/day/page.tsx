@@ -16,6 +16,7 @@ import {
   atlasDayRouteState,
   atlasDayTaskCues,
   atlasDayTaskFamily,
+  atlasDayTaskPartnerKey,
   type AtlasDayRouteState,
 } from "@/lib/atlas/day-route";
 import { fetchAtlasLivingDay } from "@/lib/atlas/living-day-client";
@@ -48,6 +49,8 @@ type DayWindow = {
   recoveryLabel: string;
   order: number;
 };
+
+type DayPartnerPlan = Map<string, { window: DayWindowKey; order: number }>;
 
 const routeLabels = atlasRouteLabels;
 const routeOrder = atlasRouteOrder;
@@ -149,6 +152,48 @@ function dayWindowDefinition(key: DayWindowKey) {
   return dayWindows.find((window) => window.key === key) ?? dayWindows[0];
 }
 
+function buildDayPartnerPlan(todayTasks: AtlasTaskCard[]): DayPartnerPlan {
+  const candidates = new Map<string, Map<DayWindowKey, { count: number; order: number }>>();
+
+  for (const task of todayTasks) {
+    const partnerKey = atlasDayTaskPartnerKey(task);
+    if (!partnerKey) continue;
+    const window = dayWindowForTask(task);
+    const order = atlasWorkOrderNumber(task);
+    const byWindow = candidates.get(partnerKey) ?? new Map<DayWindowKey, { count: number; order: number }>();
+    const current = byWindow.get(window);
+    byWindow.set(window, {
+      count: (current?.count ?? 0) + 1,
+      order: Math.min(current?.order ?? order, order),
+    });
+    candidates.set(partnerKey, byWindow);
+  }
+
+  const plan: DayPartnerPlan = new Map();
+  for (const [partnerKey, byWindow] of candidates) {
+    const winner = Array.from(byWindow.entries()).sort((left, right) => {
+      if (left[1].count !== right[1].count) return right[1].count - left[1].count;
+      const windowDifference = dayWindowDefinition(left[0]).order - dayWindowDefinition(right[0]).order;
+      if (windowDifference) return windowDifference;
+      return left[1].order - right[1].order;
+    })[0];
+    if (winner) plan.set(partnerKey, { window: winner[0], order: winner[1].order });
+  }
+  return plan;
+}
+
+function resolvedDayWindowForTask(task: AtlasTaskCard, selectedDay: string, partnerPlan: DayPartnerPlan) {
+  const belongsToWorkingDay = task.due_date === selectedDay || isOverdueTask(task, selectedDay);
+  const partner = belongsToWorkingDay ? partnerPlan.get(atlasDayTaskPartnerKey(task)) : null;
+  return partner?.window ?? dayWindowForTask(task);
+}
+
+function resolvedWorkOrderNumber(task: AtlasTaskCard, selectedDay: string, partnerPlan: DayPartnerPlan) {
+  const belongsToWorkingDay = task.due_date === selectedDay || isOverdueTask(task, selectedDay);
+  const partner = belongsToWorkingDay ? partnerPlan.get(atlasDayTaskPartnerKey(task)) : null;
+  return partner?.order ?? atlasWorkOrderNumber(task);
+}
+
 function currentDayWindow(hour: number | null): DayWindowKey {
   if (hour === null || hour < 12) return "morning";
   if (hour < 17) return "afternoon";
@@ -160,13 +205,14 @@ function upcomingWindowOrder(hour: number | null) {
   return [...dayWindows.slice(current), ...dayWindows.slice(0, current)];
 }
 
-function mixedDaySortValue(task: AtlasTaskCard, selectedDay: string) {
-  const window = dayWindowDefinition(dayWindowForTask(task)).order;
+function mixedDaySortValue(task: AtlasTaskCard, selectedDay: string, partnerPlan: DayPartnerPlan) {
+  const window = dayWindowDefinition(resolvedDayWindowForTask(task, selectedDay, partnerPlan)).order;
+  const order = String(resolvedWorkOrderNumber(task, selectedDay, partnerPlan)).padStart(5, "0");
+  const partnerKey = atlasDayTaskPartnerKey(task);
   const doneRank = isDoneTask(task) ? 2 : 0;
   const overdueRank = isOverdueTask(task, selectedDay) ? 0 : 1;
   const due = task.due_date ?? "9999-12-31";
-  const order = String(atlasWorkOrderNumber(task)).padStart(5, "0");
-  return `${window}-${doneRank}-${overdueRank}-${due}-${order}-${atlasTaskDisplay(task).title}`;
+  return `${window}-${order}-${partnerKey}-${doneRank}-${overdueRank}-${due}-${atlasTaskDisplay(task).title}`;
 }
 
 function uniqueTasks(tasks: AtlasTaskCard[]) {
@@ -178,12 +224,12 @@ function uniqueTasks(tasks: AtlasTaskCard[]) {
   });
 }
 
-function nextTaskForCurrentWindow(tasks: AtlasTaskCard[], hour: number | null, selectedDay: string) {
+function nextTaskForCurrentWindow(tasks: AtlasTaskCard[], hour: number | null, selectedDay: string, partnerPlan: DayPartnerPlan) {
   const open = tasks.filter((task) => !isDoneTask(task));
   for (const window of upcomingWindowOrder(hour)) {
     const candidate = open
-      .filter((task) => dayWindowForTask(task) === window.key)
-      .sort((a, b) => mixedDaySortValue(a, selectedDay).localeCompare(mixedDaySortValue(b, selectedDay)))[0];
+      .filter((task) => resolvedDayWindowForTask(task, selectedDay, partnerPlan) === window.key)
+      .sort((a, b) => mixedDaySortValue(a, selectedDay, partnerPlan).localeCompare(mixedDaySortValue(b, selectedDay, partnerPlan)))[0];
     if (candidate) return candidate;
   }
   return null;
@@ -445,37 +491,38 @@ function AtlasDayPageContent() {
 
   const allDayTasks = useMemo(() => tasks.filter(isWorkTask).filter((task) => task.due_date === dateIso), [dateIso, tasks]);
   const dayTasks = useMemo(() => tasks.filter(isDashboardWork).filter((task) => task.due_date === dateIso), [dateIso, tasks]);
+  const requiredTasks = useMemo(() => dayTasks.filter((task) => !isExtraCredit(task)), [dayTasks]);
+  const extraCreditTasks = useMemo(() => dayTasks.filter(isExtraCredit), [dayTasks]);
+  const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask).filter((task) => !isExtraCredit(task)), [allDayTasks]);
+  const partnerPlan = useMemo(() => buildDayPartnerPlan(allDayTasks.filter((task) => !isExtraCredit(task))), [allDayTasks]);
   const overdueTasks = useMemo(() => {
     if (dateIso !== todayIso()) return [];
     return tasks
       .filter(isDashboardWork)
       .filter((task) => Boolean(task.due_date && task.due_date < dateIso))
       .filter((task) => !isExtraCredit(task))
-      .sort((a, b) => mixedDaySortValue(a, dateIso).localeCompare(mixedDaySortValue(b, dateIso)));
-  }, [dateIso, tasks]);
-  const requiredTasks = useMemo(() => dayTasks.filter((task) => !isExtraCredit(task)), [dayTasks]);
-  const extraCreditTasks = useMemo(() => dayTasks.filter(isExtraCredit), [dayTasks]);
-  const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask).filter((task) => !isExtraCredit(task)), [allDayTasks]);
+      .sort((a, b) => mixedDaySortValue(a, dateIso, partnerPlan).localeCompare(mixedDaySortValue(b, dateIso, partnerPlan)));
+  }, [dateIso, partnerPlan, tasks]);
   const mixedOpenTasks = useMemo(() => uniqueTasks(dateIso === todayIso() ? [...overdueTasks, ...requiredTasks] : requiredTasks), [dateIso, overdueTasks, requiredTasks]);
-  const timelineTasks = useMemo(() => uniqueTasks([...mixedOpenTasks, ...doneDayTasks]).sort((a, b) => mixedDaySortValue(a, dateIso).localeCompare(mixedDaySortValue(b, dateIso))), [dateIso, doneDayTasks, mixedOpenTasks]);
+  const timelineTasks = useMemo(() => uniqueTasks([...mixedOpenTasks, ...doneDayTasks]).sort((a, b) => mixedDaySortValue(a, dateIso, partnerPlan).localeCompare(mixedDaySortValue(b, dateIso, partnerPlan))), [dateIso, doneDayTasks, mixedOpenTasks, partnerPlan]);
   const filteredTimelineTasks = useMemo(() => routeFilter ? timelineTasks.filter((task) => atlasRouteKeyForTask(task) === routeFilter) : timelineTasks, [routeFilter, timelineTasks]);
   const filteredTasks = useMemo(() => routeFilter ? mixedOpenTasks.filter((task) => atlasRouteKeyForTask(task) === routeFilter) : mixedOpenTasks, [mixedOpenTasks, routeFilter]);
   const progressTasks = timelineTasks;
   const finishedProgressTasks = useMemo(() => progressTasks.filter(isDoneTask), [progressTasks]);
   const blockedProgressTasks = useMemo(() => progressTasks.filter((task) => task.status === "blocked" && !isDoneTask(task)), [progressTasks]);
-  const currentTask = useMemo(() => nextTaskForCurrentWindow(filteredTimelineTasks, localHour, dateIso), [dateIso, filteredTimelineTasks, localHour]);
-  const nextRecoveryTask = useMemo(() => nextTaskForCurrentWindow(overdueTasks, localHour, dateIso), [dateIso, localHour, overdueTasks]);
-  const nextRecoveryWindow = nextRecoveryTask ? dayWindowDefinition(dayWindowForTask(nextRecoveryTask)) : null;
+  const currentTask = useMemo(() => nextTaskForCurrentWindow(filteredTimelineTasks, localHour, dateIso, partnerPlan), [dateIso, filteredTimelineTasks, localHour, partnerPlan]);
+  const nextRecoveryTask = useMemo(() => nextTaskForCurrentWindow(overdueTasks, localHour, dateIso, partnerPlan), [dateIso, localHour, overdueTasks, partnerPlan]);
+  const nextRecoveryWindow = nextRecoveryTask ? dayWindowDefinition(resolvedDayWindowForTask(nextRecoveryTask, dateIso, partnerPlan)) : null;
   const openRequiredCount = mixedOpenTasks.length;
   const zones = useMemo(() => Array.from(new Set(filteredTasks.map(collectionZone))).sort((a, b) => a.localeCompare(b)), [filteredTasks]);
   const recoveryGroups = useMemo(() => dayWindows.map((window) => ({
     ...window,
-    tasks: overdueTasks.filter((task) => dayWindowForTask(task) === window.key),
-  })).filter((window) => window.tasks.length), [overdueTasks]);
+    tasks: overdueTasks.filter((task) => resolvedDayWindowForTask(task, dateIso, partnerPlan) === window.key),
+  })).filter((window) => window.tasks.length), [dateIso, overdueTasks, partnerPlan]);
   const timelineGroups = useMemo(() => dayWindows.map((window) => ({
     ...window,
-    tasks: filteredTimelineTasks.filter((task) => dayWindowForTask(task) === window.key),
-  })).filter((window) => window.tasks.length), [filteredTimelineTasks]);
+    tasks: filteredTimelineTasks.filter((task) => resolvedDayWindowForTask(task, dateIso, partnerPlan) === window.key),
+  })).filter((window) => window.tasks.length), [dateIso, filteredTimelineTasks, partnerPlan]);
 
   const returnTo = routeFilter ? routeHref(dateIso, routeFilter) : dayHref(dateIso);
   const previousDate = shiftIsoDate(dateIso, -1);
@@ -604,7 +651,7 @@ function AtlasDayPageContent() {
               ) : viewMode === "work_order" ? (
                 <article className="atlas-day-route-group atlas-day-work-order-group atlas-day-timeline-group"><h3>Work the day</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{windowedTimeline(timelineGroups)}{!loading && !timelineTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}</div></article>
               ) : (
-                <>{zones.map((zone) => <article className="atlas-day-route-group" key={zone}><h3>{zone}</h3><div className="atlas-day-zone-group">{filteredTasks.filter((task) => collectionZone(task) === zone).sort((a, b) => mixedDaySortValue(a, dateIso).localeCompare(mixedDaySortValue(b, dateIso))).map((task) => <TaskCard task={task} overdue={isOverdueTask(task, dateIso)} key={task.task_id} returnTo={returnTo} />)}</div></article>)}</>
+                <>{zones.map((zone) => <article className="atlas-day-route-group" key={zone}><h3>{zone}</h3><div className="atlas-day-zone-group">{filteredTasks.filter((task) => collectionZone(task) === zone).sort((a, b) => mixedDaySortValue(a, dateIso, partnerPlan).localeCompare(mixedDaySortValue(b, dateIso, partnerPlan))).map((task) => <TaskCard task={task} overdue={isOverdueTask(task, dateIso)} key={task.task_id} returnTo={returnTo} />)}</div></article>)}</>
               )}
 
               {!routeFilter && livingDay ? <LivingDayGoals goals={livingDay.goals} returnTo={returnTo} /> : null}
