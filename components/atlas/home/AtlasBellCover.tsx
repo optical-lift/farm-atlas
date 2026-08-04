@@ -96,8 +96,8 @@ export default function AtlasBellCover() {
   }, [pathname, bell?.preparedAt]);
 
   const newest = useMemo(
-    () => bell?.items.find((item) => item.whileAway && item.requiresAction && !item.baseline && !item.acknowledged)
-      ?? bell?.items.find((item) => item.requiresAction && !item.baseline && !item.acknowledged)
+    () => bell?.items.find((item) => item.whileAway && item.requiresAction && !item.baseline && item.unread)
+      ?? bell?.items.find((item) => item.requiresAction && !item.baseline && item.unread)
       ?? null,
     [bell],
   );
@@ -106,9 +106,7 @@ export default function AtlasBellCover() {
   if (pathname === "/bell" || pathname.startsWith("/bell/") || pathname === "/login" || pathname.startsWith("/auth/")) return null;
 
   const management = atlasBellIsManagementRole(bell.effectiveRole);
-  const ariaSummary = management
-    ? `${bell.badgeCount} actions are waiting.`
-    : `${bell.badgeCount} moved tasks need finishing.`;
+  const ariaSummary = `${bell.badgeCount} new ${bell.badgeCount === 1 ? "item needs" : "items need"} your attention.`;
 
   return (
     <aside
@@ -125,7 +123,7 @@ export default function AtlasBellCover() {
 
       {expanded && newest ? (
         <Link href="/bell" className="atlas-while-away-slip">
-          <span>{management ? "Do next" : "Follow through"}</span>
+          <span>{management ? "New attention" : "New follow-through"}</span>
           <strong>{atlasBellActionTitle(newest)}</strong>
           {!management ? <em>{atlasBellActionTiming(newest)}</em> : null}
         </Link>
