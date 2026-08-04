@@ -7,11 +7,11 @@ const personalMigration = read("supabase/migrations/20260804053500_atlas_strict_
 const managementMigration = read("supabase/migrations/20260804052000_atlas_personal_work_and_manager_big_picture_v1.sql");
 const workAlongsideRoute = read("app/api/atlas/work-alongside/route.ts");
 const workAlongsideOverlay = read("components/atlas/work-alongside/AtlasWorkAlongsideOverlay.tsx");
+const workAlongsideCss = read("app/work-alongside.css");
 const shell = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
 const layout = read("app/layout.tsx");
 const morePage = read("app/more/page.tsx");
 const farmDayPage = read("app/manage/day/page.tsx");
-const farmDayCss = read("app/manage/day/farm-day.module.css");
 const effectiveAccess = read("lib/atlas/effective-management-access.ts");
 
 const personalReader = personalMigration.match(
@@ -50,14 +50,20 @@ test("management is a separate role-aware dock destination rather than an inner 
   assert.match(layout, /AtlasContextualAppFrame effectiveFarmRole=\{effectiveFarmRole\}/);
   assert.match(farmDayPage, /requireAtlasEffectiveManagementAccess/);
   assert.match(farmDayPage, /farm_day_task_cards_v1/);
-  assert.match(farmDayPage, /styles\.eyebrow}>Manager/);
+  assert.match(farmDayPage, /atlas-phone-kicker">Manager/);
   assert.doesNotMatch(farmDayPage, />My work</);
   assert.doesNotMatch(farmDayPage, />Big picture</);
   assert.doesNotMatch(workAlongsideOverlay, /atlas-day-management-lens-tabs/);
   assert.doesNotMatch(morePage, /label: "Farm day"/);
 });
 
-test("Manager uses the actual Day overview and task-row grammar", () => {
+test("Manager uses the exact Work page shell and Day task grammar", () => {
+  assert.match(farmDayPage, /atlas-phone-shell atlas-home-shell atlas-task-page-shell/);
+  assert.match(farmDayPage, /atlas-phone atlas-dashboard-phone atlas-task-page-phone/);
+  assert.match(farmDayPage, /atlas-phone-top atlas-dashboard-top/);
+  assert.match(farmDayPage, /atlas-phone-brand atlas-task-header-brand/);
+  assert.match(farmDayPage, /atlas-task-page-body/);
+  assert.match(farmDayPage, /atlas-task-page-section atlas-route-collection atlas-day-browse/);
   assert.match(farmDayPage, /atlas-day-browse-head/);
   assert.match(farmDayPage, /atlas-day-command-header/);
   assert.match(farmDayPage, /atlas-day-command-overview/);
@@ -68,20 +74,22 @@ test("Manager uses the actual Day overview and task-row grammar", () => {
   assert.match(farmDayPage, /atlas-day-task-node/);
   assert.match(farmDayPage, /atlas-day-task-card atlas-journal-task-row/);
   assert.match(farmDayPage, /atlas-journal-task-detail/);
-  assert.doesNotMatch(farmDayCss, /\.dayControls\s*\{/);
-  assert.doesNotMatch(farmDayCss, /\.feedHeader\s*\{/);
+  assert.doesNotMatch(farmDayPage, /farm-day\.module\.css/);
+  assert.doesNotMatch(farmDayPage, /styles\./);
+  assert.doesNotMatch(farmDayPage, /Every person’s assigned work/);
+  assert.doesNotMatch(farmDayPage, /peoplePill/);
 });
 
-test("every Manager task carries a visible assignee tag and avoids link-prefetch storms", () => {
-  assert.match(farmDayPage, /function AssigneeTag/);
-  assert.match(farmDayPage, /styles\.assigneeTag/);
-  assert.match(farmDayPage, /data-assignee-key=\{executor\.key\}/);
+test("every Manager task uses the compact Work Alongside assignee badge and avoids link-prefetch storms", () => {
+  assert.match(farmDayPage, /data-atlas-assignee-label=\{executor\.label\}/);
   assert.match(farmDayPage, /data-atlas-assignee-key=\{executor\.key\}/);
   assert.match(farmDayPage, /<dt>Assigned to<\/dt><dd>\{executor\.label\}<\/dd>/);
   assert.match(farmDayPage, /prefetch=\{false\}/);
-  assert.match(farmDayCss, /\.assigneeTag\s*\{/);
-  assert.match(farmDayCss, /\.assigneeTag\[data-assignee-key="anna"\]/);
-  assert.match(farmDayCss, /\.assigneeTag\[data-assignee-key="marshall"\]/);
+  assert.doesNotMatch(farmDayPage, /function AssigneeTag/);
+  assert.doesNotMatch(farmDayPage, /assigneeTag/);
+  assert.match(workAlongsideCss, /\[data-atlas-assignee-label\]::after/);
+  assert.match(workAlongsideCss, /\[data-atlas-assignee-key="anna"\]::after/);
+  assert.match(workAlongsideCss, /\[data-atlas-assignee-key="marshall"\]::after/);
 });
 
 test("effective management access and More mirror the switched identity", () => {
