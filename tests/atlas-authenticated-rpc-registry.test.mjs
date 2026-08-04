@@ -14,6 +14,10 @@ const thursdayClusterMigrationName =
   "20260804074000_thursday_morning_checklist_clusters_v2.sql";
 const thursdayClusterRegistryMigrationName =
   "20260804075500_thursday_morning_clusters_rpc_registry_v2.sql";
+const notificationActionsMigrationName =
+  "20260804225015_task_notification_actions_v1.sql";
+const notificationActionsRegistryMigrationName =
+  "20260804225100_task_notification_actions_rpc_registry_v1.sql";
 const migrationPath = new URL(
   `../supabase/migrations/${migrationName}`,
   import.meta.url,
@@ -108,6 +112,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const presentedWorkRegistry = readMigration(presentedWorkRegistryMigrationName);
   const thursdayChecklistRegistry = readMigration(thursdayChecklistRegistryMigrationName);
   const thursdayClusterRegistry = readMigration(thursdayClusterRegistryMigrationName);
+  const notificationActionsRegistry = readMigration(notificationActionsRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -123,7 +128,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
           ? thursdayChecklistRegistryMigrationName
           : name === thursdayClusterMigrationName
             ? thursdayClusterRegistryMigrationName
-            : null;
+            : name === notificationActionsMigrationName
+              ? notificationActionsRegistryMigrationName
+              : null;
 
       assert.ok(
         pairedRegistryName,
@@ -162,6 +169,10 @@ test("future authenticated EXECUTE changes must update the registry", () => {
     assert.ok(thursdayChecklistRegistry.includes(signature));
     assert.ok(thursdayClusterRegistry.includes(signature));
   }
+
+  assert.ok(notificationActionsRegistry.includes(
+    "atlas.handle_task_notification_action_v1(uuid, text, integer)",
+  ));
 });
 
 test("live registry proof is rollback-only and fail-closed", () => {
