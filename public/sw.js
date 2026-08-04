@@ -1,8 +1,8 @@
 /* Atlas PWA shell. Canonical farm truth remains server-authoritative. */
 // This byte change refreshes the installed offline document and any open stale client.
 // Bump this version whenever the offline document or global app chrome changes.
-// v6 removes Manager task-prefetch pressure and retries a real navigation before fallback.
-const ATLAS_PWA_VERSION = "atlas-pwa-shell-v6";
+// v7 restores the canonical Work-page shell and compact assignee badges in Manager.
+const ATLAS_PWA_VERSION = "atlas-pwa-shell-v7";
 const SHELL_CACHE = `${ATLAS_PWA_VERSION}:shell`;
 const STATIC_CACHE = `${ATLAS_PWA_VERSION}:static`;
 const PRIVATE_CACHE_SUFFIXES = [":pages", ":prepared-data"];
