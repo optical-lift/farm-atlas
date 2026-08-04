@@ -1,9 +1,8 @@
 /* Atlas PWA shell. Canonical farm truth remains server-authoritative. */
 // This byte change refreshes the installed offline document and any open stale client.
 // Bump this version whenever the offline document or global app chrome changes.
-// The version boundary forces installed devices to discard an older shell rather
-// than preserving retired navigation or presentation code in memory.
-const ATLAS_PWA_VERSION = "atlas-pwa-shell-v4";
+// v5 replaces clients parked on the v4 fallback and installs the role-aware Manager dock.
+const ATLAS_PWA_VERSION = "atlas-pwa-shell-v5";
 const SHELL_CACHE = `${ATLAS_PWA_VERSION}:shell`;
 const STATIC_CACHE = `${ATLAS_PWA_VERSION}:static`;
 const PRIVATE_CACHE_SUFFIXES = [":pages", ":prepared-data"];
