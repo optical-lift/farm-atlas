@@ -6,8 +6,13 @@ import { useEffect, useMemo } from "react";
 
 import GlobalAtlasAdd from "@/components/atlas/global-atlas-add";
 import HomeGreenPlusBridge from "@/components/atlas/home-green-plus-bridge";
+import type { AtlasFarmRole } from "@/lib/atlas/session";
 
-type DockIconKey = "home" | "work" | "harvest" | "more";
+type DockIconKey = "home" | "work" | "manager" | "harvest" | "more";
+
+type AtlasContextualAppFrameProps = {
+  effectiveFarmRole?: AtlasFarmRole | null;
+};
 
 function todayHref() {
   const date = new Date();
@@ -15,8 +20,15 @@ function todayHref() {
   return `/day?date=${encodeURIComponent(local.toISOString().slice(0, 10))}`;
 }
 
+function managerHref() {
+  const date = new Date();
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return `/manage/day?date=${encodeURIComponent(local.toISOString().slice(0, 10))}`;
+}
+
 function routeGroup(pathname: string) {
   if (pathname === "/") return "home";
+  if (pathname.startsWith("/manage/day")) return "manager";
   if (
     pathname.startsWith("/day")
     || pathname.startsWith("/overview")
@@ -60,6 +72,18 @@ function DockIcon({ kind }: { kind: DockIconKey }) {
     );
   }
 
+  if (kind === "manager") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <circle cx="12" cy="6.25" r="2.25" />
+        <circle cx="5.75" cy="15.75" r="1.75" />
+        <circle cx="18.25" cy="15.75" r="1.75" />
+        <path d="M12 8.5v3.25M5.75 14v-2.25h12.5V14" />
+        <path d="M9 20v-1.1c0-1.55 1.35-2.8 3-2.8s3 1.25 3 2.8V20" />
+      </svg>
+    );
+  }
+
   if (kind === "harvest") {
     return (
       <svg {...common} aria-hidden="true">
@@ -83,11 +107,13 @@ function DockIcon({ kind }: { kind: DockIconKey }) {
 
 const HIDDEN_PATHS = ["/login", "/auth", "/offline"];
 
-export default function AtlasContextualAppFrame() {
+export default function AtlasContextualAppFrame({ effectiveFarmRole = null }: AtlasContextualAppFrameProps) {
   const pathname = usePathname();
   const active = routeGroup(pathname);
   const workHref = useMemo(todayHref, []);
+  const farmManagerHref = useMemo(managerHref, []);
   const hidden = HIDDEN_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const canManage = effectiveFarmRole === "owner" || effectiveFarmRole === "manager";
 
   useEffect(() => {
     document.body.dataset.atlasRouteGroup = active;
@@ -101,6 +127,7 @@ export default function AtlasContextualAppFrame() {
   const items: Array<{ key: DockIconKey; label: string; href: string }> = [
     { key: "home", label: "Home", href: "/" },
     { key: "work", label: "Work", href: workHref },
+    ...(canManage ? [{ key: "manager" as const, label: "Manager", href: farmManagerHref }] : []),
     { key: "harvest", label: "Harvest", href: "/harvest" },
     { key: "more", label: "More", href: "/more" },
   ];
@@ -111,7 +138,10 @@ export default function AtlasContextualAppFrame() {
       <GlobalAtlasAdd />
       <HomeGreenPlusBridge />
       <nav className="atlas-context-footer" aria-label="Atlas destinations">
-        <div className="atlas-context-footer__rail" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+        <div
+          className="atlas-context-footer__rail"
+          style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+        >
           {items.map((item) => (
             <Link
               key={item.key}
