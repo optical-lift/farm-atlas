@@ -8,6 +8,8 @@ test("overdue work stays on Today instead of duplicating into future Work feeds"
   assert.match(dayPage, /if \(dateIso !== todayIso\(\)\) return \[\];/);
   assert.doesNotMatch(dayPage, /if \(dateIso < todayIso\(\)\) return \[\];/);
   assert.match(dayPage, /task\.due_date < dateIso/);
-  assert.doesNotMatch(dayPage, /overdueTasks\[0\] \?\?/);
-  assert.match(dayPage, /These unfinished tasks remain ahead of today’s regular work/);
+  assert.match(dayPage, /dateIso === todayIso\(\) \? \[\.\.\.overdueTasks, \.\.\.requiredTasks\] : requiredTasks/);
+  assert.match(dayPage, /Every unfinished recovery task is placed in the real day/);
+  assert.match(dayPage, /atlas-day-mixed-timeline/);
+  assert.doesNotMatch(dayPage, /These unfinished tasks remain ahead of today’s regular work/);
 });
