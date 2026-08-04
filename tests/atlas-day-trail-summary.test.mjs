@@ -80,9 +80,11 @@ test("Day Route keeps the overdue command together, preserves completion echoes,
   assert.match(echoCss, /\.atlas-day-completion-echo/);
   assert.match(echoCss, /\.atlas-day-task-node/);
   assert.match(patch, /label\.textContent = "Overdue"/);
-  assert.match(overdueCss, /intentionally inherit the original Day Route styling/);
-  assert.doesNotMatch(overdueCss, /\.atlas-day-recovery-overview\s*\{/);
-  assert.doesNotMatch(overdueCss, /\.atlas-day-window-marker\s*\{/);
+  assert.match(overdueCss, /exact compact Day Route geometry/);
+  assert.match(overdueCss, /\.atlas-day-recovery-count/);
+  assert.match(overdueCss, /\.atlas-day-window-marker/);
+  assert.match(overdueCss, /\.atlas-day-mixed-timeline \.atlas-day-overdue-task-card/);
+  assert.doesNotMatch(overdueCss, /\.atlas-day-command-header-with-recovery\s*\{/);
 
   assert.doesNotMatch(layout, /DayHeroQuietPatch/);
   assert.match(layout, /day-route-v1\.css/);
