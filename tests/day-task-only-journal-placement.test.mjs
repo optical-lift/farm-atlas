@@ -13,9 +13,10 @@ const journalCss = read("app/journal-page.css");
 const month = read("app/overview/month/page.tsx");
 const layout = read("app/layout.tsx");
 
-test("Day remains a task timeline while Living Journal sections are visually absent", () => {
+test("Day remains one task timeline while Living Journal sections are visually absent", () => {
   assert.match(day, /atlas-day-route-spine/);
-  assert.match(day, /timelineTasks\.map\(timelineRow\)/);
+  assert.match(day, /atlas-day-mixed-timeline/);
+  assert.match(day, /windowedTimeline\(timelineGroups\)/);
   assert.match(dayCss, /\.atlas-day-browse \.atlas-journal-carried/);
   assert.match(dayCss, /\.atlas-day-browse \.atlas-journal-goals/);
   assert.match(dayCss, /\.atlas-day-browse \.atlas-journal-events/);
@@ -25,10 +26,14 @@ test("Day remains a task timeline while Living Journal sections are visually abs
   assert.match(dayCss, /display: none !important/);
 });
 
-test("Day carry-forward keeps every unfinished task visible to the signed-in viewer", () => {
+test("Day mixes every unfinished carry-forward task into the signed-in viewer's real day", () => {
   assert.match(day, /const overdueTasks = useMemo/);
   assert.match(day, /task\.due_date < dateIso/);
-  assert.match(day, /atlas-day-overdue-group/);
+  assert.match(day, /mixedOpenTasks/);
+  assert.match(day, /\.\.\.overdueTasks, \.\.\.requiredTasks/);
+  assert.match(day, /mixedDaySortValue/);
+  assert.match(day, /isOverdueTask\(task, dateIso\)/);
+  assert.doesNotMatch(day, /atlas-day-overdue-group/);
   assert.doesNotMatch(day, /isOwnerOnlyTask/);
 });
 
