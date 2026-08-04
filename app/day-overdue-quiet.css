@@ -1,29 +1,243 @@
-/* Keep overdue carry-forward readable without repeating the state above every title.
-   atlas-day-window-marker and the recovery drawer intentionally inherit the original Day Route styling. */
+/* The overdue drawer keeps the exact compact Day Route geometry that the old
+   Next drawer used. Only its vocabulary and indexed contents are different. */
 
-.atlas-day-overdue-group
-  .atlas-day-overdue-task-card[data-atlas-day-consequence="overdue"]
-  .atlas-day-consequence-kicker {
+.atlas-day-recovery-count {
+  width: auto;
+  height: auto;
+  border: 1px solid rgba(139, 145, 194, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  color: var(--atlas-purple-dark);
+  padding: 5px 7px;
+  box-shadow: none;
+  display: inline-block;
+  font-size: 0;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.atlas-day-recovery-count::after {
+  content: "Overdue";
+  font-size: 8px;
+}
+
+.atlas-day-recovery-summary-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.atlas-day-recovery-summary-copy > span {
+  display: none;
+}
+
+.atlas-day-recovery-summary-copy > strong,
+.atlas-day-recovery-summary-copy > em {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-day-recovery-summary-copy > strong {
+  color: var(--atlas-text);
+  font-size: 14px;
+  line-height: 1.04;
+  font-weight: 950;
+  letter-spacing: -0.025em;
+}
+
+.atlas-day-recovery-summary-copy > em {
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.atlas-day-recovery-overview-body > p {
+  display: none;
+}
+
+.atlas-day-recovery-window {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.atlas-day-recovery-window > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.atlas-day-recovery-window > header strong {
+  color: var(--atlas-purple-dark);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atlas-day-recovery-window > header span {
+  color: var(--atlas-muted);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.atlas-day-recovery-chip-list {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.atlas-day-recovery-chip-list > a {
+  min-width: 0;
+  min-height: 62px;
+  border: 1px solid rgba(139, 145, 194, 0.15);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.48);
+  color: var(--atlas-text);
+  padding: 8px;
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  overflow: hidden;
+  text-decoration: none;
+}
+
+.atlas-day-recovery-chip-list > a strong,
+.atlas-day-recovery-chip-list > a span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.atlas-day-recovery-chip-list > a strong {
+  color: var(--atlas-text);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+  white-space: normal;
+}
+
+.atlas-day-recovery-chip-list > a span {
+  color: var(--atlas-muted);
+  font-size: 8px;
+  line-height: 1.05;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.atlas-day-mixed-timeline {
+  scroll-behavior: smooth;
+}
+
+.atlas-day-window-marker {
+  position: relative;
+  z-index: 3;
+  min-width: 0;
+  margin: 4px 0 4px -24px;
+  padding: 9px 4px 6px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: linear-gradient(90deg, var(--atlas-card) 82%, rgba(251, 250, 244, 0));
+}
+
+.atlas-day-window-marker::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  width: 11px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--atlas-purple-deep);
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 3px var(--atlas-card);
+}
+
+.atlas-day-window-marker span {
+  color: var(--atlas-purple-dark);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.atlas-day-window-marker em {
+  color: var(--atlas-muted);
+  font-size: 8px;
+  line-height: 1;
+  font-style: normal;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.atlas-day-mixed-timeline > .atlas-day-task-entry,
+.atlas-day-mixed-timeline > .atlas-day-completion-echo {
+  scroll-margin-top: 154px;
+}
+
+/* The drawer carries the overdue vocabulary; the timeline rows stay calm. */
+.atlas-day-mixed-timeline .atlas-day-overdue-task-card {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 8px 4px 18px 10px !important;
+  box-shadow: none !important;
+}
+
+.atlas-day-mixed-timeline .atlas-day-overdue-task-card::before,
+.atlas-day-mixed-timeline .atlas-day-overdue-badge,
+.atlas-day-mixed-timeline .atlas-day-consequence-kicker,
+.atlas-day-mixed-timeline .atlas-day-consequence-detail {
   display: none !important;
+  content: none !important;
 }
 
-.atlas-day-overdue-group
-  .atlas-day-overdue-task-card[data-atlas-day-consequence="overdue"] {
-  align-content: start !important;
-  row-gap: 4px !important;
+.atlas-day-mixed-timeline .atlas-day-overdue-entry > .atlas-day-task-node > span {
+  border-color: #9b7465 !important;
+  background: #9b7465 !important;
+  box-shadow: 0 0 0 3px var(--atlas-card) !important;
 }
 
-.atlas-day-overdue-group
-  .atlas-day-overdue-task-card[data-atlas-day-consequence="overdue"]
-  > strong {
-  display: block !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  line-height: 1.12 !important;
+.atlas-day-mixed-timeline .atlas-day-overdue-entry.atlas-day-route-current > .atlas-day-task-node > span {
+  width: 13px;
+  height: 13px;
+  border-width: 3px;
+  border-color: #835f53 !important;
+  background: var(--atlas-card) !important;
 }
 
-.atlas-day-overdue-group
-  .atlas-day-overdue-task-card[data-atlas-day-consequence="overdue"]
-  .atlas-day-consequence-detail {
-  margin-top: 1px !important;
+.atlas-day-mixed-timeline .atlas-day-overdue-task-card > summary > span:not(.atlas-day-task-cues),
+.atlas-day-mixed-timeline .atlas-day-overdue-task-card > span:not(.atlas-day-task-cues) {
+  color: #7d6257 !important;
+  font-weight: 900 !important;
+}
+
+.atlas-day-mixed-timeline .atlas-day-overdue-task-card .atlas-day-task-family {
+  color: #835f53 !important;
+}
+
+@media (max-width: 390px) {
+  .atlas-day-recovery-chip-list {
+    grid-template-columns: 1fr;
+  }
+
+  .atlas-day-window-marker {
+    margin-left: -22px;
+    padding-left: 22px;
+  }
 }
