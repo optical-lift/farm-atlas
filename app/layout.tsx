@@ -7,6 +7,7 @@ import AtlasContextualAppFrame from "@/components/atlas/shell/AtlasContextualApp
 import DependencyReleaseFlash from "@/components/atlas/task/DependencyReleaseFlash";
 import AtlasWorkAlongsideOverlay from "@/components/atlas/work-alongside/AtlasWorkAlongsideOverlay";
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
+import { getAtlasSession } from "@/lib/atlas/session";
 import WeekDayNavigation from "./WeekDayNavigation";
 import HomeTodayCompletePatch from "./HomeTodayCompletePatch";
 import HomeQuietTaskHeroPatch from "./HomeQuietTaskHeroPatch";
@@ -136,14 +137,23 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const operatorContext = await readAtlasOwnerOperatorContext();
+  const [operatorContext, session] = await Promise.all([
+    readAtlasOwnerOperatorContext(),
+    getAtlasSession(),
+  ]);
+  const activeMembership = session?.memberships.find((membership) => membership.farmId === session.activeFarmId)
+    ?? session?.memberships[0]
+    ?? null;
+  const effectiveFarmRole = operatorContext?.isOperating
+    ? operatorContext.effective.farmRole
+    : activeMembership?.role ?? null;
 
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <AtlasPwaBridge />
         <OwnerOperatorMode context={operatorContext} />
-        <AtlasContextualAppFrame />
+        <AtlasContextualAppFrame effectiveFarmRole={effectiveFarmRole} />
         <AtlasBellCover />
         <DependencyReleaseFlash />
         <Suspense fallback={null}><AtlasWorkAlongsideOverlay /></Suspense>
