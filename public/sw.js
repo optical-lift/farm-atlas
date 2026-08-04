@@ -1,4 +1,5 @@
 /* Atlas PWA shell. Canonical farm truth remains server-authoritative. */
+// This byte change refreshes the installed offline document with automatic recovery.
 // Bump this version whenever the offline document or global app chrome changes.
 // The version boundary forces installed devices to discard an older shell rather
 // than preserving retired navigation in the field fallback.
