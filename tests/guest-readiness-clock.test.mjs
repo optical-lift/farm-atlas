@@ -14,7 +14,7 @@ const titlePatch = read("supabase/migrations/20260731150400_guest_readiness_init
 const route = read("app/api/atlas/guest-readiness/route.ts");
 const focusRoute = read("app/task-focus/[taskId]/page.tsx");
 const focusPage = read("app/task-focus/[taskId]/GuestReadinessFocusPage.tsx");
-const focusStyles = read("app/task-focus/[taskId]/HarvestFocus.module.css");
+const focusStyles = read("app/task-focus/[taskId]/GuestReadinessFocus.module.css");
 const rhythmManager = read("app/manage/rhythms/BiologicalRhythmManager.tsx");
 const rhythmPage = read("app/manage/rhythms/page.tsx");
 
@@ -58,8 +58,8 @@ test("time opens a room walk but never claims a venue is ready or dirty", () => 
   assert.match(migration, /timeClaimsPhysicalCondition',false/);
   assert.match(migration, /physicalCondition','unknown/);
   assert.match(migration, /Time opened the walk; it did not decide the result/);
-  assert.match(focusPage, /Time does not claim a room is dirty/);
-  assert.match(focusPage, /What is physically true\?/);
+  assert.match(focusPage, /does not claim a room is dirty/);
+  assert.match(focusPage, /What to do/);
 });
 
 test("every room result uses the specialized readiness grammar", () => {
@@ -96,7 +96,7 @@ test("serious readiness problems become Owner-visible blockers without inventing
   assert.match(migration, /guest_readiness_owner_handoff/);
   assert.match(migration, /assigned_membership_id=v_owner_membership_id/);
   assert.match(migration, /event_damage_or_problem/);
-  assert.match(focusPage, /returns it to the Owner/);
+  assert.match(focusPage, /returned the round for Owner attention/);
 });
 
 test("only an Owner or manager may close a room or pause the venue rhythm", () => {
@@ -124,14 +124,18 @@ test("Guest Readiness writes remain authenticated same-origin operations", () =>
   assert.doesNotMatch(route, /SUPABASE_SERVICE_ROLE_KEY|atlasSupabase/);
 });
 
-test("Guest Readiness uses the universal task-focus route and mobile room cards", () => {
+test("Guest Readiness uses the universal task-focus route inside the standard Atlas shell", () => {
   assert.match(focusRoute, /isGuestReadinessTask/);
   assert.match(focusRoute, /GuestReadinessFocusPage/);
   assert.match(focusRoute, /guest_readiness_room_state/);
+  assert.match(focusPage, /atlas-phone-shell atlas-home-shell atlas-task-page-shell/);
+  assert.match(focusPage, /atlas-phone-title">Elm Farm/);
   assert.match(focusPage, /Walk every room and record its real condition/);
   assert.match(focusStyles, /\.roomList/);
   assert.match(focusStyles, /\.roomCard/);
+  assert.match(focusStyles, /var\(--atlas-text\)/);
   assert.match(focusStyles, /@media \(max-width: 390px\)/);
+  assert.doesNotMatch(focusPage, /HarvestFocus\.module\.css/);
 });
 
 test("the Owner Rulebook includes Guest Readiness as a farm rhythm", () => {
