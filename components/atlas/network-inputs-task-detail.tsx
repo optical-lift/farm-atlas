@@ -15,6 +15,8 @@ type Props = {
   assignee: AtlasAssigneeConfig;
 };
 
+type ClosingOutcome = "changed_plan" | "not_relevant";
+
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -37,11 +39,19 @@ function currentDone(task: AtlasTaskCard) {
   return task.status === "done" || text(task.metadata?.checklist_status) === "done";
 }
 
-function todayLabel(value: string | null | undefined) {
-  if (!value) return "No date";
-  const date = new Date(`${value.slice(0, 10)}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+function todayIso() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function addDays(dateIso: string, days: number) {
+  const date = new Date(`${dateIso}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: Props) {
@@ -53,6 +63,8 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const [openId, setOpenId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [savingTaskAction, setSavingTaskAction] = useState<string | null>(null);
+  const [taskMessage, setTaskMessage] = useState<string | null>(null);
   const [messageById, setMessageById] = useState<Record<string, string>>({});
   const [doneById, setDoneById] = useState<Record<string, boolean>>(() => Object.fromEntries(
     inputs.map((input) => [input.task_id, currentDone(input)]),
@@ -137,6 +149,7 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
   async function finishTask() {
     try {
       setClosing(true);
+      setTaskMessage(null);
       await postAtlasTaskTransition({
         taskId: task.task_id,
         transition: "done",
@@ -145,10 +158,56 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
         payload: { assigneeKey: assignee.key },
       });
       window.location.assign(assignee.listPath);
+    } catch (error) {
+      setTaskMessage(error instanceof Error ? error.message : "Could not finish this task.");
     } finally {
       setClosing(false);
     }
   }
+
+  async function reschedule(targetDate: string | null, reason: string, scheduleIntent?: string) {
+    try {
+      setSavingTaskAction("reschedule");
+      setTaskMessage(null);
+      await postAtlasTaskTransition({
+        taskId: task.task_id,
+        transition: "rescheduled",
+        ...(targetDate ? { targetDate } : {}),
+        reason,
+        laneKey: task.action_key || "network",
+        workKey: task.action_key || "network",
+        payload: { assigneeKey: assignee.key, ...(scheduleIntent ? { scheduleIntent } : {}) },
+      });
+      window.location.assign(assignee.listPath);
+    } catch (error) {
+      setTaskMessage(error instanceof Error ? error.message : "Could not move this task.");
+    } finally {
+      setSavingTaskAction(null);
+    }
+  }
+
+  async function closeWithoutDoing(outcome: ClosingOutcome, reason: string) {
+    try {
+      setSavingTaskAction(outcome);
+      setTaskMessage(null);
+      await postAtlasTaskTransition({
+        taskId: task.task_id,
+        transition: outcome,
+        note: reason,
+        reason,
+        laneKey: task.action_key || "network",
+        workKey: task.action_key || "network",
+        payload: { assigneeKey: assignee.key },
+      });
+      window.location.assign(assignee.listPath);
+    } catch (error) {
+      setTaskMessage(error instanceof Error ? error.message : "Could not close this task.");
+    } finally {
+      setSavingTaskAction(null);
+    }
+  }
+
+  const taskBusy = closing || Boolean(savingId) || Boolean(savingTaskAction);
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
@@ -228,13 +287,35 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
 
             <footer className="atlas-task-result-footer">
               <div className="atlas-task-result-actions atlas-task-result-actions-simple">
-                <button type="button" className="done" disabled={closing || Boolean(savingId)} onClick={() => void finishTask()}>
+                <button type="button" className="done" disabled={taskBusy} onClick={() => void finishTask()}>
                   {closing ? "Finishing" : "Done"}
                 </button>
-                <button type="button" className="unfinished" disabled={closing || Boolean(savingId)} onClick={() => window.location.assign(assignee.listPath)}>
+                <button type="button" className="unfinished" disabled={taskBusy} onClick={() => window.location.assign(assignee.listPath)}>
                   Unfinished
                 </button>
               </div>
+
+              <details className="atlas-task-more-outcomes">
+                <summary><span>Move or close this card</span><b aria-hidden="true">⌄</b></summary>
+                <div className="atlas-task-more-outcomes-body">
+                  <span>Reschedule</span>
+                  <div className="atlas-task-more-outcomes-grid">
+                    <button type="button" disabled={taskBusy} onClick={() => void reschedule(null, "Moved to next Elm Farm calendar day from assigned task page", "next_day")}>Tomorrow</button>
+                    <button type="button" disabled={taskBusy} onClick={() => void reschedule(addDays(todayIso(), 7), "Moved to next week from assigned task page")}>Next week</button>
+                    <button type="button" disabled={taskBusy} onClick={() => {
+                      const date = window.prompt("Pick a date (YYYY-MM-DD)", task.due_date || todayIso())?.trim();
+                      if (date) void reschedule(date, "Rescheduled from assigned task page");
+                    }}>Pick a date</button>
+                  </div>
+                  <span>Close without doing it</span>
+                  <div className="atlas-task-more-outcomes-grid quiet">
+                    <button type="button" disabled={taskBusy} onClick={() => void closeWithoutDoing("changed_plan", window.prompt("What changed?", "")?.trim() || "Plan changed")}>Changed plan</button>
+                    <button type="button" disabled={taskBusy} onClick={() => void closeWithoutDoing("not_relevant", window.prompt("Why is this no longer relevant?", "")?.trim() || "Not relevant")}>Not relevant</button>
+                  </div>
+                </div>
+              </details>
+
+              {taskMessage ? <p className="atlas-network-task-message" aria-live="polite">{taskMessage}</p> : null}
             </footer>
           </article>
         </div>
@@ -259,8 +340,9 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
         .atlas-network-input__form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .atlas-network-input__form-actions button { min-height: 48px; border: 1px solid rgba(139,145,194,.2); border-radius: 14px; background: rgba(255,255,255,.92); color: var(--atlas-text); font-weight: 950; }
         .atlas-network-input__form-actions button[type="submit"] { background: rgba(214,225,177,.78); color: #515b34; }
-        .atlas-network-input__form p, .atlas-network-input__message { margin: 0; color: #835345; font-size: 12px; line-height: 1.25; font-weight: 850; }
+        .atlas-network-input__form p, .atlas-network-input__message, .atlas-network-task-message { margin: 0; color: #835345; font-size: 12px; line-height: 1.25; font-weight: 850; }
         .atlas-network-input__message { padding: 0 18px 14px 62px; }
+        .atlas-network-task-message { padding: 12px 4px 0; text-align: center; }
         .atlas-network-input button:disabled, .atlas-network-input textarea:disabled { opacity: .58; }
         @media (max-width: 430px) {
           .atlas-network-inputs { padding: 20px 12px 8px; }
