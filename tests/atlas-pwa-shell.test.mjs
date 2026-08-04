@@ -12,6 +12,7 @@ const serviceWorker = read("public/sw.js");
 const pwaClient = read("lib/atlas/pwa-client.ts");
 const bridge = read("components/atlas/pwa/AtlasPwaBridge.tsx");
 const setup = read("components/atlas/pwa/AtlasPwaSetup.tsx");
+const offlineRecovery = read("components/atlas/pwa/AtlasOfflineRecovery.tsx");
 const installPage = read("app/install/page.tsx");
 const offlinePage = read("app/offline/page.tsx");
 const iconRoute = read("app/api/pwa/icon/route.tsx");
@@ -28,6 +29,7 @@ const build = [
   pwaClient,
   bridge,
   setup,
+  offlineRecovery,
   installPage,
   offlinePage,
   iconRoute,
@@ -124,7 +126,21 @@ test("the installed Bell badge refreshes whenever Atlas resumes or regains conne
 
 test("offline fallback is an Atlas shell and does not claim unsynced farm truth", () => {
   assert.match(offlinePage, /Atlas is still here/);
-  assert.match(offlinePage, /Return to a Home, Work, Bell, Zone Registry, or Project view you opened/);
+  assert.match(offlinePage, /<AtlasOfflineRecovery \/>/);
+  assert.match(offlinePage, /return to the view you were opening/);
   assert.match(serviceWorker, /server-authoritative/);
   assert.doesNotMatch(offlinePage, /saved|synced|completed|recorded/i);
+});
+
+test("the offline shell retries the real destination and leaves automatically when signal returns", () => {
+  assert.match(offlineRecovery, /fetch\(probe/);
+  assert.match(offlineRecovery, /cache: "no-store"/);
+  assert.match(offlineRecovery, /window\.location\.replace\(destination\.href\)/);
+  assert.match(offlineRecovery, /setInterval\([\s\S]*5000\)/);
+  assert.match(offlineRecovery, /addEventListener\("online", resume\)/);
+  assert.match(offlineRecovery, /addEventListener\("focus", resume\)/);
+  assert.match(offlineRecovery, /addEventListener\("pageshow", resume\)/);
+  assert.match(offlineRecovery, /addEventListener\("visibilitychange", visibility\)/);
+  assert.match(offlineRecovery, /atlasOfflineFallback/);
+  assert.match(offlineRecovery, /\.atlas-context-footer, \.atlas-bell-cover/);
 });
