@@ -369,7 +369,7 @@ function AtlasDayPageContent() {
   const allDayTasks = useMemo(() => tasks.filter(isWorkTask).filter((task) => task.due_date === dateIso), [dateIso, tasks]);
   const dayTasks = useMemo(() => tasks.filter(isDashboardWork).filter((task) => task.due_date === dateIso).sort((a, b) => atlasWorkOrderSortValue(a).localeCompare(atlasWorkOrderSortValue(b))), [dateIso, tasks]);
   const overdueTasks = useMemo(() => {
-    if (dateIso < todayIso()) return [];
+    if (dateIso !== todayIso()) return [];
     return tasks.filter(isDashboardWork).filter((task) => Boolean(task.due_date && task.due_date < dateIso)).filter((task) => !isExtraCredit(task)).filter((task) => !atlasIsMowingCollectionMember(task) && !atlasIsWeedingCollectionMember(task) && !atlasIsGerminationCollectionMember(task)).sort((a, b) => `${a.due_date ?? ""}-${atlasWorkOrderSortValue(a)}`.localeCompare(`${b.due_date ?? ""}-${atlasWorkOrderSortValue(b)}`));
   }, [dateIso, tasks]);
   const progressTasks = useMemo(() => allDayTasks.filter((task) => !isExtraCredit(task)), [allDayTasks]);
@@ -383,7 +383,7 @@ function AtlasDayPageContent() {
   const filteredTasks = useMemo(() => routeFilter ? standaloneTasks.filter((task) => atlasRouteKeyForTask(task) === routeFilter) : standaloneTasks, [routeFilter, standaloneTasks]);
   const timelineTasks = useMemo(() => [...standaloneTasks, ...doneStandaloneTasks].sort((a, b) => atlasWorkOrderSortValue(a).localeCompare(atlasWorkOrderSortValue(b))), [doneStandaloneTasks, standaloneTasks]);
   const filteredTimelineTasks = useMemo(() => routeFilter ? timelineTasks.filter((task) => atlasRouteKeyForTask(task) === routeFilter) : timelineTasks, [routeFilter, timelineTasks]);
-  const currentTask = useMemo(() => overdueTasks[0] ?? atlasDayCurrentTask(standaloneTasks) ?? atlasDayCurrentTask(requiredTasks), [overdueTasks, requiredTasks, standaloneTasks]);
+  const currentTask = useMemo(() => atlasDayCurrentTask(standaloneTasks) ?? atlasDayCurrentTask(requiredTasks), [requiredTasks, standaloneTasks]);
   const careTasks = useMemo(() => requiredTasks.filter(atlasDayIsCarePulse).filter((task) => task.task_id !== currentTask?.task_id).slice(0, 3), [currentTask, requiredTasks]);
   const openRequiredCount = useMemo(() => requiredTasks.filter((task) => task.status === "open").length, [requiredTasks]);
 
@@ -485,7 +485,7 @@ function AtlasDayPageContent() {
             {!routeFilter ? (
               <article className="atlas-day-command-header" data-day-denominator={`${finishedProgressTasks.length}/${progressTasks.length}`}>
                 <div className="atlas-day-command-topline">
-                  <div className="atlas-day-command-date"><strong>{prettyDate(dateIso)}</strong><span>{loading ? "Loading" : `${openRequiredCount} today${overdueTasks.length ? ` · ${overdueTasks.length} carry forward` : ""}${blockedProgressTasks.length ? ` · ${blockedProgressTasks.length} blocked` : ""}`}</span></div>
+                  <div className="atlas-day-command-date"><strong>{prettyDate(dateIso)}</strong><span>{loading ? "Loading" : `${openRequiredCount} open${blockedProgressTasks.length ? ` · ${blockedProgressTasks.length} blocked` : ""}`}</span></div>
                   <ViewToggle viewMode={viewMode} onChange={setViewMode} />
                 </div>
                 <DayTrailSummary compact loading={loading} completed={finishedProgressTasks.length} total={progressTasks.length} blocked={blockedProgressTasks.length} />
@@ -508,7 +508,7 @@ function AtlasDayPageContent() {
             {!routeFilter && overdueTasks.length ? (
               <article className="atlas-day-route-group atlas-day-overdue-group" aria-label="Overdue carry-forward work">
                 <div className="atlas-day-overdue-group-head"><div><span>Carry forward</span><h3>Overdue</h3></div><b>{overdueTasks.length}</b></div>
-                <p>These unfinished tasks remain ahead of this day’s regular work.</p>
+                <p>These unfinished tasks remain ahead of today’s regular work.</p>
                 <div className="atlas-day-work-order-list">{overdueTasks.map((task) => <TaskCard task={task} overdue key={task.task_id} returnTo={returnTo} />)}</div>
               </article>
             ) : null}
