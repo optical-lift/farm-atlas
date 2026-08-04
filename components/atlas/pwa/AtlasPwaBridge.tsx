@@ -8,6 +8,8 @@ import {
   registerAtlasServiceWorker,
 } from "@/lib/atlas/pwa-client";
 
+const LOADED_BUILD_KEY = "atlas:loaded-build:v1";
+
 type AtlasBuildVersionResponse = {
   ok?: boolean;
   buildVersion?: string;
@@ -20,6 +22,22 @@ function writeConnectionState() {
   }));
 }
 
+function readLoadedBuild() {
+  try {
+    return window.sessionStorage.getItem(LOADED_BUILD_KEY)?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberLoadedBuild(buildVersion: string) {
+  try {
+    window.sessionStorage.setItem(LOADED_BUILD_KEY, buildVersion);
+  } catch {
+    // Private browsing can deny storage without preventing a live Atlas load.
+  }
+}
+
 export default function AtlasPwaBridge() {
   const pathname = usePathname();
   const checkingBuild = useRef(false);
@@ -27,8 +45,6 @@ export default function AtlasPwaBridge() {
 
   const refreshStaleBuild = useCallback(async () => {
     if (!navigator.onLine || checkingBuild.current || reloadingBuild.current) return;
-    const loadedBuild = document.documentElement.dataset.atlasBuild?.trim();
-    if (!loadedBuild || loadedBuild === "development") return;
 
     checkingBuild.current = true;
     try {
@@ -39,8 +55,16 @@ export default function AtlasPwaBridge() {
       if (!response.ok) return;
       const result = await response.json() as AtlasBuildVersionResponse;
       const currentBuild = result.buildVersion?.trim();
-      if (!result.ok || !currentBuild || currentBuild === loadedBuild) return;
+      if (!result.ok || !currentBuild || currentBuild === "development") return;
 
+      const loadedBuild = readLoadedBuild();
+      if (!loadedBuild) {
+        rememberLoadedBuild(currentBuild);
+        return;
+      }
+      if (currentBuild === loadedBuild) return;
+
+      rememberLoadedBuild(currentBuild);
       reloadingBuild.current = true;
       window.location.reload();
     } catch {
