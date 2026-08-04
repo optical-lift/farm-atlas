@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import AtlasOfflineRecovery from "@/components/atlas/pwa/AtlasOfflineRecovery";
+
 export default function AtlasOfflinePage() {
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
@@ -17,7 +19,8 @@ export default function AtlasOfflinePage() {
           <section>
             <span>Signal dropped</span>
             <h1>Atlas is still here.</h1>
-            <p>Return to a Home, Work, Bell, Zone Registry, or Project view you opened on this device before the connection dropped.</p>
+            <p>Atlas will return to the view you were opening as soon as it can reach the farm again.</p>
+            <AtlasOfflineRecovery />
             <div>
               <Link href="/">Home</Link>
               <Link href="/day">Work</Link>
