@@ -18,6 +18,7 @@ export default async function AtlasMorePage() {
     { label: "Production", detail: "Crop cycles and production state", href: "/production" },
     { label: "Seed inventory", detail: "Verified counts, freshness and crop commitments", href: "/inventory/seeds" },
     ...(canManage ? [
+      { label: "Farm day", detail: "Big picture of today’s assigned work by person", href: "/manage/day" },
       { label: "Tomorrow preflight", detail: "Review each person's real day, overload and held work", href: "/tomorrow" },
       { label: "People + roles", detail: "Farm membership and authority", href: "/owner/members" },
       { label: "Farm management", detail: "Blockers, assignment and schedule risk", href: "/manage" },
@@ -48,7 +49,7 @@ export default async function AtlasMorePage() {
         </section>
 
         <div id="atlas-more-account-slot" />
-        {isFarmOwner ? <div id="atlas-more-work-alongside-slot" /> : null}
+        {canManage ? <div id="atlas-more-work-alongside-slot" /> : null}
 
         <nav className="atlas-more-page__list" aria-label="More Atlas destinations">
           {destinations.map((destination) => (
