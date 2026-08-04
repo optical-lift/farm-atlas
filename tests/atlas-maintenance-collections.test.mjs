@@ -6,20 +6,27 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Day keeps canonical collections inside the compact route overview", () => {
+test("Day keeps canonical maintenance jobs in the mixed timeline while the compact drawer stays recovery-only", () => {
   const source = read("app/day/page.tsx");
   const routeCss = read("app/day-route-v1.css");
+  const recoveryCss = read("app/day-overdue-quiet.css");
   const adapter = read("lib/atlas/day-route.ts");
 
   assert.match(source, /atlas-day-command-header/);
-  assert.match(source, /atlas-day-overview-drawer/);
-  assert.match(source, /atlas-day-route-grid/);
+  assert.match(source, /atlas-day-recovery-overview/);
+  assert.match(source, /atlas-day-recovery-chip-list/);
   assert.match(source, /atlas-day-filter-pill/);
   assert.match(source, /atlas-day-route-spine/);
-  assert.match(source, /WorkCollectionCard/);
+  assert.match(source, /atlas-day-mixed-timeline/);
+  assert.match(source, /windowedTimeline\(timelineGroups\)/);
   assert.match(source, /fetchAtlasTaskCards/);
-  assert.match(adapter, /atlasDayCurrentTask/);
-  assert.match(routeCss, /atlas-day-overview-pills/);
+  assert.match(source, /mixedOpenTasks/);
+  assert.match(source, /atlasRouteKeyForTask/);
+  assert.doesNotMatch(source, /WorkCollectionCard/);
+  assert.doesNotMatch(source, /atlas-day-route-grid/);
+  assert.match(adapter, /atlasDayRouteState/);
+  assert.match(routeCss, /atlas-day-view-toggle/);
+  assert.match(recoveryCss, /atlas-day-window-marker/);
   assert.doesNotMatch(source, /atlas-day-route-hero/);
   assert.doesNotMatch(source, /CanonicalScheduleView/);
 });
