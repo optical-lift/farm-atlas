@@ -39,7 +39,7 @@ export type AtlasBellItem = {
 };
 
 export type AtlasBell = {
-  contractVersion: "atlas_bell_v2";
+  contractVersion: "atlas_bell_v4";
   farmId: string;
   effectiveUserId: string;
   effectiveMembershipId: string;
@@ -50,9 +50,13 @@ export type AtlasBell = {
   whileAwayCount: number;
   unreadCount: number;
   badgeCount: number;
+  newAttentionCount: number;
+  currentActionCount: number;
+  badgeMeaning: "unreviewed_attention";
+  workMeaning: "current_actionable_work";
   baselineSummary: AtlasBellBaselineSummary;
   items: AtlasBellItem[];
-  eventTruth: "journal_event_index";
+  eventTruth: "journal_event_index" | "journal_event_index + community_events";
   receiptTruth: "bell_event_receipts";
   obligationTruth: "latest_worthy_event_per_obligation" | "current_assigned_task_movement_per_task";
 };
