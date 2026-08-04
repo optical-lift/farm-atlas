@@ -14,6 +14,10 @@ const workAlongsideRoute = readFileSync(
   new URL("../app/api/atlas/work-alongside/route.ts", import.meta.url),
   "utf8",
 );
+const workAlongsideOverlay = readFileSync(
+  new URL("../components/atlas/work-alongside/AtlasWorkAlongsideOverlay.tsx", import.meta.url),
+  "utf8",
+);
 const morePage = readFileSync(new URL("../app/more/page.tsx", import.meta.url), "utf8");
 const farmDayPage = readFileSync(new URL("../app/manage/day/page.tsx", import.meta.url), "utf8");
 
@@ -45,4 +49,8 @@ test("management gets a separate farm-wide day instead of broadening My work", (
   assert.match(farmDayPage, /farm_day_task_cards_v1/);
   assert.match(farmDayPage, />My work</);
   assert.match(farmDayPage, />Big picture</);
+  assert.match(workAlongsideOverlay, /atlas-day-management-lens-tabs/);
+  assert.match(workAlongsideOverlay, />My work</);
+  assert.match(workAlongsideOverlay, />Big picture</);
+  assert.match(workAlongsideOverlay, /\/manage\/day\?date=/);
 });
