@@ -19,7 +19,7 @@ export default function AtlasOfflinePage() {
           <section>
             <span>Signal dropped</span>
             <h1>Atlas is still here.</h1>
-            <p>Atlas will return to the view you were opening as soon as it can reach the farm again.</p>
+            <p>Atlas will return to the view you were opening as soon as it can reach the farm again. Home, Work, Bell, Zone Registry, or Project views remain the recovery destinations.</p>
             <AtlasOfflineRecovery />
             <div>
               <Link href="/">Home</Link>
