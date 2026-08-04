@@ -47,6 +47,9 @@ const ACTION_FAMILIES: Record<string, string> = {
   mowing: "Mow",
   water: "Water",
   watering: "Water",
+  spray: "Spray",
+  spraying: "Spray",
+  respray: "Spray",
   harvest: "Harvest",
   postharvest: "Postharvest",
   propagation: "Propagation",
@@ -121,6 +124,18 @@ export function atlasDayTaskFamily(task: AtlasTaskCard) {
   if (displayAction) return displayAction;
 
   return titleCase(task.task_type || task.action_key || "Work");
+}
+
+/**
+ * Similar work partners from canonical operational fields, not title matching.
+ * A rare task may provide an explicit partner key; otherwise its Day family is
+ * the stable grouping contract. This lets an overdue respray travel with the
+ * day's spray work without changing either task's due date or historical truth.
+ */
+export function atlasDayTaskPartnerKey(task: AtlasTaskCard) {
+  const explicit = metadataString(task, "work_partner_key")
+    || metadataString(task, "task_family_key");
+  return normalized(explicit || atlasDayTaskFamily(task));
 }
 
 export function atlasDayIsCarePulse(task: AtlasTaskCard) {
