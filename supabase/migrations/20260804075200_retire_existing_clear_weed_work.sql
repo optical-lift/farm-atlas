@@ -7,6 +7,11 @@ DO $repair$
 DECLARE
   v_task_ids uuid[] := '{}'::uuid[];
 BEGIN
+  -- Closing a task normally invites the reservoir to release another eligible
+  -- card. Hold that release seam closed while this finite consistency repair is
+  -- retiring cards that should never have been active together.
+  PERFORM set_config('atlas.reservoir_migration', 'on', true);
+
   SELECT coalesce(array_agg(DISTINCT task.id), '{}'::uuid[])
   INTO v_task_ids
   FROM atlas.tasks task
