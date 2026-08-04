@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireAtlasEffectiveManagementAccess } from "@/lib/atlas/effective-management-access";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasTaskDisplay } from "@/lib/atlas/task-display";
+import { atlasWorkOrderLabel } from "@/lib/atlas/work-order";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 import styles from "./farm-day.module.css";
 
@@ -85,15 +86,7 @@ export default async function FarmDayPage({ searchParams }: FarmDayPageProps) {
     p_work_date: dateIso,
   });
   const tasks = error ? [] : ((data ?? []) as AtlasTaskCard[]).sort(taskSort);
-
-  const groups = new Map<string, { label: string; tasks: AtlasTaskCard[] }>();
-  for (const task of tasks) {
-    const executor = taskExecutor(task);
-    const group = groups.get(executor.key) ?? { label: executor.label, tasks: [] };
-    group.tasks.push(task);
-    groups.set(executor.key, group);
-  }
-  const people = [...groups.values()].sort((left, right) => left.label.localeCompare(right.label));
+  const peopleCount = new Set(tasks.map((task) => taskExecutor(task).key)).size;
   const counts = {
     total: tasks.length,
     open: tasks.filter((task) => task.status === "open").length,
@@ -116,51 +109,65 @@ export default async function FarmDayPage({ searchParams }: FarmDayPageProps) {
           <Link className={styles.close} href="/" aria-label="Close Manager">×</Link>
         </header>
 
-        <section className={styles.dateBar} aria-label="Choose farm day">
-          <Link href={`/manage/day?date=${previousDate}`} aria-label="Previous day">‹</Link>
-          <div><strong>{prettyDate(dateIso)}</strong><span>{people.length} {people.length === 1 ? "person" : "people"} with assigned work</span></div>
-          <Link href={`/manage/day?date=${nextDate}`} aria-label="Next day">›</Link>
-        </section>
+        <section className={styles.dayControls} aria-label="Farm day overview">
+          <div className={styles.dateBar}>
+            <Link href={`/manage/day?date=${previousDate}`} aria-label="Previous day">‹</Link>
+            <div><strong>{prettyDate(dateIso)}</strong><span>{peopleCount} {peopleCount === 1 ? "person" : "people"} with assigned work</span></div>
+            <Link href={`/manage/day?date=${nextDate}`} aria-label="Next day">›</Link>
+          </div>
 
-        <section className={styles.summary} aria-label="Farm day totals">
-          <article><strong>{counts.total}</strong><span>Total</span></article>
-          <article><strong>{counts.open}</strong><span>Open</span></article>
-          <article><strong>{counts.blocked}</strong><span>Blocked</span></article>
-          <article><strong>{counts.done}</strong><span>Done</span></article>
+          <section className={styles.summary} aria-label="Farm day totals">
+            <span><b>{counts.total}</b> total</span>
+            <span><b>{counts.open}</b> open</span>
+            <span><b>{counts.blocked}</b> blocked</span>
+            <span><b>{counts.done}</b> done</span>
+          </section>
         </section>
 
         {error ? <p className={styles.error}>The farm-wide day could not be loaded.</p> : null}
-        {!error && !people.length ? <p className={styles.empty}>No assigned farm work is due or carried into this day.</p> : null}
+        {!error && !tasks.length ? <p className={styles.empty}>No assigned farm work is due or carried into this day.</p> : null}
 
-        <div className={styles.groups} data-operator-mode={access.operatorMode ? "true" : "false"}>
-          {people.map((person) => (
-            <section className={styles.group} key={person.label} aria-label={`${person.label}'s work`}>
-              <header className={styles.groupHeader}>
-                <div><span>Assigned to</span><h2>{person.label}</h2></div>
-                <b>{person.tasks.length}</b>
-              </header>
-              <div className={styles.list}>
-                {person.tasks.map((task) => {
-                  const display = atlasTaskDisplay(task);
-                  const statusLabel = taskStatusLabel(task, dateIso);
-                  return (
+        {!error && tasks.length ? (
+          <section className={styles.feed} aria-label="Every person's assigned work" data-operator-mode={access.operatorMode ? "true" : "false"}>
+            <header className={styles.feedHeader}>
+              <span>Farm work</span>
+              <strong>{counts.total} tasks across {peopleCount} {peopleCount === 1 ? "person" : "people"}</strong>
+            </header>
+            <div className={`${styles.list} atlas-day-route-spine`}>
+              {tasks.map((task) => {
+                const display = atlasTaskDisplay(task);
+                const executor = taskExecutor(task);
+                const statusLabel = taskStatusLabel(task, dateIso);
+                const carried = Boolean(task.due_date && task.due_date < dateIso);
+                const statusLine = `${atlasWorkOrderLabel(task)} · ${taskLocation(task)}${carried ? ` · due ${prettyDate(task.due_date as string)}` : ""}`;
+                const blockedClass = task.status === "blocked" ? " atlas-day-route-blocked" : "";
+                const completeClass = task.status === "done" ? " atlas-day-complete-entry" : "";
+                return (
+                  <div
+                    className={`${styles.entry} atlas-day-task-entry${blockedClass}${completeClass}`}
+                    data-atlas-assignee-key={executor.key}
+                    data-status={task.status}
+                    key={task.task_id}
+                  >
+                    <span className={`atlas-day-task-node${task.status === "done" ? " is-complete" : ""}`} aria-hidden="true"><span /></span>
                     <Link
-                      className={styles.card}
+                      className={`${styles.card} atlas-day-task-card`}
+                      data-atlas-assignee-label={executor.label}
+                      data-atlas-assignee-key={executor.key}
                       data-status={task.status}
                       href={`/task-focus/${encodeURIComponent(task.task_id)}?returnTo=${encodeURIComponent(returnTo)}`}
-                      key={task.task_id}
                     >
+                      <small className="atlas-day-task-family">{statusLabel}</small>
                       <strong>{display.title}</strong>
-                      <span className={styles.cardStatus}>{statusLabel}</span>
-                      <span className={styles.cardMeta}>{taskLocation(task)}{task.due_date && task.due_date < dateIso ? ` · due ${task.due_date}` : ""}</span>
-                      {display.detail ? <p className={styles.cardDetail}>{display.detail}</p> : null}
+                      <span>{statusLine}</span>
+                      {display.detail ? <em>{display.detail}</em> : null}
                     </Link>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
       </section>
     </main>
   );
