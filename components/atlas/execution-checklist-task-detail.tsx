@@ -71,6 +71,11 @@ function requestKey(taskId: string, itemKey: string, checked: boolean) {
   return `${taskId}:${itemKey}:${checked ? "checked" : "reopened"}:${nonce}`;
 }
 
+function metadataText(task: AtlasTaskCard, key: string) {
+  const value = task.metadata?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
 async function readChecklist(taskId: string) {
   const response = await fetch(`/api/atlas/task-execution-checklist?taskId=${encodeURIComponent(taskId)}`, {
     headers: { Accept: "application/json" },
@@ -220,7 +225,10 @@ export default function ExecutionChecklistTaskDetail({ task, assignee }: Props) 
   }
 
   const busy = Boolean(savingItem || savingOutcome);
-  const completionLabel = checklist?.completionLabel || "Elm is ready for Thursday morning";
+  const instruction = metadataText(task, "task_instruction") || task.title;
+  const checklistKicker = metadataText(task, "execution_checklist_kicker") || "Task checklist";
+  const checklistTitle = checklist?.title || metadataText(task, "execution_checklist_title") || task.title;
+  const completionLabel = checklist?.completionLabel || metadataText(task, "execution_checklist_completion_label") || "Finish task";
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
@@ -261,20 +269,20 @@ export default function ExecutionChecklistTaskDetail({ task, assignee }: Props) 
 
         <div className="atlas-task-page-body">
           <article className="atlas-task-page-active atlas-task-ticket-card atlas-dominion-task-card">
-            <TaskDominionTrail task={task} instruction="Prepare Elm for Thursday Morning" />
+            <TaskDominionTrail task={task} instruction={instruction} />
 
-            <section className="atlas-execution-checklist" aria-label="Wednesday closing round">
+            <section className="atlas-execution-checklist" aria-label={checklistTitle}>
               <header className="atlas-execution-checklist__head">
                 <div>
-                  <span>Thursday morning prep</span>
-                  <strong>{checklist?.title || "Wednesday closing round"}</strong>
+                  <span>{checklistKicker}</span>
+                  <strong>{checklistTitle}</strong>
                 </div>
                 <div className="atlas-execution-checklist__progress">
                   {checklist ? `${checklist.completeCount} / ${checklist.totalCount}` : "Loading"}
                 </div>
               </header>
 
-              {!checklist ? <p className="atlas-execution-checklist__loading">Loading the full round…</p> : sections.map((section) => (
+              {!checklist ? <p className="atlas-execution-checklist__loading">Loading checklist…</p> : sections.map((section) => (
                 <section className="atlas-execution-checklist__section" key={section.key}>
                   <h2>{section.label}</h2>
                   <div className="atlas-execution-checklist__items">
@@ -297,7 +305,7 @@ export default function ExecutionChecklistTaskDetail({ task, assignee }: Props) 
             </section>
 
             {checklist && !checklist.ready ? (
-              <p className="atlas-execution-checklist__completion-note">Complete every required line before confirming that Elm is ready.</p>
+              <p className="atlas-execution-checklist__completion-note">Complete every required line before finishing this task.</p>
             ) : null}
 
             <footer className="atlas-task-result-footer">
