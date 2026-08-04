@@ -178,6 +178,23 @@ function applyPlanProgress(plan: AtlasLivingDayPlan | null) {
   command.querySelector(".atlas-day-plan-contract-note")?.remove();
 }
 
+function applyOverdueCopy() {
+  const drawer = document.querySelector<HTMLElement>(".atlas-day-recovery-overview");
+  if (!drawer) return;
+
+  const label = drawer.querySelector<HTMLElement>(".atlas-day-recovery-summary-copy > span");
+  if (label && label.textContent !== "Overdue") label.textContent = "Overdue";
+
+  const count = drawer.querySelector<HTMLElement>(".atlas-day-recovery-count");
+  const countText = count?.textContent?.trim();
+  if (count && countText) count.setAttribute("aria-label", `${countText} overdue tasks`);
+
+  const browseSummary = document.querySelector<HTMLElement>(".atlas-day-browse-title-row > strong");
+  if (browseSummary?.textContent?.includes("fallen out of rhythm")) {
+    browseSummary.textContent = browseSummary.textContent.replace("fallen out of rhythm", "overdue");
+  }
+}
+
 function applyConsequences(
   tasks: Map<string, AtlasTaskCard>,
   selectedDay: string,
@@ -192,6 +209,7 @@ function applyConsequences(
     decorateCard(card, presentation.consequence, presentation.state);
   });
   applyPlanProgress(plan);
+  applyOverdueCopy();
 }
 
 export default function DayConsequenceTimelinePatch() {
