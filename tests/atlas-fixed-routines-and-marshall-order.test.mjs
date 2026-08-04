@@ -10,6 +10,10 @@ const hardDateMigration = readFileSync(
   new URL("../supabase/migrations/20260804101600_fixed_calendar_hard_date_contract_v1.sql", import.meta.url),
   "utf8",
 );
+const explicitCommitmentMigration = readFileSync(
+  new URL("../supabase/migrations/20260804101700_fixed_calendar_explicit_commitment_v1.sql", import.meta.url),
+  "utf8",
+);
 
 function position(value) {
   const found = migration.indexOf(value);
@@ -98,4 +102,7 @@ test("fixed calendar tasks keep authored dates and canonical recurrence identity
   assert.match(hardDateMigration, /new\.task_series_key := coalesce/);
   assert.match(hardDateMigration, /new\.engine_instance_key := coalesce/);
   assert.match(hardDateMigration, /completion_independent_schedule', true/);
+  assert.match(explicitCommitmentMigration, /'date_commitment', 'hard_date'/);
+  assert.match(explicitCommitmentMigration, /'commitment_kind', 'hard_date'/);
+  assert.match(explicitCommitmentMigration, /new\.commitment_kind:='hard_date'/);
 });
