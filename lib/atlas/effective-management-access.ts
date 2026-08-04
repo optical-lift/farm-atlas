@@ -38,7 +38,7 @@ export async function requireAtlasEffectiveManagementAccess(): Promise<AtlasEffe
 
   const membership = session.memberships.find((row) => row.farmId === session.activeFarmId && isManagementRole(row.role))
     ?? session.memberships.find((row) => isManagementRole(row.role));
-  if (!membership?.farmName) redirect("/");
+  if (!membership?.farmName || !isManagementRole(membership.role)) redirect("/");
   return {
     farmId: membership.farmId,
     farmName: membership.farmName,
