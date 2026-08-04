@@ -1,8 +1,8 @@
 /* Atlas PWA shell. Canonical farm truth remains server-authoritative. */
 // This byte change refreshes the installed offline document and any open stale client.
 // Bump this version whenever the offline document or global app chrome changes.
-// v8 moves installed clients onto the live all-visible-work day counter.
-const ATLAS_PWA_VERSION = "atlas-pwa-shell-v8";
+// v9 adds best-effort iPhone notification actions for simple task completion and snoozing.
+const ATLAS_PWA_VERSION = "atlas-pwa-shell-v9";
 const SHELL_CACHE = `${ATLAS_PWA_VERSION}:shell`;
 const STATIC_CACHE = `${ATLAS_PWA_VERSION}:static`;
 const PRIVATE_CACHE_SUFFIXES = [":pages", ":prepared-data"];
@@ -162,6 +162,34 @@ self.addEventListener("message", (event) => {
   }
 });
 
+function taskNotificationActions(payload) {
+  const momentId = typeof payload.taskNotificationMomentId === "string"
+    ? payload.taskNotificationMomentId
+    : "";
+  const taskIds = Array.isArray(payload.taskIds)
+    ? payload.taskIds.filter((taskId) => typeof taskId === "string")
+    : [];
+
+  if (!momentId || !taskIds.length) return [];
+
+  const actions = [];
+  if (taskIds.length === 1) actions.push({ action: "done", title: "Done" });
+  actions.push({ action: "snooze-5h", title: "Remind in 5h" });
+  return actions;
+}
+
+async function showAtlasNotification(title, options) {
+  try {
+    await self.registration.showNotification(title, options);
+  } catch {
+    // Some Web Push surfaces accept the notification but not action buttons.
+    // Retrying without actions keeps the notification body tap dependable.
+    const fallback = { ...options };
+    delete fallback.actions;
+    await self.registration.showNotification(title, fallback);
+  }
+}
+
 self.addEventListener("push", (event) => {
   event.waitUntil((async () => {
     let payload = {};
@@ -174,34 +202,97 @@ self.addEventListener("push", (event) => {
     const title = payload.title || "Atlas";
     const deepLink = payload.deepLink || payload.url || "/bell";
     const badgeCount = Number(payload.badgeCount || 0);
+    const taskIds = Array.isArray(payload.taskIds)
+      ? payload.taskIds.filter((taskId) => typeof taskId === "string")
+      : [];
+    const actions = taskNotificationActions(payload);
 
     await Promise.all([
-      self.registration.showNotification(title, {
+      showAtlasNotification(title, {
         body: payload.body || "Farm movement is waiting in the Bell.",
         icon: payload.icon || "/api/pwa/icon?size=192",
         badge: payload.badge || "/api/pwa/icon?size=192",
         tag: payload.tag || payload.dedupeKey || "atlas-farm-change",
         renotify: Boolean(payload.renotify),
-        data: { deepLink, eventId: payload.eventId || null },
+        actions,
+        data: {
+          deepLink,
+          eventId: payload.eventId || null,
+          taskNotificationMomentId: payload.taskNotificationMomentId || null,
+          taskIds,
+          badgeCount,
+        },
       }),
       setAtlasBadge(badgeCount),
     ]);
   })());
 });
 
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  const deepLink = event.notification.data && event.notification.data.deepLink
-    ? event.notification.data.deepLink
-    : "/bell";
-  const destination = new URL(deepLink, self.location.origin).href;
+async function openAtlasDestination(deepLink) {
+  const destination = new URL(deepLink || "/bell", self.location.origin).href;
+  const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+  for (const client of windows) {
+    if ("navigate" in client) await client.navigate(destination);
+    if ("focus" in client) return client.focus();
+  }
+  return self.clients.openWindow(destination);
+}
 
-  event.waitUntil((async () => {
-    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    for (const client of windows) {
-      if ("navigate" in client) await client.navigate(destination);
-      if ("focus" in client) return client.focus();
-    }
-    return self.clients.openWindow(destination);
-  })());
+async function postNotificationAction(data, action) {
+  const response = await fetch("/api/atlas/notification-action", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "x-atlas-intent": "notification-action-v1",
+    },
+    credentials: "include",
+    cache: "no-store",
+    body: JSON.stringify({
+      notificationMomentId: data.taskNotificationMomentId,
+      action,
+      delayMinutes: action === "snooze" ? 300 : undefined,
+    }),
+  });
+
+  let result = null;
+  try {
+    result = await response.json();
+  } catch {
+    result = null;
+  }
+  if (!response.ok || !result || !result.ok) throw new Error("Atlas notification action failed.");
+  return result;
+}
+
+self.addEventListener("notificationclick", (event) => {
+  const data = event.notification.data || {};
+  const deepLink = data.deepLink || "/bell";
+  const selectedAction = event.action || "open";
+  event.notification.close();
+
+  if (selectedAction === "done" || selectedAction === "snooze-5h") {
+    event.waitUntil((async () => {
+      try {
+        const result = await postNotificationAction(
+          data,
+          selectedAction === "done" ? "done" : "snooze",
+        );
+        if (result.requiresOpen) {
+          return openAtlasDestination(result.deepLink || deepLink);
+        }
+        if (selectedAction === "done") {
+          await setAtlasBadge(Math.max(0, Number(data.badgeCount || 1) - 1));
+        }
+        return undefined;
+      } catch {
+        // Authentication, an expired task, or a structured result can require
+        // the full Atlas surface. Opening the task is the safe fallback.
+        return openAtlasDestination(deepLink);
+      }
+    })());
+    return;
+  }
+
+  event.waitUntil(openAtlasDestination(deepLink));
 });
