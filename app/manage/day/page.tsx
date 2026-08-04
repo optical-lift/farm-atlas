@@ -6,6 +6,7 @@ import {
   atlasDayTaskFamily,
 } from "@/lib/atlas/day-route";
 import { requireAtlasEffectiveManagementAccess } from "@/lib/atlas/effective-management-access";
+import { resolveTaskAssignee } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasTaskDisplay } from "@/lib/atlas/task-display";
 import { atlasWorkOrderLabel } from "@/lib/atlas/work-order";
@@ -53,14 +54,28 @@ function prettyDate(dateIso: string) {
   });
 }
 
+function titleCase(value: string) {
+  return value
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function taskExecutor(task: AtlasTaskCard): Executor {
   const metadata = task.metadata ?? {};
+  const canonical = resolveTaskAssignee(task);
   const label = typeof metadata.executor_label === "string" ? metadata.executor_label.trim() : "";
   const workerKey = typeof metadata.executor_worker_key === "string" ? metadata.executor_worker_key.trim().toLowerCase() : "";
   return {
-    key: workerKey || label.toLowerCase().replaceAll(" ", "_") || "assigned_work",
-    label: label || (workerKey ? workerKey.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Assigned work"),
+    key: workerKey || canonical.key,
+    label: label || (workerKey ? titleCase(workerKey) : canonical.label),
   };
+}
+
+function ManagerAssigneeBadge({ executor }: { executor: Executor }) {
+  return <span className="atlas-manager-assignee-badge" data-assignee-key={executor.key}>{executor.label}</span>;
 }
 
 function taskLocation(task: AtlasTaskCard) {
@@ -110,12 +125,13 @@ function ManagerTimelineTask({
     >
       <span className="atlas-day-task-node" aria-hidden="true"><span /></span>
       <details className={`atlas-day-task-card atlas-journal-task-row ${routeClass}`} aria-current={routeState === "current" ? "step" : undefined}>
-        <summary data-atlas-assignee-label={executor.label} data-atlas-assignee-key={executor.key}>
+        <summary className="atlas-manager-assignee-host" data-atlas-assignee-key={executor.key}>
           <small className="atlas-day-task-family">{routeState === "current" ? `Current · ${family}` : family}</small>
           <strong>{display.title}</strong>
           <span>{atlasWorkOrderLabel(task)} · {taskLocation(task)}</span>
           {display.detail ? <em>{display.detail}</em> : null}
           {cues.length ? <span className="atlas-day-task-cues">{cues.map((cue) => <i key={cue}>{cue}</i>)}</span> : null}
+          <ManagerAssigneeBadge executor={executor} />
           <b className="atlas-journal-row-caret" aria-hidden="true">⌄</b>
         </summary>
         <div className="atlas-journal-task-detail">
@@ -141,8 +157,7 @@ function ManagerOverdueTask({ task, returnTo }: { task: AtlasTaskCard; returnTo:
   return (
     <Link
       prefetch={false}
-      className="atlas-day-task-card atlas-day-overdue-task-card"
-      data-atlas-assignee-label={executor.label}
+      className="atlas-day-task-card atlas-day-overdue-task-card atlas-manager-assignee-host"
       data-atlas-assignee-key={executor.key}
       data-status={task.status}
       href={taskUrl}
@@ -151,6 +166,7 @@ function ManagerOverdueTask({ task, returnTo }: { task: AtlasTaskCard; returnTo:
       <strong>{display.title}</strong>
       <span>Due {prettyDate(task.due_date ?? "")}</span>
       {display.detail ? <em>{display.detail}</em> : null}
+      <ManagerAssigneeBadge executor={executor} />
     </Link>
   );
 }
@@ -165,13 +181,13 @@ function ManagerCompleteTask({ task, returnTo }: { task: AtlasTaskCard; returnTo
       <span className="atlas-day-task-node is-complete" aria-hidden="true"><span /></span>
       <Link
         prefetch={false}
-        className="atlas-day-task-card complete"
-        data-atlas-assignee-label={executor.label}
+        className="atlas-day-task-card complete atlas-manager-assignee-host"
         data-atlas-assignee-key={executor.key}
         href={taskUrl}
       >
         <strong>{display.title}</strong>
         <span>Complete</span>
+        <ManagerAssigneeBadge executor={executor} />
       </Link>
     </div>
   );
@@ -216,6 +232,65 @@ export default async function FarmDayPage({ searchParams }: FarmDayPageProps) {
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
+      <style>{`
+        .atlas-manager-assignee-host {
+          position: relative !important;
+          padding-right: 86px !important;
+        }
+
+        .atlas-manager-assignee-badge {
+          position: absolute;
+          top: 2px;
+          right: 22px;
+          z-index: 3;
+          display: block;
+          max-width: 74px;
+          overflow: hidden;
+          border: 1px solid rgba(85, 90, 134, 0.18);
+          border-radius: 999px;
+          background: rgba(174, 179, 212, 0.18);
+          color: #555a86;
+          padding: 4px 7px 3px;
+          font-size: 8px;
+          line-height: 1;
+          font-style: normal;
+          font-weight: 950;
+          letter-spacing: 0.07em;
+          text-overflow: ellipsis;
+          text-transform: uppercase;
+          white-space: nowrap;
+        }
+
+        .atlas-manager-assignee-badge[data-assignee-key="anna"] {
+          border-color: rgba(113, 125, 87, 0.22);
+          background: rgba(207, 214, 175, 0.36);
+          color: #626d4e;
+        }
+
+        .atlas-manager-assignee-badge[data-assignee-key="marshall"] {
+          border-color: rgba(85, 90, 134, 0.24);
+          background: rgba(188, 196, 220, 0.32);
+          color: #4f567f;
+        }
+
+        .atlas-manager-assignee-badge[data-assignee-key="owner"] {
+          border-color: rgba(102, 83, 105, 0.22);
+          background: rgba(213, 200, 212, 0.34);
+          color: #665369;
+        }
+
+        @media (max-width: 360px) {
+          .atlas-manager-assignee-host {
+            padding-right: 74px !important;
+          }
+
+          .atlas-manager-assignee-badge {
+            right: 18px;
+            max-width: 62px;
+            padding-inline: 6px;
+          }
+        }
+      `}</style>
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone" aria-labelledby="farm-day-title">
         <header className="atlas-phone-top atlas-dashboard-top">
           <Link href="/" className="atlas-phone-brand atlas-task-header-brand">

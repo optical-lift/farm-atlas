@@ -7,7 +7,6 @@ const personalMigration = read("supabase/migrations/20260804053500_atlas_strict_
 const managementMigration = read("supabase/migrations/20260804052000_atlas_personal_work_and_manager_big_picture_v1.sql");
 const workAlongsideRoute = read("app/api/atlas/work-alongside/route.ts");
 const workAlongsideOverlay = read("components/atlas/work-alongside/AtlasWorkAlongsideOverlay.tsx");
-const workAlongsideCss = read("app/work-alongside.css");
 const shell = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
 const layout = read("app/layout.tsx");
 const morePage = read("app/more/page.tsx");
@@ -80,16 +79,20 @@ test("Manager uses the exact Work page shell and Day task grammar", () => {
   assert.doesNotMatch(farmDayPage, /peoplePill/);
 });
 
-test("every Manager task uses the compact Work Alongside assignee badge and avoids link-prefetch storms", () => {
-  assert.match(farmDayPage, /data-atlas-assignee-label=\{executor\.label\}/);
-  assert.match(farmDayPage, /data-atlas-assignee-key=\{executor\.key\}/);
+test("every Manager task resolves canonical Owner, Anna, and Marshall identity into a durable badge", () => {
+  assert.match(farmDayPage, /resolveTaskAssignee/);
+  assert.match(farmDayPage, /canonical = resolveTaskAssignee\(task\)/);
+  assert.match(farmDayPage, /function ManagerAssigneeBadge/);
+  assert.match(farmDayPage, /atlas-manager-assignee-host/);
+  assert.match(farmDayPage, /atlas-manager-assignee-badge/);
+  assert.match(farmDayPage, /data-assignee-key=\{executor\.key\}/);
+  assert.match(farmDayPage, /data-assignee-key="anna"/);
+  assert.match(farmDayPage, /data-assignee-key="marshall"/);
+  assert.match(farmDayPage, /data-assignee-key="owner"/);
   assert.match(farmDayPage, /<dt>Assigned to<\/dt><dd>\{executor\.label\}<\/dd>/);
   assert.match(farmDayPage, /prefetch=\{false\}/);
-  assert.doesNotMatch(farmDayPage, /function AssigneeTag/);
-  assert.doesNotMatch(farmDayPage, /assigneeTag/);
-  assert.match(workAlongsideCss, /\[data-atlas-assignee-label\]::after/);
-  assert.match(workAlongsideCss, /\[data-atlas-assignee-key="anna"\]::after/);
-  assert.match(workAlongsideCss, /\[data-atlas-assignee-key="marshall"\]::after/);
+  assert.doesNotMatch(farmDayPage, /data-atlas-assignee-label/);
+  assert.doesNotMatch(farmDayPage, /Assigned work/);
 });
 
 test("effective management access and More mirror the switched identity", () => {
