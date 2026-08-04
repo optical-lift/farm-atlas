@@ -3,7 +3,6 @@
 import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
-import StructuredUnfinishedControl from "@/components/atlas/structured-unfinished-control";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -39,16 +38,5 @@ export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
-  return (
-    <>
-      <DominionAssignedTaskDetail {...props} />
-      {props.assignee.key === "anna" ? (
-        <StructuredUnfinishedControl
-          task={props.task}
-          childTasks={props.childTasks}
-          assignee={props.assignee}
-        />
-      ) : null}
-    </>
-  );
+  return <DominionAssignedTaskDetail {...props} />;
 }
