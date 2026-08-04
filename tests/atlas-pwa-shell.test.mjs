@@ -68,7 +68,7 @@ test("PWA discovery assets remain public before Atlas authentication", () => {
 });
 
 test("the service worker keeps only the offline shell and never caches active Atlas work", () => {
-  assert.match(serviceWorker, /atlas-pwa-shell-v5/);
+  assert.match(serviceWorker, /atlas-pwa-shell-v6/);
   assert.match(serviceWorker, /SHELL_CACHE/);
   assert.match(serviceWorker, /STATIC_CACHE/);
   assert.match(serviceWorker, /request\.mode === "navigate"/);
@@ -76,6 +76,16 @@ test("the service worker keeps only the offline shell and never caches active At
   assert.doesNotMatch(serviceWorker, /PAGE_CACHE|DATA_CACHE|preparedDataResponse|latestCachedDay/);
   assert.match(serviceWorker, /if \(request\.method !== "GET"\) return/);
   assert.doesNotMatch(serviceWorker, /respondWith\([^\n]*POST|queue.*mutation/i);
+});
+
+test("navigation gets a fresh server retry before Atlas declares the device offline", () => {
+  assert.match(serviceWorker, /finishNavigationResponse/);
+  assert.match(serviceWorker, /new Request\(request\.url/);
+  assert.match(serviceWorker, /cache: "reload"/);
+  assert.match(serviceWorker, /credentials: "same-origin"/);
+  assert.match(serviceWorker, /return await finishNavigationResponse\(await fetch\(retry\)/);
+  assert.match(serviceWorker, /shell\.match\("\/offline"\)/);
+  assert.ok(serviceWorker.indexOf("fetch(retry)") < serviceWorker.indexOf('shell.match("/offline")'));
 });
 
 test("activation removes every earlier prepared-page and prepared-data cache", () => {
