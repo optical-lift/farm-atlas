@@ -1,8 +1,8 @@
 import Link from "next/link";
 
+import { requireAtlasEffectiveManagementAccess } from "@/lib/atlas/effective-management-access";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasTaskDisplay } from "@/lib/atlas/task-display";
-import { requireAtlasRole } from "@/lib/atlas/role-access";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 import styles from "./farm-day.module.css";
 
@@ -75,13 +75,13 @@ function taskSort(left: AtlasTaskCard, right: AtlasTaskCard) {
 }
 
 export default async function FarmDayPage({ searchParams }: FarmDayPageProps) {
-  const access = await requireAtlasRole(["owner", "manager"]);
+  const access = await requireAtlasEffectiveManagementAccess();
   const params = await searchParams;
   const requestedDate = Array.isArray(params.date) ? params.date[0] : params.date;
   const dateIso = validDateIso(requestedDate) ? requestedDate : centralDateIso();
   const supabase = await createAtlasServerClient();
   const { data, error } = await supabase.rpc("farm_day_task_cards_v1", {
-    p_farm_id: access.membership.farmId,
+    p_farm_id: access.farmId,
     p_work_date: dateIso,
   });
   const tasks = error ? [] : ((data ?? []) as AtlasTaskCard[]).sort(taskSort);
@@ -109,17 +109,12 @@ export default async function FarmDayPage({ searchParams }: FarmDayPageProps) {
       <section className={styles.shell} aria-labelledby="farm-day-title">
         <header className={styles.header}>
           <div>
-            <p className={styles.eyebrow}>Farm day</p>
-            <h1 id="farm-day-title">{access.membership.farmName}</h1>
-            <p>Every person’s assigned work for this farm, kept separate from your personal Work feed.</p>
+            <p className={styles.eyebrow}>Manager</p>
+            <h1 id="farm-day-title">{access.farmName}</h1>
+            <p>Every person’s assigned work for this farm, kept separate from {access.displayName}’s personal Work feed.</p>
           </div>
-          <Link className={styles.close} href="/more" aria-label="Close farm day">×</Link>
+          <Link className={styles.close} href="/" aria-label="Close Manager">×</Link>
         </header>
-
-        <nav className={styles.tabs} aria-label="Work view">
-          <Link href={`/day?date=${encodeURIComponent(dateIso)}&view=work_order`}>My work</Link>
-          <Link href={returnTo} aria-current="page">Big picture</Link>
-        </nav>
 
         <section className={styles.dateBar} aria-label="Choose farm day">
           <Link href={`/manage/day?date=${previousDate}`} aria-label="Previous day">‹</Link>
@@ -137,7 +132,7 @@ export default async function FarmDayPage({ searchParams }: FarmDayPageProps) {
         {error ? <p className={styles.error}>The farm-wide day could not be loaded.</p> : null}
         {!error && !people.length ? <p className={styles.empty}>No assigned farm work is due or carried into this day.</p> : null}
 
-        <div className={styles.groups}>
+        <div className={styles.groups} data-operator-mode={access.operatorMode ? "true" : "false"}>
           {people.map((person) => (
             <section className={styles.group} key={person.label} aria-label={`${person.label}'s work`}>
               <header className={styles.groupHeader}>

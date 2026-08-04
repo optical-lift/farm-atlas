@@ -87,3 +87,21 @@ test("Home and dated task routes read set-asides from the selected account", () 
   assert.match(datedRoute, /readAtlasTaskDayDispositions\(doneDate\)/);
   assert.doesNotMatch(datedRoute, /rpc\("viewer_task_day_dispositions_v1"/);
 });
+
+test("switched navigation and management controls use the effective role", () => {
+  const layout = read("app/layout.tsx");
+  const shell = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
+  const more = read("app/more/page.tsx");
+  const alongside = read("app/api/atlas/work-alongside/route.ts");
+  const managementAccess = read("lib/atlas/effective-management-access.ts");
+
+  assert.match(layout, /operatorContext\?\.isOperating[\s\S]*operatorContext\.effective\.farmRole/);
+  assert.match(layout, /AtlasContextualAppFrame effectiveFarmRole=\{effectiveFarmRole\}/);
+  assert.match(shell, /effectiveFarmRole === "owner" \|\| effectiveFarmRole === "manager"/);
+  assert.match(shell, /label: "Manager"/);
+  assert.match(more, /operatorContext\.effective\.farmRole/);
+  assert.match(alongside, /effective\.farmMembershipId/);
+  assert.match(alongside, /effective\.farmRole/);
+  assert.match(managementAccess, /effective\.farmId/);
+  assert.match(managementAccess, /effective\.farmRole/);
+});

@@ -2,24 +2,16 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const personalMigration = readFileSync(
-  new URL("../supabase/migrations/20260804053500_atlas_strict_personal_work_scope_v1.sql", import.meta.url),
-  "utf8",
-);
-const managementMigration = readFileSync(
-  new URL("../supabase/migrations/20260804052000_atlas_personal_work_and_manager_big_picture_v1.sql", import.meta.url),
-  "utf8",
-);
-const workAlongsideRoute = readFileSync(
-  new URL("../app/api/atlas/work-alongside/route.ts", import.meta.url),
-  "utf8",
-);
-const workAlongsideOverlay = readFileSync(
-  new URL("../components/atlas/work-alongside/AtlasWorkAlongsideOverlay.tsx", import.meta.url),
-  "utf8",
-);
-const morePage = readFileSync(new URL("../app/more/page.tsx", import.meta.url), "utf8");
-const farmDayPage = readFileSync(new URL("../app/manage/day/page.tsx", import.meta.url), "utf8");
+const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const personalMigration = read("supabase/migrations/20260804053500_atlas_strict_personal_work_scope_v1.sql");
+const managementMigration = read("supabase/migrations/20260804052000_atlas_personal_work_and_manager_big_picture_v1.sql");
+const workAlongsideRoute = read("app/api/atlas/work-alongside/route.ts");
+const workAlongsideOverlay = read("components/atlas/work-alongside/AtlasWorkAlongsideOverlay.tsx");
+const shell = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
+const layout = read("app/layout.tsx");
+const morePage = read("app/more/page.tsx");
+const farmDayPage = read("app/manage/day/page.tsx");
+const effectiveAccess = read("lib/atlas/effective-management-access.ts");
 
 const personalReader = personalMigration.match(
   /CREATE OR REPLACE FUNCTION atlas\.home_task_cards_for_membership_v2[\s\S]*?\$function\$;/,
@@ -36,25 +28,39 @@ test("normal Work is membership-personal and cross-person work requires an expli
   assert.doesNotMatch(signedInReader, /cross join lateral atlas\.home_task_cards_for_membership_v2/i);
 });
 
-test("Owner and Manager can configure work-alongside without changing task ownership", () => {
-  assert.match(workAlongsideRoute, /role === "owner" \|\| role === "manager"/);
+test("Owner and Manager can configure work-alongside through the effective account", () => {
+  assert.match(workAlongsideRoute, /readAtlasOwnerOperatorContext/);
+  assert.match(workAlongsideRoute, /operatorContext\?\.isOperating/);
+  assert.match(workAlongsideRoute, /effective\.farmMembershipId/);
+  assert.match(workAlongsideRoute, /effective\.farmRole/);
   assert.match(workAlongsideRoute, /Farm management membership required/);
   assert.match(workAlongsideRoute, /observer_membership_id/);
   assert.match(workAlongsideRoute, /teammate_membership_id/);
   assert.doesNotMatch(workAlongsideRoute, /assigned_membership_id/);
 });
 
-test("management gets a separate farm-wide day instead of broadening My work", () => {
+test("management is a separate role-aware dock destination rather than an inner Work toggle", () => {
   assert.match(managementMigration, /farm_day_task_cards_v1/);
   assert.match(managementMigration, /v_role NOT IN \('owner', 'manager'\)/);
-  assert.match(morePage, /canManage \? <div id="atlas-more-work-alongside-slot"/);
-  assert.match(morePage, /href: "\/manage\/day"/);
-  assert.match(farmDayPage, /requireAtlasRole\(\["owner", "manager"\]\)/);
+  assert.match(shell, /label: "Manager"/);
+  assert.match(shell, /kind === "manager"/);
+  assert.match(shell, /effectiveFarmRole === "owner" \|\| effectiveFarmRole === "manager"/);
+  assert.match(layout, /effectiveFarmRole = operatorContext\?\.isOperating/);
+  assert.match(layout, /AtlasContextualAppFrame effectiveFarmRole=\{effectiveFarmRole\}/);
+  assert.match(farmDayPage, /requireAtlasEffectiveManagementAccess/);
   assert.match(farmDayPage, /farm_day_task_cards_v1/);
-  assert.match(farmDayPage, />My work</);
-  assert.match(farmDayPage, />Big picture</);
-  assert.match(workAlongsideOverlay, /atlas-day-management-lens-tabs/);
-  assert.match(workAlongsideOverlay, />My work</);
-  assert.match(workAlongsideOverlay, />Big picture</);
-  assert.match(workAlongsideOverlay, /\/manage\/day\?date=/);
+  assert.match(farmDayPage, /styles\.eyebrow}>Manager/);
+  assert.doesNotMatch(farmDayPage, />My work</);
+  assert.doesNotMatch(farmDayPage, />Big picture</);
+  assert.doesNotMatch(workAlongsideOverlay, /atlas-day-management-lens-tabs/);
+  assert.doesNotMatch(morePage, /label: "Farm day"/);
+});
+
+test("effective management access and More mirror the switched identity", () => {
+  assert.match(effectiveAccess, /operatorContext\?\.isOperating/);
+  assert.match(effectiveAccess, /effective\.farmRole/);
+  assert.match(effectiveAccess, /effective\.farmId/);
+  assert.match(morePage, /operatorContext\?\.isOperating/);
+  assert.match(morePage, /operatorContext\.effective\.farmRole/);
+  assert.match(morePage, /canManage \? <div id="atlas-more-work-alongside-slot"/);
 });
