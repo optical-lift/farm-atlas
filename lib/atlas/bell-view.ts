@@ -133,10 +133,10 @@ export function atlasBellViewSummary(
 
   if (view === "next") {
     return {
-      eyebrow: "Plan ahead",
+      eyebrow: "Watchlist",
       status: `${count} coming up`,
-      title: `${count} ${plural(count, "action")} coming up`,
-      emptyMessage: "Nothing coming up.",
+      title: `${count} human ${plural(count, "decision")} coming up`,
+      emptyMessage: "Atlas has no upcoming decision waiting for you.",
     };
   }
 
@@ -144,15 +144,24 @@ export function atlasBellViewSummary(
     return {
       eyebrow: "Older work",
       status: `${count} older`,
-      title: `${count} older ${plural(count, "action")}`,
-      emptyMessage: "No older work remains.",
+      title: `${count} older ${plural(count, "exception")}`,
+      emptyMessage: "No older exception remains.",
+    };
+  }
+
+  if (count === 0) {
+    return {
+      eyebrow: "Needs you",
+      status: "Calm",
+      title: "Atlas is handling the routine work",
+      emptyMessage: "Nothing needs your judgment. Monitoring, queued work, and Anna’s selected work remain collected on their own surfaces.",
     };
   }
 
   return {
-    eyebrow: "Do now",
-    status: `${count} to do`,
-    title: `${count} ${plural(count, "action")} to do`,
-    emptyMessage: "Nothing to do now.",
+    eyebrow: "Needs you",
+    status: `${count} need you`,
+    title: `${count} ${plural(count, "exception")} need your judgment`,
+    emptyMessage: "Nothing needs your judgment.",
   };
 }
