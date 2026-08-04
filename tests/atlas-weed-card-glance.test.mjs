@@ -14,6 +14,8 @@ test("the Weed field sheet says the complete canonical action and bed name", () 
   assert.doesNotMatch(focus, /instruction="Weed"/);
   assert.match(migration, /NEW\.title := 'Weed ' \|\| v_object_label/);
   assert.match(migration, /'display_title', NEW\.title/);
+  assert.match(migration, /NEW\.generated_from = 'rhythm_clock'/);
+  assert.match(migration, /FROM atlas\.task_objects linked/);
 });
 
 test("notebook bed maps show crop names instead of ellipsizing them", () => {
@@ -36,12 +38,14 @@ test("the weed-stewardship Clock cannot turn elapsed time into a clear-bed task"
   assert.match(rhythmMigration, /weed_card_allows_ordinary_work_v1/);
   assert.match(rhythmMigration, /'action', 'physical_weed_need_not_present'/);
   assert.match(rhythmMigration, /REVOKE ALL ON FUNCTION atlas\.ensure_rhythm_task_v1/);
+  assert.match(rhythmMigration, /REVOKE ALL ON FUNCTION atlas\.ensure_rhythm_task_without_physical_gate_v1/);
+  assert.match(rhythmMigration, /physical-need bypass is exposed to service_role/);
 });
 
 test("rhythm Weed occurrences also receive the canonical bed title", () => {
-  assert.match(rhythmMigration, /NEW\.source_kind = 'rhythm_state'/);
-  assert.match(rhythmMigration, /state\.rhythm_key = 'weed_stewardship'/);
-  assert.match(rhythmMigration, /NEW\.title := 'Weed ' \|\| v_object_label/);
+  assert.match(migration, /NEW\.source_kind = 'rhythm_state'/);
+  assert.match(migration, /state\.rhythm_key = 'weed_stewardship'/);
+  assert.match(migration, /NEW\.title := 'Weed ' \|\| v_object_label/);
 });
 
 test("Field Row 8 is repaired from current Owner-observed physical truth", () => {
@@ -49,5 +53,7 @@ test("Field Row 8 is repaired from current Owner-observed physical truth", () =>
   assert.match(migration, /'already weeded and clear'/);
   assert.match(migration, /SET status = 'skipped'/);
   assert.match(migration, /current_task_id = null/);
+  assert.match(migration, /satisfaction_kind,[\s\S]*'full'/);
+  assert.match(migration, /care_source_kind = 'observation'/);
   assert.match(migration, /evaluate_rhythm_binding_v1/);
 });
