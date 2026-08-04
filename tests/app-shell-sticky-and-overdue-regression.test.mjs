@@ -8,6 +8,7 @@ function read(path) {
 
 const layout = read("app/layout.tsx");
 const fixes = read("app/app-shell-regression-fixes.css");
+const recovery = read("app/day-overdue-quiet.css");
 const day = read("app/day/page.tsx");
 
 test("the installed Atlas header stays attached to the viewport without overflow ancestors", () => {
@@ -18,9 +19,14 @@ test("the installed Atlas header stays attached to the viewport without overflow
   assert.match(fixes, /top: 0 !important/);
 });
 
-test("overdue carry-forward rows never stack legacy and Living Day labels over the title", () => {
-  assert.match(day, /atlas-day-overdue-badge/);
-  assert.match(fixes, /\.atlas-day-overdue-badge,[\s\S]*\.atlas-day-consequence-kicker[\s\S]*display: none !important/);
-  assert.match(fixes, /atlas-day-overdue-task-card[\s\S]*padding: 8px 4px 18px 10px !important/);
-  assert.match(fixes, /grid-template-columns: minmax\(0, 1fr\) !important/);
+test("the recovery drawer carries the warning while overdue task rows stay readable", () => {
+  assert.match(day, /atlas-day-recovery-count/);
+  assert.match(day, /atlas-day-recovery-overview/);
+  assert.match(day, /atlas-day-overdue-entry/);
+  assert.doesNotMatch(day, /atlas-day-overdue-badge/);
+  assert.match(recovery, /\.atlas-day-mixed-timeline \.atlas-day-overdue-badge/);
+  assert.match(recovery, /\.atlas-day-mixed-timeline \.atlas-day-consequence-kicker/);
+  assert.match(recovery, /display: none !important/);
+  assert.match(recovery, /atlas-day-overdue-task-card[\s\S]*padding: 8px 4px 18px 10px !important/);
+  assert.match(recovery, /background: transparent !important/);
 });
