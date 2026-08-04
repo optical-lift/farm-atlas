@@ -6,15 +6,14 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Day progress reads exact-date required work without a DOM patch", () => {
+test("Day progress reads the complete visible day without a DOM patch", () => {
   const page = read("app/day/page.tsx");
   const component = read("components/atlas/day-trail-summary.tsx");
   const css = read("components/atlas/day-trail-summary.module.css");
 
   assert.match(page, /DayTrailSummary/);
-  assert.match(page, /task\.due_date === dateIso/);
-  assert.match(page, /progressTasks/);
-  assert.match(page, /!isExtraCredit\(task\)/);
+  assert.match(page, /mixedOpenTasks/);
+  assert.match(page, /progressTasks = timelineTasks/);
   assert.match(page, /finishedProgressTasks/);
   assert.match(page, /blockedProgressTasks/);
   assert.match(page, /<DayTrailSummary compact/);
@@ -29,37 +28,38 @@ test("Day progress reads exact-date required work without a DOM patch", () => {
   assert.match(css, /\.blocked/);
 });
 
-test("Day Route keeps Next and overview together, preserves completion echoes, and collapses completed cards", () => {
+test("Day Route keeps the recovery command together, preserves completion echoes, and mixes work by timeframe", () => {
   const page = read("app/day/page.tsx");
   const css = read("app/day-route-v1.css");
   const refineCss = read("app/day-route-v1-refine.css");
   const echoCss = read("app/day-timeline-completion-echo.css");
+  const recoveryCss = read("app/day-overdue-quiet.css");
   const layout = read("app/layout.tsx");
   const adapter = read("lib/atlas/day-route.ts");
 
-  const commandIndex = page.indexOf('className="atlas-day-command-header"');
-  const overviewIndex = page.indexOf('className="atlas-day-overview-drawer atlas-day-command-overview"');
-  const workOrderIndex = page.indexOf("timelineTasks.map");
-  const completeIndex = page.indexOf('className="atlas-day-overview-drawer atlas-day-complete-drawer"');
+  const commandIndex = page.indexOf("atlas-day-command-header-with-recovery");
+  const overviewIndex = page.indexOf("atlas-day-recovery-overview");
+  const workOrderIndex = page.indexOf("windowedTimeline(timelineGroups)");
 
   assert.notEqual(commandIndex, -1);
   assert.notEqual(overviewIndex, -1);
   assert.ok(commandIndex < overviewIndex);
   assert.notEqual(workOrderIndex, -1);
-  assert.notEqual(completeIndex, -1);
-  assert.ok(workOrderIndex < completeIndex);
+  assert.ok(overviewIndex < workOrderIndex);
 
-  assert.match(page, /atlasDayCurrentTask/);
-  assert.match(page, /atlasDayIsCarePulse/);
+  assert.match(page, /nextTaskForCurrentWindow/);
+  assert.match(page, /nextRecoveryTask/);
   assert.match(page, /atlas-day-route-spine/);
+  assert.match(page, /atlas-day-mixed-timeline/);
   assert.match(page, /CompletionEcho/);
-  assert.match(page, /filteredTimelineTasks\.map\(timelineRow\)/);
-  assert.match(page, /<details className="atlas-day-overview-drawer atlas-day-command-overview">/);
-  assert.match(page, /<details className="atlas-day-overview-drawer atlas-day-complete-drawer">/);
+  assert.match(page, /group\.tasks\.map\(timelineRow\)/);
+  assert.match(page, /atlas-day-recovery-overview/);
   assert.match(page, />Timeline<\/button>/);
   assert.match(page, />Zone<\/button>/);
-  assert.doesNotMatch(page, /<h3>Timeline<\/h3>/);
-  assert.match(page, /!routeFilter && doneStandaloneTasks\.length/);
+  assert.match(page, /Morning recovery/);
+  assert.match(page, /Afternoon recovery/);
+  assert.match(page, /Evening recovery/);
+  assert.doesNotMatch(page, /atlas-day-complete-drawer/);
   assert.doesNotMatch(page, /atlas-day-route-hero/);
 
   assert.match(adapter, /atlasDayTaskFamily/);
@@ -76,12 +76,14 @@ test("Day Route keeps Next and overview together, preserves completion echoes, a
   assert.match(css, /\.atlas-day-route-spine > \.atlas-day-task-card[\s\S]*?border: 0 !important/);
   assert.match(css, /\.atlas-day-work-order-group[\s\S]*?background: transparent !important/);
   assert.match(refineCss, /\.atlas-day-complete-drawer/);
-  assert.match(refineCss, /\.atlas-day-complete-drawer \.atlas-day-task-card > strong/);
   assert.match(echoCss, /\.atlas-day-completion-echo/);
   assert.match(echoCss, /\.atlas-day-task-node/);
+  assert.match(recoveryCss, /\.atlas-day-recovery-overview/);
+  assert.match(recoveryCss, /\.atlas-day-window-marker/);
 
   assert.doesNotMatch(layout, /DayHeroQuietPatch/);
   assert.match(layout, /day-route-v1\.css/);
   assert.match(layout, /day-route-v1-refine\.css/);
   assert.match(layout, /day-timeline-completion-echo\.css/);
+  assert.match(layout, /day-overdue-quiet\.css/);
 });
