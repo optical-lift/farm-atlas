@@ -21,15 +21,19 @@ const workAlongsideOverlay = readFileSync(
 const morePage = readFileSync(new URL("../app/more/page.tsx", import.meta.url), "utf8");
 const farmDayPage = readFileSync(new URL("../app/manage/day/page.tsx", import.meta.url), "utf8");
 
+const personalReader = personalMigration.match(
+  /CREATE OR REPLACE FUNCTION atlas\.home_task_cards_for_membership_v2[\s\S]*?\$function\$;/,
+)?.[0] ?? "";
+const signedInReader = managementMigration.match(
+  /CREATE OR REPLACE FUNCTION atlas\.home_task_cards_v2[\s\S]*?\$function\$;/,
+)?.[0] ?? "";
+
 test("normal Work is membership-personal and cross-person work requires an explicit window", () => {
-  assert.match(personalMigration, /assigned_membership_id = p_membership_id/);
-  assert.match(personalMigration, /assigned_user_id = v_user_id/);
-  assert.match(personalMigration, /work_alongside_windows/);
-  assert.doesNotMatch(personalMigration, /shared_with_membership_ids/);
-  assert.doesNotMatch(
-    managementMigration.match(/CREATE OR REPLACE FUNCTION atlas\.home_task_cards_v2[\s\S]*?\$function\$;/)?.[0] ?? "",
-    /cross join lateral atlas\.home_task_cards_for_membership_v2/i,
-  );
+  assert.match(personalReader, /assigned_membership_id = p_membership_id/);
+  assert.match(personalReader, /assigned_user_id = v_user_id/);
+  assert.match(personalReader, /work_alongside_windows/);
+  assert.doesNotMatch(personalReader, /shared_with_membership_ids/);
+  assert.doesNotMatch(signedInReader, /cross join lateral atlas\.home_task_cards_for_membership_v2/i);
 });
 
 test("Owner and Manager can configure work-alongside without changing task ownership", () => {
