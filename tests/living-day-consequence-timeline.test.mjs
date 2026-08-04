@@ -6,12 +6,12 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Living Day keeps consequence truth while mixing recovery work into accomplish windows", () => {
+test("Living Day keeps consequence truth while mixing overdue work into accomplish windows", () => {
   const page = read("app/day/page.tsx");
   const patch = read("app/DayConsequenceTimelinePatch.tsx");
   const grammar = read("lib/atlas/day-consequence.ts");
   const consequenceCss = read("app/day-consequence-timeline.css");
-  const recoveryCss = read("app/day-overdue-quiet.css");
+  const overdueCss = read("app/day-overdue-quiet.css");
   const layout = read("app/layout.tsx");
 
   assert.match(layout, /DayConsequenceTimelinePatch/);
@@ -26,7 +26,6 @@ test("Living Day keeps consequence truth while mixing recovery work into accompl
   assert.match(grammar, /latestOutcome\?\.outcome === "reopened"/);
 
   assert.match(page, /atlas-day-recovery-overview/);
-  assert.match(page, /Fallen out of rhythm/);
   assert.match(page, /Morning recovery/);
   assert.match(page, /Afternoon recovery/);
   assert.match(page, /Evening recovery/);
@@ -37,16 +36,22 @@ test("Living Day keeps consequence truth while mixing recovery work into accompl
 
   assert.match(patch, /quietInMixedTimeline/);
   assert.match(patch, /removeConsequenceCopy/);
+  assert.match(patch, /function applyOverdueCopy/);
+  assert.match(patch, /label\.textContent = "Overdue"/);
+  assert.match(patch, /`\$\{countText\} overdue tasks`/);
+  assert.match(patch, /applyOverdueCopy\(\)/);
   assert.doesNotMatch(patch, /Added after morning plan/);
   assert.doesNotMatch(patch, /timelineOrder/);
   assert.doesNotMatch(patch, /applyOverdueHeading/);
 
   assert.match(consequenceCss, /data-atlas-day-consequence="continued"/);
-  assert.match(recoveryCss, /atlas-day-command-header-with-recovery/);
-  assert.match(recoveryCss, /atlas-day-recovery-count/);
-  assert.match(recoveryCss, /atlas-day-window-marker/);
-  assert.match(recoveryCss, /atlas-day-overdue-entry/);
-  assert.match(recoveryCss, /background: transparent !important/);
+  assert.match(overdueCss, /Keep overdue carry-forward readable/);
+  assert.match(overdueCss, /atlas-day-overdue-group/);
+  assert.match(overdueCss, /background: transparent !important|display: none !important/);
+  assert.doesNotMatch(overdueCss, /atlas-day-command-header-with-recovery/);
+  assert.doesNotMatch(overdueCss, /atlas-day-recovery-count/);
+  assert.doesNotMatch(overdueCss, /atlas-day-window-marker/);
+  assert.doesNotMatch(overdueCss, /atlas-day-overdue-entry/);
 });
 
 test("Living Day consequence reader preserves canonical task data", () => {
