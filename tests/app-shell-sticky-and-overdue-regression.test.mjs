@@ -20,16 +20,17 @@ test("the installed Atlas header stays attached to the viewport without overflow
   assert.match(fixes, /top: 0 !important/);
 });
 
-test("the drawer is called Overdue while its original Day Route styling remains authoritative", () => {
+test("the drawer is called Overdue and uses the old compact Next-drawer geometry", () => {
   assert.match(day, /atlas-day-recovery-count/);
   assert.match(day, /atlas-day-recovery-overview/);
   assert.match(day, /atlas-day-overdue-entry/);
   assert.match(patch, /function applyOverdueCopy/);
   assert.match(patch, /label\.textContent = "Overdue"/);
-  assert.match(overdue, /Keep overdue carry-forward readable/);
-  assert.match(overdue, /intentionally inherit the original Day Route styling/);
+  assert.match(overdue, /exact compact Day Route geometry/);
+  assert.match(overdue, /\.atlas-day-recovery-count[\s\S]*border-radius: 999px/);
+  assert.match(overdue, /\.atlas-day-recovery-count::after[\s\S]*content: "Overdue"/);
+  assert.match(overdue, /\.atlas-day-recovery-summary-copy > span[\s\S]*display: none/);
+  assert.match(overdue, /\.atlas-day-window-marker/);
+  assert.match(overdue, /\.atlas-day-mixed-timeline \.atlas-day-overdue-task-card/);
   assert.doesNotMatch(overdue, /\.atlas-day-command-header-with-recovery\s*\{/);
-  assert.doesNotMatch(overdue, /\.atlas-day-recovery-overview\s*\{/);
-  assert.doesNotMatch(overdue, /\.atlas-day-window-marker\s*\{/);
-  assert.doesNotMatch(overdue, /\.atlas-day-mixed-timeline\s+\.atlas-day-overdue-task-card\s*\{/);
 });
