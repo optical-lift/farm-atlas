@@ -52,3 +52,13 @@ test("grouped or structured notifications cannot falsely quick-complete work", (
   assert.match(migration, /requiresOpen', true/);
   assert.doesNotMatch(worker, /record_task_transition_v1/);
 });
+
+test("rhythm pushes describe the work instead of exposing Clock internals", () => {
+  const migration = read("supabase/migrations/20260805002453_user_facing_rhythm_push_copy.sql");
+
+  assert.match(migration, /when 'rhythm_failure' then 'Atlas · Overdue'/);
+  assert.match(migration, /v_task_title \|\| ' is overdue\.'/);
+  assert.match(migration, /' weed rhythm fell out of rhythm\$', ' needs weeding\.'/);
+  assert.match(migration, /when v_category in \('rhythm_warning', 'rhythm_due'\)/);
+  assert.match(migration, /atlas\.notification_can_user_read_event_v1/);
+});
