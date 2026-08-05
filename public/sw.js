@@ -1,8 +1,8 @@
 /* Atlas PWA shell. Canonical farm truth remains server-authoritative. */
 // This byte change refreshes the installed offline document and any open stale client.
 // Bump this version whenever the offline document or global app chrome changes.
-// v9 adds best-effort iPhone notification actions for simple task completion and snoozing.
-const ATLAS_PWA_VERSION = "atlas-pwa-shell-v9";
+// v10 refreshes installed clients after removing the remaining Day timeline backplates.
+const ATLAS_PWA_VERSION = "atlas-pwa-shell-v10";
 const SHELL_CACHE = `${ATLAS_PWA_VERSION}:shell`;
 const STATIC_CACHE = `${ATLAS_PWA_VERSION}:static`;
 const PRIVATE_CACHE_SUFFIXES = [":pages", ":prepared-data"];
