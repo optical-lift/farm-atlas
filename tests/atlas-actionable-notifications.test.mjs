@@ -9,7 +9,7 @@ function read(path) {
 test("task notifications offer Done and a five-hour reminder with an Open fallback", () => {
   const worker = read("public/sw.js");
 
-  assert.match(worker, /atlas-pwa-shell-v9/);
+  assert.match(worker, /atlas-pwa-shell-v10/);
   assert.match(worker, /action: "done", title: "Done"/);
   assert.match(worker, /action: "snooze-5h", title: "Remind in 5h"/);
   assert.match(worker, /delayMinutes: action === "snooze" \? 300/);
