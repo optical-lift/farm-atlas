@@ -68,7 +68,7 @@ test("PWA discovery assets remain public before Atlas authentication", () => {
 });
 
 test("the service worker keeps only the offline shell and never caches active Atlas work", () => {
-  assert.match(serviceWorker, /atlas-pwa-shell-v9/);
+  assert.match(serviceWorker, /atlas-pwa-shell-v10/);
   assert.match(serviceWorker, /SHELL_CACHE/);
   assert.match(serviceWorker, /STATIC_CACHE/);
   assert.match(serviceWorker, /request\.mode === "navigate"/);
