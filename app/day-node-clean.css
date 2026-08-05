@@ -1,0 +1,40 @@
+/*
+  The timeline dot is the visible completion control. Its 36px mobile tap target
+  must remain invisible so the route reads as one clean line with small dots.
+*/
+.atlas-day-route-spine .atlas-day-task-node,
+.atlas-day-route-spine .atlas-day-completion-echo > button {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  clip-path: none !important;
+  -webkit-mask: none !important;
+  mask: none !important;
+}
+
+.atlas-day-route-spine .atlas-day-task-node::before,
+.atlas-day-route-spine .atlas-day-task-node::after,
+.atlas-day-route-spine .atlas-day-completion-echo > button::before,
+.atlas-day-route-spine .atlas-day-completion-echo > button::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Keep keyboard focus on the real dot without restoring a filled tap-target halo. */
+.atlas-day-route-spine .atlas-day-task-node:focus-visible,
+.atlas-day-route-spine .atlas-day-completion-echo > button:focus-visible {
+  outline: 0 !important;
+}
+
+.atlas-day-route-spine .atlas-day-task-node:focus-visible > span,
+.atlas-day-route-spine .atlas-day-completion-echo > button:focus-visible > span {
+  outline: 2px solid var(--atlas-purple-dark);
+  outline-offset: 3px;
+}
