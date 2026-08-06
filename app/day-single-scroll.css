@@ -57,9 +57,26 @@ body:has(.atlas-day-browse) .atlas-day-task-groups,
 body:has(.atlas-day-browse) .atlas-day-route-group,
 body:has(.atlas-day-browse) .atlas-day-timeline-group,
 body:has(.atlas-day-browse) .atlas-day-work-order-list,
-body:has(.atlas-day-browse) .atlas-day-route-spine,
 body:has(.atlas-day-browse) .atlas-day-zone-group {
   position: static !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-y: visible !important;
+  overscroll-behavior-y: auto !important;
+  scroll-behavior: auto !important;
+  scroll-snap-type: none !important;
+  -webkit-overflow-scrolling: auto !important;
+  touch-action: pan-y pinch-zoom;
+}
+
+/*
+  The route spine must remain the positioning context for its vertical connector.
+  Relative positioning does not create a scroll container, so the line can stay
+  visible without reintroducing the iOS momentum trap.
+*/
+body:has(.atlas-day-browse) .atlas-day-route-spine {
+  position: relative !important;
   height: auto !important;
   min-height: 0 !important;
   max-height: none !important;
