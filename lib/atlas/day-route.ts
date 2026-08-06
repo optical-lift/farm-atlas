@@ -10,6 +10,10 @@ function normalized(value: unknown) {
   return text(value).toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
 }
 
+function truthy(value: unknown) {
+  return value === true || value === "true" || value === "yes" || value === "1" || value === 1;
+}
+
 function numberValue(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
@@ -30,6 +34,26 @@ function titleCase(value: string) {
 
 function metadataString(task: AtlasTaskCard, key: string) {
   return text(task.metadata?.[key]);
+}
+
+function isAnnaErrandTask(task: AtlasTaskCard) {
+  const metadata = task.metadata ?? {};
+  const annaAssigned = truthy(metadata.anna_task)
+    || normalized(metadata.assignee_key) === "anna"
+    || normalized(metadata.executor_worker_key) === "anna"
+    || normalized(metadata.assigned_to) === "anna";
+  if (!annaAssigned) return false;
+
+  const action = normalized(task.action_key);
+  const workRoute = normalized(metadata.work_route);
+  const taskType = normalized(task.task_type);
+  const displayAction = normalized(metadata.display_action);
+  const title = normalized(task.title);
+
+  return [action, workRoute, taskType, displayAction].some((value) => ["buy", "purchase", "errand", "farm_errand"].includes(value))
+    || title.startsWith("buy_")
+    || title.includes("_buy_")
+    || title.includes("_errand");
 }
 
 const ACTION_FAMILIES: Record<string, string> = {
@@ -70,6 +94,10 @@ const ACTION_FAMILIES: Record<string, string> = {
   prep: "Prepare",
   prepare: "Prepare",
   build: "Build",
+  buy: "Errand",
+  purchase: "Errand",
+  errand: "Errand",
+  farm_errand: "Errand",
 };
 
 const GENERIC_ACTION_KEYS = new Set([
@@ -84,6 +112,8 @@ const GENERIC_ACTION_KEYS = new Set([
 ]);
 
 function canonicalActionKey(task: AtlasTaskCard) {
+  if (isAnnaErrandTask(task)) return "errand";
+
   const actionKey = normalized(task.action_key);
   if (actionKey && !GENERIC_ACTION_KEYS.has(actionKey)) return actionKey;
 
@@ -107,6 +137,8 @@ function explicitFamily(task: AtlasTaskCard) {
  * "cut sunflowers" may be harvest work, and the title alone cannot decide.
  */
 export function atlasDayTaskFamily(task: AtlasTaskCard) {
+  if (isAnnaErrandTask(task)) return "Errand";
+
   const category = explicitFamily(task);
   if (category) return category;
 
@@ -138,6 +170,8 @@ export function atlasDayTaskFamily(task: AtlasTaskCard) {
  * day's spray work without changing either task's due date or historical truth.
  */
 export function atlasDayTaskPartnerKey(task: AtlasTaskCard) {
+  if (isAnnaErrandTask(task)) return "anna_errands";
+
   const explicit = metadataString(task, "work_partner_key")
     || metadataString(task, "task_family_key");
   return normalized(explicit || atlasDayTaskFamily(task));
