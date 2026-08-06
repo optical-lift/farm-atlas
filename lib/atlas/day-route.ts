@@ -48,12 +48,9 @@ function isAnnaErrandTask(task: AtlasTaskCard) {
   const workRoute = normalized(metadata.work_route);
   const taskType = normalized(task.task_type);
   const displayAction = normalized(metadata.display_action);
-  const title = normalized(task.title);
 
-  return [action, workRoute, taskType, displayAction].some((value) => ["buy", "purchase", "errand", "farm_errand"].includes(value))
-    || title.startsWith("buy_")
-    || title.includes("_buy_")
-    || title.includes("_errand");
+  return [action, workRoute, taskType, displayAction]
+    .some((value) => ["buy", "purchase", "errand", "farm_errand"].includes(value));
 }
 
 const ACTION_FAMILIES: Record<string, string> = {
