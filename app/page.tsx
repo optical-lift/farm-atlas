@@ -5,6 +5,7 @@ import AtlasHomeServerRefresh from "@/components/atlas/home/AtlasHomeServerRefre
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHomeV2";
 import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
 import { buildAtlasOwnerDailyHand } from "@/lib/atlas/daily-hand";
+import { atlasFarmHandConveyorMoves } from "@/lib/atlas/farm-hand-conveyor-window";
 import { withAtlasHomeCarryForward } from "@/lib/atlas/home-carry-forward";
 import { readAtlasHomeFarmSeasonProfiles } from "@/lib/atlas/home-farm-seasons";
 import { readAtlasPersonalDayProgress } from "@/lib/atlas/home-personal-day-progress";
@@ -160,7 +161,8 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     organizationMembership
       && (organizationMembership.role === "owner" || renderedViewer.farmMemberships.length === 0),
   );
-  const renderedHome = {
+  const renderedFarmHandMode = farmHandMode || switchedFarmHand;
+  const unconstrainedRenderedHome = {
     ...visibleHome,
     title: organizationPortal
       ? home.organizationHome?.organization.name
@@ -170,7 +172,12 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     moves: taskOverview.moves,
     datedItems: taskOverview.datedItems,
   };
-  const renderedFarmHandMode = farmHandMode || switchedFarmHand;
+  const renderedHome = renderedFarmHandMode
+    ? {
+        ...unconstrainedRenderedHome,
+        moves: atlasFarmHandConveyorMoves(unconstrainedRenderedHome),
+      }
+    : unconstrainedRenderedHome;
 
   return (
     <>
