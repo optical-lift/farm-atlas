@@ -27,6 +27,6 @@ test("quick wins rely on stored duration and avoid high-friction work", () => {
 
 test("the quick-win prompt is a strong nudge without removing Anna's task controls", () => {
   assert.match(prompt, /Close quick task prompt/);
-  assert.match(prompt, /quickWin\.move\.href/);
+  assert.match(prompt, /activeQuickWin\.move\.href/);
   assert.doesNotMatch(prompt, /rescheduled|Tomorrow|Next week|Pick a date/);
 });
