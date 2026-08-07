@@ -4,7 +4,6 @@ import { atlasDayTaskCues, atlasDayTaskFamily } from "@/lib/atlas/day-route";
 import type { AtlasHomeTaskOverview } from "@/lib/atlas/home-task-overview";
 import type { AtlasJournalTask } from "@/lib/atlas/journal-contract";
 import type { AtlasLivingDay } from "@/lib/atlas/living-day-contract";
-import { ensureAtlasProjectPullTask } from "@/lib/atlas/project-pull";
 import { atlasTaskDisplay } from "@/lib/atlas/task-display";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import type {
@@ -212,27 +211,13 @@ function overviewFromLivingDay(
   };
 }
 
-async function ensureProjectWork(
-  home: AtlasUniversalHomeModel,
-  effectiveMembershipId: string,
-) {
-  const farmId = home.activeFarm?.farmId;
-  if (!farmId) return;
-  try {
-    await ensureAtlasProjectPullTask(farmId, effectiveMembershipId, home.window.doneDate);
-  } catch {
-    // Project work is additive. Ordinary farm work must still load if the project pool cannot deal a card.
-  }
-}
-
 export async function readAtlasSwitchedFarmHandHomeOverview(
   home: AtlasUniversalHomeModel,
   effectiveMembershipId: string,
 ): Promise<AtlasHomeTaskOverview> {
   if (!home.activeFarm?.farmId) return fallbackOverview(home);
 
-  await ensureProjectWork(home, effectiveMembershipId);
-
+  // Owner preview is read-only. It must never materialize work into the worker's real day.
   try {
     const supabase = await createAtlasServerClient();
     const { data, error } = await supabase.rpc("owner_operator_home_day_v1", {
