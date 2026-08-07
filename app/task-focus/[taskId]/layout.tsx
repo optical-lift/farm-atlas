@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { isValidAtlasTaskId } from "@/lib/atlas/task-routing-core.js";
+import "./steps-always-visible.css";
 
 export const dynamic = "force-dynamic";
 
