@@ -14,6 +14,13 @@ export type AtlasProjectPullOption = {
   location: string | null;
   priority: string;
   fitsToday: boolean;
+  activationDemand?: "low" | "medium" | "high";
+  ambiguityLoad?: "low" | "medium" | "high";
+  setupLoad?: "low" | "medium" | "high";
+  completionClarity?: "low" | "medium" | "high";
+  familiarity?: "low" | "medium" | "high";
+  canFragment?: boolean;
+  recoveryPreferred?: boolean;
 };
 
 export type AtlasProjectPullStatus = {
@@ -38,6 +45,8 @@ export type AtlasProjectPullOptions = {
   projectTitle: string;
   membershipId: string;
   serviceDate: string;
+  workerMode?: "normal" | "recovery";
+  recoveryMovesRemaining?: number;
   capacity: {
     regularTargetMinutes: number;
     alreadyPresentedRegularMinutes: number;
@@ -84,7 +93,7 @@ export async function readAtlasProjectPullSelector(
       p_membership_id: membershipId,
       p_day: day,
     }),
-    supabase.rpc("project_pull_options_for_member_v1", {
+    supabase.rpc("project_pull_options_for_member_v2", {
       p_project_id: projectId,
       p_membership_id: membershipId,
       p_day: day,
@@ -141,7 +150,9 @@ export async function ensureAtlasProjectPullTask(
     p_project_item_id: next.projectItemId,
     p_membership_id: membershipId,
     p_day: day,
-    p_note: "Automatically dealt by the Farm Hand Conveyor.",
+    p_note: result.options.workerMode === "recovery"
+      ? "Automatically dealt by the Farm Hand Conveyor in recovery mode."
+      : "Automatically dealt by the Farm Hand Conveyor.",
   });
   if (error) throw new Error(error.message);
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
