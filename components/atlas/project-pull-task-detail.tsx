@@ -12,6 +12,19 @@ type Props = {
   assignee: AtlasAssigneeConfig;
 };
 
+type ReturnResponse = {
+  ok?: boolean;
+  message?: string;
+  error?: string | { code?: string; message?: string };
+};
+
+function responseMessage(result: ReturnResponse) {
+  if (result.message) return result.message;
+  if (typeof result.error === "string") return result.error;
+  if (result.error?.message) return result.error.message;
+  return "Atlas could not return this card to the pool.";
+}
+
 export default function ProjectPullTaskDetail(props: Props) {
   const [returning, setReturning] = useState(false);
   const [message, setMessage] = useState("");
@@ -31,9 +44,9 @@ export default function ProjectPullTaskDetail(props: Props) {
           note: "Not today — returned to the durable Finish Project pool.",
         }),
       });
-      const result = await response.json() as { ok?: boolean; error?: string; message?: string };
+      const result = await response.json() as ReturnResponse;
       if (!response.ok || !result.ok) {
-        throw new Error(result.message || result.error || "Atlas could not return this card to the pool.");
+        throw new Error(responseMessage(result));
       }
       window.location.assign("/");
     } catch (error) {
