@@ -1,5 +1,6 @@
 "use client";
 
+import ContractorServiceTaskDetail from "@/components/atlas/contractor-service-task-detail";
 import DecisionSelectorTaskDetail from "@/components/atlas/decision-selector-task-detail";
 import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
 import ExecutionChecklistTaskDetail from "@/components/atlas/execution-checklist-task-detail";
@@ -15,6 +16,11 @@ type Props = {
   childTasks: AtlasTaskCard[];
   assignee: AtlasAssigneeConfig;
 };
+
+function isContractorServiceTask(task: AtlasTaskCard) {
+  return task.task_type === "contractor_service_status"
+    || task.metadata?.task_style === "contractor_service_status";
+}
 
 function isDecisionSelectorTask(task: AtlasTaskCard) {
   return task.metadata?.task_style === "decision_selector"
@@ -54,6 +60,7 @@ function isExecutionChecklistTask(task: AtlasTaskCard) {
 }
 
 export default function CanonicalAssignedTaskDetail(props: Props) {
+  if (isContractorServiceTask(props.task)) return <ContractorServiceTaskDetail {...props} />;
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
   if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
