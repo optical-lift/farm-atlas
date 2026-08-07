@@ -123,6 +123,32 @@ export async function readAtlasEnabledProjectPull(
   return { project, ...selector };
 }
 
+export async function ensureAtlasProjectPullTask(
+  farmId: string,
+  membershipId: string,
+  day: string,
+): Promise<string | null> {
+  const result = await readAtlasEnabledProjectPull(farmId, membershipId, day);
+  if (!result) return null;
+  if (!result.status.enabled || result.status.completeForToday || result.status.remainingItems <= 0) return null;
+
+  const fitting = result.options.options.filter((option) => option.fitsToday);
+  const next = fitting[0];
+  if (!next) return null;
+
+  const supabase = await createAtlasServerClient();
+  const { data, error } = await supabase.rpc("pull_project_item_to_today_v1", {
+    p_project_item_id: next.projectItemId,
+    p_membership_id: membershipId,
+    p_day: day,
+    p_note: "Automatically dealt by the Farm Hand Conveyor.",
+  });
+  if (error) throw new Error(error.message);
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  const taskId = (data as { taskId?: unknown }).taskId;
+  return typeof taskId === "string" ? taskId : null;
+}
+
 export async function buildAtlasProjectPullMove(
   farmId: string,
   membershipId: string,
