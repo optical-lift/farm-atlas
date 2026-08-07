@@ -31,7 +31,7 @@ export default function FarmHandConveyorTaskDetail(props: Props) {
 
   return (
     <>
-      <DominionAssignedTaskDetail {...props} />
+      <DominionAssignedTaskDetail {...props} conveyorMode />
       <aside style={{
         position: "fixed",
         zIndex: 45,
