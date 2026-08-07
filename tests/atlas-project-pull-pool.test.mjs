@@ -7,6 +7,7 @@ const conversionMigration = await readFile(new URL("../supabase/migrations/20260
 const guardrailsMigration = await readFile(new URL("../supabase/migrations/20260807160000_project_pull_guardrails_v1.sql", import.meta.url), "utf8");
 const statusMigration = await readFile(new URL("../supabase/migrations/20260807161500_project_pull_status_v1.sql", import.meta.url), "utf8");
 const projectPull = await readFile(new URL("../lib/atlas/project-pull.ts", import.meta.url), "utf8");
+const homePage = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 const switchedHome = await readFile(new URL("../lib/atlas/switched-account-home-overview.ts", import.meta.url), "utf8");
 const picker = await readFile(new URL("../app/project-pull/[projectId]/page.tsx", import.meta.url), "utf8");
 const canonicalTask = await readFile(new URL("../components/atlas/canonical-assigned-task-detail.tsx", import.meta.url), "utf8");
@@ -48,14 +49,20 @@ test("Daily Hand project pull enforces one capacity-aware item and true dependen
   assert.match(statusMigration, /remainingPullMinutes/);
 });
 
-test("farm-hand conveyor deals project work without exposing a choice menu", () => {
+test("real farm-hand Home deals project work without exposing a choice menu", () => {
   assert.match(projectPull, /ensureAtlasProjectPullTask/);
   assert.match(projectPull, /pull_project_item_to_today_v1/);
   assert.match(projectPull, /filter\(\(option\) => option\.fitsToday\)/);
   assert.match(projectPull, /Automatically dealt by the Farm Hand Conveyor/);
-  assert.match(switchedHome, /ensureAtlasProjectPullTask/);
-  assert.match(switchedHome, /ensureProjectWork/);
-  assert.doesNotMatch(switchedHome, /Choose today’s Finish Project work/);
+  assert.match(homePage, /farmHandMode && actualFarmHandMembership/);
+  assert.match(homePage, /ensureAtlasProjectPullTask/);
+  assert.doesNotMatch(homePage, /Choose today’s Finish Project work/);
+});
+
+test("Owner preview of a farm hand is read-only and never deals work into the worker's real day", () => {
+  assert.match(switchedHome, /Owner preview is read-only/);
+  assert.doesNotMatch(switchedHome, /ensureAtlasProjectPullTask/);
+  assert.doesNotMatch(switchedHome, /ensureProjectWork/);
 });
 
 test("legacy picker and return mechanics remain available for management while farm-hand routing can bypass them", () => {
