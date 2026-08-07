@@ -1,0 +1,21 @@
+/* Generic assigned-task instructions are operating content, not optional detail.
+   Keep them visible at all times instead of hiding them in a closed drawer. */
+
+details.atlas-task-procedure > .atlas-task-procedure-body,
+details.atlas-task-procedure:not([open]) > .atlas-task-procedure-body {
+  display: block !important;
+}
+
+details.atlas-task-procedure > summary {
+  pointer-events: none;
+  cursor: default;
+  list-style: none;
+}
+
+details.atlas-task-procedure > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.atlas-task-procedure > summary > b {
+  display: none !important;
+}
