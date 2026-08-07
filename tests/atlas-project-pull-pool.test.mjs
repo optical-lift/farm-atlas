@@ -38,7 +38,7 @@ test("pulling materializes ordinary dated work while the durable item remains pr
   assert.match(schemaMigration, /set status='selected',active_task_id=v_task_id/);
 });
 
-test("Daily Hand project pull enforces one capacity-aware choice and true dependencies", () => {
+test("Daily Hand project pull enforces one capacity-aware item and true dependencies", () => {
   assert.match(guardrailsMigration, /Today''s project pull is already full/);
   assert.match(guardrailsMigration, /daily_pull_max_items/);
   assert.match(guardrailsMigration, /does not fit today''s remaining project pull budget/);
@@ -48,16 +48,17 @@ test("Daily Hand project pull enforces one capacity-aware choice and true depend
   assert.match(statusMigration, /remainingPullMinutes/);
 });
 
-test("farm-hand home reserves one visible Daily Hand slot for project choice", () => {
-  assert.match(projectPull, /buildAtlasProjectPullMove/);
-  assert.match(projectPull, /Choose today’s Finish Project work/);
+test("farm-hand conveyor deals project work without exposing a choice menu", () => {
+  assert.match(projectPull, /ensureAtlasProjectPullTask/);
+  assert.match(projectPull, /pull_project_item_to_today_v1/);
   assert.match(projectPull, /filter\(\(option\) => option\.fitsToday\)/);
-  assert.match(switchedHome, /buildAtlasProjectPullMove/);
-  assert.match(switchedHome, /overview\.moves\.slice\(0, 3\)/);
-  assert.match(switchedHome, /projectMove/);
+  assert.match(projectPull, /Automatically dealt by the Farm Hand Conveyor/);
+  assert.match(switchedHome, /ensureAtlasProjectPullTask/);
+  assert.match(switchedHome, /ensureProjectWork/);
+  assert.doesNotMatch(switchedHome, /Choose today’s Finish Project work/);
 });
 
-test("picker materializes a selected card and unchosen work has no reschedule consequence", () => {
+test("legacy picker and return mechanics remain available for management while farm-hand routing can bypass them", () => {
   assert.match(picker, /pull_project_item_to_today_v1/);
   assert.match(picker, /Take this one today/);
   assert.match(picker, /stays in the Elm Finish \+ Renovation Pool with no overdue date/);
