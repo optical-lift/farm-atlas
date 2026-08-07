@@ -162,12 +162,23 @@ export async function POST(request: Request) {
     }
   }
 
+  let recoveryStatus: unknown = null;
+  if (!operating && authorized.access.membership.role === "farm_hand" && input.transition === "done") {
+    const recoveryResponse = await supabase.rpc("consume_worker_recovery_move_v1", {
+      p_task_id: input.taskId,
+    });
+    if (!recoveryResponse.error && recoveryResponse.data && typeof recoveryResponse.data === "object") {
+      recoveryStatus = recoveryResponse.data;
+    }
+  }
+
   return privateJson({
     ...result,
     ok: true,
     operatorMode: operating,
     effectiveMembershipId: operatorMembershipId,
     dependencyStatus,
+    recoveryStatus,
     warnings: Array.isArray(result.warnings) ? result.warnings : [],
   });
 }

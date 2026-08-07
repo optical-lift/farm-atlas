@@ -12,12 +12,13 @@ const seasons = read("lib/atlas/home-farm-seasons.ts");
 const css = read("components/atlas/home/universal-home-v2.module.css");
 const build = `${page}\n${home}\n${seasons}\n${css}`;
 
-test("Home uses the compact day rail instead of large Week and Month dashboard cards", () => {
-  assert.match(page, /AtlasUniversalHomeV2/);
+test("Home keeps the compact day rail for Owner while farm-hand conveyor may hide it", () => {
+  assert.match(page, /AtlasUniversalHome/);
   assert.match(home, /HomeTimeRail/);
   assert.match(home, /Previous week/);
   assert.match(home, /This week/);
   assert.match(home, /Month/);
+  assert.match(home, /farmHandMode \? null : <HomeTimeRail/);
   assert.doesNotMatch(home, /UniversalOverviewBoxes|atlas-home-overview-card/);
   assert.doesNotMatch(home, />The week</);
 });
@@ -31,15 +32,16 @@ test("every day in the current Monday-through-Sunday rail opens its Living Day",
   assert.match(home, /data-atlas-home-time-rail="true"/);
 });
 
-test("Home is an unresolved-work cover followed by Needs you and untitled farm cards", () => {
+test("Owner Home remains an unresolved-work cover while farm-hand Home becomes one next move", () => {
   assert.match(home, /Today at|Today across/);
   assert.match(home, /dealt with/);
   assert.match(home, /carryForwardCount/);
   assert.match(home, /hasCarryForward/);
   assert.match(home, /overdueLabel/);
-  assert.match(home, /tasks"} overdue/);
   assert.match(home, /Needs you/);
-  assert.match(home, /<TheFarms home=\{home\} farmSeasons=\{farmSeasons\} \/>/);
+  assert.match(home, /farmHandMode \? "Your next move"/);
+  assert.match(home, /const visibleMoves = farmHandMode \? home\.moves\.slice\(0, 1\)/);
+  assert.match(home, /<TheFarms home=\{home\} farmSeasons=\{farmSeasons\}\/>/);
   assert.doesNotMatch(home, />The farms</);
   assert.doesNotMatch(home, /Growing season/);
   assert.doesNotMatch(home, /Farm pulse|known gaps|Moving now|AtlasPortfolioMatrix|AtlasTrailPulseBoard|Work in Motion|Current moves/);

@@ -14,6 +14,7 @@ import {
   readAtlasOwnerOperatorContext,
 } from "@/lib/atlas/operator-context";
 import { readAtlasOperatorUniversalHome } from "@/lib/atlas/operator-universal-home";
+import { ensureAtlasProjectPullTask } from "@/lib/atlas/project-pull";
 import { getAtlasSession } from "@/lib/atlas/session";
 import { readAtlasSwitchedFarmHandHomeOverview } from "@/lib/atlas/switched-account-home-overview";
 import { readAtlasSetAsideTaskIds } from "@/lib/atlas/task-day-dispositions-server";
@@ -57,11 +58,33 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
       ?? viewer.activeFarmId
     : viewer.activeFarmId;
   const selectedMembershipId = effectiveOperatorMembershipId(operatorContext);
-  const home = await readAtlasOperatorUniversalHome(viewer, {
+  let home = await readAtlasOperatorUniversalHome(viewer, {
     preferredFarmId,
     effectiveAccountId: effectiveOperatorAccountId(operatorContext),
     effectiveMembershipId: selectedMembershipId,
   });
+
+  const actualFarmHandMembership = !operatorContext?.isOperating
+    ? viewer.farmMemberships.find((membership) => membership.farmId === home.activeFarm?.farmId && membership.role === "farm_hand") ?? null
+    : null;
+  const farmHandMode = Boolean(actualFarmHandMembership);
+
+  if (farmHandMode && actualFarmHandMembership && home.activeFarm?.farmId) {
+    try {
+      await ensureAtlasProjectPullTask(
+        home.activeFarm.farmId,
+        actualFarmHandMembership.membershipId,
+        home.window.doneDate,
+      );
+      home = await readAtlasOperatorUniversalHome(viewer, {
+        preferredFarmId,
+        effectiveAccountId: effectiveOperatorAccountId(operatorContext),
+        effectiveMembershipId: selectedMembershipId,
+      });
+    } catch {
+      // The conveyor may still serve ordinary Living Day work if no project item can be dealt.
+    }
+  }
 
   let setAsideTaskIds = new Set<string>();
   try {
@@ -117,7 +140,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     : baseTaskOverview;
   const carriedTaskOverview = withAtlasHomeCarryForward(visibleHome, reconciledTaskOverview);
   const staffMoves = carriedTaskOverview.moves.filter((move) => move.kind === "collection");
-  const ownerDailyHand = switchedFarmHand
+  const ownerDailyHand = switchedFarmHand || farmHandMode
     ? null
     : buildAtlasOwnerDailyHand(visibleHome, staffMoves.length ? 3 : 4);
   const taskOverview = ownerDailyHand
@@ -155,6 +178,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
         home={renderedHome}
         dayOverview={taskOverview.summary}
         farmSeasons={farmSeasons}
+        farmHandMode={farmHandMode || switchedFarmHand}
       />
       <AtlasPwaCoverPrompt />
     </>

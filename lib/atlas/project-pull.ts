@@ -14,6 +14,13 @@ export type AtlasProjectPullOption = {
   location: string | null;
   priority: string;
   fitsToday: boolean;
+  activationDemand?: "low" | "medium" | "high";
+  ambiguityLoad?: "low" | "medium" | "high";
+  setupLoad?: "low" | "medium" | "high";
+  completionClarity?: "low" | "medium" | "high";
+  familiarity?: "low" | "medium" | "high";
+  canFragment?: boolean;
+  recoveryPreferred?: boolean;
 };
 
 export type AtlasProjectPullStatus = {
@@ -38,6 +45,8 @@ export type AtlasProjectPullOptions = {
   projectTitle: string;
   membershipId: string;
   serviceDate: string;
+  workerMode?: "normal" | "recovery";
+  recoveryMovesRemaining?: number;
   capacity: {
     regularTargetMinutes: number;
     alreadyPresentedRegularMinutes: number;
@@ -84,7 +93,7 @@ export async function readAtlasProjectPullSelector(
       p_membership_id: membershipId,
       p_day: day,
     }),
-    supabase.rpc("project_pull_options_for_member_v1", {
+    supabase.rpc("project_pull_options_for_member_v2", {
       p_project_id: projectId,
       p_membership_id: membershipId,
       p_day: day,
@@ -121,6 +130,34 @@ export async function readAtlasEnabledProjectPull(
 
   const selector = await readAtlasProjectPullSelector(project.id, membershipId, day);
   return { project, ...selector };
+}
+
+export async function ensureAtlasProjectPullTask(
+  farmId: string,
+  membershipId: string,
+  day: string,
+): Promise<string | null> {
+  const result = await readAtlasEnabledProjectPull(farmId, membershipId, day);
+  if (!result) return null;
+  if (!result.status.enabled || result.status.completeForToday || result.status.remainingItems <= 0) return null;
+
+  const fitting = result.options.options.filter((option) => option.fitsToday);
+  const next = fitting[0];
+  if (!next) return null;
+
+  const supabase = await createAtlasServerClient();
+  const { data, error } = await supabase.rpc("pull_project_item_to_today_v1", {
+    p_project_item_id: next.projectItemId,
+    p_membership_id: membershipId,
+    p_day: day,
+    p_note: result.options.workerMode === "recovery"
+      ? "Automatically dealt by the Farm Hand Conveyor in recovery mode."
+      : "Automatically dealt by the Farm Hand Conveyor.",
+  });
+  if (error) throw new Error(error.message);
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  const taskId = (data as { taskId?: unknown }).taskId;
+  return typeof taskId === "string" ? taskId : null;
 }
 
 export async function buildAtlasProjectPullMove(
