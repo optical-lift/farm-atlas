@@ -53,7 +53,7 @@ function isQuietTask(card: AtlasTaskCard) {
 }
 
 function isOwnerHandCandidate(card: AtlasTaskCard, today: string) {
-  if (card.status !== "open") return false;
+  if (card.status !== "open" && card.status !== "blocked") return false;
   if (isChildTask(card) || isQuietTask(card)) return false;
   if (!taskMatchesAssignee(card, "owner")) return false;
   if (!card.due_date) return false;
@@ -97,6 +97,7 @@ function slotFor(card: AtlasTaskCard): AtlasDailyHandSlot | null {
 
 function candidateSortValue(candidate: HandCandidate, today: string) {
   const card = candidate.card;
+  const blockedRank = card.status === "blocked" ? "0" : "1";
   const overdueRank = card.due_date && card.due_date < today ? "0" : "1";
   const priority = normalized(card.priority);
   const priorityRank = priority === "critical" || priority === "urgent" || priority === "high"
@@ -104,15 +105,17 @@ function candidateSortValue(candidate: HandCandidate, today: string) {
     : priority === "low"
       ? "2"
       : "1";
-  return `${overdueRank}-${priorityRank}-${card.due_date ?? "9999-12-31"}-${atlasWorkOrderSortValue(card)}-${card.title}`;
+  return `${blockedRank}-${overdueRank}-${priorityRank}-${card.due_date ?? "9999-12-31"}-${atlasWorkOrderSortValue(card)}-${card.title}`;
 }
 
 function handMove(candidate: HandCandidate, today: string, index: number): AtlasUniversalMove {
   const { card, farm, slot } = candidate;
   const display = atlasTaskDisplay(card);
+  const blocked = card.status === "blocked";
   const overdue = Boolean(card.due_date && card.due_date < today);
   const location = display.location || farm.farmName;
   const meta = [
+    blocked ? "blocked" : null,
     overdue && card.due_date ? `carried from ${card.due_date}` : null,
     card.work_class ? card.work_class.replaceAll("_", " ") : null,
   ].filter(Boolean).join(" · ");
@@ -124,10 +127,12 @@ function handMove(candidate: HandCandidate, today: string, index: number): Atlas
     title: display.title || card.title,
     scopeLabel: location,
     meta,
-    detail: display.detail || card.unlock_text || card.note || "",
+    detail: blocked
+      ? card.blocker_text || display.detail || card.unlock_text || card.note || "Blocked"
+      : display.detail || card.unlock_text || card.note || "",
     href: `/task-focus/${encodeURIComponent(card.task_id)}?returnTo=${encodeURIComponent("/")}`,
     date: card.due_date,
-    state: overdue ? "attention" : "ready",
+    state: blocked ? "blocked" : overdue ? "attention" : "ready",
     farmId: farm.farmId,
     projectId: null,
     priority: index,
@@ -138,9 +143,9 @@ function handMove(candidate: HandCandidate, today: string, index: number): Atlas
  * Build the owner's small constitutional Daily Hand from durable task cards.
  *
  * The hand deliberately does not mirror every due/overdue task. It protects one
- * card from each operating lane in constitutional order, then uses a fifth
- * watch/decision card only when there is room. Staff and non-owner views keep
- * their existing task-overview behavior.
+ * card from each operating lane in constitutional order, while allowing an
+ * owner blocker to remain visible instead of disappearing from the hand.
+ * Staff and non-owner views keep their existing task-overview behavior.
  */
 export function buildAtlasOwnerDailyHand(home: AtlasUniversalHomeModel, maxCards = 4) {
   const today = home.window.doneDate;
