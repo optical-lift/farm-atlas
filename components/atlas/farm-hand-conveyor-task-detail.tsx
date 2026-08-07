@@ -14,7 +14,22 @@ type Props = {
   assignee: AtlasAssigneeConfig;
 };
 
-type ConveyorAction = "done" | "progress" | "need" | "changed" | "lighter";
+type ConveyorAction = "done" | "progress" | "need" | "changed" | "lighter" | "reschedule";
+
+function todayIso() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function addDays(dateIso: string, days: number) {
+  const date = new Date(`${dateIso}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
 
 export default function FarmHandConveyorTaskDetail(props: Props) {
   const [saving, setSaving] = useState<ConveyorAction | null>(null);
@@ -53,6 +68,30 @@ export default function FarmHandConveyorTaskDetail(props: Props) {
     }
   }
 
+  async function reschedule(targetDate: string | null, reason: string, scheduleIntent?: string) {
+    try {
+      setSaving("reschedule");
+      setMessage("");
+      await postAtlasTaskTransition({
+        taskId: props.task.task_id,
+        transition: "rescheduled",
+        ...(targetDate ? { targetDate } : {}),
+        reason,
+        laneKey: props.task.action_key || undefined,
+        workKey: props.task.action_key || undefined,
+        payload: {
+          assigneeKey: props.assignee.key,
+          source: "farm_hand_conveyor",
+          ...(scheduleIntent ? { scheduleIntent } : {}),
+        },
+      });
+      window.location.assign("/");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Atlas could not reschedule the card.");
+      setSaving(null);
+    }
+  }
+
   async function needLighterWork() {
     try {
       setSaving("lighter");
@@ -67,7 +106,7 @@ export default function FarmHandConveyorTaskDetail(props: Props) {
 
   return (
     <>
-      <style>{`.atlas-task-result-footer{display:none!important}.atlas-task-page-body{padding-bottom:190px!important}`}</style>
+      <style>{`.atlas-task-result-footer{display:none!important}.atlas-task-page-body{padding-bottom:250px!important}`}</style>
       <DominionAssignedTaskDetail {...props} />
       <aside
         aria-label="Tell Atlas what happened"
@@ -103,6 +142,18 @@ export default function FarmHandConveyorTaskDetail(props: Props) {
         <button type="button" disabled={Boolean(saving)} onClick={() => void needLighterWork()} style={lighterButtonStyle}>
           {saving === "lighter" ? "Adjusting the work…" : "Need lighter work"}
         </button>
+        <details style={{ marginTop: 2 }}>
+          <summary style={{ cursor: "pointer", padding: "7px 10px", fontSize: 13, fontWeight: 650 }}>Move this card</summary>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 7, padding: "3px 0 2px" }}>
+            <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(null, "Moved to next Elm Farm calendar day from farm-hand task page", "next_day")} style={buttonStyle}>Tomorrow</button>
+            <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(addDays(todayIso(), 7), "Moved to next week from farm-hand task page")} style={buttonStyle}>Next week</button>
+            <button type="button" disabled={Boolean(saving)} onClick={() => {
+              const date = window.prompt("Pick a date (YYYY-MM-DD)", props.task.due_date || todayIso())?.trim();
+              if (date) void reschedule(date, "Rescheduled from farm-hand task page");
+            }} style={buttonStyle}>Pick a date</button>
+          </div>
+          {saving === "reschedule" ? <p style={{ margin: "5px 8px 0", fontSize: 12 }}>Moving card…</p> : null}
+        </details>
         {message ? <p style={{ margin: "6px 8px 2px", fontSize: 12, color: "#7a2d29" }}>{message}</p> : null}
       </aside>
     </>

@@ -26,12 +26,15 @@ test("Anna gets conveyor support without replacing canonical task truth", () => 
   assert.match(dominionDetail, /"Problem found"/);
 });
 
-test("Anna reports reality instead of rescheduling or choosing a different job", () => {
+test("Anna reports reality while retaining the reschedule controls she asked to keep", () => {
   assert.match(conveyorDetail, /"Done"/);
   assert.match(conveyorDetail, /Made progress/);
   assert.match(conveyorDetail, /Need something/);
   assert.match(conveyorDetail, /Farm changed/);
   assert.match(conveyorDetail, /Need lighter work/);
   assert.match(conveyorDetail, /atlas-task-result-footer\{display:none!important\}/);
-  assert.doesNotMatch(conveyorDetail, /Tomorrow|Next week|Pick a date|Reschedule/);
+  assert.match(conveyorDetail, />Tomorrow</);
+  assert.match(conveyorDetail, />Next week</);
+  assert.match(conveyorDetail, />Pick a date</);
+  assert.match(conveyorDetail, /transition: "rescheduled"/);
 });
