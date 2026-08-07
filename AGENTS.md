@@ -8,7 +8,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 > **Atlas does not ask the worker to manage work. Atlas quietly manages the work so the worker can steward the world in front of them.**
 
-For farm-hand experiences, treat Atlas as external executive-function scaffolding rather than a task-list UI. The worker should receive one bounded next useful action at a time, report reality, and continue. Atlas owns remembering, prioritizing, sequencing, estimating, rescheduling, dependencies, capacity fit, and recovery routing. Avoid exposing choice, prioritization, rescheduling, or project-management vocabulary to the farm hand when the system can resolve it instead.
+For farm-hand experiences, treat Atlas as external executive-function scaffolding rather than a task-list UI. The worker should receive one bounded next useful action at a time, report reality, and continue. Atlas owns remembering, prioritizing, sequencing, estimating, rescheduling, dependencies, capacity fit, recovery routing, and work-window fit. Avoid exposing choice, prioritization, rescheduling, or project-management vocabulary to the farm hand when the system can resolve it instead.
 
 Implementation implications:
 - Farm hand: present **Your Next Move**, not a menu of competing work.
@@ -16,4 +16,5 @@ Implementation implications:
 - Worker responses report reality: Done, Made progress, Need something, Need lighter work, Farm changed.
 - `Need lighter work` is a state signal, not a failure or ordinary reschedule. Preserve the underlying obligation, temporarily reduce activation demand, automatically route another useful move, and surface a concise stewardship signal to the Owner.
 - Prefer execution slices with clear physical boundaries over large ambiguous jobs. The Owner chooses the thinking; Atlas preserves and sequences it; the farm hand executes the bounded move.
+- Respect known worker work windows without changing the underlying due date. For Elm's current farm-hand conveyor, hold outdoor work from 11:00 a.m. until 7:00 p.m. Central, prefer indoor work during that window, and let outdoor obligations re-enter the conveyor in the evening rather than asking the worker to continually defer them.
 - Describe completions as changes to farm state when possible, not merely checkbox completion.
