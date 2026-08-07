@@ -82,3 +82,42 @@ revoke execute on function atlas.report_worker_needs_lighter_work_v1(uuid) from 
 revoke execute on function atlas.acknowledge_worker_support_event_v1(uuid) from public, anon;
 grant execute on function atlas.report_worker_needs_lighter_work_v1(uuid) to authenticated;
 grant execute on function atlas.acknowledge_worker_support_event_v1(uuid) to authenticated;
+
+-- Keep authenticated EXECUTE governance adjacent to the grant. The later conveyor registry
+-- migration remains an idempotent reconciliation and adds the recovery-consumption RPC.
+insert into atlas.authenticated_rpc_registry(
+  signature,classification,confidence,review_status,authenticated_execute_expected,
+  security_definer_expected,service_execute_expected,caller_count,policy_reference_count,
+  evidence,registered_at,reviewed_at
+) values
+(
+  'atlas.report_worker_needs_lighter_work_v1(uuid)',
+  'app_endpoint','verified','active',true,true,true,1,2,
+  jsonb_build_object(
+    'source','secure_farm_hand_conveyor_support_state',
+    'call_site','Farm Hand Conveyor Need lighter work action',
+    'authorization','signed-in worker may report only against their own assigned task',
+    'reviewed_date','2026-08-07'
+  ),now(),now()
+),
+(
+  'atlas.acknowledge_worker_support_event_v1(uuid)',
+  'owner_admin_endpoint','verified','active',true,true,true,0,1,
+  jsonb_build_object(
+    'source','secure_farm_hand_conveyor_support_state',
+    'call_site','Owner stewardship support event acknowledgement',
+    'authorization','farm owner only',
+    'reviewed_date','2026-08-07'
+  ),now(),now()
+)
+on conflict (signature) do update
+set classification=excluded.classification,
+    confidence=excluded.confidence,
+    review_status=excluded.review_status,
+    authenticated_execute_expected=excluded.authenticated_execute_expected,
+    security_definer_expected=excluded.security_definer_expected,
+    service_execute_expected=excluded.service_execute_expected,
+    caller_count=excluded.caller_count,
+    policy_reference_count=excluded.policy_reference_count,
+    evidence=coalesce(atlas.authenticated_rpc_registry.evidence,'{}'::jsonb)||excluded.evidence,
+    reviewed_at=excluded.reviewed_at;
