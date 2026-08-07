@@ -4,6 +4,7 @@ import ContractorServiceTaskDetail from "@/components/atlas/contractor-service-t
 import DecisionSelectorTaskDetail from "@/components/atlas/decision-selector-task-detail";
 import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
 import ExecutionChecklistTaskDetail from "@/components/atlas/execution-checklist-task-detail";
+import FarmHandConveyorTaskDetail from "@/components/atlas/farm-hand-conveyor-task-detail";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
@@ -62,10 +63,11 @@ function isExecutionChecklistTask(task: AtlasTaskCard) {
 export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isContractorServiceTask(props.task)) return <ContractorServiceTaskDetail {...props} />;
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
-  if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
+  if (props.assignee.key === "anna") return <FarmHandConveyorTaskDetail {...props} />;
+  if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
   return <DominionAssignedTaskDetail {...props} />;
 }
