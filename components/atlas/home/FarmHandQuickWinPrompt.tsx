@@ -81,14 +81,15 @@ export default function FarmHandQuickWinPrompt({ home, active }: Props) {
   }, [home.window.doneDate, quickWin]);
 
   if (!quickWin || !open) return null;
+  const activeQuickWin = quickWin;
 
   function dismiss() {
-    const key = `atlas:quick-win:dismissed:${home.window.doneDate}:${quickWin.taskId}`;
+    const key = `atlas:quick-win:dismissed:${home.window.doneDate}:${activeQuickWin.taskId}`;
     window.sessionStorage.setItem(key, "1");
     setOpen(false);
   }
 
-  const minuteLabel = quickWin.minutes === 1 ? "1-minute" : `${quickWin.minutes}-minute`;
+  const minuteLabel = activeQuickWin.minutes === 1 ? "1-minute" : `${activeQuickWin.minutes}-minute`;
 
   return (
     <div
@@ -142,14 +143,14 @@ export default function FarmHandQuickWinPrompt({ home, active }: Props) {
           One quick thing first
         </small>
         <h2 id="atlas-quick-win-title" style={{ margin: 0, fontSize: 25, lineHeight: 1.08 }}>
-          {quickWin.move.title}
+          {activeQuickWin.move.title}
         </h2>
         <p style={{ margin: "14px 0 5px", fontSize: 17, lineHeight: 1.42 }}>
           This is a {minuteLabel} task. Let’s do it before we move forward with the day.
         </p>
-        {quickWin.move.detail ? <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.4, opacity: .72 }}>{quickWin.move.detail}</p> : null}
+        {activeQuickWin.move.detail ? <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.4, opacity: .72 }}>{activeQuickWin.move.detail}</p> : null}
         <Link
-          href={quickWin.move.href}
+          href={activeQuickWin.move.href}
           style={{
             display: "block",
             marginTop: 20,
