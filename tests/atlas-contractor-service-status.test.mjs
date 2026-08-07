@@ -11,8 +11,8 @@ const migration = await readFile(new URL("../supabase/migrations/20260807162500_
 test("contractor status cards use a semantic Yes action instead of generic Done", () => {
   assert.match(canonical, /ContractorServiceTaskDetail/);
   assert.match(canonical, /task_type === "contractor_service_status"/);
-  assert.match(component, />\s*Yes\s*</);
-  assert.doesNotMatch(component, />\s*Done\s*</);
+  assert.match(component, /: "Yes"/);
+  assert.doesNotMatch(component, /: "Done"/);
 });
 
 
