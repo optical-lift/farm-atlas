@@ -36,6 +36,6 @@ test("owner Daily Hand is composed after set-aside filtering and preserves staff
   assert.match(homePage, /prepared: true/);
 });
 
-test("farm-hand operator mode never receives the owner Daily Hand", () => {
-  assert.match(homePage, /const ownerDailyHand = switchedFarmHand\s*\? null\s*:\s*buildAtlasOwnerDailyHand/);
+test("farm-hand preview and real farm-hand mode never receive the owner Daily Hand", () => {
+  assert.match(homePage, /const ownerDailyHand = switchedFarmHand \|\| farmHandMode\s*\? null\s*:\s*buildAtlasOwnerDailyHand/);
 });
