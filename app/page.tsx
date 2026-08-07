@@ -117,7 +117,6 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
       && operatorContext.effective.farmRole === "farm_hand"
       && selectedMembershipId,
   );
-
   const [baseTaskOverview, farmSeasons, personalDayProgress] = await Promise.all([
     switchedFarmHand && selectedMembershipId
       ? readAtlasSwitchedFarmHandHomeOverview(visibleHome, selectedMembershipId)
@@ -175,7 +174,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
   const renderedHome = renderedFarmHandMode
     ? {
         ...unconstrainedRenderedHome,
-        moves: atlasFarmHandConveyorMoves(unconstrainedRenderedHome),
+        moves: await atlasFarmHandConveyorMoves(unconstrainedRenderedHome),
       }
     : unconstrainedRenderedHome;
 

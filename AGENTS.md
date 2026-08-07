@@ -16,5 +16,7 @@ Implementation implications:
 - Worker responses report reality: Done, Made progress, Need something, Need lighter work, Farm changed.
 - `Need lighter work` is a state signal, not a failure or ordinary reschedule. Preserve the underlying obligation, temporarily reduce activation demand, automatically route another useful move, and surface a concise stewardship signal to the Owner.
 - Prefer execution slices with clear physical boundaries over large ambiguous jobs. The Owner chooses the thinking; Atlas preserves and sequences it; the farm hand executes the bounded move.
-- Respect known worker work windows without changing the underlying due date. For Elm's current farm-hand conveyor, hold outdoor work from 11:00 a.m. until 7:00 p.m. Central, prefer indoor work during that window, and let outdoor obligations re-enter the conveyor in the evening rather than asking the worker to continually defer them.
+- Treat Anna's established summer outdoor rhythm (morning before about 11 and evening around 7 onward) as a strong prior, not a hard clock rule. The Farm Hand Conveyor should combine that rhythm with current and hourly Elm weather. Pleasant/cloudy conditions may expand the outdoor window; heat, humidity, rain, or storms may contract it earlier. When weather data is unavailable, fall back to the established 11 a.m.–7 p.m. indoor preference without moving due dates.
+- Outdoor eligibility belongs to the conveyor, Quick Wins, and recovery routing. Never interrupt indoor time with a tiny outside task merely because its duration is short.
+- Prefer stored task metadata such as `work_environment` and `heat_exposure` over text inference when those fields exist.
 - Describe completions as changes to farm state when possible, not merely checkbox completion.
