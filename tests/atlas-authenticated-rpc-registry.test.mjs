@@ -18,6 +18,10 @@ const notificationActionsMigrationName =
   "20260804225015_task_notification_actions_v1.sql";
 const notificationActionsRegistryMigrationName =
   "20260804225100_task_notification_actions_rpc_registry_v1.sql";
+const greyCouchDecisionMigrationName =
+  "20260807134500_grey_couch_decision_selector_v1.sql";
+const greyCouchDecisionRegistryMigrationName =
+  "20260807134600_grey_couch_decision_selector_rpc_registry_v1.sql";
 const migrationPath = new URL(
   `../supabase/migrations/${migrationName}`,
   import.meta.url,
@@ -113,6 +117,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const thursdayChecklistRegistry = readMigration(thursdayChecklistRegistryMigrationName);
   const thursdayClusterRegistry = readMigration(thursdayClusterRegistryMigrationName);
   const notificationActionsRegistry = readMigration(notificationActionsRegistryMigrationName);
+  const greyCouchDecisionRegistry = readMigration(greyCouchDecisionRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -130,7 +135,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
             ? thursdayClusterRegistryMigrationName
             : name === notificationActionsMigrationName
               ? notificationActionsRegistryMigrationName
-              : null;
+              : name === greyCouchDecisionMigrationName
+                ? greyCouchDecisionRegistryMigrationName
+                : null;
 
       assert.ok(
         pairedRegistryName,
@@ -172,6 +179,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
 
   assert.ok(notificationActionsRegistry.includes(
     "atlas.handle_task_notification_action_v1(uuid, text, integer)",
+  ));
+  assert.ok(greyCouchDecisionRegistry.includes(
+    "atlas.resolve_task_decision_selector_v1(uuid, text, uuid)",
   ));
 });
 
