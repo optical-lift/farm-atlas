@@ -39,7 +39,7 @@ function parseRoutingState(value: unknown): WorkerDayRoutingState | null {
 }
 
 export async function getWorkerDayRoutingState(access: AtlasRoleAccess): Promise<WorkerDayRoutingState | null> {
-  if (access.role !== "farm_hand") return null;
+  if (access.membership.role !== "farm_hand") return null;
   const supabase = await createAtlasServerClient();
   const result = await supabase.rpc("worker_day_routing_state_v1");
   if (result.error) throw new Error("Atlas worker routing state read failed.");
