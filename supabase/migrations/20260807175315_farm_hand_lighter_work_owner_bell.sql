@@ -70,3 +70,12 @@ $$;
 
 revoke execute on function atlas.report_worker_needs_lighter_work_v1(uuid) from public, anon;
 grant execute on function atlas.report_worker_needs_lighter_work_v1(uuid) to authenticated;
+
+update atlas.authenticated_rpc_registry
+set evidence=coalesce(evidence,'{}'::jsonb)||jsonb_build_object(
+      'owner_bell_wired',true,
+      'source','farm_hand_lighter_work_owner_bell',
+      'reviewed_date','2026-08-07'
+    ),
+    reviewed_at=now()
+where signature='atlas.report_worker_needs_lighter_work_v1(uuid)';
