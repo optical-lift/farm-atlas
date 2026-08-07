@@ -9,8 +9,10 @@ function read(path) {
 const home = read("components/atlas/home/AtlasUniversalHomeV2.tsx");
 const css = read("components/atlas/home/universal-home-v2.module.css");
 
-test("Home keeps the purple task board immediately before the calendar rail", () => {
-  assert.match(home, /<div className=\{styles\.todayStack\}>[\s\S]*<AtlasCard[\s\S]*<HomeTimeRail home=\{home\} \/>/);
+test("Owner Home keeps the purple task board and calendar rail while farm-hand Home can suppress the rail", () => {
+  assert.match(home, /<div className=\{styles\.todayStack\}>/);
+  assert.match(home, /<AtlasCard/);
+  assert.match(home, /farmHandMode \? null : <HomeTimeRail home=\{home\}\/>/);
   assert.match(css, /\.todayStack[\s\S]*display: grid;[\s\S]*gap: 8px/);
   assert.doesNotMatch(home, /atlas-home-task-hero|atlas-daily-run-sheet/);
 });
@@ -23,7 +25,7 @@ test("the Home rail keeps the compact first Week Route proportions", () => {
   assert.match(home, /weekday: dateFromIso/);
 });
 
-test("the rail stays snug and preserves the three time routes", () => {
+test("the rail stays snug and preserves the three owner time routes", () => {
   assert.match(css, /\.todayStack[\s\S]*gap: 8px/);
   assert.match(home, /Previous week/);
   assert.match(home, /This week · \{weekOpen\}/);
