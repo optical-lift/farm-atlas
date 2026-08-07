@@ -1,0 +1,1 @@
+Weather-smart conveyor regression marker. The executable coverage lives in atlas-farm-hand-work-window.test.mjs.
