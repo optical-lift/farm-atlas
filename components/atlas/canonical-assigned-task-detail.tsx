@@ -1,5 +1,6 @@
 "use client";
 
+import DecisionSelectorTaskDetail from "@/components/atlas/decision-selector-task-detail";
 import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
 import ExecutionChecklistTaskDetail from "@/components/atlas/execution-checklist-task-detail";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
@@ -13,6 +14,12 @@ type Props = {
   childTasks: AtlasTaskCard[];
   assignee: AtlasAssigneeConfig;
 };
+
+function isDecisionSelectorTask(task: AtlasTaskCard) {
+  return task.metadata?.task_style === "decision_selector"
+    && typeof task.metadata?.decision_selector_key === "string"
+    && task.metadata.decision_selector_key.length > 0;
+}
 
 function isWeedTask(task: AtlasTaskCard) {
   return task.action_key === "weed"
@@ -41,6 +48,7 @@ function isExecutionChecklistTask(task: AtlasTaskCard) {
 }
 
 export default function CanonicalAssignedTaskDetail(props: Props) {
+  if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
