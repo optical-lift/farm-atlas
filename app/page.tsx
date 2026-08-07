@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import FarmHandQuickWinPrompt from "@/components/atlas/home/FarmHandQuickWinPrompt";
 import AtlasHomeServerRefresh from "@/components/atlas/home/AtlasHomeServerRefresh";
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHomeV2";
 import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
@@ -169,6 +170,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     moves: taskOverview.moves,
     datedItems: taskOverview.datedItems,
   };
+  const renderedFarmHandMode = farmHandMode || switchedFarmHand;
 
   return (
     <>
@@ -178,8 +180,9 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
         home={renderedHome}
         dayOverview={taskOverview.summary}
         farmSeasons={farmSeasons}
-        farmHandMode={farmHandMode || switchedFarmHand}
+        farmHandMode={renderedFarmHandMode}
       />
+      <FarmHandQuickWinPrompt home={renderedHome} active={renderedFarmHandMode} />
       <AtlasPwaCoverPrompt />
     </>
   );
