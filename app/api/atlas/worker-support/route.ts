@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("report_worker_needs_lighter_work_v1", {
+  const { data, error } = await supabase.rpc("report_worker_needs_lighter_work_v2", {
     p_task_id: taskId,
   });
   if (error) return rpcFailure(error);
