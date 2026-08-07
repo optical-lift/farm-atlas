@@ -27,7 +27,7 @@ test("Anna gets conveyor support without replacing canonical task truth", () => 
 });
 
 test("Anna reports reality instead of rescheduling or choosing a different job", () => {
-  assert.match(conveyorDetail, />Done</);
+  assert.match(conveyorDetail, /"Done"/);
   assert.match(conveyorDetail, /Made progress/);
   assert.match(conveyorDetail, /Need something/);
   assert.match(conveyorDetail, /Farm changed/);
