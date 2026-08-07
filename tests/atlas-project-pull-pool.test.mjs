@@ -39,8 +39,8 @@ test("pulling materializes ordinary dated work while the durable item remains pr
 });
 
 test("Daily Hand project pull enforces one capacity-aware choice and true dependencies", () => {
+  assert.match(guardrailsMigration, /Today''s project pull is already full/);
   assert.match(guardrailsMigration, /daily_pull_max_items/);
-  assert.match(guardrailsMigration, /Today's project pull is already full/);
   assert.match(guardrailsMigration, /does not fit today''s remaining project pull budget/);
   assert.match(guardrailsMigration, /Second Coat/);
   assert.match(guardrailsMigration, /First Coat/);
