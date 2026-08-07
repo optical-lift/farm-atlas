@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import AtlasHomeServerRefresh from "@/components/atlas/home/AtlasHomeServerRefresh";
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHomeV2";
 import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
+import { buildAtlasOwnerDailyHand } from "@/lib/atlas/daily-hand";
 import { withAtlasHomeCarryForward } from "@/lib/atlas/home-carry-forward";
 import { readAtlasHomeFarmSeasonProfiles } from "@/lib/atlas/home-farm-seasons";
 import { readAtlasPersonalDayProgress } from "@/lib/atlas/home-personal-day-progress";
@@ -114,7 +115,21 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
         },
       }
     : baseTaskOverview;
-  const taskOverview = withAtlasHomeCarryForward(visibleHome, reconciledTaskOverview);
+  const carriedTaskOverview = withAtlasHomeCarryForward(visibleHome, reconciledTaskOverview);
+  const staffMoves = carriedTaskOverview.moves.filter((move) => move.kind === "collection");
+  const ownerDailyHand = switchedFarmHand
+    ? null
+    : buildAtlasOwnerDailyHand(visibleHome, staffMoves.length ? 3 : 4);
+  const taskOverview = ownerDailyHand
+    ? {
+        ...carriedTaskOverview,
+        moves: [...ownerDailyHand, ...staffMoves].slice(0, 4),
+        summary: {
+          ...carriedTaskOverview.summary,
+          prepared: true,
+        },
+      }
+    : carriedTaskOverview;
   const renderedViewer = visibleHome.viewer;
   const organizationMembership = organizationMembershipForViewer(renderedViewer);
   const organizationPortal = Boolean(
