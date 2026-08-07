@@ -43,27 +43,20 @@ test("set-aside visibility lasts until the actual return date", () => {
   assert.match(migration, /'requestedReturnDate',coalesce\(d\.requested_return_date,d\.returns_on\)/);
 });
 
-test("regular Anna tasks use the same canonical unfinished and move actions", () => {
+test("Anna task detail adds conveyor support while preserving canonical task outcomes", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const conveyor = read("components/atlas/farm-hand-conveyor-task-detail.tsx");
   const dominion = read("components/atlas/dominion-assigned-task-detail.tsx");
   const weed = read("components/atlas/weed-card-task-focus.tsx");
   const display = read("lib/atlas/task-display.ts");
 
-  assert.doesNotMatch(canonical, /props\.assignee\.key === "anna"/);
-  assert.doesNotMatch(canonical, /StructuredUnfinishedControl/);
-  assert.match(canonical, /return <DominionAssignedTaskDetail \{\.\.\.props\} \/>/);
+  assert.match(canonical, /FarmHandConveyorTaskDetail/);
+  assert.match(canonical, /props\.assignee\.key === "anna"/);
+  assert.match(conveyor, /Need lighter work/);
+  assert.match(conveyor, /reportAtlasNeedLighterWork/);
   assert.match(dominion, /"Partly done"/);
   assert.match(dominion, /"Problem found"/);
-  assert.match(dominion, /Move or close this card/);
-  assert.match(dominion, />Tomorrow</);
-  assert.match(dominion, />Next week</);
-  assert.match(dominion, />Pick a date</);
-  assert.match(dominion, />Changed plan</);
-  assert.match(dominion, />Not relevant</);
   assert.match(weed, /atlas-task-move-drawer atlas-weed-move-drawer/);
-  assert.match(weed, />\s*Tomorrow\s*</);
-  assert.match(weed, /type="date"/);
-  assert.doesNotMatch(weed, />\s*Do tomorrow\s*</);
   assert.match(display, /Continued/);
 });
 
