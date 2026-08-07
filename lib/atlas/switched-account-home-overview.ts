@@ -4,6 +4,7 @@ import { atlasDayTaskCues, atlasDayTaskFamily } from "@/lib/atlas/day-route";
 import type { AtlasHomeTaskOverview } from "@/lib/atlas/home-task-overview";
 import type { AtlasJournalTask } from "@/lib/atlas/journal-contract";
 import type { AtlasLivingDay } from "@/lib/atlas/living-day-contract";
+import { buildAtlasProjectPullMove } from "@/lib/atlas/project-pull";
 import { atlasTaskDisplay } from "@/lib/atlas/task-display";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import type {
@@ -211,6 +212,32 @@ function overviewFromLivingDay(
   };
 }
 
+async function withProjectPull(
+  home: AtlasUniversalHomeModel,
+  effectiveMembershipId: string,
+  overview: AtlasHomeTaskOverview,
+): Promise<AtlasHomeTaskOverview> {
+  const farmId = home.activeFarm?.farmId;
+  if (!farmId) return overview;
+
+  try {
+    const projectMove = await buildAtlasProjectPullMove(
+      farmId,
+      effectiveMembershipId,
+      home.window.doneDate,
+    );
+    if (!projectMove) return overview;
+
+    // Daily Hand stays intentionally small. Preserve the first three prepared moves
+    // and reserve the fourth visible slot for a finite-project choice.
+    const moves = [...overview.moves.slice(0, 3), projectMove];
+    return { ...overview, moves };
+  } catch {
+    // Project pulling is additive; a selector read failure must never hide ordinary work.
+    return overview;
+  }
+}
+
 export async function readAtlasSwitchedFarmHandHomeOverview(
   home: AtlasUniversalHomeModel,
   effectiveMembershipId: string,
@@ -224,8 +251,8 @@ export async function readAtlasSwitchedFarmHandHomeOverview(
       p_day: home.window.doneDate,
     });
     if (error || !data) throw error ?? new Error("Selected member Living Day was empty.");
-    return overviewFromLivingDay(home, data as AtlasLivingDay);
+    return withProjectPull(home, effectiveMembershipId, overviewFromLivingDay(home, data as AtlasLivingDay));
   } catch {
-    return fallbackOverview(home);
+    return withProjectPull(home, effectiveMembershipId, fallbackOverview(home));
   }
 }

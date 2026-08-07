@@ -4,6 +4,7 @@ import DecisionSelectorTaskDetail from "@/components/atlas/decision-selector-tas
 import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
 import ExecutionChecklistTaskDetail from "@/components/atlas/execution-checklist-task-detail";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
+import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
@@ -19,6 +20,11 @@ function isDecisionSelectorTask(task: AtlasTaskCard) {
   return task.metadata?.task_style === "decision_selector"
     && typeof task.metadata?.decision_selector_key === "string"
     && task.metadata.decision_selector_key.length > 0;
+}
+
+function isProjectPullTask(task: AtlasTaskCard) {
+  return typeof task.metadata?.project_pull_item_id === "string"
+    && task.metadata.project_pull_item_id.length > 0;
 }
 
 function isWeedTask(task: AtlasTaskCard) {
@@ -49,6 +55,7 @@ function isExecutionChecklistTask(task: AtlasTaskCard) {
 
 export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
+  if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;

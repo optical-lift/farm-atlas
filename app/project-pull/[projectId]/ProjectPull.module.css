@@ -1,0 +1,156 @@
+.page {
+  min-height: 100vh;
+  background: #f7f4ec;
+  color: #24231f;
+  padding: 28px 18px 64px;
+}
+
+.shell {
+  width: min(760px, 100%);
+  margin: 0 auto;
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: 24px;
+  color: inherit;
+  text-decoration: none;
+  font-size: 14px;
+  opacity: .68;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  opacity: .58;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(32px, 7vw, 52px);
+  line-height: .98;
+  font-weight: 650;
+  letter-spacing: -.035em;
+}
+
+.intro {
+  margin: 16px 0 0;
+  max-width: 620px;
+  font-size: 17px;
+  line-height: 1.5;
+  opacity: .78;
+}
+
+.budget {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 22px 0 28px;
+}
+
+.pill {
+  border: 1px solid rgba(36, 35, 31, .16);
+  border-radius: 999px;
+  padding: 8px 11px;
+  font-size: 13px;
+  background: rgba(255, 255, 255, .45);
+}
+
+.cards {
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  border: 1px solid rgba(36, 35, 31, .14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .72);
+  padding: 18px;
+  box-shadow: 0 8px 26px rgba(35, 32, 24, .04);
+}
+
+.cardDisabled {
+  opacity: .48;
+}
+
+.cardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.25;
+  font-weight: 650;
+}
+
+.minutes {
+  flex: none;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(36, 35, 31, .07);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.meta {
+  margin: 8px 0 0;
+  font-size: 13px;
+  opacity: .62;
+}
+
+.note {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  opacity: .76;
+}
+
+.choose {
+  width: 100%;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: #292821;
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.choose:disabled {
+  cursor: default;
+  opacity: .35;
+}
+
+.error {
+  margin: 18px 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(137, 50, 45, .09);
+  color: #7a2d29;
+  font-size: 14px;
+}
+
+.empty {
+  margin-top: 28px;
+  border: 1px solid rgba(36, 35, 31, .14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .58);
+  padding: 22px;
+  line-height: 1.5;
+}
+
+.quiet {
+  margin-top: 26px;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: .56;
+}
