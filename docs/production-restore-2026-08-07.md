@@ -1,0 +1,1 @@
+Production restore marker after reverting the adaptive Day Overview release. This commit intentionally contains no application logic changes.
