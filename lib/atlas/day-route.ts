@@ -139,6 +139,12 @@ export function atlasDayTaskFamily(task: AtlasTaskCard) {
   const category = explicitFamily(task);
   if (category) return category;
 
+  // Operation class is the canonical Day-family vocabulary. Workflow subtype
+  // still controls the task detail/result grammar, but all inspect/assess work
+  // reads as CHECK in the lineup.
+  const operationClass = normalized(task.operation_class ?? task.metadata?.operation_class);
+  if (operationClass === "inspect_assess") return "Check";
+
   const actionKey = canonicalActionKey(task);
   const mappedAction = ACTION_FAMILIES[actionKey];
   if (mappedAction) return mappedAction;
@@ -199,6 +205,14 @@ export function atlasDayTaskCues(task: AtlasTaskCard) {
     if (!clean || cues.some((cue) => cue.toLowerCase() === clean.toLowerCase())) return;
     cues.push(clean);
   };
+
+  const queuedAfter = numberValue(metadata.release_queue_queued_count);
+  if (canonicalActionKey(task) === "weed" && queuedAfter && queuedAfter > 0) {
+    add(`${queuedAfter} ${queuedAfter === 1 ? "area needs" : "areas need"} attention after this one`);
+  }
+
+  const unlocksTask = metadataString(task, "unlocks_task_label");
+  if (unlocksTask && metadataString(task, "unlocks_queue_key")) add(`Next: ${unlocksTask}`);
 
   // Atlas may retain duration estimates for internal capacity math, but the player-facing
   // lineup describes effort qualitatively instead of displaying clock-hour promises.
