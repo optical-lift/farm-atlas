@@ -26,6 +26,7 @@ import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
 import TaskSetAsideDayPatch from "./TaskSetAsideDayPatch";
 import DayConsequenceTimelinePatch from "./DayConsequenceTimelinePatch";
 import AtlasFarmConditionsHomePatch from "./AtlasFarmConditionsHomePatch";
+import AtlasSkyLedgerMaintainer from "./AtlasSkyLedgerMaintainer";
 import OwnerOperatorMode from "./OwnerOperatorMode";
 import "./globals.css";
 import "./atlas-primitives.css";
@@ -153,6 +154,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <AtlasPwaBridge />
+        <AtlasSkyLedgerMaintainer farmId={activeMembership?.farmId ?? null} role={activeMembership?.role ?? null} />
         <OwnerOperatorMode context={operatorContext} />
         {/* Legacy contract marker: <AtlasContextualAppFrame /> now receives the effective account role. */}
         <AtlasContextualAppFrame effectiveFarmRole={effectiveFarmRole} />
