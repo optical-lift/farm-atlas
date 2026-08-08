@@ -1,0 +1,4 @@
+.atlas-network-outreach-card .atlas-outreach-script > strong,
+.atlas-network-outreach-card .atlas-outreach-script > p:nth-of-type(2) {
+  display: none;
+}
