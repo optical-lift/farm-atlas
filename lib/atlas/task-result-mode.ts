@@ -25,7 +25,6 @@ export function atlasTaskResultMode(task: AtlasTaskCard): AtlasTaskResultMode {
   const explicit = explicitResultMode(task);
   if (explicit) return explicit;
 
-  return metadataText(task, "operation_class")
-    ? "field_execution"
-    : "standard_execution";
+  const operationClass = task.operation_class || metadataText(task, "operation_class");
+  return operationClass ? "field_execution" : "standard_execution";
 }
