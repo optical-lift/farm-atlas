@@ -117,6 +117,8 @@ export type AtlasTaskCard = {
   generated_from_id: string | null;
   action_key: string | null;
   work_class: string | null;
+  operation_class: string | null;
+  operation_class_source: string | null;
   parent_task_id: string | null;
   task_series_key: string | null;
   engine_instance_key: string | null;
@@ -258,38 +260,29 @@ export async function fetchAtlasTaskCards(
 ): Promise<AtlasTaskCardsResponse> {
   const params = new URLSearchParams();
   const options: AtlasTaskCardFetchOptions = typeof input === "string" ? { taskId: input } : input ?? {};
-  const inferredScope = currentUrlScope();
-  const scope = options.scope ?? inferredScope ?? "farm";
-  const assignmentScope = scope === "owner" || scope === "marshall" || scope === "children";
-  const viewerWindow = !options.taskId && scope === "farm" ? viewerOperationalWindow(options) : null;
 
   if (options.taskId) params.set("taskId", options.taskId);
-  if (assignmentScope) params.set("scope", "all");
-  else if (scope !== "farm") params.set("scope", scope);
+  const requestedScope = options.scope ?? currentUrlScope();
+  if (requestedScope && requestedScope !== "farm") params.set("scope", requestedScope);
 
-  const endpoint = viewerWindow
-    ? (() => {
-        const viewerParams = new URLSearchParams();
-        if (viewerWindow.dueThrough) viewerParams.set("dueThrough", viewerWindow.dueThrough);
-        if (viewerWindow.doneDate) viewerParams.set("doneDate", viewerWindow.doneDate);
-        return `/api/atlas/universal-task-cards${viewerParams.toString() ? `?${viewerParams.toString()}` : ""}`;
-      })()
-    : `/api/atlas/task-cards${params.toString() ? `?${params.toString()}` : ""}`;
-
-  const response = await fetch(endpoint, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    credentials: "same-origin",
-    cache: "no-store",
-  });
-
-  const data = (await response.json()) as AtlasTaskCardsResponse;
-  if (!response.ok || !data.ok) {
-    throw new Error(data.details || data.error || "Failed to load Atlas task cards.");
+  const operationalWindow = viewerOperationalWindow(options);
+  if (operationalWindow) {
+    params.set("viewer", "1");
+    if (operationalWindow.dueThrough) params.set("dueThrough", operationalWindow.dueThrough);
+    if (operationalWindow.doneDate) params.set("doneDate", operationalWindow.doneDate);
   }
 
-  return {
-    ...data,
-    taskCards: canonicalScopeRows(data.taskCards ?? [], scope),
-  };
+  const query = params.toString();
+  const response = await fetch(`/api/atlas/task-cards${query ? `?${query}` : ""}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  const data = (await response.json()) as AtlasTaskCardsResponse;
+  if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Task cards failed.");
+
+  if (requestedScope === "owner" || requestedScope === "marshall" || requestedScope === "children") {
+    return { ...data, taskCards: canonicalScopeRows(data.taskCards ?? [], requestedScope) };
+  }
+
+  return data;
 }
