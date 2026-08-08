@@ -68,41 +68,34 @@ type FarmConditionsResponse = {
       chancePct: number;
     };
   };
-  moon: {
-    phase: string;
-    illuminationPct: number | null;
-    direction: "waxing" | "waning" | "boundary";
-    moonrise: string | null;
-    moonset: string | null;
-    closestPhase: null | {
-      phase: string;
-      dateIso: string | null;
-      time: string | null;
-    };
-    sign: string;
-    signSymbol: string;
-    signQuality: "fruitful" | "productive" | "barren";
-    source: "usno" | "calculated_fallback";
-    guidance: {
-      profileKey: string;
-      traditional: true;
-      strength: "strong" | "moderate" | "work_window";
-      headline: string;
-      detail: string;
-      favoredActions: string[];
-    };
-    astronomySourceLabel: string;
-    ruleSourceLabel: string;
-  };
-  lunarTaskHints: Array<{
-    taskId: string;
-    title: string;
-    dueDate: string | null;
-    family: string;
-    fit: "favored" | "neutral" | "caution";
-    reason: string;
-  }>;
-  precedence: string[];
+};
+
+type CanonicalSkyState = {
+  covered?: boolean;
+  moonSign?: string | null;
+  moonSignWindowStart?: string | null;
+  moonSignWindowEnd?: string | null;
+  moonMode?: string | null;
+  phaseState?: string | null;
+  phaseWindowStart?: string | null;
+  phaseWindowEnd?: string | null;
+  phaseAngleDeg?: number | string | null;
+  illuminationFraction?: number | string | null;
+  sourceProvider?: string | null;
+  sourceVersion?: string | null;
+  calculationVersion?: string | null;
+};
+
+type CanonicalSkyResponse = {
+  ok: boolean;
+  authority?: string;
+  state?: CanonicalSkyState;
+  ledger?: {
+    sampleCount?: number;
+    windowCount?: number;
+    coverageFrom?: string | null;
+    coverageThrough?: string | null;
+  } | null;
 };
 
 type FarmConditionsCollectionResponse = {
@@ -116,6 +109,21 @@ type FarmConditionsHost = {
   node: HTMLElement;
 };
 
+const SIGN_SYMBOLS: Record<string, string> = {
+  aries: "♈︎",
+  taurus: "♉︎",
+  gemini: "♊︎",
+  cancer: "♋︎",
+  leo: "♌︎",
+  virgo: "♍︎",
+  libra: "♎︎",
+  scorpio: "♏︎",
+  sagittarius: "♐︎",
+  capricorn: "♑︎",
+  aquarius: "♒︎",
+  pisces: "♓︎",
+};
+
 function inches(value: number | null | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "—";
   return `${value.toFixed(2)}\"`;
@@ -126,6 +134,36 @@ function smallDate(dateIso: string | null | undefined) {
   const date = new Date(`${dateIso}T12:00:00`);
   if (Number.isNaN(date.getTime())) return dateIso;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function smallDateTime(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function titleCase(value: string | null | undefined) {
+  if (!value) return "Unknown";
+  return value.replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function numeric(value: number | string | null | undefined) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function moonPhaseLabel(value: number | string | null | undefined) {
+  const angle = numeric(value);
+  if (angle === null) return "Sky ledger refreshing";
+  if (angle < 22.5 || angle >= 337.5) return "New Moon";
+  if (angle < 67.5) return "Waxing Crescent";
+  if (angle < 112.5) return "First Quarter";
+  if (angle < 157.5) return "Waxing Gibbous";
+  if (angle < 202.5) return "Full Moon";
+  if (angle < 247.5) return "Waning Gibbous";
+  if (angle < 292.5) return "Last Quarter";
+  return "Waning Crescent";
 }
 
 function daysBetweenIso(olderIso: string, newerIso: string) {
@@ -166,6 +204,29 @@ function FarmConditionsEmbedded({
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [sky, setSky] = useState<CanonicalSkyResponse | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/atlas/sky-state?farmId=${encodeURIComponent(conditions.farm.id)}`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const payload = await response.json() as CanonicalSkyResponse;
+        if (!response.ok || !payload.ok) throw new Error("Sky state unavailable");
+        return payload;
+      })
+      .then((payload) => {
+        if (active) setSky(payload);
+      })
+      .catch(() => {
+        if (active) setSky(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [conditions.farm.id]);
 
   async function recordRain(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -200,21 +261,29 @@ function FarmConditionsEmbedded({
     }
   }
 
-  const moonTimes = [
-    conditions.moon.moonrise ? `Rise ${conditions.moon.moonrise}` : null,
-    conditions.moon.moonset ? `Set ${conditions.moon.moonset}` : null,
-  ].filter(Boolean).join(" · ");
   const gaugeLabel = conditions.rain.gauge.latest
     ? `${inches(conditions.rain.gauge.latest.amountIn)} on ${smallDate(conditions.rain.gauge.latest.observationDate)}`
     : "Not read yet";
   const areaEstimate = conditions.rain.areaEstimate;
   const rainfallStations = areaEstimate?.stations ?? [];
   const estimateLabel = areaEstimate?.stationCount === 3 ? "3-station" : "Area estimate";
+  const skyState = sky?.state;
+  const skyCovered = skyState?.covered === true;
+  const signKey = skyCovered && skyState?.moonSign ? skyState.moonSign.toLowerCase() : null;
+  const signLabel = signKey ? titleCase(signKey) : "Unknown";
+  const signSymbol = signKey ? SIGN_SYMBOLS[signKey] ?? "" : "";
+  const phaseLabel = moonPhaseLabel(skyCovered ? skyState?.phaseAngleDeg : null);
+  const illumination = skyCovered && numeric(skyState?.illuminationFraction) !== null
+    ? Math.round((numeric(skyState?.illuminationFraction) ?? 0) * 100)
+    : null;
+  const sourceLabel = skyCovered
+    ? `${skyState?.sourceProvider ?? "Atlas sky ledger"}${skyState?.sourceVersion ? ` ${skyState.sourceVersion}` : ""}`
+    : "Canonical sky ledger refreshing";
 
   return (
     <div
       className="atlas-farm-conditions-embedded"
-      aria-label={`${conditions.farm.name} weather, rain, and lunar conditions`}
+      aria-label={`${conditions.farm.name} weather, rain, and sky conditions`}
       data-farm-id={conditions.farm.id}
     >
       <div className="atlas-farm-conditions-grid">
@@ -239,11 +308,11 @@ function FarmConditionsEmbedded({
           </p>
         </article>
 
-        <article className="atlas-farm-condition-cell atlas-farm-moon-cell" data-moon-direction={conditions.moon.direction}>
-          <small>Moon · {conditions.moon.signSymbol} {conditions.moon.sign}</small>
-          <strong>{conditions.moon.phase}</strong>
-          <span>{conditions.moon.illuminationPct === null ? "Illumination unavailable" : `${conditions.moon.illuminationPct}% illuminated`}</span>
-          <p>{moonTimes || conditions.moon.astronomySourceLabel}</p>
+        <article className="atlas-farm-condition-cell atlas-farm-moon-cell" data-moon-direction={skyState?.phaseState ?? "unknown"}>
+          <small>Moon · {signSymbol} {signLabel}</small>
+          <strong>{phaseLabel}</strong>
+          <span>{illumination === null ? "Sky ledger refreshing" : `${illumination}% illuminated · ${titleCase(skyState?.moonMode)}`}</span>
+          <p>{sourceLabel}</p>
         </article>
       </div>
 
@@ -289,40 +358,26 @@ function FarmConditionsEmbedded({
       <details className="atlas-farm-lunar-planner">
         <summary>
           <span>
-            <small>Traditional farm almanac</small>
-            <strong>{conditions.moon.guidance.headline}</strong>
+            <small>Sky state</small>
+            <strong>{skyCovered ? `${signSymbol} ${signLabel} · ${titleCase(skyState?.moonMode)}` : "Canonical ledger refreshing"}</strong>
           </span>
           <b aria-hidden="true">⌄</b>
         </summary>
         <div className="atlas-farm-lunar-body">
-          <p>{conditions.moon.guidance.detail}</p>
-          <div className="atlas-farm-lunar-actions" aria-label="Favored traditional work">
-            {conditions.moon.guidance.favoredActions.map((action) => <span key={action}>{action}</span>)}
+          <p>
+            This is the factual Atlas sky ledger only. Farm Conditions no longer assigns traditional good/bad task scores or independently ranks farm work.
+          </p>
+          <div className="atlas-farm-lunar-actions" aria-label="Current measured sky state">
+            <span>{phaseLabel}</span>
+            <span>{illumination === null ? "Illumination pending" : `${illumination}% illuminated`}</span>
+            {skyState?.moonSignWindowEnd ? <span>Sign changes {smallDateTime(skyState.moonSignWindowEnd)}</span> : null}
+            {skyState?.phaseWindowEnd ? <span>Phase half changes {smallDateTime(skyState.phaseWindowEnd)}</span> : null}
           </div>
-
-          {conditions.lunarTaskHints.length ? (
-            <section className="atlas-farm-lunar-task-list" aria-label="Atlas tasks compared with the lunar window">
-              <h3>Current Atlas work</h3>
-              {conditions.lunarTaskHints.map((task) => (
-                <a key={task.taskId} href={`/task-focus/${encodeURIComponent(task.taskId)}`} data-lunar-fit={task.fit}>
-                  <span>
-                    <small>{task.fit}{task.dueDate ? ` · ${smallDate(task.dueDate)}` : ""}</small>
-                    <strong>{task.title}</strong>
-                    <em>{task.reason}</em>
-                  </span>
-                  <b aria-hidden="true">›</b>
-                </a>
-              ))}
-            </section>
-          ) : (
-            <p className="atlas-farm-lunar-empty">No open sowing, planting, harvesting, or clearing task is inside the next 21 days.</p>
-          )}
-
           <p className="atlas-farm-lunar-precedence">
-            Atlas keeps the decision order: {conditions.precedence.join(" → ")}. Lunar timing advises; it does not move a viable crop window on its own.
+            Task timing lives in one place: approved operation rules → safety and biological guardrails → Body Budget → Daily Hand.
           </p>
           <small className="atlas-farm-condition-source">
-            Astronomy: {conditions.moon.astronomySourceLabel}. Guidance: {conditions.moon.ruleSourceLabel}. Weather and rainfall estimates are separate from the farm gauge.
+            Astronomy: {sourceLabel}. Calculation: {skyState?.calculationVersion ?? "awaiting ledger"}. No task guidance is produced by this panel.
           </small>
         </div>
       </details>
