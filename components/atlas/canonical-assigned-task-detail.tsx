@@ -6,6 +6,7 @@ import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-tas
 import ExecutionChecklistTaskDetail from "@/components/atlas/execution-checklist-task-detail";
 import FarmHandConveyorTaskDetail from "@/components/atlas/farm-hand-conveyor-task-detail";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
+import NetworkOutreachTaskDetail from "@/components/atlas/network-outreach-task-detail";
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
@@ -48,6 +49,11 @@ function isSeedInventoryTask(task: AtlasTaskCard) {
     || task.metadata?.task_style === "seed_inventory_recount";
 }
 
+function isNetworkOutreachTask(task: AtlasTaskCard) {
+  return task.metadata?.network_outreach_master_task === true
+    || task.metadata?.checklist_mode === "network_outreach";
+}
+
 function isNetworkInputsTask(task: AtlasTaskCard) {
   return task.metadata?.network_input_research === true
     || task.metadata?.network_input_master_task === true
@@ -66,6 +72,7 @@ export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
+  if (isNetworkOutreachTask(props.task)) return <NetworkOutreachTaskDetail {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
   if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
