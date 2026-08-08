@@ -22,18 +22,15 @@ function dateInTimezone(date: Date, timezone: string) {
 export async function GET() {
   const admin = createAtlasAdminClient();
   const today = dateInTimezone(new Date(), TIMEZONE);
-  const { data: existing, error: existingError } = await admin
-    .from("sky_state_samples")
-    .select("service_date")
-    .eq("farm_id", ELM_FARM_ID)
-    .order("service_date", { ascending: false })
-    .limit(1);
+  const { data: status, error: statusError } = await admin.rpc("sky_ledger_status_v1", {
+    p_farm_id: ELM_FARM_ID,
+  });
 
-  if (existingError) {
-    return NextResponse.json({ ok: false, error: existingError.message }, { status: 500 });
+  if (statusError) {
+    return NextResponse.json({ ok: false, error: statusError.message }, { status: 500 });
   }
 
-  const latest = existing?.[0]?.service_date ?? null;
+  const latest = typeof status?.coverageThrough === "string" ? status.coverageThrough : null;
   if (latest) {
     const coverageDays = Math.floor(
       (new Date(`${latest}T12:00:00Z`).getTime() - new Date(`${today}T12:00:00Z`).getTime()) / 86_400_000,
