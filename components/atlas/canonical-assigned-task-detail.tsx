@@ -11,6 +11,7 @@ import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-load
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import { atlasTaskResultMode } from "@/lib/atlas/task-result-mode";
 
 type Props = {
   task: AtlasTaskCard;
@@ -67,7 +68,12 @@ export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
-  if (props.assignee.key === "anna") return <FarmHandConveyorTaskDetail {...props} />;
   if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
+
+  const resultMode = atlasTaskResultMode(props.task);
+  if (props.assignee.key === "anna" && resultMode === "field_execution") {
+    return <FarmHandConveyorTaskDetail {...props} />;
+  }
+
   return <DominionAssignedTaskDetail {...props} />;
 }
