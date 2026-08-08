@@ -24,6 +24,17 @@ function centralDateIso(date = new Date()) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function addDaysIso(dateIso: string, days: number) {
+  const [year, month, day] = dateIso.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+function daysBetween(startIso: string, endIso: string) {
+  const start = new Date(`${startIso}T12:00:00Z`).getTime();
+  const end = new Date(`${endIso}T12:00:00Z`).getTime();
+  return Math.round((end - start) / 86_400_000);
+}
+
 function validDateIso(value: string | null) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime()));
 }
@@ -52,7 +63,8 @@ export async function GET(request: Request) {
   }
 
   const dateIso = requestedDate as string;
-  if (dateIso <= centralDateIso()) {
+  const today = centralDateIso();
+  if (dateIso <= today) {
     return privateJson({ ok: true, active: false, date: dateIso, items: [] });
   }
 
@@ -72,18 +84,24 @@ export async function GET(request: Request) {
       return privateJson({ ok: true, active: false, date: dateIso, items: [] });
     }
 
-    const [projection, home] = await Promise.all([
-      readOwnerWeekProjection(effective.farmId, effectiveMembershipId, dateIso, 1),
-      readAtlasOperatorUniversalHome(viewer, {
-        doneDate: dateIso,
-        dueThrough: dateIso,
-        effectiveAccountId,
-        effectiveMembershipId,
-      }),
-    ]);
+    const projectionStart = addDaysIso(today, 1);
+    const withinPlanningHorizon = daysBetween(projectionStart, dateIso) >= 0 && daysBetween(projectionStart, dateIso) < 14;
+    const projection = await readOwnerWeekProjection(
+      effective.farmId,
+      effectiveMembershipId,
+      withinPlanningHorizon ? projectionStart : dateIso,
+      withinPlanningHorizon ? 14 : 1,
+    );
+    const home = await readAtlasOperatorUniversalHome(viewer, {
+      doneDate: dateIso,
+      dueThrough: dateIso,
+      effectiveAccountId,
+      effectiveMembershipId,
+    });
 
     const actualTaskIds = new Set(atlasUniversalTaskCards(home).map((task) => task.task_id));
-    const items = (projection.days[0]?.items ?? [])
+    const projectionDay = projection.days.find((day) => day.date === dateIso);
+    const items = (projectionDay?.items ?? [])
       .filter((item) => item.sourceKind !== "task" || !actualTaskIds.has(item.sourceId))
       .map((item) => ({
         id: item.id,
