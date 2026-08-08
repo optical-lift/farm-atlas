@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
 type TentativeItem = {
   id: string;
@@ -19,13 +20,6 @@ type ProjectionResponse = {
   items?: TentativeItem[];
 };
 
-function selectedFutureDay() {
-  if (typeof window === "undefined" || window.location.pathname !== "/day") return null;
-  const dateIso = new URLSearchParams(window.location.search).get("date");
-  if (!dateIso || !/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) return null;
-  return dateIso;
-}
-
 function sourceLabel(sourceKind: string) {
   if (sourceKind === "project_pull") return "Project pool";
   if (sourceKind === "queue") return "Queue";
@@ -34,14 +28,17 @@ function sourceLabel(sourceKind: string) {
 }
 
 export default function OwnerTentativeDayProjection() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const requestedDate = searchParams.get("date");
+  const dateIso = pathname === "/day" && requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
+    ? requestedDate
+    : null;
   const [response, setResponse] = useState<ProjectionResponse | null>(null);
 
   useEffect(() => {
-    const dateIso = selectedFutureDay();
-    if (!dateIso) {
-      setResponse(null);
-      return;
-    }
+    setResponse(null);
+    if (!dateIso) return;
 
     const controller = new AbortController();
     void fetch(`/api/atlas/owner-day-projection?date=${encodeURIComponent(dateIso)}`, {
@@ -62,7 +59,7 @@ export default function OwnerTentativeDayProjection() {
       });
 
     return () => controller.abort();
-  }, []);
+  }, [dateIso]);
 
   if (!response?.active || !response.items?.length) return null;
   const operatorLabel = response.operatorLabel || "this worker";
