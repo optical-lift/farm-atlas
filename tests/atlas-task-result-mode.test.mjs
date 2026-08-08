@@ -6,6 +6,14 @@ const resultMode = readFileSync(
   new URL("../lib/atlas/task-result-mode.ts", import.meta.url),
   "utf8",
 );
+const taskCardsClient = readFileSync(
+  new URL("../lib/atlas/task-cards-client.ts", import.meta.url),
+  "utf8",
+);
+const taskCardMigration = readFileSync(
+  new URL("../supabase/migrations/20260808162000_expose_task_operation_class_on_task_cards.sql", import.meta.url),
+  "utf8",
+);
 const canonicalDetail = readFileSync(
   new URL("../components/atlas/canonical-assigned-task-detail.tsx", import.meta.url),
   "utf8",
@@ -22,8 +30,13 @@ const dominionDetail = readFileSync(
 test("ordinary task result grammar is selected by task shape instead of assignee", () => {
   assert.match(resultMode, /"standard_execution" \| "field_execution"/);
   assert.match(resultMode, /metadataText\(task, "task_result_mode"\)/);
-  assert.match(resultMode, /metadataText\(task, "operation_class"\)/);
-  assert.match(resultMode, /\? "field_execution"\s*:\s*"standard_execution"/);
+  assert.match(resultMode, /task\.operation_class \|\| metadataText\(task, "operation_class"\)/);
+  assert.match(resultMode, /operationClass \? "field_execution" : "standard_execution"/);
+
+  assert.match(taskCardsClient, /operation_class: string \| null/);
+  assert.match(taskCardsClient, /operation_class_source: string \| null/);
+  assert.match(taskCardMigration, /t\.operation_class,/);
+  assert.match(taskCardMigration, /t\.operation_class_source/);
 
   assert.match(canonicalDetail, /atlasTaskResultMode\(props\.task\)/);
   assert.match(canonicalDetail, /props\.assignee\.key === "anna" && resultMode === "field_execution"/);
