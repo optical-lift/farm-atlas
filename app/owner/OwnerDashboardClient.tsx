@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { OwnerFinishProjectSummary } from "@/lib/atlas-data/owner-finish-project";
+import type { OwnerWeekProjection } from "@/lib/atlas-data/owner-week-projection";
 import type {
   OwnerAction,
   OwnerDashboardProjection,
@@ -19,6 +20,11 @@ function prettyDate(dateIso: string | null | undefined) {
   const date = new Date(`${dateIso}T12:00:00`);
   if (Number.isNaN(date.getTime())) return dateIso;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function prettyWeekday(dateIso: string) {
+  const date = new Date(`${dateIso}T12:00:00`);
+  return date.toLocaleDateString("en-US", { weekday: "short" });
 }
 
 function daysBetween(startIso: string, endIso: string) {
@@ -67,44 +73,69 @@ function FinishProjectStewardship({ project }: { project: OwnerFinishProjectSumm
   const current = project.released[0] ?? null;
   const releaseLabel = current?.taskStatus === "done" ? "Completed today" : current ? "Released to Anna" : "No venue move released";
   return (
-    <Link
-      href={`/project/${encodeURIComponent(project.projectId)}`}
-      className="atlas-overview-zone-card atlas-owner-section"
-      style={{ display: "block", textDecoration: "none", color: "inherit", padding: 0, overflow: "hidden" }}
-    >
+    <Link href={`/project/${encodeURIComponent(project.projectId)}`} className="atlas-overview-zone-card atlas-owner-section" style={{ display: "block", textDecoration: "none", color: "inherit", padding: 0, overflow: "hidden" }}>
       <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(0,0,0,.08)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-          <div>
-            <small style={{ textTransform: "uppercase", letterSpacing: ".08em", opacity: .58 }}>Venue stewardship</small>
-            <strong style={{ display: "block", marginTop: 4, fontSize: 19 }}>{project.projectTitle}</strong>
-          </div>
+          <div><small style={{ textTransform: "uppercase", letterSpacing: ".08em", opacity: .58 }}>Venue stewardship</small><strong style={{ display: "block", marginTop: 4, fontSize: 19 }}>{project.projectTitle}</strong></div>
           <b style={{ whiteSpace: "nowrap" }}>{project.totalRemaining} remaining</b>
         </div>
       </div>
-
       <div style={{ padding: "14px 18px" }}>
         <small style={{ opacity: .62 }}>{releaseLabel}</small>
-        {current ? (
-          <>
-            <strong style={{ display: "block", marginTop: 4 }}>{current.title}</strong>
-            <p style={{ margin: "5px 0 0", opacity: .72 }}>{current.minutes ? `${current.minutes} min · ` : ""}{current.taskStatus ? current.taskStatus.replaceAll("_", " ") : "in today's hand"}</p>
-          </>
-        ) : <p style={{ margin: "5px 0 0", opacity: .72 }}>Atlas has not materialized a Finish Project move into Anna's day.</p>}
+        {current ? <><strong style={{ display: "block", marginTop: 4 }}>{current.title}</strong><p style={{ margin: "5px 0 0", opacity: .72 }}>{current.minutes ? `${current.minutes} min · ` : ""}{current.taskStatus ? current.taskStatus.replaceAll("_", " ") : "in today's hand"}</p></> : <p style={{ margin: "5px 0 0", opacity: .72 }}>Atlas has not materialized a Finish Project move into Anna's day.</p>}
       </div>
-
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", borderTop: "1px solid rgba(0,0,0,.08)" }}>
         <div style={{ padding: "12px 8px", textAlign: "center" }}><strong style={{ display: "block", fontSize: 18 }}>{project.annaReadyCount}</strong><span style={{ fontSize: 11, opacity: .62 }}>Anna pool</span></div>
         <div style={{ padding: "12px 8px", textAlign: "center", borderLeft: "1px solid rgba(0,0,0,.06)" }}><strong style={{ display: "block", fontSize: 18 }}>{project.managementCount}</strong><span style={{ fontSize: 11, opacity: .62 }}>Owner / Marshall</span></div>
         <div style={{ padding: "12px 8px", textAlign: "center", borderLeft: "1px solid rgba(0,0,0,.06)" }}><strong style={{ display: "block", fontSize: 18 }}>{project.blockedCount}</strong><span style={{ fontSize: 11, opacity: .62 }}>blocked</span></div>
         <div style={{ padding: "12px 8px", textAlign: "center", borderLeft: "1px solid rgba(0,0,0,.06)" }}><strong style={{ display: "block", fontSize: 18 }}>{project.completedCount}</strong><span style={{ fontSize: 11, opacity: .62 }}>completed</span></div>
       </div>
-
       <div style={{ padding: "10px 18px 14px", borderTop: "1px solid rgba(0,0,0,.06)", fontSize: 13, fontWeight: 700 }}>Open project stewardship →</div>
     </Link>
   );
 }
 
-export default function OwnerDashboardClient({ dashboard, finishProject }: { dashboard: OwnerDashboardProjection; finishProject: OwnerFinishProjectSummary | null }) {
+function AnnaWeekProjection({ projection }: { projection: OwnerWeekProjection }) {
+  return (
+    <section className="atlas-overview-zone-card atlas-owner-section" style={{ overflow: "hidden" }}>
+      <summary>
+        <div><strong>Anna's Week</strong><span>{prettyDate(projection.startDate)}–{prettyDate(projection.endDate)}</span></div>
+        <b>Forecast</b>
+      </summary>
+      <div style={{ padding: "0 14px 14px" }}>
+        <p style={{ margin: "10px 4px 12px", opacity: .68, fontSize: 13 }}>Atlas plans ahead here without releasing the whole week into Anna's hand.</p>
+        <div style={{ display: "grid", gap: 10 }}>
+          {projection.days.map((day) => (
+            <article key={day.date} style={{ border: "1px solid rgba(0,0,0,.08)", borderRadius: 14, overflow: "hidden" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "10px 12px", background: "rgba(0,0,0,.025)" }}>
+                <strong>{prettyWeekday(day.date)} · {prettyDate(day.date)}</strong>
+                <span style={{ opacity: .6, fontSize: 12 }}>{day.items.length} {day.items.length === 1 ? "move" : "moves"}</span>
+              </div>
+              <div>
+                {day.items.length ? day.items.map((item) => (
+                  <div key={item.id} style={{ padding: "10px 12px", borderTop: "1px solid rgba(0,0,0,.06)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                      <strong>{item.title}</strong>
+                      <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em", opacity: .62 }}>{item.planState}</span>
+                    </div>
+                    <p style={{ margin: "4px 0 0", opacity: .66, fontSize: 12 }}>
+                      {item.sourceKind === "project_pull" ? "Venue project" : item.sourceKind.replaceAll("_", " ")}
+                      {item.expectedActiveMinutes ? ` · ${item.expectedActiveMinutes} min` : ""}
+                      {item.environment ? ` · ${item.environment}` : ""}
+                      {item.reason ? ` · ${item.reason}` : ""}
+                    </p>
+                  </div>
+                )) : <p style={{ margin: 0, padding: "12px", opacity: .55 }}>No planned work yet.</p>}
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default function OwnerDashboardClient({ dashboard, finishProject, weekProjection }: { dashboard: OwnerDashboardProjection; finishProject: OwnerFinishProjectSummary | null; weekProjection: OwnerWeekProjection | null }) {
   const { counts, ownerActions } = dashboard;
 
   return (
@@ -122,6 +153,7 @@ export default function OwnerDashboardClient({ dashboard, finishProject }: { das
             <p>{counts.overdue} overdue · {counts.today} due today · {counts.open} open total</p>
           </section>
 
+          {weekProjection ? <AnnaWeekProjection projection={weekProjection} /> : null}
           {finishProject ? <FinishProjectStewardship project={finishProject} /> : null}
 
           <OwnerSection title="Fallen Through the Cracks" tasks={ownerActions.overdue} empty="No overdue owner tasks." referenceDate={dashboard.generatedForDate} overdue />

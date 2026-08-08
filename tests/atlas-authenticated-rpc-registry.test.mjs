@@ -26,6 +26,10 @@ const contractorServiceMigrationName =
   "20260807162500_contractor_service_visit_status_v1.sql";
 const contractorServiceRegistryMigrationName =
   "20260807162600_contractor_service_visit_status_rpc_registry_v1.sql";
+const ownerWeekProjectionMigrationName =
+  "20260808023000_owner_week_projection_v1.sql";
+const ownerWeekProjectionRegistryMigrationName =
+  "20260808023100_owner_week_projection_rpc_registry_v1.sql";
 const migrationPath = new URL(
   `../supabase/migrations/${migrationName}`,
   import.meta.url,
@@ -123,6 +127,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const notificationActionsRegistry = readMigration(notificationActionsRegistryMigrationName);
   const greyCouchDecisionRegistry = readMigration(greyCouchDecisionRegistryMigrationName);
   const contractorServiceRegistry = readMigration(contractorServiceRegistryMigrationName);
+  const ownerWeekProjectionRegistry = readMigration(ownerWeekProjectionRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -144,7 +149,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                 ? greyCouchDecisionRegistryMigrationName
                 : name === contractorServiceMigrationName
                   ? contractorServiceRegistryMigrationName
-                  : null;
+                  : name === ownerWeekProjectionMigrationName
+                    ? ownerWeekProjectionRegistryMigrationName
+                    : null;
 
       assert.ok(
         pairedRegistryName,
@@ -192,6 +199,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   ));
   assert.ok(contractorServiceRegistry.includes(
     "atlas.record_contractor_service_visit_v1(uuid,date,uuid)",
+  ));
+  assert.ok(ownerWeekProjectionRegistry.includes(
+    "atlas.refresh_owner_week_projection_v1(uuid, uuid, date, integer)",
   ));
 });
 
