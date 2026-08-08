@@ -26,11 +26,11 @@ test("Day remains one task timeline while Living Journal sections are visually a
   assert.match(dayCss, /display: none !important/);
 });
 
-test("Day mixes every unfinished carry-forward task into the signed-in viewer's real day", () => {
+test("Day shows every unfinished task already selected by the canonical exact-day membership reader", () => {
   assert.match(day, /const overdueTasks = useMemo/);
   assert.match(day, /task\.due_date < dateIso/);
   assert.match(day, /mixedOpenTasks/);
-  assert.match(day, /\.\.\.overdueTasks, \.\.\.requiredTasks/);
+  assert.match(day, /uniqueTasks\(requiredTasks\)/);
   assert.match(day, /mixedDaySortValue/);
   assert.match(day, /isOverdueTask\(task, dateIso\)/);
   assert.doesNotMatch(day, /atlas-day-overdue-group/);
