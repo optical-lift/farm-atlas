@@ -126,7 +126,6 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
 
   let renderedHome = unconstrainedRenderedHome;
   if (renderedFarmHandMode) {
-    const weatherConstrained = { ...unconstrainedRenderedHome, moves: await atlasFarmHandConveyorMoves(unconstrainedRenderedHome) };
     let routingState = null;
     if (actualFarmHandMembership) {
       const roleAccess = {
@@ -142,7 +141,19 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
         routingState = null;
       }
     }
-    renderedHome = { ...weatherConstrained, moves: adaptiveHomeConveyorMoves(weatherConstrained, routingState) };
+
+    // First rank the legitimate day by Anna's routing state. Then let weather/time
+    // constrain that ranked list. The final work-window pass must be authoritative:
+    // when a scarce morning outdoor window exists, it can promote the best outdoor
+    // obligation instead of having adaptive ranking undo the timing signal afterward.
+    const adaptiveRanked = {
+      ...unconstrainedRenderedHome,
+      moves: adaptiveHomeConveyorMoves(unconstrainedRenderedHome, routingState),
+    };
+    renderedHome = {
+      ...adaptiveRanked,
+      moves: await atlasFarmHandConveyorMoves(adaptiveRanked),
+    };
   }
 
   return (
