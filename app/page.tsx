@@ -5,6 +5,7 @@ import AtlasHomeServerRefresh from "@/components/atlas/home/AtlasHomeServerRefre
 import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHomeV2";
 import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
 import { buildAtlasOwnerDailyHand } from "@/lib/atlas/daily-hand";
+import { adaptiveHomeConveyorMoves } from "@/lib/atlas/adaptive-home-conveyor";
 import { atlasFarmHandConveyorMoves } from "@/lib/atlas/farm-hand-conveyor-window";
 import { withAtlasHomeCarryForward } from "@/lib/atlas/home-carry-forward";
 import { readAtlasHomeFarmSeasonProfiles } from "@/lib/atlas/home-farm-seasons";
@@ -21,26 +22,22 @@ import { getAtlasSession } from "@/lib/atlas/session";
 import { readAtlasSwitchedFarmHandHomeOverview } from "@/lib/atlas/switched-account-home-overview";
 import { readAtlasSetAsideTaskIds } from "@/lib/atlas/task-day-dispositions-server";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
+import { getWorkerDayRoutingState } from "@/lib/atlas-data/worker-day-routing";
+import type { AtlasRoleAccess } from "@/lib/atlas/role-access";
 
-// readAtlasOperatorUniversalHome delegates to readAtlasUniversalHome outside Owner operator mode.
 export const dynamic = "force-dynamic";
 
 type AtlasHomeSearchParams = Record<string, string | string[] | undefined>;
-
-type AtlasHomePageProps = {
-  searchParams?: Promise<AtlasHomeSearchParams>;
-};
+type AtlasHomePageProps = { searchParams?: Promise<AtlasHomeSearchParams> };
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] ?? null : value ?? null;
 }
 
-function organizationMembershipForViewer(
-  viewer: NonNullable<ReturnType<typeof atlasUniversalViewerFromSession>>,
-) {
-  return viewer.organizationMemberships.find(
-    (membership) => membership.organizationId === viewer.activeOrganizationId,
-  ) ?? viewer.organizationMemberships[0] ?? null;
+function organizationMembershipForViewer(viewer: NonNullable<ReturnType<typeof atlasUniversalViewerFromSession>>) {
+  return viewer.organizationMemberships.find((membership) => membership.organizationId === viewer.activeOrganizationId)
+    ?? viewer.organizationMemberships[0]
+    ?? null;
 }
 
 export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps) {
@@ -56,8 +53,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
   ]);
   const selectedFarmKey = firstParam(params.farm);
   const preferredFarmId = selectedFarmKey
-    ? viewer.farmMemberships.find((membership) => membership.farmKey === selectedFarmKey)?.farmId
-      ?? viewer.activeFarmId
+    ? viewer.farmMemberships.find((membership) => membership.farmKey === selectedFarmKey)?.farmId ?? viewer.activeFarmId
     : viewer.activeFarmId;
   const selectedMembershipId = effectiveOperatorMembershipId(operatorContext);
   let home = await readAtlasOperatorUniversalHome(viewer, {
@@ -73,18 +69,14 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
 
   if (farmHandMode && actualFarmHandMembership && home.activeFarm?.farmId) {
     try {
-      await ensureAtlasProjectPullTask(
-        home.activeFarm.farmId,
-        actualFarmHandMembership.membershipId,
-        home.window.doneDate,
-      );
+      await ensureAtlasProjectPullTask(home.activeFarm.farmId, actualFarmHandMembership.membershipId, home.window.doneDate);
       home = await readAtlasOperatorUniversalHome(viewer, {
         preferredFarmId,
         effectiveAccountId: effectiveOperatorAccountId(operatorContext),
         effectiveMembershipId: selectedMembershipId,
       });
     } catch {
-      // The conveyor may still serve ordinary Living Day work if no project item can be dealt.
+      // Ordinary Living Day work remains available if project dealing cannot run.
     }
   }
 
@@ -95,28 +87,15 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     setAsideTaskIds = new Set<string>();
   }
 
-  const visibleFarms = home.farms.map((farm) => ({
-    ...farm,
-    taskCards: farm.taskCards.filter((task) => !setAsideTaskIds.has(task.task_id)),
-  }));
-  const visibleActiveFarm = home.activeFarm
-    ? visibleFarms.find((farm) => farm.farmId === home.activeFarm?.farmId) ?? home.activeFarm
-    : null;
+  const visibleFarms = home.farms.map((farm) => ({ ...farm, taskCards: farm.taskCards.filter((task) => !setAsideTaskIds.has(task.task_id)) }));
+  const visibleActiveFarm = home.activeFarm ? visibleFarms.find((farm) => farm.farmId === home.activeFarm?.farmId) ?? home.activeFarm : null;
   const visibleHome = {
     ...home,
     farms: visibleFarms,
     activeFarm: visibleActiveFarm,
-    moves: home.moves.filter((move) => {
-      if (move.kind !== "farm_task") return true;
-      const taskId = move.key.split(":").at(-1) ?? "";
-      return !setAsideTaskIds.has(taskId);
-    }),
+    moves: home.moves.filter((move) => move.kind !== "farm_task" || !setAsideTaskIds.has(move.key.split(":").at(-1) ?? "")),
   };
-  const switchedFarmHand = Boolean(
-    operatorContext?.isOperating
-      && operatorContext.effective.farmRole === "farm_hand"
-      && selectedMembershipId,
-  );
+  const switchedFarmHand = Boolean(operatorContext?.isOperating && operatorContext.effective.farmRole === "farm_hand" && selectedMembershipId);
   const [baseTaskOverview, farmSeasons, personalDayProgress] = await Promise.all([
     switchedFarmHand && selectedMembershipId
       ? readAtlasSwitchedFarmHandHomeOverview(visibleHome, selectedMembershipId)
@@ -125,69 +104,51 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     switchedFarmHand ? Promise.resolve(null) : readAtlasPersonalDayProgress(visibleHome),
   ]);
   const reconciledTaskOverview = personalDayProgress && baseTaskOverview.summary.personalScope
-    ? {
-        ...baseTaskOverview,
-        summary: {
-          ...baseTaskOverview.summary,
-          plannedTotal: personalDayProgress.plannedTotal,
-          dealtCount: personalDayProgress.dealtCount,
-          openCount: personalDayProgress.openCount,
-          carryForwardCount: Math.max(
-            baseTaskOverview.summary.carryForwardCount,
-            personalDayProgress.carryForwardCount,
-          ),
-        },
-      }
+    ? { ...baseTaskOverview, summary: { ...baseTaskOverview.summary, plannedTotal: personalDayProgress.plannedTotal, dealtCount: personalDayProgress.dealtCount, openCount: personalDayProgress.openCount, carryForwardCount: Math.max(baseTaskOverview.summary.carryForwardCount, personalDayProgress.carryForwardCount) } }
     : baseTaskOverview;
   const carriedTaskOverview = withAtlasHomeCarryForward(visibleHome, reconciledTaskOverview);
   const staffMoves = carriedTaskOverview.moves.filter((move) => move.kind === "collection");
-  const ownerDailyHand = switchedFarmHand || farmHandMode
-    ? null
-    : buildAtlasOwnerDailyHand(visibleHome, staffMoves.length ? 3 : 4);
+  const ownerDailyHand = switchedFarmHand || farmHandMode ? null : buildAtlasOwnerDailyHand(visibleHome, staffMoves.length ? 3 : 4);
   const taskOverview = ownerDailyHand
-    ? {
-        ...carriedTaskOverview,
-        moves: [...ownerDailyHand, ...staffMoves].slice(0, 4),
-        summary: {
-          ...carriedTaskOverview.summary,
-          prepared: true,
-        },
-      }
+    ? { ...carriedTaskOverview, moves: [...ownerDailyHand, ...staffMoves].slice(0, 4), summary: { ...carriedTaskOverview.summary, prepared: true } }
     : carriedTaskOverview;
   const renderedViewer = visibleHome.viewer;
   const organizationMembership = organizationMembershipForViewer(renderedViewer);
-  const organizationPortal = Boolean(
-    organizationMembership
-      && (organizationMembership.role === "owner" || renderedViewer.farmMemberships.length === 0),
-  );
+  const organizationPortal = Boolean(organizationMembership && (organizationMembership.role === "owner" || renderedViewer.farmMemberships.length === 0));
   const renderedFarmHandMode = farmHandMode || switchedFarmHand;
   const unconstrainedRenderedHome = {
     ...visibleHome,
-    title: organizationPortal
-      ? home.organizationHome?.organization.name
-        || organizationMembership?.organizationName
-        || "Feast Guild"
-      : visibleHome.title,
+    title: organizationPortal ? home.organizationHome?.organization.name || organizationMembership?.organizationName || "Feast Guild" : visibleHome.title,
     moves: taskOverview.moves,
     datedItems: taskOverview.datedItems,
   };
-  const renderedHome = renderedFarmHandMode
-    ? {
-        ...unconstrainedRenderedHome,
-        moves: await atlasFarmHandConveyorMoves(unconstrainedRenderedHome),
+
+  let renderedHome = unconstrainedRenderedHome;
+  if (renderedFarmHandMode) {
+    const weatherConstrained = { ...unconstrainedRenderedHome, moves: await atlasFarmHandConveyorMoves(unconstrainedRenderedHome) };
+    let routingState = null;
+    if (actualFarmHandMembership) {
+      const roleAccess = {
+        membership: {
+          farmId: actualFarmHandMembership.farmId,
+          membershipId: actualFarmHandMembership.membershipId,
+          role: "farm_hand",
+        },
+      } as unknown as AtlasRoleAccess;
+      try {
+        routingState = await getWorkerDayRoutingState(roleAccess);
+      } catch {
+        routingState = null;
       }
-    : unconstrainedRenderedHome;
+    }
+    renderedHome = { ...weatherConstrained, moves: adaptiveHomeConveyorMoves(weatherConstrained, routingState) };
+  }
 
   return (
     <>
       <AtlasHomeServerRefresh />
       {/* Legacy route contract only: <AtlasAroundRoutes canManage={false} /> has been absorbed into the app dock and compact Home lenses. */}
-      <AtlasUniversalHome
-        home={renderedHome}
-        dayOverview={taskOverview.summary}
-        farmSeasons={farmSeasons}
-        farmHandMode={renderedFarmHandMode}
-      />
+      <AtlasUniversalHome home={renderedHome} dayOverview={taskOverview.summary} farmSeasons={farmSeasons} farmHandMode={renderedFarmHandMode} />
       <FarmHandQuickWinPrompt home={renderedHome} active={renderedFarmHandMode} />
       <AtlasPwaCoverPrompt />
     </>
