@@ -3,6 +3,7 @@ import type { AtlasUniversalHomeModel, AtlasUniversalMove } from "@/lib/atlas/un
 
 export const FARM_HAND_OUTDOOR_MORNING_END_HOUR = 11;
 export const FARM_HAND_OUTDOOR_EVENING_START_HOUR = 19;
+export const FARM_HAND_MORNING_WEED_PRIORITY_END_HOUR = 8;
 
 const ELM_LATITUDE = 37.3387;
 const ELM_LONGITUDE = -92.9071;
@@ -132,6 +133,21 @@ function taskForMove(home: AtlasUniversalHomeModel, move: AtlasUniversalMove) {
   return home.farms.flatMap((farm) => farm.taskCards).find((candidate) => candidate.task_id === taskId) ?? null;
 }
 
+function taskIsWeeding(task: AtlasTaskCard | null) {
+  if (!task) return false;
+  const action = typeof task.action_key === "string" ? task.action_key.toLowerCase() : "";
+  const workClass = typeof task.work_class === "string" ? task.work_class.toLowerCase() : "";
+  const title = task.title.toLowerCase();
+  return action.includes("weed") || workClass.includes("weed") || title.startsWith("weed ") || title.includes(" weeding");
+}
+
+function promoteMorningWeeding(home: AtlasUniversalHomeModel, moves: AtlasUniversalMove[], date = new Date()) {
+  if (centralHour(date) >= FARM_HAND_MORNING_WEED_PRIORITY_END_HOUR) return moves;
+  const weedMove = moves.find((move) => taskIsWeeding(taskForMove(home, move)));
+  if (!weedMove) return moves;
+  return [weedMove, ...moves.filter((move) => move !== weedMove)];
+}
+
 export function atlasFarmHandMoveIsOutdoor(home: AtlasUniversalHomeModel, move: AtlasUniversalMove) {
   const task = taskForMove(home, move);
   return task ? atlasTaskIsOutdoor(task) : false;
@@ -155,7 +171,7 @@ function outdoorWindowClosingSoon(weather: OutdoorWeather, task: AtlasTaskCard |
 export async function atlasFarmHandConveyorMoves(home: AtlasUniversalHomeModel, date = new Date()) {
   const weather = await readElmOutdoorWeather(date);
   if (!weather) {
-    if (fallbackRhythmAllowsOutdoor(date)) return home.moves;
+    if (fallbackRhythmAllowsOutdoor(date)) return promoteMorningWeeding(home, home.moves, date);
     const available = home.moves.filter((move) => !atlasFarmHandMoveIsOutdoor(home, move));
     if (available.length || available.length === home.moves.length) return available;
     return [{ key: "farm-hand:outside-window", kind: "attention" as const, category: "Work window", title: "Indoor work for now", scopeLabel: home.activeFarm?.farmName ?? "Elm Farm", meta: "Outside work later", detail: "Weather is unavailable, so Atlas is using Anna's usual summer outdoor rhythm.", href: "/work/today", date: home.window.doneDate, state: "waiting" as const, farmId: home.activeFarm?.farmId ?? null, projectId: null, priority: 0 }];
@@ -168,6 +184,9 @@ export async function atlasFarmHandConveyorMoves(home: AtlasUniversalHomeModel, 
   const heldOutdoor = home.moves.filter((move) => !available.includes(move) && atlasFarmHandMoveIsOutdoor(home, move));
 
   if (available.length) {
+    const morningOrdered = promoteMorningWeeding(home, available, date);
+    if (morningOrdered[0] !== available[0]) return morningOrdered;
+
     const firstOutdoor = available.find((move) => atlasFarmHandMoveIsOutdoor(home, move));
     const firstOutdoorTask = firstOutdoor ? taskForMove(home, firstOutdoor) : null;
     if (firstOutdoor && outdoorWindowClosingSoon(weather, firstOutdoorTask, date)) return [firstOutdoor, ...available.filter((move) => move !== firstOutdoor)];
