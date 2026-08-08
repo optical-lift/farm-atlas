@@ -114,10 +114,7 @@ function isChildTask(task: AtlasTaskCard) {
 }
 
 function isWorkTask(task: AtlasTaskCard) {
-  const joined = `${task.task_type ?? ""} ${task.title} ${task.unlock_text ?? ""}`.toLowerCase();
-  if (task.status === "archived" || task.status === "skipped" || isChildTask(task)) return false;
-  if (atlasIsCropCycleTask(task)) return true;
-  return !(joined.includes("verify") || joined.includes("check") || joined.includes("confirm") || joined.includes("count") || joined.includes("germin") || joined.includes("walk field rows"));
+  return task.status !== "archived" && task.status !== "skipped" && !isChildTask(task);
 }
 
 function isDashboardWork(task: AtlasTaskCard) {
