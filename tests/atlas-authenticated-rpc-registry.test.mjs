@@ -36,6 +36,10 @@ const skyIngestMigrationName =
   "20260808231244_atlas_sky_ledger_ingest_boundary_v1.sql";
 const skyRulesRegistryMigrationName =
   "20260808231809_atlas_sky_rpc_registry_v1.sql";
+const skyRuntimeMigrationName =
+  "20260808233130_atlas_sky_fitness_runtime_v2.sql";
+const skyRuntimeRegistryMigrationName =
+  "20260808233332_atlas_sky_runtime_security_registry_v1.sql";
 const migrationPath = new URL(
   `../supabase/migrations/${migrationName}`,
   import.meta.url,
@@ -135,6 +139,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const contractorServiceRegistry = readMigration(contractorServiceRegistryMigrationName);
   const ownerWeekProjectionRegistry = readMigration(ownerWeekProjectionRegistryMigrationName);
   const skyRulesRegistry = readMigration(skyRulesRegistryMigrationName);
+  const skyRuntimeRegistry = readMigration(skyRuntimeRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -160,7 +165,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                     ? ownerWeekProjectionRegistryMigrationName
                     : name === skyRulesMigrationName || name === skyIngestMigrationName
                       ? skyRulesRegistryMigrationName
-                      : null;
+                      : name === skyRuntimeMigrationName
+                        ? skyRuntimeRegistryMigrationName
+                        : null;
 
       assert.ok(
         pairedRegistryName,
@@ -221,6 +228,14 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   assert.ok(skyRulesRegistry.includes(
     "atlas.ingest_sky_ledger_v1(uuid,timestamp with time zone,timestamp with time zone,text,jsonb,jsonb)",
   ));
+  for (const signature of [
+    "atlas.sky_state_at_v2(uuid, timestamp with time zone)",
+    "atlas.task_sky_fitness_v2(uuid, timestamp with time zone)",
+    "atlas.task_sky_presentation_gate_v1(uuid, date)",
+    "atlas.sky_ledger_status_v1(uuid)",
+  ]) {
+    assert.ok(skyRuntimeRegistry.includes(signature));
+  }
 });
 
 test("live registry proof is rollback-only and fail-closed", () => {
@@ -232,6 +247,6 @@ test("live registry proof is rollback-only and fail-closed", () => {
   assert.match(liveProof, /ROLLBACK;\s*$/);
   assert.doesNotMatch(
     liveProof,
-    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i,
+    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}/i,
   );
 });
