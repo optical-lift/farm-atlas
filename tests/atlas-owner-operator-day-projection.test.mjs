@@ -35,7 +35,8 @@ test("Owner future projection remains separate from real released task cards", (
   assert.match(component, /data-owner-tentative-day-projection="true"/);
   assert.match(component, />Tentative</);
   assert.match(component, />Owner preview</);
-  assert.match(component, /They have not been released into/);
+  assert.match(component, /without releasing it into/);
+  assert.match(component, /No additional tentative work fits this day right now/);
   assert.match(component, /useSearchParams/);
   assert.match(component, /\[dateIso\]/);
   assert.doesNotMatch(component, /postAtlasTaskTransition|transition\(|task-focus|<button|<Link/);
