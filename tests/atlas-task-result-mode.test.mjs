@@ -33,8 +33,8 @@ test("ordinary task result grammar is selected by task shape instead of assignee
   assert.match(resultMode, /task\.operation_class \|\| metadataText\(task, "operation_class"\)/);
   assert.match(resultMode, /operationClass \? "field_execution" : "standard_execution"/);
 
-  assert.match(taskCardsClient, /operation_class: string \| null/);
-  assert.match(taskCardsClient, /operation_class_source: string \| null/);
+  assert.match(taskCardsClient, /operation_class\?: string \| null/);
+  assert.match(taskCardsClient, /operation_class_source\?: string \| null/);
   assert.match(taskCardMigration, /t\.operation_class,/);
   assert.match(taskCardMigration, /t\.operation_class_source/);
 
