@@ -32,8 +32,10 @@ const ownerWeekProjectionRegistryMigrationName =
   "20260808023100_owner_week_projection_rpc_registry_v1.sql";
 const skyRulesMigrationName =
   "20260808231140_atlas_sky_ledger_and_operation_rules_v1.sql";
+const skyIngestMigrationName =
+  "20260808231244_atlas_sky_ledger_ingest_boundary_v1.sql";
 const skyRulesRegistryMigrationName =
-  "20260808231150_atlas_sky_rpc_registry_v1.sql";
+  "20260808231809_atlas_sky_rpc_registry_v1.sql";
 const migrationPath = new URL(
   `../supabase/migrations/${migrationName}`,
   import.meta.url,
@@ -156,7 +158,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                   ? contractorServiceRegistryMigrationName
                   : name === ownerWeekProjectionMigrationName
                     ? ownerWeekProjectionRegistryMigrationName
-                    : name === skyRulesMigrationName
+                    : name === skyRulesMigrationName || name === skyIngestMigrationName
                       ? skyRulesRegistryMigrationName
                       : null;
 
@@ -211,10 +213,13 @@ test("future authenticated EXECUTE changes must update the registry", () => {
     "atlas.refresh_owner_week_projection_v1(uuid, uuid, date, integer)",
   ));
   assert.ok(skyRulesRegistry.includes(
-    "atlas.sky_state_at_v1(uuid, timestamp with time zone)",
+    "atlas.sky_state_at_v1(uuid,timestamp with time zone)",
   ));
   assert.ok(skyRulesRegistry.includes(
-    "atlas.task_sky_fitness_v1(uuid, timestamp with time zone)",
+    "atlas.task_sky_fitness_v1(uuid,timestamp with time zone)",
+  ));
+  assert.ok(skyRulesRegistry.includes(
+    "atlas.ingest_sky_ledger_v1(uuid,timestamp with time zone,timestamp with time zone,text,jsonb,jsonb)",
   ));
 });
 
