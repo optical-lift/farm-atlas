@@ -20,6 +20,38 @@ function numericMeta(task: AtlasTaskCard, key: string) {
   return 0;
 }
 
+function taskLooksLikeWeeding(task: AtlasTaskCard) {
+  const action = typeof task.action_key === "string" ? task.action_key.toLowerCase() : "";
+  const workClass = typeof task.work_class === "string" ? task.work_class.toLowerCase() : "";
+  const title = task.title.toLowerCase();
+  return action.includes("weed") || workClass.includes("weed") || title.startsWith("weed ") || title.includes(" weeding");
+}
+
+function missingCurrentWeedMove(home: AtlasUniversalHomeModel, task: AtlasTaskCard): AtlasUniversalMove | null {
+  if (!taskLooksLikeWeeding(task)) return null;
+  if (task.status !== "open" && task.status !== "blocked") return null;
+  if (!task.due_date || task.due_date > home.window.doneDate) return null;
+  if (task.parent_task_id) return null;
+  const farm = home.farms.find((candidate) => candidate.taskCards.some((card) => card.task_id === task.task_id));
+  if (!farm) return null;
+  const overdue = task.due_date < home.window.doneDate;
+  return {
+    key: `farm-task:${farm.farmId}:${task.task_id}`,
+    kind: "farm_task",
+    category: overdue ? "Overdue" : "Weeding",
+    title: task.title,
+    scopeLabel: farm.farmName,
+    meta: task.zone_label ?? task.zone_key ?? farm.farmName,
+    detail: task.note ?? task.unlock_text ?? "Current weeding work.",
+    href: `/task?taskId=${encodeURIComponent(task.task_id)}`,
+    date: task.due_date,
+    state: task.status === "blocked" ? "blocked" : overdue ? "attention" : "ready",
+    farmId: farm.farmId,
+    projectId: null,
+    priority: task.status === "blocked" ? 0 : overdue ? 1 : 2,
+  };
+}
+
 function workerTaskFromCard(task: AtlasTaskCard, move: AtlasUniversalMove, today: string): AdaptiveDayTask {
   const lane = move.state === "blocked"
     ? "blocked"
@@ -82,6 +114,17 @@ export function adaptiveHomeConveyorMoves(
     }
     taskMoveById.set(taskId, move);
     taskRows.push(workerTaskFromCard(card, move, home.window.doneDate));
+  }
+
+  // Universal Home intentionally keeps its generic move rail short. For a farm-hand
+  // conveyor, that truncation must not hide the current weed obligation before the
+  // adaptive/weather ranking layers get a chance to consider it.
+  for (const card of taskById.values()) {
+    if (taskMoveById.has(card.task_id)) continue;
+    const weedMove = missingCurrentWeedMove(home, card);
+    if (!weedMove) continue;
+    taskMoveById.set(card.task_id, weedMove);
+    taskRows.push(workerTaskFromCard(card, weedMove, home.window.doneDate));
   }
 
   const plan = buildAdaptiveDayPlan(taskRows, state, {
