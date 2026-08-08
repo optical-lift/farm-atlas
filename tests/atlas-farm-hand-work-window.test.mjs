@@ -28,6 +28,13 @@ test("weather can expand or contract the outdoor window and respects task heat e
   assert.match(helper, /Outside looks better/);
 });
 
+test("early morning uses scarce cool hours for the current weed obligation before generic outdoor projects", () => {
+  assert.match(helper, /FARM_HAND_MORNING_WEED_PRIORITY_END_HOUR = 8/);
+  assert.match(helper, /taskIsWeeding/);
+  assert.match(helper, /promoteMorningWeeding/);
+  assert.match(helper, /centralHour\(date\) >= FARM_HAND_MORNING_WEED_PRIORITY_END_HOUR/);
+});
+
 test("explicit indoor and outdoor metadata override location inference", () => {
   assert.match(helper, /work_environment/);
   assert.match(helper, /covered_indoor/);
@@ -36,8 +43,10 @@ test("explicit indoor and outdoor metadata override location inference", () => {
   assert.match(helper, /OUTDOOR_TERMS/);
 });
 
-test("Home awaits weather-smart conveyor before rendering hero and Quick Wins", () => {
-  assert.match(home, /await atlasFarmHandConveyorMoves\(unconstrainedRenderedHome\)/);
+test("Home ranks adaptively first and lets weather/time make the final hero decision", () => {
+  assert.match(home, /adaptiveRanked/);
+  assert.match(home, /adaptiveHomeConveyorMoves\(unconstrainedRenderedHome, routingState\)/);
+  assert.match(home, /await atlasFarmHandConveyorMoves\(adaptiveRanked\)/);
   assert.match(agents, /strong prior, not a hard clock rule/);
   assert.match(agents, /Never interrupt indoor time with a tiny outside task/);
 });
