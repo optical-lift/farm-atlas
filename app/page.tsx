@@ -6,7 +6,7 @@ import AtlasUniversalHome from "@/components/atlas/home/AtlasUniversalHomeV2";
 import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
 import { buildAtlasOwnerDailyHand } from "@/lib/atlas/daily-hand";
 import { adaptiveHomeConveyorMoves } from "@/lib/atlas/adaptive-home-conveyor";
-import { atlasFarmHandConveyorMoves } from "@/lib/atlas/farm-hand-conveyor-window";
+import { atlasFarmHandConveyorMoves, atlasFarmHandOutdoorEligibleNow } from "@/lib/atlas/farm-hand-conveyor-window";
 import { withAtlasHomeCarryForward } from "@/lib/atlas/home-carry-forward";
 import { readAtlasHomeFarmSeasonProfiles } from "@/lib/atlas/home-farm-seasons";
 import { readAtlasPersonalDayProgress } from "@/lib/atlas/home-personal-day-progress";
@@ -69,7 +69,8 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
 
   if (farmHandMode && actualFarmHandMembership && home.activeFarm?.farmId) {
     try {
-      await ensureAtlasProjectPullTask(home.activeFarm.farmId, actualFarmHandMembership.membershipId, home.window.doneDate);
+      const allowOutdoor = await atlasFarmHandOutdoorEligibleNow();
+      await ensureAtlasProjectPullTask(home.activeFarm.farmId, actualFarmHandMembership.membershipId, home.window.doneDate, { allowOutdoor });
       home = await readAtlasOperatorUniversalHome(viewer, {
         preferredFarmId,
         effectiveAccountId: effectiveOperatorAccountId(operatorContext),
