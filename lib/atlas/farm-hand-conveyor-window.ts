@@ -9,19 +9,8 @@ const ELM_LONGITUDE = -92.9071;
 const INDOOR_TERMS = ["grow room", "kitchen", "living room", "lounge", "bathroom", "basement", "garage freezer", "coffee bar", "inside", "indoor"];
 const OUTDOOR_TERMS = ["field row", "field rows", "fr1", "fr2", "fr3", "fr4", "fr5", "fr6", "fr7", "fr8", "fr9", "fr10", "fr11", "fr12", "fr13", "fr14", "fr15", "fr16", "fr17", "fr18", "barn bed", "bb1", "bb2", "bb3", "bb4", "bb5", "bb6", "bb7", "bb8", "bb9", "berry walk", "main garden", "entry billboard", "curve garden", "follow me", "lilac haven", "hydrangea", "labyrinth", "crescent moon", "u-pick", "upick", "mailbox", "redbud", "orchard", "garden", "mow", "weed", "harvest", "transplant", "sow", "spray", "fishing line"];
 
-type WeatherPoint = {
-  hour: number;
-  apparentTemperatureF: number | null;
-  humidity: number | null;
-  precipitationIn: number | null;
-  cloudCover: number | null;
-  weatherCode: number | null;
-};
-
-type OutdoorWeather = {
-  current: WeatherPoint;
-  hourly: WeatherPoint[];
-};
+type WeatherPoint = { hour: number; apparentTemperatureF: number | null; humidity: number | null; precipitationIn: number | null; cloudCover: number | null; weatherCode: number | null };
+type OutdoorWeather = { current: WeatherPoint; hourly: WeatherPoint[] };
 
 function centralHour(date = new Date()) {
   return Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", hour: "2-digit", hourCycle: "h23" }).format(date));
@@ -53,10 +42,7 @@ async function readElmOutdoorWeather(date = new Date()): Promise<OutdoorWeather 
   try {
     const response = await fetch(weatherUrl(), { cache: "no-store" });
     if (!response.ok) return null;
-    const payload = await response.json() as {
-      current?: Record<string, unknown>;
-      hourly?: Record<string, unknown>;
-    };
+    const payload = await response.json() as { current?: Record<string, unknown>; hourly?: Record<string, unknown> };
     const currentHour = centralHour(date);
     const hourly = payload.hourly ?? {};
     const apparent = Array.isArray(hourly.apparent_temperature) ? hourly.apparent_temperature : [];
@@ -111,11 +97,14 @@ function weatherAllowsOutdoor(point: WeatherPoint, task: AtlasTaskCard | null, d
   const hour = point.hour;
   const rhythmWindow = hour < FARM_HAND_OUTDOOR_MORNING_END_HOUR || hour >= FARM_HAND_OUTDOOR_EVENING_START_HOUR;
   if (rhythmWindow) return apparent === null || apparent < 91 + adjustment;
-
-  // Anna's summer rhythm remains the prior, but genuinely pleasant weather may reopen the afternoon.
   if (apparent !== null && apparent <= 80 + adjustment && precipitation < 0.05) return true;
   if (apparent !== null && apparent <= 84 + adjustment && cloud >= 70 && humidity < 70 && precipitation < 0.05) return true;
   return false;
+}
+
+export async function atlasFarmHandOutdoorEligibleNow(date = new Date()) {
+  const weather = await readElmOutdoorWeather(date);
+  return weather ? weatherAllowsOutdoor(weather.current, null, date) : fallbackRhythmAllowsOutdoor(date);
 }
 
 export function atlasTaskIsOutdoor(task: AtlasTaskCard) {
@@ -169,21 +158,7 @@ export async function atlasFarmHandConveyorMoves(home: AtlasUniversalHomeModel, 
     if (fallbackRhythmAllowsOutdoor(date)) return home.moves;
     const available = home.moves.filter((move) => !atlasFarmHandMoveIsOutdoor(home, move));
     if (available.length || available.length === home.moves.length) return available;
-    return [{
-      key: "farm-hand:outside-window",
-      kind: "attention" as const,
-      category: "Work window",
-      title: "Indoor work for now",
-      scopeLabel: home.activeFarm?.farmName ?? "Elm Farm",
-      meta: "Outside work later",
-      detail: "Weather is unavailable, so Atlas is using Anna's usual summer outdoor rhythm.",
-      href: "/work/today",
-      date: home.window.doneDate,
-      state: "waiting" as const,
-      farmId: home.activeFarm?.farmId ?? null,
-      projectId: null,
-      priority: 0,
-    }];
+    return [{ key: "farm-hand:outside-window", kind: "attention" as const, category: "Work window", title: "Indoor work for now", scopeLabel: home.activeFarm?.farmName ?? "Elm Farm", meta: "Outside work later", detail: "Weather is unavailable, so Atlas is using Anna's usual summer outdoor rhythm.", href: "/work/today", date: home.window.doneDate, state: "waiting" as const, farmId: home.activeFarm?.farmId ?? null, projectId: null, priority: 0 }];
   }
 
   const available = home.moves.filter((move) => {
@@ -195,9 +170,7 @@ export async function atlasFarmHandConveyorMoves(home: AtlasUniversalHomeModel, 
   if (available.length) {
     const firstOutdoor = available.find((move) => atlasFarmHandMoveIsOutdoor(home, move));
     const firstOutdoorTask = firstOutdoor ? taskForMove(home, firstOutdoor) : null;
-    if (firstOutdoor && outdoorWindowClosingSoon(weather, firstOutdoorTask, date)) {
-      return [firstOutdoor, ...available.filter((move) => move !== firstOutdoor)];
-    }
+    if (firstOutdoor && outdoorWindowClosingSoon(weather, firstOutdoorTask, date)) return [firstOutdoor, ...available.filter((move) => move !== firstOutdoor)];
     return available;
   }
   if (!heldOutdoor.length) return available;
@@ -205,19 +178,5 @@ export async function atlasFarmHandConveyorMoves(home: AtlasUniversalHomeModel, 
   const heldTask = taskForMove(home, heldOutdoor[0]);
   const nextWindow = nextOutdoorWindowLabel(weather, heldTask, date);
   const apparent = weather.current.apparentTemperatureF;
-  return [{
-    key: "farm-hand:outside-weather-window",
-    kind: "attention" as const,
-    category: "Weather window",
-    title: "Indoor work for now",
-    scopeLabel: home.activeFarm?.farmName ?? "Elm Farm",
-    meta: `Outside looks better ${nextWindow}`,
-    detail: apparent === null ? "Atlas is holding outside work for a better weather window." : `It feels like ${Math.round(apparent)}° outside. Atlas is holding field work for a better window.`,
-    href: "/work/today",
-    date: home.window.doneDate,
-    state: "waiting" as const,
-    farmId: home.activeFarm?.farmId ?? null,
-    projectId: null,
-    priority: 0,
-  }];
+  return [{ key: "farm-hand:outside-weather-window", kind: "attention" as const, category: "Weather window", title: "Indoor work for now", scopeLabel: home.activeFarm?.farmName ?? "Elm Farm", meta: `Outside looks better ${nextWindow}`, detail: apparent === null ? "Atlas is holding outside work for a better weather window." : `It feels like ${Math.round(apparent)}° outside. Atlas is holding field work for a better window.`, href: "/work/today", date: home.window.doneDate, state: "waiting" as const, farmId: home.activeFarm?.farmId ?? null, projectId: null, priority: 0 }];
 }
