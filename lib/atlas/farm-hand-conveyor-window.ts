@@ -3,7 +3,7 @@ import type { AtlasUniversalHomeModel, AtlasUniversalMove } from "@/lib/atlas/un
 
 export const FARM_HAND_OUTDOOR_MORNING_END_HOUR = 11;
 export const FARM_HAND_OUTDOOR_EVENING_START_HOUR = 19;
-export const FARM_HAND_MORNING_WEED_PRIORITY_END_HOUR = 8;
+export const FARM_HAND_MORNING_WEED_PRIORITY_END_HOUR = FARM_HAND_OUTDOOR_MORNING_END_HOUR;
 
 const ELM_LATITUDE = 37.3387;
 const ELM_LONGITUDE = -92.9071;
