@@ -8,8 +8,26 @@ function taskIdFromMove(move: AtlasUniversalMove) {
   return move.key.split(":").at(-1) ?? null;
 }
 
-function workerTaskFromCard(task: AtlasTaskCard, move: AtlasUniversalMove): AdaptiveDayTask {
-  const lane = move.state === "blocked" ? "blocked" : task.due_date ? "today" : "undated";
+function textMeta(task: AtlasTaskCard, key: string) {
+  const value = task.metadata?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function numericMeta(task: AtlasTaskCard, key: string) {
+  const value = task.metadata?.[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  return 0;
+}
+
+function workerTaskFromCard(task: AtlasTaskCard, move: AtlasUniversalMove, today: string): AdaptiveDayTask {
+  const lane = move.state === "blocked"
+    ? "blocked"
+    : task.due_date && task.due_date < today
+      ? "overdue"
+      : task.due_date === today
+        ? "today"
+        : "undated";
   return {
     taskId: task.task_id,
     title: task.title,
@@ -22,8 +40,8 @@ function workerTaskFromCard(task: AtlasTaskCard, move: AtlasUniversalMove): Adap
     zoneId: task.zone_id ?? null,
     zoneKey: task.zone_key ?? null,
     zoneLabel: task.zone_label ?? null,
-    assignedMembershipId: task.assigned_membership_id ?? null,
-    visibilityScope: task.visibility_scope ?? "assigned_worker",
+    assignedMembershipId: textMeta(task, "executor_membership_id"),
+    visibilityScope: textMeta(task, "visibility_scope") ?? "assigned_worker",
     lane,
     totalSteps: 0,
     completedSteps: 0,
@@ -31,9 +49,9 @@ function workerTaskFromCard(task: AtlasTaskCard, move: AtlasUniversalMove): Adap
     metadata: task.metadata ?? {},
     workClass: task.work_class ?? null,
     actionKey: task.action_key ?? null,
-    commitmentKind: task.commitment_kind ?? null,
-    effortUnits: Number(task.effort_units ?? 0) || 0,
-    taskScope: task.task_scope ?? null,
+    commitmentKind: textMeta(task, "commitment_kind"),
+    effortUnits: numericMeta(task, "effort_units"),
+    taskScope: textMeta(task, "task_scope"),
     reason: "",
     score: 0,
   };
@@ -63,7 +81,7 @@ export function adaptiveHomeConveyorMoves(
       continue;
     }
     taskMoveById.set(taskId, move);
-    taskRows.push(workerTaskFromCard(card, move));
+    taskRows.push(workerTaskFromCard(card, move, home.window.doneDate));
   }
 
   const plan = buildAdaptiveDayPlan(taskRows, state, {
