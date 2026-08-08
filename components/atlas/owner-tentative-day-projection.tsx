@@ -61,8 +61,9 @@ export default function OwnerTentativeDayProjection() {
     return () => controller.abort();
   }, [dateIso]);
 
-  if (!response?.active || !response.items?.length) return null;
+  if (!response?.active) return null;
   const operatorLabel = response.operatorLabel || "this worker";
+  const items = response.items ?? [];
 
   return (
     <section
@@ -85,25 +86,31 @@ export default function OwnerTentativeDayProjection() {
       </header>
 
       <p style={{ margin: "6px 0 10px", fontSize: 12, lineHeight: 1.4, opacity: .68 }}>
-        Atlas is considering these for this day. They have not been released into {operatorLabel}&apos;s hand.
+        Atlas is considering additional work for this day without releasing it into {operatorLabel}&apos;s hand.
       </p>
 
-      <div style={{ display: "grid", gap: 8 }}>
-        {response.items.map((item) => (
-          <article key={item.id} style={{ padding: "10px 11px", borderRadius: 12, background: "rgba(255,255,255,.68)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "start" }}>
-              <strong style={{ fontSize: 14, lineHeight: 1.25 }}>{item.title}</strong>
-              <span style={{ flex: "0 0 auto", fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".04em", opacity: .55 }}>{item.planState}</span>
-            </div>
-            <span style={{ display: "block", marginTop: 4, fontSize: 11, lineHeight: 1.35, opacity: .62 }}>
-              {sourceLabel(item.sourceKind)}
-              {item.expectedActiveMinutes ? ` · ${item.expectedActiveMinutes} min` : ""}
-              {item.environment ? ` · ${item.environment}` : ""}
-              {item.reason ? ` · ${item.reason}` : ""}
-            </span>
-          </article>
-        ))}
-      </div>
+      {items.length ? (
+        <div style={{ display: "grid", gap: 8 }}>
+          {items.map((item) => (
+            <article key={item.id} style={{ padding: "10px 11px", borderRadius: 12, background: "rgba(255,255,255,.68)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "start" }}>
+                <strong style={{ fontSize: 14, lineHeight: 1.25 }}>{item.title}</strong>
+                <span style={{ flex: "0 0 auto", fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".04em", opacity: .55 }}>{item.planState}</span>
+              </div>
+              <span style={{ display: "block", marginTop: 4, fontSize: 11, lineHeight: 1.35, opacity: .62 }}>
+                {sourceLabel(item.sourceKind)}
+                {item.expectedActiveMinutes ? ` · ${item.expectedActiveMinutes} min` : ""}
+                {item.environment ? ` · ${item.environment}` : ""}
+                {item.reason ? ` · ${item.reason}` : ""}
+              </span>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p style={{ margin: 0, padding: "9px 10px", borderRadius: 12, background: "rgba(255,255,255,.58)", fontSize: 12, lineHeight: 1.4, opacity: .66 }}>
+          No additional tentative work fits this day right now.
+        </p>
+      )}
     </section>
   );
 }
