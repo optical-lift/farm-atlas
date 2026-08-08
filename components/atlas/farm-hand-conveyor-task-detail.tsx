@@ -16,20 +16,6 @@ type Props = {
 
 type ConveyorAction = "done" | "progress" | "need" | "changed" | "lighter" | "reschedule";
 
-type ConveyorResultButton = {
-  label: string;
-  transition: AtlasTaskTransition;
-  prompt: string;
-  fallback: string;
-};
-
-type ConveyorResultProfile = {
-  progress: ConveyorResultButton;
-  need: ConveyorResultButton;
-  changed: ConveyorResultButton;
-  showLighterWork: boolean;
-};
-
 function todayIso() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Chicago",
@@ -45,63 +31,9 @@ function addDays(dateIso: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function isNetworkOutreachTask(task: AtlasTaskCard) {
-  return task.task_type === "network"
-    && (task.metadata?.network_saturday === true || task.metadata?.task_style === "network_outreach");
-}
-
-function resultProfile(task: AtlasTaskCard): ConveyorResultProfile {
-  if (isNetworkOutreachTask(task)) {
-    return {
-      progress: {
-        label: "Some calls made",
-        transition: "partial",
-        prompt: "How many calls did you make, and what happened?",
-        fallback: "Some calls made",
-      },
-      need: {
-        label: "Follow-up needed",
-        transition: "partial",
-        prompt: "Who needs a follow-up, and what should happen next?",
-        fallback: "Follow-up needed",
-      },
-      changed: {
-        label: "Couldn't call",
-        transition: "blocked",
-        prompt: "What stopped you from making the calls?",
-        fallback: "Could not make the calls",
-      },
-      showLighterWork: false,
-    };
-  }
-
-  return {
-    progress: {
-      label: "Made progress",
-      transition: "partial",
-      prompt: "What did you get done?",
-      fallback: "Made progress",
-    },
-    need: {
-      label: "Need something",
-      transition: "blocked",
-      prompt: "What do you need?",
-      fallback: "Need something",
-    },
-    changed: {
-      label: "Farm changed",
-      transition: "changed_plan",
-      prompt: "What changed on the farm?",
-      fallback: "Farm changed",
-    },
-    showLighterWork: true,
-  };
-}
-
 export default function FarmHandConveyorTaskDetail(props: Props) {
   const [saving, setSaving] = useState<ConveyorAction | null>(null);
   const [message, setMessage] = useState("");
-  const results = resultProfile(props.task);
 
   async function record(
     action: ConveyorAction,
@@ -197,21 +129,19 @@ export default function FarmHandConveyorTaskDetail(props: Props) {
           <button type="button" disabled={Boolean(saving)} onClick={() => void record("done", "done")} style={primaryButtonStyle}>
             {saving === "done" ? "Saving…" : "Done"}
           </button>
-          <button type="button" disabled={Boolean(saving)} onClick={() => void record("progress", results.progress.transition, results.progress.prompt, results.progress.fallback)} style={buttonStyle}>
-            {saving === "progress" ? "Saving…" : results.progress.label}
+          <button type="button" disabled={Boolean(saving)} onClick={() => void record("progress", "partial", "What did you get done?", "Made progress")} style={buttonStyle}>
+            {saving === "progress" ? "Saving…" : "Made progress"}
           </button>
-          <button type="button" disabled={Boolean(saving)} onClick={() => void record("need", results.need.transition, results.need.prompt, results.need.fallback)} style={buttonStyle}>
-            {saving === "need" ? "Saving…" : results.need.label}
+          <button type="button" disabled={Boolean(saving)} onClick={() => void record("need", "blocked", "What do you need?", "Need something")} style={buttonStyle}>
+            {saving === "need" ? "Saving…" : "Need something"}
           </button>
-          <button type="button" disabled={Boolean(saving)} onClick={() => void record("changed", results.changed.transition, results.changed.prompt, results.changed.fallback)} style={buttonStyle}>
-            {saving === "changed" ? "Saving…" : results.changed.label}
+          <button type="button" disabled={Boolean(saving)} onClick={() => void record("changed", "changed_plan", "What changed on the farm?", "Farm changed")} style={buttonStyle}>
+            {saving === "changed" ? "Saving…" : "Farm changed"}
           </button>
         </div>
-        {results.showLighterWork ? (
-          <button type="button" disabled={Boolean(saving)} onClick={() => void needLighterWork()} style={lighterButtonStyle}>
-            {saving === "lighter" ? "Adjusting the work…" : "Need lighter work"}
-          </button>
-        ) : null}
+        <button type="button" disabled={Boolean(saving)} onClick={() => void needLighterWork()} style={lighterButtonStyle}>
+          {saving === "lighter" ? "Adjusting the work…" : "Need lighter work"}
+        </button>
         <details style={{ marginTop: 2 }}>
           <summary style={{ cursor: "pointer", padding: "7px 10px", fontSize: 13, fontWeight: 650 }}>Move this card</summary>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 7, padding: "3px 0 2px" }}>
