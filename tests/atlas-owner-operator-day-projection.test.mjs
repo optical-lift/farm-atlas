@@ -14,8 +14,10 @@ test("Owner operator projection resolves the selected Farm Hand on the server", 
   assert.match(route, /effectiveOperatorAccountId/);
   assert.match(route, /effectiveOperatorMembershipId/);
   assert.match(route, /effective\.farmRole !== "farm_hand"/);
-  assert.match(route, /readOwnerWeekProjection\(effective\.farmId, effectiveMembershipId, dateIso, 1\)/);
-  assert.match(route, /dateIso <= centralDateIso\(\)/);
+  assert.match(route, /readOwnerWeekProjection/);
+  assert.match(route, /withinPlanningHorizon \? projectionStart : dateIso/);
+  assert.match(route, /withinPlanningHorizon \? 14 : 1/);
+  assert.match(route, /dateIso <= today/);
   assert.doesNotMatch(route, /searchParams\.get\(["']membership/i);
   assert.doesNotMatch(route, /23e98e5e-16ca-40d8-872c-c77e06baa167/);
 });
@@ -40,4 +42,14 @@ test("Owner future projection remains separate from real released task cards", (
 
   assert.match(daySummary, /OwnerTentativeDayProjection/);
   assert.match(daySummary, /compact \? <OwnerTentativeDayProjection \/>/);
+});
+
+test("weekly tentative project work uses the same capacity-aware option engine as Daily Hand", () => {
+  const migration = read("supabase/migrations/20260808192000_make_owner_week_projection_capacity_aware.sql");
+
+  assert.match(migration, /project_pull_options_for_member_v2/);
+  assert.match(migration, /fitsToday/);
+  assert.match(migration, /with ordinality/);
+  assert.match(migration, /Project work fitted into projected daily capacity/);
+  assert.doesNotMatch(migration, /v_daily_minutes/);
 });
