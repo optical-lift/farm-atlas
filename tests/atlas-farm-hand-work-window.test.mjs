@@ -28,8 +28,8 @@ test("weather can expand or contract the outdoor window and respects task heat e
   assert.match(helper, /Outside looks better/);
 });
 
-test("early morning uses scarce cool hours for the current weed obligation before generic outdoor projects", () => {
-  assert.match(helper, /FARM_HAND_MORNING_WEED_PRIORITY_END_HOUR = 8/);
+test("the current weed obligation stays ahead of generic outdoor projects for the whole morning outdoor window", () => {
+  assert.match(helper, /FARM_HAND_MORNING_WEED_PRIORITY_END_HOUR = FARM_HAND_OUTDOOR_MORNING_END_HOUR/);
   assert.match(helper, /taskIsWeeding/);
   assert.match(helper, /promoteMorningWeeding/);
   assert.match(helper, /centralHour\(date\) >= FARM_HAND_MORNING_WEED_PRIORITY_END_HOUR/);
