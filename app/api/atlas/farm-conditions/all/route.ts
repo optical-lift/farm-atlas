@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAtlasSession } from "@/lib/atlas/session";
 import { readTriangulatedFarmConditions } from "@/lib/atlas/triangulated-rainfall";
 import { createAtlasServerClient } from "@/lib/supabase/server";
-import { GET as readFarmConditions } from "../route";
+import { GET as readFarmWeatherRain } from "../../farm-weather-rain/route";
 
 export const dynamic = "force-dynamic";
 
@@ -54,9 +54,9 @@ export async function GET(request: NextRequest) {
   const conditions: ConditionsPayload[] = [];
 
   for (const farmId of farmIds) {
-    const childUrl = new URL("/api/atlas/farm-conditions", request.url);
+    const childUrl = new URL("/api/atlas/farm-weather-rain", request.url);
     childUrl.searchParams.set("farmId", farmId);
-    const response = await readFarmConditions(new NextRequest(childUrl));
+    const response = await readFarmWeatherRain(new NextRequest(childUrl));
     if (!response.ok) continue;
     const payload = await response.json() as ConditionsPayload;
     if (!payload?.ok) continue;
