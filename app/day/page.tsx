@@ -486,21 +486,20 @@ function AtlasDayPageContent() {
     void loadWeather();
   }, []);
 
-  const allDayTasks = useMemo(() => tasks.filter(isWorkTask).filter((task) => task.due_date === dateIso), [dateIso, tasks]);
-  const dayTasks = useMemo(() => tasks.filter(isDashboardWork).filter((task) => task.due_date === dateIso), [dateIso, tasks]);
+  const allDayTasks = useMemo(() => tasks.filter(isWorkTask), [tasks]);
+  const dayTasks = useMemo(() => tasks.filter(isDashboardWork), [tasks]);
   const requiredTasks = useMemo(() => dayTasks.filter((task) => !isExtraCredit(task)), [dayTasks]);
   const extraCreditTasks = useMemo(() => dayTasks.filter(isExtraCredit), [dayTasks]);
   const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask).filter((task) => !isExtraCredit(task)), [allDayTasks]);
   const partnerPlan = useMemo(() => buildDayPartnerPlan(allDayTasks.filter((task) => !isExtraCredit(task))), [allDayTasks]);
   const overdueTasks = useMemo(() => {
     if (dateIso !== todayIso()) return [];
-    return tasks
-      .filter(isDashboardWork)
+    return dayTasks
       .filter((task) => Boolean(task.due_date && task.due_date < dateIso))
       .filter((task) => !isExtraCredit(task))
       .sort((a, b) => mixedDaySortValue(a, dateIso, partnerPlan).localeCompare(mixedDaySortValue(b, dateIso, partnerPlan)));
-  }, [dateIso, partnerPlan, tasks]);
-  const mixedOpenTasks = useMemo(() => uniqueTasks(dateIso === todayIso() ? [...overdueTasks, ...requiredTasks] : requiredTasks), [dateIso, overdueTasks, requiredTasks]);
+  }, [dateIso, dayTasks, partnerPlan]);
+  const mixedOpenTasks = useMemo(() => uniqueTasks(requiredTasks), [requiredTasks]);
   const timelineTasks = useMemo(() => uniqueTasks([...mixedOpenTasks, ...doneDayTasks]).sort((a, b) => mixedDaySortValue(a, dateIso, partnerPlan).localeCompare(mixedDaySortValue(b, dateIso, partnerPlan))), [dateIso, doneDayTasks, mixedOpenTasks, partnerPlan]);
   const filteredTimelineTasks = useMemo(() => routeFilter ? timelineTasks.filter((task) => atlasRouteKeyForTask(task) === routeFilter) : timelineTasks, [routeFilter, timelineTasks]);
   const filteredTasks = useMemo(() => routeFilter ? mixedOpenTasks.filter((task) => atlasRouteKeyForTask(task) === routeFilter) : mixedOpenTasks, [mixedOpenTasks, routeFilter]);
@@ -657,7 +656,7 @@ function AtlasDayPageContent() {
               {!routeFilter && pageResolved && livingDay ? <LivingDayCompletionSummary summary={livingDay.completionSummary} /> : null}
               {!routeFilter && livingLoading ? <div className="atlas-journal-loading">Loading Journal and goals…</div> : null}
 
-              {!routeFilter && extraCreditTasks.length ? <article className="atlas-day-route-group atlas-day-extra-credit-group"><h3>Extra Credit</h3><div className="atlas-day-zone-group">{extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}</div></article> : null}
+              {!routeFilter && extraCreditTasks.length ? <article className="atlas-day-route-group atlas-day-extra-credit-group"><h3>Extra Credit</h3><div className="atlas-day-zone-group">{extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />}</div></article> : null}
             </div>
 
             {!routeFilter ? <nav className="atlas-day-adjacent-nav" aria-label="Browse adjacent days"><Link href={dayHref(previousDate)} aria-label="Open yesterday"><span aria-hidden="true">←</span><em>Yesterday</em></Link><Link href={dayHref(nextDate)} aria-label="Open tomorrow"><em>Tomorrow</em><span aria-hidden="true">→</span></Link></nav> : null}
