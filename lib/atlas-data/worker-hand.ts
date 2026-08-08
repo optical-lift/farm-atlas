@@ -87,9 +87,13 @@ function centralDateIso(now = new Date()) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-export async function getWorkerHand(access: AtlasRoleAccess, targetMembershipId: string | null = null): Promise<WorkerHandProjection> {
+export async function getWorkerHand(
+  access: AtlasRoleAccess,
+  targetMembershipId: string | null = null,
+  requestedDate: string | null = null,
+): Promise<WorkerHandProjection> {
   const supabase = await createAtlasServerClient();
-  const forDate = centralDateIso();
+  const forDate = requestedDate ?? centralDateIso();
   const farmId = access.membership.farmId;
   const args = { p_farm_id: farmId, p_for_date: forDate, p_target_membership_id: targetMembershipId };
 
@@ -99,13 +103,8 @@ export async function getWorkerHand(access: AtlasRoleAccess, targetMembershipId:
   });
   if (contextResult.error) throw new Error("Atlas worker context read failed.");
 
-  // Enrichment must never become a new availability dependency for the worker hand.
-  // Try v2 first; if it is missing, unhealthy, or permission-drifted, fall back to the
-  // long-proven v1 hand and render the day without adaptive metadata.
   let tasksResult = await supabase.rpc("worker_task_hand_v2", args);
-  if (tasksResult.error) {
-    tasksResult = await supabase.rpc("worker_task_hand_v1", args);
-  }
+  if (tasksResult.error) tasksResult = await supabase.rpc("worker_task_hand_v1", args);
   if (tasksResult.error) throw new Error("Atlas worker hand read failed.");
 
   const context = ((contextResult.data ?? []) as WorkerHandContextRow[])[0] ?? null;

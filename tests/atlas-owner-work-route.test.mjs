@@ -18,14 +18,16 @@ test("the permanent Work tab opens Living Day", () => {
 
 test("management restored onto the legacy worker hand returns to Living Day", () => {
   assert.match(workerTodayPage, /access\.membership\.role !== "farm_hand"/);
-  assert.match(workerTodayPage, /params\.inspect !== "1"/);
+  assert.match(workerTodayPage, /params\.inspect === "1"/);
   assert.match(workerTodayPage, /redirect\(`\/day\?date=\$\{encodeURIComponent\(centralTodayIso\(\)\)\}&view=work_order`\)/);
 });
 
 test("the Farm Hand hand remains available and intentional inspection stays explicit", () => {
   const redirectPosition = workerTodayPage.indexOf("redirect(`/day?date=");
-  const handPosition = workerTodayPage.indexOf("getWorkerHand(access)");
+  const handPosition = workerTodayPage.indexOf("getWorkerHand(access, null, requestedDate)");
   assert.ok(redirectPosition >= 0 && handPosition > redirectPosition);
-  assert.match(workerTodayPage, /params\.inspect !== "1"/);
+  assert.match(workerTodayPage, /params\.inspect === "1"/);
   assert.match(workerTodayPage, /Read-only worker view/);
+  assert.match(workerTodayPage, /Planned for this day/);
+  assert.match(workerTodayPage, /Preview only\. Atlas has not released this card into Anna's hand yet\./);
 });
