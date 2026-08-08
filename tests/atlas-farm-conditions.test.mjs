@@ -7,84 +7,52 @@ function read(path) {
 }
 
 test("Farm Conditions keeps gauge observations separate from area estimates and forecasts", () => {
-  const api = read("app/api/atlas/farm-conditions/route.ts");
+  const api = read("app/api/atlas/farm-weather-rain/route.ts");
   const home = read("app/AtlasFarmConditionsHomePatch.tsx");
 
   assert.match(api, /farm_rain_observations/);
   assert.match(api, /sourceType:\s*"area_model_estimate"/);
   assert.match(api, /areaEstimate:/);
   assert.match(api, /forecast:/);
-  assert.match(home, /Weather and rainfall estimates are separate from the farm gauge/);
+  assert.match(home, /weather-model rainfall readings/);
   assert.match(home, /Use this farm’s physical gauge/);
 });
 
-test("Farm Conditions uses authoritative astronomy with a transparent fallback", () => {
-  const api = read("app/api/atlas/farm-conditions/route.ts");
-  const lunar = read("lib/atlas/farm-lunar-clock.ts");
+test("Farm Conditions reads measured Moon state from the canonical Atlas sky ledger", () => {
+  const skyApi = read("app/api/atlas/sky-state/route.ts");
+  const home = read("app/AtlasFarmConditionsHomePatch.tsx");
 
-  assert.match(api, /https:\/\/aa\.usno\.navy\.mil\/api\/rstt\/oneday/);
-  assert.match(api, /U\.S\. Naval Observatory/);
-  assert.match(api, /calculated_fallback/);
-  assert.match(lunar, /tropical_local_noon/);
-  assert.match(lunar, /approximateMoon/);
+  assert.match(skyApi, /\.rpc\("sky_state_at_v2"/);
+  assert.match(skyApi, /\.rpc\("sky_ledger_status_v1"/);
+  assert.match(skyApi, /canonical_atlas_sky_ledger/);
+  assert.match(skyApi, /taskGuidanceIncluded:\s*false/);
+  assert.match(home, /\/api\/atlas\/sky-state\?farmId=/);
+  assert.match(home, /This is the factual Atlas sky ledger only/);
+  assert.match(home, /No task guidance is produced by this panel/);
 });
 
-test("Farm almanac guidance is task-aware and never outranks farm viability", () => {
-  const api = read("app/api/atlas/farm-conditions/route.ts");
-  const lunar = read("lib/atlas/farm-lunar-clock.ts");
+test("Home no longer invokes the legacy almanac task-scoring route", () => {
+  const allApi = read("app/api/atlas/farm-conditions/all/route.ts");
+  const home = read("app/AtlasFarmConditionsHomePatch.tsx");
 
-  assert.match(lunar, /aboveground_planting/);
-  assert.match(lunar, /belowground_planting/);
-  assert.match(lunar, /maintenance/);
-  assert.match(api, /\["crop window", "field readiness", "weather", "lunar preference"\]/);
+  assert.match(allApi, /GET as readFarmWeatherRain/);
+  assert.match(allApi, /farm-weather-rain/);
+  assert.doesNotMatch(allApi, /GET as readFarmConditions/);
+  assert.doesNotMatch(home, /Traditional farm almanac/);
+  assert.doesNotMatch(home, /lunarTaskHints/);
+  assert.doesNotMatch(home, /favoredActions/);
 });
 
-test("Lunar task classification reads controlled fields instead of task-title prose", () => {
-  const lunar = read("lib/atlas/farm-lunar-clock.ts");
-  const start = lunar.indexOf("export function classifyLunarTask");
-  const end = lunar.indexOf("function displayTitle", start);
-  const classifier = lunar.slice(start, end);
+test("Legacy almanac code is isolated from canonical task eligibility", () => {
+  const legacy = read("lib/atlas/farm-lunar-clock.ts");
+  const allApi = read("app/api/atlas/farm-conditions/all/route.ts");
+  const skyApi = read("app/api/atlas/sky-state/route.ts");
 
-  assert.match(classifier, /explicitLunarFamily\(task\)/);
-  assert.match(classifier, /ACTION_FAMILIES\[action\]/);
-  assert.match(classifier, /TASK_TYPE_FAMILIES\[taskType\]/);
-  assert.doesNotMatch(classifier, /task\.title/);
-  assert.doesNotMatch(classifier, /display_subject/);
-  assert.doesNotMatch(classifier, /crop_family/);
-});
-
-test("Lunar task rows show canonical action, subject, family, and location without repeated commentary", () => {
-  const lunar = read("lib/atlas/farm-lunar-clock.ts");
-  const mergedCss = read("app/farm-conditions-merged.css");
-
-  assert.match(lunar, /metadataString\(task\.metadata, "display_action"\)/);
-  assert.match(lunar, /metadataString\(task\.metadata, "display_subject"\)/);
-  assert.match(lunar, /metadataString\(task\.metadata, "display_family"\)/);
-  assert.match(lunar, /metadataString\(task\.metadata, "display_location"\)/);
-  assert.match(lunar, /reason: displayContext\(task, family\)/);
-  assert.doesNotMatch(lunar, /align with this traditional work family/);
-  assert.match(mergedCss, /atlas-farm-lunar-precedence/);
-  assert.match(mergedCss, /atlas-farm-condition-source/);
-  assert.match(mergedCss, /display:\s*none/);
-});
-
-test("Lunar work ranks farm pressure and unfinished urgency before lunar preference", () => {
-  const api = read("app/api/atlas/farm-conditions/route.ts");
-  const start = api.indexOf("function compareLunarTaskCandidates");
-  const end = api.indexOf("async function readFarmConditions", start);
-  const sorter = api.slice(start, end);
-
-  assert.match(api, /priority:\s*string \| null/);
-  assert.match(api, /select\("id, title, priority, action_key, task_type, due_date, metadata"\)/);
-  assert.match(sorter, /dynamic_priority_score/);
-  assert.match(sorter, /taskPriorityRank/);
-  assert.match(sorter, /taskConditionRank/);
-  assert.match(sorter, /aOverdue/);
-  assert.ok(sorter.indexOf("dynamic_priority_score") < sorter.indexOf("lunarFitRank"));
-  assert.ok(sorter.indexOf("taskPriorityRank") < sorter.indexOf("lunarFitRank"));
-  assert.ok(sorter.indexOf("taskConditionRank") < sorter.indexOf("lunarFitRank"));
-  assert.doesNotMatch(api, /\.gte\("due_date", todayIso\)/);
-  assert.match(api, /\.limit\(300\)/);
+  assert.match(legacy, /lunarGuidance/);
+  assert.match(legacy, /lunarTaskHint/);
+  assert.doesNotMatch(allApi, /farm-lunar-clock/);
+  assert.doesNotMatch(skyApi, /farm-lunar-clock/);
+  assert.doesNotMatch(skyApi, /lunarGuidance|lunarTaskHint|fruitful|barren/);
 });
 
 test("Rain-gauge writes cross the reviewed RPC boundary", () => {
@@ -110,7 +78,7 @@ test("Home merges conditions into each visible farm overview card", () => {
   assert.match(layout, /AtlasFarmConditionsHomePatch/);
   assert.match(layout, /import "\.\/farm-conditions-merged\.css";/);
   assert.match(allApi, /session\.memberships\.map/);
-  assert.match(allApi, /GET as readFarmConditions/);
+  assert.match(allApi, /GET as readFarmWeatherRain/);
   assert.match(home, /\/api\/atlas\/farm-conditions\/all/);
   assert.match(home, /section\[aria-label="Farm seasons"\]/);
   assert.match(home, /cardHeader\.after\(node\)/);
