@@ -27,12 +27,42 @@ type WeatherResponse = { ok: boolean; label?: string };
 type WeekViewMode = "timeline" | "zone";
 type WeekRouteFilter = "all" | AtlasWorkRouteKey;
 
+type WeekProjectionItem = {
+  id: string;
+  title: string;
+  planState: "planned" | "conditional" | "flexible" | string;
+  sourceKind: "floating_task" | "project_pull" | "queue" | "rhythm" | string;
+  environment: string | null;
+  expectedActiveMinutes: number | null;
+  reason: string | null;
+};
+
+type WeekProjectionDay = {
+  date: string;
+  scheduledPaidMinutes: number;
+  tentativePaidMinutes: number;
+  projectedPaidMinutes: number;
+  paidGapMinutes: number;
+  items: WeekProjectionItem[];
+};
+
+type WeekProjectionResponse = {
+  ok?: boolean;
+  active?: boolean;
+  paidTargetMinutes?: number;
+  days?: WeekProjectionDay[];
+};
+
 type WeekDay = {
   dateIso: string;
   index: number;
   tasks: AtlasTaskCard[];
   openTasks: AtlasTaskCard[];
   doneTasks: AtlasTaskCard[];
+  projectedItems: WeekProjectionItem[];
+  projectedPaidMinutes: number;
+  paidTargetMinutes: number;
+  paidGapMinutes: number;
 };
 
 function validIso(value: string | null) {
@@ -104,6 +134,23 @@ function matchesRoute(task: AtlasTaskCard, routeFilter: WeekRouteFilter) {
   return routeFilter === "all" || routeForTask(task) === routeFilter;
 }
 
+function minutesLabel(value: number) {
+  const minutes = Math.max(0, Math.round(value));
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (!hours) return `${remainder}m`;
+  if (!remainder) return `${hours}h`;
+  return `${hours}h ${remainder}m`;
+}
+
+function projectionSourceLabel(sourceKind: string) {
+  if (sourceKind === "project_pull") return "Finish Elm";
+  if (sourceKind === "floating_task") return "Atlas paid-work pool";
+  if (sourceKind === "queue") return "Queue";
+  if (sourceKind === "rhythm") return "Rhythm";
+  return "Paid-work fill";
+}
+
 function WeekTaskCard({ task, current, returnTo }: { task: AtlasTaskCard; current: boolean; returnTo: string }) {
   const display = atlasTaskDisplay(task);
   const family = atlasDayTaskFamily(task);
@@ -126,6 +173,25 @@ function WeekTaskCard({ task, current, returnTo }: { task: AtlasTaskCard; curren
   );
 }
 
+function WeekProjectedCard({ item }: { item: WeekProjectionItem }) {
+  const minutes = Math.max(0, Number(item.expectedActiveMinutes) || 0);
+  return (
+    <article
+      className="atlas-day-task-card atlas-week-task-card atlas-day-route-future"
+      data-week-projected-work="true"
+      style={{ borderStyle: "dashed" }}
+    >
+      <small className="atlas-day-task-family">Planned fill · {projectionSourceLabel(item.sourceKind)}</small>
+      <strong>{item.title}</strong>
+      <span>
+        {minutes ? minutesLabel(minutes) : "Noncounting"}
+        {item.environment ? ` · ${item.environment}` : ""}
+        {item.planState ? ` · ${item.planState}` : ""}
+      </span>
+    </article>
+  );
+}
+
 function WeekDaySection({
   day,
   activeRoute,
@@ -143,6 +209,7 @@ function WeekDaySection({
   const previewLimit = day.index === 0 ? 5 : day.index === 1 ? 3 : 2;
   const previewTasks = filteredOpenTasks.slice(0, previewLimit);
   const remaining = Math.max(0, filteredOpenTasks.length - previewTasks.length);
+  const projectedItems = activeRoute === "all" ? day.projectedItems : [];
   const currentTaskId = day.dateIso === today
     ? filteredOpenTasks.find((task) => task.status === "open")?.task_id ?? filteredOpenTasks[0]?.task_id ?? null
     : null;
@@ -157,17 +224,22 @@ function WeekDaySection({
   const total = day.tasks.length;
   const done = day.doneTasks.length;
   const isToday = day.dateIso === today;
+  const hasAnyPlan = total > 0 || projectedItems.length > 0;
 
   return (
     <details
       id={`week-day-${day.dateIso}`}
-      className={`atlas-week-day-section${isToday ? " today" : ""}${total === done && total > 0 ? " complete" : ""}`}
+      className={`atlas-week-day-section${isToday ? " today" : ""}${total === done && total > 0 && !projectedItems.length ? " complete" : ""}`}
       open={day.index <= 1}
     >
       <summary>
         <div className="atlas-week-day-summary-copy">
           <div><strong>{prettyDay(day.dateIso)}</strong>{isToday ? <span>Today</span> : null}</div>
-          <p>{total ? `${done} of ${total} finished · ${day.openTasks.length} open` : "No work planned"}</p>
+          <p>
+            {hasAnyPlan
+              ? `${done} of ${total} scheduled finished · ${day.openTasks.length} scheduled${projectedItems.length ? ` · ${projectedItems.length} fill planned` : ""}`
+              : "No work planned"}
+          </p>
         </div>
         <b aria-hidden="true">⌄</b>
       </summary>
@@ -179,7 +251,12 @@ function WeekDaySection({
           </div>
         ) : null}
 
-        {routeCounts.length ? (
+        {day.paidTargetMinutes > 0 && day.projectedPaidMinutes > 0 && activeRoute === "all" ? (
+          <div className="atlas-week-day-route-counts" aria-label={`${prettyDay(day.dateIso)} paid work projection`}>
+            <span>{minutesLabel(day.projectedPaidMinutes)} of {minutesLabel(day.paidTargetMinutes)} paid work</span>
+            {day.paidGapMinutes > 15 ? <span>{minutesLabel(day.paidGapMinutes)} still unfilled</span> : <span>Day filled</span>}
+          </div>
+        ) : routeCounts.length ? (
           <div className="atlas-week-day-route-counts" aria-label={`${prettyDay(day.dateIso)} work types`}>
             {routeCounts.map((entry) => <span key={entry.key}>{entry.label} {entry.count}</span>)}
           </div>
@@ -206,12 +283,24 @@ function WeekDaySection({
           </div>
         )}
 
-        {!previewTasks.length ? (
+        {projectedItems.length ? (
+          <section data-week-fill-plan="true" style={{ marginTop: 12 }}>
+            <div style={{ margin: "0 2px 8px" }}>
+              <small style={{ display: "block", fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", opacity: .58 }}>Atlas fill plan</small>
+              <span style={{ display: "block", marginTop: 2, fontSize: 12, opacity: .68 }}>These are the additional paid jobs Atlas is reserving for this day. They stay distinct from hard-date calendar commitments until released.</span>
+            </div>
+            <div className="atlas-day-route-spine atlas-week-route-spine">
+              {projectedItems.map((item) => <WeekProjectedCard item={item} key={item.id} />)}
+            </div>
+          </section>
+        ) : null}
+
+        {!previewTasks.length && !projectedItems.length ? (
           <div className="atlas-week-day-empty">{activeRoute === "all" ? (total && done === total ? "This day is complete." : "No open work planned.") : `No ${atlasRouteLabels[activeRoute]} work planned.`}</div>
         ) : null}
 
         <footer>
-          {remaining ? <span>{remaining} more {remaining === 1 ? "task" : "tasks"}</span> : <span>{day.openTasks.length ? "Day preview complete" : "Day clear"}</span>}
+          {remaining ? <span>{remaining} more {remaining === 1 ? "task" : "tasks"}</span> : <span>{day.openTasks.length || projectedItems.length ? "Day preview complete" : "Day clear"}</span>}
           <Link href={dayHref(day.dateIso)}>Open full day <span aria-hidden="true">→</span></Link>
         </footer>
       </div>
@@ -247,6 +336,8 @@ export default function AtlasWeekOverviewPage() {
   const [anchorIso, setAnchorIso] = useState(todayIso());
   const [explicitEndIso, setExplicitEndIso] = useState<string | null>(null);
   const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
+  const [projectionDays, setProjectionDays] = useState<Record<string, WeekProjectionDay>>({});
+  const [paidTargetMinutes, setPaidTargetMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
@@ -275,6 +366,25 @@ export default function AtlasWeekOverviewPage() {
       }
     }
 
+    async function loadProjection() {
+      try {
+        const response = await fetch(`/api/atlas/owner-week-projection?start=${encodeURIComponent(resolvedAnchor)}&end=${encodeURIComponent(resolvedEnd)}`, {
+          cache: "no-store",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) return;
+        const body = await response.json() as WeekProjectionResponse;
+        if (!body.ok || !body.active) return;
+        const byDate = Object.fromEntries((body.days ?? []).map((day) => [day.date, day]));
+        setProjectionDays(byDate);
+        setPaidTargetMinutes(Math.max(0, Number(body.paidTargetMinutes) || 0));
+      } catch {
+        setProjectionDays({});
+        setPaidTargetMinutes(0);
+      }
+    }
+
     async function loadWeather() {
       try {
         const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" });
@@ -286,6 +396,7 @@ export default function AtlasWeekOverviewPage() {
     }
 
     void load();
+    void loadProjection();
     void loadWeather();
   }, []);
 
@@ -301,6 +412,7 @@ export default function AtlasWeekOverviewPage() {
   const carryoverTasks = useMemo(() => openTasks.filter((task) => Boolean(task.due_date && task.due_date < anchorIso)), [anchorIso, openTasks]);
   const unplacedTasks = useMemo(() => openTasks.filter((task) => !task.due_date), [openTasks]);
   const weekOpenCount = scheduledWeekTasks.length + carryoverTasks.length + unplacedTasks.length;
+  const plannedFillCount = useMemo(() => Object.values(projectionDays).reduce((sum, day) => sum + day.items.length, 0), [projectionDays]);
 
   const routeCounts = useMemo(() => atlasRouteOrder
     .map((key) => ({ key, label: atlasRouteLabels[key], count: openTasks.filter((task) => routeForTask(task) === key).length }))
@@ -308,14 +420,19 @@ export default function AtlasWeekOverviewPage() {
 
   const days = useMemo<WeekDay[]>(() => weekDates.map((dateIso, index) => {
     const dayTasks = relevantTasks.filter((task) => task.due_date === dateIso);
+    const projection = projectionDays[dateIso];
     return {
       dateIso,
       index,
       tasks: dayTasks,
       openTasks: dayTasks.filter(isOpenTask),
       doneTasks: dayTasks.filter(isDoneTask),
+      projectedItems: projection?.items ?? [],
+      projectedPaidMinutes: projection?.projectedPaidMinutes ?? 0,
+      paidTargetMinutes,
+      paidGapMinutes: projection?.paidGapMinutes ?? 0,
     };
-  }), [relevantTasks, weekDates]);
+  }), [paidTargetMinutes, projectionDays, relevantTasks, weekDates]);
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-week-route-page">
@@ -335,10 +452,10 @@ export default function AtlasWeekOverviewPage() {
                 <button type="button" className={viewMode === "zone" ? "selected" : ""} onClick={() => setViewMode("zone")}>Zone</button>
               </div>
             </div>
-            <p>{loading ? "Loading farm week" : `${doneWeekTasks.length} finished · ${weekOpenCount} open${carryoverTasks.length ? ` · ${carryoverTasks.length} carryover` : ""}`}</p>
+            <p>{loading ? "Loading farm week" : `${doneWeekTasks.length} finished · ${weekOpenCount} open${plannedFillCount ? ` · ${plannedFillCount} fill planned` : ""}${carryoverTasks.length ? ` · ${carryoverTasks.length} carryover` : ""}`}</p>
 
             <div className="atlas-week-route-filters" aria-label="Filter week by work type">
-              <button type="button" className={activeRoute === "all" ? "selected" : ""} onClick={() => setActiveRoute("all")}>All {weekOpenCount}</button>
+              <button type="button" className={activeRoute === "all" ? "selected" : ""} onClick={() => setActiveRoute("all")}>All {weekOpenCount + plannedFillCount}</button>
               {routeCounts.map((entry) => (
                 <button type="button" className={activeRoute === entry.key ? "selected" : ""} onClick={() => setActiveRoute(entry.key)} key={entry.key}>{entry.label} {entry.count}</button>
               ))}
@@ -349,10 +466,10 @@ export default function AtlasWeekOverviewPage() {
             {days.map((day) => {
               const label = railDay(day.dateIso);
               const filteredOpen = day.openTasks.filter((task) => matchesRoute(task, activeRoute)).length;
-              const total = activeRoute === "all" ? day.tasks.length : filteredOpen;
+              const total = activeRoute === "all" ? day.tasks.length + day.projectedItems.length : filteredOpen;
               return (
                 <a href={`#week-day-${day.dateIso}`} className={day.dateIso === anchorIso ? "today" : ""} key={day.dateIso}>
-                  <span>{label.weekday}</span><strong>{label.day}</strong><em>{activeRoute === "all" && day.tasks.length ? `${day.doneTasks.length}/${day.tasks.length}` : total || "—"}</em>
+                  <span>{label.weekday}</span><strong>{label.day}</strong><em>{activeRoute === "all" && total ? `${day.doneTasks.length}/${total}` : total || "—"}</em>
                 </a>
               );
             })}
