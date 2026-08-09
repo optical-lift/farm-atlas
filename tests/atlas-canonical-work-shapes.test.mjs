@@ -9,6 +9,7 @@ const canonicalDetail = read("components/atlas/canonical-assigned-task-detail.ts
 const serialGate = read("supabase/migrations/20260808235500_serial_queue_release_gate.sql");
 const serialBehavior = read("supabase/migrations/20260808235600_serial_queue_release_behavior.sql");
 const serialWeeding = read("supabase/migrations/20260808235620_reconcile_anna_serial_weeding.sql");
+const calendarTruth = read("supabase/migrations/20260809003500_calendar_truth_and_serial_queue_semantics.sql");
 const soilSequence = read("supabase/migrations/20260808235640_lock_soil_block_sequence.sql");
 const batchTasks = read("supabase/migrations/20260808235700_consolidate_multi_tray_pot_up_batches.sql");
 
@@ -27,14 +28,18 @@ test("serial queue membership is authoritative at the final occurrence gate", ()
   assert.match(serialGate, /task_release_queue_items_one_serial_active_v1/);
 });
 
-test("Anna weeding has one released card and a quiet queue count", () => {
+test("Anna weeding has one released card while ordinary backlog stays off the calendar", () => {
   assert.match(serialWeeding, /reconcile_anna_serial_weeding_v1/);
   assert.match(serialWeeding, /queue_key='anna_weeding_rotation'/);
   assert.match(serialWeeding, /status='archived'/);
   assert.match(serialWeeding, /Waiting behind the current Weed Card in Anna serial weeding/);
   assert.match(serialWeeding, /v_serial:=atlas\.reconcile_anna_serial_weeding_v1/);
-  assert.match(dayRoute, /release_queue_queued_count/);
-  assert.match(dayRoute, /attention after this one/);
+  assert.match(calendarTruth, /calendar_commitment_kind','queue_only'/);
+  assert.match(calendarTruth, /planned_due_date=null,not_before_date=null/);
+  assert.match(calendarTruth, /release_queue_scheduled_after_count/);
+  assert.match(dayRoute, /release_queue_scheduled_after_count/);
+  assert.doesNotMatch(dayRoute, /release_queue_queued_count/);
+  assert.doesNotMatch(dayRoute, /attention after this one/);
 });
 
 test("soil-block making is a real same-day continuation after soil preparation", () => {
