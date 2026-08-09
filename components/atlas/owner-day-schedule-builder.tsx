@@ -6,7 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 import { atlasDayTaskPartnerKey } from "@/lib/atlas/day-route";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import { atlasTaskDisplay } from "@/lib/atlas/task-display";
+import { atlasRouteKeyForTask, atlasTaskDisplay } from "@/lib/atlas/task-display";
 import { atlasWorkOrderAnchorForTask, atlasWorkOrderNumber } from "@/lib/atlas/work-order";
 
 type CandidateKind = "project_pull" | "floating_task" | "queue" | "rhythm";
@@ -70,6 +70,7 @@ type AutomaticDayResponse = {
 type TaskPlacement = {
   id: string;
   title: string;
+  route: string;
   window: CandidateWindow;
   order: number;
 };
@@ -172,6 +173,7 @@ function taskPlacements(tasks: AtlasTaskCard[], dateIso: string) {
     return {
       id: task.task_id,
       title: atlasTaskDisplay(task).title,
+      route: atlasRouteKeyForTask(task),
       window: partner?.window ?? taskWindow(task),
       order: partner?.order ?? atlasWorkOrderNumber(task),
     };
@@ -193,6 +195,10 @@ function ideaSort(left: TimelineIdea, right: TimelineIdea) {
 function isAutomaticFamilyCandidate(candidate: ScheduleCandidate) {
   if (candidate.sourceKind === "queue" || candidate.sourceKind === "rhythm") return true;
   return /^mow(?:ing)?\b/i.test(candidate.title.trim());
+}
+
+function isAutomaticMow(candidate: AutomaticCandidate) {
+  return candidate.sourceKind === "rhythm" && /^mow(?:ing)?\b/i.test(candidate.title.trim());
 }
 
 function CandidateRow({ candidate, selected, onToggle }: { candidate: ScheduleCandidate; selected: boolean; onToggle: () => void }) {
@@ -386,15 +392,18 @@ export default function OwnerDayScheduleBuilder() {
     return () => controller.abort();
   }, [dateIso]);
 
+  const placements = useMemo(() => dateIso ? taskPlacements(tasks, dateIso) : [], [dateIso, tasks]);
+  const hasVisibleMowTask = useMemo(() => placements.some((row) => row.route === "mow"), [placements]);
   const candidates = useMemo(
     () => [...(response?.candidates ?? [])].filter((candidate) => !isAutomaticFamilyCandidate(candidate)).sort((left, right) => ideaSort({ ...left, kind: "candidate" }, { ...right, kind: "candidate" })),
     [response],
   );
   const automaticCandidates = useMemo(
-    () => [...(automaticResponse?.candidates ?? [])].sort((left, right) => ideaSort({ ...left, kind: "automatic" }, { ...right, kind: "automatic" })),
-    [automaticResponse],
+    () => [...(automaticResponse?.candidates ?? [])]
+      .filter((candidate) => !(hasVisibleMowTask && isAutomaticMow(candidate)))
+      .sort((left, right) => ideaSort({ ...left, kind: "automatic" }, { ...right, kind: "automatic" })),
+    [automaticResponse, hasVisibleMowTask],
   );
-  const placements = useMemo(() => dateIso ? taskPlacements(tasks, dateIso) : [], [dateIso, tasks]);
   const timelineIdeas = useMemo<TimelineIdea[]>(() => [
     ...candidates.map((candidate) => ({ id: candidate.id, kind: "candidate" as const, title: candidate.title, dayWindow: candidate.dayWindow, workOrderNumber: candidate.workOrderNumber })),
     ...automaticCandidates.map((candidate) => ({ id: candidate.id, kind: "automatic" as const, title: candidate.title, dayWindow: candidate.dayWindow, workOrderNumber: candidate.workOrderNumber })),
