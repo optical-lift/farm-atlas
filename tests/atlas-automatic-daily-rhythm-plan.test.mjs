@@ -6,50 +6,43 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Anna gets one automatic serial Weed Card per available workday", () => {
-  const route = read("app/api/atlas/automatic-day-work/route.ts");
-  const migration = read("supabase/migrations/20260809174600_anna_daily_weed_slot_automatic_v1.sql");
-
-  assert.match(route, /anna_weeding_rotation/);
-  assert.match(route, /nextWorkerDay/);
-  assert.match(route, /Automatic daily Weed Card/);
-  assert.match(route, /If the prior workday's Weed Card is unfinished/);
-  assert.match(migration, /exactly_one_weed_card_per_workday/);
-  assert.match(migration, /'release_timing','next_workday'/);
-  assert.match(migration, /'owner_schedule_approval_required',false/);
-});
-
-test("mowing always has one visible evening slot without owner tapping", () => {
-  const route = read("app/api/atlas/automatic-day-work/route.ts");
+test("owner worker-day UI reads one canonical day-plan endpoint", () => {
   const builder = read("components/atlas/owner-day-schedule-builder.tsx");
-
-  assert.match(route, /releasedTaskId/);
-  assert.match(route, /This planning row yields to the real mowing card/);
-  assert.match(route, /Automatic mowing slot/);
-  assert.match(route, /dayWindow: "evening"/);
-  assert.doesNotMatch(route, /realMowOnRequestedDay/);
-  assert.match(builder, /\/api\/atlas\/automatic-day-work\?date=/);
-  assert.match(builder, /AutomaticRow/);
-  assert.match(builder, /data-owner-schedule-automatic/);
-  assert.match(builder, /hasVisibleMowTask/);
-  assert.match(builder, /isAutomaticMow/);
-  assert.match(builder, /row\.route === "mow"/);
+  assert.match(builder, /\/api\/atlas\/worker-day-plan\?date=/);
+  assert.doesNotMatch(builder, /Promise\.all\(/);
+  assert.doesNotMatch(builder, /\/api\/atlas\/automatic-day-work\?date=/);
+  assert.doesNotMatch(builder, /\/api\/atlas\/owner-day-projection\?date=/);
 });
 
-test("sowing is evening work everywhere the day timeline infers placement", () => {
+test("legacy suggestion and automatic routes are compatibility readers only", () => {
+  const suggestions = read("app/api/atlas/owner-day-projection/route.ts");
+  const automatic = read("app/api/atlas/automatic-day-work/route.ts");
+  assert.match(suggestions, /readOwnerWorkerDayPlan/);
+  assert.match(automatic, /readOwnerWorkerDayPlan/);
+  assert.doesNotMatch(suggestions, /task_release_queue_items/);
+  assert.doesNotMatch(automatic, /member_unavailability/);
+  assert.doesNotMatch(automatic, /rhythm_state/);
+});
+
+test("automatic work is not an Owner approval selection", () => {
+  const builder = read("components/atlas/owner-day-schedule-builder.tsx");
+  const commitRoute = read("app/api/atlas/owner-day-schedule/route.ts");
+  assert.match(builder, /sourceKind === "project_pull" \|\| row\.sourceKind === "floating_task"/);
+  assert.match(commitRoute, /"project_pull", "floating_task"/);
+  assert.doesNotMatch(commitRoute, /"project_pull", "floating_task", "queue"/);
+  assert.match(commitRoute, /owner_build_worker_day_schedule_api_v2/);
+});
+
+test("sowing remains evening work in the canonical timeline rules", () => {
   const workOrder = read("lib/atlas/work-order.ts");
-  const migration = read("supabase/migrations/20260809174500_anna_sowing_evening_window_v1.sql");
-
   assert.match(workOrder, /route === "seed"[^\n]+return "evening"/);
-  assert.match(migration, /'work_order_anchor','evening'/);
-  assert.match(migration, /'work_window_key','evening'/);
+  assert.match(workOrder, /action === "sow"/);
 });
 
-test("synthetic daypart labels yield to the real task-feed daypart marker", () => {
-  const builder = read("components/atlas/owner-day-schedule-builder.tsx");
-
-  assert.match(builder, /function realMarker/);
-  assert.match(builder, /ownerScheduleSyntheticWindow !== "true"/);
-  assert.match(builder, /synthetic\.forEach\(\(marker\) => marker\.remove\(\)\)/);
-  assert.match(builder, /detail\.textContent = "planned work"/);
+test("worker day plan contract isolates real automatic and suggested work", () => {
+  const reader = read("lib/atlas/worker-day-plan-server.ts");
+  assert.match(reader, /realWork: WorkerDayPlanRow\[\]/);
+  assert.match(reader, /automaticWork: WorkerDayPlanRow\[\]/);
+  assert.match(reader, /suggestions: WorkerDayPlanRow\[\]/);
+  assert.match(reader, /warnings: string\[\]/);
 });
