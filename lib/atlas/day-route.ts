@@ -79,6 +79,7 @@ const ACTION_FAMILIES: Record<string, string> = {
   verify: "Check",
   inspect: "Check",
   germination_check: "Germination check",
+  call: "Call",
   move: "Move",
   deliver: "Deliver",
   delivery: "Deliver",
@@ -216,8 +217,8 @@ export function atlasDayTaskCues(task: AtlasTaskCard) {
   const unlocksTask = metadataString(task, "unlocks_task_label");
   if (unlocksTask && metadataString(task, "unlocks_queue_key")) add(`Next: ${unlocksTask}`);
 
-  // Atlas may retain duration estimates for internal capacity math, but the player-facing
-  // lineup describes effort qualitatively instead of displaying clock-hour promises.
+  // Atlas may retain duration estimates and workload classes for internal capacity math,
+  // but worker-facing cards should not expose the internal "light" label.
   const equipment = text(metadata.equipment_label) || text(metadata.equipment_group);
   if (equipment) add(titleCase(equipment));
 
@@ -225,7 +226,7 @@ export function atlasDayTaskCues(task: AtlasTaskCard) {
   if (mowerSetting && equipment.toLowerCase().includes("mower")) add(`Setting ${mowerSetting}`);
 
   const workClass = text(task.work_class || metadata.work_class);
-  if (workClass && !["standard", "manual", "required"].includes(workClass.toLowerCase())) add(titleCase(workClass));
+  if (workClass && !["standard", "manual", "required", "light"].includes(workClass.toLowerCase())) add(titleCase(workClass));
 
   const resource = task.resource_requirements?.find((item) => item.resource_label && item.status !== "unavailable")?.resource_label;
   if (resource) add(resource);
