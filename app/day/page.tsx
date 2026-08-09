@@ -415,6 +415,8 @@ function ViewToggle({ viewMode, onChange }: { viewMode: DayViewMode; onChange: (
 function AtlasDayPageContent() {
   const searchParams = useSearchParams();
   const dateIso = searchParams.get("date") || todayIso();
+  const calendarToday = todayIso();
+  const isFutureDay = dateIso > calendarToday;
   const requestedRoute = searchParams.get("route");
   const requestedView = searchParams.get("view");
   const routeFilter = requestedRoute && routeOrder.includes(requestedRoute as RouteKey) ? requestedRoute as RouteKey : null;
@@ -448,7 +450,12 @@ function AtlasDayPageContent() {
     try {
       if (reset) { setLoading(true); setTasks([]); }
       setError(null);
-      const response = await fetchAtlasTaskCards({ viewerScoped: true, dueThrough: dateIso, doneDate: dateIso });
+      const response = await fetchAtlasTaskCards({
+        viewerScoped: true,
+        dueThrough: dateIso,
+        doneDate: dateIso,
+        exactDate: isFutureDay ? dateIso : undefined,
+      });
       if (requestId !== requestSequence.current) return;
       setTasks(response.taskCards ?? []);
     } catch (loadError) {
@@ -456,7 +463,7 @@ function AtlasDayPageContent() {
     } finally {
       if (requestId === requestSequence.current && reset) setLoading(false);
     }
-  }, [dateIso]);
+  }, [dateIso, isFutureDay]);
 
   const loadLivingDay = useCallback(async (reset = false) => {
     const requestId = ++livingRequestSequence.current;
@@ -493,12 +500,12 @@ function AtlasDayPageContent() {
   const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask).filter((task) => !isExtraCredit(task)), [allDayTasks]);
   const partnerPlan = useMemo(() => buildDayPartnerPlan(allDayTasks.filter((task) => !isExtraCredit(task))), [allDayTasks]);
   const overdueTasks = useMemo(() => {
-    if (dateIso !== todayIso()) return [];
+    if (dateIso !== calendarToday) return [];
     return dayTasks
       .filter((task) => Boolean(task.due_date && task.due_date < dateIso))
       .filter((task) => !isExtraCredit(task))
       .sort((a, b) => mixedDaySortValue(a, dateIso, partnerPlan).localeCompare(mixedDaySortValue(b, dateIso, partnerPlan)));
-  }, [dateIso, dayTasks, partnerPlan]);
+  }, [calendarToday, dateIso, dayTasks, partnerPlan]);
   const mixedOpenTasks = useMemo(() => uniqueTasks(requiredTasks), [requiredTasks]);
   const timelineTasks = useMemo(() => uniqueTasks([...mixedOpenTasks, ...doneDayTasks]).sort((a, b) => mixedDaySortValue(a, dateIso, partnerPlan).localeCompare(mixedDaySortValue(b, dateIso, partnerPlan))), [dateIso, doneDayTasks, mixedOpenTasks, partnerPlan]);
   const filteredTimelineTasks = useMemo(() => routeFilter ? timelineTasks.filter((task) => atlasRouteKeyForTask(task) === routeFilter) : timelineTasks, [routeFilter, timelineTasks]);
@@ -506,7 +513,7 @@ function AtlasDayPageContent() {
   const progressTasks = timelineTasks;
   const finishedProgressTasks = useMemo(() => progressTasks.filter(isDoneTask), [progressTasks]);
   const blockedProgressTasks = useMemo(() => progressTasks.filter((task) => task.status === "blocked" && !isDoneTask(task)), [progressTasks]);
-  const currentTask = useMemo(() => nextTaskForCurrentWindow(filteredTimelineTasks, localHour, dateIso, partnerPlan), [dateIso, filteredTimelineTasks, localHour, partnerPlan]);
+  const currentTask = useMemo(() => dateIso === calendarToday ? nextTaskForCurrentWindow(filteredTimelineTasks, localHour, dateIso, partnerPlan) : null, [calendarToday, dateIso, filteredTimelineTasks, localHour, partnerPlan]);
   const nextRecoveryTask = useMemo(() => nextTaskForCurrentWindow(overdueTasks, localHour, dateIso, partnerPlan), [dateIso, localHour, overdueTasks, partnerPlan]);
   const nextRecoveryWindow = nextRecoveryTask ? dayWindowDefinition(resolvedDayWindowForTask(nextRecoveryTask, dateIso, partnerPlan)) : null;
   const openRequiredCount = mixedOpenTasks.length;
@@ -593,8 +600,8 @@ function AtlasDayPageContent() {
           <section className="atlas-task-page-section atlas-route-collection atlas-day-browse">
             <div className="atlas-day-browse-head">
               <Link href={routeFilter ? dayHref(dateIso) : "/"} className="atlas-route-back atlas-day-back">{routeFilter ? "← Day plan" : "← Week"}</Link>
-              <div className="atlas-day-browse-title-row"><span>{routeFilter ? routeLabels[routeFilter] : dayOnly(dateIso)}</span><strong>{loading ? "Loading" : `${openRequiredCount} open · ${overdueTasks.length} fallen out of rhythm · ${doneDayTasks.length} done`}</strong></div>
-              <p>{loading ? "Loading farm work" : routeFilter ? `${filteredTasks.length} ${filteredTasks.length === 1 ? "task" : "tasks"} in this collection` : `${openRequiredCount} unfinished tasks in the real day`}</p>
+              <div className="atlas-day-browse-title-row"><span>{routeFilter ? routeLabels[routeFilter] : dayOnly(dateIso)}</span><strong>{loading ? "Loading" : isFutureDay ? `${openRequiredCount} scheduled · ${doneDayTasks.length} done` : `${openRequiredCount} open · ${overdueTasks.length} fallen out of rhythm · ${doneDayTasks.length} done`}</strong></div>
+              <p>{loading ? "Loading farm work" : routeFilter ? `${filteredTasks.length} ${filteredTasks.length === 1 ? "task" : "tasks"} in this collection` : isFutureDay ? `${openRequiredCount} tasks scheduled for this day` : `${openRequiredCount} unfinished tasks in the real day`}</p>
             </div>
 
             {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
@@ -603,7 +610,7 @@ function AtlasDayPageContent() {
             {!routeFilter ? (
               <article className={`atlas-day-command-header${overdueTasks.length ? " atlas-day-command-header-with-recovery" : ""}`} data-day-denominator={`${finishedProgressTasks.length}/${progressTasks.length}`}>
                 <div className="atlas-day-command-topline">
-                  <div className="atlas-day-command-date"><strong>{prettyDate(dateIso)}</strong><span>{loading ? "Loading" : `${openRequiredCount} still in today${blockedProgressTasks.length ? ` · ${blockedProgressTasks.length} blocked` : ""}`}</span></div>
+                  <div className="atlas-day-command-date"><strong>{prettyDate(dateIso)}</strong><span>{loading ? "Loading" : `${openRequiredCount} ${isFutureDay ? "scheduled" : "still in today"}${blockedProgressTasks.length ? ` · ${blockedProgressTasks.length} blocked` : ""}`}</span></div>
                   <ViewToggle viewMode={viewMode} onChange={setViewMode} />
                 </div>
                 <DayTrailSummary compact loading={loading} completed={finishedProgressTasks.length} total={progressTasks.length} blocked={blockedProgressTasks.length} />
@@ -639,7 +646,7 @@ function AtlasDayPageContent() {
               </article>
             ) : null}
 
-            {!routeFilter && livingDay ? <LivingDayCarried rhythms={livingDay.carriedRhythms} decisions={livingDay.ownerDecisions} returnTo={returnTo} /> : null}
+            {!routeFilter && !isFutureDay && livingDay ? <LivingDayCarried rhythms={livingDay.carriedRhythms} decisions={livingDay.ownerDecisions} returnTo={returnTo} /> : null}
 
             <div className="atlas-day-task-groups">
               {routeFilter ? (
@@ -656,7 +663,7 @@ function AtlasDayPageContent() {
               {!routeFilter && pageResolved && livingDay ? <LivingDayCompletionSummary summary={livingDay.completionSummary} /> : null}
               {!routeFilter && livingLoading ? <div className="atlas-journal-loading">Loading Journal and goals…</div> : null}
 
-              {!routeFilter && extraCreditTasks.length ? <article className="atlas-day-route-group atlas-day-extra-credit-group"><h3>Extra Credit</h3><div className="atlas-day-zone-group">{extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}</div></article> : null}
+              {!routeFilter && extraCreditTasks.length ? <article className="atlas-day-route-group atlas-day-extra-credit-group"><h3>Extra Credit</h3><div className="atlas-day-zone-group">{extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />}</div></article> : null}
             </div>
 
             {!routeFilter ? <nav className="atlas-day-adjacent-nav" aria-label="Browse adjacent days"><Link href={dayHref(previousDate)} aria-label="Open yesterday"><span aria-hidden="true">←</span><em>Yesterday</em></Link><Link href={dayHref(nextDate)} aria-label="Open tomorrow"><em>Tomorrow</em><span aria-hidden="true">→</span></Link></nav> : null}
