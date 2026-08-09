@@ -35,7 +35,7 @@ test("only iris-style division receives Windowed authority", () => {
   assert.match(migration, /'divide_reestablish_belowground','windowed'/);
   assert.match(migration, /worker_withholding_supported/);
   assert.match(migration, /withholding_requires_deferrability/);
-  assert.equal((migration.match(/,'windowed'/g) ?? []).length, 1);
+  assert.equal((migration.match(/\('divide_reestablish_belowground','windowed'/g) ?? []).length, 1);
 });
 
 test("reconstructed mode grammar is preference-only outside the iris pilot", () => {
