@@ -34,7 +34,7 @@ test("Day Week and Month read one permission-scoped farm and project task collec
   assert.match(adapter, /structured_result_required: true/);
   assert.doesNotMatch(adapter, /insert into atlas\.tasks/i);
 
-  assert.match(day, /fetchAtlasTaskCards\(\{ viewerScoped: true/);
+  assert.match(day, /fetchAtlasTaskCards\(\{[\s\S]*viewerScoped: true/);
   assert.match(week, /fetchAtlasTaskCards\(\{ viewerScoped: true/);
   assert.match(month, /fetchAtlasTaskCards\(\{[\s\S]*viewerScoped: true/);
   assert.match(month, /\/task-focus\//);
