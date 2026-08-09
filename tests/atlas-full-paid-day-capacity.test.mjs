@@ -54,8 +54,8 @@ test("owner projection keeps selecting compatible project work until paid capaci
   assert.match(projectionMigration, /v_remaining := greatest\(v_target_minutes - v_paid_minutes, 0\)/);
   assert.match(projectionMigration, /for v_iteration in 1\.\.12 loop/);
   assert.match(projectionMigration, /exit when v_remaining <= 0/);
+  assert.match(projectionMigration, /project_pull_options_for_member_v2/);
   assert.match(projectionMigration, /v_remaining := greatest\(v_remaining - v_option_minutes, 0\)/);
-  assert.match(projectionMigration, /preferred_membership_id/);
   assert.doesNotMatch(projectionMigration, /six[_ -]?unit/i);
 });
 
