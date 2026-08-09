@@ -86,6 +86,38 @@ export type AtlasTaskTransitionEvent = {
   created_at: string;
 };
 
+export type AtlasTaskProjectPathNode = {
+  projectId: string;
+  projectKey: string;
+  title: string;
+  portfolioType: string;
+};
+
+export type AtlasTaskProjectContext = {
+  projectId: string;
+  projectKey: string;
+  title: string;
+  portfolioType: string;
+  targetDate: string | null;
+  linkRole: string;
+  path: AtlasTaskProjectPathNode[];
+};
+
+export type AtlasTaskDependencyContext = {
+  taskId: string;
+  title: string;
+  status: string;
+  assigneeName: string;
+  requiredStatus: string;
+  holdMode: string;
+};
+
+export type AtlasTaskMoveContext = {
+  projects: AtlasTaskProjectContext[];
+  unlocks: AtlasTaskDependencyContext[];
+  waitingOn: AtlasTaskDependencyContext[];
+};
+
 export type AtlasTaskCaptureByObject = Record<
   string,
   {
@@ -134,6 +166,7 @@ export type AtlasTaskCard = {
   objects: AtlasTaskCardObject[];
   resource_requirements: AtlasTaskCardResourceRequirement[];
   action_templates: AtlasTaskCardTemplate[];
+  move_context?: AtlasTaskMoveContext | null;
 };
 
 export type AtlasTaskCardsResponse = {
