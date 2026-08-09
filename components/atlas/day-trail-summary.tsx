@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import AutomaticMowFallback from "@/components/atlas/automatic-mow-fallback";
 import OwnerDayScheduleBuilder from "@/components/atlas/owner-day-schedule-builder";
 import styles from "./day-trail-summary.module.css";
 
@@ -139,6 +140,7 @@ export default function DayTrailSummary({ completed, total, blocked, loading = f
         ) : null}
       </section>
       {compact ? <OwnerDayScheduleBuilder /> : null}
+      {compact ? <AutomaticMowFallback /> : null}
     </>
   );
 }
