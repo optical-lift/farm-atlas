@@ -35,7 +35,11 @@ test("only iris-style division receives Windowed authority", () => {
   assert.match(migration, /'divide_reestablish_belowground','windowed'/);
   assert.match(migration, /worker_withholding_supported/);
   assert.match(migration, /withholding_requires_deferrability/);
-  assert.equal((migration.match(/\('divide_reestablish_belowground','windowed'/g) ?? []).length, 1);
+
+  // Count policy row declarations only. Later reconciliation/update SQL may legitimately
+  // refer to this operation class again without defining a second Windowed policy row.
+  const windowedDeclarations = migration.match(/^\('divide_reestablish_belowground','windowed'/gm) ?? [];
+  assert.equal(windowedDeclarations.length, 1);
 });
 
 test("reconstructed mode grammar is preference-only outside the iris pilot", () => {
