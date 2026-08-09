@@ -38,21 +38,25 @@ function fallbackPaidTarget(role: string | null | undefined) {
   return 480;
 }
 
-export async function readOwnerWeekProjection(
+async function readProjection(
   farmId: string,
   membershipId: string,
   startDate: string,
-  dayCount = 7,
+  dayCount: number,
+  refresh: boolean,
 ): Promise<OwnerWeekProjection> {
   const safeDayCount = Math.max(1, Math.min(dayCount, 14));
   const endDate = addDays(startDate, safeDayCount - 1);
 
-  await atlasSupabase.schema("atlas").rpc("refresh_owner_week_projection_v1", {
-    p_farm_id: farmId,
-    p_membership_id: membershipId,
-    p_start_date: startDate,
-    p_days: safeDayCount,
-  });
+  if (refresh) {
+    const refreshResult = await atlasSupabase.schema("atlas").rpc("refresh_owner_week_projection_v1", {
+      p_farm_id: farmId,
+      p_membership_id: membershipId,
+      p_start_date: startDate,
+      p_days: safeDayCount,
+    });
+    if (refreshResult.error) throw new Error(refreshResult.error.message);
+  }
 
   const [projectionResult, membershipResult, settingsResult] = await Promise.all([
     atlasSupabase
@@ -124,4 +128,26 @@ export async function readOwnerWeekProjection(
   });
 
   return { farmId, membershipId, startDate, endDate, paidTargetMinutes, days };
+}
+
+export async function readOwnerWeekProjection(
+  farmId: string,
+  membershipId: string,
+  startDate: string,
+  dayCount = 7,
+): Promise<OwnerWeekProjection> {
+  return readProjection(farmId, membershipId, startDate, dayCount, true);
+}
+
+/**
+ * Read the already-built planning ledger without recomputing it. Future Day
+ * views use this path so looking ahead cannot mutate or erase tentative work.
+ */
+export async function readStoredOwnerWeekProjection(
+  farmId: string,
+  membershipId: string,
+  startDate: string,
+  dayCount = 7,
+): Promise<OwnerWeekProjection> {
+  return readProjection(farmId, membershipId, startDate, dayCount, false);
 }
