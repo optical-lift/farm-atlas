@@ -8,15 +8,16 @@ const duplicateCleanup = readFileSync(
   "utf8",
 );
 
-test("farm hands get a calm Projects surface instead of the portfolio management dump", () => {
+test("farm hands keep a calm contributed-worlds surface while Owner gets the multi-farm map", () => {
   assert.match(projectsPage, /const farmHandMode = viewer\.farmMemberships\.some/);
   assert.match(projectsPage, /!viewer\.canManageAnyFarm/);
   assert.match(projectsPage, /!viewer\.canManageAnyPortfolio/);
-  assert.match(projectsPage, /\{!farmHandMode \? \(/);
-  assert.match(projectsPage, /!farmHandMode && home\.attention\.length/);
-  assert.match(projectsPage, /title=\{farmHandMode \? "Your worlds" : "Active worlds"\}/);
+  assert.match(projectsPage, /const ownerMode = viewer\.canManageAnyPortfolio/);
+  assert.match(projectsPage, /title=\{farmHandMode \? "Your worlds" : "Contributed worlds"\}/);
   assert.match(projectsPage, /CalmProjectBranch/);
   assert.match(projectsPage, /quests"\} inside/);
+  assert.doesNotMatch(projectsPage, /home\.attention\.map/);
+  assert.doesNotMatch(projectsPage, /AtlasMetricStrip/);
 });
 
 test("legacy cafe-light servings retire into the one combined Tuesday move", () => {

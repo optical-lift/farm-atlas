@@ -58,7 +58,7 @@ test("Tending and Dominion tasks render the shared Trail without inventing one-t
   assert.doesNotMatch(dominion, /atlas-task-dominion-track/);
 });
 
-test("projects expose Trail position through task collections and the opened task", () => {
+test("projects keep the shared Trail underneath the World and Quest reality layer", () => {
   const migration = read(migrationPath);
   const portfolio = read("lib/atlas/portfolio.ts");
   const projectPage = read("app/project/[projectId]/page.tsx");
@@ -72,9 +72,11 @@ test("projects expose Trail position through task collections and the opened tas
   assert.match(migration, /resolved_status in \('current','blocked'\)/i);
   assert.match(portfolio, /trail: AtlasTrailContext \| null/);
 
-  assert.match(projectPage, /atlasTrailCurrentNode\(project\.trail\)/);
-  assert.match(projectPage, /atlas-project-trail-position/);
-  assert.match(projectPage, /id="project-work"/);
+  // The project page now leads with strategic reality state, but the underlying
+  // executable project controls still receive the one canonical Trail contract.
+  assert.match(projectPage, /What has to become true next/);
+  assert.match(projectPage, /Moves advancing this/);
+  assert.match(projectPage, /All project work \+ controls/);
   assert.match(projectPage, /steps=\{detail\.steps\}/);
   assert.match(projectPage, /trail=\{project\.trail\}/);
   assert.doesNotMatch(projectPage, /<AtlasTrail|styles\.trail|Milestones and work/);
