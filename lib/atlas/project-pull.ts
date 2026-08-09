@@ -60,10 +60,11 @@ export type AtlasProjectPullOptions = {
 };
 
 type EnabledProject = { id: string; title: string; farm_id: string; metadata: Record<string, unknown> | null };
-type PaidProjectConveyorResult = {
+type PaidWorkConveyorResult = {
   contractVersion?: string;
   state?: string;
   taskId?: string | null;
+  sourceKind?: "floating_task" | "project_pull" | null;
 };
 
 function asStatus(value: unknown): AtlasProjectPullStatus | null {
@@ -109,7 +110,7 @@ export async function ensureAtlasProjectPullTask(
   constraints: { allowOutdoor?: boolean } = {},
 ): Promise<string | null> {
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("deal_next_paid_project_work_v1", {
+  const { data, error } = await supabase.rpc("deal_next_paid_work_v1", {
     p_farm_id: farmId,
     p_membership_id: membershipId,
     p_day: day,
@@ -117,7 +118,7 @@ export async function ensureAtlasProjectPullTask(
   });
   if (error) throw new Error(error.message);
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
-  const result = data as PaidProjectConveyorResult;
+  const result = data as PaidWorkConveyorResult;
   return typeof result.taskId === "string" ? result.taskId : null;
 }
 
