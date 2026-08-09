@@ -4,100 +4,179 @@ import { redirect } from "next/navigation";
 import {
   AtlasAppShell,
   AtlasCard,
-  AtlasMetricStrip,
   AtlasSectionHeading,
-  AtlasStateBadge,
   AtlasTopBar,
 } from "@/components/atlas/ui/AtlasPrimitives";
-import { readAtlasPortfolioHome, type AtlasPortfolioProject } from "@/lib/atlas/portfolio";
+import {
+  readAtlasPortfolioHome,
+  type AtlasPortfolioFarm,
+  type AtlasPortfolioProject,
+  type AtlasRealityState,
+} from "@/lib/atlas/portfolio";
 import { getAtlasSession } from "@/lib/atlas/session";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
 
 export const dynamic = "force-dynamic";
 
-type ProjectState = "blocked" | "attention" | "waiting" | "complete" | "quiet" | "moving";
 type Project = AtlasPortfolioProject;
+type SearchParams = Record<string, string | string[] | undefined>;
+type ProjectsPageProps = { searchParams?: Promise<SearchParams> };
 
-function titleCase(value: string) {
-  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+const REALITY_STATES: Array<{ key: AtlasRealityState; label: string; short: string }> = [
+  { key: "finding_shape", label: "Finding the shape", short: "Shape" },
+  { key: "making_real", label: "Making it real", short: "Making" },
+  { key: "closing_loop", label: "Closing the loop", short: "Closing" },
+];
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null;
 }
 
 function prettyDate(value: string) {
   return new Date(`${value}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function projectState(project: Project): ProjectState {
-  if (project.blockedTaskCount > 0 || project.health === "blocked") return "blocked";
-  if (project.openAttentionCount > 0 || project.health === "at_risk") return "attention";
-  if (project.health === "waiting") return "waiting";
-  if (project.health === "complete") return "complete";
-  if (project.health === "quiet") return "quiet";
-  return "moving";
-}
-
-function stateLabel(state: ProjectState) {
-  if (state === "blocked") return "Blocked";
-  if (state === "attention") return "Needs action";
-  if (state === "waiting") return "Waiting";
-  if (state === "complete") return "Complete";
-  if (state === "quiet") return "Quiet";
-  return "Moving";
-}
-
 function projectTypeLabel(project: Project) {
-  if (project.portfolioType === "side_quest") return "Side quest";
+  if (project.portfolioType === "side_quest") return "Quest";
   if (project.portfolioType === "event") return "Event";
   if (project.portfolioType === "program") return "Program";
   if (project.portfolioType === "incubator") return "Incubator";
-  return titleCase(project.portfolioType || "campaign");
+  return "World";
+}
+
+function realityLabel(state: string | null | undefined) {
+  return REALITY_STATES.find((item) => item.key === state)?.label ?? "Finding the shape";
+}
+
+function activeProjects(projects: Project[]) {
+  return projects.filter((project) => project.status !== "paused" && project.portfolioType !== "incubator");
 }
 
 function sortProjects(projects: Project[]) {
-  const rank: Record<ProjectState, number> = {
-    blocked: 0,
-    attention: 1,
-    moving: 2,
-    waiting: 3,
-    quiet: 4,
-    complete: 5,
-  };
-  return [...projects].sort((left, right) => rank[projectState(left)] - rank[projectState(right)]
+  const rank = new Map<AtlasRealityState, number>(REALITY_STATES.map((state, index) => [state.key, index]));
+  return [...projects].sort((left, right) =>
+    (rank.get(left.realityState) ?? 0) - (rank.get(right.realityState) ?? 0)
     || (left.targetDate ?? "9999-12-31").localeCompare(right.targetDate ?? "9999-12-31")
     || left.title.localeCompare(right.title));
 }
 
-function ProjectCard({ project, calm = false }: { project: Project; calm?: boolean }) {
-  const state = projectState(project);
+function projectOwnerCue(project: Project) {
+  if (project.health === "waiting") return "Waiting";
+  if (project.openAttentionCount > 0 || project.health === "at_risk" || project.health === "blocked") return "Needs Owner";
+  if (project.targetDate) return `Hard date · ${prettyDate(project.targetDate)}`;
+  return null;
+}
+
+function rootsFor(projects: Project[]) {
+  const active = activeProjects(projects);
+  const ids = new Set(active.map((project) => project.projectId));
+  return sortProjects(active.filter((project) => !project.parentProjectId || !ids.has(project.parentProjectId)));
+}
+
+function childrenMap(projects: Project[]) {
+  const active = activeProjects(projects);
+  const ids = new Set(active.map((project) => project.projectId));
+  const map = new Map<string, Project[]>();
+  active.forEach((project) => {
+    if (!project.parentProjectId || !ids.has(project.parentProjectId)) return;
+    const children = map.get(project.parentProjectId) ?? [];
+    children.push(project);
+    map.set(project.parentProjectId, children);
+  });
+  return map;
+}
+
+function RealityLandscape({ projects, compact = false }: { projects: Project[]; compact?: boolean }) {
+  const roots = rootsFor(projects);
   return (
-    <Link href={`/project/${encodeURIComponent(project.projectId)}`} className={`atlas-project-card${calm ? " atlas-project-card-calm" : ""}`}>
-      <div>
-        <span>{projectTypeLabel(project)}{project.targetDate ? ` · ${prettyDate(project.targetDate)}` : ""}</span>
-        {!calm ? <AtlasStateBadge state={state}>{stateLabel(state)}</AtlasStateBadge> : null}
-      </div>
-      <strong>{project.title}</strong>
-      <p>{project.currentMilestone || project.outcome || "Open the project."}</p>
-      {!calm ? (
-        <small>
-          {project.openTaskCount} open
-          {project.blockedTaskCount ? ` · ${project.blockedTaskCount} blocked` : ""}
-          {project.openAttentionCount ? ` · ${project.openAttentionCount} need action` : ""}
-        </small>
-      ) : null}
-    </Link>
+    <div className={`atlas-reality-landscape${compact ? " atlas-reality-landscape-compact" : ""}`}>
+      {REALITY_STATES.map((state) => {
+        const inState = roots.filter((project) => project.realityState === state.key);
+        return (
+          <div key={state.key} className="atlas-reality-zone" data-state={state.key}>
+            <div className="atlas-reality-zone-head"><span>{state.label}</span></div>
+            <div className="atlas-reality-zone-track" aria-hidden="true" />
+            <div className="atlas-reality-markers">
+              {inState.map((project) => (
+                <Link key={project.projectId} href={`/project/${encodeURIComponent(project.projectId)}`} className="atlas-reality-marker">
+                  <strong>{project.title}</strong>
+                  {projectOwnerCue(project) ? <small>{projectOwnerCue(project)}</small> : null}
+                </Link>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      {roots.length === 0 ? <p className="atlas-reality-empty">No active worlds yet.</p> : null}
+    </div>
   );
 }
 
-function ProjectBranch({ project, childrenByParent, depth = 0 }: { project: Project; childrenByParent: Map<string, Project[]>; depth?: number }) {
+function FarmLandscape({ farm }: { farm: AtlasPortfolioFarm }) {
+  const roots = rootsFor(farm.projects);
+  const ownerNeeds = roots.filter((project) => projectOwnerCue(project) === "Needs Owner").length;
+  return (
+    <AtlasCard as="section" className="atlas-farm-landscape">
+      <header className="atlas-farm-landscape-head">
+        <div>
+          <small>{farm.locationLabel || "Farm"}</small>
+          <h2>{farm.farmName}</h2>
+        </div>
+        <Link href={`/projects?farm=${encodeURIComponent(farm.farmKey)}`}>View farm →</Link>
+      </header>
+      <div className="atlas-north-star">
+        <span>North Star</span>
+        <strong>{farm.northStar || "Define what this farm is becoming."}</strong>
+      </div>
+      <RealityLandscape projects={farm.projects} compact />
+      <footer className="atlas-farm-landscape-foot">
+        <span>{roots.length} active {roots.length === 1 ? "world" : "worlds"}</span>
+        {ownerNeeds ? <b>{ownerNeeds} {ownerNeeds === 1 ? "needs Owner" : "need Owner"}</b> : <span>Nothing needs Owner at this level</span>}
+      </footer>
+    </AtlasCard>
+  );
+}
+
+function QuestBranch({ project, childrenByParent, depth = 0 }: { project: Project; childrenByParent: Map<string, Project[]>; depth?: number }) {
   const children = sortProjects(childrenByParent.get(project.projectId) ?? []);
   return (
-    <div className="atlas-project-branch" data-project-depth={depth}>
-      <ProjectCard project={project} />
+    <div className="atlas-quest-branch" data-depth={depth}>
+      <Link href={`/project/${encodeURIComponent(project.projectId)}`} className="atlas-quest-card">
+        <span>{realityLabel(project.realityState)}</span>
+        <strong>{project.title}</strong>
+        <p>{project.currentMilestone || project.outcome || "Open this quest."}</p>
+      </Link>
       {children.length ? (
-        <div className="atlas-project-children">
-          {children.map((child) => <ProjectBranch key={child.projectId} project={child} childrenByParent={childrenByParent} depth={depth + 1} />)}
-        </div>
+        <details className="atlas-quest-children">
+          <summary>{children.length} deeper {children.length === 1 ? "quest" : "quests"}</summary>
+          <div>{children.map((child) => <QuestBranch key={child.projectId} project={child} childrenByParent={childrenByParent} depth={depth + 1} />)}</div>
+        </details>
       ) : null}
     </div>
+  );
+}
+
+function WorldCard({ project, childrenByParent }: { project: Project; childrenByParent: Map<string, Project[]> }) {
+  const children = sortProjects(childrenByParent.get(project.projectId) ?? []);
+  const cue = projectOwnerCue(project);
+  return (
+    <article className="atlas-world-card" data-reality-state={project.realityState}>
+      <Link href={`/project/${encodeURIComponent(project.projectId)}`} className="atlas-world-card-main">
+        <div className="atlas-world-card-kicker">
+          <span>{projectTypeLabel(project)} · {realityLabel(project.realityState)}</span>
+          {cue ? <b>{cue}</b> : null}
+        </div>
+        <h3>{project.title}</h3>
+        <p className="atlas-world-outcome">{project.outcome || "Define what becomes true when this world is complete."}</p>
+        {project.currentMilestone ? <p className="atlas-world-current"><span>Now</span>{project.currentMilestone}</p> : null}
+      </Link>
+      {children.length ? (
+        <details className="atlas-world-quests">
+          <summary>{children.length} {children.length === 1 ? "quest" : "quests"}</summary>
+          <div>{children.map((child) => <QuestBranch key={child.projectId} project={child} childrenByParent={childrenByParent} />)}</div>
+        </details>
+      ) : null}
+    </article>
   );
 }
 
@@ -105,208 +184,196 @@ function CalmProjectBranch({ project, childrenByParent, depth = 0 }: { project: 
   const children = sortProjects(childrenByParent.get(project.projectId) ?? []);
   return (
     <div className="atlas-project-calm-branch" data-project-depth={depth}>
-      <ProjectCard project={project} calm />
+      <Link href={`/project/${encodeURIComponent(project.projectId)}`} className="atlas-project-card-calm">
+        <span>{projectTypeLabel(project)}</span>
+        <strong>{project.title}</strong>
+        <p>{project.currentMilestone || project.outcome || "Open the project."}</p>
+      </Link>
       {children.length ? (
         <details className="atlas-project-calm-children">
           <summary>{children.length} {children.length === 1 ? "quest" : "quests"} inside</summary>
-          <div>
-            {children.map((child) => (
-              <CalmProjectBranch key={child.projectId} project={child} childrenByParent={childrenByParent} depth={depth + 1} />
-            ))}
-          </div>
+          <div>{children.map((child) => <CalmProjectBranch key={child.projectId} project={child} childrenByParent={childrenByParent} depth={depth + 1} />)}</div>
         </details>
       ) : null}
     </div>
   );
 }
 
-export default async function AtlasProjectsPage() {
+export default async function AtlasProjectsPage({ searchParams }: ProjectsPageProps) {
   const session = await getAtlasSession();
   if (!session) redirect("/login");
 
   const viewer = atlasUniversalViewerFromSession(session);
   if (!viewer) redirect("/auth/error?reason=membership_required");
 
-  const organizationId = viewer.activeOrganizationId
-    ?? viewer.organizationMemberships[0]?.organizationId
-    ?? null;
+  const organizationId = viewer.activeOrganizationId ?? viewer.organizationMemberships[0]?.organizationId ?? null;
   if (!organizationId) redirect("/auth/error?reason=organization_membership_required");
 
-  // Portfolio home is deliberately read through the portfolio access path rather than
-  // the farm-hand universal home. In Owner operator mode the farm-hand home intentionally
-  // strips organization scope, which made a contributed-project worker appear to have
-  // zero Active worlds even though their project_contributor grants were valid.
   const home = await readAtlasPortfolioHome(organizationId);
-  const projects = [
-    ...home.crossFarmProjects,
-    ...home.farms.flatMap((farm) => farm.projects),
-  ];
-
+  const allProjects = [...home.crossFarmProjects, ...home.farms.flatMap((farm) => farm.projects)];
+  const ownerMode = viewer.canManageAnyPortfolio;
   const farmHandMode = viewer.farmMemberships.some((membership) => membership.role === "farm_hand")
     && !viewer.canManageAnyFarm
     && !viewer.canManageAnyPortfolio;
-  const activeProjects = projects.filter((project) => project.status !== "paused" && project.portfolioType !== "incubator");
-  const incubatorProjects = sortProjects(projects.filter((project) => project.status === "paused" || project.portfolioType === "incubator"));
-  const activeIds = new Set(activeProjects.map((project) => project.projectId));
-  const childrenByParent = new Map<string, Project[]>();
-  activeProjects.forEach((project) => {
-    if (!project.parentProjectId || !activeIds.has(project.parentProjectId)) return;
-    const children = childrenByParent.get(project.parentProjectId) ?? [];
-    children.push(project);
-    childrenByParent.set(project.parentProjectId, children);
-  });
-  const rootProjects = sortProjects(activeProjects.filter((project) => !project.parentProjectId || !activeIds.has(project.parentProjectId)));
-  const blockedProjects = activeProjects.filter((project) => projectState(project) === "blocked").length;
-  const attentionProjects = activeProjects.filter((project) => projectState(project) === "attention").length;
-  const openWorkCount = activeProjects.reduce((sum, project) => sum + project.openTaskCount, 0);
-  const primaryAttention = home.attention.slice(0, 6);
-  const remainingAttention = home.attention.slice(6);
+
+  const query = searchParams ? await searchParams : {};
+  const requestedFarm = firstParam(query.farm);
+  const selectedFarm = ownerMode && requestedFarm
+    ? home.farms.find((farm) => farm.farmKey === requestedFarm || farm.farmId === requestedFarm) ?? null
+    : null;
+
+  const calmProjects = activeProjects(allProjects);
+  const calmChildren = childrenMap(calmProjects);
+  const calmRoots = rootsFor(calmProjects);
+
+  const selectedActive = selectedFarm ? activeProjects(selectedFarm.projects) : [];
+  const selectedRoots = selectedFarm ? rootsFor(selectedFarm.projects) : [];
+  const selectedChildren = selectedFarm ? childrenMap(selectedFarm.projects) : new Map<string, Project[]>();
+  const selectedLater = selectedFarm ? sortProjects(selectedFarm.projects.filter((project) => project.status === "paused" || project.portfolioType === "incubator")) : [];
+  const crossFarmActive = rootsFor(home.crossFarmProjects);
 
   return (
     <>
       <style>{`
         .atlas-projects-page { background: #fbf9f1; }
         .atlas-projects-body { padding: 14px; display: grid; gap: 14px; }
-        .atlas-projects-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-        .atlas-projects-section { padding: 16px; display: grid; gap: 12px; }
-        .atlas-projects-list, .atlas-project-attention-list { display: grid; gap: 9px; }
-        .atlas-project-branch, .atlas-project-calm-branch { min-width: 0; display: grid; gap: 8px; }
-        .atlas-project-children {
-          display: grid;
-          gap: 8px;
-          margin-left: 15px;
-          padding-left: 12px;
-          border-left: 2px solid rgba(139, 145, 194, 0.22);
-        }
-        .atlas-project-branch[data-project-depth="1"] > .atlas-project-card { background: rgba(255, 253, 247, 0.82); }
-        .atlas-project-branch[data-project-depth="2"] > .atlas-project-card { border-style: dashed; box-shadow: none; }
-        .atlas-project-card, .atlas-project-attention-card {
-          min-width: 0;
-          border: 1px solid rgba(88, 87, 111, 0.12);
-          border-radius: 16px;
-          background: #fffdf7;
-          color: #303243;
-          padding: 13px;
-          text-decoration: none;
-          box-shadow: 0 4px 12px rgba(47, 48, 66, 0.035);
-        }
-        .atlas-project-card-calm { padding: 15px; }
-        .atlas-project-card > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-        .atlas-project-card > div:first-child > span,
-        .atlas-project-attention-card > span {
-          min-width: 0;
-          color: #8881b7;
-          font-size: 9px;
-          font-weight: 950;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-        }
-        .atlas-project-card > strong,
-        .atlas-project-attention-card > strong { display: block; margin-top: 8px; font-size: 16px; line-height: 1.08; }
-        .atlas-project-card-calm > strong { font-size: 18px; }
-        .atlas-project-card > p,
-        .atlas-project-attention-card > p { margin: 6px 0 0; color: #72736d; font-size: 11px; line-height: 1.35; font-weight: 700; }
-        .atlas-project-card-calm > p { max-width: 42ch; }
-        .atlas-project-card > small,
-        .atlas-project-attention-card > small { display: block; margin-top: 9px; color: #686a64; font-size: 9px; font-weight: 850; }
-        .atlas-project-attention-card { border-left: 4px solid #d9b5a9; }
+        .atlas-projects-section { padding: 16px; display: grid; gap: 13px; }
+        .atlas-scope-tabs { display: flex; gap: 7px; overflow-x: auto; padding: 1px 1px 3px; scrollbar-width: none; }
+        .atlas-scope-tabs::-webkit-scrollbar { display: none; }
+        .atlas-scope-tabs a { white-space: nowrap; text-decoration: none; color: #646078; border: 1px solid rgba(88,87,111,.14); background: rgba(255,253,247,.75); border-radius: 999px; padding: 8px 11px; font-size: 10px; font-weight: 900; }
+        .atlas-scope-tabs a[aria-current="page"] { background: #313348; color: #fffdf7; border-color: #313348; }
+        .atlas-owner-intro { padding: 4px 2px 1px; }
+        .atlas-owner-intro small { display: block; color: #8a84aa; font-size: 9px; font-weight: 950; letter-spacing: .1em; text-transform: uppercase; }
+        .atlas-owner-intro h1 { margin: 4px 0 3px; font-size: 25px; line-height: 1.04; color: #303243; }
+        .atlas-owner-intro p { margin: 0; color: #77776f; font-size: 11px; line-height: 1.45; font-weight: 700; }
+        .atlas-farm-list { display: grid; gap: 12px; }
+        .atlas-farm-landscape { padding: 17px; display: grid; gap: 14px; }
+        .atlas-farm-landscape-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+        .atlas-farm-landscape-head small { color: #8881b7; font-size: 9px; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+        .atlas-farm-landscape-head h2 { margin: 4px 0 0; color: #303243; font-size: 22px; line-height: 1; }
+        .atlas-farm-landscape-head > a { color: #615c88; font-size: 10px; font-weight: 900; text-decoration: none; }
+        .atlas-north-star { border-left: 3px solid rgba(139,145,194,.45); padding-left: 11px; }
+        .atlas-north-star span { display: block; color: #8c86ad; font-size: 8px; font-weight: 950; letter-spacing: .11em; text-transform: uppercase; }
+        .atlas-north-star strong { display: block; margin-top: 4px; color: #3a3b4f; font-size: 14px; line-height: 1.3; font-family: Georgia, serif; font-weight: 600; }
+        .atlas-reality-landscape { position: relative; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; padding-top: 2px; }
+        .atlas-reality-zone { min-width: 0; position: relative; }
+        .atlas-reality-zone-head { min-height: 22px; color: #827da2; font-size: 8px; font-weight: 950; line-height: 1.1; text-transform: uppercase; letter-spacing: .055em; }
+        .atlas-reality-zone-track { height: 2px; background: rgba(111,108,135,.16); margin: 3px 0 8px; }
+        .atlas-reality-zone:first-child .atlas-reality-zone-track { border-radius: 99px 0 0 99px; }
+        .atlas-reality-zone:last-child .atlas-reality-zone-track { border-radius: 0 99px 99px 0; }
+        .atlas-reality-markers { display: grid; gap: 5px; }
+        .atlas-reality-marker { min-width: 0; text-decoration: none; border: 1px solid rgba(88,87,111,.12); background: #fffdf7; border-radius: 10px; padding: 7px; color: #393a4d; }
+        .atlas-reality-marker strong { display: block; font-size: 9px; line-height: 1.18; overflow-wrap: anywhere; }
+        .atlas-reality-marker small { display: block; margin-top: 4px; color: #9c6c65; font-size: 7px; font-weight: 900; }
+        .atlas-reality-empty { grid-column: 1 / -1; margin: 2px 0 0; color: #8a8a82; font-size: 10px; font-weight: 750; }
+        .atlas-farm-landscape-foot { border-top: 1px solid rgba(88,87,111,.08); padding-top: 9px; display: flex; justify-content: space-between; gap: 8px; color: #77776f; font-size: 9px; font-weight: 850; }
+        .atlas-farm-landscape-foot b { color: #9c6c65; }
+        .atlas-farm-horizon { padding: 18px; display: grid; gap: 14px; }
+        .atlas-farm-horizon-head small { color: #8881b7; font-size: 9px; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+        .atlas-farm-horizon-head h1 { margin: 4px 0 0; font-size: 26px; line-height: 1; color: #303243; }
+        .atlas-farm-horizon .atlas-north-star strong { font-size: 18px; }
+        .atlas-world-list { display: grid; gap: 10px; }
+        .atlas-world-card { border: 1px solid rgba(88,87,111,.12); border-radius: 17px; background: #fffdf7; overflow: hidden; }
+        .atlas-world-card-main { display: block; padding: 15px; color: #303243; text-decoration: none; }
+        .atlas-world-card-kicker { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .atlas-world-card-kicker span { color: #8580a5; font-size: 8px; font-weight: 950; letter-spacing: .075em; text-transform: uppercase; }
+        .atlas-world-card-kicker b { color: #9a6962; font-size: 8px; white-space: nowrap; }
+        .atlas-world-card h3 { margin: 7px 0 0; font-size: 20px; line-height: 1.05; }
+        .atlas-world-outcome { margin: 7px 0 0; color: #666861; font-family: Georgia, serif; font-size: 13px; line-height: 1.4; }
+        .atlas-world-current { margin: 10px 0 0; color: #74756f; font-size: 10px; line-height: 1.35; font-weight: 750; }
+        .atlas-world-current span { display: block; margin-bottom: 2px; color: #8c86ad; font-size: 7px; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+        .atlas-world-quests { border-top: 1px solid rgba(88,87,111,.08); }
+        .atlas-world-quests > summary, .atlas-quest-children > summary { cursor: pointer; padding: 10px 15px; color: #655f8c; font-size: 9px; font-weight: 900; list-style-position: inside; }
+        .atlas-world-quests > div { display: grid; gap: 7px; padding: 0 11px 11px; }
+        .atlas-quest-branch { display: grid; gap: 5px; }
+        .atlas-quest-card { text-decoration: none; background: rgba(249,247,240,.75); border-radius: 12px; padding: 11px; color: #3b3c4e; }
+        .atlas-quest-card > span { color: #8c86ad; font-size: 7px; font-weight: 950; letter-spacing: .07em; text-transform: uppercase; }
+        .atlas-quest-card > strong { display: block; margin-top: 4px; font-size: 13px; }
+        .atlas-quest-card > p { margin: 4px 0 0; color: #74756f; font-size: 9px; line-height: 1.35; font-weight: 700; }
+        .atlas-quest-children { margin-left: 7px; border-left: 2px solid rgba(139,145,194,.16); }
+        .atlas-quest-children > div { display: grid; gap: 6px; padding: 0 0 6px 8px; }
+        .atlas-cross-farm-card { text-decoration: none; color: #303243; border: 1px solid rgba(88,87,111,.12); border-radius: 14px; background: #fffdf7; padding: 13px; }
+        .atlas-cross-farm-card span { color: #8881b7; font-size: 8px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+        .atlas-cross-farm-card strong { display: block; margin-top: 5px; font-size: 15px; }
+        .atlas-cross-farm-card p { margin: 5px 0 0; color: #73746d; font-size: 10px; line-height: 1.35; }
+        .atlas-later { border-top: 1px solid rgba(88,87,111,.09); padding-top: 9px; }
+        .atlas-later > summary { cursor: pointer; color: #655f8c; font-size: 10px; font-weight: 900; }
+        .atlas-later > div { display: grid; gap: 7px; margin-top: 9px; }
+        .atlas-project-card-calm { display: block; text-decoration: none; border: 1px solid rgba(88,87,111,.11); background: #fffdf7; border-radius: 15px; padding: 14px; color: #303243; }
+        .atlas-project-card-calm > span { color: #8881b7; font-size: 8px; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+        .atlas-project-card-calm > strong { display: block; margin-top: 5px; font-size: 17px; }
+        .atlas-project-card-calm > p { margin: 6px 0 0; color: #73746d; font-size: 10px; line-height: 1.35; font-weight: 700; }
+        .atlas-project-calm-branch { display: grid; gap: 6px; }
         .atlas-project-calm-children { margin: 0 6px; }
-        .atlas-project-calm-children > summary {
-          color: #67638f;
-          cursor: pointer;
-          font-size: 10px;
-          font-weight: 900;
-          list-style-position: inside;
-          padding: 2px 4px 5px;
-        }
-        .atlas-project-calm-children > div {
-          display: grid;
-          gap: 8px;
-          margin-left: 10px;
-          padding: 4px 0 0 10px;
-          border-left: 2px solid rgba(139, 145, 194, 0.18);
-        }
-        .atlas-project-calm-children .atlas-project-card-calm { box-shadow: none; background: rgba(255, 253, 247, 0.78); }
-        .atlas-projects-more,
-        .atlas-projects-incubator { border-top: 1px solid rgba(88, 87, 111, 0.1); padding-top: 10px; }
-        .atlas-projects-more summary,
-        .atlas-projects-incubator summary { color: #5e5985; cursor: pointer; font-size: 10px; font-weight: 900; }
-        .atlas-projects-incubator > p { margin: 7px 0 10px; color: #72736d; font-size: 10px; line-height: 1.35; }
+        .atlas-project-calm-children > summary { cursor: pointer; color: #67638f; font-size: 9px; font-weight: 900; }
+        .atlas-project-calm-children > div { display: grid; gap: 7px; margin: 6px 0 0 8px; padding-left: 9px; border-left: 2px solid rgba(139,145,194,.17); }
         .atlas-projects-empty { margin: 0; color: #72736d; font-size: 12px; font-weight: 750; }
         @media (max-width: 380px) {
-          .atlas-projects-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-          .atlas-project-children { margin-left: 9px; padding-left: 9px; }
+          .atlas-reality-zone-head { font-size: 7px; }
+          .atlas-reality-marker { padding: 6px; }
+          .atlas-reality-marker strong { font-size: 8px; }
         }
       `}</style>
       <AtlasAppShell className="atlas-projects-shell" frameClassName="atlas-projects-page">
         <AtlasTopBar title="Projects" />
         <div className="atlas-projects-body">
-          {!farmHandMode ? (
-            <AtlasMetricStrip className="atlas-projects-summary" ariaLabel="Project totals">
-              <span><b>{activeProjects.length}</b> active</span>
-              <span><b>{openWorkCount}</b> open</span>
-              <span><b>{blockedProjects}</b> blocked</span>
-              <span><b>{attentionProjects}</b> attention</span>
-            </AtlasMetricStrip>
-          ) : null}
-
-          {!farmHandMode && home.attention.length ? (
-            <AtlasCard as="section" className="atlas-projects-section" ariaLabelledBy="atlas-project-needs-title">
-              <AtlasSectionHeading title="Needs action" count={home.attention.length} id="atlas-project-needs-title" />
-              <div className="atlas-project-attention-list">
-                {primaryAttention.map((item, index) => (
-                  <Link key={`${item.attentionId ?? item.projectId}-${index}`} href={`/project/${encodeURIComponent(item.projectId)}`} className="atlas-project-attention-card">
-                    <span>{item.farmName || "Feast Guild"} · {titleCase(item.kind)}</span>
-                    <strong>{item.title}</strong>
-                    <p>{item.detail || item.projectTitle}</p>
-                    <small>{item.projectTitle}{item.dueDate ? ` · due ${prettyDate(item.dueDate)}` : ""}</small>
-                  </Link>
+          {ownerMode ? (
+            <>
+              <nav className="atlas-scope-tabs" aria-label="Project farm scope">
+                <Link href="/projects" aria-current={!selectedFarm ? "page" : undefined}>All Farms</Link>
+                {home.farms.map((farm) => (
+                  <Link key={farm.farmId} href={`/projects?farm=${encodeURIComponent(farm.farmKey)}`} aria-current={selectedFarm?.farmId === farm.farmId ? "page" : undefined}>{farm.farmName.replace(" Farm", "")}</Link>
                 ))}
-              </div>
-              {remainingAttention.length ? (
-                <details className="atlas-projects-more">
-                  <summary>Show {remainingAttention.length} more</summary>
-                  <div className="atlas-project-attention-list">
-                    {remainingAttention.map((item, index) => (
-                      <Link key={`${item.attentionId ?? item.projectId}-more-${index}`} href={`/project/${encodeURIComponent(item.projectId)}`} className="atlas-project-attention-card">
-                        <span>{item.farmName || "Feast Guild"} · {titleCase(item.kind)}</span>
-                        <strong>{item.title}</strong>
-                        <p>{item.detail || item.projectTitle}</p>
-                        <small>{item.projectTitle}{item.dueDate ? ` · due ${prettyDate(item.dueDate)}` : ""}</small>
-                      </Link>
-                    ))}
+              </nav>
+
+              {!selectedFarm ? (
+                <>
+                  <div className="atlas-owner-intro">
+                    <small>Owner reality map</small>
+                    <h1>Your farms</h1>
+                    <p>See what is becoming true at each place without turning Projects into a task report.</p>
                   </div>
-                </details>
-              ) : null}
+                  <div className="atlas-farm-list">{home.farms.map((farm) => <FarmLandscape key={farm.farmId} farm={farm} />)}</div>
+                  {crossFarmActive.length ? (
+                    <AtlasCard as="section" className="atlas-projects-section" ariaLabelledBy="atlas-cross-farm-title">
+                      <AtlasSectionHeading title="Across the farms" count={crossFarmActive.length} id="atlas-cross-farm-title" />
+                      {crossFarmActive.map((project) => (
+                        <Link key={project.projectId} href={`/project/${encodeURIComponent(project.projectId)}`} className="atlas-cross-farm-card">
+                          <span>{realityLabel(project.realityState)}</span>
+                          <strong>{project.title}</strong>
+                          <p>{project.outcome || project.currentMilestone || "Cross-farm world"}</p>
+                        </Link>
+                      ))}
+                    </AtlasCard>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <AtlasCard as="section" className="atlas-farm-horizon">
+                    <header className="atlas-farm-horizon-head"><small>{selectedFarm.locationLabel || "Farm"}</small><h1>{selectedFarm.farmName}</h1></header>
+                    <div className="atlas-north-star"><span>North Star</span><strong>{selectedFarm.northStar || "Define what this farm is becoming."}</strong></div>
+                    <RealityLandscape projects={selectedFarm.projects} />
+                  </AtlasCard>
+
+                  <AtlasCard as="section" className="atlas-projects-section" ariaLabelledBy="atlas-worlds-title">
+                    <AtlasSectionHeading title="Worlds" count={selectedRoots.length} id="atlas-worlds-title" />
+                    {selectedRoots.length ? <div className="atlas-world-list">{selectedRoots.map((project) => <WorldCard key={project.projectId} project={project} childrenByParent={selectedChildren} />)}</div> : <p className="atlas-projects-empty">No active worlds yet. This farm can stay quiet until there is a real outcome to move.</p>}
+                    {selectedLater.length ? (
+                      <details className="atlas-later">
+                        <summary>Later at {selectedFarm.farmName} · {selectedLater.length}</summary>
+                        <div>{selectedLater.map((project) => <Link key={project.projectId} href={`/project/${encodeURIComponent(project.projectId)}`} className="atlas-cross-farm-card"><span>Later</span><strong>{project.title}</strong><p>{project.outcome || project.currentMilestone || "Held outside the current field of play."}</p></Link>)}</div>
+                      </details>
+                    ) : null}
+                  </AtlasCard>
+                </>
+              )}
+            </>
+          ) : (
+            <AtlasCard as="section" className="atlas-projects-section" ariaLabelledBy="atlas-project-list-title">
+              <AtlasSectionHeading title={farmHandMode ? "Your worlds" : "Contributed worlds"} count={calmRoots.length} id="atlas-project-list-title" />
+              {calmRoots.length ? <div className="atlas-world-list">{calmRoots.map((project) => <CalmProjectBranch key={project.projectId} project={project} childrenByParent={calmChildren} />)}</div> : <p className="atlas-projects-empty">No active projects are visible in this account view.</p>}
             </AtlasCard>
-          ) : null}
-
-          <AtlasCard as="section" className="atlas-projects-section" ariaLabelledBy="atlas-project-list-title">
-            <AtlasSectionHeading
-              title={farmHandMode ? "Your worlds" : "Active worlds"}
-              count={farmHandMode ? rootProjects.length : activeProjects.length}
-              id="atlas-project-list-title"
-            />
-            {rootProjects.length ? (
-              <div className="atlas-projects-list">
-                {rootProjects.map((project) => farmHandMode
-                  ? <CalmProjectBranch key={project.projectId} project={project} childrenByParent={childrenByParent} />
-                  : <ProjectBranch key={project.projectId} project={project} childrenByParent={childrenByParent} />)}
-              </div>
-            ) : (
-              <p className="atlas-projects-empty">No active projects are visible in this account view.</p>
-            )}
-
-            {!farmHandMode && incubatorProjects.length ? (
-              <details className="atlas-projects-incubator">
-                <summary>Later / incubator · {incubatorProjects.length}</summary>
-                <p>Real possibilities that are not part of the current field of play.</p>
-                <div className="atlas-projects-list">
-                  {incubatorProjects.map((project) => <ProjectCard key={project.projectId} project={project} />)}
-                </div>
-              </details>
-            ) : null}
-          </AtlasCard>
+          )}
         </div>
       </AtlasAppShell>
     </>
