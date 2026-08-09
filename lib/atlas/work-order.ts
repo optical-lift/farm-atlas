@@ -61,7 +61,7 @@ export function atlasInferredWorkOrderAnchor(task: AtlasTaskCard): AtlasWorkOrde
   if (route === "mow" || action === "mow" || collection === "mowing") return "bottom";
   if (route === "plant" || action === "plant" || action === "transplant") return "evening";
   if (["signage_safety", "hospitality", "guest_readiness", "venue_reset"].includes(category)) return "visibility";
-  if (route === "seed" || action === "sow" || action === "seed" || rhythm === "seed_sowing") return "midday";
+  if (route === "seed" || action === "sow" || action === "seed" || rhythm === "seed_sowing") return "evening";
   if (route === "weed" || action === "weed" || collection === "weeding") return "morning";
   if (route === "harvest" || action === "harvest" || taskType === "postharvest") return "morning";
   if (
