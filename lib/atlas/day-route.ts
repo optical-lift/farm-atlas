@@ -206,9 +206,11 @@ export function atlasDayTaskCues(task: AtlasTaskCard) {
     cues.push(clean);
   };
 
-  const queuedAfter = numberValue(metadata.release_queue_queued_count);
-  if (canonicalActionKey(task) === "weed" && queuedAfter && queuedAfter > 0) {
-    add(`${queuedAfter} ${queuedAfter === 1 ? "area needs" : "areas need"} attention after this one`);
+  // A serial maintenance reservoir is not a calendar commitment. Only surface
+  // work that already has an explicit owner/dependency date outside the queue.
+  const scheduledAfter = numberValue(metadata.release_queue_scheduled_after_count);
+  if (canonicalActionKey(task) === "weed" && scheduledAfter && scheduledAfter > 0) {
+    add(`${scheduledAfter} ${scheduledAfter === 1 ? "weed job" : "weed jobs"} scheduled later`);
   }
 
   const unlocksTask = metadataString(task, "unlocks_task_label");
