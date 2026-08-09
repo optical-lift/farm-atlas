@@ -22,6 +22,7 @@ export type OwnerWeekProjection = {
   membershipId: string;
   startDate: string;
   endDate: string;
+  paidTargetMinutes: number;
   days: OwnerWeekProjectionDay[];
 };
 
@@ -29,6 +30,12 @@ function addDays(dateIso: string, days: number) {
   const date = new Date(`${dateIso}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+function fallbackPaidTarget(role: string | null | undefined) {
+  if (role === "farm_hand") return 420;
+  if (role === "manager") return 360;
+  return 480;
 }
 
 export async function readOwnerWeekProjection(
@@ -47,21 +54,41 @@ export async function readOwnerWeekProjection(
     p_days: safeDayCount,
   });
 
-  const { data, error } = await atlasSupabase
-    .schema("atlas")
-    .from("owner_week_projection")
-    .select("id,planned_date,source_kind,source_id,title,plan_state,environment,expected_active_minutes,reason")
-    .eq("farm_id", farmId)
-    .eq("membership_id", membershipId)
-    .gte("planned_date", startDate)
-    .lte("planned_date", endDate)
-    .order("planned_date", { ascending: true })
-    .order("source_kind", { ascending: true })
-    .order("title", { ascending: true });
+  const [projectionResult, membershipResult, settingsResult] = await Promise.all([
+    atlasSupabase
+      .schema("atlas")
+      .from("owner_week_projection")
+      .select("id,planned_date,source_kind,source_id,title,plan_state,environment,expected_active_minutes,reason")
+      .eq("farm_id", farmId)
+      .eq("membership_id", membershipId)
+      .gte("planned_date", startDate)
+      .lte("planned_date", endDate)
+      .order("planned_date", { ascending: true })
+      .order("source_kind", { ascending: true })
+      .order("title", { ascending: true }),
+    atlasSupabase
+      .schema("atlas")
+      .from("farm_memberships")
+      .select("role")
+      .eq("farm_id", farmId)
+      .eq("id", membershipId)
+      .eq("active", true)
+      .maybeSingle(),
+    atlasSupabase
+      .schema("atlas")
+      .from("member_capacity_settings")
+      .select("regular_target_minutes")
+      .eq("farm_id", farmId)
+      .eq("membership_id", membershipId)
+      .eq("active", true)
+      .maybeSingle(),
+  ]);
 
-  if (error) throw new Error(error.message);
+  if (projectionResult.error) throw new Error(projectionResult.error.message);
+  if (membershipResult.error) throw new Error(membershipResult.error.message);
+  if (settingsResult.error) throw new Error(settingsResult.error.message);
 
-  const rows = (data ?? []) as Array<{
+  const rows = (projectionResult.data ?? []) as Array<{
     id: string;
     planned_date: string;
     source_kind: OwnerWeekProjectionItem["sourceKind"];
@@ -72,6 +99,9 @@ export async function readOwnerWeekProjection(
     expected_active_minutes: number | null;
     reason: string | null;
   }>;
+
+  const paidTargetMinutes = Number(settingsResult.data?.regular_target_minutes)
+    || fallbackPaidTarget(membershipResult.data?.role);
 
   const days: OwnerWeekProjectionDay[] = Array.from({ length: safeDayCount }, (_, index) => {
     const date = addDays(startDate, index);
@@ -93,5 +123,5 @@ export async function readOwnerWeekProjection(
     };
   });
 
-  return { farmId, membershipId, startDate, endDate, days };
+  return { farmId, membershipId, startDate, endDate, paidTargetMinutes, days };
 }
