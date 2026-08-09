@@ -18,9 +18,11 @@ const hiddenPhrases = [
   "then move on to the rest of the day",
 ];
 
+const hiddenExactPhrases = new Set(["light"]);
+
 function isPlannerText(value: string) {
   const lower = value.trim().toLowerCase();
-  return hiddenPhrases.some((phrase) => lower.includes(phrase));
+  return hiddenExactPhrases.has(lower) || hiddenPhrases.some((phrase) => lower.includes(phrase));
 }
 
 function cleanSegmentedText(value: string) {
