@@ -8,9 +8,9 @@ import {
 } from "@/lib/atlas/operator-context";
 import { readAtlasOperatorUniversalHome } from "@/lib/atlas/operator-universal-home";
 import { getAtlasSession } from "@/lib/atlas/session";
-import { atlasSupabase } from "@/lib/atlas/supabase-server";
 import { atlasUniversalTaskCards } from "@/lib/atlas/universal-task-cards";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
+import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -154,7 +154,8 @@ export async function GET(request: Request) {
         reason: item.reason,
       }));
 
-    const queueResult = await atlasSupabase
+    const supabase = await createAtlasServerClient();
+    const queueResult = await supabase
       .schema("atlas")
       .from("task_release_queue_items")
       .select("position,state,planned_occurrence_id")
@@ -167,7 +168,7 @@ export async function GET(request: Request) {
     const queuedRows = (queueResult.data ?? []).filter((row) => Boolean(row.planned_occurrence_id));
     const occurrenceIds = queuedRows.map((row) => String(row.planned_occurrence_id));
     const occurrenceResult = occurrenceIds.length
-      ? await atlasSupabase
+      ? await supabase
           .schema("atlas")
           .from("planned_work_occurrences")
           .select("id,title,state,task_payload")
