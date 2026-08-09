@@ -9,7 +9,7 @@ import {
 } from "@/lib/atlas/portfolio";
 import { atlasSupabase } from "@/lib/atlas/supabase-server";
 import { atlasTrailCurrentNode } from "@/lib/atlas/trail";
-import { requireAtlasPortalViewer } from "@/lib/atlas/viewer-context";
+import { requireAtlasUniversalViewer } from "@/lib/atlas/viewer-context";
 
 export const dynamic = "force-dynamic";
 
@@ -124,7 +124,7 @@ function FinishReservoir({ items, projectId }: { items: Array<PullItem & { role:
 }
 
 export default async function ProjectPage({ params, searchParams }: ProjectPageProps) {
-  const viewer = await requireAtlasPortalViewer();
+  await requireAtlasUniversalViewer();
   const { projectId } = await params;
   const query: ProjectSearchParams = searchParams ? await searchParams : {};
   const selectedTaskId = firstParam(query.taskId);
@@ -137,6 +137,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
   }
 
   const project = detail.project;
+  const projectScopeName = project.farmName || "Atlas";
   const isFinishReservoir = project.projectKey === "elm_finish_renovation_pool";
   const reservoirItems = isFinishReservoir ? await readFinishReservoir(projectId).catch(() => []) : [];
   const currentNode = atlasTrailCurrentNode(project.trail);
@@ -154,7 +155,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         <header className="atlas-phone-top atlas-dashboard-top">
           <Link href="/" className="atlas-phone-brand atlas-task-header-brand">
             <span className="atlas-phone-kicker">Atlas</span>
-            <span className="atlas-phone-title">{viewer.organizationName}</span>
+            <span className="atlas-phone-title">{projectScopeName}</span>
           </Link>
           <span className="atlas-weather-line">Project</span>
           <Link href="/" className="atlas-note-plus" aria-label="Back to Atlas home">↩</Link>
@@ -168,7 +169,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
                 <span>{titleCase(project.workstream)}</span>
                 <strong>{isFinishReservoir ? `${reservoirItems.filter((item) => item.status === "available").length} held · ${reservoirItems.filter((item) => item.status === "selected").length} released` : `${activeTasks.length} open · ${blockedTasks.length} blocked · ${completeTasks.length} done`}</strong>
               </div>
-              <p>{project.farmName || viewer.organizationName}</p>
+              <p>{projectScopeName}</p>
             </div>
 
             <article className="atlas-day-command-header atlas-project-command-header">
