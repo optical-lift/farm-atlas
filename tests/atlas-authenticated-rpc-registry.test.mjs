@@ -20,6 +20,10 @@ function normalizedSql(value) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function compactSql(value) {
+  return value.replace(/\s+/g, "").toLowerCase();
+}
+
 function authenticatedGrantedSignatures(sql) {
   const flat = normalizedSql(sql);
   const signatures = [];
@@ -85,13 +89,19 @@ test("every later authenticated EXECUTE grant has an ordered registry reconcilia
     const laterRegistrySql = laterMigrations
       .slice(index + 1)
       .filter((candidate) => /rpc_registry/i.test(candidate))
-      .map((candidate) => ({ name: candidate, sql: normalizedSql(readMigration(candidate)) }));
+      .map((candidate) => ({
+        name: candidate,
+        sql: normalizedSql(readMigration(candidate)),
+        compactSql: compactSql(readMigration(candidate)),
+      }));
 
     for (const signature of signatures) {
       const signatureLoose = signature.replace(/\s*,\s*/g, ", ");
+      const compactSignature = compactSql(signature);
       const registry = laterRegistrySql.find((candidate) =>
         candidate.sql.includes(signature)
-        || candidate.sql.includes(signatureLoose),
+        || candidate.sql.includes(signatureLoose)
+        || candidate.compactSql.includes(compactSignature),
       );
       assert.ok(
         registry,
