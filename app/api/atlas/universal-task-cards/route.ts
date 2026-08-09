@@ -41,7 +41,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "universal-dated-task-cards-v2",
+      "X-Atlas-Read-Path": "universal-dated-task-cards-v3-carry-forward",
     },
   });
 }
@@ -87,9 +87,16 @@ export async function GET(request: Request) {
     });
     const dispositions = await readAtlasTaskDayDispositions(doneDate);
     const setAsideTaskIds = new Set(dispositions.map((row) => row.taskId));
+
+    // The server-side worker-day reader is authoritative for future-day membership.
+    // It now returns both work presented for the requested day and unresolved work
+    // inherited from the immediately preceding available workday. Do not throw that
+    // carry-forward away merely because its original due date is earlier than the
+    // future day being inspected. Historical/done rows are still constrained by the
+    // worker-day reader itself.
     const taskCards = atlasUniversalTaskCards(home)
-      .filter((card) => !setAsideTaskIds.has(card.task_id))
-      .filter((card) => !exactDate || card.due_date === exactDate);
+      .filter((card) => !setAsideTaskIds.has(card.task_id));
+
     return privateJson({
       ok: true,
       farmKey: home.activeFarm?.farmKey || "feast_guild",
