@@ -41,7 +41,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "universal-dated-task-cards-v1",
+      "X-Atlas-Read-Path": "universal-dated-task-cards-v2",
     },
   });
 }
@@ -56,17 +56,25 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const requestedDueThrough = url.searchParams.get("dueThrough");
   const requestedDoneDate = url.searchParams.get("doneDate");
+  const requestedExactDate = url.searchParams.get("exactDate");
   if (requestedDueThrough && !validDateIso(requestedDueThrough)) {
     return privateJson({ ok: false, error: "dueThrough must be a valid YYYY-MM-DD date." }, 400);
   }
   if (requestedDoneDate && !validDateIso(requestedDoneDate)) {
     return privateJson({ ok: false, error: "doneDate must be a valid YYYY-MM-DD date." }, 400);
   }
+  if (requestedExactDate && !validDateIso(requestedExactDate)) {
+    return privateJson({ ok: false, error: "exactDate must be a valid YYYY-MM-DD date." }, 400);
+  }
 
-  const doneDate = requestedDoneDate ?? centralDateIso();
-  const dueThrough = requestedDueThrough ?? addDaysIso(doneDate, 35);
+  const exactDate = requestedExactDate ?? undefined;
+  const doneDate = requestedDoneDate ?? exactDate ?? centralDateIso();
+  const dueThrough = requestedDueThrough ?? exactDate ?? addDaysIso(doneDate, 35);
   if (dueThrough < doneDate) {
     return privateJson({ ok: false, error: "The task window cannot end before its done date." }, 400);
+  }
+  if (exactDate && (exactDate < doneDate || exactDate > dueThrough)) {
+    return privateJson({ ok: false, error: "exactDate must fall inside the requested task window." }, 400);
   }
 
   try {
@@ -79,7 +87,9 @@ export async function GET(request: Request) {
     });
     const dispositions = await readAtlasTaskDayDispositions(doneDate);
     const setAsideTaskIds = new Set(dispositions.map((row) => row.taskId));
-    const taskCards = atlasUniversalTaskCards(home).filter((card) => !setAsideTaskIds.has(card.task_id));
+    const taskCards = atlasUniversalTaskCards(home)
+      .filter((card) => !setAsideTaskIds.has(card.task_id))
+      .filter((card) => !exactDate || card.due_date === exactDate);
     return privateJson({
       ok: true,
       farmKey: home.activeFarm?.farmKey || "feast_guild",
@@ -92,7 +102,7 @@ export async function GET(request: Request) {
       effectiveAccountId: effectiveOperatorAccountId(operatorContext),
       effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
       taskCards,
-      window: { doneDate, dueThrough },
+      window: { doneDate, dueThrough, exactDate },
     });
   } catch (error) {
     console.error("Atlas universal dated-task read failed:", error);
