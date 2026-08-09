@@ -42,11 +42,44 @@ type ScheduleBuilderResponse = {
   error?: string;
 };
 
+type AutomaticCandidate = {
+  id: string;
+  sourceKind: "queue" | "rhythm";
+  sourceId: string;
+  title: string;
+  note: string | null;
+  environment: string | null;
+  location: string | null;
+  expectedActiveMinutes: number;
+  automatic: true;
+  conditional: boolean;
+  reason: string | null;
+  dayWindow: CandidateWindow;
+  workOrderNumber: number;
+};
+
+type AutomaticDayResponse = {
+  ok?: boolean;
+  active?: boolean;
+  operatorLabel?: string;
+  automaticMinutes?: number;
+  candidates?: AutomaticCandidate[];
+  error?: string;
+};
+
 type TaskPlacement = {
   id: string;
   title: string;
   window: CandidateWindow;
   order: number;
+};
+
+type TimelineIdea = {
+  id: string;
+  kind: "candidate" | "automatic";
+  title: string;
+  dayWindow: CandidateWindow;
+  workOrderNumber: number;
 };
 
 type PartnerPlan = Map<string, { window: CandidateWindow; order: number }>;
@@ -74,6 +107,10 @@ function sourceLabel(kind: CandidateKind) {
   if (kind === "queue") return "Weed Card";
   if (kind === "floating_task") return "Atlas paid work";
   return "Farm rhythm";
+}
+
+function automaticLabel(candidate: AutomaticCandidate) {
+  return candidate.sourceKind === "queue" ? "Weed" : "Mow";
 }
 
 function environmentLabel(value: string | null) {
@@ -146,11 +183,16 @@ function taskPlacements(tasks: AtlasTaskCard[], dateIso: string) {
   });
 }
 
-function candidateSort(left: ScheduleCandidate, right: ScheduleCandidate) {
+function ideaSort(left: TimelineIdea, right: TimelineIdea) {
   const windowDifference = windowOrder[left.dayWindow] - windowOrder[right.dayWindow];
   if (windowDifference) return windowDifference;
   if (left.workOrderNumber !== right.workOrderNumber) return left.workOrderNumber - right.workOrderNumber;
   return left.title.localeCompare(right.title);
+}
+
+function isAutomaticFamilyCandidate(candidate: ScheduleCandidate) {
+  if (candidate.sourceKind === "queue" || candidate.sourceKind === "rhythm") return true;
+  return /^mow(?:ing)?\b/i.test(candidate.title.trim());
 }
 
 function CandidateRow({ candidate, selected, onToggle }: { candidate: ScheduleCandidate; selected: boolean; onToggle: () => void }) {
@@ -198,11 +240,36 @@ function CandidateRow({ candidate, selected, onToggle }: { candidate: ScheduleCa
   );
 }
 
-function CommitSchedule({ operatorLabel, selectedCount, selectedMinutes, committedMinutes, proposedMinutes, targetMinutes, overBy, saving, error, canBuild, onBuild }: {
+function AutomaticRow({ candidate }: { candidate: AutomaticCandidate }) {
+  const env = environmentLabel(candidate.environment);
+  const detail = [minutesLabel(candidate.expectedActiveMinutes), env, candidate.location].filter(Boolean).join(" · ");
+  return (
+    <div className="atlas-day-task-entry atlas-owner-schedule-automatic-entry" data-owner-schedule-automatic={candidate.id}>
+      <span className="atlas-day-task-node atlas-owner-schedule-automatic-node" aria-hidden="true"><span /></span>
+      <div
+        className="atlas-day-task-card atlas-owner-schedule-automatic-card"
+        style={{
+          width: "100%",
+          border: "1px solid rgba(125,128,172,.24)",
+          background: "rgba(250,249,245,.96)",
+          boxShadow: "none",
+        }}
+      >
+        <small className="atlas-day-task-family" style={{ color: "#747a9d" }}>Planned · {automaticLabel(candidate)}</small>
+        <strong>{candidate.title}</strong>
+        {detail ? <span>{detail}</span> : null}
+        {candidate.reason ? <em>{candidate.reason}</em> : null}
+      </div>
+    </div>
+  );
+}
+
+function CommitSchedule({ operatorLabel, selectedCount, selectedMinutes, committedMinutes, automaticMinutes, proposedMinutes, targetMinutes, overBy, saving, error, canBuild, onBuild }: {
   operatorLabel: string;
   selectedCount: number;
   selectedMinutes: number;
   committedMinutes: number;
+  automaticMinutes: number;
   proposedMinutes: number;
   targetMinutes: number;
   overBy: number;
@@ -232,8 +299,8 @@ function CommitSchedule({ operatorLabel, selectedCount, selectedMinutes, committ
       </div>
       <p style={{ margin: "7px 0 10px", fontSize: 11.5, lineHeight: 1.4, opacity: .7 }}>
         {selectedCount
-          ? `${selectedCount} purple ${selectedCount === 1 ? "task" : "tasks"} selected · ${minutesLabel(selectedMinutes)} added to ${minutesLabel(committedMinutes)} already committed.`
-          : `Purple cards are still only ideas. ${minutesLabel(committedMinutes)} is already committed.`}
+          ? `${selectedCount} purple ${selectedCount === 1 ? "task" : "tasks"} selected · ${minutesLabel(selectedMinutes)} added to ${minutesLabel(committedMinutes)} real work${automaticMinutes ? ` plus ${minutesLabel(automaticMinutes)} automatic rhythm work` : ""}.`
+          : `Purple cards are still only ideas. ${minutesLabel(committedMinutes)} is real work${automaticMinutes ? ` and ${minutesLabel(automaticMinutes)} is reserved for automatic rhythm work` : ""}.`}
       </p>
       {overBy > 0 ? <p style={{ margin: "0 0 9px", fontSize: 11.5, lineHeight: 1.4 }}>Remove {minutesLabel(overBy)} before committing this day.</p> : null}
       {error ? <p style={{ margin: "0 0 9px", fontSize: 11.5, lineHeight: 1.4 }}>{error}</p> : null}
@@ -264,16 +331,18 @@ export default function OwnerDayScheduleBuilder() {
   const requestedDate = searchParams.get("date");
   const dateIso = pathname === "/day" && requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : null;
   const [response, setResponse] = useState<ScheduleBuilderResponse | null>(null);
+  const [automaticResponse, setAutomaticResponse] = useState<AutomaticDayResponse | null>(null);
   const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [portalEpoch, setPortalEpoch] = useState(0);
-  const candidateHosts = useRef(new Map<string, HTMLElement>());
+  const rowHosts = useRef(new Map<string, HTMLElement>());
   const commitHost = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setResponse(null);
+    setAutomaticResponse(null);
     setTasks([]);
     setSelected(new Set());
     setError(null);
@@ -292,11 +361,22 @@ export default function OwnerDayScheduleBuilder() {
         if (!request.ok || !body.ok) throw new Error(body.error || "Schedule ideas could not be loaded.");
         return body;
       }),
+      fetch(`/api/atlas/automatic-day-work?date=${encodeURIComponent(dateIso)}`, {
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      }).then(async (request) => {
+        const body = await request.json() as AutomaticDayResponse;
+        if (!request.ok || !body.ok) throw new Error(body.error || "Automatic day work could not be loaded.");
+        return body;
+      }),
       fetchAtlasTaskCards({ viewerScoped: true, dueThrough: dateIso, doneDate: dateIso, exactDate: isFutureDay ? dateIso : undefined }),
     ])
-      .then(([body, taskResponse]) => {
+      .then(([body, automaticBody, taskResponse]) => {
         if (controller.signal.aborted) return;
         setResponse(body);
+        setAutomaticResponse(automaticBody);
         setTasks(taskResponse.taskCards ?? []);
       })
       .catch((loadError) => {
@@ -306,29 +386,42 @@ export default function OwnerDayScheduleBuilder() {
     return () => controller.abort();
   }, [dateIso]);
 
-  const candidates = useMemo(() => [...(response?.candidates ?? [])].sort(candidateSort), [response]);
+  const candidates = useMemo(
+    () => [...(response?.candidates ?? [])].filter((candidate) => !isAutomaticFamilyCandidate(candidate)).sort((left, right) => ideaSort({ ...left, kind: "candidate" }, { ...right, kind: "candidate" })),
+    [response],
+  );
+  const automaticCandidates = useMemo(
+    () => [...(automaticResponse?.candidates ?? [])].sort((left, right) => ideaSort({ ...left, kind: "automatic" }, { ...right, kind: "automatic" })),
+    [automaticResponse],
+  );
   const placements = useMemo(() => dateIso ? taskPlacements(tasks, dateIso) : [], [dateIso, tasks]);
+  const timelineIdeas = useMemo<TimelineIdea[]>(() => [
+    ...candidates.map((candidate) => ({ id: candidate.id, kind: "candidate" as const, title: candidate.title, dayWindow: candidate.dayWindow, workOrderNumber: candidate.workOrderNumber })),
+    ...automaticCandidates.map((candidate) => ({ id: candidate.id, kind: "automatic" as const, title: candidate.title, dayWindow: candidate.dayWindow, workOrderNumber: candidate.workOrderNumber })),
+  ].sort(ideaSort), [automaticCandidates, candidates]);
   const selectedCandidates = useMemo(() => candidates.filter((candidate) => selected.has(candidate.id) && !candidate.approved), [candidates, selected]);
   const selectedMinutes = selectedCandidates.reduce((total, candidate) => total + candidate.expectedActiveMinutes, 0);
   const targetMinutes = Math.max(0, Number(response?.paidTargetMinutes) || 0);
   const scheduledMinutes = Math.max(0, Number(response?.scheduledPaidMinutes) || 0);
   const conditionalMinutes = Math.max(0, Number(response?.approvedConditionalMinutes) || 0);
+  const automaticMinutes = automaticCandidates.reduce((total, candidate) => total + candidate.expectedActiveMinutes, 0);
   const committedMinutes = scheduledMinutes + conditionalMinutes;
-  const proposedMinutes = committedMinutes + selectedMinutes;
+  const proposedMinutes = committedMinutes + automaticMinutes + selectedMinutes;
   const overBy = Math.max(0, proposedMinutes - targetMinutes);
-  const operatorLabel = response?.operatorLabel || "Anna";
+  const operatorLabel = response?.operatorLabel || automaticResponse?.operatorLabel || "Anna";
   const canBuild = Boolean(dateIso && selectedCandidates.length && !saving && overBy === 0);
+  const plannerActive = Boolean(response?.active || automaticResponse?.active);
 
   useEffect(() => {
     function cleanup() {
-      for (const host of candidateHosts.current.values()) host.remove();
-      candidateHosts.current.clear();
+      for (const host of rowHosts.current.values()) host.remove();
+      rowHosts.current.clear();
       commitHost.current?.remove();
       commitHost.current = null;
       document.querySelectorAll('[data-owner-schedule-synthetic-window="true"]').forEach((node) => node.remove());
     }
 
-    if (!response?.active || !candidates.length || pathname !== "/day") {
+    if (!plannerActive || !timelineIdeas.length || pathname !== "/day") {
       cleanup();
       return cleanup;
     }
@@ -336,9 +429,23 @@ export default function OwnerDayScheduleBuilder() {
     let scheduledFrame = 0;
     let disposed = false;
 
-    function ensureSyntheticMarker(list: HTMLElement, window: CandidateWindow) {
-      const existing = list.querySelector<HTMLElement>(`.atlas-day-window-marker[data-day-window="${window}"]`);
-      if (existing) return existing;
+    function realMarker(list: HTMLElement, window: CandidateWindow) {
+      return Array.from(list.querySelectorAll<HTMLElement>(`.atlas-day-window-marker[data-day-window="${window}"]`))
+        .find((marker) => marker.dataset.ownerScheduleSyntheticWindow !== "true") ?? null;
+    }
+
+    function ensureWindowMarker(list: HTMLElement, window: CandidateWindow) {
+      const real = realMarker(list, window);
+      const synthetic = Array.from(list.querySelectorAll<HTMLElement>(`.atlas-day-window-marker[data-day-window="${window}"][data-owner-schedule-synthetic-window="true"]`));
+      if (real) {
+        synthetic.forEach((marker) => marker.remove());
+        return real;
+      }
+      if (synthetic[0]) {
+        synthetic.slice(1).forEach((marker) => marker.remove());
+        return synthetic[0];
+      }
+
       const marker = document.createElement("div");
       marker.className = "atlas-day-window-marker atlas-owner-schedule-window-marker";
       marker.dataset.dayWindow = window;
@@ -346,18 +453,9 @@ export default function OwnerDayScheduleBuilder() {
       const label = document.createElement("span");
       label.textContent = windowLabels[window];
       const detail = document.createElement("em");
-      detail.textContent = "suggested work";
+      detail.textContent = "planned work";
       marker.append(label, detail);
-
-      const laterWindows = (Object.keys(windowOrder) as CandidateWindow[])
-        .filter((candidateWindow) => windowOrder[candidateWindow] > windowOrder[window])
-        .sort((left, right) => windowOrder[left] - windowOrder[right]);
-      const nextMarker = laterWindows
-        .map((candidateWindow) => list.querySelector<HTMLElement>(`.atlas-day-window-marker[data-day-window="${candidateWindow}"]`))
-        .find(Boolean) ?? null;
-      if (nextMarker) list.insertBefore(marker, nextMarker);
-      else if (commitHost.current?.parentNode === list) list.insertBefore(marker, commitHost.current);
-      else list.appendChild(marker);
+      list.appendChild(marker);
       return marker;
     }
 
@@ -367,54 +465,65 @@ export default function OwnerDayScheduleBuilder() {
       if (!list) return;
       let targetsChanged = false;
 
-      if (!commitHost.current) {
-        const host = document.createElement("div");
-        host.dataset.ownerScheduleHost = "commit";
-        host.style.display = "contents";
-        commitHost.current = host;
+      const ideaWindows = new Set(timelineIdeas.map((idea) => idea.dayWindow));
+      for (const window of ["morning", "afternoon", "evening"] as CandidateWindow[]) {
+        const synthetic = Array.from(list.querySelectorAll<HTMLElement>(`.atlas-day-window-marker[data-day-window="${window}"][data-owner-schedule-synthetic-window="true"]`));
+        if (realMarker(list, window) || !ideaWindows.has(window)) synthetic.forEach((marker) => marker.remove());
+      }
+      for (const window of ideaWindows) ensureWindowMarker(list, window);
+
+      if (candidates.length) {
+        if (!commitHost.current) {
+          const host = document.createElement("div");
+          host.dataset.ownerScheduleHost = "commit";
+          host.style.display = "contents";
+          commitHost.current = host;
+          targetsChanged = true;
+        }
+        if (commitHost.current.parentNode !== list || commitHost.current !== list.lastChild) list.appendChild(commitHost.current);
+      } else if (commitHost.current) {
+        commitHost.current.remove();
+        commitHost.current = null;
         targetsChanged = true;
       }
-      if (commitHost.current.parentNode !== list || commitHost.current !== list.lastChild) list.appendChild(commitHost.current);
 
-      const liveIds = new Set(candidates.map((candidate) => candidate.id));
-      for (const [id, host] of candidateHosts.current) {
+      const liveIds = new Set(timelineIdeas.map((idea) => idea.id));
+      for (const [id, host] of rowHosts.current) {
         if (!liveIds.has(id)) {
           host.remove();
-          candidateHosts.current.delete(id);
+          rowHosts.current.delete(id);
           targetsChanged = true;
         }
       }
-      for (const candidate of candidates) {
-        if (!candidateHosts.current.has(candidate.id)) {
+      for (const idea of timelineIdeas) {
+        if (!rowHosts.current.has(idea.id)) {
           const host = document.createElement("div");
-          host.dataset.ownerScheduleHost = candidate.id;
+          host.dataset.ownerScheduleHost = idea.id;
           host.style.display = "contents";
-          candidateHosts.current.set(candidate.id, host);
+          rowHosts.current.set(idea.id, host);
           targetsChanged = true;
         }
       }
-
-      const candidateWindows = new Set(candidates.map((candidate) => candidate.dayWindow));
-      for (const window of candidateWindows) ensureSyntheticMarker(list, window);
 
       for (const window of ["morning", "afternoon", "evening"] as CandidateWindow[]) {
         const rows = [
           ...placements.filter((row) => row.window === window).map((row) => ({ kind: "task" as const, id: row.id, order: row.order, title: row.title })),
-          ...candidates.filter((candidate) => candidate.dayWindow === window).map((candidate) => ({ kind: "candidate" as const, id: candidate.id, order: candidate.workOrderNumber, title: candidate.title })),
+          ...timelineIdeas.filter((idea) => idea.dayWindow === window).map((idea) => ({ kind: "idea" as const, id: idea.id, order: idea.workOrderNumber, title: idea.title })),
         ].sort((left, right) => left.order !== right.order ? left.order - right.order : left.title.localeCompare(right.title));
 
-        const laterMarker = list.querySelector<HTMLElement>(`.atlas-day-window-marker[data-day-window="${window === "morning" ? "afternoon" : window === "afternoon" ? "evening" : "__none__"}"]`);
+        const nextWindow = window === "morning" ? "afternoon" : window === "afternoon" ? "evening" : null;
+        const laterMarker = nextWindow ? list.querySelector<HTMLElement>(`.atlas-day-window-marker[data-day-window="${nextWindow}"]`) : null;
         for (let index = rows.length - 1; index >= 0; index -= 1) {
           const row = rows[index];
-          if (row.kind !== "candidate") continue;
-          const host = candidateHosts.current.get(row.id);
+          if (row.kind !== "idea") continue;
+          const host = rowHosts.current.get(row.id);
           if (!host) continue;
 
           let reference: Element | null = null;
           for (let nextIndex = index + 1; nextIndex < rows.length; nextIndex += 1) {
             const next = rows[nextIndex];
-            if (next.kind === "candidate") {
-              const nextHost = candidateHosts.current.get(next.id);
+            if (next.kind === "idea") {
+              const nextHost = rowHosts.current.get(next.id);
               if (nextHost?.parentNode === list) { reference = nextHost; break; }
             } else {
               const taskNode = document.getElementById(`day-task-${next.id}`);
@@ -453,7 +562,7 @@ export default function OwnerDayScheduleBuilder() {
       window.removeEventListener("resize", queueArrange);
       cleanup();
     };
-  }, [candidates, placements, pathname, response?.active]);
+  }, [candidates.length, placements, pathname, plannerActive, timelineIdeas]);
 
   function toggle(candidate: ScheduleCandidate) {
     if (candidate.approved) return;
@@ -494,12 +603,12 @@ export default function OwnerDayScheduleBuilder() {
     }
   }
 
-  if (!response?.active || !candidates.length) return null;
+  if (!plannerActive || !timelineIdeas.length) return null;
 
   return (
     <Fragment key={portalEpoch}>
       {candidates.map((candidate) => {
-        const host = candidateHosts.current.get(candidate.id);
+        const host = rowHosts.current.get(candidate.id);
         if (!host?.isConnected) return null;
         return createPortal(
           <CandidateRow candidate={candidate} selected={selected.has(candidate.id)} onToggle={() => toggle(candidate)} />,
@@ -507,12 +616,18 @@ export default function OwnerDayScheduleBuilder() {
           candidate.id,
         );
       })}
-      {commitHost.current?.isConnected ? createPortal(
+      {automaticCandidates.map((candidate) => {
+        const host = rowHosts.current.get(candidate.id);
+        if (!host?.isConnected) return null;
+        return createPortal(<AutomaticRow candidate={candidate} />, host, candidate.id);
+      })}
+      {candidates.length && commitHost.current?.isConnected ? createPortal(
         <CommitSchedule
           operatorLabel={operatorLabel}
           selectedCount={selectedCandidates.length}
           selectedMinutes={selectedMinutes}
           committedMinutes={committedMinutes}
+          automaticMinutes={automaticMinutes}
           proposedMinutes={proposedMinutes}
           targetMinutes={targetMinutes}
           overBy={overBy}
