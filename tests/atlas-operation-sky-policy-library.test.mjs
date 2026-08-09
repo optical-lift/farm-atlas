@@ -66,3 +66,12 @@ test("need, observation, postharvest, treatment, cleaning, and harvest stay non-
   assert.match(migration, /'water_nourish','no_rule'/);
   assert.match(migration, /does not backdate a modern waning-equals-release formula/);
 });
+
+test("Preferred sky ranking is evaluated for dated operation tasks without granting withholding", () => {
+  const planner = read("supabase/migrations/20260809014403_atlas_preferred_sky_all_operation_tasks_v1.sql");
+  assert.match(planner, /when t\.status='open' and t\.operation_class is not null/);
+  assert.match(planner, /then atlas\.task_sky_presentation_gate_v1\(t\.id,v_work_date\)/);
+  assert.doesNotMatch(planner, /t\.commitment_kind='floating'[\s\S]{0,80}t\.due_date is null[\s\S]{0,80}task_sky_presentation_gate_v1/);
+  assert.match(planner, /sky_preference_order/);
+  assert.match(planner, /Farm timezone comes from farm metadata with Chicago only as fallback/);
+});
