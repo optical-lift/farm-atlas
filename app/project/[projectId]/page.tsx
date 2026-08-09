@@ -124,7 +124,7 @@ function FinishReservoir({ items, projectId }: { items: Array<PullItem & { role:
 }
 
 export default async function ProjectPage({ params, searchParams }: ProjectPageProps) {
-  await requireAtlasUniversalViewer();
+  const viewer = await requireAtlasUniversalViewer();
   const { projectId } = await params;
   const query: ProjectSearchParams = searchParams ? await searchParams : {};
   const selectedTaskId = firstParam(query.taskId);
@@ -191,7 +191,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
               </details>
             </article>
 
-            <ProjectReviewPanel projectId={project.projectId} />
+            {viewer.canManageAnyPortfolio ? <ProjectReviewPanel projectId={project.projectId} /> : null}
 
             {detail.attention.length ? (
               <details className="atlas-project-attention-strip" open={detail.attention.some((item) => item.kind === "blocked")}>
