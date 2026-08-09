@@ -30,8 +30,16 @@ const projectionReader = readFileSync(
   new URL("../lib/atlas-data/owner-week-projection.ts", import.meta.url),
   "utf8",
 );
-const projectionRoute = readFileSync(
-  new URL("../app/api/atlas/owner-day-projection/route.ts", import.meta.url),
+const dayPlanReader = readFileSync(
+  new URL("../lib/atlas/worker-day-plan-server.ts", import.meta.url),
+  "utf8",
+);
+const dayPlanRoute = readFileSync(
+  new URL("../app/api/atlas/worker-day-plan/route.ts", import.meta.url),
+  "utf8",
+);
+const dayPlanMigration = readFileSync(
+  new URL("../supabase/migrations/20260809203000_owner_worker_day_plan_kernel_v1.sql", import.meta.url),
   "utf8",
 );
 const projectionUi = readFileSync(
@@ -98,17 +106,21 @@ test("rescheduled unfinished work remains paid backlog instead of becoming permi
   assert.doesNotMatch(backlogMigration, /overdue_rescheduled_noncounting/);
 });
 
-test("Owner operating as Anna sees full paid-day capacity while approving the discretionary fill", () => {
+test("Owner operating as Anna sees the full paid-day plan while approving only discretionary fill", () => {
   assert.match(projectionReader, /paidTargetMinutes/);
-  assert.match(projectionRoute, /paidTargetMinutes/);
-  assert.match(projectionRoute, /scheduledPaidMinutes/);
-  assert.match(projectionRoute, /approvedConditionalMinutes/);
-  assert.match(projectionRoute, /remainingPaidMinutes/);
-  assert.match(projectionRoute, /project_pull_options_for_member_v2/);
-  assert.match(projectionRoute, /dayWindow/);
-  assert.match(projectionRoute, /workOrderNumber/);
+  assert.match(dayPlanReader, /owner_worker_day_plan_api_v1/);
+  assert.match(dayPlanRoute, /readOwnerWorkerDayPlan/);
+  assert.match(dayPlanMigration, /paidTargetMinutes/);
+  assert.match(dayPlanMigration, /committedPaidMinutes/);
+  assert.match(dayPlanMigration, /automaticPaidMinutes/);
+  assert.match(dayPlanMigration, /remainingPaidMinutes/);
+  assert.match(dayPlanMigration, /floating_paid_work_candidates_v1/);
+  assert.match(dayPlanMigration, /project_pull_items/);
+  assert.match(dayPlanMigration, /dayWindow/);
+  assert.match(dayPlanMigration, /workOrderNumber/);
   assert.match(projectionUi, /committedMinutes/);
+  assert.match(projectionUi, /automaticMinutes/);
   assert.match(projectionUi, /proposedMinutes/);
-  assert.match(projectionUi, /Purple cards are still only ideas/);
+  assert.match(projectionUi, /Purple cards are suggestions/);
   assert.match(projectionUi, /Commit schedule/);
 });
