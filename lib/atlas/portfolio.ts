@@ -71,6 +71,13 @@ export type AtlasPortfolioHome = {
   farms: AtlasPortfolioFarm[];
 };
 
+export type AtlasProjectTaskPrerequisite = {
+  taskId: string;
+  requiredStatus: string;
+  holdMode: string;
+  sequenceOrder: number;
+};
+
 export type AtlasProjectTask = {
   taskId: string;
   title: string;
@@ -84,6 +91,10 @@ export type AtlasProjectTask = {
   metadata?: Record<string, unknown> | null;
   assignedToViewer: boolean;
   createdByViewer: boolean;
+  assigneeName?: string | null;
+  parentTaskId?: string | null;
+  sortOrder?: number | null;
+  prerequisites?: AtlasProjectTaskPrerequisite[];
   originKind: string;
   createdAt: string;
   updatedAt: string;
