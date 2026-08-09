@@ -104,7 +104,7 @@ export default function FutureDayProjectionBridge() {
   const overTarget = targetMinutes > 0 && projectedMinutes > targetMinutes;
 
   return createPortal(
-    <article className="atlas-day-route-group atlas-future-projection-group" aria-label="Projected future work">
+    <article className="atlas-day-route-group atlas-future-projection-group" aria-label="Projected future work" aria-live="polite">
       <div className="atlas-future-projection-head">
         <div>
           <h3>Possible work</h3>
