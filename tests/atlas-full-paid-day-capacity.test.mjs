@@ -14,6 +14,10 @@ const personalMigration = readFileSync(
   new URL("../supabase/migrations/20260809013800_mark_personal_tasks_in_day_presentation.sql", import.meta.url),
   "utf8",
 );
+const batchMigration = readFileSync(
+  new URL("../supabase/migrations/20260809013900_scale_batch_work_and_passive_preparation_capacity.sql", import.meta.url),
+  "utf8",
+);
 const projectionReader = readFileSync(
   new URL("../lib/atlas-data/owner-week-projection.ts", import.meta.url),
   "utf8",
@@ -44,10 +48,21 @@ test("personal obligations and micro observations remain visible without filling
   assert.match(personalMigration, /'display_family', 'Personal'/);
 });
 
-test("small Follow Me mowing is owner-calibrated instead of treated as a heavy hour", () => {
+test("small passive or local prep does not masquerade as a large work block", () => {
   assert.match(capacityMigration, /Mowing — Follow Me Paths \+ Edges/);
   assert.match(capacityMigration, /20, 'light', 'routine_production'/);
   assert.match(capacityMigration, /owner_calibrated:follow_me_mowing/);
+  assert.match(batchMigration, /Charge DeWalt Batteries for Mowing/);
+  assert.match(batchMigration, /5, 'light', 'optional_improvement'/);
+  assert.match(batchMigration, /passive_elapsed_time_noncounting/);
+});
+
+test("consolidated batch parents retain the labor of all required batch items", () => {
+  assert.match(batchMigration, /batch_item_count/);
+  assert.match(batchMigration, /task_work_shape/);
+  assert.match(batchMigration, /expected_active_minutes := expected_active_minutes \* v_batch_count/);
+  assert.match(batchMigration, /\+batch_x/);
+  assert.match(batchMigration, /owner_locked, false/);
 });
 
 test("owner projection keeps selecting compatible project work until paid capacity is filled", () => {
