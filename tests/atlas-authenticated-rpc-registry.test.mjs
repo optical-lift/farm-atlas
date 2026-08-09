@@ -21,7 +21,15 @@ function normalizedSql(value) {
 }
 
 function compactSql(value) {
-  return value.replace(/\s+/g, "").toLowerCase();
+  return value
+    .replace(/\s+/g, "")
+    .toLowerCase()
+    .replaceAll("timestamptz", "timestampwithtimezone")
+    .replaceAll("int4", "integer")
+    .replaceAll("int8", "bigint")
+    .replaceAll("bool", "boolean")
+    .replaceAll("float8", "doubleprecision")
+    .replaceAll("varchar", "charactervarying");
 }
 
 function authenticatedGrantedSignatures(sql) {
