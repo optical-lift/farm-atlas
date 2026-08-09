@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
@@ -13,7 +12,21 @@ function prettyDate(value: string | null) {
 }
 
 export default function TaskProjectMoveContext({ task }: { task: AtlasTaskCard }) {
-  const context = task.move_context;
+  const [resolvedTask, setResolvedTask] = useState(task);
+
+  useEffect(() => {
+    setResolvedTask(task);
+    if (task.move_context?.projects?.length) return;
+    let active = true;
+    void fetchAtlasTaskCards(task.task_id)
+      .then((response) => {
+        if (active && response.taskCards[0]) setResolvedTask(response.taskCards[0]);
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [task]);
+
+  const context = resolvedTask.move_context;
   if (!context?.projects?.length) return null;
 
   const unlockedAssignees = Array.from(new Set(context.unlocks.map((item) => item.assigneeName).filter(Boolean)));
@@ -114,27 +127,4 @@ export default function TaskProjectMoveContext({ task }: { task: AtlasTaskCard }
       </div>
     </section>
   );
-}
-
-export function TaskProjectMoveContextPortal({ task }: { task: AtlasTaskCard }) {
-  const [resolvedTask, setResolvedTask] = useState(task);
-  const [target, setTarget] = useState<Element | null>(null);
-
-  useEffect(() => {
-    setTarget(document.querySelector(".atlas-task-page-active"));
-  }, []);
-
-  useEffect(() => {
-    if (task.move_context?.projects?.length) return;
-    let active = true;
-    void fetchAtlasTaskCards(task.task_id)
-      .then((response) => {
-        if (active && response.taskCards[0]) setResolvedTask(response.taskCards[0]);
-      })
-      .catch(() => undefined);
-    return () => { active = false; };
-  }, [task]);
-
-  if (!target || !resolvedTask.move_context?.projects?.length) return null;
-  return createPortal(<TaskProjectMoveContext task={resolvedTask} />, target);
 }
