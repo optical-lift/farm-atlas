@@ -107,14 +107,14 @@ export default function FutureDayProjectionBridge() {
     <article className="atlas-day-route-group atlas-future-projection-group" aria-label="Projected future work">
       <div className="atlas-future-projection-head">
         <div>
-          <h3>Projected next</h3>
-          <p>{items.length} {items.length === 1 ? "possible task" : "possible tasks"} not released yet</p>
+          <h3>Possible work</h3>
+          <p>{items.length} {items.length === 1 ? "projected task" : "projected tasks"} not released yet</p>
         </div>
         {targetMinutes > 0 ? <strong>{projectedMinutes}/{targetMinutes} min visible</strong> : null}
       </div>
       <div className="atlas-future-projection-note">
-        This is the planning layer, not an early task release. Completion gates, weather and the Weed Card queue can move these before the day arrives.
-        {overTarget ? " More work is shown than will fit so you can see every current possibility; Atlas should release only what fits." : ""}
+        Every current future-day possibility is shown here without becoming an early task. Completion gates, weather and the Weed Card queue can move these before the day arrives.
+        {overTarget ? " More work is shown than will fit because this view is for seeing the whole current possibility set; Atlas should release only what fits." : ""}
       </div>
       <div className="atlas-future-projection-list">
         {items.map((item) => (
