@@ -6,6 +6,7 @@ const schemaMigration = await readFile(new URL("../supabase/migrations/202608071
 const conversionMigration = await readFile(new URL("../supabase/migrations/20260807154500_convert_elm_finish_tasks_to_project_pull_pool.sql", import.meta.url), "utf8");
 const capacityV2 = await readFile(new URL("../supabase/migrations/20260809022500_full_paid_day_project_capacity_v2.sql", import.meta.url), "utf8");
 const conveyorV1 = await readFile(new URL("../supabase/migrations/20260809022900_serial_full_paid_day_project_conveyor_v1.sql", import.meta.url), "utf8");
+const conveyorHardening = await readFile(new URL("../supabase/migrations/20260809023800_harden_paid_project_conveyor_v1.sql", import.meta.url), "utf8");
 const projectPull = await readFile(new URL("../lib/atlas/project-pull.ts", import.meta.url), "utf8");
 const homePage = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 const switchedHome = await readFile(new URL("../lib/atlas/switched-account-home-overview.ts", import.meta.url), "utf8");
@@ -56,9 +57,21 @@ test("Farm Hand Conveyor releases only one actionable Finish Project serving at 
   assert.match(conveyorV1, /'state','current_serving_exists'/);
   assert.match(conveyorV1, /'state','future_plan_only'/);
   assert.match(conveyorV1, /returned\.state='returned'/);
-  assert.match(conveyorV1, /perform atlas\.deal_next_paid_project_work_v1/);
   assert.match(conveyorV1, /new\.status='blocked'/);
   assert.match(conveyorV1, /new\.status='done'/);
+});
+
+test("a blocked serving remains obligation but no longer consumes executable paid-day capacity", () => {
+  assert.match(conveyorHardening, /join atlas\.tasks selected_task on selected_task\.id=selection\.task_id/);
+  assert.match(conveyorHardening, /selection\.state='completed'/);
+  assert.match(conveyorHardening, /selection\.state='selected' and selected_task\.status='open'/);
+  assert.match(conveyorHardening, /blocked serving remains an obligation/i);
+});
+
+test("status-trigger chaining cannot silently release outdoor work without weather context", () => {
+  assert.match(conveyorHardening, /perform atlas\.deal_next_paid_project_work_v1\(new\.farm_id,v_membership_id,v_service_date,false\)/);
+  assert.match(conveyorHardening, /no trustworthy live weather context/i);
+  assert.match(projectPull, /p_allow_outdoor: constraints\.allowOutdoor !== false/);
 });
 
 test("real farm-hand Home deals from the serial paid-day plan without exposing a choice menu", () => {
