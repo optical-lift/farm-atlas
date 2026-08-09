@@ -60,6 +60,11 @@ export type AtlasProjectPullOptions = {
 };
 
 type EnabledProject = { id: string; title: string; farm_id: string; metadata: Record<string, unknown> | null };
+type PaidProjectConveyorResult = {
+  contractVersion?: string;
+  state?: string;
+  taskId?: string | null;
+};
 
 function asStatus(value: unknown): AtlasProjectPullStatus | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -103,27 +108,17 @@ export async function ensureAtlasProjectPullTask(
   day: string,
   constraints: { allowOutdoor?: boolean } = {},
 ): Promise<string | null> {
-  const result = await readAtlasEnabledProjectPull(farmId, membershipId, day);
-  if (!result) return null;
-  if (!result.status.enabled || result.status.completeForToday || result.status.remainingItems <= 0) return null;
-
-  const fitting = result.options.options.filter((option) => option.fitsToday && (constraints.allowOutdoor !== false || option.environment !== "outdoor"));
-  const next = fitting[0];
-  if (!next) return null;
-
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("pull_project_item_to_today_v1", {
-    p_project_item_id: next.projectItemId,
+  const { data, error } = await supabase.rpc("deal_next_paid_project_work_v1", {
+    p_farm_id: farmId,
     p_membership_id: membershipId,
     p_day: day,
-    p_note: result.options.workerMode === "recovery"
-      ? "Automatically dealt by the Farm Hand Conveyor in recovery mode."
-      : `Automatically dealt by the Farm Hand Conveyor (${result.options.routingMode ?? "ready"}).`,
+    p_allow_outdoor: constraints.allowOutdoor !== false,
   });
   if (error) throw new Error(error.message);
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
-  const taskId = (data as { taskId?: unknown }).taskId;
-  return typeof taskId === "string" ? taskId : null;
+  const result = data as PaidProjectConveyorResult;
+  return typeof result.taskId === "string" ? result.taskId : null;
 }
 
 export async function buildAtlasProjectPullMove(farmId: string, membershipId: string, day: string): Promise<AtlasUniversalMove | null> {
@@ -139,8 +134,8 @@ export async function buildAtlasProjectPullMove(farmId: string, membershipId: st
     category: "Physical progress · Atlas holds the order",
     title: "Finish + Renovation",
     scopeLabel: result.project.title,
-    meta: `${fitting.length} ready cards · up to ${minutes} min`,
-    detail: "Atlas will release one fitting project move. The rest stay undated in the project reservoir.",
+    meta: `${fitting.length} ready cards · ${minutes} paid-work min remain`,
+    detail: "Atlas can plan several Finish Project moves to fill the paid workday, while releasing only one actionable project serving at a time.",
     href: `/project/${encodeURIComponent(result.project.id)}`,
     date: day,
     state: "ready",
