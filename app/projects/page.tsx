@@ -66,21 +66,23 @@ function sortProjects(projects: Project[]) {
     || left.title.localeCompare(right.title));
 }
 
-function ProjectCard({ project }: { project: Project }) {
+function ProjectCard({ project, calm = false }: { project: Project; calm?: boolean }) {
   const state = projectState(project);
   return (
-    <Link href={`/project/${encodeURIComponent(project.projectId)}`} className="atlas-project-card">
+    <Link href={`/project/${encodeURIComponent(project.projectId)}`} className={`atlas-project-card${calm ? " atlas-project-card-calm" : ""}`}>
       <div>
         <span>{projectTypeLabel(project)}{project.targetDate ? ` · ${prettyDate(project.targetDate)}` : ""}</span>
-        <AtlasStateBadge state={state}>{stateLabel(state)}</AtlasStateBadge>
+        {!calm ? <AtlasStateBadge state={state}>{stateLabel(state)}</AtlasStateBadge> : null}
       </div>
       <strong>{project.title}</strong>
       <p>{project.currentMilestone || project.outcome || "Open the project."}</p>
-      <small>
-        {project.openTaskCount} open
-        {project.blockedTaskCount ? ` · ${project.blockedTaskCount} blocked` : ""}
-        {project.openAttentionCount ? ` · ${project.openAttentionCount} need action` : ""}
-      </small>
+      {!calm ? (
+        <small>
+          {project.openTaskCount} open
+          {project.blockedTaskCount ? ` · ${project.blockedTaskCount} blocked` : ""}
+          {project.openAttentionCount ? ` · ${project.openAttentionCount} need action` : ""}
+        </small>
+      ) : null}
     </Link>
   );
 }
@@ -94,6 +96,25 @@ function ProjectBranch({ project, childrenByParent, depth = 0 }: { project: Proj
         <div className="atlas-project-children">
           {children.map((child) => <ProjectBranch key={child.projectId} project={child} childrenByParent={childrenByParent} depth={depth + 1} />)}
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CalmProjectBranch({ project, childrenByParent, depth = 0 }: { project: Project; childrenByParent: Map<string, Project[]>; depth?: number }) {
+  const children = sortProjects(childrenByParent.get(project.projectId) ?? []);
+  return (
+    <div className="atlas-project-calm-branch" data-project-depth={depth}>
+      <ProjectCard project={project} calm />
+      {children.length ? (
+        <details className="atlas-project-calm-children">
+          <summary>{children.length} {children.length === 1 ? "quest" : "quests"} inside</summary>
+          <div>
+            {children.map((child) => (
+              <CalmProjectBranch key={child.projectId} project={child} childrenByParent={childrenByParent} depth={depth + 1} />
+            ))}
+          </div>
+        </details>
       ) : null}
     </div>
   );
@@ -121,6 +142,9 @@ export default async function AtlasProjectsPage() {
     ...home.farms.flatMap((farm) => farm.projects),
   ];
 
+  const farmHandMode = viewer.farmMemberships.some((membership) => membership.role === "farm_hand")
+    && !viewer.canManageAnyFarm
+    && !viewer.canManageAnyPortfolio;
   const activeProjects = projects.filter((project) => project.status !== "paused" && project.portfolioType !== "incubator");
   const incubatorProjects = sortProjects(projects.filter((project) => project.status === "paused" || project.portfolioType === "incubator"));
   const activeIds = new Set(activeProjects.map((project) => project.projectId));
@@ -146,7 +170,7 @@ export default async function AtlasProjectsPage() {
         .atlas-projects-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         .atlas-projects-section { padding: 16px; display: grid; gap: 12px; }
         .atlas-projects-list, .atlas-project-attention-list { display: grid; gap: 9px; }
-        .atlas-project-branch { min-width: 0; display: grid; gap: 8px; }
+        .atlas-project-branch, .atlas-project-calm-branch { min-width: 0; display: grid; gap: 8px; }
         .atlas-project-children {
           display: grid;
           gap: 8px;
@@ -166,6 +190,7 @@ export default async function AtlasProjectsPage() {
           text-decoration: none;
           box-shadow: 0 4px 12px rgba(47, 48, 66, 0.035);
         }
+        .atlas-project-card-calm { padding: 15px; }
         .atlas-project-card > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .atlas-project-card > div:first-child > span,
         .atlas-project-attention-card > span {
@@ -178,11 +203,30 @@ export default async function AtlasProjectsPage() {
         }
         .atlas-project-card > strong,
         .atlas-project-attention-card > strong { display: block; margin-top: 8px; font-size: 16px; line-height: 1.08; }
+        .atlas-project-card-calm > strong { font-size: 18px; }
         .atlas-project-card > p,
         .atlas-project-attention-card > p { margin: 6px 0 0; color: #72736d; font-size: 11px; line-height: 1.35; font-weight: 700; }
+        .atlas-project-card-calm > p { max-width: 42ch; }
         .atlas-project-card > small,
         .atlas-project-attention-card > small { display: block; margin-top: 9px; color: #686a64; font-size: 9px; font-weight: 850; }
         .atlas-project-attention-card { border-left: 4px solid #d9b5a9; }
+        .atlas-project-calm-children { margin: 0 6px; }
+        .atlas-project-calm-children > summary {
+          color: #67638f;
+          cursor: pointer;
+          font-size: 10px;
+          font-weight: 900;
+          list-style-position: inside;
+          padding: 2px 4px 5px;
+        }
+        .atlas-project-calm-children > div {
+          display: grid;
+          gap: 8px;
+          margin-left: 10px;
+          padding: 4px 0 0 10px;
+          border-left: 2px solid rgba(139, 145, 194, 0.18);
+        }
+        .atlas-project-calm-children .atlas-project-card-calm { box-shadow: none; background: rgba(255, 253, 247, 0.78); }
         .atlas-projects-more,
         .atlas-projects-incubator { border-top: 1px solid rgba(88, 87, 111, 0.1); padding-top: 10px; }
         .atlas-projects-more summary,
@@ -197,14 +241,16 @@ export default async function AtlasProjectsPage() {
       <AtlasAppShell className="atlas-projects-shell" frameClassName="atlas-projects-page">
         <AtlasTopBar title="Projects" />
         <div className="atlas-projects-body">
-          <AtlasMetricStrip className="atlas-projects-summary" ariaLabel="Project totals">
-            <span><b>{activeProjects.length}</b> active</span>
-            <span><b>{openWorkCount}</b> open</span>
-            <span><b>{blockedProjects}</b> blocked</span>
-            <span><b>{attentionProjects}</b> attention</span>
-          </AtlasMetricStrip>
+          {!farmHandMode ? (
+            <AtlasMetricStrip className="atlas-projects-summary" ariaLabel="Project totals">
+              <span><b>{activeProjects.length}</b> active</span>
+              <span><b>{openWorkCount}</b> open</span>
+              <span><b>{blockedProjects}</b> blocked</span>
+              <span><b>{attentionProjects}</b> attention</span>
+            </AtlasMetricStrip>
+          ) : null}
 
-          {home.attention.length ? (
+          {!farmHandMode && home.attention.length ? (
             <AtlasCard as="section" className="atlas-projects-section" ariaLabelledBy="atlas-project-needs-title">
               <AtlasSectionHeading title="Needs action" count={home.attention.length} id="atlas-project-needs-title" />
               <div className="atlas-project-attention-list">
@@ -236,16 +282,22 @@ export default async function AtlasProjectsPage() {
           ) : null}
 
           <AtlasCard as="section" className="atlas-projects-section" ariaLabelledBy="atlas-project-list-title">
-            <AtlasSectionHeading title="Active worlds" count={activeProjects.length} id="atlas-project-list-title" />
+            <AtlasSectionHeading
+              title={farmHandMode ? "Your worlds" : "Active worlds"}
+              count={farmHandMode ? rootProjects.length : activeProjects.length}
+              id="atlas-project-list-title"
+            />
             {rootProjects.length ? (
               <div className="atlas-projects-list">
-                {rootProjects.map((project) => <ProjectBranch key={project.projectId} project={project} childrenByParent={childrenByParent} />)}
+                {rootProjects.map((project) => farmHandMode
+                  ? <CalmProjectBranch key={project.projectId} project={project} childrenByParent={childrenByParent} />
+                  : <ProjectBranch key={project.projectId} project={project} childrenByParent={childrenByParent} />)}
               </div>
             ) : (
               <p className="atlas-projects-empty">No active projects are visible in this account view.</p>
             )}
 
-            {incubatorProjects.length ? (
+            {!farmHandMode && incubatorProjects.length ? (
               <details className="atlas-projects-incubator">
                 <summary>Later / incubator · {incubatorProjects.length}</summary>
                 <p>Real possibilities that are not part of the current field of play.</p>
