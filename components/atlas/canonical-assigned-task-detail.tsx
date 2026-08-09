@@ -9,7 +9,6 @@ import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-deta
 import NetworkOutreachTaskDetail from "@/components/atlas/network-outreach-task-detail";
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
-import { TaskProjectMoveContextPortal } from "@/components/atlas/task-project-move-context";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -69,26 +68,19 @@ function isExecutionChecklistTask(task: AtlasTaskCard) {
 }
 
 export default function CanonicalAssignedTaskDetail(props: Props) {
-  let detail;
-  if (isContractorServiceTask(props.task)) detail = <ContractorServiceTaskDetail {...props} />;
-  else if (isDecisionSelectorTask(props.task)) detail = <DecisionSelectorTaskDetail {...props} />;
-  else if (isWeedTask(props.task)) detail = <WeedCardTaskLoader {...props} />;
-  else if (isSeedInventoryTask(props.task)) detail = <SeedInventoryTaskLoader {...props} />;
-  else if (isNetworkOutreachTask(props.task)) detail = <NetworkOutreachTaskDetail {...props} />;
-  else if (isNetworkInputsTask(props.task)) detail = <NetworkInputsTaskDetail {...props} />;
-  else if (isExecutionChecklistTask(props.task)) detail = <ExecutionChecklistTaskDetail {...props} />;
-  else if (isProjectPullTask(props.task)) detail = <ProjectPullTaskDetail {...props} />;
-  else {
-    const resultMode = atlasTaskResultMode(props.task);
-    detail = props.assignee.key === "anna" && resultMode === "field_execution"
-      ? <FarmHandConveyorTaskDetail {...props} />
-      : <DominionAssignedTaskDetail {...props} />;
+  if (isContractorServiceTask(props.task)) return <ContractorServiceTaskDetail {...props} />;
+  if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
+  if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
+  if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
+  if (isNetworkOutreachTask(props.task)) return <NetworkOutreachTaskDetail {...props} />;
+  if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
+  if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
+  if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
+
+  const resultMode = atlasTaskResultMode(props.task);
+  if (props.assignee.key === "anna" && resultMode === "field_execution") {
+    return <FarmHandConveyorTaskDetail {...props} />;
   }
 
-  return (
-    <>
-      {detail}
-      <TaskProjectMoveContextPortal task={props.task} />
-    </>
-  );
+  return <DominionAssignedTaskDetail {...props} />;
 }
