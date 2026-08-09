@@ -35,7 +35,7 @@ const projectionRoute = readFileSync(
   "utf8",
 );
 const projectionUi = readFileSync(
-  new URL("../components/atlas/owner-tentative-day-projection.tsx", import.meta.url),
+  new URL("../components/atlas/owner-day-schedule-builder.tsx", import.meta.url),
   "utf8",
 );
 
@@ -98,14 +98,15 @@ test("rescheduled unfinished work remains paid backlog instead of becoming permi
   assert.doesNotMatch(backlogMigration, /overdue_rescheduled_noncounting/);
 });
 
-test("Owner operating as Anna can see the paid-day fill, not just a thin task count", () => {
+test("Owner operating as Anna sees full paid-day capacity while approving the discretionary fill", () => {
   assert.match(projectionReader, /paidTargetMinutes/);
+  assert.match(projectionRoute, /paidTargetMinutes/);
   assert.match(projectionRoute, /scheduledPaidMinutes/);
-  assert.match(projectionRoute, /tentativePaidMinutes/);
-  assert.match(projectionRoute, /projectedPaidMinutes/);
-  assert.match(projectionRoute, /paidGapMinutes/);
-  assert.match(projectionUi, /paid work projected/);
-  assert.match(projectionUi, /is already scheduled paid Elm work/);
-  assert.match(projectionUi, /proposed below to fill the workday/);
-  assert.match(projectionUi, /Day filled/);
+  assert.match(projectionRoute, /approvedConditionalMinutes/);
+  assert.match(projectionRoute, /remainingPaidMinutes/);
+  assert.match(projectionRoute, /project_pull_options_for_member_v2/);
+  assert.match(projectionUi, /committed/);
+  assert.match(projectionUi, /Atlas is showing every eligible idea/);
+  assert.match(projectionUi, /Nothing below becomes/);
+  assert.match(projectionUi, /Build \{operatorLabel\}&apos;s schedule/);
 });
