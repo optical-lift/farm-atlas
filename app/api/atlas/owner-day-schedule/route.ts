@@ -14,7 +14,7 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 type Selection = {
-  sourceKind: "project_pull" | "floating_task" | "queue";
+  sourceKind: "project_pull" | "floating_task";
   sourceId: string;
 };
 
@@ -26,10 +26,7 @@ type RequestBody = {
 type RpcError = { code?: string; message?: string };
 
 function privateJson(body: Record<string, unknown>, status = 200) {
-  return NextResponse.json(body, {
-    status,
-    headers: { "Cache-Control": "private, no-store" },
-  });
+  return NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 }
 
 function validDateIso(value: unknown): value is string {
@@ -51,7 +48,7 @@ function normalizeSelections(value: unknown): Selection[] | null {
     const record = row as Record<string, unknown>;
     const sourceKind = record.sourceKind;
     const sourceId = record.sourceId;
-    if (!["project_pull", "floating_task", "queue"].includes(String(sourceKind)) || !validUuid(sourceId)) return null;
+    if (!["project_pull", "floating_task"].includes(String(sourceKind)) || !validUuid(sourceId)) return null;
     normalized.push({ sourceKind: sourceKind as Selection["sourceKind"], sourceId });
   }
   return normalized;
@@ -76,13 +73,9 @@ export async function POST(request: Request) {
     return atlasApiError(400, "owner_schedule_invalid_json", "The schedule request is invalid.");
   }
 
-  if (!validDateIso(body.date)) {
-    return atlasApiError(400, "owner_schedule_date_required", "A valid YYYY-MM-DD schedule date is required.");
-  }
+  if (!validDateIso(body.date)) return atlasApiError(400, "owner_schedule_date_required", "A valid YYYY-MM-DD schedule date is required.");
   const selections = normalizeSelections(body.selections);
-  if (!selections || !selections.length) {
-    return atlasApiError(400, "owner_schedule_selections_required", "Choose at least one work card before building the schedule.");
-  }
+  if (!selections || !selections.length) return atlasApiError(400, "owner_schedule_selections_required", "Choose at least one purple work card before building the schedule.");
 
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
@@ -90,17 +83,12 @@ export async function POST(request: Request) {
   const operatorContext = await readAtlasOwnerOperatorContext();
   const effectiveMembershipId = effectiveOperatorMembershipId(operatorContext);
   const effective = operatorContext?.effective ?? null;
-  if (
-    !operatorContext?.isOperating
-    || !effectiveMembershipId
-    || !effective?.farmId
-    || effective.farmRole !== "farm_hand"
-  ) {
+  if (!operatorContext?.isOperating || !effectiveMembershipId || !effective?.farmId || effective.farmRole !== "farm_hand") {
     return atlasApiError(403, "owner_schedule_operator_required", "Open a Farm Hand account in Owner operator mode before building that worker's schedule.");
   }
 
   const supabase = await createAtlasServerClient();
-  const response = await supabase.rpc("owner_build_worker_day_schedule_api_v1", {
+  const response = await supabase.rpc("owner_build_worker_day_schedule_api_v2", {
     p_farm_id: effective.farmId,
     p_membership_id: effectiveMembershipId,
     p_day: body.date,
@@ -112,10 +100,5 @@ export async function POST(request: Request) {
     return atlasApiError(500, "owner_schedule_invalid_result", "Atlas returned an invalid schedule result.");
   }
 
-  return privateJson({
-    ...(response.data as Record<string, unknown>),
-    ok: true,
-    operatorMode: true,
-    effectiveMembershipId,
-  });
+  return privateJson({ ...(response.data as Record<string, unknown>), ok: true, operatorMode: true, effectiveMembershipId });
 }
