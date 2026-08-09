@@ -84,6 +84,7 @@ type MowingPlan = {
   nextDue: string;
   cadenceDays: number;
   expectedMinutes: number;
+  releasedTaskId?: string;
 };
 
 function centralDateIso(date = new Date()) {
@@ -187,12 +188,24 @@ function mowingMinutes(ruleKey: string) {
   return 60;
 }
 
+function mowingTaskTitle(task: MowingTaskRow) {
+  return task.title.replace(/^Mowing\s*[—·:-]\s*/i, "Mow · ");
+}
+
+function mowingTaskLocation(task: MowingTaskRow) {
+  const metadata = recordValue(task.metadata);
+  return textValue(metadata.display_location)
+    || textValue(metadata.collection_label)
+    || textValue(metadata.collection_zone)
+    || task.title.replace(/^Mowing\s*[—·:-]\s*/i, "");
+}
+
 function privateJson(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "automatic-worker-day-rhythm-plan-v1",
+      "X-Atlas-Read-Path": "automatic-worker-day-rhythm-plan-v2",
     },
   });
 }
@@ -297,9 +310,10 @@ export async function GET(request: Request) {
       weedCursor = projectedDate;
     }
 
-    // MOWING: reserve one mowing slot on every available worker day. Existing real
-    // mowing tasks own their day; gaps are filled optimistically from the mowing clock,
-    // ranked by the next due boundary. These are planning rows, never early releases.
+    // MOWING: reserve one mowing slot on every available worker day. A real released
+    // mowing task still owns the slot, but Atlas also returns its planning projection so
+    // the client can keep one mowing row visible even if that dated task is absent from
+    // the rendered task feed. The planning row yields whenever the real card is present.
     const firstWorkday = workerDayOnOrAfter(today, unavailable);
     const mowingTaskRead = await supabase
       .from("tasks")
@@ -360,8 +374,28 @@ export async function GET(request: Request) {
         .sort((left, right) => left.title.localeCompare(right.title))[0];
 
       if (explicit) {
-        const routeKey = mowingRouteKey(recordValue(explicit.metadata));
+        const metadata = recordValue(explicit.metadata);
+        const routeKey = mowingRouteKey(metadata);
         const matching = mowingPlan.find((plan) => plan.routeKey === routeKey);
+        if (day === dateIso) {
+          automaticMow = matching
+            ? {
+                ...matching,
+                title: mowingTaskTitle(explicit),
+                location: mowingTaskLocation(explicit),
+                releasedTaskId: explicit.id,
+              }
+            : {
+                ruleId: `task:${explicit.id}`,
+                routeKey,
+                title: mowingTaskTitle(explicit),
+                location: mowingTaskLocation(explicit),
+                nextDue: day,
+                cadenceDays: Math.max(1, numberValue(metadata.recreate_after_days) || 7),
+                expectedMinutes: mowingMinutes(routeKey || explicit.title.toLowerCase()),
+                releasedTaskId: explicit.id,
+              };
+        }
         if (matching) matching.nextDue = addDaysIso(day, matching.cadenceDays);
         continue;
       }
@@ -375,15 +409,11 @@ export async function GET(request: Request) {
       next.nextDue = addDaysIso(day, next.cadenceDays);
     }
 
-    const realMowOnRequestedDay = mowingTasks.some((task) => {
-      const effectiveDate = task.due_date && task.due_date < firstWorkday ? firstWorkday : task.due_date;
-      return effectiveDate === dateIso;
-    });
-    if (automaticMow && !realMowOnRequestedDay) {
+    if (automaticMow) {
       candidates.push({
-        id: `automatic-mow:${automaticMow.ruleId}:${dateIso}`,
+        id: `automatic-mow:${automaticMow.releasedTaskId ?? automaticMow.ruleId}:${dateIso}`,
         sourceKind: "rhythm",
-        sourceId: automaticMow.ruleId,
+        sourceId: automaticMow.releasedTaskId ?? automaticMow.ruleId,
         title: automaticMow.title,
         note: null,
         environment: "outdoor",
@@ -391,7 +421,9 @@ export async function GET(request: Request) {
         expectedActiveMinutes: automaticMow.expectedMinutes,
         automatic: true,
         conditional: true,
-        reason: "Automatic mowing slot. Atlas is showing one mowing area per worker day without releasing the task early.",
+        reason: automaticMow.releasedTaskId
+          ? "This workday already has a released mowing task. This planning row yields to the real mowing card when that card is present."
+          : "Automatic mowing slot. Atlas is showing one mowing area per worker day without releasing the task early.",
         dayWindow: "evening",
         workOrderNumber: 99000,
       });
