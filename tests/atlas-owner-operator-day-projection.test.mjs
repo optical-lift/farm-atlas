@@ -16,13 +16,17 @@ test("Owner schedule candidate discovery resolves the selected Farm Hand on the 
   assert.match(route, /project_pull_options_for_member_v2/);
   assert.match(route, /owner_worker_day_floating_candidates_v1/);
   assert.match(route, /anna_weeding_rotation/);
+  assert.match(route, /candidatePlacement/);
+  assert.match(route, /dayWindow/);
+  assert.match(route, /workOrderNumber/);
+  assert.match(route, /source_task_id/);
   assert.match(route, /candidates/);
   assert.doesNotMatch(route, /atlasSupabase|atlas\/supabase-server/);
   assert.doesNotMatch(route, /searchParams\.get\(["']membership/i);
   assert.doesNotMatch(route, /23e98e5e-16ca-40d8-872c-c77e06baa167/);
 });
 
-test("Owner schedule builder makes tentative work real only after explicit approval", () => {
+test("Owner schedule ideas are woven into the real timeline and committed at its bottom", () => {
   const component = read("components/atlas/owner-day-schedule-builder.tsx");
   const daySummary = read("components/atlas/day-trail-summary.tsx");
   const postRoute = read("app/api/atlas/owner-day-schedule/route.ts");
@@ -31,13 +35,18 @@ test("Owner schedule builder makes tentative work real only after explicit appro
   assert.match(component, /\/api\/atlas\/owner-day-schedule/);
   assert.match(component, /x-atlas-intent/);
   assert.match(component, /owner-day-schedule-v1/);
-  assert.match(component, /Owner schedule builder/);
-  assert.match(component, /Build \{operatorLabel\}&apos;s day/);
+  assert.match(component, /createPortal/);
+  assert.match(component, /\.atlas-day-mixed-timeline/);
+  assert.match(component, /data-owner-schedule-candidate/);
+  assert.match(component, /CandidateRow/);
+  assert.match(component, /fetchAtlasTaskCards/);
+  assert.match(component, /atlasWorkOrderNumber/);
+  assert.match(component, /atlasWorkOrderAnchorForTask/);
+  assert.match(component, /data-owner-day-schedule-commit/);
+  assert.match(component, /Commit schedule/);
+  assert.match(component, /Purple cards are still only ideas/);
   assert.match(component, /aria-pressed/);
-  assert.match(component, /Nothing below becomes/);
-  assert.match(component, /A Weed Card stays behind the card ahead of it/);
-  assert.match(component, /Build \$\{operatorLabel\}'s schedule/);
-  assert.match(component, /<button/);
+  assert.match(component, /window\.location\.reload/);
 
   assert.match(daySummary, /OwnerDayScheduleBuilder/);
   assert.match(daySummary, /compact \? <OwnerDayScheduleBuilder \/>/);
