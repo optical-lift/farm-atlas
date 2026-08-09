@@ -243,14 +243,60 @@
   padding-top: 2px;
 }
 
-.atlas-project-route-spine > .atlas-project-task-entry[data-project-task-selected="true"] {
+.atlas-project-task-entry[data-project-task-selected="true"] {
   border-radius: 14px;
   background: rgba(174, 179, 212, 0.12);
   box-shadow: 0 0 0 3px rgba(139, 145, 194, 0.16);
 }
 
-.atlas-project-route-spine > .atlas-project-task-entry > .atlas-project-task-card {
+.atlas-project-task-entry > .atlas-project-task-card {
   padding-right: 8px !important;
+}
+
+.atlas-project-task-card-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+}
+
+.atlas-project-task-card-head > small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-project-task-badges {
+  flex: 0 0 auto;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin: 0 !important;
+}
+
+.atlas-project-task-assignee,
+.atlas-project-task-unlocks {
+  border-radius: 999px;
+  padding: 3px 6px;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.atlas-project-task-assignee {
+  border: 1px solid rgba(111, 114, 104, 0.14);
+  background: rgba(246, 242, 230, 0.86);
+  color: var(--atlas-muted);
+}
+
+.atlas-project-task-unlocks {
+  border: 1px solid rgba(139, 145, 194, 0.2);
+  background: rgba(174, 179, 212, 0.18);
+  color: var(--atlas-purple-dark);
 }
 
 .atlas-project-task-card > em {
@@ -274,6 +320,50 @@
   text-decoration-thickness: 1px;
 }
 
+.atlas-project-task-tree {
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-project-task-tree-node {
+  min-width: 0;
+}
+
+.atlas-project-task-children {
+  position: relative;
+  margin: 3px 0 3px 22px;
+  padding: 3px 0 0 12px;
+  border-left: 1px solid rgba(139, 145, 194, 0.3);
+  display: grid;
+  gap: 6px;
+}
+
+.atlas-project-task-child-branch {
+  position: relative;
+  min-width: 0;
+}
+
+.atlas-project-task-child-branch::before {
+  content: "";
+  position: absolute;
+  top: 23px;
+  left: -12px;
+  width: 11px;
+  border-top: 1px solid rgba(139, 145, 194, 0.3);
+}
+
+.atlas-project-task-children .atlas-project-task-entry {
+  min-width: 0;
+}
+
+.atlas-project-task-children .atlas-project-task-card.atlas-day-route-blocked {
+  opacity: 0.78;
+}
+
+.atlas-project-task-children .atlas-project-task-children {
+  margin-left: 18px;
+}
+
 .atlas-project-task-totals {
   margin-left: 24px;
   border-top: 1px solid rgba(139, 145, 194, 0.12);
@@ -295,5 +385,14 @@
     align-items: start;
     flex-direction: column;
     gap: 4px;
+  }
+
+  .atlas-project-task-card-head {
+    align-items: flex-start;
+  }
+
+  .atlas-project-task-badges {
+    max-width: 46%;
+    flex-wrap: wrap;
   }
 }
