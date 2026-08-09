@@ -25,6 +25,8 @@ export type AtlasProjectPathNode = {
   portfolioType: string;
 };
 
+export type AtlasRealityState = "finding_shape" | "making_real" | "closing_loop";
+
 export type AtlasPortfolioProject = {
   projectId: string;
   projectKey: string;
@@ -40,6 +42,8 @@ export type AtlasPortfolioProject = {
   outcome: string | null;
   currentMilestone: string | null;
   health: "moving" | "waiting" | "blocked" | "at_risk" | "complete" | "quiet" | string;
+  realityState: AtlasRealityState;
+  realityStateReason: string | null;
   targetDate: string | null;
   lastMovementAt: string | null;
   farmId: string | null;
@@ -59,6 +63,8 @@ export type AtlasPortfolioFarm = {
   farmKey: string;
   farmName: string;
   status: string;
+  northStar: string | null;
+  locationLabel: string | null;
   facts: Record<string, unknown>;
   projects: AtlasPortfolioProject[];
 };
