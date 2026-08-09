@@ -33,11 +33,14 @@ test("Farm Conditions reads measured Moon state from the canonical Atlas sky led
 
 test("Home no longer invokes the legacy almanac task-scoring route", () => {
   const allApi = read("app/api/atlas/farm-conditions/all/route.ts");
+  const legacyRoute = read("app/api/atlas/farm-conditions/route.ts");
   const home = read("app/AtlasFarmConditionsHomePatch.tsx");
 
   assert.match(allApi, /GET as readFarmWeatherRain/);
   assert.match(allApi, /farm-weather-rain/);
   assert.doesNotMatch(allApi, /GET as readFarmConditions/);
+  assert.match(legacyRoute, /farm-weather-rain\/route/);
+  assert.doesNotMatch(legacyRoute, /lunarGuidance|lunarTaskHint|approximateMoon|tropicalMoonSign/);
   assert.doesNotMatch(home, /Traditional farm almanac/);
   assert.doesNotMatch(home, /lunarTaskHints/);
   assert.doesNotMatch(home, /favoredActions/);
@@ -57,7 +60,7 @@ test("Legacy almanac code is isolated from canonical task eligibility", () => {
 
 test("Rain-gauge writes cross the reviewed RPC boundary", () => {
   const migration = read("supabase/migrations/20260801041000_atlas_farm_rain_and_lunar_profile_v1.sql");
-  const api = read("app/api/atlas/farm-conditions/route.ts");
+  const api = read("app/api/atlas/farm-weather-rain/route.ts");
 
   assert.match(migration, /create table if not exists atlas\.farm_rain_observations/);
   assert.match(migration, /alter table atlas\.farm_rain_observations enable row level security/);
