@@ -16,7 +16,7 @@ test("organization portals keep the Feast Guild title while farm employees keep 
   assert.doesNotMatch(home, /singleVisibleFarmName/);
 });
 
-test("project tasks use the same task-focus route while project pages remain task collections", () => {
+test("project Moves keep the same task-focus route beneath the strategic project horizon", () => {
   const project = read("app/project/[projectId]/page.tsx");
   const tools = read("components/atlas/portfolio/ProjectTaskTools.tsx");
   const focusRoute = read("app/task-focus/[taskId]/page.tsx");
@@ -25,7 +25,8 @@ test("project tasks use the same task-focus route while project pages remain tas
   const migration = read("supabase/migrations/20260728235900_universal_project_task_focus_and_transitions_v1.sql");
   const css = read("app/project-task-timeline.css");
 
-  assert.match(project, /atlas-project-command-header/);
+  assert.match(project, /atlas-project-horizon/);
+  assert.match(project, /Moves advancing this/);
   assert.match(project, /<ProjectTaskTools[\s\S]*steps=\{detail\.steps\}[\s\S]*trail=\{project\.trail\}/);
   assert.doesNotMatch(project, /<AtlasTrail/);
   assert.doesNotMatch(project, /className=\{styles\.hero\}/);
