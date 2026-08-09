@@ -39,6 +39,10 @@ function validDateIso(value: string | null) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime()));
 }
 
+function minuteTotal(items: Array<{ expectedActiveMinutes: number | null }>) {
+  return items.reduce((total, item) => total + Math.max(0, Number(item.expectedActiveMinutes) || 0), 0);
+}
+
 function privateJson(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, {
     status,
@@ -101,7 +105,15 @@ export async function GET(request: Request) {
 
     const actualTaskIds = new Set(atlasUniversalTaskCards(home).map((task) => task.task_id));
     const projectionDay = projection.days.find((day) => day.date === dateIso);
-    const items = (projectionDay?.items ?? [])
+    const allDayItems = projectionDay?.items ?? [];
+    const scheduledPaidMinutes = minuteTotal(allDayItems.filter((item) => item.sourceKind === "task"));
+    const tentativeDayItems = allDayItems.filter((item) => item.sourceKind !== "task");
+    const tentativePaidMinutes = minuteTotal(tentativeDayItems);
+    const projectedPaidMinutes = scheduledPaidMinutes + tentativePaidMinutes;
+    const paidTargetMinutes = projection.paidTargetMinutes;
+    const paidGapMinutes = Math.max(0, paidTargetMinutes - projectedPaidMinutes);
+
+    const items = allDayItems
       .filter((item) => item.sourceKind !== "task" || !actualTaskIds.has(item.sourceId))
       .map((item) => ({
         id: item.id,
@@ -118,6 +130,11 @@ export async function GET(request: Request) {
       active: true,
       date: dateIso,
       operatorLabel: effective.displayName,
+      paidTargetMinutes,
+      scheduledPaidMinutes,
+      tentativePaidMinutes,
+      projectedPaidMinutes,
+      paidGapMinutes,
       items,
     });
   } catch (error) {
