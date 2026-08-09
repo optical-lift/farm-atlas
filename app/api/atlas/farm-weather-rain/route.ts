@@ -194,3 +194,47 @@ export async function GET(request: NextRequest) {
     },
   });
 }
+
+export async function POST(request: NextRequest) {
+  const session = await getAtlasSession();
+  if (!session) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json() as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
+  }
+
+  const farmId = typeof body.farmId === "string" ? body.farmId : session.activeFarmId;
+  if (!farmId || !membershipForFarm(session, farmId)) {
+    return NextResponse.json({ ok: false, error: "farm membership required" }, { status: 403 });
+  }
+
+  const amountIn = typeof body.amountIn === "number" ? body.amountIn : Number(body.amountIn);
+  if (!Number.isFinite(amountIn) || amountIn < 0 || amountIn > 30) {
+    return NextResponse.json({ ok: false, error: "rain amount must be between 0 and 30 inches" }, { status: 400 });
+  }
+
+  const supabase = await createAtlasServerClient();
+  const { data: farmData } = await supabase.from("farms").select("metadata").eq("id", farmId).single();
+  const metadata = (farmData?.metadata ?? {}) as Record<string, unknown>;
+  const timezone = text(metadata, "timezone", DEFAULT_TIMEZONE);
+  const observationDate = typeof body.observationDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.observationDate)
+    ? body.observationDate
+    : isoInTimezone(new Date(), timezone);
+  const note = typeof body.note === "string" ? body.note : null;
+
+  const { data, error } = await supabase.rpc("record_farm_rain_observation_v1", {
+    p_farm_id: farmId,
+    p_observation_date: observationDate,
+    p_amount_in: amountIn,
+    p_note: note,
+  });
+
+  if (error) {
+    return NextResponse.json({ ok: false, error: "rain observation could not be recorded", details: error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true, observation: data });
+}
