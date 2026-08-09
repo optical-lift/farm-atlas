@@ -146,6 +146,7 @@ export type AtlasTaskCardsResponse = {
   window?: {
     doneDate?: string;
     dueThrough?: string;
+    exactDate?: string;
   };
   taskCards: AtlasTaskCard[];
   error?: string;
@@ -160,11 +161,13 @@ export type AtlasTaskCardFetchOptions = {
   viewerScoped?: boolean;
   dueThrough?: string;
   doneDate?: string;
+  exactDate?: string;
 };
 
 type ViewerOperationalWindow = {
   dueThrough?: string;
   doneDate?: string;
+  exactDate?: string;
 };
 
 export function atlasTaskCardScope(task: AtlasTaskCard) {
@@ -221,12 +224,17 @@ function monthEndIso(dateIso: string) {
 }
 
 function viewerOperationalWindow(options: AtlasTaskCardFetchOptions): ViewerOperationalWindow | null {
-  if (typeof window === "undefined") return options.viewerScoped ? { dueThrough: options.dueThrough, doneDate: options.doneDate } : null;
+  if (typeof window === "undefined") return options.viewerScoped ? {
+    dueThrough: options.dueThrough,
+    doneDate: options.doneDate,
+    exactDate: options.exactDate,
+  } : null;
 
   if (options.viewerScoped) {
     return {
       dueThrough: validDateIso(options.dueThrough) ? options.dueThrough : undefined,
       doneDate: validDateIso(options.doneDate) ? options.doneDate : undefined,
+      exactDate: validDateIso(options.exactDate) ? options.exactDate : undefined,
     };
   }
 
@@ -238,7 +246,11 @@ function viewerOperationalWindow(options: AtlasTaskCardFetchOptions): ViewerOper
 
   if (pathname === "/day") {
     const dateIso = validDateIso(params.get("date")) ? params.get("date") as string : today;
-    return { dueThrough: dateIso, doneDate: dateIso };
+    return {
+      dueThrough: dateIso,
+      doneDate: dateIso,
+      exactDate: dateIso > today ? dateIso : undefined,
+    };
   }
 
   if (pathname === "/overview/week") {
@@ -274,6 +286,7 @@ export async function fetchAtlasTaskCards(
         const viewerParams = new URLSearchParams();
         if (viewerWindow.dueThrough) viewerParams.set("dueThrough", viewerWindow.dueThrough);
         if (viewerWindow.doneDate) viewerParams.set("doneDate", viewerWindow.doneDate);
+        if (viewerWindow.exactDate) viewerParams.set("exactDate", viewerWindow.exactDate);
         return `/api/atlas/universal-task-cards${viewerParams.toString() ? `?${viewerParams.toString()}` : ""}`;
       })()
     : `/api/atlas/task-cards${params.toString() ? `?${params.toString()}` : ""}`;
