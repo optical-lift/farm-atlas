@@ -18,6 +18,14 @@ const batchMigration = readFileSync(
   new URL("../supabase/migrations/20260809013900_scale_batch_work_and_passive_preparation_capacity.sql", import.meta.url),
   "utf8",
 );
+const fullDayProjectMigration = readFileSync(
+  new URL("../supabase/migrations/20260809022500_full_paid_day_project_capacity_v2.sql", import.meta.url),
+  "utf8",
+);
+const backlogMigration = readFileSync(
+  new URL("../supabase/migrations/20260809023500_count_unfinished_backlog_without_lowering_expectation_v1.sql", import.meta.url),
+  "utf8",
+);
 const projectionReader = readFileSync(
   new URL("../lib/atlas-data/owner-week-projection.ts", import.meta.url),
   "utf8",
@@ -36,6 +44,8 @@ test("Anna retains a full paid-work target regardless of prior completion", () =
   assert.match(capacityMigration, /maximum_planned_minutes = 480/);
   assert.match(capacityMigration, /completion_history_may_reduce_target', false/);
   assert.match(capacityMigration, /paid_active_target_minutes', 420/);
+  assert.match(backlogMigration, /'workerUndercompletionLowersTomorrowTarget',false/);
+  assert.match(backlogMigration, /'undercompletionLowersFutureTarget',false/);
   assert.doesNotMatch(capacityMigration, /six[_ -]?unit/i);
 });
 
@@ -65,13 +75,27 @@ test("consolidated batch parents retain the labor of all required batch items", 
   assert.match(batchMigration, /owner_locked, false/);
 });
 
-test("owner projection keeps selecting compatible project work until paid capacity is filled", () => {
-  assert.match(projectionMigration, /v_remaining := greatest\(v_target_minutes - v_paid_minutes, 0\)/);
-  assert.match(projectionMigration, /for v_iteration in 1\.\.12 loop/);
-  assert.match(projectionMigration, /exit when v_remaining <= 0/);
+test("owner projection keeps selecting compatible project work until paid capacity is substantially filled", () => {
   assert.match(projectionMigration, /project_pull_options_for_member_v2/);
-  assert.match(projectionMigration, /v_remaining := greatest\(v_remaining - v_option_minutes, 0\)/);
-  assert.doesNotMatch(projectionMigration, /six[_ -]?unit/i);
+  assert.match(fullDayProjectMigration, /for v_iteration in 1\.\.24 loop/);
+  assert.match(fullDayProjectMigration, /exit when v_remaining<=15/);
+  assert.match(fullDayProjectMigration, /projectPullBudgetMinutes',v_budget/);
+  assert.match(fullDayProjectMigration, /v_budget := v_remaining/);
+  assert.match(fullDayProjectMigration, /v_remaining:=greatest\(v_remaining-v_option_minutes,0\)/);
+  assert.doesNotMatch(fullDayProjectMigration, /six[_ -]?unit/i);
+});
+
+test("rescheduled unfinished work remains paid backlog instead of becoming permission for a smaller day", () => {
+  assert.match(backlogMigration, /overdue_backlog_counted/);
+  assert.match(backlogMigration, /workerRescheduledBacklogMinutes/);
+  assert.match(backlogMigration, /backlogPaidMinutes/);
+  assert.match(backlogMigration, /heldPaidMinutes/);
+  assert.match(backlogMigration, /openPaidObligationMinutes/);
+  assert.match(backlogMigration, /obligationBeyondPaidTargetMinutes/);
+  assert.match(backlogMigration, /'workerRescheduleErasesObligation',false/);
+  assert.match(backlogMigration, /'heldWorkStillExists',true/);
+  assert.match(backlogMigration, /'noncountingOverdueMinutes',0/);
+  assert.doesNotMatch(backlogMigration, /overdue_rescheduled_noncounting/);
 });
 
 test("Owner operating as Anna can see the paid-day fill, not just a thin task count", () => {
