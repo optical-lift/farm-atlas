@@ -44,6 +44,10 @@ const skyDeferralMigrationName =
   "20260809011103_atlas_sky_deferrability_and_iris_window_v1.sql";
 const skyDeferralRegistryMigrationName =
   "20260809012855_atlas_sky_deferral_rpc_registry_v1.sql";
+const projectMovesMigrationName =
+  "20260809183000_real_project_hierarchy_and_shared_moves.sql";
+const projectMovesRegistryMigrationName =
+  "20260809183100_project_move_context_rpc_registry_v1.sql";
 const migrationPath = new URL(
   `../supabase/migrations/${migrationName}`,
   import.meta.url,
@@ -145,6 +149,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const skyRulesRegistry = readMigration(skyRulesRegistryMigrationName);
   const skyRuntimeRegistry = readMigration(skyRuntimeRegistryMigrationName);
   const skyDeferralRegistry = readMigration(skyDeferralRegistryMigrationName);
+  const projectMovesRegistry = readMigration(projectMovesRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -174,7 +179,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                         ? skyRuntimeRegistryMigrationName
                         : name === skyDeferralMigrationName
                           ? skyDeferralRegistryMigrationName
-                          : null;
+                          : name === projectMovesMigrationName
+                            ? projectMovesRegistryMigrationName
+                            : null;
 
       assert.ok(
         pairedRegistryName,
@@ -249,6 +256,13 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   assert.ok(skyDeferralRegistry.includes(
     "atlas.task_sky_presentation_gate_v1(uuid, date)",
   ));
+  assert.ok(projectMovesRegistry.includes(
+    "atlas.task_move_context_batch_v1(uuid[])",
+  ));
+  assert.match(
+    projectMovesRegistry,
+    /revoke all on function atlas\.project_path_v1\(uuid\) from public,anon,authenticated/i,
+  );
 });
 
 test("live registry proof is rollback-only and fail-closed", () => {
