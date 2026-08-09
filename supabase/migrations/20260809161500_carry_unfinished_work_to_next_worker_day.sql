@@ -97,8 +97,8 @@ begin
 end;
 $$;
 
-revoke all on function atlas.member_day_carryover_v1(uuid, uuid, date) from public;
-grant execute on function atlas.member_day_carryover_v1(uuid, uuid, date) to authenticated;
+revoke all on function atlas.member_day_carryover_v1(uuid, uuid, date) from public, anon, authenticated;
+grant execute on function atlas.member_day_carryover_v1(uuid, uuid, date) to service_role;
 
 create or replace function atlas.home_task_cards_for_membership_v2(
   p_farm_id uuid,
