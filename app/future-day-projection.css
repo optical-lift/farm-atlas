@@ -1,0 +1,89 @@
+.atlas-future-projection-group {
+  margin-top: 1.15rem;
+  padding-top: 0.2rem;
+}
+
+.atlas-future-projection-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+}
+
+.atlas-future-projection-head h3 {
+  margin: 0;
+}
+
+.atlas-future-projection-head p,
+.atlas-future-projection-head strong {
+  margin: 0.2rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.atlas-future-projection-head p {
+  color: var(--atlas-muted, #77756c);
+}
+
+.atlas-future-projection-head > strong {
+  flex: 0 0 auto;
+  color: var(--atlas-muted, #77756c);
+  font-weight: 700;
+  text-align: right;
+}
+
+.atlas-future-projection-note {
+  margin-bottom: 0.75rem;
+  border: 1px dashed rgba(84, 82, 119, 0.28);
+  border-radius: 16px;
+  padding: 0.7rem 0.8rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--atlas-muted, #706f68);
+  background: rgba(111, 107, 167, 0.035);
+}
+
+.atlas-future-projection-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.atlas-future-projection-card {
+  display: grid;
+  gap: 0.16rem;
+  border: 1px dashed rgba(84, 82, 119, 0.28);
+  border-radius: 16px;
+  padding: 0.78rem 0.85rem;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.atlas-future-projection-card small {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--atlas-indigo, #65679a);
+}
+
+.atlas-future-projection-card strong {
+  font-size: 1rem;
+  line-height: 1.15;
+  color: var(--atlas-ink, #2e3043);
+}
+
+.atlas-future-projection-card span,
+.atlas-future-projection-card em {
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--atlas-muted, #77756c);
+}
+
+.atlas-future-projection-card em {
+  font-style: normal;
+}
+
+.atlas-future-projection-card[data-projection-kind="queue"] {
+  border-style: solid;
+  background: rgba(111, 107, 167, 0.05);
+}
