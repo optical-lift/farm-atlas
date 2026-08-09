@@ -22,6 +22,15 @@ test("unfinished worker-day work carries to the next available workday", () => {
   assert.match(trustMigration, /to service_role/);
 });
 
+test("carry-forward uses closed workday truth without recursively polluting later future days", () => {
+  const migration = read("supabase/migrations/20260809164500_closed_workday_carry_forward_only.sql");
+
+  assert.match(migration, /actual-state truth, not a recursive future forecast/);
+  assert.match(migration, /if v_previous_work_date >= v_today then/);
+  assert.match(migration, /Monday inherit unfinished Saturday work/);
+  assert.match(migration, /Tuesday planning still assumes Monday's scheduled work will be completed/);
+});
+
 test("future day API preserves server-authoritative carry-forward cards", () => {
   const route = read("app/api/atlas/universal-task-cards/route.ts");
 
