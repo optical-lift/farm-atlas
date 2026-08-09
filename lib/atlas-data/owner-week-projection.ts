@@ -3,7 +3,7 @@ import { atlasSupabase } from "@/lib/atlas/supabase-server";
 export type OwnerWeekProjectionItem = {
   id: string;
   plannedDate: string;
-  sourceKind: "task" | "project_pull" | "queue" | "rhythm";
+  sourceKind: "task" | "floating_task" | "project_pull" | "queue" | "rhythm";
   sourceId: string;
   title: string;
   planState: "planned" | "conditional" | "flexible";

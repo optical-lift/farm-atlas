@@ -7,7 +7,7 @@ type TentativeItem = {
   id: string;
   title: string;
   planState: "planned" | "conditional" | "flexible" | string;
-  sourceKind: "task" | "project_pull" | "queue" | "rhythm" | string;
+  sourceKind: "task" | "floating_task" | "project_pull" | "queue" | "rhythm" | string;
   environment: string | null;
   expectedActiveMinutes: number | null;
   reason: string | null;
@@ -26,7 +26,8 @@ type ProjectionResponse = {
 };
 
 function sourceLabel(sourceKind: string) {
-  if (sourceKind === "project_pull") return "Finish Project pool";
+  if (sourceKind === "floating_task") return "Atlas paid-work pool";
+  if (sourceKind === "project_pull") return "Finish Elm pool";
   if (sourceKind === "queue") return "Queue";
   if (sourceKind === "rhythm") return "Rhythm";
   return "Projected task";
@@ -147,7 +148,7 @@ export default function OwnerTentativeDayProjection() {
       )}
 
       <p style={{ margin: "9px 1px 0", fontSize: 10.5, lineHeight: 1.35, opacity: .58 }}>
-        Tentative additions are Owner planning truth only. They do not become {operatorLabel}&apos;s released tasks until Atlas commits them.
+        Tentative additions are Owner planning truth only. Existing undated Atlas tasks keep their real identity and due-date state until they are actually worked; project-pool work is not released until Atlas deals it.
       </p>
     </section>
   );
