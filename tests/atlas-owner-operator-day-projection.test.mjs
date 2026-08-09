@@ -6,60 +6,67 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Owner operator projection resolves the selected Farm Hand on the server", () => {
+test("Owner schedule candidate discovery resolves the selected Farm Hand on the server", () => {
   const route = read("app/api/atlas/owner-day-projection/route.ts");
 
   assert.match(route, /getAtlasSession/);
   assert.match(route, /readAtlasOwnerOperatorContext/);
-  assert.match(route, /effectiveOperatorAccountId/);
   assert.match(route, /effectiveOperatorMembershipId/);
   assert.match(route, /effective\.farmRole !== "farm_hand"/);
-  assert.match(route, /readStoredOwnerWeekProjection/);
-  assert.match(route, /withinPlanningHorizon \? projectionStart : dateIso/);
-  assert.match(route, /withinPlanningHorizon \? 14 : 1/);
-  assert.match(route, /dateIso <= today/);
+  assert.match(route, /project_pull_options_for_member_v2/);
+  assert.match(route, /floating_paid_work_candidates_v1/);
+  assert.match(route, /anna_weeding_rotation/);
+  assert.match(route, /candidates/);
   assert.doesNotMatch(route, /searchParams\.get\(["']membership/i);
   assert.doesNotMatch(route, /23e98e5e-16ca-40d8-872c-c77e06baa167/);
 });
 
-test("Owner future projection remains separate from real released task cards", () => {
-  const route = read("app/api/atlas/owner-day-projection/route.ts");
-  const component = read("components/atlas/owner-tentative-day-projection.tsx");
+test("Owner schedule builder makes tentative work real only after explicit approval", () => {
+  const component = read("components/atlas/owner-day-schedule-builder.tsx");
   const daySummary = read("components/atlas/day-trail-summary.tsx");
-
-  assert.match(route, /readAtlasOperatorUniversalHome/);
-  assert.match(route, /atlasUniversalTaskCards\(home\)/);
-  assert.match(route, /item\.sourceKind !== "task" \|\| !actualTaskIds\.has\(item\.sourceId\)/);
+  const postRoute = read("app/api/atlas/owner-day-schedule/route.ts");
 
   assert.match(component, /\/api\/atlas\/owner-day-projection\?date=/);
-  assert.match(component, /data-owner-tentative-day-projection="true"/);
-  assert.match(component, /Owner schedule preview/);
-  assert.match(component, /"Tentative"/);
-  assert.match(component, /paid work projected/);
-  assert.match(component, /without releasing it into/);
-  assert.match(component, /No compatible tentative work is available/);
-  assert.match(component, /No additional tentative work is needed/);
-  assert.match(component, /useSearchParams/);
-  assert.match(component, /\[dateIso\]/);
-  assert.doesNotMatch(component, /postAtlasTaskTransition|transition\(|task-focus|<button|<Link/);
+  assert.match(component, /\/api\/atlas\/owner-day-schedule/);
+  assert.match(component, /x-atlas-intent/);
+  assert.match(component, /owner-day-schedule-v1/);
+  assert.match(component, /Owner schedule builder/);
+  assert.match(component, /Build \{operatorLabel\}&apos;s day/);
+  assert.match(component, /aria-pressed/);
+  assert.match(component, /Nothing below becomes/);
+  assert.match(component, /A Weed Card stays behind the card ahead of it/);
+  assert.match(component, /<button/);
 
-  assert.match(daySummary, /OwnerTentativeDayProjection/);
-  assert.match(daySummary, /compact \? <OwnerTentativeDayProjection \/>/);
+  assert.match(daySummary, /OwnerDayScheduleBuilder/);
+  assert.match(daySummary, /compact \? <OwnerDayScheduleBuilder \/>/);
+
+  assert.match(postRoute, /owner_build_worker_day_schedule_v1/);
+  assert.match(postRoute, /effective\.farmRole !== "farm_hand"/);
+  assert.match(postRoute, /owner-day-schedule-v1/);
 });
 
-test("future worker projection exposes queued Weed Cards without releasing them", () => {
-  const route = read("app/api/atlas/owner-day-projection/route.ts");
+test("the duplicate Possible Work bridge is disabled", () => {
   const bridge = read("app/FutureDayProjectionBridge.tsx");
-
-  assert.match(route, /anna_weeding_rotation/);
-  assert.match(route, /sourceKind: "queue"/);
-  assert.match(route, /Projected Weed Card/);
-  assert.match(bridge, /Possible work/);
-  assert.match(bridge, /Moves if an earlier Weed Card is still open/);
-  assert.doesNotMatch(bridge, /postAtlasTaskTransition|task-focus|<button|<Link/);
+  assert.match(bridge, /return null/);
+  assert.doesNotMatch(bridge, /Possible work|Projected Finish Elm|Projected Weed Card/);
 });
 
-test("weekly tentative project work uses the same capacity-aware option engine as Daily Hand", () => {
+test("Owner approval gates Finish Elm and serial Weed Card release", () => {
+  const builderMigration = read("supabase/migrations/20260809150556_owner_approved_worker_day_builder.sql");
+  const capacityMigration = read("supabase/migrations/20260809150824_owner_day_builder_counts_approved_queue.sql");
+  const queueMigration = read("supabase/migrations/20260809151400_anna_weeding_owner_schedule_gate_default.sql");
+
+  assert.match(builderMigration, /owner_schedule_approval_required/);
+  assert.match(builderMigration, /farm_hand_assigned_work_continues', false/);
+  assert.match(capacityMigration, /owner_build_worker_day_schedule_v1/);
+  assert.match(capacityMigration, /approvedConditionalMinutes/);
+  assert.match(capacityMigration, /pull_project_item_to_today_v1/);
+  assert.match(queueMigration, /p_queue_key='anna_weeding_rotation'/);
+  assert.match(queueMigration, /owner_schedule_approved_date/);
+  assert.match(queueMigration, /awaiting_owner_schedule_approval/);
+});
+
+test("weekly project ranking still uses the capacity-aware option engine", () => {
   const migration = read("supabase/migrations/20260808192000_make_owner_week_projection_capacity_aware.sql");
 
   assert.match(migration, /project_pull_options_for_member_v2/);

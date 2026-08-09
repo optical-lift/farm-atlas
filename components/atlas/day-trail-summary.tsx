@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import OwnerTentativeDayProjection from "@/components/atlas/owner-tentative-day-projection";
+import OwnerDayScheduleBuilder from "@/components/atlas/owner-day-schedule-builder";
 import styles from "./day-trail-summary.module.css";
 
 type DayTrailSummaryProps = {
@@ -138,7 +138,7 @@ export default function DayTrailSummary({ completed, total, blocked, loading = f
           </footer>
         ) : null}
       </section>
-      {compact ? <OwnerTentativeDayProjection /> : null}
+      {compact ? <OwnerDayScheduleBuilder /> : null}
     </>
   );
 }
