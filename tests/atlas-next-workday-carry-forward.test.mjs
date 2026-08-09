@@ -8,6 +8,7 @@ function read(path) {
 
 test("unfinished worker-day work carries to the next available workday", () => {
   const migration = read("supabase/migrations/20260809161500_carry_unfinished_work_to_next_worker_day.sql");
+  const trustMigration = read("supabase/migrations/20260809163100_trust_internal_carryover_callers.sql");
 
   assert.match(migration, /member_day_carryover_v1/);
   assert.match(migration, /extract\(isodow from p_work_date\) = 7/);
@@ -17,6 +18,8 @@ test("unfinished worker-day work carries to the next available workday", () => {
   assert.match(migration, /withheldUnderSky/);
   assert.match(migration, /task_capacity_plan_v1/);
   assert.match(migration, /personal_carry/);
+  assert.match(trustMigration, /revoke all on function atlas\.member_day_carryover_v1/);
+  assert.match(trustMigration, /to service_role/);
 });
 
 test("future day API preserves server-authoritative carry-forward cards", () => {
@@ -25,4 +28,15 @@ test("future day API preserves server-authoritative carry-forward cards", () => 
   assert.match(route, /worker-day reader is authoritative for future-day membership/);
   assert.doesNotMatch(route, /filter\(\(card\) => !exactDate \|\| card\.due_date === exactDate\)/);
   assert.match(route, /readAtlasTaskDayDispositions\(doneDate\)/);
+});
+
+test("carried work consumes the same paid-day capacity as newly dated work", () => {
+  const migration = read("supabase/migrations/20260809163000_count_carried_work_in_worker_day_capacity_v2.sql");
+
+  assert.match(migration, /project_pull_options_for_member_v1/);
+  assert.match(migration, /owner_build_worker_day_schedule_v1/);
+  assert.match(migration, /member_day_carryover_v1\(v_membership\.farm_id,v_membership\.id,v_day\)/);
+  assert.match(migration, /carriedRegularMinutes/);
+  assert.match(migration, /v_current_paid := v_current_paid \+ v_carried_paid/);
+  assert.match(migration, /carriedPaidMinutes/);
 });
