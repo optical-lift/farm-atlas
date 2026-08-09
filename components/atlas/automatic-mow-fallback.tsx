@@ -1,7 +1,8 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 type MowCandidate = {
   id: string;
@@ -39,13 +40,6 @@ type TaskCardResponse = {
   taskCards?: TaskLike[];
 };
 
-function selectedDayIso() {
-  if (typeof window === "undefined") return null;
-  const requested = new URLSearchParams(window.location.search).get("date");
-  if (requested && /^\d{4}-\d{2}-\d{2}$/.test(requested)) return requested;
-  return null;
-}
-
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -56,7 +50,7 @@ function numberValue(value: unknown) {
 }
 
 function looksLikeMow(candidate: CandidateLike) {
-  return candidate.sourceKind === "rhythm" || /^mow(?:ing)?\b/i.test(text(candidate.title));
+  return /^mow(?:ing)?\b/i.test(text(candidate.title));
 }
 
 function fromCandidate(candidate: CandidateLike): MowCandidate {
@@ -135,11 +129,14 @@ function FallbackRow({ candidate }: { candidate: MowCandidate }) {
 }
 
 export default function AutomaticMowFallback() {
+  const searchParams = useSearchParams();
+  const requestedDate = searchParams.get("date");
+  const dateIso = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : null;
   const [candidate, setCandidate] = useState<MowCandidate | null>(null);
   const [host, setHost] = useState<HTMLElement | null>(null);
-  const dateIso = useMemo(selectedDayIso, []);
 
   useEffect(() => {
+    setCandidate(null);
     if (!dateIso || window.location.pathname !== "/day") return;
     const controller = new AbortController();
 
