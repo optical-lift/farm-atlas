@@ -6,24 +6,21 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Owner schedule candidate discovery resolves the selected Farm Hand on the server", () => {
-  const route = read("app/api/atlas/owner-day-projection/route.ts");
+test("Owner worker-day planning resolves the selected Farm Hand through one guarded plan reader", () => {
+  const route = read("app/api/atlas/worker-day-plan/route.ts");
+  const reader = read("lib/atlas/worker-day-plan-server.ts");
 
   assert.match(route, /getAtlasSession/);
-  assert.match(route, /readAtlasOwnerOperatorContext/);
-  assert.match(route, /effectiveOperatorMembershipId/);
-  assert.match(route, /effective\.farmRole !== "farm_hand"/);
-  assert.match(route, /project_pull_options_for_member_v2/);
-  assert.match(route, /owner_worker_day_floating_candidates_v1/);
-  assert.match(route, /anna_weeding_rotation/);
-  assert.match(route, /candidatePlacement/);
-  assert.match(route, /dayWindow/);
-  assert.match(route, /workOrderNumber/);
-  assert.match(route, /source_task_id/);
-  assert.match(route, /candidates/);
-  assert.doesNotMatch(route, /atlasSupabase|atlas\/supabase-server/);
-  assert.doesNotMatch(route, /searchParams\.get\(["']membership/i);
-  assert.doesNotMatch(route, /23e98e5e-16ca-40d8-872c-c77e06baa167/);
+  assert.match(route, /readOwnerWorkerDayPlan/);
+  assert.match(reader, /readAtlasOwnerOperatorContext/);
+  assert.match(reader, /effectiveOperatorMembershipId/);
+  assert.match(reader, /effective\.farmRole !== "farm_hand"/);
+  assert.match(reader, /owner_worker_day_plan_api_v1/);
+  assert.match(reader, /realWork/);
+  assert.match(reader, /automaticWork/);
+  assert.match(reader, /suggestions/);
+  assert.doesNotMatch(reader, /task_release_queue_items|member_unavailability|rhythm_state/);
+  assert.doesNotMatch(reader, /23e98e5e-16ca-40d8-872c-c77e06baa167/);
 });
 
 test("Owner schedule ideas are woven into the real timeline and committed at its bottom", () => {
@@ -31,7 +28,7 @@ test("Owner schedule ideas are woven into the real timeline and committed at its
   const daySummary = read("components/atlas/day-trail-summary.tsx");
   const postRoute = read("app/api/atlas/owner-day-schedule/route.ts");
 
-  assert.match(component, /\/api\/atlas\/owner-day-projection\?date=/);
+  assert.match(component, /\/api\/atlas\/worker-day-plan\?date=/);
   assert.match(component, /\/api\/atlas\/owner-day-schedule/);
   assert.match(component, /x-atlas-intent/);
   assert.match(component, /owner-day-schedule-v1/);
@@ -39,22 +36,33 @@ test("Owner schedule ideas are woven into the real timeline and committed at its
   assert.match(component, /\.atlas-day-mixed-timeline/);
   assert.match(component, /data-owner-schedule-candidate/);
   assert.match(component, /CandidateRow/);
-  assert.match(component, /fetchAtlasTaskCards/);
-  assert.match(component, /atlasWorkOrderNumber/);
-  assert.match(component, /atlasWorkOrderAnchorForTask/);
+  assert.match(component, /plan\?\.realWork/);
+  assert.match(component, /workOrderNumber/);
+  assert.match(component, /dayWindow/);
   assert.match(component, /data-owner-day-schedule-commit/);
   assert.match(component, /Commit schedule/);
-  assert.match(component, /Purple cards are still only ideas/);
+  assert.match(component, /Purple cards are suggestions/);
   assert.match(component, /aria-pressed/);
   assert.match(component, /window\.location\.reload/);
 
   assert.match(daySummary, /OwnerDayScheduleBuilder/);
   assert.match(daySummary, /compact \? <OwnerDayScheduleBuilder \/>/);
 
-  assert.match(postRoute, /owner_build_worker_day_schedule_api_v1/);
+  assert.match(postRoute, /owner_build_worker_day_schedule_api_v2/);
   assert.match(postRoute, /effective\.farmRole !== "farm_hand"/);
   assert.match(postRoute, /owner-day-schedule-v1/);
-  assert.doesNotMatch(postRoute, /atlasSupabase|atlas\/supabase-server/);
+  assert.match(postRoute, /"project_pull", "floating_task"/);
+  assert.doesNotMatch(postRoute, /"project_pull", "floating_task", "queue"/);
+});
+
+test("legacy day-planning endpoints are compatibility shells around the canonical resolver", () => {
+  const suggestions = read("app/api/atlas/owner-day-projection/route.ts");
+  const automatic = read("app/api/atlas/automatic-day-work/route.ts");
+
+  assert.match(suggestions, /readOwnerWorkerDayPlan/);
+  assert.match(automatic, /readOwnerWorkerDayPlan/);
+  assert.doesNotMatch(suggestions, /project_pull_options_for_member_v2|anna_weeding_rotation/);
+  assert.doesNotMatch(automatic, /member_unavailability|task_release_queue_items|rhythm_state/);
 });
 
 test("the duplicate Possible Work bridge is disabled", () => {
@@ -63,23 +71,18 @@ test("the duplicate Possible Work bridge is disabled", () => {
   assert.doesNotMatch(bridge, /Possible work|Projected Finish Elm|Projected Weed Card/);
 });
 
-test("Owner approval gates Finish Elm and serial Weed Card release", () => {
-  const builderMigration = read("supabase/migrations/20260809150556_owner_approved_worker_day_builder.sql");
-  const capacityMigration = read("supabase/migrations/20260809150824_owner_day_builder_counts_approved_queue.sql");
-  const queueMigration = read("supabase/migrations/20260809151400_anna_weeding_owner_schedule_gate_default.sql");
-  const boundaryMigration = read("supabase/migrations/20260809152303_owner_day_schedule_authenticated_boundary.sql");
+test("Owner approval applies only to discretionary purple work; Weed and Mow are automatic", () => {
+  const planMigration = read("supabase/migrations/20260809203000_owner_worker_day_plan_kernel_v1.sql");
+  const commitMigration = read("supabase/migrations/20260809203100_owner_worker_day_schedule_commit_v2.sql");
 
-  assert.match(builderMigration, /owner_schedule_approval_required/);
-  assert.match(builderMigration, /farm_hand_assigned_work_continues', false/);
-  assert.match(capacityMigration, /owner_build_worker_day_schedule_v1/);
-  assert.match(capacityMigration, /approvedConditionalMinutes/);
-  assert.match(capacityMigration, /pull_project_item_to_today_v1/);
-  assert.match(queueMigration, /p_queue_key='anna_weeding_rotation'/);
-  assert.match(queueMigration, /owner_schedule_approved_date/);
-  assert.match(queueMigration, /awaiting_owner_schedule_approval/);
-  assert.match(boundaryMigration, /owner_worker_day_floating_candidates_v1/);
-  assert.match(boundaryMigration, /owner_build_worker_day_schedule_api_v1/);
-  assert.match(boundaryMigration, /authenticated_rpc_registry/);
+  assert.match(planMigration, /anna_weeding_rotation/);
+  assert.match(planMigration, /One Weed Card owns each workday/);
+  assert.match(planMigration, /One mowing area is reserved for each workday/);
+  assert.match(planMigration, /requiresOwnerApproval',false/);
+  assert.match(planMigration, /requiresOwnerApproval',true/);
+  assert.match(commitMigration, /Only Owner-choice Finish Elm or floating work may be committed/);
+  assert.match(commitMigration, /owner_build_worker_day_schedule_api_v2/);
+  assert.doesNotMatch(commitMigration, /v_kind='queue'/);
 });
 
 test("weekly project ranking still uses the capacity-aware option engine", () => {
