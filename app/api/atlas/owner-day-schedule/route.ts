@@ -9,7 +9,7 @@ import {
   effectiveOperatorMembershipId,
   readAtlasOwnerOperatorContext,
 } from "@/lib/atlas/operator-context";
-import { atlasSupabase } from "@/lib/atlas/supabase-server";
+import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -99,7 +99,8 @@ export async function POST(request: Request) {
     return atlasApiError(403, "owner_schedule_operator_required", "Open a Farm Hand account in Owner operator mode before building that worker's schedule.");
   }
 
-  const response = await atlasSupabase.schema("atlas").rpc("owner_build_worker_day_schedule_v1", {
+  const supabase = await createAtlasServerClient();
+  const response = await supabase.rpc("owner_build_worker_day_schedule_api_v1", {
     p_farm_id: effective.farmId,
     p_membership_id: effectiveMembershipId,
     p_day: body.date,

@@ -5,7 +5,6 @@ import {
   readAtlasOwnerOperatorContext,
 } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
-import { atlasSupabase } from "@/lib/atlas/supabase-server";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -192,7 +191,7 @@ export async function GET(request: Request) {
       scheduledPaidMinutes = numberValue(capacity.alreadyPresentedRegularMinutes);
     }
 
-    const floatingRead = await atlasSupabase.schema("atlas").rpc("floating_paid_work_candidates_v1", {
+    const floatingRead = await supabase.rpc("owner_worker_day_floating_candidates_v1", {
       p_farm_id: effective.farmId,
       p_membership_id: effectiveMembershipId,
       p_day: dateIso,

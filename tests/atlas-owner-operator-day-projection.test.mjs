@@ -14,9 +14,10 @@ test("Owner schedule candidate discovery resolves the selected Farm Hand on the 
   assert.match(route, /effectiveOperatorMembershipId/);
   assert.match(route, /effective\.farmRole !== "farm_hand"/);
   assert.match(route, /project_pull_options_for_member_v2/);
-  assert.match(route, /floating_paid_work_candidates_v1/);
+  assert.match(route, /owner_worker_day_floating_candidates_v1/);
   assert.match(route, /anna_weeding_rotation/);
   assert.match(route, /candidates/);
+  assert.doesNotMatch(route, /atlasSupabase|atlas\/supabase-server/);
   assert.doesNotMatch(route, /searchParams\.get\(["']membership/i);
   assert.doesNotMatch(route, /23e98e5e-16ca-40d8-872c-c77e06baa167/);
 });
@@ -41,9 +42,10 @@ test("Owner schedule builder makes tentative work real only after explicit appro
   assert.match(daySummary, /OwnerDayScheduleBuilder/);
   assert.match(daySummary, /compact \? <OwnerDayScheduleBuilder \/>/);
 
-  assert.match(postRoute, /owner_build_worker_day_schedule_v1/);
+  assert.match(postRoute, /owner_build_worker_day_schedule_api_v1/);
   assert.match(postRoute, /effective\.farmRole !== "farm_hand"/);
   assert.match(postRoute, /owner-day-schedule-v1/);
+  assert.doesNotMatch(postRoute, /atlasSupabase|atlas\/supabase-server/);
 });
 
 test("the duplicate Possible Work bridge is disabled", () => {
@@ -56,6 +58,7 @@ test("Owner approval gates Finish Elm and serial Weed Card release", () => {
   const builderMigration = read("supabase/migrations/20260809150556_owner_approved_worker_day_builder.sql");
   const capacityMigration = read("supabase/migrations/20260809150824_owner_day_builder_counts_approved_queue.sql");
   const queueMigration = read("supabase/migrations/20260809151400_anna_weeding_owner_schedule_gate_default.sql");
+  const boundaryMigration = read("supabase/migrations/20260809152303_owner_day_schedule_authenticated_boundary.sql");
 
   assert.match(builderMigration, /owner_schedule_approval_required/);
   assert.match(builderMigration, /farm_hand_assigned_work_continues', false/);
@@ -65,6 +68,9 @@ test("Owner approval gates Finish Elm and serial Weed Card release", () => {
   assert.match(queueMigration, /p_queue_key='anna_weeding_rotation'/);
   assert.match(queueMigration, /owner_schedule_approved_date/);
   assert.match(queueMigration, /awaiting_owner_schedule_approval/);
+  assert.match(boundaryMigration, /owner_worker_day_floating_candidates_v1/);
+  assert.match(boundaryMigration, /owner_build_worker_day_schedule_api_v1/);
+  assert.match(boundaryMigration, /authenticated_rpc_registry/);
 });
 
 test("weekly project ranking still uses the capacity-aware option engine", () => {
