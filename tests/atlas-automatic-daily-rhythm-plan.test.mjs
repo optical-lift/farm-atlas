@@ -19,17 +19,21 @@ test("Anna gets one automatic serial Weed Card per available workday", () => {
   assert.match(migration, /'owner_schedule_approval_required',false/);
 });
 
-test("mowing occupies one automatic evening rhythm slot without owner tapping", () => {
+test("mowing always has one visible evening slot without owner tapping", () => {
   const route = read("app/api/atlas/automatic-day-work/route.ts");
   const builder = read("components/atlas/owner-day-schedule-builder.tsx");
 
-  assert.match(route, /realMowOnRequestedDay/);
+  assert.match(route, /releasedTaskId/);
+  assert.match(route, /This planning row yields to the real mowing card/);
   assert.match(route, /Automatic mowing slot/);
   assert.match(route, /dayWindow: "evening"/);
+  assert.doesNotMatch(route, /realMowOnRequestedDay/);
   assert.match(builder, /\/api\/atlas\/automatic-day-work\?date=/);
   assert.match(builder, /AutomaticRow/);
   assert.match(builder, /data-owner-schedule-automatic/);
-  assert.match(builder, /candidate\.sourceKind === "queue" \|\| candidate\.sourceKind === "rhythm"/);
+  assert.match(builder, /hasVisibleMowTask/);
+  assert.match(builder, /isAutomaticMow/);
+  assert.match(builder, /row\.route === "mow"/);
 });
 
 test("sowing is evening work everywhere the day timeline infers placement", () => {
