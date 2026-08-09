@@ -40,6 +40,10 @@ const skyRuntimeMigrationName =
   "20260808233130_atlas_sky_fitness_runtime_v2.sql";
 const skyRuntimeRegistryMigrationName =
   "20260808233332_atlas_sky_runtime_security_registry_v1.sql";
+const skyDeferralMigrationName =
+  "20260809011103_atlas_sky_deferrability_and_iris_window_v1.sql";
+const skyDeferralRegistryMigrationName =
+  "20260809012855_atlas_sky_deferral_rpc_registry_v1.sql";
 const migrationPath = new URL(
   `../supabase/migrations/${migrationName}`,
   import.meta.url,
@@ -140,6 +144,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const ownerWeekProjectionRegistry = readMigration(ownerWeekProjectionRegistryMigrationName);
   const skyRulesRegistry = readMigration(skyRulesRegistryMigrationName);
   const skyRuntimeRegistry = readMigration(skyRuntimeRegistryMigrationName);
+  const skyDeferralRegistry = readMigration(skyDeferralRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -167,7 +172,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                       ? skyRulesRegistryMigrationName
                       : name === skyRuntimeMigrationName
                         ? skyRuntimeRegistryMigrationName
-                        : null;
+                        : name === skyDeferralMigrationName
+                          ? skyDeferralRegistryMigrationName
+                          : null;
 
       assert.ok(
         pairedRegistryName,
@@ -236,6 +243,12 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   ]) {
     assert.ok(skyRuntimeRegistry.includes(signature));
   }
+  assert.ok(skyDeferralRegistry.includes(
+    "atlas.task_sky_deferral_policy_v1(uuid, timestamp with time zone)",
+  ));
+  assert.ok(skyDeferralRegistry.includes(
+    "atlas.task_sky_presentation_gate_v1(uuid, date)",
+  ));
 });
 
 test("live registry proof is rollback-only and fail-closed", () => {
