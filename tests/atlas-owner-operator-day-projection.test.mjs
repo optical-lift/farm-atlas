@@ -14,7 +14,7 @@ test("Owner operator projection resolves the selected Farm Hand on the server", 
   assert.match(route, /effectiveOperatorAccountId/);
   assert.match(route, /effectiveOperatorMembershipId/);
   assert.match(route, /effective\.farmRole !== "farm_hand"/);
-  assert.match(route, /readOwnerWeekProjection/);
+  assert.match(route, /readStoredOwnerWeekProjection/);
   assert.match(route, /withinPlanningHorizon \? projectionStart : dateIso/);
   assert.match(route, /withinPlanningHorizon \? 14 : 1/);
   assert.match(route, /dateIso <= today/);
@@ -45,6 +45,18 @@ test("Owner future projection remains separate from real released task cards", (
 
   assert.match(daySummary, /OwnerTentativeDayProjection/);
   assert.match(daySummary, /compact \? <OwnerTentativeDayProjection \/>/);
+});
+
+test("future worker projection exposes queued Weed Cards without releasing them", () => {
+  const route = read("app/api/atlas/owner-day-projection/route.ts");
+  const bridge = read("app/FutureDayProjectionBridge.tsx");
+
+  assert.match(route, /anna_weeding_rotation/);
+  assert.match(route, /sourceKind: "queue"/);
+  assert.match(route, /Projected Weed Card/);
+  assert.match(bridge, /Possible work/);
+  assert.match(bridge, /Moves if an earlier Weed Card is still open/);
+  assert.doesNotMatch(bridge, /postAtlasTaskTransition|task-focus|<button|<Link/);
 });
 
 test("weekly tentative project work uses the same capacity-aware option engine as Daily Hand", () => {
