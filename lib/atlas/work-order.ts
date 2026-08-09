@@ -46,6 +46,18 @@ function explicitAnchor(task: AtlasTaskCard): AtlasWorkOrderAnchor | null {
   return null;
 }
 
+function isSeedSowing(task: AtlasTaskCard) {
+  const route = atlasRouteKeyForTask(task);
+  const action = lower(task.action_key);
+  const taskType = lower(task.task_type);
+  const rhythm = lower(atlasMetaString(task, "work_rhythm"));
+  return route === "seed"
+    || action === "sow"
+    || action === "seed"
+    || taskType === "sowing"
+    || rhythm === "seed_sowing";
+}
+
 /**
  * Fallback ordering is allowed to use controlled task fields only. Title prose
  * is presentation, not an operational clock or work-class source.
@@ -76,6 +88,9 @@ export function atlasInferredWorkOrderAnchor(task: AtlasTaskCard): AtlasWorkOrde
 }
 
 export function atlasWorkOrderAnchorForTask(task: AtlasTaskCard): AtlasWorkOrderAnchor {
+  // Seed sowing is a canonical evening operation. Old planner metadata must not
+  // pull sowing back into an afternoon bucket.
+  if (isSeedSowing(task)) return "evening";
   return explicitAnchor(task) ?? atlasInferredWorkOrderAnchor(task);
 }
 
