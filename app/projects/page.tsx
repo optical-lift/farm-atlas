@@ -9,19 +9,14 @@ import {
   AtlasStateBadge,
   AtlasTopBar,
 } from "@/components/atlas/ui/AtlasPrimitives";
-import {
-  effectiveOperatorAccountId,
-  effectiveOperatorMembershipId,
-  readAtlasOwnerOperatorContext,
-} from "@/lib/atlas/operator-context";
-import { readAtlasOperatorUniversalHome } from "@/lib/atlas/operator-universal-home";
+import { readAtlasPortfolioHome, type AtlasPortfolioProject } from "@/lib/atlas/portfolio";
 import { getAtlasSession } from "@/lib/atlas/session";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
 
 export const dynamic = "force-dynamic";
 
 type ProjectState = "blocked" | "attention" | "waiting" | "complete" | "quiet" | "moving";
-type Project = Awaited<ReturnType<typeof readAtlasOperatorUniversalHome>>["projects"][number];
+type Project = AtlasPortfolioProject;
 
 function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -111,15 +106,23 @@ export default async function AtlasProjectsPage() {
   const viewer = atlasUniversalViewerFromSession(session);
   if (!viewer) redirect("/auth/error?reason=membership_required");
 
-  const operatorContext = await readAtlasOwnerOperatorContext();
-  const home = await readAtlasOperatorUniversalHome(viewer, {
-    preferredFarmId: viewer.activeFarmId,
-    effectiveAccountId: effectiveOperatorAccountId(operatorContext),
-    effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
-  });
+  const organizationId = viewer.activeOrganizationId
+    ?? viewer.organizationMemberships[0]?.organizationId
+    ?? null;
+  if (!organizationId) redirect("/auth/error?reason=organization_membership_required");
 
-  const activeProjects = home.projects.filter((project) => project.status !== "paused" && project.portfolioType !== "incubator");
-  const incubatorProjects = sortProjects(home.projects.filter((project) => project.status === "paused" || project.portfolioType === "incubator"));
+  // Portfolio home is deliberately read through the portfolio access path rather than
+  // the farm-hand universal home. In Owner operator mode the farm-hand home intentionally
+  // strips organization scope, which made a contributed-project worker appear to have
+  // zero Active worlds even though their project_contributor grants were valid.
+  const home = await readAtlasPortfolioHome(organizationId);
+  const projects = [
+    ...home.crossFarmProjects,
+    ...home.farms.flatMap((farm) => farm.projects),
+  ];
+
+  const activeProjects = projects.filter((project) => project.status !== "paused" && project.portfolioType !== "incubator");
+  const incubatorProjects = sortProjects(projects.filter((project) => project.status === "paused" || project.portfolioType === "incubator"));
   const activeIds = new Set(activeProjects.map((project) => project.projectId));
   const childrenByParent = new Map<string, Project[]>();
   activeProjects.forEach((project) => {
@@ -131,6 +134,7 @@ export default async function AtlasProjectsPage() {
   const rootProjects = sortProjects(activeProjects.filter((project) => !project.parentProjectId || !activeIds.has(project.parentProjectId)));
   const blockedProjects = activeProjects.filter((project) => projectState(project) === "blocked").length;
   const attentionProjects = activeProjects.filter((project) => projectState(project) === "attention").length;
+  const openWorkCount = activeProjects.reduce((sum, project) => sum + project.openTaskCount, 0);
   const primaryAttention = home.attention.slice(0, 6);
   const remainingAttention = home.attention.slice(6);
 
@@ -195,7 +199,7 @@ export default async function AtlasProjectsPage() {
         <div className="atlas-projects-body">
           <AtlasMetricStrip className="atlas-projects-summary" ariaLabel="Project totals">
             <span><b>{activeProjects.length}</b> active</span>
-            <span><b>{home.metrics.openWorkCount}</b> open</span>
+            <span><b>{openWorkCount}</b> open</span>
             <span><b>{blockedProjects}</b> blocked</span>
             <span><b>{attentionProjects}</b> attention</span>
           </AtlasMetricStrip>
