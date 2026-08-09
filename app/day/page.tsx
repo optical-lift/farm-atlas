@@ -322,6 +322,47 @@ function latestEvidence(task: AtlasTaskCard) {
   return "No result has been recorded yet.";
 }
 
+function shortProjectTitle(title: string) {
+  return title
+    .replace(/^First Ticketed Thursday\s*[—-]\s*/i, "")
+    .replace(/^Get the\s+/i, "")
+    .replace(/^Finish the\s+/i, "")
+    .trim();
+}
+
+function unlockSummary(task: AtlasTaskCard) {
+  const unlocks = task.move_context?.unlocks ?? [];
+  if (!unlocks.length) return null;
+  const assignees = Array.from(new Set(unlocks.map((item) => item.assigneeName).filter(Boolean)));
+  if (assignees.length === 1) return unlocks.length === 1 ? `Unlocks ${assignees[0]}` : `Unlocks ${assignees[0]} ×${unlocks.length}`;
+  return `Unlocks ${unlocks.length} moves`;
+}
+
+function advancesSummary(task: AtlasTaskCard) {
+  const projects = task.move_context?.projects ?? [];
+  if (!projects.length) return null;
+  const primary = shortProjectTitle(projects[0].title);
+  return projects.length === 1 ? `Advances ${primary}` : `Advances ${primary} +${projects.length - 1}`;
+}
+
+function projectPathLabel(task: AtlasTaskCard, projectIndex: number) {
+  const project = task.move_context?.projects?.[projectIndex];
+  if (!project) return "";
+  return project.path.map((node) => node.title).join(" → ");
+}
+
+function whyMoveMatters(task: AtlasTaskCard) {
+  const context = task.move_context;
+  const primary = context?.projects?.[0];
+  if (!primary) return "This task has no project outcome attached yet.";
+  if (context.unlocks.length) {
+    const noun = context.unlocks.length === 1 ? "downstream move" : "downstream moves";
+    return `Finish this and ${context.unlocks.length} ${noun} can move.`;
+  }
+  if (context.waitingOn.length) return `This advances ${primary.title}, but another move has to land first.`;
+  return `This is a concrete move toward ${primary.title}.`;
+}
+
 type TaskCardProps = {
   task: AtlasTaskCard;
   complete?: boolean;
@@ -343,27 +384,85 @@ function TaskCard({ task, complete = false, overdue = false, expandable = false,
   const routeClass = routeState ? `atlas-day-route-${routeState}` : "";
   const className = `atlas-day-task-card${complete ? " complete" : ""}${overdue ? " atlas-day-overdue-task-card" : ""}${atlasIsCropCycleTask(task) ? " atlas-crop-cycle-task-card" : ""}${routeClass ? ` ${routeClass}` : ""}`;
   const timeLine = overdue ? `Due ${prettyShortDate(task.due_date)} · ${zone}` : statusLine;
+  const moveContext = task.move_context;
+  const projectMove = Boolean(moveContext?.projects?.length);
+  const primaryProject = moveContext?.projects?.[0] ?? null;
+  const unlockLabel = unlockSummary(task);
+  const advancesLabel = advancesSummary(task);
+  const familyLabel = projectMove && primaryProject ? `Project move · ${shortProjectTitle(primaryProject.title)}` : family;
 
   const summaryContent = (
     <>
-      {!complete ? <small className="atlas-day-task-family">{routeState === "current" ? `Current · ${family}` : family}</small> : null}
+      {!complete ? <small className="atlas-day-task-family">{routeState === "current" ? `Current · ${familyLabel}` : familyLabel}</small> : null}
       <strong>{display.title}</strong>
       <span>{complete ? "Complete" : timeLine}</span>
       {display.detail ? <em>{display.detail}</em> : null}
-      {!complete && cues.length ? <span className="atlas-day-task-cues">{cues.map((cue) => <i key={cue}>{cue}</i>)}</span> : null}
+      {!complete && projectMove ? (
+        <span className="atlas-day-project-impact">
+          {unlockLabel ? <i>{unlockLabel}</i> : null}
+          {advancesLabel ? <i>{advancesLabel}</i> : null}
+        </span>
+      ) : !complete && cues.length ? <span className="atlas-day-task-cues">{cues.map((cue) => <i key={cue}>{cue}</i>)}</span> : null}
     </>
   );
 
   const card = expandable ? (
-    <details id={onNodePress ? undefined : taskAnchorId(task)} className={`${className} atlas-journal-task-row`} aria-current={routeState === "current" ? "step" : undefined}>
+    <details id={onNodePress ? undefined : taskAnchorId(task)} className={`${className} atlas-journal-task-row${projectMove ? " atlas-project-move-card" : ""}`} aria-current={routeState === "current" ? "step" : undefined}>
       <summary>{summaryContent}<b className="atlas-journal-row-caret" aria-hidden="true">⌄</b></summary>
       <div className="atlas-journal-task-detail">
-        <dl>
-          <div><dt>Place</dt><dd>{task.objects.length ? task.objects.map((object) => object.object_label).join(" · ") : zone}</dd></div>
-          <div><dt>Time</dt><dd>{task.due_date ? prettyDate(task.due_date) : "No date recorded"}</dd></div>
-          <div><dt>Evidence</dt><dd>{latestEvidence(task)}</dd></div>
-          <div><dt>Effect</dt><dd>{task.unlock_text || task.blocker_text || "No secondary effect is recorded."}</dd></div>
-        </dl>
+        {projectMove && moveContext ? (
+          <div className="atlas-project-move-context">
+            <section className="atlas-project-move-block atlas-project-move-why">
+              <small>Why this move matters</small>
+              <strong>{whyMoveMatters(task)}</strong>
+            </section>
+
+            {moveContext.unlocks.length ? (
+              <section className="atlas-project-move-block">
+                <small>Unlocks</small>
+                <div className="atlas-project-move-list">
+                  {moveContext.unlocks.map((item) => (
+                    <div className="atlas-project-move-row" key={item.taskId}>
+                      <b>{item.assigneeName} →</b><span>{item.title}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            <section className="atlas-project-move-block">
+              <small>Advances</small>
+              <div className="atlas-project-move-list">
+                {moveContext.projects.map((project, index) => (
+                  <Link className="atlas-project-move-path" href={`/project/${encodeURIComponent(project.projectId)}`} key={project.projectId}>
+                    <span>{projectPathLabel(task, index)}</span>
+                    {project.portfolioType === "event" && project.targetDate ? <em>{prettyShortDate(project.targetDate)}</em> : <em>{project.portfolioType.replaceAll("_", " ")}</em>}
+                  </Link>
+                ))}
+              </div>
+            </section>
+
+            <section className="atlas-project-move-block">
+              <small>Waiting on</small>
+              {moveContext.waitingOn.length ? (
+                <div className="atlas-project-move-list">
+                  {moveContext.waitingOn.map((item) => (
+                    <div className="atlas-project-move-row is-waiting" key={item.taskId}>
+                      <b>{item.assigneeName} →</b><span>{item.title}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : <strong>Nothing. This is your move.</strong>}
+            </section>
+          </div>
+        ) : (
+          <dl>
+            <div><dt>Place</dt><dd>{task.objects.length ? task.objects.map((object) => object.object_label).join(" · ") : zone}</dd></div>
+            <div><dt>Time</dt><dd>{task.due_date ? prettyDate(task.due_date) : "No date recorded"}</dd></div>
+            <div><dt>Evidence</dt><dd>{latestEvidence(task)}</dd></div>
+            <div><dt>Effect</dt><dd>{task.unlock_text || task.blocker_text || "No secondary effect is recorded."}</dd></div>
+          </dl>
+        )}
         <Link href={taskHref(task, returnTo)}>Open full task <span aria-hidden="true">→</span></Link>
       </div>
     </details>
@@ -588,89 +687,150 @@ function AtlasDayPageContent() {
   }
 
   return (
-    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
-      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
-        <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></Link>
-          <span className="atlas-weather-line">{weatherLabel}</span>
-          <Link href="/" className="atlas-note-plus" aria-label="Back to today">+</Link>
-        </header>
+    <>
+      <style>{`
+        .atlas-day-project-impact { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+        .atlas-day-project-impact i {
+          display: inline-flex;
+          align-items: center;
+          min-height: 20px;
+          padding: 3px 7px;
+          border: 1px solid rgba(85, 90, 134, .16);
+          border-radius: 999px;
+          background: rgba(174, 179, 212, .13);
+          color: #5f6282;
+          font-size: 9px;
+          line-height: 1.1;
+          font-style: normal;
+          font-weight: 900;
+        }
+        .atlas-project-move-card > summary { background: linear-gradient(90deg, rgba(174,179,212,.055), transparent 62%); }
+        .atlas-project-move-context { display: grid; gap: 0; }
+        .atlas-project-move-block { display: grid; gap: 7px; padding: 11px 0; border-top: 1px solid rgba(88,87,111,.1); }
+        .atlas-project-move-block:first-child { padding-top: 1px; border-top: 0; }
+        .atlas-project-move-block > small {
+          color: #8881b7;
+          font-size: 9px;
+          font-weight: 950;
+          letter-spacing: .1em;
+          text-transform: uppercase;
+        }
+        .atlas-project-move-block > strong { color: #303243; font-size: 12px; line-height: 1.4; }
+        .atlas-project-move-list { display: grid; gap: 6px; }
+        .atlas-project-move-row {
+          display: grid;
+          grid-template-columns: auto minmax(0,1fr);
+          gap: 5px;
+          align-items: baseline;
+          padding: 7px 9px;
+          border-radius: 10px;
+          background: rgba(216,220,151,.17);
+          color: #4f514c;
+          font-size: 10px;
+          line-height: 1.3;
+        }
+        .atlas-project-move-row.is-waiting { background: rgba(213,200,212,.18); }
+        .atlas-project-move-row b { color: #5f6282; white-space: nowrap; }
+        .atlas-project-move-path {
+          display: flex !important;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          padding: 7px 9px !important;
+          border: 1px solid rgba(88,87,111,.1);
+          border-radius: 10px;
+          color: #303243 !important;
+          text-decoration: none;
+          font-size: 10px !important;
+          font-weight: 800;
+        }
+        .atlas-project-move-path span { min-width: 0; line-height: 1.3; }
+        .atlas-project-move-path em { color: #8881b7; font-size: 8px; font-style: normal; text-transform: uppercase; white-space: nowrap; }
+      `}</style>
+      <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
+        <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
+          <header className="atlas-phone-top atlas-dashboard-top">
+            <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></Link>
+            <span className="atlas-weather-line">{weatherLabel}</span>
+            <Link href="/" className="atlas-note-plus" aria-label="Back to today">+</Link>
+          </header>
 
-        <div className="atlas-task-page-body">
-          <section className="atlas-task-page-section atlas-route-collection atlas-day-browse">
-            <div className="atlas-day-browse-head">
-              <Link href={routeFilter ? dayHref(dateIso) : "/"} className="atlas-route-back atlas-day-back">{routeFilter ? "← Day plan" : "← Week"}</Link>
-              <div className="atlas-day-browse-title-row"><span>{routeFilter ? routeLabels[routeFilter] : dayOnly(dateIso)}</span><strong>{loading ? "Loading" : isFutureDay ? `${openRequiredCount} scheduled · ${doneDayTasks.length} done` : `${openRequiredCount} open · ${overdueTasks.length} fallen out of rhythm · ${doneDayTasks.length} done`}</strong></div>
-              <p>{loading ? "Loading farm work" : routeFilter ? `${filteredTasks.length} ${filteredTasks.length === 1 ? "task" : "tasks"} in this collection` : isFutureDay ? `${openRequiredCount} tasks scheduled for this day` : `${openRequiredCount} unfinished tasks in the real day`}</p>
-            </div>
+          <div className="atlas-task-page-body">
+            <section className="atlas-task-page-section atlas-route-collection atlas-day-browse">
+              <div className="atlas-day-browse-head">
+                <Link href={routeFilter ? dayHref(dateIso) : "/"} className="atlas-route-back atlas-day-back">{routeFilter ? "← Day plan" : "← Week"}</Link>
+                <div className="atlas-day-browse-title-row"><span>{routeFilter ? routeLabels[routeFilter] : dayOnly(dateIso)}</span><strong>{loading ? "Loading" : isFutureDay ? `${openRequiredCount} scheduled · ${doneDayTasks.length} done` : `${openRequiredCount} open · ${overdueTasks.length} fallen out of rhythm · ${doneDayTasks.length} done`}</strong></div>
+                <p>{loading ? "Loading farm work" : routeFilter ? `${filteredTasks.length} ${filteredTasks.length === 1 ? "task" : "tasks"} in this collection` : isFutureDay ? `${openRequiredCount} tasks scheduled for this day` : `${openRequiredCount} unfinished tasks in the real day`}</p>
+              </div>
 
-            {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
-            {livingError ? <div className="atlas-journal-read-error">Journal view unavailable. Today’s tasks remain usable.</div> : null}
+              {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
+              {livingError ? <div className="atlas-journal-read-error">Journal view unavailable. Today’s tasks remain usable.</div> : null}
 
-            {!routeFilter ? (
-              <article className={`atlas-day-command-header${overdueTasks.length ? " atlas-day-command-header-with-recovery" : ""}`} data-day-denominator={`${finishedProgressTasks.length}/${progressTasks.length}`}>
-                <div className="atlas-day-command-topline">
-                  <div className="atlas-day-command-date"><strong>{prettyDate(dateIso)}</strong><span>{loading ? "Loading" : `${openRequiredCount} ${isFutureDay ? "scheduled" : "still in today"}${blockedProgressTasks.length ? ` · ${blockedProgressTasks.length} blocked` : ""}`}</span></div>
-                  <ViewToggle viewMode={viewMode} onChange={setViewMode} />
-                </div>
-                <DayTrailSummary compact loading={loading} completed={finishedProgressTasks.length} total={progressTasks.length} blocked={blockedProgressTasks.length} />
-                {overdueTasks.length ? (
-                  <details className="atlas-day-overview-drawer atlas-day-command-overview atlas-day-recovery-overview">
-                    <summary>
-                      <span className="atlas-day-recovery-count" aria-label={`${overdueTasks.length} tasks fallen out of rhythm`}>{overdueTasks.length}</span>
-                      <div className="atlas-day-recovery-summary-copy">
-                        <span>Fallen out of rhythm</span>
-                        <strong>{nextRecoveryTask ? `Next recovery · ${atlasTaskDisplay(nextRecoveryTask).title}` : "Recovery work is waiting"}</strong>
-                        <em>{nextRecoveryTask && nextRecoveryWindow ? `${nextRecoveryWindow.recoveryLabel} · due ${prettyShortDate(nextRecoveryTask.due_date)}` : "Open the recovery index"}</em>
+              {!routeFilter ? (
+                <article className={`atlas-day-command-header${overdueTasks.length ? " atlas-day-command-header-with-recovery" : ""}`} data-day-denominator={`${finishedProgressTasks.length}/${progressTasks.length}`}>
+                  <div className="atlas-day-command-topline">
+                    <div className="atlas-day-command-date"><strong>{prettyDate(dateIso)}</strong><span>{loading ? "Loading" : `${openRequiredCount} ${isFutureDay ? "scheduled" : "still in today"}${blockedProgressTasks.length ? ` · ${blockedProgressTasks.length} blocked` : ""}`}</span></div>
+                    <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+                  </div>
+                  <DayTrailSummary compact loading={loading} completed={finishedProgressTasks.length} total={progressTasks.length} blocked={blockedProgressTasks.length} />
+                  {overdueTasks.length ? (
+                    <details className="atlas-day-overview-drawer atlas-day-command-overview atlas-day-recovery-overview">
+                      <summary>
+                        <span className="atlas-day-recovery-count" aria-label={`${overdueTasks.length} tasks fallen out of rhythm`}>{overdueTasks.length}</span>
+                        <div className="atlas-day-recovery-summary-copy">
+                          <span>Fallen out of rhythm</span>
+                          <strong>{nextRecoveryTask ? `Next recovery · ${atlasTaskDisplay(nextRecoveryTask).title}` : "Recovery work is waiting"}</strong>
+                          <em>{nextRecoveryTask && nextRecoveryWindow ? `${nextRecoveryWindow.recoveryLabel} · due ${prettyShortDate(nextRecoveryTask.due_date)}` : "Open the recovery index"}</em>
+                        </div>
+                        <b aria-hidden="true">⌄</b>
+                      </summary>
+                      <div className="atlas-day-command-overview-body atlas-day-recovery-overview-body">
+                        <p>Every unfinished recovery task is placed in the real day by the time it can best be accomplished.</p>
+                        {recoveryGroups.map((group) => (
+                          <section className="atlas-day-recovery-window" data-recovery-window={group.key} key={group.key}>
+                            <header><strong>{group.recoveryLabel}</strong><span>{group.tasks.length}</span></header>
+                            <div className="atlas-day-recovery-chip-list">
+                              {group.tasks.map((task) => (
+                                <a href={`#${taskAnchorId(task)}`} key={task.task_id}>
+                                  <strong>{atlasTaskDisplay(task).title}</strong>
+                                  <span>{overdueAgeDays(task, dateIso)}d · due {prettyShortDate(task.due_date)}</span>
+                                </a>
+                              ))}
+                            </div>
+                          </section>
+                        ))}
                       </div>
-                      <b aria-hidden="true">⌄</b>
-                    </summary>
-                    <div className="atlas-day-command-overview-body atlas-day-recovery-overview-body">
-                      <p>Every unfinished recovery task is placed in the real day by the time it can best be accomplished.</p>
-                      {recoveryGroups.map((group) => (
-                        <section className="atlas-day-recovery-window" data-recovery-window={group.key} key={group.key}>
-                          <header><strong>{group.recoveryLabel}</strong><span>{group.tasks.length}</span></header>
-                          <div className="atlas-day-recovery-chip-list">
-                            {group.tasks.map((task) => (
-                              <a href={`#${taskAnchorId(task)}`} key={task.task_id}>
-                                <strong>{atlasTaskDisplay(task).title}</strong>
-                                <span>{overdueAgeDays(task, dateIso)}d · due {prettyShortDate(task.due_date)}</span>
-                              </a>
-                            ))}
-                          </div>
-                        </section>
-                      ))}
-                    </div>
-                  </details>
-                ) : null}
-              </article>
-            ) : null}
+                    </details>
+                  ) : null}
+                </article>
+              ) : null}
 
-            {!routeFilter && !isFutureDay && livingDay ? <LivingDayCarried rhythms={livingDay.carriedRhythms} decisions={livingDay.ownerDecisions} returnTo={returnTo} /> : null}
+              {!routeFilter && !isFutureDay && livingDay ? <LivingDayCarried rhythms={livingDay.carriedRhythms} decisions={livingDay.ownerDecisions} returnTo={returnTo} /> : null}
 
-            <div className="atlas-day-task-groups">
-              {routeFilter ? (
-                <article className="atlas-day-route-group atlas-day-work-order-group"><h3>{routeLabels[routeFilter]}</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{windowedTimeline(timelineGroups)}{!loading && !filteredTimelineTasks.length ? <div className="atlas-day-route-empty">No open tasks in this collection.</div> : null}</div></article>
-              ) : viewMode === "work_order" ? (
-                <article className="atlas-day-route-group atlas-day-work-order-group atlas-day-timeline-group"><h3>Work the day</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{windowedTimeline(timelineGroups)}{!loading && !timelineTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}</div></article>
-              ) : (
-                <>{zones.map((zone) => <article className="atlas-day-route-group" key={zone}><h3>{zone}</h3><div className="atlas-day-zone-group">{filteredTasks.filter((task) => collectionZone(task) === zone).sort((a, b) => mixedDaySortValue(a, dateIso, partnerPlan).localeCompare(mixedDaySortValue(b, dateIso, partnerPlan))).map((task) => <TaskCard task={task} overdue={isOverdueTask(task, dateIso)} key={task.task_id} returnTo={returnTo} />)}</div></article>)}</>
-              )}
+              <div className="atlas-day-task-groups">
+                {routeFilter ? (
+                  <article className="atlas-day-route-group atlas-day-work-order-group"><h3>{routeLabels[routeFilter]}</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{windowedTimeline(timelineGroups)}{!loading && !filteredTimelineTasks.length ? <div className="atlas-day-route-empty">No open tasks in this collection.</div> : null}</div></article>
+                ) : viewMode === "work_order" ? (
+                  <article className="atlas-day-route-group atlas-day-work-order-group atlas-day-timeline-group"><h3>Work the day</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{windowedTimeline(timelineGroups)}{!loading && !timelineTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}</div></article>
+                ) : (
+                  <>{zones.map((zone) => <article className="atlas-day-route-group" key={zone}><h3>{zone}</h3><div className="atlas-day-zone-group">{filteredTasks.filter((task) => collectionZone(task) === zone).sort((a, b) => mixedDaySortValue(a, dateIso, partnerPlan).localeCompare(mixedDaySortValue(b, dateIso, partnerPlan))).map((task) => <TaskCard task={task} overdue={isOverdueTask(task, dateIso)} key={task.task_id} returnTo={returnTo} />)}</div></article>)}</>
+                )}
 
-              {!routeFilter && livingDay ? <LivingDayGoals goals={livingDay.goals} returnTo={returnTo} /> : null}
-              {!routeFilter && livingDay ? <LivingDayJournal events={standaloneJournalEvents} /> : null}
-              {!routeFilter && livingDay ? <LivingDayUnlocked unlocks={livingDay.unlockedToday} returnTo={returnTo} /> : null}
-              {!routeFilter && pageResolved && livingDay ? <LivingDayCompletionSummary summary={livingDay.completionSummary} /> : null}
-              {!routeFilter && livingLoading ? <div className="atlas-journal-loading">Loading Journal and goals…</div> : null}
+                {!routeFilter && livingDay ? <LivingDayGoals goals={livingDay.goals} returnTo={returnTo} /> : null}
+                {!routeFilter && livingDay ? <LivingDayJournal events={standaloneJournalEvents} /> : null}
+                {!routeFilter && livingDay ? <LivingDayUnlocked unlocks={livingDay.unlockedToday} returnTo={returnTo} /> : null}
+                {!routeFilter && pageResolved && livingDay ? <LivingDayCompletionSummary summary={livingDay.completionSummary} /> : null}
+                {!routeFilter && livingLoading ? <div className="atlas-journal-loading">Loading Journal and goals…</div> : null}
 
-              {!routeFilter && extraCreditTasks.length ? <article className="atlas-day-route-group atlas-day-extra-credit-group"><h3>Extra Credit</h3><div className="atlas-day-zone-group">{extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}</div></article> : null}
-            </div>
+                {!routeFilter && extraCreditTasks.length ? <article className="atlas-day-route-group atlas-day-extra-credit-group"><h3>Extra Credit</h3><div className="atlas-day-zone-group">{extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}</div></article> : null}
+              </div>
 
-            {!routeFilter ? <nav className="atlas-day-adjacent-nav" aria-label="Browse adjacent days"><Link href={dayHref(previousDate)} aria-label="Open yesterday"><span aria-hidden="true">←</span><em>Yesterday</em></Link><Link href={dayHref(nextDate)} aria-label="Open tomorrow"><em>Tomorrow</em><span aria-hidden="true">→</span></Link></nav> : null}
-          </section>
-        </div>
-      </section>
-    </main>
+              {!routeFilter ? <nav className="atlas-day-adjacent-nav" aria-label="Browse adjacent days"><Link href={dayHref(previousDate)} aria-label="Open yesterday"><span aria-hidden="true">←</span><em>Yesterday</em></Link><Link href={dayHref(nextDate)} aria-label="Open tomorrow"><em>Tomorrow</em><span aria-hidden="true">→</span></Link></nav> : null}
+            </section>
+          </div>
+        </section>
+      </main>
+    </>
   );
 }
 
