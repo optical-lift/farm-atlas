@@ -79,3 +79,5 @@ test("Preferred sky ranking is evaluated for dated operation tasks without grant
   assert.match(planner, /sky_preference_order/);
   assert.match(planner, /Farm timezone comes from farm metadata with Chicago only as fallback/);
 });
+
+// Build retry marker: 2026-08-08T21:17-05:00
