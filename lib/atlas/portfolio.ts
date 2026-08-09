@@ -18,12 +18,24 @@ export type AtlasPortfolioTarget = {
   zoneLabel: string | null;
 };
 
+export type AtlasProjectPathNode = {
+  projectId: string;
+  projectKey: string;
+  title: string;
+  portfolioType: string;
+};
+
 export type AtlasPortfolioProject = {
   projectId: string;
   projectKey: string;
   title: string;
   status: string;
   projectKind: "farm" | "cross_farm" | "organization" | string;
+  portfolioType: "program" | "campaign" | "side_quest" | "event" | "incubator" | string;
+  parentProjectId: string | null;
+  parentProjectKey: string | null;
+  parentProjectTitle: string | null;
+  projectPath: AtlasProjectPathNode[];
   workstream: string;
   outcome: string | null;
   currentMilestone: string | null;
@@ -119,12 +131,21 @@ export type AtlasProjectAttention = {
   status: string;
 };
 
+export type AtlasProjectRelationship = {
+  relationshipId: string;
+  relationshipType: string;
+  direction: "inbound" | "outbound" | string;
+  project: AtlasPortfolioProject;
+};
+
 export type AtlasProjectDetail = {
   project: AtlasPortfolioProject;
   permissions: { canCreateTasks: boolean; isOrganizationOwner: boolean };
   tasks: AtlasProjectTask[];
   steps: AtlasProjectStep[];
   attention: AtlasProjectAttention[];
+  children?: AtlasPortfolioProject[];
+  relationships?: AtlasProjectRelationship[];
 };
 
 export type AtlasProjectTaskFocus = {

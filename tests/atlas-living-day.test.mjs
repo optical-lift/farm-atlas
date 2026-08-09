@@ -92,7 +92,7 @@ test("the Living Day API remains private membership-scoped and failure-isolated 
 });
 
 test("task rows expand inline while the separate completion dot keeps its action", () => {
-  assert.match(day, /<details id=\{onNodePress \? undefined : taskAnchorId\(task\)\} className=\{`\$\{className\} atlas-journal-task-row`\}/);
+  assert.match(day, /<details id=\{onNodePress \? undefined : taskAnchorId\(task\)\} className=\{`\$\{className\} atlas-journal-task-row\$\{projectMove/);
   assert.match(day, /<dl>/);
   assert.match(day, /<dt>Place<\/dt>/);
   assert.match(day, /<dt>Time<\/dt>/);
@@ -102,6 +102,16 @@ test("task rows expand inline while the separate completion dot keeps its action
   assert.match(day, /onClick=\{\(\) => onNodePress\(task\)\}/);
   assert.match(day, /atlas-day-mixed-timeline/);
   assert.match(css, /Tapping the row opens context/);
+});
+
+test("project Moves repurpose the Day drawer around outcome and dependencies", () => {
+  assert.match(day, /Why this move matters/);
+  assert.match(day, /<small>Unlocks<\/small>/);
+  assert.match(day, /<small>Advances<\/small>/);
+  assert.match(day, /<small>Waiting on<\/small>/);
+  assert.match(day, /Nothing\. This is your move\./);
+  assert.match(day, /Unlocks \$\{assignees\[0\]\} ×\$\{unlocks\.length\}/);
+  assert.match(day, /Project move · \$\{shortProjectTitle\(primaryProject\.title\)\}/);
 });
 
 test("completion echoes remain compact but say what changed", () => {

@@ -21,6 +21,7 @@ import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
 export const dynamic = "force-dynamic";
 
 type ProjectState = "blocked" | "attention" | "waiting" | "complete" | "quiet" | "moving";
+type Project = Awaited<ReturnType<typeof readAtlasOperatorUniversalHome>>["projects"][number];
 
 function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -30,7 +31,7 @@ function prettyDate(value: string) {
   return new Date(`${value}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function projectState(project: Awaited<ReturnType<typeof readAtlasOperatorUniversalHome>>["projects"][number]): ProjectState {
+function projectState(project: Project): ProjectState {
   if (project.blockedTaskCount > 0 || project.health === "blocked") return "blocked";
   if (project.openAttentionCount > 0 || project.health === "at_risk") return "attention";
   if (project.health === "waiting") return "waiting";
@@ -48,6 +49,61 @@ function stateLabel(state: ProjectState) {
   return "Moving";
 }
 
+function projectTypeLabel(project: Project) {
+  if (project.portfolioType === "side_quest") return "Side quest";
+  if (project.portfolioType === "event") return "Event";
+  if (project.portfolioType === "program") return "Program";
+  if (project.portfolioType === "incubator") return "Incubator";
+  return titleCase(project.portfolioType || "campaign");
+}
+
+function sortProjects(projects: Project[]) {
+  const rank: Record<ProjectState, number> = {
+    blocked: 0,
+    attention: 1,
+    moving: 2,
+    waiting: 3,
+    quiet: 4,
+    complete: 5,
+  };
+  return [...projects].sort((left, right) => rank[projectState(left)] - rank[projectState(right)]
+    || (left.targetDate ?? "9999-12-31").localeCompare(right.targetDate ?? "9999-12-31")
+    || left.title.localeCompare(right.title));
+}
+
+function ProjectCard({ project }: { project: Project }) {
+  const state = projectState(project);
+  return (
+    <Link href={`/project/${encodeURIComponent(project.projectId)}`} className="atlas-project-card">
+      <div>
+        <span>{projectTypeLabel(project)}{project.targetDate ? ` · ${prettyDate(project.targetDate)}` : ""}</span>
+        <AtlasStateBadge state={state}>{stateLabel(state)}</AtlasStateBadge>
+      </div>
+      <strong>{project.title}</strong>
+      <p>{project.currentMilestone || project.outcome || "Open the project."}</p>
+      <small>
+        {project.openTaskCount} open
+        {project.blockedTaskCount ? ` · ${project.blockedTaskCount} blocked` : ""}
+        {project.openAttentionCount ? ` · ${project.openAttentionCount} need action` : ""}
+      </small>
+    </Link>
+  );
+}
+
+function ProjectBranch({ project, childrenByParent, depth = 0 }: { project: Project; childrenByParent: Map<string, Project[]>; depth?: number }) {
+  const children = sortProjects(childrenByParent.get(project.projectId) ?? []);
+  return (
+    <div className="atlas-project-branch" data-project-depth={depth}>
+      <ProjectCard project={project} />
+      {children.length ? (
+        <div className="atlas-project-children">
+          {children.map((child) => <ProjectBranch key={child.projectId} project={child} childrenByParent={childrenByParent} depth={depth + 1} />)}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default async function AtlasProjectsPage() {
   const session = await getAtlasSession();
   if (!session) redirect("/login");
@@ -62,21 +118,19 @@ export default async function AtlasProjectsPage() {
     effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
   });
 
-  const projects = [...home.projects].sort((left, right) => {
-    const rank: Record<ProjectState, number> = {
-      blocked: 0,
-      attention: 1,
-      moving: 2,
-      waiting: 3,
-      quiet: 4,
-      complete: 5,
-    };
-    return rank[projectState(left)] - rank[projectState(right)]
-      || (left.targetDate ?? "9999-12-31").localeCompare(right.targetDate ?? "9999-12-31")
-      || left.title.localeCompare(right.title);
+  const activeProjects = home.projects.filter((project) => project.status !== "paused" && project.portfolioType !== "incubator");
+  const incubatorProjects = sortProjects(home.projects.filter((project) => project.status === "paused" || project.portfolioType === "incubator"));
+  const activeIds = new Set(activeProjects.map((project) => project.projectId));
+  const childrenByParent = new Map<string, Project[]>();
+  activeProjects.forEach((project) => {
+    if (!project.parentProjectId || !activeIds.has(project.parentProjectId)) return;
+    const children = childrenByParent.get(project.parentProjectId) ?? [];
+    children.push(project);
+    childrenByParent.set(project.parentProjectId, children);
   });
-  const blockedProjects = projects.filter((project) => projectState(project) === "blocked").length;
-  const attentionProjects = projects.filter((project) => projectState(project) === "attention").length;
+  const rootProjects = sortProjects(activeProjects.filter((project) => !project.parentProjectId || !activeIds.has(project.parentProjectId)));
+  const blockedProjects = activeProjects.filter((project) => projectState(project) === "blocked").length;
+  const attentionProjects = activeProjects.filter((project) => projectState(project) === "attention").length;
   const primaryAttention = home.attention.slice(0, 6);
   const remainingAttention = home.attention.slice(6);
 
@@ -88,6 +142,16 @@ export default async function AtlasProjectsPage() {
         .atlas-projects-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         .atlas-projects-section { padding: 16px; display: grid; gap: 12px; }
         .atlas-projects-list, .atlas-project-attention-list { display: grid; gap: 9px; }
+        .atlas-project-branch { min-width: 0; display: grid; gap: 8px; }
+        .atlas-project-children {
+          display: grid;
+          gap: 8px;
+          margin-left: 15px;
+          padding-left: 12px;
+          border-left: 2px solid rgba(139, 145, 194, 0.22);
+        }
+        .atlas-project-branch[data-project-depth="1"] > .atlas-project-card { background: rgba(255, 253, 247, 0.82); }
+        .atlas-project-branch[data-project-depth="2"] > .atlas-project-card { border-style: dashed; box-shadow: none; }
         .atlas-project-card, .atlas-project-attention-card {
           min-width: 0;
           border: 1px solid rgba(88, 87, 111, 0.12);
@@ -115,18 +179,22 @@ export default async function AtlasProjectsPage() {
         .atlas-project-card > small,
         .atlas-project-attention-card > small { display: block; margin-top: 9px; color: #686a64; font-size: 9px; font-weight: 850; }
         .atlas-project-attention-card { border-left: 4px solid #d9b5a9; }
-        .atlas-projects-more { border-top: 1px solid rgba(88, 87, 111, 0.1); padding-top: 10px; }
-        .atlas-projects-more summary { color: #5e5985; cursor: pointer; font-size: 10px; font-weight: 900; }
+        .atlas-projects-more,
+        .atlas-projects-incubator { border-top: 1px solid rgba(88, 87, 111, 0.1); padding-top: 10px; }
+        .atlas-projects-more summary,
+        .atlas-projects-incubator summary { color: #5e5985; cursor: pointer; font-size: 10px; font-weight: 900; }
+        .atlas-projects-incubator > p { margin: 7px 0 10px; color: #72736d; font-size: 10px; line-height: 1.35; }
         .atlas-projects-empty { margin: 0; color: #72736d; font-size: 12px; font-weight: 750; }
         @media (max-width: 380px) {
           .atlas-projects-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .atlas-project-children { margin-left: 9px; padding-left: 9px; }
         }
       `}</style>
       <AtlasAppShell className="atlas-projects-shell" frameClassName="atlas-projects-page">
         <AtlasTopBar title="Projects" />
         <div className="atlas-projects-body">
           <AtlasMetricStrip className="atlas-projects-summary" ariaLabel="Project totals">
-            <span><b>{projects.length}</b> projects</span>
+            <span><b>{activeProjects.length}</b> active</span>
             <span><b>{home.metrics.openWorkCount}</b> open</span>
             <span><b>{blockedProjects}</b> blocked</span>
             <span><b>{attentionProjects}</b> attention</span>
@@ -164,32 +232,24 @@ export default async function AtlasProjectsPage() {
           ) : null}
 
           <AtlasCard as="section" className="atlas-projects-section" ariaLabelledBy="atlas-project-list-title">
-            <AtlasSectionHeading title="Projects" count={projects.length} id="atlas-project-list-title" />
-            {projects.length ? (
+            <AtlasSectionHeading title="Active worlds" count={activeProjects.length} id="atlas-project-list-title" />
+            {rootProjects.length ? (
               <div className="atlas-projects-list">
-                {projects.map((project) => {
-                  const state = projectState(project);
-                  return (
-                    <Link key={project.projectId} href={`/project/${encodeURIComponent(project.projectId)}`} className="atlas-project-card">
-                      <div>
-                        <span>{project.farmName || "Feast Guild"} · {titleCase(project.workstream)}</span>
-                        <AtlasStateBadge state={state}>{stateLabel(state)}</AtlasStateBadge>
-                      </div>
-                      <strong>{project.title}</strong>
-                      <p>{project.currentMilestone || project.outcome || "Open the project."}</p>
-                      <small>
-                        {project.openTaskCount} open
-                        {project.blockedTaskCount ? ` · ${project.blockedTaskCount} blocked` : ""}
-                        {project.openAttentionCount ? ` · ${project.openAttentionCount} need action` : ""}
-                        {project.targetDate ? ` · due ${prettyDate(project.targetDate)}` : ""}
-                      </small>
-                    </Link>
-                  );
-                })}
+                {rootProjects.map((project) => <ProjectBranch key={project.projectId} project={project} childrenByParent={childrenByParent} />)}
               </div>
             ) : (
-              <p className="atlas-projects-empty">No projects are visible in this account view.</p>
+              <p className="atlas-projects-empty">No active projects are visible in this account view.</p>
             )}
+
+            {incubatorProjects.length ? (
+              <details className="atlas-projects-incubator">
+                <summary>Later / incubator · {incubatorProjects.length}</summary>
+                <p>Real possibilities that are not part of the current field of play.</p>
+                <div className="atlas-projects-list">
+                  {incubatorProjects.map((project) => <ProjectCard key={project.projectId} project={project} />)}
+                </div>
+              </details>
+            ) : null}
           </AtlasCard>
         </div>
       </AtlasAppShell>

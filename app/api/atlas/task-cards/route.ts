@@ -5,6 +5,7 @@ import {
   effectiveOperatorMembershipId,
   readAtlasOwnerOperatorContext,
 } from "@/lib/atlas/operator-context";
+import { readAtlasTaskMoveContexts } from "@/lib/atlas/task-move-context";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -59,10 +60,22 @@ export async function GET(request: NextRequest) {
     return privateJson({ ok: false, error: "Atlas task cards read failed." }, 500);
   }
 
-  const taskCards = (data ?? []) as AtlasTaskCardRow[];
-  if (taskId && taskCards.length === 0) {
+  const baseTaskCards = (data ?? []) as AtlasTaskCardRow[];
+  if (taskId && baseTaskCards.length === 0) {
     return privateJson({ ok: false, error: "Task not found." }, 404);
   }
+
+  let moveContexts = {} as Awaited<ReturnType<typeof readAtlasTaskMoveContexts>>;
+  try {
+    moveContexts = await readAtlasTaskMoveContexts(baseTaskCards.map((card) => card.task_id));
+  } catch (contextError) {
+    console.error("Atlas full-task Move context read failed:", contextError);
+  }
+
+  const taskCards = baseTaskCards.map((card) => ({
+    ...card,
+    move_context: moveContexts[card.task_id] ?? null,
+  }));
 
   return privateJson({
     ok: true,

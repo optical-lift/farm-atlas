@@ -8,6 +8,7 @@ import {
 import { readAtlasOperatorUniversalHome } from "@/lib/atlas/operator-universal-home";
 import { getAtlasSession } from "@/lib/atlas/session";
 import { readAtlasTaskDayDispositions } from "@/lib/atlas/task-day-dispositions-server";
+import { readAtlasTaskMoveContexts } from "@/lib/atlas/task-move-context";
 import {
   atlasUniversalPortalLabel,
   atlasUniversalTaskCards,
@@ -41,7 +42,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "universal-dated-task-cards-v3-carry-forward",
+      "X-Atlas-Read-Path": "universal-dated-task-cards-v4-project-moves",
     },
   });
 }
@@ -94,8 +95,22 @@ export async function GET(request: Request) {
     // carry-forward away merely because its original due date is earlier than the
     // future day being inspected. Historical/done rows are still constrained by the
     // worker-day reader itself.
-    const taskCards = atlasUniversalTaskCards(home)
+    const baseTaskCards = atlasUniversalTaskCards(home)
       .filter((card) => !setAsideTaskIds.has(card.task_id));
+
+    // Project context is enrichment, not a dependency of the working Day. If the
+    // portfolio reader is temporarily unavailable, the executable task cards remain usable.
+    let moveContexts = {} as Awaited<ReturnType<typeof readAtlasTaskMoveContexts>>;
+    try {
+      moveContexts = await readAtlasTaskMoveContexts(baseTaskCards.map((card) => card.task_id));
+    } catch (contextError) {
+      console.error("Atlas task Move context read failed:", contextError);
+    }
+
+    const taskCards = baseTaskCards.map((card) => ({
+      ...card,
+      move_context: moveContexts[card.task_id] ?? null,
+    }));
 
     return privateJson({
       ok: true,
