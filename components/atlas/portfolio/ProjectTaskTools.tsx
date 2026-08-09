@@ -158,7 +158,8 @@ export default function ProjectTaskTools({
     const assignee = task.assigneeName || (task.assignedToViewer ? "You" : "Shared");
     const waitingOn = (task.prerequisites ?? [])
       .map((prerequisite) => taskById.get(prerequisite.taskId))
-      .filter((prerequisite): prerequisite is AtlasProjectTask => Boolean(prerequisite) && !isCompleteTask(prerequisite));
+      .filter((prerequisite): prerequisite is AtlasProjectTask => Boolean(prerequisite))
+      .filter((prerequisite) => !isCompleteTask(prerequisite));
     const dependencyNote = waitingOn.length
       ? `Waiting on ${waitingOn.map((prerequisite) => prerequisite.title).join(" + ")}`
       : null;
