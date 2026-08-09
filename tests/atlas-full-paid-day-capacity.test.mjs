@@ -105,8 +105,10 @@ test("Owner operating as Anna sees full paid-day capacity while approving the di
   assert.match(projectionRoute, /approvedConditionalMinutes/);
   assert.match(projectionRoute, /remainingPaidMinutes/);
   assert.match(projectionRoute, /project_pull_options_for_member_v2/);
-  assert.match(projectionUi, /committed/);
-  assert.match(projectionUi, /Atlas is showing every eligible idea/);
-  assert.match(projectionUi, /Nothing below becomes/);
-  assert.match(projectionUi, /Build \$\{operatorLabel\}'s schedule/);
+  assert.match(projectionRoute, /dayWindow/);
+  assert.match(projectionRoute, /workOrderNumber/);
+  assert.match(projectionUi, /committedMinutes/);
+  assert.match(projectionUi, /proposedMinutes/);
+  assert.match(projectionUi, /Purple cards are still only ideas/);
+  assert.match(projectionUi, /Commit schedule/);
 });
