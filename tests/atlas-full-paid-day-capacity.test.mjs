@@ -100,15 +100,18 @@ test("rescheduled unfinished work remains paid backlog instead of becoming permi
 
 test("Owner operating as Anna sees full paid-day capacity while approving the discretionary fill", () => {
   assert.match(projectionReader, /paidTargetMinutes/);
+  assert.match(projectionRoute, /readOwnerWorkerDayPlan/);
   assert.match(projectionRoute, /paidTargetMinutes/);
   assert.match(projectionRoute, /scheduledPaidMinutes/);
   assert.match(projectionRoute, /approvedConditionalMinutes/);
   assert.match(projectionRoute, /remainingPaidMinutes/);
-  assert.match(projectionRoute, /project_pull_options_for_member_v2/);
-  assert.match(projectionRoute, /dayWindow/);
-  assert.match(projectionRoute, /workOrderNumber/);
+  assert.match(projectionRoute, /plan\.suggestions/);
+  assert.doesNotMatch(projectionRoute, /project_pull_options_for_member_v2/);
+  assert.match(projectionUi, /plan\?\.realWork/);
+  assert.match(projectionUi, /workOrderNumber/);
+  assert.match(projectionUi, /dayWindow/);
   assert.match(projectionUi, /committedMinutes/);
   assert.match(projectionUi, /proposedMinutes/);
-  assert.match(projectionUi, /Purple cards are still only ideas/);
+  assert.match(projectionUi, /Purple cards are suggestions/);
   assert.match(projectionUi, /Commit schedule/);
 });
