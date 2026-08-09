@@ -28,6 +28,7 @@ import DayConsequenceTimelinePatch from "./DayConsequenceTimelinePatch";
 import AtlasFarmConditionsHomePatch from "./AtlasFarmConditionsHomePatch";
 import AtlasSkyLedgerMaintainer from "./AtlasSkyLedgerMaintainer";
 import OwnerOperatorMode from "./OwnerOperatorMode";
+import FutureDayProjectionBridge from "./FutureDayProjectionBridge";
 import "./globals.css";
 import "./atlas-primitives.css";
 import "./atlas-trail.css";
@@ -102,6 +103,7 @@ import "./day-single-scroll.css";
 import "./farm-conditions-home.css";
 import "./farm-conditions-merged.css";
 import "./day-node-clean.css";
+import "./future-day-projection.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -179,6 +181,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <TaskSetAsideDayPatch />
         <DayConsequenceTimelinePatch />
         <AtlasFarmConditionsHomePatch />
+        <Suspense fallback={null}><FutureDayProjectionBridge /></Suspense>
         {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}
       </body>
