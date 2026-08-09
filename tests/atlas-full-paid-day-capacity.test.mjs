@@ -108,5 +108,5 @@ test("Owner operating as Anna sees full paid-day capacity while approving the di
   assert.match(projectionUi, /committed/);
   assert.match(projectionUi, /Atlas is showing every eligible idea/);
   assert.match(projectionUi, /Nothing below becomes/);
-  assert.match(projectionUi, /Build \{operatorLabel\}&apos;s schedule/);
+  assert.match(projectionUi, /Build \$\{operatorLabel\}'s schedule/);
 });

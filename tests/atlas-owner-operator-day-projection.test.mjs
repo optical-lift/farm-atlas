@@ -35,6 +35,7 @@ test("Owner schedule builder makes tentative work real only after explicit appro
   assert.match(component, /aria-pressed/);
   assert.match(component, /Nothing below becomes/);
   assert.match(component, /A Weed Card stays behind the card ahead of it/);
+  assert.match(component, /Build \$\{operatorLabel\}'s schedule/);
   assert.match(component, /<button/);
 
   assert.match(daySummary, /OwnerDayScheduleBuilder/);
