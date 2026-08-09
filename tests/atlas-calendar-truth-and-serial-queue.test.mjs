@@ -6,6 +6,10 @@ const migration = readFileSync(
   new URL("../supabase/migrations/20260809003500_calendar_truth_and_serial_queue_semantics.sql", import.meta.url),
   "utf8",
 );
+const carryMigration = readFileSync(
+  new URL("../supabase/migrations/20260809161500_carry_unfinished_work_to_next_worker_day.sql", import.meta.url),
+  "utf8",
+);
 const dayRoute = readFileSync(new URL("../lib/atlas/day-route.ts", import.meta.url), "utf8");
 const taskCardsClient = readFileSync(new URL("../lib/atlas/task-cards-client.ts", import.meta.url), "utf8");
 const universalRoute = readFileSync(new URL("../app/api/atlas/universal-task-cards/route.ts", import.meta.url), "utf8");
@@ -29,23 +33,30 @@ test("weed card cue reports only real scheduled exceptions, never reservoir size
   assert.doesNotMatch(dayRoute, /areas need.*attention after this one/);
 });
 
-test("future presented work is an exact-date calendar read", () => {
+test("future presented work remains exact-date calendar truth before carry-forward", () => {
   assert.match(migration, /v_today date:=\(now\(\) at time zone 'America\/Chicago'\)::date/);
   assert.match(migration, /where v_work_date<=v_today or task\.due_date=v_work_date/);
+  assert.match(carryMigration, /target_presented/);
+  assert.match(carryMigration, /prior_presented/);
 });
 
-test("future Day asks the universal task reader for one exact date", () => {
+test("future Day asks for one date but preserves unresolved prior-workday carry", () => {
   assert.match(taskCardsClient, /exactDate\?: string/);
   assert.match(taskCardsClient, /viewerParams\.set\("exactDate", viewerWindow\.exactDate\)/);
   assert.match(universalRoute, /requestedExactDate/);
-  assert.match(universalRoute, /card\.due_date === exactDate/);
+  assert.match(universalRoute, /server-side worker-day reader is authoritative for future-day membership/);
+  assert.doesNotMatch(universalRoute, /card\.due_date === exactDate/);
   assert.match(dayPage, /exactDate: isFutureDay \? dateIso : undefined/);
+  assert.match(carryMigration, /member_day_carryover_v1/);
+  assert.match(carryMigration, /withheldUnderSky/);
 });
 
-test("future Day is labeled as a schedule instead of accumulated unfinished work", () => {
+test("future Day is labeled as a schedule instead of an indiscriminate overdue dump", () => {
   assert.match(dayPage, /const isFutureDay = dateIso > calendarToday/);
   assert.match(dayPage, /isFutureDay \? `\$\{openRequiredCount\} scheduled/);
   assert.match(dayPage, /tasks scheduled for this day/);
   assert.match(dayPage, /dateIso === calendarToday \? nextTaskForCurrentWindow/);
   assert.match(dayPage, /!isFutureDay && livingDay \? <LivingDayCarried/);
+  assert.match(carryMigration, /v_previous_work_date/);
+  assert.match(carryMigration, /extract\(isodow from p_work_date\) = 7/);
 });
