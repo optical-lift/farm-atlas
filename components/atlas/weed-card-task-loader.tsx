@@ -38,7 +38,7 @@ export default function WeedCardTaskLoader({ task, childTasks, assignee }: Props
     };
   }, [task.task_id]);
 
-  if (card) return <WeedCardTaskFocus task={task} card={card} assignee={assignee} />;
+  if (card) return <WeedCardTaskFocus task={task} card={card} childTasks={childTasks} assignee={assignee} />;
   if (failed) return <ConciseWeedTaskDetail task={task} childTasks={childTasks} assignee={assignee} />;
 
   return (
