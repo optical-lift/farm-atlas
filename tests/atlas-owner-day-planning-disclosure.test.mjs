@@ -26,12 +26,14 @@ test("schedule suggestions remain local until explicit commit", () => {
   assert.match(builder, /window\.location\.reload\(\)/);
 });
 
-test("operator context is Owner-only at the application layer", () => {
+test("operator context and worker-day planner are Owner-only at the application layer", () => {
   const operatorContext = read("lib/atlas/operator-context.ts");
+  const workerDayPlan = read("lib/atlas/worker-day-plan-server.ts");
 
-  assert.match(operatorContext, /hasOwnerAccess\(ownerIdentity\.access\)/);
-  assert.match(operatorContext, /operatingMembership\.role !== "farm_hand"/);
-  assert.match(operatorContext, /operatorRole: "Owner"/);
+  assert.match(operatorContext, /membership\.role === "owner"/);
+  assert.match(operatorContext, /organizationMemberships\.some\(\(membership\) => membership\.role === "owner"\)/);
+  assert.match(workerDayPlan, /readAtlasOwnerOperatorContext\(\)/);
+  assert.match(workerDayPlan, /effective\.farmRole !== "farm_hand"/);
 });
 
 test("worker-day planning RPC wrappers are Owner-only at the database layer", () => {
