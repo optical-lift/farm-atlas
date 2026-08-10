@@ -14,8 +14,8 @@ test("annual landscape cards use the shared execution-detail contract", () => {
   assert.match(dominion, /TaskExecutionBrief/);
   assert.match(brief, /taskExecutionModel\(task\)/);
   assert.match(brief, /More instructions/);
-  assert.match(execution, /metadataText\(task, "execution_details"\)/);
-  assert.match(execution, /details/);
+  assert.match(execution, /atlasMetaString\(task, "execution_details"\)/);
+  assert.match(execution, /const details = explicitDetails/);
 
   // Timing belongs in the task's shared execution details now; Dominion should
   // not maintain a second annual-only timing forecast parser or vocabulary.
