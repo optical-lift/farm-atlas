@@ -43,21 +43,41 @@ test("set-aside visibility lasts until the actual return date", () => {
   assert.match(migration, /'requestedReturnDate',coalesce\(d\.requested_return_date,d\.returns_on\)/);
 });
 
-test("Anna task detail adds conveyor support while preserving canonical task outcomes", () => {
+test("Anna generic task detail uses the regular Done and Unfinished result set", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
-  const conveyor = read("components/atlas/farm-hand-conveyor-task-detail.tsx");
   const dominion = read("components/atlas/dominion-assigned-task-detail.tsx");
   const weed = read("components/atlas/weed-card-task-focus.tsx");
   const display = read("lib/atlas/task-display.ts");
 
-  assert.match(canonical, /FarmHandConveyorTaskDetail/);
-  assert.match(canonical, /props\.assignee\.key === "anna"/);
-  assert.match(conveyor, /Need lighter work/);
-  assert.match(conveyor, /reportAtlasNeedLighterWork/);
+  assert.doesNotMatch(canonical, /FarmHandConveyorTaskDetail/);
+  assert.doesNotMatch(canonical, /props\.assignee\.key === "anna"/);
+  assert.match(canonical, /return <DominionAssignedTaskDetail/);
+  assert.match(dominion, />Done</);
+  assert.match(dominion, /Unfinished/);
   assert.match(dominion, /"Partly done"/);
   assert.match(dominion, /"Problem found"/);
   assert.match(weed, /atlas-task-move-drawer atlas-weed-move-drawer/);
   assert.match(display, /Continued/);
+});
+
+test("transplant readiness records a counted survivor result or total crop loss", () => {
+  const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const capture = read("components/atlas/transplant-readiness-task-detail.tsx");
+  const route = read("app/api/atlas/transplant-readiness/route.ts");
+  const migration = read("supabase/migrations/20260810135407_atlas_legacy_transplant_readiness_results_v1.sql");
+
+  assert.match(canonical, /isTransplantReadinessTask/);
+  assert.match(canonical, /TransplantReadinessTaskDetail/);
+  assert.match(capture, /Transplant-ready seedlings/);
+  assert.match(capture, /Revise count/);
+  assert.match(capture, /All seedlings lost/);
+  assert.match(capture, /transplant_ready_seedlings/);
+  assert.match(route, /worker_record_transplant_readiness_v1/);
+  assert.match(route, /owner_operator_record_transplant_readiness_v1/);
+  assert.match(migration, /transplant_readiness_history/);
+  assert.match(migration, /'crop_loss'/);
+  assert.match(migration, /v_action = 'failed'/);
+  assert.match(migration, /v_task\.status = 'done' then 'note' else 'done'/);
 });
 
 test("problem handoff infrastructure remains governed for any specialized flow that still uses it", () => {
