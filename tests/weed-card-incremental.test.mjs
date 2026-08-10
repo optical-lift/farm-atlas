@@ -48,11 +48,11 @@ test("legacy time remains optional evidence while the live Weed Card is state-fi
   assert.doesNotMatch(focus, /QUICK_MINUTES|Add time|<span>Time<\/span>|atlas-weed-invested/);
 });
 
-test("the Weed Card presents state outcomes plus a Clock-governed Move drawer", () => {
+test("the Weed Card keeps its state outcomes while entering the universal execution shell", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
-  const trail = read("components/atlas/task-dominion-trail.tsx");
+  const shell = read("components/atlas/assigned-task-execution-shell.tsx");
   const client = read("lib/atlas/weed-card-client.ts");
   const setAsideClient = read("lib/atlas/task-set-aside-client.ts");
   const passApi = read("app/api/atlas/weed-card-session/route.ts");
@@ -61,11 +61,20 @@ test("the Weed Card presents state outcomes plus a Clock-governed Move drawer", 
   assert.match(canonical, /isWeedTask/);
   assert.match(canonical, /WeedCardTaskLoader/);
   assert.match(loader, /\/api\/atlas\/weed-card\?taskId=/);
-  assert.match(focus, /instruction=\{`Weed \$\{card\.objectLabel\}`\}/);
-  assert.match(focus, /presentation="weed-sheet"/);
+  assert.match(loader, /childTasks=\{childTasks\}/);
+  assert.match(focus, /AssignedTaskExecutionShell/);
+  assert.match(focus, /methodInstrument=\{methodInstrument\}/);
+  assert.match(focus, /resultInstrument=\{resultInstrument\}/);
+  assert.match(focus, /data-atlas-method-instrument="weed-card"/);
+  assert.match(focus, /data-atlas-result-instrument="weed-card"/);
+  assert.doesNotMatch(focus, /TaskDominionTrail/);
+  assert.doesNotMatch(focus, /atlas-phone-shell|atlas-task-page-shell/);
+  assert.match(shell, /methodInstrument \? methodInstrument\(instrumentContext\)/);
+  assert.match(shell, /resultInstrument \? resultInstrument\(instrumentContext\)/);
+
   assert.match(focus, /variant="notebook"/);
-  assert.doesNotMatch(focus, /atlas-weather-line/);
   assert.match(focus, /<CropOccupancyList groups=\{card\.occupancyGroups\} \/>/);
+  assert.match(focus, /MaintenanceDirectiveStrip taskId=\{task\.task_id\}/);
   assert.match(focus, /atlas-task-result-actions atlas-task-result-actions-simple atlas-weed-day-actions/);
   assert.match(focus, /className="done"/);
   assert.match(focus, /"Clear"/);
@@ -73,14 +82,14 @@ test("the Weed Card presents state outcomes plus a Clock-governed Move drawer", 
   assert.match(focus, /postAtlasFinishPartialWeedCardDay/);
   assert.match(focus, /conditionAfter: "clear"/);
   assert.match(focus, /atlas-task-move-drawer atlas-weed-move-drawer/);
+  assert.match(focus, />\s*Set aside\s*</);
   assert.match(focus, />\s*Tomorrow\s*</);
-  assert.match(focus, /Choose date/);
+  assert.match(focus, /Choose return date/);
   assert.match(focus, /type="date"/);
   assert.match(focus, /postAtlasTaskSetAsideToday\(task\.task_id, requestedReturnDate\)/);
   assert.doesNotMatch(focus, />\s*Do tomorrow\s*</);
   assert.doesNotMatch(focus, /That’s all for today|>\s*Unfinished\s*<|>Log a pass/);
-  assert.match(trail, /presentation\?: "default" \| "field-sheet" \| "weed-sheet"/);
-  assert.match(trail, /moveDetails\?: ReactNode/);
+
   assert.match(client, /weed-card-partial-v1/);
   assert.match(client, /\/api\/atlas\/weed-card-partial/);
   assert.match(setAsideClient, /task-set-aside-v2/);
@@ -89,23 +98,20 @@ test("the Weed Card presents state outcomes plus a Clock-governed Move drawer", 
   assert.match(partialApi, /conditionAfter === "clear"/);
 });
 
-test("the Weed Card reads as place, action, Trail, map, then condition", () => {
+test("Weed-specific field truth is an instrument beneath the shared Task Move instead of a second trail", () => {
   const focus = read("components/atlas/weed-card-task-focus.tsx");
-  const trail = read("components/atlas/task-dominion-trail.tsx");
   const cohesion = read("components/atlas/weed-card-cohesion.module.css");
   const map = read("components/atlas/crop-occupancy-bed-map.tsx");
   const mapCss = read("components/atlas/crop-occupancy-bed-map.module.css");
 
-  assert.match(trail, /atlas-task-dominion-weed-meta/);
-  assert.match(trail, /<h1>\{model\.instruction\}<\/h1>/);
-  assert.match(trail, /atlas-trail-weed-sheet/);
-  assert.match(trail, /atlas-task-dominion-weed-map/);
-  assert.ok(trail.indexOf("atlas-task-dominion-weed-heading") < trail.indexOf("atlas-trail-weed-sheet"));
-  assert.ok(trail.indexOf("atlas-trail-weed-sheet") < trail.indexOf("atlas-task-dominion-weed-map"));
-  assert.match(trail, /sheetDateLabel\(model\.dueLabel\)/);
+  assert.match(focus, /atlas-weed-card-occupancy/);
+  assert.match(focus, /atlas-weed-condition-summary/);
+  assert.match(focus, /atlas-weed-condition-scale/);
+  assert.match(focus, /Recent bed states/);
+  assert.match(focus, /card\.sessions\.slice\(0, 4\)/);
+  assert.doesNotMatch(focus, /presentation="weed-sheet"|moveDetails=|instruction=\{/);
   assert.doesNotMatch(focus, /Today ·/);
   assert.match(cohesion, /\.cohesive :global\(\.atlas-task-dominion-weed-meta\)/);
-  assert.match(cohesion, /\.cohesive :global\(\.atlas-trail-weed-sheet \.atlas-trail-track li:not\(:last-child\)::after\)/);
   assert.match(map, /compactCropLabel/);
   assert.match(map, /return "FMN"/);
   assert.match(mapCss, /\.notebook \.bed/);
