@@ -27,7 +27,7 @@ const dominionDetail = readFileSync(
   "utf8",
 );
 
-test("ordinary task result grammar is selected by task shape instead of assignee", () => {
+test("operation class remains available without replacing the canonical result grammar", () => {
   assert.match(resultMode, /"standard_execution" \| "field_execution"/);
   assert.match(resultMode, /metadataText\(task, "task_result_mode"\)/);
   assert.match(resultMode, /task\.operation_class \|\| metadataText\(task, "operation_class"\)/);
@@ -38,13 +38,13 @@ test("ordinary task result grammar is selected by task shape instead of assignee
   assert.match(taskCardMigration, /t\.operation_class,/);
   assert.match(taskCardMigration, /t\.operation_class_source/);
 
-  assert.match(canonicalDetail, /atlasTaskResultMode\(props\.task\)/);
-  assert.match(canonicalDetail, /props\.assignee\.key === "anna" && resultMode === "field_execution"/);
+  assert.doesNotMatch(canonicalDetail, /atlasTaskResultMode\(props\.task\)/);
+  assert.doesNotMatch(canonicalDetail, /props\.assignee\.key === "anna" && resultMode === "field_execution"/);
   assert.match(canonicalDetail, /return <DominionAssignedTaskDetail/);
 });
 
-test("specialized task families resolve before ordinary result mode", () => {
-  const resolverIndex = canonicalDetail.indexOf("const resultMode = atlasTaskResultMode(props.task)");
+test("specialized task families resolve before ordinary canonical result fallback", () => {
+  const fallbackIndex = canonicalDetail.indexOf("return <DominionAssignedTaskDetail");
   for (const specialized of [
     "ContractorServiceTaskDetail",
     "DecisionSelectorTaskDetail",
@@ -53,13 +53,14 @@ test("specialized task families resolve before ordinary result mode", () => {
     "NetworkInputsTaskDetail",
     "ExecutionChecklistTaskDetail",
     "ProjectPullTaskDetail",
+    "TransplantReadinessTaskDetail",
   ]) {
-    const routeIndex = canonicalDetail.lastIndexOf(`return <${specialized}`, resolverIndex);
-    assert.ok(routeIndex >= 0 && routeIndex < resolverIndex, `${specialized} should route before ordinary result mode`);
+    const routeIndex = canonicalDetail.lastIndexOf(`return <${specialized}`, fallbackIndex);
+    assert.ok(routeIndex >= 0 && routeIndex < fallbackIndex, `${specialized} should route before ordinary result fallback`);
   }
 });
 
-test("standard execution reuses the existing canonical result grammar", () => {
+test("ordinary execution uses the existing canonical result grammar", () => {
   assert.match(dominionDetail, />\s*\{saving === "done" \? "Finishing" : "Done"\}\s*</);
   assert.match(dominionDetail, /Unfinished/);
   assert.match(dominionDetail, /"Partly done"/);
@@ -70,7 +71,8 @@ test("standard execution reuses the existing canonical result grammar", () => {
   assert.match(dominionDetail, />Changed plan</);
   assert.match(dominionDetail, />Not relevant</);
 
-  assert.doesNotMatch(conveyorDetail, /Some calls made|Follow-up needed|Couldn't call/);
+  // The adaptive conveyor remains available as a component, but it is no longer
+  // the default result grammar for Anna's ordinary field_execution tasks.
   assert.match(conveyorDetail, /Made progress/);
   assert.match(conveyorDetail, /Need something/);
   assert.match(conveyorDetail, /Farm changed/);
