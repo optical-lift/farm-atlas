@@ -161,11 +161,14 @@ test("the TypeScript adapter reuses Atlas execution and dominion instead of dupl
   assert.match(source, /export type TaskMoveAssembly/);
 });
 
-test("the server resolver is membership-scoped and batches canonical cards plus move context", () => {
+test("the server resolver uses Atlas membership-scoped card readers plus move context", () => {
   const source = read("lib/atlas/task-move-resolver.ts");
   assert.match(source, /createAtlasServerClient/);
-  assert.match(source, /v_task_cards/);
-  assert.match(source, /readAtlasTaskMoveContexts\(ids\)/);
+  assert.match(source, /owner_operator_task_cards_v1/);
+  assert.match(source, /task_cards_v1/);
+  assert.match(source, /effectiveOperatorMembershipId/);
+  assert.match(source, /getAtlasSession/);
+  assert.match(source, /readAtlasTaskMoveContexts\(\[id\]\)/);
   assert.match(source, /assembleTaskMove/);
-  assert.doesNotMatch(source, /atlasSupabase|SUPABASE_SERVICE_ROLE_KEY/);
+  assert.doesNotMatch(source, /atlasSupabase|SUPABASE_SERVICE_ROLE_KEY|v_task_cards/);
 });
