@@ -1,12 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-import TaskDominionTrail from "@/components/atlas/task-dominion-trail";
+import AssignedTaskExecutionShell, {
+  type AssignedTaskInstrumentContext,
+  type AssignedTaskResultInstrumentContext,
+} from "@/components/atlas/assigned-task-execution-shell";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import { atlasTaskDisplay } from "@/lib/atlas/task-display";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
 type Props = {
@@ -14,8 +15,6 @@ type Props = {
   childTasks: AtlasTaskCard[];
   assignee: AtlasAssigneeConfig;
 };
-
-type ClosingOutcome = "changed_plan" | "not_relevant";
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -39,32 +38,21 @@ function currentDone(task: AtlasTaskCard) {
   return task.status === "done" || text(task.metadata?.checklist_status) === "done";
 }
 
-function todayIso() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Chicago",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
-function addDays(dateIso: string, days: number) {
-  const date = new Date(`${dateIso}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: Props) {
-  const display = useMemo(() => atlasTaskDisplay(task), [task]);
+function NetworkInputsInstrument({
+  task,
+  childTasks,
+  busy,
+}: {
+  task: AtlasTaskCard;
+  childTasks: AtlasTaskCard[];
+  busy: boolean;
+}) {
   const inputs = useMemo(
     () => [...childTasks].sort((a, b) => stepOrder(a) - stepOrder(b) || inputLabel(a).localeCompare(inputLabel(b))),
     [childTasks],
   );
-  const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const [openId, setOpenId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [savingTaskAction, setSavingTaskAction] = useState<string | null>(null);
-  const [taskMessage, setTaskMessage] = useState<string | null>(null);
   const [messageById, setMessageById] = useState<Record<string, string>>({});
   const [doneById, setDoneById] = useState<Record<string, boolean>>(() => Object.fromEntries(
     inputs.map((input) => [input.task_id, currentDone(input)]),
@@ -75,16 +63,9 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
   const [savedById, setSavedById] = useState<Record<string, string>>(() => Object.fromEntries(
     inputs.map((input) => [input.task_id, input.note ?? ""]),
   ));
-  const [closing, setClosing] = useState(false);
-
-  useEffect(() => {
-    void fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" })
-      .then((response) => response.json())
-      .then((data: { ok?: boolean; label?: string }) => setWeatherLabel(data.ok && data.label ? data.label : "weather unavailable"))
-      .catch(() => setWeatherLabel("weather unavailable"));
-  }, []);
 
   async function toggleDone(input: AtlasTaskCard) {
+    if (busy) return;
     const nextDone = !(doneById[input.task_id] ?? currentDone(input));
     try {
       setSavingId(input.task_id);
@@ -112,6 +93,7 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
   }
 
   async function saveFindings(input: AtlasTaskCard) {
+    if (busy) return;
     const note = (draftById[input.task_id] ?? "").trim();
     if (!note) {
       setMessageById((current) => ({ ...current, [input.task_id]: "Add a company or finding first." }));
@@ -146,181 +128,66 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
     }
   }
 
-  async function finishTask() {
-    try {
-      setClosing(true);
-      setTaskMessage(null);
-      await postAtlasTaskTransition({
-        taskId: task.task_id,
-        transition: "done",
-        laneKey: task.action_key || "network",
-        workKey: task.action_key || "network",
-        payload: { assigneeKey: assignee.key },
-      });
-      window.location.assign(assignee.listPath);
-    } catch (error) {
-      setTaskMessage(error instanceof Error ? error.message : "Could not finish this task.");
-    } finally {
-      setClosing(false);
-    }
-  }
-
-  async function reschedule(targetDate: string | null, reason: string, scheduleIntent?: string) {
-    try {
-      setSavingTaskAction("reschedule");
-      setTaskMessage(null);
-      await postAtlasTaskTransition({
-        taskId: task.task_id,
-        transition: "rescheduled",
-        ...(targetDate ? { targetDate } : {}),
-        reason,
-        laneKey: task.action_key || "network",
-        workKey: task.action_key || "network",
-        payload: { assigneeKey: assignee.key, ...(scheduleIntent ? { scheduleIntent } : {}) },
-      });
-      window.location.assign(assignee.listPath);
-    } catch (error) {
-      setTaskMessage(error instanceof Error ? error.message : "Could not move this task.");
-    } finally {
-      setSavingTaskAction(null);
-    }
-  }
-
-  async function closeWithoutDoing(outcome: ClosingOutcome, reason: string) {
-    try {
-      setSavingTaskAction(outcome);
-      setTaskMessage(null);
-      await postAtlasTaskTransition({
-        taskId: task.task_id,
-        transition: outcome,
-        note: reason,
-        reason,
-        laneKey: task.action_key || "network",
-        workKey: task.action_key || "network",
-        payload: { assigneeKey: assignee.key },
-      });
-      window.location.assign(assignee.listPath);
-    } catch (error) {
-      setTaskMessage(error instanceof Error ? error.message : "Could not close this task.");
-    } finally {
-      setSavingTaskAction(null);
-    }
-  }
-
-  const taskBusy = closing || Boolean(savingId) || Boolean(savingTaskAction);
-
   return (
-    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
-      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
-        <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href={assignee.listPath} className="atlas-phone-brand atlas-task-header-brand">
-            <span className="atlas-phone-kicker">Atlas</span>
-            <span className="atlas-phone-title">{assignee.label}</span>
-          </Link>
-          <span className="atlas-weather-line">{weatherLabel}</span>
-          <Link href={assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
-        </header>
+    <section className="atlas-network-inputs" aria-label="Disposal inputs" data-atlas-method-instrument="network-inputs">
+      <h2>Checklist</h2>
+      <div className="atlas-network-inputs__list">
+        {inputs.map((input) => {
+          const done = doneById[input.task_id] ?? currentDone(input);
+          const open = openId === input.task_id;
+          const saving = savingId === input.task_id;
+          const saved = savedById[input.task_id] ?? "";
+          const message = messageById[input.task_id] ?? "";
 
-        <div className="atlas-task-page-body">
-          <article className="atlas-task-page-active atlas-task-ticket-card atlas-dominion-task-card atlas-network-inputs-card">
-            <TaskDominionTrail task={task} instruction={display.title} />
-
-            <section className="atlas-network-inputs" aria-label="Disposal inputs">
-              <h2>Checklist</h2>
-              <div className="atlas-network-inputs__list">
-                {inputs.map((input) => {
-                  const done = doneById[input.task_id] ?? currentDone(input);
-                  const open = openId === input.task_id;
-                  const saving = savingId === input.task_id;
-                  const saved = savedById[input.task_id] ?? "";
-                  const message = messageById[input.task_id] ?? "";
-
-                  return (
-                    <article className={`atlas-network-input${done ? " is-done" : ""}${open ? " is-open" : ""}`} key={input.task_id}>
-                      <div className="atlas-network-input__row">
-                        <button
-                          type="button"
-                          className="atlas-network-input__check"
-                          aria-label={done ? `Reopen ${inputLabel(input)}` : `Complete ${inputLabel(input)}`}
-                          aria-pressed={done}
-                          disabled={saving}
-                          onClick={() => void toggleDone(input)}
-                        >
-                          {done ? "✓" : ""}
-                        </button>
-                        <button
-                          type="button"
-                          className="atlas-network-input__open"
-                          aria-expanded={open}
-                          disabled={saving}
-                          onClick={() => setOpenId(open ? null : input.task_id)}
-                        >
-                          <strong>{inputLabel(input)}</strong>
-                          <small>Tap to log info</small>
-                          {saved ? <span>{saved}</span> : null}
-                        </button>
-                      </div>
-
-                      {open ? (
-                        <form className="atlas-network-input__form" onSubmit={(event) => { event.preventDefault(); void saveFindings(input); }}>
-                          <textarea
-                            aria-label={`Companies and findings for ${inputLabel(input)}`}
-                            value={draftById[input.task_id] ?? ""}
-                            placeholder="Company — what they have"
-                            onChange={(event) => {
-                              setDraftById((current) => ({ ...current, [input.task_id]: event.target.value }));
-                              setMessageById((current) => ({ ...current, [input.task_id]: "" }));
-                            }}
-                          />
-                          <div className="atlas-network-input__form-actions">
-                            <button type="submit" disabled={saving}>{saving ? "Saving" : "Save"}</button>
-                            <button type="button" disabled={saving} onClick={() => setOpenId(null)}>Cancel</button>
-                          </div>
-                          {message ? <p aria-live="polite">{message}</p> : null}
-                        </form>
-                      ) : message ? <p className="atlas-network-input__message" aria-live="polite">{message}</p> : null}
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-
-            <footer className="atlas-task-result-footer">
-              <div className="atlas-task-result-actions atlas-task-result-actions-simple">
-                <button type="button" className="done" disabled={taskBusy} onClick={() => void finishTask()}>
-                  {closing ? "Finishing" : "Done"}
+          return (
+            <article className={`atlas-network-input${done ? " is-done" : ""}${open ? " is-open" : ""}`} key={input.task_id}>
+              <div className="atlas-network-input__row">
+                <button
+                  type="button"
+                  className="atlas-network-input__check"
+                  aria-label={done ? `Reopen ${inputLabel(input)}` : `Complete ${inputLabel(input)}`}
+                  aria-pressed={done}
+                  disabled={saving || busy}
+                  onClick={() => void toggleDone(input)}
+                >
+                  {done ? "✓" : ""}
                 </button>
-                <button type="button" className="unfinished" disabled={taskBusy} onClick={() => window.location.assign(assignee.listPath)}>
-                  Unfinished
+                <button
+                  type="button"
+                  className="atlas-network-input__open"
+                  aria-expanded={open}
+                  disabled={saving || busy}
+                  onClick={() => setOpenId(open ? null : input.task_id)}
+                >
+                  <strong>{inputLabel(input)}</strong>
+                  <small>Tap to log info</small>
+                  {saved ? <span>{saved}</span> : null}
                 </button>
               </div>
 
-              <details className="atlas-task-more-outcomes">
-                <summary><span>Move or close this card</span><b aria-hidden="true">⌄</b></summary>
-                <div className="atlas-task-more-outcomes-body">
-                  <span>Reschedule</span>
-                  <div className="atlas-task-more-outcomes-grid">
-                    <button type="button" disabled={taskBusy} onClick={() => void reschedule(null, "Moved to next Elm Farm calendar day from assigned task page", "next_day")}>Tomorrow</button>
-                    <button type="button" disabled={taskBusy} onClick={() => void reschedule(addDays(todayIso(), 7), "Moved to next week from assigned task page")}>Next week</button>
-                    <button type="button" disabled={taskBusy} onClick={() => {
-                      const date = window.prompt("Pick a date (YYYY-MM-DD)", task.due_date || todayIso())?.trim();
-                      if (date) void reschedule(date, "Rescheduled from assigned task page");
-                    }}>Pick a date</button>
+              {open ? (
+                <form className="atlas-network-input__form" onSubmit={(event) => { event.preventDefault(); void saveFindings(input); }}>
+                  <textarea
+                    aria-label={`Companies and findings for ${inputLabel(input)}`}
+                    value={draftById[input.task_id] ?? ""}
+                    placeholder="Company — what they have"
+                    disabled={busy}
+                    onChange={(event) => {
+                      setDraftById((current) => ({ ...current, [input.task_id]: event.target.value }));
+                      setMessageById((current) => ({ ...current, [input.task_id]: "" }));
+                    }}
+                  />
+                  <div className="atlas-network-input__form-actions">
+                    <button type="submit" disabled={saving || busy}>{saving ? "Saving" : "Save"}</button>
+                    <button type="button" disabled={saving || busy} onClick={() => setOpenId(null)}>Cancel</button>
                   </div>
-                  <span>Close without doing it</span>
-                  <div className="atlas-task-more-outcomes-grid quiet">
-                    <button type="button" disabled={taskBusy} onClick={() => void closeWithoutDoing("changed_plan", window.prompt("What changed?", "")?.trim() || "Plan changed")}>Changed plan</button>
-                    <button type="button" disabled={taskBusy} onClick={() => void closeWithoutDoing("not_relevant", window.prompt("Why is this no longer relevant?", "")?.trim() || "Not relevant")}>Not relevant</button>
-                  </div>
-                </div>
-              </details>
-
-              {taskMessage ? <p className="atlas-network-task-message" aria-live="polite">{taskMessage}</p> : null}
-            </footer>
-          </article>
-        </div>
-      </section>
-
+                  {message ? <p aria-live="polite">{message}</p> : null}
+                </form>
+              ) : message ? <p className="atlas-network-input__message" aria-live="polite">{message}</p> : null}
+            </article>
+          );
+        })}
+      </div>
       <style>{`
         .atlas-network-inputs { padding: 22px 18px 8px; border-top: 1px solid var(--atlas-border); }
         .atlas-network-inputs h2 { margin: 0 0 14px; color: #858bb8; font-size: 14px; line-height: 1; font-weight: 950; letter-spacing: .16em; text-transform: uppercase; }
@@ -342,7 +209,6 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
         .atlas-network-input__form-actions button[type="submit"] { background: rgba(214,225,177,.78); color: #515b34; }
         .atlas-network-input__form p, .atlas-network-input__message, .atlas-network-task-message { margin: 0; color: #835345; font-size: 12px; line-height: 1.25; font-weight: 850; }
         .atlas-network-input__message { padding: 0 18px 14px 62px; }
-        .atlas-network-task-message { padding: 12px 4px 0; text-align: center; }
         .atlas-network-input button:disabled, .atlas-network-input textarea:disabled { opacity: .58; }
         @media (max-width: 430px) {
           .atlas-network-inputs { padding: 20px 12px 8px; }
@@ -351,6 +217,71 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
           .atlas-network-input__open strong { font-size: 21px; }
         }
       `}</style>
-    </main>
+    </section>
+  );
+}
+
+function NetworkInputsResultInstrument({
+  task,
+  assignee,
+  assembly,
+  busy,
+  returnHref,
+}: AssignedTaskResultInstrumentContext) {
+  const [closing, setClosing] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const blocked = busy
+    || closing
+    || !assembly
+    || assembly.readiness.status === "blocked"
+    || assembly.spine.connection === "stops_at_move";
+
+  async function finishTask() {
+    if (blocked) return;
+    try {
+      setClosing(true);
+      setMessage(null);
+      await postAtlasTaskTransition({
+        taskId: task.task_id,
+        transition: "done",
+        laneKey: task.action_key || "network",
+        workKey: task.action_key || "network",
+        payload: { assigneeKey: assignee.key },
+      });
+      window.location.assign(returnHref);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not finish this task.");
+      setClosing(false);
+    }
+  }
+
+  return (
+    <section data-atlas-result-instrument="network-inputs">
+      <div className="atlas-task-result-actions atlas-task-result-actions-simple">
+        <button type="button" className="done" disabled={blocked} onClick={() => void finishTask()}>
+          {closing ? "Finishing" : "Done"}
+        </button>
+        <button type="button" className="unfinished" disabled={busy || closing} onClick={() => window.location.assign(returnHref)}>
+          Unfinished
+        </button>
+      </div>
+      {message ? <p className="atlas-network-task-message" aria-live="polite">{message}</p> : null}
+    </section>
+  );
+}
+
+export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: Props) {
+  const methodInstrument = ({ busy }: AssignedTaskInstrumentContext) => (
+    <NetworkInputsInstrument task={task} childTasks={childTasks} busy={busy} />
+  );
+
+  return (
+    <AssignedTaskExecutionShell
+      task={task}
+      childTasks={[]}
+      assignee={assignee}
+      methodInstrument={methodInstrument}
+      resultInstrument={(context) => <NetworkInputsResultInstrument {...context} />}
+    />
   );
 }
