@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-import SeedInventoryFocusPage, { type SeedInventoryFocusTask } from "@/app/task-focus/[taskId]/SeedInventoryFocusPage";
+import {
+  SeedInventoryContextInstrument,
+  SeedInventoryResultInstrument,
+  type SeedInventoryFocusTask,
+} from "@/app/task-focus/[taskId]/SeedInventoryFocusPage";
+import AssignedTaskExecutionShell from "@/components/atlas/assigned-task-execution-shell";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
@@ -52,7 +57,7 @@ function number(value: unknown, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-export default function SeedInventoryTaskLoader({ task }: Props) {
+export default function SeedInventoryTaskLoader({ task, childTasks, assignee }: Props) {
   const [focus, setFocus] = useState<SeedInventoryFocusTask | null>(null);
   const [error, setError] = useState<string | null>(null);
   const seedLotId = text(task.metadata?.seed_lot_id);
@@ -101,18 +106,37 @@ export default function SeedInventoryTaskLoader({ task }: Props) {
           returnTo: "/inventory/seeds",
         });
       } catch (loadError) {
+        setFocus(null);
         setError(loadError instanceof Error ? loadError.message : "Seed inventory failed.");
       }
     }
     if (seedLotId) void load();
-    else setError("This recount is missing its canonical seed-lot link.");
+    else {
+      setFocus(null);
+      setError("This recount is missing its canonical seed-lot link.");
+    }
   }, [seedLotId, task]);
 
-  if (error) {
-    return <main className="atlas-phone-shell"><section className="atlas-phone"><div className="atlas-task-page-empty error">{error}</div></section></main>;
-  }
-  if (!focus) {
-    return <main className="atlas-phone-shell"><section className="atlas-phone"><div className="atlas-task-page-empty">Loading physical seed count.</div></section></main>;
-  }
-  return <SeedInventoryFocusPage task={focus} />;
+  return (
+    <AssignedTaskExecutionShell
+      task={task}
+      childTasks={childTasks}
+      assignee={assignee}
+      methodInstrument={() => focus ? (
+        <SeedInventoryContextInstrument task={focus} />
+      ) : (
+        <section className="atlas-task-page-empty" data-atlas-method-instrument="seed-inventory-loading">
+          {error || "Loading physical seed count."}
+        </section>
+      )}
+      resultInstrument={({ assembly, busy, returnHref }) => focus ? (
+        <SeedInventoryResultInstrument
+          task={focus}
+          assembly={assembly}
+          busy={busy}
+          returnHref={returnHref}
+        />
+      ) : null}
+    />
+  );
 }
