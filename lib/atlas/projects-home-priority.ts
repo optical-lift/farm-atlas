@@ -44,8 +44,19 @@ type TaskRow = {
 };
 
 type ProjectTaskLinkRow = { project_id: string; task_id: string };
-type DependencyRow = { prerequisite_task_id: string; downstream_task_id: string };
 type MembershipRow = { id: string; role: string; user_id: string | null };
+type MoveContextUnlock = {
+  taskId?: string;
+  title?: string;
+  status?: string;
+  assigneeName?: string | null;
+};
+type MoveContextEntry = {
+  unlocks?: MoveContextUnlock[];
+  waitingOn?: Array<Record<string, unknown>>;
+  projects?: Array<Record<string, unknown>>;
+};
+type MoveContextMap = Record<string, MoveContextEntry>;
 
 type RankInput = {
   home: AtlasPortfolioHome;
@@ -53,7 +64,7 @@ type RankInput = {
   today: string;
   links: ProjectTaskLinkRow[];
   tasks: TaskRow[];
-  dependencies: DependencyRow[];
+  moveContexts: MoveContextMap;
   memberships: MembershipRow[];
 };
 
@@ -141,13 +152,6 @@ export function rankAtlasProjectsHomePriority(input: RankInput): AtlasProjectsHo
     projectIdsByTask.set(link.task_id, projectIds);
   }
 
-  const downstreamByPrerequisite = new Map<string, Set<string>>();
-  for (const dependency of input.dependencies) {
-    const downstream = downstreamByPrerequisite.get(dependency.prerequisite_task_id) ?? new Set<string>();
-    downstream.add(dependency.downstream_task_id);
-    downstreamByPrerequisite.set(dependency.prerequisite_task_id, downstream);
-  }
-
   const candidates: AtlasProjectsHomeBlocker[] = [];
   for (const task of input.tasks) {
     if (task.status !== "open") continue;
@@ -164,11 +168,8 @@ export function rankAtlasProjectsHomePriority(input: RankInput): AtlasProjectsHo
       || boolMeta(task.metadata, "delegation_task");
     if (!ownerActionable) continue;
 
-    const downstreamIds = [...(downstreamByPrerequisite.get(task.id) ?? [])]
-      .filter((taskId) => {
-        const downstream = taskById.get(taskId);
-        return downstream ? downstream.status === "open" || downstream.status === "blocked" : true;
-      });
+    const unlocks = input.moveContexts[task.id]?.unlocks ?? [];
+    const downstreamIds = unlocks.map((unlock) => unlock.taskId).filter((taskId): taskId is string => Boolean(taskId));
     const downstreamUnlockCount = downstreamIds.length;
     const blockedPeople = new Set<string>();
     for (const downstreamId of downstreamIds) {
@@ -189,14 +190,18 @@ export function rankAtlasProjectsHomePriority(input: RankInput): AtlasProjectsHo
     const daysToDue = task.due_date ? dateDistance(input.today, task.due_date) : null;
     const ownerDecision = boolMeta(task.metadata, "owner_decision_required") || boolMeta(task.metadata, "delegation_task");
     const hardDate = targetDate !== null || task.metadata?.commitment_kind === "hard_date" || typeof task.metadata?.event_deadline === "string";
+    const currentQueueServing = task.metadata?.release_queue_policy === "completion_gated_serial"
+      && (task.metadata?.release_queue_state === "active" || boolMeta(task.metadata, "completion_gate_serving"));
 
-    // Projects home is consequence-first: the Move must either unlock work, represent an Owner decision,
-    // or be high-priority work against a near hard date. Ordinary overdue Owner chores never become the hero.
-    if (!(downstreamUnlockCount > 0 || ownerDecision || (task.priority === "high" && hardDate && daysToTarget !== null && daysToTarget <= 7))) continue;
+    // Projects home is consequence-first. A current completion-gated project serving is itself a blocker:
+    // until the serving is done, Atlas intentionally withholds the next Move in that project queue.
+    if (!(downstreamUnlockCount > 0 || ownerDecision || currentQueueServing || (task.priority === "high" && hardDate && daysToTarget !== null && daysToTarget <= 7))) continue;
 
     let score = priorityWeight(task.priority);
     score += downstreamUnlockCount * 18;
     score += blockedMembershipCount * 22;
+    if (currentQueueServing) score += 28;
+    score += Math.min(linkedProjects.length, 4) * 4;
     if (hardDate && daysToTarget !== null && daysToTarget <= 7) score += 30 + Math.max(0, 7 - daysToTarget) * 3;
     if (daysToDue !== null) {
       if (daysToDue <= 0) score += 26;
@@ -208,6 +213,7 @@ export function rankAtlasProjectsHomePriority(input: RankInput): AtlasProjectsHo
     const rankingReasons: string[] = [];
     if (downstreamUnlockCount) rankingReasons.push(`${downstreamUnlockCount} downstream ${downstreamUnlockCount === 1 ? "move" : "moves"}`);
     if (blockedMembershipCount) rankingReasons.push(`${blockedMembershipCount} ${blockedMembershipCount === 1 ? "teammate" : "teammates"} waiting`);
+    if (currentQueueServing) rankingReasons.push("current project serving");
     if (hardDate && targetDate) rankingReasons.push(`hard date ${targetDate}`);
     if (ownerDecision) rankingReasons.push("Owner decision");
 
@@ -262,17 +268,18 @@ export async function readAtlasProjectsHomePriority(
   const linkedTaskIds = [...new Set(links.map((link) => link.task_id))];
   if (!linkedTaskIds.length) return { primaryBlocker: null, secondaryBlockers: [], secondaryCount: 0 };
 
-  const { data: dependencyData, error: dependencyError } = await supabase
+  // Task dependencies are intentionally not directly selectable by authenticated clients.
+  // Use Atlas's governed SECURITY DEFINER context reader instead of widening table access.
+  const { data: moveContextData, error: moveContextError } = await supabase
     .schema("atlas")
-    .from("task_prerequisites")
-    .select("prerequisite_task_id,downstream_task_id")
-    .in("prerequisite_task_id", linkedTaskIds)
-    .eq("active", true)
-    .is("satisfied_at", null);
-  if (dependencyError) throw new Error(dependencyError.message);
+    .rpc("task_move_context_batch_v1", { p_task_ids: linkedTaskIds });
+  if (moveContextError) throw new Error(moveContextError.message);
+  const moveContexts = (moveContextData ?? {}) as MoveContextMap;
 
-  const dependencies = (dependencyData ?? []) as DependencyRow[];
-  const downstreamIds = dependencies.map((dependency) => dependency.downstream_task_id);
+  const downstreamIds = Object.values(moveContexts)
+    .flatMap((context) => context.unlocks ?? [])
+    .map((unlock) => unlock.taskId)
+    .filter((taskId): taskId is string => Boolean(taskId));
   const taskIds = [...new Set([...linkedTaskIds, ...downstreamIds])];
   const { data: taskData, error: taskError } = await supabase
     .schema("atlas")
@@ -301,7 +308,7 @@ export async function readAtlasProjectsHomePriority(
     today: atlasOperatingDate(),
     links,
     tasks,
-    dependencies,
+    moveContexts,
     memberships,
   });
 }
