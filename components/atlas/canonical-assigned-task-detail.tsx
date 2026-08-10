@@ -1,9 +1,9 @@
 "use client";
 
+import AssignedTaskExecutionShell from "@/components/atlas/assigned-task-execution-shell";
 import BuyerOutreachTaskDetail from "@/components/atlas/buyer-outreach-task-detail";
 import ContractorServiceTaskDetail from "@/components/atlas/contractor-service-task-detail";
 import DecisionSelectorTaskDetail from "@/components/atlas/decision-selector-task-detail";
-import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
 import ExecutionChecklistTaskDetail from "@/components/atlas/execution-checklist-task-detail";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
 import NetworkOutreachTaskDetail from "@/components/atlas/network-outreach-task-detail";
@@ -90,5 +90,5 @@ export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
   if (isTransplantReadinessTask(props.task)) return <TransplantReadinessTaskDetail {...props} />;
 
-  return <DominionAssignedTaskDetail {...props} />;
+  return <AssignedTaskExecutionShell {...props} />;
 }
