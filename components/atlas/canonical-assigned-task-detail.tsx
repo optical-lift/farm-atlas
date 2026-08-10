@@ -1,5 +1,6 @@
 "use client";
 
+import BuyerOutreachTaskDetail from "@/components/atlas/buyer-outreach-task-detail";
 import ContractorServiceTaskDetail from "@/components/atlas/contractor-service-task-detail";
 import DecisionSelectorTaskDetail from "@/components/atlas/decision-selector-task-detail";
 import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
@@ -48,6 +49,10 @@ function isSeedInventoryTask(task: AtlasTaskCard) {
     || task.metadata?.task_style === "seed_inventory_recount";
 }
 
+function isBuyerOutreachTask(task: AtlasTaskCard) {
+  return task.metadata?.buyer_outreach_mode === "sales";
+}
+
 function isNetworkOutreachTask(task: AtlasTaskCard) {
   return task.metadata?.network_outreach_master_task === true
     || task.metadata?.checklist_mode === "network_outreach";
@@ -78,6 +83,7 @@ export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
+  if (isBuyerOutreachTask(props.task)) return <BuyerOutreachTaskDetail {...props} />;
   if (isNetworkOutreachTask(props.task)) return <NetworkOutreachTaskDetail {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;

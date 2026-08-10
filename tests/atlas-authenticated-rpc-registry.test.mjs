@@ -54,6 +54,10 @@ const ownerWorkerDayScheduleMigrationName =
   "20260809203100_owner_worker_day_schedule_commit_v2.sql";
 const ownerWorkerDayRegistryMigrationName =
   "20260809203200_owner_worker_day_plan_rpc_registry_v1.sql";
+const buyerOutreachMigrationName =
+  "20260810171500_add_buyer_contact_event_pipeline.sql";
+const buyerOutreachRegistryMigrationName =
+  "20260810171600_buyer_outreach_rpc_registry_v1.sql";
 const migrationPath = new URL(
   `../supabase/migrations/${migrationName}`,
   import.meta.url,
@@ -157,6 +161,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const skyDeferralRegistry = readMigration(skyDeferralRegistryMigrationName);
   const projectMovesRegistry = readMigration(projectMovesRegistryMigrationName);
   const ownerWorkerDayRegistry = readMigration(ownerWorkerDayRegistryMigrationName);
+  const buyerOutreachRegistry = readMigration(buyerOutreachRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -190,7 +195,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                             ? projectMovesRegistryMigrationName
                             : name === ownerWorkerDayPlanMigrationName || name === ownerWorkerDayScheduleMigrationName
                               ? ownerWorkerDayRegistryMigrationName
-                              : null;
+                              : name === buyerOutreachMigrationName
+                                ? buyerOutreachRegistryMigrationName
+                                : null;
 
       assert.ok(
         pairedRegistryName,
@@ -280,6 +287,10 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   ));
   assert.match(ownerWorkerDayRegistry, /owner_admin_endpoint/);
   assert.match(ownerWorkerDayRegistry, /automatic_work/);
+  assert.ok(buyerOutreachRegistry.includes(
+    "atlas.record_buyer_outreach_result_v1(uuid, text, text, text, text, text, integer, numeric, date, uuid)",
+  ));
+  assert.match(buyerOutreachRegistry, /app_endpoint/);
 });
 
 test("live registry proof is rollback-only and fail-closed", () => {

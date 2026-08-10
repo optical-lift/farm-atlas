@@ -125,5 +125,6 @@ test("Anna gets cut-and-dry task results with detail behind Unfinished", () => {
   assert.match(detail, /transition\("partial"/);
   assert.match(detail, /transition\("blocked"/);
   assert.match(detail, /reschedule\(null, [^)]*"next_day"\)/);
-  assert.match(detail, /targetReached: outcome === "done"/);
+  assert.match(detail, /TaskPrimaryResultControls/);
+  assert.doesNotMatch(detail, /targetReached: outcome === "done"/);
 });

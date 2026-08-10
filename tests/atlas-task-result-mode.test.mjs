@@ -26,6 +26,10 @@ const dominionDetail = readFileSync(
   new URL("../components/atlas/dominion-assigned-task-detail.tsx", import.meta.url),
   "utf8",
 );
+const primaryResults = readFileSync(
+  new URL("../components/atlas/task-primary-result-controls.tsx", import.meta.url),
+  "utf8",
+);
 
 test("operation class remains available without replacing the canonical result grammar", () => {
   assert.match(resultMode, /"standard_execution" \| "field_execution"/);
@@ -50,6 +54,7 @@ test("specialized task families resolve before ordinary canonical result fallbac
     "DecisionSelectorTaskDetail",
     "WeedCardTaskLoader",
     "SeedInventoryTaskLoader",
+    "BuyerOutreachTaskDetail",
     "NetworkInputsTaskDetail",
     "ExecutionChecklistTaskDetail",
     "ProjectPullTaskDetail",
@@ -61,8 +66,9 @@ test("specialized task families resolve before ordinary canonical result fallbac
 });
 
 test("ordinary execution uses the existing canonical result grammar", () => {
-  assert.match(dominionDetail, />\s*\{saving === "done" \? "Finishing" : "Done"\}\s*</);
-  assert.match(dominionDetail, /Unfinished/);
+  assert.match(primaryResults, /doneLabel = "Done"/);
+  assert.match(primaryResults, /doneBusyLabel = "Finishing"/);
+  assert.match(primaryResults, />\s*Unfinished\s*</);
   assert.match(dominionDetail, /"Partly done"/);
   assert.match(dominionDetail, /"Problem found"/);
   assert.match(dominionDetail, />Tomorrow</);
