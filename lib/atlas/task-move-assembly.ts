@@ -4,6 +4,7 @@ import type {
   AtlasTaskProjectContext,
 } from "@/lib/atlas/task-cards-client";
 import { taskDominionModel } from "@/lib/atlas/task-dominion";
+import type { AtlasWorkRouteKey } from "@/lib/atlas/task-display";
 import { taskExecutionModel } from "@/lib/atlas/task-execution";
 import { assembleTaskMoveCore } from "./task-move-assembly-core";
 
@@ -16,7 +17,7 @@ export type TaskMoveAssembly = {
     status: string;
     priority: string;
     dueDate: string | null;
-    route: string;
+    route: AtlasWorkRouteKey;
     workClass: string | null;
     updatedAt: string | null;
   };
@@ -31,6 +32,7 @@ export type TaskMoveAssembly = {
   context: {
     whyNow: string | null;
     stateEffect: string | null;
+    blocker: string | null;
     projects: AtlasTaskProjectContext[];
     waitingOn: AtlasTaskDependencyContext[];
     unlocks: AtlasTaskDependencyContext[];
