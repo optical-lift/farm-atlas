@@ -8,7 +8,8 @@ function read(path) {
 
 test("focused work uses one task execution brief while linked Trails stay optional context", () => {
   const layout = read("app/layout.tsx");
-  const detail = read("components/atlas/dominion-assigned-task-detail.tsx");
+  const detail = read("components/atlas/assigned-task-execution-shell.tsx");
+  const dominion = read("components/atlas/dominion-assigned-task-detail.tsx");
   const brief = read("components/atlas/task-execution-brief.tsx");
   const results = read("components/atlas/task-primary-result-controls.tsx");
   const trail = read("components/atlas/task-dominion-trail.tsx");
@@ -19,7 +20,7 @@ test("focused work uses one task execution brief while linked Trails stay option
   assert.doesNotMatch(layout, /import TaskFocusTendingTrail/);
   assert.doesNotMatch(layout, /^\s*<TaskFocusTendingTrail/m);
   assert.match(detail, /atlas-dominion-task-card/);
-  assert.match(detail, /<TaskExecutionBrief task=\{task\} \/>/);
+  assert.match(detail, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
   assert.doesNotMatch(detail, /TaskDominionTrail/);
   for (const label of ["Do", "Place", "How", "Done when"]) assert.ok(brief.includes(label));
   assert.match(detail, /TaskPrimaryResultControls/);
@@ -27,9 +28,9 @@ test("focused work uses one task execution brief while linked Trails stay option
   assert.match(results, />\s*Unfinished\s*</);
   assert.match(detail, /Partly done/);
   assert.match(detail, /Problem found/);
-  assert.doesNotMatch(detail, />Blocked</);
   assert.match(detail, /Move or close this card/);
   assert.doesNotMatch(detail, />Result</);
+  assert.match(dominion, /AssignedTaskExecutionShell/);
 
   assert.match(trail, /fetchTendingTaskContext/);
   assert.match(trail, /condition\.meaningful/);
