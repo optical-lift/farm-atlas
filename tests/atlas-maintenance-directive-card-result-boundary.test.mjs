@@ -9,5 +9,6 @@ test("directive strip is context while existing card controls own results", () =
   assert.match(weed, /MaintenanceDirectiveStrip/);
   assert.match(weed, /postAtlasWeedCardSession/);
   assert.match(mow, /MaintenanceDirectiveStrip/);
-  assert.match(mow, /Record mowing result/);
+  assert.match(mow, /TaskPrimaryResultControls/);
+  assert.match(mow, /save\("mowed_full"\)/);
 });
