@@ -12,16 +12,18 @@ const split = read("supabase/migrations/20260804074500_split_thursday_morning_in
 const capacityOrder = read("supabase/migrations/20260804075000_thursday_morning_cluster_capacity_order_v2.sql");
 const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
 const detail = read("components/atlas/execution-checklist-task-detail.tsx");
+const execution = read("lib/atlas/task-execution.ts");
 const route = read("app/api/atlas/task-execution-checklist/route.ts");
 
 test("Thursday morning preparation opens as four themed tasks with visible checklists", () => {
   assert.match(canonical, /ExecutionChecklistTaskDetail/);
   assert.match(canonical, /execution_checklist_template_key/);
+  assert.match(detail, /TaskExecutionBrief task=\{task\}/);
   assert.match(detail, /atlas-execution-checklist__section/);
   assert.match(detail, /execution_checklist_kicker/);
   assert.match(detail, /execution_checklist_title/);
-  assert.match(detail, /execution_checklist_completion_label/);
-  assert.match(detail, /instruction=\{instruction\}/);
+  assert.match(execution, /execution_checklist_completion_label/);
+  assert.doesNotMatch(detail, /TaskDominionTrail/);
   assert.doesNotMatch(detail, /instruction="Prepare Elm for Thursday Morning"/);
   assert.doesNotMatch(detail, /Wednesday closing round/);
   assert.doesNotMatch(detail, /TaskChildChecklist/);
