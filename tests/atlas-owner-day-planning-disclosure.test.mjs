@@ -35,13 +35,14 @@ test("Only a true Owner membership mounts the planning disclosure", () => {
 
 test("Owner planning RPC wrappers reject manager membership", () => {
   const migration = read(
-    "supabase/migrations/20260810121500_owner_worker_day_planning_owner_only.sql",
+    "supabase/migrations/20260810123000_owner_day_planning_owner_only_v1.sql",
   );
 
   assert.match(migration, /owner_worker_day_plan_api_v1/);
   assert.match(migration, /owner_build_worker_day_schedule_api_v2/);
-  assert.match(migration, /fm\.role = 'owner'/);
+  assert.match(migration, /fm\.role='owner'/);
   assert.doesNotMatch(migration, /fm\.role\s+in\s*\([^)]*manager/is);
-  assert.match(migration, /Only an active owner can read worker day plans/);
-  assert.match(migration, /Only an active owner can commit worker day schedules/);
+  assert.match(migration, /Owner farm membership required/);
+  assert.match(migration, /Active Farm Hand membership required/);
+  assert.match(migration, /ownerOnlyPlanning/);
 });
