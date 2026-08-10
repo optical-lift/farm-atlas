@@ -73,11 +73,9 @@ test("ordinary execution uses the existing canonical result grammar", () => {
   assert.match(primaryResults, />\s*Unfinished\s*</);
   assert.match(executionShell, /"Partly done"/);
   assert.match(executionShell, /"Problem found"/);
-  assert.match(executionShell, />Tomorrow</);
-  assert.match(executionShell, />Next week</);
-  assert.match(executionShell, />Pick a date</);
-  assert.match(executionShell, />Changed plan</);
-  assert.match(executionShell, />Not relevant</);
+  for (const label of ["Tomorrow", "Next week", "Pick a date", "Changed plan", "Not relevant"]) {
+    assert.match(executionShell, new RegExp(label));
+  }
 
   // The adaptive conveyor remains available as a component, but it is no longer
   // the default result grammar for Anna's ordinary field_execution tasks.
