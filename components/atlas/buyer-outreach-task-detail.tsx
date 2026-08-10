@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import TaskDominionTrail from "@/components/atlas/task-dominion-trail";
+import AssignedTaskExecutionShell from "@/components/atlas/assigned-task-execution-shell";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import { atlasTaskDisplay } from "@/lib/atlas/task-display";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
 type Props = {
@@ -24,6 +22,15 @@ type BuyerDraft = {
   agreedStartDate: string;
   followUp: string;
   notes: string;
+};
+
+type BuyerOutreachResultInstrumentProps = {
+  task: AtlasTaskCard;
+  contacts: AtlasTaskCard[];
+  assignee: AtlasAssigneeConfig;
+  script: string;
+  blocked: boolean;
+  returnHref: string;
 };
 
 function text(value: unknown) {
@@ -121,13 +128,14 @@ async function postBuyerOutreach(body: Record<string, unknown>) {
   return data;
 }
 
-export default function BuyerOutreachTaskDetail({ task, childTasks, assignee }: Props) {
-  const display = useMemo(() => atlasTaskDisplay(task), [task]);
-  const contacts = useMemo(
-    () => [...childTasks].sort((a, b) => stepOrder(a) - stepOrder(b) || itemLabel(a).localeCompare(itemLabel(b))),
-    [childTasks],
-  );
-  const script = text(task.metadata?.outreach_script) || text(task.note);
+function BuyerOutreachResultInstrument({
+  task,
+  contacts,
+  assignee,
+  script,
+  blocked,
+  returnHref,
+}: BuyerOutreachResultInstrumentProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
@@ -144,15 +152,18 @@ export default function BuyerOutreachTaskDetail({ task, childTasks, assignee }: 
   ));
 
   function updateDraft(taskId: string, patch: Partial<BuyerDraft>) {
+    if (blocked) return;
     const contact = contacts.find((candidate) => candidate.task_id === taskId);
+    if (!contact) return;
     setDraftById((current) => ({
       ...current,
-      [taskId]: { ...(current[taskId] ?? initialDraft(contact as AtlasTaskCard)), ...patch },
+      [taskId]: { ...(current[taskId] ?? initialDraft(contact)), ...patch },
     }));
     setMessageById((current) => ({ ...current, [taskId]: "" }));
   }
 
   async function reopenContact(contact: AtlasTaskCard) {
+    if (blocked) return;
     try {
       setSavingId(contact.task_id);
       await postAtlasTaskTransition({
@@ -192,6 +203,7 @@ export default function BuyerOutreachTaskDetail({ task, childTasks, assignee }: 
   }
 
   async function saveContactResult(contact: AtlasTaskCard) {
+    if (blocked) return;
     const draft = draftById[contact.task_id] ?? initialDraft(contact);
     if (!draft.contactResult) {
       setMessageById((current) => ({ ...current, [contact.task_id]: "Choose what happened on the call first." }));
@@ -256,6 +268,7 @@ export default function BuyerOutreachTaskDetail({ task, childTasks, assignee }: 
   );
 
   async function finishTask() {
+    if (blocked) return;
     if (!allContactsDone) {
       setTaskMessage("Record a result for all five restaurants before closing this batch.");
       return;
@@ -271,7 +284,7 @@ export default function BuyerOutreachTaskDetail({ task, childTasks, assignee }: 
         workKey: task.action_key || "network",
         payload: { assigneeKey: assignee.key, completion_source: "buyer_outreach_batch" },
       });
-      window.location.assign(assignee.listPath);
+      window.location.assign(returnHref);
     } catch (error) {
       setTaskMessage(error instanceof Error ? error.message : "Could not finish this restaurant outreach batch.");
     } finally {
@@ -280,151 +293,167 @@ export default function BuyerOutreachTaskDetail({ task, childTasks, assignee }: 
   }
 
   return (
-    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
-      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
-        <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href={assignee.listPath} className="atlas-phone-brand atlas-task-header-brand">
-            <span className="atlas-phone-kicker">Atlas</span>
-            <span className="atlas-phone-title">{assignee.label}</span>
-          </Link>
-          <span className="atlas-weather-line">Flower sales</span>
-          <Link href={assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
-        </header>
+    <section
+      className="atlas-network-outreach-card"
+      aria-label="Restaurant outreach checklist"
+      data-atlas-result-instrument="buyer-outreach"
+    >
+      <section className="atlas-network-inputs">
+        <h2>Restaurants to call</h2>
+        <div className="atlas-network-inputs__list">
+          {contacts.map((contact) => {
+            const done = doneById[contact.task_id] ?? currentDone(contact);
+            const open = openId === contact.task_id;
+            const saving = savingId === contact.task_id;
+            const saved = savedById[contact.task_id] ?? "";
+            const message = messageById[contact.task_id] ?? "";
+            const draft = draftById[contact.task_id] ?? initialDraft(contact);
+            const businessName = itemLabel(contact);
+            const phone = text(contact.metadata?.business_phone);
+            const address = text(contact.metadata?.business_address);
 
-        <div className="atlas-task-page-body">
-          <article className="atlas-task-page-active atlas-task-ticket-card atlas-dominion-task-card atlas-network-outreach-card">
-            <TaskDominionTrail task={task} instruction={display.title} />
-
-            {script ? (
-              <section className="atlas-outreach-brief">
-                <div className="atlas-outreach-script">
-                  <span>Call script</span>
-                  <p>{script}</p>
+            return (
+              <article className={`atlas-network-input${done ? " is-done" : ""}${open ? " is-open" : ""}`} key={contact.task_id}>
+                <div className="atlas-network-input__row">
+                  <button
+                    type="button"
+                    className="atlas-network-input__check"
+                    aria-label={done ? `Log another contact with ${businessName}` : `Log result for ${businessName}`}
+                    aria-pressed={done}
+                    disabled={blocked || saving}
+                    onClick={() => done ? void reopenContact(contact) : setOpenId(contact.task_id)}
+                  >
+                    {done ? "✓" : ""}
+                  </button>
+                  <button
+                    type="button"
+                    className="atlas-network-input__open"
+                    aria-expanded={open}
+                    disabled={blocked || saving}
+                    onClick={() => setOpenId(open ? null : contact.task_id)}
+                  >
+                    <strong>{businessName}</strong>
+                    <small>{done ? "Result recorded" : "Tap to call + record result"}</small>
+                    {saved ? <span>{saved}</span> : null}
+                  </button>
                 </div>
-              </section>
-            ) : null}
 
-            <section className="atlas-network-inputs" aria-label="Restaurant outreach checklist">
-              <h2>Restaurants to call</h2>
-              <div className="atlas-network-inputs__list">
-                {contacts.map((contact) => {
-                  const done = doneById[contact.task_id] ?? currentDone(contact);
-                  const open = openId === contact.task_id;
-                  const saving = savingId === contact.task_id;
-                  const saved = savedById[contact.task_id] ?? "";
-                  const message = messageById[contact.task_id] ?? "";
-                  const draft = draftById[contact.task_id] ?? initialDraft(contact);
-                  const businessName = itemLabel(contact);
-                  const phone = text(contact.metadata?.business_phone);
-                  const address = text(contact.metadata?.business_address);
+                {open ? (
+                  <div className="atlas-network-input__detail">
+                    <div className="atlas-outreach-contact-card">
+                      {address ? <p>{address}</p> : null}
+                      {phone ? blocked
+                        ? <span>Call {phone}</span>
+                        : <a href={`tel:${phone.replace(/\D/g, "")}`}>Call {phone}</a>
+                      : null}
+                    </div>
 
-                  return (
-                    <article className={`atlas-network-input${done ? " is-done" : ""}${open ? " is-open" : ""}`} key={contact.task_id}>
-                      <div className="atlas-network-input__row">
-                        <button
-                          type="button"
-                          className="atlas-network-input__check"
-                          aria-label={done ? `Log another contact with ${businessName}` : `Log result for ${businessName}`}
-                          aria-pressed={done}
-                          disabled={saving}
-                          onClick={() => done ? void reopenContact(contact) : setOpenId(contact.task_id)}
-                        >
-                          {done ? "✓" : ""}
-                        </button>
-                        <button
-                          type="button"
-                          className="atlas-network-input__open"
-                          aria-expanded={open}
-                          disabled={saving}
-                          onClick={() => setOpenId(open ? null : contact.task_id)}
-                        >
-                          <strong>{businessName}</strong>
-                          <small>{done ? "Result recorded" : "Tap to call + record result"}</small>
-                          {saved ? <span>{saved}</span> : null}
-                        </button>
+                    {script ? (
+                      <div className="atlas-outreach-script">
+                        <span>Say this</span>
+                        <p>{scriptForBusiness(script, businessName)}</p>
                       </div>
+                    ) : null}
 
-                      {open ? (
-                        <div className="atlas-network-input__detail">
-                          <div className="atlas-outreach-contact-card">
-                            {address ? <p>{address}</p> : null}
-                            {phone ? <a href={`tel:${phone.replace(/\D/g, "")}`}>Call {phone}</a> : null}
-                          </div>
+                    <form className="atlas-network-input__form" onSubmit={(event) => { event.preventDefault(); void saveContactResult(contact); }}>
+                      <label>
+                        <span>What happened?</span>
+                        <select disabled={blocked || saving} value={draft.contactResult} onChange={(event) => updateDraft(contact.task_id, { contactResult: event.target.value })} required>
+                          <option value="">Choose a result</option>
+                          <option value="interested">Interested</option>
+                          <option value="maybe">Maybe / follow up</option>
+                          <option value="not_interested">Not interested</option>
+                          <option value="voicemail">Left voicemail</option>
+                          <option value="no_answer">No answer</option>
+                          <option value="wrong_contact">Wrong contact / referred elsewhere</option>
+                        </select>
+                      </label>
+                      <label>
+                        <span>Who did you reach?</span>
+                        <input disabled={blocked || saving} value={draft.reachedName} placeholder="Name or role" onChange={(event) => updateDraft(contact.task_id, { reachedName: event.target.value })} />
+                      </label>
+                      <label>
+                        <span>Best contact / person they referred you to</span>
+                        <input disabled={blocked || saving} value={draft.contactDetails} placeholder="Name · phone · email" onChange={(event) => updateDraft(contact.task_id, { contactDetails: event.target.value })} />
+                      </label>
+                      <label>
+                        <span>Quantity, only if different</span>
+                        <input disabled={blocked || saving} type="number" min="1" inputMode="numeric" value={draft.quantity} placeholder="12" onChange={(event) => updateDraft(contact.task_id, { quantity: event.target.value })} />
+                      </label>
+                      <label>
+                        <span>Weekly price, only if different</span>
+                        <input disabled={blocked || saving} type="number" min="0" step="0.01" inputMode="decimal" value={draft.quotedWeeklyPrice} placeholder="48" onChange={(event) => updateDraft(contact.task_id, { quotedWeeklyPrice: event.target.value })} />
+                      </label>
+                      <label>
+                        <span>Start date, if agreed</span>
+                        <input disabled={blocked || saving} type="date" value={draft.agreedStartDate} onChange={(event) => updateDraft(contact.task_id, { agreedStartDate: event.target.value })} />
+                      </label>
+                      <label>
+                        <span>Follow-up</span>
+                        <input disabled={blocked || saving} value={draft.followUp} placeholder="Who, when, what next" onChange={(event) => updateDraft(contact.task_id, { followUp: event.target.value })} />
+                      </label>
+                      <label>
+                        <span>Notes</span>
+                        <textarea disabled={blocked || saving} value={draft.notes} rows={3} onChange={(event) => updateDraft(contact.task_id, { notes: event.target.value })} />
+                      </label>
 
-                          {script ? (
-                            <div className="atlas-outreach-script">
-                              <span>Say this</span>
-                              <p>{scriptForBusiness(script, businessName)}</p>
-                            </div>
-                          ) : null}
-
-                          <form className="atlas-network-input__form" onSubmit={(event) => { event.preventDefault(); void saveContactResult(contact); }}>
-                            <label>
-                              <span>What happened?</span>
-                              <select value={draft.contactResult} onChange={(event) => updateDraft(contact.task_id, { contactResult: event.target.value })} required>
-                                <option value="">Choose a result</option>
-                                <option value="interested">Interested</option>
-                                <option value="maybe">Maybe / follow up</option>
-                                <option value="not_interested">Not interested</option>
-                                <option value="voicemail">Left voicemail</option>
-                                <option value="no_answer">No answer</option>
-                                <option value="wrong_contact">Wrong contact / referred elsewhere</option>
-                              </select>
-                            </label>
-                            <label>
-                              <span>Who did you reach?</span>
-                              <input value={draft.reachedName} placeholder="Name or role" onChange={(event) => updateDraft(contact.task_id, { reachedName: event.target.value })} />
-                            </label>
-                            <label>
-                              <span>Best contact / person they referred you to</span>
-                              <input value={draft.contactDetails} placeholder="Name · phone · email" onChange={(event) => updateDraft(contact.task_id, { contactDetails: event.target.value })} />
-                            </label>
-                            <label>
-                              <span>Quantity, only if different</span>
-                              <input type="number" min="1" inputMode="numeric" value={draft.quantity} placeholder="12" onChange={(event) => updateDraft(contact.task_id, { quantity: event.target.value })} />
-                            </label>
-                            <label>
-                              <span>Weekly price, only if different</span>
-                              <input type="number" min="0" step="0.01" inputMode="decimal" value={draft.quotedWeeklyPrice} placeholder="48" onChange={(event) => updateDraft(contact.task_id, { quotedWeeklyPrice: event.target.value })} />
-                            </label>
-                            <label>
-                              <span>Start date, if agreed</span>
-                              <input type="date" value={draft.agreedStartDate} onChange={(event) => updateDraft(contact.task_id, { agreedStartDate: event.target.value })} />
-                            </label>
-                            <label>
-                              <span>Follow-up</span>
-                              <input value={draft.followUp} placeholder="Who, when, what next" onChange={(event) => updateDraft(contact.task_id, { followUp: event.target.value })} />
-                            </label>
-                            <label>
-                              <span>Notes</span>
-                              <textarea value={draft.notes} rows={3} onChange={(event) => updateDraft(contact.task_id, { notes: event.target.value })} />
-                            </label>
-
-                            {message ? <p className="atlas-network-input__message">{message}</p> : null}
-                            <button type="submit" className="atlas-network-input__save" disabled={saving}>
-                              {saving ? "Saving…" : "Save call result"}
-                            </button>
-                          </form>
-                        </div>
-                      ) : null}
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-
-            {taskMessage ? <p className="atlas-network-input__message">{taskMessage}</p> : null}
-            <button
-              type="button"
-              className="atlas-network-input__save"
-              disabled={closing || !allContactsDone}
-              onClick={() => void finishTask()}
-            >
-              {closing ? "Finishing…" : "Finish restaurant calls"}
-            </button>
-          </article>
+                      {message ? <p className="atlas-network-input__message">{message}</p> : null}
+                      <button type="submit" className="atlas-network-input__save" disabled={blocked || saving}>
+                        {saving ? "Saving…" : "Save call result"}
+                      </button>
+                    </form>
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
         </div>
       </section>
-    </main>
+
+      {taskMessage ? <p className="atlas-network-input__message">{taskMessage}</p> : null}
+      <button
+        type="button"
+        className="atlas-network-input__save"
+        disabled={blocked || closing || !allContactsDone}
+        onClick={() => void finishTask()}
+      >
+        {closing ? "Finishing…" : "Finish restaurant calls"}
+      </button>
+    </section>
+  );
+}
+
+export default function BuyerOutreachTaskDetail({ task, childTasks, assignee }: Props) {
+  const contacts = useMemo(
+    () => [...childTasks].sort((a, b) => stepOrder(a) - stepOrder(b) || itemLabel(a).localeCompare(itemLabel(b))),
+    [childTasks],
+  );
+  const script = text(task.metadata?.outreach_script) || text(task.note);
+
+  return (
+    <AssignedTaskExecutionShell
+      task={task}
+      childTasks={[]}
+      assignee={assignee}
+      weatherLabel="Flower sales"
+      methodInstrument={script ? () => (
+        <section className="atlas-outreach-brief" data-atlas-method-instrument="buyer-outreach-script">
+          <div className="atlas-outreach-script">
+            <span>Call script</span>
+            <p>{script}</p>
+          </div>
+        </section>
+      ) : undefined}
+      resultInstrument={({ blocked, returnHref }) => (
+        <BuyerOutreachResultInstrument
+          task={task}
+          contacts={contacts}
+          assignee={assignee}
+          script={script}
+          blocked={blocked}
+          returnHref={returnHref || assignee.listPath}
+        />
+      )}
+    />
   );
 }
