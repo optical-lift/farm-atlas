@@ -6,6 +6,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 
 const brief = read("components/atlas/task-execution-brief.tsx");
 const results = read("components/atlas/task-primary-result-controls.tsx");
+const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 const dominion = read("components/atlas/dominion-assigned-task-detail.tsx");
 const checklist = read("components/atlas/execution-checklist-task-detail.tsx");
 const mowing = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
@@ -17,15 +18,17 @@ test("assigned work has one visible do-place-how-done contract", () => {
   for (const label of ["Do", "Place", "How", "Done when", "More instructions"]) {
     assert.ok(brief.includes(label), `shared execution brief keeps ${label}`);
   }
-  assert.match(dominion, /TaskExecutionBrief task=\{task\}/);
-  assert.doesNotMatch(dominion, /TaskDominionTrail/);
-  assert.doesNotMatch(dominion, /taskConditionRailModel/);
+  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
+  assert.doesNotMatch(shell, /TaskDominionTrail/);
+  assert.doesNotMatch(shell, /taskConditionRailModel/);
+  assert.match(dominion, /AssignedTaskExecutionShell/);
+  assert.doesNotMatch(dominion, /TaskExecutionBrief/);
 });
 
 test("the primary result language is shared instead of reinvented per card", () => {
   assert.match(results, />\s*Unfinished\s*</);
   assert.match(results, /doneLabel = "Done"/);
-  assert.match(dominion, /TaskPrimaryResultControls/);
+  assert.match(shell, /TaskPrimaryResultControls/);
   assert.match(checklist, /TaskPrimaryResultControls/);
   assert.match(mowing, /TaskPrimaryResultControls/);
 });
