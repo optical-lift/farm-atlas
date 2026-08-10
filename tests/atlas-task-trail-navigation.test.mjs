@@ -6,9 +6,11 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("the focused task owns one truthful Dominion Trail and condition rail", () => {
+test("focused work uses one task execution brief while linked Trails stay optional context", () => {
   const layout = read("app/layout.tsx");
   const detail = read("components/atlas/dominion-assigned-task-detail.tsx");
+  const brief = read("components/atlas/task-execution-brief.tsx");
+  const results = read("components/atlas/task-primary-result-controls.tsx");
   const trail = read("components/atlas/task-dominion-trail.tsx");
   const renderer = read("components/atlas/trail/AtlasTrail.tsx");
   const model = read("lib/atlas/task-condition-rail.ts");
@@ -16,21 +18,19 @@ test("the focused task owns one truthful Dominion Trail and condition rail", () 
 
   assert.doesNotMatch(layout, /import TaskFocusTendingTrail/);
   assert.doesNotMatch(layout, /^\s*<TaskFocusTendingTrail/m);
-  assert.match(layout, /task-dominion-card\.css/);
-  assert.match(layout, /task-condition-rail\.css/);
-  assert.match(layout, /atlas-trail\.css/);
   assert.match(detail, /atlas-dominion-task-card/);
-  assert.match(detail, /<TaskDominionTrail task=\{task\} instruction=\{instruction\} \/>/);
-  assert.match(detail, /const detailHeading = "Steps"/);
-  assert.doesNotMatch(detail, /How to play this card/);
-  assert.match(detail, /Done/);
-  assert.match(detail, /Unfinished/);
+  assert.match(detail, /<TaskExecutionBrief task=\{task\} \/>/);
+  assert.doesNotMatch(detail, /TaskDominionTrail/);
+  for (const label of ["Do", "Place", "How", "Done when"]) assert.ok(brief.includes(label));
+  assert.match(detail, /TaskPrimaryResultControls/);
+  assert.match(results, /doneLabel = "Done"/);
+  assert.match(results, />\s*Unfinished\s*</);
   assert.match(detail, /Partly done/);
   assert.match(detail, /Problem found/);
   assert.doesNotMatch(detail, />Blocked</);
   assert.match(detail, /Move or close this card/);
-  assert.match(detail, /condition\.meaningful/);
   assert.doesNotMatch(detail, />Result</);
+
   assert.match(trail, /fetchTendingTaskContext/);
   assert.match(trail, /condition\.meaningful/);
   assert.match(trail, /atlasTrailFromTendingTrack/);
@@ -50,6 +50,7 @@ test("the focused task owns one truthful Dominion Trail and condition rail", () 
   assert.match(model, /Medium pressure|weed_pressure/);
   assert.match(model, /Even moisture/);
   assert.match(model, /conditionTarget|condition_target/);
+  assert.match(model, /route === "general"/);
   assert.match(styles, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(styles, /atlas-task-dominion-no-trail/);
   assert.match(styles, /atlas-task-result-actions-simple/);
