@@ -29,7 +29,7 @@ test("the primary result language is shared instead of reinvented per card", () 
   assert.match(results, />\s*Unfinished\s*</);
   assert.match(results, /doneLabel = "Done"/);
   assert.match(shell, /TaskPrimaryResultControls/);
-  assert.match(checklist, /TaskPrimaryResultControls/);
+  assert.doesNotMatch(checklist, /TaskPrimaryResultControls/);
   assert.match(mowing, /TaskPrimaryResultControls/);
 });
 
@@ -42,9 +42,15 @@ test("mowing is an instruction task, not an operating-system lecture", () => {
   assert.doesNotMatch(mowing, /full mow renews the cadence/i);
 });
 
-test("checklist tasks keep their checklist beneath the shared task instruction", () => {
-  assert.match(checklist, /TaskExecutionBrief task=\{task\}/);
+test("checklist tasks are a method instrument inside the universal task shell", () => {
+  assert.match(checklist, /AssignedTaskExecutionShell/);
+  assert.match(checklist, /methodInstrument=\{methodInstrument\}/);
+  assert.match(checklist, /data-atlas-method-instrument="execution-checklist"/);
+  assert.match(checklist, /doneDisabled=\{checklist\?\.ready !== true\}/);
+  assert.match(checklist, /resultPayload=\{resultPayload\}/);
   assert.match(checklist, /atlas-execution-checklist/);
+  assert.doesNotMatch(checklist, /TaskExecutionBrief/);
+  assert.doesNotMatch(checklist, /postAtlasTaskTransition/);
   assert.doesNotMatch(checklist, /TaskDominionTrail/);
 });
 
