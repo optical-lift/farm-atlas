@@ -101,7 +101,7 @@ test("production plans are shared reads with owner-only controls", () => {
 });
 
 test("Anna gets cut-and-dry task results with detail behind Unfinished", () => {
-  const detail = read("components/atlas/dominion-assigned-task-detail.tsx");
+  const detail = read("components/atlas/assigned-task-execution-shell.tsx");
 
   for (const label of [
     "Done",
