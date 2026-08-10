@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-import TaskDominionTrail from "@/components/atlas/task-dominion-trail";
+import AssignedTaskExecutionShell, {
+  type AssignedTaskResultInstrumentContext,
+} from "@/components/atlas/assigned-task-execution-shell";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import styles from "./decision-selector-task-detail.module.css";
@@ -52,24 +53,18 @@ function requestError(data: DecisionResponse) {
   return data.error?.message || "Atlas could not save this decision.";
 }
 
-export default function DecisionSelectorTaskDetail({ task, assignee }: Props) {
-  const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
+function DecisionSelectorInstrument({ context }: { context: AssignedTaskResultInstrumentContext }) {
+  const { task, busy, returnHref } = context;
   const [selected, setSelected] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const question = text(task.metadata?.decision_question) || "What should happen next?";
   const options = useMemo(() => decisionOptions(task), [task]);
-
-  useEffect(() => {
-    void fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" })
-      .then((response) => response.json())
-      .then((data: { ok?: boolean; label?: string }) => setWeatherLabel(data.ok && data.label ? data.label : "weather unavailable"))
-      .catch(() => setWeatherLabel("weather unavailable"));
-  }, []);
+  const disabled = saving || busy;
 
   async function saveDecision() {
-    if (!selected || saving) return;
+    if (!selected || disabled) return;
     try {
       setSaving(true);
       setMessage(null);
@@ -85,7 +80,7 @@ export default function DecisionSelectorTaskDetail({ task, assignee }: Props) {
       });
       const data = await response.json() as DecisionResponse;
       if (!response.ok || !data.ok) throw new Error(requestError(data));
-      window.location.assign(assignee.listPath);
+      window.location.assign(returnHref);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not save this decision.");
     } finally {
@@ -94,57 +89,46 @@ export default function DecisionSelectorTaskDetail({ task, assignee }: Props) {
   }
 
   return (
-    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
-      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
-        <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href={assignee.listPath} className="atlas-phone-brand atlas-task-header-brand">
-            <span className="atlas-phone-kicker">Atlas</span>
-            <span className="atlas-phone-title">{assignee.label}</span>
-          </Link>
-          <span className="atlas-weather-line">{weatherLabel}</span>
-          <Link href={assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
-        </header>
+    <section className={styles.decisionCard} aria-label="Decision" data-atlas-result-instrument="decision-selector">
+      <h2 className={styles.question}>{question}</h2>
+      <fieldset className={styles.options} aria-label={question}>
+        {options.map((option) => (
+          <label
+            key={option.key}
+            className={`${styles.option}${selected === option.key ? ` ${styles.optionSelected}` : ""}`}
+          >
+            <input
+              className={styles.radio}
+              type="radio"
+              name="atlas-task-decision"
+              value={option.key}
+              checked={selected === option.key}
+              disabled={disabled}
+              onChange={() => setSelected(option.key)}
+            />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </fieldset>
 
-        <div className="atlas-task-page-body">
-          <article className="atlas-task-page-active atlas-task-ticket-card atlas-dominion-task-card">
-            <TaskDominionTrail task={task} instruction={task.title} />
+      <button
+        type="button"
+        className={styles.saveButton}
+        disabled={!selected || disabled}
+        onClick={() => void saveDecision()}
+      >
+        {saving ? "Saving decision…" : "Save decision"}
+      </button>
 
-            <section className={styles.decisionCard} aria-label="Decision">
-              <h2 className={styles.question}>{question}</h2>
-              <fieldset className={styles.options} aria-label={question}>
-                {options.map((option) => (
-                  <label
-                    key={option.key}
-                    className={`${styles.option}${selected === option.key ? ` ${styles.optionSelected}` : ""}`}
-                  >
-                    <input
-                      className={styles.radio}
-                      type="radio"
-                      name="atlas-task-decision"
-                      value={option.key}
-                      checked={selected === option.key}
-                      disabled={saving}
-                      onChange={() => setSelected(option.key)}
-                    />
-                    <span>{option.label}</span>
-                  </label>
-                ))}
-              </fieldset>
-
-              <button
-                type="button"
-                className={styles.saveButton}
-                disabled={!selected || saving}
-                onClick={() => void saveDecision()}
-              >
-                {saving ? "Saving decision…" : "Save decision"}
-              </button>
-
-              {message ? <p className={styles.message}>{message}</p> : null}
-            </section>
-          </article>
-        </div>
-      </section>
-    </main>
+      {message ? <p className={styles.message}>{message}</p> : null}
+    </section>
   );
+}
+
+function resultInstrument(context: AssignedTaskResultInstrumentContext) {
+  return <DecisionSelectorInstrument context={context} />;
+}
+
+export default function DecisionSelectorTaskDetail(props: Props) {
+  return <AssignedTaskExecutionShell {...props} resultInstrument={resultInstrument} />;
 }
