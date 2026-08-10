@@ -435,7 +435,6 @@ export default function BuyerOutreachTaskDetail({ task, childTasks, assignee }: 
       task={task}
       childTasks={[]}
       assignee={assignee}
-      weatherLabel="Flower sales"
       methodInstrument={script ? () => (
         <section className="atlas-outreach-brief" data-atlas-method-instrument="buyer-outreach-script">
           <div className="atlas-outreach-script">
@@ -444,16 +443,22 @@ export default function BuyerOutreachTaskDetail({ task, childTasks, assignee }: 
           </div>
         </section>
       ) : undefined}
-      resultInstrument={({ blocked, returnHref }) => (
-        <BuyerOutreachResultInstrument
-          task={task}
-          contacts={contacts}
-          assignee={assignee}
-          script={script}
-          blocked={blocked}
-          returnHref={returnHref || assignee.listPath}
-        />
-      )}
+      resultInstrument={({ assembly, busy, returnHref }) => {
+        const blocked = busy
+          || !assembly
+          || assembly.readiness.status === "blocked"
+          || assembly.spine.connection === "stops_at_move";
+        return (
+          <BuyerOutreachResultInstrument
+            task={task}
+            contacts={contacts}
+            assignee={assignee}
+            script={script}
+            blocked={blocked}
+            returnHref={returnHref}
+          />
+        );
+      }}
     />
   );
 }
