@@ -1,12 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-import TaskDominionTrail from "@/components/atlas/task-dominion-trail";
+import AssignedTaskExecutionShell, {
+  type AssignedTaskInstrumentContext,
+  type AssignedTaskResultInstrumentContext,
+} from "@/components/atlas/assigned-task-execution-shell";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import { atlasTaskDisplay } from "@/lib/atlas/task-display";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
 type Props = {
@@ -29,8 +30,6 @@ type OutreachDraft = {
 };
 
 type ThursdaySlot = { start: string; end: string; label: string };
-
-type ClosingOutcome = "changed_plan" | "not_relevant";
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -88,21 +87,6 @@ function initialDraft(task: AtlasTaskCard): OutreachDraft {
     restroomDisclosed: saved.restroom_disclosed === true,
     notes: text(saved.notes),
   };
-}
-
-function todayIso() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Chicago",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
-function addDays(dateIso: string, days: number) {
-  const date = new Date(`${dateIso}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
 }
 
 function friendlyDate(dateIso: string) {
@@ -163,17 +147,14 @@ async function postOutreach(body: Record<string, unknown>) {
 }
 
 export default function NetworkOutreachTaskDetail({ task, childTasks, assignee }: Props) {
-  const display = useMemo(() => atlasTaskDisplay(task), [task]);
   const contacts = useMemo(
     () => [...childTasks].sort((a, b) => stepOrder(a) - stepOrder(b) || itemLabel(a).localeCompare(itemLabel(b))),
     [childTasks],
   );
   const thursdayOptions = useMemo(() => strings(task.metadata?.thursday_options), [task.metadata]);
   const thursdaySlots = useMemo(() => slots(task.metadata?.thursday_slots), [task.metadata]);
-  const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const [openId, setOpenId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [savingTaskAction, setSavingTaskAction] = useState<string | null>(null);
   const [taskMessage, setTaskMessage] = useState<string | null>(null);
   const [messageById, setMessageById] = useState<Record<string, string>>({});
   const [doneById, setDoneById] = useState<Record<string, boolean>>(() => Object.fromEntries(
@@ -187,13 +168,6 @@ export default function NetworkOutreachTaskDetail({ task, childTasks, assignee }
   ));
   const [closing, setClosing] = useState(false);
 
-  useEffect(() => {
-    void fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" })
-      .then((response) => response.json())
-      .then((data: { ok?: boolean; label?: string }) => setWeatherLabel(data.ok && data.label ? data.label : "weather unavailable"))
-      .catch(() => setWeatherLabel("weather unavailable"));
-  }, []);
-
   function updateDraft(taskId: string, patch: Partial<OutreachDraft>) {
     setDraftById((current) => ({
       ...current,
@@ -202,7 +176,8 @@ export default function NetworkOutreachTaskDetail({ task, childTasks, assignee }
     setMessageById((current) => ({ ...current, [taskId]: "" }));
   }
 
-  async function reopenContact(contact: AtlasTaskCard) {
+  async function reopenContact(contact: AtlasTaskCard, shellBusy: boolean) {
+    if (shellBusy || closing || savingId) return;
     try {
       setSavingId(contact.task_id);
       await postAtlasTaskTransition({
@@ -228,7 +203,8 @@ export default function NetworkOutreachTaskDetail({ task, childTasks, assignee }
     }
   }
 
-  async function saveContactResult(contact: AtlasTaskCard) {
+  async function saveContactResult(contact: AtlasTaskCard, shellBusy: boolean) {
+    if (shellBusy || closing || savingId) return;
     const draft = draftById[contact.task_id] ?? initialDraft(contact);
     if (!draft.contactResult) {
       setMessageById((current) => ({ ...current, [contact.task_id]: "Choose what happened on the call first." }));
@@ -299,33 +275,52 @@ export default function NetworkOutreachTaskDetail({ task, childTasks, assignee }
   }
 
   const allContactsDone = contacts.length > 0 && contacts.every((contact) => doneById[contact.task_id] ?? currentDone(contact));
+  const callbackNumber = text(task.metadata?.callback_number);
+  const script = text(task.metadata?.outreach_script);
+  const voicemail = text(task.metadata?.voicemail_script);
+  const ifTheyAsk = strings(task.metadata?.if_they_ask);
+  const completionLabel = text(task.metadata?.completion_label) || "Done";
 
-  async function finishTask() {
+  async function finishTask({
+    task: currentTask,
+    assignee: currentAssignee,
+    assembly,
+    busy,
+    returnHref,
+  }: AssignedTaskResultInstrumentContext) {
     if (!allContactsDone) {
       setTaskMessage("Record a result for all five churches before closing this batch.");
       return;
     }
+    const moveBlocked =
+      busy ||
+      closing ||
+      Boolean(savingId) ||
+      !assembly ||
+      assembly.readiness.status === "blocked" ||
+      assembly.spine.connection === "stops_at_move";
+    if (moveBlocked) return;
 
     try {
       setClosing(true);
       setTaskMessage(null);
       await postAtlasTaskTransition({
-        taskId: task.task_id,
+        taskId: currentTask.task_id,
         transition: "done",
-        laneKey: task.action_key || "network",
-        workKey: task.action_key || "network",
-        payload: { assigneeKey: assignee.key, completion_source: "network_outreach_batch" },
+        laneKey: currentTask.action_key || "network",
+        workKey: currentTask.action_key || "network",
+        payload: { assigneeKey: currentAssignee.key, completion_source: "network_outreach_batch" },
       });
 
-      const nextTaskKey = text(task.metadata?.next_batch_task_key);
+      const nextTaskKey = text(currentTask.metadata?.next_batch_task_key);
       if (nextTaskKey) {
         await postOutreach({
           action: "release_next_batch",
-          taskId: task.task_id,
+          taskId: currentTask.task_id,
           nextTaskKey,
         });
       }
-      window.location.assign(assignee.listPath);
+      window.location.assign(returnHref);
     } catch (error) {
       setTaskMessage(error instanceof Error ? error.message : "Could not finish this outreach batch.");
     } finally {
@@ -333,331 +328,272 @@ export default function NetworkOutreachTaskDetail({ task, childTasks, assignee }
     }
   }
 
-  async function reschedule(targetDate: string | null, reason: string, scheduleIntent?: string) {
-    try {
-      setSavingTaskAction("reschedule");
-      setTaskMessage(null);
-      await postAtlasTaskTransition({
-        taskId: task.task_id,
-        transition: "rescheduled",
-        ...(targetDate ? { targetDate } : {}),
-        reason,
-        laneKey: task.action_key || "network",
-        workKey: task.action_key || "network",
-        payload: { assigneeKey: assignee.key, ...(scheduleIntent ? { scheduleIntent } : {}) },
-      });
-      window.location.assign(assignee.listPath);
-    } catch (error) {
-      setTaskMessage(error instanceof Error ? error.message : "Could not move this task.");
-    } finally {
-      setSavingTaskAction(null);
-    }
-  }
-
-  async function closeWithoutDoing(outcome: ClosingOutcome, reason: string) {
-    try {
-      setSavingTaskAction(outcome);
-      setTaskMessage(null);
-      await postAtlasTaskTransition({
-        taskId: task.task_id,
-        transition: outcome,
-        note: reason,
-        reason,
-        laneKey: task.action_key || "network",
-        workKey: task.action_key || "network",
-        payload: { assigneeKey: assignee.key },
-      });
-      window.location.assign(assignee.listPath);
-    } catch (error) {
-      setTaskMessage(error instanceof Error ? error.message : "Could not close this task.");
-    } finally {
-      setSavingTaskAction(null);
-    }
-  }
-
-  const taskBusy = closing || Boolean(savingId) || Boolean(savingTaskAction);
-  const callbackNumber = text(task.metadata?.callback_number);
-  const script = text(task.metadata?.outreach_script);
-  const voicemail = text(task.metadata?.voicemail_script);
-  const ifTheyAsk = strings(task.metadata?.if_they_ask);
-  const completionLabel = text(task.metadata?.completion_label) || "Done";
-
-  return (
-    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
-      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
-        <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href={assignee.listPath} className="atlas-phone-brand atlas-task-header-brand">
-            <span className="atlas-phone-kicker">Atlas</span>
-            <span className="atlas-phone-title">{assignee.label}</span>
-          </Link>
-          <span className="atlas-weather-line">{weatherLabel}</span>
-          <Link href={assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
-        </header>
-
-        <div className="atlas-task-page-body">
-          <article className="atlas-task-page-active atlas-task-ticket-card atlas-dominion-task-card atlas-network-outreach-card">
-            <TaskDominionTrail task={task} instruction={display.title} />
-
-            <section className="atlas-outreach-brief">
-              <p className="atlas-outreach-objective">{task.note}</p>
-              <div className="atlas-outreach-call-window">
-                <span>Best call window</span>
-                <strong>{text(task.metadata?.preferred_call_window) || "10:00–11:30 AM"}</strong>
+  function methodInstrument({ busy }: AssignedTaskInstrumentContext) {
+    const methodBusy = busy || closing || Boolean(savingId);
+    return (
+      <>
+        <div data-atlas-method-instrument="network-outreach">
+          <section className="atlas-outreach-brief">
+            <p className="atlas-outreach-objective">{task.note}</p>
+            <div className="atlas-outreach-call-window">
+              <span>Best call window</span>
+              <strong>{text(task.metadata?.preferred_call_window) || "10:00–11:30 AM"}</strong>
+            </div>
+            {callbackNumber ? (
+              <div className="atlas-outreach-callback">
+                <span>Elm Farm callback number</span>
+                <a href={`tel:${callbackNumber.replace(/\D/g, "")}`}>{callbackNumber}</a>
+                <small>{text(task.metadata?.callback_note)}</small>
               </div>
-              {callbackNumber ? (
-                <div className="atlas-outreach-callback">
-                  <span>Elm Farm callback number</span>
-                  <a href={`tel:${callbackNumber.replace(/\D/g, "")}`}>{callbackNumber}</a>
-                  <small>{text(task.metadata?.callback_note)}</small>
-                </div>
-              ) : null}
-              {script ? (
-                <div className="atlas-outreach-script">
-                  <span>Call script</span>
-                  <p>{script}</p>
-                  <strong>When you reach the group leader:</strong>
-                  <p>“Great. I have a few Thursdays open. What Thursday usually works best for your group?”</p>
-                </div>
-              ) : null}
-              <details className="atlas-outreach-helper">
-                <summary>Voicemail + quick answers</summary>
-                {voicemail ? <><strong>Voicemail</strong><p>{voicemail}</p></> : null}
-                {ifTheyAsk.length ? <><strong>If they ask…</strong><ul>{ifTheyAsk.map((line) => <li key={line}>{line}</li>)}</ul></> : null}
-                <strong>Booking rule</strong>
-                <p>{text(task.metadata?.booking_rule)}</p>
-              </details>
-            </section>
+            ) : null}
+            {script ? (
+              <div className="atlas-outreach-script">
+                <span>Call script</span>
+                <p>{script}</p>
+                <strong>When you reach the group leader:</strong>
+                <p>“Great. I have a few Thursdays open. What Thursday usually works best for your group?”</p>
+              </div>
+            ) : null}
+            <details className="atlas-outreach-helper">
+              <summary>Voicemail + quick answers</summary>
+              {voicemail ? <><strong>Voicemail</strong><p>{voicemail}</p></> : null}
+              {ifTheyAsk.length ? <><strong>If they ask…</strong><ul>{ifTheyAsk.map((line) => <li key={line}>{line}</li>)}</ul></> : null}
+              <strong>Booking rule</strong>
+              <p>{text(task.metadata?.booking_rule)}</p>
+            </details>
+          </section>
 
-            <section className="atlas-network-inputs" aria-label="Church outreach checklist">
-              <h2>{text(task.metadata?.checklist_heading) || "Churches to call"}</h2>
-              <p className="atlas-network-inputs__hint">A call counts when you record what happened — yes, no, voicemail, and no answer are all real results.</p>
-              <div className="atlas-network-inputs__list">
-                {contacts.map((contact) => {
-                  const done = doneById[contact.task_id] ?? currentDone(contact);
-                  const open = openId === contact.task_id;
-                  const saving = savingId === contact.task_id;
-                  const saved = savedById[contact.task_id] ?? "";
-                  const message = messageById[contact.task_id] ?? "";
-                  const draft = draftById[contact.task_id] ?? initialDraft(contact);
-                  const address = text(contact.metadata?.church_address);
-                  const phone = text(contact.metadata?.church_phone);
-                  const email = text(contact.metadata?.church_email);
-                  const suggestedGroup = text(contact.metadata?.suggested_group);
-                  const suggestedContact = text(contact.metadata?.suggested_contact);
-                  const dateOptions = draft.bookingDate && !thursdayOptions.includes(draft.bookingDate)
-                    ? [draft.bookingDate, ...thursdayOptions]
-                    : thursdayOptions;
+          <section className="atlas-network-inputs" aria-label="Church outreach checklist">
+            <h2>{text(task.metadata?.checklist_heading) || "Churches to call"}</h2>
+            <p className="atlas-network-inputs__hint">A call counts when you record what happened — yes, no, voicemail, and no answer are all real results.</p>
+            <div className="atlas-network-inputs__list">
+              {contacts.map((contact) => {
+                const done = doneById[contact.task_id] ?? currentDone(contact);
+                const open = openId === contact.task_id;
+                const saving = savingId === contact.task_id;
+                const saved = savedById[contact.task_id] ?? "";
+                const message = messageById[contact.task_id] ?? "";
+                const draft = draftById[contact.task_id] ?? initialDraft(contact);
+                const address = text(contact.metadata?.church_address);
+                const phone = text(contact.metadata?.church_phone);
+                const email = text(contact.metadata?.church_email);
+                const suggestedGroup = text(contact.metadata?.suggested_group);
+                const suggestedContact = text(contact.metadata?.suggested_contact);
+                const dateOptions = draft.bookingDate && !thursdayOptions.includes(draft.bookingDate)
+                  ? [draft.bookingDate, ...thursdayOptions]
+                  : thursdayOptions;
 
-                  return (
-                    <article className={`atlas-network-input${done ? " is-done" : ""}${open ? " is-open" : ""}`} key={contact.task_id}>
-                      <div className="atlas-network-input__row">
-                        <button
-                          type="button"
-                          className="atlas-network-input__check"
-                          aria-label={done ? `Reopen ${itemLabel(contact)}` : `Log result for ${itemLabel(contact)}`}
-                          aria-pressed={done}
-                          disabled={saving}
-                          onClick={() => done ? void reopenContact(contact) : setOpenId(contact.task_id)}
-                        >
-                          {done ? "✓" : ""}
-                        </button>
-                        <button
-                          type="button"
-                          className="atlas-network-input__open"
-                          aria-expanded={open}
-                          disabled={saving}
-                          onClick={() => setOpenId(open ? null : contact.task_id)}
-                        >
-                          <strong>{itemLabel(contact)}</strong>
-                          <small>{done ? "Result recorded · tap to review" : "Tap to call + log result"}</small>
-                          {saved ? <span>{saved}</span> : null}
-                        </button>
-                      </div>
+                return (
+                  <article className={`atlas-network-input${done ? " is-done" : ""}${open ? " is-open" : ""}`} key={contact.task_id}>
+                    <div className="atlas-network-input__row">
+                      <button
+                        type="button"
+                        className="atlas-network-input__check"
+                        aria-label={done ? `Reopen ${itemLabel(contact)}` : `Log result for ${itemLabel(contact)}`}
+                        aria-pressed={done}
+                        disabled={methodBusy}
+                        onClick={() => done ? void reopenContact(contact, busy) : setOpenId(contact.task_id)}
+                      >
+                        {done ? "✓" : ""}
+                      </button>
+                      <button
+                        type="button"
+                        className="atlas-network-input__open"
+                        aria-expanded={open}
+                        disabled={methodBusy}
+                        onClick={() => setOpenId(open ? null : contact.task_id)}
+                      >
+                        <strong>{itemLabel(contact)}</strong>
+                        <small>{done ? "Result recorded · tap to review" : "Tap to call + log result"}</small>
+                        {saved ? <span>{saved}</span> : null}
+                      </button>
+                    </div>
 
-                      {open ? (
-                        <div className="atlas-network-input__detail">
-                          <div className="atlas-outreach-contact-card">
-                            {address ? <p>{address}</p> : null}
-                            <div>
-                              {phone ? <a href={`tel:${phone.replace(/\D/g, "")}`}>Call {phone}</a> : null}
-                              {email ? <a href={`mailto:${email}`}>{email}</a> : null}
-                            </div>
-                            {suggestedGroup ? <p><b>Ask for:</b> {suggestedGroup}</p> : null}
-                            {suggestedContact ? <p><b>Good contact:</b> {suggestedContact}</p> : null}
+                    {open ? (
+                      <div className="atlas-network-input__detail">
+                        <div className="atlas-outreach-contact-card">
+                          {address ? <p>{address}</p> : null}
+                          <div>
+                            {phone ? <a href={`tel:${phone.replace(/\D/g, "")}`}>Call {phone}</a> : null}
+                            {email ? <a href={`mailto:${email}`}>{email}</a> : null}
                           </div>
+                          {suggestedGroup ? <p><b>Ask for:</b> {suggestedGroup}</p> : null}
+                          {suggestedContact ? <p><b>Good contact:</b> {suggestedContact}</p> : null}
+                        </div>
 
-                          <form className="atlas-network-input__form" onSubmit={(event) => { event.preventDefault(); void saveContactResult(contact); }}>
+                        <form className="atlas-network-input__form" onSubmit={(event) => { event.preventDefault(); void saveContactResult(contact, busy); }}>
+                          <label>
+                            <span>What happened?</span>
+                            <select value={draft.contactResult} onChange={(event) => updateDraft(contact.task_id, { contactResult: event.target.value })} required>
+                              <option value="">Choose a result</option>
+                              <option value="interested">Interested</option>
+                              <option value="maybe">Maybe / follow up</option>
+                              <option value="not_interested">Not interested</option>
+                              <option value="voicemail">Left voicemail</option>
+                              <option value="no_answer">No answer</option>
+                              <option value="wrong_contact">Wrong contact / referred elsewhere</option>
+                            </select>
+                          </label>
+                          <label>
+                            <span>Who did you reach?</span>
+                            <input value={draft.reachedName} placeholder="Name or role" onChange={(event) => updateDraft(contact.task_id, { reachedName: event.target.value })} />
+                          </label>
+                          <label>
+                            <span>Their group</span>
+                            <input value={draft.groupType} placeholder={suggestedGroup || "Women’s group, small group, homeschool group…"} onChange={(event) => updateDraft(contact.task_id, { groupType: event.target.value })} />
+                          </label>
+                          <label>
+                            <span>Best contact / person they referred you to</span>
+                            <input value={draft.contactDetails} placeholder="Name · phone · email" onChange={(event) => updateDraft(contact.task_id, { contactDetails: event.target.value })} />
+                          </label>
+                          <label>
+                            <span>Follow-up needed?</span>
+                            <input value={draft.followUp} placeholder="Who, when, what next" onChange={(event) => updateDraft(contact.task_id, { followUp: event.target.value })} />
+                          </label>
+
+                          <fieldset className="atlas-outreach-booking">
+                            <legend>Book a Thursday if they’re ready</legend>
                             <label>
-                              <span>What happened?</span>
-                              <select value={draft.contactResult} onChange={(event) => updateDraft(contact.task_id, { contactResult: event.target.value })} required>
-                                <option value="">Choose a result</option>
-                                <option value="interested">Interested</option>
-                                <option value="maybe">Maybe / follow up</option>
-                                <option value="not_interested">Not interested</option>
-                                <option value="voicemail">Left voicemail</option>
-                                <option value="no_answer">No answer</option>
-                                <option value="wrong_contact">Wrong contact / referred elsewhere</option>
+                              <span>Thursday</span>
+                              <select value={draft.bookingDate} onChange={(event) => updateDraft(contact.task_id, { bookingDate: event.target.value, bookingStart: event.target.value ? draft.bookingStart : "", restroomDisclosed: event.target.value ? draft.restroomDisclosed : false })}>
+                                <option value="">Not booked yet</option>
+                                {dateOptions.map((date) => <option key={date} value={date}>{friendlyDate(date)}</option>)}
                               </select>
                             </label>
-                            <label>
-                              <span>Who did you reach?</span>
-                              <input value={draft.reachedName} placeholder="Name or role" onChange={(event) => updateDraft(contact.task_id, { reachedName: event.target.value })} />
-                            </label>
-                            <label>
-                              <span>Their group</span>
-                              <input value={draft.groupType} placeholder={suggestedGroup || "Women’s group, small group, homeschool group…"} onChange={(event) => updateDraft(contact.task_id, { groupType: event.target.value })} />
-                            </label>
-                            <label>
-                              <span>Best contact / person they referred you to</span>
-                              <input value={draft.contactDetails} placeholder="Name · phone · email" onChange={(event) => updateDraft(contact.task_id, { contactDetails: event.target.value })} />
-                            </label>
-                            <label>
-                              <span>Follow-up needed?</span>
-                              <input value={draft.followUp} placeholder="Who, when, what next" onChange={(event) => updateDraft(contact.task_id, { followUp: event.target.value })} />
-                            </label>
+                            {draft.bookingDate ? (
+                              <>
+                                <label>
+                                  <span>Time</span>
+                                  <select value={draft.bookingStart} onChange={(event) => updateDraft(contact.task_id, { bookingStart: event.target.value })}>
+                                    <option value="">Choose a time</option>
+                                    {thursdaySlots.map((slot) => <option key={slot.start} value={slot.start}>{slot.label}</option>)}
+                                  </select>
+                                </label>
+                                <label>
+                                  <span>Expected group size</span>
+                                  <input type="number" min="1" max="250" inputMode="numeric" value={draft.expectedGroupSize} placeholder="About how many?" onChange={(event) => updateDraft(contact.task_id, { expectedGroupSize: event.target.value })} />
+                                </label>
+                                <label className="atlas-outreach-restroom-check">
+                                  <input type="checkbox" checked={draft.restroomDisclosed} onChange={(event) => updateDraft(contact.task_id, { restroomDisclosed: event.target.checked })} />
+                                  <span>I told them this first visit is outdoor-only and there is currently no guest restroom available.</span>
+                                </label>
+                              </>
+                            ) : null}
+                          </fieldset>
 
-                            <fieldset className="atlas-outreach-booking">
-                              <legend>Book a Thursday if they’re ready</legend>
-                              <label>
-                                <span>Thursday</span>
-                                <select value={draft.bookingDate} onChange={(event) => updateDraft(contact.task_id, { bookingDate: event.target.value, bookingStart: event.target.value ? draft.bookingStart : "", restroomDisclosed: event.target.value ? draft.restroomDisclosed : false })}>
-                                  <option value="">Not booked yet</option>
-                                  {dateOptions.map((date) => <option key={date} value={date}>{friendlyDate(date)}</option>)}
-                                </select>
-                              </label>
-                              {draft.bookingDate ? (
-                                <>
-                                  <label>
-                                    <span>Time</span>
-                                    <select value={draft.bookingStart} onChange={(event) => updateDraft(contact.task_id, { bookingStart: event.target.value })}>
-                                      <option value="">Choose a time</option>
-                                      {thursdaySlots.map((slot) => <option key={slot.start} value={slot.start}>{slot.label}</option>)}
-                                    </select>
-                                  </label>
-                                  <label>
-                                    <span>Expected group size</span>
-                                    <input type="number" min="1" max="250" inputMode="numeric" value={draft.expectedGroupSize} placeholder="About how many?" onChange={(event) => updateDraft(contact.task_id, { expectedGroupSize: event.target.value })} />
-                                  </label>
-                                  <label className="atlas-outreach-restroom-check">
-                                    <input type="checkbox" checked={draft.restroomDisclosed} onChange={(event) => updateDraft(contact.task_id, { restroomDisclosed: event.target.checked })} />
-                                    <span>I told them this first visit is outdoor-only and there is currently no guest restroom available.</span>
-                                  </label>
-                                </>
-                              ) : null}
-                            </fieldset>
-
-                            <label>
-                              <span>Anything else?</span>
-                              <textarea value={draft.notes} placeholder="Questions, needs, or useful context" onChange={(event) => updateDraft(contact.task_id, { notes: event.target.value })} />
-                            </label>
-                            <div className="atlas-network-input__form-actions">
-                              <button type="submit" disabled={saving}>{saving ? "Saving" : "Save result + mark contacted"}</button>
-                              <button type="button" disabled={saving} onClick={() => setOpenId(null)}>Cancel</button>
-                            </div>
-                            {message ? <p className="atlas-network-input__message-inline" aria-live="polite">{message}</p> : null}
-                          </form>
-                        </div>
-                      ) : message ? <p className="atlas-network-input__message" aria-live="polite">{message}</p> : null}
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-
-            <footer className="atlas-task-result-footer">
-              <div className="atlas-task-result-actions atlas-task-result-actions-simple">
-                <button type="button" className="done" disabled={taskBusy || !allContactsDone} onClick={() => void finishTask()}>
-                  {closing ? "Finishing" : completionLabel}
-                </button>
-                <button type="button" className="unfinished" disabled={taskBusy} onClick={() => window.location.assign(assignee.listPath)}>
-                  Unfinished
-                </button>
-              </div>
-              {!allContactsDone ? <p className="atlas-outreach-finish-hint">Record a result for all five churches to finish this batch.</p> : null}
-
-              <details className="atlas-task-more-outcomes">
-                <summary><span>Move or close this card</span><b aria-hidden="true">⌄</b></summary>
-                <div className="atlas-task-more-outcomes-body">
-                  <span>Reschedule</span>
-                  <div className="atlas-task-more-outcomes-grid">
-                    <button type="button" disabled={taskBusy} onClick={() => void reschedule(null, "Moved to next Elm Farm calendar day from assigned task page", "next_day")}>Tomorrow</button>
-                    <button type="button" disabled={taskBusy} onClick={() => void reschedule(addDays(todayIso(), 7), "Moved to next week from assigned task page")}>Next week</button>
-                    <button type="button" disabled={taskBusy} onClick={() => {
-                      const date = window.prompt("Pick a date (YYYY-MM-DD)", task.due_date || todayIso())?.trim();
-                      if (date) void reschedule(date, "Rescheduled from assigned task page");
-                    }}>Pick a date</button>
-                  </div>
-                  <span>Close without doing it</span>
-                  <div className="atlas-task-more-outcomes-grid quiet">
-                    <button type="button" disabled={taskBusy} onClick={() => void closeWithoutDoing("changed_plan", window.prompt("What changed?", "")?.trim() || "Plan changed")}>Changed plan</button>
-                    <button type="button" disabled={taskBusy} onClick={() => void closeWithoutDoing("not_relevant", window.prompt("Why is this no longer relevant?", "")?.trim() || "Not relevant")}>Not relevant</button>
-                  </div>
-                </div>
-              </details>
-
-              {taskMessage ? <p className="atlas-network-task-message" aria-live="polite">{taskMessage}</p> : null}
-            </footer>
-          </article>
+                          <label>
+                            <span>Anything else?</span>
+                            <textarea value={draft.notes} placeholder="Questions, needs, or useful context" onChange={(event) => updateDraft(contact.task_id, { notes: event.target.value })} />
+                          </label>
+                          <div className="atlas-network-input__form-actions">
+                            <button type="submit" disabled={methodBusy}>{saving ? "Saving" : "Save result + mark contacted"}</button>
+                            <button type="button" disabled={methodBusy} onClick={() => setOpenId(null)}>Cancel</button>
+                          </div>
+                          {message ? <p className="atlas-network-input__message-inline" aria-live="polite">{message}</p> : null}
+                        </form>
+                      </div>
+                    ) : message ? <p className="atlas-network-input__message" aria-live="polite">{message}</p> : null}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
         </div>
-      </section>
+        <style>{networkOutreachStyles}</style>
+      </>
+    );
+  }
 
-      <style>{`
-        .atlas-outreach-brief { display:grid; gap:14px; padding:20px 18px 22px; border-top:1px solid var(--atlas-border); background:linear-gradient(180deg,rgba(255,255,255,.56),rgba(246,242,230,.48)); }
-        .atlas-outreach-objective { margin:0; color:var(--atlas-text); font-size:17px; line-height:1.45; font-weight:800; }
-        .atlas-outreach-call-window,.atlas-outreach-callback { display:grid; gap:4px; padding:14px 15px; border:1px solid rgba(139,145,194,.2); border-radius:16px; background:rgba(255,255,255,.88); }
-        .atlas-outreach-call-window span,.atlas-outreach-callback span,.atlas-outreach-script>span { color:#858bb8; font-size:11px; line-height:1; font-weight:950; letter-spacing:.13em; text-transform:uppercase; }
-        .atlas-outreach-call-window strong { font-size:20px; }
-        .atlas-outreach-callback a { color:var(--atlas-text); font-size:27px; line-height:1.1; font-weight:950; text-decoration:none; letter-spacing:-.03em; }
-        .atlas-outreach-callback small { color:var(--atlas-muted); font-size:12px; line-height:1.35; font-weight:750; }
-        .atlas-outreach-script { display:grid; gap:9px; padding:16px; border-radius:18px; background:rgba(232,235,211,.7); }
-        .atlas-outreach-script p,.atlas-outreach-helper p { margin:0; white-space:pre-wrap; color:var(--atlas-text); font-size:15px; line-height:1.5; }
-        .atlas-outreach-script strong,.atlas-outreach-helper strong { margin-top:4px; font-size:13px; }
-        .atlas-outreach-helper { padding:13px 14px; border:1px solid rgba(139,145,194,.18); border-radius:16px; background:rgba(255,255,255,.7); }
-        .atlas-outreach-helper summary { cursor:pointer; font-size:13px; font-weight:950; }
-        .atlas-outreach-helper[open] { display:grid; gap:10px; }
-        .atlas-outreach-helper ul { margin:0; padding-left:20px; color:var(--atlas-text); font-size:14px; line-height:1.45; }
-        .atlas-network-inputs { padding:22px 18px 8px; border-top:1px solid var(--atlas-border); }
-        .atlas-network-inputs h2 { margin:0 0 8px; color:#858bb8; font-size:14px; line-height:1; font-weight:950; letter-spacing:.16em; text-transform:uppercase; }
-        .atlas-network-inputs__hint { margin:0 0 14px; color:var(--atlas-muted); font-size:12px; line-height:1.4; font-weight:750; }
-        .atlas-network-inputs__list { display:grid; gap:12px; }
-        .atlas-network-input { overflow:hidden; border:1px solid rgba(139,145,194,.22); border-radius:22px; background:rgba(255,255,255,.82); }
-        .atlas-network-input.is-done { background:rgba(228,234,200,.48); }
-        .atlas-network-input__row { display:grid; grid-template-columns:54px minmax(0,1fr); align-items:stretch; min-height:104px; }
-        .atlas-network-input__check { align-self:center; justify-self:center; width:42px; height:42px; padding:0; border:4px solid rgba(139,145,194,.24); border-radius:999px; background:rgba(255,255,255,.45); color:#686b7d; font-size:25px; line-height:1; font-weight:950; touch-action:manipulation; }
-        .atlas-network-input.is-done .atlas-network-input__check { border-color:rgba(185,204,124,.9); background:rgba(222,233,183,.96); }
-        .atlas-network-input__open { min-width:0; padding:18px 18px 18px 8px; border:0; background:transparent; color:var(--atlas-text); text-align:left; touch-action:manipulation; }
-        .atlas-network-input__open strong { display:block; font-size:21px; line-height:1.06; font-weight:950; letter-spacing:-.035em; }
-        .atlas-network-input__open small { display:block; margin-top:7px; color:var(--atlas-purple-dark); font-size:12px; line-height:1.2; font-weight:900; }
-        .atlas-network-input__open span { display:block; margin-top:9px; color:var(--atlas-muted); font-size:13px; line-height:1.35; font-weight:750; white-space:pre-wrap; }
-        .atlas-network-input__detail { padding:0 12px 12px; }
-        .atlas-outreach-contact-card { display:grid; gap:7px; padding:13px 14px; border-radius:16px; background:rgba(247,244,233,.9); }
-        .atlas-outreach-contact-card p { margin:0; color:var(--atlas-text); font-size:14px; line-height:1.35; }
-        .atlas-outreach-contact-card div { display:flex; flex-wrap:wrap; gap:8px; }
-        .atlas-outreach-contact-card a { display:inline-flex; min-height:38px; align-items:center; padding:0 11px; border-radius:11px; background:#fff; color:var(--atlas-purple-dark); font-size:13px; font-weight:950; text-decoration:none; }
-        .atlas-network-input__form { display:grid; gap:11px; margin-top:10px; padding:13px; border:1px solid rgba(91,99,71,.18); border-radius:16px; background:rgba(246,242,230,.82); }
-        .atlas-network-input__form label { display:grid; gap:5px; }
-        .atlas-network-input__form label>span,.atlas-outreach-booking legend { color:var(--atlas-muted); font-size:11px; line-height:1.2; font-weight:950; letter-spacing:.04em; text-transform:uppercase; }
-        .atlas-network-input__form input,.atlas-network-input__form select,.atlas-network-input__form textarea { width:100%; min-height:46px; padding:10px 11px; border:1px solid rgba(139,145,194,.24); border-radius:12px; background:#fff; color:var(--atlas-text); font:inherit; font-size:15px; line-height:1.35; }
-        .atlas-network-input__form textarea { min-height:92px; resize:vertical; }
-        .atlas-outreach-booking { display:grid; gap:10px; margin:2px 0; padding:12px; border:1px solid rgba(139,145,194,.2); border-radius:14px; background:rgba(255,255,255,.55); }
-        .atlas-outreach-restroom-check { grid-template-columns:22px minmax(0,1fr)!important; align-items:start; gap:8px!important; }
-        .atlas-outreach-restroom-check input { width:20px; min-height:20px; height:20px; margin-top:1px; }
-        .atlas-outreach-restroom-check span { color:#835345!important; font-size:12px!important; line-height:1.35!important; font-weight:850!important; letter-spacing:0!important; text-transform:none!important; }
-        .atlas-network-input__form-actions { display:grid; grid-template-columns:minmax(0,1.6fr) 1fr; gap:8px; }
-        .atlas-network-input__form-actions button { min-height:48px; border:1px solid rgba(139,145,194,.2); border-radius:14px; background:rgba(255,255,255,.92); color:var(--atlas-text); font-weight:950; }
-        .atlas-network-input__form-actions button[type="submit"] { background:rgba(214,225,177,.78); color:#515b34; }
-        .atlas-network-input__message,.atlas-network-input__message-inline,.atlas-network-task-message,.atlas-outreach-finish-hint { margin:0; color:#835345; font-size:12px; line-height:1.3; font-weight:850; }
-        .atlas-network-input__message { padding:0 18px 14px 62px; }
-        .atlas-network-task-message,.atlas-outreach-finish-hint { padding:10px 4px 0; text-align:center; }
-        .atlas-network-input button:disabled,.atlas-network-input input:disabled,.atlas-network-input select:disabled,.atlas-network-input textarea:disabled { opacity:.58; }
-        @media (max-width:430px) {
-          .atlas-outreach-brief,.atlas-network-inputs { padding-left:12px; padding-right:12px; }
-          .atlas-network-input__row { grid-template-columns:52px minmax(0,1fr); min-height:96px; }
-          .atlas-network-input__open { padding-right:14px; }
-          .atlas-network-input__open strong { font-size:20px; }
-          .atlas-network-input__form-actions { grid-template-columns:1fr; }
-        }
-      `}</style>
-    </main>
+  function resultInstrument(context: AssignedTaskResultInstrumentContext) {
+    const resultBusy = context.busy || closing || Boolean(savingId);
+    const moveBlocked =
+      resultBusy ||
+      !allContactsDone ||
+      !context.assembly ||
+      context.assembly.readiness.status === "blocked" ||
+      context.assembly.spine.connection === "stops_at_move";
+
+    return (
+      <section data-atlas-result-instrument="network-outreach">
+        <div className="atlas-task-result-actions atlas-task-result-actions-simple">
+          <button type="button" className="done" disabled={moveBlocked} onClick={() => void finishTask(context)}>
+            {closing ? "Finishing" : completionLabel}
+          </button>
+          <button type="button" className="unfinished" disabled={resultBusy} onClick={() => window.location.assign(context.returnHref)}>
+            Unfinished
+          </button>
+        </div>
+        {!allContactsDone ? <p className="atlas-outreach-finish-hint">Record a result for all five churches to finish this batch.</p> : null}
+        {taskMessage ? <p className="atlas-network-task-message" aria-live="polite">{taskMessage}</p> : null}
+      </section>
+    );
+  }
+
+  return (
+    <AssignedTaskExecutionShell
+      task={task}
+      childTasks={[]}
+      assignee={assignee}
+      methodInstrument={methodInstrument}
+      resultInstrument={resultInstrument}
+    />
   );
 }
+
+const networkOutreachStyles = `
+  .atlas-outreach-brief { display:grid; gap:14px; padding:20px 18px 22px; border-top:1px solid var(--atlas-border); background:linear-gradient(180deg,rgba(255,255,255,.56),rgba(246,242,230,.48)); }
+  .atlas-outreach-objective { margin:0; color:var(--atlas-text); font-size:17px; line-height:1.45; font-weight:800; }
+  .atlas-outreach-call-window,.atlas-outreach-callback { display:grid; gap:4px; padding:14px 15px; border:1px solid rgba(139,145,194,.2); border-radius:16px; background:rgba(255,255,255,.88); }
+  .atlas-outreach-call-window span,.atlas-outreach-callback span,.atlas-outreach-script>span { color:#858bb8; font-size:11px; line-height:1; font-weight:950; letter-spacing:.13em; text-transform:uppercase; }
+  .atlas-outreach-call-window strong { font-size:20px; }
+  .atlas-outreach-callback a { color:var(--atlas-text); font-size:27px; line-height:1.1; font-weight:950; text-decoration:none; letter-spacing:-.03em; }
+  .atlas-outreach-callback small { color:var(--atlas-muted); font-size:12px; line-height:1.35; font-weight:750; }
+  .atlas-outreach-script { display:grid; gap:9px; padding:16px; border-radius:18px; background:rgba(232,235,211,.7); }
+  .atlas-outreach-script p,.atlas-outreach-helper p { margin:0; white-space:pre-wrap; color:var(--atlas-text); font-size:15px; line-height:1.5; }
+  .atlas-outreach-script strong,.atlas-outreach-helper strong { margin-top:4px; font-size:13px; }
+  .atlas-outreach-helper { padding:13px 14px; border:1px solid rgba(139,145,194,.18); border-radius:16px; background:rgba(255,255,255,.7); }
+  .atlas-outreach-helper summary { cursor:pointer; font-size:13px; font-weight:950; }
+  .atlas-outreach-helper[open] { display:grid; gap:10px; }
+  .atlas-outreach-helper ul { margin:0; padding-left:20px; color:var(--atlas-text); font-size:14px; line-height:1.45; }
+  .atlas-network-inputs { padding:22px 18px 8px; border-top:1px solid var(--atlas-border); }
+  .atlas-network-inputs h2 { margin:0 0 8px; color:#858bb8; font-size:14px; line-height:1; font-weight:950; letter-spacing:.16em; text-transform:uppercase; }
+  .atlas-network-inputs__hint { margin:0 0 14px; color:var(--atlas-muted); font-size:12px; line-height:1.4; font-weight:750; }
+  .atlas-network-inputs__list { display:grid; gap:12px; }
+  .atlas-network-input { overflow:hidden; border:1px solid rgba(139,145,194,.22); border-radius:22px; background:rgba(255,255,255,.82); }
+  .atlas-network-input.is-done { background:rgba(228,234,200,.48); }
+  .atlas-network-input__row { display:grid; grid-template-columns:54px minmax(0,1fr); align-items:stretch; min-height:104px; }
+  .atlas-network-input__check { align-self:center; justify-self:center; width:42px; height:42px; padding:0; border:4px solid rgba(139,145,194,.24); border-radius:999px; background:rgba(255,255,255,.45); color:#686b7d; font-size:25px; line-height:1; font-weight:950; touch-action:manipulation; }
+  .atlas-network-input.is-done .atlas-network-input__check { border-color:rgba(185,204,124,.9); background:rgba(222,233,183,.96); }
+  .atlas-network-input__open { min-width:0; padding:18px 18px 18px 8px; border:0; background:transparent; color:var(--atlas-text); text-align:left; touch-action:manipulation; }
+  .atlas-network-input__open strong { display:block; font-size:21px; line-height:1.06; font-weight:950; letter-spacing:-.035em; }
+  .atlas-network-input__open small { display:block; margin-top:7px; color:var(--atlas-purple-dark); font-size:12px; line-height:1.2; font-weight:900; }
+  .atlas-network-input__open span { display:block; margin-top:9px; color:var(--atlas-muted); font-size:13px; line-height:1.35; font-weight:750; white-space:pre-wrap; }
+  .atlas-network-input__detail { padding:0 12px 12px; }
+  .atlas-outreach-contact-card { display:grid; gap:7px; padding:13px 14px; border-radius:16px; background:rgba(247,244,233,.9); }
+  .atlas-outreach-contact-card p { margin:0; color:var(--atlas-text); font-size:14px; line-height:1.35; }
+  .atlas-outreach-contact-card div { display:flex; flex-wrap:wrap; gap:8px; }
+  .atlas-outreach-contact-card a { display:inline-flex; min-height:38px; align-items:center; padding:0 11px; border-radius:11px; background:#fff; color:var(--atlas-purple-dark); font-size:13px; font-weight:950; text-decoration:none; }
+  .atlas-network-input__form { display:grid; gap:11px; margin-top:10px; padding:13px; border:1px solid rgba(91,99,71,.18); border-radius:16px; background:rgba(246,242,230,.82); }
+  .atlas-network-input__form label { display:grid; gap:5px; }
+  .atlas-network-input__form label>span,.atlas-outreach-booking legend { color:var(--atlas-muted); font-size:11px; line-height:1.2; font-weight:950; letter-spacing:.04em; text-transform:uppercase; }
+  .atlas-network-input__form input,.atlas-network-input__form select,.atlas-network-input__form textarea { width:100%; min-height:46px; padding:10px 11px; border:1px solid rgba(139,145,194,.24); border-radius:12px; background:#fff; color:var(--atlas-text); font:inherit; font-size:15px; line-height:1.35; }
+  .atlas-network-input__form textarea { min-height:92px; resize:vertical; }
+  .atlas-outreach-booking { display:grid; gap:10px; margin:2px 0; padding:12px; border:1px solid rgba(139,145,194,.2); border-radius:14px; background:rgba(255,255,255,.55); }
+  .atlas-outreach-restroom-check { grid-template-columns:22px minmax(0,1fr)!important; align-items:start; gap:8px!important; }
+  .atlas-outreach-restroom-check input { width:20px; min-height:20px; height:20px; margin-top:1px; }
+  .atlas-outreach-restroom-check span { color:#835345!important; font-size:12px!important; line-height:1.35!important; font-weight:850!important; letter-spacing:0!important; text-transform:none!important; }
+  .atlas-network-input__form-actions { display:grid; grid-template-columns:minmax(0,1.6fr) 1fr; gap:8px; }
+  .atlas-network-input__form-actions button { min-height:48px; border:1px solid rgba(139,145,194,.2); border-radius:14px; background:rgba(255,255,255,.92); color:var(--atlas-text); font-weight:950; }
+  .atlas-network-input__form-actions button[type="submit"] { background:rgba(214,225,177,.78); color:#515b34; }
+  .atlas-network-input__message,.atlas-network-input__message-inline,.atlas-network-task-message,.atlas-outreach-finish-hint { margin:0; color:#835345; font-size:12px; line-height:1.3; font-weight:850; }
+  .atlas-network-input__message { padding:0 18px 14px 62px; }
+  .atlas-network-task-message,.atlas-outreach-finish-hint { padding:10px 4px 0; text-align:center; }
+  .atlas-network-input button:disabled,.atlas-network-input input:disabled,.atlas-network-input select:disabled,.atlas-network-input textarea:disabled { opacity:.58; }
+  @media (max-width:430px) {
+    .atlas-outreach-brief,.atlas-network-inputs { padding-left:12px; padding-right:12px; }
+    .atlas-network-input__row { grid-template-columns:52px minmax(0,1fr); min-height:96px; }
+    .atlas-network-input__open { padding-right:14px; }
+    .atlas-network-input__open strong { font-size:20px; }
+    .atlas-network-input__form-actions { grid-template-columns:1fr; }
+  }
+`;
