@@ -1,6 +1,6 @@
 import type { AtlasTaskCard, AtlasTaskCardObject } from "@/lib/atlas/task-cards-client";
 
-export type AtlasWorkRouteKey = "plant" | "weed" | "mow" | "seed" | "crop_cycle" | "harvest" | "build" | "venue" | "water" | "propagation";
+export type AtlasWorkRouteKey = "plant" | "weed" | "mow" | "seed" | "crop_cycle" | "harvest" | "build" | "venue" | "water" | "propagation" | "general";
 
 export type AtlasTaskDisplay = {
   action: string;
@@ -23,9 +23,10 @@ export const atlasRouteLabels: Record<AtlasWorkRouteKey, string> = {
   venue: "Venue",
   water: "Water",
   propagation: "Propagation",
+  general: "Task",
 };
 
-export const atlasRouteOrder: AtlasWorkRouteKey[] = ["weed", "plant", "propagation", "mow", "seed", "crop_cycle", "harvest", "build", "venue", "water"];
+export const atlasRouteOrder: AtlasWorkRouteKey[] = ["weed", "plant", "propagation", "mow", "seed", "crop_cycle", "harvest", "build", "venue", "water", "general"];
 
 export function atlasText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -67,7 +68,7 @@ export function atlasTitleSubject(title: string) {
 }
 
 export function atlasIsRouteKey(value: string | null | undefined): value is AtlasWorkRouteKey {
-  return value === "plant" || value === "weed" || value === "mow" || value === "seed" || value === "crop_cycle" || value === "harvest" || value === "build" || value === "venue" || value === "water" || value === "propagation";
+  return value === "plant" || value === "weed" || value === "mow" || value === "seed" || value === "crop_cycle" || value === "harvest" || value === "build" || value === "venue" || value === "water" || value === "propagation" || value === "general";
 }
 
 export function atlasIsCropCycleTask(task: AtlasTaskCard) {
@@ -86,15 +87,25 @@ export function atlasIsCropCycleTask(task: AtlasTaskCard) {
     || text.includes("turnover_watch");
 }
 
+function normalizedRoute(value: string) : AtlasWorkRouteKey | null {
+  if (atlasIsRouteKey(value)) return value;
+  if (value === "weeding") return "weed";
+  if (value === "mowing") return "mow";
+  if (value === "watering") return "water";
+  if (value === "planting" || value === "transplant") return "plant";
+  if (value === "sowing" || value === "sow" || value === "seed_sowing") return "seed";
+  if (["propagate", "propagation_start", "propagation_count", "check_rooting", "pot_rooted_cuttings"].includes(value)) return "propagation";
+  if (["call", "phone", "research", "purchase", "buy", "check", "inspect", "transplant_readiness", "pot_up", "move", "load", "deliver", "pickup"].includes(value)) return "general";
+  return null;
+}
+
 export function atlasRouteKeyForTask(task: AtlasTaskCard): AtlasWorkRouteKey {
-  const explicit = task.action_key || atlasMetaString(task, "work_route");
-  if (atlasIsRouteKey(explicit)) return explicit;
-  if (explicit === "weeding") return "weed";
-  if (explicit === "mowing") return "mow";
-  if (explicit === "watering") return "water";
-  if (explicit === "planting" || explicit === "transplant") return "plant";
-  if (explicit === "sowing") return "seed";
-  if (["propagate", "propagation_start", "propagation_count", "check_rooting", "pot_rooted_cuttings"].includes(explicit)) return "propagation";
+  const action = atlasText(task.action_key).toLowerCase();
+  const workRoute = atlasMetaString(task, "work_route").toLowerCase();
+  const actionRoute = normalizedRoute(action);
+  if (actionRoute) return actionRoute;
+  const workRouteKey = normalizedRoute(workRoute);
+  if (workRouteKey) return workRouteKey;
 
   const explicitCollection = atlasMetaString(task, "work_collection_key");
   const explicitRhythm = atlasMetaString(task, "work_rhythm").toLowerCase();
@@ -116,8 +127,9 @@ export function atlasRouteKeyForTask(task: AtlasTaskCard): AtlasWorkRouteKey {
   if (joined.includes("harvest") || joined.includes("postharvest") || joined.includes("garlic") || joined.includes("gather")) return "harvest";
   if (joined.includes("build") || joined.includes("prep") || joined.includes("string") || joined.includes("arch")) return "build";
   if (joined.includes("plant") || joined.includes("transplant")) return "plant";
+  if (joined.includes("venue") || joined.includes("guest") || joined.includes("clean") || joined.includes("wash") || joined.includes("window")) return "venue";
 
-  return "venue";
+  return "general";
 }
 
 export function atlasActionForTask(task: AtlasTaskCard) {
@@ -207,13 +219,14 @@ function usableCollectionLocation(task: AtlasTaskCard) {
   const collection = atlasMetaString(task, "collection_zone");
   if (!collection) return "";
   const normalized = collection.toLowerCase();
-  if (["owner", "marshall", "kids", "children", "anna", "farm team", "farm_team"].includes(normalized)) return "";
+  if (["owner", "marshall", "kids", "children", "anna", "farm team", "farm_team", "network"].includes(normalized)) return "";
   return collection;
 }
 
 export function atlasTaskLocation(task: AtlasTaskCard) {
-  return atlasTaskObjectLocation(task)
+  return atlasMetaString(task, "execution_place")
     || atlasMetaString(task, "display_location")
+    || atlasTaskObjectLocation(task)
     || task.zone_label
     || usableCollectionLocation(task)
     || atlasMetaString(task, "display_detail")
