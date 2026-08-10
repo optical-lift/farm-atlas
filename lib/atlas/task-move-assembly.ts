@@ -21,6 +21,20 @@ export type TaskMoveProvenance =
   | "derived"
   | "unresolved";
 
+export type TaskMoveResourceRole =
+  | "container"
+  | "growing_medium"
+  | "tool"
+  | "equipment"
+  | "material"
+  | "plant_material"
+  | "water"
+  | "transport"
+  | "protective_equipment"
+  | "infrastructure"
+  | "information"
+  | "other";
+
 export type TaskMoveLinkedObject = {
   id: string;
   key: string;
@@ -34,7 +48,8 @@ export type TaskMoveLinkedObject = {
 
 export type TaskMoveResourceRequirement = {
   id: string;
-  role: string;
+  requirementRole: string;
+  moveRole: TaskMoveResourceRole;
   label: string;
   resourceKey: string | null;
   resourceType: string | null;
