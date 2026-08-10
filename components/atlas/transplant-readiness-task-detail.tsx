@@ -1,9 +1,10 @@
 "use client";
 
-import { createPortal } from "react-dom";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
+import AssignedTaskExecutionShell, {
+  type AssignedTaskResultInstrumentContext,
+} from "@/components/atlas/assigned-task-execution-shell";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
@@ -30,59 +31,17 @@ function savedStatus(task: AtlasTaskCard) {
   return value === "ready" || value === "failed" ? value : null;
 }
 
-function ReadinessCapture({ task, assignee }: Pick<Props, "task" | "assignee">) {
-  const existingCount = savedCount(task);
-  const existingStatus = savedStatus(task);
-  const [host, setHost] = useState<HTMLElement | null>(null);
+function TransplantReadinessInstrument({ context }: { context: AssignedTaskResultInstrumentContext }) {
+  const existingCount = savedCount(context.task);
+  const existingStatus = savedStatus(context.task);
   const [count, setCount] = useState(existingCount === null ? "" : String(existingCount));
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState<"ready" | "failed" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    let disposed = false;
-    let frame = 0;
-
-    const mount = () => {
-      if (disposed) return;
-      const footer = document.querySelector<HTMLElement>(".atlas-task-result-footer");
-      const article = footer?.closest<HTMLElement>(".atlas-dominion-task-card");
-      if (!footer || !article) return;
-
-      let nextHost = article.querySelector<HTMLElement>('[data-transplant-readiness-capture="true"]');
-      if (!nextHost) {
-        nextHost = document.createElement("div");
-        nextHost.dataset.transplantReadinessCapture = "true";
-        article.insertBefore(nextHost, footer);
-      }
-      setHost((current) => current === nextHost ? current : nextHost);
-    };
-
-    const queueMount = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        mount();
-      });
-    };
-
-    queueMount();
-    const observer = new MutationObserver(queueMount);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    return () => {
-      disposed = true;
-      if (frame) window.cancelAnimationFrame(frame);
-      observer.disconnect();
-      setHost((current) => {
-        current?.remove();
-        return null;
-      });
-    };
-  }, []);
+  const busy = Boolean(saving) || context.busy;
 
   async function save(action: "ready" | "failed") {
-    if (saving) return;
+    if (busy) return;
     const parsedCount = /^\d+$/.test(count.trim()) ? Number(count) : null;
     if (action === "ready" && (!parsedCount || parsedCount < 1)) {
       setMessage("Enter how many seedlings are transplant-ready, or choose All seedlings lost.");
@@ -99,7 +58,7 @@ function ReadinessCapture({ task, assignee }: Pick<Props, "task" | "assignee">) 
         cache: "no-store",
         headers: { Accept: "application/json", "Content-Type": "application/json" },
         body: JSON.stringify({
-          taskId: task.task_id,
+          taskId: context.task.task_id,
           action,
           readyCount: action === "failed" ? 0 : parsedCount,
           note: note.trim() || null,
@@ -107,20 +66,19 @@ function ReadinessCapture({ task, assignee }: Pick<Props, "task" | "assignee">) 
       });
       const body = await response.json() as ReadinessResponse;
       if (!response.ok || !body.ok) throw new Error(body.error || "Atlas could not save the readiness result.");
-      window.location.assign(assignee.listPath);
+      window.location.assign(context.returnHref);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not save the readiness result.");
       setSaving(null);
     }
   }
 
-  if (!host?.isConnected) return null;
-
-  return createPortal(
+  return (
     <section
       aria-label="Transplant-ready seedling result"
+      data-atlas-result-instrument="transplant-readiness"
       style={{
-        margin: "18px 0 4px",
+        margin: "0 0 4px",
         padding: "14px",
         border: "1px solid rgba(91, 95, 126, .18)",
         borderRadius: 18,
@@ -148,6 +106,7 @@ function ReadinessCapture({ task, assignee }: Pick<Props, "task" | "assignee">) 
           min="0"
           inputMode="numeric"
           value={count}
+          disabled={busy}
           onChange={(event) => setCount(event.target.value.replace(/[^0-9]/g, ""))}
           placeholder="0"
           style={{ width: "100%", minHeight: 46, border: "1px solid rgba(91,95,126,.22)", borderRadius: 12, padding: "9px 11px", background: "#fff", color: "#303243", font: "inherit", fontSize: 18, fontWeight: 850 }}
@@ -159,6 +118,7 @@ function ReadinessCapture({ task, assignee }: Pick<Props, "task" | "assignee">) 
         <input
           type="text"
           value={note}
+          disabled={busy}
           onChange={(event) => setNote(event.target.value)}
           placeholder="e.g. cabbage moth damage"
           style={{ width: "100%", minHeight: 42, border: "1px solid rgba(91,95,126,.18)", borderRadius: 12, padding: "9px 11px", background: "#fff", color: "#303243", font: "inherit", fontSize: 12 }}
@@ -168,7 +128,7 @@ function ReadinessCapture({ task, assignee }: Pick<Props, "task" | "assignee">) 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
         <button
           type="button"
-          disabled={Boolean(saving)}
+          disabled={busy}
           onClick={() => void save("ready")}
           style={{ border: 0, borderRadius: 12, padding: "11px 10px", background: "#e9e73b", color: "#303243", font: "inherit", fontSize: 12, fontWeight: 900 }}
         >
@@ -176,7 +136,7 @@ function ReadinessCapture({ task, assignee }: Pick<Props, "task" | "assignee">) 
         </button>
         <button
           type="button"
-          disabled={Boolean(saving)}
+          disabled={busy}
           onClick={() => void save("failed")}
           style={{ border: "1px solid rgba(116,73,73,.2)", borderRadius: 12, padding: "11px 10px", background: "rgba(250,244,241,.9)", color: "#704c49", font: "inherit", fontSize: 12, fontWeight: 900 }}
         >
@@ -185,17 +145,15 @@ function ReadinessCapture({ task, assignee }: Pick<Props, "task" | "assignee">) 
       </div>
 
       {message ? <p style={{ margin: "9px 0 0", color: "#6d5350", fontSize: 11.5, lineHeight: 1.35 }}>{message}</p> : null}
-    </section>,
-    host,
-    "transplant-readiness-capture",
+    </section>
   );
 }
 
 export default function TransplantReadinessTaskDetail(props: Props) {
   return (
-    <>
-      <DominionAssignedTaskDetail {...props} />
-      <ReadinessCapture task={props.task} assignee={props.assignee} />
-    </>
+    <AssignedTaskExecutionShell
+      {...props}
+      resultInstrument={(context) => <TransplantReadinessInstrument context={context} />}
+    />
   );
 }
