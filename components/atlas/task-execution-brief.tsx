@@ -34,11 +34,12 @@ export default function TaskExecutionBrief({
   dueLabel,
 }: Props) {
   const model = task ? taskExecutionModel(task) : null;
+  const assemblyControlled = assembly !== undefined;
   const [resolvedAssembly, setResolvedAssembly] = useState<TaskMoveAssembly | null>(assembly ?? null);
 
   useEffect(() => {
-    if (assembly) {
-      setResolvedAssembly(assembly);
+    if (assemblyControlled) {
+      setResolvedAssembly(assembly ?? null);
       return;
     }
     if (!task?.task_id) {
@@ -70,7 +71,7 @@ export default function TaskExecutionBrief({
       });
 
     return () => controller.abort();
-  }, [assembly, task?.task_id]);
+  }, [assembly, assemblyControlled, task?.task_id]);
 
   const resolvedDo = doText || resolvedAssembly?.execution.what || model?.doText || "Do this task";
   const resolvedPlace = placeText || resolvedAssembly?.execution.where || model?.placeText || "Elm Farm";
