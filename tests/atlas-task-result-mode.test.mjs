@@ -26,6 +26,10 @@ const dominionDetail = readFileSync(
   new URL("../components/atlas/dominion-assigned-task-detail.tsx", import.meta.url),
   "utf8",
 );
+const primaryResultControls = readFileSync(
+  new URL("../components/atlas/task-primary-result-controls.tsx", import.meta.url),
+  "utf8",
+);
 
 test("operation class remains available without replacing the canonical result grammar", () => {
   assert.match(resultMode, /"standard_execution" \| "field_execution"/);
@@ -60,9 +64,9 @@ test("specialized task families resolve before ordinary canonical result fallbac
   }
 });
 
-test("ordinary execution uses the existing canonical result grammar", () => {
-  assert.match(dominionDetail, />\s*\{saving === "done" \? "Finishing" : "Done"\}\s*</);
-  assert.match(dominionDetail, /Unfinished/);
+test("ordinary execution uses the shared canonical result grammar", () => {
+  assert.match(dominionDetail, /<TaskPrimaryResultControls/);
+  assert.match(dominionDetail, /doneBusy=\{saving === "done"\}/);
   assert.match(dominionDetail, /"Partly done"/);
   assert.match(dominionDetail, /"Problem found"/);
   assert.match(dominionDetail, />Tomorrow</);
@@ -70,6 +74,11 @@ test("ordinary execution uses the existing canonical result grammar", () => {
   assert.match(dominionDetail, />Pick a date</);
   assert.match(dominionDetail, />Changed plan</);
   assert.match(dominionDetail, />Not relevant</);
+
+  assert.match(primaryResultControls, /doneLabel = "Done"/);
+  assert.match(primaryResultControls, /doneBusyLabel = "Finishing"/);
+  assert.match(primaryResultControls, /\{doneBusy \? doneBusyLabel : doneLabel\}/);
+  assert.match(primaryResultControls, />\s*Unfinished\s*</);
 
   // The adaptive conveyor remains available as a component, but it is no longer
   // the default result grammar for Anna's ordinary field_execution tasks.
