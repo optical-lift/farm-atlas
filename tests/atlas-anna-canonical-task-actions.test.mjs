@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const canonicalDetail = readFileSync(
@@ -12,10 +12,6 @@ const conveyorDetail = readFileSync(
 );
 const executionShell = readFileSync(
   new URL("../components/atlas/assigned-task-execution-shell.tsx", import.meta.url),
-  "utf8",
-);
-const dominionDetail = readFileSync(
-  new URL("../components/atlas/dominion-assigned-task-detail.tsx", import.meta.url),
   "utf8",
 );
 const primaryResults = readFileSync(
@@ -33,7 +29,8 @@ test("Anna generic assigned tasks use the canonical regular result grammar", () 
   assert.match(executionShell, /"Problem found"/);
 });
 
-test("the old conveyor remains available without owning Anna's ordinary task footer", () => {
+test("the conveyor is a specialty instrument inside the same universal task shell", () => {
+  assert.match(conveyorDetail, /AssignedTaskExecutionShell/);
   assert.match(conveyorDetail, /"Done"/);
   assert.match(conveyorDetail, /Made progress/);
   assert.match(conveyorDetail, /Need something/);
@@ -48,8 +45,5 @@ test("the old conveyor remains available without owning Anna's ordinary task foo
   assert.match(executionShell, /Pick a date/);
   assert.match(executionShell, /transition: "rescheduled"/);
 
-  // Dominion no longer owns execution behavior; it only preserves old imports
-  // until specialized task families migrate through the shell in Pass 6.
-  assert.match(dominionDetail, /AssignedTaskExecutionShell/);
-  assert.doesNotMatch(dominionDetail, /TaskPrimaryResultControls/);
+  assert.equal(existsSync(new URL("../components/atlas/dominion-assigned-task-detail.tsx", import.meta.url)), false);
 });
