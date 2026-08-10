@@ -1,0 +1,47 @@
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import assert from "node:assert/strict";
+
+const repoRoot = process.cwd();
+const read = (filePath) => fs.readFileSync(path.join(repoRoot, filePath), "utf8");
+
+test("owner day planner stays hidden until the Owner opens Plan today", () => {
+  const gate = read("components/atlas/owner-day-plan-gate.tsx");
+
+  assert.match(gate, /\/api\/atlas\/worker-day-plan\?date=/);
+  assert.match(gate, /Plan today/);
+  assert.match(gate, /Nothing enters the working day until you commit it\./);
+  assert.match(gate, /\{open \? <OwnerDayScheduleBuilder \/> : null\}/);
+  assert.match(gate, /onClick=\{\(\) => setOpen\(false\)\}/);
+});
+
+test("schedule suggestions remain local until explicit commit", () => {
+  const builder = read("components/atlas/owner-day-schedule-builder.tsx");
+
+  assert.match(builder, /useState<Set<string>>\(new Set\(\)\)/);
+  assert.match(builder, /selectedCandidates\.map\(\(candidate\) => \(\{ sourceKind: candidate\.sourceKind, sourceId: candidate\.sourceId \}\)\)/);
+  assert.match(builder, /fetch\("\/api\/atlas\/owner-day-schedule"/);
+  assert.match(builder, /method: "POST"/);
+  assert.match(builder, /window\.location\.reload\(\)/);
+});
+
+test("operator context and worker-day planner are Owner-only at the application layer", () => {
+  const operatorContext = read("lib/atlas/operator-context.ts");
+  const workerDayPlan = read("lib/atlas/worker-day-plan-server.ts");
+
+  assert.match(operatorContext, /membership\.role === "owner"/);
+  assert.match(operatorContext, /organizationMemberships\.some\(\(membership\) => membership\.role === "owner"\)/);
+  assert.match(workerDayPlan, /readAtlasOwnerOperatorContext\(\)/);
+  assert.match(workerDayPlan, /effective\.farmRole !== "farm_hand"/);
+});
+
+test("the active worker-day planning RPC overloads are Owner-only", () => {
+  const migration = read("supabase/migrations/20260810181200_owner_worker_day_planning_owner_only_v2.sql");
+
+  assert.match(migration, /owner_worker_day_plan_api_v1\(\s*p_farm_id uuid,\s*p_membership_id uuid,\s*p_day date\s*\)/);
+  assert.match(migration, /owner_build_worker_day_schedule_api_v2\(\s*p_farm_id uuid,\s*p_membership_id uuid,\s*p_day date,\s*p_selections jsonb\s*\)/);
+  assert.match(migration, /fm\.role='owner'/);
+  assert.doesNotMatch(migration, /fm\.role\s+in\s*\(\s*'owner'\s*,\s*'manager'\s*\)/i);
+  assert.match(migration, /from public, anon/);
+});
