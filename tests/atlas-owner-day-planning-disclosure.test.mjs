@@ -36,12 +36,12 @@ test("operator context and worker-day planner are Owner-only at the application 
   assert.match(workerDayPlan, /effective\.farmRole !== "farm_hand"/);
 });
 
-test("worker-day planning RPC wrappers are Owner-only at the database layer", () => {
-  const migration = read("supabase/migrations/20260810124500_owner_worker_day_planning_owner_only_v1.sql");
+test("the active worker-day planning RPC overloads are Owner-only", () => {
+  const migration = read("supabase/migrations/20260810181200_owner_worker_day_planning_owner_only_v2.sql");
 
-  assert.match(migration, /owner_worker_day_plan_api_v1\([\s\S]*p_membership_id uuid/);
-  assert.match(migration, /owner_build_worker_day_schedule_api_v2\([\s\S]*p_membership_id uuid/);
-  assert.match(migration, /fm\.role = 'owner'/);
-  assert.doesNotMatch(migration, /fm\.role in \('owner', 'manager'\)/);
-  assert.match(migration, /Owner access required/);
+  assert.match(migration, /owner_worker_day_plan_api_v1\(\s*p_farm_id uuid,\s*p_membership_id uuid,\s*p_day date\s*\)/);
+  assert.match(migration, /owner_build_worker_day_schedule_api_v2\(\s*p_farm_id uuid,\s*p_membership_id uuid,\s*p_day date,\s*p_selections jsonb\s*\)/);
+  assert.match(migration, /fm\.role='owner'/);
+  assert.doesNotMatch(migration, /fm\.role\s+in\s*\(\s*'owner'\s*,\s*'manager'\s*\)/i);
+  assert.match(migration, /from public, anon/);
 });
