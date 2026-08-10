@@ -52,7 +52,7 @@ test("Anna generic task detail uses the regular Done and Unfinished result set",
   assert.doesNotMatch(canonical, /FarmHandConveyorTaskDetail/);
   assert.doesNotMatch(canonical, /props\.assignee\.key === "anna"/);
   assert.match(canonical, /return <DominionAssignedTaskDetail/);
-  assert.match(dominion, />Done</);
+  assert.match(dominion, /"Done"/);
   assert.match(dominion, /Unfinished/);
   assert.match(dominion, /"Partly done"/);
   assert.match(dominion, /"Problem found"/);
