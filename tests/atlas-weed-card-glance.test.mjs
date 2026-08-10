@@ -5,14 +5,19 @@ import test from "node:test";
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 const focus = read("components/atlas/weed-card-task-focus.tsx");
+const shell = read("components/atlas/assigned-task-execution-shell.tsx");
+const brief = read("components/atlas/task-execution-brief.tsx");
 const mapCss = read("components/atlas/crop-occupancy-bed-map.module.css");
 const migration = read("supabase/migrations/20260804075000_weed_cards_require_physical_need_and_canonical_titles.sql");
 const rhythmMigration = read("supabase/migrations/20260804075100_weed_rhythm_requires_physical_need.sql");
 const cleanupMigration = read("supabase/migrations/20260804075200_retire_existing_clear_weed_work.sql");
 
-test("the Weed field sheet says the complete canonical action and bed name", () => {
-  assert.match(focus, /instruction=\{`Weed \$\{card\.objectLabel\}`\}/);
-  assert.doesNotMatch(focus, /instruction="Weed"/);
+test("the Weed task keeps its complete canonical action and bed name through the shared Task Move shell", () => {
+  assert.match(focus, /AssignedTaskExecutionShell/);
+  assert.match(focus, /task=\{task\}/);
+  assert.doesNotMatch(focus, /instruction=|TaskDominionTrail/);
+  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
+  assert.match(brief, /TaskMoveSpine/);
   assert.match(migration, /NEW\.title := 'Weed ' \|\| v_object_label/);
   assert.match(migration, /'display_title', NEW\.title/);
   assert.match(migration, /NEW\.generated_from = 'rhythm_clock'/);
