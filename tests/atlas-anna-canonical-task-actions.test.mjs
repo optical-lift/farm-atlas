@@ -15,26 +15,27 @@ const dominionDetail = readFileSync(
   "utf8",
 );
 
-test("Anna gets conveyor support without replacing canonical task truth", () => {
+test("Anna generic assigned tasks use the canonical regular result grammar", () => {
   assert.doesNotMatch(canonicalDetail, /StructuredUnfinishedControl/);
-  assert.match(canonicalDetail, /assignee\.key === "anna"/);
-  assert.match(canonicalDetail, /FarmHandConveyorTaskDetail/);
-  assert.match(conveyorDetail, /Need lighter work/);
-  assert.match(conveyorDetail, /reportAtlasNeedLighterWork/);
-  assert.match(conveyorDetail, /DominionAssignedTaskDetail/);
+  assert.doesNotMatch(canonicalDetail, /assignee\.key === "anna"/);
+  assert.doesNotMatch(canonicalDetail, /FarmHandConveyorTaskDetail/);
+  assert.match(canonicalDetail, /return <DominionAssignedTaskDetail/);
+  assert.match(canonicalDetail, /TransplantReadinessTaskDetail/);
   assert.match(dominionDetail, /"Partly done"/);
   assert.match(dominionDetail, /"Problem found"/);
 });
 
-test("Anna reports reality while retaining the reschedule controls she asked to keep", () => {
+test("the old conveyor remains available without owning Anna's ordinary task footer", () => {
   assert.match(conveyorDetail, /"Done"/);
   assert.match(conveyorDetail, /Made progress/);
   assert.match(conveyorDetail, /Need something/);
   assert.match(conveyorDetail, /Farm changed/);
   assert.match(conveyorDetail, /Need lighter work/);
-  assert.match(conveyorDetail, /atlas-task-result-footer\{display:none!important\}/);
-  assert.match(conveyorDetail, />Tomorrow</);
-  assert.match(conveyorDetail, />Next week</);
-  assert.match(conveyorDetail, />Pick a date</);
-  assert.match(conveyorDetail, /transition: "rescheduled"/);
+
+  assert.match(dominionDetail, /"Done"/);
+  assert.match(dominionDetail, /Unfinished/);
+  assert.match(dominionDetail, />Tomorrow</);
+  assert.match(dominionDetail, />Next week</);
+  assert.match(dominionDetail, />Pick a date</);
+  assert.match(dominionDetail, /transition: "rescheduled"/);
 });
