@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -17,7 +17,7 @@ test("Pass 5 gives ordinary assigned tasks one neutral execution shell", () => {
   assert.match(shell, /TaskPrimaryResultControls/);
   assert.match(shell, /data-atlas-assigned-task-execution-shell="true"/);
   assert.match(canonical, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
-  assert.doesNotMatch(canonical, /return <DominionAssignedTaskDetail \{\.\.\.props\} \/>/);
+  assert.doesNotMatch(canonical, /DominionAssignedTaskDetail/);
 });
 
 test("the shell owns canonical Task Move resolution, timing, readiness, blockers, and default completion gating", () => {
@@ -62,12 +62,9 @@ test("the universal shell has no task-kind routing or domain-specific execution 
   assert.doesNotMatch(shell, /WeedCardTaskLoader|TransplantReadinessTaskDetail|BuyerOutreachTaskDetail|ContractorServiceTaskDetail|ProjectPullTaskDetail|NetworkOutreachTaskDetail|ExecutionChecklistTaskDetail/);
 });
 
-test("Dominion is now only a compatibility name over the universal shell", () => {
-  const dominion = read("components/atlas/dominion-assigned-task-detail.tsx");
-
-  assert.match(dominion, /AssignedTaskExecutionShell/);
-  assert.match(dominion, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
-  assert.doesNotMatch(dominion, /TaskExecutionBrief/);
-  assert.doesNotMatch(dominion, /TaskPrimaryResultControls/);
-  assert.doesNotMatch(dominion, /postAtlasTaskTransition/);
+test("the retired Dominion execution wrapper no longer exists", () => {
+  assert.equal(existsSync(join(root, "components/atlas/dominion-assigned-task-detail.tsx")), false);
+  assert.equal(existsSync(join(root, "components/atlas/task-dominion-trail.tsx")), false);
+  assert.equal(existsSync(join(root, "lib/atlas/task-dominion.ts")), false);
+  assert.equal(existsSync(join(root, "lib/atlas/task-condition-rail.ts")), false);
 });
