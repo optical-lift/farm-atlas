@@ -26,10 +26,23 @@ export type TaskMoveProvenance =
   | "resource_requirement"
   | "action_template"
   | "prerequisite"
+  | "capacity_pool"
   | "task_record"
   | "legacy_metadata"
   | "derived"
   | "missing";
+
+export type TaskMoveCapacityQuestion = {
+  id: string;
+  key: string | null;
+  kind: string | null;
+  label: string;
+  status: string;
+  blockerRole: string;
+  answerValue: number | null;
+  answerUnit: string | null;
+  answerText: string | null;
+};
 
 export type TaskMoveFact = {
   label: string;
@@ -56,6 +69,11 @@ export type TaskMoveRequirement = {
   conditionNotes?: string | null;
   templateKey?: string | null;
   poolKey?: string | null;
+  capacityRole?: string;
+  capacityStatus?: string;
+  totalCapacity?: number | null;
+  totalUnit?: string | null;
+  questions?: TaskMoveCapacityQuestion[];
   taskId?: string;
   assigneeName?: string;
   requiredStatus?: string;
