@@ -20,7 +20,7 @@ test("Pass 5 gives ordinary assigned tasks one neutral execution shell", () => {
   assert.doesNotMatch(canonical, /return <DominionAssignedTaskDetail \{\.\.\.props\} \/>/);
 });
 
-test("the shell owns canonical Task Move resolution, timing, readiness, and blockers", () => {
+test("the shell owns canonical Task Move resolution, timing, readiness, blockers, and default completion gating", () => {
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
   const brief = read("components/atlas/task-execution-brief.tsx");
 
@@ -31,6 +31,11 @@ test("the shell owns canonical Task Move resolution, timing, readiness, and bloc
   assert.match(shell, /assembly\.readiness\.status/);
   assert.match(shell, /assembly\?\.unresolved/);
   assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
+  assert.match(shell, /const canonicalDoneDisabled =/);
+  assert.match(shell, /!assembly \|\|/);
+  assert.match(shell, /assembly\.readiness\.status === "blocked"/);
+  assert.match(shell, /assembly\.spine\.connection === "stops_at_move"/);
+  assert.match(shell, /doneDisabled=\{canonicalDoneDisabled\}/);
   assert.match(brief, /assemblyControlled = assembly !== undefined/);
 });
 
