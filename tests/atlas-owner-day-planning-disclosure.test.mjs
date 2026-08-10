@@ -20,7 +20,7 @@ test("schedule suggestions remain local until explicit commit", () => {
   const builder = read("components/atlas/owner-day-schedule-builder.tsx");
 
   assert.match(builder, /useState<Set<string>>\(new Set\(\)\)/);
-  assert.match(builder, /candidate_ids:/);
+  assert.match(builder, /selectedCandidates\.map\(\(candidate\) => \(\{ sourceKind: candidate\.sourceKind, sourceId: candidate\.sourceId \}\)\)/);
   assert.match(builder, /fetch\("\/api\/atlas\/owner-day-schedule"/);
   assert.match(builder, /method: "POST"/);
   assert.match(builder, /window\.location\.reload\(\)/);
