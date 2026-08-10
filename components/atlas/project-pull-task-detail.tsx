@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 
-import DominionAssignedTaskDetail from "@/components/atlas/dominion-assigned-task-detail";
+import AssignedTaskExecutionShell, {
+  type AssignedTaskInstrumentContext,
+} from "@/components/atlas/assigned-task-execution-shell";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
@@ -25,11 +27,16 @@ function responseMessage(result: ReturnResponse) {
   return "Atlas could not return this card to the pool.";
 }
 
-export default function ProjectPullTaskDetail(props: Props) {
+function ProjectPullReturnInstrument({
+  task,
+  busy,
+  returnHref,
+}: AssignedTaskInstrumentContext) {
   const [returning, setReturning] = useState(false);
   const [message, setMessage] = useState("");
 
   async function returnToPool() {
+    if (returning || busy) return;
     try {
       setReturning(true);
       setMessage("");
@@ -40,7 +47,7 @@ export default function ProjectPullTaskDetail(props: Props) {
           "x-atlas-intent": "project-pull-return-v1",
         },
         body: JSON.stringify({
-          taskId: props.task.task_id,
+          taskId: task.task_id,
           note: "Not today — returned to the durable Finish Project pool.",
         }),
       });
@@ -48,7 +55,7 @@ export default function ProjectPullTaskDetail(props: Props) {
       if (!response.ok || !result.ok) {
         throw new Error(responseMessage(result));
       }
-      window.location.assign("/");
+      window.location.assign(returnHref);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not return this card to the pool.");
       setReturning(false);
@@ -56,44 +63,37 @@ export default function ProjectPullTaskDetail(props: Props) {
   }
 
   return (
-    <>
-      <DominionAssignedTaskDetail {...props} />
-      <aside style={{
-        position: "fixed",
-        zIndex: 40,
-        left: "50%",
-        bottom: 14,
-        transform: "translateX(-50%)",
-        width: "min(430px, calc(100vw - 28px))",
-        border: "1px solid rgba(36,35,31,.16)",
-        borderRadius: 14,
-        padding: 10,
-        background: "rgba(247,244,236,.96)",
-        boxShadow: "0 10px 32px rgba(30,28,22,.13)",
-        backdropFilter: "blur(8px)",
-      }}>
-        <button
-          type="button"
-          disabled={returning}
-          onClick={() => void returnToPool()}
-          style={{
-            width: "100%",
-            border: 0,
-            borderRadius: 10,
-            padding: "11px 14px",
-            background: "transparent",
-            color: "inherit",
-            font: "inherit",
-            fontSize: 13,
-            fontWeight: 650,
-            cursor: returning ? "default" : "pointer",
-            opacity: returning ? .5 : .72,
-          }}
-        >
-          {returning ? "Returning to project pool…" : "Not this one today · return it to the Finish Project"}
-        </button>
-        {message ? <p style={{ margin: "6px 8px 2px", fontSize: 12, color: "#7a2d29" }}>{message}</p> : null}
-      </aside>
-    </>
+    <section data-atlas-method-instrument="project-pull-return" style={{ padding: "0 18px 18px" }}>
+      <button
+        type="button"
+        disabled={returning || busy}
+        onClick={() => void returnToPool()}
+        style={{
+          width: "100%",
+          border: "1px solid rgba(36,35,31,.12)",
+          borderRadius: 12,
+          padding: "11px 14px",
+          background: "rgba(247,244,236,.72)",
+          color: "inherit",
+          font: "inherit",
+          fontSize: 13,
+          fontWeight: 650,
+          cursor: returning || busy ? "default" : "pointer",
+          opacity: returning || busy ? .5 : .72,
+        }}
+      >
+        {returning ? "Returning to project pool…" : "Not this one today · return it to the Finish Project"}
+      </button>
+      {message ? <p style={{ margin: "6px 8px 2px", fontSize: 12, color: "#7a2d29" }}>{message}</p> : null}
+    </section>
+  );
+}
+
+export default function ProjectPullTaskDetail(props: Props) {
+  return (
+    <AssignedTaskExecutionShell
+      {...props}
+      methodInstrument={ProjectPullReturnInstrument}
+    />
   );
 }
