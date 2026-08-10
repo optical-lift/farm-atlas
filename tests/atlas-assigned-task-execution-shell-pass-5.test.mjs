@@ -34,13 +34,17 @@ test("the shell owns canonical Task Move resolution, timing, readiness, and bloc
   assert.match(brief, /assemblyControlled = assembly !== undefined/);
 });
 
-test("domain-specific result behavior has an explicit instrument slot", () => {
+test("domain-specific behavior enters through explicit instrument slots without owning the page", () => {
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 
+  assert.match(shell, /export type AssignedTaskInstrumentContext/);
+  assert.match(shell, /export type AssignedTaskMethodInstrument =/);
+  assert.match(shell, /methodInstrument\?: AssignedTaskMethodInstrument/);
+  assert.match(shell, /methodInstrument \? methodInstrument\(instrumentContext\)/);
   assert.match(shell, /export type AssignedTaskResultInstrumentContext/);
   assert.match(shell, /export type AssignedTaskResultInstrument =/);
   assert.match(shell, /resultInstrument\?: AssignedTaskResultInstrument/);
-  assert.match(shell, /resultInstrument \? resultInstrument\(resultContext\)/);
+  assert.match(shell, /resultInstrument \? resultInstrument\(instrumentContext\)/);
   assert.match(shell, /data-atlas-primary-results="true"/);
   assert.match(shell, /DefaultResultInstrument/);
 });
@@ -50,7 +54,7 @@ test("the universal shell has no task-kind routing or domain-specific execution 
 
   assert.doesNotMatch(shell, /task\.task_type\s*===/);
   assert.doesNotMatch(shell, /task\.action_key\s*===/);
-  assert.doesNotMatch(shell, /WeedCardTaskLoader|TransplantReadinessTaskDetail|BuyerOutreachTaskDetail|ContractorServiceTaskDetail|ProjectPullTaskDetail|NetworkOutreachTaskDetail/);
+  assert.doesNotMatch(shell, /WeedCardTaskLoader|TransplantReadinessTaskDetail|BuyerOutreachTaskDetail|ContractorServiceTaskDetail|ProjectPullTaskDetail|NetworkOutreachTaskDetail|ExecutionChecklistTaskDetail/);
 });
 
 test("Dominion is now only a compatibility name over the universal shell", () => {
