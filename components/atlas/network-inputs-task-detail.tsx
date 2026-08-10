@@ -1,12 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-import TaskDominionTrail from "@/components/atlas/task-dominion-trail";
+import AssignedTaskExecutionShell, {
+  type AssignedTaskInstrumentContext,
+  type AssignedTaskResultInstrumentContext,
+} from "@/components/atlas/assigned-task-execution-shell";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import { atlasTaskDisplay } from "@/lib/atlas/task-display";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
 type Props = {
@@ -14,8 +15,6 @@ type Props = {
   childTasks: AtlasTaskCard[];
   assignee: AtlasAssigneeConfig;
 };
-
-type ClosingOutcome = "changed_plan" | "not_relevant";
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -39,31 +38,14 @@ function currentDone(task: AtlasTaskCard) {
   return task.status === "done" || text(task.metadata?.checklist_status) === "done";
 }
 
-function todayIso() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Chicago",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
-function addDays(dateIso: string, days: number) {
-  const date = new Date(`${dateIso}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
 export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: Props) {
-  const display = useMemo(() => atlasTaskDisplay(task), [task]);
   const inputs = useMemo(
     () => [...childTasks].sort((a, b) => stepOrder(a) - stepOrder(b) || inputLabel(a).localeCompare(inputLabel(b))),
     [childTasks],
   );
-  const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const [openId, setOpenId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [savingTaskAction, setSavingTaskAction] = useState<string | null>(null);
+  const [closing, setClosing] = useState(false);
   const [taskMessage, setTaskMessage] = useState<string | null>(null);
   const [messageById, setMessageById] = useState<Record<string, string>>({});
   const [doneById, setDoneById] = useState<Record<string, boolean>>(() => Object.fromEntries(
@@ -75,16 +57,9 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
   const [savedById, setSavedById] = useState<Record<string, string>>(() => Object.fromEntries(
     inputs.map((input) => [input.task_id, input.note ?? ""]),
   ));
-  const [closing, setClosing] = useState(false);
 
-  useEffect(() => {
-    void fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" })
-      .then((response) => response.json())
-      .then((data: { ok?: boolean; label?: string }) => setWeatherLabel(data.ok && data.label ? data.label : "weather unavailable"))
-      .catch(() => setWeatherLabel("weather unavailable"));
-  }, []);
-
-  async function toggleDone(input: AtlasTaskCard) {
+  async function toggleDone(input: AtlasTaskCard, shellBusy: boolean) {
+    if (shellBusy || closing || savingId) return;
     const nextDone = !(doneById[input.task_id] ?? currentDone(input));
     try {
       setSavingId(input.task_id);
@@ -111,7 +86,8 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
     }
   }
 
-  async function saveFindings(input: AtlasTaskCard) {
+  async function saveFindings(input: AtlasTaskCard, shellBusy: boolean) {
+    if (shellBusy || closing || savingId) return;
     const note = (draftById[input.task_id] ?? "").trim();
     if (!note) {
       setMessageById((current) => ({ ...current, [input.task_id]: "Add a company or finding first." }));
@@ -146,18 +122,33 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
     }
   }
 
-  async function finishTask() {
+  async function finishTask({
+    task: currentTask,
+    assignee: currentAssignee,
+    assembly,
+    busy,
+    returnHref,
+  }: AssignedTaskResultInstrumentContext) {
+    const moveBlocked =
+      busy ||
+      closing ||
+      Boolean(savingId) ||
+      !assembly ||
+      assembly.readiness.status === "blocked" ||
+      assembly.spine.connection === "stops_at_move";
+    if (moveBlocked) return;
+
     try {
       setClosing(true);
       setTaskMessage(null);
       await postAtlasTaskTransition({
-        taskId: task.task_id,
+        taskId: currentTask.task_id,
         transition: "done",
-        laneKey: task.action_key || "network",
-        workKey: task.action_key || "network",
-        payload: { assigneeKey: assignee.key },
+        laneKey: currentTask.action_key || "network",
+        workKey: currentTask.action_key || "network",
+        payload: { assigneeKey: currentAssignee.key },
       });
-      window.location.assign(assignee.listPath);
+      window.location.assign(returnHref);
     } catch (error) {
       setTaskMessage(error instanceof Error ? error.message : "Could not finish this task.");
     } finally {
@@ -165,192 +156,138 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
     }
   }
 
-  async function reschedule(targetDate: string | null, reason: string, scheduleIntent?: string) {
-    try {
-      setSavingTaskAction("reschedule");
-      setTaskMessage(null);
-      await postAtlasTaskTransition({
-        taskId: task.task_id,
-        transition: "rescheduled",
-        ...(targetDate ? { targetDate } : {}),
-        reason,
-        laneKey: task.action_key || "network",
-        workKey: task.action_key || "network",
-        payload: { assigneeKey: assignee.key, ...(scheduleIntent ? { scheduleIntent } : {}) },
-      });
-      window.location.assign(assignee.listPath);
-    } catch (error) {
-      setTaskMessage(error instanceof Error ? error.message : "Could not move this task.");
-    } finally {
-      setSavingTaskAction(null);
-    }
+  function methodInstrument({ busy }: AssignedTaskInstrumentContext) {
+    const methodBusy = busy || closing || Boolean(savingId);
+    return (
+      <>
+        <section className="atlas-network-inputs" aria-label="Disposal inputs" data-atlas-method-instrument="network-inputs">
+          <h2>Checklist</h2>
+          <div className="atlas-network-inputs__list">
+            {inputs.map((input) => {
+              const done = doneById[input.task_id] ?? currentDone(input);
+              const open = openId === input.task_id;
+              const saving = savingId === input.task_id;
+              const saved = savedById[input.task_id] ?? "";
+              const message = messageById[input.task_id] ?? "";
+
+              return (
+                <article className={`atlas-network-input${done ? " is-done" : ""}${open ? " is-open" : ""}`} key={input.task_id}>
+                  <div className="atlas-network-input__row">
+                    <button
+                      type="button"
+                      className="atlas-network-input__check"
+                      aria-label={done ? `Reopen ${inputLabel(input)}` : `Complete ${inputLabel(input)}`}
+                      aria-pressed={done}
+                      disabled={methodBusy}
+                      onClick={() => void toggleDone(input, busy)}
+                    >
+                      {done ? "✓" : ""}
+                    </button>
+                    <button
+                      type="button"
+                      className="atlas-network-input__open"
+                      aria-expanded={open}
+                      disabled={methodBusy}
+                      onClick={() => setOpenId(open ? null : input.task_id)}
+                    >
+                      <strong>{inputLabel(input)}</strong>
+                      <small>Tap to log info</small>
+                      {saved ? <span>{saved}</span> : null}
+                    </button>
+                  </div>
+
+                  {open ? (
+                    <form className="atlas-network-input__form" onSubmit={(event) => { event.preventDefault(); void saveFindings(input, busy); }}>
+                      <textarea
+                        aria-label={`Companies and findings for ${inputLabel(input)}`}
+                        value={draftById[input.task_id] ?? ""}
+                        placeholder="Company — what they have"
+                        disabled={methodBusy && !saving}
+                        onChange={(event) => {
+                          setDraftById((current) => ({ ...current, [input.task_id]: event.target.value }));
+                          setMessageById((current) => ({ ...current, [input.task_id]: "" }));
+                        }}
+                      />
+                      <div className="atlas-network-input__form-actions">
+                        <button type="submit" disabled={methodBusy}>{saving ? "Saving" : "Save"}</button>
+                        <button type="button" disabled={methodBusy} onClick={() => setOpenId(null)}>Cancel</button>
+                      </div>
+                      {message ? <p aria-live="polite">{message}</p> : null}
+                    </form>
+                  ) : message ? <p className="atlas-network-input__message" aria-live="polite">{message}</p> : null}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+        <style>{networkInputsStyles}</style>
+      </>
+    );
   }
 
-  async function closeWithoutDoing(outcome: ClosingOutcome, reason: string) {
-    try {
-      setSavingTaskAction(outcome);
-      setTaskMessage(null);
-      await postAtlasTaskTransition({
-        taskId: task.task_id,
-        transition: outcome,
-        note: reason,
-        reason,
-        laneKey: task.action_key || "network",
-        workKey: task.action_key || "network",
-        payload: { assigneeKey: assignee.key },
-      });
-      window.location.assign(assignee.listPath);
-    } catch (error) {
-      setTaskMessage(error instanceof Error ? error.message : "Could not close this task.");
-    } finally {
-      setSavingTaskAction(null);
-    }
-  }
+  function resultInstrument(context: AssignedTaskResultInstrumentContext) {
+    const moveBlocked =
+      context.busy ||
+      closing ||
+      Boolean(savingId) ||
+      !context.assembly ||
+      context.assembly.readiness.status === "blocked" ||
+      context.assembly.spine.connection === "stops_at_move";
+    const resultBusy = context.busy || closing || Boolean(savingId);
 
-  const taskBusy = closing || Boolean(savingId) || Boolean(savingTaskAction);
+    return (
+      <section data-atlas-result-instrument="network-inputs">
+        <div className="atlas-task-result-actions atlas-task-result-actions-simple">
+          <button type="button" className="done" disabled={moveBlocked} onClick={() => void finishTask(context)}>
+            {closing ? "Finishing" : "Done"}
+          </button>
+          <button type="button" className="unfinished" disabled={resultBusy} onClick={() => window.location.assign(context.returnHref)}>
+            Unfinished
+          </button>
+        </div>
+        {taskMessage ? <p className="atlas-network-task-message" aria-live="polite">{taskMessage}</p> : null}
+      </section>
+    );
+  }
 
   return (
-    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
-      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
-        <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href={assignee.listPath} className="atlas-phone-brand atlas-task-header-brand">
-            <span className="atlas-phone-kicker">Atlas</span>
-            <span className="atlas-phone-title">{assignee.label}</span>
-          </Link>
-          <span className="atlas-weather-line">{weatherLabel}</span>
-          <Link href={assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
-        </header>
-
-        <div className="atlas-task-page-body">
-          <article className="atlas-task-page-active atlas-task-ticket-card atlas-dominion-task-card atlas-network-inputs-card">
-            <TaskDominionTrail task={task} instruction={display.title} />
-
-            <section className="atlas-network-inputs" aria-label="Disposal inputs">
-              <h2>Checklist</h2>
-              <div className="atlas-network-inputs__list">
-                {inputs.map((input) => {
-                  const done = doneById[input.task_id] ?? currentDone(input);
-                  const open = openId === input.task_id;
-                  const saving = savingId === input.task_id;
-                  const saved = savedById[input.task_id] ?? "";
-                  const message = messageById[input.task_id] ?? "";
-
-                  return (
-                    <article className={`atlas-network-input${done ? " is-done" : ""}${open ? " is-open" : ""}`} key={input.task_id}>
-                      <div className="atlas-network-input__row">
-                        <button
-                          type="button"
-                          className="atlas-network-input__check"
-                          aria-label={done ? `Reopen ${inputLabel(input)}` : `Complete ${inputLabel(input)}`}
-                          aria-pressed={done}
-                          disabled={saving}
-                          onClick={() => void toggleDone(input)}
-                        >
-                          {done ? "✓" : ""}
-                        </button>
-                        <button
-                          type="button"
-                          className="atlas-network-input__open"
-                          aria-expanded={open}
-                          disabled={saving}
-                          onClick={() => setOpenId(open ? null : input.task_id)}
-                        >
-                          <strong>{inputLabel(input)}</strong>
-                          <small>Tap to log info</small>
-                          {saved ? <span>{saved}</span> : null}
-                        </button>
-                      </div>
-
-                      {open ? (
-                        <form className="atlas-network-input__form" onSubmit={(event) => { event.preventDefault(); void saveFindings(input); }}>
-                          <textarea
-                            aria-label={`Companies and findings for ${inputLabel(input)}`}
-                            value={draftById[input.task_id] ?? ""}
-                            placeholder="Company — what they have"
-                            onChange={(event) => {
-                              setDraftById((current) => ({ ...current, [input.task_id]: event.target.value }));
-                              setMessageById((current) => ({ ...current, [input.task_id]: "" }));
-                            }}
-                          />
-                          <div className="atlas-network-input__form-actions">
-                            <button type="submit" disabled={saving}>{saving ? "Saving" : "Save"}</button>
-                            <button type="button" disabled={saving} onClick={() => setOpenId(null)}>Cancel</button>
-                          </div>
-                          {message ? <p aria-live="polite">{message}</p> : null}
-                        </form>
-                      ) : message ? <p className="atlas-network-input__message" aria-live="polite">{message}</p> : null}
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-
-            <footer className="atlas-task-result-footer">
-              <div className="atlas-task-result-actions atlas-task-result-actions-simple">
-                <button type="button" className="done" disabled={taskBusy} onClick={() => void finishTask()}>
-                  {closing ? "Finishing" : "Done"}
-                </button>
-                <button type="button" className="unfinished" disabled={taskBusy} onClick={() => window.location.assign(assignee.listPath)}>
-                  Unfinished
-                </button>
-              </div>
-
-              <details className="atlas-task-more-outcomes">
-                <summary><span>Move or close this card</span><b aria-hidden="true">⌄</b></summary>
-                <div className="atlas-task-more-outcomes-body">
-                  <span>Reschedule</span>
-                  <div className="atlas-task-more-outcomes-grid">
-                    <button type="button" disabled={taskBusy} onClick={() => void reschedule(null, "Moved to next Elm Farm calendar day from assigned task page", "next_day")}>Tomorrow</button>
-                    <button type="button" disabled={taskBusy} onClick={() => void reschedule(addDays(todayIso(), 7), "Moved to next week from assigned task page")}>Next week</button>
-                    <button type="button" disabled={taskBusy} onClick={() => {
-                      const date = window.prompt("Pick a date (YYYY-MM-DD)", task.due_date || todayIso())?.trim();
-                      if (date) void reschedule(date, "Rescheduled from assigned task page");
-                    }}>Pick a date</button>
-                  </div>
-                  <span>Close without doing it</span>
-                  <div className="atlas-task-more-outcomes-grid quiet">
-                    <button type="button" disabled={taskBusy} onClick={() => void closeWithoutDoing("changed_plan", window.prompt("What changed?", "")?.trim() || "Plan changed")}>Changed plan</button>
-                    <button type="button" disabled={taskBusy} onClick={() => void closeWithoutDoing("not_relevant", window.prompt("Why is this no longer relevant?", "")?.trim() || "Not relevant")}>Not relevant</button>
-                  </div>
-                </div>
-              </details>
-
-              {taskMessage ? <p className="atlas-network-task-message" aria-live="polite">{taskMessage}</p> : null}
-            </footer>
-          </article>
-        </div>
-      </section>
-
-      <style>{`
-        .atlas-network-inputs { padding: 22px 18px 8px; border-top: 1px solid var(--atlas-border); }
-        .atlas-network-inputs h2 { margin: 0 0 14px; color: #858bb8; font-size: 14px; line-height: 1; font-weight: 950; letter-spacing: .16em; text-transform: uppercase; }
-        .atlas-network-inputs__list { display: grid; gap: 12px; }
-        .atlas-network-input { overflow: hidden; border: 1px solid rgba(139,145,194,.22); border-radius: 22px; background: rgba(255,255,255,.82); }
-        .atlas-network-input.is-done { background: rgba(228,234,200,.48); }
-        .atlas-network-input__row { display: grid; grid-template-columns: 54px minmax(0,1fr); align-items: stretch; min-height: 104px; }
-        .atlas-network-input__check { align-self: center; justify-self: center; width: 42px; height: 42px; padding: 0; border: 4px solid rgba(139,145,194,.24); border-radius: 999px; background: rgba(255,255,255,.45); color: #686b7d; font-size: 25px; line-height: 1; font-weight: 950; touch-action: manipulation; }
-        .atlas-network-input.is-done .atlas-network-input__check { border-color: rgba(185,204,124,.9); background: rgba(222,233,183,.96); }
-        .atlas-network-input__open { min-width: 0; padding: 18px 18px 18px 8px; border: 0; background: transparent; color: var(--atlas-text); text-align: left; touch-action: manipulation; }
-        .atlas-network-input__open strong { display: block; font-size: 22px; line-height: 1.06; font-weight: 950; letter-spacing: -.035em; }
-        .atlas-network-input__open small { display: block; margin-top: 7px; color: var(--atlas-purple-dark); font-size: 12px; line-height: 1.2; font-weight: 900; letter-spacing: .02em; }
-        .atlas-network-input__open span { display: block; margin-top: 9px; color: var(--atlas-muted); font-size: 14px; line-height: 1.35; font-weight: 750; white-space: pre-wrap; }
-        .atlas-network-input__check:focus-visible, .atlas-network-input__open:focus-visible { outline: 3px solid rgba(85,90,134,.38); outline-offset: -3px; }
-        .atlas-network-input__form { display: grid; gap: 10px; margin: 0 12px 12px; padding: 12px; border: 1px solid rgba(91,99,71,.18); border-radius: 16px; background: rgba(246,242,230,.82); }
-        .atlas-network-input__form textarea { width: 100%; min-height: 140px; resize: vertical; padding: 12px; border: 1px solid rgba(139,145,194,.24); border-radius: 14px; background: #fff; color: var(--atlas-text); font: inherit; font-size: 16px; line-height: 1.4; }
-        .atlas-network-input__form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .atlas-network-input__form-actions button { min-height: 48px; border: 1px solid rgba(139,145,194,.2); border-radius: 14px; background: rgba(255,255,255,.92); color: var(--atlas-text); font-weight: 950; }
-        .atlas-network-input__form-actions button[type="submit"] { background: rgba(214,225,177,.78); color: #515b34; }
-        .atlas-network-input__form p, .atlas-network-input__message, .atlas-network-task-message { margin: 0; color: #835345; font-size: 12px; line-height: 1.25; font-weight: 850; }
-        .atlas-network-input__message { padding: 0 18px 14px 62px; }
-        .atlas-network-task-message { padding: 12px 4px 0; text-align: center; }
-        .atlas-network-input button:disabled, .atlas-network-input textarea:disabled { opacity: .58; }
-        @media (max-width: 430px) {
-          .atlas-network-inputs { padding: 20px 12px 8px; }
-          .atlas-network-input__row { grid-template-columns: 52px minmax(0,1fr); min-height: 96px; }
-          .atlas-network-input__open { padding-right: 14px; }
-          .atlas-network-input__open strong { font-size: 21px; }
-        }
-      `}</style>
-    </main>
+    <AssignedTaskExecutionShell
+      task={task}
+      childTasks={[]}
+      assignee={assignee}
+      methodInstrument={methodInstrument}
+      resultInstrument={resultInstrument}
+    />
   );
 }
+
+const networkInputsStyles = `
+  .atlas-network-inputs { padding: 22px 18px 8px; border-top: 1px solid var(--atlas-border); }
+  .atlas-network-inputs h2 { margin: 0 0 14px; color: #858bb8; font-size: 14px; line-height: 1; font-weight: 950; letter-spacing: .16em; text-transform: uppercase; }
+  .atlas-network-inputs__list { display: grid; gap: 12px; }
+  .atlas-network-input { overflow: hidden; border: 1px solid rgba(139,145,194,.22); border-radius: 22px; background: rgba(255,255,255,.82); }
+  .atlas-network-input.is-done { background: rgba(228,234,200,.48); }
+  .atlas-network-input__row { display: grid; grid-template-columns: 54px minmax(0,1fr); align-items: stretch; min-height: 104px; }
+  .atlas-network-input__check { align-self: center; justify-self: center; width: 42px; height: 42px; padding: 0; border: 4px solid rgba(139,145,194,.24); border-radius: 999px; background: rgba(255,255,255,.45); color: #686b7d; font-size: 25px; line-height: 1; font-weight: 950; touch-action: manipulation; }
+  .atlas-network-input.is-done .atlas-network-input__check { border-color: rgba(185,204,124,.9); background: rgba(222,233,183,.96); }
+  .atlas-network-input__open { min-width: 0; padding: 18px 18px 18px 8px; border: 0; background: transparent; color: var(--atlas-text); text-align: left; touch-action: manipulation; }
+  .atlas-network-input__open strong { display: block; font-size: 22px; line-height: 1.06; font-weight: 950; letter-spacing: -.035em; }
+  .atlas-network-input__open small { display: block; margin-top: 7px; color: var(--atlas-purple-dark); font-size: 12px; line-height: 1.2; font-weight: 900; letter-spacing: .02em; }
+  .atlas-network-input__open span { display: block; margin-top: 9px; color: var(--atlas-muted); font-size: 14px; line-height: 1.35; font-weight: 750; white-space: pre-wrap; }
+  .atlas-network-input__check:focus-visible, .atlas-network-input__open:focus-visible { outline: 3px solid rgba(85,90,134,.38); outline-offset: -3px; }
+  .atlas-network-input__form { display: grid; gap: 10px; margin: 0 12px 12px; padding: 12px; border: 1px solid rgba(91,99,71,.18); border-radius: 16px; background: rgba(246,242,230,.82); }
+  .atlas-network-input__form textarea { width: 100%; min-height: 140px; resize: vertical; padding: 12px; border: 1px solid rgba(139,145,194,.24); border-radius: 14px; background: #fff; color: var(--atlas-text); font: inherit; font-size: 16px; line-height: 1.4; }
+  .atlas-network-input__form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .atlas-network-input__form-actions button { min-height: 48px; border: 1px solid rgba(139,145,194,.2); border-radius: 14px; background: rgba(255,255,255,.92); color: var(--atlas-text); font-weight: 950; }
+  .atlas-network-input__form-actions button[type="submit"] { background: rgba(214,225,177,.78); color: #515b34; }
+  .atlas-network-input__form p, .atlas-network-input__message, .atlas-network-task-message { margin: 0; color: #835345; font-size: 12px; line-height: 1.25; font-weight: 850; }
+  .atlas-network-input__message { padding: 0 18px 14px 62px; }
+  .atlas-network-task-message { padding: 12px 4px 0; text-align: center; }
+  .atlas-network-input button:disabled, .atlas-network-input textarea:disabled { opacity: .58; }
+  @media (max-width: 430px) {
+    .atlas-network-inputs { padding: 20px 12px 8px; }
+    .atlas-network-input__row { grid-template-columns: 52px minmax(0,1fr); min-height: 96px; }
+    .atlas-network-input__open { padding-right: 14px; }
+    .atlas-network-input__open strong { font-size: 21px; }
+  }
+`;
