@@ -91,6 +91,9 @@ jobs:
           npm test > atlas-test.log 2>&1
           status=$?
           if [ "$status" -ne 0 ]; then
+            while IFS= read -r failure; do
+              printf '::error title=Atlas test failure::%s\n' "$failure"
+            done < <(grep -E '^[[:space:]]*(✖|not ok [0-9]+ - )' atlas-test.log || true)
             tail -n 180 atlas-test.log
             exit "$status"
           fi

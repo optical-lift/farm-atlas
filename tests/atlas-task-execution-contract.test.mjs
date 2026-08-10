@@ -47,7 +47,7 @@ test("checklist tasks keep their checklist beneath the shared task instruction",
 
 test("explicit worker verbs cannot be reclassified by incidental words in the task text", () => {
   assert.match(display, /\["call", "phone", "research"/);
-  assert.match(display, /"sowing", "sow", "seed_sowing"/);
+  assert.match(display, /value === "sowing" \|\| value === "sow" \|\| value === "seed_sowing"/);
   assert.ok(display.indexOf('atlasMetaString(task, "display_location")') < display.indexOf('atlasTaskObjectLocation(task)'), "explicit task place outranks attached destination objects");
   assert.match(conditions, /if \(route === "general"\) return false/);
 });
