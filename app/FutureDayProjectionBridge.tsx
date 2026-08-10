@@ -150,7 +150,6 @@ export default function FutureDayProjectionBridge() {
           type="button"
           className="atlas-owner-planning-toggle"
           aria-expanded={planningOpen}
-          aria-controls="atlas-owner-day-planning-layer"
           onClick={() => setPlanningOpen((open) => !open)}
         >
           <strong>{planningOpen ? "Close planning" : "Plan today"}</strong>
