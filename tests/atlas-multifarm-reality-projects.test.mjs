@@ -9,13 +9,14 @@ const control = readFileSync(new URL("../components/atlas/portfolio/ProjectReali
 const route = readFileSync(new URL("../app/api/atlas/project-reality-state/route.ts", import.meta.url), "utf8");
 const migration = readFileSync(new URL("../supabase/migrations/20260809234500_multifarm_reality_projects_v1.sql", import.meta.url), "utf8");
 
-test("Owner Projects is scoped by farms and opens as an All Farms reality map", () => {
+test("Owner Projects is scoped by farms and opens as a blocker-first All Farms map", () => {
   assert.match(projectsPage, />All Farms</);
-  assert.match(projectsPage, />Your farms</);
+  assert.match(projectsPage, /Needs you now/);
+  assert.match(projectsPage, /FarmHomeLane/);
   assert.match(projectsPage, /home\.farms\.map/);
   assert.match(projectsPage, /farm\.northStar/);
   assert.match(projectsPage, /farm\.locationLabel/);
-  assert.match(projectsPage, /RealityLandscape/);
+  assert.match(projectsPage, /MiniRealityTrail/);
   assert.match(projectsPage, /Finding the shape/);
   assert.match(projectsPage, /Making it real/);
   assert.match(projectsPage, /Closing the loop/);
