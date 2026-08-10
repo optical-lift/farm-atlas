@@ -228,6 +228,11 @@ export default function AssignedTaskExecutionShell({
   };
   const timingLabel = assembly?.execution.dueLabel || task.due_date || null;
   const unresolved = assembly?.unresolved ?? [];
+  const canonicalDoneDisabled =
+    doneDisabled ||
+    !assembly ||
+    assembly.readiness.status === "blocked" ||
+    assembly.spine.connection === "stops_at_move";
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell" data-atlas-assigned-task-execution-shell="true">
@@ -294,7 +299,7 @@ export default function AssignedTaskExecutionShell({
                 <DefaultResultInstrument
                   busy={Boolean(saving)}
                   doneBusy={saving === "done"}
-                  doneDisabled={doneDisabled}
+                  doneDisabled={canonicalDoneDisabled}
                   unfinishedOpen={unfinishedOpen}
                   onToggleUnfinished={() => setUnfinishedOpen((open) => !open)}
                   onDone={() => void transition("done")}
