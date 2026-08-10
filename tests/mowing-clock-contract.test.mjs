@@ -78,7 +78,9 @@ test("mowing result UI and API preserve observation, operator mode, and canonica
     "equipment_or_area_problem",
     "closed_not_mowable",
   ]) assert.match(focus, new RegExp(outcome));
-  assert.match(focus, /Time does not claim the grass is long, dry, or safe to mow/);
+  assert.match(focus, /TaskExecutionBrief/);
+  assert.match(focus, /TaskPrimaryResultControls/);
+  assert.doesNotMatch(focus, /Time does not claim the grass is long, dry, or safe to mow/);
   assert.match(taskFocus, /isMowingTask/);
   assert.match(taskFocus, /MowingFocusPage/);
 
