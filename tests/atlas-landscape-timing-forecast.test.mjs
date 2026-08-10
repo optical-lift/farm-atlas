@@ -6,13 +6,20 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("annual landscape sowing cards keep biological timing in the Dominion card", () => {
-  const source = read("components/atlas/dominion-assigned-task-detail.tsx");
+test("annual landscape cards use the shared execution-detail contract", () => {
+  const dominion = read("components/atlas/dominion-assigned-task-detail.tsx");
+  const brief = read("components/atlas/task-execution-brief.tsx");
+  const execution = read("lib/atlas/task-execution.ts");
 
-  assert.match(source, /"sow window": "Sow window"/);
-  assert.match(source, /"first bloom": "First bloom"/);
-  assert.match(source, /display: "Expected display"/);
-  assert.match(source, /sow window\|germination\|transplant\|first bloom\|display\|harvest\|clear bed/);
-  assert.match(source, /<strong>Timing forecast<\/strong>/);
-  assert.match(source, /timing\.facts\.map/);
+  assert.match(dominion, /TaskExecutionBrief/);
+  assert.match(brief, /taskExecutionModel\(task\)/);
+  assert.match(brief, /More instructions/);
+  assert.match(execution, /metadataText\(task, "execution_details"\)/);
+  assert.match(execution, /details/);
+
+  // Timing belongs in the task's shared execution details now; Dominion should
+  // not maintain a second annual-only timing forecast parser or vocabulary.
+  assert.doesNotMatch(dominion, /<strong>Timing forecast<\/strong>/);
+  assert.doesNotMatch(dominion, /timing\.facts\.map/);
+  assert.doesNotMatch(dominion, /"sow window": "Sow window"/);
 });
