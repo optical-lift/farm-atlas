@@ -29,6 +29,15 @@ function titleCase(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function purchaseList(note: string | null | undefined) {
+  if (!note?.trim()) return [];
+  const normalized = note.trim().replace(/^Buy exactly:\s*/i, "");
+  return normalized
+    .split(/;\s*|\n+/)
+    .map((item) => item.trim().replace(/\.$/, ""))
+    .filter(Boolean);
+}
+
 function OrdinaryProjectTaskFocus({ focus, returnTo }: Props) {
   const [saving, setSaving] = useState<Outcome | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -39,7 +48,8 @@ function OrdinaryProjectTaskFocus({ focus, returnTo }: Props) {
   const currentNode = useMemo(() => atlasTrailCurrentNode(project.trail), [project.trail]);
   const familyLabel = focus.step?.title || currentNode?.label || titleCase(project.workstream);
   const locationLabel = project.farmName || focus.organizationName;
-  const detailLines = [task.blockerText, task.note].filter((value): value is string => Boolean(value && value.trim()));
+  const shoppingItems = task.taskType === "purchase" ? purchaseList(task.note) : [];
+  const detailLines = [task.blockerText, shoppingItems.length ? null : task.note].filter((value): value is string => Boolean(value && value.trim()));
 
   async function transition(outcome: Outcome, note = "") {
     try {
@@ -118,6 +128,21 @@ function OrdinaryProjectTaskFocus({ focus, returnTo }: Props) {
                 <span><small>Trail position</small>{familyLabel}</span>
               </footer>
             </section>
+
+            {shoppingItems.length ? (
+              <section className="atlas-task-shopping-list" aria-labelledby="atlas-shopping-list-title">
+                <header>
+                  <div>
+                    <small>Take with you</small>
+                    <strong id="atlas-shopping-list-title">Shopping list</strong>
+                  </div>
+                  <span>{shoppingItems.length} {shoppingItems.length === 1 ? "item" : "items"}</span>
+                </header>
+                <ul>
+                  {shoppingItems.map((item) => <li key={item}><span aria-hidden="true" />{item}</li>)}
+                </ul>
+              </section>
+            ) : null}
 
             {detailLines.length ? (
               <details className="atlas-task-procedure" open={task.status === "blocked"}>
