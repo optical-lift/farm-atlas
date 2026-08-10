@@ -8,6 +8,7 @@ import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-deta
 import NetworkOutreachTaskDetail from "@/components/atlas/network-outreach-task-detail";
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
+import TransplantReadinessTaskDetail from "@/components/atlas/transplant-readiness-task-detail";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -65,6 +66,13 @@ function isExecutionChecklistTask(task: AtlasTaskCard) {
     && task.metadata.execution_checklist_template_key.length > 0;
 }
 
+function isTransplantReadinessTask(task: AtlasTaskCard) {
+  return task.task_type === "transplant_readiness"
+    || task.metadata?.task_style === "transplant_readiness"
+    || task.metadata?.requires_transplant_readiness_check === true
+    || task.metadata?.requires_transplant_readiness_check === "true";
+}
+
 export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isContractorServiceTask(props.task)) return <ContractorServiceTaskDetail {...props} />;
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
@@ -74,6 +82,7 @@ export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
   if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
+  if (isTransplantReadinessTask(props.task)) return <TransplantReadinessTaskDetail {...props} />;
 
   return <DominionAssignedTaskDetail {...props} />;
 }
