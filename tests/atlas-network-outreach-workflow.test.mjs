@@ -33,7 +33,7 @@ test("network outreach is a reusable checklist family instead of a church-specif
   assert.match(detail, /task\.metadata\?\.thursday_slots/);
 });
 
-test("every contact records reality before the outreach batch can close", () => {
+test("every contact records reality and canonical Task Move readiness before the outreach batch can close", () => {
   assert.match(detail, /Interested/);
   assert.match(detail, /Maybe \/ follow up/);
   assert.match(detail, /Not interested/);
@@ -42,7 +42,12 @@ test("every contact records reality before the outreach batch can close", () => 
   assert.match(detail, /Wrong contact \/ referred elsewhere/);
   assert.match(detail, /Save result \+ mark contacted/);
   assert.match(detail, /allContactsDone/);
-  assert.match(detail, /disabled=\{taskBusy \|\| !allContactsDone\}/);
+  assert.match(detail, /const moveBlocked =/);
+  assert.match(detail, /!allContactsDone/);
+  assert.match(detail, /!context\.assembly/);
+  assert.match(detail, /context\.assembly\.readiness\.status === "blocked"/);
+  assert.match(detail, /context\.assembly\.spine\.connection === "stops_at_move"/);
+  assert.match(detail, /disabled=\{moveBlocked\}/);
   assert.match(detail, /transition: "checklist_done"/);
 });
 
