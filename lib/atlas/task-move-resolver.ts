@@ -1,44 +1,59 @@
 import "server-only";
 
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import {
+  effectiveOperatorMembershipId,
+  readAtlasOwnerOperatorContext,
+} from "@/lib/atlas/operator-context";
+import { getAtlasSession } from "@/lib/atlas/session";
 import { readAtlasTaskMoveContexts } from "@/lib/atlas/task-move-context";
 import { assembleTaskMove, type TaskMoveAssembly } from "@/lib/atlas/task-move-assembly";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
-type ReadError = { message?: string };
+type RpcError = { code?: string; message?: string };
 
-function uniqueTaskIds(taskIds: string[]) {
-  return Array.from(new Set(taskIds.map((taskId) => taskId.trim()).filter(Boolean)));
-}
+async function readTaskCardForCurrentViewer(taskId: string): Promise<AtlasTaskCard | null> {
+  const [operatorContext, session] = await Promise.all([
+    readAtlasOwnerOperatorContext(),
+    getAtlasSession(),
+  ]);
+  if (!session) return null;
 
-export async function resolveTaskMoves(taskIds: string[]): Promise<TaskMoveAssembly[]> {
-  const ids = uniqueTaskIds(taskIds);
-  if (!ids.length) return [];
+  const operatorMembershipId = effectiveOperatorMembershipId(operatorContext);
+  const activeFarmId = session.activeFarmId ?? session.memberships[0]?.farmId ?? null;
+  if (!operatorMembershipId && !activeFarmId) return null;
 
   const supabase = await createAtlasServerClient();
-  const [{ data, error }, moveContexts] = await Promise.all([
-    supabase.from("v_task_cards").select("*").in("task_id", ids),
-    readAtlasTaskMoveContexts(ids),
-  ]);
+  const response = operatorMembershipId
+    ? await supabase.rpc("owner_operator_task_cards_v1", {
+        p_effective_membership_id: operatorMembershipId,
+        p_task_id: taskId,
+      })
+    : await supabase.rpc("task_cards_v1", {
+        p_farm_id: activeFarmId,
+        p_task_id: taskId,
+      });
 
+  const { data, error } = response;
   if (error) {
-    throw new Error((error as ReadError).message || "Atlas task cards could not be loaded for Move assembly.");
+    const rpcError = error as RpcError;
+    if (rpcError.code === "42501") return null;
+    throw new Error(rpcError.message || "Atlas task card could not be loaded for Move assembly.");
   }
 
-  const cards = (data ?? []) as AtlasTaskCard[];
-  const byId = new Map(cards.map((card) => [card.task_id, card]));
-
-  return ids.flatMap((taskId) => {
-    const card = byId.get(taskId);
-    if (!card) return [];
-    return [assembleTaskMove({
-      ...card,
-      move_context: moveContexts[taskId] ?? null,
-    })];
-  });
+  return ((data ?? [])[0] as AtlasTaskCard | undefined) ?? null;
 }
 
 export async function resolveTaskMove(taskId: string): Promise<TaskMoveAssembly | null> {
-  const [assembly] = await resolveTaskMoves([taskId]);
-  return assembly ?? null;
+  const id = taskId.trim();
+  if (!id) return null;
+
+  const card = await readTaskCardForCurrentViewer(id);
+  if (!card) return null;
+
+  const moveContexts = await readAtlasTaskMoveContexts([id]);
+  return assembleTaskMove({
+    ...card,
+    move_context: moveContexts[id] ?? null,
+  });
 }
