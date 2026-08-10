@@ -11,7 +11,9 @@ import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import type { TaskMoveAssembly } from "@/lib/atlas/task-move-assembly";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
-export type AssignedTaskResultInstrumentContext = {
+export type AssignedTaskOutcome = "done" | "partial" | "blocked" | "not_relevant" | "changed_plan";
+
+export type AssignedTaskInstrumentContext = {
   task: AtlasTaskCard;
   assignee: AtlasAssigneeConfig;
   assembly: TaskMoveAssembly | null;
@@ -20,16 +22,21 @@ export type AssignedTaskResultInstrumentContext = {
   refreshTask: () => Promise<void>;
 };
 
+export type AssignedTaskMethodInstrument = (context: AssignedTaskInstrumentContext) => ReactNode;
+export type AssignedTaskResultInstrumentContext = AssignedTaskInstrumentContext;
 export type AssignedTaskResultInstrument = (context: AssignedTaskResultInstrumentContext) => ReactNode;
+export type AssignedTaskResultPayload = Record<string, unknown> | ((outcome: AssignedTaskOutcome) => Record<string, unknown>);
 
 export type AssignedTaskExecutionShellProps = {
   task: AtlasTaskCard;
   childTasks: AtlasTaskCard[];
   assignee: AtlasAssigneeConfig;
+  methodInstrument?: AssignedTaskMethodInstrument;
   resultInstrument?: AssignedTaskResultInstrument;
+  doneDisabled?: boolean;
+  resultPayload?: AssignedTaskResultPayload;
 };
 
-type Outcome = "done" | "partial" | "blocked" | "not_relevant" | "changed_plan";
 type TaskMoveResponse = { ok?: boolean; assembly?: TaskMoveAssembly; error?: string };
 
 function todayIso() {
@@ -55,6 +62,7 @@ function returnDestination(fallback: string) {
 function DefaultResultInstrument({
   busy,
   doneBusy,
+  doneDisabled,
   unfinishedOpen,
   onToggleUnfinished,
   onDone,
@@ -63,6 +71,7 @@ function DefaultResultInstrument({
 }: {
   busy: boolean;
   doneBusy: boolean;
+  doneDisabled: boolean;
   unfinishedOpen: boolean;
   onToggleUnfinished: () => void;
   onDone: () => void;
@@ -73,6 +82,7 @@ function DefaultResultInstrument({
     <TaskPrimaryResultControls
       busy={busy}
       doneBusy={doneBusy}
+      doneDisabled={doneDisabled}
       unfinishedOpen={unfinishedOpen}
       onToggleUnfinished={onToggleUnfinished}
       onDone={onDone}
@@ -92,7 +102,10 @@ export default function AssignedTaskExecutionShell({
   task: initialTask,
   childTasks: initialChildren,
   assignee,
+  methodInstrument,
   resultInstrument,
+  doneDisabled = false,
+  resultPayload,
 }: AssignedTaskExecutionShellProps) {
   const [task, setTask] = useState(initialTask);
   const [children, setChildren] = useState(initialChildren);
@@ -151,10 +164,11 @@ export default function AssignedTaskExecutionShell({
     setTask(data.taskCards[0]);
   }
 
-  async function transition(outcome: Outcome, note = "") {
+  async function transition(outcome: AssignedTaskOutcome, note = "") {
     try {
       setSaving(outcome);
       setMessage(null);
+      const additionalPayload = typeof resultPayload === "function" ? resultPayload(outcome) : (resultPayload ?? {});
       await postAtlasTaskTransition({
         taskId: task.task_id,
         transition: outcome,
@@ -162,7 +176,11 @@ export default function AssignedTaskExecutionShell({
         reason: note,
         laneKey: task.action_key || undefined,
         workKey: task.action_key || undefined,
-        payload: { workClass: task.work_class, assigneeKey: assignee.key },
+        payload: {
+          workClass: task.work_class,
+          assigneeKey: assignee.key,
+          ...additionalPayload,
+        },
       });
       if (outcome === "done" || outcome === "not_relevant" || outcome === "changed_plan") {
         window.location.assign(returnDestination(assignee.listPath));
@@ -200,7 +218,7 @@ export default function AssignedTaskExecutionShell({
   }
 
   const returnHref = assignee.listPath;
-  const resultContext: AssignedTaskResultInstrumentContext = {
+  const instrumentContext: AssignedTaskInstrumentContext = {
     task,
     assignee,
     assembly,
@@ -269,12 +287,14 @@ export default function AssignedTaskExecutionShell({
                 </ul>
               </section>
             ) : null}
+            {methodInstrument ? methodInstrument(instrumentContext) : null}
             <TaskChildChecklist childTasks={children} onChange={async () => setChildren((current) => [...current])} />
             <footer className="atlas-task-result-footer" data-atlas-primary-results="true">
-              {resultInstrument ? resultInstrument(resultContext) : (
+              {resultInstrument ? resultInstrument(instrumentContext) : (
                 <DefaultResultInstrument
                   busy={Boolean(saving)}
                   doneBusy={saving === "done"}
+                  doneDisabled={doneDisabled}
                   unfinishedOpen={unfinishedOpen}
                   onToggleUnfinished={() => setUnfinishedOpen((open) => !open)}
                   onDone={() => void transition("done")}
