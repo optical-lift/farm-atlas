@@ -23,9 +23,11 @@ test("Owner worker-day planning resolves the selected Farm Hand through one guar
   assert.doesNotMatch(reader, /23e98e5e-16ca-40d8-872c-c77e06baa167/);
 });
 
-test("Owner schedule ideas are woven into the real timeline and committed at its bottom", () => {
+test("Owner schedule ideas stay behind the Plan today gate until explicitly opened", () => {
   const component = read("components/atlas/owner-day-schedule-builder.tsx");
+  const gate = read("components/atlas/owner-day-plan-gate.tsx");
   const daySummary = read("components/atlas/day-trail-summary.tsx");
+  const layout = read("app/layout.tsx");
   const postRoute = read("app/api/atlas/owner-day-schedule/route.ts");
 
   assert.match(component, /\/api\/atlas\/worker-day-plan\?date=/);
@@ -45,8 +47,13 @@ test("Owner schedule ideas are woven into the real timeline and committed at its
   assert.match(component, /aria-pressed/);
   assert.match(component, /window\.location\.reload/);
 
-  assert.match(daySummary, /OwnerDayScheduleBuilder/);
-  assert.match(daySummary, /compact \? <OwnerDayScheduleBuilder \/>/);
+  assert.match(gate, /Plan today/);
+  assert.match(gate, /setOpen\(true\)/);
+  assert.match(gate, /setOpen\(false\)/);
+  assert.match(gate, /open \? <OwnerDayScheduleBuilder \/> : null/);
+  assert.match(gate, /Nothing enters the working day until you commit it/);
+  assert.doesNotMatch(daySummary, /OwnerDayScheduleBuilder/);
+  assert.match(layout, /OwnerDayPlanGate/);
 
   assert.match(postRoute, /owner_build_worker_day_schedule_api_v2/);
   assert.match(postRoute, /effective\.farmRole !== "farm_hand"/);
