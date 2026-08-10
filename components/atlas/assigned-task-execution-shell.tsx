@@ -60,6 +60,13 @@ function returnDestination(fallback: string) {
   return value && value.startsWith("/") && !value.startsWith("//") ? value : fallback;
 }
 
+function canonicalCompletionBlocked(assembly: TaskMoveAssembly | null, explicit: boolean) {
+  return explicit
+    || !assembly
+    || assembly.readiness.status === "blocked"
+    || assembly.spine.connection === "stops_at_move";
+}
+
 function DefaultResultInstrument({
   busy,
   doneBusy,
@@ -167,6 +174,7 @@ export default function AssignedTaskExecutionShell({
   }
 
   async function transition(outcome: AssignedTaskOutcome, note = "") {
+    if (outcome === "done" && canonicalCompletionBlocked(assembly, doneDisabled)) return;
     try {
       setSaving(outcome);
       setMessage(null);
@@ -296,7 +304,7 @@ export default function AssignedTaskExecutionShell({
                 <DefaultResultInstrument
                   busy={Boolean(saving)}
                   doneBusy={saving === "done"}
-                  doneDisabled={doneDisabled}
+                  doneDisabled={canonicalCompletionBlocked(assembly, doneDisabled)}
                   unfinishedOpen={unfinishedOpen}
                   onToggleUnfinished={() => setUnfinishedOpen((open) => !open)}
                   onDone={() => void transition("done")}
