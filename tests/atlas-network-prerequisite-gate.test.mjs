@@ -6,21 +6,27 @@ const networkDetail = readFileSync(
   new URL("../components/atlas/network-inputs-task-detail.tsx", import.meta.url),
   "utf8",
 );
+const executionShell = readFileSync(
+  new URL("../components/atlas/assigned-task-execution-shell.tsx", import.meta.url),
+  "utf8",
+);
 const prerequisiteMigration = readFileSync(
   new URL("../supabase/migrations/20260804090000_task_prerequisite_gates_and_network_outreach.sql", import.meta.url),
   "utf8",
 );
 
-test("the custom network checklist exposes the canonical task movement controls", () => {
-  assert.match(networkDetail, /async function reschedule\(/);
-  assert.match(networkDetail, /transition: "rescheduled"/);
-  assert.match(networkDetail, />Tomorrow<\/button>/);
-  assert.match(networkDetail, />Next week<\/button>/);
-  assert.match(networkDetail, />Pick a date<\/button>/);
-  assert.match(networkDetail, /"next_day"/);
-  assert.match(networkDetail, /Moved to next Elm Farm calendar day from assigned task page/);
-  assert.match(networkDetail, /Rescheduled from assigned task page/);
-  assert.match(networkDetail, /Move or close this card/);
+test("the custom network checklist delegates canonical task movement controls to the universal shell", () => {
+  assert.match(networkDetail, /AssignedTaskExecutionShell/);
+  assert.doesNotMatch(networkDetail, /async function reschedule\(/);
+  assert.match(executionShell, /async function reschedule\(/);
+  assert.match(executionShell, /transition: "rescheduled"/);
+  assert.match(executionShell, />Tomorrow<\/button>/);
+  assert.match(executionShell, />Next week<\/button>/);
+  assert.match(executionShell, /Pick a date/);
+  assert.match(executionShell, /"next_day"/);
+  assert.match(executionShell, /Moved to next Elm Farm calendar day/);
+  assert.match(executionShell, /Rescheduled from task page/);
+  assert.match(executionShell, /Move or close this card/);
 });
 
 test("network outreach waits behind explicit owner prerequisites", () => {
