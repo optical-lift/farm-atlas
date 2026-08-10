@@ -14,6 +14,10 @@ const dominionDetail = readFileSync(
   new URL("../components/atlas/dominion-assigned-task-detail.tsx", import.meta.url),
   "utf8",
 );
+const primaryResults = readFileSync(
+  new URL("../components/atlas/task-primary-result-controls.tsx", import.meta.url),
+  "utf8",
+);
 
 test("Anna generic assigned tasks use the canonical regular result grammar", () => {
   assert.doesNotMatch(canonicalDetail, /StructuredUnfinishedControl/);
@@ -32,8 +36,9 @@ test("the old conveyor remains available without owning Anna's ordinary task foo
   assert.match(conveyorDetail, /Farm changed/);
   assert.match(conveyorDetail, /Need lighter work/);
 
-  assert.match(dominionDetail, /"Done"/);
-  assert.match(dominionDetail, /Unfinished/);
+  assert.match(primaryResults, /doneLabel = "Done"/);
+  assert.match(primaryResults, />\s*Unfinished\s*</);
+  assert.match(dominionDetail, /TaskPrimaryResultControls/);
   assert.match(dominionDetail, />Tomorrow</);
   assert.match(dominionDetail, />Next week</);
   assert.match(dominionDetail, />Pick a date</);
