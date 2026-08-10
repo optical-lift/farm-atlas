@@ -69,6 +69,17 @@ function dateDistance(fromIso: string, toIso: string) {
   return Math.round((to - from) / 86_400_000);
 }
 
+function atlasOperatingDate() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = (type: "year" | "month" | "day") => parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
 function activeVisibleProjects(home: AtlasPortfolioHome) {
   return [...home.crossFarmProjects, ...home.farms.flatMap((farm) => farm.projects)]
     .filter((project) => project.status !== "paused" && project.status !== "archived" && project.portfolioType !== "incubator");
@@ -284,12 +295,10 @@ export async function readAtlasProjectsHomePriority(
     memberships = (membershipData ?? []) as MembershipRow[];
   }
 
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
   return rankAtlasProjectsHomePriority({
     home,
     ownerUserId,
-    today: local.toISOString().slice(0, 10),
+    today: atlasOperatingDate(),
     links,
     tasks,
     dependencies,
