@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-import TaskDominionTrail from "@/components/atlas/task-dominion-trail";
+import AssignedTaskExecutionShell, {
+  type AssignedTaskResultInstrumentContext,
+} from "@/components/atlas/assigned-task-execution-shell";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
@@ -57,9 +58,9 @@ function requestError(data: VisitResponse) {
   return data.error?.message || "Atlas could not save the contractor visit.";
 }
 
-export default function ContractorServiceTaskDetail({ task, assignee }: Props) {
+function ContractorServiceInstrument({ context }: { context: AssignedTaskResultInstrumentContext }) {
+  const { task, assembly, busy, returnHref } = context;
   const today = useMemo(() => todayIso(), []);
-  const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const [differentDay, setDifferentDay] = useState(false);
   const [serviceDate, setServiceDate] = useState(today);
   const [saving, setSaving] = useState<"yes" | "not_yet" | null>(null);
@@ -71,17 +72,14 @@ export default function ContractorServiceTaskDetail({ task, assignee }: Props) {
   const question = text(task.metadata?.status_question) || `Did ${provider} come?`;
   const cadenceDays = numberValue(task.metadata?.cadence_days);
   const price = numberValue(task.metadata?.price_per_visit);
-
-  useEffect(() => {
-    void fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" })
-      .then((response) => response.json())
-      .then((data: { ok?: boolean; label?: string }) => setWeatherLabel(data.ok && data.label ? data.label : "weather unavailable"))
-      .catch(() => setWeatherLabel("weather unavailable"));
-  }, []);
+  const moveBlocked = busy
+    || !assembly
+    || assembly.readiness.status === "blocked"
+    || assembly.spine.connection === "stops_at_move";
 
   async function confirmVisit() {
     const actualDate = differentDay ? serviceDate : today;
-    if (!actualDate || saving) return;
+    if (!actualDate || saving || moveBlocked) return;
     try {
       setSaving("yes");
       setMessage(null);
@@ -97,7 +95,7 @@ export default function ContractorServiceTaskDetail({ task, assignee }: Props) {
       });
       const data = await response.json() as VisitResponse;
       if (!response.ok || !data.ok) throw new Error(requestError(data));
-      window.location.assign(assignee.listPath);
+      window.location.assign(returnHref);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not save the contractor visit.");
     } finally {
@@ -106,7 +104,7 @@ export default function ContractorServiceTaskDetail({ task, assignee }: Props) {
   }
 
   async function notYet() {
-    if (saving) return;
+    if (saving || busy) return;
     try {
       setSaving("not_yet");
       setMessage(null);
@@ -119,7 +117,7 @@ export default function ContractorServiceTaskDetail({ task, assignee }: Props) {
         workKey: task.action_key || undefined,
         payload: { contractorServiceStatus: "not_yet" },
       });
-      window.location.assign(assignee.listPath);
+      window.location.assign(returnHref);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not move the contractor check.");
     } finally {
@@ -128,83 +126,76 @@ export default function ContractorServiceTaskDetail({ task, assignee }: Props) {
   }
 
   return (
-    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
-      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
-        <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href={assignee.listPath} className="atlas-phone-brand atlas-task-header-brand">
-            <span className="atlas-phone-kicker">Atlas</span>
-            <span className="atlas-phone-title">{assignee.label}</span>
-          </Link>
-          <span className="atlas-weather-line">{weatherLabel}</span>
-          <Link href={assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
-        </header>
+    <section
+      className={styles.statusCard}
+      aria-label={`${provider} visit status`}
+      data-atlas-result-instrument="contractor-service"
+    >
+      <h2 className={styles.question}>{question}</h2>
 
-        <div className="atlas-task-page-body">
-          <article className="atlas-task-page-active atlas-task-ticket-card atlas-dominion-task-card">
-            <TaskDominionTrail task={task} instruction={question} />
+      <div className={styles.context}>
+        {price !== null ? <span>${price.toLocaleString("en-US")} visit</span> : null}
+        {cadenceDays !== null ? <span>Every {cadenceDays} days</span> : null}
+        {task.due_date ? <span>Expected {task.due_date}</span> : null}
+      </div>
 
-            <section className={styles.statusCard} aria-label={`${provider} visit status`}>
-              <h2 className={styles.question}>{question}</h2>
+      <div className={styles.dateChoice}>
+        <label>
+          <input
+            type="checkbox"
+            checked={differentDay}
+            disabled={Boolean(saving) || busy}
+            onChange={(event) => setDifferentDay(event.target.checked)}
+          />
+          <span>They came on a different day</span>
+        </label>
 
-              <div className={styles.context}>
-                {price !== null ? <span>${price.toLocaleString("en-US")} visit</span> : null}
-                {cadenceDays !== null ? <span>Every {cadenceDays} days</span> : null}
-                {task.due_date ? <span>Expected {task.due_date}</span> : null}
-              </div>
+        {differentDay ? (
+          <label className={styles.dateField}>
+            <span>When did they come?</span>
+            <input
+              type="date"
+              value={serviceDate}
+              max={today}
+              disabled={Boolean(saving) || busy}
+              onChange={(event) => setServiceDate(event.target.value)}
+            />
+          </label>
+        ) : null}
+      </div>
 
-              <div className={styles.dateChoice}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={differentDay}
-                    disabled={Boolean(saving)}
-                    onChange={(event) => setDifferentDay(event.target.checked)}
-                  />
-                  <span>They came on a different day</span>
-                </label>
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={styles.yes}
+          disabled={moveBlocked || Boolean(saving) || (differentDay && !serviceDate)}
+          onClick={() => void confirmVisit()}
+        >
+          {saving === "yes" ? "Saving…" : "Yes"}
+        </button>
+        <button
+          type="button"
+          className={styles.notYet}
+          disabled={Boolean(saving) || busy}
+          onClick={() => void notYet()}
+        >
+          {saving === "not_yet" ? "Moving…" : "Not yet"}
+        </button>
+      </div>
 
-                {differentDay ? (
-                  <label className={styles.dateField}>
-                    <span>When did they come?</span>
-                    <input
-                      type="date"
-                      value={serviceDate}
-                      max={today}
-                      disabled={Boolean(saving)}
-                      onChange={(event) => setServiceDate(event.target.value)}
-                    />
-                  </label>
-                ) : null}
-              </div>
+      <p className={styles.helper}>
+        If they came today, just tap Yes. If they came earlier, choose the date first so Atlas anchors the next mowing check to the actual visit.
+      </p>
 
-              <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={styles.yes}
-                  disabled={Boolean(saving) || (differentDay && !serviceDate)}
-                  onClick={() => void confirmVisit()}
-                >
-                  {saving === "yes" ? "Saving…" : "Yes"}
-                </button>
-                <button
-                  type="button"
-                  className={styles.notYet}
-                  disabled={Boolean(saving)}
-                  onClick={() => void notYet()}
-                >
-                  {saving === "not_yet" ? "Moving…" : "Not yet"}
-                </button>
-              </div>
-
-              <p className={styles.helper}>
-                If they came today, just tap Yes. If they came earlier, choose the date first so Atlas anchors the next mowing check to the actual visit.
-              </p>
-
-              {message ? <p className={styles.message}>{message}</p> : null}
-            </section>
-          </article>
-        </div>
-      </section>
-    </main>
+      {message ? <p className={styles.message}>{message}</p> : null}
+    </section>
   );
+}
+
+function resultInstrument(context: AssignedTaskResultInstrumentContext) {
+  return <ContractorServiceInstrument context={context} />;
+}
+
+export default function ContractorServiceTaskDetail(props: Props) {
+  return <AssignedTaskExecutionShell {...props} resultInstrument={resultInstrument} />;
 }
