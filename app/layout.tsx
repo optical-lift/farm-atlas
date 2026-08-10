@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
 import AtlasBellCover from "@/components/atlas/home/AtlasBellCover";
+import OwnerDayPlanningDisclosure from "@/components/atlas/owner-day-planning-disclosure";
 import AtlasPwaBridge from "@/components/atlas/pwa/AtlasPwaBridge";
 import AtlasContextualAppFrame from "@/components/atlas/shell/AtlasContextualAppFrame";
 import DependencyReleaseFlash from "@/components/atlas/task/DependencyReleaseFlash";
@@ -182,6 +183,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <DayConsequenceTimelinePatch />
         <AtlasFarmConditionsHomePatch />
         <Suspense fallback={null}><FutureDayProjectionBridge /></Suspense>
+        {activeMembership?.role === "owner" ? (
+          <Suspense fallback={null}><OwnerDayPlanningDisclosure /></Suspense>
+        ) : null}
         {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}
       </body>
