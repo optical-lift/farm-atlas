@@ -46,14 +46,16 @@ test("set-aside visibility lasts until the actual return date", () => {
 test("Anna generic task detail uses the regular Done and Unfinished result set", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const dominion = read("components/atlas/dominion-assigned-task-detail.tsx");
+  const results = read("components/atlas/task-primary-result-controls.tsx");
   const weed = read("components/atlas/weed-card-task-focus.tsx");
   const display = read("lib/atlas/task-display.ts");
 
   assert.doesNotMatch(canonical, /FarmHandConveyorTaskDetail/);
   assert.doesNotMatch(canonical, /props\.assignee\.key === "anna"/);
   assert.match(canonical, /return <DominionAssignedTaskDetail/);
-  assert.match(dominion, /"Done"/);
-  assert.match(dominion, /Unfinished/);
+  assert.match(dominion, /TaskPrimaryResultControls/);
+  assert.match(results, /doneLabel = "Done"/);
+  assert.match(results, />\s*Unfinished\s*</);
   assert.match(dominion, /"Partly done"/);
   assert.match(dominion, /"Problem found"/);
   assert.match(weed, /atlas-task-move-drawer atlas-weed-move-drawer/);
