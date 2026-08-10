@@ -22,8 +22,8 @@ const conveyorDetail = readFileSync(
   new URL("../components/atlas/farm-hand-conveyor-task-detail.tsx", import.meta.url),
   "utf8",
 );
-const dominionDetail = readFileSync(
-  new URL("../components/atlas/dominion-assigned-task-detail.tsx", import.meta.url),
+const executionShell = readFileSync(
+  new URL("../components/atlas/assigned-task-execution-shell.tsx", import.meta.url),
   "utf8",
 );
 const primaryResults = readFileSync(
@@ -44,24 +44,26 @@ test("operation class remains available without replacing the canonical result g
 
   assert.doesNotMatch(canonicalDetail, /atlasTaskResultMode\(props\.task\)/);
   assert.doesNotMatch(canonicalDetail, /props\.assignee\.key === "anna" && resultMode === "field_execution"/);
-  assert.match(canonicalDetail, /return <DominionAssignedTaskDetail/);
+  assert.match(canonicalDetail, /return <AssignedTaskExecutionShell/);
 });
 
 test("specialized task families resolve before ordinary canonical result fallback", () => {
-  const fallbackIndex = canonicalDetail.indexOf("return <DominionAssignedTaskDetail");
+  const fallbackIndex = canonicalDetail.indexOf("return <AssignedTaskExecutionShell");
+  assert.ok(fallbackIndex >= 0, "ordinary task fallback should use AssignedTaskExecutionShell");
   for (const specialized of [
     "ContractorServiceTaskDetail",
     "DecisionSelectorTaskDetail",
     "WeedCardTaskLoader",
     "SeedInventoryTaskLoader",
     "BuyerOutreachTaskDetail",
+    "NetworkOutreachTaskDetail",
     "NetworkInputsTaskDetail",
     "ExecutionChecklistTaskDetail",
     "ProjectPullTaskDetail",
     "TransplantReadinessTaskDetail",
   ]) {
     const routeIndex = canonicalDetail.lastIndexOf(`return <${specialized}`, fallbackIndex);
-    assert.ok(routeIndex >= 0 && routeIndex < fallbackIndex, `${specialized} should route before ordinary result fallback`);
+    assert.ok(routeIndex >= 0 && routeIndex < fallbackIndex, `${specialized} should route before ordinary result fallback until Pass 6 migrates it`);
   }
 });
 
@@ -69,13 +71,13 @@ test("ordinary execution uses the existing canonical result grammar", () => {
   assert.match(primaryResults, /doneLabel = "Done"/);
   assert.match(primaryResults, /doneBusyLabel = "Finishing"/);
   assert.match(primaryResults, />\s*Unfinished\s*</);
-  assert.match(dominionDetail, /"Partly done"/);
-  assert.match(dominionDetail, /"Problem found"/);
-  assert.match(dominionDetail, />Tomorrow</);
-  assert.match(dominionDetail, />Next week</);
-  assert.match(dominionDetail, />Pick a date</);
-  assert.match(dominionDetail, />Changed plan</);
-  assert.match(dominionDetail, />Not relevant</);
+  assert.match(executionShell, /"Partly done"/);
+  assert.match(executionShell, /"Problem found"/);
+  assert.match(executionShell, />Tomorrow</);
+  assert.match(executionShell, />Next week</);
+  assert.match(executionShell, />Pick a date</);
+  assert.match(executionShell, />Changed plan</);
+  assert.match(executionShell, />Not relevant</);
 
   // The adaptive conveyor remains available as a component, but it is no longer
   // the default result grammar for Anna's ordinary field_execution tasks.
