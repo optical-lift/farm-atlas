@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CropObservationPanel } from "@/components/atlas/crop-observation-panel";
 import MaintenanceDirectiveComposer from "@/components/atlas/maintenance-directive-composer";
-import ObjectWorkComposer from "@/components/atlas/object-work-composer";
 import { ObjectQuickLog } from "@/components/atlas/object-quick-log";
 import AtlasTrail from "@/components/atlas/trail/AtlasTrail";
 import { WalkwayCardPanel } from "@/components/atlas/walkway-card-panel";
@@ -218,12 +217,6 @@ export default function AtlasObjectPage() {
                   <p className="atlas-object-empty">No current crop cycle or permanent plant is attached.</p>
                 ) : null}
               </section>
-
-              <ObjectWorkComposer
-                objectKey={object.object_key}
-                cropCycles={cropCycles}
-                onSaved={() => loadObject(false)}
-              />
 
               <MaintenanceDirectiveComposer
                 objectKey={object.object_key}
