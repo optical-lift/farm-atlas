@@ -6,23 +6,25 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("every weed task routes to the occupancy-aware persistent Weed Card", () => {
+test("every weed task routes to the occupancy-aware persistent Weed Card inside the universal shell", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
-  const trail = read("components/atlas/task-dominion-trail.tsx");
+  const shell = read("components/atlas/assigned-task-execution-shell.tsx");
   const occupancy = read("components/atlas/crop-occupancy-list.tsx");
 
   assert.match(canonical, /isWeedTask/);
   assert.match(canonical, /if \(isWeedTask\(props\.task\)\) return <WeedCardTaskLoader/);
   assert.doesNotMatch(canonical, /<ConciseWeedTaskDetail/);
   assert.match(loader, /<ConciseWeedTaskDetail/);
+  assert.match(loader, /childTasks=\{childTasks\}/);
+  assert.match(focus, /AssignedTaskExecutionShell/);
   assert.match(focus, /<CropOccupancyList groups=\{card\.occupancyGroups\} \/>/);
-  assert.match(focus, /showSubjectLabel=\{false\}/);
-  assert.match(focus, /moveDetails=/);
-  assert.match(focus, /presentation="weed-sheet"/);
-  assert.match(trail, /moveDetails\?: ReactNode/);
-  assert.match(trail, /atlas-task-dominion-weed-map/);
+  assert.match(focus, /data-atlas-method-instrument="weed-card"/);
+  assert.match(focus, /methodInstrument=\{methodInstrument\}/);
+  assert.match(focus, /resultInstrument=\{resultInstrument\}/);
+  assert.doesNotMatch(focus, /TaskDominionTrail|showSubjectLabel|moveDetails=|presentation="weed-sheet"/);
+  assert.match(shell, /methodInstrument \? methodInstrument\(instrumentContext\)/);
   assert.match(occupancy, /group\.groupLabel/);
   assert.match(occupancy, /cohort\.placementSummary/);
   assert.match(occupancy, /cohort\.stageLabel/);
