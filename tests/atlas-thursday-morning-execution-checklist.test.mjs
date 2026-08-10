@@ -12,13 +12,16 @@ const split = read("supabase/migrations/20260804074500_split_thursday_morning_in
 const capacityOrder = read("supabase/migrations/20260804075000_thursday_morning_cluster_capacity_order_v2.sql");
 const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
 const detail = read("components/atlas/execution-checklist-task-detail.tsx");
+const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 const execution = read("lib/atlas/task-execution.ts");
 const route = read("app/api/atlas/task-execution-checklist/route.ts");
 
 test("Thursday morning preparation opens as four themed tasks with visible checklists", () => {
   assert.match(canonical, /ExecutionChecklistTaskDetail/);
   assert.match(canonical, /execution_checklist_template_key/);
-  assert.match(detail, /TaskExecutionBrief task=\{task\}/);
+  assert.match(detail, /AssignedTaskExecutionShell/);
+  assert.match(detail, /methodInstrument=\{methodInstrument\}/);
+  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
   assert.match(detail, /atlas-execution-checklist__section/);
   assert.match(detail, /execution_checklist_kicker/);
   assert.match(detail, /execution_checklist_title/);
@@ -81,6 +84,7 @@ test("the split preserves prior checks as history while retired v1 lines stop bl
   assert.match(clusters, /metadata ->> 'retired'/);
   assert.match(clusters, /Complete every required checklist item before finishing this task/);
   assert.match(detail, /checklist\?\.ready !== true/);
+  assert.match(detail, /completion_source: outcome === "done" \? "execution_checklist" : "task_card"/);
 });
 
 test("current and future Thursday mornings expand to one occurrence per cluster", () => {
