@@ -36,10 +36,6 @@ begin
 end;
 $$;
 
-revoke all on function atlas.owner_worker_day_plan_api_v1(uuid, uuid, date, timestamptz) from public;
-grant execute on function atlas.owner_worker_day_plan_api_v1(uuid, uuid, date, timestamptz) to authenticated;
-grant execute on function atlas.owner_worker_day_plan_api_v1(uuid, uuid, date, timestamptz) to service_role;
-
 create or replace function atlas.owner_build_worker_day_schedule_api_v2(
   p_farm_id uuid,
   p_membership_id uuid,
@@ -81,10 +77,6 @@ begin
   );
 end;
 $$;
-
-revoke all on function atlas.owner_build_worker_day_schedule_api_v2(uuid, uuid, date, uuid[], text, uuid, timestamptz) from public;
-grant execute on function atlas.owner_build_worker_day_schedule_api_v2(uuid, uuid, date, uuid[], text, uuid, timestamptz) to authenticated;
-grant execute on function atlas.owner_build_worker_day_schedule_api_v2(uuid, uuid, date, uuid[], text, uuid, timestamptz) to service_role;
 
 comment on function atlas.owner_worker_day_plan_api_v1(uuid, uuid, date, timestamptz)
   is 'Authenticated owner-only worker-day planning read wrapper.';
