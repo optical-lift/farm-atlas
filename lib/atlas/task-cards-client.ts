@@ -21,6 +21,7 @@ export type AtlasTaskCardObject = {
 export type AtlasTaskCardResourceRequirement = {
   requirement_id: string;
   requirement_role: string;
+  move_role: string | null;
   requirement_source: string;
   quantity_needed: number | null;
   unit: string | null;
