@@ -35,3 +35,9 @@ test("project blocker ranking is consequence-first rather than overdue-task-firs
   assert.match(priority, /ownerActionable/);
   assert.match(priority, /rootProjectIds/);
 });
+
+test("Projects priority uses the farms' Central operating date instead of Vercel UTC", () => {
+  assert.match(priority, /timeZone: "America\/Chicago"/);
+  assert.match(priority, /today: atlasOperatingDate\(\)/);
+  assert.doesNotMatch(priority, /getTimezoneOffset\(\)/);
+});
