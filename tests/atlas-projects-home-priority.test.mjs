@@ -26,14 +26,24 @@ test("Projects home groups compact Worlds by farm and uses Atlas trail lines and
   assert.match(page, /CrossFarmHomeLane/);
 });
 
-test("project blocker ranking is consequence-first rather than overdue-task-first", () => {
+test("project blocker ranking is consequence-first and treats current completion-gated servings as real blockers", () => {
   assert.match(priority, /downstreamUnlockCount \* 18/);
   assert.match(priority, /blockedMembershipCount \* 22/);
+  assert.match(priority, /currentQueueServing\) score \+= 28/);
+  assert.match(priority, /release_queue_policy === "completion_gated_serial"/);
+  assert.match(priority, /completion_gate_serving/);
   assert.match(priority, /hardDate[\s\S]*daysToTarget/);
-  assert.match(priority, /Ordinary overdue Owner chores never become the hero/);
+  assert.match(priority, /current completion-gated project serving is itself a blocker/);
   assert.match(priority, /task\.status !== "open"/);
   assert.match(priority, /ownerActionable/);
   assert.match(priority, /rootProjectIds/);
+});
+
+test("Projects priority reads dependency context through the governed Atlas RPC instead of exposing prerequisite rows", () => {
+  assert.match(priority, /task_move_context_batch_v1/);
+  assert.match(priority, /\.rpc\("task_move_context_batch_v1"/);
+  assert.match(priority, /moveContexts/);
+  assert.doesNotMatch(priority, /\.from\("task_prerequisites"\)/);
 });
 
 test("Projects priority uses the farms' Central operating date instead of Vercel UTC", () => {
