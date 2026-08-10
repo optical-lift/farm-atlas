@@ -93,7 +93,7 @@ jobs:
           if [ "$status" -ne 0 ]; then
             while IFS= read -r failure; do
               printf '::error title=Atlas test failure::%s\n' "$failure"
-            done < <(grep -E '^not ok [0-9]+ - ' atlas-test.log || true)
+            done < <(grep -E '^[[:space:]]*(✖|not ok [0-9]+ - )' atlas-test.log || true)
             tail -n 180 atlas-test.log
             exit "$status"
           fi
