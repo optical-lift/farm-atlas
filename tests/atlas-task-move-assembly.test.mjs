@@ -76,28 +76,29 @@ test("one assembly keeps task identity, execution, farm objects, and readiness t
   assert.equal(result.readiness.status, "ready");
 });
 
-test("actual task resource requirements are first-class assembly branches", () => {
+test("actual task resource requirements keep obligation and physical move role separate", () => {
   const result = assemble({
     task_id: "11111111-1111-4111-8111-111111111111",
     title: "Pot up · Snow in Summer",
-    task_type: "propagation",
+    task_type: "pot_up",
     status: "open",
     priority: "high",
     resource_requirements: [{
       requirement_id: "tray-requirement",
-      requirement_role: "container",
-      requirement_source: "owner",
+      requirement_role: "required",
+      move_role: "container",
+      requirement_source: "manual",
       quantity_needed: 3,
-      unit: "tray",
-      status: "ready",
+      unit: "trays",
+      status: "available",
       note: null,
-      resource_key: "tray_200_cell",
-      resource_label: "200-cell tray",
+      resource_key: "pot_up_tray_200_cell",
+      resource_label: "200-Cell Pot-Up Tray",
       resource_type: "container",
-      resource_category: "tray",
+      resource_category: "seed_starting",
       resource_status: "available",
       resource_quantity: 5,
-      resource_unit: "tray",
+      resource_unit: "trays",
       condition_notes: null,
       restock_needed: false,
     }],
@@ -107,18 +108,19 @@ test("actual task resource requirements are first-class assembly branches", () =
   });
 
   assert.equal(result.requirements.resources.length, 1);
-  assert.equal(result.requirements.resources[0].role, "container");
-  assert.equal(result.requirements.resources[0].label, "200-cell tray");
+  assert.equal(result.requirements.resources[0].requirementRole, "required");
+  assert.equal(result.requirements.resources[0].moveRole, "container");
+  assert.equal(result.requirements.resources[0].label, "200-Cell Pot-Up Tray");
   assert.equal(result.requirements.resources[0].quantityNeeded, 3);
   assert.equal(result.requirements.resources[0].source, "resource_requirement");
   assert.equal(result.requirements.resources[0].resolution, "resolved");
 });
 
-test("action templates surface required resources that have not been attached to the task", () => {
+test("action templates compare expected categories against move role, resource type, and category", () => {
   const result = assemble({
     task_id: "22222222-2222-4222-8222-222222222222",
     title: "Pot up · Snow in Summer",
-    task_type: "propagation",
+    task_type: "pot_up",
     status: "open",
     priority: "high",
     action_templates: [{
@@ -126,7 +128,7 @@ test("action templates surface required resources that have not been attached to
       template_key: "pot_up",
       template_label: "Pot up",
       action_type: "pot_up",
-      required_resource_categories: ["growing_medium", "tray"],
+      required_resource_categories: ["container", "growing_medium"],
       optional_resource_categories: [],
       required_resource_keys: [],
       optional_resource_keys: [],
@@ -137,19 +139,20 @@ test("action templates surface required resources that have not been attached to
     }],
     resource_requirements: [{
       requirement_id: "tray-requirement",
-      requirement_role: "container",
-      requirement_source: "owner",
+      requirement_role: "required",
+      move_role: "container",
+      requirement_source: "manual",
       quantity_needed: 4,
-      unit: "tray",
-      status: "ready",
+      unit: "trays",
+      status: "available",
       note: null,
-      resource_key: "tray_200_cell",
-      resource_label: "200-cell tray",
+      resource_key: "pot_up_tray_200_cell",
+      resource_label: "200-Cell Pot-Up Tray",
       resource_type: "container",
-      resource_category: "tray",
+      resource_category: "seed_starting",
       resource_status: "available",
       resource_quantity: 4,
-      resource_unit: "tray",
+      resource_unit: "trays",
       condition_notes: null,
       restock_needed: false,
     }],
@@ -166,6 +169,43 @@ test("action templates surface required resources that have not been attached to
   assert.equal(result.unresolved[0].kind, "resource_requirement");
 });
 
+test("unknown or needs-check availability stays visible as a warning", () => {
+  const result = assemble({
+    task_id: "66666666-6666-4666-8666-666666666666",
+    title: "Pot up · Snow in Summer",
+    task_type: "pot_up",
+    status: "open",
+    priority: "high",
+    resource_requirements: [{
+      requirement_id: "mix-requirement",
+      requirement_role: "required",
+      move_role: "growing_medium",
+      requirement_source: "manual",
+      quantity_needed: null,
+      unit: null,
+      status: "needs_check",
+      note: "Quantity not confirmed.",
+      resource_key: "potting_mix",
+      resource_label: "Potting Mix",
+      resource_type: "soil_amendment",
+      resource_category: "growing_medium",
+      resource_status: "unknown",
+      resource_quantity: null,
+      resource_unit: null,
+      condition_notes: null,
+      restock_needed: false,
+    }],
+  }, {
+    route: "propagation",
+    placeText: "Grow Room",
+  });
+
+  assert.equal(result.requirements.resources[0].moveRole, "growing_medium");
+  assert.equal(result.requirements.resources[0].resolution, "warning");
+  assert.equal(result.readiness.status, "warning");
+  assert.equal(result.unresolved[0].label, "Potting Mix");
+});
+
 test("resource shortages and blockers remain truthful rather than disappearing into prose", () => {
   const result = assemble({
     task_id: "33333333-3333-4333-8333-333333333333",
@@ -176,11 +216,12 @@ test("resource shortages and blockers remain truthful rather than disappearing i
     blocker_text: "Waiting for Thursday flower buckets",
     resource_requirements: [{
       requirement_id: "bucket-requirement",
-      requirement_role: "container",
-      requirement_source: "owner",
+      requirement_role: "required",
+      move_role: "container",
+      requirement_source: "manual",
       quantity_needed: 12,
-      unit: "bucket",
-      status: "required",
+      unit: "buckets",
+      status: "needed",
       note: null,
       resource_key: "black_florist_bucket",
       resource_label: "Black florist bucket",
@@ -188,7 +229,7 @@ test("resource shortages and blockers remain truthful rather than disappearing i
       resource_category: "bucket",
       resource_status: "available",
       resource_quantity: 7,
-      resource_unit: "bucket",
+      resource_unit: "buckets",
       condition_notes: null,
       restock_needed: true,
     }],
@@ -244,7 +285,7 @@ test("legacy execution metadata is visible as provenance rather than mistaken fo
   const result = assemble({
     task_id: "55555555-5555-4555-8555-555555555555",
     title: "Pot up · Snow in Summer",
-    task_type: "propagation",
+    task_type: "pot_up",
     status: "open",
     priority: "high",
     metadata: {
@@ -270,12 +311,28 @@ test("legacy execution metadata is visible as provenance rather than mistaken fo
   assert.equal(result.requirements.resources.length, 0);
 });
 
+test("Pass 2 migration makes Snow in Summer requirements canonical without pretending availability", () => {
+  const source = read("supabase/migrations/20260810183000_task_move_resource_roles_and_snow_in_summer_requirements_v1.sql");
+  assert.match(source, /add column if not exists move_role text/i);
+  assert.match(source, /pot_up_tray_200_cell/);
+  assert.match(source, /pot_up_tray_120_cell/);
+  assert.match(source, /potting_mix/);
+  assert.match(source, /'container'/);
+  assert.match(source, /'growing_medium'/);
+  assert.match(source, /'unknown'/);
+  assert.match(source, /'needs_check'/);
+  assert.match(source, /anna_20260810_pot_up_200_cell_snow_in_summer_tray_1/);
+  assert.match(source, /'move_role', trr\.move_role/);
+  assert.doesNotMatch(source, /grow_light_sets'.*'required'/s);
+});
+
 test("the TypeScript adapter converges existing execution and context layers instead of creating another task model", () => {
   const source = read("lib/atlas/task-move-assembly.ts");
   assert.match(source, /taskExecutionModel\(task\)/);
   assert.match(source, /taskDominionModel\(task, null\)/);
   assert.match(source, /task\.move_context/);
   assert.match(source, /export type TaskMoveAssembly/);
+  assert.match(source, /export type TaskMoveResourceRole/);
   assert.match(source, /requirements:/);
   assert.match(source, /unresolved:/);
   assert.match(source, /readiness:/);
