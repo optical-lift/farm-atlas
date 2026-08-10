@@ -33,6 +33,7 @@ export type AssignedTaskExecutionShellProps = {
   assignee: AtlasAssigneeConfig;
   methodInstrument?: AssignedTaskMethodInstrument;
   resultInstrument?: AssignedTaskResultInstrument;
+  supplementalResultInstrument?: AssignedTaskResultInstrument;
   doneDisabled?: boolean;
   resultPayload?: AssignedTaskResultPayload;
 };
@@ -104,6 +105,7 @@ export default function AssignedTaskExecutionShell({
   assignee,
   methodInstrument,
   resultInstrument,
+  supplementalResultInstrument,
   doneDisabled = false,
   resultPayload,
 }: AssignedTaskExecutionShellProps) {
@@ -302,6 +304,7 @@ export default function AssignedTaskExecutionShell({
                   onBlocked={() => void transition("blocked", window.prompt("What problem did you find?", "")?.trim() || "Problem found")}
                 />
               )}
+              {supplementalResultInstrument ? supplementalResultInstrument(instrumentContext) : null}
               <details className="atlas-task-more-outcomes">
                 <summary><span>Move or close this card</span><b aria-hidden="true">⌄</b></summary>
                 <div className="atlas-task-more-outcomes-body">
