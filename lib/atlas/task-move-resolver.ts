@@ -20,19 +20,24 @@ async function readTaskCardForCurrentViewer(taskId: string): Promise<AtlasTaskCa
   if (!session) return null;
 
   const operatorMembershipId = effectiveOperatorMembershipId(operatorContext);
-  const activeFarmId = session.activeFarmId ?? session.memberships[0]?.farmId ?? null;
-  if (!operatorMembershipId && !activeFarmId) return null;
+  if (operatorContext?.isOperating && !operatorMembershipId) return null;
 
   const supabase = await createAtlasServerClient();
-  const response = operatorMembershipId
-    ? await supabase.rpc("owner_operator_task_cards_v1", {
-        p_effective_membership_id: operatorMembershipId,
-        p_task_id: taskId,
-      })
-    : await supabase.rpc("task_cards_v1", {
-        p_farm_id: activeFarmId,
-        p_task_id: taskId,
-      });
+  let response;
+
+  if (operatorMembershipId) {
+    response = await supabase.rpc("owner_operator_task_cards_v1", {
+      p_effective_membership_id: operatorMembershipId,
+      p_task_id: taskId,
+    });
+  } else {
+    const activeFarmId = session.activeFarmId ?? session.memberships[0]?.farmId ?? null;
+    if (!activeFarmId) return null;
+    response = await supabase.rpc("task_cards_v1", {
+      p_farm_id: activeFarmId,
+      p_task_id: taskId,
+    });
+  }
 
   const { data, error } = response;
   if (error) {
