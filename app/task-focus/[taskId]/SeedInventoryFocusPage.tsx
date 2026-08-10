@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
+import type { TaskMoveAssembly } from "@/lib/atlas/task-move-assembly";
 import styles from "./HarvestFocus.module.css";
 
 export type SeedInventoryDependency = {
@@ -70,7 +70,54 @@ function quantityLabel(value: number | null, unit: string) {
   return value === null ? "Unknown" : `${value.toLocaleString()} ${unit}`;
 }
 
-export default function SeedInventoryFocusPage({ task }: { task: SeedInventoryFocusTask }) {
+export function SeedInventoryContextInstrument({ task }: { task: SeedInventoryFocusTask }) {
+  return (
+    <div data-atlas-method-instrument="seed-inventory">
+      <section className={styles.hero}>
+        <div className={styles.kicker}><span>Physical recount</span><span>{prettyDate(task.dueDate)}</span></div>
+        <h1>{task.lotLabel}</h1>
+        <p>{task.storageLocation || `${task.cropLabel}${task.variety ? ` · ${task.variety}` : ""}`}</p>
+      </section>
+
+      <section className={styles.facts} aria-label="Seed inventory facts">
+        <div className={`${styles.fact} ${styles.factWide}`}><small>What time means</small><strong>The last count is missing or stale. Time does not claim any seed was received, consumed, lost, or damaged.</strong></div>
+        <div className={styles.fact}><small>Atlas expects</small><strong>{quantityLabel(task.expectedQuantity, task.quantityUnit)}</strong></div>
+        <div className={styles.fact}><small>Recorded receipt</small><strong>{quantityLabel(task.recordedReceiptQuantity, task.quantityUnit)}</strong></div>
+        <div className={styles.fact}><small>Last verified</small><strong>{prettyDate(task.lastVerifiedAt)}</strong></div>
+        <div className={styles.fact}><small>Committed</small><strong>{quantityLabel(task.outstandingReservedQuantity, task.quantityUnit)}</strong></div>
+      </section>
+
+      <section className={styles.prompt}>
+        <small>What is physically true?</small>
+        <h2>Find the seed lot and count what is actually on hand.</h2>
+        <p>Confirming or correcting establishes a dated stock observation. Reservations remain crop commitments; they are not treated as physical consumption.</p>
+      </section>
+
+      {task.dependencies.length ? (
+        <section className={styles.form}>
+          <strong>Committed production</strong>
+          {task.dependencies.map((dependency) => (
+            <p className={styles.message} key={`${dependency.label}-${dependency.plannedSowDate}`}>
+              {dependency.label} · {quantityLabel(dependency.outstandingQuantity, task.quantityUnit)} · sow {prettyDate(dependency.plannedSowDate)}
+            </p>
+          ))}
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+export function SeedInventoryResultInstrument({
+  task,
+  assembly,
+  busy,
+  returnHref,
+}: {
+  task: SeedInventoryFocusTask;
+  assembly: TaskMoveAssembly | null;
+  busy: boolean;
+  returnHref: string;
+}) {
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [observedQuantity, setObservedQuantity] = useState(String(task.expectedQuantity));
   const [quantityAdded, setQuantityAdded] = useState("");
@@ -80,7 +127,7 @@ export default function SeedInventoryFocusPage({ task }: { task: SeedInventoryFo
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const returnTo = task.returnTo || "/inventory/seeds";
+  const returnTo = task.returnTo || returnHref;
   const options = task.canRetire
     ? [...choices, { value: "retired" as Outcome, title: "Retire this seed lot", detail: "Owner-only governed closure", tone: "problem" }]
     : choices;
@@ -98,6 +145,9 @@ export default function SeedInventoryFocusPage({ task }: { task: SeedInventoryFo
     && (!needsRecheck || Boolean(nextCheckDate))
     && (!needsProblem || Boolean(problemKind))
     && (!needsNote || Boolean(note.trim()));
+  const moveBlocked = !assembly
+    || assembly.readiness.status === "blocked"
+    || assembly.spine.connection === "stops_at_move";
 
   function choose(value: Outcome) {
     setOutcome(value);
@@ -106,7 +156,7 @@ export default function SeedInventoryFocusPage({ task }: { task: SeedInventoryFo
   }
 
   async function submit() {
-    if (!outcome || !complete) return;
+    if (!outcome || !complete || saving || busy || moveBlocked) return;
     try {
       setSaving(true);
       setMessage(null);
@@ -139,76 +189,38 @@ export default function SeedInventoryFocusPage({ task }: { task: SeedInventoryFo
       window.setTimeout(() => window.location.assign(returnTo), 1200);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Seed inventory result failed.");
-    } finally {
       setSaving(false);
     }
   }
 
   return (
-    <main className={styles.shell}>
-      <header className={styles.top}>
-        <Link href={returnTo} className={styles.brand}><small>Atlas</small><strong>Seed Inventory</strong></Link>
-        <Link href={returnTo} className={styles.close} aria-label="Close seed recount">×</Link>
-      </header>
-
-      <div className={styles.body}>
-        <article className={styles.ticket}>
-          <section className={styles.hero}>
-            <div className={styles.kicker}><span>Physical recount</span><span>{prettyDate(task.dueDate)}</span></div>
-            <h1>{task.lotLabel}</h1>
-            <p>{task.storageLocation || `${task.cropLabel}${task.variety ? ` · ${task.variety}` : ""}`}</p>
-          </section>
-
-          <section className={styles.facts} aria-label="Seed inventory facts">
-            <div className={`${styles.fact} ${styles.factWide}`}><small>What time means</small><strong>The last count is missing or stale. Time does not claim any seed was received, consumed, lost, or damaged.</strong></div>
-            <div className={styles.fact}><small>Atlas expects</small><strong>{quantityLabel(task.expectedQuantity, task.quantityUnit)}</strong></div>
-            <div className={styles.fact}><small>Recorded receipt</small><strong>{quantityLabel(task.recordedReceiptQuantity, task.quantityUnit)}</strong></div>
-            <div className={styles.fact}><small>Last verified</small><strong>{prettyDate(task.lastVerifiedAt)}</strong></div>
-            <div className={styles.fact}><small>Committed</small><strong>{quantityLabel(task.outstandingReservedQuantity, task.quantityUnit)}</strong></div>
-          </section>
-
-          <section className={styles.prompt}>
-            <small>What is physically true?</small>
-            <h2>Find the seed lot and count what is actually on hand.</h2>
-            <p>Confirming or correcting establishes a dated stock observation. Reservations remain crop commitments; they are not treated as physical consumption.</p>
-          </section>
-
-          {task.dependencies.length ? (
-            <section className={styles.form}>
-              <strong>Committed production</strong>
-              {task.dependencies.map((dependency) => (
-                <p className={styles.message} key={`${dependency.label}-${dependency.plannedSowDate}`}>
-                  {dependency.label} · {quantityLabel(dependency.outstandingQuantity, task.quantityUnit)} · sow {prettyDate(dependency.plannedSowDate)}
-                </p>
-              ))}
-            </section>
-          ) : null}
-
-          <div className={styles.choices}>
-            {options.map((choice) => (
-              <button key={choice.value} type="button" className={styles.choice} data-active={outcome === choice.value} data-tone={choice.tone} onClick={() => choose(choice.value)}>
-                <strong>{choice.title}</strong><span>{choice.detail}</span>
-              </button>
-            ))}
-          </div>
-
-          {outcome ? (
-            <section className={styles.form}>
-              {outcome === "count_confirmed" ? <p className={styles.message}>Confirming {quantityLabel(task.expectedQuantity, task.quantityUnit)}.</p> : null}
-              {needsObserved ? <label><span>Physical total now on hand ({task.quantityUnit})</span><input inputMode="decimal" value={observedQuantity} onChange={(event) => setObservedQuantity(event.target.value)} /></label> : null}
-              {needsAdded ? <label><span>Quantity added ({task.quantityUnit})</span><input inputMode="decimal" value={quantityAdded} onChange={(event) => setQuantityAdded(event.target.value)} /></label> : null}
-              {needsAdded ? <label><span>Source</span><input value={source} onChange={(event) => setSource(event.target.value)} placeholder="Supplier, saved seed, transfer…" /></label> : null}
-              {needsRecheck ? <label><span>Count again</span><input type="date" min={tomorrowIso()} value={nextCheckDate} onChange={(event) => setNextCheckDate(event.target.value)} /></label> : null}
-              {needsProblem ? <label><span>Problem</span><select value={problemKind} onChange={(event) => setProblemKind(event.target.value as ProblemKind | "")}><option value="">Choose after looking</option>{problemOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label> : null}
-              <label><span>{needsNote ? "Required note" : "Note (optional)"}</span><textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Record only what was observed or decided." /></label>
-              <button type="button" className={styles.submit} disabled={saving || !complete} onClick={() => void submit()}>{saving ? "Recording…" : "Record seed inventory result"}</button>
-              {!complete ? <p className={styles.message}>Complete the required physical-result details before recording.</p> : null}
-              {task.currentNote ? <p className={styles.message}>Previous note: {task.currentNote}</p> : null}
-              {message ? <p className={styles.message}>{message}</p> : null}
-            </section>
-          ) : null}
-        </article>
+    <section data-atlas-result-instrument="seed-inventory">
+      <div className={styles.choices}>
+        {options.map((choice) => (
+          <button key={choice.value} type="button" className={styles.choice} data-active={outcome === choice.value} data-tone={choice.tone} disabled={saving || busy} onClick={() => choose(choice.value)}>
+            <strong>{choice.title}</strong><span>{choice.detail}</span>
+          </button>
+        ))}
       </div>
-    </main>
+
+      {outcome ? (
+        <section className={styles.form}>
+          {outcome === "count_confirmed" ? <p className={styles.message}>Confirming {quantityLabel(task.expectedQuantity, task.quantityUnit)}.</p> : null}
+          {needsObserved ? <label><span>Physical total now on hand ({task.quantityUnit})</span><input disabled={saving || busy} inputMode="decimal" value={observedQuantity} onChange={(event) => setObservedQuantity(event.target.value)} /></label> : null}
+          {needsAdded ? <label><span>Quantity added ({task.quantityUnit})</span><input disabled={saving || busy} inputMode="decimal" value={quantityAdded} onChange={(event) => setQuantityAdded(event.target.value)} /></label> : null}
+          {needsAdded ? <label><span>Source</span><input disabled={saving || busy} value={source} onChange={(event) => setSource(event.target.value)} placeholder="Supplier, saved seed, transfer…" /></label> : null}
+          {needsRecheck ? <label><span>Count again</span><input disabled={saving || busy} type="date" min={tomorrowIso()} value={nextCheckDate} onChange={(event) => setNextCheckDate(event.target.value)} /></label> : null}
+          {needsProblem ? <label><span>Problem</span><select disabled={saving || busy} value={problemKind} onChange={(event) => setProblemKind(event.target.value as ProblemKind | "")}><option value="">Choose after looking</option>{problemOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label> : null}
+          <label><span>{needsNote ? "Required note" : "Note (optional)"}</span><textarea disabled={saving || busy} rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Record only what was observed or decided." /></label>
+          <button type="button" className={styles.submit} disabled={saving || busy || !complete || moveBlocked} onClick={() => void submit()}>{saving ? "Recording…" : "Record seed inventory result"}</button>
+          {!complete ? <p className={styles.message}>Complete the required physical-result details before recording.</p> : null}
+          {moveBlocked ? <p className={styles.message}>Atlas is still resolving what must be true before this recount can be recorded.</p> : null}
+          {task.currentNote ? <p className={styles.message}>Previous note: {task.currentNote}</p> : null}
+          {message ? <p className={styles.message}>{message}</p> : null}
+        </section>
+      ) : null}
+    </section>
   );
 }
+
+export default SeedInventoryContextInstrument;
