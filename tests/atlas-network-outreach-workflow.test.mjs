@@ -23,9 +23,13 @@ const workflowMigration = readFileSync(
   "utf8",
 );
 
-test("network outreach is a reusable checklist family instead of a church-specific task page", () => {
+test("network outreach is a reusable checklist instrument inside the universal execution shell", () => {
   assert.match(dispatcher, /checklist_mode === "network_outreach"/);
   assert.match(dispatcher, /NetworkOutreachTaskDetail/);
+  assert.match(detail, /AssignedTaskExecutionShell/);
+  assert.match(detail, /data-atlas-method-instrument="network-outreach"/);
+  assert.match(detail, /data-atlas-result-instrument="network-outreach"/);
+  assert.doesNotMatch(detail, /TaskDominionTrail|atlas-phone-shell|\/api\/atlas\/weather/);
   assert.doesNotMatch(detail, /Faith Southern|Kingdom Church|Hope Church|Marshfield Assembly|Marshfield First/);
   assert.match(detail, /task\.metadata\?\.callback_number/);
   assert.match(detail, /task\.metadata\?\.outreach_script/);
@@ -42,8 +46,18 @@ test("every contact records reality before the outreach batch can close", () => 
   assert.match(detail, /Wrong contact \/ referred elsewhere/);
   assert.match(detail, /Save result \+ mark contacted/);
   assert.match(detail, /allContactsDone/);
-  assert.match(detail, /disabled=\{taskBusy \|\| !allContactsDone\}/);
+  assert.match(detail, /finishBlocked = taskBusy \|\| !controller\.allContactsDone \|\| moveBlocked/);
+  assert.match(detail, /disabled=\{finishBlocked\}/);
   assert.match(detail, /transition: "checklist_done"/);
+});
+
+test("outreach completion obeys canonical Task Move readiness before releasing the next batch", () => {
+  assert.match(detail, /!assembly/);
+  assert.match(detail, /assembly\.readiness\.status === "blocked"/);
+  assert.match(detail, /assembly\.spine\.connection === "stops_at_move"/);
+  assert.match(detail, /completion_source: "network_outreach_batch"/);
+  assert.match(detail, /action: "release_next_batch"/);
+  assert.match(detail, /window\.location\.assign\(returnHref\)/);
 });
 
 test("Thursday booking has an explicit restroom gate and writes canonical community events", () => {
