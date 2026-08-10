@@ -7,6 +7,7 @@ import { taskDominionModel } from "@/lib/atlas/task-dominion";
 import { atlasTaskDisplay, type AtlasWorkRouteKey } from "@/lib/atlas/task-display";
 import { taskExecutionModel } from "@/lib/atlas/task-execution";
 import { assembleTaskMoveCore } from "./task-move-assembly-core";
+import { attachCanonicalMoveRoles } from "./task-move-role-enrichment";
 
 export type TaskMoveResolution = "resolved" | "warning" | "missing" | "blocked";
 export type TaskMoveReadiness = "ready" | "warning" | "blocked";
@@ -73,6 +74,7 @@ export type TaskMoveRequirement = {
   capacityStatus?: string;
   totalCapacity?: number | null;
   totalUnit?: string | null;
+  unitCompatible?: boolean | null;
   questions?: TaskMoveCapacityQuestion[];
   taskId?: string;
   assigneeName?: string;
@@ -119,6 +121,7 @@ export type TaskMoveAssembly = {
     objectType: string;
     objectMode: string | null;
     lifeStatus: string | null;
+    role?: string | null;
     provenance: "task_object";
   }>;
   execution: {
@@ -161,11 +164,13 @@ export function assembleTaskMove(task: AtlasTaskCard): TaskMoveAssembly {
   const display = atlasTaskDisplay(task);
   const dominion = taskDominionModel(task, null);
 
-  return assembleTaskMoveCore({
+  const baseAssembly = assembleTaskMoveCore({
     task,
     execution,
     display,
     dominion,
     moveContext: task.move_context ?? null,
-  }) as TaskMoveAssembly;
+  });
+
+  return attachCanonicalMoveRoles(baseAssembly, task) as TaskMoveAssembly;
 }
