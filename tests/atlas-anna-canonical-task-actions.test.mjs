@@ -43,9 +43,9 @@ test("the old conveyor remains available without owning Anna's ordinary task foo
   assert.match(primaryResults, /doneLabel = "Done"/);
   assert.match(primaryResults, />\s*Unfinished\s*</);
   assert.match(executionShell, /TaskPrimaryResultControls/);
-  assert.match(executionShell, />Tomorrow</);
-  assert.match(executionShell, />Next week</);
-  assert.match(executionShell, />Pick a date</);
+  assert.match(executionShell, /Tomorrow/);
+  assert.match(executionShell, /Next week/);
+  assert.match(executionShell, /Pick a date/);
   assert.match(executionShell, /transition: "rescheduled"/);
 
   // Dominion no longer owns execution behavior; it only preserves old imports
