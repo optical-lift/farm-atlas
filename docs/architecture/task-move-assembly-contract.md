@@ -52,12 +52,20 @@ The target AFTER state is **not erased** when a branch blocks execution. The sys
 
 A missing CURRENT or AFTER description is represented explicitly as missing truth. It produces a warning unless the MOVE itself or a required branch is blocked. Atlas does not invent a state sentence to make the visual complete.
 
+## Capacity units are physical truth
+
+A task-capacity requirement must use the physical unit the move actually consumes. A pool measured in a different unit cannot satisfy the requirement unless Atlas has a separate canonical conversion fact.
+
+For example, four propagation trays require `4 tray_positions`. Atlas may not silently reinterpret that as `4 shelf_positions`. A shelf-position pool and a tray-position pool can both exist because they answer different physical questions. Until a measured shelf-to-tray conversion exists, they remain separate truths.
+
+A confirmed pool total is also not automatically the same thing as currently available capacity. Occupancy or reservation truth must exist before Atlas claims a confirmed amount is free for the move.
+
 ## Provenance and precedence
 
 Every spine fact and branch carries provenance. Stronger structured links take precedence over fallback prose:
 
-1. `task_object` for explicit linked farm-object truth or explicitly named source/destination objects.
-2. `resource_requirement` for task-scoped typed requirements and inventory state.
+1. `task_object` for explicit linked farm-object truth or source/destination relationships carried by `task_objects.role`.
+2. `resource_requirement` for task-scoped typed requirements; `task_resource_requirements.move_role` controls the semantic branch role when present.
 3. `prerequisite` for task dependency context.
 4. `action_template` for required resources the task should have but does not yet have attached.
 5. `task_record` for an explicit task blocker.
@@ -93,9 +101,9 @@ Classification uses structured role/type/category/key fields first and conservat
 
 Pass 1 must prove the grammar on at least these six shapes:
 
-1. Snow in Summer propagation: CURRENT and AFTER remain known while unresolved light capacity blocks the spine at MOVE. Tray and potting-mix requirements are sibling branches.
+1. Snow in Summer propagation: CURRENT and AFTER remain known while unresolved light capacity blocks the spine at MOVE. Tray and potting-mix requirements are sibling branches, and the capacity branch is expressed in tray positions rather than inferred shelf positions.
 2. Mowing: a simple CURRENT -> MOVE -> AFTER with only mower and target-height branches.
 3. Weeding: a linked bed grounds the subject/site without being mistaken for an instruction stage.
-4. Transplant readiness: destination and prerequisite requirements stay attached to MOVE.
+4. Transplant readiness: canonical destination object roles and prerequisite requirements stay attached to MOVE.
 5. Outreach: a non-field task can still have a truthful state transition and dependency/resource branches without pretending it is crop work.
 6. Finish Elm: project context remains context; prerequisites/dependencies are branches; the project hierarchy is not turned into task steps.
