@@ -37,6 +37,20 @@ test("database commit wraps placement edits and selected work in one transaction
   assert.match(migration, /authenticated_rpc_registry/);
 });
 
+test("atomic commit registers against the canonical authenticated RPC registry schema", () => {
+  assert.match(migration, /classification,/);
+  assert.match(migration, /confidence,/);
+  assert.match(migration, /review_status,/);
+  assert.match(migration, /authenticated_execute_expected,/);
+  assert.match(migration, /security_definer_expected,/);
+  assert.match(migration, /service_execute_expected,/);
+  assert.match(migration, /caller_count,/);
+  assert.match(migration, /policy_reference_count,/);
+  assert.doesNotMatch(migration, /\bwrite_kind\b/);
+  assert.doesNotMatch(migration, /\broute_dependencies\b/);
+  assert.doesNotMatch(migration, /\bprotection\b/);
+});
+
 test("Owner replanning keeps explicit timing and recovery controls", () => {
   assert.match(board, /Tomorrow/);
   assert.match(board, /Next week/);
