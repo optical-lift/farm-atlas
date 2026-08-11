@@ -91,25 +91,27 @@ test("the Living Day API remains private membership-scoped and failure-isolated 
   assert.match(reader, /not atlas\.is_farm_member\(p_farm_id\)/);
 });
 
-test("task rows expand inline while the separate completion dot keeps its action", () => {
-  assert.match(day, /<details id=\{onNodePress \? undefined : taskAnchorId\(task\)\} className=\{`\$\{className\} atlas-journal-task-row\$\{projectMove/);
-  assert.match(day, /<dl>/);
-  assert.match(day, /<dt>Place<\/dt>/);
-  assert.match(day, /<dt>Time<\/dt>/);
-  assert.match(day, /<dt>Evidence<\/dt>/);
-  assert.match(day, /<dt>Effect<\/dt>/);
+test("task rows open canonical Task Focus while the separate completion dot and caret keep their own actions", () => {
+  assert.match(day, /className="atlas-day-task-open-hit-area"/);
+  assert.match(day, /href=\{taskHref\(task, returnTo\)\}/);
+  assert.match(day, /onClick=\{\(event\) => event\.stopPropagation\(\)\}/);
+  assert.match(day, /aria-label=\{`Show big picture for \$\{display\.title\}`\}/);
   assert.match(day, /className=\{`atlas-day-task-node/);
   assert.match(day, /onClick=\{\(\) => onNodePress\(task\)\}/);
   assert.match(day, /atlas-day-mixed-timeline/);
-  assert.match(css, /Tapping the row opens context/);
+  assert.doesNotMatch(day, /<dt>Place<\/dt>/);
+  assert.doesNotMatch(day, /<dt>Time<\/dt>/);
+  assert.doesNotMatch(day, /<dt>Evidence<\/dt>/);
+  assert.doesNotMatch(day, /<dt>Effect<\/dt>/);
 });
 
-test("project Moves repurpose the Day drawer around outcome and dependencies", () => {
-  assert.match(day, /Why this move matters/);
+test("Day context drawers explain project goal and Task Move consequences", () => {
+  assert.match(day, />Big picture</);
+  assert.match(day, />Project goal</);
+  assert.match(day, />Finish line</);
+  assert.match(day, />Right now</);
   assert.match(day, /<small>Unlocks<\/small>/);
-  assert.match(day, /<small>Advances<\/small>/);
   assert.match(day, /<small>Waiting on<\/small>/);
-  assert.match(day, /Nothing\. This is your move\./);
   assert.match(day, /Unlocks \$\{assignees\[0\]\} ×\$\{unlocks\.length\}/);
   assert.match(day, /Project move · \$\{shortProjectTitle\(primaryProject\.title\)\}/);
 });
