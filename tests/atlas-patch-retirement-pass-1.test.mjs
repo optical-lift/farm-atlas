@@ -10,12 +10,31 @@ function read(path) { return readFileSync(join(root, path), "utf8"); }
 test("root layout no longer mounts retired no-op or Home visibility patches", () => {
   const layout = read("app/layout.tsx");
 
-  assert.doesNotMatch(layout, /FutureDayProjectionBridge/);
-  assert.doesNotMatch(layout, /HomeQuietTaskHeroPatch/);
-  assert.doesNotMatch(layout, /TaskResultAnchorPatch/);
-  assert.equal(existsSync(join(root, "app/FutureDayProjectionBridge.tsx")), false);
-  assert.equal(existsSync(join(root, "app/HomeQuietTaskHeroPatch.tsx")), false);
-  assert.equal(existsSync(join(root, "app/TaskResultAnchorPatch.tsx")), false);
+  for (const retired of [
+    "FutureDayProjectionBridge",
+    "HomeQuietTaskHeroPatch",
+    "TaskResultAnchorPatch",
+    "WeekDayNavigation",
+    "HomeSundayNavigationPatch",
+    "HomeTodayCompletePatch",
+    "OwnerHomeLinkPatch",
+    "AnnaPaidScheduleHomePatch",
+  ]) {
+    assert.doesNotMatch(layout, new RegExp(retired));
+  }
+
+  for (const retiredFile of [
+    "app/FutureDayProjectionBridge.tsx",
+    "app/HomeQuietTaskHeroPatch.tsx",
+    "app/TaskResultAnchorPatch.tsx",
+    "app/WeekDayNavigation.tsx",
+    "app/HomeSundayNavigationPatch.tsx",
+    "app/HomeTodayCompletePatch.tsx",
+    "app/OwnerHomeLinkPatch.tsx",
+    "app/AnnaPaidScheduleHomePatch.tsx",
+  ]) {
+    assert.equal(existsSync(join(root, retiredFile)), false);
+  }
 });
 
 test("Home owns quiet-task visibility before rendering instead of mutating DOM cards", () => {
