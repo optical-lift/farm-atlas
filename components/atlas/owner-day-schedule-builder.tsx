@@ -24,6 +24,11 @@ type PlanRow = {
   automatic: boolean;
   requiresOwnerApproval: boolean;
   reason?: string | null;
+  commitmentKind?: string | null;
+  preferredWindowStart?: string | null;
+  preferredWindowEnd?: string | null;
+  safeWindowEnd?: string | null;
+  timingWarning?: string | null;
 };
 
 type WorkerDayPlan = {
@@ -95,6 +100,12 @@ type DayEdit = {
   serviceDate?: string;
   dayWindow?: DayWindow;
   sortOrder?: number;
+};
+
+type PendingMove = {
+  taskId: string;
+  serviceDate: string;
+  warning: string;
 };
 
 const windows: Array<{ key: DayWindow; label: string }> = [
@@ -169,6 +180,7 @@ export default function OwnerDayScheduleBuilder() {
   const [selectedAdds, setSelectedAdds] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<EditTab>("work");
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -178,6 +190,7 @@ export default function OwnerDayScheduleBuilder() {
     setBaseline(new Map());
     setDraft(new Map());
     setSelectedAdds(new Set());
+    setPendingMove(null);
     setError(null);
     if (!dateIso) return;
 
@@ -316,23 +329,50 @@ export default function OwnerDayScheduleBuilder() {
     });
   }
 
-  function sendTomorrow(taskId: string) {
-    if (!dateIso) return;
-    setPlacement(taskId, (current) => ({ ...current, serviceDate: shiftDate(dateIso, 1), returnedToAtlas: false }));
-  }
-
-  function chooseDate(taskId: string, serviceDate: string) {
-    if (!validDateIso(serviceDate)) return;
+  function applyDateMove(taskId: string, serviceDate: string) {
+    setPendingMove((current) => current?.taskId === taskId ? null : current);
     setPlacement(taskId, (current) => ({ ...current, serviceDate, returnedToAtlas: false }));
   }
 
+  function requestDateMove(taskId: string, serviceDate: string) {
+    if (!validDateIso(serviceDate)) return;
+    const row = rowsByTaskId.get(taskId);
+    const crossesEnd = Boolean(row?.safeWindowEnd && serviceDate > row.safeWindowEnd);
+    const crossesStart = Boolean(row?.preferredWindowStart && serviceDate < row.preferredWindowStart);
+    if (row && (crossesEnd || crossesStart)) {
+      setPendingMove({
+        taskId,
+        serviceDate,
+        warning: row.timingWarning || "Moving this may miss the preferred farm window.",
+      });
+      return;
+    }
+    applyDateMove(taskId, serviceDate);
+  }
+
+  function sendTomorrow(taskId: string) {
+    if (!dateIso) return;
+    requestDateMove(taskId, shiftDate(dateIso, 1));
+  }
+
+  function sendNextWeek(taskId: string) {
+    if (!dateIso) return;
+    requestDateMove(taskId, shiftDate(dateIso, 7));
+  }
+
+  function chooseDate(taskId: string, serviceDate: string) {
+    requestDateMove(taskId, serviceDate);
+  }
+
   function returnToAtlas(taskId: string) {
+    setPendingMove((current) => current?.taskId === taskId ? null : current);
     setPlacement(taskId, (current) => ({ ...current, returnedToAtlas: true }));
   }
 
   function undoTask(taskId: string) {
     const original = baseline.get(taskId);
     if (!original) return;
+    setPendingMove((current) => current?.taskId === taskId ? null : current);
     setDraft((current) => {
       const next = new Map(current);
       next.set(taskId, { ...original });
@@ -372,7 +412,7 @@ export default function OwnerDayScheduleBuilder() {
   }
 
   async function commitChanges() {
-    if (!dateIso || saving || (!changedTaskIds.length && !selectedCandidates.length)) return;
+    if (!dateIso || saving || pendingMove || (!changedTaskIds.length && !selectedCandidates.length)) return;
     setSaving(true);
     setError(null);
     try {
@@ -520,6 +560,7 @@ export default function OwnerDayScheduleBuilder() {
               const changed = !placementEqual(placement, baseline.get(placement.taskId));
               const beforeCues = showCues ? cuesForTask(placement.taskId, "before_task") : [];
               const afterCues = showCues ? cuesForTask(placement.taskId, "after_task") : [];
+              const moveWarning = pendingMove?.taskId === placement.taskId ? pendingMove : null;
               return (
                 <div key={placement.taskId} style={{ display: "grid", gap: 5 }}>
                   {beforeCues.map((cue) => (
@@ -568,12 +609,24 @@ export default function OwnerDayScheduleBuilder() {
                       <button type="button" onClick={() => bump(placement.taskId, -1)} style={{ border: "1px solid rgba(112,111,177,.22)", borderRadius: 9, padding: "5px 7px", background: "rgba(255,255,255,.56)", font: "inherit", fontSize: 9.5, fontWeight: 800 }}>↑</button>
                       <button type="button" onClick={() => bump(placement.taskId, 1)} style={{ border: "1px solid rgba(112,111,177,.22)", borderRadius: 9, padding: "5px 7px", background: "rgba(255,255,255,.56)", font: "inherit", fontSize: 9.5, fontWeight: 800 }}>↓</button>
                       <button type="button" onClick={() => sendTomorrow(placement.taskId)} style={{ border: "1px solid rgba(112,111,177,.22)", borderRadius: 9, padding: "5px 7px", background: "rgba(255,255,255,.56)", font: "inherit", fontSize: 9.5, fontWeight: 800 }}>Tomorrow</button>
+                      <button type="button" onClick={() => sendNextWeek(placement.taskId)} style={{ border: "1px solid rgba(112,111,177,.22)", borderRadius: 9, padding: "5px 7px", background: "rgba(255,255,255,.56)", font: "inherit", fontSize: 9.5, fontWeight: 800 }}>Next week</button>
                       <label style={{ display: "inline-flex", alignItems: "center", gap: 4, border: "1px solid rgba(112,111,177,.22)", borderRadius: 9, padding: "3px 5px", background: "rgba(255,255,255,.56)", fontSize: 9.5, fontWeight: 800 }}>
                         Date
                         <input type="date" value={placement.serviceDate} onChange={(event) => chooseDate(placement.taskId, event.target.value)} style={{ border: 0, background: "transparent", font: "inherit", fontSize: 9.5, maxWidth: 112 }} />
                       </label>
                       <button type="button" onClick={() => returnToAtlas(placement.taskId)} style={{ border: "1px solid rgba(112,111,177,.22)", borderRadius: 9, padding: "5px 7px", background: "rgba(255,255,255,.56)", font: "inherit", fontSize: 9.5, fontWeight: 850, color: "#555887" }}>Return to Atlas</button>
                     </div>
+
+                    {moveWarning ? (
+                      <div data-owner-day-timing-warning="true" style={{ marginTop: 8, padding: "8px 9px", borderRadius: 10, background: "rgba(255,247,213,.78)", border: "1px solid rgba(139,119,54,.18)", display: "grid", gap: 6 }}>
+                        <strong style={{ fontSize: 10.5, lineHeight: 1.35 }}>{moveWarning.warning}</strong>
+                        <span style={{ fontSize: 9.5, opacity: .7 }}>Requested date · {moveWarning.serviceDate}</span>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button type="button" onClick={() => setPendingMove(null)} style={{ border: "1px solid rgba(112,111,177,.2)", borderRadius: 8, padding: "5px 7px", background: "rgba(255,255,255,.7)", font: "inherit", fontSize: 9.5, fontWeight: 850 }}>Keep today</button>
+                          <button type="button" onClick={() => applyDateMove(moveWarning.taskId, moveWarning.serviceDate)} style={{ border: 0, borderRadius: 8, padding: "5px 7px", background: "#e9e73b", font: "inherit", fontSize: 9.5, fontWeight: 900 }}>Move anyway</button>
+                        </div>
+                      </div>
+                    ) : null}
                   </article>
                   {afterCues.map((cue) => (
                     <div key={cue.cueId} style={{ marginLeft: 12, padding: "6px 9px", borderLeft: "2px solid rgba(112,111,177,.4)", fontSize: 10.5 }}>
@@ -638,21 +691,21 @@ export default function OwnerDayScheduleBuilder() {
 
       <button
         type="button"
-        disabled={!dirtyCount || saving}
+        disabled={!dirtyCount || saving || Boolean(pendingMove)}
         onClick={() => void commitChanges()}
         style={{
           width: "100%",
           border: 0,
           borderRadius: 12,
           padding: "10px 12px",
-          background: dirtyCount && !saving ? "#e9e73b" : "rgba(125,128,172,.13)",
+          background: dirtyCount && !saving && !pendingMove ? "#e9e73b" : "rgba(125,128,172,.13)",
           color: "#303242",
           font: "inherit",
           fontSize: 12.5,
           fontWeight: 900,
         }}
       >
-        {saving ? "Committing changes…" : dirtyCount ? `Commit ${dirtyCount} change${dirtyCount === 1 ? "" : "s"}` : "No Day changes"}
+        {saving ? "Committing changes…" : pendingMove ? "Resolve move warning" : dirtyCount ? `Commit ${dirtyCount} change${dirtyCount === 1 ? "" : "s"}` : "No Day changes"}
       </button>
     </section>
   );
