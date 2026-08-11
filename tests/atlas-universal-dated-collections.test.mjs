@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 function read(path) {
@@ -40,20 +40,19 @@ test("Day Week and Month read one permission-scoped farm and project task collec
   assert.match(month, /\/task-focus\//);
 });
 
-test("dated collection identity comes from membership scope instead of a role-owned portal", () => {
-  const identity = read("app/UniversalCollectionIdentity.tsx");
+test("dated collection identity is returned by the permission-scoped reader instead of patched into rendered headers", () => {
+  const route = read("app/api/atlas/universal-task-cards/route.ts");
   const layout = read("app/layout.tsx");
   const adapter = read("lib/atlas/universal-task-cards.ts");
 
-  assert.match(layout, /<UniversalCollectionIdentity \/>/);
-  assert.match(identity, /pathname === "\/day"/);
-  assert.match(identity, /pathname === "\/overview\/week"/);
-  assert.match(identity, /pathname === "\/overview\/month"/);
-  assert.match(identity, /portalLabel/);
-  assert.match(identity, /hasFarmScope === false/);
+  assert.equal(existsSync(new URL("../app/UniversalCollectionIdentity.tsx", import.meta.url)), false);
+  assert.doesNotMatch(layout, /UniversalCollectionIdentity/);
+  assert.match(route, /portalLabel: atlasUniversalPortalLabel\(home\)/);
+  assert.match(route, /hasFarmScope: home\.viewer\.hasFarmScope/);
+  assert.match(route, /hasOrganizationScope: home\.viewer\.hasOrganizationScope/);
   assert.match(adapter, /organizationMembership\.role === "owner"/);
   assert.match(adapter, /home\.viewer\.farmMemberships\.length === 0/);
-  assert.doesNotMatch(identity, /Anna|Katie|consultant|farm_hand/i);
+  assert.doesNotMatch(route, /MutationObserver|document\.querySelector/);
 });
 
 test("blocked tasks remain visible in universal period collections", () => {
