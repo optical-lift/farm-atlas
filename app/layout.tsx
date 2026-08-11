@@ -13,7 +13,6 @@ import WorkerVocabularyCleanupPatch from "./WorkerVocabularyCleanupPatch";
 import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
 import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
 import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
-import ProjectTaskDestinationGuard from "./ProjectTaskDestinationGuard";
 import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
 import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
 import TaskSetAsideDayPatch from "./TaskSetAsideDayPatch";
@@ -159,7 +158,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <TaskProgressExactDayPatch />
         <SafeBedCropAccordionPatch />
         <AttachedTaskHistoryPatch />
-        <ProjectTaskDestinationGuard />
         <UniversalCollectionIdentity />
         <DayTaskTitleLinkPatch />
         <TaskSetAsideDayPatch />
