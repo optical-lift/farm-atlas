@@ -21,7 +21,7 @@ test("project Moves keep the same task-focus route beneath the strategic project
   const tools = read("components/atlas/portfolio/ProjectTaskTools.tsx");
   const focusRoute = read("app/task-focus/[taskId]/page.tsx");
   const focus = read("components/atlas/project-task-focus.tsx");
-  const guard = read("app/ProjectTaskDestinationGuard.tsx");
+  const legacyTaskLayout = read("app/task/layout.tsx");
   const migration = read("supabase/migrations/20260728235900_universal_project_task_focus_and_transitions_v1.sql");
   const css = read("app/project-task-timeline.css");
 
@@ -41,8 +41,9 @@ test("project Moves keep the same task-focus route beneath the strategic project
   assert.match(focus, /atlas-task-ticket-card atlas-dominion-task-card/);
   assert.match(focus, /<AtlasTrail context=\{project\.trail\} mode="compact"/);
   assert.match(focus, /project-tasks\/\$\{encodeURIComponent\(task\.taskId\)\}\/transition/);
+  assert.match(focus, /const destination = returnTo \|\| `\/project\/\$\{encodeURIComponent\(project\.projectId\)\}`/);
+  assert.match(legacyTaskLayout, /\/task-focus\/\$\{encodeURIComponent\(taskId\)\}/);
 
-  assert.match(guard, /\/task-focus\/\$\{encodeURIComponent\(destinationTaskId\)\}/);
   assert.match(migration, /atlas\.project_task_focus_v1/i);
   assert.match(migration, /atlas\.transition_project_task_v1/i);
   assert.match(migration, /atlas\.can_read_project\(p\.id\)/i);
