@@ -4,23 +4,11 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-function localTodayIso() {
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 10);
-}
-
-function shiftIsoDate(dateIso: string, days: number) {
-  const date = new Date(`${dateIso}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return dateIso;
-  date.setDate(date.getDate() + days);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 10);
-}
+import { atlasFarmDateIso, atlasShiftFarmDate } from "@/lib/atlas/farm-day";
 
 function liveDateIso() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("date") || localTodayIso();
+  return params.get("date") || atlasFarmDateIso();
 }
 
 function dayHref(dateIso: string) {
@@ -32,7 +20,7 @@ export default function DayAdjacentNavigation() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [target, setTarget] = useState<HTMLElement | null>(null);
-  const dateIso = searchParams.get("date") || localTodayIso();
+  const dateIso = searchParams.get("date") || atlasFarmDateIso();
   const route = searchParams.get("route");
 
   useEffect(() => {
@@ -50,12 +38,12 @@ export default function DayAdjacentNavigation() {
 
   if (!target) return null;
 
-  const previousDate = shiftIsoDate(dateIso, -1);
-  const nextDate = shiftIsoDate(dateIso, 1);
+  const previousDate = atlasShiftFarmDate(dateIso, -1);
+  const nextDate = atlasShiftFarmDate(dateIso, 1);
 
   function openDay(event: React.MouseEvent<HTMLAnchorElement>, offsetDays: number) {
     event.preventDefault();
-    const targetDate = shiftIsoDate(liveDateIso(), offsetDays);
+    const targetDate = atlasShiftFarmDate(liveDateIso(), offsetDays);
     router.push(`/day?date=${encodeURIComponent(targetDate)}&view=work_order`, { scroll: false });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
