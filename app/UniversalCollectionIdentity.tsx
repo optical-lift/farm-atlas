@@ -2,48 +2,31 @@
 
 import { useEffect } from "react";
 
-function todayIso() {
-  const date = new Date();
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
-
-function addDaysIso(dateIso: string, days: number) {
-  const date = new Date(`${dateIso}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
-
-function monthEndIso(dateIso: string) {
-  const date = new Date(`${dateIso}T12:00:00`);
-  const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 12);
-  const local = new Date(end.getTime() - end.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
-
-function validDate(value: string | null) {
-  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
-}
+import {
+  atlasFarmDateIso,
+  atlasFarmMonthEnd,
+  atlasNormalizeFarmDate,
+  atlasShiftFarmDate,
+} from "@/lib/atlas/farm-day";
 
 function collectionWindow(pathname: string, search: string) {
   const params = new URLSearchParams(search);
-  const today = todayIso();
+  const today = atlasFarmDateIso();
 
   if (pathname === "/day") {
-    const date = validDate(params.get("date")) ? params.get("date") as string : today;
+    const date = atlasNormalizeFarmDate(params.get("date"), today);
     return { doneDate: date, dueThrough: date };
   }
 
   if (pathname === "/overview/week") {
-    const date = validDate(params.get("date")) ? params.get("date") as string : today;
-    const dueThrough = validDate(params.get("end")) ? params.get("end") as string : addDaysIso(date, 6);
+    const date = atlasNormalizeFarmDate(params.get("date"), today);
+    const dueThrough = atlasNormalizeFarmDate(params.get("end"), atlasShiftFarmDate(date, 6));
     return { doneDate: date, dueThrough };
   }
 
   if (pathname === "/overview/month") {
-    const date = validDate(params.get("date")) ? params.get("date") as string : today;
-    return { doneDate: date, dueThrough: monthEndIso(date) };
+    const date = atlasNormalizeFarmDate(params.get("date"), today);
+    return { doneDate: date, dueThrough: atlasFarmMonthEnd(date) };
   }
 
   return null;
