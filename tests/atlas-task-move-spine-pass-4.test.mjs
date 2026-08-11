@@ -42,7 +42,9 @@ test("Task Move visual states preserve warnings missing requirements blocks and 
 
   assert.match(spine, /if \(status === "blocked"\) return "Blocked"/);
   assert.match(spine, /if \(status === "missing"\) return "Needed"/);
-  assert.match(spine, /if \(status === "warning"\) return "Check"/);
+  assert.match(spine, /status === "warning"/);
+  assert.match(spine, /requirement\.capacityStatus !== "confirmed"/);
+  assert.match(spine, /return unconfirmedCapacity \? "Not yet confirmed" : "Check"/);
   assert.match(spine, /data-state=\{requirement\.status\}/);
   assert.match(spine, /data-reachable=\{stopped \? "false" : "true"\}/);
   assert.match(spine, /afterFacts\.length \? <FactLines facts=\{afterFacts\}/);
