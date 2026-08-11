@@ -9,10 +9,6 @@ import DependencyReleaseFlash from "@/components/atlas/task/DependencyReleaseFla
 import AtlasWorkAlongsideOverlay from "@/components/atlas/work-alongside/AtlasWorkAlongsideOverlay";
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
-import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
-import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
-import TaskSetAsideDayPatch from "./TaskSetAsideDayPatch";
-import DayConsequenceTimelinePatch from "./DayConsequenceTimelinePatch";
 import AtlasSkyLedgerMaintainer from "./AtlasSkyLedgerMaintainer";
 import OwnerOperatorMode from "./OwnerOperatorMode";
 import "./globals.css";
@@ -149,10 +145,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <AtlasBellCover />
         <DependencyReleaseFlash />
         <Suspense fallback={null}><AtlasWorkAlongsideOverlay /></Suspense>
-        <UniversalCollectionIdentity />
-        <DayTaskTitleLinkPatch />
-        <TaskSetAsideDayPatch />
-        <DayConsequenceTimelinePatch />
         <Suspense fallback={null}><OwnerDayPlanGate /></Suspense>
         {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}
