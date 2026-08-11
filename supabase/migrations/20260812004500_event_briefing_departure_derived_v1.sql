@@ -1,7 +1,6 @@
 -- Event first-open briefings are generic choreography over canonical project work.
--- The first acceptance case happens to leave Elm for Lebanon, but the briefing
--- must not encode a city or person's name in its planning logic. Derive the
--- departure label and action from the actual open project-linked worker task.
+-- The briefing must not encode a city or person's name in its planning logic.
+-- Derive the departure label and action from the actual open project-linked worker task.
 
 create or replace function atlas.event_day_briefing_body_v1(
   p_project_id uuid,
