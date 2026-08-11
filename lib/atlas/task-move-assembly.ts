@@ -167,9 +167,6 @@ export function assembleTaskMove(task: AtlasTaskCard): TaskMoveAssembly {
   const execution = taskExecutionModel(task);
   const display = atlasTaskDisplay(task);
 
-  // The retired Dominion model used to invent route-specific explanations here.
-  // Keep only canonical task display/execution facts plus explicit owner-authored
-  // context while the JS assembly core is migrated away from its old parameter name.
   const canonicalMoveSemantics = {
     route: display.route,
     instruction: display.action || execution.doText || task.title,
@@ -183,7 +180,7 @@ export function assembleTaskMove(task: AtlasTaskCard): TaskMoveAssembly {
     task,
     execution,
     display,
-    dominion: canonicalMoveSemantics,
+    moveSemantics: canonicalMoveSemantics,
     moveContext: task.move_context ?? null,
   });
 
