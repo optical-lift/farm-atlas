@@ -4,19 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { atlasFarmDateIso } from "@/lib/atlas/farm-day";
 import { fetchAtlasTaskDayDispositions } from "@/lib/atlas/task-set-aside-client";
 import type { AtlasTaskDayDisposition } from "@/lib/atlas/task-set-aside-contract";
-
-function centralDateIso() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
-}
 
 function prettyDate(value: string) {
   const date = new Date(`${value}T12:00:00`);
@@ -53,14 +43,14 @@ function hideSetAsideRows(taskIds: Set<string>) {
 
 export default function TaskSetAsideDayPatch() {
   const [rows, setRows] = useState<AtlasTaskDayDisposition[]>([]);
-  const [day, setDay] = useState(centralDateIso());
+  const [day, setDay] = useState(atlasFarmDateIso());
   const [target, setTarget] = useState<Element | null>(null);
   const taskIds = useMemo(() => new Set(rows.map((row) => row.taskId)), [rows]);
 
   useEffect(() => {
     if (window.location.pathname !== "/day") return;
     const params = new URLSearchParams(window.location.search);
-    const selectedDay = params.get("date") || centralDateIso();
+    const selectedDay = params.get("date") || atlasFarmDateIso();
     setDay(selectedDay);
     let cancelled = false;
 
