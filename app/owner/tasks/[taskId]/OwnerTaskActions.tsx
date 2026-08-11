@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { resolveAtlasTaskProblemHandoff } from "@/lib/atlas/task-problem-handoff-client";
+import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 import styles from "./task.module.css";
 
 type Transition = "done" | "blocked" | "rescheduled" | "note";
@@ -12,13 +13,6 @@ type ProblemHandoff = {
   id: string;
   issueText: string;
 };
-
-function idempotencyKey(taskId: string, transition: Transition) {
-  const nonce = typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return `owner:${taskId}:${transition}:${nonce}`;
-}
 
 export default function OwnerTaskActions({
   taskId,
@@ -62,45 +56,35 @@ export default function OwnerTaskActions({
     setError("");
     setMessage("");
 
-    const response = await fetch(`/api/atlas/owner/tasks/${encodeURIComponent(taskId)}/transition`, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json",
-        "x-atlas-intent": "task-transition-v1",
-      },
-      body: JSON.stringify({
+    try {
+      await postAtlasTaskTransition({
+        taskId,
         transition,
-        idempotencyKey: idempotencyKey(taskId, transition),
         note: note.trim() || null,
         reason: transition === "blocked" ? note.trim() : null,
         payload: transition === "rescheduled" ? { scheduleIntent: "next_day" } : {},
-      }),
-    });
+      });
 
-    const result = (await response.json().catch(() => null)) as { error?: string } | null;
-    if (!response.ok) {
-      setError(result?.error ?? "Atlas could not apply that action.");
-      setWorking(null);
-      return;
-    }
+      if (transition === "done") {
+        router.push("/owner");
+        router.refresh();
+        return;
+      }
 
-    if (transition === "done") {
-      router.push("/owner");
+      setMessage(
+        transition === "rescheduled"
+          ? "Moved to the next work day."
+          : transition === "blocked"
+            ? "Blocker saved."
+            : "Note saved.",
+      );
+      setNote("");
       router.refresh();
-      return;
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Atlas could not apply that action.");
+    } finally {
+      setWorking(null);
     }
-
-    setMessage(
-      transition === "rescheduled"
-        ? "Moved to the next work day."
-        : transition === "blocked"
-          ? "Blocker saved."
-          : "Note saved.",
-    );
-    setNote("");
-    setWorking(null);
-    router.refresh();
   }
 
   if (problemHandoff) {
