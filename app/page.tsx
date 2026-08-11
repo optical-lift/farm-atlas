@@ -181,7 +181,6 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
         dayOverview={visibleTaskOverview.summary}
         farmSeasons={farmSeasons}
         farmHandMode={renderedFarmHandMode}
-        hideTimeNavigation={farmHandMode}
       />
       <FarmHandQuickWinPrompt home={renderedHome} active={renderedFarmHandMode} />
       <AtlasPwaCoverPrompt />
