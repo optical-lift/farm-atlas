@@ -61,6 +61,7 @@ function RequirementBranch({ requirement }: { requirement: TaskMoveRequirement }
 }
 
 export default function TaskMoveSpine({ assembly }: Props) {
+  const stopped = assembly.spine.connection === "stops_at_move";
   const currentFacts = visibleFacts(assembly.spine.current);
   const afterFacts = visibleFacts(assembly.spine.after);
   const moveSite = assembly.spine.move.workSite.status === "missing" ? null : assembly.spine.move.workSite.label;
@@ -79,6 +80,8 @@ export default function TaskMoveSpine({ assembly }: Props) {
         .atlas-human-task-trail__line::before { content:""; position:absolute; left:6px; top:11px; bottom:11px; width:1px; background:rgba(86,89,112,.27); }
         .atlas-human-task-trail__step { position:relative; padding:0 0 21px; }
         .atlas-human-task-trail__step:last-child { padding-bottom:0; }
+        .atlas-human-task-trail__step[data-reachable="false"] { opacity:.58; }
+        .atlas-human-task-trail__step[data-reachable="false"] .atlas-human-task-trail__dot { border-style:dashed; background:#fff; }
         .atlas-human-task-trail__dot { position:absolute; left:-26px; top:3px; width:13px; height:13px; border:2px solid #6d7088; border-radius:50%; background:#6d7088; box-shadow:0 0 0 4px #fff; }
         .atlas-human-task-trail__step[data-kind="finish"] .atlas-human-task-trail__dot { background:#fff; }
         .atlas-human-task-trail__eyebrow { display:block; margin-bottom:3px; color:#898ba0; font-size:.64rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
@@ -127,9 +130,13 @@ export default function TaskMoveSpine({ assembly }: Props) {
           ) : null}
         </section>
 
-        <section className="atlas-human-task-trail__step" data-kind="finish">
+        <section
+          className="atlas-human-task-trail__step"
+          data-kind="finish"
+          data-reachable={stopped ? "false" : "true"}
+        >
           <span className="atlas-human-task-trail__dot" aria-hidden="true" />
-          <span className="atlas-human-task-trail__eyebrow">Finished</span>
+          <span className="atlas-human-task-trail__eyebrow">{stopped ? "Target held" : "Finished"}</span>
           {afterFacts.length ? <FactLines facts={afterFacts} /> : <p className="atlas-human-task-trail__finish">{assembly.execution.doneWhen}</p>}
         </section>
       </div>
