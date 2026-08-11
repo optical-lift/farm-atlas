@@ -33,7 +33,18 @@ function validDateIso(value: unknown): value is string {
     && !Number.isNaN(new Date(`${value}T12:00:00`).getTime());
 }
 
-function normalizeEdits(value: unknown): DayEdit[] | null {
+function requestDay(request: Request) {
+  const referer = request.headers.get("referer");
+  if (!referer) return null;
+  try {
+    const value = new URL(referer).searchParams.get("date");
+    return validDateIso(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeEdits(value: unknown, fallbackServiceDate: string | null): DayEdit[] | null {
   if (!Array.isArray(value) || value.length === 0 || value.length > 100) return null;
   const result: DayEdit[] = [];
   for (const entry of value) {
@@ -42,7 +53,17 @@ function normalizeEdits(value: unknown): DayEdit[] | null {
     const kind = row.kind;
     const taskId = row.taskId;
     if (!["place","rewindow","reschedule","reorder","return_to_atlas"].includes(String(kind)) || !validUuid(taskId)) return null;
-    if (!validDateIso(row.serviceDate)) return null;
+
+    // The first Owner Day Edit client shipped Return to Atlas without repeating
+    // the already-visible Day date in each edit. Preserve that client while the
+    // canonical mutation still records the exact Day being removed.
+    const serviceDate = validDateIso(row.serviceDate)
+      ? row.serviceDate
+      : kind === "return_to_atlas" && validDateIso(fallbackServiceDate)
+        ? fallbackServiceDate
+        : null;
+    if (!serviceDate) return null;
+
     const dayWindow = ["morning","afternoon","evening"].includes(String(row.dayWindow)) ? row.dayWindow as DayWindow : undefined;
     const sortOrder = row.sortOrder === undefined ? undefined : Number(row.sortOrder);
     if (sortOrder !== undefined && !Number.isFinite(sortOrder)) return null;
@@ -50,7 +71,7 @@ function normalizeEdits(value: unknown): DayEdit[] | null {
     result.push({
       kind: kind as DayEditKind,
       taskId,
-      serviceDate: row.serviceDate,
+      serviceDate,
       ...(dayWindow ? { dayWindow } : {}),
       ...(sortOrder === undefined ? {} : { sortOrder }),
     });
@@ -77,7 +98,7 @@ export async function POST(request: Request) {
     return atlasApiError(400, "owner_day_edit_invalid_json", "The Day edit request is invalid.");
   }
 
-  const edits = normalizeEdits(body.edits);
+  const edits = normalizeEdits(body.edits, requestDay(request));
   if (!edits) return atlasApiError(400, "owner_day_edit_required", "Choose at least one valid Day change.");
 
   const authorized = await requireAtlasApiAccess();
