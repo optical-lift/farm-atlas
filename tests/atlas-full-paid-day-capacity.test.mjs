@@ -42,6 +42,10 @@ const dayPlanMigration = readFileSync(
   new URL("../supabase/migrations/20260809203000_owner_worker_day_plan_kernel_v1.sql", import.meta.url),
   "utf8",
 );
+const choreographyMigration = readFileSync(
+  new URL("../supabase/migrations/20260811160000_atlas_day_choreography_plan_overlay_v1.sql", import.meta.url),
+  "utf8",
+);
 const projectionUi = readFileSync(
   new URL("../components/atlas/owner-day-schedule-builder.tsx", import.meta.url),
   "utf8",
@@ -106,9 +110,9 @@ test("rescheduled unfinished work remains paid backlog instead of becoming permi
   assert.doesNotMatch(backlogMigration, /overdue_rescheduled_noncounting/);
 });
 
-test("Owner operating as Anna sees the full paid-day plan while approving only discretionary fill", () => {
+test("Owner sees the full paid-day plan while choreography changes presentation and only discretionary fill needs approval", () => {
   assert.match(projectionReader, /paidTargetMinutes/);
-  assert.match(dayPlanReader, /owner_worker_day_plan_api_v1/);
+  assert.match(dayPlanReader, /owner_worker_day_plan_choreographed_api_v1/);
   assert.match(dayPlanRoute, /readOwnerWorkerDayPlan/);
   assert.match(dayPlanMigration, /paidTargetMinutes/);
   assert.match(dayPlanMigration, /committedPaidMinutes/);
@@ -118,9 +122,14 @@ test("Owner operating as Anna sees the full paid-day plan while approving only d
   assert.match(dayPlanMigration, /project_pull_items/);
   assert.match(dayPlanMigration, /dayWindow/);
   assert.match(dayPlanMigration, /workOrderNumber/);
-  assert.match(projectionUi, /committedMinutes/);
-  assert.match(projectionUi, /automaticMinutes/);
-  assert.match(projectionUi, /proposedMinutes/);
-  assert.match(projectionUi, /Purple cards are suggestions/);
-  assert.match(projectionUi, /Commit schedule/);
+  assert.match(choreographyMigration, /owner_worker_day_plan_v1\(p_farm_id,p_membership_id,p_day\)/);
+  assert.match(choreographyMigration, /committedPaidMinutes/);
+  assert.match(choreographyMigration, /remainingPaidMinutes/);
+  assert.match(projectionUi, /paidTargetMinutes/);
+  assert.match(projectionUi, /committedPaidMinutes/);
+  assert.match(projectionUi, /automaticPaidMinutes/);
+  assert.match(projectionUi, /selectedCandidates/);
+  assert.match(projectionUi, /\/api\/atlas\/owner-day-schedule/);
+  assert.match(projectionUi, /\/api\/atlas\/owner-day-edit/);
+  assert.match(projectionUi, /Return to Atlas/);
 });
