@@ -9,7 +9,6 @@ import DependencyReleaseFlash from "@/components/atlas/task/DependencyReleaseFla
 import AtlasWorkAlongsideOverlay from "@/components/atlas/work-alongside/AtlasWorkAlongsideOverlay";
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
-import WorkerVocabularyCleanupPatch from "./WorkerVocabularyCleanupPatch";
 import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
 import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
 import TaskSetAsideDayPatch from "./TaskSetAsideDayPatch";
@@ -150,7 +149,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <AtlasBellCover />
         <DependencyReleaseFlash />
         <Suspense fallback={null}><AtlasWorkAlongsideOverlay /></Suspense>
-        <WorkerVocabularyCleanupPatch />
         <UniversalCollectionIdentity />
         <DayTaskTitleLinkPatch />
         <TaskSetAsideDayPatch />
