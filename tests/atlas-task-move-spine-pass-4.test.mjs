@@ -20,11 +20,17 @@ test("Pass 4 keeps CURRENT MOVE AFTER semantics while presenting them as a compa
   assert.match(spine, /data-reachable=\{stopped \? "false" : "true"\}/);
 });
 
-test("requirements branch from the work move and are never rendered as ordered execution steps", () => {
+test("requirements branch from CURRENT as preconditions and are never rendered as ordered execution steps", () => {
   const spine = read("components/atlas/task-move-spine.tsx");
+  const currentIndex = spine.indexOf('data-kind="current"');
+  const requirementIndex = spine.indexOf('aria-label="What must be true before this move"');
+  const workIndex = spine.indexOf('data-kind="work"');
 
+  assert.ok(currentIndex >= 0);
+  assert.ok(requirementIndex > currentIndex);
+  assert.ok(workIndex > requirementIndex);
   assert.match(spine, /aria-label="What this work needs"/);
-  assert.match(spine, /assembly\.requirements\.map/);
+  assert.match(spine, /groupedRequirements\(assembly\.requirements\)/);
   assert.match(spine, /atlas-human-task-trail__requirements/);
   assert.match(spine, /atlas-human-task-trail__branch-line/);
   assert.doesNotMatch(spine, /<ol/);
