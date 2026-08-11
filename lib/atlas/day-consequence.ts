@@ -1,3 +1,4 @@
+import { atlasFarmDateIso } from "./farm-day";
 import type { AtlasTaskCard } from "./task-cards-client";
 
 export type AtlasDayConsequenceKind = "continued" | "returned" | "overdue" | "at_risk";
@@ -8,21 +9,10 @@ export type AtlasDayConsequence = {
   detail: string;
 };
 
-function centralDateIso(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
-}
-
 function dateIsoFromTimestamp(value: string | null | undefined) {
   if (!value) return null;
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : centralDateIso(date);
+  return Number.isNaN(date.getTime()) ? null : atlasFarmDateIso(date);
 }
 
 function shortDate(value: string | null | undefined) {
