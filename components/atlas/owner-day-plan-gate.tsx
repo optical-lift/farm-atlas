@@ -1,7 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import OwnerDayScheduleBuilder from "@/components/atlas/owner-day-schedule-builder";
@@ -10,10 +10,17 @@ type PlanProbe = {
   ok?: boolean;
   active?: boolean;
   operatorLabel?: string;
+  target?: {
+    farmId?: string;
+    membershipId?: string;
+    displayName?: string;
+    source?: "operator_lens" | "owner_direct";
+  } | null;
   plan?: {
     availableWorkerDay?: boolean;
     suggestions?: Array<{ sourceKind?: string }>;
     automaticWork?: unknown[];
+    realWork?: unknown[];
   } | null;
 };
 
@@ -51,16 +58,10 @@ export default function OwnerDayPlanGate() {
     return () => controller.abort();
   }, [dateIso]);
 
-  const canPlan = Boolean(probe?.active && probe.plan?.availableWorkerDay !== false);
-  const hasPlanningWork = useMemo(() => {
-    const suggestions = probe?.plan?.suggestions ?? [];
-    const selectable = suggestions.some((row) => row.sourceKind === "project_pull" || row.sourceKind === "floating_task");
-    const automatic = (probe?.plan?.automaticWork?.length ?? 0) > 0;
-    return selectable || automatic;
-  }, [probe]);
+  const canPlan = Boolean(probe?.active && probe.plan?.availableWorkerDay !== false && probe.target?.membershipId);
 
   useEffect(() => {
-    if (!dateIso || !canPlan || !hasPlanningWork || pathname !== "/day") {
+    if (!dateIso || !canPlan || pathname !== "/day") {
       setHost((current) => {
         current?.remove();
         return null;
@@ -107,11 +108,11 @@ export default function OwnerDayPlanGate() {
         return null;
       });
     };
-  }, [canPlan, dateIso, hasPlanningWork, pathname]);
+  }, [canPlan, dateIso, pathname]);
 
-  if (!canPlan || !hasPlanningWork || !host?.isConnected) return null;
+  if (!canPlan || !host?.isConnected) return null;
 
-  const operatorLabel = probe?.operatorLabel || "Anna";
+  const operatorLabel = probe?.operatorLabel || "Farm Hand";
 
   return createPortal(
     <>
@@ -135,14 +136,14 @@ export default function OwnerDayPlanGate() {
               cursor: "pointer",
             }}
           >
-            Plan today
+            Edit today
           </button>
         ) : (
           <div style={{ padding: "10px 12px", border: "1px solid rgba(112,111,177,.28)", borderRadius: 14, background: "rgba(246,244,252,.72)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
               <div>
-                <strong style={{ display: "block", color: "#3f4267", fontSize: 12.5 }}>Planning {operatorLabel}&apos;s day</strong>
-                <span style={{ display: "block", marginTop: 2, color: "#73758e", fontSize: 10.5 }}>Nothing enters the working day until you commit it.</span>
+                <strong style={{ display: "block", color: "#3f4267", fontSize: 12.5 }}>Editing {operatorLabel}&apos;s day</strong>
+                <span style={{ display: "block", marginTop: 2, color: "#73758e", fontSize: 10.5 }}>Purple is a draft. Anna&apos;s working Day changes only when you commit it.</span>
               </div>
               <button
                 type="button"
