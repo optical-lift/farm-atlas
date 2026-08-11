@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import AssignedTaskExecutionShell, {
   type AssignedTaskInstrumentContext,
 } from "@/components/atlas/assigned-task-execution-shell";
-import CropOccupancyBedMap from "@/components/atlas/crop-occupancy-bed-map";
 import CropOccupancyList from "@/components/atlas/crop-occupancy-list";
 import MaintenanceDirectiveStrip from "@/components/atlas/maintenance-directive-strip";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
@@ -123,18 +122,17 @@ export default function WeedCardTaskFocus({ task, card, childTasks, assignee }: 
   }
 
   function methodInstrument(_context: AssignedTaskInstrumentContext) {
-    const occupancy = card.bedMap
-      ? <CropOccupancyBedMap map={card.bedMap} variant="notebook" />
-      : <CropOccupancyList groups={card.occupancyGroups} />;
-
     return (
       <section
         className={`${styles.root} ${cohesionStyles.cohesive} atlas-weed-card-method-instrument`}
         data-atlas-method-instrument="weed-card"
         aria-label={`${card.objectLabel} weed state`}
       >
+        {/* The old rectangle map was decorative unless Atlas happened to have
+            hard-coded geometry. Until a real state portrait exists, show only
+            crop occupancy Atlas can actually support from canonical cohort data. */}
         <div className="atlas-weed-card-occupancy" aria-label={`${card.objectLabel} crop occupancy`}>
-          {occupancy}
+          <CropOccupancyList groups={card.occupancyGroups} />
         </div>
         <MaintenanceDirectiveStrip taskId={task.task_id} />
         <section className="atlas-weed-pass">
@@ -183,6 +181,7 @@ export default function WeedCardTaskFocus({ task, card, childTasks, assignee }: 
         <style>{`
           .atlas-task-result-footer > .atlas-task-more-outcomes { display: none; }
           .atlas-weed-card-method-instrument { margin: 0 10px 18px; }
+          .atlas-weed-card-occupancy:empty { display:none; }
           .atlas-weed-card-occupancy { margin: 0 18px 14px; }
         `}</style>
         {!logOpen ? (

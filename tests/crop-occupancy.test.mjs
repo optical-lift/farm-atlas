@@ -69,7 +69,7 @@ test("haphazard owner notes have one idempotent structured ingestion contract", 
   assert.match(ingest, /Only the farm owner may record crop occupancy/);
 });
 
-test("the Weed Card renders a compact text map with quiet cardinal orientation", () => {
+test("oriented bed-map truth remains available without forcing decorative geometry into Weed Card Task Focus", () => {
   const migration = read("supabase/migrations/20260729163000_oriented_bed_map_v1.sql");
   const component = read("components/atlas/crop-occupancy-bed-map.tsx");
   const css = read("components/atlas/crop-occupancy-bed-map.module.css");
@@ -92,12 +92,13 @@ test("the Weed Card renders a compact text map with quiet cardinal orientation",
   assert.match(css, /\.endDirection\s*\{[\s\S]*position: absolute/);
   assert.match(css, /font-size: 0\.54rem/);
   assert.match(css, /border-top-style: dashed/);
-  assert.match(focus, /<CropOccupancyBedMap map=\{card\.bedMap\} variant="notebook" \/>/);
+  assert.match(focus, /<CropOccupancyList groups=\{card\.occupancyGroups\} \/>/);
+  assert.doesNotMatch(focus, /CropOccupancyBedMap|variant="notebook"/);
   assert.match(route, /object_crop_bed_map_v1/);
   assert.doesNotMatch(component, /Perennial|Date unknown|Observed/);
 });
 
-test("every Weed Card receives a map frame and known long beds keep real directions", () => {
+test("every Weed Card may retain a map frame while Task Focus shows only supported crop occupancy", () => {
   const universal = read("supabase/migrations/20260729175000_universal_weed_card_maps_v1.sql");
   const component = read("components/atlas/crop-occupancy-bed-map.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
@@ -113,7 +114,8 @@ test("every Weed Card receives a map frame and known long beds keep real directi
   assert.doesNotMatch(component, /!map\.placements\.length/);
   assert.match(component, /styles\.emptyBed/);
   assert.match(component, /edgeBandBasis/);
-  assert.match(focus, /const occupancy = card\.bedMap\s*\?/);
+  assert.match(focus, /CropOccupancyList/);
+  assert.doesNotMatch(focus, /const occupancy = card\.bedMap\s*\?/);
 });
 
 test("bed maps show establishment dates and FR4 forget-me-not is on the south endcap", () => {

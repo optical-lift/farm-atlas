@@ -40,11 +40,14 @@ test("future presented work remains exact-date calendar truth before carry-forwa
   assert.match(carryMigration, /prior_presented/);
 });
 
-test("future Day asks for one date but preserves unresolved prior-workday carry", () => {
+test("future Day asks for one date, preserves carry-forward, and then applies explicit Owner placement", () => {
   assert.match(taskCardsClient, /exactDate\?: string/);
   assert.match(taskCardsClient, /viewerParams\.set\("exactDate", viewerWindow\.exactDate\)/);
   assert.match(universalRoute, /requestedExactDate/);
-  assert.match(universalRoute, /server-side worker-day reader is authoritative for future-day membership/);
+  assert.match(universalRoute, /server-side worker-day reader remains authoritative for ordinary day/);
+  assert.match(universalRoute, /Explicit Owner placement is a narrow override layered on top/);
+  assert.match(universalRoute, /worker_day_choreography_api_v1/);
+  assert.match(universalRoute, /worker_day_placed_task_cards_v1/);
   assert.doesNotMatch(universalRoute, /card\.due_date === exactDate/);
   assert.match(dayPage, /exactDate: isFutureDay \? dateIso : undefined/);
   assert.match(carryMigration, /member_day_carryover_v1/);

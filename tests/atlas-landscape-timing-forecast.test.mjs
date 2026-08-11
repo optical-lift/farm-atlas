@@ -13,7 +13,8 @@ test("annual landscape cards use the shared execution-detail contract", () => {
 
   assert.match(shell, /TaskExecutionBrief/);
   assert.match(brief, /taskExecutionModel\(task\)/);
-  assert.match(brief, /More instructions/);
+  assert.match(brief, /function Instructions/);
+  assert.match(brief, /atlas-human-task-instructions__note/);
   assert.match(execution, /atlasMetaString\(task, "execution_details"\)/);
   assert.match(execution, /const details = explicitDetails/);
 

@@ -15,8 +15,20 @@ import {
   atlasUniversalTaskCards,
 } from "@/lib/atlas/universal-task-cards";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
+import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+type TaskCardRow = { task_id: string; due_date?: string | null; metadata?: Record<string, unknown> | null; [key: string]: unknown };
+type DayPlacement = {
+  taskId: string;
+  serviceDate: string;
+  dayWindow: "morning" | "afternoon" | "evening";
+  sortOrder: number;
+  placementSource: "atlas" | "owner";
+  placementReason: string | null;
+  state: "placed" | "returned_to_atlas";
+};
 
 function validDateIso(value: string | null) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime()));
@@ -27,9 +39,66 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "universal-dated-task-cards-v4-project-moves",
+      "X-Atlas-Read-Path": "universal-dated-task-cards-v5-day-placement",
     },
   });
+}
+
+function dayPlacement(value: unknown): DayPlacement | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  if (typeof row.taskId !== "string" || typeof row.serviceDate !== "string") return null;
+  if (row.dayWindow !== "morning" && row.dayWindow !== "afternoon" && row.dayWindow !== "evening") return null;
+  return {
+    taskId: row.taskId,
+    serviceDate: row.serviceDate,
+    dayWindow: row.dayWindow,
+    sortOrder: Number(row.sortOrder) || 0,
+    placementSource: row.placementSource === "owner" ? "owner" : "atlas",
+    placementReason: typeof row.placementReason === "string" && row.placementReason.trim() ? row.placementReason : null,
+    state: row.state === "returned_to_atlas" ? "returned_to_atlas" : "placed",
+  };
+}
+
+function placementAnchor(window: DayPlacement["dayWindow"]) {
+  if (window === "morning") return "morning";
+  if (window === "afternoon") return "midday";
+  return "evening";
+}
+
+function applyDayPlacement(card: TaskCardRow, placement: DayPlacement) {
+  return {
+    ...card,
+    // Day placement changes where the worker encounters this move, not the
+    // canonical task due_date stored in Atlas. Task Focus still reads task truth.
+    due_date: placement.serviceDate,
+    metadata: {
+      ...(card.metadata ?? {}),
+      canonical_due_date: card.due_date ?? null,
+      owner_day_window_override: placement.dayWindow,
+      work_order_anchor: placementAnchor(placement.dayWindow),
+      day_work_order: placement.sortOrder,
+      day_placement: {
+        serviceDate: placement.serviceDate,
+        dayWindow: placement.dayWindow,
+        sortOrder: placement.sortOrder,
+        placementSource: placement.placementSource,
+        placementReason: placement.placementReason,
+      },
+    },
+  };
+}
+
+function baselineSurvivesPlacement(placement: DayPlacement, placementDay: string) {
+  if (placement.state === "returned_to_atlas") {
+    // Return to Atlas removes the task from the Day it was handed back. On a
+    // later workday the ordinary eligibility/carry engine is free to offer it.
+    return placement.serviceDate !== placementDay;
+  }
+  if (placement.serviceDate === placementDay) return true;
+  // Before an explicit future placement, keep the task off the worker's plate.
+  // After a missed explicit placement, ordinary overdue/carry behavior resumes.
+  return placement.serviceDate < placementDay;
 }
 
 export async function GET(request: Request) {
@@ -63,6 +132,10 @@ export async function GET(request: Request) {
     return privateJson({ ok: false, error: "exactDate must fall inside the requested task window." }, 400);
   }
 
+  // Day currently sends an exactDate only for future dates. An equal one-day
+  // done/due window is also a Day-sized request, so placements govern today too.
+  const placementDay = exactDate ?? (requestedDoneDate && requestedDueThrough === requestedDoneDate ? requestedDoneDate : null);
+
   try {
     const operatorContext = await readAtlasOwnerOperatorContext();
     const home = await readAtlasOperatorUniversalHome(viewer, {
@@ -74,14 +147,66 @@ export async function GET(request: Request) {
     const dispositions = await readAtlasTaskDayDispositions(doneDate);
     const setAsideTaskIds = new Set(dispositions.map((row) => row.taskId));
 
-    // The server-side worker-day reader is authoritative for future-day membership.
-    // It now returns both work presented for the requested day and unresolved work
-    // inherited from the immediately preceding available workday. Do not throw that
-    // carry-forward away merely because its original due date is earlier than the
-    // future day being inspected. Historical/done rows are still constrained by the
-    // worker-day reader itself.
-    const baseTaskCards = atlasUniversalTaskCards(home)
-      .filter((card) => !setAsideTaskIds.has(card.task_id));
+    // The server-side worker-day reader remains authoritative for ordinary day
+    // membership. Explicit Owner placement is a narrow override layered on top.
+    let baseTaskCards = atlasUniversalTaskCards(home)
+      .filter((card) => !setAsideTaskIds.has(card.task_id)) as TaskCardRow[];
+
+    const effectiveMembershipId = effectiveOperatorMembershipId(operatorContext);
+    const workerMembershipId = effectiveMembershipId
+      ?? (home.activeFarm?.role === "farm_hand" ? home.activeFarm.membershipId : null);
+    const workerFarmId = home.activeFarm?.farmId ?? null;
+
+    if (placementDay && workerMembershipId && workerFarmId) {
+      const supabase = await createAtlasServerClient();
+      const [choreographyResponse, placedCardsResponse] = await Promise.all([
+        supabase.rpc("worker_day_choreography_api_v1", {
+          p_farm_id: workerFarmId,
+          p_membership_id: workerMembershipId,
+          p_day: placementDay,
+        }),
+        supabase.rpc("worker_day_placed_task_cards_v1", {
+          p_farm_id: workerFarmId,
+          p_membership_id: workerMembershipId,
+          p_day: placementDay,
+        }),
+      ]);
+
+      if (choreographyResponse.error) throw new Error(choreographyResponse.error.message);
+      if (placedCardsResponse.error) throw new Error(placedCardsResponse.error.message);
+
+      const choreography = choreographyResponse.data && typeof choreographyResponse.data === "object" && !Array.isArray(choreographyResponse.data)
+        ? choreographyResponse.data as Record<string, unknown>
+        : {};
+      const overrideRows = Array.isArray(choreography.placementOverrides) ? choreography.placementOverrides : [];
+      const overrides = new Map<string, DayPlacement>();
+      for (const value of overrideRows) {
+        const placement = dayPlacement(value);
+        if (placement) overrides.set(placement.taskId, placement);
+      }
+
+      baseTaskCards = baseTaskCards
+        .filter((card) => {
+          const placement = overrides.get(card.task_id);
+          return placement ? baselineSurvivesPlacement(placement, placementDay) : true;
+        })
+        .map((card) => {
+          const placement = overrides.get(card.task_id);
+          return placement?.state === "placed" && placement.serviceDate === placementDay
+            ? applyDayPlacement(card, placement)
+            : card;
+        });
+
+      const seen = new Set(baseTaskCards.map((card) => card.task_id));
+      const placedRows = Array.isArray(placedCardsResponse.data) ? placedCardsResponse.data as TaskCardRow[] : [];
+      for (const card of placedRows) {
+        if (seen.has(card.task_id) || setAsideTaskIds.has(card.task_id)) continue;
+        const placement = overrides.get(card.task_id);
+        if (!placement || placement.state !== "placed" || placement.serviceDate !== placementDay) continue;
+        baseTaskCards.push(applyDayPlacement(card, placement));
+        seen.add(card.task_id);
+      }
+    }
 
     // Project context is enrichment, not a dependency of the working Day. If the
     // portfolio reader is temporarily unavailable, the executable task cards remain usable.
@@ -109,7 +234,7 @@ export async function GET(request: Request) {
       effectiveAccountId: effectiveOperatorAccountId(operatorContext),
       effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
       taskCards,
-      window: { doneDate, dueThrough, exactDate },
+      window: { doneDate, dueThrough, exactDate, placementDay },
     });
   } catch (error) {
     console.error("Atlas universal dated-task read failed:", error);

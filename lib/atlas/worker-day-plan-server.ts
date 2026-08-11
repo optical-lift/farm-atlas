@@ -1,9 +1,7 @@
 import "server-only";
 
-import {
-  effectiveOperatorMembershipId,
-  readAtlasOwnerOperatorContext,
-} from "@/lib/atlas/operator-context";
+import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
+import { getAtlasSession } from "@/lib/atlas/session";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export type WorkerDayPlanWindow = "morning" | "afternoon" | "evening";
@@ -47,6 +45,13 @@ export type WorkerDayPlan = {
   warnings: string[];
 };
 
+export type OwnerWorkerDayPlanningTarget = {
+  farmId: string;
+  membershipId: string;
+  displayName: string;
+  source: "operator_lens" | "owner_direct";
+};
+
 function validDateIso(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value)
     && !Number.isNaN(new Date(`${value}T12:00:00`).getTime());
@@ -84,31 +89,90 @@ function normalizePlan(value: unknown): WorkerDayPlan {
   };
 }
 
+function labelFromWorkerKey(workerKey: string | null | undefined) {
+  const value = workerKey?.trim();
+  if (!value) return "Farm Hand";
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+export async function resolveOwnerWorkerDayPlanningTarget(): Promise<OwnerWorkerDayPlanningTarget | null> {
+  const [operatorContext, session] = await Promise.all([
+    readAtlasOwnerOperatorContext(),
+    getAtlasSession(),
+  ]);
+  if (!session) return null;
+
+  if (
+    operatorContext?.isOperating
+    && operatorContext.effective.farmRole === "farm_hand"
+    && operatorContext.effective.farmId
+    && operatorContext.effective.farmMembershipId
+  ) {
+    return {
+      farmId: operatorContext.effective.farmId,
+      membershipId: operatorContext.effective.farmMembershipId,
+      displayName: operatorContext.effective.displayName || labelFromWorkerKey(operatorContext.effective.workerKey),
+      source: "operator_lens",
+    };
+  }
+
+  const farmId = session.activeFarmId
+    ?? operatorContext?.actor.farmId
+    ?? session.memberships.find((membership) => membership.role === "owner")?.farmId
+    ?? null;
+  if (!farmId) return null;
+
+  const ownerMembership = session.memberships.find((membership) => membership.farmId === farmId && membership.role === "owner");
+  if (!ownerMembership) return null;
+
+  const supabase = await createAtlasServerClient();
+  const { data, error } = await supabase
+    .from("farm_memberships")
+    .select("id, worker_key")
+    .eq("farm_id", farmId)
+    .eq("role", "farm_hand")
+    .eq("active", true)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error("Atlas could not resolve the worker Day target.");
+
+  const workers = (data ?? []) as Array<{ id: string; worker_key: string | null }>;
+  if (workers.length !== 1) return null;
+  const worker = workers[0];
+  const option = operatorContext?.options.find((candidate) => candidate.farmMembershipId === worker.id) ?? null;
+
+  return {
+    farmId,
+    membershipId: worker.id,
+    displayName: option?.displayName || labelFromWorkerKey(worker.worker_key),
+    source: "owner_direct",
+  };
+}
+
 export async function readOwnerWorkerDayPlan(dateIso: string) {
   if (!validDateIso(dateIso)) throw new Error("A valid YYYY-MM-DD worker day is required.");
 
-  const operatorContext = await readAtlasOwnerOperatorContext();
-  const membershipId = effectiveOperatorMembershipId(operatorContext);
-  const effective = operatorContext?.effective ?? null;
-  if (!operatorContext?.isOperating || !membershipId || !effective?.farmId || effective.farmRole !== "farm_hand") {
+  const target = await resolveOwnerWorkerDayPlanningTarget();
+  if (!target) {
     return {
       active: false as const,
-      operatorLabel: effective?.displayName || "Anna",
+      operatorLabel: "Farm Hand",
+      target: null,
       plan: null,
     };
   }
 
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("owner_worker_day_plan_api_v1", {
-    p_farm_id: effective.farmId,
-    p_membership_id: membershipId,
+  const { data, error } = await supabase.rpc("owner_worker_day_plan_choreographed_api_v1", {
+    p_farm_id: target.farmId,
+    p_membership_id: target.membershipId,
     p_day: dateIso,
   });
   if (error) throw new Error(error.message);
 
   return {
     active: true as const,
-    operatorLabel: effective.displayName || "Anna",
+    operatorLabel: target.displayName,
+    target,
     plan: normalizePlan(data),
   };
 }

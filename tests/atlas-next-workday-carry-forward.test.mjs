@@ -31,10 +31,13 @@ test("carry-forward uses closed workday truth without recursively polluting late
   assert.match(migration, /Tuesday planning still assumes Monday's scheduled work will be completed/);
 });
 
-test("future day API preserves server-authoritative carry-forward cards", () => {
+test("future day API preserves server-authoritative carry-forward while honoring explicit Owner placement", () => {
   const route = read("app/api/atlas/universal-task-cards/route.ts");
 
-  assert.match(route, /worker-day reader is authoritative for future-day membership/);
+  assert.match(route, /server-side worker-day reader remains authoritative for ordinary day/);
+  assert.match(route, /Explicit Owner placement is a narrow override layered on top/);
+  assert.match(route, /baselineSurvivesPlacement/);
+  assert.match(route, /worker_day_placed_task_cards_v1/);
   assert.doesNotMatch(route, /filter\(\(card\) => !exactDate \|\| card\.due_date === exactDate\)/);
   assert.match(route, /readAtlasTaskDayDispositions\(doneDate\)/);
 });

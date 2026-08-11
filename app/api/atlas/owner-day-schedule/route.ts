@@ -5,11 +5,8 @@ import {
   readAtlasJsonBody,
   requireAtlasApiAccess,
 } from "@/lib/atlas/api-access";
-import {
-  effectiveOperatorMembershipId,
-  readAtlasOwnerOperatorContext,
-} from "@/lib/atlas/operator-context";
 import { createAtlasServerClient } from "@/lib/supabase/server";
+import { resolveOwnerWorkerDayPlanningTarget } from "@/lib/atlas/worker-day-plan-server";
 
 export const dynamic = "force-dynamic";
 
@@ -80,17 +77,15 @@ export async function POST(request: Request) {
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
 
-  const operatorContext = await readAtlasOwnerOperatorContext();
-  const effectiveMembershipId = effectiveOperatorMembershipId(operatorContext);
-  const effective = operatorContext?.effective ?? null;
-  if (!operatorContext?.isOperating || !effectiveMembershipId || !effective?.farmId || effective.farmRole !== "farm_hand") {
-    return atlasApiError(403, "owner_schedule_operator_required", "Open a Farm Hand account in Owner operator mode before building that worker's schedule.");
+  const target = await resolveOwnerWorkerDayPlanningTarget();
+  if (!target) {
+    return atlasApiError(409, "owner_schedule_target_required", "Atlas could not resolve one Farm Hand Day to edit. Choose a worker lens first if this farm has multiple Farm Hands.");
   }
 
   const supabase = await createAtlasServerClient();
   const response = await supabase.rpc("owner_build_worker_day_schedule_api_v2", {
-    p_farm_id: effective.farmId,
-    p_membership_id: effectiveMembershipId,
+    p_farm_id: target.farmId,
+    p_membership_id: target.membershipId,
     p_day: body.date,
     p_selections: selections,
   });
@@ -100,5 +95,11 @@ export async function POST(request: Request) {
     return atlasApiError(500, "owner_schedule_invalid_result", "Atlas returned an invalid schedule result.");
   }
 
-  return privateJson({ ...(response.data as Record<string, unknown>), ok: true, operatorMode: true, effectiveMembershipId });
+  return privateJson({
+    ...(response.data as Record<string, unknown>),
+    ok: true,
+    targetSource: target.source,
+    targetMembershipId: target.membershipId,
+    targetLabel: target.displayName,
+  });
 }
