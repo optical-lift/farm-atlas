@@ -25,9 +25,9 @@ test("focused work uses one Task Move execution spine while linked Trails stay o
   assert.doesNotMatch(detail, /TaskDominionTrail/);
   for (const label of ["Do", "Place", "How", "Done when"]) assert.ok(brief.includes(label));
   assert.match(brief, /TaskMoveSpine/);
-  assert.match(move, /CURRENT/);
-  assert.match(move, /MOVE/);
-  assert.match(move, /AFTER/);
+  assert.match(move, /<span>Current<\/span>/);
+  assert.match(move, /<span>Move<\/span>/);
+  assert.match(move, /<span>After<\/span>/);
   assert.match(detail, /TaskPrimaryResultControls/);
   assert.match(results, /doneLabel = "Done"/);
   assert.match(results, />\s*Unfinished\s*</);
