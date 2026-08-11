@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 function read(path) {
@@ -34,7 +34,6 @@ test("Day Route keeps the overdue command together, preserves completion echoes,
   const refineCss = read("app/day-route-v1-refine.css");
   const echoCss = read("app/day-timeline-completion-echo.css");
   const overdueCss = read("app/day-overdue-quiet.css");
-  const patch = read("app/DayConsequenceTimelinePatch.tsx");
   const layout = read("app/layout.tsx");
   const adapter = read("lib/atlas/day-route.ts");
 
@@ -79,7 +78,9 @@ test("Day Route keeps the overdue command together, preserves completion echoes,
   assert.match(refineCss, /\.atlas-day-complete-drawer/);
   assert.match(echoCss, /\.atlas-day-completion-echo/);
   assert.match(echoCss, /\.atlas-day-task-node/);
-  assert.match(patch, /label\.textContent = "Overdue"/);
+  assert.equal(existsSync(new URL("../app/DayConsequenceTimelinePatch.tsx", import.meta.url)), false);
+  assert.doesNotMatch(layout, /DayConsequenceTimelinePatch/);
+  assert.match(overdueCss, /content: "Overdue"/);
   assert.match(overdueCss, /exact compact Day Route geometry/);
   assert.match(overdueCss, /\.atlas-day-recovery-count/);
   assert.match(overdueCss, /\.atlas-day-window-marker/);
