@@ -84,18 +84,23 @@ as $function$
 declare
   v_occurrence_id uuid;
   v_original_due date;
+  v_guardrail_applied boolean:=false;
 begin
-  if coalesce((new.metadata->>'sunday_guardrail_applied')::boolean,false) is distinct from true
+  v_guardrail_applied:=lower(coalesce(new.metadata->>'sunday_guardrail_applied','false')) in ('true','1','yes','on');
+
+  if not v_guardrail_applied
      or new.due_date is null
      or coalesce(new.metadata->>'planned_occurrence_date_role','')='historical_release_provenance' then
     return new;
   end if;
 
-  begin
-    v_original_due:=nullif(new.metadata->>'sunday_guardrail_original_due_date','')::date;
-  exception when others then
-    v_original_due:=null;
-  end;
+  if coalesce(new.metadata->>'sunday_guardrail_original_due_date','') ~ '^\d{4}-\d{2}-\d{2}$' then
+    begin
+      v_original_due:=(new.metadata->>'sunday_guardrail_original_due_date')::date;
+    exception when others then
+      v_original_due:=null;
+    end;
+  end if;
 
   v_occurrence_id:=coalesce(
     new.planned_occurrence_id,
@@ -208,32 +213,41 @@ where occurrence.id=candidate.planned_occurrence_id
 -- Reconcile employee work already shifted by the Sunday guardrail before the
 -- post-guardrail occurrence synchronizer existed. The guardrail metadata itself
 -- is the evidence; no title/id-specific patch is required.
+with guarded_tasks as (
+  select task.*,
+         case
+           when coalesce(task.metadata->>'sunday_guardrail_original_due_date','') ~ '^\d{4}-\d{2}-\d{2}$'
+           then (task.metadata->>'sunday_guardrail_original_due_date')::date
+           else null
+         end as original_guardrail_due
+  from atlas.tasks task
+  where task.status in ('open','blocked')
+    and task.due_date is not null
+    and lower(coalesce(task.metadata->>'sunday_guardrail_applied','false')) in ('true','1','yes','on')
+    and coalesce(task.metadata->>'planned_occurrence_date_role','')<>'historical_release_provenance'
+)
 update atlas.planned_work_occurrences occurrence
 set planned_due_date=task.due_date,
     not_before_date=case
       when occurrence.not_before_date is null
         or occurrence.not_before_date=occurrence.planned_due_date
-        or occurrence.not_before_date=nullif(task.metadata->>'sunday_guardrail_original_due_date','')::date
+        or occurrence.not_before_date=task.original_guardrail_due
       then task.due_date
       else occurrence.not_before_date
     end,
     metadata=coalesce(occurrence.metadata,'{}'::jsonb) || jsonb_build_object(
       'sunday_guardrail_current_schedule',jsonb_build_object(
         'task_id',task.id,
-        'original_due_date',task.metadata->>'sunday_guardrail_original_due_date',
+        'original_due_date',task.original_guardrail_due,
         'shifted_to',task.due_date,
         'synced_at',now(),
         'source','active_occurrence_date_reconciliation_v1'
       )
     ),
     updated_at=now()
-from atlas.tasks task
+from guarded_tasks task
 where occurrence.id=task.planned_occurrence_id
   and occurrence.farm_id=task.farm_id
   and occurrence.released_task_id=task.id
   and occurrence.state='released'
-  and task.status in ('open','blocked')
-  and task.due_date is not null
-  and coalesce((task.metadata->>'sunday_guardrail_applied')::boolean,false)=true
-  and coalesce(task.metadata->>'planned_occurrence_date_role','')<>'historical_release_provenance'
   and occurrence.planned_due_date is distinct from task.due_date;
