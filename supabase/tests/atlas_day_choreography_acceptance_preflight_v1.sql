@@ -8,6 +8,7 @@ DECLARE
   v_prepare uuid;
   v_harvest uuid;
   v_event uuid;
+  v_iris uuid;
   v_resource_count integer;
   v_resource_roles text[];
   v_prepare_requirement_count integer;
@@ -243,6 +244,52 @@ BEGIN
   IF coalesce(nullif(btrim(v_briefing_body),''),'')='' THEN
     RAISE EXCEPTION 'Day acceptance preflight: Aug 13 dynamic briefing body is empty';
   END IF;
+
+  -- Owner replanning specimen: this long-horizon iris move is intentionally
+  -- floating and sky-deferrable. Owner Day placement must not manufacture a
+  -- canonical due date, because that would force the sky engine to treat the
+  -- move as date-protected biological work.
+  SELECT id INTO v_iris
+  FROM atlas.tasks
+  WHERE metadata->>'task_key'='anna_20260716_divide_lilac_haven_irises_into_drifts'
+  ORDER BY created_at DESC
+  LIMIT 1;
+
+  IF v_iris IS NULL THEN
+    RAISE EXCEPTION 'Day acceptance preflight: Lilac Haven iris Owner-replanning specimen missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM atlas.tasks task
+    WHERE task.id=v_iris
+      AND task.status='open'
+      AND task.due_date IS NULL
+      AND task.commitment_kind='floating'
+      AND task.work_lane='discretionary'
+      AND task.sky_deferral_mode='allow'
+      AND task.metadata->>'schedule_semantics'='floating_eligibility'
+  ) THEN
+    RAISE EXCEPTION 'Day acceptance preflight: Owner Day placement leaked back into canonical iris due-date truth';
+  END IF;
+
+  IF coalesce((atlas.task_sky_presentation_gate_v1(v_iris,'2026-08-11'::date)->>'withheldUnderSky')::boolean,false) IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'Day acceptance preflight: undated iris specimen is not being withheld during the current unfavored sky window';
+  END IF;
+
+  IF position(
+    'owner_apply_worker_day_edits_api_v1'
+    IN pg_get_functiondef('atlas.owner_build_worker_day_schedule_v2(uuid,uuid,date,jsonb)'::regprocedure)
+  ) = 0 THEN
+    RAISE EXCEPTION 'Day acceptance preflight: Owner schedule builder is not using Day placement truth';
+  END IF;
+
+  IF position(
+    'set due_date=p_day'
+    IN lower(pg_get_functiondef('atlas.owner_build_worker_day_schedule_v2(uuid,uuid,date,jsonb)'::regprocedure))
+  ) > 0 THEN
+    RAISE EXCEPTION 'Day acceptance preflight: Owner schedule builder still mutates task due dates for placement';
+  END IF;
 END
 $$;
 
@@ -256,7 +303,9 @@ SELECT jsonb_build_object(
     'Lebanon prepare and harvest tasks retain destination truth and canonical load requirements',
     'Thursday harvest has a blocking 7-bucket departure cue',
     'both Lebanon tasks belong to the Aug 13 Bloom Bar event',
-    'Aug 13 has a dynamic first-open briefing with a non-empty current body'
+    'Aug 13 has a dynamic first-open briefing with a non-empty current body',
+    'Owner Day places floating work without rewriting canonical due-date truth',
+    'the Lilac Haven iris move is currently withheld by its real sky-deferral policy'
   )
 ) AS atlas_day_choreography_acceptance_preflight_v1;
 
