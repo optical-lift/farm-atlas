@@ -16,7 +16,7 @@ test("dynamic event briefings derive their expiry from the event's real local en
   assert.match(migration, /new\.expires_at:=v_event_end/);
   assert.match(migration, /new\.recovery_policy:='expire'/);
   assert.match(migration, /update atlas\.worker_day_cues cue/);
-  assert.match(delivery, /if \(cue\.expiresAt && cue\.expiresAt <= nowIso\) return false/);
+  assert.match(delivery, /if \(cue\.expiresAt && new Date\(cue\.expiresAt\)\.getTime\(\) < now && cue\.recoveryPolicy === "expire"\) return false/);
 });
 
 test("first-open briefing changes language as the event approaches and begins", () => {
