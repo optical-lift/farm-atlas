@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import TaskExecutionBrief from "@/components/atlas/task-execution-brief";
 import TaskPrimaryResultControls from "@/components/atlas/task-primary-result-controls";
 import { TaskChildChecklist } from "@/components/atlas/task-child-checklist";
+import { atlasFarmDateIso, atlasShiftFarmDate } from "@/lib/atlas/farm-day";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import type { TaskMoveAssembly } from "@/lib/atlas/task-move-assembly";
@@ -38,21 +39,12 @@ export type AssignedTaskExecutionShellProps = {
 };
 
 type TaskMoveResponse = { ok?: boolean; assembly?: TaskMoveAssembly; error?: string };
-
-function todayIso() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Chicago",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
-function addDays(dateIso: string, days: number) {
-  const date = new Date(`${dateIso}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
+type TaskCardsResponse = {
+  ok?: boolean;
+  taskCards?: AtlasTaskCard[];
+  error?: string;
+  details?: string;
+};
 
 function returnDestination(fallback: string) {
   const value = new URLSearchParams(window.location.search).get("returnTo");
@@ -163,16 +155,28 @@ export default function AssignedTaskExecutionShell({
       headers: { Accept: "application/json" },
       cache: "no-store",
     });
-    const data = await response.json() as {
-      ok?: boolean;
-      taskCards?: AtlasTaskCard[];
-      error?: string;
-      details?: string;
-    };
+    const data = await response.json() as TaskCardsResponse;
     if (!response.ok || !data.ok || !data.taskCards?.[0]) {
       throw new Error(data.details || data.error || "Task refresh failed.");
     }
     setTask(data.taskCards[0]);
+  }
+
+  async function refreshTaskAndChildren() {
+    const response = await fetch("/api/atlas/task-cards", {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    const data = await response.json() as TaskCardsResponse;
+    if (!response.ok || !data.ok || !data.taskCards) {
+      throw new Error(data.details || data.error || "Task checklist refresh failed.");
+    }
+
+    const parent = data.taskCards.find((candidate) => candidate.task_id === task.task_id);
+    if (parent) setTask(parent);
+    setChildren(data.taskCards
+      .filter((candidate) => candidate.parent_task_id === task.task_id && candidate.status !== "archived")
+      .sort((left, right) => left.created_at.localeCompare(right.created_at)));
   }
 
   async function transition(outcome: AssignedTaskOutcome, note = "") {
@@ -304,7 +308,7 @@ export default function AssignedTaskExecutionShell({
               </section>
             ) : null}
             {methodInstrument ? methodInstrument(instrumentContext) : null}
-            <TaskChildChecklist childTasks={children} onChange={async () => setChildren((current) => [...current])} />
+            <TaskChildChecklist childTasks={children} onChange={refreshTaskAndChildren} />
             {showCorrectionNote ? (
               <p className="atlas-task-correction-note">This completion has linked farm evidence. Review the recorded result before correcting it.</p>
             ) : null}
@@ -327,12 +331,12 @@ export default function AssignedTaskExecutionShell({
                   <span>Reschedule</span>
                   <div className="atlas-task-more-outcomes-grid">
                     <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(null, "Moved to next Elm Farm calendar day", "next_day")}>Tomorrow</button>
-                    <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(addDays(todayIso(), 7), "Moved to next week")}>Next week</button>
+                    <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(atlasShiftFarmDate(atlasFarmDateIso(), 7), "Moved to next week")}>Next week</button>
                     <button
                       type="button"
                       disabled={Boolean(saving)}
                       onClick={() => {
-                        const date = window.prompt("Pick a date (YYYY-MM-DD)", task.due_date || todayIso())?.trim();
+                        const date = window.prompt("Pick a date (YYYY-MM-DD)", task.due_date || atlasFarmDateIso())?.trim();
                         if (date) void reschedule(date, "Rescheduled from task page");
                       }}
                     >
