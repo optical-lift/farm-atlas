@@ -20,15 +20,12 @@ test("Pass 5 gives ordinary assigned tasks one neutral execution shell", () => {
   assert.doesNotMatch(canonical, /DominionAssignedTaskDetail/);
 });
 
-test("the shell owns canonical Task Move resolution, timing, readiness, blockers, and default completion gating", () => {
+test("the shell owns canonical Task Move resolution blockers and completion gating while the brief owns human timing presentation", () => {
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
   const brief = read("components/atlas/task-execution-brief.tsx");
+  const spine = read("components/atlas/task-move-spine.tsx");
 
   assert.match(shell, /\/api\/atlas\/task-move\?taskId=/);
-  assert.match(shell, /assembly\?\.execution\.dueLabel/);
-  assert.match(shell, /data-atlas-task-timing="true"/);
-  assert.match(shell, /data-atlas-task-readiness="true"/);
-  assert.match(shell, /assembly\.readiness\.status/);
   assert.match(shell, /assembly\?\.unresolved/);
   assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
   assert.match(shell, /const canonicalDoneDisabled =/);
@@ -36,7 +33,14 @@ test("the shell owns canonical Task Move resolution, timing, readiness, blockers
   assert.match(shell, /assembly\.readiness\.status === "blocked"/);
   assert.match(shell, /assembly\.spine\.connection === "stops_at_move"/);
   assert.match(shell, /doneDisabled=\{canonicalDoneDisabled\}/);
+  assert.match(shell, /This can&apos;t move yet/);
+
   assert.match(brief, /assemblyControlled = assembly !== undefined/);
+  assert.match(brief, /resolvedAssembly\?\.execution\.dueLabel/);
+  assert.match(brief, /atlas-human-task-fallback__due/);
+  assert.match(spine, /assembly\.execution\.dueLabel/);
+  assert.match(spine, /data-reachable=\{stopped \? "false" : "true"\}/);
+  assert.doesNotMatch(shell, /data-atlas-task-timing="true"|data-atlas-task-readiness="true"/);
 });
 
 test("domain-specific behavior enters through explicit instrument slots without owning the page", () => {
