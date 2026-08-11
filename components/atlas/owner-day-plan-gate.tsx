@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import OwnerDayCueEditor from "@/components/atlas/owner-day-cue-editor";
+import type { OwnerDayCueDraftEdit } from "@/components/atlas/owner-day-cue-draft";
 import OwnerDayScheduleBuilder from "@/components/atlas/owner-day-schedule-builder";
 
 type PlanProbe = {
@@ -49,10 +50,12 @@ export default function OwnerDayPlanGate() {
   const [probe, setProbe] = useState<PlanProbe | null>(null);
   const [open, setOpen] = useState(false);
   const [host, setHost] = useState<HTMLElement | null>(null);
+  const [cueDraftEdits, setCueDraftEdits] = useState<Map<string, OwnerDayCueDraftEdit>>(new Map());
 
   useEffect(() => {
     setProbe(null);
     setOpen(false);
+    setCueDraftEdits(new Map());
     if (!dateIso) return;
 
     const controller = new AbortController();
@@ -131,6 +134,29 @@ export default function OwnerDayPlanGate() {
     + Math.max(0, Number(probe?.plan?.automaticPaidMinutes) || 0);
   const overByMinutes = Math.max(knownLoadMinutes - targetMinutes, 0);
   const remainingMinutes = Math.max(targetMinutes - knownLoadMinutes, 0);
+  const cueDrafts = [...cueDraftEdits.values()];
+
+  function stageCueEdit(edit: OwnerDayCueDraftEdit) {
+    setCueDraftEdits((current) => {
+      const next = new Map(current);
+      next.set(edit.draftKey, edit);
+      return next;
+    });
+  }
+
+  function removeCueDraftEdit(draftKey: string) {
+    setCueDraftEdits((current) => {
+      if (!current.has(draftKey)) return current;
+      const next = new Map(current);
+      next.delete(draftKey);
+      return next;
+    });
+  }
+
+  function closeDraft() {
+    setCueDraftEdits(new Map());
+    setOpen(false);
+  }
 
   return createPortal(
     <>
@@ -172,11 +198,12 @@ export default function OwnerDayPlanGate() {
                     {overByMinutes ? ` · ${minutesLabel(overByMinutes)} over` : remainingMinutes ? ` · ${minutesLabel(remainingMinutes)} open` : " · full"}
                   </span>
                 ) : null}
+                {cueDrafts.length ? <span style={{ display: "block", marginTop: 3, color: "#686b87", fontSize: 10, fontWeight: 800 }}>{cueDrafts.length} cue change{cueDrafts.length === 1 ? "" : "s"} staged</span> : null}
               </div>
               <button
                 type="button"
                 aria-expanded="true"
-                onClick={() => setOpen(false)}
+                onClick={closeDraft}
                 style={{ border: 0, background: "transparent", color: "#676a96", font: "inherit", fontSize: 11, fontWeight: 900, cursor: "pointer" }}
               >
                 Close
@@ -187,8 +214,8 @@ export default function OwnerDayPlanGate() {
       </div>
       {open ? (
         <>
-          <OwnerDayScheduleBuilder />
-          <OwnerDayCueEditor />
+          <OwnerDayScheduleBuilder cueDraftEdits={cueDrafts} />
+          <OwnerDayCueEditor draftEdits={cueDrafts} onDraftCueEdit={stageCueEdit} onRemoveDraftCueEdit={removeCueDraftEdit} />
         </>
       ) : null}
     </>,
