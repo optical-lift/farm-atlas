@@ -12,7 +12,9 @@ test("Owner Day choreography stays hidden until the Owner opens Edit today", () 
   assert.match(gate, /\/api\/atlas\/worker-day-plan\?date=/);
   assert.match(gate, /Edit today/);
   assert.match(gate, /Purple is a draft/);
-  assert.match(gate, /\{open \? <OwnerDayScheduleBuilder \/> : null\}/);
+  assert.match(gate, /\{open \? \(/);
+  assert.match(gate, /<OwnerDayScheduleBuilder \/>/);
+  assert.match(gate, /<OwnerDayCueEditor \/>/);
   assert.match(gate, /onClick=\{\(\) => setOpen\(false\)\}/);
 });
 
