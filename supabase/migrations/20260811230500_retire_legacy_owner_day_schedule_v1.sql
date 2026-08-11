@@ -25,8 +25,9 @@ begin
 end;
 $function$;
 
-revoke all on function atlas.owner_build_worker_day_schedule_v1(uuid,uuid,date,jsonb) from public,anon,authenticated;
-grant execute on function atlas.owner_build_worker_day_schedule_v1(uuid,uuid,date,jsonb) to service_role;
+-- The internal compatibility name is callable only through a database-owner
+-- wrapper. There is no direct authenticated or service entry point to v1.
+revoke all on function atlas.owner_build_worker_day_schedule_v1(uuid,uuid,date,jsonb) from public,anon,authenticated,service_role;
 
 create or replace function atlas.owner_build_worker_day_schedule_api_v1(
   p_farm_id uuid,
