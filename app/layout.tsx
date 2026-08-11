@@ -9,14 +9,11 @@ import DependencyReleaseFlash from "@/components/atlas/task/DependencyReleaseFla
 import AtlasWorkAlongsideOverlay from "@/components/atlas/work-alongside/AtlasWorkAlongsideOverlay";
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
-import HomeTodayCompletePatch from "./HomeTodayCompletePatch";
 import WorkerVocabularyCleanupPatch from "./WorkerVocabularyCleanupPatch";
 import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
-import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
 import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
 import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
 import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
-import AnnaPaidScheduleHomePatch from "./AnnaPaidScheduleHomePatch";
 import ProjectTaskDestinationGuard from "./ProjectTaskDestinationGuard";
 import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
 import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
@@ -159,14 +156,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <AtlasBellCover />
         <DependencyReleaseFlash />
         <Suspense fallback={null}><AtlasWorkAlongsideOverlay /></Suspense>
-        <HomeTodayCompletePatch />
         <WorkerVocabularyCleanupPatch />
         <TaskProgressExactDayPatch />
-        <OwnerHomeLinkPatch />
         <OwnerTaskReturnPatch />
         <SafeBedCropAccordionPatch />
         <AttachedTaskHistoryPatch />
-        <AnnaPaidScheduleHomePatch />
         <ProjectTaskDestinationGuard />
         <UniversalCollectionIdentity />
         <DayTaskTitleLinkPatch />
