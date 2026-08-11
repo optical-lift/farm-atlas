@@ -6,9 +6,12 @@ import {
   requireAtlasApiAccess,
 } from "@/lib/atlas/api-access";
 import {
+  effectiveOperatorAccountId,
   effectiveOperatorMembershipId,
   readAtlasOwnerOperatorContext,
 } from "@/lib/atlas/operator-context";
+import { readAtlasProjectTaskFocus } from "@/lib/atlas/portfolio";
+import { getAtlasSession } from "@/lib/atlas/session";
 import {
   AtlasTaskTransitionInputError,
   atlasTaskTransitionRpcForRole,
@@ -20,6 +23,15 @@ export const dynamic = "force-dynamic";
 
 type RpcError = { code?: string; message?: string };
 type RpcResult = Record<string, unknown>;
+type ProjectTransition = "done" | "partial" | "blocked" | "not_relevant" | "changed_plan";
+
+const PROJECT_TRANSITIONS = new Set<ProjectTransition>([
+  "done",
+  "partial",
+  "blocked",
+  "not_relevant",
+  "changed_plan",
+]);
 
 function privateJson(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
@@ -38,6 +50,71 @@ function rpcError(error: RpcError) {
   return atlasApiError(500, "task_transition_failed", "Atlas could not update the task.");
 }
 
+function projectStatus(transition: ProjectTransition) {
+  if (transition === "done") return "done";
+  if (transition === "blocked") return "blocked";
+  if (transition === "not_relevant" || transition === "changed_plan") return "skipped";
+  return "open";
+}
+
+async function projectTaskTransition(input: ReturnType<typeof normalizeAtlasTaskTransitionInput>) {
+  const session = await getAtlasSession();
+  if (!session?.organizationMemberships.length) return null;
+
+  let focus;
+  try {
+    focus = await readAtlasProjectTaskFocus(input.taskId);
+  } catch {
+    // A farm task may not participate in the organization portfolio. In that case
+    // continue through the normal farm transition path below.
+    return null;
+  }
+  if (!focus) return null;
+
+  if (!focus.permissions.canComplete) {
+    return atlasApiError(403, "project_task_transition_forbidden", "This project task cannot be changed by the selected account.");
+  }
+  if (!PROJECT_TRANSITIONS.has(input.transition as ProjectTransition)) {
+    return atlasApiError(400, "project_task_transition_unsupported", "That outcome is not supported for project work.");
+  }
+
+  const transition = input.transition as ProjectTransition;
+  const operatorContext = await readAtlasOwnerOperatorContext();
+  const effectiveAccountId = effectiveOperatorAccountId(operatorContext);
+  const supabase = await createAtlasServerClient();
+  const { data, error } = effectiveAccountId
+    ? await supabase.rpc("owner_operator_transition_project_task_v1", {
+        p_effective_account_id: effectiveAccountId,
+        p_task_id: input.taskId,
+        p_transition: transition,
+        p_note: input.note,
+      })
+    : await supabase.rpc("transition_project_task_v1", {
+        p_task_id: input.taskId,
+        p_transition: transition,
+        p_note: input.note,
+      });
+
+  if (error) return rpcError(error as RpcError);
+
+  return privateJson({
+    ok: true,
+    transitionId: `project:${input.taskId}:${input.idempotencyKey}`,
+    taskId: typeof data === "string" ? data : input.taskId,
+    status: projectStatus(transition),
+    fieldLogId: null,
+    taskOutcomeEventId: null,
+    childTaskIds: [],
+    childrenClosed: 0,
+    nextTaskId: null,
+    deduplicated: false,
+    warnings: [],
+    projectTransition: true,
+    operatorMode: Boolean(effectiveAccountId),
+    effectiveAccountId,
+  });
+}
+
 export async function POST(request: Request) {
   if (request.headers.get("x-atlas-intent") !== "task-transition-v1") {
     return atlasApiError(400, "task_transition_intent_required", "A valid Atlas task intent is required.");
@@ -49,6 +126,9 @@ export async function POST(request: Request) {
   } catch (error) {
     return inputError(error);
   }
+
+  const projectResponse = await projectTaskTransition(input);
+  if (projectResponse) return projectResponse;
 
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
