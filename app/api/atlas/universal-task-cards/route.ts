@@ -89,6 +89,18 @@ function applyDayPlacement(card: TaskCardRow, placement: DayPlacement) {
   };
 }
 
+function baselineSurvivesPlacement(placement: DayPlacement, placementDay: string) {
+  if (placement.state === "returned_to_atlas") {
+    // Return to Atlas removes the task from the Day it was handed back. On a
+    // later workday the ordinary eligibility/carry engine is free to offer it.
+    return placement.serviceDate !== placementDay;
+  }
+  if (placement.serviceDate === placementDay) return true;
+  // Before an explicit future placement, keep the task off the worker's plate.
+  // After a missed explicit placement, ordinary overdue/carry behavior resumes.
+  return placement.serviceDate < placementDay;
+}
+
 export async function GET(request: Request) {
   const session = await getAtlasSession();
   if (!session) return privateJson({ ok: false, error: "Sign in required." }, 401);
@@ -176,12 +188,13 @@ export async function GET(request: Request) {
       baseTaskCards = baseTaskCards
         .filter((card) => {
           const placement = overrides.get(card.task_id);
-          if (!placement) return true;
-          return placement.state === "placed" && placement.serviceDate === placementDay;
+          return placement ? baselineSurvivesPlacement(placement, placementDay) : true;
         })
         .map((card) => {
           const placement = overrides.get(card.task_id);
-          return placement ? applyDayPlacement(card, placement) : card;
+          return placement?.state === "placed" && placement.serviceDate === placementDay
+            ? applyDayPlacement(card, placement)
+            : card;
         });
 
       const seen = new Set(baseTaskCards.map((card) => card.task_id));
