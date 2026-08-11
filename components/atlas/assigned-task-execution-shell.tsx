@@ -145,7 +145,7 @@ export default function AssignedTaskExecutionShell({
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        // The legacy execution brief remains available if canonical resolution fails.
+        // The compatibility brief remains usable if canonical resolution fails.
       });
     return () => controller.abort();
   }, [task.task_id, task.status, task.updated_at]);
@@ -241,8 +241,7 @@ export default function AssignedTaskExecutionShell({
     returnHref,
     refreshTask,
   };
-  const timingLabel = assembly?.execution.dueLabel || task.due_date || null;
-  const unresolved = assembly?.unresolved ?? [];
+  const blockers = (assembly?.unresolved ?? []).filter((item) => item.status === "blocked");
   const canonicalDoneDisabled =
     doneDisabled ||
     !assembly ||
@@ -252,21 +251,10 @@ export default function AssignedTaskExecutionShell({
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell" data-atlas-assigned-task-execution-shell="true">
       <style>{`
-        .atlas-assigned-task-shell__timing { display:flex; align-items:center; gap:8px; margin:0; padding:10px 28px; border-bottom:1px solid rgba(66,65,82,.09); background:#fbfbfd; color:#666878; font-size:.76rem; font-weight:800; }
-        .atlas-assigned-task-shell__timing b { color:#8588ad; font-size:.66rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
-        .atlas-assigned-task-shell__readiness { margin:0 28px 20px; padding:13px 14px; border:1px solid rgba(87,89,116,.14); border-radius:15px; background:#fafafd; color:#4e5062; }
-        .atlas-assigned-task-shell__readiness[data-state="warning"] { background:#fffdf2; }
-        .atlas-assigned-task-shell__readiness[data-state="blocked"] { border-style:dashed; background:#fff8f5; color:#704d43; }
-        .atlas-assigned-task-shell__readiness-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-        .atlas-assigned-task-shell__readiness-head span { color:#8588ad; font-size:.66rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
-        .atlas-assigned-task-shell__readiness-head strong { font-size:.78rem; }
-        .atlas-assigned-task-shell__unresolved { display:grid; gap:5px; margin:9px 0 0; padding:0; list-style:none; font-size:.78rem; font-weight:720; line-height:1.35; }
-        .atlas-assigned-task-shell__unresolved li { display:grid; grid-template-columns:auto minmax(0,1fr); gap:7px; }
-        .atlas-assigned-task-shell__unresolved small { color:#8588ad; font-size:.62rem; font-weight:900; letter-spacing:.07em; text-transform:uppercase; }
-        @media (max-width:560px) {
-          .atlas-assigned-task-shell__timing { padding:10px 21px; }
-          .atlas-assigned-task-shell__readiness { margin:0 21px 18px; }
-        }
+        .atlas-human-task-blocker { margin:0 28px 18px; padding:10px 12px; border-left:3px solid #865f4f; border-radius:0 11px 11px 0; background:#fff8f5; color:#65483e; }
+        .atlas-human-task-blocker strong { display:block; font-size:.78rem; }
+        .atlas-human-task-blocker ul { display:grid; gap:3px; margin:5px 0 0; padding-left:17px; font-size:.76rem; line-height:1.35; }
+        @media (max-width:560px) { .atlas-human-task-blocker { margin:0 21px 16px; } }
       `}</style>
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
@@ -278,33 +266,12 @@ export default function AssignedTaskExecutionShell({
           <Link href={assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
         </header>
         <div className="atlas-task-page-body">
-          <article className="atlas-task-page-active atlas-task-ticket-card atlas-assigned-task-execution-card atlas-dominion-task-card">
-            {timingLabel ? (
-              <p className="atlas-assigned-task-shell__timing" data-atlas-task-timing="true">
-                <b>Timing</b>
-                <span>{timingLabel}</span>
-              </p>
-            ) : null}
+          <article className="atlas-task-page-active atlas-task-ticket-card atlas-assigned-task-execution-card">
             <TaskExecutionBrief task={task} assembly={assembly} />
-            {assembly && unresolved.length ? (
-              <section
-                className="atlas-assigned-task-shell__readiness"
-                data-atlas-task-readiness="true"
-                data-state={assembly.readiness.status}
-                aria-label="Task readiness"
-              >
-                <div className="atlas-assigned-task-shell__readiness-head">
-                  <span>Before the move</span>
-                  <strong>{assembly.readiness.status === "blocked" ? "Blocked" : "Check"}</strong>
-                </div>
-                <ul className="atlas-assigned-task-shell__unresolved">
-                  {unresolved.map((item, index) => (
-                    <li key={`${item.kind}-${item.label}-${index}`}>
-                      <small>{item.kind.replaceAll("_", " ")}</small>
-                      <span>{item.label}</span>
-                    </li>
-                  ))}
-                </ul>
+            {blockers.length ? (
+              <section className="atlas-human-task-blocker" data-atlas-task-blocker="true" aria-label="What is blocking this task">
+                <strong>This can&apos;t move yet.</strong>
+                <ul>{blockers.map((item, index) => <li key={`${item.kind}-${item.label}-${index}`}>{item.label}</li>)}</ul>
               </section>
             ) : null}
             {methodInstrument ? methodInstrument(instrumentContext) : null}
