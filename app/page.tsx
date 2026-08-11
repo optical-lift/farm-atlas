@@ -176,7 +176,13 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     <>
       <AtlasHomeServerRefresh />
       {/* Legacy route contract only: <AtlasAroundRoutes canManage={false} /> has been absorbed into the app dock and compact Home lenses. */}
-      <AtlasUniversalHome home={renderedHome} dayOverview={visibleTaskOverview.summary} farmSeasons={farmSeasons} farmHandMode={renderedFarmHandMode} />
+      <AtlasUniversalHome
+        home={renderedHome}
+        dayOverview={visibleTaskOverview.summary}
+        farmSeasons={farmSeasons}
+        farmHandMode={renderedFarmHandMode}
+        hideTimeNavigation={farmHandMode}
+      />
       <FarmHandQuickWinPrompt home={renderedHome} active={renderedFarmHandMode} />
       <AtlasPwaCoverPrompt />
     </>
