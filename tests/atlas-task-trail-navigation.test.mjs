@@ -10,7 +10,7 @@ function exists(path) {
   return existsSync(new URL(`../${path}`, import.meta.url));
 }
 
-test("focused work uses one Task Move execution spine while linked Trails stay optional context", () => {
+test("focused work uses one human Task Move execution trail while linked Trails stay optional context", () => {
   const layout = read("app/layout.tsx");
   const detail = read("components/atlas/assigned-task-execution-shell.tsx");
   const brief = read("components/atlas/task-execution-brief.tsx");
@@ -23,11 +23,14 @@ test("focused work uses one Task Move execution spine while linked Trails stay o
   assert.match(detail, /atlas-dominion-task-card/);
   assert.match(detail, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
   assert.doesNotMatch(detail, /TaskDominionTrail/);
-  for (const label of ["Do", "Place", "How", "Done when"]) assert.ok(brief.includes(label));
   assert.match(brief, /TaskMoveSpine/);
-  assert.match(move, /<span>Current<\/span>/);
-  assert.match(move, /<span>Move<\/span>/);
-  assert.match(move, /<span>After<\/span>/);
+  assert.match(brief, /function Instructions/);
+  assert.match(move, />Right now<\/span>/);
+  assert.match(move, />Do this<\/span>/);
+  assert.match(move, /"Target held" : "Finished"/);
+  assert.match(move, /data-kind="current"/);
+  assert.match(move, /data-kind="work"/);
+  assert.match(move, /data-kind="finish"/);
   assert.match(detail, /TaskPrimaryResultControls/);
   assert.match(results, /doneLabel = "Done"/);
   assert.match(results, />\s*Unfinished\s*</);
