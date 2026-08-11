@@ -12,8 +12,8 @@ test("generated transplant readiness is internal provenance delivered as a Day o
   assert.match(migration, /new\.visibility_scope:='system_internal'/);
   assert.match(migration, /'observation_delivery_mode','day_cue'/);
   assert.match(migration, /'readiness_target','field_transplant'/);
-  assert.match(migration, /'cue_kind'[\s\S]*'observation'/i);
-  assert.match(migration, /'anchorKind'|first_open/);
+  assert.match(migration, /service_date,cue_kind,anchor_kind/);
+  assert.match(migration, /'observation','first_open'/);
   assert.match(migration, /Are the '\|\|v_subject\|\|' seedlings ready to plant out\?'/);
 });
 
