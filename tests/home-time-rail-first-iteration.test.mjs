@@ -9,10 +9,11 @@ function read(path) {
 const home = read("components/atlas/home/AtlasUniversalHomeV2.tsx");
 const css = read("components/atlas/home/universal-home-v2.module.css");
 
-test("Owner Home keeps the purple task board and calendar rail while farm-hand Home can suppress the rail", () => {
+test("Owner Home keeps the purple task board and calendar rail while actual farm-hand Home can suppress the rail", () => {
   assert.match(home, /<div className=\{styles\.todayStack\}>/);
   assert.match(home, /<AtlasCard/);
-  assert.match(home, /farmHandMode \? null : <HomeTimeRail home=\{home\}\/>/);
+  assert.match(home, /hideTimeNavigation \? null : <HomeTimeRail home=\{home\}\/>/);
+  assert.doesNotMatch(home, /farmHandMode \? null : <HomeTimeRail/);
   assert.match(css, /\.todayStack[\s\S]*display: grid;[\s\S]*gap: 8px/);
   assert.doesNotMatch(home, /atlas-home-task-hero|atlas-daily-run-sheet/);
 });
