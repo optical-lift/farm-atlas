@@ -103,9 +103,7 @@ begin
           z.stable_key = 'grow_room'
           or coalesce(t.metadata ->> 'collection_zone', '') ilike '%grow room%'
           or coalesce(t.metadata ->> 'location_label', '') ilike '%grow room%'
-          or coalesce(t.metadata ->> 'work_route', '') in (
-            'grow_room_check', 'pot_up', 'hardening_off', 'transplant_readiness'
-          )
+          or coalesce(t.metadata ->> 'work_route', '') = 'grow_room_check'
         )
     ), linked as (
       select *
