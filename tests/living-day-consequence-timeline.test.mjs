@@ -1,20 +1,20 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Living Day keeps consequence truth while mixing overdue work into accomplish windows", () => {
+test("Living Day keeps canonical consequence truth while mixing overdue work into accomplish windows", () => {
   const page = read("app/day/page.tsx");
-  const patch = read("app/DayConsequenceTimelinePatch.tsx");
   const grammar = read("lib/atlas/day-consequence.ts");
   const consequenceCss = read("app/day-consequence-timeline.css");
   const overdueCss = read("app/day-overdue-quiet.css");
   const layout = read("app/layout.tsx");
 
-  assert.match(layout, /DayConsequenceTimelinePatch/);
+  assert.equal(existsSync(new URL("../app/DayConsequenceTimelinePatch.tsx", import.meta.url)), false);
+  assert.doesNotMatch(layout, /DayConsequenceTimelinePatch/);
   assert.match(layout, /day-consequence-timeline\.css/);
   assert.match(layout, /day-overdue-quiet\.css/);
   assert.match(grammar, /Continuing from/);
@@ -34,16 +34,6 @@ test("Living Day keeps consequence truth while mixing overdue work into accompli
   assert.match(page, /isOverdueTask\(task, dateIso\)/);
   assert.doesNotMatch(page, /atlas-day-overdue-group/);
 
-  assert.match(patch, /quietInMixedTimeline/);
-  assert.match(patch, /removeConsequenceCopy/);
-  assert.match(patch, /function applyOverdueCopy/);
-  assert.match(patch, /label\.textContent = "Overdue"/);
-  assert.match(patch, /`\$\{countText\} overdue tasks`/);
-  assert.match(patch, /applyOverdueCopy\(\)/);
-  assert.doesNotMatch(patch, /Added after morning plan/);
-  assert.doesNotMatch(patch, /timelineOrder/);
-  assert.doesNotMatch(patch, /applyOverdueHeading/);
-
   assert.match(consequenceCss, /data-atlas-day-consequence="continued"/);
   assert.match(overdueCss, /exact compact Day Route geometry/);
   assert.match(overdueCss, /\.atlas-day-recovery-count/);
@@ -53,18 +43,16 @@ test("Living Day keeps consequence truth while mixing overdue work into accompli
   assert.doesNotMatch(overdueCss, /\.atlas-day-command-header-with-recovery\s*\{/);
 });
 
-test("Living Day consequence reader preserves canonical task data", () => {
-  const patch = read("app/DayConsequenceTimelinePatch.tsx");
+test("Living Day consequence rules preserve canonical task data without mutating task dates", () => {
+  const grammar = read("lib/atlas/day-consequence.ts");
   const route = read("app/api/atlas/living-day-plan/route.ts");
   const migration = read("supabase/migrations/20260730035400_living_day_plan_snapshot_v1.sql");
 
-  assert.match(patch, /fetchAtlasTaskCards/);
-  assert.match(patch, /dataset\.atlasDayConsequence/);
+  assert.match(grammar, /atlasDayTaskConsequence/);
+  assert.match(grammar, /atlasIsCarriedDayTask/);
   assert.match(route, /prepare_living_day_plan_v1/);
   assert.match(migration, /due_dates_unchanged/);
   assert.match(migration, /withheld_flexible_task_ids/);
-  assert.doesNotMatch(patch, /postAtlasTaskTransition/);
-  assert.doesNotMatch(patch, /update.*due_date/i);
+  assert.doesNotMatch(grammar, /postAtlasTaskTransition|window\.prompt|MutationObserver|document\.querySelector/);
   assert.doesNotMatch(route, /update.*due_date/i);
-  assert.doesNotMatch(patch, /window\.prompt/);
 });
