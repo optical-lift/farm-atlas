@@ -3,16 +3,26 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const shell = readFileSync(new URL("../components/atlas/shell/AtlasContextualAppFrame.tsx", import.meta.url), "utf8");
+const home = readFileSync(new URL("../components/atlas/home/AtlasUniversalHomeV2.tsx", import.meta.url), "utf8");
 const add = readFileSync(new URL("../components/atlas/global-atlas-add.tsx", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../components/atlas/global-atlas-add.module.css", import.meta.url), "utf8");
-const client = readFileSync(new URL("../lib/atlas/object-work-client.ts", import.meta.url), "utf8");
+const client = readFileSync(new URL("../lib/atlas/manual-task-client.ts", import.meta.url), "utf8");
+const route = readFileSync(new URL("../app/api/atlas/manual-task/route.ts", import.meta.url), "utf8");
 
-test("the green plus is mounted in the authenticated Atlas shell", () => {
+test("the one real green plus is mounted in the authenticated Atlas shell", () => {
   assert.match(shell, /import GlobalAtlasAdd/);
   assert.match(shell, /<GlobalAtlasAdd\s*\/>/);
   assert.ok(shell.indexOf("<GlobalAtlasAdd") < shell.indexOf("<nav className=\"atlas-context-footer\""));
   assert.match(add, /aria-label="Add to Atlas"/);
   assert.match(styles, /\.floatingButton[\s\S]*background: #6f9562/);
+});
+
+test("the false darker-green Home proxy is gone", () => {
+  assert.doesNotMatch(shell, /HomeGreenPlusBridge/);
+  assert.doesNotMatch(home, /atlas-note-plus/);
+  assert.doesNotMatch(home, /aria-label="Document work"/);
+  assert.doesNotMatch(styles, /atlas-note-plus/);
+  assert.doesNotMatch(styles, /atlas-home-add-trigger/);
 });
 
 test("the plus defaults to sentence-built canonical Work Cards instead of a note form", () => {
@@ -24,13 +34,17 @@ test("the plus defaults to sentence-built canonical Work Cards instead of a note
   assert.match(add, /<FieldLogDrawer/);
 });
 
-test("global authoring chooses one canonical place before creating work", () => {
+test("global authoring chooses one canonical place before creating a canonical task", () => {
   assert.match(add, /fetchAtlasZoneRegistry/);
   assert.match(add, /One canonical object owns this card/);
-  assert.match(add, /fetchAtlasObjectWorkContext\(objectKey\)/);
+  assert.match(add, /fetchAtlasManualTaskContext\(objectKey\)/);
   assert.match(add, /fetchAtlasObjectWorkbench\(objectKey\)/);
-  assert.match(add, /createAtlasObjectWork\(objectKey/);
-  assert.match(client, /\/api\/atlas\/objects\/\$\{encodeURIComponent\(objectKey\)\}\/work/);
+  assert.match(add, /createAtlasManualTask\(objectKey/);
+  assert.match(client, /\/api\/atlas\/manual-task/);
+  assert.match(route, /manual_task_context_v1/);
+  assert.match(route, /create_manual_task_v1/);
+  assert.match(route, /manual-task-authoring-v1/);
+  assert.doesNotMatch(add, /object-work-client/);
 });
 
 test("global task creators define the state change instead of a checklist", () => {
