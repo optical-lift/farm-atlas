@@ -67,7 +67,7 @@ test("capacity enrichment blocks unlike physical units instead of inventing a co
   assert.equal(result.spine.connection, "stops_at_move");
 });
 
-test("matching tray-position units remain unresolved until the pool itself is confirmed", () => {
+test("matching tray-position units stay visible but executable until the pool itself is confirmed", () => {
   const rows = [{
     requirement_id: "capacity",
     capacity_role: "destination",
@@ -93,8 +93,11 @@ test("matching tray-position units remain unresolved until the pool itself is co
   const capacity = result.requirements[0];
 
   assert.equal(capacity.unitCompatible, true);
-  assert.equal(capacity.status, "blocked");
+  assert.equal(capacity.status, "warning");
   assert.equal(capacity.questions[0].key, "grow_room_lit_tray_positions_available");
+  assert.equal(result.readiness.status, "warning");
+  assert.equal(result.readiness.executable, true);
+  assert.equal(result.spine.connection, "continuous");
   assert.equal(result.spine.after[0].label, "After");
 });
 
