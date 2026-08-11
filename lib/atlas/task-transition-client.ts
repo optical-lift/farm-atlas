@@ -76,13 +76,7 @@ export type AtlasTaskTransitionResponse = {
   details?: string;
 };
 
-type ChecklistVisualState = "done" | "open";
-
 export const ATLAS_DEPENDENCY_RELEASE_FLASH_KEY = "atlas:dependency-release-flash:v1";
-
-const checklistVisualStates = new Map<string, ChecklistVisualState>();
-const checklistVisualTimers = new Map<string, number>();
-let checklistObserver: MutationObserver | null = null;
 
 function transitionKey(taskId: string, transition: AtlasTaskTransition) {
   const nonce = typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -101,94 +95,6 @@ function taskTransitionError(data: AtlasTaskTransitionResponse) {
   if (typeof data.error === "string") return data.error;
   if (data.error?.message) return data.error.message;
   return "Task update failed.";
-}
-
-function checklistRow(taskId: string) {
-  if (typeof document === "undefined") return null;
-  return document.querySelector<HTMLElement>(`[data-child-task-id="${CSS.escape(taskId)}"]`);
-}
-
-function currentChecklistVisualState(taskId: string): ChecklistVisualState | null {
-  const row = checklistRow(taskId);
-  if (!row) return null;
-  return row.classList.contains("is-done") ? "done" : "open";
-}
-
-function checklistToggleButton(row: HTMLElement) {
-  const buttons = Array.from(row.querySelectorAll<HTMLButtonElement>(".atlas-plant-check__actions button"));
-  return buttons.find((button) => {
-    const label = button.textContent?.trim().toLowerCase();
-    return label === "mark done" || label === "reopen";
-  }) ?? buttons.at(-1) ?? null;
-}
-
-function setAttributeIfChanged(element: Element, name: string, value: string) {
-  if (element.getAttribute(name) !== value) element.setAttribute(name, value);
-}
-
-function applyChecklistVisualState(taskId: string, state: ChecklistVisualState) {
-  const row = checklistRow(taskId);
-  if (!row) return;
-
-  const done = state === "done";
-  if (row.classList.contains("is-done") !== done) row.classList.toggle("is-done", done);
-  if (row.dataset.optimisticChecklistStatus !== state) row.dataset.optimisticChecklistStatus = state;
-
-  const mark = row.querySelector<HTMLElement>(".atlas-plant-check__mark");
-  if (mark) {
-    const markText = done ? "✓" : "";
-    if (mark.textContent !== markText) mark.textContent = markText;
-    setAttributeIfChanged(mark, "aria-pressed", String(done));
-    setAttributeIfChanged(mark, "aria-label", done ? "Reopen subtask" : "Mark subtask complete");
-  }
-
-  const button = checklistToggleButton(row);
-  if (button) {
-    const buttonText = done ? "Reopen" : "Mark done";
-    if (button.textContent !== buttonText) button.textContent = buttonText;
-    setAttributeIfChanged(button, "aria-label", done ? "Reopen subtask" : "Mark subtask complete");
-  }
-}
-
-function ensureChecklistObserver() {
-  if (typeof document === "undefined" || checklistObserver) return;
-
-  checklistObserver = new MutationObserver(() => {
-    checklistVisualStates.forEach((state, taskId) => applyChecklistVisualState(taskId, state));
-  });
-
-  checklistObserver.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["class"],
-    characterData: true,
-  });
-}
-
-function forgetChecklistVisualState(taskId: string) {
-  checklistVisualStates.delete(taskId);
-  const timer = checklistVisualTimers.get(taskId);
-  if (timer !== undefined && typeof window !== "undefined") window.clearTimeout(timer);
-  checklistVisualTimers.delete(taskId);
-
-  if (!checklistVisualStates.size && checklistObserver) {
-    checklistObserver.disconnect();
-    checklistObserver = null;
-  }
-}
-
-function rememberChecklistVisualState(taskId: string, state: ChecklistVisualState) {
-  if (typeof window === "undefined") return;
-
-  checklistVisualStates.set(taskId, state);
-  ensureChecklistObserver();
-  applyChecklistVisualState(taskId, state);
-
-  const priorTimer = checklistVisualTimers.get(taskId);
-  if (priorTimer !== undefined) window.clearTimeout(priorTimer);
-  const timer = window.setTimeout(() => forgetChecklistVisualState(taskId), 60000);
-  checklistVisualTimers.set(taskId, timer);
 }
 
 function rememberDependencyReleaseFlash(data: AtlasTaskTransitionResponse) {
@@ -241,48 +147,34 @@ function leaveCompletedTaskPage() {
   window.setTimeout(() => window.location.replace(destination), 0);
 }
 
+/**
+ * The transition client owns transport only. Visual task/checklist state belongs
+ * to the React surface that initiated the mutation; this module never reaches
+ * into rendered task markup to simulate state after the fact.
+ */
 export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest): Promise<AtlasTaskTransitionResponse> {
-  const optimisticChecklistState: ChecklistVisualState | null = input.transition === "checklist_done"
-    ? "done"
-    : input.transition === "checklist_open"
-      ? "open"
-      : null;
-  const previousChecklistState = optimisticChecklistState && typeof window !== "undefined"
-    ? currentChecklistVisualState(input.taskId)
-    : null;
+  const response = await fetch("/api/atlas/task-transition", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "x-atlas-intent": "task-transition-v1",
+    },
+    cache: "no-store",
+    body: JSON.stringify({
+      ...input,
+      idempotencyKey: scopedTransitionKey(input),
+    }),
+  });
+  const data = await response.json() as AtlasTaskTransitionResponse;
+  if (!response.ok || !data.ok) throw new Error(taskTransitionError(data));
 
-  if (optimisticChecklistState) rememberChecklistVisualState(input.taskId, optimisticChecklistState);
-
-  try {
-    const response = await fetch("/api/atlas/task-transition", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "x-atlas-intent": "task-transition-v1",
-      },
-      cache: "no-store",
-      body: JSON.stringify({
-        ...input,
-        idempotencyKey: scopedTransitionKey(input),
-      }),
-    });
-    const data = await response.json() as AtlasTaskTransitionResponse;
-    if (!response.ok || !data.ok) throw new Error(taskTransitionError(data));
-
-    if (input.transition === "done" || input.transition === "checklist_done") {
-      rememberDependencyReleaseFlash(data);
-    }
-    if (input.transition === "done") {
-      leaveCompletedTaskPage();
-    }
-
-    return data;
-  } catch (error) {
-    if (optimisticChecklistState) {
-      if (previousChecklistState) rememberChecklistVisualState(input.taskId, previousChecklistState);
-      else forgetChecklistVisualState(input.taskId);
-    }
-    throw error;
+  if (input.transition === "done" || input.transition === "checklist_done") {
+    rememberDependencyReleaseFlash(data);
   }
+  if (input.transition === "done") {
+    leaveCompletedTaskPage();
+  }
+
+  return data;
 }

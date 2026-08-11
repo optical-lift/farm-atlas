@@ -21,6 +21,8 @@ test("root layout no longer mounts retired no-op or Home visibility patches", ()
     "AnnaPaidScheduleHomePatch",
     "OwnerTaskReturnPatch",
     "ProjectTaskDestinationGuard",
+    "SafeBedCropAccordionPatch",
+    "AttachedTaskHistoryPatch",
   ]) {
     assert.doesNotMatch(layout, new RegExp(retired));
   }
@@ -36,6 +38,8 @@ test("root layout no longer mounts retired no-op or Home visibility patches", ()
     "app/AnnaPaidScheduleHomePatch.tsx",
     "app/OwnerTaskReturnPatch.tsx",
     "app/ProjectTaskDestinationGuard.tsx",
+    "app/SafeBedCropAccordionPatch.tsx",
+    "app/AttachedTaskHistoryPatch.tsx",
   ]) {
     assert.equal(existsSync(join(root, retiredFile)), false);
   }
@@ -74,10 +78,20 @@ test("legacy single-task links hand return context to the canonical task-focus r
   assert.match(projectFocus, /const destination = returnTo \|\| `\/project\/\$\{encodeURIComponent\(project\.projectId\)\}`/);
 });
 
-test("superseded bed and germination DOM patches stay retired behind their canonical surfaces", () => {
+test("bed crop accordion and attached history are owned by the Zone component", () => {
+  const zone = read("components/atlas/zone-inspection.tsx");
+
   assert.equal(existsSync(join(root, "app/CollapsibleBedCropPatch.tsx")), false);
+  assert.equal(existsSync(join(root, "app/SafeBedCropAccordionPatch.tsx")), false);
+  assert.equal(existsSync(join(root, "app/AttachedTaskHistoryPatch.tsx")), false);
+  assert.match(zone, /atlas-bed-crop-list-trigger/);
+  assert.match(zone, /expandedContentId/);
+  assert.match(zone, /VISIBLE_ATTACHED_TASK_COUNT = 3/);
+  assert.match(zone, /atlas-attached-tasks-toggle/);
+});
+
+test("germination duplicate patches remain retired behind canonical focus", () => {
   assert.equal(existsSync(join(root, "app/GerminationCheckTaskPatch.tsx")), false);
   assert.equal(existsSync(join(root, "app/RouteAwareGerminationCheckTaskPatch.tsx")), false);
-  assert.equal(existsSync(join(root, "app/SafeBedCropAccordionPatch.tsx")), true);
   assert.equal(existsSync(join(root, "app/task-focus/[taskId]/GerminationFocusPage.tsx")), true);
 });

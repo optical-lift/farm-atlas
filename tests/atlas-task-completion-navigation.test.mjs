@@ -6,12 +6,16 @@ const transitionClient = readFileSync(
   new URL("../lib/atlas/task-transition-client.ts", import.meta.url),
   "utf8",
 );
+const executionShell = readFileSync(
+  new URL("../components/atlas/assigned-task-execution-shell.tsx", import.meta.url),
+  "utf8",
+);
 
-test("completed task pages leave through a fresh document navigation", () => {
+test("legacy completed task pages leave through a fresh document navigation", () => {
   assert.match(transitionClient, /function leaveCompletedTaskPage\(\)/);
   assert.match(transitionClient, /window\.location\.pathname !== "\/task"/);
   assert.match(transitionClient, /window\.location\.replace\(destination\)/);
-  assert.match(transitionClient, /input\.transition === "done"[\s\S]*leaveCompletedTaskPage\(\)/);
+  assert.match(transitionClient, /if \(input\.transition === "done"\) \{\s*leaveCompletedTaskPage\(\);\s*\}/);
 });
 
 test("completion return paths cannot reopen a task route", () => {
@@ -21,19 +25,16 @@ test("completion return paths cannot reopen a task route", () => {
   assert.match(transitionClient, /return "\/"/);
 });
 
-test("subtask completion stays in the checklist instead of leaving the parent task", () => {
+test("subtask completion stays in the checklist instead of triggering parent-page navigation", () => {
   const leaveCallCount = (transitionClient.match(/leaveCompletedTaskPage\(\);/g) ?? []).length;
   assert.equal(leaveCallCount, 1);
-  assert.match(transitionClient, /input\.transition === "checklist_done"[\s\S]*rememberChecklistVisualState/);
+  assert.match(transitionClient, /if \(input\.transition === "done"\) \{\s*leaveCompletedTaskPage\(\);\s*\}/);
+  assert.doesNotMatch(transitionClient, /if \(input\.transition === "checklist_done"\) \{\s*leaveCompletedTaskPage\(\);/);
 });
 
-test("subtasks paint their new state before the request and keep it through React rerenders", () => {
-  const optimisticPaint = transitionClient.indexOf("if (optimisticChecklistState) rememberChecklistVisualState");
-  const request = transitionClient.indexOf("const response = await fetch");
-  assert.ok(optimisticPaint >= 0 && request > optimisticPaint);
-  assert.match(transitionClient, /attributes: true/);
-  assert.match(transitionClient, /attributeFilter: \["class"\]/);
-  assert.match(transitionClient, /characterData: true/);
-  assert.match(transitionClient, /row\.classList\.contains\("is-done"\) !== done/);
-  assert.match(transitionClient, /catch \(error\)[\s\S]*previousChecklistState[\s\S]*forgetChecklistVisualState/);
+test("checklist state is refreshed by the React execution owner instead of a global DOM observer", () => {
+  assert.doesNotMatch(transitionClient, /rememberChecklistVisualState|MutationObserver|data-child-task-id|classList/);
+  assert.match(executionShell, /async function refreshTaskAndChildren\(\)/);
+  assert.match(executionShell, /setChildren\(data\.taskCards/);
+  assert.match(executionShell, /onChange=\{refreshTaskAndChildren\}/);
 });

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo } from "react";
 
 import GlobalAtlasAdd from "@/components/atlas/global-atlas-add";
+import { atlasFarmDateIso } from "@/lib/atlas/farm-day";
 import type { AtlasFarmRole } from "@/lib/atlas/session";
 
 type DockIconKey = "home" | "work" | "manager" | "harvest" | "more";
@@ -14,15 +15,11 @@ type AtlasContextualAppFrameProps = {
 };
 
 function todayHref() {
-  const date = new Date();
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return `/day?date=${encodeURIComponent(local.toISOString().slice(0, 10))}`;
+  return `/day?date=${encodeURIComponent(atlasFarmDateIso())}`;
 }
 
 function managerHref() {
-  const date = new Date();
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return `/manage/day?date=${encodeURIComponent(local.toISOString().slice(0, 10))}`;
+  return `/manage/day?date=${encodeURIComponent(atlasFarmDateIso())}`;
 }
 
 function routeGroup(pathname: string) {

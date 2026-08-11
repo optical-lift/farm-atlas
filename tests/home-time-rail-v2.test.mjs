@@ -10,6 +10,7 @@ const page = read("app/page.tsx");
 const home = read("components/atlas/home/AtlasUniversalHomeV2.tsx");
 const seasons = read("lib/atlas/home-farm-seasons.ts");
 const css = read("components/atlas/home/universal-home-v2.module.css");
+const farmDay = read("lib/atlas/farm-day.ts");
 const build = `${page}\n${home}\n${seasons}\n${css}`;
 
 test("Home keeps the compact day rail for every portal, including farm-hand sessions and operator lenses", () => {
@@ -26,7 +27,9 @@ test("Home keeps the compact day rail for every portal, including farm-hand sess
 });
 
 test("every day in the current Monday-through-Sunday rail opens its Living Day", () => {
-  assert.match(home, /weekStartMonday/);
+  assert.match(home, /atlasFarmWeekStartMonday/);
+  assert.match(home, /atlasShiftFarmDate/);
+  assert.match(farmDay, /atlasFarmWeekStartMonday/);
   assert.match(home, /Array\.from\(\{ length: 7 \}/);
   assert.match(home, /\/day\?date=/);
   assert.match(home, /aria-current=\{day\.dateIso === todayIso \? "date"/);
@@ -43,7 +46,7 @@ test("Owner Home remains an unresolved-work cover while farm-hand Home becomes o
   assert.match(home, /Needs you/);
   assert.match(home, /farmHandMode \? "Your next move"/);
   assert.match(home, /const visibleMoves = farmHandMode \? home\.moves\.slice\(0, 1\)/);
-  assert.match(home, /<TheFarms home=\{home\} farmSeasons=\{farmSeasons\}\/>/);
+  assert.match(home, /<TheFarms home=\{home\} farmSeasons=\{farmSeasons\} conditionsByFarmId=\{conditionsByFarmId\}/);
   assert.doesNotMatch(home, />The farms</);
   assert.doesNotMatch(home, /Growing season/);
   assert.doesNotMatch(home, /Farm pulse|known gaps|Moving now|AtlasPortfolioMatrix|AtlasTrailPulseBoard|Work in Motion|Current moves/);

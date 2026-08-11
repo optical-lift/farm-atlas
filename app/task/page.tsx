@@ -1,47 +1,69 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { TaskChildChecklist } from "@/components/atlas/task-child-checklist";
-import { atlasTaskDisplay } from "@/lib/atlas/task-display";
+import { useEffect, useMemo, useState } from "react";
+
+import {
+  atlasFarmDateIso,
+  atlasShiftFarmDate,
+} from "@/lib/atlas/farm-day";
+import {
+  atlasRouteKeyForTask,
+  atlasRouteLabels,
+  atlasTaskDisplay,
+  type AtlasWorkRouteKey,
+} from "@/lib/atlas/task-display";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
 type LaneKey = "start" | "maintain" | "harvest" | "venue";
-type Outcome = "done" | "partial" | "blocked" | "not_relevant" | "changed_plan";
-type RescheduleMode = "tomorrow" | "next_time_block" | "pick_date";
 type WeatherResponse = { ok: boolean; label?: string };
 
-type DisplayTask = {
-  rhythm: string;
-  action: string;
-  subject: string;
-  location: string;
-  detailHeading: string | null;
-  detailLines: string[];
-  lane: LaneKey;
+type CollectionQuery = {
+  route: AtlasWorkRouteKey | null;
+  lane: LaneKey | null;
 };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function addDaysIso(dateIso: string, days: number) {
-  const date = new Date(`${dateIso}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-function initialTaskQuery(): { taskId: string | null; lane: LaneKey | null } {
-  if (typeof window === "undefined") return { taskId: null, lane: null as LaneKey | null };
+function initialQuery(): CollectionQuery {
+  if (typeof window === "undefined") return { route: null, lane: null };
   const params = new URLSearchParams(window.location.search);
+  const route = params.get("route");
   const lane = params.get("lane");
   return {
-    taskId: params.get("taskId"),
+    route: route && route in atlasRouteLabels ? route as AtlasWorkRouteKey : null,
     lane: lane === "start" || lane === "maintain" || lane === "harvest" || lane === "venue" ? lane : null,
   };
+}
+
+function metaString(task: AtlasTaskCard, key: string) {
+  const value = task.metadata?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function metaNumber(task: AtlasTaskCard, key: string) {
+  const value = task.metadata?.[key];
+  return typeof value === "number" ? value : null;
+}
+
+function isChildTask(task: AtlasTaskCard) {
+  return Boolean(task.parent_task_id)
+    || task.metadata?.is_child_task === true
+    || task.metadata?.is_child_task === "true";
+}
+
+function laneForTask(task: AtlasTaskCard): LaneKey {
+  const display = atlasTaskDisplay(task);
+  const joined = `${task.task_type} ${task.action_key ?? ""} ${display.title} ${display.action}`.toLowerCase();
+  if (joined.includes("harvest") || joined.includes("postharvest") || joined.includes("gather")) return "harvest";
+  if (joined.includes("venue") || joined.includes("paint") || joined.includes("trim") || joined.includes("chicken")) return "venue";
+  if (joined.includes("seed") || joined.includes("sow") || joined.includes("plant") || joined.includes("transplant")) return "start";
+  return "maintain";
+}
+
+function taskSortValue(task: AtlasTaskCard) {
+  const dayOrder = metaNumber(task, "day_order") ?? 999;
+  return `${task.due_date ?? "9999-12-31"}-${priorityRank[task.priority] ?? 9}-${String(dayOrder).padStart(3, "0")}-${task.title}`;
 }
 
 function prettyDate(dateIso: string | null | undefined) {
@@ -50,671 +72,137 @@ function prettyDate(dateIso: string | null | undefined) {
   return Number.isNaN(date.getTime()) ? dateIso : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function clean(value: string | null | undefined) {
-  return (value ?? "")
-    .replace(/\b(urgent|high|normal|low)\b/gi, "")
-    .replace(/truth/gi, "state")
-    .replace(/\s+·\s+·\s+/g, " · ")
-    .replace(/^\s*·\s*|\s*·\s*$/g, "")
-    .trim();
+function currentReturnTo(query: CollectionQuery) {
+  const params = new URLSearchParams();
+  if (query.route) params.set("route", query.route);
+  if (query.lane) params.set("lane", query.lane);
+  const search = params.toString();
+  return `/task${search ? `?${search}` : ""}`;
 }
 
-function metadataValue(task: AtlasTaskCard, key: string) {
-  return task.metadata?.[key];
+function taskHref(task: AtlasTaskCard, query: CollectionQuery) {
+  return `/task-focus/${encodeURIComponent(task.task_id)}?returnTo=${encodeURIComponent(currentReturnTo(query))}`;
 }
 
-function metaString(task: AtlasTaskCard, key: string) {
-  const value = metadataValue(task, key);
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function metaNumber(task: AtlasTaskCard, key: string) {
-  const value = metadataValue(task, key);
-  return typeof value === "number" ? value : null;
-}
-
-function metaStringList(task: AtlasTaskCard, key: string) {
-  const value = metadataValue(task, key);
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
-}
-
-function titleSubject(title: string) {
-  const parts = title.split("—");
-  return clean(parts.length > 1 ? parts.slice(1).join("—") : title);
-}
-
-function taskSortValue(task: AtlasTaskCard) {
-  const dayOrder = metaNumber(task, "day_order") ?? 999;
-  return `${task.due_date ?? "9999-12-31"}-${priorityRank[task.priority] ?? 9}-${String(dayOrder).padStart(3, "0")}-${task.title}`;
-}
-
-function rhythmFromTask(task: AtlasTaskCard) {
-  const explicit = task.action_key || metaString(task, "work_rhythm");
-  if (explicit) return explicit;
-
-  const title = task.title.toLowerCase();
-  const type = task.task_type.toLowerCase();
-  const text = `${type} ${title}`;
-
-  if (text.includes("harvest") || text.includes("postharvest") || text.includes("cure")) return "Harvest + Postharvest";
-  if (text.includes("venue") || text.includes("paint") || text.includes("trim") || text.includes("tidy")) return "Venue Maintenance";
-  if (text.includes("seed") || text.includes("sow")) return "Seed Sowing";
-  if (text.includes("weed")) return "Weeding";
-  if (text.includes("plant") || text.includes("transplant")) return "Planting";
-  if (text.includes("mow") || text.includes("maintenance")) return "Maintenance";
-  if (text.includes("prep") || text.includes("string")) return "Bed Prep";
-  return "Farm Work";
-}
-
-function actionFromTask(task: AtlasTaskCard, rhythm: string) {
-  const explicit = metaString(task, "display_action") || task.action_key;
-  if (explicit) return explicit;
-
-  const text = `${task.task_type} ${task.title}`.toLowerCase();
-  if (text.includes("mow")) return "Mow";
-  if (text.includes("weed")) return "Weed";
-  if (text.includes("sow")) return "Sow";
-  if (text.includes("seed")) return "Seed";
-  if (text.includes("plant") || text.includes("transplant")) return "Plant";
-  if (text.includes("paint")) return "Paint";
-  if (text.includes("trim")) return "Trim";
-  if (text.includes("tidy")) return "Tidy";
-  if (text.includes("string")) return "String";
-  if (text.includes("prep")) return "Prep";
-  if (text.includes("harvest") || text.includes("gather")) return "Harvest";
-  return rhythm;
-}
-
-function laneFromRhythm(rhythm: string, action: string): LaneKey {
-  const text = `${rhythm} ${action}`.toLowerCase();
-  if (text.includes("harvest") || text.includes("postharvest") || text.includes("gather")) return "harvest";
-  if (text.includes("venue") || text.includes("paint") || text.includes("trim") || text.includes("chicken")) return "venue";
-  if (text.includes("seed") || text.includes("sow") || text.includes("plant")) return "start";
-  return "maintain";
-}
-
-function fallbackDetailHeading(task: AtlasTaskCard, rhythm: string) {
-  const text = `${task.task_type} ${task.title} ${rhythm}`.toLowerCase();
-  if (text.includes("tray")) return "Tray List";
-  if (text.includes("seed") || text.includes("sow")) return "Seed / Variety";
-  if (text.includes("plant")) return "Plant Material";
-  if (text.includes("harvest") || text.includes("postharvest") || text.includes("garlic")) return "Harvest + Handling";
-  if (text.includes("paint")) return "Paint";
-  if (text.includes("trim")) return "Tool";
-  if (text.includes("mow")) return "Equipment";
-  return "Details";
-}
-
-function displayTask(task: AtlasTaskCard): DisplayTask {
-  const rhythm = rhythmFromTask(task);
-  const action = actionFromTask(task, rhythm);
-  const sharedDisplay = atlasTaskDisplay(task);
-  const subject = metaString(task, "display_subject") ?? titleSubject(task.title);
-  const location = sharedDisplay.location;
-  const metadataLines = metaStringList(task, "detail_lines");
-  const noteLines = (task.note ?? "")
-    .split(".")
-    .map((line) => clean(line))
-    .filter(Boolean);
-  const resourceLines = task.resource_requirements
-    .map((requirement) => clean(requirement.note || [requirement.quantity_needed, requirement.unit, requirement.resource_label].filter(Boolean).join(" ")))
-    .filter(Boolean);
-  const detailLines = Array.from(new Set(metadataLines.length ? metadataLines : [...resourceLines, ...noteLines]));
-  const detailHeading = detailLines.length ? metaString(task, "detail_heading") ?? fallbackDetailHeading(task, rhythm) : null;
-
-  return {
-    rhythm,
-    action,
-    subject,
-    location,
-    detailHeading,
-    detailLines,
-    lane: laneFromRhythm(rhythm, action),
-  };
-}
-
-function laneForTask(task: AtlasTaskCard): LaneKey {
-  return displayTask(task).lane;
-}
-
-function workKeyForDisplay(display: DisplayTask) {
-  return display.action.toLowerCase().replace(/\s+/g, "_");
-}
-
-function isChildTask(task: AtlasTaskCard) {
-  return Boolean(task.parent_task_id) || metadataValue(task, "is_child_task") === true || metadataValue(task, "is_child_task") === "true";
-}
-
-function childParentId(task: AtlasTaskCard) {
-  return task.parent_task_id || metaString(task, "parent_task_id");
-}
-
-function checklistLabel(task: AtlasTaskCard) {
-  return metaString(task, "checklist_label") ?? displayTask(task).subject;
-}
-
-function stepOrder(task: AtlasTaskCard) {
-  return metaNumber(task, "step_order") ?? 999;
-}
-
-function latestOutcome(task: AtlasTaskCard) {
-  return task.task_outcomes?.[0] ?? null;
-}
-
-function isChecklistDone(task: AtlasTaskCard) {
-  return task.status === "done" || latestOutcome(task)?.outcome === "done" || metaString(task, "checklist_status") === "done";
-}
-
-function isCompletedTask(task: AtlasTaskCard) {
-  return task.status === "done" || latestOutcome(task)?.outcome === "done" || isChecklistDone(task);
-}
-
-function progressPercent(done: number, total: number) {
-  if (total <= 0) return 0;
-  return Math.max(0, Math.min(100, Math.round((done / total) * 100)));
-}
-
-function workWindowForTask(task: AtlasTaskCard, weatherLabel: string) {
-  const display = displayTask(task);
-  const text = `${task.task_type} ${task.title} ${display.rhythm} ${display.action}`.toLowerCase();
-  const weather = weatherLabel.toLowerCase();
-
-  if (weather.includes("rain") && text.includes("germin")) return "After rain";
-  if (text.includes("weed") || text.includes("hoe") || text.includes("mow") || display.lane === "harvest") return "Morning";
-  if (display.lane === "venue") return "Afternoon";
-  return "";
-}
-
-function carryoverLabel(task: AtlasTaskCard, today: string) {
-  const outcome = latestOutcome(task);
-  if (task.status === "blocked" || outcome?.outcome === "blocked") return "Waiting";
-  if (outcome?.outcome === "partial") return "Needs next step";
-  if (task.due_date && task.due_date < today) return `Carried from ${prettyDate(task.due_date)}`;
-  if (!task.due_date) return "";
-  if (task.due_date === today) return "Today";
-  return prettyDate(task.due_date);
-}
-
-function isCarryoverTask(task: AtlasTaskCard, today: string) {
-  const outcome = latestOutcome(task);
-  return task.status === "blocked" || outcome?.outcome === "blocked" || outcome?.outcome === "partial" || Boolean(task.due_date && task.due_date < today);
-}
-
-function rowMeta(task: AtlasTaskCard, today: string, weatherLabel: string) {
-  const display = displayTask(task);
-  return [display.location, workWindowForTask(task, weatherLabel), carryoverLabel(task, today)].filter(Boolean).join(" · ");
-}
-
-function validDate(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime());
-}
-
-function nextTimeBlockDate(task: AtlasTaskCard, allTasks: AtlasTaskCard[], today: string) {
-  const display = displayTask(task);
-  const sameBlock = allTasks
-    .filter((candidate) => candidate.task_id !== task.task_id)
-    .filter((candidate) => (candidate.status === "open" || candidate.status === "blocked") && !isChildTask(candidate))
-    .filter((candidate) => Boolean(candidate.due_date && candidate.due_date > today))
-    .filter((candidate) => {
-      const candidateDisplay = displayTask(candidate);
-      return candidateDisplay.lane === display.lane && (candidateDisplay.action === display.action || candidateDisplay.rhythm === display.rhythm);
-    })
-    .sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b)))[0];
-
-  return sameBlock?.due_date ?? addDaysIso(today, 7);
-}
-
-function childTasksFor(task: AtlasTaskCard, allTasks: AtlasTaskCard[]) {
-  return allTasks
-    .filter((candidate) => childParentId(candidate) === task.task_id && candidate.status !== "archived")
-    .sort((a, b) => stepOrder(a) - stepOrder(b));
-}
-
-async function postOutcome(task: AtlasTaskCard, outcome: Outcome, note = "") {
-  const display = displayTask(task);
-  return postAtlasTaskTransition({
-    taskId: task.task_id,
-    transition: outcome,
-    note,
-    reason: note,
-    laneKey: display.lane,
-    workKey: task.action_key || workKeyForDisplay(display),
-    payload: { workClass: task.work_class },
-  });
-}
-
-async function postReschedule(task: AtlasTaskCard, targetDate: string, rescheduleMode: RescheduleMode, reason = "") {
-  const display = displayTask(task);
-  return postAtlasTaskTransition({
-    taskId: task.task_id,
-    transition: "rescheduled",
-    targetDate,
-    reason,
-    laneKey: display.lane,
-    workKey: task.action_key || workKeyForDisplay(display),
-    payload: { rescheduleMode },
-  });
-}
-
-async function postNote(task: AtlasTaskCard, note: string) {
-  return postAtlasTaskTransition({
-    taskId: task.task_id,
-    transition: "note",
-    note,
-    laneKey: laneForTask(task),
-    workKey: task.action_key,
-  });
-}
-
-function TaskSummaryButton({ task, selected, onSelect, today, weatherLabel }: { task: AtlasTaskCard; selected: boolean; onSelect: () => void; today: string; weatherLabel: string }) {
-  const display = displayTask(task);
-  const windowLabel = workWindowForTask(task, weatherLabel);
+function TaskCollectionRow({ task, query }: { task: AtlasTaskCard; query: CollectionQuery }) {
+  const display = atlasTaskDisplay(task);
+  const meta = [display.location, task.due_date ? prettyDate(task.due_date) : "Undated", task.status === "blocked" ? "Blocked" : null]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <button type="button" className={selected ? "atlas-task-page-row selected" : "atlas-task-page-row"} onClick={onSelect}>
+    <Link className="atlas-task-page-row" href={taskHref(task, query)}>
       <div>
-        <strong>{display.rhythm} — {display.subject}</strong>
-        <span>{rowMeta(task, today, weatherLabel)}</span>
+        <strong>{display.title}</strong>
+        <span>{meta}</span>
       </div>
-      {windowLabel ? <small>{windowLabel}</small> : null}
-    </button>
+      <small>{display.action || atlasRouteLabels[atlasRouteKeyForTask(task)]}</small>
+    </Link>
   );
 }
 
-function DetailCard({ heading, lines }: { heading: string | null; lines: string[] }) {
-  if (!heading || lines.length === 0) return null;
+function TaskSection({
+  label,
+  tasks,
+  query,
+  empty,
+}: {
+  label: string;
+  tasks: AtlasTaskCard[];
+  query: CollectionQuery;
+  empty: string;
+}) {
   return (
-    <section className="atlas-task-detail-card">
-      <strong>{heading}</strong>
-      {lines.map((line) => <p key={line}>{line}</p>)}
+    <section className="atlas-task-page-section">
+      <div className="atlas-task-page-section-head"><span>{label}</span><small>{tasks.length}</small></div>
+      {tasks.length ? tasks.map((task) => <TaskCollectionRow key={task.task_id} task={task} query={query} />) : <p className="atlas-task-page-muted">{empty}</p>}
     </section>
-  );
-}
-
-function transitionLabel(value: string) {
-  return value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
-}
-
-function TaskRecordCard({ task }: { task: AtlasTaskCard }) {
-  const transitions = (task.task_transitions ?? []).slice(0, 3);
-  const objects = task.objects ?? [];
-  if (!objects.length && !transitions.length && !task.work_class) return null;
-
-  return (
-    <section className="atlas-task-record-card">
-      <strong>Linked record</strong>
-      {objects.length ? (
-        <div>
-          <small>Spaces</small>
-          <nav aria-label="Task spaces">
-            {objects.map((object) => (
-              <Link key={object.object_id} href={`/objects/${encodeURIComponent(object.object_key)}`}>{object.object_label}</Link>
-            ))}
-          </nav>
-        </div>
-      ) : null}
-      {task.work_class ? <p><small>Work class</small><span>{transitionLabel(task.work_class)}</span></p> : null}
-      {transitions.length ? (
-        <div>
-          <small>Recent task history</small>
-          <ol>
-            {transitions.map((transition) => (
-              <li key={transition.transition_id}>
-                <span>{transitionLabel(transition.transition)}</span>
-                <time dateTime={transition.created_at}>{prettyDate(transition.created_at.slice(0, 10))}</time>
-              </li>
-            ))}
-          </ol>
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function ProgressLine({ label, value, percent }: { label: string; value: string; percent: number }) {
-  return (
-    <div className="atlas-progress-line">
-      <div>
-        <span>{label}</span>
-        <strong>{value}</strong>
-      </div>
-      <div className="atlas-progress-bar"><i style={{ width: `${percent}%` }} /></div>
-    </div>
-  );
-}
-
-function ProgressReportHero({ selectedTask, tasks, nextWorkTasks, today }: { selectedTask: AtlasTaskCard | null; tasks: AtlasTaskCard[]; nextWorkTasks: AtlasTaskCard[]; today: string }) {
-  const selectedDisplay = selectedTask ? displayTask(selectedTask) : null;
-  const childTasks = selectedTask ? childTasksFor(selectedTask, tasks) : [];
-  const taskTotal = childTasks.length || (selectedTask ? 1 : 0);
-  const taskDone = childTasks.length ? childTasks.filter(isChecklistDone).length : selectedTask && isCompletedTask(selectedTask) ? 1 : 0;
-  const dayTasks = tasks.filter((task) => !isChildTask(task) && task.status !== "archived" && (!task.due_date || task.due_date <= today));
-  const dayDone = dayTasks.filter(isCompletedTask).length;
-  const dayTotal = dayTasks.length;
-  const remainingSteps = childTasks.filter((task) => !isChecklistDone(task)).map(checklistLabel).slice(0, 3);
-  const nextTask = nextWorkTasks.find((task) => task.task_id !== selectedTask?.task_id) ?? null;
-
-  return (
-    <section className="atlas-task-page-hero atlas-task-progress-hero">
-      <span>Today · {prettyDate(today)}</span>
-      <div className="atlas-progress-hero-head">
-        <h2>{selectedDisplay?.subject ?? "Day Progress"}</h2>
-        {selectedDisplay ? <small>{selectedDisplay.action} · {selectedDisplay.location}</small> : null}
-      </div>
-      {selectedTask ? (
-        <div className="atlas-progress-report">
-          <ProgressLine label="Task" value={`${taskDone} / ${taskTotal} steps done`} percent={progressPercent(taskDone, taskTotal)} />
-          <ProgressLine label="Day" value={`${dayDone} / ${dayTotal} tasks done`} percent={progressPercent(dayDone, dayTotal)} />
-          <div className="atlas-progress-next-line">
-            <span>Remaining here</span>
-            <strong>{remainingSteps.length ? remainingSteps.join(" · ") : "Ready to finish this card"}</strong>
-          </div>
-          {nextTask ? (
-            <div className="atlas-progress-next-line">
-              <span>Next task</span>
-              <strong>{displayTask(nextTask).subject}</strong>
-            </div>
-          ) : null}
-        </div>
-      ) : (
-        <p>No active task selected.</p>
-      )}
-    </section>
-  );
-}
-
-function ActiveTaskCard({ task, allTasks, onChange, onChildChange, onDoneComplete, today, weatherLabel }: { task: AtlasTaskCard; allTasks: AtlasTaskCard[]; onChange: () => Promise<void>; onChildChange: () => Promise<void>; onDoneComplete: () => void; today: string; weatherLabel: string }) {
-  const [saving, setSaving] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [unfinishedOpen, setUnfinishedOpen] = useState(false);
-  const display = displayTask(task);
-  const windowLabel = workWindowForTask(task, weatherLabel);
-  const childTasks = childTasksFor(task, allTasks);
-
-  async function submitOutcome(outcome: Outcome, note = "") {
-    try {
-      setSaving(outcome);
-      setMessage(null);
-      const result = await postOutcome(task, outcome, note);
-      if (outcome === "done") {
-        setMessage(result.childrenClosed > 0 ? `Done — ${result.childrenClosed} checklist steps completed.` : "Done.");
-        window.setTimeout(onDoneComplete, 150);
-        return;
-      }
-      await onChange();
-      setMessage("Saved.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Task update failed.");
-    } finally {
-      setSaving(null);
-    }
-  }
-
-  async function submitReschedule(targetDate: string, mode: RescheduleMode, reason = "") {
-    try {
-      setSaving(mode);
-      setMessage(null);
-      await postReschedule(task, targetDate, mode, reason);
-      await onChange();
-      setMessage(`Moved to ${prettyDate(targetDate)}.`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Task reschedule failed.");
-    } finally {
-      setSaving(null);
-    }
-  }
-
-  function finishDone() {
-    void submitOutcome("done");
-  }
-
-  function markPartial() {
-    const note = window.prompt("What is left?", "")?.trim() || "Unfinished — partly done";
-    void submitOutcome("partial", note);
-  }
-
-  function markBlocked() {
-    const note = window.prompt("What blocked it?", "")?.trim() || "Blocked";
-    void submitOutcome("blocked", note);
-  }
-
-  function markNotRelevant() {
-    const note = window.prompt("Why is this no longer relevant?", "")?.trim() || "Not relevant now";
-    void submitOutcome("not_relevant", note);
-  }
-
-  function markChangedPlan() {
-    const note = window.prompt("What changed?", "")?.trim() || "Plan changed";
-    void submitOutcome("changed_plan", note);
-  }
-
-  function reschedule(mode: RescheduleMode) {
-    const defaultDate = mode === "tomorrow" ? addDaysIso(today, 1) : mode === "next_time_block" ? nextTimeBlockDate(task, allTasks, today) : task.due_date && task.due_date > today ? task.due_date : addDaysIso(today, 1);
-    const targetDate = mode === "pick_date" ? window.prompt("Pick a date (YYYY-MM-DD)", defaultDate)?.trim() ?? "" : defaultDate;
-    if (!validDate(targetDate)) {
-      setMessage("Use a date like 2026-07-09.");
-      return;
-    }
-    const reason = mode === "next_time_block" ? "Moved to the next matching time block" : mode === "tomorrow" ? "Moved to tomorrow" : "Picked a new date";
-    void submitReschedule(targetDate, mode, reason);
-  }
-
-  async function addNote() {
-    const note = window.prompt("Note", "")?.trim();
-    if (!note) return;
-    try {
-      setSaving("note");
-      setMessage(null);
-      await postNote(task, note);
-      await onChange();
-      setMessage("Note saved.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Task note failed.");
-    } finally {
-      setSaving(null);
-    }
-  }
-
-  return (
-    <article className="atlas-task-page-active atlas-task-ticket-card">
-      <div className="atlas-task-page-kicker"><span>Up Now</span><small>{display.rhythm}</small></div>
-      <h1>{display.subject.toUpperCase()}</h1>
-      <div className="atlas-task-page-time-row">
-        <span>{display.action}</span>
-        {windowLabel ? <span>{windowLabel}</span> : null}
-        <span>{task.due_date ? prettyDate(task.due_date) : carryoverLabel(task, today)}</span>
-      </div>
-      <section className="atlas-task-place-card">
-        <small>Location</small>
-        <strong>{display.location}</strong>
-      </section>
-      <DetailCard heading={display.detailHeading} lines={display.detailLines} />
-      <TaskRecordCard task={task} />
-      <TaskChildChecklist childTasks={childTasks} onChange={onChildChange} />
-      <div className="atlas-task-page-actions atlas-task-primary-actions">
-        <button type="button" className="done" disabled={Boolean(saving)} onClick={finishDone}>{saving === "done" ? "Finishing" : "Done"}</button>
-        <button type="button" disabled={Boolean(saving)} onClick={() => setUnfinishedOpen((open) => !open)}>{unfinishedOpen ? "Close" : "Unfinished"}</button>
-      </div>
-      {unfinishedOpen ? (
-        <section className="atlas-task-unfinished-panel">
-          <strong>What happened?</strong>
-          <div className="atlas-task-unfinished-grid">
-            <button type="button" disabled={Boolean(saving)} onClick={markPartial}>{saving === "partial" ? "Saving" : "Partly done"}</button>
-            <button type="button" className="blocked" disabled={Boolean(saving)} onClick={markBlocked}>{saving === "blocked" ? "Saving" : "Blocked"}</button>
-          </div>
-          <span>Reschedule</span>
-          <div className="atlas-task-unfinished-grid reschedule">
-            <button type="button" disabled={Boolean(saving)} onClick={() => reschedule("tomorrow")}>{saving === "tomorrow" ? "Saving" : "Tomorrow"}</button>
-            <button type="button" disabled={Boolean(saving)} onClick={() => reschedule("next_time_block")}>{saving === "next_time_block" ? "Saving" : "Next time block"}</button>
-            <button type="button" disabled={Boolean(saving)} onClick={() => reschedule("pick_date")}>{saving === "pick_date" ? "Saving" : "Pick a date"}</button>
-          </div>
-          <span>Close this card without doing it</span>
-          <div className="atlas-task-unfinished-grid quiet">
-            <button type="button" disabled={Boolean(saving)} onClick={markChangedPlan}>{saving === "changed_plan" ? "Saving" : "Changed plan"}</button>
-            <button type="button" disabled={Boolean(saving)} onClick={markNotRelevant}>{saving === "not_relevant" ? "Saving" : "Not relevant"}</button>
-            <button type="button" disabled={Boolean(saving)} onClick={() => void addNote()}>{saving === "note" ? "Saving" : "Note only"}</button>
-          </div>
-        </section>
-      ) : null}
-      {message ? <p className="atlas-task-page-message">{message}</p> : null}
-    </article>
   );
 }
 
 export default function AtlasTaskPage() {
-  const initialQuery = useMemo(() => initialTaskQuery(), []);
+  const query = useMemo(initialQuery, []);
   const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialQuery.taskId);
-  const [selectedLane, setSelectedLane] = useState<LaneKey | null>(initialQuery.lane);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
-  const [message, setMessage] = useState<string | null>(null);
-  const activeTaskAnchorRef = useRef<HTMLDivElement | null>(null);
-  const today = todayIso();
-  const nextWeek = addDaysIso(today, 7);
-
-  async function loadTasks() {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await fetchAtlasTaskCards();
-      setTasks((response.taskCards ?? []).filter((task) => task.status !== "archived").sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b))));
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function refreshTaskData() {
-    try {
-      const response = await fetchAtlasTaskCards();
-      setTasks((response.taskCards ?? []).filter((task) => task.status !== "archived").sort((a, b) => taskSortValue(a).localeCompare(taskSortValue(b))));
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
-    }
-  }
-
-  async function loadWeather() {
-    try {
-      const response = await fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" });
-      const data = (await response.json()) as WeatherResponse;
-      setWeatherLabel(response.ok && data.ok && data.label ? data.label : "weather unavailable");
-    } catch {
-      setWeatherLabel("weather unavailable");
-    }
-  }
+  const today = atlasFarmDateIso();
+  const nextWeek = atlasShiftFarmDate(today, 7);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadTasks();
-      void loadWeather();
-    }, 0);
-    return () => window.clearTimeout(timer);
+    let active = true;
+    Promise.all([
+      fetchAtlasTaskCards(),
+      fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" })
+        .then((response) => response.json() as Promise<WeatherResponse>)
+        .catch(() => ({ ok: false } as WeatherResponse)),
+    ])
+      .then(([taskResponse, weather]) => {
+        if (!active) return;
+        setTasks((taskResponse.taskCards ?? [])
+          .filter((task) => task.status !== "archived")
+          .sort((left, right) => taskSortValue(left).localeCompare(taskSortValue(right))));
+        setWeatherLabel(weather.ok && weather.label ? weather.label : "weather unavailable");
+      })
+      .catch((loadError) => {
+        if (active) setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
   }, []);
 
-  const openTasks = useMemo(() => tasks.filter((task) => task.status === "open" || task.status === "blocked"), [tasks]);
-  const visibleTasks = useMemo(() => selectedLane ? openTasks.filter((task) => laneForTask(task) === selectedLane) : openTasks, [openTasks, selectedLane]);
-  const todayTasks = useMemo(() => visibleTasks.filter((task) => !task.due_date || task.due_date <= today), [visibleTasks, today]);
-  const nextTasks = useMemo(() => visibleTasks.filter((task) => task.due_date && task.due_date > today && task.due_date <= nextWeek), [visibleTasks, nextWeek, today]);
-  const nextWorkTasks = useMemo(() => (todayTasks.length ? todayTasks : nextTasks).filter((task) => !isChildTask(task)).slice(0, 3), [nextTasks, todayTasks]);
-  const laterWorkTasks = useMemo(() => (todayTasks.length ? todayTasks : nextTasks).filter((task) => !isChildTask(task)).slice(3), [nextTasks, todayTasks]);
-  const carryoverTasks = useMemo(() => visibleTasks.filter((task) => isCarryoverTask(task, today) && !isChildTask(task)).slice(0, 5), [visibleTasks, today]);
-  const matchingLane = useMemo(() => selectedLane ? openTasks.filter((task) => laneForTask(task) === selectedLane && !isChildTask(task)) : [], [openTasks, selectedLane]);
-  const selectedTask = useMemo(() => {
-    if (selectedTaskId) return tasks.find((task) => task.task_id === selectedTaskId) ?? null;
-    if (matchingLane.length) return matchingLane[0];
-    return nextWorkTasks[0] ?? todayTasks.find((task) => !isChildTask(task)) ?? nextTasks.find((task) => !isChildTask(task)) ?? openTasks.find((task) => !isChildTask(task)) ?? null;
-  }, [matchingLane, nextTasks, nextWorkTasks, openTasks, selectedTaskId, tasks, todayTasks]);
+  const openTasks = useMemo(
+    () => tasks
+      .filter((task) => (task.status === "open" || task.status === "blocked") && !isChildTask(task))
+      .filter((task) => !query.route || atlasRouteKeyForTask(task) === query.route)
+      .filter((task) => !query.lane || laneForTask(task) === query.lane),
+    [tasks, query],
+  );
 
-  function scrollToActiveTask() {
-    window.setTimeout(() => activeTaskAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
-  }
+  const todayTasks = useMemo(
+    () => openTasks.filter((task) => !task.due_date || task.due_date <= today),
+    [openTasks, today],
+  );
+  const thisWeekTasks = useMemo(
+    () => openTasks.filter((task) => task.due_date && task.due_date > today && task.due_date <= nextWeek),
+    [nextWeek, openTasks, today],
+  );
+  const laterTasks = useMemo(
+    () => openTasks.filter((task) => task.due_date && task.due_date > nextWeek),
+    [nextWeek, openTasks],
+  );
 
-  function selectTask(taskId: string) {
-    setSelectedTaskId(taskId);
-    scrollToActiveTask();
-  }
-
-  async function handleTaskChanged() {
-    await loadTasks();
-    setSelectedTaskId(null);
-    setSelectedLane(null);
-    if (window.location.pathname === "/task") {
-      window.history.replaceState(null, "", "/task");
-    }
-  }
-
-  function returnAfterDone() {
-    const params = new URLSearchParams(window.location.search);
-    const returnTo = params.get("returnTo");
-    if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("/task")) {
-      window.location.assign(returnTo);
-      return;
-    }
-
-    if (document.referrer) {
-      try {
-        const referrer = new URL(document.referrer);
-        const referrerPath = `${referrer.pathname}${referrer.search}${referrer.hash}`;
-        if (referrer.origin === window.location.origin && referrer.pathname !== "/task") {
-          window.location.assign(referrerPath);
-          return;
-        }
-      } catch {
-        // Ignore malformed referrers and fall back to history/day overview.
-      }
-    }
-
-    if (window.history.length > 1) {
-      window.history.back();
-      return;
-    }
-
-    window.location.assign(`/day?date=${encodeURIComponent(today)}`);
-  }
-
-  async function addHeaderNote() {
-    if (!selectedTask) {
-      setMessage("Choose a task first.");
-      return;
-    }
-    const note = window.prompt("Note", "")?.trim();
-    if (!note) return;
-    try {
-      setMessage(null);
-      await postNote(selectedTask, note);
-      await loadTasks();
-      setMessage("Note saved.");
-    } catch (noteError) {
-      setMessage(noteError instanceof Error ? noteError.message : "Task note failed.");
-    }
-  }
-
-  function renderTaskRows(rows: AtlasTaskCard[], empty: string) {
-    return rows.length === 0 ? <p className="atlas-task-page-muted">{empty}</p> : rows.map((task) => <TaskSummaryButton key={task.task_id} task={task} selected={task.task_id === selectedTask?.task_id} onSelect={() => selectTask(task.task_id)} today={today} weatherLabel={weatherLabel} />);
-  }
+  const collectionLabel = query.route
+    ? atlasRouteLabels[query.route]
+    : query.lane
+      ? query.lane.replace(/^./, (letter) => letter.toUpperCase())
+      : "Task collection";
 
   return (
-    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
+    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell" data-atlas-task-collection="true">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
           <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></Link>
           <span className="atlas-weather-line">{weatherLabel}</span>
-          <button type="button" className="atlas-note-plus" aria-label="Add task note" onClick={() => void addHeaderNote()}>+</button>
+          <Link href={`/day?date=${encodeURIComponent(today)}&view=work_order`} className="atlas-note-plus" aria-label="Open today">↩</Link>
         </header>
         <div className="atlas-task-page-body">
-          <ProgressReportHero selectedTask={selectedTask} tasks={tasks} nextWorkTasks={nextWorkTasks} today={today} />
+          <section className="atlas-task-page-hero atlas-route-collection-head">
+            <span>Work collection</span>
+            <h2>{collectionLabel}</h2>
+            <p>{openTasks.length} open {openTasks.length === 1 ? "task" : "tasks"}. Opening one always enters canonical Task Focus.</p>
+          </section>
           {loading ? <div className="atlas-task-page-empty">Loading tasks.</div> : null}
           {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
-          {message ? <div className="atlas-task-page-empty">{message}</div> : null}
-          {!loading && !selectedTask ? <div className="atlas-task-page-empty">No open tasks.</div> : null}
-          {selectedTask ? <div ref={activeTaskAnchorRef} className="atlas-task-page-active-anchor"><ActiveTaskCard task={selectedTask} allTasks={tasks} onChange={handleTaskChanged} onChildChange={refreshTaskData} onDoneComplete={returnAfterDone} today={today} weatherLabel={weatherLabel} /></div> : null}
-          <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Next</span><small>{nextWorkTasks.length}</small></div>{renderTaskRows(nextWorkTasks, "No next tasks ready.")}</section>
-          <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Later</span><small>{laterWorkTasks.length}</small></div>{renderTaskRows(laterWorkTasks, "No later tasks ready.")}</section>
-          <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>Waiting</span><small>{carryoverTasks.length}</small></div>{renderTaskRows(carryoverTasks, "Nothing waiting.")}</section>
-          <section className="atlas-task-page-section"><div className="atlas-task-page-section-head"><span>This Week</span><small>{nextTasks.filter((task) => !isChildTask(task)).length}</small></div>{renderTaskRows(nextTasks.filter((task) => !isChildTask(task)), "No later weekly tasks.")}</section>
+          {!loading && !error ? (
+            <>
+              <TaskSection label="Today + carry-forward" tasks={todayTasks} query={query} empty="Nothing due or carried forward here." />
+              <TaskSection label="Next 7 days" tasks={thisWeekTasks} query={query} empty="Nothing else scheduled in the next seven days." />
+              <TaskSection label="Later" tasks={laterTasks} query={query} empty="No later work in this collection." />
+            </>
+          ) : null}
         </div>
       </section>
     </main>

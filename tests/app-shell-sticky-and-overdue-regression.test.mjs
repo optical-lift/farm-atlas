@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 function read(path) {
@@ -10,7 +10,6 @@ const layout = read("app/layout.tsx");
 const fixes = read("app/app-shell-regression-fixes.css");
 const overdue = read("app/day-overdue-quiet.css");
 const day = read("app/day/page.tsx");
-const patch = read("app/DayConsequenceTimelinePatch.tsx");
 
 test("the installed Atlas header stays attached to the viewport without overflow ancestors", () => {
   assert.match(layout, /import "\.\/contextual-app-shell\.css";[\s\S]*import "\.\/app-shell-regression-fixes\.css";/);
@@ -20,12 +19,12 @@ test("the installed Atlas header stays attached to the viewport without overflow
   assert.match(fixes, /top: 0 !important/);
 });
 
-test("the drawer is called Overdue and uses the old compact Next-drawer geometry", () => {
+test("the overdue drawer copy and compact geometry are owned by the Day surface", () => {
+  assert.equal(existsSync(new URL("../app/DayConsequenceTimelinePatch.tsx", import.meta.url)), false);
+  assert.doesNotMatch(layout, /DayConsequenceTimelinePatch/);
   assert.match(day, /atlas-day-recovery-count/);
   assert.match(day, /atlas-day-recovery-overview/);
   assert.match(day, /atlas-day-overdue-entry/);
-  assert.match(patch, /function applyOverdueCopy/);
-  assert.match(patch, /label\.textContent = "Overdue"/);
   assert.match(overdue, /exact compact Day Route geometry/);
   assert.match(overdue, /\.atlas-day-recovery-count[\s\S]*border-radius: 999px/);
   assert.match(overdue, /\.atlas-day-recovery-count::after[\s\S]*content: "Overdue"/);

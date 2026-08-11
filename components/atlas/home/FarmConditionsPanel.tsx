@@ -1,10 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
-import { createPortal } from "react-dom";
+import { FormEvent, useEffect, useState } from "react";
 
-type FarmConditionsResponse = {
+export type FarmConditionsResponse = {
   ok: boolean;
   farm: {
     id: string;
@@ -98,17 +96,6 @@ type CanonicalSkyResponse = {
   } | null;
 };
 
-type FarmConditionsCollectionResponse = {
-  ok: boolean;
-  conditions?: FarmConditionsResponse[];
-  error?: string;
-};
-
-type FarmConditionsHost = {
-  farmId: string;
-  node: HTMLElement;
-};
-
 const SIGN_SYMBOLS: Record<string, string> = {
   aries: "♈︎",
   taurus: "♉︎",
@@ -189,12 +176,7 @@ function rainAge(days: number | null) {
   return `${days} days since watering rain`;
 }
 
-function sameHosts(left: FarmConditionsHost[], right: FarmConditionsHost[]) {
-  return left.length === right.length
-    && left.every((host, index) => host.farmId === right[index]?.farmId && host.node === right[index]?.node);
-}
-
-function FarmConditionsEmbedded({
+export default function FarmConditionsPanel({
   conditions,
   onReload,
 }: {
@@ -413,119 +395,5 @@ function FarmConditionsEmbedded({
         </form>
       </details>
     </div>
-  );
-}
-
-export default function AtlasFarmConditionsHomePatch() {
-  const pathname = usePathname();
-  const [conditions, setConditions] = useState<FarmConditionsResponse[]>([]);
-  const [hosts, setHosts] = useState<FarmConditionsHost[]>([]);
-  const [reloadVersion, setReloadVersion] = useState(0);
-
-  useEffect(() => {
-    if (pathname !== "/") {
-      setConditions([]);
-      return;
-    }
-
-    let active = true;
-    fetch("/api/atlas/farm-conditions/all", {
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-    })
-      .then(async (response) => {
-        const payload = await response.json() as FarmConditionsCollectionResponse;
-        if (!response.ok || !payload.ok) throw new Error(payload.error || "Farm conditions are unavailable.");
-        return payload.conditions ?? [];
-      })
-      .then((payload) => {
-        if (active) setConditions(payload);
-      })
-      .catch(() => {
-        if (active) setConditions([]);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [pathname, reloadVersion]);
-
-  const farmIdentityKey = useMemo(
-    () => conditions.map((entry) => `${entry.farm.id}:${entry.farm.name}`).sort().join("|"),
-    [conditions],
-  );
-
-  useEffect(() => {
-    if (pathname !== "/" || !conditions.length) {
-      setHosts([]);
-      return;
-    }
-
-    let cancelled = false;
-    let observer: MutationObserver | null = null;
-
-    const mount = () => {
-      if (cancelled) return;
-      const section = document.querySelector<HTMLElement>('section[aria-label="Farm seasons"]');
-      const cardContainer = section?.firstElementChild;
-      if (!cardContainer) return;
-
-      const farmCards = Array.from(cardContainer.children)
-        .filter((element): element is HTMLElement => element instanceof HTMLElement && element.tagName === "ARTICLE");
-      const nextHosts: FarmConditionsHost[] = [];
-
-      for (const conditionsEntry of conditions) {
-        const farmCard = farmCards.find((card) => {
-          const title = card.querySelector(":scope > header h3")?.textContent?.trim();
-          return title === conditionsEntry.farm.name;
-        });
-        if (!farmCard) continue;
-
-        let node = Array.from(farmCard.children).find(
-          (child): child is HTMLElement => child instanceof HTMLElement
-            && child.dataset.atlasFarmConditionsHost === conditionsEntry.farm.id,
-        ) ?? null;
-        if (!node) {
-          node = document.createElement("div");
-          node.dataset.atlasFarmConditionsHost = conditionsEntry.farm.id;
-          const cardHeader = farmCard.querySelector(":scope > header");
-          if (cardHeader) cardHeader.after(node);
-          else farmCard.prepend(node);
-        }
-        nextHosts.push({ farmId: conditionsEntry.farm.id, node });
-      }
-
-      setHosts((current) => sameHosts(current, nextHosts) ? current : nextHosts);
-    };
-
-    mount();
-    observer = new MutationObserver(mount);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    return () => {
-      cancelled = true;
-      observer?.disconnect();
-      document.querySelectorAll<HTMLElement>("[data-atlas-farm-conditions-host]").forEach((node) => node.remove());
-      setHosts([]);
-    };
-  }, [pathname, farmIdentityKey, conditions]);
-
-  if (pathname !== "/" || !hosts.length) return null;
-
-  return (
-    <>
-      {hosts.map((host) => {
-        const entry = conditions.find((candidate) => candidate.farm.id === host.farmId);
-        if (!entry) return null;
-        return createPortal(
-          <FarmConditionsEmbedded
-            conditions={entry}
-            onReload={() => setReloadVersion((value) => value + 1)}
-          />,
-          host.node,
-          host.farmId,
-        );
-      })}
-    </>
   );
 }

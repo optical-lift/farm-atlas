@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 function read(path) {
@@ -106,20 +106,17 @@ test("problem handoff infrastructure remains governed for any specialized flow t
   assert.match(css, /\.atlas-structured-unfinished-problem textarea/);
 });
 
-test("The selected day and home cover omit accepted set-asides while the journal keeps a quiet record", () => {
+test("The selected day and home cover omit accepted set-asides at their canonical readers", () => {
   const taskCardsRoute = read("app/api/atlas/universal-task-cards/route.ts");
   const home = read("app/page.tsx");
-  const dayPatch = read("app/TaskSetAsideDayPatch.tsx");
-  const css = read("app/task-day-set-aside.css");
+  const layout = read("app/layout.tsx");
 
+  assert.equal(existsSync(new URL("../app/TaskSetAsideDayPatch.tsx", import.meta.url)), false);
+  assert.doesNotMatch(layout, /TaskSetAsideDayPatch/);
+  assert.match(taskCardsRoute, /readAtlasTaskDayDispositions\(doneDate\)/);
   assert.match(taskCardsRoute, /setAsideTaskIds/);
   assert.match(taskCardsRoute, /!setAsideTaskIds\.has\(card\.task_id\)/);
   assert.match(home, /readAtlasSetAsideTaskIds/);
   assert.match(home, /taskCards: farm\.taskCards\.filter/);
-  assert.match(dayPatch, /<strong>Set aside<\/strong>/);
-  assert.match(dayPatch, /still overdue/);
-  assert.match(dayPatch, /returns \$\{prettyDate\(row\.returnsOn\)\}/);
-  assert.match(dayPatch, /set aside \$\{row\.deferralCount\}×/);
-  assert.match(css, /Overdue remains a timeline state/);
-  assert.match(css, /background: transparent !important/);
+  assert.doesNotMatch(taskCardsRoute + home, /MutationObserver|createPortal|document\.querySelector/);
 });

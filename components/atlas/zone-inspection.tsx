@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import type {
@@ -13,6 +13,7 @@ import type {
 } from "@/lib/atlas/zone-registry-client";
 
 const EMPTY = "not logged";
+const VISIBLE_ATTACHED_TASK_COUNT = 3;
 
 type ZoneLayoutFallback = {
   count?: number;
@@ -99,8 +100,48 @@ function cropDisplayName(content: Pick<AtlasObjectContent, "content_label" | "va
   return lower.includes(variety.toLowerCase()) ? label : `${variety} ${label}`;
 }
 
+function collapseRepeatedPhrase(value: string) {
+  const words = value.trim().split(/\s+/).filter(Boolean);
+  for (let size = Math.floor(words.length / 2); size >= 1; size -= 1) {
+    const left = words.slice(words.length - size * 2, words.length - size).join(" ").toLowerCase();
+    const right = words.slice(words.length - size).join(" ").toLowerCase();
+    if (left === right) return words.slice(0, words.length - size).join(" ");
+  }
+  return value;
+}
+
+function cleanCropTitle(value: string | null | undefined) {
+  let cleaned = (value ?? "")
+    .replace(/^robin\s+tn\s+/i, "")
+    .replace(/^marshfield\s+mulch\s+pile\s+lineage\s+/i, "")
+    .replace(/^marshfield\s+mulch\s+pile\s+/i, "")
+    .replace(/^lineage\s+/i, "")
+    .trim();
+
+  cleaned = collapseRepeatedPhrase(cleaned);
+  if (/mint collection$/i.test(cleaned) && /,/.test(cleaned)) cleaned = "Mint collection";
+  return (cleaned || "Crop").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function normalizedCropName(value: string | null | undefined) {
+  return cleanCropTitle(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+}
+
 function primaryContent(object: AtlasRegistryObject) {
   return object.contents.find(contentIsCropCycle) ?? object.contents[0] ?? null;
+}
+
+function visibleInspectionContents(object: AtlasRegistryObject) {
+  const currentNames = object.contents
+    .filter(contentIsCropCycle)
+    .map((content) => normalizedCropName(cropDisplayName(content)))
+    .filter(Boolean);
+
+  return object.contents.filter((content) => {
+    if (contentIsCropCycle(content)) return true;
+    const legacyName = normalizedCropName(cropDisplayName(content));
+    return !legacyName || !currentNames.some((currentName) => currentName === legacyName || currentName.endsWith(` ${legacyName}`));
+  });
 }
 
 function cropLine(object: AtlasRegistryObject) {
@@ -108,7 +149,7 @@ function cropLine(object: AtlasRegistryObject) {
   if (!content) return "No current crop logged";
   const inspection = content.inspection;
   const seeded = inspection.seeded_date ? ` · sown ${prettyDate(inspection.seeded_date)}` : "";
-  return `${cropDisplayName(content)} · ${stageLabel(inspection.stage)}${seeded}`;
+  return `${cleanCropTitle(cropDisplayName(content))} · ${stageLabel(inspection.stage)}${seeded}`;
 }
 
 function inspectionRows(content: AtlasObjectContent) {
@@ -181,7 +222,7 @@ function currentCropCycleLines(zone: AtlasRegistryZone) {
 
   const counts = new Map<string, { count: number; state: string }>();
   cycles.forEach((content) => {
-    const label = cropDisplayName(content);
+    const label = cleanCropTitle(cropDisplayName(content));
     const state = stageLabel(content.status);
     const current = counts.get(label) ?? { count: 0, state };
     current.count += 1;
@@ -337,17 +378,34 @@ function BedTaskList({
   tasks: AtlasTaskCard[];
   onTaskSelect?: (task: AtlasTaskCard) => void;
 }) {
-  if (tasks.length === 0) return null;
+  const [expanded, setExpanded] = useState(false);
+  const sortedTasks = useMemo(
+    () => [...tasks].sort((left, right) => (right.due_date ?? "").localeCompare(left.due_date ?? "")),
+    [tasks],
+  );
+  if (sortedTasks.length === 0) return null;
+  const hiddenCount = Math.max(0, sortedTasks.length - VISIBLE_ATTACHED_TASK_COUNT);
+  const visibleTasks = expanded ? sortedTasks : sortedTasks.slice(0, VISIBLE_ATTACHED_TASK_COUNT);
 
   return (
-    <section className="atlas-bed-task-list">
+    <section className="atlas-bed-task-list" data-tasks-expanded={expanded ? "true" : "false"}>
       <span className="atlas-soft-label">Attached tasks</span>
-      {tasks.map((task) => (
+      {visibleTasks.map((task) => (
         <button type="button" key={task.task_id} onClick={() => onTaskSelect?.(task)}>
           <strong>{task.title}</strong>
           <small>{prettyDate(task.due_date)} · {task.status.replaceAll("_", " ")}</small>
         </button>
       ))}
+      {hiddenCount > 0 ? (
+        <button
+          type="button"
+          className="atlas-attached-tasks-toggle"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((current) => !current)}
+        >
+          {expanded ? "Show less" : `See ${hiddenCount} more`}
+        </button>
+      ) : null}
     </section>
   );
 }
@@ -389,6 +447,9 @@ function InspectionSheet({
   onTaskSelect?: (task: AtlasTaskCard) => void;
   onDocumentObject?: (object: AtlasRegistryObject) => void;
 }) {
+  const contents = useMemo(() => visibleInspectionContents(object), [object]);
+  const [expandedContentId, setExpandedContentId] = useState<string | null>(null);
+
   return (
     <div className="atlas-bed-inspection-sheet">
       {onDocumentObject ? (
@@ -397,24 +458,42 @@ function InspectionSheet({
         </Link>
       ) : null}
       <ObjectRegistryFactLine object={object} />
-      {object.contents.length === 0 ? <div className="atlas-inspection-empty">No current crop cycle logged.</div> : null}
-      {object.contents.map((content) => (
-        <section key={content.id} className={`atlas-crop-cycle-sheet ${contentIsCropCycle(content) ? "current-crop-cycle" : ""}`}>
-          <div className="atlas-crop-cycle-title">
-            {contentIsCropCycle(content) ? "Current crop cycle" : object.contents.length > 1 ? content.content_label : "Crop record"}
-            {contentIsCropCycle(content) ? <span>{cropDisplayName(content)}</span> : null}
-          </div>
-          <dl className="atlas-inspection-list-sheet">
-            {inspectionRows(content).map(([label, value]) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-          {content.inspection.note ? <p className="atlas-inspection-note">{content.inspection.note}</p> : null}
-        </section>
-      ))}
+      {contents.length === 0 ? <div className="atlas-inspection-empty">No current crop cycle logged.</div> : null}
+      {contents.length ? <div className="atlas-bed-crop-list-label">Crops in this bed · {contents.length}</div> : null}
+      {contents.map((content) => {
+        const expanded = expandedContentId === content.id;
+        const namedCrop = cleanCropTitle(cropDisplayName(content));
+        return (
+          <section
+            key={content.id}
+            className={`atlas-crop-cycle-sheet atlas-bed-crop-list-item ${contentIsCropCycle(content) ? "current-crop-cycle" : ""} ${expanded ? "is-expanded" : ""}`}
+          >
+            <button
+              type="button"
+              className="atlas-crop-cycle-title atlas-bed-crop-list-trigger"
+              aria-expanded={expanded}
+              aria-label={`${expanded ? "Close" : "Open"} ${namedCrop} details`}
+              onClick={() => setExpandedContentId((current) => current === content.id ? null : content.id)}
+            >
+              {contentIsCropCycle(content) ? "Current crop cycle" : contents.length > 1 ? cleanCropTitle(content.content_label) : "Crop record"}
+              {contentIsCropCycle(content) ? <span>{namedCrop}</span> : null}
+            </button>
+            {expanded ? (
+              <>
+                <dl className="atlas-inspection-list-sheet">
+                  {inspectionRows(content).map(([label, value]) => (
+                    <div key={label}>
+                      <dt>{label}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {content.inspection.note ? <p className="atlas-inspection-note">{content.inspection.note}</p> : null}
+              </>
+            ) : null}
+          </section>
+        );
+      })}
       <BedTaskList tasks={tasks} onTaskSelect={onTaskSelect} />
     </div>
   );

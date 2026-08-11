@@ -9,15 +9,6 @@ import DependencyReleaseFlash from "@/components/atlas/task/DependencyReleaseFla
 import AtlasWorkAlongsideOverlay from "@/components/atlas/work-alongside/AtlasWorkAlongsideOverlay";
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
-import WorkerVocabularyCleanupPatch from "./WorkerVocabularyCleanupPatch";
-import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
-import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
-import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
-import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
-import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
-import TaskSetAsideDayPatch from "./TaskSetAsideDayPatch";
-import DayConsequenceTimelinePatch from "./DayConsequenceTimelinePatch";
-import AtlasFarmConditionsHomePatch from "./AtlasFarmConditionsHomePatch";
 import AtlasSkyLedgerMaintainer from "./AtlasSkyLedgerMaintainer";
 import OwnerOperatorMode from "./OwnerOperatorMode";
 import "./globals.css";
@@ -79,7 +70,6 @@ import "./home-cover-v1.css";
 import "./weed-card-grazer.css";
 import "./task-day-set-aside.css";
 import "./task-structured-unfinished.css";
-import "./day-consequence-timeline.css";
 import "./day-overdue-quiet.css";
 import "./owner-operator-mode.css";
 import "./bell.css";
@@ -94,7 +84,6 @@ import "./day-single-scroll.css";
 import "./farm-conditions-home.css";
 import "./farm-conditions-merged.css";
 import "./day-node-clean.css";
-import "./future-day-projection.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -154,15 +143,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <AtlasBellCover />
         <DependencyReleaseFlash />
         <Suspense fallback={null}><AtlasWorkAlongsideOverlay /></Suspense>
-        <WorkerVocabularyCleanupPatch />
-        <TaskProgressExactDayPatch />
-        <SafeBedCropAccordionPatch />
-        <AttachedTaskHistoryPatch />
-        <UniversalCollectionIdentity />
-        <DayTaskTitleLinkPatch />
-        <TaskSetAsideDayPatch />
-        <DayConsequenceTimelinePatch />
-        <AtlasFarmConditionsHomePatch />
         <Suspense fallback={null}><OwnerDayPlanGate /></Suspense>
         {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}

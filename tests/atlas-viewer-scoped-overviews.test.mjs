@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 function read(path) {
@@ -32,16 +32,18 @@ test("operational overview routes use the universal viewer-scoped task reader", 
 
 test("day week and month cannot silently fall back to a mixed farm-wide reader", () => {
   const day = read("app/day/page.tsx");
-  const adjacentNavigation = read("app/DayAdjacentNavigation.tsx");
   const week = read("app/overview/week/page.tsx");
   const month = read("app/overview/month/page.tsx");
 
+  assert.equal(existsSync(new URL("../app/DayAdjacentNavigation.tsx", import.meta.url)), false);
   assert.match(day, /useSearchParams\(\)/);
   assert.match(day, /fetchAtlasTaskCards\(\{[\s\S]*?viewerScoped:\s*true,[\s\S]*?dueThrough:\s*dateIso,[\s\S]*?doneDate:\s*dateIso,?[\s\S]*?\}\)/);
   assert.match(day, /requestSequence/);
   assert.doesNotMatch(day, /atlas:day-change/);
-  assert.match(adjacentNavigation, /router\.push\(`/);
-  assert.doesNotMatch(adjacentNavigation, /history\.pushState/);
+  assert.match(day, /<nav className="atlas-day-adjacent-nav"/);
+  assert.match(day, /<Link href=\{dayHref\(previousDate\)\}/);
+  assert.match(day, /<Link href=\{dayHref\(nextDate\)\}/);
+  assert.doesNotMatch(day, /history\.pushState/);
 
   assert.match(week, /fetchAtlasTaskCards\(\{[\s\S]*?viewerScoped:\s*true,[\s\S]*?dueThrough:\s*resolvedEnd,[\s\S]*?doneDate:\s*resolvedAnchor[\s\S]*?\}\)/);
   assert.match(month, /fetchAtlasTaskCards\(\{[\s\S]*?viewerScoped:\s*true,[\s\S]*?doneDate:\s*resolvedAnchor,[\s\S]*?dueThrough:\s*resolvedEnd[\s\S]*?\}\)/);

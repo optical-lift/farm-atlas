@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import ProjectReviewTaskFocus from "@/components/atlas/portfolio/ProjectReviewTaskFocus";
 import AtlasTrail from "@/components/atlas/trail/AtlasTrail";
 import type { AtlasProjectTaskFocus } from "@/lib/atlas/portfolio";
+import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 import { atlasTrailCurrentNode } from "@/lib/atlas/trail";
 
 type Outcome = "done" | "partial" | "blocked" | "not_relevant" | "changed_plan";
@@ -55,13 +56,18 @@ function OrdinaryProjectTaskFocus({ focus, returnTo }: Props) {
     try {
       setSaving(outcome);
       setMessage(null);
-      const response = await fetch(`/api/atlas/project-tasks/${encodeURIComponent(task.taskId)}/transition`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transition: outcome, note }),
+      await postAtlasTaskTransition({
+        taskId: task.taskId,
+        transition: outcome,
+        note,
+        reason: note,
+        laneKey: "project",
+        workKey: project.workstream,
+        payload: {
+          projectId: project.projectId,
+          taskScope: task.taskScope ?? "project",
+        },
       });
-      const result = await response.json().catch(() => null) as { error?: string } | null;
-      if (!response.ok) throw new Error(result?.error || "Project task update failed.");
 
       if (outcome === "done" || outcome === "not_relevant" || outcome === "changed_plan") {
         window.location.assign(destination);
