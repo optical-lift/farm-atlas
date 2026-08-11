@@ -162,7 +162,7 @@ export async function readOwnerWorkerDayPlan(dateIso: string) {
   }
 
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("owner_worker_day_plan_api_v1", {
+  const { data, error } = await supabase.rpc("owner_worker_day_plan_choreographed_api_v1", {
     p_farm_id: target.farmId,
     p_membership_id: target.membershipId,
     p_day: dateIso,
