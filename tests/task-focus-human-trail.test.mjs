@@ -15,7 +15,8 @@ test("canonical Task Move data renders as a compact human trail instead of schem
   assert.match(spine, /aria-label="Task trail"/);
   assert.match(spine, />Right now</);
   assert.match(spine, />Do this</);
-  assert.match(spine, />Finished</);
+  assert.match(spine, /"Target held" : "Finished"/);
+  assert.match(spine, /data-reachable=\{stopped \? "false" : "true"\}/);
   assert.match(spine, /atlas-human-task-trail__requirements/);
   assert.doesNotMatch(spine, />Task move</i);
   assert.doesNotMatch(spine, />Current</);
