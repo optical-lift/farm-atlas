@@ -1,13 +1,12 @@
 import type { ReactNode } from "react";
 
 import DayCueDelivery from "./DayCueDelivery";
-import DayTaskOpenBridge from "./DayTaskOpenBridge";
+import DaySurface from "./DaySurface";
 
 export default function DayLayout({ children }: { children: ReactNode }) {
   return (
     <>
-      {children}
-      <DayTaskOpenBridge />
+      <DaySurface>{children}</DaySurface>
       <DayCueDelivery />
     </>
   );
