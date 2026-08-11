@@ -12,9 +12,10 @@ const normalized = migration.replace(/\s+/g, " ").trim();
 test("canonical reschedules keep the released occurrence on the same current date", () => {
   assert.match(migration, /create or replace function atlas\.sync_rescheduled_task_occurrence_v1/);
   assert.match(migration, /new\.transition not in \('rescheduled','unfinished'\)/);
-  assert.match(migration, /occurrence\.planned_due_date=new\.target_date/);
+  assert.match(migration, /set planned_due_date=new\.target_date/);
   assert.match(migration, /occurrence\.not_before_date=occurrence\.planned_due_date/);
   assert.match(migration, /v_task\.planned_occurrence_id/);
+  assert.match(migration, /occurrence\.released_task_id=new\.task_id/);
 });
 
 test("historical-release provenance is never converted into a current schedule claim", () => {
@@ -27,8 +28,9 @@ test("Sunday guardrail gets a post-task synchronization path", () => {
   assert.match(migration, /after insert or update of due_date,metadata,planned_occurrence_id on atlas\.tasks/);
   assert.match(migration, /sunday_guardrail_applied/);
   assert.match(migration, /sunday_guardrail_original_due_date/);
-  assert.match(migration, /planned_due_date=new\.due_date/);
+  assert.match(migration, /set planned_due_date=new\.due_date/);
   assert.match(migration, /sunday_guardrail_current_schedule/);
+  assert.match(migration, /lower\(coalesce\(new\.metadata->>'sunday_guardrail_applied','false'\)\)/);
 });
 
 test("historical backfill requires decisive canonical transition evidence", () => {
