@@ -16,8 +16,9 @@ test("every weed task routes to the occupancy-aware persistent Weed Card inside 
   assert.match(canonical, /isWeedTask/);
   assert.match(canonical, /if \(isWeedTask\(props\.task\)\) return <WeedCardTaskLoader/);
   assert.doesNotMatch(canonical, /<ConciseWeedTaskDetail/);
-  assert.match(loader, /<ConciseWeedTaskDetail/);
+  assert.match(loader, /<AssignedTaskExecutionShell task=\{task\} childTasks=\{childTasks\} assignee=\{assignee\} \/>/);
   assert.match(loader, /childTasks=\{childTasks\}/);
+  assert.doesNotMatch(loader, /ConciseWeedTaskDetail/);
   assert.match(focus, /AssignedTaskExecutionShell/);
   assert.match(focus, /<CropOccupancyList groups=\{card\.occupancyGroups\} \/>/);
   assert.match(focus, /data-atlas-method-instrument="weed-card"/);
