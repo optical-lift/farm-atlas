@@ -9,10 +9,12 @@ export type OwnerDayCueDraftPayload = {
   anchorKind: OwnerDayCueAnchorKind;
   anchorTaskId: string | null;
   scheduledAt: string | null;
+  availableFrom: string | null;
+  expiresAt: string | null;
   title: string;
   body: string | null;
   payload: Record<string, unknown>;
-  resultContract: Record<string, unknown>;
+  resultContract?: Record<string, unknown>;
   recoveryPolicy: OwnerDayCueRecoveryPolicy;
 };
 
