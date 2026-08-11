@@ -110,6 +110,8 @@ test("rescheduled unfinished work remains paid backlog instead of becoming permi
   assert.doesNotMatch(backlogMigration, /overdue_rescheduled_noncounting/);
 });
 
+// Owner purple editing now commits through one transaction boundary; the old
+// schedule/edit routes remain compatibility APIs, not the active board write path.
 test("Owner sees the full paid-day plan while choreography changes presentation and only discretionary fill needs approval", () => {
   assert.match(projectionReader, /paidTargetMinutes/);
   assert.match(dayPlanReader, /owner_worker_day_plan_choreographed_api_v1/);
