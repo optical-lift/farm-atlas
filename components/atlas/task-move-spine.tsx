@@ -18,9 +18,12 @@ function readable(value: string) {
   return value.replaceAll("_", " ");
 }
 
-function quantityLabel(requirement: TaskMoveRequirement) {
-  if (requirement.quantity === null) return null;
-  return `${requirement.quantity} ${requirement.unit ? readable(requirement.unit) : ""}`.trim();
+function requirementLine(requirement: TaskMoveRequirement) {
+  if (requirement.quantity === null) return requirement.label;
+  if (requirement.kind === "capacity" && requirement.unit) {
+    return `${requirement.quantity} ${readable(requirement.unit)}`;
+  }
+  return `${requirement.quantity} × ${requirement.label}`;
 }
 
 function visibleFacts(facts: TaskMoveFact[]) {
@@ -92,11 +95,10 @@ function RequirementGroupBranch({ group, final }: { group: RequirementGroup; fin
         <span className="atlas-human-task-trail__requirement-label">{group.label}</span>
         <ul className="atlas-human-task-trail__requirement-items">
           {group.requirements.map((requirement) => {
-            const amount = quantityLabel(requirement);
             const openQuestions = (requirement.questions ?? []).filter((question) => question.status === "open");
             return (
               <li key={requirement.id} data-state={requirement.status}>
-                <strong>{amount ? `${amount} · ` : ""}{requirement.label}</strong>
+                <strong>{requirementLine(requirement)}</strong>
                 {requirement.note ? <p>{requirement.note}</p> : null}
                 {openQuestions.length ? <p>{openQuestions.map((question) => question.label).join(" · ")}</p> : null}
               </li>
