@@ -30,10 +30,17 @@ function visibleFacts(facts: TaskMoveFact[]) {
   return facts.filter((fact) => fact.status !== "missing" && fact.label.trim());
 }
 
-function issueLabel(status: TaskMoveRequirement["status"]) {
+function issueLabel(status: TaskMoveRequirement["status"], requirements: TaskMoveRequirement[]) {
   if (status === "blocked") return "Blocked";
   if (status === "missing") return "Needed";
-  if (status === "warning") return "Check";
+  if (status === "warning") {
+    const unconfirmedCapacity = requirements.some((requirement) => (
+      requirement.kind === "capacity"
+      && requirement.status === "warning"
+      && requirement.capacityStatus !== "confirmed"
+    ));
+    return unconfirmedCapacity ? "Not yet confirmed" : "Check";
+  }
   return null;
 }
 
@@ -87,7 +94,7 @@ function FactLines({ facts }: { facts: TaskMoveFact[] }) {
 
 function RequirementGroupBranch({ group, final }: { group: RequirementGroup; final: boolean }) {
   const status = groupStatus(group.requirements);
-  const issue = issueLabel(status);
+  const issue = issueLabel(status, group.requirements);
   return (
     <li className="atlas-human-task-trail__requirement-group" data-state={status}>
       <span className="atlas-human-task-trail__branch-line" aria-hidden="true">{final ? "└──" : "├──"}</span>
