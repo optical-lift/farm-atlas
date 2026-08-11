@@ -33,10 +33,12 @@ type CueUpsertEdit = {
     anchorKind: CueAnchorKind;
     anchorTaskId: string | null;
     scheduledAt: string | null;
+    availableFrom: string | null;
+    expiresAt: string | null;
     title: string;
     body: string | null;
     payload: Record<string, unknown>;
-    resultContract: Record<string, unknown>;
+    resultContract?: Record<string, unknown>;
     recoveryPolicy: CueRecoveryPolicy;
   };
 };
@@ -67,6 +69,12 @@ function boundedString(value: unknown, max: number, required = false) {
 function plainRecord(value: unknown) {
   if (value === null || value === undefined) return {} as Record<string, unknown>;
   return typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function optionalTimestamp(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value !== "string" || value.length > 64 || Number.isNaN(new Date(value).getTime())) return undefined;
+  return value;
 }
 
 function normalizeEdits(value: unknown, fallbackDate: string): DayEdit[] | null {
@@ -133,11 +141,16 @@ function normalizeCueEdits(value: unknown, serviceDate: string): CueEdit[] | nul
     if (!["first_open", "before_task", "after_task", "at_time"].includes(anchorKind)) return null;
     if (!["refresh", "expire", "persist", "block"].includes(recoveryPolicy)) return null;
     if (cue.anchorTaskId !== undefined && cue.anchorTaskId !== null && !validUuid(cue.anchorTaskId)) return null;
+
     const title = boundedString(cue.title, 160, true);
     const body = boundedString(cue.body, 1000, false);
     const payload = plainRecord(cue.payload);
-    const resultContract = plainRecord(cue.resultContract);
-    if (title === null || body === null || payload === null || resultContract === null) return null;
+    const hasResultContract = Object.prototype.hasOwnProperty.call(cue, "resultContract");
+    const resultContract = hasResultContract ? plainRecord(cue.resultContract) : undefined;
+    const scheduledAt = optionalTimestamp(cue.scheduledAt);
+    const availableFrom = optionalTimestamp(cue.availableFrom);
+    const expiresAt = optionalTimestamp(cue.expiresAt);
+    if (title === null || body === null || payload === null || resultContract === null || scheduledAt === undefined || availableFrom === undefined || expiresAt === undefined) return null;
 
     result.push({
       kind: "upsert",
@@ -147,11 +160,13 @@ function normalizeCueEdits(value: unknown, serviceDate: string): CueEdit[] | nul
         cueKind,
         anchorKind,
         anchorTaskId: cue.anchorTaskId ? cue.anchorTaskId as string : null,
-        scheduledAt: typeof cue.scheduledAt === "string" && cue.scheduledAt.trim() ? cue.scheduledAt.trim() : null,
+        scheduledAt,
+        availableFrom,
+        expiresAt,
         title,
         body: body || null,
         payload,
-        resultContract,
+        ...(hasResultContract ? { resultContract: resultContract as Record<string, unknown> } : {}),
         recoveryPolicy,
       },
     });
