@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 function read(path) {
@@ -72,10 +72,11 @@ test("legacy day-planning endpoints are compatibility shells around the canonica
   assert.doesNotMatch(automatic, /member_unavailability|task_release_queue_items|rhythm_state/);
 });
 
-test("the duplicate Possible Work bridge is disabled", () => {
-  const bridge = read("app/FutureDayProjectionBridge.tsx");
-  assert.match(bridge, /return null/);
-  assert.doesNotMatch(bridge, /Possible work|Projected Finish Elm|Projected Weed Card/);
+test("the duplicate Possible Work bridge is retired instead of mounted as a no-op", () => {
+  const bridgeUrl = new URL("../app/FutureDayProjectionBridge.tsx", import.meta.url);
+  const layout = read("app/layout.tsx");
+  assert.equal(existsSync(bridgeUrl), false);
+  assert.doesNotMatch(layout, /FutureDayProjectionBridge/);
 });
 
 test("Owner approval applies only to discretionary purple work; Weed and Mow are automatic", () => {
