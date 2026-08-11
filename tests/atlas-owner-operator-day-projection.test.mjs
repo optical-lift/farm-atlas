@@ -25,20 +25,21 @@ test("Owner worker-day planning resolves one Farm Hand directly or through an ex
   assert.doesNotMatch(reader, /23e98e5e-16ca-40d8-872c-c77e06baa167/);
 });
 
-test("Owner Day Edit is a deliberate purple choreography mode instead of injected Possible Work cards", () => {
+test("Owner Day Edit is a deliberate purple choreography mode with one atomic commit", () => {
   const component = read("components/atlas/owner-day-schedule-builder.tsx");
   const gate = read("components/atlas/owner-day-plan-gate.tsx");
   const daySummary = read("components/atlas/day-trail-summary.tsx");
   const layout = read("app/layout.tsx");
+  const commitRoute = read("app/api/atlas/owner-day-commit/route.ts");
   const postRoute = read("app/api/atlas/owner-day-schedule/route.ts");
   const editRoute = read("app/api/atlas/owner-day-edit/route.ts");
 
   assert.match(component, /\/api\/atlas\/worker-day-plan\?date=/);
   assert.match(component, /\/api\/atlas\/day-choreography\?date=/);
-  assert.match(component, /\/api\/atlas\/owner-day-schedule/);
-  assert.match(component, /\/api\/atlas\/owner-day-edit/);
-  assert.match(component, /owner-day-schedule-v1/);
-  assert.match(component, /owner-day-edit-v1/);
+  assert.match(component, /\/api\/atlas\/owner-day-commit/);
+  assert.match(component, /owner-day-commit-v1/);
+  assert.doesNotMatch(component, /fetch\("\/api\/atlas\/owner-day-schedule"/);
+  assert.doesNotMatch(component, /fetch\("\/api\/atlas\/owner-day-edit"/);
   assert.match(component, /data-owner-day-edit-board/);
   assert.match(component, /Work/);
   assert.match(component, /Cues/);
@@ -61,12 +62,15 @@ test("Owner Day Edit is a deliberate purple choreography mode instead of injecte
   assert.doesNotMatch(daySummary, /OwnerDayScheduleBuilder/);
   assert.match(layout, /OwnerDayPlanGate/);
 
-  assert.match(postRoute, /owner_build_worker_day_schedule_api_v2/);
-  assert.match(postRoute, /resolveOwnerWorkerDayPlanningTarget/);
-  assert.match(postRoute, /owner-day-schedule-v1/);
-  assert.match(postRoute, /"project_pull", "floating_task"/);
-  assert.doesNotMatch(postRoute, /"project_pull", "floating_task", "queue"/);
+  assert.match(commitRoute, /owner_commit_worker_day_choreography_api_v1/);
+  assert.match(commitRoute, /resolveOwnerWorkerDayPlanningTarget/);
+  assert.match(commitRoute, /owner-day-commit-v1/);
+  assert.match(commitRoute, /"project_pull", "floating_task"/);
 
+  // The older focused endpoints remain explicit compatibility boundaries; the
+  // current board no longer chains them into a partially committed draft.
+  assert.match(postRoute, /owner_build_worker_day_schedule_api_v2/);
+  assert.match(postRoute, /owner-day-schedule-v1/);
   assert.match(editRoute, /owner_apply_worker_day_edits_api_v1/);
   assert.match(editRoute, /return_to_atlas/);
   assert.match(editRoute, /rewindow/);
