@@ -27,11 +27,11 @@ test("legacy suggestion and automatic routes are compatibility readers only", ()
 
 test("automatic work is not an Owner approval selection", () => {
   const builder = read("components/atlas/owner-day-schedule-builder.tsx");
-  const commitRoute = read("app/api/atlas/owner-day-schedule/route.ts");
+  const commitRoute = read("app/api/atlas/owner-day-commit/route.ts");
   assert.match(builder, /sourceKind === "project_pull" \|\| row\.sourceKind === "floating_task"/);
   assert.match(commitRoute, /"project_pull", "floating_task"/);
   assert.doesNotMatch(commitRoute, /"project_pull", "floating_task", "queue"/);
-  assert.match(commitRoute, /owner_build_worker_day_schedule_api_v2/);
+  assert.match(commitRoute, /owner_commit_worker_day_choreography_api_v1/);
 });
 
 test("sowing is a hard evening rule unless Owner explicitly choreographs the Day", () => {
@@ -48,10 +48,10 @@ test("sowing is a hard evening rule unless Owner explicitly choreographs the Day
 
 test("explicit Owner approval can exceed the normal capacity target without making automatic work selectable", () => {
   const builder = read("components/atlas/owner-day-schedule-builder.tsx");
-  const commitRoute = read("app/api/atlas/owner-day-schedule/route.ts");
+  const commitRoute = read("app/api/atlas/owner-day-commit/route.ts");
   const migration = read("supabase/migrations/20260809203300_owner_project_pull_capacity_override_v1.sql");
   assert.match(builder, /selectedCandidates/);
-  assert.match(builder, /\/api\/atlas\/owner-day-schedule/);
+  assert.match(builder, /\/api\/atlas\/owner-day-commit/);
   assert.match(commitRoute, /"project_pull", "floating_task"/);
   assert.doesNotMatch(commitRoute, /"project_pull", "floating_task", "queue"/);
   assert.match(migration, /pull_project_item_to_today_owner_override_v1/);
