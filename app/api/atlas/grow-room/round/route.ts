@@ -25,12 +25,29 @@ type FinishInput = {
   idempotencyKey?: string;
 };
 
+type GrowRoomRoundRequest = {
+  taskId?: string;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+type GrowRoomRoundData = {
+  requests?: GrowRoomRoundRequest[];
+  [key: string]: unknown;
+};
+
+type RequestTaskInstructionRow = {
+  id: string;
+  note: string | null;
+  metadata: Record<string, unknown> | null;
+};
+
 function privateJson(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, {
     status,
     headers: {
       "Cache-Control": "private, no-store",
-      "X-Atlas-Read-Path": "grow-room-round-v1",
+      "X-Atlas-Read-Path": "grow-room-round-v2-execution-detail",
     },
   });
 }
@@ -44,6 +61,63 @@ function rpcStatus(error: RpcError) {
 
 function cleanId(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function cleanText(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function cleanTextArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => item.trim());
+}
+
+function executionDetail(row: RequestTaskInstructionRow) {
+  const metadata = row.metadata ?? {};
+  return {
+    do: cleanText(metadata.execution_do) || cleanText(metadata.display_action),
+    place: cleanText(metadata.execution_place) || cleanText(metadata.display_location) || cleanText(metadata.collection_zone),
+    how: cleanTextArray(metadata.execution_how).length
+      ? cleanTextArray(metadata.execution_how)
+      : cleanTextArray(metadata.detail_lines),
+    doneWhen: cleanText(metadata.execution_done_when) || cleanText(metadata.execution_checklist_completion_label),
+    note: cleanText(row.note),
+  };
+}
+
+async function enrichRoundExecution(
+  supabase: Awaited<ReturnType<typeof createAtlasServerClient>>,
+  farmId: string,
+  round: unknown,
+) {
+  if (!round || typeof round !== "object") return round;
+  const typedRound = round as GrowRoomRoundData;
+  const requests = Array.isArray(typedRound.requests) ? typedRound.requests : [];
+  const taskIds = requests.map((request) => cleanId(request.taskId)).filter((id): id is string => Boolean(id));
+  if (!taskIds.length) return round;
+
+  const { data, error } = await supabase
+    .schema("atlas")
+    .from("tasks")
+    .select("id,note,metadata")
+    .eq("farm_id", farmId)
+    .in("id", taskIds);
+
+  if (error) {
+    console.error("Atlas Grow Room execution detail read failed:", error);
+    return round;
+  }
+
+  const rows = (data ?? []) as RequestTaskInstructionRow[];
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return {
+    ...typedRound,
+    requests: requests.map((request) => {
+      const taskId = cleanId(request.taskId);
+      const task = taskId ? byId.get(taskId) : null;
+      return task ? { ...request, execution: executionDetail(task) } : request;
+    }),
+  };
 }
 
 export async function GET(request: Request) {
@@ -62,11 +136,13 @@ export async function GET(request: Request) {
     return privateJson({ ok: false, error: error.message || "The Grow Room round could not be loaded." }, rpcStatus(error as RpcError));
   }
 
+  const enrichedRound = await enrichRoundExecution(supabase, authorized.access.membership.farmId, data);
+
   return privateJson({
     ok: true,
     farmKey: authorized.access.membership.farmKey ?? "elm_farm",
     role: authorized.access.membership.role,
-    round: data,
+    round: enrichedRound,
   });
 }
 
