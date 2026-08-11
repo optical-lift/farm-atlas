@@ -393,7 +393,7 @@ export default function OwnerDayScheduleBuilder() {
     return changedTaskIds.map((taskId) => {
       const current = draft.get(taskId) as DraftPlacement;
       const original = baseline.get(taskId) as DraftPlacement;
-      if (current.returnedToAtlas) return { kind: "return_to_atlas", taskId };
+      if (current.returnedToAtlas) return { kind: "return_to_atlas", taskId, serviceDate: dateIso };
       const kind: DayEdit["kind"] = current.serviceDate !== original.serviceDate
         ? "reschedule"
         : current.dayWindow !== original.dayWindow
@@ -416,42 +416,26 @@ export default function OwnerDayScheduleBuilder() {
     setSaving(true);
     setError(null);
     try {
-      const edits = editsForCommit();
-      if (edits.length) {
-        const request = await fetch("/api/atlas/owner-day-edit", {
-          method: "POST",
-          credentials: "same-origin",
-          cache: "no-store",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            "x-atlas-intent": "owner-day-edit-v1",
-          },
-          body: JSON.stringify({ edits }),
-        });
-        const body = await request.json() as { ok?: boolean; error?: string; message?: string };
-        if (!request.ok || !body.ok) throw new Error(body.message || body.error || "Atlas could not re-plan the Day.");
-      }
-
-      if (selectedCandidates.length) {
-        const request = await fetch("/api/atlas/owner-day-schedule", {
-          method: "POST",
-          credentials: "same-origin",
-          cache: "no-store",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            "x-atlas-intent": "owner-day-schedule-v1",
-          },
-          body: JSON.stringify({
-            date: dateIso,
-            selections: selectedCandidates.map((candidate) => ({ sourceKind: candidate.sourceKind, sourceId: candidate.sourceId })),
-          }),
-        });
-        const body = await request.json() as { ok?: boolean; error?: string; message?: string };
-        if (!request.ok || !body.ok) throw new Error(body.message || body.error || "Atlas could not add the selected work.");
-      }
-
+      const request = await fetch("/api/atlas/owner-day-commit", {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "x-atlas-intent": "owner-day-commit-v1",
+        },
+        body: JSON.stringify({
+          date: dateIso,
+          edits: editsForCommit(),
+          selections: selectedCandidates.map((candidate) => ({
+            sourceKind: candidate.sourceKind,
+            sourceId: candidate.sourceId,
+          })),
+        }),
+      });
+      const body = await request.json() as { ok?: boolean; error?: string; message?: string };
+      if (!request.ok || !body.ok) throw new Error(body.message || body.error || "Atlas could not commit these Day changes.");
       window.location.reload();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Atlas could not commit these Day changes.");

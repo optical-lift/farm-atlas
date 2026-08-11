@@ -129,7 +129,9 @@ test("Owner sees the full paid-day plan while choreography changes presentation 
   assert.match(projectionUi, /committedPaidMinutes/);
   assert.match(projectionUi, /automaticPaidMinutes/);
   assert.match(projectionUi, /selectedCandidates/);
-  assert.match(projectionUi, /\/api\/atlas\/owner-day-schedule/);
-  assert.match(projectionUi, /\/api\/atlas\/owner-day-edit/);
+  assert.match(projectionUi, /\/api\/atlas\/owner-day-commit/);
+  assert.match(projectionUi, /owner-day-commit-v1/);
+  assert.doesNotMatch(projectionUi, /fetch\("\/api\/atlas\/owner-day-schedule"/);
+  assert.doesNotMatch(projectionUi, /fetch\("\/api\/atlas\/owner-day-edit"/);
   assert.match(projectionUi, /Return to Atlas/);
 });
