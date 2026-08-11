@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { atlasFarmDateIso } from "@/lib/atlas/farm-day";
+
 type Card = {
   task_id: string;
   parent_task_id?: string | null;
@@ -12,12 +14,6 @@ type Card = {
   metadata?: Record<string, unknown> | null;
   task_outcomes?: Array<{ outcome?: string | null }>;
 };
-
-function todayIso() {
-  const date = new Date();
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -104,7 +100,7 @@ export default function TaskProgressExactDayPatch() {
       if (stopped) return;
       const cards = await fetchTaskCards();
       if (stopped) return;
-      const today = todayIso();
+      const today = atlasFarmDateIso();
       const todayCards = cards.filter(isProgressTask).filter((card) => card.due_date === today);
       setDayProgress(todayCards.filter(isDone).length, todayCards.length);
       setTaskProgress(cards);
