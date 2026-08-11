@@ -15,7 +15,7 @@ test("legacy completed task pages leave through a fresh document navigation", ()
   assert.match(transitionClient, /function leaveCompletedTaskPage\(\)/);
   assert.match(transitionClient, /window\.location\.pathname !== "\/task"/);
   assert.match(transitionClient, /window\.location\.replace\(destination\)/);
-  assert.match(transitionClient, /input\.transition === "done"[\s\S]*leaveCompletedTaskPage\(\)/);
+  assert.match(transitionClient, /if \(input\.transition === "done"\) \{\s*leaveCompletedTaskPage\(\);\s*\}/);
 });
 
 test("completion return paths cannot reopen a task route", () => {
@@ -28,8 +28,8 @@ test("completion return paths cannot reopen a task route", () => {
 test("subtask completion stays in the checklist instead of triggering parent-page navigation", () => {
   const leaveCallCount = (transitionClient.match(/leaveCompletedTaskPage\(\);/g) ?? []).length;
   assert.equal(leaveCallCount, 1);
-  assert.match(transitionClient, /input\.transition === "done"[\s\S]*leaveCompletedTaskPage\(\)/);
-  assert.doesNotMatch(transitionClient, /input\.transition === "checklist_done"[\s\S]*leaveCompletedTaskPage/);
+  assert.match(transitionClient, /if \(input\.transition === "done"\) \{\s*leaveCompletedTaskPage\(\);\s*\}/);
+  assert.doesNotMatch(transitionClient, /if \(input\.transition === "checklist_done"\) \{\s*leaveCompletedTaskPage\(\);/);
 });
 
 test("checklist state is refreshed by the React execution owner instead of a global DOM observer", () => {
