@@ -1,3 +1,4 @@
+import { atlasFarmDateIso, atlasFarmMonthEnd, atlasShiftFarmDate } from "@/lib/atlas/farm-day";
 import { taskMatchesAssignee } from "@/lib/atlas/task-assignment";
 
 export type AtlasTaskCardObject = {
@@ -237,26 +238,6 @@ function validDateIso(value: string | null | undefined) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime()));
 }
 
-function localTodayIso() {
-  const date = new Date();
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
-
-function addDaysIso(dateIso: string, days: number) {
-  const date = new Date(`${dateIso}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
-
-function monthEndIso(dateIso: string) {
-  const date = new Date(`${dateIso}T12:00:00`);
-  const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 12);
-  const local = new Date(end.getTime() - end.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
-
 function viewerOperationalWindow(options: AtlasTaskCardFetchOptions): ViewerOperationalWindow | null {
   if (typeof window === "undefined") return options.viewerScoped ? {
     dueThrough: options.dueThrough,
@@ -274,7 +255,7 @@ function viewerOperationalWindow(options: AtlasTaskCardFetchOptions): ViewerOper
 
   const params = new URLSearchParams(window.location.search);
   const pathname = window.location.pathname;
-  const today = localTodayIso();
+  const today = atlasFarmDateIso();
 
   if (pathname === "/") return {};
 
@@ -289,13 +270,13 @@ function viewerOperationalWindow(options: AtlasTaskCardFetchOptions): ViewerOper
 
   if (pathname === "/overview/week") {
     const anchorIso = validDateIso(params.get("date")) ? params.get("date") as string : today;
-    const dueThrough = validDateIso(params.get("end")) ? params.get("end") as string : addDaysIso(anchorIso, 6);
+    const dueThrough = validDateIso(params.get("end")) ? params.get("end") as string : atlasShiftFarmDate(anchorIso, 6);
     return { dueThrough };
   }
 
   if (pathname === "/overview/month") {
     const anchorIso = validDateIso(params.get("date")) ? params.get("date") as string : today;
-    return { dueThrough: monthEndIso(anchorIso) };
+    return { dueThrough: atlasFarmMonthEnd(anchorIso) };
   }
 
   return null;
