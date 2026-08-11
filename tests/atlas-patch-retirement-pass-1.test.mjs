@@ -37,3 +37,11 @@ test("the universal execution shell owns result anchoring and correction evidenc
   assert.match(shell, /id="result" className="atlas-task-result-footer"/);
   assert.match(shell, /This completion has linked farm evidence\. Review the recorded result before correcting it\./);
 });
+
+test("superseded bed and germination DOM patches stay retired behind their canonical surfaces", () => {
+  assert.equal(existsSync(join(root, "app/CollapsibleBedCropPatch.tsx")), false);
+  assert.equal(existsSync(join(root, "app/GerminationCheckTaskPatch.tsx")), false);
+  assert.equal(existsSync(join(root, "app/RouteAwareGerminationCheckTaskPatch.tsx")), false);
+  assert.equal(existsSync(join(root, "app/SafeBedCropAccordionPatch.tsx")), true);
+  assert.equal(existsSync(join(root, "app/task-focus/[taskId]/GerminationFocusPage.tsx")), true);
+});
