@@ -133,7 +133,7 @@ function unconfirmedLitCapacity() {
   }];
 }
 
-test("unconfirmed destination capacity stops Snow in Summer at MOVE without erasing AFTER", () => {
+test("unconfirmed destination capacity stays visible for Snow in Summer without inventing a stop at MOVE", () => {
   const result = attachCanonicalCapacityRequirements(baseAssembly(), unconfirmedLitCapacity());
   const capacity = result.requirements.find((item) => item.provenance === "capacity_pool");
 
@@ -142,12 +142,12 @@ test("unconfirmed destination capacity stops Snow in Summer at MOVE without eras
   assert.equal(capacity.quantity, 4);
   assert.equal(capacity.unit, "shelf_positions");
   assert.equal(capacity.capacityRole, "destination");
-  assert.equal(capacity.status, "blocked");
+  assert.equal(capacity.status, "warning");
   assert.equal(capacity.questions.length, 2);
   assert.equal(capacity.questions[0].key, "functional_grow_light_sets");
-  assert.equal(result.readiness.status, "blocked");
-  assert.equal(result.readiness.executable, false);
-  assert.equal(result.spine.connection, "stops_at_move");
+  assert.equal(result.readiness.status, "warning");
+  assert.equal(result.readiness.executable, true);
+  assert.equal(result.spine.connection, "continuous");
   assert.equal(result.spine.after[0].label, "720 starts potted and placed for continued growth");
   assert.equal(result.spine.after[0].status, "resolved");
 });
