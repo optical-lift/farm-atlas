@@ -16,6 +16,21 @@ test("Owner Day choreography stays hidden until the Owner opens Edit today", () 
   assert.match(gate, /<OwnerDayScheduleBuilder \/>/);
   assert.match(gate, /<OwnerDayCueEditor \/>/);
   assert.match(gate, /onClick=\{\(\) => setOpen\(false\)\}/);
+  assert.match(gate, /data-owner-day-starting-load="true"/);
+});
+
+test("Owner Edit today reveals the starting paid-load budget without changing the worker Day", () => {
+  const gate = read("components/atlas/owner-day-plan-gate.tsx");
+
+  assert.match(gate, /paidTargetMinutes\?: number/);
+  assert.match(gate, /committedPaidMinutes\?: number/);
+  assert.match(gate, /automaticPaidMinutes\?: number/);
+  assert.match(gate, /const knownLoadMinutes = Math\.max\(0, Number\(probe\?\.plan\?\.committedPaidMinutes\) \|\| 0\)/);
+  assert.match(gate, /\+ Math\.max\(0, Number\(probe\?\.plan\?\.automaticPaidMinutes\) \|\| 0\)/);
+  assert.match(gate, /const overByMinutes = Math\.max\(knownLoadMinutes - targetMinutes, 0\)/);
+  assert.match(gate, /Starting load · \{minutesLabel\(knownLoadMinutes\)\} \/ \{minutesLabel\(targetMinutes\)\} target/);
+  assert.match(gate, /data-over-capacity=\{overByMinutes \? "true" : "false"\}/);
+  assert.doesNotMatch(gate, /fetch\([^\n]+method:\s*"POST"/);
 });
 
 test("purple additions and Owner Day changes remain drafts until explicit commit", () => {

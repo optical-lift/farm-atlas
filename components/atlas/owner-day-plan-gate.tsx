@@ -19,6 +19,9 @@ type PlanProbe = {
   } | null;
   plan?: {
     availableWorkerDay?: boolean;
+    paidTargetMinutes?: number;
+    committedPaidMinutes?: number;
+    automaticPaidMinutes?: number;
     suggestions?: Array<{ sourceKind?: string }>;
     automaticWork?: unknown[];
     realWork?: unknown[];
@@ -27,6 +30,15 @@ type PlanProbe = {
 
 function validDateIso(value: string | null) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+function minutesLabel(value: number) {
+  const minutes = Math.max(0, Math.round(value));
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (!hours) return `${remainder}m`;
+  if (!remainder) return `${hours}h`;
+  return `${hours}h ${remainder}m`;
 }
 
 export default function OwnerDayPlanGate() {
@@ -114,6 +126,11 @@ export default function OwnerDayPlanGate() {
   if (!canPlan || !host?.isConnected) return null;
 
   const operatorLabel = probe?.operatorLabel || "Farm Hand";
+  const targetMinutes = Math.max(0, Number(probe?.plan?.paidTargetMinutes) || 0);
+  const knownLoadMinutes = Math.max(0, Number(probe?.plan?.committedPaidMinutes) || 0)
+    + Math.max(0, Number(probe?.plan?.automaticPaidMinutes) || 0);
+  const overByMinutes = Math.max(knownLoadMinutes - targetMinutes, 0);
+  const remainingMinutes = Math.max(targetMinutes - knownLoadMinutes, 0);
 
   return createPortal(
     <>
@@ -145,6 +162,16 @@ export default function OwnerDayPlanGate() {
               <div>
                 <strong style={{ display: "block", color: "#3f4267", fontSize: 12.5 }}>Editing {operatorLabel}&apos;s day</strong>
                 <span style={{ display: "block", marginTop: 2, color: "#73758e", fontSize: 10.5 }}>Purple is a draft. {operatorLabel}&apos;s working Day changes only when you commit it.</span>
+                {targetMinutes ? (
+                  <span
+                    data-owner-day-starting-load="true"
+                    data-over-capacity={overByMinutes ? "true" : "false"}
+                    style={{ display: "block", marginTop: 5, color: overByMinutes ? "#7c563f" : "#686b87", fontSize: 10.5, fontWeight: 800 }}
+                  >
+                    Starting load · {minutesLabel(knownLoadMinutes)} / {minutesLabel(targetMinutes)} target
+                    {overByMinutes ? ` · ${minutesLabel(overByMinutes)} over` : remainingMinutes ? ` · ${minutesLabel(remainingMinutes)} open` : " · full"}
+                  </span>
+                ) : null}
               </div>
               <button
                 type="button"
