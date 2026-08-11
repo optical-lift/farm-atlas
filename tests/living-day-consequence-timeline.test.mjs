@@ -9,13 +9,12 @@ function read(path) {
 test("Living Day keeps canonical consequence truth while mixing overdue work into accomplish windows", () => {
   const page = read("app/day/page.tsx");
   const grammar = read("lib/atlas/day-consequence.ts");
-  const consequenceCss = read("app/day-consequence-timeline.css");
   const overdueCss = read("app/day-overdue-quiet.css");
   const layout = read("app/layout.tsx");
 
   assert.equal(existsSync(new URL("../app/DayConsequenceTimelinePatch.tsx", import.meta.url)), false);
-  assert.doesNotMatch(layout, /DayConsequenceTimelinePatch/);
-  assert.match(layout, /day-consequence-timeline\.css/);
+  assert.equal(existsSync(new URL("../app/day-consequence-timeline.css", import.meta.url)), false);
+  assert.doesNotMatch(layout, /DayConsequenceTimelinePatch|day-consequence-timeline\.css/);
   assert.match(layout, /day-overdue-quiet\.css/);
   assert.match(grammar, /Continuing from/);
   assert.match(grammar, /Returned from Owner/);
@@ -24,6 +23,7 @@ test("Living Day keeps canonical consequence truth while mixing overdue work int
   assert.match(grammar, /Partly done\$\{partialCount > 1/);
   assert.match(grammar, /last_owner_problem_handoff/);
   assert.match(grammar, /latestOutcome\?\.outcome === "reopened"/);
+  assert.match(grammar, /atlasFarmDateIso/);
 
   assert.match(page, /atlas-day-recovery-overview/);
   assert.match(page, /Morning recovery/);
@@ -34,7 +34,6 @@ test("Living Day keeps canonical consequence truth while mixing overdue work int
   assert.match(page, /isOverdueTask\(task, dateIso\)/);
   assert.doesNotMatch(page, /atlas-day-overdue-group/);
 
-  assert.match(consequenceCss, /data-atlas-day-consequence="continued"/);
   assert.match(overdueCss, /exact compact Day Route geometry/);
   assert.match(overdueCss, /\.atlas-day-recovery-count/);
   assert.match(overdueCss, /content: "Overdue"/);
