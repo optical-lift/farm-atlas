@@ -58,6 +58,14 @@ const buyerOutreachMigrationName =
   "20260810171500_add_buyer_contact_event_pipeline.sql";
 const buyerOutreachRegistryMigrationName =
   "20260810171600_buyer_outreach_rpc_registry_v1.sql";
+const dayChoreographyFoundationMigrationName =
+  "20260811154000_atlas_day_choreography_foundation_v1.sql";
+const dayChoreographyOverlayMigrationName =
+  "20260811160000_atlas_day_choreography_plan_overlay_v1.sql";
+const dayCueMutationsMigrationName =
+  "20260811162000_atlas_day_cue_mutations_v1.sql";
+const dayChoreographyRegistryMigrationName =
+  "20260811162500_atlas_day_choreography_rpc_registry_v1.sql";
 const migrationPath = new URL(
   `../supabase/migrations/${migrationName}`,
   import.meta.url,
@@ -162,6 +170,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const projectMovesRegistry = readMigration(projectMovesRegistryMigrationName);
   const ownerWorkerDayRegistry = readMigration(ownerWorkerDayRegistryMigrationName);
   const buyerOutreachRegistry = readMigration(buyerOutreachRegistryMigrationName);
+  const dayChoreographyRegistry = readMigration(dayChoreographyRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -197,7 +206,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                               ? ownerWorkerDayRegistryMigrationName
                               : name === buyerOutreachMigrationName
                                 ? buyerOutreachRegistryMigrationName
-                                : null;
+                                : name === dayChoreographyFoundationMigrationName || name === dayChoreographyOverlayMigrationName || name === dayCueMutationsMigrationName
+                                  ? dayChoreographyRegistryMigrationName
+                                  : null;
 
       assert.ok(
         pairedRegistryName,
@@ -291,6 +302,21 @@ test("future authenticated EXECUTE changes must update the registry", () => {
     "atlas.record_buyer_outreach_result_v1(uuid, text, text, text, text, text, integer, numeric, date, uuid)",
   ));
   assert.match(buyerOutreachRegistry, /app_endpoint/);
+
+  for (const signature of [
+    "atlas.worker_day_choreography_api_v1(uuid, uuid, date)",
+    "atlas.worker_day_placed_task_cards_v1(uuid, uuid, date)",
+    "atlas.owner_apply_worker_day_edits_api_v1(uuid, uuid, jsonb)",
+    "atlas.owner_worker_day_plan_choreographed_api_v1(uuid, uuid, date)",
+    "atlas.owner_upsert_worker_day_cue_api_v1(uuid, uuid, jsonb)",
+    "atlas.owner_delete_worker_day_cue_api_v1(uuid, uuid, uuid)",
+    "atlas.worker_resolve_day_cue_api_v1(uuid, jsonb)",
+  ]) {
+    assert.ok(dayChoreographyRegistry.includes(signature));
+  }
+  assert.match(dayChoreographyRegistry, /owner_admin_endpoint/);
+  assert.match(dayChoreographyRegistry, /app_endpoint/);
+  assert.match(dayChoreographyRegistry, /revoke all on function atlas\.worker_day_choreography_api_v1\(uuid,uuid,date\) from public, anon/i);
 });
 
 test("live registry proof is rollback-only and fail-closed", () => {
