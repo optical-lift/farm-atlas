@@ -143,7 +143,7 @@ export default function OwnerDayPlanGate() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
               <div>
                 <strong style={{ display: "block", color: "#3f4267", fontSize: 12.5 }}>Editing {operatorLabel}&apos;s day</strong>
-                <span style={{ display: "block", marginTop: 2, color: "#73758e", fontSize: 10.5 }}>Purple is a draft. Anna&apos;s working Day changes only when you commit it.</span>
+                <span style={{ display: "block", marginTop: 2, color: "#73758e", fontSize: 10.5 }}>Purple is a draft. {operatorLabel}&apos;s working Day changes only when you commit it.</span>
               </div>
               <button
                 type="button"
