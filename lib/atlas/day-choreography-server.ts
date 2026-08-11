@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getAtlasSession } from "@/lib/atlas/session";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 import { resolveOwnerWorkerDayPlanningTarget } from "@/lib/atlas/worker-day-plan-server";
 
@@ -45,6 +46,13 @@ export type AtlasDayChoreography = {
   placements: AtlasDayTaskPlacement[];
   placementOverrides: AtlasDayTaskPlacement[];
   cues: AtlasDayCue[];
+};
+
+export type AtlasDayChoreographyTarget = {
+  farmId: string;
+  membershipId: string;
+  displayName: string;
+  source: "operator_lens" | "owner_direct" | "worker_self";
 };
 
 function validDateIso(value: string) {
@@ -127,9 +135,28 @@ function normalizeChoreography(value: unknown): AtlasDayChoreography {
   };
 }
 
-export async function readOwnerWorkerDayChoreography(dateIso: string) {
+export async function resolveDayChoreographyTarget(): Promise<AtlasDayChoreographyTarget | null> {
+  const ownerTarget = await resolveOwnerWorkerDayPlanningTarget();
+  if (ownerTarget) return ownerTarget;
+
+  const session = await getAtlasSession();
+  if (!session) return null;
+  const farmId = session.activeFarmId ?? session.memberships.find((membership) => membership.role === "farm_hand")?.farmId ?? null;
+  if (!farmId) return null;
+  const worker = session.memberships.find((membership) => membership.farmId === farmId && membership.role === "farm_hand");
+  if (!worker) return null;
+
+  return {
+    farmId,
+    membershipId: worker.membershipId,
+    displayName: session.displayName || "Farm Hand",
+    source: "worker_self",
+  };
+}
+
+export async function readWorkerDayChoreography(dateIso: string) {
   if (!validDateIso(dateIso)) throw new Error("A valid YYYY-MM-DD Day is required.");
-  const target = await resolveOwnerWorkerDayPlanningTarget();
+  const target = await resolveDayChoreographyTarget();
   if (!target) return { active: false as const, target: null, choreography: null };
 
   const supabase = await createAtlasServerClient();
@@ -146,3 +173,5 @@ export async function readOwnerWorkerDayChoreography(dateIso: string) {
     choreography: normalizeChoreography(data),
   };
 }
+
+export const readOwnerWorkerDayChoreography = readWorkerDayChoreography;
