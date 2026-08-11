@@ -103,6 +103,7 @@ as $$
 declare
   v_allowed boolean:=false;
   v_placements jsonb:='[]'::jsonb;
+  v_placement_overrides jsonb:='[]'::jsonb;
   v_cues jsonb:='[]'::jsonb;
 begin
   if auth.uid() is null then
@@ -147,6 +148,25 @@ begin
     and p.service_date=p_day
     and p.state='placed';
 
+  -- A task with any explicit placement is no longer governed by its old due-date
+  -- membership in the worker feed. The requested-day cards are returned above;
+  -- these overrides let the feed suppress copies on every other day without
+  -- mutating the task's canonical due_date.
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'placementId',p.id,
+    'taskId',p.task_id,
+    'serviceDate',p.service_date,
+    'dayWindow',p.day_window,
+    'sortOrder',p.sort_order,
+    'placementSource',p.placement_source,
+    'placementReason',p.placement_reason,
+    'state',p.state
+  ) order by p.updated_at desc,p.task_id),'[]'::jsonb)
+  into v_placement_overrides
+  from atlas.worker_day_task_placements p
+  where p.farm_id=p_farm_id
+    and p.membership_id=p_membership_id;
+
   select coalesce(jsonb_agg(jsonb_build_object(
     'cueId',c.id,
     'serviceDate',c.service_date,
@@ -179,12 +199,63 @@ begin
     'membershipId',p_membership_id,
     'serviceDate',p_day,
     'placements',v_placements,
+    'placementOverrides',v_placement_overrides,
     'cues',v_cues
   );
 end;
 $$;
 
 grant execute on function atlas.worker_day_choreography_api_v1(uuid,uuid,date) to authenticated;
+
+create or replace function atlas.worker_day_placed_task_cards_v1(
+  p_farm_id uuid,
+  p_membership_id uuid,
+  p_day date
+)
+returns setof atlas.v_task_cards
+language plpgsql
+stable
+security definer
+set search_path to 'pg_catalog','atlas','auth'
+as $$
+declare
+  v_allowed boolean:=false;
+begin
+  if auth.uid() is null then
+    raise exception 'Authenticated user required.' using errcode='42501';
+  end if;
+  if p_day is null then
+    raise exception 'A worker day is required.' using errcode='22023';
+  end if;
+
+  select exists (
+    select 1 from atlas.farm_memberships fm
+    where fm.id=p_membership_id and fm.farm_id=p_farm_id and fm.active=true and fm.user_id=auth.uid()
+  ) or exists (
+    select 1 from atlas.farm_memberships fm
+    where fm.farm_id=p_farm_id and fm.active=true and fm.role='owner' and fm.user_id=auth.uid()
+  ) into v_allowed;
+
+  if not v_allowed then
+    raise exception 'Worker day access required.' using errcode='42501';
+  end if;
+
+  return query
+  select card.*
+  from atlas.worker_day_task_placements p
+  join atlas.tasks task on task.id=p.task_id
+  join atlas.v_task_cards card on card.task_id=task.id
+  where p.farm_id=p_farm_id
+    and p.membership_id=p_membership_id
+    and p.service_date=p_day
+    and p.state='placed'
+    and task.status<>'archived'
+    and task.assigned_membership_id=p_membership_id
+  order by case p.day_window when 'morning' then 0 when 'afternoon' then 1 else 2 end,p.sort_order,card.created_at;
+end;
+$$;
+
+grant execute on function atlas.worker_day_placed_task_cards_v1(uuid,uuid,date) to authenticated;
 
 create or replace function atlas.owner_apply_worker_day_edits_api_v1(
   p_farm_id uuid,
@@ -254,7 +325,6 @@ begin
 
     if v_kind='return_to_atlas' then
       if v_existing.id is null then
-        select f.organization_id into v_task.organization_id from atlas.farms f where f.id=p_farm_id;
         insert into atlas.worker_day_task_placements(
           organization_id,farm_id,membership_id,task_id,service_date,day_window,sort_order,
           placement_source,placement_reason,state,owner_actor_user_id
