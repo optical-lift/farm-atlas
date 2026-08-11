@@ -61,7 +61,8 @@ test("Mowing stays a destination collection while Day and Week show actual mowin
   assert.doesNotMatch(day, /collection=\{mowingCollection\}/);
   assert.match(day, /atlasRouteKeyForTask/);
   assert.match(day, /mixedOpenTasks/);
-  assert.match(day, /windowedTimeline\(timelineGroups\)/);
+  assert.match(day, /windowedTimeline\(visibleTimelineGroups\)/);
+  assert.match(day, /relativeWorkerTimelineGroups/);
   assert.match(day, /CompletionEcho/);
   assert.match(day, /dayWindowForTask/);
   assert.doesNotMatch(day, /WorkCollectionCard/);

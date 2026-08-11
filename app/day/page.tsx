@@ -51,13 +51,14 @@ type DayWindow = {
 };
 
 type DayPartnerPlan = Map<string, { window: DayWindowKey; order: number }>;
+type RenderTimelineGroup = { key: string; label: string; tasks: AtlasTaskCard[] };
 
 const routeLabels = atlasRouteLabels;
 const routeOrder = atlasRouteOrder;
 const dayWindows: DayWindow[] = [
-  { key: "morning", label: "Morning", recoveryLabel: "Morning recovery", order: 0 },
-  { key: "afternoon", label: "Afternoon", recoveryLabel: "Afternoon recovery", order: 1 },
-  { key: "evening", label: "Evening", recoveryLabel: "Evening recovery", order: 2 },
+  { key: "morning", label: "Morning", recoveryLabel: "Morning fit", order: 0 },
+  { key: "afternoon", label: "Afternoon", recoveryLabel: "Afternoon fit", order: 1 },
+  { key: "evening", label: "Evening", recoveryLabel: "Evening fit", order: 2 },
 ];
 
 function todayIso() {
@@ -230,6 +231,30 @@ function nextTaskForCurrentWindow(tasks: AtlasTaskCard[], hour: number | null, s
     if (candidate) return candidate;
   }
   return null;
+}
+
+function relativeWorkerTimelineGroups(tasks: AtlasTaskCard[], hour: number | null, selectedDay: string, partnerPlan: DayPartnerPlan, currentTaskId: string | null): RenderTimelineGroup[] {
+  const currentWindowOrder = dayWindowDefinition(currentDayWindow(hour)).order;
+  const sortCanonical = (left: AtlasTaskCard, right: AtlasTaskCard) => mixedDaySortValue(left, selectedDay, partnerPlan).localeCompare(mixedDaySortValue(right, selectedDay, partnerPlan));
+  const open = tasks.filter((task) => !isDoneTask(task));
+  const done = tasks.filter(isDoneTask).sort(sortCanonical);
+  const now = currentTaskId ? open.filter((task) => task.task_id === currentTaskId) : [];
+  const remainingOpen = open.filter((task) => task.task_id !== currentTaskId);
+  const comingUp = remainingOpen
+    .filter((task) => dayWindowDefinition(resolvedDayWindowForTask(task, selectedDay, partnerPlan)).order >= currentWindowOrder)
+    .sort(sortCanonical);
+  const later = uniqueTasks([
+    ...remainingOpen
+      .filter((task) => dayWindowDefinition(resolvedDayWindowForTask(task, selectedDay, partnerPlan)).order < currentWindowOrder)
+      .sort(sortCanonical),
+    ...done,
+  ]);
+
+  return [
+    { key: "now", label: "Now", tasks: now },
+    { key: "coming-up", label: "Coming up", tasks: comingUp },
+    { key: "later", label: "Later", tasks: later },
+  ].filter((group) => group.tasks.length);
 }
 
 function collectionZone(task: AtlasTaskCard) {
@@ -621,10 +646,14 @@ function AtlasDayPageContent() {
     ...window,
     tasks: overdueTasks.filter((task) => resolvedDayWindowForTask(task, dateIso, partnerPlan) === window.key),
   })).filter((window) => window.tasks.length), [dateIso, overdueTasks, partnerPlan]);
-  const timelineGroups = useMemo(() => dayWindows.map((window) => ({
+  const timelineGroups = useMemo<RenderTimelineGroup[]>(() => dayWindows.map((window) => ({
     ...window,
     tasks: filteredTimelineTasks.filter((task) => resolvedDayWindowForTask(task, dateIso, partnerPlan) === window.key),
   })).filter((window) => window.tasks.length), [dateIso, filteredTimelineTasks, partnerPlan]);
+  const visibleTimelineGroups = useMemo<RenderTimelineGroup[]>(() => dateIso === calendarToday
+    ? relativeWorkerTimelineGroups(filteredTimelineTasks, localHour, dateIso, partnerPlan, currentTask?.task_id ?? null)
+    : timelineGroups,
+  [calendarToday, currentTask?.task_id, dateIso, filteredTimelineTasks, localHour, partnerPlan, timelineGroups]);
 
   const returnTo = routeFilter ? routeHref(dateIso, routeFilter) : dayHref(dateIso);
   const previousDate = shiftIsoDate(dateIso, -1);
@@ -675,7 +704,7 @@ function AtlasDayPageContent() {
     return <TaskCard key={task.task_id} task={task} overdue={overdue} expandable routeState={atlasDayRouteState(task, currentTask?.task_id ?? null)} returnTo={returnTo} onNodePress={(row) => void toggleTaskCompletion(row)} nodeSaving={savingTaskId === task.task_id} />;
   }
 
-  function windowedTimeline(groups: typeof timelineGroups) {
+  function windowedTimeline(groups: RenderTimelineGroup[]) {
     return groups.map((group) => (
       <Fragment key={group.key}>
         <div className="atlas-day-window-marker" data-day-window={group.key}>
@@ -759,7 +788,7 @@ function AtlasDayPageContent() {
             <section className="atlas-task-page-section atlas-route-collection atlas-day-browse">
               <div className="atlas-day-browse-head">
                 <Link href={routeFilter ? dayHref(dateIso) : "/"} className="atlas-route-back atlas-day-back">{routeFilter ? "← Day plan" : "← Week"}</Link>
-                <div className="atlas-day-browse-title-row"><span>{routeFilter ? routeLabels[routeFilter] : dayOnly(dateIso)}</span><strong>{loading ? "Loading" : isFutureDay ? `${openRequiredCount} scheduled · ${doneDayTasks.length} done` : `${openRequiredCount} open · ${overdueTasks.length} fallen out of rhythm · ${doneDayTasks.length} done`}</strong></div>
+                <div className="atlas-day-browse-title-row"><span>{routeFilter ? routeLabels[routeFilter] : dayOnly(dateIso)}</span><strong>{loading ? "Loading" : isFutureDay ? `${openRequiredCount} scheduled · ${doneDayTasks.length} done` : `${openRequiredCount} open · ${overdueTasks.length} carried · ${doneDayTasks.length} done`}</strong></div>
                 <p>{loading ? "Loading farm work" : routeFilter ? `${filteredTasks.length} ${filteredTasks.length === 1 ? "task" : "tasks"} in this collection` : isFutureDay ? `${openRequiredCount} tasks scheduled for this day` : `${openRequiredCount} unfinished tasks in the real day`}</p>
               </div>
 
@@ -776,16 +805,16 @@ function AtlasDayPageContent() {
                   {overdueTasks.length ? (
                     <details className="atlas-day-overview-drawer atlas-day-command-overview atlas-day-recovery-overview">
                       <summary>
-                        <span className="atlas-day-recovery-count" aria-label={`${overdueTasks.length} tasks fallen out of rhythm`}>{overdueTasks.length}</span>
+                        <span className="atlas-day-recovery-count" aria-label={`${overdueTasks.length} carried tasks`}>{overdueTasks.length}</span>
                         <div className="atlas-day-recovery-summary-copy">
-                          <span>Fallen out of rhythm</span>
-                          <strong>{nextRecoveryTask ? `Next recovery · ${atlasTaskDisplay(nextRecoveryTask).title}` : "Recovery work is waiting"}</strong>
-                          <em>{nextRecoveryTask && nextRecoveryWindow ? `${nextRecoveryWindow.recoveryLabel} · due ${prettyShortDate(nextRecoveryTask.due_date)}` : "Open the recovery index"}</em>
+                          <span>Carried work</span>
+                          <strong>{nextRecoveryTask ? `Next carried move · ${atlasTaskDisplay(nextRecoveryTask).title}` : "Carried work is waiting"}</strong>
+                          <em>{nextRecoveryTask && nextRecoveryWindow ? `${nextRecoveryWindow.recoveryLabel} · due ${prettyShortDate(nextRecoveryTask.due_date)}` : "Open carried work"}</em>
                         </div>
                         <b aria-hidden="true">⌄</b>
                       </summary>
                       <div className="atlas-day-command-overview-body atlas-day-recovery-overview-body">
-                        <p>Every unfinished recovery task is placed in the real day by the time it can best be accomplished.</p>
+                        <p>Unfinished work from earlier days is still real. Atlas places it where it best fits today.</p>
                         {recoveryGroups.map((group) => (
                           <section className="atlas-day-recovery-window" data-recovery-window={group.key} key={group.key}>
                             <header><strong>{group.recoveryLabel}</strong><span>{group.tasks.length}</span></header>
@@ -809,9 +838,9 @@ function AtlasDayPageContent() {
 
               <div className="atlas-day-task-groups">
                 {routeFilter ? (
-                  <article className="atlas-day-route-group atlas-day-work-order-group"><h3>{routeLabels[routeFilter]}</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{windowedTimeline(timelineGroups)}{!loading && !filteredTimelineTasks.length ? <div className="atlas-day-route-empty">No open tasks in this collection.</div> : null}</div></article>
+                  <article className="atlas-day-route-group atlas-day-work-order-group"><h3>{routeLabels[routeFilter]}</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{windowedTimeline(visibleTimelineGroups)}{!loading && !filteredTimelineTasks.length ? <div className="atlas-day-route-empty">No open tasks in this collection.</div> : null}</div></article>
                 ) : viewMode === "work_order" ? (
-                  <article className="atlas-day-route-group atlas-day-work-order-group atlas-day-timeline-group"><h3>Work the day</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{windowedTimeline(timelineGroups)}{!loading && !timelineTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}</div></article>
+                  <article className="atlas-day-route-group atlas-day-work-order-group atlas-day-timeline-group"><h3>Work the day</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{windowedTimeline(visibleTimelineGroups)}{!loading && !timelineTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}</div></article>
                 ) : (
                   <>{zones.map((zone) => <article className="atlas-day-route-group" key={zone}><h3>{zone}</h3><div className="atlas-day-zone-group">{filteredTasks.filter((task) => collectionZone(task) === zone).sort((a, b) => mixedDaySortValue(a, dateIso, partnerPlan).localeCompare(mixedDaySortValue(b, dateIso, partnerPlan))).map((task) => <TaskCard task={task} overdue={isOverdueTask(task, dateIso)} key={task.task_id} returnTo={returnTo} />)}</div></article>)}</>
                 )}

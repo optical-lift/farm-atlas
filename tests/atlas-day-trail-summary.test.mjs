@@ -28,7 +28,7 @@ test("Day progress reads the complete visible day without a DOM patch", () => {
   assert.match(css, /\.blocked/);
 });
 
-test("Day Route keeps the overdue command together, preserves completion echoes, and mixes work by timeframe", () => {
+test("Day Route keeps the carried-work command together, preserves completion echoes, and presents today's work relatively", () => {
   const page = read("app/day/page.tsx");
   const css = read("app/day-route-v1.css");
   const refineCss = read("app/day-route-v1-refine.css");
@@ -39,7 +39,7 @@ test("Day Route keeps the overdue command together, preserves completion echoes,
 
   const commandIndex = page.indexOf("atlas-day-command-header-with-recovery");
   const overviewIndex = page.indexOf("atlas-day-recovery-overview");
-  const workOrderIndex = page.indexOf("windowedTimeline(timelineGroups)");
+  const workOrderIndex = page.indexOf("windowedTimeline(visibleTimelineGroups)");
 
   assert.notEqual(commandIndex, -1);
   assert.notEqual(overviewIndex, -1);
@@ -49,6 +49,11 @@ test("Day Route keeps the overdue command together, preserves completion echoes,
 
   assert.match(page, /nextTaskForCurrentWindow/);
   assert.match(page, /nextRecoveryTask/);
+  assert.match(page, /relativeWorkerTimelineGroups/);
+  assert.match(page, /label: "Now"/);
+  assert.match(page, /label: "Coming up"/);
+  assert.match(page, /label: "Later"/);
+  assert.match(page, /Carried work/);
   assert.match(page, /atlas-day-route-spine/);
   assert.match(page, /atlas-day-mixed-timeline/);
   assert.match(page, /CompletionEcho/);
@@ -56,9 +61,6 @@ test("Day Route keeps the overdue command together, preserves completion echoes,
   assert.match(page, /atlas-day-recovery-overview/);
   assert.match(page, />Timeline<\/button>/);
   assert.match(page, />Zone<\/button>/);
-  assert.match(page, /Morning recovery/);
-  assert.match(page, /Afternoon recovery/);
-  assert.match(page, /Evening recovery/);
   assert.doesNotMatch(page, /atlas-day-complete-drawer/);
   assert.doesNotMatch(page, /atlas-day-route-hero/);
 
