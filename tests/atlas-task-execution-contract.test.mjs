@@ -1,17 +1,16 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const exists = (path) => existsSync(new URL(`../${path}`, import.meta.url));
 
 const brief = read("components/atlas/task-execution-brief.tsx");
 const results = read("components/atlas/task-primary-result-controls.tsx");
 const shell = read("components/atlas/assigned-task-execution-shell.tsx");
-const dominion = read("components/atlas/dominion-assigned-task-detail.tsx");
 const checklist = read("components/atlas/execution-checklist-task-detail.tsx");
 const mowing = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
 const display = read("lib/atlas/task-display.ts");
-const conditions = read("lib/atlas/task-condition-rail.ts");
 const migration = read("supabase/migrations/20260810144000_atlas_task_execution_contract_v1.sql");
 
 test("assigned work has one visible do-place-how-done contract", () => {
@@ -21,8 +20,9 @@ test("assigned work has one visible do-place-how-done contract", () => {
   assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
   assert.doesNotMatch(shell, /TaskDominionTrail/);
   assert.doesNotMatch(shell, /taskConditionRailModel/);
-  assert.match(dominion, /AssignedTaskExecutionShell/);
-  assert.doesNotMatch(dominion, /TaskExecutionBrief/);
+  assert.equal(exists("components/atlas/dominion-assigned-task-detail.tsx"), false);
+  assert.equal(exists("components/atlas/task-dominion-trail.tsx"), false);
+  assert.equal(exists("lib/atlas/task-condition-rail.ts"), false);
 });
 
 test("the primary result language is shared instead of reinvented per card", () => {
@@ -58,7 +58,6 @@ test("explicit worker verbs cannot be reclassified by incidental words in the ta
   assert.match(display, /\["call", "phone", "research"/);
   assert.match(display, /value === "sowing" \|\| value === "sow" \|\| value === "seed_sowing"/);
   assert.ok(display.indexOf('atlasMetaString(task, "display_location")') < display.indexOf('atlasTaskObjectLocation(task)'), "explicit task place outranks attached destination objects");
-  assert.match(conditions, /if \(route === "general"\) return false/);
 });
 
 test("current Elm tasks carry worker-facing execution fields without deleting source notes", () => {
