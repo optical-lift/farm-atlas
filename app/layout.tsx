@@ -10,7 +10,6 @@ import AtlasWorkAlongsideOverlay from "@/components/atlas/work-alongside/AtlasWo
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
 import WorkerVocabularyCleanupPatch from "./WorkerVocabularyCleanupPatch";
-import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
 import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
 import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
 import TaskSetAsideDayPatch from "./TaskSetAsideDayPatch";
@@ -152,7 +151,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <DependencyReleaseFlash />
         <Suspense fallback={null}><AtlasWorkAlongsideOverlay /></Suspense>
         <WorkerVocabularyCleanupPatch />
-        <TaskProgressExactDayPatch />
         <UniversalCollectionIdentity />
         <DayTaskTitleLinkPatch />
         <TaskSetAsideDayPatch />
