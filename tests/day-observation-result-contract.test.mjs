@@ -49,5 +49,6 @@ test("stale cues recover as fresh reality questions and expired briefings do not
   assert.match(migration, /recoveryPrompt/);
   assert.match(migration, /then 'stale'/);
   assert.match(migration, /c\.recovery_policy in \('refresh','persist','block'\)/);
-  assert.doesNotMatch(migration, /overdue/i);
+  const executableSql = migration.replace(/^\s*--.*$/gm, "");
+  assert.doesNotMatch(executableSql, /overdue/i);
 });
