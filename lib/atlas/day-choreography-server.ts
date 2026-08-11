@@ -43,6 +43,7 @@ export type AtlasDayChoreography = {
   membershipId: string;
   serviceDate: string;
   placements: AtlasDayTaskPlacement[];
+  placementOverrides: AtlasDayTaskPlacement[];
   cues: AtlasDayCue[];
 };
 
@@ -74,6 +75,12 @@ function normalizePlacement(value: unknown): AtlasDayTaskPlacement | null {
     placementReason: nullableString(row.placementReason),
     state: row.state === "returned_to_atlas" ? "returned_to_atlas" : "placed",
   };
+}
+
+function normalizePlacements(value: unknown) {
+  return Array.isArray(value)
+    ? value.map(normalizePlacement).filter((item): item is AtlasDayTaskPlacement => Boolean(item))
+    : [];
 }
 
 function normalizeCue(value: unknown): AtlasDayCue | null {
@@ -114,7 +121,8 @@ function normalizeChoreography(value: unknown): AtlasDayChoreography {
     farmId: String(row.farmId || ""),
     membershipId: String(row.membershipId || ""),
     serviceDate: String(row.serviceDate || ""),
-    placements: Array.isArray(row.placements) ? row.placements.map(normalizePlacement).filter((item): item is AtlasDayTaskPlacement => Boolean(item)) : [],
+    placements: normalizePlacements(row.placements),
+    placementOverrides: normalizePlacements(row.placementOverrides),
     cues: Array.isArray(row.cues) ? row.cues.map(normalizeCue).filter((item): item is AtlasDayCue => Boolean(item)) : [],
   };
 }
