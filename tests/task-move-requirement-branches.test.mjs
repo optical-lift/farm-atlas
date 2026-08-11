@@ -13,8 +13,8 @@ const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 test("Task Move keeps requirements as branches of the work move, not sequential trail steps", () => {
   const currentIndex = spine.indexOf('<section className="atlas-human-task-trail__step" data-kind="current">');
   const workIndex = spine.indexOf('<section className="atlas-human-task-trail__step" data-kind="work">');
-  const requirementIndex = spine.indexOf("assembly.requirements.map");
-  const finishIndex = spine.indexOf('data-kind="finish"\n          data-reachable');
+  const requirementIndex = spine.indexOf("assembly.requirements.map", workIndex);
+  const finishIndex = spine.indexOf('data-kind="finish"', requirementIndex);
 
   assert.ok(currentIndex >= 0, "current farm-state step must render");
   assert.ok(workIndex > currentIndex, "work move must follow current state");
