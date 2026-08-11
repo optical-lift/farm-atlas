@@ -1,6 +1,8 @@
 -- Worker Day is a role presentation boundary. System-internal tasks may remain
 -- useful provenance for planners, cue generation, and canonical state transitions,
 -- but they are not worker work and must never enter the worker presented surface.
+-- This replacement preserves the function's existing EXECUTE grants; only its
+-- role-presentation predicate changes.
 
 create or replace function atlas.presented_work_rows_v1(
   p_farm_id uuid,
@@ -123,6 +125,3 @@ begin
   order by row.lane_order,row.selection_rank;
 end;
 $function$;
-
-revoke all on function atlas.presented_work_rows_v1(uuid,uuid,date) from public,anon;
-grant execute on function atlas.presented_work_rows_v1(uuid,uuid,date) to authenticated,service_role;
