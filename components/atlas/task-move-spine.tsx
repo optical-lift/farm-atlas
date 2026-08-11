@@ -2,26 +2,11 @@ import type {
   TaskMoveAssembly,
   TaskMoveFact,
   TaskMoveRequirement,
-  TaskMoveResolution,
 } from "@/lib/atlas/task-move-assembly";
 
 type Props = {
   assembly: TaskMoveAssembly;
 };
-
-const STATUS_LABEL: Record<TaskMoveResolution, string> = {
-  resolved: "Ready",
-  warning: "Check",
-  missing: "Missing",
-  blocked: "Blocked",
-};
-
-function strongestStatus(statuses: TaskMoveResolution[]): TaskMoveResolution {
-  if (statuses.includes("blocked")) return "blocked";
-  if (statuses.includes("missing")) return "missing";
-  if (statuses.includes("warning")) return "warning";
-  return "resolved";
-}
 
 function readable(value: string) {
   return value.replaceAll("_", " ");
@@ -32,16 +17,26 @@ function quantityLabel(requirement: TaskMoveRequirement) {
   return `${requirement.quantity} ${requirement.unit ? readable(requirement.unit) : ""}`.trim();
 }
 
-function FactList({ facts }: { facts: TaskMoveFact[] }) {
+function visibleFacts(facts: TaskMoveFact[]) {
+  return facts.filter((fact) => fact.status !== "missing" && fact.label.trim());
+}
+
+function issueLabel(status: TaskMoveRequirement["status"]) {
+  if (status === "blocked") return "Blocked";
+  if (status === "missing") return "Needed";
+  if (status === "warning") return "Check";
+  return null;
+}
+
+function FactLines({ facts }: { facts: TaskMoveFact[] }) {
+  const visible = visibleFacts(facts);
+  if (!visible.length) return null;
   return (
-    <ul className="atlas-task-move-spine__facts">
-      {facts.map((fact, index) => (
+    <ul className="atlas-human-task-trail__facts">
+      {visible.map((fact, index) => (
         <li key={`${fact.label}-${index}`} data-state={fact.status}>
-          <span className="atlas-task-move-spine__fact-mark" aria-hidden="true" />
           <span>{fact.label}</span>
-          {fact.status !== "resolved" ? (
-            <small>{STATUS_LABEL[fact.status]}</small>
-          ) : null}
+          {fact.status === "blocked" ? <small>Blocked</small> : fact.status === "warning" ? <small>Check</small> : null}
         </li>
       ))}
     </ul>
@@ -49,154 +44,95 @@ function FactList({ facts }: { facts: TaskMoveFact[] }) {
 }
 
 function RequirementBranch({ requirement }: { requirement: TaskMoveRequirement }) {
-  const openQuestions = (requirement.questions ?? []).filter((question) => question.status === "open");
   const amount = quantityLabel(requirement);
-
+  const issue = issueLabel(requirement.status);
+  const openQuestions = (requirement.questions ?? []).filter((question) => question.status === "open");
   return (
-    <li className="atlas-task-move-spine__branch" data-state={requirement.status}>
-      <div className="atlas-task-move-spine__branch-head">
-        <span className="atlas-task-move-spine__branch-kind">{readable(requirement.kind)}</span>
-        <span className="atlas-task-move-spine__status">{STATUS_LABEL[requirement.status]}</span>
+    <li className="atlas-human-task-trail__requirement" data-state={requirement.status}>
+      <span className="atlas-human-task-trail__branch-line" aria-hidden="true">├</span>
+      <div>
+        <strong>{amount ? `${amount} · ` : ""}{requirement.label}</strong>
+        {requirement.note ? <p>{requirement.note}</p> : null}
+        {openQuestions.length ? <p>{openQuestions.map((question) => question.label).join(" · ")}</p> : null}
       </div>
-      {amount ? <b className="atlas-task-move-spine__amount">{amount}</b> : null}
-      <strong>{requirement.label}</strong>
-      {requirement.note ? <p>{requirement.note}</p> : null}
-      {openQuestions.length ? (
-        <details>
-          <summary>{openQuestions.length === 1 ? "1 thing still unknown" : `${openQuestions.length} things still unknown`}</summary>
-          <ul>
-            {openQuestions.map((question) => <li key={question.id}>{question.label}</li>)}
-          </ul>
-        </details>
-      ) : null}
+      {issue ? <small>{issue}</small> : null}
     </li>
   );
 }
 
 export default function TaskMoveSpine({ assembly }: Props) {
-  const stopped = assembly.spine.connection === "stops_at_move";
-  const currentStatus = strongestStatus(assembly.spine.current.map((fact) => fact.status));
-  const moveFacts = [assembly.spine.move.action, assembly.spine.move.subject, assembly.spine.move.workSite];
-  const moveStatus = strongestStatus(moveFacts.map((fact) => fact.status));
-  const afterStatus = strongestStatus(assembly.spine.after.map((fact) => fact.status));
-  const readinessLabel = assembly.readiness.status === "ready"
-    ? "Ready to do"
-    : assembly.readiness.status === "warning"
-      ? "Check before doing"
-      : "Blocked before the move";
+  const currentFacts = visibleFacts(assembly.spine.current);
+  const afterFacts = visibleFacts(assembly.spine.after);
+  const moveSite = assembly.spine.move.workSite.status === "missing" ? null : assembly.spine.move.workSite.label;
+  const moveSubject = assembly.spine.move.subject.status === "missing" ? null : assembly.spine.move.subject.label;
+  const moveAction = assembly.spine.move.action.label || assembly.task.title;
+  const dueLabel = assembly.execution.dueLabel?.trim() || null;
 
   return (
-    <section className="atlas-task-move-spine" aria-label="Task move">
+    <section className="atlas-human-task-trail" aria-label="Task trail">
       <style>{`
-        .atlas-task-move-spine { margin:0; padding:26px 28px 24px; background:#fff; color:#303145; }
-        .atlas-task-move-spine__top { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:24px; }
-        .atlas-task-move-spine__kicker { margin:0 0 5px; color:#777ca8; font-size:.72rem; font-weight:900; letter-spacing:.15em; text-transform:uppercase; }
-        .atlas-task-move-spine__title { margin:0; font-size:clamp(1.7rem,6vw,2.65rem); line-height:1; letter-spacing:-.035em; }
-        .atlas-task-move-spine__readiness { flex:0 0 auto; padding:7px 10px; border:1px solid rgba(75,76,101,.15); border-radius:999px; background:#f7f7fb; color:#55576d; font-size:.76rem; font-weight:850; }
-        .atlas-task-move-spine__readiness[data-state="blocked"] { border-style:dashed; background:#fff7f3; color:#7c4536; }
-        .atlas-task-move-spine__readiness[data-state="warning"] { background:#fffbea; color:#716328; }
-        .atlas-task-move-spine__track { display:grid; grid-template-columns:minmax(0,1fr) 34px minmax(0,1.15fr) 34px minmax(0,1fr); align-items:stretch; }
-        .atlas-task-move-spine__node { min-width:0; padding:17px 16px 16px; border:1px solid rgba(69,70,94,.14); border-radius:17px; background:#fbfbfd; }
-        .atlas-task-move-spine__node[data-state="missing"] { border-style:dashed; background:#fff; }
-        .atlas-task-move-spine__node[data-state="warning"] { background:#fffdf3; }
-        .atlas-task-move-spine__node[data-state="blocked"] { border-style:dashed; background:#fff8f5; }
-        .atlas-task-move-spine__node[data-reachable="false"] { opacity:.64; }
-        .atlas-task-move-spine__node-label { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 12px; color:#777ca8; font-size:.68rem; font-weight:950; letter-spacing:.14em; text-transform:uppercase; }
-        .atlas-task-move-spine__node-label small { color:#777887; font-size:.66rem; letter-spacing:0; text-transform:none; }
-        .atlas-task-move-spine__move-action { display:block; margin:0 0 5px; font-size:1.18rem; line-height:1.2; }
-        .atlas-task-move-spine__move-subject { margin:0; color:#3b3c4c; font-size:1rem; font-weight:720; line-height:1.35; }
-        .atlas-task-move-spine__move-site { margin:10px 0 0; color:#6b6c79; font-size:.84rem; line-height:1.35; }
-        .atlas-task-move-spine__facts { display:grid; gap:9px; margin:0; padding:0; list-style:none; }
-        .atlas-task-move-spine__facts li { display:grid; grid-template-columns:10px minmax(0,1fr) auto; gap:8px; align-items:start; font-size:.9rem; font-weight:690; line-height:1.35; }
-        .atlas-task-move-spine__facts small { color:#777887; font-size:.68rem; font-weight:800; }
-        .atlas-task-move-spine__fact-mark { width:8px; height:8px; margin-top:3px; border:2px solid #8f91a7; border-radius:50%; background:#8f91a7; }
-        .atlas-task-move-spine__facts li[data-state="missing"] .atlas-task-move-spine__fact-mark { background:transparent; border-style:dashed; }
-        .atlas-task-move-spine__facts li[data-state="warning"] .atlas-task-move-spine__fact-mark { background:#fff; }
-        .atlas-task-move-spine__facts li[data-state="blocked"] .atlas-task-move-spine__fact-mark { border-radius:2px; background:#745046; border-color:#745046; }
-        .atlas-task-move-spine__connector { display:flex; align-items:center; justify-content:center; color:#9092a4; font-size:1.25rem; font-weight:900; }
-        .atlas-task-move-spine__connector[data-state="blocked"] { flex-direction:column; gap:3px; color:#7c4536; }
-        .atlas-task-move-spine__connector small { font-size:.56rem; font-weight:850; letter-spacing:.03em; text-transform:uppercase; writing-mode:vertical-rl; }
-        .atlas-task-move-spine__branches { position:relative; margin:22px 0 0; padding-top:20px; }
-        .atlas-task-move-spine__branches::before { content:""; position:absolute; top:0; left:50%; width:1px; height:14px; background:rgba(103,105,133,.32); }
-        .atlas-task-move-spine__branches-title { margin:0 0 11px; text-align:center; color:#777ca8; font-size:.69rem; font-weight:950; letter-spacing:.13em; text-transform:uppercase; }
-        .atlas-task-move-spine__branch-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin:0; padding:0; list-style:none; }
-        .atlas-task-move-spine__branch { min-width:0; padding:13px 14px; border:1px solid rgba(69,70,94,.13); border-radius:14px; background:#fbfbfd; }
-        .atlas-task-move-spine__branch[data-state="missing"] { border-style:dashed; background:#fff; }
-        .atlas-task-move-spine__branch[data-state="warning"] { background:#fffdf3; }
-        .atlas-task-move-spine__branch[data-state="blocked"] { border-style:dashed; background:#fff8f5; }
-        .atlas-task-move-spine__branch-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:7px; }
-        .atlas-task-move-spine__branch-kind { color:#7d80a0; font-size:.64rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
-        .atlas-task-move-spine__status { color:#696a79; font-size:.67rem; font-weight:850; }
-        .atlas-task-move-spine__amount { display:block; margin-bottom:2px; color:#555773; font-size:.78rem; font-weight:900; }
-        .atlas-task-move-spine__branch > strong { display:block; font-size:.91rem; line-height:1.3; }
-        .atlas-task-move-spine__branch > p { margin:6px 0 0; color:#696a75; font-size:.76rem; line-height:1.4; }
-        .atlas-task-move-spine__branch details { margin-top:8px; }
-        .atlas-task-move-spine__branch summary { cursor:pointer; color:#6c6d7d; font-size:.72rem; font-weight:850; }
-        .atlas-task-move-spine__branch details ul { margin:6px 0 0; padding-left:17px; color:#666774; font-size:.72rem; line-height:1.4; }
-        @media (max-width:680px) {
-          .atlas-task-move-spine { padding:23px 21px 21px; }
-          .atlas-task-move-spine__top { display:block; }
-          .atlas-task-move-spine__readiness { display:inline-block; margin-top:12px; }
-          .atlas-task-move-spine__track { grid-template-columns:1fr; }
-          .atlas-task-move-spine__connector { min-height:28px; transform:rotate(90deg); }
-          .atlas-task-move-spine__connector[data-state="blocked"] { flex-direction:row; transform:none; }
-          .atlas-task-move-spine__connector small { writing-mode:horizontal-tb; }
-          .atlas-task-move-spine__branch-grid { grid-template-columns:1fr; }
+        .atlas-human-task-trail { margin:0; padding:23px 28px 19px; background:#fff; color:#303145; }
+        .atlas-human-task-trail__place { margin:0 0 5px; color:#777ca0; font-size:.7rem; font-weight:900; letter-spacing:.11em; text-transform:uppercase; }
+        .atlas-human-task-trail__title { margin:0; font-size:clamp(1.8rem,6vw,2.65rem); line-height:1.02; letter-spacing:-.035em; }
+        .atlas-human-task-trail__due { display:inline-block; margin-top:8px; color:#6b6d7b; font-size:.72rem; font-weight:780; }
+        .atlas-human-task-trail__line { position:relative; display:grid; gap:0; margin-top:22px; padding-left:26px; }
+        .atlas-human-task-trail__line::before { content:""; position:absolute; left:6px; top:11px; bottom:11px; width:1px; background:rgba(86,89,112,.27); }
+        .atlas-human-task-trail__step { position:relative; padding:0 0 21px; }
+        .atlas-human-task-trail__step:last-child { padding-bottom:0; }
+        .atlas-human-task-trail__dot { position:absolute; left:-26px; top:3px; width:13px; height:13px; border:2px solid #6d7088; border-radius:50%; background:#6d7088; box-shadow:0 0 0 4px #fff; }
+        .atlas-human-task-trail__step[data-kind="finish"] .atlas-human-task-trail__dot { background:#fff; }
+        .atlas-human-task-trail__eyebrow { display:block; margin-bottom:3px; color:#898ba0; font-size:.64rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
+        .atlas-human-task-trail__step > strong { display:block; font-size:1rem; line-height:1.3; }
+        .atlas-human-task-trail__step > p { margin:3px 0 0; color:#606270; font-size:.83rem; line-height:1.4; }
+        .atlas-human-task-trail__facts { display:grid; gap:3px; margin:4px 0 0; padding:0; list-style:none; }
+        .atlas-human-task-trail__facts li { display:flex; align-items:baseline; gap:8px; color:#4e5060; font-size:.84rem; font-weight:680; line-height:1.35; }
+        .atlas-human-task-trail__facts small { color:#8a654d; font-size:.65rem; font-weight:850; }
+        .atlas-human-task-trail__requirements { display:grid; gap:5px; margin:9px 0 0 2px; padding:0; list-style:none; }
+        .atlas-human-task-trail__requirement { display:grid; grid-template-columns:16px minmax(0,1fr) auto; gap:3px; align-items:start; color:#555766; }
+        .atlas-human-task-trail__branch-line { color:#a0a1ae; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+        .atlas-human-task-trail__requirement strong { display:block; font-size:.8rem; line-height:1.35; }
+        .atlas-human-task-trail__requirement p { margin:2px 0 0; color:#747582; font-size:.72rem; line-height:1.35; }
+        .atlas-human-task-trail__requirement > small { margin-top:1px; color:#7a5948; font-size:.64rem; font-weight:900; }
+        .atlas-human-task-trail__requirement[data-state="blocked"] > div > strong,
+        .atlas-human-task-trail__requirement[data-state="missing"] > div > strong { color:#704d43; }
+        .atlas-human-task-trail__finish { color:#4e5060; }
+        @media (max-width:560px) {
+          .atlas-human-task-trail { padding:21px 21px 17px; }
+          .atlas-human-task-trail__line { margin-top:19px; }
         }
       `}</style>
 
-      <header className="atlas-task-move-spine__top">
-        <div>
-          <p className="atlas-task-move-spine__kicker">Task move</p>
-          <h1 className="atlas-task-move-spine__title">{assembly.task.title}</h1>
-        </div>
-        <span className="atlas-task-move-spine__readiness" data-state={assembly.readiness.status}>{readinessLabel}</span>
-      </header>
+      {moveSite ? <p className="atlas-human-task-trail__place">{moveSite}</p> : null}
+      <h1 className="atlas-human-task-trail__title">{assembly.task.title}</h1>
+      {dueLabel ? <span className="atlas-human-task-trail__due">{dueLabel}</span> : null}
 
-      <div className="atlas-task-move-spine__track">
-        <section className="atlas-task-move-spine__node" data-state={currentStatus} aria-label="Current state">
-          <div className="atlas-task-move-spine__node-label"><span>Current</span><small>{STATUS_LABEL[currentStatus]}</small></div>
-          <FactList facts={assembly.spine.current} />
+      <div className="atlas-human-task-trail__line">
+        {currentFacts.length ? (
+          <section className="atlas-human-task-trail__step" data-kind="current">
+            <span className="atlas-human-task-trail__dot" aria-hidden="true" />
+            <span className="atlas-human-task-trail__eyebrow">Right now</span>
+            <FactLines facts={currentFacts} />
+          </section>
+        ) : null}
+
+        <section className="atlas-human-task-trail__step" data-kind="work">
+          <span className="atlas-human-task-trail__dot" aria-hidden="true" />
+          <span className="atlas-human-task-trail__eyebrow">Do this</span>
+          <strong>{moveAction}</strong>
+          {moveSubject && moveSubject !== moveAction ? <p>{moveSubject}</p> : null}
+          {assembly.requirements.length ? (
+            <ul className="atlas-human-task-trail__requirements" aria-label="What this work needs">
+              {assembly.requirements.map((requirement) => <RequirementBranch key={requirement.id} requirement={requirement} />)}
+            </ul>
+          ) : null}
         </section>
 
-        <div className="atlas-task-move-spine__connector" aria-hidden="true">→</div>
-
-        <section className="atlas-task-move-spine__node" data-state={moveStatus} aria-label="Move">
-          <div className="atlas-task-move-spine__node-label"><span>Move</span><small>{STATUS_LABEL[moveStatus]}</small></div>
-          <strong className="atlas-task-move-spine__move-action">{assembly.spine.move.action.label}</strong>
-          <p className="atlas-task-move-spine__move-subject">{assembly.spine.move.subject.label}</p>
-          <p className="atlas-task-move-spine__move-site">{assembly.spine.move.workSite.label}</p>
-        </section>
-
-        <div className="atlas-task-move-spine__connector" data-state={stopped ? "blocked" : "resolved"} aria-hidden="true">
-          <span>{stopped ? "⊣" : "→"}</span>
-          {stopped ? <small>stop</small> : null}
-        </div>
-
-        <section
-          className="atlas-task-move-spine__node"
-          data-state={afterStatus}
-          data-reachable={stopped ? "false" : "true"}
-          aria-label="After state"
-        >
-          <div className="atlas-task-move-spine__node-label">
-            <span>After</span>
-            <small>{stopped ? "Target held" : STATUS_LABEL[afterStatus]}</small>
-          </div>
-          <FactList facts={assembly.spine.after} />
+        <section className="atlas-human-task-trail__step" data-kind="finish">
+          <span className="atlas-human-task-trail__dot" aria-hidden="true" />
+          <span className="atlas-human-task-trail__eyebrow">Finished</span>
+          {afterFacts.length ? <FactLines facts={afterFacts} /> : <p className="atlas-human-task-trail__finish">{assembly.execution.doneWhen}</p>}
         </section>
       </div>
-
-      {assembly.requirements.length ? (
-        <section className="atlas-task-move-spine__branches" aria-label="Requirements for this move">
-          <h2 className="atlas-task-move-spine__branches-title">Needed for this move</h2>
-          <ul className="atlas-task-move-spine__branch-grid">
-            {assembly.requirements.map((requirement) => (
-              <RequirementBranch key={requirement.id} requirement={requirement} />
-            ))}
-          </ul>
-        </section>
-      ) : null}
     </section>
   );
 }
