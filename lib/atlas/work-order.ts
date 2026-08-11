@@ -1,5 +1,6 @@
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasMetaString, atlasMetadataValue, atlasRouteKeyForTask, atlasTaskDisplay } from "@/lib/atlas/task-display";
+import { atlasWorkerDisplayText } from "@/lib/atlas/worker-display";
 
 export type AtlasWorkOrderAnchor = "top" | "morning" | "midday" | "visibility" | "evening" | "bottom";
 
@@ -107,6 +108,15 @@ export function atlasWorkOrderLabel(task: AtlasTaskCard) {
   const explicit = atlasMetaString(task, "day_work_order_label") || atlasMetaString(task, "work_order_label") || atlasMetaString(task, "work_order_bucket");
   if (explicit) return explicit;
   return atlasWorkOrderAnchors[atlasWorkOrderAnchorForTask(task)].label;
+}
+
+/**
+ * Work-order labels can be useful to the planner while still being noise to the
+ * worker. The Day surface asks for this presentation-safe label instead of
+ * rendering planner vocabulary and hiding it later with a DOM patch.
+ */
+export function atlasWorkerWorkOrderLabel(task: AtlasTaskCard) {
+  return atlasWorkerDisplayText(atlasWorkOrderLabel(task));
 }
 
 export function atlasWorkOrderSortValue(task: AtlasTaskCard) {
