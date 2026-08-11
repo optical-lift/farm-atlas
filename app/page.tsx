@@ -89,6 +89,14 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
   }
 
   const visibleFarms = home.farms.map((farm) => ({ ...farm, taskCards: farm.taskCards.filter((task) => !setAsideTaskIds.has(task.task_id)) }));
+  const quietTaskIds = new Set(
+    visibleFarms.flatMap((farm) => farm.taskCards
+      .filter((task) => {
+        const value = task.metadata?.hide_from_home_hero ?? task.metadata?.quiet_task;
+        return value === true || value === "true" || value === "yes" || value === 1;
+      })
+      .map((task) => task.task_id)),
+  );
   const visibleActiveFarm = home.activeFarm ? visibleFarms.find((farm) => farm.farmId === home.activeFarm?.farmId) ?? home.activeFarm : null;
   const visibleHome = {
     ...home,
@@ -113,6 +121,14 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
   const taskOverview = ownerDailyHand
     ? { ...carriedTaskOverview, moves: [...ownerDailyHand, ...staffMoves].slice(0, 4), summary: { ...carriedTaskOverview.summary, prepared: true } }
     : carriedTaskOverview;
+  const visibleTaskOverview = {
+    ...taskOverview,
+    moves: taskOverview.moves.filter((move) => {
+      if (move.kind !== "farm_task") return true;
+      const taskId = move.key.split(":").at(-1) ?? "";
+      return !quietTaskIds.has(taskId);
+    }),
+  };
   const renderedViewer = visibleHome.viewer;
   const organizationMembership = organizationMembershipForViewer(renderedViewer);
   const organizationPortal = Boolean(organizationMembership && (organizationMembership.role === "owner" || renderedViewer.farmMemberships.length === 0));
@@ -120,8 +136,8 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
   const unconstrainedRenderedHome = {
     ...visibleHome,
     title: organizationPortal ? home.organizationHome?.organization.name || organizationMembership?.organizationName || "Feast Guild" : visibleHome.title,
-    moves: taskOverview.moves,
-    datedItems: taskOverview.datedItems,
+    moves: visibleTaskOverview.moves,
+    datedItems: visibleTaskOverview.datedItems,
   };
 
   let renderedHome = unconstrainedRenderedHome;
@@ -160,7 +176,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     <>
       <AtlasHomeServerRefresh />
       {/* Legacy route contract only: <AtlasAroundRoutes canManage={false} /> has been absorbed into the app dock and compact Home lenses. */}
-      <AtlasUniversalHome home={renderedHome} dayOverview={taskOverview.summary} farmSeasons={farmSeasons} farmHandMode={renderedFarmHandMode} />
+      <AtlasUniversalHome home={renderedHome} dayOverview={visibleTaskOverview.summary} farmSeasons={farmSeasons} farmHandMode={renderedFarmHandMode} />
       <FarmHandQuickWinPrompt home={renderedHome} active={renderedFarmHandMode} />
       <AtlasPwaCoverPrompt />
     </>
