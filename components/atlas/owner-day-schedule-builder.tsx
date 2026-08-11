@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
+import type { OwnerDayCueDraftEdit } from "@/components/atlas/owner-day-cue-draft";
+
 type DayWindow = "morning" | "afternoon" | "evening";
 type EditTab = "work" | "cues" | "both";
 type CandidateKind = "project_pull" | "floating_task";
@@ -108,6 +110,10 @@ type PendingMove = {
   warning: string;
 };
 
+type OwnerDayScheduleBuilderProps = {
+  cueDraftEdits?: OwnerDayCueDraftEdit[];
+};
+
 const windows: Array<{ key: DayWindow; label: string }> = [
   { key: "morning", label: "Morning" },
   { key: "afternoon", label: "Afternoon" },
@@ -167,7 +173,36 @@ function cardDetail(row: PlanRow) {
   ].filter(Boolean).join(" · ");
 }
 
-export default function OwnerDayScheduleBuilder() {
+function visibleCues(serverCues: Cue[], cueDraftEdits: OwnerDayCueDraftEdit[]) {
+  const map = new Map(serverCues.map((cue) => [cue.cueId, cue]));
+  for (const edit of cueDraftEdits) {
+    if (edit.kind === "delete") {
+      map.delete(edit.cueId);
+      continue;
+    }
+    const cueId = edit.cue.cueId ?? edit.draftKey;
+    map.set(cueId, {
+      cueId,
+      cueKind: edit.cue.cueKind,
+      anchorKind: edit.cue.anchorKind,
+      anchorTaskId: edit.cue.anchorTaskId,
+      title: edit.cue.title,
+      body: edit.cue.body,
+      status: "draft",
+      scheduledAt: edit.cue.scheduledAt,
+    });
+  }
+  return [...map.values()];
+}
+
+function cueEditsForRequest(edits: OwnerDayCueDraftEdit[]) {
+  return edits.map((edit) => {
+    if (edit.kind === "delete") return { kind: "delete" as const, cueId: edit.cueId };
+    return { kind: "upsert" as const, cue: edit.cue };
+  });
+}
+
+export default function OwnerDayScheduleBuilder({ cueDraftEdits = [] }: OwnerDayScheduleBuilderProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const requestedDate = searchParams.get("date");
@@ -231,7 +266,8 @@ export default function OwnerDayScheduleBuilder() {
     () => (plan?.suggestions ?? []).filter((row) => row.sourceKind === "project_pull" || row.sourceKind === "floating_task"),
     [plan],
   );
-  const cues = useMemo(() => choreographyResponse?.choreography?.cues ?? [], [choreographyResponse]);
+  const serverCues = useMemo(() => choreographyResponse?.choreography?.cues ?? [], [choreographyResponse]);
+  const cues = useMemo(() => visibleCues(serverCues, cueDraftEdits), [cueDraftEdits, serverCues]);
   const placementOverrides = useMemo(() => choreographyResponse?.choreography?.placementOverrides ?? [], [choreographyResponse]);
 
   useEffect(() => {
@@ -412,7 +448,7 @@ export default function OwnerDayScheduleBuilder() {
   }
 
   async function commitChanges() {
-    if (!dateIso || saving || pendingMove || (!changedTaskIds.length && !selectedCandidates.length)) return;
+    if (!dateIso || saving || pendingMove || (!changedTaskIds.length && !selectedCandidates.length && !cueDraftEdits.length)) return;
     setSaving(true);
     setError(null);
     try {
@@ -423,7 +459,7 @@ export default function OwnerDayScheduleBuilder() {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
-          "x-atlas-intent": "owner-day-commit-v1",
+          "x-atlas-intent": "owner-day-commit-v2",
         },
         body: JSON.stringify({
           date: dateIso,
@@ -432,6 +468,7 @@ export default function OwnerDayScheduleBuilder() {
             sourceKind: candidate.sourceKind,
             sourceId: candidate.sourceId,
           })),
+          cueEdits: cueEditsForRequest(cueDraftEdits),
         }),
       });
       const body = await request.json() as { ok?: boolean; error?: string; message?: string };
@@ -454,7 +491,7 @@ export default function OwnerDayScheduleBuilder() {
   const movedOff = [...draft.values()].filter((row) => row.returnedToAtlas || row.serviceDate !== dateIso);
   const showWork = tab === "work" || tab === "both";
   const showCues = tab === "cues" || tab === "both";
-  const dirtyCount = changedTaskIds.length + selectedCandidates.length;
+  const dirtyCount = changedTaskIds.length + selectedCandidates.length + cueDraftEdits.length;
 
   function cuesForTask(taskId: string, anchorKind: Cue["anchorKind"]) {
     return cues.filter((cue) => cue.anchorTaskId === taskId && cue.anchorKind === anchorKind);
@@ -508,8 +545,8 @@ export default function OwnerDayScheduleBuilder() {
       {showCues ? (
         <div style={{ display: "grid", gap: 6 }}>
           {cues.filter((cue) => cue.anchorKind === "first_open" || cue.anchorKind === "at_time").map((cue) => (
-            <div key={cue.cueId} style={{ padding: "8px 10px", borderRadius: 12, background: "rgba(255,255,255,.58)", border: "1px solid rgba(112,111,177,.14)" }}>
-              <small style={{ display: "block", fontSize: 9.5, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", color: "#777bb0" }}>{cueMark(cue.cueKind)} {cueAnchorLabel(cue)}</small>
+            <div key={cue.cueId} style={{ padding: "8px 10px", borderRadius: 12, background: cue.status === "draft" ? "rgba(234,231,249,.98)" : "rgba(255,255,255,.58)", border: "1px solid rgba(112,111,177,.14)" }}>
+              <small style={{ display: "block", fontSize: 9.5, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", color: "#777bb0" }}>{cue.status === "draft" ? "Draft · " : ""}{cueMark(cue.cueKind)} {cueAnchorLabel(cue)}</small>
               <strong style={{ display: "block", marginTop: 2, fontSize: 12 }}>{cue.title}</strong>
               {cue.body ? <span style={{ display: "block", marginTop: 2, fontSize: 10.5, opacity: .68 }}>{cue.body}</span> : null}
             </div>
@@ -548,8 +585,8 @@ export default function OwnerDayScheduleBuilder() {
               return (
                 <div key={placement.taskId} style={{ display: "grid", gap: 5 }}>
                   {beforeCues.map((cue) => (
-                    <div key={cue.cueId} style={{ marginLeft: 12, padding: "6px 9px", borderLeft: "2px solid rgba(112,111,177,.4)", fontSize: 10.5 }}>
-                      <strong>{cueMark(cue.cueKind)} Before · {cue.title}</strong>
+                    <div key={cue.cueId} style={{ marginLeft: 12, padding: "6px 9px", borderLeft: "2px solid rgba(112,111,177,.4)", fontSize: 10.5, background: cue.status === "draft" ? "rgba(234,231,249,.72)" : "transparent" }}>
+                      <strong>{cue.status === "draft" ? "Draft · " : ""}{cueMark(cue.cueKind)} Before · {cue.title}</strong>
                     </div>
                   ))}
                   <article
@@ -613,8 +650,8 @@ export default function OwnerDayScheduleBuilder() {
                     ) : null}
                   </article>
                   {afterCues.map((cue) => (
-                    <div key={cue.cueId} style={{ marginLeft: 12, padding: "6px 9px", borderLeft: "2px solid rgba(112,111,177,.4)", fontSize: 10.5 }}>
-                      <strong>{cueMark(cue.cueKind)} After · {cue.title}</strong>
+                    <div key={cue.cueId} style={{ marginLeft: 12, padding: "6px 9px", borderLeft: "2px solid rgba(112,111,177,.4)", fontSize: 10.5, background: cue.status === "draft" ? "rgba(234,231,249,.72)" : "transparent" }}>
+                      <strong>{cue.status === "draft" ? "Draft · " : ""}{cueMark(cue.cueKind)} After · {cue.title}</strong>
                     </div>
                   ))}
                 </div>
