@@ -113,17 +113,22 @@ begin
       updated_at=now()
   where id=v_next.id;
 
-  update atlas.tasks
+  update atlas.tasks child
   set status='open',
       blocker_text=null,
-      metadata=coalesce(metadata,'{}'::jsonb)||jsonb_build_object(
-        'released_from_task_id',v_source.id,
-        'released_at',now(),
-        'release_source','network_outreach_batch_v1_legacy_compatibility'
+      metadata=jsonb_set(
+        coalesce(child.metadata,'{}'::jsonb)||jsonb_build_object(
+          'released_from_task_id',v_source.id,
+          'released_at',now(),
+          'release_source','network_outreach_batch_v1_legacy_compatibility'
+        ),
+        '{checklist_status}',
+        '"open"'::jsonb,
+        true
       ),
       updated_at=now()
-  where parent_task_id=v_next.id
-    and status='blocked';
+  where child.parent_task_id=v_next.id
+    and child.status='blocked';
 
   return jsonb_build_object(
     'released',true,
@@ -199,8 +204,13 @@ begin
     update atlas.tasks child
     set status='open',
         blocker_text=null,
-        metadata=coalesce(child.metadata,'{}'::jsonb)||jsonb_build_object(
-          'prerequisite_waiting_text','Waiting for the first church outreach batch.'
+        metadata=jsonb_set(
+          coalesce(child.metadata,'{}'::jsonb)||jsonb_build_object(
+            'prerequisite_waiting_text','Waiting for the first church outreach batch.'
+          ),
+          '{checklist_status}',
+          '"open"'::jsonb,
+          true
         ),
         updated_at=now()
     where child.parent_task_id=v_next.id
