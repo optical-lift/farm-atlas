@@ -42,8 +42,11 @@ test("Task Focus reads the canonical Task Move assembly and uses one human trail
   assert.match(brief, /Compatibility state while the canonical assembly is loading\/unavailable/);
 });
 
-test("requirement branches expose quantity, state, notes, and open questions without becoming instructions", () => {
-  assert.match(spine, /quantityLabel\(requirement\)/);
+test("requirement branches use human quantities and preserve state, notes, and open questions", () => {
+  assert.match(spine, /function requirementLine\(requirement: TaskMoveRequirement\)/);
+  assert.match(spine, /return `\$\{requirement\.quantity\} × \$\{requirement\.label\}`/);
+  assert.match(spine, /return `\$\{requirement\.quantity\} \$\{readable\(requirement\.unit\)\}`/);
+  assert.match(spine, /<strong>\{requirementLine\(requirement\)\}<\/strong>/);
   assert.match(spine, /data-state=\{requirement.status\}/);
   assert.match(spine, /requirement.note/);
   assert.match(spine, /requirement.questions/);
