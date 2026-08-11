@@ -20,7 +20,7 @@ test("focused work uses one human Task Move execution trail while linked Trails 
 
   assert.doesNotMatch(layout, /import TaskFocusTendingTrail/);
   assert.doesNotMatch(layout, /^\s*<TaskFocusTendingTrail/m);
-  assert.match(detail, /atlas-dominion-task-card/);
+  assert.match(detail, /data-atlas-assigned-task-execution-shell="true"/);
   assert.match(detail, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
   assert.doesNotMatch(detail, /TaskDominionTrail/);
   assert.match(brief, /TaskMoveSpine/);
