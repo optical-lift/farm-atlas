@@ -14,6 +14,7 @@ type Cue = {
   title: string;
   body: string | null;
   payload: Record<string, unknown>;
+  status: string;
   recoveryPolicy: "refresh" | "expire" | "persist" | "block";
   scheduledAt: string | null;
   availableFrom: string | null;
@@ -30,6 +31,7 @@ type DraftCue = {
   items: string;
   actionLabel: string;
   recoveryPolicy: "refresh" | "expire" | "persist" | "block";
+  payload: Record<string, unknown>;
 };
 
 const emptyDraft: DraftCue = {
@@ -41,6 +43,7 @@ const emptyDraft: DraftCue = {
   items: "",
   actionLabel: "Start today",
   recoveryPolicy: "expire",
+  payload: {},
 };
 
 function validDate(value: string | null) {
@@ -66,6 +69,7 @@ function draftFromCue(cue: Cue): DraftCue {
     items: payloadItems(cue.payload),
     actionLabel: payloadAction(cue.payload),
     recoveryPolicy: cue.recoveryPolicy,
+    payload: { ...cue.payload },
   };
 }
 
@@ -84,6 +88,10 @@ function cueLabel(cue: Cue) {
   return "Timed cue";
 }
 
+function taskAnchored(anchorKind: AnchorKind) {
+  return anchorKind === "before_task" || anchorKind === "after_task";
+}
+
 export default function OwnerDayCueEditor() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -92,6 +100,7 @@ export default function OwnerDayCueEditor() {
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [cues, setCues] = useState<Cue[]>([]);
   const [draft, setDraft] = useState<DraftCue | null>(null);
+  const [draggingCueId, setDraggingCueId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -113,6 +122,7 @@ export default function OwnerDayCueEditor() {
 
   useEffect(() => {
     setDraft(null);
+    setDraggingCueId(null);
     setMessage(null);
     if (!dateIso) return;
     const controller = new AbortController();
@@ -123,51 +133,83 @@ export default function OwnerDayCueEditor() {
   }, [dateIso]);
 
   const taskById = useMemo(() => new Map(tasks.map((task) => [task.taskId as string, task.title])), [tasks]);
+  const draggingCue = useMemo(() => cues.find((cue) => cue.cueId === draggingCueId) ?? null, [cues, draggingCueId]);
 
   function setPreset(kind: "morning" | "before" | "somatic" | "result") {
     setDraft(preset(kind));
     setMessage(null);
   }
 
+  async function upsertCue(cue: Record<string, unknown>) {
+    const request = await fetch("/api/atlas/owner-day-cue", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json", "Content-Type": "application/json", "x-atlas-intent": "owner-day-cue-v1" },
+      body: JSON.stringify({ cue }),
+    });
+    const body = await request.json() as { ok?: boolean; error?: string; message?: string };
+    if (!request.ok || !body.ok) throw new Error(body.message || body.error || "Atlas could not save this cue.");
+  }
+
   async function saveCue() {
     if (!dateIso || !draft || saving || !draft.title.trim()) return;
-    if ((draft.anchorKind === "before_task" || draft.anchorKind === "after_task") && !draft.anchorTaskId) {
+    if (taskAnchored(draft.anchorKind) && !draft.anchorTaskId) {
       setMessage("Choose the task this cue belongs to.");
       return;
     }
     setSaving(true);
     setMessage(null);
     try {
-      const cuePayload: Record<string, unknown> = {};
+      const cuePayload: Record<string, unknown> = { ...draft.payload };
       const itemList = draft.items.split("\n").map((item) => item.trim()).filter(Boolean);
-      if (itemList.length) cuePayload.items = itemList;
-      if (draft.actionLabel.trim()) cuePayload.actionLabel = draft.actionLabel.trim();
+      if (itemList.length) cuePayload.items = itemList; else delete cuePayload.items;
+      if (draft.actionLabel.trim()) cuePayload.actionLabel = draft.actionLabel.trim(); else delete cuePayload.actionLabel;
 
-      const request = await fetch("/api/atlas/owner-day-cue", {
-        method: "POST",
-        credentials: "same-origin",
-        cache: "no-store",
-        headers: { Accept: "application/json", "Content-Type": "application/json", "x-atlas-intent": "owner-day-cue-v1" },
-        body: JSON.stringify({
-          cue: {
-            ...(draft.cueId ? { cueId: draft.cueId } : {}),
-            serviceDate: dateIso,
-            cueKind: draft.cueKind,
-            anchorKind: draft.anchorKind,
-            anchorTaskId: draft.anchorTaskId || null,
-            title: draft.title.trim(),
-            body: draft.body.trim() || null,
-            payload: cuePayload,
-            recoveryPolicy: draft.recoveryPolicy,
-          },
-        }),
+      await upsertCue({
+        ...(draft.cueId ? { cueId: draft.cueId } : {}),
+        serviceDate: dateIso,
+        cueKind: draft.cueKind,
+        anchorKind: draft.anchorKind,
+        anchorTaskId: draft.anchorTaskId || null,
+        title: draft.title.trim(),
+        body: draft.body.trim() || null,
+        payload: cuePayload,
+        recoveryPolicy: draft.recoveryPolicy,
       });
-      const body = await request.json() as { ok?: boolean; error?: string; message?: string };
-      if (!request.ok || !body.ok) throw new Error(body.message || body.error || "Atlas could not save this cue.");
       setDraft(null);
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not save this cue.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function reanchorCue(cue: Cue, anchorTaskId: string) {
+    if (!dateIso || saving || !taskAnchored(cue.anchorKind)) return;
+    setSaving(true);
+    setMessage(null);
+    try {
+      await upsertCue({
+        cueId: cue.cueId,
+        serviceDate: dateIso,
+        cueKind: cue.cueKind,
+        anchorKind: cue.anchorKind,
+        anchorTaskId,
+        title: cue.title,
+        body: cue.body,
+        payload: cue.payload,
+        recoveryPolicy: cue.recoveryPolicy,
+        scheduledAt: cue.scheduledAt,
+        availableFrom: cue.availableFrom,
+        expiresAt: cue.expiresAt,
+      });
+      setDraggingCueId(null);
+      if (draft?.cueId === cue.cueId) setDraft(null);
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Atlas could not re-anchor this cue.");
     } finally {
       setSaving(false);
     }
@@ -186,6 +228,7 @@ export default function OwnerDayCueEditor() {
       });
       if (!request.ok) throw new Error("Atlas could not remove this cue.");
       if (draft?.cueId === cueId) setDraft(null);
+      setDraggingCueId(null);
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not remove this cue.");
@@ -204,17 +247,45 @@ export default function OwnerDayCueEditor() {
       </div>
 
       {cues.length ? <div style={{ display: "grid", gap: 6 }}>
-        {cues.map((cue) => (
-          <div key={cue.cueId} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 8, padding: "8px 9px", borderRadius: 11, background: "rgba(255,255,255,.58)" }}>
-            <button type="button" onClick={() => setDraft(draftFromCue(cue))} style={{ border: 0, background: "transparent", padding: 0, textAlign: "left", font: "inherit", color: "inherit" }}>
-              <small style={{ display: "block", color: "#777bb0", fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".07em" }}>{cueLabel(cue)}</small>
-              <strong style={{ display: "block", marginTop: 2, fontSize: 11.5 }}>{cue.title}</strong>
-              {cue.anchorTaskId ? <span style={{ display: "block", marginTop: 2, fontSize: 9.5, opacity: .62 }}>{taskById.get(cue.anchorTaskId) || "Task anchor"}</span> : null}
-            </button>
-            <button type="button" disabled={saving} onClick={() => void deleteCue(cue.cueId)} style={{ alignSelf: "center", border: 0, background: "transparent", font: "inherit", fontSize: 9.5, fontWeight: 850, color: "#77758e" }}>Remove</button>
-          </div>
-        ))}
+        {cues.map((cue) => {
+          const canDrag = taskAnchored(cue.anchorKind) && cue.status !== "resolved";
+          return (
+            <div
+              key={cue.cueId}
+              draggable={canDrag}
+              onDragStart={() => canDrag && setDraggingCueId(cue.cueId)}
+              onDragEnd={() => setDraggingCueId(null)}
+              style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 8, padding: "8px 9px", borderRadius: 11, background: "rgba(255,255,255,.58)", cursor: canDrag ? "grab" : "default" }}
+            >
+              <button type="button" onClick={() => setDraft(draftFromCue(cue))} style={{ border: 0, background: "transparent", padding: 0, textAlign: "left", font: "inherit", color: "inherit" }}>
+                <small style={{ display: "block", color: "#777bb0", fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".07em" }}>{cueLabel(cue)}</small>
+                <strong style={{ display: "block", marginTop: 2, fontSize: 11.5 }}>{cue.title}</strong>
+                {cue.anchorTaskId ? <span style={{ display: "block", marginTop: 2, fontSize: 9.5, opacity: .62 }}>{taskById.get(cue.anchorTaskId) || "Task anchor"}</span> : null}
+              </button>
+              <button type="button" disabled={saving} onClick={() => void deleteCue(cue.cueId)} style={{ alignSelf: "center", border: 0, background: "transparent", font: "inherit", fontSize: 9.5, fontWeight: 850, color: "#77758e" }}>Remove</button>
+            </div>
+          );
+        })}
       </div> : <span style={{ fontSize: 10.5, opacity: .58 }}>No cues attached yet.</span>}
+
+      {draggingCue ? (
+        <section data-cue-reanchor-targets="true" style={{ display: "grid", gap: 5, padding: 9, borderRadius: 11, border: "1px dashed rgba(112,111,177,.35)" }}>
+          <strong style={{ fontSize: 10 }}>Drop “{draggingCue.title}” onto its new task</strong>
+          {tasks.map((task) => (
+            <div
+              key={task.taskId}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                if (task.taskId) void reanchorCue(draggingCue, task.taskId);
+              }}
+              style={{ padding: "7px 8px", borderRadius: 9, background: "rgba(255,255,255,.62)", fontSize: 10.5 }}
+            >
+              {task.title}
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       {!draft ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 6 }}>
@@ -229,7 +300,22 @@ export default function OwnerDayCueEditor() {
             <strong style={{ fontSize: 11.5 }}>{draft.cueId ? "Edit cue" : "Add cue"}</strong>
             <button type="button" onClick={() => setDraft(null)} style={{ border: 0, background: "transparent", font: "inherit", fontSize: 9.5, fontWeight: 850 }}>Cancel</button>
           </div>
-          {(draft.anchorKind === "before_task" || draft.anchorKind === "after_task") ? (
+          <label style={{ display: "grid", gap: 3, fontSize: 9.5, fontWeight: 850 }}>Show this cue
+            <select
+              value={draft.anchorKind}
+              onChange={(event) => {
+                const anchorKind = event.target.value as AnchorKind;
+                setDraft((current) => current ? { ...current, anchorKind, anchorTaskId: taskAnchored(anchorKind) ? current.anchorTaskId : "" } : current);
+              }}
+              style={{ border: "1px solid rgba(112,111,177,.2)", borderRadius: 9, padding: 8, background: "#fff", font: "inherit", fontSize: 10.5 }}
+            >
+              <option value="first_open">Morning login</option>
+              <option value="before_task">Before a task</option>
+              <option value="after_task">After a task</option>
+              <option value="at_time">At a time</option>
+            </select>
+          </label>
+          {taskAnchored(draft.anchorKind) ? (
             <label style={{ display: "grid", gap: 3, fontSize: 9.5, fontWeight: 850 }}>Attach to task
               <select value={draft.anchorTaskId} onChange={(event) => setDraft((current) => current ? { ...current, anchorTaskId: event.target.value } : current)} style={{ border: "1px solid rgba(112,111,177,.2)", borderRadius: 9, padding: 8, background: "#fff", font: "inherit", fontSize: 10.5 }}>
                 <option value="">Choose task…</option>

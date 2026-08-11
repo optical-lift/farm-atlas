@@ -27,6 +27,11 @@ export type WorkerDayPlanRow = {
   fitsWithinCurrentRemaining?: boolean;
   recommended?: boolean;
   reason?: string | null;
+  commitmentKind?: string | null;
+  preferredWindowStart?: string | null;
+  preferredWindowEnd?: string | null;
+  safeWindowEnd?: string | null;
+  timingWarning?: string | null;
 };
 
 export type WorkerDayPlan = {
@@ -50,6 +55,15 @@ export type OwnerWorkerDayPlanningTarget = {
   membershipId: string;
   displayName: string;
   source: "operator_lens" | "owner_direct";
+};
+
+type TimingTaskRow = {
+  id: string;
+  due_date: string | null;
+  task_type: string | null;
+  action_key: string | null;
+  commitment_kind: string | null;
+  metadata: Record<string, unknown> | null;
 };
 
 function validDateIso(value: string) {
@@ -93,6 +107,73 @@ function labelFromWorkerKey(workerKey: string | null | undefined) {
   const value = workerKey?.trim();
   if (!value) return "Farm Hand";
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function metadataDate(metadata: Record<string, unknown> | null, key: string) {
+  const value = metadata?.[key];
+  return typeof value === "string" && validDateIso(value) ? value : null;
+}
+
+function timingWindow(task: TimingTaskRow) {
+  const metadata = task.metadata ?? {};
+  const start = metadataDate(metadata, "window_start")
+    ?? metadataDate(metadata, "projected_transplant_start")
+    ?? metadataDate(metadata, "projected_germination_start");
+  const preferredEnd = metadataDate(metadata, "window_end")
+    ?? metadataDate(metadata, "projected_transplant_end")
+    ?? metadataDate(metadata, "latest_safe_sow_date")
+    ?? metadataDate(metadata, "projected_germination_end");
+  const safeEnd = preferredEnd ?? (task.commitment_kind === "hard_date" ? task.due_date : null);
+  const joined = `${task.task_type ?? ""} ${task.action_key ?? ""}`.toLowerCase();
+  const warning = safeEnd
+    ? /pot[_ -]?up/.test(joined)
+      ? "Moving this may miss the preferred pot-up window."
+      : task.commitment_kind === "hard_date"
+        ? "Moving this crosses a committed farm date."
+        : "Moving this may miss the preferred biological window."
+    : null;
+  return { start, preferredEnd, safeEnd, warning };
+}
+
+async function enrichPlanTiming(plan: WorkerDayPlan) {
+  const taskIds = Array.from(new Set(
+    [...plan.realWork, ...plan.suggestions]
+      .map((row) => row.taskId)
+      .filter((value): value is string => Boolean(value)),
+  ));
+  if (!taskIds.length) return plan;
+
+  const supabase = await createAtlasServerClient();
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("id, due_date, task_type, action_key, commitment_kind, metadata")
+    .in("id", taskIds);
+  if (error) throw new Error("Atlas could not load task timing truth for Day editing.");
+
+  const timingByTask = new Map<string, ReturnType<typeof timingWindow> & { commitmentKind: string | null }>();
+  for (const task of (data ?? []) as TimingTaskRow[]) {
+    timingByTask.set(task.id, { ...timingWindow(task), commitmentKind: task.commitment_kind });
+  }
+
+  const enrich = (row: WorkerDayPlanRow): WorkerDayPlanRow => {
+    const timing = row.taskId ? timingByTask.get(row.taskId) : null;
+    if (!timing) return row;
+    return {
+      ...row,
+      commitmentKind: timing.commitmentKind,
+      preferredWindowStart: timing.start,
+      preferredWindowEnd: timing.preferredEnd,
+      safeWindowEnd: timing.safeEnd,
+      timingWarning: timing.warning,
+    };
+  };
+
+  return {
+    ...plan,
+    realWork: plan.realWork.map(enrich),
+    automaticWork: plan.automaticWork.map(enrich),
+    suggestions: plan.suggestions.map(enrich),
+  };
 }
 
 export async function resolveOwnerWorkerDayPlanningTarget(): Promise<OwnerWorkerDayPlanningTarget | null> {
@@ -169,10 +250,11 @@ export async function readOwnerWorkerDayPlan(dateIso: string) {
   });
   if (error) throw new Error(error.message);
 
+  const plan = await enrichPlanTiming(normalizePlan(data));
   return {
     active: true as const,
     operatorLabel: target.displayName,
     target,
-    plan: normalizePlan(data),
+    plan,
   };
 }
