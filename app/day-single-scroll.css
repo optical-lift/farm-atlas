@@ -12,6 +12,7 @@
 .atlas-day-route-spine {
   height: auto !important;
   max-height: none !important;
+  overflow-x: clip !important;
   overflow-y: visible !important;
   overscroll-behavior-y: auto !important;
   scrollbar-width: auto !important;
@@ -30,11 +31,17 @@
   drag can hand off to the document, while a momentum flick is caught by that
   temporary surface and rubber-bands back. On the Day route, make the document
   the only vertical scroller and remove every possible snap/containment boundary.
+
+  The global mobile overflow guard uses overflow-x: hidden. CSS computes a paired
+  overflow-y: visible to auto when the other axis is hidden, which silently turns
+  these Day wrappers back into scroll containers. Use overflow-x: clip here so
+  horizontal paint stays contained without creating a vertical scrolling box.
 */
 html:has(.atlas-day-browse),
 body:has(.atlas-day-browse) {
   height: auto !important;
   min-height: 100% !important;
+  overflow-x: clip !important;
   overflow-y: visible !important;
   overscroll-behavior-y: none !important;
   scroll-behavior: auto !important;
@@ -45,7 +52,8 @@ body:has(.atlas-day-browse) {
   height: auto !important;
   min-height: 100svh !important;
   max-height: none !important;
-  overflow: visible !important;
+  overflow-x: clip !important;
+  overflow-y: visible !important;
 }
 
 body:has(.atlas-day-browse) .atlas-task-page-shell,
@@ -62,6 +70,7 @@ body:has(.atlas-day-browse) .atlas-day-zone-group {
   height: auto !important;
   min-height: 0 !important;
   max-height: none !important;
+  overflow-x: clip !important;
   overflow-y: visible !important;
   overscroll-behavior-y: auto !important;
   scroll-behavior: auto !important;
@@ -80,6 +89,7 @@ body:has(.atlas-day-browse) .atlas-day-route-spine {
   height: auto !important;
   min-height: 0 !important;
   max-height: none !important;
+  overflow-x: clip !important;
   overflow-y: visible !important;
   overscroll-behavior-y: auto !important;
   scroll-behavior: auto !important;
