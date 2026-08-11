@@ -15,7 +15,6 @@ import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
 import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
 import TaskSetAsideDayPatch from "./TaskSetAsideDayPatch";
 import DayConsequenceTimelinePatch from "./DayConsequenceTimelinePatch";
-import AtlasFarmConditionsHomePatch from "./AtlasFarmConditionsHomePatch";
 import AtlasSkyLedgerMaintainer from "./AtlasSkyLedgerMaintainer";
 import OwnerOperatorMode from "./OwnerOperatorMode";
 import "./globals.css";
@@ -158,7 +157,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <DayTaskTitleLinkPatch />
         <TaskSetAsideDayPatch />
         <DayConsequenceTimelinePatch />
-        <AtlasFarmConditionsHomePatch />
         <Suspense fallback={null}><OwnerDayPlanGate /></Suspense>
         {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}
