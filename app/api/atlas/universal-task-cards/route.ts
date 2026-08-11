@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { atlasFarmDateIso, atlasShiftFarmDate } from "@/lib/atlas/farm-day";
 import {
   effectiveOperatorAccountId,
   effectiveOperatorMembershipId,
@@ -16,22 +17,6 @@ import {
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
 
 export const dynamic = "force-dynamic";
-
-function centralDateIso(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
-}
-
-function addDaysIso(dateIso: string, days: number) {
-  const [year, month, day] = dateIso.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
-}
 
 function validDateIso(value: string | null) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime()));
@@ -69,8 +54,8 @@ export async function GET(request: Request) {
   }
 
   const exactDate = requestedExactDate ?? undefined;
-  const doneDate = requestedDoneDate ?? exactDate ?? centralDateIso();
-  const dueThrough = requestedDueThrough ?? exactDate ?? addDaysIso(doneDate, 35);
+  const doneDate = requestedDoneDate ?? exactDate ?? atlasFarmDateIso();
+  const dueThrough = requestedDueThrough ?? exactDate ?? atlasShiftFarmDate(doneDate, 35);
   if (dueThrough < doneDate) {
     return privateJson({ ok: false, error: "The task window cannot end before its done date." }, 400);
   }
