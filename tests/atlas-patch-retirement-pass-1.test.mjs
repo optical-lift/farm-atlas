@@ -19,6 +19,7 @@ test("root layout no longer mounts retired no-op or Home visibility patches", ()
     "HomeTodayCompletePatch",
     "OwnerHomeLinkPatch",
     "AnnaPaidScheduleHomePatch",
+    "OwnerTaskReturnPatch",
   ]) {
     assert.doesNotMatch(layout, new RegExp(retired));
   }
@@ -32,6 +33,7 @@ test("root layout no longer mounts retired no-op or Home visibility patches", ()
     "app/HomeTodayCompletePatch.tsx",
     "app/OwnerHomeLinkPatch.tsx",
     "app/AnnaPaidScheduleHomePatch.tsx",
+    "app/OwnerTaskReturnPatch.tsx",
   ]) {
     assert.equal(existsSync(join(root, retiredFile)), false);
   }
@@ -55,6 +57,17 @@ test("the universal execution shell owns result anchoring and correction evidenc
   assert.match(shell, /document\.getElementById\("result"\)/);
   assert.match(shell, /id="result" className="atlas-task-result-footer"/);
   assert.match(shell, /This completion has linked farm evidence\. Review the recorded result before correcting it\./);
+});
+
+test("legacy single-task links hand return context to the canonical task-focus route", () => {
+  const taskLayout = read("app/task/layout.tsx");
+
+  assert.match(taskLayout, /function canonicalTaskHref/);
+  assert.match(taskLayout, /source\.get\("returnTo"\)/);
+  assert.match(taskLayout, /target\.set\("returnTo", returnTo\)/);
+  assert.match(taskLayout, /source\.get\("correction"\)/);
+  assert.match(taskLayout, /window\.location\.replace\(canonicalTaskHref\(taskId, params\)\)/);
+  assert.doesNotMatch(taskLayout, /\?taskId=\$\{encoded\}/);
 });
 
 test("superseded bed and germination DOM patches stay retired behind their canonical surfaces", () => {
