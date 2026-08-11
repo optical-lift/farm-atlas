@@ -26,15 +26,18 @@ test("Owner-selected floating work uses the canonical Day placement writer inste
   assert.doesNotMatch(migration, /owner_schedule_approved_date',p_day/);
 });
 
-test("floating work is revalidated under the schedule lock before placement", () => {
-  const lockIndex = migration.indexOf("pg_advisory_xact_lock");
-  const secondLoopIndex = migration.indexOf("for v_selection", lockIndex);
+test("schedule and placement writers acquire locks in one order before floating placement", () => {
+  const choreographyLockIndex = migration.indexOf("|day_choreography_v1");
+  const scheduleLockIndex = migration.indexOf("|owner_schedule_builder_v2");
+  const secondLoopIndex = migration.indexOf("for v_selection", scheduleLockIndex);
   const revalidationIndex = migration.indexOf("floating_paid_work_candidates_v1", secondLoopIndex);
   const placementIndex = migration.indexOf("owner_apply_worker_day_edits_api_v1", revalidationIndex);
-  assert.ok(lockIndex >= 0);
-  assert.ok(secondLoopIndex > lockIndex);
+  assert.ok(choreographyLockIndex >= 0);
+  assert.ok(scheduleLockIndex > choreographyLockIndex);
+  assert.ok(secondLoopIndex > scheduleLockIndex);
   assert.ok(revalidationIndex > secondLoopIndex);
   assert.ok(placementIndex > revalidationIndex);
+  assert.match(migration, /cannot invert\s+--\s+locks against the atomic purple-commit endpoint/);
   assert.match(migration, /changed before the schedule could be built/);
 });
 
