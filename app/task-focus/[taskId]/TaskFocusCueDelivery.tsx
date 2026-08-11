@@ -138,12 +138,13 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
 
   const cue = activeAfter ?? beforeCue;
   if (!cue) return null;
+  const activeCue: Cue = cue;
 
-  const cueChoices = choices(cue.payload.choices);
-  const cueItems = items(cue.payload.items);
-  const actionLabel = typeof cue.payload.actionLabel === "string" && cue.payload.actionLabel.trim()
-    ? cue.payload.actionLabel
-    : cue.anchorKind === "before_task"
+  const cueChoices = choices(activeCue.payload.choices);
+  const cueItems = items(activeCue.payload.items);
+  const actionLabel = typeof activeCue.payload.actionLabel === "string" && activeCue.payload.actionLabel.trim()
+    ? activeCue.payload.actionLabel
+    : activeCue.anchorKind === "before_task"
       ? "Everything is ready"
       : "Next";
 
@@ -160,10 +161,10 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
           "Content-Type": "application/json",
           "x-atlas-intent": "day-cue-response-v1",
         },
-        body: JSON.stringify({ cueId: cue.cueId, response: responseData }),
+        body: JSON.stringify({ cueId: activeCue.cueId, response: responseData }),
       });
       if (!request.ok) throw new Error("Cue response failed");
-      if (cue.anchorKind === "after_task") {
+      if (activeCue.anchorKind === "after_task") {
         window.location.assign(completionReturn(completion, "/day"));
         return;
       }
@@ -180,16 +181,16 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={cue.title}
-      data-atlas-task-cue={cue.anchorKind}
+      aria-label={activeCue.title}
+      data-atlas-task-cue={activeCue.anchorKind}
       style={{ position: "fixed", inset: 0, zIndex: 170, display: "grid", alignItems: "end", padding: "12px 12px max(14px, env(safe-area-inset-bottom))", background: "rgba(31,42,35,.18)" }}
     >
       <section style={{ width: "min(100%,520px)", margin: "0 auto", padding: "17px 18px 16px", borderRadius: 22, border: "1px solid rgba(50,72,56,.13)", background: "#f8f5e9", boxShadow: "0 18px 60px rgba(34,45,36,.22)" }}>
         <small style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".11em", textTransform: "uppercase", opacity: .5 }}>
-          {cue.anchorKind === "before_task" ? "Before you start" : cue.cueKind === "somatic" ? "Let this be finished" : "After this"}
+          {activeCue.anchorKind === "before_task" ? "Before you start" : activeCue.cueKind === "somatic" ? "Let this be finished" : "After this"}
         </small>
-        <strong style={{ display: "block", marginTop: 5, fontSize: 18, lineHeight: 1.18 }}>{cue.title}</strong>
-        {cue.body ? <p style={{ margin: "8px 0 0", fontSize: 13.5, lineHeight: 1.45, whiteSpace: "pre-line", opacity: .8 }}>{cue.body}</p> : null}
+        <strong style={{ display: "block", marginTop: 5, fontSize: 18, lineHeight: 1.18 }}>{activeCue.title}</strong>
+        {activeCue.body ? <p style={{ margin: "8px 0 0", fontSize: 13.5, lineHeight: 1.45, whiteSpace: "pre-line", opacity: .8 }}>{activeCue.body}</p> : null}
         {cueItems.length ? <ul style={{ display: "grid", gap: 5, margin: "11px 0 0", paddingLeft: 20, fontSize: 13, lineHeight: 1.38 }}>{cueItems.map((item) => <li key={item}>{item}</li>)}</ul> : null}
         {cueChoices.length ? (
           <div style={{ display: "grid", gap: 7, marginTop: 14 }}>
