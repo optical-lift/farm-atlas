@@ -22,11 +22,11 @@ test("Sunday worker override cannot surface a system-internal task", () => {
   assert.match(migration, /owner_sunday_override/);
 });
 
-test("the boundary is server-side presentation policy, not a client filter", () => {
+test("the boundary is server-side presentation policy and preserves existing RPC grants", () => {
   assert.match(migration, /create or replace function atlas\.presented_work_rows_v1/);
   assert.match(migration, /security definer/);
-  assert.match(migration, /revoke all on function atlas\.presented_work_rows_v1\(uuid,uuid,date\) from public,anon/);
-  assert.match(migration, /grant execute on function atlas\.presented_work_rows_v1\(uuid,uuid,date\) to authenticated,service_role/);
+  assert.doesNotMatch(migration, /\bgrant\s+execute\b/i);
+  assert.doesNotMatch(migration, /\brevoke\s+all\s+on\s+function\b/i);
   assert.doesNotMatch(migration, /Fall cabbage mix/);
   assert.doesNotMatch(migration, /Fall onion mix/);
 });
