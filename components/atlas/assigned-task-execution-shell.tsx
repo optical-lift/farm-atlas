@@ -114,6 +114,17 @@ export default function AssignedTaskExecutionShell({
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
+  const [showCorrectionNote, setShowCorrectionNote] = useState(false);
+
+  useEffect(() => {
+    if (window.location.hash !== "#result") return;
+    const params = new URLSearchParams(window.location.search);
+    setShowCorrectionNote(params.get("correction") === "1");
+    const timer = window.setTimeout(() => {
+      document.getElementById("result")?.scrollIntoView({ block: "start", behavior: "smooth" });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     void fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" })
@@ -294,7 +305,10 @@ export default function AssignedTaskExecutionShell({
             ) : null}
             {methodInstrument ? methodInstrument(instrumentContext) : null}
             <TaskChildChecklist childTasks={children} onChange={async () => setChildren((current) => [...current])} />
-            <footer className="atlas-task-result-footer" data-atlas-primary-results="true">
+            {showCorrectionNote ? (
+              <p className="atlas-task-correction-note">This completion has linked farm evidence. Review the recorded result before correcting it.</p>
+            ) : null}
+            <footer id="result" className="atlas-task-result-footer" data-atlas-primary-results="true">
               {resultInstrument ? resultInstrument(instrumentContext) : (
                 <DefaultResultInstrument
                   busy={Boolean(saving)}

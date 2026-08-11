@@ -11,6 +11,20 @@ import "../route-today-header.css";
 import "../task-child-inline-log.css";
 import "../task-child-react-only.css";
 
+function canonicalTaskHref(taskId: string, source: URLSearchParams) {
+  const target = new URLSearchParams();
+  const returnTo = source.get("returnTo")?.trim();
+  const correction = source.get("correction")?.trim();
+
+  if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+    target.set("returnTo", returnTo);
+  }
+  if (correction === "1") target.set("correction", "1");
+
+  const query = target.toString();
+  return `/task-focus/${encodeURIComponent(taskId)}${query ? `?${query}` : ""}${window.location.hash}`;
+}
+
 export default function TaskLayout({ children }: { children: ReactNode }) {
   const [redirecting, setRedirecting] = useState(false);
 
@@ -20,8 +34,7 @@ export default function TaskLayout({ children }: { children: ReactNode }) {
     if (!taskId) return;
 
     setRedirecting(true);
-    const encoded = encodeURIComponent(taskId);
-    window.location.replace(`/task-focus/${encoded}?taskId=${encoded}`);
+    window.location.replace(canonicalTaskHref(taskId, params));
   }, []);
 
   if (redirecting) {

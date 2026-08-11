@@ -9,19 +9,10 @@ import DependencyReleaseFlash from "@/components/atlas/task/DependencyReleaseFla
 import AtlasWorkAlongsideOverlay from "@/components/atlas/work-alongside/AtlasWorkAlongsideOverlay";
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
-import WeekDayNavigation from "./WeekDayNavigation";
-import HomeTodayCompletePatch from "./HomeTodayCompletePatch";
-import HomeQuietTaskHeroPatch from "./HomeQuietTaskHeroPatch";
 import WorkerVocabularyCleanupPatch from "./WorkerVocabularyCleanupPatch";
 import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
-import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
-import HomeSundayNavigationPatch from "./HomeSundayNavigationPatch";
-import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
 import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
 import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
-import AnnaPaidScheduleHomePatch from "./AnnaPaidScheduleHomePatch";
-import TaskResultAnchorPatch from "./TaskResultAnchorPatch";
-import ProjectTaskDestinationGuard from "./ProjectTaskDestinationGuard";
 import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
 import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
 import TaskSetAsideDayPatch from "./TaskSetAsideDayPatch";
@@ -29,7 +20,6 @@ import DayConsequenceTimelinePatch from "./DayConsequenceTimelinePatch";
 import AtlasFarmConditionsHomePatch from "./AtlasFarmConditionsHomePatch";
 import AtlasSkyLedgerMaintainer from "./AtlasSkyLedgerMaintainer";
 import OwnerOperatorMode from "./OwnerOperatorMode";
-import FutureDayProjectionBridge from "./FutureDayProjectionBridge";
 import "./globals.css";
 import "./atlas-primitives.css";
 import "./atlas-trail.css";
@@ -164,25 +154,15 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <AtlasBellCover />
         <DependencyReleaseFlash />
         <Suspense fallback={null}><AtlasWorkAlongsideOverlay /></Suspense>
-        <WeekDayNavigation />
-        <HomeTodayCompletePatch />
-        <HomeQuietTaskHeroPatch />
         <WorkerVocabularyCleanupPatch />
         <TaskProgressExactDayPatch />
-        <OwnerHomeLinkPatch />
-        <HomeSundayNavigationPatch />
-        <OwnerTaskReturnPatch />
         <SafeBedCropAccordionPatch />
         <AttachedTaskHistoryPatch />
-        <AnnaPaidScheduleHomePatch />
-        <TaskResultAnchorPatch />
-        <ProjectTaskDestinationGuard />
         <UniversalCollectionIdentity />
         <DayTaskTitleLinkPatch />
         <TaskSetAsideDayPatch />
         <DayConsequenceTimelinePatch />
         <AtlasFarmConditionsHomePatch />
-        <Suspense fallback={null}><FutureDayProjectionBridge /></Suspense>
         <Suspense fallback={null}><OwnerDayPlanGate /></Suspense>
         {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}

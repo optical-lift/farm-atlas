@@ -40,8 +40,9 @@ test("both ordinary and Owner-switched Home pass through one carry-forward queue
   assert.match(page, /readAtlasSwitchedFarmHandHomeOverview/);
   assert.match(page, /readAtlasOperatorHomeTaskOverview/);
   assert.match(page, /withAtlasHomeCarryForward\(visibleHome, reconciledTaskOverview\)/);
-  assert.match(page, /moves: taskOverview\.moves/);
-  assert.match(page, /dayOverview=\{taskOverview\.summary\}/);
+  assert.match(page, /\.\.\.taskOverview/);
+  assert.match(page, /moves: taskOverview\.moves\.filter/);
+  assert.match(page, /dayOverview=\{visibleTaskOverview\.summary\}/);
 });
 
 test("Home never describes a carry-forward day as clear", () => {
