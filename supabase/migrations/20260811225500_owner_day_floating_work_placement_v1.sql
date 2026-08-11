@@ -81,6 +81,10 @@ begin
     v_selected:=v_selected+v_minutes;
   end loop;
 
+  -- The schedule builder can now call the Day-placement writer. Acquire locks in
+  -- the same order on every path so the legacy schedule endpoint cannot invert
+  -- locks against the atomic purple-commit endpoint.
+  perform pg_advisory_xact_lock(hashtextextended(p_farm_id::text||'|'||p_membership_id::text||'|day_choreography_v1',0));
   perform pg_advisory_xact_lock(hashtextextended(p_farm_id::text||'|'||p_membership_id::text||'|'||p_day::text||'|owner_schedule_builder_v2',0));
 
   for v_selection in select value from jsonb_array_elements(coalesce(p_selections,'[]'::jsonb)) loop
