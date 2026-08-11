@@ -5,13 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 
 import { FieldLogDrawer } from "@/components/atlas/field-log-builder";
 import {
-  createAtlasObjectWork,
-  fetchAtlasObjectWorkContext,
-  type AtlasObjectWorkActionKind,
-  type AtlasObjectWorkContext,
-  type AtlasObjectWorkDateCommitment,
-  type AtlasObjectWorkEffort,
-} from "@/lib/atlas/object-work-client";
+  createAtlasManualTask,
+  fetchAtlasManualTaskContext,
+  type AtlasManualTaskActionKind,
+  type AtlasManualTaskContext,
+  type AtlasManualTaskDateCommitment,
+  type AtlasManualTaskEffort,
+} from "@/lib/atlas/manual-task-client";
 import { fetchAtlasObjectWorkbench, type AtlasObjectCropCycle } from "@/lib/atlas/object-workbench-client";
 import {
   fetchAtlasZoneRegistry,
@@ -24,7 +24,7 @@ import styles from "./global-atlas-add.module.css";
 type WorkWindow = "first_thing" | "morning" | "midday" | "afternoon" | "evening";
 type AddMode = "work" | "log";
 
-const actions: Array<{ key: AtlasObjectWorkActionKind; label: string }> = [
+const actions: Array<{ key: AtlasManualTaskActionKind; label: string }> = [
   { key: "check", label: "Check" },
   { key: "water", label: "Water" },
   { key: "sow", label: "Sow" },
@@ -45,7 +45,7 @@ const windows: Array<{ key: WorkWindow; label: string }> = [
   { key: "evening", label: "Evening" },
 ];
 
-const efforts: Array<{ key: AtlasObjectWorkEffort; label: string }> = [
+const efforts: Array<{ key: AtlasManualTaskEffort; label: string }> = [
   { key: "light", label: "Light" },
   { key: "standard", label: "Standard" },
   { key: "heavy", label: "Heavy" },
@@ -89,7 +89,7 @@ function cropLabel(crop: AtlasObjectCropCycle) {
     : crop.crop_label;
 }
 
-function workloadSentence(context: AtlasObjectWorkContext, commitment: AtlasObjectWorkDateCommitment) {
+function workloadSentence(context: AtlasManualTaskContext, commitment: AtlasManualTaskDateCommitment) {
   const load = context.dayLoad;
   if (!load) return "Atlas will calculate this person’s farm-day load when the person and date are selected.";
   const mix = `${load.lightCount} light, ${load.standardCount} standard, and ${load.heavyCount} heavy`;
@@ -99,7 +99,7 @@ function workloadSentence(context: AtlasObjectWorkContext, commitment: AtlasObje
   if (commitment === "hard_date") {
     return `${prettyDate(load.workDate)} is overloaded with ${mix} obligations. This hard-date card will still appear and notify the assigned person.`;
   }
-  return `${prettyDate(load.workDate)} is overloaded with ${mix} obligations. This floating card will remain safely in the Work Reservoir until Atlas can present it.`;
+  return `${prettyDate(load.workDate)} is overloaded with ${mix} obligations. Atlas will keep this floating obligation discretionary when presenting the farm day.`;
 }
 
 export default function GlobalAtlasAdd() {
@@ -111,10 +111,10 @@ export default function GlobalAtlasAdd() {
   const [registryError, setRegistryError] = useState<string | null>(null);
   const [zoneKey, setZoneKey] = useState("");
   const [objectKey, setObjectKey] = useState("");
-  const [context, setContext] = useState<AtlasObjectWorkContext | null>(null);
+  const [context, setContext] = useState<AtlasManualTaskContext | null>(null);
   const [cropCycles, setCropCycles] = useState<AtlasObjectCropCycle[]>([]);
   const [loadingObject, setLoadingObject] = useState(false);
-  const [actionKind, setActionKind] = useState<AtlasObjectWorkActionKind>("check");
+  const [actionKind, setActionKind] = useState<AtlasManualTaskActionKind>("check");
   const [title, setTitle] = useState("");
   const [currentTruth, setCurrentTruth] = useState("");
   const [afterTruth, setAfterTruth] = useState("");
@@ -122,8 +122,8 @@ export default function GlobalAtlasAdd() {
   const [assigneeId, setAssigneeId] = useState("");
   const [dueDate, setDueDate] = useState(centralDate(1));
   const [windowKey, setWindowKey] = useState<WorkWindow>("morning");
-  const [effortClass, setEffortClass] = useState<AtlasObjectWorkEffort>("standard");
-  const [dateCommitment, setDateCommitment] = useState<AtlasObjectWorkDateCommitment>("hard_date");
+  const [effortClass, setEffortClass] = useState<AtlasManualTaskEffort>("standard");
+  const [dateCommitment, setDateCommitment] = useState<AtlasManualTaskDateCommitment>("hard_date");
   const [bringIntoWorkNow, setBringIntoWorkNow] = useState(false);
   const [selectedCycles, setSelectedCycles] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -187,7 +187,7 @@ export default function GlobalAtlasAdd() {
     setLoadingObject(true);
     setMessage(null);
     Promise.all([
-      fetchAtlasObjectWorkContext(objectKey),
+      fetchAtlasManualTaskContext(objectKey),
       fetchAtlasObjectWorkbench(objectKey),
     ])
       .then(([nextContext, workbench]) => {
@@ -210,7 +210,7 @@ export default function GlobalAtlasAdd() {
   useEffect(() => {
     if (!open || mode !== "work" || !objectKey || !assigneeId || !dueDate) return;
     let active = true;
-    fetchAtlasObjectWorkContext(objectKey, assigneeId, dueDate)
+    fetchAtlasManualTaskContext(objectKey, assigneeId, dueDate)
       .then((nextContext) => {
         if (active) setContext(nextContext);
       })
@@ -267,7 +267,7 @@ export default function GlobalAtlasAdd() {
     try {
       setSaving(true);
       setMessage(null);
-      const result = await createAtlasObjectWork(objectKey, {
+      const result = await createAtlasManualTask(objectKey, {
         actionKind,
         title: title.trim(),
         currentTruth: currentTruth.trim(),
@@ -281,15 +281,13 @@ export default function GlobalAtlasAdd() {
         bringIntoWorkNow,
         cropCycleIds: selectedCycles,
       });
-      setMessage(result.taskId
-        ? `${selectedAction.label} card is in Work for ${result.workItem.assignee.displayName} on ${prettyDate(result.workItem.dueDate)}.`
-        : dateCommitment === "hard_date"
-          ? `${selectedAction.label} card is committed for ${prettyDate(result.workItem.dueDate)}. Atlas will prepare it and notify ${result.workItem.assignee.displayName} in the selected window.`
-          : `${selectedAction.label} card is attached to ${result.workItem.object.label} in the Work Reservoir.`);
+      const assigneeName = result.assignee?.displayName || selectedAssignee?.displayName || "the assigned person";
+      const taskDate = result.task?.dueDate || dueDate;
+      setMessage(`${selectedAction.label} task created for ${assigneeName} on ${prettyDate(taskDate)}.`);
       resetCard();
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Atlas could not create this work card.");
+      setMessage(error instanceof Error ? error.message : "Atlas could not create this task.");
     } finally {
       setSaving(false);
     }
@@ -428,8 +426,8 @@ export default function GlobalAtlasAdd() {
                   <section className={styles.section}>
                     <header><span>{activeCycles.length ? "7" : "6"}</span><div><strong>How firm is this farm day?</strong><small>Atlas remembers every decision. This choice controls commitment and presentation.</small></div></header>
                     <div className={styles.releaseGrid}>
-                      <button type="button" data-selected={dateCommitment === "hard_date"} onClick={() => setDateCommitment("hard_date")}><strong>Must happen that day</strong><span>Atlas commits the card, prepares it the evening before, and does not suppress its notification.</span></button>
-                      <button type="button" data-selected={dateCommitment === "floating"} onClick={() => setDateCommitment("floating")}><strong>Can float around that day</strong><span>Atlas keeps it in the Work Reservoir and presents it when the person’s day can carry it.</span></button>
+                      <button type="button" data-selected={dateCommitment === "hard_date"} onClick={() => setDateCommitment("hard_date")}><strong>Must happen that day</strong><span>Atlas commits the card to that farm day.</span></button>
+                      <button type="button" data-selected={dateCommitment === "floating"} onClick={() => setDateCommitment("floating")}><strong>Can float around that day</strong><span>Atlas marks this as discretionary work when presenting the farm day.</span></button>
                     </div>
                     <p className={styles.capacity} data-over={Boolean(context.dayLoad?.overloaded)}>{workloadSentence(context, dateCommitment)}</p>
                     <label>
@@ -439,7 +437,7 @@ export default function GlobalAtlasAdd() {
                   </section>
 
                   <button type="button" className={styles.save} disabled={!canSave || saving} onClick={() => void save()}>
-                    {saving ? "Saving obligation…" : bringIntoWorkNow ? "Bring into Work now" : dateCommitment === "hard_date" ? "Commit farm-day obligation" : "Save to Work Reservoir"}
+                    {saving ? "Saving obligation…" : "Create task"}
                   </button>
                 </>
               ) : null}

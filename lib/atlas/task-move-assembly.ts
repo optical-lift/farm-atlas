@@ -3,7 +3,6 @@ import type {
   AtlasTaskDependencyContext,
   AtlasTaskProjectContext,
 } from "@/lib/atlas/task-cards-client";
-import { taskDominionModel } from "@/lib/atlas/task-dominion";
 import { atlasTaskDisplay, type AtlasWorkRouteKey } from "@/lib/atlas/task-display";
 import { taskExecutionModel } from "@/lib/atlas/task-execution";
 import { assembleTaskMoveCore } from "./task-move-assembly-core";
@@ -151,6 +150,11 @@ export type TaskMoveAssembly = {
   };
 };
 
+function metadataText(task: AtlasTaskCard, key: string) {
+  const value = task.metadata?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
 /**
  * Assemble the canonical semantic payload for one Atlas Task Move.
  *
@@ -162,13 +166,21 @@ export type TaskMoveAssembly = {
 export function assembleTaskMove(task: AtlasTaskCard): TaskMoveAssembly {
   const execution = taskExecutionModel(task);
   const display = atlasTaskDisplay(task);
-  const dominion = taskDominionModel(task, null);
+
+  const canonicalMoveSemantics = {
+    route: display.route,
+    instruction: display.action || execution.doText || task.title,
+    placeLabel: execution.placeText || display.location || "Elm Farm",
+    dueLabel: execution.dueLabel,
+    whyNow: metadataText(task, "why_now"),
+    stateEffect: metadataText(task, "state_effect"),
+  };
 
   const baseAssembly = assembleTaskMoveCore({
     task,
     execution,
     display,
-    dominion,
+    moveSemantics: canonicalMoveSemantics,
     moveContext: task.move_context ?? null,
   });
 

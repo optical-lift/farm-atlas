@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+}
+
+function exists(path) {
+  return existsSync(new URL(`../${path}`, import.meta.url));
 }
 
 const migrationPath = "supabase/migrations/20260728224500_universal_trail_foundation_v1.sql";
@@ -40,22 +44,20 @@ test("Atlas has one evidence-backed Trail contract instead of feature-owned time
   assert.match(layout, /import "\.\/atlas-trail\.css"/);
 });
 
-test("Tending and Dominion tasks render the shared Trail without inventing one-time sequences", () => {
+test("Tending keeps its evidence-backed bed Trail while focused tasks use canonical Task Move", () => {
   const tending = read("app/collections/weeding/[zoneKey]/[objectKey]/page.tsx");
-  const dominion = read("components/atlas/task-dominion-trail.tsx");
+  const shell = read("components/atlas/assigned-task-execution-shell.tsx");
+  const brief = read("components/atlas/task-execution-brief.tsx");
 
   assert.match(tending, /import AtlasTrail from "@\/components\/atlas\/trail\/AtlasTrail"/);
   assert.match(tending, /atlasTrailFromTendingTrack\(bed, taskHref\)/);
   assert.match(tending, /<AtlasTrail context=\{trail\} mode="full" title="Path to harvest"/);
   assert.doesNotMatch(tending, /gateSymbol|bed\.gates\.map/);
 
-  assert.match(dominion, /import AtlasTrail from "@\/components\/atlas\/trail\/AtlasTrail"/);
-  assert.match(dominion, /fetchTendingTaskContext\(task\.task_id, objectKey\)/);
-  assert.match(dominion, /track \? atlasTrailFromTendingTrack\(track\) : null/);
-  assert.match(dominion, /<AtlasTrail context=\{trail\} mode="compact"/);
-  assert.match(dominion, /No linked Trail/);
-  assert.doesNotMatch(dominion, /atlasRouteKeyForTask|route !== "weed"/);
-  assert.doesNotMatch(dominion, /atlas-task-dominion-track/);
+  assert.match(shell, /\/api\/atlas\/task-move\?taskId=/);
+  assert.match(brief, /TaskMoveSpine/);
+  assert.doesNotMatch(shell, /TaskDominionTrail|fetchTendingTaskContext/);
+  assert.equal(exists("components/atlas/task-dominion-trail.tsx"), false);
 });
 
 test("projects keep the shared Trail underneath the World and Quest reality layer", () => {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 function read(path) {
@@ -8,7 +8,6 @@ function read(path) {
 
 test("annual landscape cards use the shared execution-detail contract", () => {
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
-  const dominion = read("components/atlas/dominion-assigned-task-detail.tsx");
   const brief = read("components/atlas/task-execution-brief.tsx");
   const execution = read("lib/atlas/task-execution.ts");
 
@@ -18,11 +17,10 @@ test("annual landscape cards use the shared execution-detail contract", () => {
   assert.match(execution, /atlasMetaString\(task, "execution_details"\)/);
   assert.match(execution, /const details = explicitDetails/);
 
-  // Timing belongs in the shared execution shell/details; neither the shell nor
-  // the Dominion compatibility wrapper maintains an annual-only forecast parser.
+  // Timing belongs in the shared execution shell/details. The retired Dominion
+  // surface must not be required to interpret an annual task.
   assert.doesNotMatch(shell, /<strong>Timing forecast<\/strong>/);
   assert.doesNotMatch(shell, /timing\.facts\.map/);
   assert.doesNotMatch(shell, /"sow window": "Sow window"/);
-  assert.match(dominion, /AssignedTaskExecutionShell/);
-  assert.doesNotMatch(dominion, /Timing forecast/);
+  assert.equal(existsSync(new URL("../components/atlas/dominion-assigned-task-detail.tsx", import.meta.url)), false);
 });

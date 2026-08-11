@@ -34,7 +34,8 @@ test("Day keeps canonical maintenance jobs in the mixed timeline while the compa
 test("Weeding remains a Tending destination while every released move is a canonical task", () => {
   const collections = read("lib/atlas/work-collections.ts");
   const timeline = read("components/atlas/tending/TendingTaskTimeline.tsx");
-  const dominionTrail = read("components/atlas/task-dominion-trail.tsx");
+  const shell = read("components/atlas/assigned-task-execution-shell.tsx");
+  const brief = read("components/atlas/task-execution-brief.tsx");
   const layout = read("app/layout.tsx");
   const css = read("app/tending-task-timeline.css");
 
@@ -46,9 +47,9 @@ test("Weeding remains a Tending destination while every released move is a canon
   assert.match(timeline, /atlas-day-task-entry/);
   assert.match(timeline, /atlas-day-task-card/);
   assert.match(timeline, /tendingTaskHref\(track, returnTo\)/);
-  assert.match(dominionTrail, /fetchTendingTaskContext/);
-  assert.match(dominionTrail, /atlasTrailFromTendingTrack/);
-  assert.match(dominionTrail, /Open bed board/);
+  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
+  assert.match(brief, /TaskMoveSpine/);
+  assert.doesNotMatch(shell, /TaskDominionTrail|fetchTendingTaskContext/);
   assert.match(layout, /tending-task-timeline\.css/);
   assert.doesNotMatch(layout, /TendingTaskContext/);
   assert.match(css, /same Day\/Week/);
@@ -134,25 +135,22 @@ test("Tending overview is a released-task collection rather than a second work i
   assert.doesNotMatch(route, /service_role|createServiceClient/i);
 });
 
-test("Tending opens universal task focus and keeps crop context inside the Dominion card", () => {
+test("Tending opens universal task focus while crop context stays in canonical farm state and Task Move", () => {
   const client = read("lib/atlas/tending-client.ts");
   const timeline = read("components/atlas/tending/TendingTaskTimeline.tsx");
-  const dominionTrail = read("components/atlas/task-dominion-trail.tsx");
   const taskRoute = read("app/api/atlas/tending/task-context/route.ts");
   const taskFocus = read("app/task-focus/[taskId]/page.tsx");
-  const layout = read("app/layout.tsx");
+  const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 
   assert.match(client, /\/task-focus\/\$\{encodeURIComponent\(track\.releasedTaskId\)\}/);
   assert.match(client, /returnTo=/);
   assert.match(timeline, /tendingTaskHref\(track, returnTo\)/);
-  assert.match(dominionTrail, /fetchTendingTaskContext/);
-  assert.match(dominionTrail, /AtlasTrail/);
-  assert.match(dominionTrail, /tendingBedHref/);
   assert.match(taskRoute, /tending_task_context_v2/);
   assert.match(taskRoute, /p_task_id: taskId/);
   assert.match(taskRoute, /p_object_key: objectKey/);
   assert.match(taskFocus, /CanonicalAssignedTaskDetail/);
-  assert.doesNotMatch(layout, /<TendingTaskContext/);
+  assert.match(shell, /\/api\/atlas\/task-move\?taskId=/);
+  assert.doesNotMatch(shell, /TaskDominionTrail/);
 
   assert.match(taskRoute, /requireAtlasApiAccess/);
   assert.doesNotMatch(taskRoute, /service_role|createServiceClient/i);

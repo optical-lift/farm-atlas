@@ -76,10 +76,10 @@ test("broad open-work and project-movement totals no longer dominate Home", () =
   assert.doesNotMatch(home, /home\.metrics\.farmCount/);
 });
 
-test("the compact home remains inside the sticky Atlas app shell", () => {
+test("the compact home remains inside the sticky Atlas app shell without a second add button", () => {
   assert.match(home, /<AtlasAppShell/);
   assert.match(home, /<AtlasTopBar/);
   assert.match(css, /padding: 10px 11px calc\(18px \+ var\(--atlas-context-footer-height\)\)/);
-  assert.match(build, /atlas-note-plus/);
+  assert.doesNotMatch(build, /atlas-note-plus/);
   assert.match(build, /data-atlas-home-task-board="true"/);
 });
