@@ -72,8 +72,8 @@ test("the Weed Card keeps its state outcomes while entering the universal execut
   assert.match(shell, /methodInstrument \? methodInstrument\(instrumentContext\)/);
   assert.match(shell, /resultInstrument \? resultInstrument\(instrumentContext\)/);
 
-  assert.match(focus, /variant="notebook"/);
   assert.match(focus, /<CropOccupancyList groups=\{card\.occupancyGroups\} \/>/);
+  assert.doesNotMatch(focus, /CropOccupancyBedMap|variant="notebook"/);
   assert.match(focus, /MaintenanceDirectiveStrip taskId=\{task\.task_id\}/);
   assert.match(focus, /atlas-task-result-actions atlas-task-result-actions-simple atlas-weed-day-actions/);
   assert.match(focus, /className="done"/);
