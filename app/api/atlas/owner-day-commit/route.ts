@@ -11,6 +11,9 @@ export const dynamic = "force-dynamic";
 type DayEditKind = "place" | "rewindow" | "reschedule" | "reorder" | "return_to_atlas";
 type DayWindow = "morning" | "afternoon" | "evening";
 type CandidateKind = "project_pull" | "floating_task";
+type CueKind = "briefing" | "requirement" | "observation" | "somatic" | "result";
+type CueAnchorKind = "first_open" | "before_task" | "after_task" | "at_time";
+type CueRecoveryPolicy = "refresh" | "expire" | "persist" | "block";
 
 type DayEdit = {
   kind: DayEditKind;
@@ -21,7 +24,25 @@ type DayEdit = {
 };
 
 type Selection = { sourceKind: CandidateKind; sourceId: string };
-type RequestBody = { date?: unknown; edits?: unknown; selections?: unknown };
+type CueUpsertEdit = {
+  kind: "upsert";
+  cue: {
+    cueId?: string;
+    serviceDate: string;
+    cueKind: CueKind;
+    anchorKind: CueAnchorKind;
+    anchorTaskId: string | null;
+    scheduledAt: string | null;
+    title: string;
+    body: string | null;
+    payload: Record<string, unknown>;
+    resultContract: Record<string, unknown>;
+    recoveryPolicy: CueRecoveryPolicy;
+  };
+};
+type CueDeleteEdit = { kind: "delete"; cueId: string };
+type CueEdit = CueUpsertEdit | CueDeleteEdit;
+type RequestBody = { date?: unknown; edits?: unknown; selections?: unknown; cueEdits?: unknown };
 type RpcError = { code?: string; message?: string };
 
 function validUuid(value: unknown): value is string {
@@ -33,6 +54,19 @@ function validDateIso(value: unknown): value is string {
   return typeof value === "string"
     && /^\d{4}-\d{2}-\d{2}$/.test(value)
     && !Number.isNaN(new Date(`${value}T12:00:00`).getTime());
+}
+
+function boundedString(value: unknown, max: number, required = false) {
+  if (value === null || value === undefined) return required ? null : "";
+  if (typeof value !== "string") return null;
+  const clean = value.trim();
+  if ((required && !clean) || clean.length > max) return null;
+  return clean;
+}
+
+function plainRecord(value: unknown) {
+  if (value === null || value === undefined) return {} as Record<string, unknown>;
+  return typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
 function normalizeEdits(value: unknown, fallbackDate: string): DayEdit[] | null {
@@ -74,6 +108,57 @@ function normalizeSelections(value: unknown): Selection[] | null {
   return result;
 }
 
+function normalizeCueEdits(value: unknown, serviceDate: string): CueEdit[] | null {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 40) return null;
+  const result: CueEdit[] = [];
+
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+    const row = entry as Record<string, unknown>;
+    const kind = String(row.kind);
+    if (kind === "delete") {
+      if (!validUuid(row.cueId)) return null;
+      result.push({ kind: "delete", cueId: row.cueId });
+      continue;
+    }
+    if (kind !== "upsert" || !row.cue || typeof row.cue !== "object" || Array.isArray(row.cue)) return null;
+
+    const cue = row.cue as Record<string, unknown>;
+    if (cue.cueId !== undefined && cue.cueId !== null && !validUuid(cue.cueId)) return null;
+    const cueKind = String(cue.cueKind) as CueKind;
+    const anchorKind = String(cue.anchorKind) as CueAnchorKind;
+    const recoveryPolicy = String(cue.recoveryPolicy || "refresh") as CueRecoveryPolicy;
+    if (!["briefing", "requirement", "observation", "somatic", "result"].includes(cueKind)) return null;
+    if (!["first_open", "before_task", "after_task", "at_time"].includes(anchorKind)) return null;
+    if (!["refresh", "expire", "persist", "block"].includes(recoveryPolicy)) return null;
+    if (cue.anchorTaskId !== undefined && cue.anchorTaskId !== null && !validUuid(cue.anchorTaskId)) return null;
+    const title = boundedString(cue.title, 160, true);
+    const body = boundedString(cue.body, 1000, false);
+    const payload = plainRecord(cue.payload);
+    const resultContract = plainRecord(cue.resultContract);
+    if (title === null || body === null || payload === null || resultContract === null) return null;
+
+    result.push({
+      kind: "upsert",
+      cue: {
+        ...(cue.cueId ? { cueId: cue.cueId as string } : {}),
+        serviceDate,
+        cueKind,
+        anchorKind,
+        anchorTaskId: cue.anchorTaskId ? cue.anchorTaskId as string : null,
+        scheduledAt: typeof cue.scheduledAt === "string" && cue.scheduledAt.trim() ? cue.scheduledAt.trim() : null,
+        title,
+        body: body || null,
+        payload,
+        resultContract,
+        recoveryPolicy,
+      },
+    });
+  }
+  return result;
+}
+
 function rpcError(error: RpcError) {
   if (error.code === "42501") return atlasApiError(403, "owner_day_commit_forbidden", error.message || "Owner access is required to commit this Day.");
   if (error.code === "22023") return atlasApiError(400, "owner_day_commit_invalid", error.message || "One of the Day changes is invalid.");
@@ -82,7 +167,7 @@ function rpcError(error: RpcError) {
 }
 
 export async function POST(request: Request) {
-  if (request.headers.get("x-atlas-intent") !== "owner-day-commit-v1") {
+  if (request.headers.get("x-atlas-intent") !== "owner-day-commit-v2") {
     return atlasApiError(400, "owner_day_commit_intent_required", "A valid Owner Day commit intent is required.");
   }
 
@@ -96,8 +181,9 @@ export async function POST(request: Request) {
   if (!validDateIso(body.date)) return atlasApiError(400, "owner_day_commit_date_required", "A valid YYYY-MM-DD Day date is required.");
   const edits = normalizeEdits(body.edits, body.date);
   const selections = normalizeSelections(body.selections);
-  if (!edits || !selections) return atlasApiError(400, "owner_day_commit_invalid", "One of the Day changes is invalid.");
-  if (!edits.length && !selections.length) return atlasApiError(400, "owner_day_commit_empty", "Choose at least one Day change.");
+  const cueEdits = normalizeCueEdits(body.cueEdits, body.date);
+  if (!edits || !selections || !cueEdits) return atlasApiError(400, "owner_day_commit_invalid", "One of the Day changes is invalid.");
+  if (!edits.length && !selections.length && !cueEdits.length) return atlasApiError(400, "owner_day_commit_empty", "Choose at least one Day change.");
 
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
@@ -108,12 +194,13 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createAtlasServerClient();
-  const response = await supabase.rpc("owner_commit_worker_day_choreography_api_v1", {
+  const response = await supabase.rpc("owner_commit_worker_day_choreography_api_v2", {
     p_farm_id: target.farmId,
     p_membership_id: target.membershipId,
     p_day: body.date,
     p_edits: edits,
     p_selections: selections,
+    p_cue_edits: cueEdits,
   });
   if (response.error) return rpcError(response.error);
   if (!response.data || typeof response.data !== "object" || Array.isArray(response.data)) {
