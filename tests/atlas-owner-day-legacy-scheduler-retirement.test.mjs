@@ -20,6 +20,8 @@ test("legacy v1 scheduler delegates to the canonical v2 implementation instead o
   assert.match(v1Body, /owner_build_worker_day_schedule_v2/);
   assert.doesNotMatch(v1Body, /set\s+due_date\s*=\s*p_day/i);
   assert.doesNotMatch(v1Body, /update\s+atlas\.tasks/i);
+  assert.match(v1Body, /revoke all on function atlas\.owner_build_worker_day_schedule_v1\(uuid,uuid,date,jsonb\) from public,anon,authenticated,service_role/);
+  assert.doesNotMatch(v1Body, /grant execute on function atlas\.owner_build_worker_day_schedule_v1/);
 });
 
 test("legacy authenticated API now uses the same Owner-only boundary as current Day editing", () => {
@@ -27,6 +29,7 @@ test("legacy authenticated API now uses the same Owner-only boundary as current 
   assert.match(migration, /fm\.role='owner'/);
   assert.doesNotMatch(migration, /fm\.role in \('owner','manager'\)/);
   assert.match(migration, /owner_build_worker_day_schedule_v2/);
+  assert.match(migration, /revoke all on function atlas\.owner_build_worker_day_schedule_api_v1\(uuid,uuid,date,jsonb\) from public,anon,service_role/);
   assert.match(migration, /grant execute on function atlas\.owner_build_worker_day_schedule_api_v1\(uuid,uuid,date,jsonb\) to authenticated/);
 });
 
