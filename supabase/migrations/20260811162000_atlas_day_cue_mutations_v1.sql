@@ -32,9 +32,13 @@ begin
   if auth.uid() is null then
     raise exception 'Authenticated user required.' using errcode='42501';
   end if;
-  select fm.organization_id into v_org_id
-  from atlas.farm_memberships fm
-  where fm.farm_id=p_farm_id and fm.active=true and fm.role='owner' and fm.user_id=auth.uid();
+  select farm.organization_id into v_org_id
+  from atlas.farms farm
+  where farm.id=p_farm_id
+    and exists (
+      select 1 from atlas.farm_memberships fm
+      where fm.farm_id=farm.id and fm.active=true and fm.role='owner' and fm.user_id=auth.uid()
+    );
   if v_org_id is null then
     raise exception 'Owner farm membership required.' using errcode='42501';
   end if;
