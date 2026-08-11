@@ -11,7 +11,6 @@ import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
 import WeekDayNavigation from "./WeekDayNavigation";
 import HomeTodayCompletePatch from "./HomeTodayCompletePatch";
-import HomeQuietTaskHeroPatch from "./HomeQuietTaskHeroPatch";
 import WorkerVocabularyCleanupPatch from "./WorkerVocabularyCleanupPatch";
 import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
 import OwnerHomeLinkPatch from "./OwnerHomeLinkPatch";
@@ -29,7 +28,6 @@ import DayConsequenceTimelinePatch from "./DayConsequenceTimelinePatch";
 import AtlasFarmConditionsHomePatch from "./AtlasFarmConditionsHomePatch";
 import AtlasSkyLedgerMaintainer from "./AtlasSkyLedgerMaintainer";
 import OwnerOperatorMode from "./OwnerOperatorMode";
-import FutureDayProjectionBridge from "./FutureDayProjectionBridge";
 import "./globals.css";
 import "./atlas-primitives.css";
 import "./atlas-trail.css";
@@ -166,7 +164,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <Suspense fallback={null}><AtlasWorkAlongsideOverlay /></Suspense>
         <WeekDayNavigation />
         <HomeTodayCompletePatch />
-        <HomeQuietTaskHeroPatch />
         <WorkerVocabularyCleanupPatch />
         <TaskProgressExactDayPatch />
         <OwnerHomeLinkPatch />
@@ -182,7 +179,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <TaskSetAsideDayPatch />
         <DayConsequenceTimelinePatch />
         <AtlasFarmConditionsHomePatch />
-        <Suspense fallback={null}><FutureDayProjectionBridge /></Suspense>
         <Suspense fallback={null}><OwnerDayPlanGate /></Suspense>
         {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}
