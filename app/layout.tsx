@@ -70,7 +70,6 @@ import "./home-cover-v1.css";
 import "./weed-card-grazer.css";
 import "./task-day-set-aside.css";
 import "./task-structured-unfinished.css";
-import "./day-consequence-timeline.css";
 import "./day-overdue-quiet.css";
 import "./owner-operator-mode.css";
 import "./bell.css";
@@ -85,7 +84,6 @@ import "./day-single-scroll.css";
 import "./farm-conditions-home.css";
 import "./farm-conditions-merged.css";
 import "./day-node-clean.css";
-import "./future-day-projection.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
