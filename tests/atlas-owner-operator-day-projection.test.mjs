@@ -6,16 +6,18 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Owner worker-day planning resolves the selected Farm Hand through one guarded plan reader", () => {
+test("Owner worker-day planning resolves one Farm Hand directly or through an explicit worker lens", () => {
   const route = read("app/api/atlas/worker-day-plan/route.ts");
   const reader = read("lib/atlas/worker-day-plan-server.ts");
 
   assert.match(route, /getAtlasSession/);
   assert.match(route, /readOwnerWorkerDayPlan/);
   assert.match(reader, /readAtlasOwnerOperatorContext/);
-  assert.match(reader, /effectiveOperatorMembershipId/);
-  assert.match(reader, /effective\.farmRole !== "farm_hand"/);
-  assert.match(reader, /owner_worker_day_plan_api_v1/);
+  assert.match(reader, /resolveOwnerWorkerDayPlanningTarget/);
+  assert.match(reader, /source: "operator_lens"/);
+  assert.match(reader, /source: "owner_direct"/);
+  assert.match(reader, /workers\.length !== 1/);
+  assert.match(reader, /owner_worker_day_plan_choreographed_api_v1/);
   assert.match(reader, /realWork/);
   assert.match(reader, /automaticWork/);
   assert.match(reader, /suggestions/);
@@ -23,43 +25,51 @@ test("Owner worker-day planning resolves the selected Farm Hand through one guar
   assert.doesNotMatch(reader, /23e98e5e-16ca-40d8-872c-c77e06baa167/);
 });
 
-test("Owner schedule ideas stay behind the Plan today gate until explicitly opened", () => {
+test("Owner Day Edit is a deliberate purple choreography mode instead of injected Possible Work cards", () => {
   const component = read("components/atlas/owner-day-schedule-builder.tsx");
   const gate = read("components/atlas/owner-day-plan-gate.tsx");
   const daySummary = read("components/atlas/day-trail-summary.tsx");
   const layout = read("app/layout.tsx");
   const postRoute = read("app/api/atlas/owner-day-schedule/route.ts");
+  const editRoute = read("app/api/atlas/owner-day-edit/route.ts");
 
   assert.match(component, /\/api\/atlas\/worker-day-plan\?date=/);
+  assert.match(component, /\/api\/atlas\/day-choreography\?date=/);
   assert.match(component, /\/api\/atlas\/owner-day-schedule/);
-  assert.match(component, /x-atlas-intent/);
+  assert.match(component, /\/api\/atlas\/owner-day-edit/);
   assert.match(component, /owner-day-schedule-v1/);
-  assert.match(component, /createPortal/);
-  assert.match(component, /\.atlas-day-mixed-timeline/);
-  assert.match(component, /data-owner-schedule-candidate/);
-  assert.match(component, /CandidateRow/);
-  assert.match(component, /plan\?\.realWork/);
-  assert.match(component, /workOrderNumber/);
-  assert.match(component, /dayWindow/);
-  assert.match(component, /data-owner-day-schedule-commit/);
-  assert.match(component, /Commit schedule/);
-  assert.match(component, /Purple cards are suggestions/);
+  assert.match(component, /owner-day-edit-v1/);
+  assert.match(component, /data-owner-day-edit-board/);
+  assert.match(component, /Work/);
+  assert.match(component, /Cues/);
+  assert.match(component, /Both/);
+  assert.match(component, /Return to Atlas/);
+  assert.match(component, /draggable/);
+  assert.match(component, /Commit \$\{dirtyCount\} change/);
   assert.match(component, /aria-pressed/);
   assert.match(component, /window\.location\.reload/);
+  assert.doesNotMatch(component, /createPortal/);
+  assert.doesNotMatch(component, /MutationObserver/);
 
-  assert.match(gate, /Plan today/);
+  assert.match(gate, /Edit today/);
   assert.match(gate, /setOpen\(true\)/);
   assert.match(gate, /setOpen\(false\)/);
   assert.match(gate, /open \? <OwnerDayScheduleBuilder \/> : null/);
-  assert.match(gate, /Nothing enters the working day until you commit it/);
+  assert.match(gate, /working Day changes only when you commit it/);
   assert.doesNotMatch(daySummary, /OwnerDayScheduleBuilder/);
   assert.match(layout, /OwnerDayPlanGate/);
 
   assert.match(postRoute, /owner_build_worker_day_schedule_api_v2/);
-  assert.match(postRoute, /effective\.farmRole !== "farm_hand"/);
+  assert.match(postRoute, /resolveOwnerWorkerDayPlanningTarget/);
   assert.match(postRoute, /owner-day-schedule-v1/);
   assert.match(postRoute, /"project_pull", "floating_task"/);
   assert.doesNotMatch(postRoute, /"project_pull", "floating_task", "queue"/);
+
+  assert.match(editRoute, /owner_apply_worker_day_edits_api_v1/);
+  assert.match(editRoute, /return_to_atlas/);
+  assert.match(editRoute, /rewindow/);
+  assert.match(editRoute, /reschedule/);
+  assert.match(editRoute, /reorder/);
 });
 
 test("legacy day-planning endpoints are compatibility shells around the canonical resolver", () => {
@@ -79,7 +89,7 @@ test("the duplicate Possible Work bridge is retired instead of mounted as a no-o
   assert.doesNotMatch(layout, /FutureDayProjectionBridge/);
 });
 
-test("Owner approval applies only to discretionary purple work; Weed and Mow are automatic", () => {
+test("Owner approval applies only to discretionary purple work; Weed and Mow remain automatic", () => {
   const planMigration = read("supabase/migrations/20260809203000_owner_worker_day_plan_kernel_v1.sql");
   const commitMigration = read("supabase/migrations/20260809203100_owner_worker_day_schedule_commit_v2.sql");
 
