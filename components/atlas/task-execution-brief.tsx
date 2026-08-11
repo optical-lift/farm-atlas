@@ -23,6 +23,25 @@ type TaskMoveResponse = {
   assembly?: TaskMoveAssembly;
 };
 
+function Instructions({ how, details }: { how: string[]; details: string | null }) {
+  if (!how.length && !details) return null;
+  return (
+    <section className="atlas-human-task-instructions" aria-label="Instructions">
+      <style>{`
+        .atlas-human-task-instructions { margin:0 28px 21px; padding:14px 0 0; border-top:1px solid rgba(66,65,82,.11); color:#3d3e50; }
+        .atlas-human-task-instructions h2 { margin:0 0 9px; color:#777ca0; font-size:.68rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
+        .atlas-human-task-instructions ul { display:grid; gap:7px; margin:0; padding:0 0 0 18px; }
+        .atlas-human-task-instructions li { padding-left:1px; font-size:.9rem; font-weight:690; line-height:1.42; }
+        .atlas-human-task-instructions__note { margin:10px 0 0; padding:9px 11px; border-left:2px solid rgba(113,116,153,.38); background:#faf9f5; color:#5f606b; white-space:pre-line; font-size:.82rem; line-height:1.46; }
+        @media (max-width:560px) { .atlas-human-task-instructions { margin:0 21px 18px; } }
+      `}</style>
+      <h2>Instructions</h2>
+      {how.length ? <ul>{how.map((line, index) => <li key={`${line}-${index}`}>{line}</li>)}</ul> : null}
+      {details ? <p className="atlas-human-task-instructions__note">{details}</p> : null}
+    </section>
+  );
+}
+
 export default function TaskExecutionBrief({
   task,
   assembly,
@@ -67,7 +86,7 @@ export default function TaskExecutionBrief({
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        // Keep the compatibility execution brief visible if canonical resolution is unavailable.
+        // Compatibility rendering below remains available if canonical resolution fails.
       });
 
     return () => controller.abort();
@@ -90,100 +109,41 @@ export default function TaskExecutionBrief({
 
   if (resolvedAssembly) {
     return (
-      <section className="atlas-task-execution-brief atlas-task-execution-brief--task-move" aria-label="Task instructions">
-        <style>{`
-          .atlas-task-execution-brief--task-move { margin:0; background:#fff; color:#2d2e44; }
-          .atlas-task-execution-brief__support { margin:0 28px; padding:20px 0 24px; border-top:1px solid rgba(66,65,82,.12); }
-          .atlas-task-execution-brief__support-title { margin:0 0 13px; color:#858bc0; font-size:.72rem; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
-          .atlas-task-execution-brief__support-grid { display:grid; gap:12px; margin:0; }
-          .atlas-task-execution-brief__support-row { display:grid; grid-template-columns:92px minmax(0,1fr); gap:14px; }
-          .atlas-task-execution-brief__support-row dt { margin:2px 0 0; color:#858bc0; font-size:.7rem; font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
-          .atlas-task-execution-brief__support-row dd { margin:0; color:#3d3e50; font-size:.94rem; font-weight:690; line-height:1.42; }
-          .atlas-task-execution-brief__support-row dd p { margin:0; }
-          .atlas-task-execution-brief__support-row dd p + p { margin-top:5px; }
-          .atlas-task-execution-brief__support details { margin-top:14px; border:1px solid rgba(66,65,82,.12); border-radius:14px; background:#fbfaf6; }
-          .atlas-task-execution-brief__support summary { display:flex; justify-content:space-between; gap:12px; padding:11px 13px; cursor:pointer; color:#555667; font-size:.82rem; font-weight:850; list-style:none; }
-          .atlas-task-execution-brief__support summary::-webkit-details-marker { display:none; }
-          .atlas-task-execution-brief__support-details { margin:0; padding:0 13px 13px; white-space:pre-line; color:#5f606b; font-size:.86rem; line-height:1.48; }
-          @media (max-width:560px) {
-            .atlas-task-execution-brief__support { margin:0 21px; }
-            .atlas-task-execution-brief__support-row { grid-template-columns:74px minmax(0,1fr); gap:10px; }
-          }
-        `}</style>
+      <section className="atlas-task-execution-brief atlas-task-execution-brief--human" aria-label="Task instructions">
         <TaskMoveSpine assembly={resolvedAssembly} />
-        <section className="atlas-task-execution-brief__support" aria-label="How to complete this move">
-          <h2 className="atlas-task-execution-brief__support-title">Instructions</h2>
-          <dl className="atlas-task-execution-brief__support-grid">
-            {resolvedHow.length ? (
-              <div className="atlas-task-execution-brief__support-row">
-                <dt>How</dt>
-                <dd>{resolvedHow.map((line) => <p key={line}>{line}</p>)}</dd>
-              </div>
-            ) : null}
-            <div className="atlas-task-execution-brief__support-row">
-              <dt>Done when</dt>
-              <dd>{resolvedDone}</dd>
-            </div>
-          </dl>
-          {resolvedDetails ? (
-            <details>
-              <summary><span>More instructions</span><span aria-hidden="true">⌄</span></summary>
-              <p className="atlas-task-execution-brief__support-details">{resolvedDetails}</p>
-            </details>
-          ) : null}
-        </section>
+        <Instructions how={resolvedHow} details={resolvedDetails} />
       </section>
     );
   }
 
+  // Compatibility state while the canonical assembly is loading/unavailable. It
+  // uses the same human grammar instead of exposing a second visual architecture.
   return (
-    <section className="atlas-task-execution-brief" aria-label="Task instructions">
+    <section className="atlas-task-execution-brief atlas-task-execution-brief--human" aria-label="Task instructions">
       <style>{`
-        .atlas-task-execution-brief { margin: 0; padding: 28px 30px 26px; background: #fff; color: #2d2e44; }
-        .atlas-task-execution-brief__head { padding-bottom: 22px; border-bottom: 1px solid rgba(66,65,82,.14); }
-        .atlas-task-execution-brief__label { display:block; margin:0 0 7px; color:#858bc0; font-size:.76rem; font-weight:900; letter-spacing:.16em; text-transform:uppercase; }
-        .atlas-task-execution-brief h1 { margin:0; max-width:18ch; font-size:clamp(2rem,7vw,3.4rem); line-height:.98; letter-spacing:-.045em; }
-        .atlas-task-execution-brief__due { display:inline-block; margin-top:14px; padding:7px 11px; border:1px solid rgba(112,113,151,.18); border-radius:999px; background:#f7f7fb; color:#4f5065; font-size:.86rem; font-weight:800; }
-        .atlas-task-execution-brief__rows { display:grid; margin:0; }
-        .atlas-task-execution-brief__row { display:grid; grid-template-columns:92px minmax(0,1fr); gap:14px; padding:18px 0; border-bottom:1px solid rgba(66,65,82,.11); }
-        .atlas-task-execution-brief dt { margin:2px 0 0; color:#858bc0; font-size:.72rem; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
-        .atlas-task-execution-brief dd { margin:0; color:#333448; font-size:1.03rem; font-weight:760; line-height:1.38; }
-        .atlas-task-execution-brief dd p { margin:0; }
-        .atlas-task-execution-brief dd p + p { margin-top:5px; }
-        .atlas-task-execution-brief details { margin-top:16px; border:1px solid rgba(66,65,82,.12); border-radius:15px; background:#fbfaf6; }
-        .atlas-task-execution-brief summary { display:flex; justify-content:space-between; gap:12px; padding:12px 14px; cursor:pointer; color:#555667; font-size:.86rem; font-weight:850; list-style:none; }
-        .atlas-task-execution-brief summary::-webkit-details-marker { display:none; }
-        .atlas-task-execution-brief__details { margin:0; padding:0 14px 14px; white-space:pre-line; color:#5f606b; font-size:.9rem; line-height:1.48; }
-        @media (max-width:560px) {
-          .atlas-task-execution-brief { padding:24px 22px 22px; }
-          .atlas-task-execution-brief__row { grid-template-columns:78px minmax(0,1fr); gap:10px; }
-        }
+        .atlas-human-task-fallback { margin:0; padding:23px 28px 19px; background:#fff; color:#303145; }
+        .atlas-human-task-fallback__place { margin:0 0 5px; color:#777ca0; font-size:.7rem; font-weight:900; letter-spacing:.11em; text-transform:uppercase; }
+        .atlas-human-task-fallback h1 { margin:0; font-size:clamp(1.8rem,6vw,2.65rem); line-height:1.02; letter-spacing:-.035em; }
+        .atlas-human-task-fallback__due { display:block; margin-top:8px; color:#6b6d7b; font-size:.72rem; font-weight:780; }
+        .atlas-human-task-fallback__trail { position:relative; display:grid; gap:18px; margin-top:21px; padding-left:26px; }
+        .atlas-human-task-fallback__trail::before { content:""; position:absolute; left:6px; top:9px; bottom:9px; width:1px; background:rgba(86,89,112,.27); }
+        .atlas-human-task-fallback__step { position:relative; }
+        .atlas-human-task-fallback__step::before { content:""; position:absolute; left:-26px; top:3px; width:13px; height:13px; border:2px solid #6d7088; border-radius:50%; background:#6d7088; box-shadow:0 0 0 4px #fff; }
+        .atlas-human-task-fallback__step:last-child::before { background:#fff; }
+        .atlas-human-task-fallback__step small { display:block; margin-bottom:3px; color:#898ba0; font-size:.64rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
+        .atlas-human-task-fallback__step strong,.atlas-human-task-fallback__step span { display:block; font-size:.91rem; line-height:1.4; }
+        @media (max-width:560px) { .atlas-human-task-fallback { padding:21px 21px 17px; } }
       `}</style>
-      <header className="atlas-task-execution-brief__head">
-        <span className="atlas-task-execution-brief__label">Do</span>
-        <h1>{resolvedDo}</h1>
-        {resolvedDue ? <span className="atlas-task-execution-brief__due">{resolvedDue}</span> : null}
-      </header>
-      <dl className="atlas-task-execution-brief__rows">
-        <div className="atlas-task-execution-brief__row">
-          <dt>Place</dt>
-          <dd>{resolvedPlace}</dd>
+      <section className="atlas-human-task-fallback">
+        <p className="atlas-human-task-fallback__place">{resolvedPlace}</p>
+        <h1>{task?.title || resolvedDo}</h1>
+        {resolvedDue ? <span className="atlas-human-task-fallback__due">{resolvedDue}</span> : null}
+        <div className="atlas-human-task-fallback__trail">
+          <div className="atlas-human-task-fallback__step"><small>Do this</small><strong>{resolvedDo}</strong></div>
+          <div className="atlas-human-task-fallback__step"><small>Finished</small><span>{resolvedDone}</span></div>
         </div>
-        <div className="atlas-task-execution-brief__row">
-          <dt>How</dt>
-          <dd>{resolvedHow.map((line) => <p key={line}>{line}</p>)}</dd>
-        </div>
-        <div className="atlas-task-execution-brief__row">
-          <dt>Done when</dt>
-          <dd>{resolvedDone}</dd>
-        </div>
-      </dl>
-      {resolvedDetails ? (
-        <details>
-          <summary><span>More instructions</span><span aria-hidden="true">⌄</span></summary>
-          <p className="atlas-task-execution-brief__details">{resolvedDetails}</p>
-        </details>
-      ) : null}
+      </section>
+      <Instructions how={resolvedHow} details={resolvedDetails} />
     </section>
   );
 }
