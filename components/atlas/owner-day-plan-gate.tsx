@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
+import OwnerDayCueEditor from "@/components/atlas/owner-day-cue-editor";
 import OwnerDayScheduleBuilder from "@/components/atlas/owner-day-schedule-builder";
 
 type PlanProbe = {
@@ -157,7 +158,12 @@ export default function OwnerDayPlanGate() {
           </div>
         )}
       </div>
-      {open ? <OwnerDayScheduleBuilder /> : null}
+      {open ? (
+        <>
+          <OwnerDayScheduleBuilder />
+          <OwnerDayCueEditor />
+        </>
+      ) : null}
     </>,
     host,
     "owner-day-plan-gate",
