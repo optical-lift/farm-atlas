@@ -571,6 +571,19 @@ $function$;
 revoke all on function atlas.worker_resolve_day_cue_api_v1(uuid,jsonb) from public,anon;
 grant execute on function atlas.worker_resolve_day_cue_api_v1(uuid,jsonb) to authenticated,service_role;
 
+-- Keep the authenticated RPC registry synchronized with the expanded typed cue
+-- contract. The external function signature and authorization boundary do not
+-- change; only the bounded set of canonical result contracts expands.
+update atlas.authenticated_rpc_registry
+set evidence=coalesce(evidence,'{}'::jsonb)
+      || jsonb_build_object(
+        'purpose','Resolve delivered Day cues and apply only typed canonical result contracts',
+        'boundary','assigned worker for farm-state result contracts; ordinary cue access remains role-scoped',
+        'contracts','pot-up readiness, field-transplant readiness, and departure requirement confirmation'
+      ),
+    reviewed_at=now()
+where signature='atlas.worker_resolve_day_cue_api_v1(uuid, jsonb)';
+
 -- Backfill only still-open generated readiness sources. They remain provenance;
 -- the farm hand receives a future/current first-open observation cue instead.
 update atlas.tasks task
