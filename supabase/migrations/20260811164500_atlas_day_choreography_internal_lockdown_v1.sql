@@ -7,3 +7,7 @@ revoke all on function atlas.owner_worker_day_plan_choreographed_v1(uuid,uuid,da
 
 grant execute on function atlas.owner_worker_day_plan_choreographed_v1(uuid,uuid,date)
   to service_role;
+
+-- A service-only helper does not belong in the authenticated RPC registry.
+delete from atlas.authenticated_rpc_registry
+where signature='atlas.owner_worker_day_plan_choreographed_v1(uuid, uuid, date)';
