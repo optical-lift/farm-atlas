@@ -51,6 +51,16 @@ function returnDestination(fallback: string) {
   return value && value.startsWith("/") && !value.startsWith("//") ? value : fallback;
 }
 
+function completeTaskExit(taskId: string, fallback: string) {
+  const returnTo = returnDestination(fallback);
+  const event = new CustomEvent("atlas:task-completed", {
+    cancelable: true,
+    detail: { taskId, returnTo },
+  });
+  window.dispatchEvent(event);
+  if (!event.defaultPrevented) window.location.assign(returnTo);
+}
+
 function DefaultResultInstrument({
   busy,
   doneBusy,
@@ -197,7 +207,11 @@ export default function AssignedTaskExecutionShell({
           ...additionalPayload,
         },
       });
-      if (outcome === "done" || outcome === "not_relevant" || outcome === "changed_plan") {
+      if (outcome === "done") {
+        completeTaskExit(task.task_id, assignee.listPath);
+        return;
+      }
+      if (outcome === "not_relevant" || outcome === "changed_plan") {
         window.location.assign(returnDestination(assignee.listPath));
         return;
       }
