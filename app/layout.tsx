@@ -19,7 +19,6 @@ import OwnerTaskReturnPatch from "./OwnerTaskReturnPatch";
 import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
 import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
 import AnnaPaidScheduleHomePatch from "./AnnaPaidScheduleHomePatch";
-import TaskResultAnchorPatch from "./TaskResultAnchorPatch";
 import ProjectTaskDestinationGuard from "./ProjectTaskDestinationGuard";
 import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
 import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
@@ -172,7 +171,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <SafeBedCropAccordionPatch />
         <AttachedTaskHistoryPatch />
         <AnnaPaidScheduleHomePatch />
-        <TaskResultAnchorPatch />
         <ProjectTaskDestinationGuard />
         <UniversalCollectionIdentity />
         <DayTaskTitleLinkPatch />
