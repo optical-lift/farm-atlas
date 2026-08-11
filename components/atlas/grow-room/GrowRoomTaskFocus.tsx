@@ -13,6 +13,14 @@ type GrowRoomVisitTask = {
   workOrder: string;
 };
 
+type GrowRoomExecutionDetail = {
+  do: string | null;
+  place: string | null;
+  how: string[];
+  doneWhen: string | null;
+  note: string | null;
+};
+
 type GrowRoomRequest = {
   assignmentId: string;
   taskId: string;
@@ -30,6 +38,7 @@ type GrowRoomRequest = {
   displaySubject: string;
   displayDetail: string | null;
   metadata: Record<string, unknown>;
+  execution?: GrowRoomExecutionDetail;
 };
 
 type GrowRoomRound = {
@@ -82,7 +91,7 @@ function requestActionLabel(request: GrowRoomRequest) {
   if (request.requestKind === "pot_up") return "Pot up plants";
   if (request.requestKind === "hardening") return "Advance hardening";
   if (request.requestKind === "readiness") return "Check transplant readiness";
-  return (request.displayAction || "Complete action").replace(/[.!]+$/, "");
+  return (request.displayAction || request.execution?.do || "Complete action").replace(/[.!]+$/, "");
 }
 
 function requestSubjectLabel(request: GrowRoomRequest) {
@@ -159,6 +168,10 @@ export default function GrowRoomTaskFocus({
   const resolvedReturnTo = returnTo || (round?.visitTask?.dueDate
     ? `/day?date=${encodeURIComponent(round.visitTask.dueDate)}`
     : "/");
+  const growRoomReturnHref = `/task-focus/${encodeURIComponent(requestedVisitTaskId)}?returnTo=${encodeURIComponent(resolvedReturnTo)}`;
+  const activeRequestHref = activeRequest
+    ? `/task-focus/${encodeURIComponent(activeRequest.taskId)}?returnTo=${encodeURIComponent(growRoomReturnHref)}`
+    : null;
 
   function resetLogForm() {
     setLiveCount("");
@@ -327,6 +340,31 @@ export default function GrowRoomTaskFocus({
                   <h1>{requestActionLabel(activeRequest)}</h1>
                   <p className={styles.detail}>{requestSubjectLabel(activeRequest)}</p>
                   {activeRequest.displayDetail ? <p className={styles.detail}>{activeRequest.displayDetail}</p> : null}
+
+                  {activeRequest.execution && (
+                    activeRequest.execution.place
+                    || activeRequest.execution.how.length
+                    || activeRequest.execution.doneWhen
+                    || activeRequest.execution.note
+                  ) ? (
+                    <section className={styles.instructions} aria-label="Step instructions">
+                      {activeRequest.execution.place ? (
+                        <div className={styles.instructionRow}><small>Place</small><span>{activeRequest.execution.place}</span></div>
+                      ) : null}
+                      {activeRequest.execution.how.length ? (
+                        <div className={styles.instructionRow}>
+                          <small>How</small>
+                          <div>{activeRequest.execution.how.map((line) => <p key={line}>{line}</p>)}</div>
+                        </div>
+                      ) : null}
+                      {activeRequest.execution.doneWhen ? (
+                        <div className={styles.instructionRow}><small>Done when</small><span>{activeRequest.execution.doneWhen}</span></div>
+                      ) : null}
+                      {activeRequest.execution.note ? <p className={styles.moreDetail}>{activeRequest.execution.note}</p> : null}
+                    </section>
+                  ) : null}
+
+                  {activeRequestHref ? <Link className={styles.fullTaskLink} href={activeRequestHref}>Open full step →</Link> : null}
 
                   {activeRequest.resolvedAt ? (
                     <div className={styles.loggedState}>
