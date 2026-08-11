@@ -104,19 +104,22 @@ export function atlasWorkOrderNumber(task: AtlasTaskCard) {
   return atlasWorkOrderAnchors[anchor].order + Math.min(Math.max(dayOrder, 0), 999);
 }
 
-export function atlasWorkOrderLabel(task: AtlasTaskCard) {
+function plannerWorkOrderLabel(task: AtlasTaskCard) {
   const explicit = atlasMetaString(task, "day_work_order_label") || atlasMetaString(task, "work_order_label") || atlasMetaString(task, "work_order_bucket");
   if (explicit) return explicit;
   return atlasWorkOrderAnchors[atlasWorkOrderAnchorForTask(task)].label;
 }
 
 /**
- * Work-order labels can be useful to the planner while still being noise to the
- * worker. The Day surface asks for this presentation-safe label instead of
- * rendering planner vocabulary and hiding it later with a DOM patch.
+ * Ordering labels belong to the planner. Callers that render the label get a
+ * worker-safe value directly, so no later DOM cleanup is required.
  */
+export function atlasWorkOrderLabel(task: AtlasTaskCard) {
+  return atlasWorkerDisplayText(plannerWorkOrderLabel(task));
+}
+
 export function atlasWorkerWorkOrderLabel(task: AtlasTaskCard) {
-  return atlasWorkerDisplayText(atlasWorkOrderLabel(task));
+  return atlasWorkOrderLabel(task);
 }
 
 export function atlasWorkOrderSortValue(task: AtlasTaskCard) {
