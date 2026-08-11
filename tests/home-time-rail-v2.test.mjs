@@ -12,13 +12,16 @@ const seasons = read("lib/atlas/home-farm-seasons.ts");
 const css = read("components/atlas/home/universal-home-v2.module.css");
 const build = `${page}\n${home}\n${seasons}\n${css}`;
 
-test("Home keeps the compact day rail for Owner while farm-hand conveyor may hide it", () => {
+test("Home keeps the compact day rail for Owner even through a farm-hand operator lens", () => {
   assert.match(page, /AtlasUniversalHome/);
   assert.match(home, /HomeTimeRail/);
   assert.match(home, /Previous week/);
   assert.match(home, /This week/);
   assert.match(home, /Month/);
-  assert.match(home, /farmHandMode \? null : <HomeTimeRail/);
+  assert.match(page, /farmHandMode=\{renderedFarmHandMode\}/);
+  assert.match(page, /hideTimeNavigation=\{farmHandMode\}/);
+  assert.match(home, /hideTimeNavigation \? null : <HomeTimeRail/);
+  assert.doesNotMatch(home, /farmHandMode \? null : <HomeTimeRail/);
   assert.doesNotMatch(home, /UniversalOverviewBoxes|atlas-home-overview-card/);
   assert.doesNotMatch(home, />The week</);
 });
