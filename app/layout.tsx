@@ -11,8 +11,6 @@ import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
 import WorkerVocabularyCleanupPatch from "./WorkerVocabularyCleanupPatch";
 import TaskProgressExactDayPatch from "./TaskProgressExactDayPatch";
-import SafeBedCropAccordionPatch from "./SafeBedCropAccordionPatch";
-import AttachedTaskHistoryPatch from "./AttachedTaskHistoryPatch";
 import UniversalCollectionIdentity from "./UniversalCollectionIdentity";
 import DayTaskTitleLinkPatch from "./DayTaskTitleLinkPatch";
 import TaskSetAsideDayPatch from "./TaskSetAsideDayPatch";
@@ -156,8 +154,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <Suspense fallback={null}><AtlasWorkAlongsideOverlay /></Suspense>
         <WorkerVocabularyCleanupPatch />
         <TaskProgressExactDayPatch />
-        <SafeBedCropAccordionPatch />
-        <AttachedTaskHistoryPatch />
         <UniversalCollectionIdentity />
         <DayTaskTitleLinkPatch />
         <TaskSetAsideDayPatch />
