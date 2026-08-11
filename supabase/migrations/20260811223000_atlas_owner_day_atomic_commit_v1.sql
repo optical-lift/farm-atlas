@@ -99,22 +99,45 @@ $function$;
 revoke all on function atlas.owner_commit_worker_day_choreography_api_v1(uuid,uuid,date,jsonb,jsonb) from public,anon;
 grant execute on function atlas.owner_commit_worker_day_choreography_api_v1(uuid,uuid,date,jsonb,jsonb) to authenticated,service_role;
 
-insert into atlas.authenticated_rpc_registry(signature,write_kind,route_dependencies,protection,evidence,reviewed_at)
+insert into atlas.authenticated_rpc_registry(
+  signature,
+  classification,
+  confidence,
+  review_status,
+  authenticated_execute_expected,
+  security_definer_expected,
+  service_execute_expected,
+  caller_count,
+  policy_reference_count,
+  evidence,
+  reviewed_at
+)
 values(
   'atlas.owner_commit_worker_day_choreography_api_v1(uuid, uuid, date, jsonb, jsonb)',
-  'mutation',
-  array['/api/atlas/owner-day-commit'],
-  'owner farm membership + active Farm Hand target + one database transaction',
+  'owner_admin_endpoint',
+  'verified',
+  'active',
+  true,
+  true,
+  true,
+  1,
+  0,
   jsonb_build_object(
     'purpose','Commit the Owner Day purple draft atomically across placement edits and newly approved work',
     'boundary','owner-only; child edit/schedule functions retain their own authorization checks',
-    'rollback','any failed edit or selection rolls back the entire Day commit'
+    'rollback','any failed edit or selection rolls back the entire Day commit',
+    'route','/api/atlas/owner-day-commit'
   ),
   now()
 )
 on conflict (signature) do update
-set write_kind=excluded.write_kind,
-    route_dependencies=excluded.route_dependencies,
-    protection=excluded.protection,
+set classification=excluded.classification,
+    confidence=excluded.confidence,
+    review_status=excluded.review_status,
+    authenticated_execute_expected=excluded.authenticated_execute_expected,
+    security_definer_expected=excluded.security_definer_expected,
+    service_execute_expected=excluded.service_execute_expected,
+    caller_count=excluded.caller_count,
+    policy_reference_count=excluded.policy_reference_count,
     evidence=excluded.evidence,
     reviewed_at=excluded.reviewed_at;
