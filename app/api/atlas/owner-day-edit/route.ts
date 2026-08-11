@@ -14,7 +14,7 @@ type DayWindow = "morning" | "afternoon" | "evening";
 type DayEdit = {
   kind: DayEditKind;
   taskId: string;
-  serviceDate?: string;
+  serviceDate: string;
   dayWindow?: DayWindow;
   sortOrder?: number;
 };
@@ -42,19 +42,16 @@ function normalizeEdits(value: unknown): DayEdit[] | null {
     const kind = row.kind;
     const taskId = row.taskId;
     if (!["place","rewindow","reschedule","reorder","return_to_atlas"].includes(String(kind)) || !validUuid(taskId)) return null;
-    if (kind === "return_to_atlas") {
-      result.push({ kind, taskId } as DayEdit);
-      continue;
-    }
     if (!validDateIso(row.serviceDate)) return null;
-    if (!["morning","afternoon","evening"].includes(String(row.dayWindow))) return null;
+    const dayWindow = ["morning","afternoon","evening"].includes(String(row.dayWindow)) ? row.dayWindow as DayWindow : undefined;
     const sortOrder = row.sortOrder === undefined ? undefined : Number(row.sortOrder);
     if (sortOrder !== undefined && !Number.isFinite(sortOrder)) return null;
+    if (kind !== "return_to_atlas" && !dayWindow) return null;
     result.push({
       kind: kind as DayEditKind,
       taskId,
       serviceDate: row.serviceDate,
-      dayWindow: row.dayWindow as DayWindow,
+      ...(dayWindow ? { dayWindow } : {}),
       ...(sortOrder === undefined ? {} : { sortOrder }),
     });
   }
