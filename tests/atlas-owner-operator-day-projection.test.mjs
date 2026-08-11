@@ -54,7 +54,9 @@ test("Owner Day Edit is a deliberate purple choreography mode instead of injecte
   assert.match(gate, /Edit today/);
   assert.match(gate, /setOpen\(true\)/);
   assert.match(gate, /setOpen\(false\)/);
-  assert.match(gate, /open \? <OwnerDayScheduleBuilder \/> : null/);
+  assert.match(gate, /open \? \(/);
+  assert.match(gate, /<OwnerDayScheduleBuilder \/>/);
+  assert.match(gate, /<OwnerDayCueEditor \/>/);
   assert.match(gate, /working Day changes only when you commit it/);
   assert.doesNotMatch(daySummary, /OwnerDayScheduleBuilder/);
   assert.match(layout, /OwnerDayPlanGate/);
