@@ -6,6 +6,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 const exists = (path) => existsSync(new URL(`../${path}`, import.meta.url));
 
 const brief = read("components/atlas/task-execution-brief.tsx");
+const move = read("components/atlas/task-move-spine.tsx");
 const results = read("components/atlas/task-primary-result-controls.tsx");
 const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 const checklist = read("components/atlas/execution-checklist-task-detail.tsx");
@@ -13,10 +14,16 @@ const mowing = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
 const display = read("lib/atlas/task-display.ts");
 const migration = read("supabase/migrations/20260810144000_atlas_task_execution_contract_v1.sql");
 
-test("assigned work has one visible do-place-how-done contract", () => {
-  for (const label of ["Do", "Place", "How", "Done when", "More instructions"]) {
-    assert.ok(brief.includes(label), `shared execution brief keeps ${label}`);
-  }
+test("assigned work has one visible human task trail plus instructions and results", () => {
+  assert.match(brief, /TaskMoveSpine/);
+  assert.match(brief, /function Instructions/);
+  assert.match(brief, />Instructions</);
+  assert.match(brief, />Do this</);
+  assert.match(brief, />Finished</);
+  assert.match(move, /atlas-human-task-trail__place/);
+  assert.match(move, />Right now</);
+  assert.match(move, />Do this</);
+  assert.match(move, /"Target held" : "Finished"/);
   assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
   assert.doesNotMatch(shell, /TaskDominionTrail/);
   assert.doesNotMatch(shell, /taskConditionRailModel/);
