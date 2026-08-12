@@ -216,6 +216,8 @@ export function atlasDayTaskCues(task: AtlasTaskCard) {
   // Keeping it as a cue on the mowing card means it travels whenever mowing moves.
   if (canonicalActionKey(task) === "mow") add("First: pick up sticks + move hoses");
 
+  // Atlas may retain duration estimates and workload classes for internal capacity math,
+  // but worker-facing cards should not expose the internal "light" label.
   const equipment = text(metadata.equipment_label) || text(metadata.equipment_group);
   if (equipment) add(titleCase(equipment));
 
