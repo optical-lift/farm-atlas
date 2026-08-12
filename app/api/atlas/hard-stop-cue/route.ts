@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
   let targetMembershipId = operatorMembershipId;
 
   if (!targetMembershipId && effectiveRole === "farm_hand") {
-    targetMembershipId = authorized.access.membership.id;
+    targetMembershipId = authorized.access.membership.membershipId;
   }
 
   if (!targetMembershipId && (effectiveRole === "owner" || effectiveRole === "manager")) {
