@@ -233,11 +233,17 @@ execute function atlas.refresh_crop_availability_gates_from_harvest_v1();
 -- Normalize the one current commercial research move by stable identity. The
 -- project can retain all commercial reasoning; the worker receives a complete,
 -- literal action and only becomes eligible after an observed harvestable
--- pollenless sunflower crop exists.
+-- pollenless sunflower crop exists. The legacy task predates the current release
+-- validator, so repair its occurrence/policy provenance before placing it behind
+-- the crop gate. That keeps the gate compatible with the universal release
+-- contract instead of bypassing it with a one-off visibility patch.
 do $block$
 declare
   v_task atlas.tasks%rowtype;
   v_gate_id uuid;
+  v_occurrence_id uuid;
+  v_policy_id uuid;
+  v_release_at timestamptz;
 begin
   select task.* into v_task
   from atlas.tasks task
@@ -248,9 +254,72 @@ begin
   if v_task.id is null then
     raise exception 'Price Cutter Nixa research task is missing; refusing crop-availability gate migration.';
   end if;
-  if v_task.status<>'open' or v_task.visibility_scope<>'assigned_worker' then
-    raise exception 'Price Cutter Nixa task state drifted; expected open assigned-worker task before gating.';
+  if v_task.status in ('done','skipped') then
+    raise exception 'Price Cutter Nixa task is already terminal; refusing to resurrect it for crop gating.';
   end if;
+
+  v_release_at := coalesce(v_task.released_at,now());
+  v_occurrence_id := atlas.plan_work_occurrence_v1(
+    v_task.farm_id,
+    'commercial:price-cutter-nixa-vendor-path',
+    'commercial:price-cutter-nixa-vendor-path:crop-readiness-holder',
+    'commercial:price-cutter-nixa-vendor-path:current',
+    v_task.title,
+    coalesce(nullif(v_task.task_type,''),'research'),
+    v_task.due_date,
+    'legacy_task_repair',
+    v_task.id,
+    'external_signal',
+    0,
+    1,
+    (to_jsonb(v_task)-'id'-'created_at'-'updated_at'-'planned_occurrence_id'-'release_policy_id'-'released_at'-'release_reason')
+      ||jsonb_build_object(
+        'status','open',
+        'visibility_scope','assigned_worker',
+        'assigned_membership_id',v_task.assigned_membership_id,
+        'assigned_user_id',v_task.assigned_user_id
+      ),
+    atlas.capture_task_relation_payload_v1(v_task.id),
+    jsonb_build_object('readiness_kind','marketable_crop_availability'),
+    null,
+    jsonb_build_object('source','price_cutter_crop_gate_release_provenance_repair')
+  );
+
+  select occurrence.release_policy_id into v_policy_id
+  from atlas.planned_work_occurrences occurrence
+  where occurrence.id=v_occurrence_id;
+
+  update atlas.planned_work_occurrences occurrence
+  set state='released',
+      released_task_id=v_task.id,
+      released_at=v_release_at,
+      gate_satisfied_at=coalesce(occurrence.gate_satisfied_at,v_release_at),
+      metadata=coalesce(occurrence.metadata,'{}'::jsonb)||jsonb_build_object(
+        'legacy_task_release_provenance_repaired',true,
+        'legacy_task_id',v_task.id,
+        'release_provenance_repaired_at',now()
+      ),
+      updated_at=now()
+  where occurrence.id=v_occurrence_id;
+
+  update atlas.tasks task
+  set planned_occurrence_id=v_occurrence_id,
+      release_policy_id=v_policy_id,
+      released_at=v_release_at,
+      release_reason=coalesce(nullif(task.release_reason,''),'crop_availability_gate_provenance_repair'),
+      status='open',
+      visibility_scope='assigned_worker',
+      blocker_text=null,
+      metadata=coalesce(task.metadata,'{}'::jsonb)||jsonb_build_object(
+        'release_gate_installed',true,
+        'planned_occurrence_id',v_occurrence_id,
+        'release_policy_id',v_policy_id,
+        'release_provenance_repaired_at',now()
+      ),
+      updated_at=now()
+  where task.id=v_task.id;
+
+  select task.* into v_task from atlas.tasks task where task.id=v_task.id;
 
   update atlas.tasks task
   set title='Visit Nixa Price Cutter to learn how Elm can become a local flower vendor',
