@@ -7,12 +7,14 @@ function read(path) {
 }
 
 test("every weed task routes to the occupancy-aware persistent Weed Card inside the universal shell", () => {
-  const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const boundary = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const canonical = read("components/atlas/canonical-assigned-task-detail-client.tsx");
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
   const occupancy = read("components/atlas/crop-occupancy-list.tsx");
 
+  assert.match(boundary, /workerExecutionTaskCard/);
   assert.match(canonical, /isWeedTask/);
   assert.match(canonical, /if \(isWeedTask\(props\.task\)\) return <WeedCardTaskLoader/);
   assert.doesNotMatch(canonical, /<ConciseWeedTaskDetail/);
