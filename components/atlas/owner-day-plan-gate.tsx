@@ -43,9 +43,7 @@ function minutesLabel(value: number) {
 
 function dayEditTarget() {
   if (typeof document === "undefined") return null;
-  return document.querySelector<HTMLElement>(
-    ".atlas-day-timeline-group .atlas-day-work-order-list, .atlas-day-task-groups",
-  );
+  return document.querySelector<HTMLElement>(".atlas-day-task-groups");
 }
 
 export default function OwnerDayPlanGate({ dateIso }: Props) {
