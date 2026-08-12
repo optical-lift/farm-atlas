@@ -121,18 +121,14 @@ function RequirementGroupBranch({ group, final }: { group: RequirementGroup; fin
 export default function TaskMoveSpine({ assembly }: Props) {
   const stopped = assembly.spine.connection === "stops_at_move";
   const currentFacts = visibleFacts(assembly.spine.current);
-  const afterFacts = visibleFacts(assembly.spine.after);
-  const moveSite = assembly.spine.move.workSite.status === "missing" ? null : assembly.spine.move.workSite.label;
-  const moveSubject = assembly.spine.move.subject.status === "missing" ? null : assembly.spine.move.subject.label;
-  const moveAction = assembly.spine.move.action.label || assembly.task.title;
-  const dueLabel = assembly.execution.dueLabel?.trim() || null;
   const requirementGroups = groupedRequirements(assembly.requirements);
+  const presentation = assembly.presentation;
+  const dueLabel = assembly.execution.dueLabel?.trim() || null;
 
   return (
     <section className="atlas-human-task-trail" aria-label="Task trail">
       <style>{`
         .atlas-human-task-trail { margin:0; padding:23px 28px 19px; background:#fff; color:#303145; }
-        .atlas-human-task-trail__place { margin:0 0 5px; color:#777ca0; font-size:.7rem; font-weight:900; letter-spacing:.11em; text-transform:uppercase; }
         .atlas-human-task-trail__title { margin:0; font-size:clamp(1.8rem,6vw,2.65rem); line-height:1.02; letter-spacing:-.035em; }
         .atlas-human-task-trail__due { display:inline-block; margin-top:8px; color:#6b6d7b; font-size:.72rem; font-weight:780; }
         .atlas-human-task-trail__line { position:relative; display:grid; gap:0; margin-top:22px; padding-left:26px; }
@@ -142,7 +138,7 @@ export default function TaskMoveSpine({ assembly }: Props) {
         .atlas-human-task-trail__step[data-reachable="false"] { opacity:.58; }
         .atlas-human-task-trail__step[data-reachable="false"] .atlas-human-task-trail__dot { border-style:dashed; background:#fff; }
         .atlas-human-task-trail__dot { position:absolute; left:-26px; top:3px; width:13px; height:13px; border:2px solid #6d7088; border-radius:50%; background:#6d7088; box-shadow:0 0 0 4px #fff; }
-        .atlas-human-task-trail__step[data-kind="finish"] .atlas-human-task-trail__dot { background:#fff; }
+        .atlas-human-task-trail__step[data-kind="result"] .atlas-human-task-trail__dot { background:#fff; }
         .atlas-human-task-trail__eyebrow { display:block; margin-bottom:3px; color:#898ba0; font-size:.64rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
         .atlas-human-task-trail__step > strong { display:block; font-size:1rem; line-height:1.3; }
         .atlas-human-task-trail__step > p { margin:3px 0 0; color:#606270; font-size:.83rem; line-height:1.4; }
@@ -163,14 +159,12 @@ export default function TaskMoveSpine({ assembly }: Props) {
         .atlas-human-task-trail__requirement-group[data-state="missing"] .atlas-human-task-trail__requirement-label,
         .atlas-human-task-trail__requirement-items li[data-state="blocked"] strong,
         .atlas-human-task-trail__requirement-items li[data-state="missing"] strong { color:#704d43; }
-        .atlas-human-task-trail__finish { color:#4e5060; }
         @media (max-width:560px) {
           .atlas-human-task-trail { padding:21px 21px 17px; }
           .atlas-human-task-trail__line { margin-top:19px; }
         }
       `}</style>
 
-      {moveSite ? <p className="atlas-human-task-trail__place">{moveSite}</p> : null}
       <h1 className="atlas-human-task-trail__title">{assembly.task.title}</h1>
       {dueLabel ? <span className="atlas-human-task-trail__due">{dueLabel}</span> : null}
 
@@ -178,7 +172,7 @@ export default function TaskMoveSpine({ assembly }: Props) {
         {currentFacts.length ? (
           <section className="atlas-human-task-trail__step" data-kind="current">
             <span className="atlas-human-task-trail__dot" aria-hidden="true" />
-            <span className="atlas-human-task-trail__eyebrow">Right now</span>
+            <span className="atlas-human-task-trail__eyebrow">Current</span>
             <FactLines facts={currentFacts} />
           </section>
         ) : null}
@@ -193,22 +187,39 @@ export default function TaskMoveSpine({ assembly }: Props) {
           </section>
         ) : null}
 
-        <section className="atlas-human-task-trail__step" data-kind="work">
+        <section className="atlas-human-task-trail__step" data-kind="action">
           <span className="atlas-human-task-trail__dot" aria-hidden="true" />
-          <span className="atlas-human-task-trail__eyebrow">Do this</span>
-          <strong>{moveAction}</strong>
-          {moveSubject && moveSubject !== moveAction ? <p>{moveSubject}</p> : null}
+          <span className="atlas-human-task-trail__eyebrow">{presentation.actionLabel}</span>
+          <strong>{presentation.actionSubject}</strong>
         </section>
 
-        <section
-          className="atlas-human-task-trail__step"
-          data-kind="finish"
-          data-reachable={stopped ? "false" : "true"}
-        >
-          <span className="atlas-human-task-trail__dot" aria-hidden="true" />
-          <span className="atlas-human-task-trail__eyebrow">{stopped ? "Target held" : "Finished"}</span>
-          {afterFacts.length ? <FactLines facts={afterFacts} /> : <p className="atlas-human-task-trail__finish">{assembly.execution.doneWhen}</p>}
-        </section>
+        {presentation.placeLabel ? (
+          <section className="atlas-human-task-trail__step" data-kind="place">
+            <span className="atlas-human-task-trail__dot" aria-hidden="true" />
+            <span className="atlas-human-task-trail__eyebrow">{presentation.placeRelation}</span>
+            <strong>{presentation.placeLabel}</strong>
+          </section>
+        ) : null}
+
+        {presentation.methodFacts.map((method) => (
+          <section className="atlas-human-task-trail__step" data-kind="method" key={`${method.label}:${method.value}`}>
+            <span className="atlas-human-task-trail__dot" aria-hidden="true" />
+            <span className="atlas-human-task-trail__eyebrow">{method.label}</span>
+            <strong>{method.value}</strong>
+          </section>
+        ))}
+
+        {presentation.resultText ? (
+          <section
+            className="atlas-human-task-trail__step"
+            data-kind="result"
+            data-reachable={stopped ? "false" : "true"}
+          >
+            <span className="atlas-human-task-trail__dot" aria-hidden="true" />
+            <span className="atlas-human-task-trail__eyebrow">{stopped ? "Held" : presentation.resultLabel || "After"}</span>
+            <strong>{presentation.resultText}</strong>
+          </section>
+        ) : null}
       </div>
     </section>
   );
