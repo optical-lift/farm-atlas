@@ -14,16 +14,20 @@ const mowing = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
 const display = read("lib/atlas/task-display.ts");
 const migration = read("supabase/migrations/20260810144000_atlas_task_execution_contract_v1.sql");
 
-test("assigned work has one visible human task trail plus instructions and results", () => {
+test("assigned work has one visible operation-aware task trail plus instructions and results", () => {
   assert.match(brief, /TaskMoveSpine/);
   assert.match(brief, /function Instructions/);
   assert.match(brief, />Instructions</);
-  assert.match(brief, />Do this</);
-  assert.match(brief, />Finished</);
-  assert.match(move, /atlas-human-task-trail__place/);
-  assert.match(move, />Right now</);
-  assert.match(move, />Do this</);
-  assert.match(move, /"Target held" : "Finished"/);
+  assert.match(brief, /Loading structured task details…/);
+  assert.doesNotMatch(brief, />Do this</);
+  assert.doesNotMatch(brief, />Finished</);
+  assert.match(move, /presentation\.actionLabel/);
+  assert.match(move, /presentation\.actionSubject/);
+  assert.match(move, /presentation\.placeRelation/);
+  assert.match(move, /presentation\.methodFacts/);
+  assert.doesNotMatch(move, />Right now</);
+  assert.doesNotMatch(move, />Do this</);
+  assert.doesNotMatch(move, />Finished</);
   assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
   assert.doesNotMatch(shell, /TaskDominionTrail/);
   assert.doesNotMatch(shell, /taskConditionRailModel/);
