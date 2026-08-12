@@ -14,16 +14,16 @@ const mowing = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
 const display = read("lib/atlas/task-display.ts");
 const migration = read("supabase/migrations/20260810144000_atlas_task_execution_contract_v1.sql");
 
-test("assigned work has one visible human task trail plus instructions and results", () => {
+test("assigned work has one visible compact Move plus optional instructions and results", () => {
   assert.match(brief, /TaskMoveSpine/);
   assert.match(brief, /function Instructions/);
-  assert.match(brief, />Instructions</);
-  assert.match(brief, />Do this</);
-  assert.match(brief, />Finished</);
-  assert.match(move, /atlas-human-task-trail__place/);
-  assert.match(move, />Right now</);
+  assert.match(brief, /<summary>Instructions<\/summary>/);
+  assert.match(move, /atlas-worker-move__eyebrow/);
+  assert.match(move, />Needs</);
   assert.match(move, />Do this</);
-  assert.match(move, /"Target held" : "Finished"/);
+  assert.match(move, />Done</);
+  assert.doesNotMatch(move, />Right now</);
+  assert.doesNotMatch(move, /Target held/);
   assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
   assert.doesNotMatch(shell, /TaskDominionTrail/);
   assert.doesNotMatch(shell, /taskConditionRailModel/);
@@ -43,6 +43,8 @@ test("the primary result language is shared instead of reinvented per card", () 
 test("mowing is an instruction task, not an operating-system lecture", () => {
   assert.match(mowing, /TaskExecutionBrief/);
   assert.match(mowing, /Mow · \$\{task\.routeLabel\}/);
+  assert.match(move, />Mowing next</);
+  assert.match(move, /Pick up sticks \+ move hoses first/);
   assert.doesNotMatch(mowing, /What time means/i);
   assert.doesNotMatch(mowing, /What is physically true/i);
   assert.doesNotMatch(mowing, /Time does not claim/i);
