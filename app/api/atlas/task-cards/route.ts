@@ -5,6 +5,7 @@ import {
   effectiveOperatorMembershipId,
   readAtlasOwnerOperatorContext,
 } from "@/lib/atlas/operator-context";
+import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { readAtlasTaskMoveContexts } from "@/lib/atlas/task-move-context";
 import { workerExecutionTaskCards } from "@/lib/atlas/worker-execution-contract";
 import { createAtlasServerClient } from "@/lib/supabase/server";
@@ -80,9 +81,9 @@ export async function GET(request: NextRequest) {
   const enrichedTaskCards = baseTaskCards.map((card) => ({
     ...card,
     move_context: moveContexts[card.task_id] ?? null,
-  }));
+  })) as AtlasTaskCard[];
   const taskCards = effectiveRole === "farm_hand"
-    ? workerExecutionTaskCards(enrichedTaskCards as never[])
+    ? workerExecutionTaskCards(enrichedTaskCards)
     : enrichedTaskCards;
 
   return privateJson({
