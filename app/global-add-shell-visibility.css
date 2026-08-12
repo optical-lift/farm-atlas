@@ -1,0 +1,7 @@
+/*
+  GlobalAtlasAdd is owned once by AtlasContextualAppFrame. Route headers may be
+  sticky, but they may never cover the canonical green Add to Atlas action.
+*/
+button[aria-label="Add to Atlas"] {
+  z-index: 995 !important;
+}
