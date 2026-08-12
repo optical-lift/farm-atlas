@@ -48,7 +48,7 @@ export default function TaskExecutionBrief({
   doText,
   placeText,
   howLines,
-  doneWhen,
+  doneWhen: _doneWhen,
   details,
   dueLabel,
 }: Props) {
@@ -86,38 +86,29 @@ export default function TaskExecutionBrief({
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        // Compatibility rendering below remains available if canonical resolution fails.
+        // The compact loading state below remains usable if canonical resolution fails.
       });
 
     return () => controller.abort();
   }, [assembly, assemblyControlled, task?.task_id]);
 
-  const resolvedDo = doText || resolvedAssembly?.execution.what || model?.doText || "Do this task";
-  const resolvedPlace = placeText || resolvedAssembly?.execution.where || model?.placeText || "Elm Farm";
-  const resolvedHow = howLines?.length
-    ? howLines
-    : resolvedAssembly?.execution.how.length
-      ? resolvedAssembly.execution.how
-      : model?.howLines || ["Follow the task instructions."];
-  const resolvedDone = doneWhen || resolvedAssembly?.execution.doneWhen || model?.doneWhen || "The requested work is finished.";
-  const resolvedDetails = details === undefined
-    ? resolvedAssembly?.execution.details || model?.details || null
-    : details;
-  const resolvedDue = dueLabel === undefined
-    ? resolvedAssembly?.execution.dueLabel || model?.dueLabel || null
-    : dueLabel;
+  const resolvedDo = doText || model?.doText || task?.title || "Task";
+  const resolvedPlace = placeText || model?.placeText || "Elm Farm";
+  const resolvedHow = howLines?.length ? howLines : model?.howLines || [];
+  const resolvedDetails = details === undefined ? model?.details || null : details;
+  const resolvedDue = dueLabel === undefined ? model?.dueLabel || null : dueLabel;
 
   if (resolvedAssembly) {
     return (
       <section className="atlas-task-execution-brief atlas-task-execution-brief--human" aria-label="Task instructions">
         <TaskMoveSpine assembly={resolvedAssembly} />
-        <Instructions how={resolvedHow} details={resolvedDetails} />
+        <Instructions how={resolvedAssembly.execution.how.length ? resolvedAssembly.execution.how : resolvedHow} details={resolvedAssembly.execution.details || resolvedDetails} />
       </section>
     );
   }
 
-  // Compatibility state while the canonical assembly is loading/unavailable. It
-  // uses the same human grammar instead of exposing a second visual architecture.
+  // While canonical Task Move is resolving, do not invent a universal
+  // Do-this/Finished story. Show only execution facts already present on the task.
   return (
     <section className="atlas-task-execution-brief atlas-task-execution-brief--human" aria-label="Task instructions">
       <style>{`
@@ -125,23 +116,14 @@ export default function TaskExecutionBrief({
         .atlas-human-task-fallback__place { margin:0 0 5px; color:#777ca0; font-size:.7rem; font-weight:900; letter-spacing:.11em; text-transform:uppercase; }
         .atlas-human-task-fallback h1 { margin:0; font-size:clamp(1.8rem,6vw,2.65rem); line-height:1.02; letter-spacing:-.035em; }
         .atlas-human-task-fallback__due { display:block; margin-top:8px; color:#6b6d7b; font-size:.72rem; font-weight:780; }
-        .atlas-human-task-fallback__trail { position:relative; display:grid; gap:18px; margin-top:21px; padding-left:26px; }
-        .atlas-human-task-fallback__trail::before { content:""; position:absolute; left:6px; top:9px; bottom:9px; width:1px; background:rgba(86,89,112,.27); }
-        .atlas-human-task-fallback__step { position:relative; }
-        .atlas-human-task-fallback__step::before { content:""; position:absolute; left:-26px; top:3px; width:13px; height:13px; border:2px solid #6d7088; border-radius:50%; background:#6d7088; box-shadow:0 0 0 4px #fff; }
-        .atlas-human-task-fallback__step:last-child::before { background:#fff; }
-        .atlas-human-task-fallback__step small { display:block; margin-bottom:3px; color:#898ba0; font-size:.64rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
-        .atlas-human-task-fallback__step strong,.atlas-human-task-fallback__step span { display:block; font-size:.91rem; line-height:1.4; }
+        .atlas-human-task-fallback__status { margin:18px 0 0; color:#777985; font-size:.78rem; font-weight:760; }
         @media (max-width:560px) { .atlas-human-task-fallback { padding:21px 21px 17px; } }
       `}</style>
       <section className="atlas-human-task-fallback">
-        <p className="atlas-human-task-fallback__place">{resolvedPlace}</p>
+        {resolvedPlace && resolvedPlace !== "Elm Farm" ? <p className="atlas-human-task-fallback__place">{resolvedPlace}</p> : null}
         <h1>{task?.title || resolvedDo}</h1>
         {resolvedDue ? <span className="atlas-human-task-fallback__due">{resolvedDue}</span> : null}
-        <div className="atlas-human-task-fallback__trail">
-          <div className="atlas-human-task-fallback__step"><small>Do this</small><strong>{resolvedDo}</strong></div>
-          <div className="atlas-human-task-fallback__step"><small>Finished</small><span>{resolvedDone}</span></div>
-        </div>
+        <p className="atlas-human-task-fallback__status">Loading structured task details…</p>
       </section>
       <Instructions how={resolvedHow} details={resolvedDetails} />
     </section>
