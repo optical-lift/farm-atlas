@@ -6,7 +6,7 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-const migration = read("supabase/migrations/20260812171420_school_enrollment_worker_packet_v1.sql");
+const migration = read("supabase/migrations/20260812173855_school_enrollment_worker_packet_v1.sql");
 
 test("School and Preschool Enrollment follows the current literal next work", () => {
   assert.match(migration, /anna_20260805_school_preschool_enrollment/);
