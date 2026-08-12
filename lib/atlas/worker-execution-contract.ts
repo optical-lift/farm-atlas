@@ -18,6 +18,7 @@ import type { TaskMoveAssembly } from "@/lib/atlas/task-move-assembly";
 export const WORKER_EXECUTION_METADATA_KEYS = new Set([
   // Stable identity used by a few execution instruments.
   "task_key",
+  "seed_lot_id",
 
   // Execution identity + human display.
   "display_title",
