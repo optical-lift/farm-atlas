@@ -17,3 +17,15 @@ test("Owner Edit Today is mounted inside the Day route and not the global app sh
   assert.match(gate, /Purple is a draft/);
   assert.doesNotMatch(layout, /OwnerDayPlanGate/);
 });
+
+test("opening Owner Day edit replaces the working timeline with the purple draft instead of duplicating it", () => {
+  const gate = read("components/atlas/owner-day-plan-gate.tsx");
+
+  assert.match(gate, /createPortal/);
+  assert.match(gate, /\.atlas-day-timeline-group \.atlas-day-work-order-list, \.atlas-day-task-groups/);
+  assert.match(gate, /atlas-owner-day-plan-active/);
+  assert.match(gate, /atlas-owner-day-plan-inline-root/);
+  assert.match(gate, /> :not\(\.atlas-owner-day-plan-inline-root\)/);
+  assert.match(gate, /createPortal\(editBoard, portalTarget\)/);
+  assert.match(gate, /onClick=\{\(\) => setOpen\(false\)\}/);
+});
