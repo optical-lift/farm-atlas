@@ -11,24 +11,27 @@ const brief = read("components/atlas/task-execution-brief.tsx");
 const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 const weed = read("components/atlas/weed-card-task-focus.tsx");
 
-test("canonical Task Move data renders as a compact human trail instead of schema labels", () => {
-  assert.match(spine, /aria-label="Task trail"/);
-  assert.match(spine, />Right now</);
+test("canonical Task Move data renders as compact worker cues instead of schema explanation", () => {
+  assert.match(spine, /aria-label="Task move"/);
+  assert.match(spine, />Needs</);
   assert.match(spine, />Do this</);
-  assert.match(spine, /"Target held" : "Finished"/);
-  assert.match(spine, /data-reachable=\{stopped \? "false" : "true"\}/);
-  assert.match(spine, /atlas-human-task-trail__requirements/);
-  assert.doesNotMatch(spine, />Task move</i);
-  assert.doesNotMatch(spine, />Current</);
-  assert.doesNotMatch(spine, />Move</);
-  assert.doesNotMatch(spine, />After</);
+  assert.match(spine, />Done</);
+  assert.match(spine, /requirementGlyph/);
+  assert.match(spine, /data-state=\{requirement.status\}/);
+  assert.doesNotMatch(spine, />Right now</);
+  assert.doesNotMatch(spine, /Target held/);
+  assert.doesNotMatch(spine, /atlas-human-task-trail__requirements/);
+  assert.doesNotMatch(spine, /requirement\.note/);
+  assert.doesNotMatch(spine, /requirement\.questions/);
   assert.doesNotMatch(spine, /Ready to do/);
   assert.doesNotMatch(spine, /Check before doing/);
 });
 
-test("instructions stay explicit while duplicate architecture furniture is removed", () => {
-  assert.match(brief, /<h2>Instructions<\/h2>/);
-  assert.match(brief, /atlas-human-task-instructions__note/);
+test("instructions are collapsed and duplicate explanatory prose is removed", () => {
+  assert.match(brief, /<details className="atlas-worker-instructions">/);
+  assert.match(brief, /<summary>Instructions<\/summary>/);
+  assert.match(brief, /fallbackDetail = !lines\.length/);
+  assert.doesNotMatch(brief, /atlas-human-task-instructions__note/);
   assert.doesNotMatch(brief, /More instructions/);
   assert.doesNotMatch(shell, /Before the move/);
   assert.doesNotMatch(shell, /data-atlas-task-readiness/);
