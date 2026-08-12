@@ -1,3 +1,24 @@
+begin;
+
+with target as (
+  select id,organization_id,farm_id,assigned_membership_id
+  from atlas.tasks
+  where metadata->>'task_key'='owner_20260808_sow_procut_horizon_bw7_bw8'
+  limit 1
+)
+update atlas.worker_day_cues c
+set payload=jsonb_set(
+      coalesce(c.payload,'{}'::jsonb),
+      '{stableKey}',
+      to_jsonb('hard_stop_sowing:owner_20260808_sow_procut_horizon_bw7_bw8:2026-08-12'::text),
+      true
+    ),
+    updated_at=now()
+from target t
+where c.payload->>'taskId'=t.id::text
+  and c.service_date=date '2026-08-12'
+  and coalesce((c.payload->>'hardStop')::boolean,false)=true;
+
 insert into atlas.worker_day_cues(
   id,organization_id,farm_id,membership_id,service_date,cue_kind,anchor_kind,anchor_task_id,scheduled_at,
   title,body,payload,result_contract,status,recovery_policy,available_from,expires_at,created_by_user_id,created_at,updated_at
@@ -19,3 +40,5 @@ where t.metadata->>'task_key'='owner_20260808_sow_procut_horizon_bw7_bw8'
     select 1 from atlas.worker_day_cues c
     where c.payload->>'stableKey'='hard_stop_sowing:owner_20260808_sow_procut_horizon_bw7_bw8:2026-08-12'
   );
+
+commit;
