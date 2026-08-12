@@ -270,7 +270,7 @@ function BuyerOutreachResultInstrument({
   async function finishTask() {
     if (blocked) return;
     if (!allContactsDone) {
-      setTaskMessage("Record a result for all five restaurants before closing this batch.");
+      setTaskMessage("Record a result for all five buyers before closing this batch.");
       return;
     }
 
@@ -286,7 +286,7 @@ function BuyerOutreachResultInstrument({
       });
       window.location.assign(returnHref);
     } catch (error) {
-      setTaskMessage(error instanceof Error ? error.message : "Could not finish this restaurant outreach batch.");
+      setTaskMessage(error instanceof Error ? error.message : "Could not finish this buyer outreach batch.");
     } finally {
       setClosing(false);
     }
@@ -295,11 +295,11 @@ function BuyerOutreachResultInstrument({
   return (
     <section
       className="atlas-network-outreach-card"
-      aria-label="Restaurant outreach checklist"
+      aria-label="Buyer outreach checklist"
       data-atlas-result-instrument="buyer-outreach"
     >
       <section className="atlas-network-inputs">
-        <h2>Restaurants to call</h2>
+        <h2>Buyers to call</h2>
         <div className="atlas-network-inputs__list">
           {contacts.map((contact) => {
             const done = doneById[contact.task_id] ?? currentDone(contact);
@@ -417,7 +417,7 @@ function BuyerOutreachResultInstrument({
         disabled={blocked || closing || !allContactsDone}
         onClick={() => void finishTask()}
       >
-        {closing ? "Finishing…" : "Finish restaurant calls"}
+        {closing ? "Finishing…" : "Finish buyer calls"}
       </button>
     </section>
   );
