@@ -6,16 +6,19 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Anna weeding advances the serial queue instead of recreating the same Weed Card tomorrow", () => {
-  const migration = read("supabase/migrations/20260812131500_worker_day_serial_queue_corrections_v1.sql");
+test("Anna can finish today's Weed Card without the same bed taking tomorrow's serial slot", () => {
+  const migration = read("supabase/migrations/20260812125237_weed_partial_returns_to_serial_tail_v1.sql");
 
-  assert.match(migration, /release_weed_card_continuation_unqueued_v1/);
-  assert.match(migration, /weed_serial_gate/);
   assert.match(migration, /anna_weeding_rotation/);
-  assert.match(migration, /serial_queue_owns_daily_serving/);
-  assert.match(migration, /set state='cancelled'/);
-  assert.match(migration, /return null;/);
-  assert.match(migration, /release_weed_card_continuation_unqueued_v1\(p_occurrence_id,p_source_task_id\)/);
+  assert.match(migration, /partly finished/);
+  assert.match(migration, /back of that rotation/);
+  assert.match(migration, /requeued_partial_card/);
+  assert.match(migration, /coalesce\(max\(qi\.position\),0\)\+1/);
+  assert.match(migration, /state='planned'/);
+  assert.match(migration, /planned_due_date=null/);
+  assert.match(migration, /not_before_date=null/);
+  assert.match(migration, /release_timing','next_workday'/);
+  assert.doesNotMatch(migration, /planned_due_date=v_source\.due_date\+1/);
 });
 
 test("pressure washing owns one exact active queue item and keeps later surfaces calendarless", () => {
