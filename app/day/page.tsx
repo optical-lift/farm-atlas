@@ -139,6 +139,22 @@ function overdueAgeDays(task: AtlasTaskCard, selectedDay: string) {
   return Math.max(0, Math.round((selected.getTime() - due.getTime()) / 86_400_000));
 }
 
+function recurringOccurrence(task: AtlasTaskCard) {
+  const interval = Number(meta(task, "repeat_interval_days"));
+  return Number.isFinite(interval) && interval > 1
+    || Boolean(text(meta(task, "repeat_rule")))
+    || Boolean(text(meta(task, "task_series_key")))
+    || Boolean(text(meta(task, "engine_instance_key")));
+}
+
+function overdueWorkerLine(task: AtlasTaskCard, selectedDay: string, zone: string) {
+  if (!task.due_date) return `Still open · ${zone}`;
+  if (recurringOccurrence(task)) {
+    return `${dayOnly(task.due_date)} occurrence · still open · due ${prettyShortDate(task.due_date)} · ${zone}`;
+  }
+  return `Still open · due ${prettyShortDate(task.due_date)} · ${zone}`;
+}
+
 function dayWindowForTask(task: AtlasTaskCard): DayWindowKey {
   const anchor = atlasWorkOrderAnchorForTask(task);
   if (anchor === "top" || anchor === "morning") return "morning";
@@ -207,10 +223,9 @@ function mixedDaySortValue(task: AtlasTaskCard, selectedDay: string, partnerPlan
   const window = dayWindowDefinition(resolvedDayWindowForTask(task, selectedDay, partnerPlan)).order;
   const order = String(resolvedWorkOrderNumber(task, selectedDay, partnerPlan)).padStart(5, "0");
   const partnerKey = atlasDayTaskPartnerKey(task);
-  const doneRank = isDoneTask(task) ? 2 : 0;
   const overdueRank = isOverdueTask(task, selectedDay) ? 0 : 1;
   const due = task.due_date ?? "9999-12-31";
-  return `${window}-${order}-${partnerKey}-${doneRank}-${overdueRank}-${due}-${atlasTaskDisplay(task).title}`;
+  return `${window}-${order}-${partnerKey}-${overdueRank}-${due}-${atlasTaskDisplay(task).title}`;
 }
 
 function uniqueTasks(tasks: AtlasTaskCard[]) {
@@ -231,30 +246,6 @@ function nextTaskForCurrentWindow(tasks: AtlasTaskCard[], hour: number | null, s
     if (candidate) return candidate;
   }
   return null;
-}
-
-function relativeWorkerTimelineGroups(tasks: AtlasTaskCard[], hour: number | null, selectedDay: string, partnerPlan: DayPartnerPlan, currentTaskId: string | null): RenderTimelineGroup[] {
-  const currentWindowOrder = dayWindowDefinition(currentDayWindow(hour)).order;
-  const sortCanonical = (left: AtlasTaskCard, right: AtlasTaskCard) => mixedDaySortValue(left, selectedDay, partnerPlan).localeCompare(mixedDaySortValue(right, selectedDay, partnerPlan));
-  const open = tasks.filter((task) => !isDoneTask(task));
-  const done = tasks.filter(isDoneTask).sort(sortCanonical);
-  const now = currentTaskId ? open.filter((task) => task.task_id === currentTaskId) : [];
-  const remainingOpen = open.filter((task) => task.task_id !== currentTaskId);
-  const comingUp = remainingOpen
-    .filter((task) => dayWindowDefinition(resolvedDayWindowForTask(task, selectedDay, partnerPlan)).order >= currentWindowOrder)
-    .sort(sortCanonical);
-  const later = uniqueTasks([
-    ...remainingOpen
-      .filter((task) => dayWindowDefinition(resolvedDayWindowForTask(task, selectedDay, partnerPlan)).order < currentWindowOrder)
-      .sort(sortCanonical),
-    ...done,
-  ]);
-
-  return [
-    { key: "now", label: "Now", tasks: now },
-    { key: "coming-up", label: "Coming up", tasks: comingUp },
-    { key: "later", label: "Later", tasks: later },
-  ].filter((group) => group.tasks.length);
 }
 
 function collectionZone(task: AtlasTaskCard) {
@@ -408,7 +399,7 @@ function TaskCard({ task, complete = false, overdue = false, expandable = false,
   const cues = atlasDayTaskCues(task);
   const routeClass = routeState ? `atlas-day-route-${routeState}` : "";
   const className = `atlas-day-task-card${complete ? " complete" : ""}${overdue ? " atlas-day-overdue-task-card" : ""}${atlasIsCropCycleTask(task) ? " atlas-crop-cycle-task-card" : ""}${routeClass ? ` ${routeClass}` : ""}`;
-  const timeLine = overdue ? `Due ${prettyShortDate(task.due_date)} · ${zone}` : statusLine;
+  const timeLine = overdue ? overdueWorkerLine(task, task.due_date ? todayIso() : "", zone) : statusLine;
   const moveContext = task.move_context;
   const projectMove = Boolean(moveContext?.projects?.length);
   const primaryProject = moveContext?.projects?.[0] ?? null;
@@ -650,10 +641,7 @@ function AtlasDayPageContent() {
     ...window,
     tasks: filteredTimelineTasks.filter((task) => resolvedDayWindowForTask(task, dateIso, partnerPlan) === window.key),
   })).filter((window) => window.tasks.length), [dateIso, filteredTimelineTasks, partnerPlan]);
-  const visibleTimelineGroups = useMemo<RenderTimelineGroup[]>(() => dateIso === calendarToday
-    ? relativeWorkerTimelineGroups(filteredTimelineTasks, localHour, dateIso, partnerPlan, currentTask?.task_id ?? null)
-    : timelineGroups,
-  [calendarToday, currentTask?.task_id, dateIso, filteredTimelineTasks, localHour, partnerPlan, timelineGroups]);
+  const visibleTimelineGroups = timelineGroups;
 
   const returnTo = routeFilter ? routeHref(dateIso, routeFilter) : dayHref(dateIso);
   const previousDate = shiftIsoDate(dateIso, -1);
@@ -705,14 +693,17 @@ function AtlasDayPageContent() {
   }
 
   function windowedTimeline(groups: RenderTimelineGroup[]) {
-    return groups.map((group) => (
-      <Fragment key={group.key}>
-        <div className="atlas-day-window-marker" data-day-window={group.key}>
-          <span>{group.label}</span><em>{group.tasks.filter((task) => !isDoneTask(task)).length} remaining</em>
-        </div>
-        {group.tasks.map(timelineRow)}
-      </Fragment>
-    ));
+    return groups.map((group) => {
+      const isCurrentWindow = dateIso === calendarToday && group.key === currentDayWindow(localHour);
+      return (
+        <Fragment key={group.key}>
+          <div className="atlas-day-window-marker" data-day-window={group.key} data-current-window={isCurrentWindow ? "true" : "false"}>
+            <span>{group.label}</span><em>{group.tasks.filter((task) => !isDoneTask(task)).length} remaining{isCurrentWindow ? " · current window" : ""}</em>
+          </div>
+          {group.tasks.map(timelineRow)}
+        </Fragment>
+      );
+    });
   }
 
   return (
