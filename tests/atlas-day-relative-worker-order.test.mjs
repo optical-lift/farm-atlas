@@ -5,20 +5,25 @@ import test from "node:test";
 const dayPage = readFileSync(new URL("../app/day/page.tsx", import.meta.url), "utf8");
 const ownerBuilder = readFileSync(new URL("../components/atlas/owner-day-schedule-builder.tsx", import.meta.url), "utf8");
 
-test("today's worker timeline reads Now, Coming up, Later instead of exposing planning dayparts", () => {
-  assert.match(dayPage, /function relativeWorkerTimelineGroups/);
-  assert.match(dayPage, /key: "now", label: "Now"/);
-  assert.match(dayPage, /key: "coming-up", label: "Coming up"/);
-  assert.match(dayPage, /key: "later", label: "Later"/);
-  assert.match(dayPage, /dateIso === calendarToday\s*\? relativeWorkerTimelineGroups/);
-  assert.match(dayPage, /: timelineGroups/);
+test("worker Day keeps Morning Afternoon Evening as permanent schedule structure", () => {
+  assert.match(dayPage, /type DayWindowKey = "morning" \| "afternoon" \| "evening"/);
+  assert.match(dayPage, /key: "morning", label: "Morning"/);
+  assert.match(dayPage, /key: "afternoon", label: "Afternoon"/);
+  assert.match(dayPage, /key: "evening", label: "Evening"/);
+  assert.match(dayPage, /windowedTimeline\(visibleTimelineGroups\)/);
+  assert.doesNotMatch(dayPage, /relativeWorkerTimelineGroups/);
+  assert.doesNotMatch(dayPage, /key: "now", label: "Now"/);
+  assert.doesNotMatch(dayPage, /key: "coming-up", label: "Coming up"/);
+  assert.doesNotMatch(dayPage, /key: "later", label: "Later"/);
 });
 
-test("Now is the one current move, future same-day work comes up, and passed windows move later", () => {
-  assert.match(dayPage, /task\.task_id === currentTaskId/);
-  assert.match(dayPage, /order >= currentWindowOrder/);
-  assert.match(dayPage, /order < currentWindowOrder/);
-  assert.match(dayPage, /\.\.\.done/);
+test("clock time can choose the next open move without renaming or relocating its schedule lane", () => {
+  assert.match(dayPage, /function currentDayWindow/);
+  assert.match(dayPage, /function nextTaskForCurrentWindow/);
+  assert.match(dayPage, /resolvedDayWindowForTask/);
+  assert.match(dayPage, /mixedDaySortValue/);
+  assert.match(dayPage, /window = dayWindowDefinition\(resolvedDayWindowForTask/);
+  assert.doesNotMatch(dayPage, /order < currentWindowOrder/);
 });
 
 test("carried work stays truthful without grading the worker", () => {
@@ -29,7 +34,7 @@ test("carried work stays truthful without grading the worker", () => {
   assert.doesNotMatch(dayPage, /fallen out of rhythm/);
 });
 
-test("Owner planning still uses concrete Morning Afternoon Evening windows", () => {
+test("Owner planning uses the same concrete Morning Afternoon Evening vocabulary", () => {
   assert.match(ownerBuilder, /Morning/);
   assert.match(ownerBuilder, /Afternoon/);
   assert.match(ownerBuilder, /Evening/);
