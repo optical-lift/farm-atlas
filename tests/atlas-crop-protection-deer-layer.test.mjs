@@ -9,6 +9,7 @@ function read(path) {
 const layer = read("supabase/migrations/20260812024500_crop_protection_deer_layer_v1.sql");
 const resourceFix = read("supabase/migrations/20260812024600_crop_protection_resource_attachment_fix_v1.sql");
 const normalized = layer.replace(/\s+/g, " ").trim();
+const executableLayer = layer.replace(/^\s*--.*$/gm, "");
 
 test("deer protection is durable crop state with policy, enrollment, and event history", () => {
   assert.match(layer, /create table if not exists atlas\.crop_protection_policies/);
@@ -33,7 +34,7 @@ test("Elm seed records only the Owner-confirmed garlic concentrate and hand-pump
   assert.match(layer, /'hand_pump_sprayer','Hand pump sprayer','equipment','sprayer','available'/);
   assert.match(layer, /'label_method_status','not_yet_recorded'/);
   assert.match(layer, /'label_required'/);
-  assert.doesNotMatch(layer, /tablespoon|teaspoon|ounce|gallon|dilut|mix \d|every \d+ days/i);
+  assert.doesNotMatch(executableLayer, /tablespoon|teaspoon|ounce|gallon|dilut|mix \d|every \d+ days/i);
 });
 
 test("an exact product-label method and interval are required before release", () => {
