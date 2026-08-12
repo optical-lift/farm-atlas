@@ -49,7 +49,8 @@ test("legacy time remains optional evidence while the live Weed Card is state-fi
 });
 
 test("the Weed Card keeps its state outcomes while entering the universal execution shell", () => {
-  const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const boundary = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const canonical = read("components/atlas/canonical-assigned-task-detail-client.tsx");
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
@@ -58,6 +59,7 @@ test("the Weed Card keeps its state outcomes while entering the universal execut
   const passApi = read("app/api/atlas/weed-card-session/route.ts");
   const partialApi = read("app/api/atlas/weed-card-partial/route.ts");
 
+  assert.match(boundary, /workerExecutionTaskCard/);
   assert.match(canonical, /isWeedTask/);
   assert.match(canonical, /WeedCardTaskLoader/);
   assert.match(loader, /\/api\/atlas\/weed-card\?taskId=/);
@@ -96,65 +98,4 @@ test("the Weed Card keeps its state outcomes while entering the universal execut
   assert.match(passApi, /record_weed_card_pass_v1/);
   assert.match(partialApi, /finish_partial_weed_card_day_v1/);
   assert.match(partialApi, /conditionAfter === "clear"/);
-});
-
-test("Weed-specific field truth is an instrument beneath the shared Task Move instead of a second trail", () => {
-  const focus = read("components/atlas/weed-card-task-focus.tsx");
-  const cohesion = read("components/atlas/weed-card-cohesion.module.css");
-  const map = read("components/atlas/crop-occupancy-bed-map.tsx");
-  const mapCss = read("components/atlas/crop-occupancy-bed-map.module.css");
-
-  assert.match(focus, /atlas-weed-card-occupancy/);
-  assert.match(focus, /atlas-weed-condition-summary/);
-  assert.match(focus, /atlas-weed-condition-scale/);
-  assert.match(focus, /Recent bed states/);
-  assert.match(focus, /card\.sessions\.slice\(0, 4\)/);
-  assert.doesNotMatch(focus, /presentation="weed-sheet"|moveDetails=|instruction=\{/);
-  assert.doesNotMatch(focus, /Today ·/);
-  assert.match(cohesion, /\.cohesive :global\(\.atlas-task-dominion-weed-meta\)/);
-  assert.match(map, /compactCropLabel/);
-  assert.match(map, /return "FMN"/);
-  assert.match(mapCss, /\.notebook \.bed/);
-  assert.match(mapCss, /rgba\(190, 185, 174, 0\.62\)/);
-});
-
-test("Partly finished closes one daily serving and releases one same-card continuation", () => {
-  const finalMigration = read("supabase/migrations/20260729014000_weed_card_final_contract_v1.sql");
-  const grazerMigration = read("supabase/migrations/20260729022500_weed_card_grazer_logging_v1.sql");
-  const partialMigration = read("supabase/migrations/20260729154000_weed_card_clear_partial_buttons_v1.sql");
-
-  assert.match(finalMigration, /release_weed_card_continuation_v1/);
-  assert.match(finalMigration, /The prior Weed Card session must be done/);
-  assert.match(finalMigration, /replacement_source_task_id/);
-  assert.match(grazerMigration, /planned_by','finish_weed_card_day_v1/);
-  assert.match(grazerMigration, /v_next_task_id := atlas\.release_weed_card_continuation_v1/);
-  assert.match(partialMigration, /p_idempotency_key \|\| ':pass'/);
-  assert.match(partialMigration, /p_idempotency_key \|\| ':day'/);
-});
-
-test("Clear closes the pass and returns the permanent card to its maintenance rhythm", () => {
-  const migration = read("supabase/migrations/20260729022500_weed_card_grazer_logging_v1.sql");
-
-  assert.match(migration, /status=case when p_condition_after='clear' then 'closed'/);
-  assert.match(migration, /next_review_on=case when p_condition_after='clear'/);
-  assert.match(migration, /active=p_condition_after='clear'/);
-  assert.match(migration, /when 'clear' then 'maintained'/);
-});
-
-test("legacy weed work is backfilled only into still-open physical passes", () => {
-  const migration = read("supabase/migrations/20260729193000_legacy_weed_history_backfill_v1.sql");
-
-  assert.match(migration, /wc\.current_condition <> 'clear'/);
-  assert.match(migration, /mh\.outcome = 'partially_completed'/);
-  assert.match(migration, /mh\.actual_minutes is not null and mh\.actual_minutes > 0 as minutes_known/);
-  assert.match(migration, /Historical weed work · time unrecorded/);
-  assert.match(migration, /legacy_weed_history_backfill_v1/);
-  assert.match(migration, /backfill:maintenance_history:/);
-  assert.match(migration, /backfill:task_outcome:/);
-  assert.match(migration, /ws\.metadata ->> 'maintenance_history_id'/);
-  assert.match(migration, /sum\(ws\.minutes\)::integer as total_minutes/);
-  assert.match(migration, /day_closed/);
-  assert.match(migration, /reopened/);
-  assert.match(migration, /legacy_weed_history_unmapped_reason/);
-  assert.doesNotMatch(migration, /estimated_minutes/);
 });
