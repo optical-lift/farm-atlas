@@ -1,103 +1,8 @@
--- Worker Day serial-work correction.
---
--- Two independent schedulers were competing for the same daily weeding slot:
--- a persistent Weed Card could create a same-card next-day replacement while the
--- Anna weeding queue also advanced to the next bed. The queue is the day-level
--- scheduler; the Weed Card remains physical state/evidence and can re-enter the
--- queue later when its condition warrants another serving.
---
--- Pressure washing is likewise a serial process continuation. Materialize the
--- exact queued pressure-wash occurrence instead of asking the general release
--- sweep to choose among unrelated eligible work.
+-- Pressure washing is a serial process continuation. Materialize the exact
+-- queued pressure-wash occurrence instead of asking the general release sweep to
+-- choose among unrelated eligible work. Weed Card partial-return behavior is
+-- owned by 20260812125237_weed_partial_returns_to_serial_tail_v1.sql.
 
--- Preserve the original non-serial Weed Card release implementation under a
--- narrower name, then put a serial-queue guard at the canonical function name.
-do $block$
-begin
-  if to_regprocedure('atlas.release_weed_card_continuation_unqueued_v1(uuid,uuid)') is null
-     and to_regprocedure('atlas.release_weed_card_continuation_v1(uuid,uuid)') is not null
-  then
-    alter function atlas.release_weed_card_continuation_v1(uuid,uuid)
-      rename to release_weed_card_continuation_unqueued_v1;
-  end if;
-end;
-$block$;
-
-create or replace function atlas.release_weed_card_continuation_v1(
-  p_occurrence_id uuid,
-  p_source_task_id uuid
-)
-returns uuid
-language plpgsql
-security definer
-set search_path to 'pg_catalog','atlas'
-as $function$
-declare
-  v_source atlas.tasks%rowtype;
-  v_serial_managed boolean := false;
-begin
-  if p_occurrence_id is null or p_source_task_id is null then
-    raise exception 'Occurrence and source task are required.' using errcode='22023';
-  end if;
-
-  select task.* into v_source
-  from atlas.tasks task
-  where task.id=p_source_task_id;
-
-  if v_source.id is null then
-    raise exception 'Source Weed Card task not found.' using errcode='P0002';
-  end if;
-
-  v_serial_managed :=
-    lower(coalesce(v_source.metadata->>'weed_serial_gate','false')) in ('true','yes','1')
-    or v_source.metadata->>'release_queue_key'='anna_weeding_rotation'
-    or exists(
-      select 1
-      from atlas.task_release_queue_items queue_item
-      where queue_item.farm_id=v_source.farm_id
-        and queue_item.queue_key='anna_weeding_rotation'
-        and (
-          queue_item.task_id=v_source.id
-          or (
-            v_source.planned_occurrence_id is not null
-            and queue_item.planned_occurrence_id=v_source.planned_occurrence_id
-          )
-        )
-    );
-
-  if v_serial_managed then
-    update atlas.planned_work_occurrences occurrence
-    set state='cancelled',
-        released_at=null,
-        released_task_id=null,
-        metadata=coalesce(occurrence.metadata,'{}'::jsonb)||jsonb_build_object(
-          'cancelled_reason','Anna daily weeding is completion-gated by anna_weeding_rotation; do not create a same-card next-day copy.',
-          'cancelled_at',now(),
-          'serial_queue_owns_daily_serving',true,
-          'serial_queue_key','anna_weeding_rotation',
-          'serial_queue_source_task_id',v_source.id
-        ),
-        updated_at=now()
-    where occurrence.id=p_occurrence_id
-      and occurrence.state not in ('completed','cancelled');
-
-    return null;
-  end if;
-
-  if to_regprocedure('atlas.release_weed_card_continuation_unqueued_v1(uuid,uuid)') is null then
-    raise exception 'Unqueued Weed Card continuation implementation is missing.' using errcode='42883';
-  end if;
-
-  return atlas.release_weed_card_continuation_unqueued_v1(p_occurrence_id,p_source_task_id);
-end;
-$function$;
-
-revoke all on function atlas.release_weed_card_continuation_v1(uuid,uuid) from public,anon,authenticated;
-grant execute on function atlas.release_weed_card_continuation_v1(uuid,uuid) to service_role;
-
--- Materialize exactly one pressure-wash queue item. This deliberately does not
--- call release_eligible_work_v1 because that function is allowed to choose any
--- higher-ranked eligible occurrence on the farm.
 create or replace function atlas.release_pressure_wash_queue_item_v1(
   p_queue_item_id uuid,
   p_due_date date
@@ -375,7 +280,6 @@ begin
   select coalesce(nullif(farm.metadata->>'timezone',''),'America/Chicago') into v_timezone
   from atlas.farms farm where farm.id=p_farm_id;
 
-  -- Clear a stale active pointer only when its task is no longer active.
   update atlas.task_release_queue_items item
   set state='queued',task_id=null,activated_at=null,updated_at=now(),
       metadata=coalesce(item.metadata,'{}'::jsonb)||jsonb_build_object('stale_active_pointer_cleared_at',now())
@@ -479,15 +383,12 @@ $function$;
 revoke all on function atlas.advance_gentle_pressure_wash_serial_queue_v1() from public,anon,authenticated;
 grant execute on function atlas.advance_gentle_pressure_wash_serial_queue_v1() to service_role;
 
--- Complete the existing Elm queue and repair the current head if an earlier
--- partial migration left the queue with no active pressure-wash task.
 do $block$
 declare
   v_queue_key constant text := 'anna_gentle_pressure_wash_aug_2026';
   v_farm_id uuid;
   v_front atlas.planned_work_occurrences%rowtype;
   v_concrete atlas.planned_work_occurrences%rowtype;
-  v_item_id uuid;
 begin
   select item.farm_id into v_farm_id
   from atlas.task_release_queue_items item
@@ -565,8 +466,6 @@ begin
       metadata=atlas.task_release_queue_items.metadata||excluded.metadata,
       updated_at=now();
 
-  -- Any queued pressure-wash occurrence is calendarless until it becomes the
-  -- sole active head. This is the key anti-pile-up invariant.
   update atlas.planned_work_occurrences occurrence
   set work_lane='process_continuation',
       commitment_kind='persistent',
