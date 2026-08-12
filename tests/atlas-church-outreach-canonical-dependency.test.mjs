@@ -27,6 +27,8 @@ test("the prerequisite gate restores batch 2 and contacts to open, not permanent
   assert.match(migration, /set status='open',\s*blocker_text=null/);
   assert.match(migration, /'prerequisite_waiting_text','Finish the first five church contacts first\.'/);
   assert.match(migration, /'prerequisite_waiting_text','Waiting for the first church outreach batch\.'/);
+  const checklistOpenWrites = migration.match(/'\{checklist_status\}'[\s\S]{0,80}'"open"'::jsonb/g) ?? [];
+  assert.ok(checklistOpenWrites.length >= 2, "both canonical seeding and legacy compatibility must restore child checklist_status to open");
 });
 
 test("legacy release endpoint becomes idempotent once canonical prerequisite truth exists", () => {
