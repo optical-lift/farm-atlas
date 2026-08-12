@@ -10,6 +10,7 @@ const schedule = read("supabase/migrations/20260812193000_rhythmic_work_live_sch
 const outreach = read("supabase/migrations/20260812194000_serial_outreach_conveyor_v1.sql");
 const weed = read("supabase/migrations/20260812194500_weed_projection_and_clear_crop_merge_v1.sql");
 const moveAssembly = read("lib/atlas/task-move-assembly.ts");
+const ownerDay = read("components/atlas/owner-day-plan-gate.tsx");
 
 test("live schedule correction removes false work instead of rescheduling it", () => {
   assert.match(schedule, /zinnia_2026_s5_house_south_sow/);
@@ -75,4 +76,12 @@ test("clear-crop work is a mode of the serial removal and weeding system", () =>
   assert.match(weed, /work_collection_key','weeding'/);
   assert.match(weed, /anna_weeding_rotation/);
   assert.match(weed, /Duplicate MG11 continuation/);
+});
+
+test("Owner Day surfaces future Weed Cards as projections rather than released work", () => {
+  assert.match(ownerDay, /automaticWork\?: AutomaticWorkRow\[\]/);
+  assert.match(ownerDay, /sourceKind === "queue"/);
+  assert.match(ownerDay, /conditional === true/);
+  assert.match(ownerDay, /Projected Weed Card/);
+  assert.match(ownerDay, /This is a projection, not another released task/);
 });
