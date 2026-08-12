@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import OwnerDayPlanGate from "@/components/atlas/owner-day-plan-gate";
 import styles from "./day-trail-summary.module.css";
 
 type DayTrailSummaryProps = {
@@ -47,6 +48,7 @@ function finiteNumber(value: unknown) {
 
 export default function DayTrailSummary({ completed, total, blocked, loading = false, compact = false }: DayTrailSummaryProps) {
   const [authoritative, setAuthoritative] = useState<AuthoritativeProgress | null>(null);
+  const [ownerPlanDateIso, setOwnerPlanDateIso] = useState<string | null>(null);
 
   const refreshAuthoritativeProgress = useCallback(async () => {
     if (loading) return;
@@ -81,6 +83,10 @@ export default function DayTrailSummary({ completed, total, blocked, loading = f
   }, [completed, total, refreshAuthoritativeProgress]);
 
   useEffect(() => {
+    setOwnerPlanDateIso(compact ? selectedDayIso() : null);
+  }, [compact]);
+
+  useEffect(() => {
     const refresh = () => { void refreshAuthoritativeProgress(); };
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") refresh();
@@ -108,33 +114,36 @@ export default function DayTrailSummary({ completed, total, blocked, loading = f
       : "No work planned";
 
   return (
-    <section className={`${styles.card}${compact ? ` ${styles.compact}` : ""}`} aria-label="Day progress">
-      <header>
-        <strong>{valueText}</strong>
-        {!loading && compact && blocked > 0 ? <span>{blocked} blocked</span> : null}
-      </header>
+    <>
+      <section className={`${styles.card}${compact ? ` ${styles.compact}` : ""}`} aria-label="Day progress">
+        <header>
+          <strong>{valueText}</strong>
+          {!loading && compact && blocked > 0 ? <span>{blocked} blocked</span> : null}
+        </header>
 
-      <div
-        className={styles.rail}
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={safeTotal || 1}
-        aria-valuenow={safeCompleted}
-        aria-valuetext={valueText}
-      >
-        <span className={styles.fill} style={{ width: `${percent}%` }} />
-      </div>
+        <div
+          className={styles.rail}
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={safeTotal || 1}
+          aria-valuenow={safeCompleted}
+          aria-valuetext={valueText}
+        >
+          <span className={styles.fill} style={{ width: `${percent}%` }} />
+        </div>
 
-      {!compact ? (
-        <footer>
-          <span>{loading ? "Reading exact-date work" : safeTotal ? `${remaining} remaining` : "The day is clear"}</span>
-          {!loading && blocked > 0 ? (
-            <span className={styles.blocked}><i aria-hidden="true" />{blocked} blocked</span>
-          ) : !loading && safeTotal > 0 ? (
-            <span>Path clear</span>
-          ) : null}
-        </footer>
-      ) : null}
-    </section>
+        {!compact ? (
+          <footer>
+            <span>{loading ? "Reading exact-date work" : safeTotal ? `${remaining} remaining` : "The day is clear"}</span>
+            {!loading && blocked > 0 ? (
+              <span className={styles.blocked}><i aria-hidden="true" />{blocked} blocked</span>
+            ) : !loading && safeTotal > 0 ? (
+              <span>Path clear</span>
+            ) : null}
+          </footer>
+        ) : null}
+      </section>
+      {compact && ownerPlanDateIso ? <OwnerDayPlanGate dateIso={ownerPlanDateIso} /> : null}
+    </>
   );
 }
