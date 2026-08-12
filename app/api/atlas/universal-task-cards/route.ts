@@ -8,6 +8,7 @@ import {
 } from "@/lib/atlas/operator-context";
 import { readAtlasOperatorUniversalHome } from "@/lib/atlas/operator-universal-home";
 import { getAtlasSession } from "@/lib/atlas/session";
+import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { readAtlasTaskDayDispositions } from "@/lib/atlas/task-day-dispositions-server";
 import { readAtlasTaskMoveContexts } from "@/lib/atlas/task-move-context";
 import {
@@ -15,6 +16,7 @@ import {
   atlasUniversalTaskCards,
 } from "@/lib/atlas/universal-task-cards";
 import { atlasUniversalViewerFromSession } from "@/lib/atlas/viewer";
+import { workerExecutionTaskCards } from "@/lib/atlas/worker-execution-contract";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -138,11 +140,12 @@ export async function GET(request: Request) {
 
   try {
     const operatorContext = await readAtlasOwnerOperatorContext();
+    const effectiveMembershipId = effectiveOperatorMembershipId(operatorContext);
     const home = await readAtlasOperatorUniversalHome(viewer, {
       doneDate,
       dueThrough,
       effectiveAccountId: effectiveOperatorAccountId(operatorContext),
-      effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
+      effectiveMembershipId,
     });
     const dispositions = await readAtlasTaskDayDispositions(doneDate);
     const setAsideTaskIds = new Set(dispositions.map((row) => row.taskId));
@@ -152,7 +155,6 @@ export async function GET(request: Request) {
     let baseTaskCards = atlasUniversalTaskCards(home)
       .filter((card) => !setAsideTaskIds.has(card.task_id)) as TaskCardRow[];
 
-    const effectiveMembershipId = effectiveOperatorMembershipId(operatorContext);
     const workerMembershipId = effectiveMembershipId
       ?? (home.activeFarm?.role === "farm_hand" ? home.activeFarm.membershipId : null);
     const workerFarmId = home.activeFarm?.farmId ?? null;
@@ -217,10 +219,16 @@ export async function GET(request: Request) {
       console.error("Atlas task Move context read failed:", contextError);
     }
 
-    const taskCards = baseTaskCards.map((card) => ({
+    const enrichedTaskCards = baseTaskCards.map((card) => ({
       ...card,
       move_context: moveContexts[card.task_id] ?? null,
-    }));
+    })) as AtlasTaskCard[];
+    const effectiveRole = effectiveMembershipId
+      ? operatorContext?.effective.farmRole ?? operatorContext?.effective.role ?? null
+      : home.activeFarm?.role ?? home.organizationHome?.viewer.role ?? null;
+    const taskCards = effectiveRole === "farm_hand"
+      ? workerExecutionTaskCards(enrichedTaskCards)
+      : enrichedTaskCards;
 
     return privateJson({
       ok: true,
@@ -229,10 +237,10 @@ export async function GET(request: Request) {
       hasFarmScope: home.viewer.hasFarmScope,
       hasOrganizationScope: home.viewer.hasOrganizationScope,
       activeFarmName: home.activeFarm?.farmName ?? null,
-      role: home.activeFarm?.role ?? home.organizationHome?.viewer.role ?? null,
+      role: effectiveRole,
       operatorMode: operatorContext?.isOperating ?? false,
       effectiveAccountId: effectiveOperatorAccountId(operatorContext),
-      effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
+      effectiveMembershipId,
       taskCards,
       window: { doneDate, dueThrough, exactDate, placementDay },
     });
