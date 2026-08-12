@@ -41,7 +41,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "universal-dated-task-cards-v5-day-placement",
+      "X-Atlas-Read-Path": "universal-dated-task-cards-v6-hard-date-exceptions",
     },
   });
 }
@@ -99,8 +99,31 @@ function baselineSurvivesPlacement(placement: DayPlacement, placementDay: string
   }
   if (placement.serviceDate === placementDay) return true;
   // Before an explicit future placement, keep the task off the worker's plate.
-  // After a missed explicit placement, ordinary overdue/carry behavior resumes.
+  // After a missed explicit placement, ordinary carry can resume only when the
+  // task's own timing contract permits it. Hard dates are filtered below.
   return placement.serviceDate < placementDay;
+}
+
+function metadataText(card: TaskCardRow, key: string) {
+  const value = card.metadata?.[key];
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function hardDateCard(card: TaskCardRow) {
+  return card.commitment_kind === "hard_date"
+    || metadataText(card, "date_behavior") === "hard_date"
+    || metadataText(card, "date_commitment") === "hard_date"
+    || metadataText(card, "calendar_commitment_kind") === "owner_hard_date";
+}
+
+function farmHandDayKeepsCard(card: TaskCardRow, serviceDate: string) {
+  const status = typeof card.status === "string" ? card.status : "";
+  if (status !== "open" && status !== "blocked") return true;
+  if (!card.due_date || card.due_date >= serviceDate) return true;
+
+  // A missed hard date belongs to the Owner exception path. Farm Hand Day must
+  // not silently reinterpret yesterday's hard commitment as today's work.
+  return !hardDateCard(card);
 }
 
 export async function GET(request: Request) {
@@ -210,6 +233,14 @@ export async function GET(request: Request) {
       }
     }
 
+    const effectiveRole = effectiveMembershipId
+      ? operatorContext?.effective.farmRole ?? operatorContext?.effective.role ?? null
+      : home.activeFarm?.role ?? home.organizationHome?.viewer.role ?? null;
+
+    if (effectiveRole === "farm_hand" && placementDay) {
+      baseTaskCards = baseTaskCards.filter((card) => farmHandDayKeepsCard(card, placementDay));
+    }
+
     // Project context is enrichment, not a dependency of the working Day. If the
     // portfolio reader is temporarily unavailable, the executable task cards remain usable.
     let moveContexts = {} as Awaited<ReturnType<typeof readAtlasTaskMoveContexts>>;
@@ -223,9 +254,6 @@ export async function GET(request: Request) {
       ...card,
       move_context: moveContexts[card.task_id] ?? null,
     })) as AtlasTaskCard[];
-    const effectiveRole = effectiveMembershipId
-      ? operatorContext?.effective.farmRole ?? operatorContext?.effective.role ?? null
-      : home.activeFarm?.role ?? home.organizationHome?.viewer.role ?? null;
     const taskCards = effectiveRole === "farm_hand"
       ? workerExecutionTaskCards(enrichedTaskCards)
       : enrichedTaskCards;
