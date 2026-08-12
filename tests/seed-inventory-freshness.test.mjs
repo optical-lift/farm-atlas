@@ -93,7 +93,8 @@ test("trusted seed coverage gates dependent sowing and opens only proven shortfa
 
 test("seed recounts remain canonical Atlas tasks with authenticated APIs", () => {
   const api = read("app/api/atlas/seed-inventory/route.ts");
-  const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const boundary = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const canonical = read("components/atlas/canonical-assigned-task-detail-client.tsx");
   const loader = read("components/atlas/seed-inventory-task-loader.tsx");
   const more = read("app/more/page.tsx");
 
@@ -102,6 +103,7 @@ test("seed recounts remain canonical Atlas tasks with authenticated APIs", () =>
   assert.match(api, /record_seed_inventory_result_for_member_v1/);
   assert.match(api, /owner_operator_record_seed_inventory_result_v1/);
   assert.doesNotMatch(api, /service_role|createServiceClient/i);
+  assert.match(boundary, /workerExecutionTaskCard/);
   assert.match(canonical, /SeedInventoryTaskLoader/);
   assert.match(canonical, /seed_inventory_recount/);
   assert.match(loader, /\/api\/atlas\/seed-inventory/);
