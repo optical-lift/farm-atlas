@@ -11,9 +11,9 @@ const brief = read("components/atlas/task-execution-brief.tsx");
 const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 
 test("Task Move presents requirements before the physical action and resulting state", () => {
-  const requirementIndex = spine.indexOf('aria-label="Needs"');
-  const workIndex = spine.indexOf('data-kind="action"');
-  const finishIndex = spine.indexOf('data-kind="done"', workIndex);
+  const requirementIndex = spine.indexOf('<section className="atlas-worker-move__section" aria-label="Needs">');
+  const workIndex = spine.indexOf('<section className="atlas-worker-move__step" data-kind="action">');
+  const finishIndex = spine.indexOf('<section className="atlas-worker-move__step" data-kind="done">', workIndex);
 
   assert.ok(requirementIndex >= 0, "worker needs must render");
   assert.ok(workIndex > requirementIndex, "the physical action must follow its needs");
