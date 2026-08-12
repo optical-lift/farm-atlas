@@ -10,13 +10,15 @@ const foundation = read("supabase/migrations/20260804070500_thursday_morning_exe
 const clusters = read("supabase/migrations/20260804074000_thursday_morning_checklist_clusters_v2.sql");
 const split = read("supabase/migrations/20260804074500_split_thursday_morning_into_four_tasks_v2.sql");
 const capacityOrder = read("supabase/migrations/20260804075000_thursday_morning_cluster_capacity_order_v2.sql");
-const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
+const boundary = read("components/atlas/canonical-assigned-task-detail.tsx");
+const canonical = read("components/atlas/canonical-assigned-task-detail-client.tsx");
 const detail = read("components/atlas/execution-checklist-task-detail.tsx");
 const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 const execution = read("lib/atlas/task-execution.ts");
 const route = read("app/api/atlas/task-execution-checklist/route.ts");
 
 test("Thursday morning preparation opens as four themed tasks with visible checklists", () => {
+  assert.match(boundary, /workerExecutionTaskCard/);
   assert.match(canonical, /ExecutionChecklistTaskDetail/);
   assert.match(canonical, /execution_checklist_template_key/);
   assert.match(detail, /AssignedTaskExecutionShell/);
