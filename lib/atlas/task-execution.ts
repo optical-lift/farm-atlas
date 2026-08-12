@@ -42,13 +42,6 @@ function metadataLines(task: AtlasTaskCard, key: string) {
   return atlasStringList(value);
 }
 
-function firstSentence(value: string | null | undefined) {
-  if (!value?.trim()) return "";
-  const normalized = value.trim().replace(/\s+/g, " ");
-  const match = normalized.match(/^.*?[.!?](?:\s|$)/);
-  return (match?.[0] || normalized).trim();
-}
-
 function physicalZone(task: AtlasTaskCard) {
   if (task.zone_label?.trim()) return task.zone_label.trim();
   const collection = atlasMetaString(task, "collection_zone");
@@ -78,12 +71,9 @@ function fallbackHow(task: AtlasTaskCard) {
   const location = atlasMetaString(task, "display_location");
   if (detail && detail.toLowerCase() !== location.toLowerCase() && !lines.includes(detail)) lines.push(detail);
 
-  if (!lines.length) {
-    const noteLead = firstSentence(task.note);
-    if (noteLead) lines.push(noteLead);
-  }
-
-  return lines.length ? lines.slice(0, 2) : ["Follow the task instructions for this move."];
+  // No prose guess. If Atlas does not have a method, the worker card should not
+  // invent "follow the instructions" or pull a management note into execution.
+  return lines.slice(0, 2);
 }
 
 function fallbackDoneWhen(task: AtlasTaskCard) {
@@ -106,7 +96,7 @@ function fallbackDoneWhen(task: AtlasTaskCard) {
   if (route === "propagation") return "The propagation move is finished.";
   if (route === "build") return "The requested build or prep work is finished.";
   if (route === "venue") return "The requested venue work is finished.";
-  return "The requested result is recorded.";
+  return "";
 }
 
 export function taskExecutionModel(task: AtlasTaskCard): AtlasTaskExecutionModel {
@@ -117,15 +107,15 @@ export function taskExecutionModel(task: AtlasTaskCard): AtlasTaskExecutionModel
   const howLines = explicitHow.length ? explicitHow : fallbackHow(task);
   const doneWhen = atlasMetaString(task, "execution_done_when") || fallbackDoneWhen(task);
   const explicitDetails = atlasMetaString(task, "execution_details");
-  const note = task.note?.trim() || "";
-  const details = explicitDetails || (note && !howLines.some((line) => line === note) ? note : "") || null;
 
   return {
     doText,
     placeText: combinedPlace(task),
     howLines,
     doneWhen,
-    details,
+    // Free-form task.note is management/provenance by default. Worker prose must
+    // be deliberately authored as execution_details / worker_context.
+    details: explicitDetails || null,
     dueLabel: dueLabel(task),
   };
 }
