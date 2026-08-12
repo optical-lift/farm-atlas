@@ -2,6 +2,7 @@ import type {
   AtlasTaskCard,
   AtlasTaskCardMetadata,
   AtlasTaskCardObject,
+  AtlasTaskCardResourceRequirement,
   AtlasTaskCardTemplate,
 } from "@/lib/atlas/task-cards-client";
 import type { TaskMoveAssembly } from "@/lib/atlas/task-move-assembly";
@@ -15,6 +16,9 @@ import type { TaskMoveAssembly } from "@/lib/atlas/task-move-assembly";
  * the structured execution fields, author it deliberately as `worker_context`.
  */
 export const WORKER_EXECUTION_METADATA_KEYS = new Set([
+  // Stable identity used by a few execution instruments.
+  "task_key",
+
   // Execution identity + human display.
   "display_title",
   "display_action",
@@ -125,7 +129,18 @@ function workerMetadata(metadata: AtlasTaskCardMetadata | null): AtlasTaskCardMe
   if (!metadata) return null;
   const output: AtlasTaskCardMetadata = {};
   for (const [key, value] of Object.entries(metadata)) {
-    if (WORKER_EXECUTION_METADATA_KEYS.has(key)) output[key] = value;
+    if (!WORKER_EXECUTION_METADATA_KEYS.has(key)) continue;
+    if (key === "day_placement" && value && typeof value === "object" && !Array.isArray(value)) {
+      const placement = value as Record<string, unknown>;
+      output[key] = {
+        serviceDate: placement.serviceDate,
+        dayWindow: placement.dayWindow,
+        sortOrder: placement.sortOrder,
+        placementSource: placement.placementSource,
+      };
+      continue;
+    }
+    output[key] = value;
   }
   return output;
 }
@@ -137,7 +152,7 @@ function workerObject(object: AtlasTaskCardObject): AtlasTaskCardObject {
     object_label: object.object_label,
     object_type: object.object_type,
     object_mode: object.object_mode,
-    life_status: object.life_status ?? null,
+    life_status: null,
     weed_pressure: null,
     water_status: null,
     last_touched_at: null,
@@ -147,6 +162,16 @@ function workerObject(object: AtlasTaskCardObject): AtlasTaskCardObject {
     decision_required: null,
     presentability: null,
     state_metadata: null,
+  };
+}
+
+function workerResourceRequirement(requirement: AtlasTaskCardResourceRequirement): AtlasTaskCardResourceRequirement {
+  return {
+    ...requirement,
+    // Free-form requirement notes can contain management rationale. The worker
+    // receives canonical resource identity, quantity and availability only.
+    note: null,
+    condition_notes: null,
   };
 }
 
@@ -183,6 +208,7 @@ export function workerExecutionTaskCard(task: AtlasTaskCard): AtlasTaskCard {
     task_outcomes: [],
     task_transitions: [],
     objects: (task.objects ?? []).map(workerObject),
+    resource_requirements: (task.resource_requirements ?? []).map(workerResourceRequirement),
     action_templates: (task.action_templates ?? []).map(workerTemplate),
     move_context: task.move_context ? {
       projects: [],
@@ -210,6 +236,11 @@ export function workerExecutionTaskMove(assembly: TaskMoveAssembly): TaskMoveAss
       // tradeoffs, reset rationale). They are not worker-visible by default.
       current: [],
     },
+    requirements: assembly.requirements.map((requirement) => ({
+      ...requirement,
+      note: null,
+      conditionNotes: null,
+    })),
     linkedObjects: assembly.linkedObjects.map((object) => ({
       ...object,
       lifeStatus: null,
