@@ -6,6 +6,7 @@ import {
   readAtlasOwnerOperatorContext,
 } from "@/lib/atlas/operator-context";
 import { readAtlasTaskMoveContexts } from "@/lib/atlas/task-move-context";
+import { workerExecutionTaskCards } from "@/lib/atlas/worker-execution-contract";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,10 @@ export async function GET(request: NextRequest) {
   if (operatorContext?.isOperating && !operatorMembershipId) {
     return privateJson({ ok: false, error: "The selected account has no farm task scope." }, 403);
   }
+
+  const effectiveRole = operatorMembershipId
+    ? operatorContext?.effective.farmRole ?? operatorContext?.effective.role
+    : authorized.access.membership.role;
 
   const supabase = await createAtlasServerClient();
   const response = operatorMembershipId
@@ -72,19 +77,20 @@ export async function GET(request: NextRequest) {
     console.error("Atlas full-task Move context read failed:", contextError);
   }
 
-  const taskCards = baseTaskCards.map((card) => ({
+  const enrichedTaskCards = baseTaskCards.map((card) => ({
     ...card,
     move_context: moveContexts[card.task_id] ?? null,
   }));
+  const taskCards = effectiveRole === "farm_hand"
+    ? workerExecutionTaskCards(enrichedTaskCards as never[])
+    : enrichedTaskCards;
 
   return privateJson({
     ok: true,
     farmKey: operatorMembershipId
       ? operatorContext?.effective.farmKey ?? "elm_farm"
       : authorized.access.membership.farmKey ?? "elm_farm",
-    role: operatorMembershipId
-      ? operatorContext?.effective.farmRole ?? operatorContext?.effective.role
-      : authorized.access.membership.role,
+    role: effectiveRole,
     operatorMode: operatorContext?.isOperating ?? false,
     effectiveMembershipId: operatorMembershipId,
     taskCards,
