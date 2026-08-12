@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireAtlasApiAccess } from "@/lib/atlas/api-access";
+import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { resolveTaskMove } from "@/lib/atlas/task-move-resolver";
+import { workerExecutionTaskMove } from "@/lib/atlas/worker-execution-contract";
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +28,21 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const assembly = await resolveTaskMove(taskId);
+    const [assembly, operatorContext] = await Promise.all([
+      resolveTaskMove(taskId),
+      readAtlasOwnerOperatorContext(),
+    ]);
     if (!assembly) return privateJson({ ok: false, error: "Task not found." }, 404);
-    return privateJson({ ok: true, assembly });
+
+    const effectiveRole = operatorContext?.isOperating
+      && operatorContext.effective.farmId === authorized.access.membership.farmId
+      ? operatorContext.effective.farmRole
+      : authorized.access.membership.role;
+    const visibleAssembly = effectiveRole === "farm_hand"
+      ? workerExecutionTaskMove(assembly)
+      : assembly;
+
+    return privateJson({ ok: true, assembly: visibleAssembly });
   } catch (error) {
     console.error("Atlas Task Move resolution failed:", error);
     return privateJson({ ok: false, error: "Atlas could not resolve this task move." }, 500);

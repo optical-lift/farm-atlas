@@ -89,6 +89,21 @@ export type TaskMoveUnresolvedItem = {
   status: Exclude<TaskMoveResolution, "resolved">;
 };
 
+export type TaskMovePresentationFact = {
+  label: string;
+  value: string;
+};
+
+export type TaskMovePresentation = {
+  actionLabel: string;
+  actionSubject: string;
+  placeRelation: "Where" | "Into" | "From" | "To" | "At" | "Place";
+  placeLabel: string | null;
+  methodFacts: TaskMovePresentationFact[];
+  resultLabel: string | null;
+  resultText: string | null;
+};
+
 export type TaskMoveAssembly = {
   version: 2;
   task: {
@@ -131,6 +146,7 @@ export type TaskMoveAssembly = {
     details: string | null;
     dueLabel: string;
   };
+  presentation: TaskMovePresentation;
   checklist: Array<{
     id: string;
     label: string;
@@ -155,13 +171,92 @@ function metadataText(task: AtlasTaskCard, key: string) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function metadataNumber(task: AtlasTaskCard, key: string) {
+  const value = task.metadata?.[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  return null;
+}
+
+function metadataLines(task: AtlasTaskCard, key: string) {
+  const value = task.metadata?.[key];
+  if (typeof value === "string" && value.trim()) return [value.trim()];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => item.trim())
+    : [];
+}
+
+function placeRelation(task: AtlasTaskCard, route: AtlasWorkRouteKey): TaskMovePresentation["placeRelation"] {
+  const type = task.task_type.toLowerCase();
+  const action = (task.action_key ?? "").toLowerCase();
+  if (type.includes("transplant") || action.includes("transplant")) return "Into";
+  if (route === "harvest" || type.includes("harvest")) return "From";
+  if (type.includes("deliver") || action.includes("deliver")) return "To";
+  if (type.includes("move") || type.includes("relocat") || action === "move") return "Place";
+  if (route === "seed" || type.includes("sow")) return "Where";
+  if (route === "plant") return "Where";
+  return "At";
+}
+
+function meaningfulResult(task: AtlasTaskCard, route: AtlasWorkRouteKey) {
+  const label = metadataText(task, "worker_result_label");
+  const lines = metadataLines(task, "worker_result_lines");
+  if (label && lines.length) return { label, text: lines.join(" · ") };
+
+  const batchCount = metadataNumber(task, "batch_item_count");
+  const batchTotal = metadataNumber(task, "batch_total_quantity");
+  const batchUnit = metadataText(task, "batch_quantity_unit") || metadataText(task, "quantity_unit");
+  if (task.task_type === "pot_up" && batchCount !== null && batchTotal !== null) {
+    return {
+      label: "After",
+      text: `${batchCount} trays · ${batchTotal}${batchUnit ? ` ${batchUnit}` : ""}`,
+    };
+  }
+
+  // Do not spend a trail node saying that sowing makes a bed sown, weeding makes
+  // a bed weeded, etc. A result node is reserved for information beyond the verb.
+  if (["seed", "weed", "mow", "water"].includes(route)) return { label: null, text: null };
+
+  const doneWhen = metadataText(task, "execution_done_when");
+  const generic = [
+    "the requested result is recorded.",
+    "the requested work is finished.",
+    "the requested task is finished.",
+    "the assigned planting is in place.",
+  ];
+  if (!doneWhen || generic.includes(doneWhen.toLowerCase())) return { label: null, text: null };
+  return { label: "After", text: doneWhen };
+}
+
+function taskMovePresentation(task: AtlasTaskCard, route: AtlasWorkRouteKey, action: string, subject: string, place: string): TaskMovePresentation {
+  const methodFacts: TaskMovePresentationFact[] = [];
+  const rows = metadataNumber(task, "rows_per_3ft_bed");
+  const spacing = metadataNumber(task, "in_row_spacing_in");
+  const depth = metadataNumber(task, "target_depth_inches");
+  const cutHeight = metadataNumber(task, "target_cut_height_inches");
+
+  if (rows !== null) methodFacts.push({ label: "Rows", value: `${rows} per bed` });
+  if (spacing !== null) methodFacts.push({ label: "Spacing", value: `${spacing}″` });
+  if (depth !== null) methodFacts.push({ label: "Depth", value: `${depth}″` });
+  if (cutHeight !== null) methodFacts.push({ label: "Cut height", value: `${cutHeight}″` });
+
+  const result = meaningfulResult(task, route);
+  return {
+    actionLabel: action || "Work",
+    actionSubject: subject || task.title,
+    placeRelation: placeRelation(task, route),
+    placeLabel: place && place !== "Elm Farm" ? place : null,
+    methodFacts,
+    resultLabel: result.label,
+    resultText: result.text,
+  };
+}
+
 /**
  * Assemble the canonical semantic payload for one Atlas Task Move.
  *
- * The spine is only the state transition: CURRENT -> MOVE -> AFTER.
- * Requirements attach to MOVE as branches. Their array order is never sequential
- * and must never be rendered as though one resource or dependency happens after
- * another. A blocked branch may stop the spine at MOVE while AFTER remains known.
+ * The spine is the state transition. Requirements remain independent branches;
+ * presentation describes how a human should read the particular operation.
  */
 export function assembleTaskMove(task: AtlasTaskCard): TaskMoveAssembly {
   const execution = taskExecutionModel(task);
@@ -183,6 +278,16 @@ export function assembleTaskMove(task: AtlasTaskCard): TaskMoveAssembly {
     moveSemantics: canonicalMoveSemantics,
     moveContext: task.move_context ?? null,
   });
+  const enriched = attachCanonicalMoveRoles(baseAssembly, task) as Omit<TaskMoveAssembly, "presentation">;
 
-  return attachCanonicalMoveRoles(baseAssembly, task) as TaskMoveAssembly;
+  return {
+    ...enriched,
+    presentation: taskMovePresentation(
+      task,
+      display.route,
+      display.action || execution.doText || task.title,
+      display.subject || task.title,
+      execution.placeText || display.location || "Elm Farm",
+    ),
+  };
 }

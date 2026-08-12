@@ -18,7 +18,7 @@ const retiredRootPatches = [
   "AtlasFarmConditionsHomePatch",
 ];
 
-test("RootLayout mounts services, not corrective render patches", () => {
+test("RootLayout mounts services, not corrective render patches or Day-specific planning UI", () => {
   const layout = read("app/layout.tsx");
 
   for (const patch of retiredRootPatches) {
@@ -29,7 +29,7 @@ test("RootLayout mounts services, not corrective render patches", () => {
   assert.match(layout, /AtlasSkyLedgerMaintainer/);
   assert.match(layout, /AtlasContextualAppFrame/);
   assert.match(layout, /DependencyReleaseFlash/);
-  assert.match(layout, /OwnerDayPlanGate/);
+  assert.doesNotMatch(layout, /OwnerDayPlanGate/);
 });
 
 test("set-aside task membership is enforced by the dated task reader, not hidden after render", () => {

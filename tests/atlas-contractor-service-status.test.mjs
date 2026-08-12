@@ -4,13 +4,15 @@ import test from "node:test";
 
 const component = await readFile(new URL("../components/atlas/contractor-service-task-detail.tsx", import.meta.url), "utf8");
 const canonical = await readFile(new URL("../components/atlas/canonical-assigned-task-detail.tsx", import.meta.url), "utf8");
+const canonicalClient = await readFile(new URL("../components/atlas/canonical-assigned-task-detail-client.tsx", import.meta.url), "utf8");
 const api = await readFile(new URL("../app/api/atlas/contractor-service/route.ts", import.meta.url), "utf8");
 const migration = await readFile(new URL("../supabase/migrations/20260807162500_contractor_service_visit_status_v1.sql", import.meta.url), "utf8");
 
 
 test("contractor status cards use a semantic Yes action instead of generic Done", () => {
-  assert.match(canonical, /ContractorServiceTaskDetail/);
-  assert.match(canonical, /task_type === "contractor_service_status"/);
+  assert.match(canonical, /CanonicalAssignedTaskDetailClient/);
+  assert.match(canonicalClient, /ContractorServiceTaskDetail/);
+  assert.match(canonicalClient, /task\.task_type === "contractor_service_status"/);
   assert.match(component, /: "Yes"/);
   assert.doesNotMatch(component, /: "Done"/);
 });

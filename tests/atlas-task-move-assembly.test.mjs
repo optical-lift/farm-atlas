@@ -317,8 +317,9 @@ test("contract prevents UI from treating branch array order as a sequence", () =
 
   assert.match(contract, /Branch ordering has no temporal meaning/);
   assert.match(contract, /target AFTER state is \*\*not erased\*\*/);
-  assert.match(adapter, /CURRENT -> MOVE -> AFTER/);
-  assert.match(adapter, /Requirements attach to MOVE as branches/);
+  assert.match(adapter, /The spine is the state transition/);
+  assert.match(adapter, /Requirements remain independent branches/);
+  assert.match(adapter, /presentation describes how a human should read the particular operation/);
   assert.match(adapter, /atlasTaskDisplay\(task\)/);
   assert.match(resolver, /resolveTaskMove/);
   assert.match(resolver, /owner_operator_task_cards_v1/);

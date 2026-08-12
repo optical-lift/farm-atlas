@@ -6,6 +6,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 
 const dayRoute = read("lib/atlas/day-route.ts");
 const canonicalDetail = read("components/atlas/canonical-assigned-task-detail.tsx");
+const canonicalClient = read("components/atlas/canonical-assigned-task-detail-client.tsx");
 const serialGate = read("supabase/migrations/20260808235500_serial_queue_release_gate.sql");
 const serialBehavior = read("supabase/migrations/20260808235600_serial_queue_release_behavior.sql");
 const serialWeeding = read("supabase/migrations/20260808235620_reconcile_anna_serial_weeding.sql");
@@ -16,8 +17,9 @@ const batchTasks = read("supabase/migrations/20260808235700_consolidate_multi_tr
 test("inspect-assess is one CHECK family while subtype keeps task behavior", () => {
   assert.match(dayRoute, /operationClass === "inspect_assess"\) return "Check"/);
   assert.match(dayRoute, /germination_check: "Germination check"/);
-  assert.match(canonicalDetail, /isExecutionChecklistTask/);
-  assert.match(canonicalDetail, /WeedCardTaskLoader/);
+  assert.match(canonicalDetail, /CanonicalAssignedTaskDetailClient/);
+  assert.match(canonicalClient, /isExecutionChecklistTask/);
+  assert.match(canonicalClient, /WeedCardTaskLoader/);
 });
 
 test("serial queue membership is authoritative at the final occurrence gate", () => {
@@ -59,7 +61,7 @@ test("multi-tray pot-up work is one executable task with required tray lines", (
   assert.match(batchTasks, /execution_checklist_template_key/);
   assert.match(batchTasks, /status='archived'/);
   assert.match(batchTasks, /Consolidated into one crop pot-up task before work began/);
-  assert.match(canonicalDetail, /return <ExecutionChecklistTaskDetail/);
+  assert.match(canonicalClient, /return <ExecutionChecklistTaskDetail/);
 });
 
 test("legacy multi-item initial batches stay compatible with serial release helper", () => {

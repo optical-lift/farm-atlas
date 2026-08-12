@@ -10,16 +10,16 @@ const spine = read("components/atlas/task-move-spine.tsx");
 const brief = read("components/atlas/task-execution-brief.tsx");
 const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 
-test("Task Move keeps requirements as precondition branches between current state and the work move", () => {
+test("Task Move keeps requirements as preconditions before the operation", () => {
   const currentIndex = spine.indexOf('<section className="atlas-human-task-trail__step" data-kind="current">');
   const requirementIndex = spine.indexOf('className="atlas-human-task-trail__requirement-cluster"');
-  const workIndex = spine.indexOf('<section className="atlas-human-task-trail__step" data-kind="work">');
-  const finishIndex = spine.indexOf('data-kind="finish"', workIndex);
+  const actionIndex = spine.indexOf('<section className="atlas-human-task-trail__step" data-kind="action">');
+  const placeIndex = spine.indexOf('data-kind="place"', actionIndex);
 
-  assert.ok(currentIndex >= 0, "current farm-state step must render");
-  assert.ok(requirementIndex > currentIndex, "requirements must branch from the current state before work begins");
-  assert.ok(workIndex > requirementIndex, "the work move must follow its preconditions");
-  assert.ok(finishIndex > workIndex, "finished state must follow the work move");
+  assert.ok(currentIndex >= 0, "owner-capable current farm-state step must remain available");
+  assert.ok(requirementIndex > currentIndex, "requirements must branch before work begins");
+  assert.ok(actionIndex > requirementIndex, "the operation must follow its preconditions");
+  assert.ok(placeIndex > actionIndex, "structured place must follow the operation identity");
   assert.match(spine, /aria-label="What must be true before this move"/);
   assert.match(spine, /atlas-human-task-trail__branch-line/);
   assert.match(spine, /"├──"/);
@@ -35,11 +35,24 @@ test("same-kind Task Move requirements group into one semantic branch", () => {
   assert.match(spine, /requirement\.kind === "capacity" && requirement\.capacityRole === "destination"\) return "Destination capacity"/);
 });
 
-test("Task Focus reads the canonical Task Move assembly and uses one human trail architecture", () => {
+test("Task Focus reads the canonical Task Move assembly and never invents a fallback finish story", () => {
   assert.match(shell, /\/api\/atlas\/task-move\?taskId=/);
   assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
   assert.match(brief, /<TaskMoveSpine assembly=\{resolvedAssembly\} \/>/);
-  assert.match(brief, /Compatibility state while the canonical assembly is loading\/unavailable/);
+  assert.match(brief, /Loading structured task details…/);
+  assert.doesNotMatch(brief, /<small>Do this<\/small>/);
+  assert.doesNotMatch(brief, /<small>Finished<\/small>/);
+});
+
+test("operation trail consumes semantic presentation rather than universal Do this / Finished labels", () => {
+  assert.match(spine, /presentation\.actionLabel/);
+  assert.match(spine, /presentation\.actionSubject/);
+  assert.match(spine, /presentation\.placeRelation/);
+  assert.match(spine, /presentation\.placeLabel/);
+  assert.match(spine, /presentation\.methodFacts\.map/);
+  assert.match(spine, /presentation\.resultText \?/);
+  assert.doesNotMatch(spine, />Do this</);
+  assert.doesNotMatch(spine, />Finished</);
 });
 
 test("requirement branches use human quantities and preserve state, notes, and open questions", () => {

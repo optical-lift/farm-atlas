@@ -11,7 +11,8 @@ const projectPull = await readFile(new URL("../lib/atlas/project-pull.ts", impor
 const homePage = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 const switchedHome = await readFile(new URL("../lib/atlas/switched-account-home-overview.ts", import.meta.url), "utf8");
 const picker = await readFile(new URL("../app/project-pull/[projectId]/page.tsx", import.meta.url), "utf8");
-const canonicalTask = await readFile(new URL("../components/atlas/canonical-assigned-task-detail.tsx", import.meta.url), "utf8");
+const taskBoundary = await readFile(new URL("../components/atlas/canonical-assigned-task-detail.tsx", import.meta.url), "utf8");
+const canonicalTask = await readFile(new URL("../components/atlas/canonical-assigned-task-detail-client.tsx", import.meta.url), "utf8");
 const returnRoute = await readFile(new URL("../app/api/atlas/project-pull/return/route.ts", import.meta.url), "utf8");
 
 test("project pool remains an Atlas-scoped durable source of truth", () => {
@@ -96,5 +97,6 @@ test("management picker now chooses the next serving without reintroducing a one
   assert.match(picker, /Take this one next/);
   assert.match(picker, /pull_project_item_to_today_v1/);
   assert.match(returnRoute, /return_project_item_to_pool_v1/);
+  assert.match(taskBoundary, /CanonicalAssignedTaskDetailClient/);
   assert.match(canonicalTask, /ProjectPullTaskDetail/);
 });

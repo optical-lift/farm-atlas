@@ -7,20 +7,23 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 function read(path) { return readFileSync(join(root, path), "utf8"); }
 
-test("Pass 5 gives ordinary assigned tasks one neutral execution shell", () => {
+test("Pass 5 gives ordinary assigned tasks one neutral execution shell behind the worker server boundary", () => {
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const canonicalClient = read("components/atlas/canonical-assigned-task-detail-client.tsx");
 
   assert.match(shell, /export default function AssignedTaskExecutionShell/);
   assert.match(shell, /TaskExecutionBrief/);
   assert.match(shell, /TaskChildChecklist/);
   assert.match(shell, /TaskPrimaryResultControls/);
   assert.match(shell, /data-atlas-assigned-task-execution-shell="true"/);
-  assert.match(canonical, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
+  assert.match(canonical, /workerExecutionTaskCard\(props\.task\)/);
+  assert.match(canonical, /CanonicalAssignedTaskDetailClient/);
+  assert.match(canonicalClient, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
   assert.doesNotMatch(canonical, /DominionAssignedTaskDetail/);
 });
 
-test("the shell owns canonical Task Move resolution blockers and completion gating while the brief owns human timing presentation", () => {
+test("the shell owns canonical Task Move resolution blockers and completion gating while the brief owns fallback human timing presentation", () => {
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
   const brief = read("components/atlas/task-execution-brief.tsx");
   const spine = read("components/atlas/task-move-spine.tsx");
@@ -36,7 +39,7 @@ test("the shell owns canonical Task Move resolution blockers and completion gati
   assert.match(shell, /This can&apos;t move yet/);
 
   assert.match(brief, /assemblyControlled = assembly !== undefined/);
-  assert.match(brief, /resolvedAssembly\?\.execution\.dueLabel/);
+  assert.match(brief, /const resolvedDue = dueLabel === undefined \? model\?\.dueLabel/);
   assert.match(brief, /atlas-human-task-fallback__due/);
   assert.match(spine, /assembly\.execution\.dueLabel/);
   assert.match(spine, /data-reachable=\{stopped \? "false" : "true"\}/);

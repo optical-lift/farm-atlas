@@ -2,8 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const dispatcher = readFileSync(
+const boundary = readFileSync(
   new URL("../components/atlas/canonical-assigned-task-detail.tsx", import.meta.url),
+  "utf8",
+);
+const dispatcher = readFileSync(
+  new URL("../components/atlas/canonical-assigned-task-detail-client.tsx", import.meta.url),
   "utf8",
 );
 const detail = readFileSync(
@@ -23,7 +27,8 @@ const workflowMigration = readFileSync(
   "utf8",
 );
 
-test("network outreach is a reusable checklist family instead of a church-specific task page", () => {
+test("network outreach is a reusable checklist family behind the worker execution boundary", () => {
+  assert.match(boundary, /workerExecutionTaskCard/);
   assert.match(dispatcher, /checklist_mode === "network_outreach"/);
   assert.match(dispatcher, /NetworkOutreachTaskDetail/);
   assert.doesNotMatch(detail, /Faith Southern|Kingdom Church|Hope Church|Marshfield Assembly|Marshfield First/);

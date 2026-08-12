@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 function read(path) {
@@ -53,7 +53,7 @@ test("only the Owner configures a seed count lifespan and the form has no guesse
 
 test("all seed inventory outcomes preserve physical truth and role boundaries", () => {
   const result = read("supabase/migrations/20260731175035_seed_inventory_result_engine_v1.sql");
-  const focus = read("app/task-focus/[taskId]/SeedInventoryFocusPage.tsx");
+  const instrument = read("components/atlas/seed-inventory-task-loader.tsx");
 
   for (const outcome of [
     "count_confirmed",
@@ -65,7 +65,7 @@ test("all seed inventory outcomes preserve physical truth and role boundaries", 
     "retired",
   ]) {
     assert.match(result, new RegExp(outcome));
-    assert.match(focus, new RegExp(outcome));
+    assert.match(instrument, new RegExp(outcome));
   }
   assert.match(result, /Use Count corrected/);
   assert.match(result, /Use Count confirmed/);
@@ -73,7 +73,7 @@ test("all seed inventory outcomes preserve physical truth and role boundaries", 
   assert.match(result, /seed_inventory_owner_handoff/);
   assert.match(result, /state='recovering'/);
   assert.match(result, /upsert_journal_event_v1/);
-  assert.match(focus, /Time does not claim any seed was received, consumed, lost, or damaged/);
+  assert.match(instrument, /Time does not claim seed was received, consumed, lost, or damaged/);
 });
 
 test("trusted seed coverage gates dependent sowing and opens only proven shortfall decisions", () => {
@@ -93,7 +93,8 @@ test("trusted seed coverage gates dependent sowing and opens only proven shortfa
 
 test("seed recounts remain canonical Atlas tasks with authenticated APIs", () => {
   const api = read("app/api/atlas/seed-inventory/route.ts");
-  const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const boundary = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const canonical = read("components/atlas/canonical-assigned-task-detail-client.tsx");
   const loader = read("components/atlas/seed-inventory-task-loader.tsx");
   const more = read("app/more/page.tsx");
 
@@ -102,10 +103,14 @@ test("seed recounts remain canonical Atlas tasks with authenticated APIs", () =>
   assert.match(api, /record_seed_inventory_result_for_member_v1/);
   assert.match(api, /owner_operator_record_seed_inventory_result_v1/);
   assert.doesNotMatch(api, /service_role|createServiceClient/i);
+  assert.match(boundary, /workerExecutionTaskCard/);
   assert.match(canonical, /SeedInventoryTaskLoader/);
   assert.match(canonical, /seed_inventory_recount/);
   assert.match(loader, /\/api\/atlas\/seed-inventory/);
-  assert.match(loader, /SeedInventoryFocusPage/);
+  assert.match(loader, /AssignedTaskExecutionShell/);
+  assert.match(loader, /data-atlas-method-instrument="seed-inventory"/);
+  assert.match(loader, /data-atlas-result-instrument="seed-inventory"/);
+  assert.equal(existsSync(new URL("../app/task-focus/[taskId]/SeedInventoryFocusPage.tsx", import.meta.url)), false);
   assert.match(more, /Seed inventory/);
   assert.match(more, /\/inventory\/seeds/);
 });

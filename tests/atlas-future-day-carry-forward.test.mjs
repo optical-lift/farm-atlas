@@ -12,7 +12,11 @@ test("carried-work labeling stays on Today while each future Day trusts its exac
   assert.match(dayPage, /task\.due_date < dateIso/);
   assert.match(dayPage, /const mixedOpenTasks = useMemo\(\(\) => uniqueTasks\(requiredTasks\), \[requiredTasks\]\);/);
   assert.match(dayPage, /Unfinished work from earlier days is still real/);
-  assert.match(dayPage, /dateIso === calendarToday[\s\S]*relativeWorkerTimelineGroups[\s\S]*: timelineGroups/);
+  assert.match(dayPage, /windowedTimeline\(visibleTimelineGroups\)/);
+  assert.match(dayPage, /label: "Morning"/);
+  assert.match(dayPage, /label: "Afternoon"/);
+  assert.match(dayPage, /label: "Evening"/);
+  assert.doesNotMatch(dayPage, /relativeWorkerTimelineGroups/);
   assert.match(dayPage, /atlas-day-mixed-timeline/);
   assert.match(dayPage, /tasks scheduled for this day/);
   assert.doesNotMatch(dayPage, /These unfinished tasks remain ahead of today’s regular work/);

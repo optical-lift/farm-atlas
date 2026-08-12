@@ -1,11 +1,19 @@
 "use client";
 
-import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { createPortal } from "react-dom";
 
 import OwnerDayCueEditor from "@/components/atlas/owner-day-cue-editor";
 import OwnerDayScheduleBuilder from "@/components/atlas/owner-day-schedule-builder";
+
+type AutomaticWorkRow = {
+  id?: string;
+  title?: string;
+  sourceKind?: string;
+  conditional?: boolean;
+  reason?: string | null;
+  location?: string | null;
+};
 
 type PlanProbe = {
   ok?: boolean;
@@ -22,13 +30,15 @@ type PlanProbe = {
     paidTargetMinutes?: number;
     committedPaidMinutes?: number;
     automaticPaidMinutes?: number;
-    suggestions?: Array<{ sourceKind?: string }>;
-    automaticWork?: unknown[];
-    realWork?: unknown[];
+    automaticWork?: AutomaticWorkRow[];
   } | null;
 };
 
-function validDateIso(value: string | null) {
+type Props = {
+  dateIso: string;
+};
+
+function validDateIso(value: string | null | undefined) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
 }
 
@@ -41,19 +51,20 @@ function minutesLabel(value: number) {
   return `${hours}h ${remainder}m`;
 }
 
-export default function OwnerDayPlanGate() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const requestedDate = searchParams.get("date");
-  const dateIso = pathname === "/day" && validDateIso(requestedDate) ? requestedDate : null;
+function dayEditTarget() {
+  if (typeof document === "undefined") return null;
+  return document.querySelector<HTMLElement>(".atlas-day-task-groups");
+}
+
+export default function OwnerDayPlanGate({ dateIso }: Props) {
   const [probe, setProbe] = useState<PlanProbe | null>(null);
   const [open, setOpen] = useState(false);
-  const [host, setHost] = useState<HTMLElement | null>(null);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     setProbe(null);
     setOpen(false);
-    if (!dateIso) return;
+    if (!validDateIso(dateIso)) return;
 
     const controller = new AbortController();
     void fetch(`/api/atlas/worker-day-plan?date=${encodeURIComponent(dateIso)}`, {
@@ -71,59 +82,24 @@ export default function OwnerDayPlanGate() {
     return () => controller.abort();
   }, [dateIso]);
 
-  const canPlan = Boolean(probe?.active && probe.plan?.availableWorkerDay !== false && probe.target?.membershipId);
-
   useEffect(() => {
-    if (!dateIso || !canPlan || pathname !== "/day") {
-      setHost((current) => {
-        current?.remove();
-        return null;
-      });
+    if (!open) {
+      setPortalTarget(null);
       return;
     }
 
-    let disposed = false;
-    let frame = 0;
+    const target = dayEditTarget();
+    if (!target) return;
 
-    const mount = () => {
-      if (disposed) return;
-      const group = document.querySelector<HTMLElement>(".atlas-day-work-order-group.atlas-day-timeline-group");
-      const timeline = group?.querySelector<HTMLElement>(".atlas-day-mixed-timeline");
-      if (!group || !timeline) return;
-
-      let nextHost = group.querySelector<HTMLElement>('[data-owner-day-plan-gate="true"]');
-      if (!nextHost) {
-        nextHost = document.createElement("div");
-        nextHost.dataset.ownerDayPlanGate = "true";
-        group.insertBefore(nextHost, timeline);
-      }
-      setHost((current) => current === nextHost ? current : nextHost);
-    };
-
-    const queueMount = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        mount();
-      });
-    };
-
-    queueMount();
-    const observer = new MutationObserver(queueMount);
-    observer.observe(document.body, { childList: true, subtree: true });
-
+    target.classList.add("atlas-owner-day-plan-active");
+    setPortalTarget(target);
     return () => {
-      disposed = true;
-      if (frame) window.cancelAnimationFrame(frame);
-      observer.disconnect();
-      setHost((current) => {
-        current?.remove();
-        return null;
-      });
+      target.classList.remove("atlas-owner-day-plan-active");
     };
-  }, [canPlan, dateIso, pathname]);
+  }, [open]);
 
-  if (!canPlan || !host?.isConnected) return null;
+  const canPlan = Boolean(probe?.active && probe.plan?.availableWorkerDay !== false && probe.target?.membershipId);
+  if (!canPlan) return null;
 
   const operatorLabel = probe?.operatorLabel || "Farm Hand";
   const targetMinutes = Math.max(0, Number(probe?.plan?.paidTargetMinutes) || 0);
@@ -131,9 +107,57 @@ export default function OwnerDayPlanGate() {
     + Math.max(0, Number(probe?.plan?.automaticPaidMinutes) || 0);
   const overByMinutes = Math.max(knownLoadMinutes - targetMinutes, 0);
   const remainingMinutes = Math.max(targetMinutes - knownLoadMinutes, 0);
+  const projectedWeed = (probe?.plan?.automaticWork ?? []).find((item) => (
+    item?.sourceKind === "queue"
+    && item?.conditional === true
+    && typeof item?.title === "string"
+    && item.title.trim().length > 0
+  ));
 
-  return createPortal(
-    <>
+  const editBoard = open ? (
+    <div className="atlas-owner-day-plan-inline-root" data-owner-day-plan-inline="true">
+      <OwnerDayScheduleBuilder />
+      <OwnerDayCueEditor />
+    </div>
+  ) : null;
+
+  return (
+    <section className="atlas-owner-day-plan-gate" data-owner-day-plan-gate="true">
+      <style>{`
+        .atlas-owner-day-plan-active > :not(.atlas-owner-day-plan-inline-root) {
+          display: none !important;
+        }
+        .atlas-owner-day-plan-inline-root {
+          display: grid;
+          gap: 10px;
+        }
+        .atlas-owner-day-projection {
+          margin: 2px 0 8px;
+          padding: 9px 11px;
+          border: 1px dashed rgba(112,111,177,.28);
+          border-radius: 12px;
+          background: rgba(249,248,252,.64);
+          color: #5f627e;
+        }
+        .atlas-owner-day-projection strong {
+          display: block;
+          font-size: 11.5px;
+          line-height: 1.3;
+        }
+        .atlas-owner-day-projection span {
+          display: block;
+          margin-top: 2px;
+          color: #85879b;
+          font-size: 10px;
+          line-height: 1.35;
+        }
+      `}</style>
+      {projectedWeed ? (
+        <div className="atlas-owner-day-projection" data-owner-projected-weed-card="true">
+          <strong>Projected Weed Card · {projectedWeed.title}</strong>
+          <span>If the prior workday&apos;s Weed Card clears. This is a projection, not another released task.</span>
+        </div>
+      ) : null}
       <div style={{ margin: "2px 0 12px", display: "grid", gap: 8 }}>
         {!open ? (
           <button
@@ -185,14 +209,7 @@ export default function OwnerDayPlanGate() {
           </div>
         )}
       </div>
-      {open ? (
-        <>
-          <OwnerDayScheduleBuilder />
-          <OwnerDayCueEditor />
-        </>
-      ) : null}
-    </>,
-    host,
-    "owner-day-plan-gate",
+      {open && portalTarget ? createPortal(editBoard, portalTarget) : editBoard}
+    </section>
   );
 }
