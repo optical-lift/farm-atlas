@@ -11,6 +11,7 @@ const outreach = read("supabase/migrations/20260812194000_serial_outreach_convey
 const weed = read("supabase/migrations/20260812194500_weed_projection_and_clear_crop_merge_v1.sql");
 const temporal = read("supabase/migrations/20260812195500_explicit_temporal_constraints_precede_generic_dayparts_v1.sql");
 const hardCarry = read("supabase/migrations/20260812200500_hard_date_misses_do_not_silently_carry_v1.sql");
+const choreography = read("supabase/migrations/20260812202500_choreography_placement_owns_execution_date_v1.sql");
 const moveAssembly = read("lib/atlas/task-move-assembly.ts");
 const ownerDay = read("components/atlas/owner-day-plan-gate.tsx");
 const hardStopBanner = read("components/atlas/hard-stop-day-banner.tsx");
@@ -46,12 +47,15 @@ test("Thursday event constraints keep Corral mowing before guest time", () => {
   assert.ok(temporal.indexOf("work_window_key") < temporal.indexOf("succession_sowing"), "explicit window must outrank generic sowing defaults");
 });
 
-test("Elm harvest remains the fixed weekly rhythm even when this week executes Wednesday night", () => {
+test("Elm harvest remains the fixed Thursday rhythm even when this week executes Wednesday night", () => {
   assert.match(schedule, /recurring:anna_harvest_thursday_weekly:2026-08-13/);
   assert.match(schedule, /early_execution/);
-  assert.match(schedule, /canonical_occurrence_date','2026-08-13'/);
-  assert.match(schedule, /execution_date','2026-08-12'/);
   assert.match(schedule, /Event-specific Elm harvest copy replaced by the canonical weekly Thursday harvest rhythm/);
+  assert.match(choreography, /due_date=date '2026-08-13'/);
+  assert.match(choreography, /canonical_occurrence_date','2026-08-13'/);
+  assert.match(choreography, /execution_date','2026-08-12'/);
+  assert.match(choreography, /placement\.state='placed'/);
+  assert.match(choreography, /choreography_owns_execution_date/);
 });
 
 test("finished bouquet holding uses fulfillment language and a real post-state", () => {
