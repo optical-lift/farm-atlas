@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const migration = readFileSync(
-  new URL("../supabase/migrations/20260812024800_worker_task_authoring_guard_v1.sql", import.meta.url),
+  new URL("../supabase/migrations/20260812142203_worker_task_authoring_guard_v1.sql", import.meta.url),
   "utf8",
 );
 const normalized = migration.replace(/\s+/g, " ").trim();

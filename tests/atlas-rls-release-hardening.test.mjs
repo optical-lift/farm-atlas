@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const migration = readFileSync(
-  new URL("../supabase/migrations/20260812154000_enable_rls_on_unprivileged_atlas_tables_v1.sql", import.meta.url),
+  new URL("../supabase/migrations/20260812151931_enable_rls_on_unprivileged_atlas_tables_v1.sql", import.meta.url),
   "utf8",
 );
 

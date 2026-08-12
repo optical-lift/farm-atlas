@@ -7,7 +7,7 @@ function read(path) {
 }
 
 test("Price Cutter stays out of the worker feed until a harvestable pollenless crop exists", () => {
-  const migration = read("supabase/migrations/20260812023000_task_crop_availability_gate_v1.sql");
+  const migration = read("supabase/migrations/20260812140954_task_crop_availability_gate_v1.sql");
 
   assert.match(migration, /task_crop_availability_gates/);
   assert.match(migration, /required_profile_metadata_key/);
@@ -23,7 +23,7 @@ test("Price Cutter stays out of the worker feed until a harvestable pollenless c
 });
 
 test("the Thursday Lebanon harvest carries its literal worker execution packet", () => {
-  const migration = read("supabase/migrations/20260812142000_thursday_lebanon_worker_execution_normalization_v1.sql");
+  const migration = read("supabase/migrations/20260812141519_thursday_lebanon_worker_execution_normalization_v1.sql");
   const contract = read("lib/atlas/worker-execution-contract.ts");
 
   assert.match(migration, /19395 Highway HH, Lebanon, MO 65536/);
@@ -64,7 +64,7 @@ test("partly finished Anna Weed Cards return to the serial tail instead of steal
 test("gentle pressure washing exposes one current move and gates the rest behind completion", () => {
   const queue = read("supabase/migrations/20260812124733_gentle_pressure_wash_serial_queue_v1.sql");
   const restore = read("supabase/migrations/20260812125726_gentle_pressure_wash_restore_current_v1.sql");
-  const exactRelease = read("supabase/migrations/20260812131500_worker_day_serial_queue_corrections_v1.sql");
+  const exactRelease = read("supabase/migrations/20260812125854_worker_day_serial_queue_corrections_v1.sql");
 
   assert.match(queue, /anna_gentle_pressure_wash_aug_2026/);
   assert.match(queue, /completion_gated_serial/);

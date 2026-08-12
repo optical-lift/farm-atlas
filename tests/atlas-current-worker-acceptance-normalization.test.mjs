@@ -7,7 +7,7 @@ function read(path) {
 }
 
 test("current exact-date worker specimens carry literal execution packets", () => {
-  const migration = read("supabase/migrations/20260812150000_current_worker_acceptance_normalization_v1.sql");
+  const migration = read("supabase/migrations/20260812150117_current_worker_acceptance_normalization_v1.sql");
 
   assert.match(migration, /anna_chicken_chore_20260812/);
   assert.match(migration, /anna_chicken_chore_20260811/);
@@ -32,7 +32,7 @@ test("current exact-date worker specimens carry literal execution packets", () =
 });
 
 test("current and Thursday note-backed work is deliberately promoted into worker fields", () => {
-  const migration = read("supabase/migrations/20260812151500_aug12_aug13_worker_packet_normalization_v1.sql");
+  const migration = read("supabase/migrations/20260812150841_aug12_aug13_worker_packet_normalization_v1.sql");
 
   assert.match(migration, /Expected 13 current worker acceptance tasks/);
   assert.match(migration, /Clean Interior Windows \+ Glass Doors/);
@@ -52,7 +52,7 @@ test("current and Thursday note-backed work is deliberately promoted into worker
 });
 
 test("the current Weed Card gets a shared-shell brief without replacing its specialty instrument", () => {
-  const migration = read("supabase/migrations/20260812152500_current_weed_card_worker_packet_v1.sql");
+  const migration = read("supabase/migrations/20260812151109_current_weed_card_worker_packet_v1.sql");
   const client = read("components/atlas/canonical-assigned-task-detail-client.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
 

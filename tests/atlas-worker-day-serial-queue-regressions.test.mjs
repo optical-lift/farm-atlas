@@ -22,7 +22,7 @@ test("Anna can finish today's Weed Card without the same bed taking tomorrow's s
 });
 
 test("pressure washing owns one exact active queue item and keeps later surfaces calendarless", () => {
-  const migration = read("supabase/migrations/20260812131500_worker_day_serial_queue_corrections_v1.sql");
+  const migration = read("supabase/migrations/20260812125854_worker_day_serial_queue_corrections_v1.sql");
 
   assert.match(migration, /release_pressure_wash_queue_item_v1/);
   assert.match(migration, /release_next_pressure_wash_task_v1/);
@@ -42,7 +42,7 @@ test("pressure washing owns one exact active queue item and keeps later surfaces
 });
 
 test("the remaining porch pressure-wash work joins the same completion-gated sequence", () => {
-  const migration = read("supabase/migrations/20260812131500_worker_day_serial_queue_corrections_v1.sql");
+  const migration = read("supabase/migrations/20260812125854_worker_day_serial_queue_corrections_v1.sql");
 
   assert.match(migration, /anna_20260814_gentle_pressure_wash_front_porch/);
   assert.match(migration, /anna_20260815_gentle_pressure_wash_concrete_entrance_porch/);
