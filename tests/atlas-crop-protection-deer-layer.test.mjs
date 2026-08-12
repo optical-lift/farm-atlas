@@ -31,7 +31,7 @@ test("green emergence enrolls active outdoor crop cycles without inventing a wor
 test("Elm seed records only the Owner-confirmed garlic concentrate and hand-pump sprayer facts", () => {
   assert.match(layer, /'deer_garlic_concentrate','Garlic concentrate','pest_control','deer_repellent','available'/);
   assert.match(layer, /'hand_pump_sprayer','Hand pump sprayer','equipment','sprayer','available'/);
-  assert.match(layer, /'method_status','not_yet_recorded'/);
+  assert.match(layer, /'label_method_status','not_yet_recorded'/);
   assert.match(layer, /'label_required'/);
   assert.doesNotMatch(layer, /tablespoon|teaspoon|ounce|gallon|dilut|mix \d|every \d+ days/i);
 });
