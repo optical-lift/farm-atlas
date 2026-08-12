@@ -28,7 +28,7 @@ test("Day progress reads the complete visible day without a DOM patch", () => {
   assert.match(css, /\.blocked/);
 });
 
-test("Day Route keeps the carried-work command together, preserves completion echoes, and presents today's work relatively", () => {
+test("Day Route keeps carried work together, preserves completion echoes, and keeps permanent schedule windows", () => {
   const page = read("app/day/page.tsx");
   const css = read("app/day-route-v1.css");
   const refineCss = read("app/day-route-v1-refine.css");
@@ -49,10 +49,11 @@ test("Day Route keeps the carried-work command together, preserves completion ec
 
   assert.match(page, /nextTaskForCurrentWindow/);
   assert.match(page, /nextRecoveryTask/);
-  assert.match(page, /relativeWorkerTimelineGroups/);
-  assert.match(page, /label: "Now"/);
-  assert.match(page, /label: "Coming up"/);
-  assert.match(page, /label: "Later"/);
+  assert.match(page, /label: "Morning"/);
+  assert.match(page, /label: "Afternoon"/);
+  assert.match(page, /label: "Evening"/);
+  assert.doesNotMatch(page, /relativeWorkerTimelineGroups/);
+  assert.doesNotMatch(page, /label: "Now"|label: "Coming up"|label: "Later"/);
   assert.match(page, /Carried work/);
   assert.match(page, /atlas-day-route-spine/);
   assert.match(page, /atlas-day-mixed-timeline/);
