@@ -10,46 +10,38 @@ const spine = read("components/atlas/task-move-spine.tsx");
 const brief = read("components/atlas/task-execution-brief.tsx");
 const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 
-test("Task Move keeps requirements as precondition branches between current state and the work move", () => {
-  const currentIndex = spine.indexOf('<section className="atlas-human-task-trail__step" data-kind="current">');
-  const requirementIndex = spine.indexOf('className="atlas-human-task-trail__requirement-cluster"');
-  const workIndex = spine.indexOf('<section className="atlas-human-task-trail__step" data-kind="work">');
-  const finishIndex = spine.indexOf('data-kind="finish"', workIndex);
+test("Task Move presents requirements before the physical action and resulting state", () => {
+  const requirementIndex = spine.indexOf('<section className="atlas-worker-move__section" aria-label="Needs">');
+  const workIndex = spine.indexOf('<section className="atlas-worker-move__step" data-kind="action">');
+  const finishIndex = spine.indexOf('<section className="atlas-worker-move__step" data-kind="done">', workIndex);
 
-  assert.ok(currentIndex >= 0, "current farm-state step must render");
-  assert.ok(requirementIndex > currentIndex, "requirements must branch from the current state before work begins");
-  assert.ok(workIndex > requirementIndex, "the work move must follow its preconditions");
-  assert.ok(finishIndex > workIndex, "finished state must follow the work move");
-  assert.match(spine, /aria-label="What must be true before this move"/);
-  assert.match(spine, /atlas-human-task-trail__branch-line/);
-  assert.match(spine, /"├──"/);
-  assert.match(spine, /"└──"/);
+  assert.ok(requirementIndex >= 0, "worker needs must render");
+  assert.ok(workIndex > requirementIndex, "the physical action must follow its needs");
+  assert.ok(finishIndex > workIndex, "done state must follow the physical action");
+  assert.match(spine, />Needs</);
+  assert.match(spine, />Do this</);
+  assert.match(spine, />Done</);
 });
 
-test("same-kind Task Move requirements group into one semantic branch", () => {
-  assert.match(spine, /function groupedRequirements\(requirements: TaskMoveRequirement\[\]\)/);
-  assert.match(spine, /const groups = new Map<string, RequirementGroup>\(\)/);
-  assert.match(spine, /if \(existing\) existing\.requirements\.push\(requirement\)/);
-  assert.match(spine, /requirement\.kind === "container"\) return "Container"/);
-  assert.match(spine, /requirement\.kind === "medium"\) return "Medium"/);
-  assert.match(spine, /requirement\.kind === "capacity" && requirement\.capacityRole === "destination"\) return "Destination capacity"/);
-});
-
-test("Task Focus reads the canonical Task Move assembly and uses one human trail architecture", () => {
+test("Task Focus reads the canonical Task Move assembly and keeps one worker grammar", () => {
   assert.match(shell, /\/api\/atlas\/task-move\?taskId=/);
   assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
   assert.match(brief, /<TaskMoveSpine assembly=\{resolvedAssembly\} \/>/);
-  assert.match(brief, /Compatibility state while the canonical assembly is loading\/unavailable/);
 });
 
-test("requirement branches use human quantities and preserve state, notes, and open questions", () => {
-  assert.match(spine, /function requirementLine\(requirement: TaskMoveRequirement\)/);
-  assert.match(spine, /return `\$\{requirement\.quantity\} × \$\{requirement\.label\}`/);
-  assert.match(spine, /return `\$\{requirement\.quantity\} \$\{readable\(requirement\.unit\)\}`/);
-  assert.match(spine, /<strong>\{requirementLine\(requirement\)\}<\/strong>/);
+test("worker requirements retain quantities and state while hiding explanatory internals", () => {
+  assert.match(spine, /function compactRequirementLabel\(requirement: TaskMoveRequirement\)/);
+  assert.match(spine, /return `\$\{quantity\} × \$\{label\}`/);
+  assert.match(spine, /return `\$\{quantity\} \$\{readable\(requirement\.unit\)\}`/);
   assert.match(spine, /data-state=\{requirement.status\}/);
-  assert.match(spine, /requirement.note/);
-  assert.match(spine, /requirement.questions/);
-  assert.match(spine, /aria-label="What this work needs"/);
-  assert.doesNotMatch(spine, /Instructions/);
+  assert.match(spine, /requirementGlyph/);
+  assert.doesNotMatch(spine, /requirement\.note/);
+  assert.doesNotMatch(spine, /requirement\.questions/);
+  assert.doesNotMatch(spine, /├──|└──/);
+});
+
+test("detailed instructions are secondary instead of duplicating the move", () => {
+  assert.match(brief, /<details className="atlas-worker-instructions">/);
+  assert.match(brief, /<summary>Instructions<\/summary>/);
+  assert.match(brief, /fallbackDetail = !lines\.length/);
 });

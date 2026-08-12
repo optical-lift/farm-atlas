@@ -8,207 +8,140 @@ type Props = {
   assembly: TaskMoveAssembly;
 };
 
-type RequirementGroup = {
-  key: string;
-  label: string;
-  requirements: TaskMoveRequirement[];
-};
-
 function readable(value: string) {
-  return value.replaceAll("_", " ");
+  return value.replaceAll("_", " ").replace(/\s+/g, " ").trim();
 }
 
-function requirementLine(requirement: TaskMoveRequirement) {
-  if (requirement.quantity === null) return requirement.label;
-  if (requirement.kind === "capacity" && requirement.unit) {
-    return `${requirement.quantity} ${readable(requirement.unit)}`;
+function titleCase(value: string) {
+  return readable(value).replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function compactRequirementLabel(requirement: TaskMoveRequirement) {
+  const quantity = requirement.quantity;
+  const label = requirement.label.trim();
+  const normalized = label.toLowerCase();
+
+  if (requirement.kind === "capacity") {
+    if (normalized.includes("lit tray position")) {
+      return quantity === null ? "Lit tray spots" : `${quantity} lit tray spots`;
+    }
+    if (quantity !== null && requirement.unit) return `${quantity} ${readable(requirement.unit)}`;
   }
-  return `${requirement.quantity} × ${requirement.label}`;
+
+  if (quantity === null) return label;
+  return `${quantity} × ${label}`;
 }
 
-function visibleFacts(facts: TaskMoveFact[]) {
-  return facts.filter((fact) => fact.status !== "missing" && fact.label.trim());
+function requirementGlyph(status: TaskMoveRequirement["status"]) {
+  if (status === "resolved") return "✓";
+  if (status === "warning") return "○";
+  return "!";
 }
 
-function issueLabel(status: TaskMoveRequirement["status"], requirements: TaskMoveRequirement[]) {
-  if (status === "blocked") return "Blocked";
-  if (status === "missing") return "Needed";
-  if (status === "warning") {
-    const unconfirmedCapacity = requirements.some((requirement) => (
-      requirement.kind === "capacity"
-      && requirement.status === "warning"
-      && requirement.capacityStatus !== "confirmed"
-    ));
-    return unconfirmedCapacity ? "Not yet confirmed" : "Check";
-  }
-  return null;
+function unresolvedCurrentFacts(facts: TaskMoveFact[]) {
+  return facts.filter((fact) => fact.label.trim() && fact.status !== "resolved" && fact.status !== "missing");
 }
 
-function requirementGroupLabel(requirement: TaskMoveRequirement) {
-  if (requirement.kind === "container") return "Container";
-  if (requirement.kind === "medium") return "Medium";
-  if (requirement.kind === "capacity" && requirement.capacityRole === "destination") return "Destination capacity";
-  if (requirement.kind === "capacity") return "Capacity";
-  if (requirement.kind === "source") return "Source";
-  if (requirement.kind === "destination") return "Destination";
-  if (requirement.kind === "prerequisite") return "Prerequisite";
-  if (requirement.kind === "dependency") return "Dependency";
-  if (requirement.kind === "method") return "Method";
-  if (requirement.resourceCategory?.trim()) return readable(requirement.resourceCategory).replace(/^./, (letter) => letter.toUpperCase());
-  return "Requirement";
+function operationLabel(assembly: TaskMoveAssembly) {
+  const type = assembly.task.taskType?.trim();
+  if (type) return titleCase(type);
+  return titleCase(assembly.task.route);
 }
 
-function groupedRequirements(requirements: TaskMoveRequirement[]) {
-  const groups = new Map<string, RequirementGroup>();
-  for (const requirement of requirements) {
-    const label = requirementGroupLabel(requirement);
-    const key = `${requirement.kind}:${label.toLowerCase()}`;
-    const existing = groups.get(key);
-    if (existing) existing.requirements.push(requirement);
-    else groups.set(key, { key, label, requirements: [requirement] });
-  }
-  return [...groups.values()];
+function workerTitle(assembly: TaskMoveAssembly) {
+  const subject = assembly.spine.move.subject;
+  if (subject.status !== "missing" && subject.label.trim()) return subject.label.trim();
+  return assembly.task.title;
 }
 
-function groupStatus(requirements: TaskMoveRequirement[]): TaskMoveRequirement["status"] {
-  if (requirements.some((requirement) => requirement.status === "blocked")) return "blocked";
-  if (requirements.some((requirement) => requirement.status === "missing")) return "missing";
-  if (requirements.some((requirement) => requirement.status === "warning")) return "warning";
-  return "resolved";
-}
-
-function FactLines({ facts }: { facts: TaskMoveFact[] }) {
-  const visible = visibleFacts(facts);
-  if (!visible.length) return null;
-  return (
-    <ul className="atlas-human-task-trail__facts">
-      {visible.map((fact, index) => (
-        <li key={`${fact.label}-${index}`} data-state={fact.status}>
-          <span>{fact.label}</span>
-          {fact.status === "blocked" ? <small>Blocked</small> : fact.status === "warning" ? <small>Check</small> : null}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function RequirementGroupBranch({ group, final }: { group: RequirementGroup; final: boolean }) {
-  const status = groupStatus(group.requirements);
-  const issue = issueLabel(status, group.requirements);
-  return (
-    <li className="atlas-human-task-trail__requirement-group" data-state={status}>
-      <span className="atlas-human-task-trail__branch-line" aria-hidden="true">{final ? "└──" : "├──"}</span>
-      <div>
-        <span className="atlas-human-task-trail__requirement-label">{group.label}</span>
-        <ul className="atlas-human-task-trail__requirement-items">
-          {group.requirements.map((requirement) => {
-            const openQuestions = (requirement.questions ?? []).filter((question) => question.status === "open");
-            return (
-              <li key={requirement.id} data-state={requirement.status}>
-                <strong>{requirementLine(requirement)}</strong>
-                {requirement.note ? <p>{requirement.note}</p> : null}
-                {openQuestions.length ? <p>{openQuestions.map((question) => question.label).join(" · ")}</p> : null}
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-      {issue ? <small>{issue}</small> : null}
-    </li>
-  );
+function isMowing(assembly: TaskMoveAssembly) {
+  return assembly.task.route === "mow" || assembly.task.taskType.toLowerCase() === "mowing";
 }
 
 export default function TaskMoveSpine({ assembly }: Props) {
-  const stopped = assembly.spine.connection === "stops_at_move";
-  const currentFacts = visibleFacts(assembly.spine.current);
-  const afterFacts = visibleFacts(assembly.spine.after);
-  const moveSite = assembly.spine.move.workSite.status === "missing" ? null : assembly.spine.move.workSite.label;
-  const moveSubject = assembly.spine.move.subject.status === "missing" ? null : assembly.spine.move.subject.label;
-  const moveAction = assembly.spine.move.action.label || assembly.task.title;
+  const requirements = assembly.requirements.filter((requirement) => requirement.label.trim());
+  const currentIssues = unresolvedCurrentFacts(assembly.spine.current);
+  const place = assembly.execution.where?.trim() || assembly.spine.move.workSite.label?.trim() || null;
   const dueLabel = assembly.execution.dueLabel?.trim() || null;
-  const requirementGroups = groupedRequirements(assembly.requirements);
+  const action = assembly.execution.what?.trim() || assembly.spine.move.action.label || assembly.task.title;
+  const doneWhen = assembly.execution.doneWhen?.trim() || null;
+  const mowing = isMowing(assembly);
 
   return (
-    <section className="atlas-human-task-trail" aria-label="Task trail">
+    <section className="atlas-worker-move" aria-label="Task move">
       <style>{`
-        .atlas-human-task-trail { margin:0; padding:23px 28px 19px; background:#fff; color:#303145; }
-        .atlas-human-task-trail__place { margin:0 0 5px; color:#777ca0; font-size:.7rem; font-weight:900; letter-spacing:.11em; text-transform:uppercase; }
-        .atlas-human-task-trail__title { margin:0; font-size:clamp(1.8rem,6vw,2.65rem); line-height:1.02; letter-spacing:-.035em; }
-        .atlas-human-task-trail__due { display:inline-block; margin-top:8px; color:#6b6d7b; font-size:.72rem; font-weight:780; }
-        .atlas-human-task-trail__line { position:relative; display:grid; gap:0; margin-top:22px; padding-left:26px; }
-        .atlas-human-task-trail__line::before { content:""; position:absolute; left:6px; top:11px; bottom:11px; width:1px; background:rgba(86,89,112,.27); }
-        .atlas-human-task-trail__step { position:relative; padding:0 0 21px; }
-        .atlas-human-task-trail__step:last-child { padding-bottom:0; }
-        .atlas-human-task-trail__step[data-reachable="false"] { opacity:.58; }
-        .atlas-human-task-trail__step[data-reachable="false"] .atlas-human-task-trail__dot { border-style:dashed; background:#fff; }
-        .atlas-human-task-trail__dot { position:absolute; left:-26px; top:3px; width:13px; height:13px; border:2px solid #6d7088; border-radius:50%; background:#6d7088; box-shadow:0 0 0 4px #fff; }
-        .atlas-human-task-trail__step[data-kind="finish"] .atlas-human-task-trail__dot { background:#fff; }
-        .atlas-human-task-trail__eyebrow { display:block; margin-bottom:3px; color:#898ba0; font-size:.64rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
-        .atlas-human-task-trail__step > strong { display:block; font-size:1rem; line-height:1.3; }
-        .atlas-human-task-trail__step > p { margin:3px 0 0; color:#606270; font-size:.83rem; line-height:1.4; }
-        .atlas-human-task-trail__facts { display:grid; gap:3px; margin:4px 0 0; padding:0; list-style:none; }
-        .atlas-human-task-trail__facts li { display:flex; align-items:baseline; gap:8px; color:#4e5060; font-size:.84rem; font-weight:680; line-height:1.35; }
-        .atlas-human-task-trail__facts small { color:#8a654d; font-size:.65rem; font-weight:850; }
-        .atlas-human-task-trail__requirement-cluster { position:relative; margin:-5px 0 19px; }
-        .atlas-human-task-trail__requirements { display:grid; gap:9px; margin:0; padding:0; list-style:none; }
-        .atlas-human-task-trail__requirement-group { display:grid; grid-template-columns:31px minmax(0,1fr) auto; gap:4px; align-items:start; color:#555766; }
-        .atlas-human-task-trail__branch-line { margin-left:-20px; color:#a0a1ae; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.78rem; line-height:1.25; letter-spacing:-.08em; }
-        .atlas-human-task-trail__requirement-label { display:block; margin-bottom:2px; color:#898ba0; font-size:.6rem; font-weight:900; letter-spacing:.09em; text-transform:uppercase; }
-        .atlas-human-task-trail__requirement-items { display:grid; gap:3px; margin:0; padding:0; list-style:none; }
-        .atlas-human-task-trail__requirement-items li { color:#555766; }
-        .atlas-human-task-trail__requirement-items strong { display:block; font-size:.8rem; line-height:1.35; }
-        .atlas-human-task-trail__requirement-items p { margin:2px 0 0; color:#747582; font-size:.72rem; line-height:1.35; }
-        .atlas-human-task-trail__requirement-group > small { margin-top:1px; color:#7a5948; font-size:.64rem; font-weight:900; }
-        .atlas-human-task-trail__requirement-group[data-state="blocked"] .atlas-human-task-trail__requirement-label,
-        .atlas-human-task-trail__requirement-group[data-state="missing"] .atlas-human-task-trail__requirement-label,
-        .atlas-human-task-trail__requirement-items li[data-state="blocked"] strong,
-        .atlas-human-task-trail__requirement-items li[data-state="missing"] strong { color:#704d43; }
-        .atlas-human-task-trail__finish { color:#4e5060; }
-        @media (max-width:560px) {
-          .atlas-human-task-trail { padding:21px 21px 17px; }
-          .atlas-human-task-trail__line { margin-top:19px; }
-        }
+        .atlas-worker-move { margin:0; padding:22px 28px 18px; background:#fff; color:#303145; }
+        .atlas-worker-move__eyebrow { margin:0 0 6px; color:#777ca0; font-size:.67rem; font-weight:920; letter-spacing:.11em; text-transform:uppercase; }
+        .atlas-worker-move__title { margin:0; font-size:clamp(1.9rem,6vw,2.7rem); line-height:1.02; letter-spacing:-.035em; }
+        .atlas-worker-move__due { display:block; margin-top:8px; color:#6b6d7b; font-size:.75rem; font-weight:780; }
+        .atlas-worker-move__section { margin-top:22px; }
+        .atlas-worker-move__label { display:block; margin-bottom:9px; color:#8589a6; font-size:.64rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
+        .atlas-worker-move__needs { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
+        .atlas-worker-move__need { display:grid; grid-template-columns:22px minmax(0,1fr); gap:8px; align-items:baseline; color:#505260; }
+        .atlas-worker-move__need-mark { font-size:.92rem; font-weight:950; line-height:1; }
+        .atlas-worker-move__need[data-state="resolved"] .atlas-worker-move__need-mark { color:#61647d; }
+        .atlas-worker-move__need[data-state="warning"] .atlas-worker-move__need-mark { color:#8a654d; }
+        .atlas-worker-move__need[data-state="blocked"], .atlas-worker-move__need[data-state="missing"] { color:#704d43; }
+        .atlas-worker-move__need strong { font-size:.9rem; line-height:1.3; }
+        .atlas-worker-move__issue { display:grid; grid-template-columns:22px minmax(0,1fr); gap:8px; margin:6px 0 0; color:#704d43; font-size:.82rem; font-weight:760; }
+        .atlas-worker-move__flow { display:grid; gap:0; margin-top:22px; padding-left:28px; }
+        .atlas-worker-move__step { position:relative; padding:0 0 22px; }
+        .atlas-worker-move__step:last-child { padding-bottom:0; }
+        .atlas-worker-move__step:not(:last-child)::after { content:""; position:absolute; left:-20px; top:18px; bottom:0; width:1px; background:rgba(86,89,112,.28); }
+        .atlas-worker-move__dot { position:absolute; left:-28px; top:2px; width:16px; height:16px; display:grid; place-items:center; border:2px solid #6d7088; border-radius:50%; background:#fff; color:#6d7088; font-size:.58rem; font-weight:950; box-shadow:0 0 0 4px #fff; }
+        .atlas-worker-move__step[data-kind="action"] .atlas-worker-move__dot { background:#6d7088; }
+        .atlas-worker-move__step-label { display:block; margin-bottom:4px; color:#8589a6; font-size:.64rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
+        .atlas-worker-move__step strong { display:block; font-size:1.02rem; line-height:1.32; }
+        .atlas-worker-move__step p { margin:3px 0 0; color:#666876; font-size:.8rem; font-weight:680; line-height:1.35; }
+        @media (max-width:560px) { .atlas-worker-move { padding:20px 21px 16px; } }
       `}</style>
 
-      {moveSite ? <p className="atlas-human-task-trail__place">{moveSite}</p> : null}
-      <h1 className="atlas-human-task-trail__title">{assembly.task.title}</h1>
-      {dueLabel ? <span className="atlas-human-task-trail__due">{dueLabel}</span> : null}
+      <p className="atlas-worker-move__eyebrow">
+        {[place, operationLabel(assembly)].filter(Boolean).join(" · ")}
+      </p>
+      <h1 className="atlas-worker-move__title">{workerTitle(assembly)}</h1>
+      {dueLabel ? <span className="atlas-worker-move__due">{dueLabel}</span> : null}
 
-      <div className="atlas-human-task-trail__line">
-        {currentFacts.length ? (
-          <section className="atlas-human-task-trail__step" data-kind="current">
-            <span className="atlas-human-task-trail__dot" aria-hidden="true" />
-            <span className="atlas-human-task-trail__eyebrow">Right now</span>
-            <FactLines facts={currentFacts} />
+      {requirements.length ? (
+        <section className="atlas-worker-move__section" aria-label="Needs">
+          <span className="atlas-worker-move__label">Needs</span>
+          <ul className="atlas-worker-move__needs">
+            {requirements.map((requirement) => (
+              <li key={requirement.id} className="atlas-worker-move__need" data-state={requirement.status}>
+                <span className="atlas-worker-move__need-mark" aria-hidden="true">{requirementGlyph(requirement.status)}</span>
+                <strong>{compactRequirementLabel(requirement)}</strong>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {currentIssues.map((fact, index) => (
+        <p key={`${fact.label}-${index}`} className="atlas-worker-move__issue"><span aria-hidden="true">!</span><span>{fact.label}</span></p>
+      ))}
+
+      <div className="atlas-worker-move__flow">
+        {mowing ? (
+          <section className="atlas-worker-move__step" data-kind="preflight">
+            <span className="atlas-worker-move__dot" aria-hidden="true">○</span>
+            <span className="atlas-worker-move__step-label">Mowing next</span>
+            <strong>Pick up sticks + move hoses first</strong>
           </section>
         ) : null}
 
-        {requirementGroups.length ? (
-          <section className="atlas-human-task-trail__requirement-cluster" aria-label="What must be true before this move">
-            <ul className="atlas-human-task-trail__requirements" aria-label="What this work needs">
-              {requirementGroups.map((group, index) => (
-                <RequirementGroupBranch key={group.key} group={group} final={index === requirementGroups.length - 1} />
-              ))}
-            </ul>
+        <section className="atlas-worker-move__step" data-kind="action">
+          <span className="atlas-worker-move__dot" aria-hidden="true" />
+          <span className="atlas-worker-move__step-label">Do this</span>
+          <strong>{action}</strong>
+        </section>
+
+        {doneWhen ? (
+          <section className="atlas-worker-move__step" data-kind="done">
+            <span className="atlas-worker-move__dot" aria-hidden="true">○</span>
+            <span className="atlas-worker-move__step-label">Done</span>
+            <strong>{doneWhen}</strong>
           </section>
         ) : null}
-
-        <section className="atlas-human-task-trail__step" data-kind="work">
-          <span className="atlas-human-task-trail__dot" aria-hidden="true" />
-          <span className="atlas-human-task-trail__eyebrow">Do this</span>
-          <strong>{moveAction}</strong>
-          {moveSubject && moveSubject !== moveAction ? <p>{moveSubject}</p> : null}
-        </section>
-
-        <section
-          className="atlas-human-task-trail__step"
-          data-kind="finish"
-          data-reachable={stopped ? "false" : "true"}
-        >
-          <span className="atlas-human-task-trail__dot" aria-hidden="true" />
-          <span className="atlas-human-task-trail__eyebrow">{stopped ? "Target held" : "Finished"}</span>
-          {afterFacts.length ? <FactLines facts={afterFacts} /> : <p className="atlas-human-task-trail__finish">{assembly.execution.doneWhen}</p>}
-        </section>
       </div>
     </section>
   );

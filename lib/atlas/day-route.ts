@@ -140,9 +140,6 @@ export function atlasDayTaskFamily(task: AtlasTaskCard) {
   const category = explicitFamily(task);
   if (category) return category;
 
-  // Operation class is the canonical Day-family vocabulary. Workflow subtype
-  // still controls the task detail/result grammar, but all inspect/assess work
-  // reads as CHECK in the lineup.
   const operationClass = normalized(task.operation_class ?? task.metadata?.operation_class);
   if (operationClass === "inspect_assess") return "Check";
 
@@ -207,8 +204,6 @@ export function atlasDayTaskCues(task: AtlasTaskCard) {
     cues.push(clean);
   };
 
-  // A serial maintenance reservoir is not a calendar commitment. Only surface
-  // work that already has an explicit owner/dependency date outside the queue.
   const scheduledAfter = numberValue(metadata.release_queue_scheduled_after_count);
   if (canonicalActionKey(task) === "weed" && scheduledAfter && scheduledAfter > 0) {
     add(`${scheduledAfter} ${scheduledAfter === 1 ? "weed job" : "weed jobs"} scheduled later`);
@@ -216,6 +211,10 @@ export function atlasDayTaskCues(task: AtlasTaskCard) {
 
   const unlocksTask = metadataString(task, "unlocks_task_label");
   if (unlocksTask && metadataString(task, "unlocks_queue_key")) add(`Next: ${unlocksTask}`);
+
+  // Mowing preparation is procedural truth of mowing, not a second weekly task.
+  // Keeping it as a cue on the mowing card means it travels whenever mowing moves.
+  if (canonicalActionKey(task) === "mow") add("First: pick up sticks + move hoses");
 
   // Atlas may retain duration estimates and workload classes for internal capacity math,
   // but worker-facing cards should not expose the internal "light" label.

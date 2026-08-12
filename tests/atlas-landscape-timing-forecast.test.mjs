@@ -6,7 +6,7 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("annual landscape cards use the shared execution-detail contract", () => {
+test("annual landscape cards use the shared compact execution-detail contract", () => {
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
   const brief = read("components/atlas/task-execution-brief.tsx");
   const execution = read("lib/atlas/task-execution.ts");
@@ -14,12 +14,13 @@ test("annual landscape cards use the shared execution-detail contract", () => {
   assert.match(shell, /TaskExecutionBrief/);
   assert.match(brief, /taskExecutionModel\(task\)/);
   assert.match(brief, /function Instructions/);
-  assert.match(brief, /atlas-human-task-instructions__note/);
+  assert.match(brief, /<details className="atlas-worker-instructions">/);
+  assert.match(brief, /<summary>Instructions<\/summary>/);
   assert.match(execution, /atlasMetaString\(task, "execution_details"\)/);
   assert.match(execution, /const details = explicitDetails/);
 
-  // Timing belongs in the shared execution shell/details. The retired Dominion
-  // surface must not be required to interpret an annual task.
+  // Timing belongs in the shared execution details and may stay available without
+  // occupying the default Farm Hand view.
   assert.doesNotMatch(shell, /<strong>Timing forecast<\/strong>/);
   assert.doesNotMatch(shell, /timing\.facts\.map/);
   assert.doesNotMatch(shell, /"sow window": "Sow window"/);

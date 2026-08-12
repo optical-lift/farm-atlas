@@ -10,7 +10,7 @@ function exists(path) {
   return existsSync(new URL(`../${path}`, import.meta.url));
 }
 
-test("focused work uses one human Task Move execution trail while linked Trails stay optional context", () => {
+test("focused work uses one compact Task Move execution grammar while linked Trails stay optional context", () => {
   const layout = read("app/layout.tsx");
   const detail = read("components/atlas/assigned-task-execution-shell.tsx");
   const brief = read("components/atlas/task-execution-brief.tsx");
@@ -25,12 +25,13 @@ test("focused work uses one human Task Move execution trail while linked Trails 
   assert.doesNotMatch(detail, /TaskDominionTrail/);
   assert.match(brief, /TaskMoveSpine/);
   assert.match(brief, /function Instructions/);
-  assert.match(move, />Right now<\/span>/);
+  assert.match(move, />Needs<\/span>/);
   assert.match(move, />Do this<\/span>/);
-  assert.match(move, /"Target held" : "Finished"/);
-  assert.match(move, /data-kind="current"/);
-  assert.match(move, /data-kind="work"/);
-  assert.match(move, /data-kind="finish"/);
+  assert.match(move, />Done<\/span>/);
+  assert.match(move, /data-kind="action"/);
+  assert.match(move, /data-kind="done"/);
+  assert.doesNotMatch(move, /data-kind="current"/);
+  assert.doesNotMatch(move, />Right now<\/span>/);
   assert.match(detail, /TaskPrimaryResultControls/);
   assert.match(results, /doneLabel = "Done"/);
   assert.match(results, />\s*Unfinished\s*</);

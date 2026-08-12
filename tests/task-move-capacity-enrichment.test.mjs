@@ -80,8 +80,10 @@ test("confirmed total capacity still stays visible until Atlas knows actual avai
   assert.equal(result.readiness.executable, true);
 });
 
-test("Task Move names an unconfirmed capacity warning without implying absence", () => {
+test("Task Move renders unconfirmed capacity as a visual warning without exposing explanation prose", () => {
   const spine = readFileSync(new URL("../components/atlas/task-move-spine.tsx", import.meta.url), "utf8");
-  assert.match(spine, /requirement\.capacityStatus !== "confirmed"/);
-  assert.match(spine, /Not yet confirmed/);
+  assert.match(spine, /if \(status === "warning"\) return "○"/);
+  assert.match(spine, /lit tray spots/);
+  assert.doesNotMatch(spine, /Not yet confirmed/);
+  assert.doesNotMatch(spine, /requirement\.note/);
 });
