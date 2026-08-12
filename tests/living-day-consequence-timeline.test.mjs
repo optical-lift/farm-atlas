@@ -6,7 +6,7 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Living Day keeps canonical consequence truth while presenting carried work inside relative worker order", () => {
+test("Living Day keeps canonical consequence truth while presenting carried work inside permanent day windows", () => {
   const page = read("app/day/page.tsx");
   const grammar = read("lib/atlas/day-consequence.ts");
   const overdueCss = read("app/day-overdue-quiet.css");
@@ -27,9 +27,12 @@ test("Living Day keeps canonical consequence truth while presenting carried work
 
   assert.match(page, /atlas-day-recovery-overview/);
   assert.match(page, /Carried work/);
-  assert.match(page, /label: "Now"/);
-  assert.match(page, /label: "Coming up"/);
-  assert.match(page, /label: "Later"/);
+  assert.match(page, /label: "Morning"/);
+  assert.match(page, /label: "Afternoon"/);
+  assert.match(page, /label: "Evening"/);
+  assert.doesNotMatch(page, /label: "Now"/);
+  assert.doesNotMatch(page, /label: "Coming up"/);
+  assert.doesNotMatch(page, /label: "Later"/);
   assert.match(page, /atlas-day-mixed-timeline/);
   assert.match(page, /mixedDaySortValue/);
   assert.match(page, /isOverdueTask\(task, dateIso\)/);
