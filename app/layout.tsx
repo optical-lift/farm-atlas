@@ -78,6 +78,7 @@ import "./pwa.css";
 import "./web-push.css";
 import "./contextual-app-shell.css";
 import "./app-shell-regression-fixes.css";
+import "./global-add-shell-visibility.css";
 import "./dependency-release-flash.css";
 import "./work-alongside.css";
 import "./day-single-scroll.css";
