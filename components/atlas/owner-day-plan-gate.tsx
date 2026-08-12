@@ -6,6 +6,15 @@ import { createPortal } from "react-dom";
 import OwnerDayCueEditor from "@/components/atlas/owner-day-cue-editor";
 import OwnerDayScheduleBuilder from "@/components/atlas/owner-day-schedule-builder";
 
+type AutomaticWorkRow = {
+  id?: string;
+  title?: string;
+  sourceKind?: string;
+  conditional?: boolean;
+  reason?: string | null;
+  location?: string | null;
+};
+
 type PlanProbe = {
   ok?: boolean;
   active?: boolean;
@@ -21,6 +30,7 @@ type PlanProbe = {
     paidTargetMinutes?: number;
     committedPaidMinutes?: number;
     automaticPaidMinutes?: number;
+    automaticWork?: AutomaticWorkRow[];
   } | null;
 };
 
@@ -97,6 +107,12 @@ export default function OwnerDayPlanGate({ dateIso }: Props) {
     + Math.max(0, Number(probe?.plan?.automaticPaidMinutes) || 0);
   const overByMinutes = Math.max(knownLoadMinutes - targetMinutes, 0);
   const remainingMinutes = Math.max(targetMinutes - knownLoadMinutes, 0);
+  const projectedWeed = (probe?.plan?.automaticWork ?? []).find((item) => (
+    item?.sourceKind === "queue"
+    && item?.conditional === true
+    && typeof item?.title === "string"
+    && item.title.trim().length > 0
+  ));
 
   const editBoard = open ? (
     <div className="atlas-owner-day-plan-inline-root" data-owner-day-plan-inline="true">
@@ -115,7 +131,33 @@ export default function OwnerDayPlanGate({ dateIso }: Props) {
           display: grid;
           gap: 10px;
         }
+        .atlas-owner-day-projection {
+          margin: 2px 0 8px;
+          padding: 9px 11px;
+          border: 1px dashed rgba(112,111,177,.28);
+          border-radius: 12px;
+          background: rgba(249,248,252,.64);
+          color: #5f627e;
+        }
+        .atlas-owner-day-projection strong {
+          display: block;
+          font-size: 11.5px;
+          line-height: 1.3;
+        }
+        .atlas-owner-day-projection span {
+          display: block;
+          margin-top: 2px;
+          color: #85879b;
+          font-size: 10px;
+          line-height: 1.35;
+        }
       `}</style>
+      {projectedWeed ? (
+        <div className="atlas-owner-day-projection" data-owner-projected-weed-card="true">
+          <strong>Projected Weed Card · {projectedWeed.title}</strong>
+          <span>If the prior workday&apos;s Weed Card clears. This is a projection, not another released task.</span>
+        </div>
+      ) : null}
       <div style={{ margin: "2px 0 12px", display: "grid", gap: 8 }}>
         {!open ? (
           <button
