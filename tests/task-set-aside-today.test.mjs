@@ -110,12 +110,15 @@ test("problem handoff infrastructure remains governed for any specialized flow t
 
 test("The selected day and home cover omit accepted set-asides at their canonical readers", () => {
   const taskCardsRoute = read("app/api/atlas/universal-task-cards/route.ts");
-  const homeReader = read("lib/atlas/operator-universal-home.ts");
+  const home = read("app/page.tsx");
+  const layout = read("app/layout.tsx");
 
-  assert.match(taskCardsRoute, /readAtlasTaskDayDispositions/);
+  assert.equal(existsSync(new URL("../app/TaskSetAsideDayPatch.tsx", import.meta.url)), false);
+  assert.doesNotMatch(layout, /TaskSetAsideDayPatch/);
+  assert.match(taskCardsRoute, /readAtlasTaskDayDispositions\(doneDate\)/);
   assert.match(taskCardsRoute, /setAsideTaskIds/);
-  assert.match(taskCardsRoute, /filter\(\(card\) => !setAsideTaskIds\.has\(card\.task_id\)\)/);
-  assert.match(homeReader, /readAtlasTaskDayDispositions/);
-  assert.match(homeReader, /setAsideTaskIds/);
-  assert.match(homeReader, /!setAsideTaskIds\.has\(task\.task_id\)/);
+  assert.match(taskCardsRoute, /!setAsideTaskIds\.has\(card\.task_id\)/);
+  assert.match(home, /readAtlasSetAsideTaskIds/);
+  assert.match(home, /taskCards: farm\.taskCards\.filter/);
+  assert.doesNotMatch(taskCardsRoute + home, /MutationObserver|createPortal|document\.querySelector/);
 });
