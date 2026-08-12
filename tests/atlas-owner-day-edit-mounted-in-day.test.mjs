@@ -22,7 +22,7 @@ test("opening Owner Day edit replaces the working timeline with the purple draft
   const gate = read("components/atlas/owner-day-plan-gate.tsx");
 
   assert.match(gate, /createPortal/);
-  assert.match(gate, /\.atlas-day-timeline-group \.atlas-day-work-order-list, \.atlas-day-task-groups/);
+  assert.match(gate, /querySelector<HTMLElement>\("\.atlas-day-task-groups"\)/);
   assert.match(gate, /atlas-owner-day-plan-active/);
   assert.match(gate, /atlas-owner-day-plan-inline-root/);
   assert.match(gate, /> :not\(\.atlas-owner-day-plan-inline-root\)/);
