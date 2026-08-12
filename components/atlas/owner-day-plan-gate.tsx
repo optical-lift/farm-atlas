@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import OwnerDayCueEditor from "@/components/atlas/owner-day-cue-editor";
 import OwnerDayScheduleBuilder from "@/components/atlas/owner-day-schedule-builder";
@@ -40,9 +41,17 @@ function minutesLabel(value: number) {
   return `${hours}h ${remainder}m`;
 }
 
+function dayEditTarget() {
+  if (typeof document === "undefined") return null;
+  return document.querySelector<HTMLElement>(
+    ".atlas-day-timeline-group .atlas-day-work-order-list, .atlas-day-task-groups",
+  );
+}
+
 export default function OwnerDayPlanGate({ dateIso }: Props) {
   const [probe, setProbe] = useState<PlanProbe | null>(null);
   const [open, setOpen] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     setProbe(null);
@@ -65,6 +74,22 @@ export default function OwnerDayPlanGate({ dateIso }: Props) {
     return () => controller.abort();
   }, [dateIso]);
 
+  useEffect(() => {
+    if (!open) {
+      setPortalTarget(null);
+      return;
+    }
+
+    const target = dayEditTarget();
+    if (!target) return;
+
+    target.classList.add("atlas-owner-day-plan-active");
+    setPortalTarget(target);
+    return () => {
+      target.classList.remove("atlas-owner-day-plan-active");
+    };
+  }, [open]);
+
   const canPlan = Boolean(probe?.active && probe.plan?.availableWorkerDay !== false && probe.target?.membershipId);
   if (!canPlan) return null;
 
@@ -75,8 +100,24 @@ export default function OwnerDayPlanGate({ dateIso }: Props) {
   const overByMinutes = Math.max(knownLoadMinutes - targetMinutes, 0);
   const remainingMinutes = Math.max(targetMinutes - knownLoadMinutes, 0);
 
+  const editBoard = open ? (
+    <div className="atlas-owner-day-plan-inline-root" data-owner-day-plan-inline="true">
+      <OwnerDayScheduleBuilder />
+      <OwnerDayCueEditor />
+    </div>
+  ) : null;
+
   return (
     <section className="atlas-owner-day-plan-gate" data-owner-day-plan-gate="true">
+      <style>{`
+        .atlas-owner-day-plan-active > :not(.atlas-owner-day-plan-inline-root) {
+          display: none !important;
+        }
+        .atlas-owner-day-plan-inline-root {
+          display: grid;
+          gap: 10px;
+        }
+      `}</style>
       <div style={{ margin: "2px 0 12px", display: "grid", gap: 8 }}>
         {!open ? (
           <button
@@ -128,12 +169,7 @@ export default function OwnerDayPlanGate({ dateIso }: Props) {
           </div>
         )}
       </div>
-      {open ? (
-        <>
-          <OwnerDayScheduleBuilder />
-          <OwnerDayCueEditor />
-        </>
-      ) : null}
+      {open && portalTarget ? createPortal(editBoard, portalTarget) : editBoard}
     </section>
   );
 }
