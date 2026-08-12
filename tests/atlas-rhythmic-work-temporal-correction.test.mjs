@@ -9,8 +9,13 @@ function read(path) {
 const schedule = read("supabase/migrations/20260812193000_rhythmic_work_live_schedule_correction_v1.sql");
 const outreach = read("supabase/migrations/20260812194000_serial_outreach_conveyor_v1.sql");
 const weed = read("supabase/migrations/20260812194500_weed_projection_and_clear_crop_merge_v1.sql");
+const temporal = read("supabase/migrations/20260812195500_explicit_temporal_constraints_precede_generic_dayparts_v1.sql");
+const hardCarry = read("supabase/migrations/20260812200500_hard_date_misses_do_not_silently_carry_v1.sql");
 const moveAssembly = read("lib/atlas/task-move-assembly.ts");
 const ownerDay = read("components/atlas/owner-day-plan-gate.tsx");
+const hardStopBanner = read("components/atlas/hard-stop-day-banner.tsx");
+const hardStopApi = read("app/api/atlas/hard-stop-cue/route.ts");
+const daySummary = read("components/atlas/day-trail-summary.tsx");
 
 test("live schedule correction removes false work instead of rescheduling it", () => {
   assert.match(schedule, /zinnia_2026_s5_house_south_sow/);
@@ -38,6 +43,7 @@ test("Thursday event constraints keep Corral mowing before guest time", () => {
   assert.match(schedule, /must_finish_before_local/);
   assert.match(schedule, /2026-08-13T17:45:00-05:00/);
   assert.match(schedule, /work_window_key','afternoon'/);
+  assert.ok(temporal.indexOf("work_window_key") < temporal.indexOf("succession_sowing"), "explicit window must outrank generic sowing defaults");
 });
 
 test("Elm harvest remains the fixed weekly rhythm even when this week executes Wednesday night", () => {
@@ -84,4 +90,20 @@ test("Owner Day surfaces future Weed Cards as projections rather than released w
   assert.match(ownerDay, /conditional === true/);
   assert.match(ownerDay, /Projected Weed Card/);
   assert.match(ownerDay, /This is a projection, not another released task/);
+});
+
+test("hard-date sowing has an in-app Day cue independent of push delivery", () => {
+  assert.match(daySummary, /<HardStopDayBanner dateIso=\{dayDateIso\}/);
+  assert.match(hardStopBanner, /SOW TODAY|cue\.headline/);
+  assert.match(hardStopApi, /This sowing owns today\. Open it before moving on\./);
+  assert.match(hardStopApi, /OWNER DECISION NEEDED/);
+  assert.match(hardStopApi, /Projected harvest shifts/);
+  assert.match(hardStopApi, /missed && effectiveRole === "farm_hand"/);
+});
+
+test("missed hard dates become Owner exceptions instead of tomorrow's worker carry", () => {
+  assert.match(hardCarry, /A missed hard calendar commitment becomes an exception for Owner review/);
+  assert.match(hardCarry, /v_missed_hard_date_work/);
+  assert.match(hardCarry, /owner_decision_required/);
+  assert.match(hardCarry, /calendar_commitment_kind/);
 });
