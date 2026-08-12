@@ -269,7 +269,7 @@ begin
     v_task.due_date,
     'legacy_task_repair',
     v_task.id,
-    'external_signal',
+    'event',
     0,
     1,
     (to_jsonb(v_task)-'id'-'created_at'-'updated_at'-'planned_occurrence_id'-'release_policy_id'-'released_at'-'release_reason')
