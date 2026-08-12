@@ -20,7 +20,7 @@ test("Pass 5 gives ordinary assigned tasks one neutral execution shell", () => {
   assert.doesNotMatch(canonical, /DominionAssignedTaskDetail/);
 });
 
-test("the shell owns canonical Task Move resolution blockers and completion gating while the brief owns human timing presentation", () => {
+test("the shell owns canonical Task Move blockers and gating while the brief owns compact timing presentation", () => {
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
   const brief = read("components/atlas/task-execution-brief.tsx");
   const spine = read("components/atlas/task-move-spine.tsx");
@@ -37,9 +37,9 @@ test("the shell owns canonical Task Move resolution blockers and completion gati
 
   assert.match(brief, /assemblyControlled = assembly !== undefined/);
   assert.match(brief, /resolvedAssembly\?\.execution\.dueLabel/);
-  assert.match(brief, /atlas-human-task-fallback__due/);
+  assert.match(brief, /atlas-worker-fallback__due/);
   assert.match(spine, /assembly\.execution\.dueLabel/);
-  assert.match(spine, /data-reachable=\{stopped \? "false" : "true"\}/);
+  assert.match(spine, /data-state=\{requirement.status\}/);
   assert.doesNotMatch(shell, /data-atlas-task-timing="true"|data-atlas-task-readiness="true"/);
 });
 
