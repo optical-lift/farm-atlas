@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import HardStopDayBanner from "@/components/atlas/hard-stop-day-banner";
 import OwnerDayPlanGate from "@/components/atlas/owner-day-plan-gate";
 import styles from "./day-trail-summary.module.css";
 
@@ -48,7 +49,7 @@ function finiteNumber(value: unknown) {
 
 export default function DayTrailSummary({ completed, total, blocked, loading = false, compact = false }: DayTrailSummaryProps) {
   const [authoritative, setAuthoritative] = useState<AuthoritativeProgress | null>(null);
-  const [ownerPlanDateIso, setOwnerPlanDateIso] = useState<string | null>(null);
+  const [dayDateIso, setDayDateIso] = useState<string | null>(null);
 
   const refreshAuthoritativeProgress = useCallback(async () => {
     if (loading) return;
@@ -83,7 +84,7 @@ export default function DayTrailSummary({ completed, total, blocked, loading = f
   }, [completed, total, refreshAuthoritativeProgress]);
 
   useEffect(() => {
-    setOwnerPlanDateIso(compact ? selectedDayIso() : null);
+    setDayDateIso(selectedDayIso());
   }, [compact]);
 
   useEffect(() => {
@@ -115,6 +116,7 @@ export default function DayTrailSummary({ completed, total, blocked, loading = f
 
   return (
     <>
+      {dayDateIso ? <HardStopDayBanner dateIso={dayDateIso} /> : null}
       <section className={`${styles.card}${compact ? ` ${styles.compact}` : ""}`} aria-label="Day progress">
         <header>
           <strong>{valueText}</strong>
@@ -143,7 +145,7 @@ export default function DayTrailSummary({ completed, total, blocked, loading = f
           </footer>
         ) : null}
       </section>
-      {compact && ownerPlanDateIso ? <OwnerDayPlanGate dateIso={ownerPlanDateIso} /> : null}
+      {compact && dayDateIso ? <OwnerDayPlanGate dateIso={dayDateIso} /> : null}
     </>
   );
 }
