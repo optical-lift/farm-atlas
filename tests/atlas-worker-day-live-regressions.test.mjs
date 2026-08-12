@@ -13,6 +13,8 @@ test("Price Cutter stays out of the worker feed until a harvestable pollenless c
   assert.match(migration, /required_profile_metadata_key/);
   assert.match(migration, /'pollen_status','pollenless','harvestable'/);
   assert.match(migration, /plan_work_occurrence_v1/);
+  assert.match(migration, /v_task\.id,\s*'event',\s*0,\s*1,/);
+  assert.doesNotMatch(migration, /'external_signal'/);
   assert.match(migration, /legacy_task_release_provenance_repaired/);
   assert.match(migration, /status='blocked'/);
   assert.match(migration, /due_date=null/);
