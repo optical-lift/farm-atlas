@@ -22,6 +22,22 @@ test("Price Cutter stays out of the worker feed until a harvestable pollenless c
   assert.match(migration, /refresh_crop_availability_gates_from_harvest_v1/);
 });
 
+test("the Thursday Lebanon harvest carries its literal worker execution packet", () => {
+  const migration = read("supabase/migrations/20260812142000_thursday_lebanon_worker_execution_normalization_v1.sql");
+  const contract = read("lib/atlas/worker-execution-contract.ts");
+
+  assert.match(migration, /19395 Highway HH, Lebanon, MO 65536/);
+  assert.match(migration, /buckets_required'\)::integer,-1\)<>7/);
+  assert.match(migration, /'execution_do','Harvest Karianne’s garden for Thursday evening’s bouquet bar\.'/);
+  assert.match(migration, /'execution_place','Karianne’s garden · 19395 Highway HH, Lebanon, MO 65536'/);
+  assert.match(migration, /'Take 7 black florist buckets\.'/);
+  assert.match(migration, /'execution_done_when','Harvested flowers are bucketed, conditioned, and back at Elm for Thursday evening\.'/);
+  assert.match(migration, /'worker_execution_normalized_source','worker_task_contract_correction_v1'/);
+  assert.match(contract, /"execution_place"/);
+  assert.match(contract, /"execution_how"/);
+  assert.match(contract, /"execution_done_when"/);
+});
+
 test("the overdue House South zinnia sowing is explicitly restored to the Aug 12 evening Day", () => {
   const migration = read("supabase/migrations/20260812125903_restore_zinnia_house_south_sowing_to_aug12_v1.sql");
 
