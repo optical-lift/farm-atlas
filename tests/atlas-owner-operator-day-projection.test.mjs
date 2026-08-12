@@ -25,7 +25,7 @@ test("Owner worker-day planning resolves one Farm Hand directly or through an ex
   assert.doesNotMatch(reader, /23e98e5e-16ca-40d8-872c-c77e06baa167/);
 });
 
-test("Owner Day Edit is a deliberate purple choreography mode with one atomic commit", () => {
+test("Owner Day Edit remains one deliberate purple choreography mode with one atomic commit", () => {
   const component = read("components/atlas/owner-day-schedule-builder.tsx");
   const gate = read("components/atlas/owner-day-plan-gate.tsx");
   const daySummary = read("components/atlas/day-trail-summary.tsx");
@@ -60,15 +60,13 @@ test("Owner Day Edit is a deliberate purple choreography mode with one atomic co
   assert.match(gate, /<OwnerDayCueEditor \/>/);
   assert.match(gate, /working Day changes only when you commit it/);
   assert.doesNotMatch(daySummary, /OwnerDayScheduleBuilder/);
-  assert.match(layout, /OwnerDayPlanGate/);
+  assert.doesNotMatch(layout, /OwnerDayPlanGate/);
 
   assert.match(commitRoute, /owner_commit_worker_day_choreography_api_v1/);
   assert.match(commitRoute, /resolveOwnerWorkerDayPlanningTarget/);
   assert.match(commitRoute, /owner-day-commit-v1/);
   assert.match(commitRoute, /"project_pull", "floating_task"/);
 
-  // The older focused endpoints remain explicit compatibility boundaries; the
-  // current board no longer chains them into a partially committed draft.
   assert.match(postRoute, /owner_build_worker_day_schedule_api_v2/);
   assert.match(postRoute, /owner-day-schedule-v1/);
   assert.match(editRoute, /owner_apply_worker_day_edits_api_v1/);
