@@ -1,8 +1,6 @@
 "use client";
 
-import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
 
 import OwnerDayCueEditor from "@/components/atlas/owner-day-cue-editor";
 import OwnerDayScheduleBuilder from "@/components/atlas/owner-day-schedule-builder";
@@ -22,13 +20,14 @@ type PlanProbe = {
     paidTargetMinutes?: number;
     committedPaidMinutes?: number;
     automaticPaidMinutes?: number;
-    suggestions?: Array<{ sourceKind?: string }>;
-    automaticWork?: unknown[];
-    realWork?: unknown[];
   } | null;
 };
 
-function validDateIso(value: string | null) {
+type Props = {
+  dateIso: string;
+};
+
+function validDateIso(value: string | null | undefined) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
 }
 
@@ -41,19 +40,14 @@ function minutesLabel(value: number) {
   return `${hours}h ${remainder}m`;
 }
 
-export default function OwnerDayPlanGate() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const requestedDate = searchParams.get("date");
-  const dateIso = pathname === "/day" && validDateIso(requestedDate) ? requestedDate : null;
+export default function OwnerDayPlanGate({ dateIso }: Props) {
   const [probe, setProbe] = useState<PlanProbe | null>(null);
   const [open, setOpen] = useState(false);
-  const [host, setHost] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     setProbe(null);
     setOpen(false);
-    if (!dateIso) return;
+    if (!validDateIso(dateIso)) return;
 
     const controller = new AbortController();
     void fetch(`/api/atlas/worker-day-plan?date=${encodeURIComponent(dateIso)}`, {
@@ -72,58 +66,7 @@ export default function OwnerDayPlanGate() {
   }, [dateIso]);
 
   const canPlan = Boolean(probe?.active && probe.plan?.availableWorkerDay !== false && probe.target?.membershipId);
-
-  useEffect(() => {
-    if (!dateIso || !canPlan || pathname !== "/day") {
-      setHost((current) => {
-        current?.remove();
-        return null;
-      });
-      return;
-    }
-
-    let disposed = false;
-    let frame = 0;
-
-    const mount = () => {
-      if (disposed) return;
-      const group = document.querySelector<HTMLElement>(".atlas-day-work-order-group.atlas-day-timeline-group");
-      const timeline = group?.querySelector<HTMLElement>(".atlas-day-mixed-timeline");
-      if (!group || !timeline) return;
-
-      let nextHost = group.querySelector<HTMLElement>('[data-owner-day-plan-gate="true"]');
-      if (!nextHost) {
-        nextHost = document.createElement("div");
-        nextHost.dataset.ownerDayPlanGate = "true";
-        group.insertBefore(nextHost, timeline);
-      }
-      setHost((current) => current === nextHost ? current : nextHost);
-    };
-
-    const queueMount = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        mount();
-      });
-    };
-
-    queueMount();
-    const observer = new MutationObserver(queueMount);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    return () => {
-      disposed = true;
-      if (frame) window.cancelAnimationFrame(frame);
-      observer.disconnect();
-      setHost((current) => {
-        current?.remove();
-        return null;
-      });
-    };
-  }, [canPlan, dateIso, pathname]);
-
-  if (!canPlan || !host?.isConnected) return null;
+  if (!canPlan) return null;
 
   const operatorLabel = probe?.operatorLabel || "Farm Hand";
   const targetMinutes = Math.max(0, Number(probe?.plan?.paidTargetMinutes) || 0);
@@ -132,8 +75,8 @@ export default function OwnerDayPlanGate() {
   const overByMinutes = Math.max(knownLoadMinutes - targetMinutes, 0);
   const remainingMinutes = Math.max(targetMinutes - knownLoadMinutes, 0);
 
-  return createPortal(
-    <>
+  return (
+    <section className="atlas-owner-day-plan-gate" data-owner-day-plan-gate="true">
       <div style={{ margin: "2px 0 12px", display: "grid", gap: 8 }}>
         {!open ? (
           <button
@@ -191,8 +134,6 @@ export default function OwnerDayPlanGate() {
           <OwnerDayCueEditor />
         </>
       ) : null}
-    </>,
-    host,
-    "owner-day-plan-gate",
+    </section>
   );
 }
