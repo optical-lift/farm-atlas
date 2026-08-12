@@ -11,17 +11,17 @@ const brief = read("components/atlas/task-execution-brief.tsx");
 const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 const weed = read("components/atlas/weed-card-task-focus.tsx");
 
-test("canonical Task Move data renders as a compact human trail instead of schema labels", () => {
+test("canonical Task Move data renders as a compact operation-aware human trail", () => {
   assert.match(spine, /aria-label="Task trail"/);
-  assert.match(spine, />Right now</);
-  assert.match(spine, />Do this</);
-  assert.match(spine, /"Target held" : "Finished"/);
+  assert.match(spine, /presentation\.actionLabel/);
+  assert.match(spine, /presentation\.actionSubject/);
+  assert.match(spine, /presentation\.placeRelation/);
+  assert.match(spine, /presentation\.methodFacts\.map/);
   assert.match(spine, /data-reachable=\{stopped \? "false" : "true"\}/);
   assert.match(spine, /atlas-human-task-trail__requirements/);
   assert.doesNotMatch(spine, />Task move</i);
-  assert.doesNotMatch(spine, />Current</);
-  assert.doesNotMatch(spine, />Move</);
-  assert.doesNotMatch(spine, />After</);
+  assert.doesNotMatch(spine, />Do this</);
+  assert.doesNotMatch(spine, />Finished</);
   assert.doesNotMatch(spine, /Ready to do/);
   assert.doesNotMatch(spine, /Check before doing/);
 });
