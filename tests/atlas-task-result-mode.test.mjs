@@ -14,8 +14,12 @@ const taskCardMigration = readFileSync(
   new URL("../supabase/migrations/20260808162000_expose_task_operation_class_on_task_cards.sql", import.meta.url),
   "utf8",
 );
-const canonicalDetail = readFileSync(
+const canonicalBoundary = readFileSync(
   new URL("../components/atlas/canonical-assigned-task-detail.tsx", import.meta.url),
+  "utf8",
+);
+const canonicalDetail = readFileSync(
+  new URL("../components/atlas/canonical-assigned-task-detail-client.tsx", import.meta.url),
   "utf8",
 );
 const conveyorDetail = readFileSync(
@@ -42,6 +46,7 @@ test("operation class remains available without replacing the canonical result g
   assert.match(taskCardMigration, /t\.operation_class,/);
   assert.match(taskCardMigration, /t\.operation_class_source/);
 
+  assert.match(canonicalBoundary, /workerExecutionTaskCard/);
   assert.doesNotMatch(canonicalDetail, /atlasTaskResultMode\(props\.task\)/);
   assert.doesNotMatch(canonicalDetail, /props\.assignee\.key === "anna" && resultMode === "field_execution"/);
   assert.match(canonicalDetail, /return <AssignedTaskExecutionShell/);
