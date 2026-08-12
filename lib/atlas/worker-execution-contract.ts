@@ -95,6 +95,8 @@ export const WORKER_EXECUTION_METADATA_KEYS = new Set([
   "checklist_status",
   "checklist_mode",
   "checklist_heading",
+  "checklist_label",
+  "step_order",
   "execution_checklist_template_key",
   "execution_checklist_title",
   "execution_checklist_kicker",
@@ -111,11 +113,16 @@ export const WORKER_EXECUTION_METADATA_KEYS = new Set([
   "weed_pass_id",
   "seed_inventory_recount",
 
-  // Worker contact / script data for calling and outreach tasks.
+  // Worker contact / script data for calling and outreach tasks. Business name,
+  // phone, address and checklist order are execution facts; relationship status,
+  // buyer history, volume strategy and management notes remain outside the packet.
   "contact_name",
   "contact_phone",
   "phone",
   "phone_number",
+  "business_name",
+  "business_phone",
+  "business_address",
   "call_script",
   "outreach_script",
   "worker_script",
