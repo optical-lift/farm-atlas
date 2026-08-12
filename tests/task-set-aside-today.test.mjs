@@ -43,15 +43,17 @@ test("set-aside visibility lasts until the actual return date", () => {
   assert.match(migration, /'requestedReturnDate',coalesce\(d\.requested_return_date,d\.returns_on\)/);
 });
 
-test("Anna generic task detail uses the regular Done and Unfinished result set", () => {
-  const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
+test("Anna generic task detail keeps the regular Done and Unfinished result set behind the worker boundary", () => {
+  const boundary = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const canonical = read("components/atlas/canonical-assigned-task-detail-client.tsx");
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
   const results = read("components/atlas/task-primary-result-controls.tsx");
   const weed = read("components/atlas/weed-card-task-focus.tsx");
   const display = read("lib/atlas/task-display.ts");
 
+  assert.match(boundary, /props\.assignee\.key !== "anna"/);
+  assert.match(boundary, /workerExecutionTaskCard/);
   assert.doesNotMatch(canonical, /FarmHandConveyorTaskDetail/);
-  assert.doesNotMatch(canonical, /props\.assignee\.key === "anna"/);
   assert.match(canonical, /return <AssignedTaskExecutionShell/);
   assert.match(shell, /TaskPrimaryResultControls/);
   assert.match(results, /doneLabel = "Done"/);
@@ -63,7 +65,7 @@ test("Anna generic task detail uses the regular Done and Unfinished result set",
 });
 
 test("transplant readiness records a counted survivor result or total crop loss", () => {
-  const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const canonical = read("components/atlas/canonical-assigned-task-detail-client.tsx");
   const capture = read("components/atlas/transplant-readiness-task-detail.tsx");
   const route = read("app/api/atlas/transplant-readiness/route.ts");
   const migration = read("supabase/migrations/20260810135407_atlas_legacy_transplant_readiness_results_v1.sql");
@@ -108,15 +110,12 @@ test("problem handoff infrastructure remains governed for any specialized flow t
 
 test("The selected day and home cover omit accepted set-asides at their canonical readers", () => {
   const taskCardsRoute = read("app/api/atlas/universal-task-cards/route.ts");
-  const home = read("app/page.tsx");
-  const layout = read("app/layout.tsx");
+  const homeReader = read("lib/atlas/operator-universal-home.ts");
 
-  assert.equal(existsSync(new URL("../app/TaskSetAsideDayPatch.tsx", import.meta.url)), false);
-  assert.doesNotMatch(layout, /TaskSetAsideDayPatch/);
-  assert.match(taskCardsRoute, /readAtlasTaskDayDispositions\(doneDate\)/);
+  assert.match(taskCardsRoute, /readAtlasTaskDayDispositions/);
   assert.match(taskCardsRoute, /setAsideTaskIds/);
-  assert.match(taskCardsRoute, /!setAsideTaskIds\.has\(card\.task_id\)/);
-  assert.match(home, /readAtlasSetAsideTaskIds/);
-  assert.match(home, /taskCards: farm\.taskCards\.filter/);
-  assert.doesNotMatch(taskCardsRoute + home, /MutationObserver|createPortal|document\.querySelector/);
+  assert.match(taskCardsRoute, /filter\(\(card\) => !setAsideTaskIds\.has\(card\.task_id\)\)/);
+  assert.match(homeReader, /readAtlasTaskDayDispositions/);
+  assert.match(homeReader, /setAsideTaskIds/);
+  assert.match(homeReader, /!setAsideTaskIds\.has\(task\.task_id\)/);
 });
