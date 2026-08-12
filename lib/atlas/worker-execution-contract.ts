@@ -31,6 +31,8 @@ export const WORKER_EXECUTION_METADATA_KEYS = new Set([
   "execution_done_when",
   "execution_details",
   "worker_context",
+  "worker_result_label",
+  "worker_result_lines",
   "detail_lines",
   "detail_heading",
 
