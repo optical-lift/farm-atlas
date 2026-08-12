@@ -17,7 +17,11 @@ test("Day remains one task timeline while Living Journal sections are visually a
   assert.match(day, /atlas-day-route-spine/);
   assert.match(day, /atlas-day-mixed-timeline/);
   assert.match(day, /windowedTimeline\(visibleTimelineGroups\)/);
-  assert.match(day, /relativeWorkerTimelineGroups/);
+  assert.match(day, /const dayWindows: DayWindow\[\] =/);
+  assert.match(day, /label: "Morning"/);
+  assert.match(day, /label: "Afternoon"/);
+  assert.match(day, /label: "Evening"/);
+  assert.doesNotMatch(day, /relativeWorkerTimelineGroups/);
   assert.match(dayCss, /\.atlas-day-browse \.atlas-journal-carried/);
   assert.match(dayCss, /\.atlas-day-browse \.atlas-journal-goals/);
   assert.match(dayCss, /\.atlas-day-browse \.atlas-journal-events/);
