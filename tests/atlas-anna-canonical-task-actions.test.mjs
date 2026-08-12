@@ -6,6 +6,10 @@ const canonicalDetail = readFileSync(
   new URL("../components/atlas/canonical-assigned-task-detail.tsx", import.meta.url),
   "utf8",
 );
+const canonicalClient = readFileSync(
+  new URL("../components/atlas/canonical-assigned-task-detail-client.tsx", import.meta.url),
+  "utf8",
+);
 const conveyorDetail = readFileSync(
   new URL("../components/atlas/farm-hand-conveyor-task-detail.tsx", import.meta.url),
   "utf8",
@@ -19,12 +23,15 @@ const primaryResults = readFileSync(
   "utf8",
 );
 
-test("Anna generic assigned tasks use the canonical regular result grammar", () => {
+test("Anna generic assigned tasks cross the worker contract boundary before the canonical client grammar", () => {
   assert.doesNotMatch(canonicalDetail, /StructuredUnfinishedControl/);
-  assert.doesNotMatch(canonicalDetail, /assignee\.key === "anna"/);
-  assert.doesNotMatch(canonicalDetail, /FarmHandConveyorTaskDetail/);
-  assert.match(canonicalDetail, /return <AssignedTaskExecutionShell/);
-  assert.match(canonicalDetail, /TransplantReadinessTaskDetail/);
+  assert.match(canonicalDetail, /assignee\.key !== "anna"/);
+  assert.match(canonicalDetail, /workerExecutionTaskCard\(props\.task\)/);
+  assert.match(canonicalDetail, /workerExecutionTaskCards\(props\.childTasks\)/);
+  assert.match(canonicalDetail, /CanonicalAssignedTaskDetailClient/);
+
+  assert.match(canonicalClient, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
+  assert.match(canonicalClient, /TransplantReadinessTaskDetail/);
   assert.match(executionShell, /"Partly done"/);
   assert.match(executionShell, /"Problem found"/);
 });
