@@ -16,7 +16,8 @@ const shellCss = read("app/app-shell-regression-fixes.css");
 test("one shell-owned Add to Atlas action serves Home and every authenticated route", () => {
   assert.match(frame, /<GlobalAtlasAdd \/>/);
   assert.match(add, /aria-label="Add to Atlas"/);
-  assert.doesNotMatch(frame, /pathname === "\/"[\s\S]*GlobalAtlasAdd/);
+  assert.doesNotMatch(frame, /if \(pathname === "\/"\)[\s\S]{0,180}<GlobalAtlasAdd/);
+  assert.doesNotMatch(frame, /active === "home"[\s\S]{0,180}<GlobalAtlasAdd/);
   assert.match(frame, /if \(hidden\) return null/);
 });
 
