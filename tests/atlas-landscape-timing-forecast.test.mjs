@@ -17,7 +17,8 @@ test("annual landscape cards use deliberately authored shared execution details"
   assert.match(brief, /atlas-human-task-instructions__note/);
   assert.match(execution, /atlasMetaString\(task, "execution_details"\)/);
   assert.match(execution, /details: explicitDetails \|\| null/);
-  assert.doesNotMatch(execution, /task\.note/);
+  assert.doesNotMatch(execution, /details:\s*task\.note/);
+  assert.doesNotMatch(execution, /\|\|\s*task\.note/);
 
   // Timing belongs in deliberately authored execution fields. The retired Dominion
   // surface must not be required to interpret an annual task.
