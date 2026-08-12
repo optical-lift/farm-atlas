@@ -27,7 +27,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
   });
 }
 
-function validDateIso(value: string | null) {
+function validDateIso(value: string | null | undefined) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
 }
 
@@ -54,6 +54,49 @@ function priority(task: HardStopTask, dateIso: string) {
   if (today) return 1;
   if (sowing(task)) return 2;
   return 3;
+}
+
+function dateDistanceDays(fromIso: string, toIso: string) {
+  const from = new Date(`${fromIso}T12:00:00Z`);
+  const to = new Date(`${toIso}T12:00:00Z`);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return 0;
+  return Math.max(0, Math.round((to.getTime() - from.getTime()) / 86_400_000));
+}
+
+function shiftIsoDate(value: string, days: number) {
+  if (!validDateIso(value)) return null;
+  const date = new Date(`${value}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function shortDate(value: string | null) {
+  if (!value) return null;
+  const date = new Date(`${value}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+function missedSowingBody(task: HardStopTask, dateIso: string) {
+  if (!task.due_date) return "This committed sowing date passed without a result. Owner review is required.";
+  const metadata = task.metadata ?? {};
+  const slipDays = dateDistanceDays(task.due_date, dateIso);
+  const harvestStart = text(metadata.projected_harvest_start);
+  const harvestEnd = text(metadata.projected_harvest_end);
+  const shiftedStart = harvestStart ? shiftIsoDate(harvestStart, slipDays) : null;
+  const shiftedEnd = harvestEnd ? shiftIsoDate(harvestEnd, slipDays) : null;
+  const latestSafe = text(metadata.latest_safe_sow_date);
+  const stillBiologicallyViable = Boolean(latestSafe && latestSafe >= dateIso);
+  const harvestShift = harvestStart && harvestEnd && shiftedStart && shiftedEnd
+    ? ` Projected harvest shifts ${shortDate(harvestStart)}–${shortDate(harvestEnd)} → ${shortDate(shiftedStart)}–${shortDate(shiftedEnd)}.`
+    : "";
+  const viability = stillBiologicallyViable
+    ? ` It is still inside the recorded biological sowing window through ${shortDate(latestSafe)}.`
+    : latestSafe
+      ? " The recorded biological sowing window has also closed."
+      : "";
+  return `Planned sowing slipped ${slipDays} ${slipDays === 1 ? "day" : "days"}.${harvestShift}${viability} Choose whether to sow late, change the succession, or abandon it.`;
 }
 
 export async function GET(request: NextRequest) {
@@ -119,19 +162,26 @@ export async function GET(request: NextRequest) {
 
   const isSowing = sowing(task);
   const missed = Boolean(task.due_date && task.due_date < (dateIso as string));
+
+  // A missed hard-date task is an Owner exception, not a new worker obligation.
+  // Farm Hands stop seeing it in Day after its committed date instead of being taught that hard dates silently become tomorrow.
+  if (missed && effectiveRole === "farm_hand") {
+    return privateJson({ ok: true, cue: null });
+  }
+
   const metadata = task.metadata ?? {};
   const latestSafe = text(metadata.latest_safe_sow_date);
   const biologicalCutoffToday = Boolean(isSowing && latestSafe && latestSafe === task.due_date);
   const displaySubject = text(metadata.display_subject) || task.title;
   const headline = missed
-    ? effectiveRole === "owner" || effectiveRole === "manager"
-      ? "OWNER DECISION NEEDED"
-      : "DATE MISSED"
+    ? "OWNER DECISION NEEDED"
     : isSowing
       ? "SOW TODAY"
       : "DO TODAY";
   const body = missed
-    ? "This committed date passed without a result. Atlas is holding the exception instead of silently treating today as the new due date."
+    ? isSowing
+      ? missedSowingBody(task, dateIso as string)
+      : "This committed date passed without a result. Atlas is holding the exception instead of silently treating today as the new due date."
     : biologicalCutoffToday
       ? "This planting window closes today."
       : isSowing
