@@ -109,6 +109,10 @@ export default function TaskExecutionBrief({
   const resolvedDue = dueLabel === undefined
     ? resolvedAssembly?.execution.dueLabel || model?.dueLabel || null
     : dueLabel;
+  const displaySubject = task?.metadata?.display_subject;
+  const fallbackTitle = typeof displaySubject === "string" && displaySubject.trim()
+    ? displaySubject.trim()
+    : task?.title || resolvedDo;
 
   if (resolvedAssembly) {
     return (
@@ -133,7 +137,7 @@ export default function TaskExecutionBrief({
       `}</style>
       <section className="atlas-worker-fallback">
         <p className="atlas-worker-fallback__place">{resolvedPlace}</p>
-        <h1>{task?.metadata?.display_subject as string || task?.title || resolvedDo}</h1>
+        <h1>{fallbackTitle}</h1>
         {resolvedDue ? <span className="atlas-worker-fallback__due">{resolvedDue}</span> : null}
         <div className="atlas-worker-fallback__flow">
           <div className="atlas-worker-fallback__step"><small>Do this</small><strong>{resolvedDo}</strong></div>
