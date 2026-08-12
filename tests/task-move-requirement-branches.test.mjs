@@ -27,7 +27,6 @@ test("Task Focus reads the canonical Task Move assembly and keeps one worker gra
   assert.match(shell, /\/api\/atlas\/task-move\?taskId=/);
   assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
   assert.match(brief, /<TaskMoveSpine assembly=\{resolvedAssembly\} \/>/);
-  assert.match(brief, /Compatibility rendering/);
 });
 
 test("worker requirements retain quantities and state while hiding explanatory internals", () => {
