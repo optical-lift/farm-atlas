@@ -46,13 +46,13 @@ test("partly finished Anna Weed Cards return to the serial tail instead of steal
 test("gentle pressure washing exposes one current move and gates the rest behind completion", () => {
   const queue = read("supabase/migrations/20260812124733_gentle_pressure_wash_serial_queue_v1.sql");
   const restore = read("supabase/migrations/20260812125726_gentle_pressure_wash_restore_current_v1.sql");
+  const exactRelease = read("supabase/migrations/20260812131500_worker_day_serial_queue_corrections_v1.sql");
 
   assert.match(queue, /anna_gentle_pressure_wash_aug_2026/);
   assert.match(queue, /completion_gated_serial/);
   assert.match(queue, /release_timing','next_workday/);
   assert.match(queue, /advance_gentle_pressure_wash_serial_queue_v1/);
   assert.match(queue, /after update of status on atlas\.tasks/i);
-  assert.match(queue, /perform atlas\.release_next_task_in_queue_v1/);
   assert.match(queue, /v_queue_key,null,v_occ6,2,'queued'/);
   assert.match(queue, /v_queue_key,null,v_occ7,3,'queued'/);
 
@@ -62,4 +62,14 @@ test("gentle pressure washing exposes one current move and gates the rest behind
   assert.match(restore, /-'release_deferred'-'release_duplicate'/);
   assert.match(restore, /state='active'/);
   assert.match(restore, /state='released'/);
+
+  assert.match(exactRelease, /release_pressure_wash_queue_item_v1/);
+  assert.match(exactRelease, /release_next_pressure_wash_task_v1/);
+  assert.match(exactRelease, /planned_due_date=null/);
+  assert.match(exactRelease, /held_until_previous_completion/);
+  assert.match(exactRelease, /perform atlas\.release_next_pressure_wash_task_v1\(v_item\.farm_id,v_completed_date\)/);
+  assert.doesNotMatch(
+    exactRelease.match(/create or replace function atlas\.advance_gentle_pressure_wash_serial_queue_v1\(\)[\s\S]*?\$function\$;/)?.[0] ?? "",
+    /release_next_task_in_queue_v1/,
+  );
 });
