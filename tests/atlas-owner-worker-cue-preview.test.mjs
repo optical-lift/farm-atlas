@@ -34,12 +34,31 @@ test("Task Focus cues preserve the same worker cue preview after the Owner taps 
   assert.match(taskCueRoute, /task\?\.assigned_membership_id === operatorContext\.effective\.farmMembershipId/);
   assert.match(taskCueRoute, /targetSource = "operator_lens"/);
   assert.match(taskCue, /response\?\.targetSource === "worker_self" \|\| isOperatorPreview/);
-  assert.match(taskCue, /setPreviewDismissed/);
+  assert.match(taskCue, /setDismissedForSession/);
   assert.match(taskCue, /Owner cue preview · testing will not clear this for the worker/);
 
   const previewBranch = taskCue.indexOf("if (isOperatorPreview) {");
   const responseWrite = taskCue.indexOf('fetch("/api/atlas/day-cue-response"');
   assert.ok(previewBranch >= 0 && responseWrite > previewBranch, "Task Focus preview exits before the worker cue-response write");
+});
+
+test("worker cues have a non-mutating escape instead of trapping the app", () => {
+  assert.match(dayCue, /function closeCueForNow\(\)/);
+  assert.match(dayCue, /Close for now/);
+  assert.match(dayCue, /onClick=\{closeCueForNow\}/);
+  assert.match(taskCue, /function closeCueForNow\(\)/);
+  assert.match(taskCue, /Close for now/);
+  assert.match(taskCue, /onClick=\{closeCueForNow\}/);
+
+  const dayClose = dayCue.slice(dayCue.indexOf("function closeCueForNow()"), dayCue.indexOf("async function resolveCue"));
+  const taskClose = taskCue.slice(taskCue.indexOf("function closeCueForNow()"), taskCue.indexOf("async function resolve"));
+  assert.doesNotMatch(dayClose, /day-cue-response/);
+  assert.doesNotMatch(taskClose, /day-cue-response/);
+});
+
+test("closing an after-task cue releases the completed task instead of trapping Task Focus", () => {
+  assert.match(taskCue, /activeCue\.anchorKind === "after_task"/);
+  assert.match(taskCue, /window\.location\.assign\(completionReturn\(completion, "\/day"\)\)/);
 });
 
 test("the account switcher tells the Owner which interactions are safe previews", () => {
