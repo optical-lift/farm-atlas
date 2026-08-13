@@ -28,7 +28,13 @@ export default function TaskPrimaryResultControls({
   return (
     <>
       <div className="atlas-task-result-actions atlas-task-result-actions-simple">
-        <button type="button" className="done" disabled={busy || doneDisabled} onClick={onDone}>
+        <button
+          type="button"
+          className={doneDisabled ? "done is-readiness-warning" : "done"}
+          disabled={busy}
+          data-atlas-readiness-guard={doneDisabled ? "soft" : "clear"}
+          onClick={onDone}
+        >
           {doneBusy ? doneBusyLabel : doneLabel}
         </button>
         <button
