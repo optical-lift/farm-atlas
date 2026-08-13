@@ -20,11 +20,21 @@ test("Day sequence defines one typed read model for committed work, potential wo
   assert.match(sequence, /commitmentState: "potential"/);
 });
 
-test("Pass 2 does not pretend cue positions are solved before deterministic anchor rules exist", () => {
-  assert.match(sequence, /dayWindow: null/);
-  assert.match(sequence, /sequenceOrder: null/);
-  assert.match(sequence, /positionResolved: false/);
-  assert.match(sequence, /Pass 3 owns the deterministic before\/after\/time insertion rules/);
+test("Pass 3 deterministically resolves first-open, task-anchored, and timed cue positions", () => {
+  assert.match(sequence, /positionBasis: "first_open"/);
+  assert.match(sequence, /cue\.anchorKind === "at_time"/);
+  assert.match(sequence, /cue\.anchorKind === "before_task" \? -0\.01 : 0\.01/);
+  assert.match(sequence, /timeZone: "America\/Chicago"/);
+  assert.match(sequence, /positionBasis: "timed_estimate"/);
+  assert.match(sequence, /items: \[\.\.\.workItems, \.\.\.cueItems\]\.sort\(sortSequenceItems\)/);
+});
+
+test("timed cue placement uses the existing work order plus expected duration instead of inventing task start times", () => {
+  assert.match(sequence, /estimatedMinutes \?\? 30/);
+  assert.match(sequence, /totalMinutes/);
+  assert.match(sequence, /target = ratio \* totalMinutes/);
+  assert.match(sequence, /orderBetween\(previous, next\)/);
+  assert.doesNotMatch(sequence, /taskStartTime/);
 });
 
 test("the sequence reader combines existing plan and choreography truth without creating another write path", () => {
@@ -45,9 +55,13 @@ test("the Day sequence API is private read-only infrastructure for Day and futur
   assert.doesNotMatch(route, /export async function DELETE/);
 });
 
-test("Pass 1 projection remains intact while Pass 2 establishes the shared seam underneath it", () => {
-  assert.match(projection, /\/api\/atlas\/worker-day-plan\?date=/);
+test("Owner planning now consumes the shared Day sequence for purple potential and cue placement", () => {
+  assert.match(projection, /\/api\/atlas\/worker-day-sequence\?date=/);
   assert.match(projection, /data-owner-potential-day-card="true"/);
-  assert.match(projection, /projection/i);
+  assert.match(projection, /data-owner-day-sequence-cue="true"/);
+  assert.match(projection, /positionResolved/);
+  assert.match(projection, /resolved", "dismissed", "stale/);
+  assert.match(projection, /nextCommitted/);
+  assert.doesNotMatch(projection, /\/api\/atlas\/worker-day-plan\?date=/);
   assert.doesNotMatch(projection, /method:\s*"POST"/);
 });

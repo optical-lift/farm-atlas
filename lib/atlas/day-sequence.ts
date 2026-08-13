@@ -96,6 +96,8 @@ export type AtlasPotentialDaySequenceItem = {
   positionResolved: true;
 };
 
+export type AtlasCuePositionBasis = "first_open" | "before_task" | "after_task" | "timed_estimate" | "unresolved";
+
 export type AtlasCueDaySequenceItem = {
   kind: "cue";
   id: string;
@@ -107,10 +109,11 @@ export type AtlasCueDaySequenceItem = {
   title: string;
   body: string | null;
   status: string;
-  dayWindow: null;
-  sequenceOrder: null;
+  dayWindow: AtlasDaySequenceWindow | null;
+  sequenceOrder: number | null;
   commitmentState: "cue";
-  positionResolved: false;
+  positionResolved: boolean;
+  positionBasis: AtlasCuePositionBasis;
 };
 
 export type AtlasDaySequenceItem =
@@ -136,6 +139,12 @@ const windowRank: Record<AtlasDaySequenceWindow, number> = {
   morning: 0,
   afternoon: 1,
   evening: 2,
+};
+
+const dayWindowMinutes: Record<AtlasDaySequenceWindow, { start: number; end: number }> = {
+  morning: { start: 6 * 60, end: 12 * 60 },
+  afternoon: { start: 12 * 60, end: 17 * 60 },
+  evening: { start: 17 * 60, end: 23 * 60 },
 };
 
 function minutes(value: number | null | undefined) {
@@ -209,7 +218,7 @@ function potentialItem(row: AtlasDaySequencePlanRowInput): AtlasPotentialDaySequ
   };
 }
 
-function cueItem(cue: AtlasDaySequenceCueInput): AtlasCueDaySequenceItem {
+function unresolvedCueItem(cue: AtlasDaySequenceCueInput): AtlasCueDaySequenceItem {
   return {
     kind: "cue",
     id: `cue:${cue.cueId}`,
@@ -225,6 +234,7 @@ function cueItem(cue: AtlasDaySequenceCueInput): AtlasCueDaySequenceItem {
     sequenceOrder: null,
     commitmentState: "cue",
     positionResolved: false,
+    positionBasis: "unresolved",
   };
 }
 
@@ -233,6 +243,130 @@ function sortResolvedWork(left: AtlasCommittedDaySequenceItem | AtlasPotentialDa
     || left.sequenceOrder - right.sequenceOrder
     || (left.kind === right.kind ? 0 : left.kind === "committed_task" ? -1 : 1)
     || left.title.localeCompare(right.title);
+}
+
+function localMinuteOfDay(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value);
+  return Number.isFinite(hour) && Number.isFinite(minute) ? hour * 60 + minute : null;
+}
+
+function windowForMinute(minute: number): AtlasDaySequenceWindow {
+  if (minute < dayWindowMinutes.afternoon.start) return "morning";
+  if (minute < dayWindowMinutes.evening.start) return "afternoon";
+  return "evening";
+}
+
+function orderBetween(previous: number | null, next: number | null) {
+  if (previous === null && next === null) return 0;
+  if (previous === null) return (next as number) - 0.5;
+  if (next === null) return previous + 0.5;
+  if (next > previous) return previous + ((next - previous) / 2);
+  return previous + 0.001;
+}
+
+function resolveTimedCue(
+  cue: AtlasDaySequenceCueInput,
+  workItems: Array<AtlasCommittedDaySequenceItem | AtlasPotentialDaySequenceItem>,
+): AtlasCueDaySequenceItem {
+  const minute = localMinuteOfDay(cue.scheduledAt);
+  if (minute === null) return unresolvedCueItem(cue);
+  const dayWindow = windowForMinute(minute);
+  const inWindow = workItems.filter((item) => item.dayWindow === dayWindow).sort(sortResolvedWork);
+  if (!inWindow.length) {
+    return {
+      ...unresolvedCueItem(cue),
+      dayWindow,
+      sequenceOrder: 0,
+      positionResolved: true,
+      positionBasis: "timed_estimate",
+    };
+  }
+
+  const bounds = dayWindowMinutes[dayWindow];
+  const ratio = Math.max(0, Math.min(1, (minute - bounds.start) / Math.max(1, bounds.end - bounds.start)));
+  const duration = (item: AtlasCommittedDaySequenceItem | AtlasPotentialDaySequenceItem) => Math.max(15, item.estimatedMinutes ?? 30);
+  const totalMinutes = inWindow.reduce((sum, item) => sum + duration(item), 0);
+  const target = ratio * totalMinutes;
+  let consumed = 0;
+  let slot = inWindow.length;
+
+  for (let index = 0; index < inWindow.length; index += 1) {
+    const itemDuration = duration(inWindow[index]);
+    if (target <= consumed + (itemDuration / 2)) {
+      slot = index;
+      break;
+    }
+    if (target < consumed + itemDuration) {
+      slot = index + 1;
+      break;
+    }
+    consumed += itemDuration;
+  }
+
+  const previous = slot > 0 ? inWindow[slot - 1].sequenceOrder : null;
+  const next = slot < inWindow.length ? inWindow[slot].sequenceOrder : null;
+  return {
+    ...unresolvedCueItem(cue),
+    dayWindow,
+    sequenceOrder: orderBetween(previous, next),
+    positionResolved: true,
+    positionBasis: "timed_estimate",
+  };
+}
+
+function resolveCue(
+  cue: AtlasDaySequenceCueInput,
+  workItems: Array<AtlasCommittedDaySequenceItem | AtlasPotentialDaySequenceItem>,
+): AtlasCueDaySequenceItem {
+  if (cue.anchorKind === "first_open") {
+    const first = workItems[0] ?? null;
+    return {
+      ...unresolvedCueItem(cue),
+      dayWindow: "morning",
+      sequenceOrder: first?.dayWindow === "morning" ? first.sequenceOrder - 1 : -1_000_000,
+      positionResolved: true,
+      positionBasis: "first_open",
+    };
+  }
+
+  if (cue.anchorKind === "at_time") return resolveTimedCue(cue, workItems);
+
+  const anchor = cue.anchorTaskId
+    ? workItems.find((item) => item.kind === "committed_task" && item.taskId === cue.anchorTaskId) ?? null
+    : null;
+  if (!anchor) return unresolvedCueItem(cue);
+
+  return {
+    ...unresolvedCueItem(cue),
+    dayWindow: anchor.dayWindow,
+    sequenceOrder: anchor.sequenceOrder + (cue.anchorKind === "before_task" ? -0.01 : 0.01),
+    positionResolved: true,
+    positionBasis: cue.anchorKind,
+  };
+}
+
+function sortSequenceItems(left: AtlasDaySequenceItem, right: AtlasDaySequenceItem) {
+  if (!left.positionResolved && !right.positionResolved) return left.id.localeCompare(right.id);
+  if (!left.positionResolved) return 1;
+  if (!right.positionResolved) return -1;
+  const leftWindow = left.dayWindow as AtlasDaySequenceWindow;
+  const rightWindow = right.dayWindow as AtlasDaySequenceWindow;
+  const leftOrder = left.sequenceOrder as number;
+  const rightOrder = right.sequenceOrder as number;
+  return windowRank[leftWindow] - windowRank[rightWindow]
+    || leftOrder - rightOrder
+    || (left.kind === right.kind ? 0 : left.kind === "cue" ? -1 : right.kind === "cue" ? 1 : left.kind === "committed_task" ? -1 : 1)
+    || left.id.localeCompare(right.id);
 }
 
 export function assembleWorkerDaySequence(input: AssembleWorkerDaySequenceInput): AtlasDaySequence {
@@ -247,13 +381,11 @@ export function assembleWorkerDaySequence(input: AssembleWorkerDaySequenceInput)
     ...(input.suggestions ?? []).map(potentialItem),
   ].sort(sortResolvedWork);
 
-  // Pass 2 establishes one typed Day read model. Cue anchors are deliberately left
-  // unresolved here; Pass 3 owns the deterministic before/after/time insertion rules.
-  const cueItems = (input.cues ?? []).map(cueItem);
+  const cueItems = (input.cues ?? []).map((cue) => resolveCue(cue, workItems));
 
   return {
     contractVersion: "worker_day_sequence_v1",
     serviceDate: input.serviceDate,
-    items: [...workItems, ...cueItems],
+    items: [...workItems, ...cueItems].sort(sortSequenceItems),
   };
 }
