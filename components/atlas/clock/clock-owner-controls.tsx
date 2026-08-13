@@ -13,6 +13,7 @@ export default function ClockOwnerControls(props: {
   onChanged: () => Promise<void>;
   onError: (message: string | null) => void;
   showTime?: boolean;
+  compact?: boolean;
 }) {
   const { item } = props;
   const [time, setTime] = useState("");
@@ -46,20 +47,23 @@ export default function ClockOwnerControls(props: {
   const durationValue = duration || (item.plannedDurationMinutes ? String(item.plannedDurationMinutes) : "");
   const parsedDuration = Number(durationValue);
   const durationValid = Number.isInteger(parsedDuration) && parsedDuration >= 5 && parsedDuration <= 720;
+  const panel = <div data-clock-owner-controls="true" style={{ display: "grid", gap: 5 }}>
+    {props.showTime !== false ? <div style={{ display: "flex", gap: 5 }}>
+      <input aria-label={`Start time for ${item.title}`} type="time" value={time} onChange={(event) => setTime(event.target.value)} />
+      <button type="button" disabled={!time || saving} onClick={() => void post("/api/atlas/owner-day-task-time", "owner-clock-time-v1", { date: props.dateIso, taskId: item.taskId, localTime: time })}>{item.plannedStartAt ? "Save time" : "Place"}</button>
+      {item.plannedStartAt ? <button type="button" disabled={saving} onClick={() => void post("/api/atlas/owner-day-task-time", "owner-clock-time-v1", { date: props.dateIso, taskId: item.taskId, localTime: null })}>Remove time</button> : null}
+    </div> : null}
+    {item.plannedStartAt ? <div data-clock-owner-duration-controls="true" style={{ display: "flex", gap: 5, alignItems: "center" }}>
+      <input aria-label={`Planned duration for ${item.title}`} type="number" min="5" max="720" step="5" value={durationValue} placeholder="minutes" onChange={(event) => setDuration(event.target.value)} />
+      <button type="button" disabled={!durationValid || saving} onClick={() => void post("/api/atlas/owner-day-task-duration", "owner-clock-duration-v1", { date: props.dateIso, taskId: item.taskId, durationMinutes: parsedDuration })}>Save span</button>
+      {!item.plannedDurationMinutes && item.estimatedMinutes ? <button type="button" disabled={saving} onClick={() => void post("/api/atlas/owner-day-task-duration", "owner-clock-duration-v1", { date: props.dateIso, taskId: item.taskId, durationMinutes: item.estimatedMinutes })}>Use estimate</button> : null}
+      {item.plannedDurationMinutes ? <button type="button" disabled={saving} onClick={() => void post("/api/atlas/owner-day-task-duration", "owner-clock-duration-v1", { date: props.dateIso, taskId: item.taskId, durationMinutes: null })}>Remove span</button> : null}
+    </div> : null}
+  </div>;
 
-  return (
-    <div data-clock-owner-controls="true" style={{ display: "grid", gap: 5, marginTop: 6 }}>
-      {props.showTime !== false ? <div style={{ display: "flex", gap: 5 }}>
-        <input aria-label={`Start time for ${item.title}`} type="time" value={time} onChange={(event) => setTime(event.target.value)} />
-        <button type="button" disabled={!time || saving} onClick={() => void post("/api/atlas/owner-day-task-time", "owner-clock-time-v1", { date: props.dateIso, taskId: item.taskId, localTime: time })}>{item.plannedStartAt ? "Save time" : "Place"}</button>
-        {item.plannedStartAt ? <button type="button" disabled={saving} onClick={() => void post("/api/atlas/owner-day-task-time", "owner-clock-time-v1", { date: props.dateIso, taskId: item.taskId, localTime: null })}>Remove time</button> : null}
-      </div> : null}
-      {item.plannedStartAt ? <div data-clock-owner-duration-controls="true" style={{ display: "flex", gap: 5, alignItems: "center" }}>
-        <input aria-label={`Planned duration for ${item.title}`} type="number" min="5" max="720" step="5" value={durationValue} placeholder="minutes" onChange={(event) => setDuration(event.target.value)} />
-        <button type="button" disabled={!durationValid || saving} onClick={() => void post("/api/atlas/owner-day-task-duration", "owner-clock-duration-v1", { date: props.dateIso, taskId: item.taskId, durationMinutes: parsedDuration })}>Save span</button>
-        {!item.plannedDurationMinutes && item.estimatedMinutes ? <button type="button" disabled={saving} onClick={() => void post("/api/atlas/owner-day-task-duration", "owner-clock-duration-v1", { date: props.dateIso, taskId: item.taskId, durationMinutes: item.estimatedMinutes })}>Use estimate</button> : null}
-        {item.plannedDurationMinutes ? <button type="button" disabled={saving} onClick={() => void post("/api/atlas/owner-day-task-duration", "owner-clock-duration-v1", { date: props.dateIso, taskId: item.taskId, durationMinutes: null })}>Remove span</button> : null}
-      </div> : null}
-    </div>
-  );
+  if (!props.compact) return <div style={{ marginTop: 6 }}>{panel}</div>;
+  return <details style={{ position: "absolute", top: 4, right: 4, zIndex: 20 }}>
+    <summary style={{ cursor: "pointer", listStyle: "none", padding: "2px 5px", borderRadius: 6, background: "rgba(247,246,250,.96)", fontSize: 8, fontWeight: 900 }}>Edit</summary>
+    <div style={{ position: "absolute", top: 22, right: 0, width: 285, padding: 8, border: "1px solid rgba(104,106,124,.2)", borderRadius: 9, background: "#fff", boxShadow: "0 5px 18px rgba(55,51,74,.14)" }}>{panel}</div>
+  </details>;
 }
