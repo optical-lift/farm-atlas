@@ -1,0 +1,12 @@
+-- Production migrations applied through Supabase on 2026-08-13:
+-- 20260813191646 clock_planned_duration_column_v1
+-- 20260813191726 clock_planned_duration_rpc_v1a
+-- 20260813191746 clock_planned_duration_rpc_revoke_v1
+-- 20260813191755 clock_planned_duration_rpc_grant_v1
+-- 20260813191831 clock_duration_choreography_reader_v1
+--
+-- Contract: worker_day_task_placements.planned_duration_minutes stores a 5–720 minute
+-- choreography span, separate from task due-date truth. worker_day_choreography_api_v1
+-- exposes plannedDurationMinutes to both Owner and the assigned Farm Hand, while
+-- owner_set_worker_day_task_duration_api_v1 is Owner-only at the authenticated boundary.
+select 1;
