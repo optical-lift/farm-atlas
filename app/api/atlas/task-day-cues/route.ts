@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -36,5 +37,31 @@ export async function GET(request: Request) {
     return privateJson({ ok: false, error: "Atlas returned invalid task cues." }, 500);
   }
 
-  return privateJson({ ok: true, ...(result.data as Record<string, unknown>) });
+  const body = result.data as Record<string, unknown>;
+  let targetSource = body.targetSource;
+
+  // The database correctly identifies the authenticated Owner as owner_view. If
+  // the Owner has deliberately switched into the task assignee through Atlas's
+  // server-managed operator context, upgrade only that exact match to an
+  // operator_lens preview. This cannot be requested by an arbitrary query param.
+  if (targetSource === "owner_view") {
+    const operatorContext = await readAtlasOwnerOperatorContext();
+    if (operatorContext?.isOperating && operatorContext.effective.farmMembershipId) {
+      const { data: task } = await supabase
+        .schema("atlas")
+        .from("tasks")
+        .select("assigned_membership_id, farm_id")
+        .eq("id", taskId as string)
+        .limit(1)
+        .maybeSingle();
+      if (
+        task?.assigned_membership_id === operatorContext.effective.farmMembershipId
+        && task?.farm_id === operatorContext.effective.farmId
+      ) {
+        targetSource = "operator_lens";
+      }
+    }
+  }
+
+  return privateJson({ ok: true, ...body, targetSource });
 }

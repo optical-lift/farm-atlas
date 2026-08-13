@@ -7,7 +7,7 @@ type Choice = { value: string; label: string };
 type Cue = {
   cueId: string;
   serviceDate: string;
-  cueKind: "briefing" | "requirement" | "observation" | "somatic" | "result";
+  cueKind: string;
   anchorKind: "before_task" | "after_task";
   title: string;
   body: string | null;
@@ -20,7 +20,7 @@ type Cue = {
 
 type CueResponse = {
   ok?: boolean;
-  targetSource?: "worker_self" | "owner_view";
+  targetSource?: "worker_self" | "owner_view" | "operator_lens";
   cues?: Cue[];
 };
 
@@ -95,6 +95,7 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
   const [activeAfter, setActiveAfter] = useState<Cue | null>(null);
   const [completion, setCompletion] = useState<CompletionDetail | null>(null);
   const [saving, setSaving] = useState(false);
+  const [previewDismissed, setPreviewDismissed] = useState<Set<string>>(new Set());
 
   async function load(signal?: AbortSignal) {
     try {
@@ -116,11 +117,16 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
     setResponse(null);
     setActiveAfter(null);
     setCompletion(null);
+    setPreviewDismissed(new Set());
     void load(controller.signal);
     return () => controller.abort();
   }, [dateIso, taskId]);
 
-  const workerCues = response?.targetSource === "worker_self" ? response.cues ?? [] : [];
+  const isOperatorPreview = response?.targetSource === "operator_lens";
+  const canSeeWorkerCues = response?.targetSource === "worker_self" || isOperatorPreview;
+  const workerCues = canSeeWorkerCues
+    ? (response?.cues ?? []).filter((cue) => !previewDismissed.has(cue.cueId))
+    : [];
   const beforeCue = workerCues.find((cue) => cue.anchorKind === "before_task" && cueDue(cue)) ?? null;
   const afterCue = workerCues.find((cue) => cue.anchorKind === "after_task" && cueDue(cue)) ?? null;
 
@@ -150,6 +156,13 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
 
   async function resolve(responseData: Record<string, unknown> = {}) {
     if (saving) return;
+
+    if (isOperatorPreview) {
+      setPreviewDismissed((current) => new Set(current).add(activeCue.cueId));
+      if (activeCue.anchorKind === "after_task") setActiveAfter(null);
+      return;
+    }
+
     setSaving(true);
     try {
       const request = await fetch("/api/atlas/day-cue-response", {
@@ -183,9 +196,15 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
       aria-modal="true"
       aria-label={activeCue.title}
       data-atlas-task-cue={activeCue.anchorKind}
+      data-atlas-cue-preview={isOperatorPreview ? "owner" : "worker"}
       style={{ position: "fixed", inset: 0, zIndex: 170, display: "grid", alignItems: "end", padding: "12px 12px max(14px, env(safe-area-inset-bottom))", background: "rgba(31,42,35,.18)" }}
     >
       <section style={{ width: "min(100%,520px)", margin: "0 auto", padding: "17px 18px 16px", borderRadius: 22, border: "1px solid rgba(50,72,56,.13)", background: "#f8f5e9", boxShadow: "0 18px 60px rgba(34,45,36,.22)" }}>
+        {isOperatorPreview ? (
+          <small style={{ display: "block", marginBottom: 8, paddingBottom: 8, borderBottom: "1px solid rgba(50,72,56,.12)", fontSize: 9.5, fontWeight: 950, letterSpacing: ".1em", textTransform: "uppercase", color: "#665d91" }}>
+            Owner cue preview · testing will not clear this for the worker
+          </small>
+        ) : null}
         <small style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".11em", textTransform: "uppercase", opacity: .5 }}>
           {activeCue.anchorKind === "before_task" ? "Before you start" : activeCue.cueKind === "somatic" ? "Let this be finished" : "After this"}
         </small>

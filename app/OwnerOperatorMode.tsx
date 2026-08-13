@@ -111,7 +111,7 @@ export default function OwnerOperatorMode({ context }: OwnerOperatorModeProps) {
       {saving ? <p style={noteStyle}>Switching…</p> : null}
       {activeContext.isOperating ? (
         <p style={noteStyle}>
-          Actions change live Atlas data and remain recorded as {activeContext.actor.displayName} operating for {activeContext.effective.displayName}.
+          You are seeing {activeContext.effective.displayName}&apos;s access and assignments. Worker cues are safe previews: testing a cue does not clear or answer it for {activeContext.effective.displayName}. Other task actions still change live Atlas data and remain recorded as {activeContext.actor.displayName} operating for {activeContext.effective.displayName}.
         </p>
       ) : null}
       {error ? <p role="alert" style={{ ...noteStyle, color: "#9b2f3f" }}>{error}</p> : null}

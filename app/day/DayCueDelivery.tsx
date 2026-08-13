@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Choice = {
   value: string;
@@ -19,8 +19,9 @@ type Question = {
 
 type Cue = {
   cueId: string;
-  cueKind: "briefing" | "requirement" | "observation" | "somatic" | "result";
-  anchorKind: "first_open" | "before_task" | "after_task" | "at_time";
+  cueKind: string;
+  anchorKind: string;
+  anchorTaskId?: string | null;
   title: string;
   body: string | null;
   payload: Record<string, unknown>;
@@ -36,6 +37,8 @@ type ChoreographyResponse = {
   target?: { source?: "worker_self" | "owner_direct" | "operator_lens" } | null;
   choreography?: { cues?: Cue[] } | null;
 };
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function validDate(value: string | null) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
@@ -90,8 +93,16 @@ function actionLabel(cue: Cue) {
   return "Continue";
 }
 
+function cueTaskId(cue: Cue) {
+  const payloadTaskId = typeof cue.payload.taskId === "string" ? cue.payload.taskId.trim() : "";
+  if (UUID_PATTERN.test(payloadTaskId)) return payloadTaskId;
+  const anchorTaskId = typeof cue.anchorTaskId === "string" ? cue.anchorTaskId.trim() : "";
+  return UUID_PATTERN.test(anchorTaskId) ? anchorTaskId : null;
+}
+
 export default function DayCueDelivery() {
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const requestedDate = searchParams.get("date");
   const dateIso = pathname === "/day" && validDate(requestedDate) ? requestedDate as string : null;
@@ -126,12 +137,15 @@ export default function DayCueDelivery() {
     return () => controller.abort();
   }, [dateIso]);
 
+  const targetSource = response?.target?.source ?? null;
+  const isOperatorPreview = targetSource === "operator_lens";
   const currentCue = useMemo(() => {
-    // Owner can inspect cues in purple Day Edit without being interrupted by the
-    // worker's first-open experience. Automatic cue delivery belongs to the worker.
-    if (response?.target?.source !== "worker_self") return null;
-    return (response.choreography?.cues ?? []).find((cue) => cueIsDue(cue) && !dismissedForSession.has(cue.cueId)) ?? null;
-  }, [dismissedForSession, response]);
+    // The operator lens intentionally reads the exact worker choreography so the
+    // Owner can acceptance-test a cue before it reaches the worker. Preview
+    // interactions are local-only and never record a worker response.
+    if (targetSource !== "worker_self" && targetSource !== "operator_lens") return null;
+    return (response?.choreography?.cues ?? []).find((cue) => cueIsDue(cue) && !dismissedForSession.has(cue.cueId)) ?? null;
+  }, [dismissedForSession, response, targetSource]);
 
   const allQuestions = useMemo(() => currentCue ? questions(currentCue.payload.questions) : [], [currentCue]);
   const visibleQuestions = useMemo(() => allQuestions.filter((question) => !question.when || answers[question.when.key] === question.when.equals), [allQuestions, answers]);
@@ -140,6 +154,13 @@ export default function DayCueDelivery() {
 
   async function resolveCue(extraResponse: Record<string, string> = {}) {
     if (!currentCue || saving) return;
+
+    if (isOperatorPreview) {
+      setAnswers({});
+      setDismissedForSession((current) => new Set(current).add(currentCue.cueId));
+      return;
+    }
+
     setSaving(true);
     try {
       const request = await fetch("/api/atlas/day-cue-response", {
@@ -165,6 +186,19 @@ export default function DayCueDelivery() {
     }
   }
 
+  async function openCueTask() {
+    if (!currentCue || !dateIso || saving) return;
+    const taskId = cueTaskId(currentCue);
+    if (!taskId) {
+      await resolveCue();
+      return;
+    }
+
+    if (!isOperatorPreview) await resolveCue({ opened: "true" });
+    const returnTo = `/day?date=${dateIso}`;
+    router.push(`/task-focus/${taskId}?returnTo=${encodeURIComponent(returnTo)}`);
+  }
+
   function answerQuestion(question: Question, value: string) {
     const next = { ...answers, [question.key]: value };
     setAnswers(next);
@@ -181,6 +215,7 @@ export default function DayCueDelivery() {
   const prompt = currentQuestion?.prompt
     ?? (typeof currentCue.payload.prompt === "string" ? currentCue.payload.prompt : null)
     ?? currentCue.body;
+  const targetTaskId = cueTaskId(currentCue);
 
   return (
     <div
@@ -188,6 +223,7 @@ export default function DayCueDelivery() {
       aria-modal="true"
       aria-label={currentCue.title}
       data-atlas-day-cue-delivery="true"
+      data-atlas-cue-preview={isOperatorPreview ? "owner" : "worker"}
       style={{
         position: "fixed",
         inset: 0,
@@ -207,8 +243,13 @@ export default function DayCueDelivery() {
         boxShadow: "0 18px 60px rgba(34,45,36,.22)",
         border: "1px solid rgba(50,72,56,.13)",
       }}>
+        {isOperatorPreview ? (
+          <small style={{ display: "block", marginBottom: 8, paddingBottom: 8, borderBottom: "1px solid rgba(50,72,56,.12)", fontSize: 9.5, fontWeight: 950, letterSpacing: ".1em", textTransform: "uppercase", color: "#665d91" }}>
+            Owner cue preview · testing will not clear this for the worker
+          </small>
+        ) : null}
         <small style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".11em", textTransform: "uppercase", opacity: .5 }}>
-          {currentCue.cueKind === "briefing" ? "Today at Elm" : currentCue.cueKind === "observation" ? "Quick check" : "Before we keep going"}
+          {currentCue.cueKind === "briefing" || currentCue.cueKind === "hard_stop_sowing" ? "Today at Elm" : currentCue.cueKind === "observation" ? "Quick check" : "Before we keep going"}
         </small>
         <strong style={{ display: "block", marginTop: 5, fontSize: 19, lineHeight: 1.15 }}>{currentCue.title}</strong>
         {prompt ? <p style={{ margin: "8px 0 0", fontSize: 13.5, lineHeight: 1.45, opacity: .78 }}>{prompt}</p> : null}
@@ -243,7 +284,7 @@ export default function DayCueDelivery() {
             ))}
           </div>
         ) : (
-          <button type="button" disabled={saving} onClick={() => void resolveCue()} style={{ width: "100%", marginTop: 14, border: 0, borderRadius: 13, padding: "11px 12px", background: "#e8e43c", color: "#293126", font: "inherit", fontSize: 12.5, fontWeight: 900 }}>
+          <button type="button" disabled={saving} onClick={() => void (targetTaskId ? openCueTask() : resolveCue())} style={{ width: "100%", marginTop: 14, border: 0, borderRadius: 13, padding: "11px 12px", background: "#e8e43c", color: "#293126", font: "inherit", fontSize: 12.5, fontWeight: 900 }}>
             {saving ? "Saving…" : actionLabel(currentCue)}
           </button>
         )}
