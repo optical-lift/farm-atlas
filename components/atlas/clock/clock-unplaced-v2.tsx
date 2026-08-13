@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import type { AtlasClockProposalUnresolved } from "@/lib/atlas/clock-proposal";
 import type { AtlasDaySequenceItem, AtlasDaySequenceWindow } from "@/lib/atlas/day-sequence";
 import { atlasTimingClassLabel } from "@/lib/atlas/timing-mobility";
 
@@ -26,15 +27,19 @@ export default function ClockUnplacedV2(props: {
   dateIso: string;
   canManage: boolean;
   loading: boolean;
+  proposedTaskIds?: Set<string>;
+  proposalUnresolved?: AtlasClockProposalUnresolved[];
   onChanged: () => Promise<void>;
   onError: (message: string | null) => void;
 }) {
-  const unplaced = props.items.filter((item) => item.kind === "committed_task" ? !item.plannedStartAt : item.kind === "cue" && item.positionResolved && item.anchorKind !== "at_time" && !["resolved", "dismissed", "stale"].includes(item.status));
+  const unplaced = props.items.filter((item) => item.kind === "committed_task" ? !item.plannedStartAt && !props.proposedTaskIds?.has(item.id) : item.kind === "cue" && item.positionResolved && item.anchorKind !== "at_time" && !["resolved", "dismissed", "stale"].includes(item.status));
+  const waitingCount = unplaced.filter((item) => item.kind === "committed_task").length;
   return <section className={styles.unplaced} aria-label="Unplaced today">
-    <header><h2>Unplaced today</h2><span>{unplaced.filter((item) => item.kind === "committed_task").length} tasks need a time</span></header>
+    <header><h2>{props.proposedTaskIds ? "Still unplaced" : "Unplaced today"}</h2><span>{waitingCount} tasks need a time</span></header>
     <div className={styles.unplacedList} data-clock-unplaced-today="true">
       {props.loading ? <div className={styles.empty}>Loading the shared Day sequence…</div> : null}
-      {!props.loading && !unplaced.length ? <div className={styles.empty}>Nothing is waiting for a clock time.</div> : null}
+      {!props.loading && !unplaced.length && !props.proposalUnresolved?.length ? <div className={styles.empty}>Nothing is waiting for a clock time.</div> : null}
+      {(props.proposalUnresolved ?? []).map((entry) => <div className={styles.proposalUnresolved} key={`unresolved:${entry.id}`} data-clock-proposal-unresolved="true"><small>Atlas left unplaced</small><strong>{entry.title}</strong><span>{entry.reason}</span></div>)}
       {unplaced.map((item, index) => {
         const previous = unplaced[index - 1];
         const showWindow = item.dayWindow && (!previous || previous.dayWindow !== item.dayWindow);
