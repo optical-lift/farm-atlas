@@ -24,13 +24,14 @@ as $function$
 
   select card.*
   from atlas.v_task_cards card
+  join atlas.tasks task on task.id=card.task_id
   where p_done_date is not null
-    and card.farm_id = p_farm_id
-    and card.assigned_membership_id = p_membership_id
-    and card.parent_task_id is null
-    and card.status = 'done'
-    and card.completed_at is not null
-    and (card.completed_at at time zone 'America/Chicago')::date = p_done_date;
+    and task.farm_id = p_farm_id
+    and task.assigned_membership_id = p_membership_id
+    and task.parent_task_id is null
+    and task.status = 'done'
+    and task.completed_at is not null
+    and (task.completed_at at time zone 'America/Chicago')::date = p_done_date;
 $function$;
 
 create or replace function atlas.home_task_cards_v2(
@@ -124,9 +125,7 @@ declare
   v_user_id uuid := auth.uid();
   v_result jsonb;
 begin
-  if v_user_id is null then
-    raise exception 'Sign in required.' using errcode='42501';
-  end if;
+  if v_user_id is null then raise exception 'Sign in required.' using errcode='42501'; end if;
 
   select coalesce(jsonb_object_agg(t.id::text, jsonb_build_object(
     'projects', coalesce((
@@ -150,13 +149,11 @@ begin
             'planningStatus', pg.planning_status
           ) order by pg.target_due_date nulls last, pg.created_at, pg.goal_label)
           from atlas.project_goals pg
-          where pg.project_id = p.id
-            and coalesce(pg.planning_status, '') <> 'archived'
+          where pg.project_id = p.id and coalesce(pg.planning_status, '') <> 'archived'
         ), '[]'::jsonb)
       ) order by
         case p.portfolio_type when 'event' then 0 when 'side_quest' then 1 when 'campaign' then 2 when 'program' then 3 else 4 end,
-        p.sort_order,
-        p.title)
+        p.sort_order,p.title)
       from atlas.project_task_links ptl
       join atlas.projects p on p.id = ptl.project_id
       where ptl.task_id = t.id
@@ -204,14 +201,8 @@ begin
   where t.id = any(coalesce(p_task_ids, array[]::uuid[]))
     and (
       t.assigned_user_id = v_user_id
-      or exists(
-        select 1 from atlas.farm_memberships fm
-        where fm.farm_id = t.farm_id and fm.user_id = v_user_id and fm.active = true
-      )
-      or exists(
-        select 1 from atlas.project_task_links ptl
-        where ptl.task_id = t.id and atlas.can_read_project(ptl.project_id)
-      )
+      or exists(select 1 from atlas.farm_memberships fm where fm.farm_id=t.farm_id and fm.user_id=v_user_id and fm.active=true)
+      or exists(select 1 from atlas.project_task_links ptl where ptl.task_id=t.id and atlas.can_read_project(ptl.project_id))
     );
 
   return v_result;
@@ -228,30 +219,20 @@ declare
   v_place_key text := nullif(new.metadata ->> 'operation_place_key', '');
   v_tracks boolean := lower(coalesce(new.metadata ->> 'place_readiness_on_done', 'false')) in ('true','yes','1');
 begin
-  if v_place_key is null or not v_tracks then
-    return new;
-  end if;
+  if v_place_key is null or not v_tracks then return new; end if;
 
-  if new.status = 'done' and old.status is distinct from 'done' then
+  if new.status='done' and old.status is distinct from 'done' then
     update atlas.places p
-    set facts = coalesce(p.facts, '{}'::jsonb) || jsonb_build_object(
-          'readiness', 'ready',
-          'last_prepared_at', now(),
-          'last_prepared_task_id', new.id
-        ),
-        updated_at = now()
-    where p.farm_id = new.farm_id
-      and p.stable_key = v_place_key;
-  elsif old.status = 'done' and new.status <> 'done' then
+    set facts=coalesce(p.facts,'{}'::jsonb) || jsonb_build_object(
+          'readiness','ready','last_prepared_at',now(),'last_prepared_task_id',new.id
+        ),updated_at=now()
+    where p.farm_id=new.farm_id and p.stable_key=v_place_key;
+  elsif old.status='done' and new.status<>'done' then
     update atlas.places p
-    set facts = coalesce(p.facts, '{}'::jsonb) || jsonb_build_object(
-          'readiness', 'needs_check',
-          'readiness_changed_at', now(),
-          'readiness_changed_by_task_id', new.id
-        ),
-        updated_at = now()
-    where p.farm_id = new.farm_id
-      and p.stable_key = v_place_key;
+    set facts=coalesce(p.facts,'{}'::jsonb) || jsonb_build_object(
+          'readiness','needs_check','readiness_changed_at',now(),'readiness_changed_by_task_id',new.id
+        ),updated_at=now()
+    where p.farm_id=new.farm_id and p.stable_key=v_place_key;
   end if;
 
   return new;
