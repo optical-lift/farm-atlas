@@ -152,12 +152,17 @@ export default function DayCueDelivery() {
   const currentQuestion = visibleQuestions.find((question) => answers[question.key] === undefined) ?? null;
   const simpleChoices = currentCue ? choices(currentCue.payload.choices) : [];
 
+  function closeCueForNow() {
+    if (!currentCue || saving) return;
+    setAnswers({});
+    setDismissedForSession((current) => new Set(current).add(currentCue.cueId));
+  }
+
   async function resolveCue(extraResponse: Record<string, string> = {}) {
     if (!currentCue || saving) return;
 
     if (isOperatorPreview) {
-      setAnswers({});
-      setDismissedForSession((current) => new Set(current).add(currentCue.cueId));
+      closeCueForNow();
       return;
     }
 
@@ -288,6 +293,9 @@ export default function DayCueDelivery() {
             {saving ? "Saving…" : actionLabel(currentCue)}
           </button>
         )}
+        <button type="button" disabled={saving} onClick={closeCueForNow} style={{ width: "100%", marginTop: 8, border: 0, padding: "8px 10px", background: "transparent", color: "#445147", font: "inherit", fontSize: 12, fontWeight: 800, textDecoration: "underline", textUnderlineOffset: 3 }}>
+          {isOperatorPreview ? "Close preview" : "Close for now"}
+        </button>
       </section>
     </div>
   );
