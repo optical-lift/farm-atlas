@@ -121,159 +121,206 @@ export type AtlasTaskMoveContext = {
   waitingOn: AtlasTaskDependencyContext[];
 };
 
+export type AtlasTaskCaptureByObject = Record<
+  string,
+  {
+    result?: string;
+    capture_kind?: string;
+    completed_at?: string;
+    field_log_id?: string;
+    capture?: Record<string, unknown>;
+  }
+>;
+
+export type AtlasTaskCardMetadata = {
+  capture_by_object?: AtlasTaskCaptureByObject;
+  [key: string]: unknown;
+};
+
 export type AtlasTaskCard = {
+  farm_key: string;
   task_id: string;
-  farm_id: string;
-  farm_key?: string | null;
-  organization_id?: string | null;
-  organization_key?: string | null;
-  task_scope?: "farm" | "organization" | "universal" | string | null;
-  zone_id: string | null;
   title: string;
   task_type: string;
-  action_key: string;
-  work_class: string;
   status: string;
   priority: string;
   due_date: string | null;
   unlock_text: string | null;
   blocker_text: string | null;
-  completed_at: string | null;
-  completed_by: string | null;
   note: string | null;
-  metadata: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-  zone_label: string | null;
+  generated_from: string | null;
+  generated_from_id: string | null;
+  action_key: string | null;
+  work_class: string | null;
+  operation_class?: string | null;
+  operation_class_source?: string | null;
   parent_task_id: string | null;
   task_series_key: string | null;
   engine_instance_key: string | null;
-  visibility_scope: string;
-  assigned_user_id?: string | null;
-  assigned_membership_id?: string | null;
-  planned_occurrence_id?: string | null;
-  release_policy_id?: string | null;
-  released_at?: string | null;
-  release_reason?: string | null;
-  operation_class?: string | null;
-  operation_class_source?: string | null;
-  objects?: AtlasTaskCardObject[];
-  resource_requirements?: AtlasTaskCardResourceRequirement[];
-  action_templates?: AtlasTaskCardTemplate[];
-  task_logs?: AtlasTaskCardLog[];
-  task_outcomes?: AtlasTaskOutcomeEvent[];
-  task_transitions?: AtlasTaskTransitionEvent[];
+  created_at: string;
+  updated_at: string;
+  metadata: AtlasTaskCardMetadata | null;
+  zone_id: string | null;
+  zone_key: string | null;
+  zone_label: string | null;
+  task_logs: AtlasTaskCardLog[];
+  task_outcomes: AtlasTaskOutcomeEvent[];
+  task_transitions: AtlasTaskTransitionEvent[];
+  objects: AtlasTaskCardObject[];
+  resource_requirements: AtlasTaskCardResourceRequirement[];
+  action_templates: AtlasTaskCardTemplate[];
   move_context?: AtlasTaskMoveContext | null;
 };
 
 export type AtlasTaskCardsResponse = {
   ok: boolean;
+  farmKey: string;
+  portalLabel?: string;
+  hasFarmScope?: boolean;
+  hasOrganizationScope?: boolean;
+  activeFarmName?: string | null;
+  window?: {
+    doneDate?: string;
+    dueThrough?: string;
+    exactDate?: string;
+  };
   taskCards: AtlasTaskCard[];
-  farm?: { id: string; key: string; name: string } | null;
-  farms?: { id: string; key: string; name: string }[];
-  role?: string | null;
-  scope?: "farm" | "organization" | "universal" | string | null;
-  generatedAt?: string;
   error?: string;
   details?: string;
 };
 
-export type AtlasTaskCardFilters = {
-  farmKey?: string;
-  farmKeys?: string[];
-  organizationKey?: string;
-  scope?: "farm" | "organization" | "universal";
-  includeOrganization?: boolean;
-  status?: string;
+export type AtlasTaskCardScope = "farm" | "owner" | "marshall" | "children" | "all";
+
+export type AtlasTaskCardFetchOptions = {
+  taskId?: string;
+  scope?: AtlasTaskCardScope;
+  viewerScoped?: boolean;
   dueThrough?: string;
   doneDate?: string;
   exactDate?: string;
-  taskId?: string;
-  assignedUserId?: string;
-  assignedMembershipId?: string;
-  includeUnassigned?: boolean;
-  viewerScoped?: boolean;
-  limit?: number;
 };
 
-function buildTaskCardsQuery(filters: AtlasTaskCardFilters = {}) {
-  const params = new URLSearchParams();
-  if (filters.farmKey) params.set("farmKey", filters.farmKey);
-  for (const farmKey of filters.farmKeys ?? []) params.append("farmKey", farmKey);
-  if (filters.organizationKey) params.set("organizationKey", filters.organizationKey);
-  if (filters.scope) params.set("scope", filters.scope);
-  if (filters.includeOrganization === false) params.set("includeOrganization", "false");
-  if (filters.status) params.set("status", filters.status);
-  if (filters.dueThrough) params.set("dueThrough", filters.dueThrough);
-  if (filters.doneDate) params.set("doneDate", filters.doneDate);
-  if (filters.exactDate) params.set("exactDate", filters.exactDate);
-  if (filters.taskId) params.set("taskId", filters.taskId);
-  if (filters.assignedUserId) params.set("assignedUserId", filters.assignedUserId);
-  if (filters.assignedMembershipId) params.set("assignedMembershipId", filters.assignedMembershipId);
-  if (filters.includeUnassigned) params.set("includeUnassigned", "true");
-  if (filters.viewerScoped) params.set("viewerScoped", "true");
-  if (filters.limit) params.set("limit", String(filters.limit));
-  const query = params.toString();
-  return query ? `?${query}` : "";
+type ViewerOperationalWindow = {
+  dueThrough?: string;
+  doneDate?: string;
+  exactDate?: string;
+};
+
+export function atlasTaskCardScope(task: AtlasTaskCard) {
+  const value = task.metadata?.task_scope;
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (task.generated_from === "project" || task.task_type === "project_task") return "project";
+  return "farm_operation";
 }
 
-export async function fetchAtlasTaskCards(filters: AtlasTaskCardFilters = {}) {
-  const response = await fetch(`/api/atlas/universal-task-cards${buildTaskCardsQuery(filters)}`, {
+export function atlasIsProjectTaskCard(task: AtlasTaskCard) {
+  return atlasTaskCardScope(task) === "project";
+}
+
+function currentUrlScope(): AtlasTaskCardScope | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const scope = params.get("scope");
+  if (scope === "owner" || scope === "marshall" || scope === "children" || scope === "all") return scope;
+  if (window.location.pathname === "/owner") return "owner";
+  if (window.location.pathname === "/marshall") return "marshall";
+  if (window.location.pathname === "/children") return "children";
+  return null;
+}
+
+function canonicalScopeRows(taskCards: AtlasTaskCard[], scope: AtlasTaskCardScope) {
+  if (scope === "owner") return taskCards.filter((task) => taskMatchesAssignee(task, "owner"));
+  if (scope === "marshall") return taskCards.filter((task) => taskMatchesAssignee(task, "marshall"));
+  if (scope === "children") return taskCards.filter((task) => taskMatchesAssignee(task, "kids"));
+  return taskCards;
+}
+
+function validDateIso(value: string | null | undefined) {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime()));
+}
+
+function viewerOperationalWindow(options: AtlasTaskCardFetchOptions): ViewerOperationalWindow | null {
+  if (typeof window === "undefined") return options.viewerScoped ? {
+    dueThrough: options.dueThrough,
+    doneDate: options.doneDate,
+    exactDate: options.exactDate,
+  } : null;
+
+  if (options.viewerScoped) {
+    return {
+      dueThrough: validDateIso(options.dueThrough) ? options.dueThrough : undefined,
+      doneDate: validDateIso(options.doneDate) ? options.doneDate : undefined,
+      exactDate: validDateIso(options.exactDate) ? options.exactDate : undefined,
+    };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const pathname = window.location.pathname;
+  const today = atlasFarmDateIso();
+
+  if (pathname === "/") return {};
+
+  if (pathname === "/day") {
+    const dateIso = validDateIso(params.get("date")) ? params.get("date") as string : today;
+    return {
+      dueThrough: dateIso,
+      doneDate: dateIso,
+      exactDate: dateIso > today ? dateIso : undefined,
+    };
+  }
+
+  if (pathname === "/overview/week") {
+    const anchorIso = validDateIso(params.get("date")) ? params.get("date") as string : today;
+    const dueThrough = validDateIso(params.get("end")) ? params.get("end") as string : atlasShiftFarmDate(anchorIso, 6);
+    return { dueThrough };
+  }
+
+  if (pathname === "/overview/month") {
+    const anchorIso = validDateIso(params.get("date")) ? params.get("date") as string : today;
+    return { dueThrough: atlasFarmMonthEnd(anchorIso) };
+  }
+
+  return null;
+}
+
+export async function fetchAtlasTaskCards(
+  input?: string | AtlasTaskCardFetchOptions,
+): Promise<AtlasTaskCardsResponse> {
+  const params = new URLSearchParams();
+  const options: AtlasTaskCardFetchOptions = typeof input === "string" ? { taskId: input } : input ?? {};
+  const inferredScope = currentUrlScope();
+  const scope = options.scope ?? inferredScope ?? "farm";
+  const assignmentScope = scope === "owner" || scope === "marshall" || scope === "children";
+  const viewerWindow = !options.taskId && scope === "farm" ? viewerOperationalWindow(options) : null;
+
+  if (options.taskId) params.set("taskId", options.taskId);
+  if (assignmentScope) params.set("scope", "all");
+  else if (scope !== "farm") params.set("scope", scope);
+
+  const endpoint = viewerWindow
+    ? (() => {
+        const viewerParams = new URLSearchParams();
+        if (viewerWindow.dueThrough) viewerParams.set("dueThrough", viewerWindow.dueThrough);
+        if (viewerWindow.doneDate) viewerParams.set("doneDate", viewerWindow.doneDate);
+        if (viewerWindow.exactDate) viewerParams.set("exactDate", viewerWindow.exactDate);
+        return `/api/atlas/universal-task-cards${viewerParams.toString() ? `?${viewerParams.toString()}` : ""}`;
+      })()
+    : `/api/atlas/task-cards${params.toString() ? `?${params.toString()}` : ""}`;
+
+  const response = await fetch(endpoint, {
+    method: "GET",
     headers: { Accept: "application/json" },
+    credentials: "same-origin",
     cache: "no-store",
   });
+
   const data = (await response.json()) as AtlasTaskCardsResponse;
   if (!response.ok || !data.ok) {
-    throw new Error(data.details || data.error || "Atlas task cards failed to load.");
+    throw new Error(data.details || data.error || "Failed to load Atlas task cards.");
   }
-  return data;
-}
 
-export function taskDueKey(task: AtlasTaskCard) {
-  return task.due_date || "9999-12-31";
-}
-
-export function taskPriorityRank(priority: string) {
-  const normalized = priority.trim().toLowerCase();
-  if (normalized === "urgent") return 0;
-  if (normalized === "high") return 1;
-  if (normalized === "normal") return 2;
-  if (normalized === "low") return 3;
-  return 4;
-}
-
-export function sortAtlasTaskCards(tasks: AtlasTaskCard[]) {
-  return [...tasks].sort((a, b) => {
-    const byDue = taskDueKey(a).localeCompare(taskDueKey(b));
-    if (byDue !== 0) return byDue;
-    const byPriority = taskPriorityRank(a.priority) - taskPriorityRank(b.priority);
-    if (byPriority !== 0) return byPriority;
-    return a.title.localeCompare(b.title);
-  });
-}
-
-export function todayTaskCards(tasks: AtlasTaskCard[]) {
-  const today = atlasFarmDateIso();
-  return sortAtlasTaskCards(tasks.filter((task) => task.status === "open" && task.due_date && task.due_date <= today));
-}
-
-export function overdueTaskCards(tasks: AtlasTaskCard[]) {
-  const today = atlasFarmDateIso();
-  return sortAtlasTaskCards(tasks.filter((task) => task.status === "open" && task.due_date && task.due_date < today));
-}
-
-export function upcomingTaskCards(tasks: AtlasTaskCard[], days = 7) {
-  const today = atlasFarmDateIso();
-  const end = atlasShiftFarmDate(today, days);
-  return sortAtlasTaskCards(tasks.filter((task) => task.status === "open" && task.due_date && task.due_date > today && task.due_date <= end));
-}
-
-export function monthTaskCards(tasks: AtlasTaskCard[]) {
-  const today = atlasFarmDateIso();
-  const end = atlasFarmMonthEnd();
-  return sortAtlasTaskCards(tasks.filter((task) => task.status === "open" && task.due_date && task.due_date >= today && task.due_date <= end));
-}
-
-export function assigneeTaskCards(tasks: AtlasTaskCard[], assigneeKey: string) {
-  return tasks.filter((task) => taskMatchesAssignee(task, assigneeKey));
+  return {
+    ...data,
+    taskCards: canonicalScopeRows(data.taskCards ?? [], scope),
+  };
 }
