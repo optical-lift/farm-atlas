@@ -69,8 +69,6 @@ function placementAnchor(window: DayPlacement["dayWindow"]) {
 function applyDayPlacement(card: TaskCardRow, placement: DayPlacement) {
   return {
     ...card,
-    // Day placement changes where the worker encounters this move, not the
-    // canonical task due_date stored in Atlas. Task Focus still reads task truth.
     due_date: placement.serviceDate,
     metadata: {
       ...(card.metadata ?? {}),
@@ -90,15 +88,32 @@ function applyDayPlacement(card: TaskCardRow, placement: DayPlacement) {
 }
 
 function baselineSurvivesPlacement(placement: DayPlacement, placementDay: string) {
-  if (placement.state === "returned_to_atlas") {
-    // Return to Atlas removes the task from the Day it was handed back. On a
-    // later workday the ordinary eligibility/carry engine is free to offer it.
-    return placement.serviceDate !== placementDay;
-  }
+  if (placement.state === "returned_to_atlas") return placement.serviceDate !== placementDay;
   if (placement.serviceDate === placementDay) return true;
-  // Before an explicit future placement, keep the task off the worker's plate.
-  // After a missed explicit placement, ordinary overdue/carry behavior resumes.
   return placement.serviceDate < placementDay;
+}
+
+function farmHandMoveContext(
+  context: Awaited<ReturnType<typeof readAtlasTaskMoveContexts>>[string] | undefined,
+  membershipId: string | null,
+) {
+  if (!context || !membershipId) return null;
+  const ownDependencies = (rows: typeof context.unlocks) => rows
+    .filter((row) => row.assigneeMembershipId === membershipId)
+    .map((row) => ({ ...row, assigneeName: "You" }));
+  return {
+    projects: context.projects.map((project) => ({
+      projectId: project.projectId,
+      projectKey: project.projectKey,
+      title: project.title,
+      portfolioType: project.portfolioType,
+      targetDate: project.targetDate,
+      linkRole: project.linkRole,
+      path: project.path,
+    })),
+    unlocks: ownDependencies(context.unlocks),
+    waitingOn: ownDependencies(context.waitingOn),
+  };
 }
 
 export async function GET(request: Request) {
@@ -132,8 +147,6 @@ export async function GET(request: Request) {
     return privateJson({ ok: false, error: "exactDate must fall inside the requested task window." }, 400);
   }
 
-  // Day currently sends an exactDate only for future dates. An equal one-day
-  // done/due window is also a Day-sized request, so placements govern today too.
   const placementDay = exactDate ?? (requestedDoneDate && requestedDueThrough === requestedDoneDate ? requestedDoneDate : null);
 
   try {
@@ -147,8 +160,6 @@ export async function GET(request: Request) {
     const dispositions = await readAtlasTaskDayDispositions(doneDate);
     const setAsideTaskIds = new Set(dispositions.map((row) => row.taskId));
 
-    // The server-side worker-day reader remains authoritative for ordinary day
-    // membership. Explicit Owner placement is a narrow override layered on top.
     let baseTaskCards = atlasUniversalTaskCards(home)
       .filter((card) => !setAsideTaskIds.has(card.task_id)) as TaskCardRow[];
 
@@ -156,6 +167,7 @@ export async function GET(request: Request) {
     const workerMembershipId = effectiveMembershipId
       ?? (home.activeFarm?.role === "farm_hand" ? home.activeFarm.membershipId : null);
     const workerFarmId = home.activeFarm?.farmId ?? null;
+    const farmHandLens = home.activeFarm?.role === "farm_hand";
 
     if (placementDay && workerMembershipId && workerFarmId) {
       const supabase = await createAtlasServerClient();
@@ -208,8 +220,6 @@ export async function GET(request: Request) {
       }
     }
 
-    // Project context is enrichment, not a dependency of the working Day. If the
-    // portfolio reader is temporarily unavailable, the executable task cards remain usable.
     let moveContexts = {} as Awaited<ReturnType<typeof readAtlasTaskMoveContexts>>;
     try {
       moveContexts = await readAtlasTaskMoveContexts(baseTaskCards.map((card) => card.task_id));
@@ -219,7 +229,9 @@ export async function GET(request: Request) {
 
     const taskCards = baseTaskCards.map((card) => ({
       ...card,
-      move_context: moveContexts[card.task_id] ?? null,
+      move_context: farmHandLens
+        ? farmHandMoveContext(moveContexts[card.task_id], workerMembershipId)
+        : moveContexts[card.task_id] ?? null,
     }));
 
     return privateJson({
