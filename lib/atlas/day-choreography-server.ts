@@ -19,6 +19,7 @@ export type AtlasDayTaskPlacement = {
   placementReason: string | null;
   state: "placed" | "returned_to_atlas";
   plannedStartAt: string | null;
+  plannedDurationMinutes: number | null;
 };
 
 export type AtlasDayCue = {
@@ -69,6 +70,12 @@ function nullableString(value: unknown) {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
+function nullablePositiveInteger(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
 function normalizePlacement(value: unknown): AtlasDayTaskPlacement | null {
   const row = object(value);
   if (!row || typeof row.placementId !== "string" || typeof row.taskId !== "string" || typeof row.serviceDate !== "string") return null;
@@ -84,6 +91,7 @@ function normalizePlacement(value: unknown): AtlasDayTaskPlacement | null {
     placementReason: nullableString(row.placementReason),
     state: row.state === "returned_to_atlas" ? "returned_to_atlas" : "placed",
     plannedStartAt: nullableString(row.plannedStartAt),
+    plannedDurationMinutes: nullablePositiveInteger(row.plannedDurationMinutes),
   };
 }
 
