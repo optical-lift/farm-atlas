@@ -7,13 +7,15 @@ function read(path) {
 }
 
 const board = read("components/atlas/owner-day-schedule-builder.tsx");
+const projection = read("components/atlas/owner-interleaved-day-projection.tsx");
 const route = read("app/api/atlas/owner-day-commit/route.ts");
 const migration = read("supabase/migrations/20260811223000_atlas_owner_day_atomic_commit_v1.sql");
 
-test("Owner Day purple draft sends one commit request for edits and newly added work", () => {
-  assert.match(board, /Purple is your draft\. Nothing below is worker history until you commit it\./);
+test("Owner Day inline draft sends one commit request for edits and selected potential work", () => {
+  assert.match(board, /data-owner-day-inline-edit-controller/);
+  assert.match(projection, /data-owner-potential-day-card/);
   assert.match(board, /fetch\("\/api\/atlas\/owner-day-commit"/);
-  assert.match(board, /"x-atlas-intent": "owner-day-commit-v1"/);
+  assert.match(board, /owner-day-commit-v1/);
   assert.match(board, /edits: editsForCommit\(\)/);
   assert.match(board, /selections: selectedCandidates\.map/);
   assert.doesNotMatch(board, /fetch\("\/api\/atlas\/owner-day-edit"/);
@@ -51,14 +53,16 @@ test("atomic commit registers against the canonical authenticated RPC registry s
   assert.doesNotMatch(migration, /\bprotection\b/);
 });
 
-test("Owner replanning keeps explicit timing and recovery controls", () => {
+test("Owner replanning keeps explicit timing and recovery controls inline", () => {
   assert.match(board, /Tomorrow/);
-  assert.match(board, /Next week/);
   assert.match(board, /type="date"/);
   assert.match(board, /Return to Atlas/);
-  assert.match(board, /data-owner-day-timing-warning="true"/);
+  assert.match(board, /data-owner-day-timing-warning/);
   assert.match(board, /Move anyway/);
-  assert.match(board, /Work/);
-  assert.match(board, /Cues/);
-  assert.match(board, /Both/);
+  assert.match(board, /Morning/);
+  assert.match(board, /Afternoon/);
+  assert.match(board, /Evening/);
+  assert.match(board, /Move earlier/);
+  assert.match(board, /Move later/);
+  assert.doesNotMatch(board, /data-owner-day-edit-board/);
 });

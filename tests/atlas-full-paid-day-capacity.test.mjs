@@ -2,54 +2,19 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const capacityMigration = readFileSync(
-  new URL("../supabase/migrations/20260809013600_full_paid_day_capacity_contract.sql", import.meta.url),
-  "utf8",
-);
-const projectionMigration = readFileSync(
-  new URL("../supabase/migrations/20260809013700_fill_owner_week_projection_to_paid_capacity.sql", import.meta.url),
-  "utf8",
-);
-const personalMigration = readFileSync(
-  new URL("../supabase/migrations/20260809013800_mark_personal_tasks_in_day_presentation.sql", import.meta.url),
-  "utf8",
-);
-const batchMigration = readFileSync(
-  new URL("../supabase/migrations/20260809013900_scale_batch_work_and_passive_preparation_capacity.sql", import.meta.url),
-  "utf8",
-);
-const fullDayProjectMigration = readFileSync(
-  new URL("../supabase/migrations/20260809022500_full_paid_day_project_capacity_v2.sql", import.meta.url),
-  "utf8",
-);
-const backlogMigration = readFileSync(
-  new URL("../supabase/migrations/20260809023500_count_unfinished_backlog_without_lowering_expectation_v1.sql", import.meta.url),
-  "utf8",
-);
-const projectionReader = readFileSync(
-  new URL("../lib/atlas-data/owner-week-projection.ts", import.meta.url),
-  "utf8",
-);
-const dayPlanReader = readFileSync(
-  new URL("../lib/atlas/worker-day-plan-server.ts", import.meta.url),
-  "utf8",
-);
-const dayPlanRoute = readFileSync(
-  new URL("../app/api/atlas/worker-day-plan/route.ts", import.meta.url),
-  "utf8",
-);
-const dayPlanMigration = readFileSync(
-  new URL("../supabase/migrations/20260809203000_owner_worker_day_plan_kernel_v1.sql", import.meta.url),
-  "utf8",
-);
-const choreographyMigration = readFileSync(
-  new URL("../supabase/migrations/20260811160000_atlas_day_choreography_plan_overlay_v1.sql", import.meta.url),
-  "utf8",
-);
-const projectionUi = readFileSync(
-  new URL("../components/atlas/owner-day-schedule-builder.tsx", import.meta.url),
-  "utf8",
-);
+const capacityMigration = readFileSync(new URL("../supabase/migrations/20260809013600_full_paid_day_capacity_contract.sql", import.meta.url), "utf8");
+const projectionMigration = readFileSync(new URL("../supabase/migrations/20260809013700_fill_owner_week_projection_to_paid_capacity.sql", import.meta.url), "utf8");
+const personalMigration = readFileSync(new URL("../supabase/migrations/20260809013800_mark_personal_tasks_in_day_presentation.sql", import.meta.url), "utf8");
+const batchMigration = readFileSync(new URL("../supabase/migrations/20260809013900_scale_batch_work_and_passive_preparation_capacity.sql", import.meta.url), "utf8");
+const fullDayProjectMigration = readFileSync(new URL("../supabase/migrations/20260809022500_full_paid_day_project_capacity_v2.sql", import.meta.url), "utf8");
+const backlogMigration = readFileSync(new URL("../supabase/migrations/20260809023500_count_unfinished_backlog_without_lowering_expectation_v1.sql", import.meta.url), "utf8");
+const projectionReader = readFileSync(new URL("../lib/atlas-data/owner-week-projection.ts", import.meta.url), "utf8");
+const dayPlanReader = readFileSync(new URL("../lib/atlas/worker-day-plan-server.ts", import.meta.url), "utf8");
+const dayPlanRoute = readFileSync(new URL("../app/api/atlas/worker-day-plan/route.ts", import.meta.url), "utf8");
+const dayPlanMigration = readFileSync(new URL("../supabase/migrations/20260809203000_owner_worker_day_plan_kernel_v1.sql", import.meta.url), "utf8");
+const choreographyMigration = readFileSync(new URL("../supabase/migrations/20260811160000_atlas_day_choreography_plan_overlay_v1.sql", import.meta.url), "utf8");
+const projectionUi = readFileSync(new URL("../components/atlas/owner-day-schedule-builder.tsx", import.meta.url), "utf8");
+const planGate = readFileSync(new URL("../components/atlas/owner-day-plan-gate.tsx", import.meta.url), "utf8");
 
 test("Anna retains a full paid-work target regardless of prior completion", () => {
   assert.match(capacityMigration, /regular_target_minutes = 420/);
@@ -110,7 +75,7 @@ test("rescheduled unfinished work remains paid backlog instead of becoming permi
   assert.doesNotMatch(backlogMigration, /overdue_rescheduled_noncounting/);
 });
 
-test("Owner sees the full paid-day plan while choreography changes presentation and only discretionary fill needs approval", () => {
+test("Owner sees the full paid-day plan while inline choreography changes presentation and only discretionary fill needs approval", () => {
   assert.match(projectionReader, /paidTargetMinutes/);
   assert.match(dayPlanReader, /owner_worker_day_plan_choreographed_api_v1/);
   assert.match(dayPlanRoute, /readOwnerWorkerDayPlan/);
@@ -125,9 +90,10 @@ test("Owner sees the full paid-day plan while choreography changes presentation 
   assert.match(choreographyMigration, /owner_worker_day_plan_v1\(p_farm_id,p_membership_id,p_day\)/);
   assert.match(choreographyMigration, /committedPaidMinutes/);
   assert.match(choreographyMigration, /remainingPaidMinutes/);
-  assert.match(projectionUi, /paidTargetMinutes/);
-  assert.match(projectionUi, /committedPaidMinutes/);
-  assert.match(projectionUi, /automaticPaidMinutes/);
+  assert.match(planGate, /paidTargetMinutes/);
+  assert.match(planGate, /committedPaidMinutes/);
+  assert.match(planGate, /automaticPaidMinutes/);
+  assert.match(planGate, /Starting load/);
   assert.match(projectionUi, /selectedCandidates/);
   assert.match(projectionUi, /\/api\/atlas\/owner-day-commit/);
   assert.match(projectionUi, /owner-day-commit-v1/);

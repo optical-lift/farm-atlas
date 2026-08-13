@@ -56,23 +56,32 @@ test("the Day sequence API is private read-only infrastructure for Day and futur
   assert.doesNotMatch(route, /export async function DELETE/);
 });
 
-test("Owner planning consumes the shared Day sequence for purple potential and cue placement", () => {
+test("Owner planning consumes the shared Day sequence and can project against live draft geometry", () => {
   assert.match(projection, /\/api\/atlas\/worker-day-sequence\?date=/);
-  assert.match(projection, /data-owner-potential-day-card="true"/);
-  assert.match(projection, /data-owner-day-sequence-cue="true"/);
+  assert.match(projection, /data-owner-potential-day-card/);
+  assert.match(projection, /data-owner-day-sequence-cue/);
   assert.match(projection, /positionResolved/);
   assert.match(projection, /resolved", "dismissed", "stale/);
-  assert.match(projection, /nextCommitted/);
+  assert.match(projection, /effectivePlacement/);
+  assert.match(projection, /ownerDraftWindow/);
+  assert.match(projection, /ownerDraftOrder/);
   assert.doesNotMatch(projection, /\/api\/atlas\/worker-day-plan\?date=/);
   assert.doesNotMatch(projection, /method:\s*"POST"/);
 });
 
-test("Pass 4 keeps live cues in the normal Owner Day while purple potential remains planning-only", () => {
-  assert.match(projection, /function visibleSequenceItems\(items: SequenceItem\[\], planningActive: boolean\)/);
+test("Pass 4 keeps live cues in normal Owner Day and Pass 5 adds purple only while planning", () => {
+  assert.match(projection, /function visibleSequenceItems\(items: SequenceItem\[\], planningActive: boolean, hiddenPotential: Set<string>\)/);
   assert.match(projection, /if \(item\.kind === "cue"\) return isVisibleCue\(item\)/);
-  assert.match(projection, /return planningActive && item\.projectionEligible/);
+  assert.match(projection, /planningActive && item\.projectionEligible/);
   assert.match(projection, /if \(!dateIso\) return/);
-  assert.doesNotMatch(projection, /if \(!planningActive \|\| !dateIso\) return/);
   assert.match(planGate, /<OwnerInterleavedDayProjection planningActive=\{open\} \/>/);
-  assert.match(projection, /data-owner-day-normal-sequence-cues="true"/);
+  assert.match(projection, /data-owner-day-normal-sequence-cues/);
+});
+
+test("task-anchored cues stay attached to a white task while the inline draft reorders it", () => {
+  assert.match(projection, /item\.anchorTaskId/);
+  assert.match(projection, /item\.anchorKind === "before_task"/);
+  assert.match(projection, /item\.anchorKind === "after_task"/);
+  assert.match(projection, /insertAdjacentElement\("afterend", host\)/);
+  assert.match(projection, /atlas-owner-day-draft-layout/);
 });
