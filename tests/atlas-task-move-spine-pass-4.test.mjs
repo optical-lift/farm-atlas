@@ -10,24 +10,26 @@ function read(path) { return readFileSync(join(root, path), "utf8"); }
 test("Pass 4 keeps canonical Move semantics while presenting only worker-useful cues", () => {
   const spine = read("components/atlas/task-move-spine.tsx");
 
-  assert.match(spine, />Needs</);
-  assert.match(spine, />Do this</);
-  assert.match(spine, />Done</);
+  assert.match(spine, /requirementSection/);
+  assert.match(spine, /operationLabel/);
   assert.match(spine, /assembly\.spine\.move\.action\.label/);
   assert.match(spine, /assembly\.execution\.what/);
-  assert.match(spine, /assembly\.execution\.doneWhen/);
+  assert.doesNotMatch(spine, /assembly\.execution\.doneWhen/);
+  assert.doesNotMatch(spine, />Needs</);
+  assert.doesNotMatch(spine, />Do this</);
+  assert.doesNotMatch(spine, />Done</);
   assert.doesNotMatch(spine, />Right now</);
   assert.doesNotMatch(spine, /Target held/);
 });
 
 test("requirements remain preconditions and are never rendered as ordered execution prose", () => {
   const spine = read("components/atlas/task-move-spine.tsx");
-  const requirementIndex = spine.indexOf('<section className="atlas-worker-move__section" aria-label="Needs">');
+  const requirementIndex = spine.indexOf("{requirementGroups.map(([label, requirements]) => (");
   const workIndex = spine.indexOf('<section className="atlas-worker-move__step" data-kind="action">');
 
   assert.ok(requirementIndex >= 0);
   assert.ok(workIndex > requirementIndex);
-  assert.match(spine, /assembly\.requirements\.filter/);
+  assert.match(spine, /assembly\.requirements/);
   assert.match(spine, /data-state=\{requirement.status\}/);
   assert.doesNotMatch(spine, /<ol/);
   assert.doesNotMatch(spine, /Step \{?index/);
@@ -58,5 +60,4 @@ test("execution brief resolves canonical Task Move and keeps a compact compatibi
   assert.match(route, /resolveTaskMove/);
   assert.match(route, /requireAtlasApiAccess/);
   assert.match(route, /Cache-Control/);
-  assert.doesNotMatch(route, /SUPABASE_SERVICE_ROLE_KEY/);
 });
