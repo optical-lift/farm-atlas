@@ -1,3 +1,5 @@
+import { deriveAtlasTimingMobility, type AtlasTimingMobility } from "@/lib/atlas/timing-mobility";
+
 export type AtlasDaySequenceWindow = "morning" | "afternoon" | "evening";
 
 export type AtlasDaySequencePlanRowInput = {
@@ -24,6 +26,7 @@ export type AtlasDaySequencePlanRowInput = {
   preferredWindowEnd?: string | null;
   safeWindowEnd?: string | null;
   timingWarning?: string | null;
+  mobility?: AtlasTimingMobility | null;
 };
 
 export type AtlasDaySequencePlacementInput = {
@@ -79,6 +82,7 @@ export type AtlasCommittedDaySequenceItem = {
   placementId: string | null;
   plannedStartAt: string | null;
   plannedDurationMinutes: number | null;
+  mobility: AtlasTimingMobility;
   positionResolved: true;
 };
 
@@ -107,6 +111,7 @@ export type AtlasPotentialDaySequenceItem = {
   safeWindowEnd: string | null;
   timingWarning: string | null;
   projectionEligible: boolean;
+  mobility: AtlasTimingMobility;
   positionResolved: true;
 };
 
@@ -126,6 +131,7 @@ export type AtlasCueDaySequenceItem = {
   dayWindow: AtlasDaySequenceWindow | null;
   sequenceOrder: number | null;
   commitmentState: "cue";
+  mobility: AtlasTimingMobility;
   positionResolved: boolean;
   positionBasis: AtlasCuePositionBasis;
 };
@@ -175,6 +181,57 @@ function workIdentity(row: AtlasDaySequencePlanRowInput) {
   return row.taskId ? `task:${row.taskId}` : `${row.sourceKind}:${row.sourceId || row.id}`;
 }
 
+function rowMobility(row: AtlasDaySequencePlanRowInput, potential: boolean) {
+  const base = row.mobility ?? deriveAtlasTimingMobility({ location: row.location, potential: false });
+  return {
+    ...base,
+    timingClass: potential ? "potential" as const : base.constraintClass,
+  };
+}
+
+function cueMobility(cue: AtlasDaySequenceCueInput): AtlasTimingMobility {
+  if (cue.anchorKind === "at_time") {
+    return {
+      timingClass: "fixed",
+      constraintClass: "fixed",
+      fixedLocalTime: null,
+      windowStartAt: cue.scheduledAt,
+      windowEndAt: cue.scheduledAt,
+      anchorTaskId: null,
+      anchorRelation: null,
+      minimumGapMinutes: null,
+      travelLocation: null,
+      placementReason: "Cue occurs at an exact Elm Farm time.",
+    };
+  }
+  if (cue.anchorKind === "before_task" || cue.anchorKind === "after_task") {
+    return {
+      timingClass: "anchored",
+      constraintClass: "anchored",
+      fixedLocalTime: null,
+      windowStartAt: null,
+      windowEndAt: null,
+      anchorTaskId: cue.anchorTaskId,
+      anchorRelation: cue.anchorKind === "before_task" ? "before" : "after",
+      minimumGapMinutes: null,
+      travelLocation: null,
+      placementReason: cue.anchorKind === "before_task" ? "Cue must remain immediately before its task." : "Cue must remain immediately after its task.",
+    };
+  }
+  return {
+    timingClass: "fixed",
+    constraintClass: "fixed",
+    fixedLocalTime: null,
+    windowStartAt: null,
+    windowEndAt: null,
+    anchorTaskId: null,
+    anchorRelation: null,
+    minimumGapMinutes: null,
+    travelLocation: null,
+    placementReason: "Cue is fixed to the opening of the service day.",
+  };
+}
+
 function committedItem(
   row: AtlasDaySequencePlanRowInput,
   placement?: AtlasDaySequencePlacementInput,
@@ -205,6 +262,7 @@ function committedItem(
     placementId: text(placement?.placementId),
     plannedStartAt: text(placement?.plannedStartAt),
     plannedDurationMinutes: minutes(placement?.plannedDurationMinutes),
+    mobility: rowMobility(row, false),
     positionResolved: true,
   };
 }
@@ -235,6 +293,7 @@ function potentialItem(row: AtlasDaySequencePlanRowInput): AtlasPotentialDaySequ
     safeWindowEnd: text(row.safeWindowEnd),
     timingWarning: text(row.timingWarning),
     projectionEligible: row.sourceKind === "project_pull" || row.sourceKind === "floating_task",
+    mobility: rowMobility(row, true),
     positionResolved: true,
   };
 }
@@ -254,6 +313,7 @@ function unresolvedCueItem(cue: AtlasDaySequenceCueInput): AtlasCueDaySequenceIt
     dayWindow: null,
     sequenceOrder: null,
     commitmentState: "cue",
+    mobility: cueMobility(cue),
     positionResolved: false,
     positionBasis: "unresolved",
   };
