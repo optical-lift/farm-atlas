@@ -140,9 +140,6 @@ export default function DayCueDelivery() {
   const targetSource = response?.target?.source ?? null;
   const isOperatorPreview = targetSource === "operator_lens";
   const currentCue = useMemo(() => {
-    // The operator lens intentionally reads the exact worker choreography so the
-    // Owner can acceptance-test a cue before it reaches the worker. Preview
-    // interactions are local-only and never record a worker response.
     if (targetSource !== "worker_self" && targetSource !== "operator_lens") return null;
     return (response?.choreography?.cues ?? []).find((cue) => cueIsDue(cue) && !dismissedForSession.has(cue.cueId)) ?? null;
   }, [dismissedForSession, response, targetSource]);
@@ -152,12 +149,17 @@ export default function DayCueDelivery() {
   const currentQuestion = visibleQuestions.find((question) => answers[question.key] === undefined) ?? null;
   const simpleChoices = currentCue ? choices(currentCue.payload.choices) : [];
 
+  function hideCueForSession() {
+    if (!currentCue) return;
+    setAnswers({});
+    setDismissedForSession((current) => new Set(current).add(currentCue.cueId));
+  }
+
   async function resolveCue(extraResponse: Record<string, string> = {}) {
     if (!currentCue || saving) return;
 
     if (isOperatorPreview) {
-      setAnswers({});
-      setDismissedForSession((current) => new Set(current).add(currentCue.cueId));
+      hideCueForSession();
       return;
     }
 
@@ -179,8 +181,8 @@ export default function DayCueDelivery() {
       setDismissedForSession((current) => new Set(current).add(currentCue.cueId));
       await load();
     } catch {
-      // Keep the cue on screen so the worker can try again; do not manufacture a
-      // resolved state when Atlas did not persist the answer.
+      // Keep the cue available so the worker can retry. Atlas never manufactures
+      // an acknowledgement when the write did not persist.
     } finally {
       setSaving(false);
     }
@@ -218,9 +220,7 @@ export default function DayCueDelivery() {
   const targetTaskId = cueTaskId(currentCue);
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
+    <aside
       aria-label={currentCue.title}
       data-atlas-day-cue-delivery="true"
       data-atlas-cue-preview={isOperatorPreview ? "owner" : "worker"}
@@ -230,28 +230,42 @@ export default function DayCueDelivery() {
         zIndex: 160,
         display: "grid",
         alignItems: "end",
-        background: "rgba(31,42,35,.18)",
-        padding: "max(12px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom))",
+        padding: "max(12px, env(safe-area-inset-top)) 12px max(78px, calc(env(safe-area-inset-bottom) + 64px))",
+        pointerEvents: "none",
       }}
     >
       <section style={{
+        position: "relative",
         width: "min(100%, 520px)",
+        maxHeight: "min(62vh, 520px)",
+        overflowY: "auto",
+        overscrollBehavior: "contain",
         margin: "0 auto",
         borderRadius: 22,
         padding: "18px 18px 16px",
         background: "#f8f5e9",
-        boxShadow: "0 18px 60px rgba(34,45,36,.22)",
-        border: "1px solid rgba(50,72,56,.13)",
+        boxShadow: "0 18px 60px rgba(34,45,36,.24)",
+        border: "1px solid rgba(50,72,56,.16)",
+        pointerEvents: "auto",
       }}>
+        <button
+          type="button"
+          aria-label="Close cue for now"
+          disabled={saving}
+          onClick={hideCueForSession}
+          style={{ position: "absolute", top: 10, right: 10, width: 34, height: 34, border: 0, borderRadius: 17, background: "rgba(55,61,49,.07)", color: "#4c5148", font: "inherit", fontSize: 20, lineHeight: 1, cursor: "pointer" }}
+        >
+          ×
+        </button>
         {isOperatorPreview ? (
-          <small style={{ display: "block", marginBottom: 8, paddingBottom: 8, borderBottom: "1px solid rgba(50,72,56,.12)", fontSize: 9.5, fontWeight: 950, letterSpacing: ".1em", textTransform: "uppercase", color: "#665d91" }}>
+          <small style={{ display: "block", margin: "0 38px 8px 0", paddingBottom: 8, borderBottom: "1px solid rgba(50,72,56,.12)", fontSize: 9.5, fontWeight: 950, letterSpacing: ".1em", textTransform: "uppercase", color: "#665d91" }}>
             Owner cue preview · testing will not clear this for the worker
           </small>
         ) : null}
-        <small style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".11em", textTransform: "uppercase", opacity: .5 }}>
+        <small style={{ display: "block", paddingRight: 38, fontSize: 10, fontWeight: 900, letterSpacing: ".11em", textTransform: "uppercase", opacity: .5 }}>
           {currentCue.cueKind === "briefing" || currentCue.cueKind === "hard_stop_sowing" ? "Today at Elm" : currentCue.cueKind === "observation" ? "Quick check" : "Before we keep going"}
         </small>
-        <strong style={{ display: "block", marginTop: 5, fontSize: 19, lineHeight: 1.15 }}>{currentCue.title}</strong>
+        <strong style={{ display: "block", marginTop: 5, paddingRight: 30, fontSize: 19, lineHeight: 1.15 }}>{currentCue.title}</strong>
         {prompt ? <p style={{ margin: "8px 0 0", fontSize: 13.5, lineHeight: 1.45, opacity: .78 }}>{prompt}</p> : null}
 
         {currentQuestion?.choices?.length ? (
@@ -289,6 +303,6 @@ export default function DayCueDelivery() {
           </button>
         )}
       </section>
-    </div>
+    </aside>
   );
 }
