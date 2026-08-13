@@ -89,6 +89,7 @@ function isVisibleCue(item: CueItem) {
 function visibleSequenceItems(items: SequenceItem[], planningActive: boolean) {
   return items.filter((item): item is ProjectionItem => {
     if (item.kind === "cue") return isVisibleCue(item);
+    if (item.kind !== "potential_task") return false;
     return planningActive && item.projectionEligible;
   });
 }
