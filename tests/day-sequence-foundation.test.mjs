@@ -10,6 +10,7 @@ const sequence = read("lib/atlas/day-sequence.ts");
 const sequenceServer = read("lib/atlas/worker-day-sequence-server.ts");
 const route = read("app/api/atlas/worker-day-sequence/route.ts");
 const projection = read("components/atlas/owner-interleaved-day-projection.tsx");
+const planGate = read("components/atlas/owner-day-plan-gate.tsx");
 
 test("Day sequence defines one typed read model for committed work, potential work, and cues", () => {
   assert.match(sequence, /kind: "committed_task"/);
@@ -55,7 +56,7 @@ test("the Day sequence API is private read-only infrastructure for Day and futur
   assert.doesNotMatch(route, /export async function DELETE/);
 });
 
-test("Owner planning now consumes the shared Day sequence for purple potential and cue placement", () => {
+test("Owner planning consumes the shared Day sequence for purple potential and cue placement", () => {
   assert.match(projection, /\/api\/atlas\/worker-day-sequence\?date=/);
   assert.match(projection, /data-owner-potential-day-card="true"/);
   assert.match(projection, /data-owner-day-sequence-cue="true"/);
@@ -64,4 +65,14 @@ test("Owner planning now consumes the shared Day sequence for purple potential a
   assert.match(projection, /nextCommitted/);
   assert.doesNotMatch(projection, /\/api\/atlas\/worker-day-plan\?date=/);
   assert.doesNotMatch(projection, /method:\s*"POST"/);
+});
+
+test("Pass 4 keeps live cues in the normal Owner Day while purple potential remains planning-only", () => {
+  assert.match(projection, /function visibleSequenceItems\(items: SequenceItem\[\], planningActive: boolean\)/);
+  assert.match(projection, /if \(item\.kind === "cue"\) return isVisibleCue\(item\)/);
+  assert.match(projection, /return planningActive && item\.projectionEligible/);
+  assert.match(projection, /if \(!dateIso\) return/);
+  assert.doesNotMatch(projection, /if \(!planningActive \|\| !dateIso\) return/);
+  assert.match(planGate, /<OwnerInterleavedDayProjection planningActive=\{open\} \/>/);
+  assert.match(projection, /data-owner-day-normal-sequence-cues="true"/);
 });
