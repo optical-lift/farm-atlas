@@ -14,17 +14,19 @@ const mowing = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
 const display = read("lib/atlas/task-display.ts");
 const migration = read("supabase/migrations/20260810144000_atlas_task_execution_contract_v1.sql");
 
-test("assigned work has one visible compact Move plus optional instructions and results", () => {
+test("assigned work has one visible compact Move plus visible execution facts and shared results", () => {
   assert.match(brief, /TaskMoveSpine/);
-  assert.match(brief, /function Instructions/);
-  assert.match(brief, /<summary>Instructions<\/summary>/);
+  assert.match(brief, /function VisibleMethod/);
+  assert.doesNotMatch(brief, /<summary>Instructions<\/summary>/);
   assert.match(move, /atlas-worker-move__eyebrow/);
-  assert.match(move, />Needs</);
-  assert.match(move, />Do this</);
-  assert.match(move, />Done</);
+  assert.match(move, /requirementSection/);
+  assert.doesNotMatch(move, />Needs</);
+  assert.doesNotMatch(move, />Do this</);
+  assert.doesNotMatch(move, />Done</);
   assert.doesNotMatch(move, />Right now</);
   assert.doesNotMatch(move, /Target held/);
   assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
+  assert.match(shell, /TaskPrimaryResultControls/);
   assert.doesNotMatch(shell, /TaskDominionTrail/);
   assert.doesNotMatch(shell, /taskConditionRailModel/);
   assert.equal(exists("components/atlas/dominion-assigned-task-detail.tsx"), false);
