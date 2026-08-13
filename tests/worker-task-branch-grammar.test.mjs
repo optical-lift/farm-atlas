@@ -17,14 +17,16 @@ test("stateful children keep real state transitions while sharing the branch vis
   assert.match(stateful, /postAtlasTaskTransition/);
   assert.match(stateful, /checklist_done/);
   assert.match(stateful, /checklist_open/);
-  assert.match(stateful, /final \? "└──" : "├──"/);
-  assert.match(stateful, /atlas-stateful-children__branch/);
+  assert.match(stateful, /atlas-stateful-children::before/);
+  assert.match(stateful, /atlas-stateful-children__row::before/);
+  assert.match(stateful, /atlas-stateful-children__checkpoint/);
   assert.doesNotMatch(stateful, /grid-template-columns:22px minmax\(0,1fr\) auto/);
 });
 
 test("Task Move requirements use the same branch geometry without reviving generic finished-state narration", () => {
-  assert.match(move, /final \? "└──" : "├──"/);
-  assert.match(move, /atlas-worker-move__branch/);
+  assert.match(move, /atlas-worker-move__requirements::before/);
+  assert.match(move, /atlas-worker-move__requirement::before/);
+  assert.match(move, /atlas-worker-move__flow::before/);
   assert.match(move, /Not yet confirmed/);
   assert.doesNotMatch(move, />Do this</i);
   assert.doesNotMatch(move, />Finished</i);
