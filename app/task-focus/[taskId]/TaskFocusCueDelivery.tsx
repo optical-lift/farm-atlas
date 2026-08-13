@@ -95,7 +95,7 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
   const [activeAfter, setActiveAfter] = useState<Cue | null>(null);
   const [completion, setCompletion] = useState<CompletionDetail | null>(null);
   const [saving, setSaving] = useState(false);
-  const [previewDismissed, setPreviewDismissed] = useState<Set<string>>(new Set());
+  const [dismissedForSession, setDismissedForSession] = useState<Set<string>>(new Set());
 
   async function load(signal?: AbortSignal) {
     try {
@@ -117,7 +117,7 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
     setResponse(null);
     setActiveAfter(null);
     setCompletion(null);
-    setPreviewDismissed(new Set());
+    setDismissedForSession(new Set());
     void load(controller.signal);
     return () => controller.abort();
   }, [dateIso, taskId]);
@@ -125,7 +125,7 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
   const isOperatorPreview = response?.targetSource === "operator_lens";
   const canSeeWorkerCues = response?.targetSource === "worker_self" || isOperatorPreview;
   const workerCues = canSeeWorkerCues
-    ? (response?.cues ?? []).filter((cue) => !previewDismissed.has(cue.cueId))
+    ? (response?.cues ?? []).filter((cue) => !dismissedForSession.has(cue.cueId))
     : [];
   const beforeCue = workerCues.find((cue) => cue.anchorKind === "before_task" && cueDue(cue)) ?? null;
   const afterCue = workerCues.find((cue) => cue.anchorKind === "after_task" && cueDue(cue)) ?? null;
@@ -154,12 +154,20 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
       ? "Everything is ready"
       : "Next";
 
+  function closeCueForNow() {
+    if (saving) return;
+    setDismissedForSession((current) => new Set(current).add(activeCue.cueId));
+    if (activeCue.anchorKind === "after_task") {
+      setActiveAfter(null);
+      if (completion) window.location.assign(completionReturn(completion, "/day"));
+    }
+  }
+
   async function resolve(responseData: Record<string, unknown> = {}) {
     if (saving) return;
 
     if (isOperatorPreview) {
-      setPreviewDismissed((current) => new Set(current).add(activeCue.cueId));
-      if (activeCue.anchorKind === "after_task") setActiveAfter(null);
+      closeCueForNow();
       return;
     }
 
@@ -222,6 +230,9 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
             {saving ? "Saving…" : actionLabel}
           </button>
         )}
+        <button type="button" disabled={saving} onClick={closeCueForNow} style={{ width: "100%", marginTop: 8, border: 0, padding: "8px 10px", background: "transparent", color: "#445147", font: "inherit", fontSize: 12, fontWeight: 800, textDecoration: "underline", textUnderlineOffset: 3 }}>
+          {isOperatorPreview ? "Close preview" : "Close for now"}
+        </button>
       </section>
     </div>
   );
