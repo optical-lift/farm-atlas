@@ -26,6 +26,13 @@ test("Day cue delivery reaches the worker and deliberate Owner operator-lens pre
   assert.doesNotMatch(taskLayout, /TaskFocusCueDelivery/);
 });
 
+test("automatic app cues belong to the real farm service day rather than whichever date the user browses", () => {
+  assert.match(delivery, /const dateIso = useMemo\(\(\) => pathname === "\/login" \? null : centralDateIso\(\), \[pathname\]\)/);
+  assert.doesNotMatch(delivery, /useSearchParams/);
+  assert.doesNotMatch(delivery, /function routeDate/);
+  assert.match(delivery, /Browsing[\s\S]*tomorrow[\s\S]*inspection[\s\S]*must never summon/);
+});
+
 test("a real worker cue resolves only after response persistence while dismissal stays a distinct persistent state", () => {
   assert.match(delivery, /\/api\/atlas\/day-cue-response/);
   assert.match(delivery, /day-cue-response-v1/);
