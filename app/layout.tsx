@@ -10,6 +10,7 @@ import AtlasWorkAlongsideOverlay from "@/components/atlas/work-alongside/AtlasWo
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
 import AtlasSkyLedgerMaintainer from "./AtlasSkyLedgerMaintainer";
+import GlobalDayCueDelivery from "./GlobalDayCueDelivery";
 import OwnerOperatorMode from "./OwnerOperatorMode";
 import "./globals.css";
 import "./atlas-primitives.css";
@@ -144,6 +145,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <DependencyReleaseFlash />
         <Suspense fallback={null}><AtlasWorkAlongsideOverlay /></Suspense>
         <Suspense fallback={null}><OwnerDayPlanGate /></Suspense>
+        <Suspense fallback={null}><GlobalDayCueDelivery /></Suspense>
         {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
         {children}
       </body>
