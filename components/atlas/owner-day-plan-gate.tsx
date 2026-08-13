@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 import OwnerDayCueEditor from "@/components/atlas/owner-day-cue-editor";
 import OwnerDayScheduleBuilder from "@/components/atlas/owner-day-schedule-builder";
+import OwnerInterleavedDayProjection from "@/components/atlas/owner-interleaved-day-projection";
 
 type PlanProbe = {
   ok?: boolean;
@@ -154,14 +155,14 @@ export default function OwnerDayPlanGate() {
               cursor: "pointer",
             }}
           >
-            Edit today
+            Plan today
           </button>
         ) : (
           <div style={{ padding: "10px 12px", border: "1px solid rgba(112,111,177,.28)", borderRadius: 14, background: "rgba(246,244,252,.72)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
               <div>
-                <strong style={{ display: "block", color: "#3f4267", fontSize: 12.5 }}>Editing {operatorLabel}&apos;s day</strong>
-                <span style={{ display: "block", marginTop: 2, color: "#73758e", fontSize: 10.5 }}>Purple is a draft. {operatorLabel}&apos;s working Day changes only when you commit it.</span>
+                <strong style={{ display: "block", color: "#3f4267", fontSize: 12.5 }}>Planning {operatorLabel}&apos;s day</strong>
+                <span style={{ display: "block", marginTop: 2, color: "#73758e", fontSize: 10.5 }}>Purple is potential only. {operatorLabel}&apos;s working Day changes only when you commit it.</span>
                 {targetMinutes ? (
                   <span
                     data-owner-day-starting-load="true"
@@ -185,6 +186,7 @@ export default function OwnerDayPlanGate() {
           </div>
         )}
       </div>
+      <OwnerInterleavedDayProjection active={open} />
       {open ? (
         <>
           <OwnerDayScheduleBuilder />
