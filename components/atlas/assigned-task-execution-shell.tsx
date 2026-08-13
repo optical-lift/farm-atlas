@@ -271,9 +271,10 @@ export default function AssignedTaskExecutionShell({
   const canonicalDoneDisabled =
     doneDisabled ||
     openStatefulChildren ||
-    !assembly ||
-    assembly.readiness.status === "blocked" ||
-    assembly.spine.connection === "stops_at_move";
+    (assembly !== null && (
+      assembly.readiness.status === "blocked" ||
+      assembly.spine.connection === "stops_at_move"
+    ));
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell" data-atlas-assigned-task-execution-shell="true">
@@ -331,7 +332,7 @@ export default function AssignedTaskExecutionShell({
         }
         .atlas-assigned-task-execution-card .atlas-plant-check__item::before {
           content:"";
-          position:absolute;
+          position:absolute !important;
           left:-52px;
           top:10px;
           width:42px;
