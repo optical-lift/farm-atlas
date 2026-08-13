@@ -43,6 +43,8 @@ function unresolvedCurrentFacts(facts: TaskMoveFact[]) {
 }
 
 function operationLabel(assembly: TaskMoveAssembly) {
+  if (assembly.task.operationFamily?.trim()) return assembly.task.operationFamily.trim();
+  if (assembly.task.displayAction?.trim()) return assembly.task.displayAction.trim();
   const type = assembly.task.taskType?.trim();
   if (type) return titleCase(type);
   return titleCase(assembly.task.route);
@@ -58,14 +60,76 @@ function isMowing(assembly: TaskMoveAssembly) {
   return assembly.task.route === "mow" || assembly.task.taskType.toLowerCase() === "mowing";
 }
 
+function normalizeCompare(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function requirementIsWorkerDuplicate(requirement: TaskMoveRequirement, assembly: TaskMoveAssembly) {
+  const label = normalizeCompare(requirement.label);
+  if (!label) return true;
+  const subject = normalizeCompare(workerTitle(assembly));
+  const linked = assembly.linkedObjects.some((object) => normalizeCompare(object.label) === label);
+  return label === subject || linked;
+}
+
+function requirementSection(requirement: TaskMoveRequirement) {
+  if (requirement.kind === "container") {
+    return requirement.label.toLowerCase().includes("tray") ? "Trays" : "Container";
+  }
+  if (requirement.kind === "medium") return "Medium";
+  if (requirement.kind === "capacity") return "Space";
+  if (requirement.kind === "source") return "From";
+  if (requirement.kind === "destination") return "To";
+  if (requirement.kind === "dependency" || requirement.kind === "prerequisite") return "Before";
+  if (requirement.kind === "method") return "Method";
+  return "Bring";
+}
+
+function groupedRequirements(assembly: TaskMoveAssembly) {
+  const groups = new Map<string, TaskMoveRequirement[]>();
+  assembly.requirements
+    .filter((requirement) => requirement.label.trim())
+    .filter((requirement) => !requirementIsWorkerDuplicate(requirement, assembly))
+    .forEach((requirement) => {
+      const key = requirementSection(requirement);
+      groups.set(key, [...(groups.get(key) ?? []), requirement]);
+    });
+  return [...groups.entries()];
+}
+
+function targetObject(assembly: TaskMoveAssembly) {
+  return assembly.linkedObjects.find((object) => object.role === "target")
+    ?? assembly.linkedObjects.find((object) => object.objectType === "bed")
+    ?? assembly.linkedObjects[0]
+    ?? null;
+}
+
+function simpleActionDetail(assembly: TaskMoveAssembly, action: string) {
+  const title = workerTitle(assembly);
+  const displayAction = assembly.task.displayAction?.trim() || operationLabel(assembly);
+  const normalized = normalizeCompare(action);
+  const titleNormalized = normalizeCompare(title);
+  const actionNormalized = normalizeCompare(displayAction);
+
+  if (normalized === titleNormalized || normalized === `${actionNormalized} ${titleNormalized}`.trim()) return null;
+  if (action.toLowerCase().startsWith(`${displayAction.toLowerCase()} `)) {
+    const remainder = action.slice(displayAction.length).trim();
+    if (remainder && normalizeCompare(remainder) !== titleNormalized) return remainder;
+  }
+  return action;
+}
+
 export default function TaskMoveSpine({ assembly }: Props) {
-  const requirements = assembly.requirements.filter((requirement) => requirement.label.trim());
+  const requirementGroups = groupedRequirements(assembly);
   const currentIssues = unresolvedCurrentFacts(assembly.spine.current);
   const place = assembly.execution.where?.trim() || assembly.spine.move.workSite.label?.trim() || null;
   const dueLabel = assembly.execution.dueLabel?.trim() || null;
   const action = assembly.execution.what?.trim() || assembly.spine.move.action.label || assembly.task.title;
-  const doneWhen = assembly.execution.doneWhen?.trim() || null;
+  const actionDetail = simpleActionDetail(assembly, action);
+  const actionLabel = assembly.task.displayAction?.trim() || operationLabel(assembly);
   const mowing = isMowing(assembly);
+  const object = targetObject(assembly);
+  const showObject = Boolean(object && (assembly.task.route === "weed" || assembly.task.route === "mow"));
 
   return (
     <section className="atlas-worker-move" aria-label="Task move">
@@ -74,8 +138,9 @@ export default function TaskMoveSpine({ assembly }: Props) {
         .atlas-worker-move__eyebrow { margin:0 0 6px; color:#777ca0; font-size:.67rem; font-weight:920; letter-spacing:.11em; text-transform:uppercase; }
         .atlas-worker-move__title { margin:0; font-size:clamp(1.9rem,6vw,2.7rem); line-height:1.02; letter-spacing:-.035em; }
         .atlas-worker-move__due { display:block; margin-top:8px; color:#6b6d7b; font-size:.75rem; font-weight:780; }
-        .atlas-worker-move__section { margin-top:22px; }
-        .atlas-worker-move__label { display:block; margin-bottom:9px; color:#8589a6; font-size:.64rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
+        .atlas-worker-move__section { margin-top:20px; }
+        .atlas-worker-move__label { display:block; margin-bottom:8px; color:#8589a6; font-size:.64rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
+        .atlas-worker-move__value { display:block; font-size:.96rem; line-height:1.3; }
         .atlas-worker-move__needs { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
         .atlas-worker-move__need { display:grid; grid-template-columns:22px minmax(0,1fr); gap:8px; align-items:baseline; color:#505260; }
         .atlas-worker-move__need-mark { font-size:.92rem; font-weight:950; line-height:1; }
@@ -92,7 +157,6 @@ export default function TaskMoveSpine({ assembly }: Props) {
         .atlas-worker-move__step[data-kind="action"] .atlas-worker-move__dot { background:#6d7088; }
         .atlas-worker-move__step-label { display:block; margin-bottom:4px; color:#8589a6; font-size:.64rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
         .atlas-worker-move__step strong { display:block; font-size:1.02rem; line-height:1.32; }
-        .atlas-worker-move__step p { margin:3px 0 0; color:#666876; font-size:.8rem; font-weight:680; line-height:1.35; }
         @media (max-width:560px) { .atlas-worker-move { padding:20px 21px 16px; } }
       `}</style>
 
@@ -102,9 +166,16 @@ export default function TaskMoveSpine({ assembly }: Props) {
       <h1 className="atlas-worker-move__title">{workerTitle(assembly)}</h1>
       {dueLabel ? <span className="atlas-worker-move__due">{dueLabel}</span> : null}
 
-      {requirements.length ? (
-        <section className="atlas-worker-move__section" aria-label="Needs">
-          <span className="atlas-worker-move__label">Needs</span>
+      {showObject && object ? (
+        <section className="atlas-worker-move__section" aria-label={titleCase(object.objectType)}>
+          <span className="atlas-worker-move__label">{titleCase(object.objectType)}</span>
+          <strong className="atlas-worker-move__value">{object.label}</strong>
+        </section>
+      ) : null}
+
+      {requirementGroups.map(([label, requirements]) => (
+        <section key={label} className="atlas-worker-move__section" aria-label={label}>
+          <span className="atlas-worker-move__label">{label}</span>
           <ul className="atlas-worker-move__needs">
             {requirements.map((requirement) => (
               <li key={requirement.id} className="atlas-worker-move__need" data-state={requirement.status}>
@@ -114,35 +185,31 @@ export default function TaskMoveSpine({ assembly }: Props) {
             ))}
           </ul>
         </section>
-      ) : null}
+      ))}
 
       {currentIssues.map((fact, index) => (
         <p key={`${fact.label}-${index}`} className="atlas-worker-move__issue"><span aria-hidden="true">!</span><span>{fact.label}</span></p>
       ))}
 
-      <div className="atlas-worker-move__flow">
-        {mowing ? (
-          <section className="atlas-worker-move__step" data-kind="preflight">
-            <span className="atlas-worker-move__dot" aria-hidden="true">○</span>
-            <span className="atlas-worker-move__step-label">Mowing next</span>
-            <strong>Pick up sticks + move hoses first</strong>
-          </section>
-        ) : null}
+      {mowing || actionDetail ? (
+        <div className="atlas-worker-move__flow">
+          {mowing ? (
+            <section className="atlas-worker-move__step" data-kind="preflight">
+              <span className="atlas-worker-move__dot" aria-hidden="true">○</span>
+              <span className="atlas-worker-move__step-label">Mowing next</span>
+              <strong>Pick up sticks + move hoses first</strong>
+            </section>
+          ) : null}
 
-        <section className="atlas-worker-move__step" data-kind="action">
-          <span className="atlas-worker-move__dot" aria-hidden="true" />
-          <span className="atlas-worker-move__step-label">Do this</span>
-          <strong>{action}</strong>
-        </section>
-
-        {doneWhen ? (
-          <section className="atlas-worker-move__step" data-kind="done">
-            <span className="atlas-worker-move__dot" aria-hidden="true">○</span>
-            <span className="atlas-worker-move__step-label">Done</span>
-            <strong>{doneWhen}</strong>
-          </section>
-        ) : null}
-      </div>
+          {actionDetail ? (
+            <section className="atlas-worker-move__step" data-kind="action">
+              <span className="atlas-worker-move__dot" aria-hidden="true" />
+              <span className="atlas-worker-move__step-label">{actionLabel}</span>
+              <strong>{actionDetail}</strong>
+            </section>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }
