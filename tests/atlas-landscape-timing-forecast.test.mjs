@@ -14,7 +14,8 @@ test("annual landscape cards use the shared compact execution-detail contract", 
   assert.match(shell, /TaskExecutionBrief/);
   assert.match(brief, /taskExecutionModel\(task\)/);
   assert.match(brief, /function VisibleMethod/);
-  assert.match(brief, /className="atlas-worker-method"/);
+  assert.match(brief, /className="atlas-worker-method atlas-task-trail-section"/);
+  assert.match(brief, /atlas-worker-method::before/);
   assert.doesNotMatch(brief, /<details className="atlas-worker-instructions">/);
   assert.doesNotMatch(brief, /<summary>Instructions<\/summary>/);
   assert.match(execution, /atlasMetaString\(task, "execution_details"\)/);
