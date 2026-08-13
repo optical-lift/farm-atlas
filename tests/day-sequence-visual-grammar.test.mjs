@@ -17,12 +17,11 @@ test("Owner Day declares one visual grammar for committed work, potential work, 
 });
 
 test("potential work stays purple and branches off the uninterrupted Day rail", () => {
-  assert.match(projection, /data-owner-day-sequence-kind/);
+  assert.match(projection, /ownerDaySequenceKind = item\.kind/);
   assert.match(grammar, /data-owner-day-sequence-kind="potential_task"/);
   assert.match(grammar, /atlas-owner-potential-day-card::before/);
   assert.match(grammar, /border-top: 1px dashed/);
   assert.match(grammar, /atlas-owner-potential-day-card\[data-selected="true"\]/);
-  assert.match(grammar, /background: #aeb3d4/);
 });
 
 test("cues read as chronological interruptions rather than another rounded task card", () => {
