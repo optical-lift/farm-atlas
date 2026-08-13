@@ -36,6 +36,27 @@ function metadataLines(task: AtlasTaskCard | undefined, key: string) {
     : [];
 }
 
+function presentationAssembly(assembly: TaskMoveAssembly | null | undefined, task: AtlasTaskCard | undefined) {
+  if (!assembly) return null;
+  const displaySubject = metadataText(task, "display_subject");
+  if (!displaySubject) return assembly;
+  return {
+    ...assembly,
+    spine: {
+      ...assembly.spine,
+      move: {
+        ...assembly.spine.move,
+        subject: {
+          ...assembly.spine.move.subject,
+          label: displaySubject,
+          status: "resolved" as const,
+          provenance: "task_record" as const,
+        },
+      },
+    },
+  };
+}
+
 function VisibleMethod({ label, how, details }: { label: string; how: string[]; details: string | null }) {
   const lines = how.map((line) => line.trim()).filter(Boolean);
   const fallbackDetail = !lines.length && details?.trim() ? details.trim() : null;
@@ -105,11 +126,11 @@ export default function TaskExecutionBrief({
 }: Props) {
   const model = task ? taskExecutionModel(task) : null;
   const assemblyControlled = assembly !== undefined;
-  const [resolvedAssembly, setResolvedAssembly] = useState<TaskMoveAssembly | null>(assembly ?? null);
+  const [resolvedAssembly, setResolvedAssembly] = useState<TaskMoveAssembly | null>(() => presentationAssembly(assembly ?? null, task));
 
   useEffect(() => {
     if (assemblyControlled) {
-      setResolvedAssembly(assembly ?? null);
+      setResolvedAssembly(presentationAssembly(assembly ?? null, task));
       return;
     }
     if (!task?.task_id) {
@@ -133,14 +154,14 @@ export default function TaskExecutionBrief({
         return data.assembly;
       })
       .then((nextAssembly) => {
-        if (nextAssembly) setResolvedAssembly(nextAssembly);
+        if (nextAssembly) setResolvedAssembly(presentationAssembly(nextAssembly, task));
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
       });
 
     return () => controller.abort();
-  }, [assembly, assemblyControlled, task?.task_id]);
+  }, [assembly, assemblyControlled, task]);
 
   const resolvedDo = doText || resolvedAssembly?.execution.what || model?.doText || "";
   const resolvedPlace = placeText || resolvedAssembly?.execution.where || model?.placeText || "Elm Farm";
@@ -158,35 +179,16 @@ export default function TaskExecutionBrief({
   const displaySubject = metadataText(task, "display_subject");
   const fallbackTitle = displaySubject || task?.title || resolvedDo;
   const detailHeading = metadataText(task, "detail_heading") || "Timing forecast";
-  const detailLines = metadataLines(task, "detail_lines").length
-    ? metadataLines(task, "detail_lines")
-    : metadataLines(task, "projection_detail_lines");
+  const directDetailLines = metadataLines(task, "detail_lines");
+  const detailLines = directDetailLines.length ? directDetailLines : metadataLines(task, "projection_detail_lines");
   const resultLines = metadataLines(task, "worker_result_lines");
 
-  const displayAssembly = resolvedAssembly && displaySubject
-    ? {
-        ...resolvedAssembly,
-        spine: {
-          ...resolvedAssembly.spine,
-          move: {
-            ...resolvedAssembly.spine.move,
-            subject: {
-              ...resolvedAssembly.spine.move.subject,
-              label: displaySubject,
-              status: "resolved" as const,
-              provenance: "task_record" as const,
-            },
-          },
-        },
-      }
-    : resolvedAssembly;
-
-  if (displayAssembly) {
+  if (resolvedAssembly) {
     return (
       <section className="atlas-task-execution-brief atlas-task-execution-brief--human" aria-label="Task instructions">
-        <TaskMoveSpine assembly={displayAssembly} />
+        <TaskMoveSpine assembly={resolvedAssembly} />
         <VisibleMethod
-          label={displayAssembly.execution.howLabel || "Steps"}
+          label={resolvedAssembly.execution.howLabel || "Steps"}
           how={resolvedHow}
           details={resolvedDetails}
         />
