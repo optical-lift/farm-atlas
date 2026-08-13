@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { buildClockTaskRanges, chooseClockNextTask, clockLocalMinuteOfDay, layoutClockTaskRanges } from "@/lib/atlas/clock-layout";
+import { proposeAtlasClock } from "@/lib/atlas/clock-proposal";
 import type { AtlasDaySequence, AtlasDaySequenceItem } from "@/lib/atlas/day-sequence";
 import { atlasFarmDateIso, atlasNormalizeFarmDate, DEFAULT_ATLAS_FARM_TIME_ZONE } from "@/lib/atlas/farm-day";
 
@@ -33,6 +34,7 @@ export default function ClockOrchestrator() {
   const dateIso = atlasNormalizeFarmDate(searchParams.get("date"));
   const [sequence, setSequence] = useState<AtlasDaySequence | null>(null);
   const [canManage, setCanManage] = useState(false);
+  const [proposalActive, setProposalActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,6 +51,7 @@ export default function ClockOrchestrator() {
     setLoading(true);
     setError(null);
     setSaveError(null);
+    setProposalActive(false);
     void readClock(dateIso).then((value) => {
       if (!alive) return;
       setSequence(value.sequence);
@@ -72,6 +75,10 @@ export default function ClockOrchestrator() {
   const timedCues = useMemo(() => items.filter((item): item is CueItem => item.kind === "cue" && item.positionResolved && item.anchorKind === "at_time" && Boolean(item.scheduledAt) && !["resolved", "dismissed", "stale"].includes(item.status)), [items]);
   const ranges = useMemo(() => buildClockTaskRanges(committed, { timeZone: DEFAULT_ATLAS_FARM_TIME_ZONE }), [committed]);
   const layouts = useMemo(() => layoutClockTaskRanges(ranges), [ranges]);
+  const proposalPlan = useMemo(() => canManage && proposalActive
+    ? proposeAtlasClock(committed, { timeZone: DEFAULT_ATLAS_FARM_TIME_ZONE })
+    : null, [canManage, committed, proposalActive]);
+  const proposedTaskIds = useMemo(() => new Set((proposalPlan?.proposals ?? []).map((proposal) => proposal.item.taskId ?? proposal.item.id)), [proposalPlan]);
   const today = atlasFarmDateIso(now);
   const selectedToday = dateIso === today;
   const nowMinute = selectedToday ? clockLocalMinuteOfDay(now.toISOString(), DEFAULT_ATLAS_FARM_TIME_ZONE) : null;
@@ -80,7 +87,8 @@ export default function ClockOrchestrator() {
   const nextRange = nextTask ? ranges.find((range) => range.item.id === nextTask.id) ?? null : null;
   const cueMinutes = timedCues.map((item) => clockLocalMinuteOfDay(item.scheduledAt, DEFAULT_ATLAS_FARM_TIME_ZONE)).filter((value): value is number => value !== null);
   const taskMinutes = ranges.flatMap((range) => range.span.minutes ? [range.startMinute, range.endMinute] : [range.startMinute]);
-  const allMinutes = [...taskMinutes, ...cueMinutes];
+  const proposalMinutes = (proposalPlan?.proposals ?? []).flatMap((proposal) => [proposal.startMinute, proposal.endMinute]);
+  const allMinutes = [...taskMinutes, ...cueMinutes, ...proposalMinutes];
   const floorMinute = Math.min(360, ...(allMinutes.length ? allMinutes : [360]), ...(nowMinute !== null ? [nowMinute] : []));
   const ceilingMinute = Math.max(1320, ...(allMinutes.length ? allMinutes : [1320]), ...(nowMinute !== null ? [nowMinute] : []));
   const startHour = Math.max(0, Math.floor(floorMinute / 60));
@@ -92,10 +100,15 @@ export default function ClockOrchestrator() {
       <header className="atlas-phone-top"><Link href="/" className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Clock</span></Link></header>
       <div className={styles.body}>
         <ClockHeaderV2 dateIso={dateIso} selectedToday={selectedToday} nowLabel={timeLabel(now)} activeRange={activeRange} nextTask={nextTask} nextRange={nextRange} loading={loading} />
+        {canManage ? <section className={styles.proposalGate} data-clock-proposal-gate="true">
+          <div><small>OWNER PLANNING</small><strong>{proposalActive ? "Atlas proposed Clock" : "Let Atlas arrange the untimed Day"}</strong><span>{proposalActive ? "Purple is proposed time only. Anna's Clock is unchanged." : "Uses current Day order, recorded timing constraints, durations, open gaps, and location grouping."}</span></div>
+          <button type="button" onClick={() => setProposalActive((active) => !active)}>{proposalActive ? "Close plan" : "Propose times"}</button>
+          {proposalActive && proposalPlan ? <p>{proposalPlan.proposals.length} proposed · {proposalPlan.unresolved.length} left unplaced{proposalPlan.unresolved.length ? ` · ${proposalPlan.unresolved.map((entry) => entry.item.title).slice(0, 2).join("; ")}` : ""}</p> : null}
+        </section> : null}
         {error ? <div className={styles.error}>{error}</div> : null}
         {saveError ? <div className={styles.error}>{saveError}</div> : null}
-        <ClockTimelineV2 dateIso={dateIso} canManage={canManage} layouts={layouts} timedCues={timedCues} activeRange={activeRange} selectedToday={selectedToday} nowMinute={nowMinute} startHour={startHour} endHour={endHour} gridHeight={gridHeight} onChanged={reload} onError={setSaveError} />
-        <ClockUnplacedV2 items={items} dateIso={dateIso} canManage={canManage} loading={loading} onChanged={reload} onError={setSaveError} />
+        <ClockTimelineV2 dateIso={dateIso} canManage={canManage} layouts={layouts} proposals={proposalPlan?.proposals ?? []} timedCues={timedCues} activeRange={activeRange} selectedToday={selectedToday} nowMinute={nowMinute} startHour={startHour} endHour={endHour} gridHeight={gridHeight} onChanged={reload} onError={setSaveError} />
+        <ClockUnplacedV2 items={items} proposedTaskIds={proposedTaskIds} proposalActive={Boolean(proposalPlan)} dateIso={dateIso} canManage={canManage} loading={loading} onChanged={reload} onError={setSaveError} />
       </div>
     </section>
   </main>;
