@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 
+import StatefulChildChecklist, { statefulChildTask } from "@/components/atlas/stateful-child-checklist";
 import TaskExecutionBrief from "@/components/atlas/task-execution-brief";
 import TaskPrimaryResultControls from "@/components/atlas/task-primary-result-controls";
 import { TaskChildChecklist } from "@/components/atlas/task-child-checklist";
@@ -59,6 +60,10 @@ function completeTaskExit(taskId: string, fallback: string) {
   });
   window.dispatchEvent(event);
   if (!event.defaultPrevented) window.location.assign(returnTo);
+}
+
+function childIsDone(task: AtlasTaskCard) {
+  return task.status === "done" || task.metadata?.checklist_status === "done";
 }
 
 function DefaultResultInstrument({
@@ -155,7 +160,6 @@ export default function AssignedTaskExecutionShell({
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        // The compatibility brief remains usable if canonical resolution fails.
       });
     return () => controller.abort();
   }, [task.task_id, task.status, task.updated_at]);
@@ -256,8 +260,12 @@ export default function AssignedTaskExecutionShell({
     refreshTask,
   };
   const blockers = (assembly?.unresolved ?? []).filter((item) => item.status === "blocked");
+  const statefulChildren = children.filter(statefulChildTask);
+  const ordinaryChildren = children.filter((child) => !statefulChildTask(child));
+  const openStatefulChildren = statefulChildren.some((child) => !childIsDone(child));
   const canonicalDoneDisabled =
     doneDisabled ||
+    openStatefulChildren ||
     !assembly ||
     assembly.readiness.status === "blocked" ||
     assembly.spine.connection === "stops_at_move";
@@ -289,7 +297,8 @@ export default function AssignedTaskExecutionShell({
               </section>
             ) : null}
             {methodInstrument ? methodInstrument(instrumentContext) : null}
-            <TaskChildChecklist childTasks={children} onChange={refreshTaskAndChildren} />
+            <StatefulChildChecklist childTasks={statefulChildren} onChange={refreshTaskAndChildren} />
+            <TaskChildChecklist childTasks={ordinaryChildren} onChange={refreshTaskAndChildren} />
             {showCorrectionNote ? (
               <p className="atlas-task-correction-note">This completion has linked farm evidence. Review the recorded result before correcting it.</p>
             ) : null}

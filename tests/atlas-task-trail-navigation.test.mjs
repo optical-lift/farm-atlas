@@ -24,12 +24,13 @@ test("focused work uses one compact Task Move execution grammar while linked Tra
   assert.match(detail, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
   assert.doesNotMatch(detail, /TaskDominionTrail/);
   assert.match(brief, /TaskMoveSpine/);
-  assert.match(brief, /function Instructions/);
-  assert.match(move, />Needs<\/span>/);
-  assert.match(move, />Do this<\/span>/);
-  assert.match(move, />Done<\/span>/);
+  assert.match(brief, /function VisibleMethod/);
+  assert.match(move, /requirementSection/);
+  assert.doesNotMatch(move, />Needs<\/span>/);
+  assert.doesNotMatch(move, />Do this<\/span>/);
+  assert.doesNotMatch(move, />Done<\/span>/);
   assert.match(move, /data-kind="action"/);
-  assert.match(move, /data-kind="done"/);
+  assert.doesNotMatch(move, /data-kind="done"/);
   assert.doesNotMatch(move, /data-kind="current"/);
   assert.doesNotMatch(move, />Right now<\/span>/);
   assert.match(detail, /TaskPrimaryResultControls/);

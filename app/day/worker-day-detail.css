@@ -1,0 +1,28 @@
+.atlas-journal-task-detail dl {
+  position: relative;
+  margin-top: 0;
+  padding-top: 22px;
+}
+
+.atlas-journal-task-detail dl::before {
+  content: "Details";
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: #777ca0;
+  font-size: .62rem;
+  font-weight: 950;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* Evidence and effect are Atlas internals, not Farm Hand execution context. */
+.atlas-journal-task-detail dl > div:nth-child(n + 3) {
+  display: none;
+}
+
+/* Project portfolio paths belong to Owner planning. Farm Hand drawers keep only
+   why the move matters, the worker's own unlocks, and the worker's own waits. */
+.atlas-project-move-block:has(.atlas-project-move-path) {
+  display: none;
+}

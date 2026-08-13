@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import "./worker-day-detail.css";
 import DayCueDelivery from "./DayCueDelivery";
 import DaySurface from "./DaySurface";
 

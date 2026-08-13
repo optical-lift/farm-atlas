@@ -10,17 +10,13 @@ const spine = read("components/atlas/task-move-spine.tsx");
 const brief = read("components/atlas/task-execution-brief.tsx");
 const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 
-test("Task Move presents requirements before the physical action and resulting state", () => {
-  const requirementIndex = spine.indexOf('<section className="atlas-worker-move__section" aria-label="Needs">');
-  const workIndex = spine.indexOf('<section className="atlas-worker-move__step" data-kind="action">');
-  const finishIndex = spine.indexOf('<section className="atlas-worker-move__step" data-kind="done">', workIndex);
-
-  assert.ok(requirementIndex >= 0, "worker needs must render");
-  assert.ok(workIndex > requirementIndex, "the physical action must follow its needs");
-  assert.ok(finishIndex > workIndex, "done state must follow the physical action");
-  assert.match(spine, />Needs</);
-  assert.match(spine, />Do this</);
-  assert.match(spine, />Done</);
+test("Task Move presents physical facts and action without manufacturing a redundant finished state", () => {
+  assert.match(spine, /function requirementSection\(requirement: TaskMoveRequirement\)/);
+  assert.match(spine, /requirementGroups\.map/);
+  assert.match(spine, /data-kind="action"/);
+  assert.doesNotMatch(spine, /data-kind="done"/);
+  assert.doesNotMatch(spine, /step-label">Done/);
+  assert.doesNotMatch(spine, />Do this</);
 });
 
 test("Task Focus reads the canonical Task Move assembly and keeps one worker grammar", () => {
@@ -40,8 +36,11 @@ test("worker requirements retain quantities and state while hiding explanatory i
   assert.doesNotMatch(spine, /├──|└──/);
 });
 
-test("detailed instructions are secondary instead of duplicating the move", () => {
-  assert.match(brief, /<details className="atlas-worker-instructions">/);
-  assert.match(brief, /<summary>Instructions<\/summary>/);
+test("execution instructions are visible compact steps instead of a prose drawer", () => {
+  assert.match(brief, /function VisibleMethod/);
+  assert.match(brief, /className="atlas-worker-method"/);
+  assert.match(brief, /className="atlas-worker-method__list"/);
   assert.match(brief, /fallbackDetail = !lines\.length/);
+  assert.doesNotMatch(brief, /<details className="atlas-worker-instructions">/);
+  assert.doesNotMatch(brief, /<summary>Instructions<\/summary>/);
 });

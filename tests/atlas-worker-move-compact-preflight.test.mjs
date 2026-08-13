@@ -10,22 +10,26 @@ test("Farm Hand Task Move is visual-first and keeps explanatory internals out of
   const spine = read("components/atlas/task-move-spine.tsx");
   const brief = read("components/atlas/task-execution-brief.tsx");
 
-  assert.match(spine, />Needs</);
+  assert.match(spine, /requirementSection/);
+  assert.match(spine, /return requirement\.label\.toLowerCase\(\)\.includes\("tray"\) \? "Trays" : "Container"/);
   assert.match(spine, /requirementGlyph/);
   assert.match(spine, /return "✓"/);
   assert.match(spine, /return "○"/);
   assert.match(spine, /return "!"/);
   assert.match(spine, /4 lit tray spots|lit tray spots/);
-  assert.match(spine, />Do this</);
-  assert.match(spine, />Done</);
+  assert.doesNotMatch(spine, />Needs</);
+  assert.doesNotMatch(spine, />Do this</);
+  assert.doesNotMatch(spine, /step-label">Done/);
   assert.doesNotMatch(spine, /requirement\.note\s*\?/);
   assert.doesNotMatch(spine, /openQuestions/);
   assert.doesNotMatch(spine, /Not yet confirmed/);
   assert.doesNotMatch(spine, /├──|└──/);
 
-  assert.match(brief, /<details className="atlas-worker-instructions">/);
-  assert.match(brief, /<summary>Instructions<\/summary>/);
+  assert.match(brief, /function VisibleMethod/);
+  assert.match(brief, /className="atlas-worker-method"/);
   assert.match(brief, /const fallbackDetail = !lines\.length/);
+  assert.doesNotMatch(brief, /<details className="atlas-worker-instructions">/);
+  assert.doesNotMatch(brief, /<summary>Instructions<\/summary>/);
   assert.doesNotMatch(brief, /atlas-human-task-instructions__note/);
 });
 

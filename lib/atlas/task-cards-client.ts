@@ -110,6 +110,7 @@ export type AtlasTaskDependencyContext = {
   title: string;
   status: string;
   assigneeName: string;
+  assigneeMembershipId?: string | null;
   requiredStatus: string;
   holdMode: string;
 };

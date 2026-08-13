@@ -44,10 +44,10 @@ test("future Day asks for one date, preserves carry-forward, and then applies ex
   assert.match(taskCardsClient, /exactDate\?: string/);
   assert.match(taskCardsClient, /viewerParams\.set\("exactDate", viewerWindow\.exactDate\)/);
   assert.match(universalRoute, /requestedExactDate/);
-  assert.match(universalRoute, /server-side worker-day reader remains authoritative for ordinary day/);
-  assert.match(universalRoute, /Explicit Owner placement is a narrow override layered on top/);
   assert.match(universalRoute, /worker_day_choreography_api_v1/);
   assert.match(universalRoute, /worker_day_placed_task_cards_v1/);
+  assert.match(universalRoute, /baselineSurvivesPlacement/);
+  assert.match(universalRoute, /placement\?\.state === "placed" && placement\.serviceDate === placementDay/);
   assert.doesNotMatch(universalRoute, /card\.due_date === exactDate/);
   assert.match(dayPage, /exactDate: isFutureDay \? dateIso : undefined/);
   assert.match(carryMigration, /member_day_carryover_v1/);
