@@ -34,6 +34,7 @@ export type AtlasDaySequencePlacementInput = {
   sortOrder: number;
   state: "placed" | "returned_to_atlas";
   plannedStartAt?: string | null;
+  plannedDurationMinutes?: number | null;
 };
 
 export type AtlasDaySequenceCueInput = {
@@ -77,6 +78,7 @@ export type AtlasCommittedDaySequenceItem = {
   timingWarning: string | null;
   placementId: string | null;
   plannedStartAt: string | null;
+  plannedDurationMinutes: number | null;
   positionResolved: true;
 };
 
@@ -202,6 +204,7 @@ function committedItem(
     timingWarning: text(row.timingWarning),
     placementId: text(placement?.placementId),
     plannedStartAt: text(placement?.plannedStartAt),
+    plannedDurationMinutes: minutes(placement?.plannedDurationMinutes),
     positionResolved: true,
   };
 }
