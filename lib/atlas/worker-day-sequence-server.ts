@@ -36,6 +36,7 @@ export async function readOwnerWorkerDaySequence(dateIso: string) {
     realWork: plan.realWork,
     automaticWork: plan.automaticWork,
     suggestions: plan.suggestions,
+    placements: sameTarget ? (choreography?.placements ?? []) : [],
     cues: sameTarget ? (choreography?.cues ?? []) : [],
   });
 

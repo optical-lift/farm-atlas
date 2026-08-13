@@ -26,6 +26,16 @@ export type AtlasDaySequencePlanRowInput = {
   timingWarning?: string | null;
 };
 
+export type AtlasDaySequencePlacementInput = {
+  placementId?: string | null;
+  taskId: string;
+  serviceDate: string;
+  dayWindow: AtlasDaySequenceWindow;
+  sortOrder: number;
+  state: "placed" | "returned_to_atlas";
+  plannedStartAt?: string | null;
+};
+
 export type AtlasDaySequenceCueInput = {
   cueId: string;
   serviceDate: string;
@@ -65,6 +75,8 @@ export type AtlasCommittedDaySequenceItem = {
   preferredWindowEnd: string | null;
   safeWindowEnd: string | null;
   timingWarning: string | null;
+  placementId: string | null;
+  plannedStartAt: string | null;
   positionResolved: true;
 };
 
@@ -132,6 +144,7 @@ type AssembleWorkerDaySequenceInput = {
   realWork?: AtlasDaySequencePlanRowInput[];
   automaticWork?: AtlasDaySequencePlanRowInput[];
   suggestions?: AtlasDaySequencePlanRowInput[];
+  placements?: AtlasDaySequencePlacementInput[];
   cues?: AtlasDaySequenceCueInput[];
 };
 
@@ -160,7 +173,10 @@ function workIdentity(row: AtlasDaySequencePlanRowInput) {
   return row.taskId ? `task:${row.taskId}` : `${row.sourceKind}:${row.sourceId || row.id}`;
 }
 
-function committedItem(row: AtlasDaySequencePlanRowInput): AtlasCommittedDaySequenceItem {
+function committedItem(
+  row: AtlasDaySequencePlanRowInput,
+  placement?: AtlasDaySequencePlacementInput,
+): AtlasCommittedDaySequenceItem {
   return {
     kind: "committed_task",
     id: workIdentity(row),
@@ -174,8 +190,8 @@ function committedItem(row: AtlasDaySequencePlanRowInput): AtlasCommittedDaySequ
     location: text(row.location),
     environment: text(row.environment),
     estimatedMinutes: minutes(row.expectedActiveMinutes),
-    dayWindow: row.dayWindow,
-    sequenceOrder: Number(row.workOrderNumber) || 0,
+    dayWindow: placement?.dayWindow ?? row.dayWindow,
+    sequenceOrder: Number(placement?.sortOrder ?? row.workOrderNumber) || 0,
     commitmentState: "committed",
     automatic: row.kind === "automatic" || row.automatic === true,
     reason: text(row.reason),
@@ -184,6 +200,8 @@ function committedItem(row: AtlasDaySequencePlanRowInput): AtlasCommittedDaySequ
     preferredWindowEnd: text(row.preferredWindowEnd),
     safeWindowEnd: text(row.safeWindowEnd),
     timingWarning: text(row.timingWarning),
+    placementId: text(placement?.placementId),
+    plannedStartAt: text(placement?.plannedStartAt),
     positionResolved: true,
   };
 }
@@ -370,9 +388,16 @@ function sortSequenceItems(left: AtlasDaySequenceItem, right: AtlasDaySequenceIt
 }
 
 export function assembleWorkerDaySequence(input: AssembleWorkerDaySequenceInput): AtlasDaySequence {
+  const placementByTask = new Map<string, AtlasDaySequencePlacementInput>();
+  for (const placement of input.placements ?? []) {
+    if (placement.state !== "placed" || placement.serviceDate !== input.serviceDate) continue;
+    placementByTask.set(placement.taskId, placement);
+  }
+
   const committedByIdentity = new Map<string, AtlasCommittedDaySequenceItem>();
   for (const row of [...(input.realWork ?? []), ...(input.automaticWork ?? [])]) {
-    const item = committedItem(row);
+    const placement = row.taskId ? placementByTask.get(row.taskId) : undefined;
+    const item = committedItem(row, placement);
     if (!committedByIdentity.has(item.id)) committedByIdentity.set(item.id, item);
   }
 

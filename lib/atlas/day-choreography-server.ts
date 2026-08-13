@@ -18,6 +18,7 @@ export type AtlasDayTaskPlacement = {
   placementSource: "atlas" | "owner";
   placementReason: string | null;
   state: "placed" | "returned_to_atlas";
+  plannedStartAt: string | null;
 };
 
 export type AtlasDayCue = {
@@ -82,6 +83,7 @@ function normalizePlacement(value: unknown): AtlasDayTaskPlacement | null {
     placementSource: row.placementSource === "owner" ? "owner" : "atlas",
     placementReason: nullableString(row.placementReason),
     state: row.state === "returned_to_atlas" ? "returned_to_atlas" : "placed",
+    plannedStartAt: nullableString(row.plannedStartAt),
   };
 }
 
