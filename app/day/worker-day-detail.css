@@ -20,3 +20,9 @@
 .atlas-journal-task-detail dl > div:nth-child(n + 3) {
   display: none;
 }
+
+/* Project portfolio paths belong to Owner planning. Farm Hand drawers keep only
+   why the move matters, the worker's own unlocks, and the worker's own waits. */
+.atlas-project-move-block:has(.atlas-project-move-path) {
+  display: none;
+}
