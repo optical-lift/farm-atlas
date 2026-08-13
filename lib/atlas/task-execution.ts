@@ -83,7 +83,9 @@ function fallbackHow(task: AtlasTaskCard) {
     if (noteLead) lines.push(noteLead);
   }
 
-  return lines.length ? lines.slice(0, 2) : ["Follow the task instructions for this move."];
+  // No instructions is meaningful. Do not manufacture a Steps section that points
+  // the worker back to instructions which do not exist.
+  return lines.slice(0, 2);
 }
 
 function fallbackDoneWhen(task: AtlasTaskCard) {
