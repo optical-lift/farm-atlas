@@ -56,8 +56,9 @@ test("Snow in Summer and station work use the corrected physical objects", () =>
 
 test("Day completion truth includes carried tasks completed on the selected day", () => {
   assert.match(contractMigration, /home_task_cards_for_membership_v3/);
-  assert.match(contractMigration, /card\.completed_at at time zone 'America\/Chicago'/);
-  assert.match(contractMigration, /card\.assigned_membership_id = p_membership_id/);
+  assert.match(contractMigration, /task\.completed_at at time zone 'America\/Chicago'/);
+  assert.match(contractMigration, /task\.assigned_membership_id = p_membership_id/);
+  assert.match(contractMigration, /join atlas\.tasks task on task\.id=card\.task_id/);
 });
 
 test("Farm Hand move context cannot surface another person's unlocks", () => {
