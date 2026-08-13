@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { buildClockTaskRanges, chooseClockNextTask, clockLocalMinuteOfDay, layoutClockTaskRanges } from "@/lib/atlas/clock-layout";
+import { buildAtlasClockProposals } from "@/lib/atlas/clock-proposal";
 import type { AtlasDaySequence, AtlasDaySequenceItem } from "@/lib/atlas/day-sequence";
 import { atlasFarmDateIso, atlasNormalizeFarmDate, DEFAULT_ATLAS_FARM_TIME_ZONE } from "@/lib/atlas/farm-day";
 
@@ -33,6 +34,7 @@ export default function ClockOrchestrator() {
   const dateIso = atlasNormalizeFarmDate(searchParams.get("date"));
   const [sequence, setSequence] = useState<AtlasDaySequence | null>(null);
   const [canManage, setCanManage] = useState(false);
+  const [proposalOpen, setProposalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,7 @@ export default function ClockOrchestrator() {
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    setProposalOpen(false);
     setError(null);
     setSaveError(null);
     void readClock(dateIso).then((value) => {
@@ -72,6 +75,8 @@ export default function ClockOrchestrator() {
   const timedCues = useMemo(() => items.filter((item): item is CueItem => item.kind === "cue" && item.positionResolved && item.anchorKind === "at_time" && Boolean(item.scheduledAt) && !["resolved", "dismissed", "stale"].includes(item.status)), [items]);
   const ranges = useMemo(() => buildClockTaskRanges(committed, { timeZone: DEFAULT_ATLAS_FARM_TIME_ZONE }), [committed]);
   const layouts = useMemo(() => layoutClockTaskRanges(ranges), [ranges]);
+  const proposals = useMemo(() => canManage && proposalOpen ? buildAtlasClockProposals(committed, ranges) : [], [canManage, proposalOpen, committed, ranges]);
+  const proposedTaskIds = useMemo(() => proposals.map((proposal) => proposal.item.id), [proposals]);
   const today = atlasFarmDateIso(now);
   const selectedToday = dateIso === today;
   const nowMinute = selectedToday ? clockLocalMinuteOfDay(now.toISOString(), DEFAULT_ATLAS_FARM_TIME_ZONE) : null;
@@ -80,7 +85,8 @@ export default function ClockOrchestrator() {
   const nextRange = nextTask ? ranges.find((range) => range.item.id === nextTask.id) ?? null : null;
   const cueMinutes = timedCues.map((item) => clockLocalMinuteOfDay(item.scheduledAt, DEFAULT_ATLAS_FARM_TIME_ZONE)).filter((value): value is number => value !== null);
   const taskMinutes = ranges.flatMap((range) => range.span.minutes ? [range.startMinute, range.endMinute] : [range.startMinute]);
-  const allMinutes = [...taskMinutes, ...cueMinutes];
+  const proposalMinutes = proposals.flatMap((proposal) => [proposal.startMinute, proposal.endMinute]);
+  const allMinutes = [...taskMinutes, ...cueMinutes, ...proposalMinutes];
   const floorMinute = Math.min(360, ...(allMinutes.length ? allMinutes : [360]), ...(nowMinute !== null ? [nowMinute] : []));
   const ceilingMinute = Math.max(1320, ...(allMinutes.length ? allMinutes : [1320]), ...(nowMinute !== null ? [nowMinute] : []));
   const startHour = Math.max(0, Math.floor(floorMinute / 60));
@@ -92,10 +98,11 @@ export default function ClockOrchestrator() {
       <header className="atlas-phone-top"><Link href="/" className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Clock</span></Link></header>
       <div className={styles.body}>
         <ClockHeaderV2 dateIso={dateIso} selectedToday={selectedToday} nowLabel={timeLabel(now)} activeRange={activeRange} nextTask={nextTask} nextRange={nextRange} loading={loading} />
+        {canManage ? <section className={styles.proposalGate} data-clock-proposal-gate="true"><div><strong>Atlas proposed clock</strong><span>{proposalOpen ? "Purple timing is a proposal only. Saved Clock times stay white." : "See where Atlas would place the untimed work without changing the worker Clock."}</span></div><button type="button" aria-pressed={proposalOpen} onClick={() => setProposalOpen((value) => !value)}>{proposalOpen ? "Hide proposal" : "Plan this clock"}</button></section> : null}
         {error ? <div className={styles.error}>{error}</div> : null}
         {saveError ? <div className={styles.error}>{saveError}</div> : null}
-        <ClockTimelineV2 dateIso={dateIso} canManage={canManage} layouts={layouts} timedCues={timedCues} activeRange={activeRange} selectedToday={selectedToday} nowMinute={nowMinute} startHour={startHour} endHour={endHour} gridHeight={gridHeight} onChanged={reload} onError={setSaveError} />
-        <ClockUnplacedV2 items={items} dateIso={dateIso} canManage={canManage} loading={loading} onChanged={reload} onError={setSaveError} />
+        <ClockTimelineV2 dateIso={dateIso} canManage={canManage} layouts={layouts} proposals={proposals} timedCues={timedCues} activeRange={activeRange} selectedToday={selectedToday} nowMinute={nowMinute} startHour={startHour} endHour={endHour} gridHeight={gridHeight} onChanged={reload} onError={setSaveError} />
+        <ClockUnplacedV2 items={items} proposedTaskIds={proposedTaskIds} dateIso={dateIso} canManage={canManage} loading={loading} onChanged={reload} onError={setSaveError} />
       </div>
     </section>
   </main>;
