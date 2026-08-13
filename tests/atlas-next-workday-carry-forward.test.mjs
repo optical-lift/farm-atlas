@@ -38,7 +38,7 @@ test("future day API preserves canonical worker-day truth while honoring explici
   assert.match(route, /worker_day_choreography_api_v1/);
   assert.match(route, /baselineSurvivesPlacement/);
   assert.match(route, /worker_day_placed_task_cards_v1/);
-  assert.match(route, /placement\.state === "placed" && placement\.serviceDate === placementDay/);
+  assert.match(route, /placement\?\.state === "placed" && placement\.serviceDate === placementDay/);
   assert.doesNotMatch(route, /filter\(\(card\) => !exactDate \|\| card\.due_date === exactDate\)/);
   assert.match(route, /readAtlasTaskDayDispositions\(doneDate\)/);
 });
