@@ -15,7 +15,8 @@ test("canonical Task Move data renders as compact worker branch cues instead of 
   assert.match(spine, /aria-label="Task move"/);
   assert.match(spine, /requirementSection/);
   assert.match(spine, /requirementStatusLabel/);
-  assert.match(spine, /final \? "└──" : "├──"/);
+  assert.match(spine, /atlas-worker-move__requirements::before/);
+  assert.match(spine, /atlas-worker-move__requirement::before/);
   assert.match(spine, /data-state=\{requirement.status\}/);
   assert.match(spine, /operationLabel/);
   assert.doesNotMatch(spine, />Needs</);
@@ -32,7 +33,8 @@ test("canonical Task Move data renders as compact worker branch cues instead of 
 
 test("execution facts stay visible instead of hiding useful work behind an Instructions drawer", () => {
   assert.match(brief, /function VisibleMethod/);
-  assert.match(brief, /className="atlas-worker-method"/);
+  assert.match(brief, /className="atlas-worker-method atlas-task-trail-section"/);
+  assert.match(brief, /atlas-worker-method::before/);
   assert.match(brief, /fallbackDetail = !lines\.length/);
   assert.doesNotMatch(brief, /<details className="atlas-worker-instructions">/);
   assert.doesNotMatch(brief, /<summary>Instructions<\/summary>/);
