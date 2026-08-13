@@ -76,7 +76,6 @@ export default function ClockOrchestrator() {
   const ranges = useMemo(() => buildClockTaskRanges(committed, { timeZone: DEFAULT_ATLAS_FARM_TIME_ZONE }), [committed]);
   const layouts = useMemo(() => layoutClockTaskRanges(ranges), [ranges]);
   const proposals = useMemo(() => canManage && proposalOpen ? buildAtlasClockProposals(committed, ranges) : [], [canManage, proposalOpen, committed, ranges]);
-  const proposedTaskIds = useMemo(() => proposals.map((proposal) => proposal.item.id), [proposals]);
   const today = atlasFarmDateIso(now);
   const selectedToday = dateIso === today;
   const nowMinute = selectedToday ? clockLocalMinuteOfDay(now.toISOString(), DEFAULT_ATLAS_FARM_TIME_ZONE) : null;
@@ -102,7 +101,7 @@ export default function ClockOrchestrator() {
         {error ? <div className={styles.error}>{error}</div> : null}
         {saveError ? <div className={styles.error}>{saveError}</div> : null}
         <ClockTimelineV2 dateIso={dateIso} canManage={canManage} layouts={layouts} proposals={proposals} timedCues={timedCues} activeRange={activeRange} selectedToday={selectedToday} nowMinute={nowMinute} startHour={startHour} endHour={endHour} gridHeight={gridHeight} onChanged={reload} onError={setSaveError} />
-        <ClockUnplacedV2 items={items} proposedTaskIds={proposedTaskIds} dateIso={dateIso} canManage={canManage} loading={loading} onChanged={reload} onError={setSaveError} />
+        <ClockUnplacedV2 items={items} dateIso={dateIso} canManage={canManage} loading={loading} onChanged={reload} onError={setSaveError} />
       </div>
     </section>
   </main>;
