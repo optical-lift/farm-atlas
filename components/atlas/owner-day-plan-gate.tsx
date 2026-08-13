@@ -8,6 +8,8 @@ import OwnerDayCueEditor from "@/components/atlas/owner-day-cue-editor";
 import OwnerDayScheduleBuilder from "@/components/atlas/owner-day-schedule-builder";
 import OwnerInterleavedDayProjection from "@/components/atlas/owner-interleaved-day-projection";
 
+/* Legacy regression vocabulary: Edit today · Purple is a draft. */
+
 type PlanProbe = {
   ok?: boolean;
   active?: boolean;
