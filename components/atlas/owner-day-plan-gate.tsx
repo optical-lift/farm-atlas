@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 import OwnerDayCueEditor from "@/components/atlas/owner-day-cue-editor";
 import OwnerDayScheduleBuilder from "@/components/atlas/owner-day-schedule-builder";
+import OwnerDayVisualGrammar from "@/components/atlas/owner-day-visual-grammar";
 import OwnerInterleavedDayProjection from "@/components/atlas/owner-interleaved-day-projection";
 
 /* Legacy regression vocabulary: Edit today · Purple is a draft. */
@@ -189,6 +190,7 @@ export default function OwnerDayPlanGate() {
         )}
       </div>
       <OwnerInterleavedDayProjection planningActive={open} />
+      <OwnerDayVisualGrammar />
       {open ? (
         <>
           <OwnerDayScheduleBuilder />
