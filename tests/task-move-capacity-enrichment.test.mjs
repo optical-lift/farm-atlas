@@ -80,10 +80,11 @@ test("confirmed total capacity still stays visible until Atlas knows actual avai
   assert.equal(result.readiness.executable, true);
 });
 
-test("Task Move renders unconfirmed capacity in the branch grammar without exposing explanation prose", () => {
+test("Task Move renders unconfirmed capacity in the continuous branch grammar without exposing explanation prose", () => {
   const spine = readFileSync(new URL("../components/atlas/task-move-spine.tsx", import.meta.url), "utf8");
   assert.match(spine, /return unconfirmedCapacity \? "Not yet confirmed" : "Check"/);
   assert.match(spine, /lit tray spots/);
-  assert.match(spine, /final \? "└──" : "├──"/);
+  assert.match(spine, /atlas-worker-move__requirements::before/);
+  assert.match(spine, /atlas-worker-move__requirement::before/);
   assert.doesNotMatch(spine, /requirement\.note/);
 });
