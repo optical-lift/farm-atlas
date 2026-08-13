@@ -24,6 +24,39 @@ type TaskMoveResponse = {
   assembly?: TaskMoveAssembly;
 };
 
+function metadataText(task: AtlasTaskCard | undefined, key: string) {
+  const value = task?.metadata?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function metadataLines(task: AtlasTaskCard | undefined, key: string) {
+  const value = task?.metadata?.[key];
+  return Array.isArray(value)
+    ? value.filter((line): line is string => typeof line === "string" && Boolean(line.trim())).map((line) => line.trim())
+    : [];
+}
+
+function presentationAssembly(assembly: TaskMoveAssembly | null | undefined, task: AtlasTaskCard | undefined) {
+  if (!assembly) return null;
+  const displaySubject = metadataText(task, "display_subject");
+  if (!displaySubject) return assembly;
+  return {
+    ...assembly,
+    spine: {
+      ...assembly.spine,
+      move: {
+        ...assembly.spine.move,
+        subject: {
+          ...assembly.spine.move.subject,
+          label: displaySubject,
+          status: "resolved" as const,
+          provenance: "task_record" as const,
+        },
+      },
+    },
+  };
+}
+
 function VisibleMethod({ label, how, details }: { label: string; how: string[]; details: string | null }) {
   const lines = how.map((line) => line.trim()).filter(Boolean);
   const fallbackDetail = !lines.length && details?.trim() ? details.trim() : null;
@@ -56,6 +89,25 @@ function VisibleMethod({ label, how, details }: { label: string; how: string[]; 
   );
 }
 
+function VisibleFacts({ label, lines }: { label: string; lines: string[] }) {
+  if (!lines.length) return null;
+  return (
+    <section className="atlas-worker-facts" aria-label={label}>
+      <style>{`
+        .atlas-worker-facts { margin:0 28px 20px; padding:14px 0 0; border-top:1px solid rgba(66,65,82,.11); color:#3d3e50; }
+        .atlas-worker-facts__label { display:block; margin-bottom:9px; color:#777ca0; font-size:.66rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
+        .atlas-worker-facts__list { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
+        .atlas-worker-facts__item { font-size:.82rem; font-weight:710; line-height:1.35; color:#5a5c6a; }
+        @media (max-width:560px) { .atlas-worker-facts { margin:0 21px 18px; } }
+      `}</style>
+      <span className="atlas-worker-facts__label">{label}</span>
+      <ul className="atlas-worker-facts__list">
+        {lines.map((line, index) => <li className="atlas-worker-facts__item" key={`${line}-${index}`}>{line}</li>)}
+      </ul>
+    </section>
+  );
+}
+
 function stripLeadingAction(action: string, text: string) {
   const trimmed = text.trim();
   if (!action.trim() || !trimmed.toLowerCase().startsWith(`${action.trim().toLowerCase()} `)) return trimmed;
@@ -74,11 +126,11 @@ export default function TaskExecutionBrief({
 }: Props) {
   const model = task ? taskExecutionModel(task) : null;
   const assemblyControlled = assembly !== undefined;
-  const [resolvedAssembly, setResolvedAssembly] = useState<TaskMoveAssembly | null>(assembly ?? null);
+  const [resolvedAssembly, setResolvedAssembly] = useState<TaskMoveAssembly | null>(() => presentationAssembly(assembly ?? null, task));
 
   useEffect(() => {
     if (assemblyControlled) {
-      setResolvedAssembly(assembly ?? null);
+      setResolvedAssembly(presentationAssembly(assembly ?? null, task));
       return;
     }
     if (!task?.task_id) {
@@ -102,14 +154,14 @@ export default function TaskExecutionBrief({
         return data.assembly;
       })
       .then((nextAssembly) => {
-        if (nextAssembly) setResolvedAssembly(nextAssembly);
+        if (nextAssembly) setResolvedAssembly(presentationAssembly(nextAssembly, task));
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
       });
 
     return () => controller.abort();
-  }, [assembly, assemblyControlled, task?.task_id]);
+  }, [assembly, assemblyControlled, task]);
 
   const resolvedDo = doText || resolvedAssembly?.execution.what || model?.doText || "";
   const resolvedPlace = placeText || resolvedAssembly?.execution.where || model?.placeText || "Elm Farm";
@@ -124,10 +176,12 @@ export default function TaskExecutionBrief({
   const resolvedDue = dueLabel === undefined
     ? resolvedAssembly?.execution.dueLabel || model?.dueLabel || null
     : dueLabel;
-  const displaySubject = task?.metadata?.display_subject;
-  const fallbackTitle = typeof displaySubject === "string" && displaySubject.trim()
-    ? displaySubject.trim()
-    : task?.title || resolvedDo;
+  const displaySubject = metadataText(task, "display_subject");
+  const fallbackTitle = displaySubject || task?.title || resolvedDo;
+  const detailHeading = metadataText(task, "detail_heading") || "Timing forecast";
+  const directDetailLines = metadataLines(task, "detail_lines");
+  const detailLines = directDetailLines.length ? directDetailLines : metadataLines(task, "projection_detail_lines");
+  const resultLines = metadataLines(task, "worker_result_lines");
 
   if (resolvedAssembly) {
     return (
@@ -138,6 +192,8 @@ export default function TaskExecutionBrief({
           how={resolvedHow}
           details={resolvedDetails}
         />
+        <VisibleFacts label={detailHeading} lines={detailLines} />
+        <VisibleFacts label="Next" lines={resultLines} />
       </section>
     );
   }
@@ -170,6 +226,8 @@ export default function TaskExecutionBrief({
         ) : null}
       </section>
       <VisibleMethod label="Steps" how={resolvedHow} details={resolvedDetails} />
+      <VisibleFacts label={detailHeading} lines={detailLines} />
+      <VisibleFacts label="Next" lines={resultLines} />
     </section>
   );
 }

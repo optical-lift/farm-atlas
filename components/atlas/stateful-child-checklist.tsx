@@ -17,6 +17,11 @@ function meta(task: AtlasTaskCard, key: string) {
   return task.metadata?.[key];
 }
 
+function sortOrder(task: AtlasTaskCard) {
+  const value = Number(meta(task, "checklist_sort_order"));
+  return Number.isFinite(value) && value > 0 ? value : Number.MAX_SAFE_INTEGER;
+}
+
 function isDone(task: AtlasTaskCard) {
   return task.status === "done"
     || task.task_outcomes?.[0]?.outcome === "done"
@@ -59,7 +64,8 @@ export default function StatefulChildChecklist({
   const [message, setMessage] = useState<Record<string, string | null>>({});
   if (!childTasks.length) return null;
 
-  const heading = text(meta(childTasks[0], "checklist_group_label")) || "Checklist";
+  const orderedTasks = [...childTasks].sort((a, b) => sortOrder(a) - sortOrder(b) || a.title.localeCompare(b.title));
+  const heading = text(meta(orderedTasks[0], "checklist_group_label")) || "Checklist";
 
   async function toggle(task: AtlasTaskCard, next: "done" | "open") {
     try {
@@ -102,7 +108,7 @@ export default function StatefulChildChecklist({
       `}</style>
       <span className="atlas-stateful-children__heading">{heading}</span>
       <div className="atlas-stateful-children__list">
-        {childTasks.map((task) => {
+        {orderedTasks.map((task) => {
           const done = isDone(task);
           const saving = savingId === task.task_id;
           return (
