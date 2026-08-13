@@ -86,16 +86,17 @@ function isVisibleCue(item: CueItem) {
     && !["resolved", "dismissed", "stale"].includes(item.status);
 }
 
-function projectedItems(items: SequenceItem[]) {
-  return items.filter((item): item is ProjectionItem =>
-    (item.kind === "potential_task" && item.projectionEligible)
-    || (item.kind === "cue" && isVisibleCue(item)));
+function visibleSequenceItems(items: SequenceItem[], planningActive: boolean) {
+  return items.filter((item): item is ProjectionItem => {
+    if (item.kind === "cue") return isVisibleCue(item);
+    return planningActive && item.projectionEligible;
+  });
 }
 
-function placeProjectedSequence(timeline: HTMLElement, items: SequenceItem[]) {
+function placeVisibleSequence(timeline: HTMLElement, items: SequenceItem[], planningActive: boolean) {
   clearHosts();
   const mounts: Mount[] = [];
-  const projections = projectedItems(items);
+  const projections = visibleSequenceItems(items, planningActive);
 
   for (const item of projections) {
     const itemIndex = items.findIndex((candidate) => candidate.id === item.id);
@@ -166,7 +167,7 @@ function CueMarker({ item }: { item: CueItem }) {
   );
 }
 
-export default function OwnerInterleavedDayProjection({ active }: { active: boolean }) {
+export default function OwnerInterleavedDayProjection({ planningActive }: { planningActive: boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const requestedDate = searchParams.get("date");
@@ -176,7 +177,7 @@ export default function OwnerInterleavedDayProjection({ active }: { active: bool
 
   useEffect(() => {
     setResponse(null);
-    if (!active || !dateIso) return;
+    if (!dateIso) return;
     const controller = new AbortController();
     void fetch(`/api/atlas/worker-day-sequence?date=${encodeURIComponent(dateIso)}`, {
       cache: "no-store",
@@ -190,24 +191,24 @@ export default function OwnerInterleavedDayProjection({ active }: { active: bool
       if (!controller.signal.aborted) setResponse(null);
     });
     return () => controller.abort();
-  }, [active, dateIso]);
+  }, [dateIso]);
 
   const items = useMemo(() => response?.sequence?.items ?? [], [response]);
 
   useEffect(() => {
     clearHosts();
     setMounts([]);
-    if (!active || !response?.active || !projectedItems(items).length) return;
+    if (!response?.active || !visibleSequenceItems(items, planningActive).length) return;
     const timeline = document.querySelector<HTMLElement>(".atlas-day-work-order-group.atlas-day-timeline-group .atlas-day-mixed-timeline");
     if (!timeline) return;
-    const frame = window.requestAnimationFrame(() => setMounts(placeProjectedSequence(timeline, items)));
+    const frame = window.requestAnimationFrame(() => setMounts(placeVisibleSequence(timeline, items, planningActive)));
     return () => {
       window.cancelAnimationFrame(frame);
       clearHosts();
     };
-  }, [active, items, response?.active]);
+  }, [items, planningActive, response?.active]);
 
-  if (!active || !response?.active) return null;
+  if (!response?.active) return null;
   return (
     <>
       <style>{`
@@ -224,6 +225,7 @@ export default function OwnerInterleavedDayProjection({ active }: { active: bool
         .atlas-owner-day-cue-marker strong{font-size:12px;line-height:1.1;font-weight:900}
         .atlas-owner-day-cue-marker>span:not(.atlas-owner-day-cue-node){color:#77798c;font-size:9.5px;line-height:1.2}
       `}</style>
+      <span data-owner-day-normal-sequence-cues="true" hidden />
       {mounts.map(({ item, host }) => createPortal(
         item.kind === "potential_task" ? <PotentialCard item={item} /> : <CueMarker item={item} />,
         host,
