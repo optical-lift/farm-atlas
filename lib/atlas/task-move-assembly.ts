@@ -101,6 +101,8 @@ export type TaskMoveAssembly = {
     route: AtlasWorkRouteKey;
     workClass: string | null;
     updatedAt: string | null;
+    displayAction: string | null;
+    operationFamily: string | null;
   };
   spine: {
     current: TaskMoveFact[];
@@ -127,6 +129,7 @@ export type TaskMoveAssembly = {
     what: string;
     where: string;
     how: string[];
+    howLabel: string | null;
     doneWhen: string;
     details: string | null;
     dueLabel: string;
@@ -161,7 +164,8 @@ function metadataText(task: AtlasTaskCard, key: string) {
  * The spine is only the state transition: CURRENT -> MOVE -> AFTER.
  * Requirements attach to MOVE as branches. Their array order is never sequential
  * and must never be rendered as though one resource or dependency happens after
- * another. A blocked branch may stop the spine at MOVE while AFTER remains known.
+ * another. Worker presentation then labels those facts with the farm language
+ * attached to the canonical task rather than exposing implementation vocabulary.
  */
 export function assembleTaskMove(task: AtlasTaskCard): TaskMoveAssembly {
   const execution = taskExecutionModel(task);
@@ -176,13 +180,27 @@ export function assembleTaskMove(task: AtlasTaskCard): TaskMoveAssembly {
     stateEffect: metadataText(task, "state_effect"),
   };
 
-  const baseAssembly = assembleTaskMoveCore({
+  const baseAssembly = attachCanonicalMoveRoles(assembleTaskMoveCore({
     task,
     execution,
     display,
     moveSemantics: canonicalMoveSemantics,
     moveContext: task.move_context ?? null,
-  });
+  }), task) as Omit<TaskMoveAssembly, "task" | "execution"> & {
+    task: Omit<TaskMoveAssembly["task"], "displayAction" | "operationFamily">;
+    execution: Omit<TaskMoveAssembly["execution"], "howLabel">;
+  };
 
-  return attachCanonicalMoveRoles(baseAssembly, task) as TaskMoveAssembly;
+  return {
+    ...baseAssembly,
+    task: {
+      ...baseAssembly.task,
+      displayAction: metadataText(task, "display_action") || display.action || null,
+      operationFamily: metadataText(task, "display_family") || metadataText(task, "operation_family") || null,
+    },
+    execution: {
+      ...baseAssembly.execution,
+      howLabel: metadataText(task, "execution_how_label"),
+    },
+  };
 }
