@@ -15,7 +15,7 @@ test("Clock renders planned duration as real vertical blocks", () => {
   assert.match(surface, /layoutClockTaskRanges/);
   assert.match(timeline, /data-clock-duration-blocks="true"/);
   assert.match(timeline, /layout\.span\.minutes/);
-  assert.match(timeline, /height = layout\.span\.minutes/);
+  assert.match(timeline, /height\s*=\s*layout\.span\.minutes/);
 });
 
 test("overlapping planned blocks receive separate visual lanes", () => {
