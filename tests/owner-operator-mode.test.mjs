@@ -42,7 +42,8 @@ test("the owner can switch among every discovered Atlas account without changing
   assert.match(switcher, /Operating as/);
   assert.match(switcher, /option\.accountId/);
   assert.match(switcher, /window\.location\.reload\(\)/);
-  assert.match(switcher, /Actions change live Atlas data/);
+  assert.match(switcher, /Worker cues are safe previews/);
+  assert.match(switcher, /Other task actions still change live Atlas data/);
   assert.match(layout, /<OwnerOperatorMode context=\{operatorContext\} \/>/);
   assert.match(layout, /owner-operator-mode\.css/);
 });
