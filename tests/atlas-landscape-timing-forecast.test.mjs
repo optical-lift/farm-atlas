@@ -13,14 +13,15 @@ test("annual landscape cards use the shared compact execution-detail contract", 
 
   assert.match(shell, /TaskExecutionBrief/);
   assert.match(brief, /taskExecutionModel\(task\)/);
-  assert.match(brief, /function Instructions/);
-  assert.match(brief, /<details className="atlas-worker-instructions">/);
-  assert.match(brief, /<summary>Instructions<\/summary>/);
+  assert.match(brief, /function VisibleMethod/);
+  assert.match(brief, /className="atlas-worker-method"/);
+  assert.doesNotMatch(brief, /<details className="atlas-worker-instructions">/);
+  assert.doesNotMatch(brief, /<summary>Instructions<\/summary>/);
   assert.match(execution, /atlasMetaString\(task, "execution_details"\)/);
   assert.match(execution, /const details = explicitDetails/);
 
-  // Timing belongs in the shared execution details and may stay available without
-  // occupying the default Farm Hand view.
+  // Timing still belongs to the shared execution contract. It should not grow a
+  // second landscape-specific panel beside the ordinary Farm Hand card.
   assert.doesNotMatch(shell, /<strong>Timing forecast<\/strong>/);
   assert.doesNotMatch(shell, /timing\.facts\.map/);
   assert.doesNotMatch(shell, /"sow window": "Sow window"/);
