@@ -8,7 +8,7 @@ import GlobalAtlasAdd from "@/components/atlas/global-atlas-add";
 import { atlasFarmDateIso } from "@/lib/atlas/farm-day";
 import type { AtlasFarmRole } from "@/lib/atlas/session";
 
-type DockIconKey = "home" | "work" | "manager" | "harvest" | "more";
+type DockIconKey = "home" | "work" | "clock" | "manager" | "harvest" | "more";
 
 type AtlasContextualAppFrameProps = {
   effectiveFarmRole?: AtlasFarmRole | null;
@@ -18,12 +18,17 @@ function todayHref() {
   return `/day?date=${encodeURIComponent(atlasFarmDateIso())}`;
 }
 
+function clockHref() {
+  return `/clock?date=${encodeURIComponent(atlasFarmDateIso())}`;
+}
+
 function managerHref() {
   return `/manage/day?date=${encodeURIComponent(atlasFarmDateIso())}`;
 }
 
 function routeGroup(pathname: string) {
   if (pathname === "/") return "home";
+  if (pathname.startsWith("/clock")) return "clock";
   if (pathname.startsWith("/manage/day")) return "manager";
   if (
     pathname.startsWith("/day")
@@ -68,6 +73,15 @@ function DockIcon({ kind }: { kind: DockIconKey }) {
     );
   }
 
+  if (kind === "clock") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12 7.25v5.25l3.5 2" />
+      </svg>
+    );
+  }
+
   if (kind === "manager") {
     return (
       <svg {...common} aria-hidden="true">
@@ -107,6 +121,7 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null }: At
   const pathname = usePathname();
   const active = routeGroup(pathname);
   const workHref = useMemo(todayHref, []);
+  const currentClockHref = useMemo(clockHref, []);
   const farmManagerHref = useMemo(managerHref, []);
   const hidden = HIDDEN_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   const canManage = effectiveFarmRole === "owner" || effectiveFarmRole === "manager";
@@ -123,6 +138,7 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null }: At
   const items: Array<{ key: DockIconKey; label: string; href: string }> = [
     { key: "home", label: "Home", href: "/" },
     { key: "work", label: "Work", href: workHref },
+    { key: "clock", label: "Clock", href: currentClockHref },
     ...(canManage ? [{ key: "manager" as const, label: "Manager", href: farmManagerHref }] : []),
     { key: "harvest", label: "Harvest", href: "/harvest" },
     { key: "more", label: "More", href: "/more" },
