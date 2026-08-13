@@ -117,6 +117,7 @@ export default function AssignedTaskExecutionShell({
   const [task, setTask] = useState(initialTask);
   const [children, setChildren] = useState(initialChildren);
   const [assembly, setAssembly] = useState<TaskMoveAssembly | null>(null);
+  const [assemblyLoading, setAssemblyLoading] = useState(true);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -143,6 +144,7 @@ export default function AssignedTaskExecutionShell({
   useEffect(() => {
     const controller = new AbortController();
     setAssembly(null);
+    setAssemblyLoading(true);
     void fetch(`/api/atlas/task-move?taskId=${encodeURIComponent(task.task_id)}`, {
       method: "GET",
       headers: { Accept: "application/json" },
@@ -160,6 +162,9 @@ export default function AssignedTaskExecutionShell({
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setAssemblyLoading(false);
       });
     return () => controller.abort();
   }, [task.task_id, task.status, task.updated_at]);
@@ -276,7 +281,111 @@ export default function AssignedTaskExecutionShell({
         .atlas-human-task-blocker { margin:0 28px 18px; padding:10px 12px; border-left:3px solid #865f4f; border-radius:0 11px 11px 0; background:#fff8f5; color:#65483e; }
         .atlas-human-task-blocker strong { display:block; font-size:.78rem; }
         .atlas-human-task-blocker ul { display:grid; gap:3px; margin:5px 0 0; padding-left:17px; font-size:.76rem; line-height:1.35; }
-        @media (max-width:560px) { .atlas-human-task-blocker { margin:0 21px 16px; } }
+
+        .atlas-assigned-task-execution-card .atlas-plant-check {
+          --atlas-task-trail-x:36px;
+          position:relative !important;
+          margin:0 !important;
+          padding:17px 28px 8px 88px !important;
+          border:0 !important;
+          border-top:1px solid rgba(66,65,82,.11) !important;
+          border-radius:0 !important;
+          box-shadow:none !important;
+          background:#fff !important;
+        }
+        .atlas-assigned-task-execution-card .atlas-plant-check::before {
+          content:"";
+          position:absolute;
+          left:var(--atlas-task-trail-x);
+          top:-1px;
+          bottom:-1px;
+          width:1px;
+          background:rgba(86,89,112,.28);
+        }
+        .atlas-assigned-task-execution-card .atlas-plant-check > h3 {
+          margin:0 0 12px !important;
+          padding:0 !important;
+          color:#777ca0 !important;
+          font-size:.66rem !important;
+          font-weight:950 !important;
+          letter-spacing:.11em !important;
+          text-transform:uppercase !important;
+        }
+        .atlas-assigned-task-execution-card .atlas-plant-check__list {
+          display:grid !important;
+          gap:0 !important;
+          margin:0 !important;
+          padding:0 !important;
+          border:0 !important;
+          background:transparent !important;
+        }
+        .atlas-assigned-task-execution-card .atlas-plant-check__item {
+          position:relative !important;
+          min-height:58px;
+          margin:0 !important;
+          padding:0 0 14px !important;
+          border:0 !important;
+          border-radius:0 !important;
+          box-shadow:none !important;
+          background:transparent !important;
+        }
+        .atlas-assigned-task-execution-card .atlas-plant-check__item::before {
+          content:"";
+          position:absolute;
+          left:-52px;
+          top:10px;
+          width:42px;
+          height:1px;
+          background:rgba(86,89,112,.42);
+        }
+        .atlas-assigned-task-execution-card .atlas-plant-check__content,
+        .atlas-assigned-task-execution-card .atlas-plant-check__actions {
+          border:0 !important;
+          background:transparent !important;
+          box-shadow:none !important;
+        }
+
+        .atlas-task-result-footer {
+          --atlas-task-trail-x:36px;
+          position:relative;
+        }
+        .atlas-task-result-footer::before {
+          content:"";
+          position:absolute;
+          left:var(--atlas-task-trail-x);
+          top:-1px;
+          height:43px;
+          width:1px;
+          background:rgba(86,89,112,.28);
+        }
+        .atlas-task-finish-node {
+          position:absolute;
+          z-index:2;
+          left:calc(var(--atlas-task-trail-x) - 9px);
+          top:34px;
+          width:19px;
+          height:19px;
+          border:2px solid #6d7088;
+          border-radius:50%;
+          background:#fbf8f2;
+          box-shadow:0 0 0 4px #fbf8f2;
+          pointer-events:none;
+        }
+        .atlas-task-finish-node::after {
+          content:"";
+          position:absolute;
+          left:15px;
+          top:7px;
+          width:25px;
+          height:1px;
+          background:rgba(86,89,112,.42);
+        }
+
+        @media (max-width:560px) {
+          .atlas-human-task-blocker { margin:0 21px 16px; }
+          .atlas-assigned-task-execution-card .atlas-plant-check { --atlas-task-trail-x:29px; padding:17px 21px 6px 81px !important; }
+          .atlas-task-result-footer { --atlas-task-trail-x:29px; }
+        }
       `}</style>
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
@@ -289,7 +398,7 @@ export default function AssignedTaskExecutionShell({
         </header>
         <div className="atlas-task-page-body">
           <article className="atlas-task-page-active atlas-task-ticket-card atlas-assigned-task-execution-card">
-            <TaskExecutionBrief task={task} assembly={assembly} />
+            <TaskExecutionBrief task={task} assembly={assembly} assemblyLoading={assemblyLoading} />
             {blockers.length ? (
               <section className="atlas-human-task-blocker" data-atlas-task-blocker="true" aria-label="What is blocking this task">
                 <strong>This can&apos;t move yet.</strong>
@@ -303,6 +412,7 @@ export default function AssignedTaskExecutionShell({
               <p className="atlas-task-correction-note">This completion has linked farm evidence. Review the recorded result before correcting it.</p>
             ) : null}
             <footer id="result" className="atlas-task-result-footer" data-atlas-primary-results="true">
+              <span className="atlas-task-finish-node" aria-hidden="true" />
               {resultInstrument ? resultInstrument(instrumentContext) : (
                 <DefaultResultInstrument
                   busy={Boolean(saving)}
