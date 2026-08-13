@@ -24,7 +24,7 @@ test("Pass 4 keeps canonical Move semantics while presenting only worker-useful 
 
 test("requirements remain preconditions and are never rendered as ordered execution prose", () => {
   const spine = read("components/atlas/task-move-spine.tsx");
-  const requirementIndex = spine.indexOf("requirementGroups.map(([label, requirements], index)");
+  const requirementIndex = spine.indexOf("requirementGroups.map(([label, requirements]) =>");
   const workIndex = spine.indexOf('<section className="atlas-worker-move__step" data-kind="action">');
 
   assert.ok(requirementIndex >= 0);
@@ -43,9 +43,11 @@ test("Task Move visual states retain warning and blocked meaning in the shared b
   assert.match(spine, /function requirementStatusLabel/);
   assert.match(spine, /if \(status === "blocked"\) return "Blocked"/);
   assert.match(spine, /return unconfirmedCapacity \? "Not yet confirmed" : "Check"/);
-  assert.match(spine, /final \? "└──" : "├──"/);
+  assert.match(spine, /atlas-worker-move__requirements::before/);
+  assert.match(spine, /atlas-worker-move__requirement::before/);
   assert.match(spine, /data-state=\{requirement.status\}/);
   assert.doesNotMatch(spine, /requirementGlyph/);
+  assert.doesNotMatch(spine, /└──|├──/);
 });
 
 test("execution brief resolves canonical Task Move and keeps a compact compatibility fallback", () => {
@@ -56,6 +58,7 @@ test("execution brief resolves canonical Task Move and keeps a compact compatibi
   assert.match(brief, /\/api\/atlas\/task-move\?taskId=/);
   assert.match(brief, /taskExecutionModel\(task\)/);
   assert.match(brief, /if \(resolvedAssembly\)/);
+  assert.match(brief, /StableTaskMoveLoading/);
   assert.match(brief, /atlas-worker-fallback/);
   assert.match(route, /resolveTaskMove/);
   assert.match(route, /requireAtlasApiAccess/);
