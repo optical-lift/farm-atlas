@@ -24,6 +24,18 @@ type TaskMoveResponse = {
   assembly?: TaskMoveAssembly;
 };
 
+function metadataText(task: AtlasTaskCard | undefined, key: string) {
+  const value = task?.metadata?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function metadataLines(task: AtlasTaskCard | undefined, key: string) {
+  const value = task?.metadata?.[key];
+  return Array.isArray(value)
+    ? value.filter((line): line is string => typeof line === "string" && Boolean(line.trim())).map((line) => line.trim())
+    : [];
+}
+
 function VisibleMethod({ label, how, details }: { label: string; how: string[]; details: string | null }) {
   const lines = how.map((line) => line.trim()).filter(Boolean);
   const fallbackDetail = !lines.length && details?.trim() ? details.trim() : null;
@@ -52,6 +64,25 @@ function VisibleMethod({ label, how, details }: { label: string; how: string[]; 
         </ul>
       ) : null}
       {fallbackDetail ? <p>{fallbackDetail}</p> : null}
+    </section>
+  );
+}
+
+function VisibleFacts({ label, lines }: { label: string; lines: string[] }) {
+  if (!lines.length) return null;
+  return (
+    <section className="atlas-worker-facts" aria-label={label}>
+      <style>{`
+        .atlas-worker-facts { margin:0 28px 20px; padding:14px 0 0; border-top:1px solid rgba(66,65,82,.11); color:#3d3e50; }
+        .atlas-worker-facts__label { display:block; margin-bottom:9px; color:#777ca0; font-size:.66rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
+        .atlas-worker-facts__list { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
+        .atlas-worker-facts__item { font-size:.82rem; font-weight:710; line-height:1.35; color:#5a5c6a; }
+        @media (max-width:560px) { .atlas-worker-facts { margin:0 21px 18px; } }
+      `}</style>
+      <span className="atlas-worker-facts__label">{label}</span>
+      <ul className="atlas-worker-facts__list">
+        {lines.map((line, index) => <li className="atlas-worker-facts__item" key={`${line}-${index}`}>{line}</li>)}
+      </ul>
     </section>
   );
 }
@@ -124,20 +155,43 @@ export default function TaskExecutionBrief({
   const resolvedDue = dueLabel === undefined
     ? resolvedAssembly?.execution.dueLabel || model?.dueLabel || null
     : dueLabel;
-  const displaySubject = task?.metadata?.display_subject;
-  const fallbackTitle = typeof displaySubject === "string" && displaySubject.trim()
-    ? displaySubject.trim()
-    : task?.title || resolvedDo;
+  const displaySubject = metadataText(task, "display_subject");
+  const fallbackTitle = displaySubject || task?.title || resolvedDo;
+  const detailHeading = metadataText(task, "detail_heading") || "Timing forecast";
+  const detailLines = metadataLines(task, "detail_lines").length
+    ? metadataLines(task, "detail_lines")
+    : metadataLines(task, "projection_detail_lines");
+  const resultLines = metadataLines(task, "worker_result_lines");
 
-  if (resolvedAssembly) {
+  const displayAssembly = resolvedAssembly && displaySubject
+    ? {
+        ...resolvedAssembly,
+        spine: {
+          ...resolvedAssembly.spine,
+          move: {
+            ...resolvedAssembly.spine.move,
+            subject: {
+              ...resolvedAssembly.spine.move.subject,
+              label: displaySubject,
+              status: "resolved" as const,
+              provenance: "task_record" as const,
+            },
+          },
+        },
+      }
+    : resolvedAssembly;
+
+  if (displayAssembly) {
     return (
       <section className="atlas-task-execution-brief atlas-task-execution-brief--human" aria-label="Task instructions">
-        <TaskMoveSpine assembly={resolvedAssembly} />
+        <TaskMoveSpine assembly={displayAssembly} />
         <VisibleMethod
-          label={resolvedAssembly.execution.howLabel || "Steps"}
+          label={displayAssembly.execution.howLabel || "Steps"}
           how={resolvedHow}
           details={resolvedDetails}
         />
+        <VisibleFacts label={detailHeading} lines={detailLines} />
+        <VisibleFacts label="Next" lines={resultLines} />
       </section>
     );
   }
@@ -170,6 +224,8 @@ export default function TaskExecutionBrief({
         ) : null}
       </section>
       <VisibleMethod label="Steps" how={resolvedHow} details={resolvedDetails} />
+      <VisibleFacts label={detailHeading} lines={detailLines} />
+      <VisibleFacts label="Next" lines={resultLines} />
     </section>
   );
 }
