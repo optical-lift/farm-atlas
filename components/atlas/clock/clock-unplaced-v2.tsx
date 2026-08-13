@@ -32,9 +32,7 @@ export default function ClockUnplacedV2(props: {
   onChanged: () => Promise<void>;
   onError: (message: string | null) => void;
 }) {
-  const unplaced = props.items.filter((item) => item.kind === "committed_task"
-    ? !item.plannedStartAt && !props.proposedTaskIds?.has(item.id)
-    : item.kind === "cue" && item.positionResolved && item.anchorKind !== "at_time" && !["resolved", "dismissed", "stale"].includes(item.status));
+  const unplaced = props.items.filter((item) => item.kind === "committed_task" ? !item.plannedStartAt && !props.proposedTaskIds?.has(item.id) : item.kind === "cue" && item.positionResolved && item.anchorKind !== "at_time" && !["resolved", "dismissed", "stale"].includes(item.status));
   const waitingCount = unplaced.filter((item) => item.kind === "committed_task").length;
   return <section className={styles.unplaced} aria-label="Unplaced today">
     <header><h2>{props.proposedTaskIds ? "Still unplaced" : "Unplaced today"}</h2><span>{waitingCount} tasks need a time</span></header>
