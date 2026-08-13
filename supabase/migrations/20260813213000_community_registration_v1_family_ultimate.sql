@@ -1,2 +1,0 @@
--- Community registration foundation + Elm Family Ultimate acceptance specimen.
--- Full migration is applied to noel-core and mirrored here in staged sections.
