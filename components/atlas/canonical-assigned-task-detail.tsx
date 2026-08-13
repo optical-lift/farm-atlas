@@ -11,6 +11,7 @@ import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import TransplantReadinessTaskDetail from "@/components/atlas/transplant-readiness-task-detail";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
+import WeeklyHarvestTaskDetail from "@/components/atlas/weekly-harvest-task-detail";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
@@ -78,6 +79,11 @@ function isTransplantReadinessTask(task: AtlasTaskCard) {
     || task.metadata?.requires_transplant_readiness_check === "true";
 }
 
+function isWeeklyHarvestTask(task: AtlasTaskCard) {
+  return task.task_type === "harvest"
+    && (task.metadata?.weekly_routine === true || task.metadata?.weekly_routine === "true");
+}
+
 export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isContractorServiceTask(props.task)) return <ContractorServiceTaskDetail {...props} />;
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
@@ -89,6 +95,7 @@ export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
   if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
   if (isTransplantReadinessTask(props.task)) return <TransplantReadinessTaskDetail {...props} />;
+  if (isWeeklyHarvestTask(props.task)) return <WeeklyHarvestTaskDetail {...props} />;
 
   return <AssignedTaskExecutionShell {...props} />;
 }

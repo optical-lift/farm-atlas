@@ -16,12 +16,15 @@ const executionBrief = read("components/atlas/task-execution-brief.tsx");
 const checklist = read("components/atlas/stateful-child-checklist.tsx");
 const factsMigration = read("supabase/migrations/20260813023000_restore_worker_execution_facts_v1.sql");
 
-test("worker Day cues mount once in the universal app shell, not inside Day or Task Focus", () => {
+test("worker Day cues mount once in the universal app shell and follow the real service day, not a browsed calendar day", () => {
   assert.match(rootLayout, /GlobalDayCueDelivery/);
   assert.doesNotMatch(dayLayout, /DayCueDelivery/);
   assert.doesNotMatch(taskLayout, /TaskFocusCueDelivery/);
   assert.match(globalCue, /data-atlas-global-cue-delivery/);
-  assert.match(globalCue, /routeDate\(searchParams\)/);
+  assert.match(globalCue, /centralDateIso\(\)/);
+  assert.match(globalCue, /const dateIso = useMemo\(\(\) => pathname === "\/login" \? null : centralDateIso\(\), \[pathname\]\)/);
+  assert.doesNotMatch(globalCue, /routeDate\(searchParams\)/);
+  assert.doesNotMatch(globalCue, /useSearchParams/);
 });
 
 test("cue dismissal persists for workers and does not mutate Owner previews", () => {

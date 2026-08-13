@@ -11,10 +11,11 @@ const brief = read("components/atlas/task-execution-brief.tsx");
 const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 const weed = read("components/atlas/weed-card-task-focus.tsx");
 
-test("canonical Task Move data renders as compact worker cues instead of schema explanation", () => {
+test("canonical Task Move data renders as compact worker branch cues instead of schema explanation", () => {
   assert.match(spine, /aria-label="Task move"/);
   assert.match(spine, /requirementSection/);
-  assert.match(spine, /requirementGlyph/);
+  assert.match(spine, /requirementStatusLabel/);
+  assert.match(spine, /final \? "└──" : "├──"/);
   assert.match(spine, /data-state=\{requirement.status\}/);
   assert.match(spine, /operationLabel/);
   assert.doesNotMatch(spine, />Needs</);

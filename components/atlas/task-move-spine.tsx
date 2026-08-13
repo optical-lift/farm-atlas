@@ -32,12 +32,6 @@ function compactRequirementLabel(requirement: TaskMoveRequirement) {
   return `${quantity} × ${label}`;
 }
 
-function requirementGlyph(status: TaskMoveRequirement["status"]) {
-  if (status === "resolved") return "✓";
-  if (status === "warning") return "○";
-  return "!";
-}
-
 function unresolvedCurrentFacts(facts: TaskMoveFact[]) {
   return facts.filter((fact) => fact.label.trim() && fact.status !== "resolved" && fact.status !== "missing");
 }
@@ -73,9 +67,7 @@ function requirementIsWorkerDuplicate(requirement: TaskMoveRequirement, assembly
 }
 
 function requirementSection(requirement: TaskMoveRequirement) {
-  if (requirement.kind === "container") {
-    return requirement.label.toLowerCase().includes("tray") ? "Trays" : "Container";
-  }
+  if (requirement.kind === "container") return requirement.label.toLowerCase().includes("tray") ? "Trays" : "Container";
   if (requirement.kind === "medium") return "Medium";
   if (requirement.kind === "capacity") return "Space";
   if (requirement.kind === "source") return "From";
@@ -95,6 +87,28 @@ function groupedRequirements(assembly: TaskMoveAssembly) {
       groups.set(key, [...(groups.get(key) ?? []), requirement]);
     });
   return [...groups.entries()];
+}
+
+function groupStatus(requirements: TaskMoveRequirement[]): TaskMoveRequirement["status"] {
+  if (requirements.some((requirement) => requirement.status === "blocked")) return "blocked";
+  if (requirements.some((requirement) => requirement.status === "missing")) return "missing";
+  if (requirements.some((requirement) => requirement.status === "warning")) return "warning";
+  return "resolved";
+}
+
+function requirementStatusLabel(requirements: TaskMoveRequirement[]) {
+  const status = groupStatus(requirements);
+  if (status === "blocked") return "Blocked";
+  if (status === "missing") return "Needed";
+  if (status === "warning") {
+    const unconfirmedCapacity = requirements.some((requirement) => (
+      requirement.kind === "capacity"
+      && requirement.status === "warning"
+      && requirement.capacityStatus !== "confirmed"
+    ));
+    return unconfirmedCapacity ? "Not yet confirmed" : "Check";
+  }
+  return null;
 }
 
 function targetObject(assembly: TaskMoveAssembly) {
@@ -141,14 +155,20 @@ export default function TaskMoveSpine({ assembly }: Props) {
         .atlas-worker-move__section { margin-top:20px; }
         .atlas-worker-move__label { display:block; margin-bottom:8px; color:#8589a6; font-size:.64rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
         .atlas-worker-move__value { display:block; font-size:.96rem; line-height:1.3; }
-        .atlas-worker-move__needs { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
-        .atlas-worker-move__need { display:grid; grid-template-columns:22px minmax(0,1fr); gap:8px; align-items:baseline; color:#505260; }
-        .atlas-worker-move__need-mark { font-size:.92rem; font-weight:950; line-height:1; }
-        .atlas-worker-move__need[data-state="resolved"] .atlas-worker-move__need-mark { color:#61647d; }
-        .atlas-worker-move__need[data-state="warning"] .atlas-worker-move__need-mark { color:#8a654d; }
-        .atlas-worker-move__need[data-state="blocked"], .atlas-worker-move__need[data-state="missing"] { color:#704d43; }
-        .atlas-worker-move__need strong { font-size:.9rem; line-height:1.3; }
-        .atlas-worker-move__issue { display:grid; grid-template-columns:22px minmax(0,1fr); gap:8px; margin:6px 0 0; color:#704d43; font-size:.82rem; font-weight:760; }
+        .atlas-worker-move__requirements { display:grid; gap:12px; margin:22px 0 0; padding:0; list-style:none; }
+        .atlas-worker-move__requirement { display:grid; grid-template-columns:42px minmax(0,1fr) auto; gap:7px; align-items:start; color:#555766; }
+        .atlas-worker-move__branch { margin-left:-5px; padding-top:3px; color:#9a9cac; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.83rem; line-height:1.25; letter-spacing:-.08em; white-space:pre; }
+        .atlas-worker-move__requirement-label { display:block; margin-bottom:3px; color:#8589a6; font-size:.62rem; font-weight:950; letter-spacing:.1em; text-transform:uppercase; }
+        .atlas-worker-move__requirement-items { display:grid; gap:3px; margin:0; padding:0; list-style:none; }
+        .atlas-worker-move__requirement-items strong { display:block; font-size:.88rem; line-height:1.32; }
+        .atlas-worker-move__requirement-items li[data-state="blocked"],
+        .atlas-worker-move__requirement-items li[data-state="missing"] { color:#704d43; }
+        .atlas-worker-move__requirement-status { margin-top:0; color:#7a5948; font-size:.68rem; font-weight:900; white-space:nowrap; }
+        .atlas-worker-move__requirement[data-state="blocked"] .atlas-worker-move__requirement-label,
+        .atlas-worker-move__requirement[data-state="missing"] .atlas-worker-move__requirement-label,
+        .atlas-worker-move__requirement[data-state="blocked"] .atlas-worker-move__requirement-items,
+        .atlas-worker-move__requirement[data-state="missing"] .atlas-worker-move__requirement-items { color:#704d43; }
+        .atlas-worker-move__issue { display:grid; grid-template-columns:22px minmax(0,1fr); gap:8px; margin:10px 0 0; color:#704d43; font-size:.82rem; font-weight:760; }
         .atlas-worker-move__flow { display:grid; gap:0; margin-top:22px; padding-left:28px; }
         .atlas-worker-move__step { position:relative; padding:0 0 22px; }
         .atlas-worker-move__step:last-child { padding-bottom:0; }
@@ -157,7 +177,12 @@ export default function TaskMoveSpine({ assembly }: Props) {
         .atlas-worker-move__step[data-kind="action"] .atlas-worker-move__dot { background:#6d7088; }
         .atlas-worker-move__step-label { display:block; margin-bottom:4px; color:#8589a6; font-size:.64rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
         .atlas-worker-move__step strong { display:block; font-size:1.02rem; line-height:1.32; }
-        @media (max-width:560px) { .atlas-worker-move { padding:20px 21px 16px; } }
+        @media (max-width:560px) {
+          .atlas-worker-move { padding:20px 21px 16px; }
+          .atlas-worker-move__requirement { grid-template-columns:34px minmax(0,1fr) auto; gap:5px; }
+          .atlas-worker-move__branch { margin-left:-9px; }
+          .atlas-worker-move__requirement-status { font-size:.64rem; }
+        }
       `}</style>
 
       <p className="atlas-worker-move__eyebrow">
@@ -173,19 +198,29 @@ export default function TaskMoveSpine({ assembly }: Props) {
         </section>
       ) : null}
 
-      {requirementGroups.map(([label, requirements]) => (
-        <section key={label} className="atlas-worker-move__section" aria-label={label}>
-          <span className="atlas-worker-move__label">{label}</span>
-          <ul className="atlas-worker-move__needs">
-            {requirements.map((requirement) => (
-              <li key={requirement.id} className="atlas-worker-move__need" data-state={requirement.status}>
-                <span className="atlas-worker-move__need-mark" aria-hidden="true">{requirementGlyph(requirement.status)}</span>
-                <strong>{compactRequirementLabel(requirement)}</strong>
+      {requirementGroups.length ? (
+        <ul className="atlas-worker-move__requirements" aria-label="What this work needs">
+          {requirementGroups.map(([label, requirements], index) => {
+            const status = groupStatus(requirements);
+            const statusLabel = requirementStatusLabel(requirements);
+            const final = index === requirementGroups.length - 1;
+            return (
+              <li key={label} className="atlas-worker-move__requirement" data-state={status}>
+                <span className="atlas-worker-move__branch" aria-hidden="true">{final ? "└──" : "├──"}</span>
+                <div>
+                  <span className="atlas-worker-move__requirement-label">{label}</span>
+                  <ul className="atlas-worker-move__requirement-items">
+                    {requirements.map((requirement) => (
+                      <li key={requirement.id} data-state={requirement.status}><strong>{compactRequirementLabel(requirement)}</strong></li>
+                    ))}
+                  </ul>
+                </div>
+                {statusLabel ? <small className="atlas-worker-move__requirement-status">{statusLabel}</small> : null}
               </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+            );
+          })}
+        </ul>
+      ) : null}
 
       {currentIssues.map((fact, index) => (
         <p key={`${fact.label}-${index}`} className="atlas-worker-move__issue"><span aria-hidden="true">!</span><span>{fact.label}</span></p>

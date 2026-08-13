@@ -24,7 +24,7 @@ test("Pass 4 keeps canonical Move semantics while presenting only worker-useful 
 
 test("requirements remain preconditions and are never rendered as ordered execution prose", () => {
   const spine = read("components/atlas/task-move-spine.tsx");
-  const requirementIndex = spine.indexOf("{requirementGroups.map(([label, requirements]) => (");
+  const requirementIndex = spine.indexOf("requirementGroups.map(([label, requirements], index)");
   const workIndex = spine.indexOf('<section className="atlas-worker-move__step" data-kind="action">');
 
   assert.ok(requirementIndex >= 0);
@@ -37,15 +37,15 @@ test("requirements remain preconditions and are never rendered as ordered execut
   assert.doesNotMatch(spine, /requirement\.questions/);
 });
 
-test("Task Move visual states retain resolved warning and blocked meaning without explanatory labels", () => {
+test("Task Move visual states retain warning and blocked meaning in the shared branch grammar", () => {
   const spine = read("components/atlas/task-move-spine.tsx");
 
-  assert.match(spine, /if \(status === "resolved"\) return "✓"/);
-  assert.match(spine, /if \(status === "warning"\) return "○"/);
-  assert.match(spine, /return "!"/);
+  assert.match(spine, /function requirementStatusLabel/);
+  assert.match(spine, /if \(status === "blocked"\) return "Blocked"/);
+  assert.match(spine, /return unconfirmedCapacity \? "Not yet confirmed" : "Check"/);
+  assert.match(spine, /final \? "└──" : "├──"/);
   assert.match(spine, /data-state=\{requirement.status\}/);
-  assert.doesNotMatch(spine, /Not yet confirmed/);
-  assert.doesNotMatch(spine, /return "Blocked"/);
+  assert.doesNotMatch(spine, /requirementGlyph/);
 });
 
 test("execution brief resolves canonical Task Move and keeps a compact compatibility fallback", () => {
