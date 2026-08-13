@@ -16,9 +16,41 @@ function validUuid(value: unknown): value is string {
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+function validDateIso(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function farmDateForInstant(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value;
+  const year = part("year");
+  const month = part("month");
+  const day = part("day");
+  return year && month && day ? `${year}-${month}-${day}` : null;
+}
+
+function validateTimedCue(cue: Record<string, unknown>) {
+  if (cue.anchorKind !== "at_time") return null;
+  if (typeof cue.scheduledAt !== "string" || !cue.scheduledAt.trim() || Number.isNaN(new Date(cue.scheduledAt).getTime())) {
+    return atlasApiError(400, "owner_day_cue_time_required", "Pick a time for this cue.");
+  }
+  if (!validDateIso(cue.serviceDate) || farmDateForInstant(cue.scheduledAt) !== cue.serviceDate) {
+    return atlasApiError(400, "owner_day_cue_service_day_mismatch", "The cue time must belong to the Elm Farm Day you are editing.");
+  }
+  return null;
+}
+
 function rpcError(error: RpcError) {
   if (error.code === "42501") return atlasApiError(403, "owner_day_cue_forbidden", error.message || "Owner access is required to edit Day cues.");
-  if (error.code === "22023") return atlasApiError(400, "owner_day_cue_invalid", error.message || "This Day cue is invalid.");
+  if (error.code === "22023" || error.code === "23514") return atlasApiError(400, "owner_day_cue_invalid", error.message || "This Day cue is invalid.");
   if (error.code === "55000") return atlasApiError(409, "owner_day_cue_changed", error.message || "The cue or its task anchor changed.");
   return atlasApiError(500, "owner_day_cue_failed", "Atlas could not save this Day cue.");
 }
@@ -50,6 +82,9 @@ export async function POST(request: Request) {
   if (!body.cue || typeof body.cue !== "object" || Array.isArray(body.cue)) {
     return atlasApiError(400, "owner_day_cue_required", "Cue details are required.");
   }
+  const cue = body.cue as Record<string, unknown>;
+  const timedCueError = validateTimedCue(cue);
+  if (timedCueError) return timedCueError;
 
   const resolved = await targetOrResponse();
   if (!resolved.target) return resolved.response as Response;
@@ -58,7 +93,7 @@ export async function POST(request: Request) {
   const result = await supabase.rpc("owner_upsert_worker_day_cue_api_v1", {
     p_farm_id: resolved.target.farmId,
     p_membership_id: resolved.target.membershipId,
-    p_cue: body.cue,
+    p_cue: cue,
   });
   if (result.error) return rpcError(result.error);
 
