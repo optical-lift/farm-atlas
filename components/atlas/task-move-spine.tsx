@@ -161,6 +161,8 @@ export default function TaskMoveSpine({ assembly }: Props) {
         .atlas-worker-move__requirement-label { display:block; margin-bottom:3px; color:#8589a6; font-size:.62rem; font-weight:950; letter-spacing:.1em; text-transform:uppercase; }
         .atlas-worker-move__requirement-items { display:grid; gap:3px; margin:0; padding:0; list-style:none; }
         .atlas-worker-move__requirement-items strong { display:block; font-size:.88rem; line-height:1.32; }
+        .atlas-worker-move__requirement-items li[data-state="blocked"],
+        .atlas-worker-move__requirement-items li[data-state="missing"] { color:#704d43; }
         .atlas-worker-move__requirement-status { margin-top:0; color:#7a5948; font-size:.68rem; font-weight:900; white-space:nowrap; }
         .atlas-worker-move__requirement[data-state="blocked"] .atlas-worker-move__requirement-label,
         .atlas-worker-move__requirement[data-state="missing"] .atlas-worker-move__requirement-label,
@@ -209,7 +211,7 @@ export default function TaskMoveSpine({ assembly }: Props) {
                   <span className="atlas-worker-move__requirement-label">{label}</span>
                   <ul className="atlas-worker-move__requirement-items">
                     {requirements.map((requirement) => (
-                      <li key={requirement.id}><strong>{compactRequirementLabel(requirement)}</strong></li>
+                      <li key={requirement.id} data-state={requirement.status}><strong>{compactRequirementLabel(requirement)}</strong></li>
                     ))}
                   </ul>
                 </div>
