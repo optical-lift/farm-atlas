@@ -12,18 +12,17 @@ test("Farm Hand Task Move is visual-first and keeps explanatory internals out of
 
   assert.match(spine, /requirementSection/);
   assert.match(spine, /return requirement\.label\.toLowerCase\(\)\.includes\("tray"\) \? "Trays" : "Container"/);
-  assert.match(spine, /requirementGlyph/);
-  assert.match(spine, /return "✓"/);
-  assert.match(spine, /return "○"/);
-  assert.match(spine, /return "!"/);
+  assert.match(spine, /requirementStatusLabel/);
+  assert.match(spine, /final \? "└──" : "├──"/);
+  assert.match(spine, /return unconfirmedCapacity \? "Not yet confirmed" : "Check"/);
+  assert.match(spine, /if \(status === "blocked"\) return "Blocked"/);
   assert.match(spine, /4 lit tray spots|lit tray spots/);
   assert.doesNotMatch(spine, />Needs</);
   assert.doesNotMatch(spine, />Do this</);
   assert.doesNotMatch(spine, /step-label">Done/);
   assert.doesNotMatch(spine, /requirement\.note\s*\?/);
   assert.doesNotMatch(spine, /openQuestions/);
-  assert.doesNotMatch(spine, /Not yet confirmed/);
-  assert.doesNotMatch(spine, /├──|└──/);
+  assert.doesNotMatch(spine, /requirementGlyph/);
 
   assert.match(brief, /function VisibleMethod/);
   assert.match(brief, /className="atlas-worker-method"/);
