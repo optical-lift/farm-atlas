@@ -188,7 +188,7 @@ export default function OwnerDayPlanGate() {
           </div>
         )}
       </div>
-      <OwnerInterleavedDayProjection active={open} />
+      <OwnerInterleavedDayProjection planningActive={open} />
       {open ? (
         <>
           <OwnerDayScheduleBuilder />
