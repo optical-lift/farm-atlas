@@ -212,5 +212,9 @@ export async function readAtlasProjectTaskFocus(taskId: string): Promise<AtlasPr
     : await supabase.rpc("project_task_focus_v1", { p_task_id: taskId });
 
   if (error) throw new Error((error as RpcError | null)?.message || "Atlas project task read failed.");
-  return data ? data as AtlasProjectTaskFocus : null;
+  if (!data) return null;
+
+  const focus = data as AtlasProjectTaskFocus;
+  if (focus.task.taskScope && focus.task.taskScope !== "project") return null;
+  return focus;
 }
