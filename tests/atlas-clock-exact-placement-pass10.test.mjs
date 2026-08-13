@@ -9,7 +9,12 @@ function read(path) {
 const sequence = read("lib/atlas/day-sequence.ts");
 const sequenceServer = read("lib/atlas/worker-day-sequence-server.ts");
 const choreography = read("lib/atlas/day-choreography-server.ts");
-const clock = read("components/atlas/clock/clock-surface.tsx");
+const surface = read("components/atlas/clock/clock-orchestrator.tsx");
+const timeline = read("components/atlas/clock/clock-timeline-v2.tsx");
+const unplaced = read("components/atlas/clock/clock-unplaced-v2.tsx");
+const controls = read("components/atlas/clock/clock-owner-controls.tsx");
+const ownerReader = read("components/atlas/clock/clock-owner-reader.ts");
+const workerReader = read("components/atlas/clock/clock-worker-reader.ts");
 const route = read("app/api/atlas/owner-day-task-time/route.ts");
 
 test("Clock exact starts are choreography truth carried through the shared Day sequence", () => {
@@ -23,21 +28,20 @@ test("Clock exact starts are choreography truth carried through the shared Day s
 });
 
 test("Clock moves only exact committed starts onto the hourly grid", () => {
-  assert.match(clock, /if \(item\.kind === "committed_task"\) return Boolean\(item\.plannedStartAt\)/);
-  assert.match(clock, /if \(item\.kind === "committed_task"\) return !item\.plannedStartAt/);
-  assert.match(clock, /data-clock-timed-task="true"/);
-  assert.match(clock, /data-clock-unplaced-today="true"/);
-  assert.match(clock, /itemExactTime/);
-  assert.match(clock, /suggestions: \[\]/);
+  assert.match(surface, /buildClockTaskRanges\(committed/);
+  assert.match(unplaced, /item\.kind === "committed_task" \? !item\.plannedStartAt/);
+  assert.match(timeline, /data-clock-timed-task="true"/);
+  assert.match(unplaced, /data-clock-unplaced-today="true"/);
+  assert.match(workerReader, /suggestions: \[\]/);
 });
 
 test("Owner can set, change, and remove a Clock time while Farm Hand remains read only", () => {
-  assert.match(clock, /type ClockRead = \{ sequence: AtlasDaySequence; canManage: boolean \}/);
-  assert.match(clock, /if \(ownerSequence\) return \{ sequence: ownerSequence, canManage: true \}/);
-  assert.match(clock, /canManage: false/);
-  assert.match(clock, /type="time"/);
-  assert.match(clock, /x-atlas-intent": "owner-clock-time-v1"/);
-  assert.match(clock, /saveTaskTime\(item\.taskId as string, null\)/);
+  assert.match(ownerReader, /readOwnerClockSequence/);
+  assert.match(surface, /ownerSequence\) return \{ sequence: ownerSequence, canManage: true \}/);
+  assert.match(surface, /canManage: false/);
+  assert.match(controls, /type="time"/);
+  assert.match(controls, /owner-clock-time-v1/);
+  assert.match(controls, /localTime: null/);
   assert.match(route, /owner_set_worker_day_task_time_api_v1/);
   assert.match(route, /request\.headers\.get\("x-atlas-intent"\)/);
 });
