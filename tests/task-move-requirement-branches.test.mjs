@@ -25,15 +25,17 @@ test("Task Focus reads the canonical Task Move assembly and keeps one worker gra
   assert.match(brief, /<TaskMoveSpine assembly=\{resolvedAssembly\} \/>/);
 });
 
-test("worker requirements retain quantities and state while hiding explanatory internals", () => {
+test("worker requirements retain quantities and state in the shared branch grammar while hiding explanatory internals", () => {
   assert.match(spine, /function compactRequirementLabel\(requirement: TaskMoveRequirement\)/);
   assert.match(spine, /return `\$\{quantity\} × \$\{label\}`/);
   assert.match(spine, /return `\$\{quantity\} \$\{readable\(requirement\.unit\)\}`/);
   assert.match(spine, /data-state=\{requirement.status\}/);
-  assert.match(spine, /requirementGlyph/);
+  assert.match(spine, /final \? "└──" : "├──"/);
+  assert.match(spine, /requirementStatusLabel/);
+  assert.match(spine, /Not yet confirmed/);
   assert.doesNotMatch(spine, /requirement\.note/);
   assert.doesNotMatch(spine, /requirement\.questions/);
-  assert.doesNotMatch(spine, /├──|└──/);
+  assert.doesNotMatch(spine, /requirementGlyph/);
 });
 
 test("execution instructions are visible compact steps instead of a prose drawer", () => {
