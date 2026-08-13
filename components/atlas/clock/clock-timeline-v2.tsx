@@ -65,7 +65,7 @@ export default function ClockTimelineV2(props: {
         const width = layout.laneCount === 1 ? "calc(100% - 69px)" : `calc((${available} / ${layout.laneCount}) - 4px)`;
         return <div className={styles.timedTask} style={{ top: offsetForMinute(layout.startMinute), height, left, width }} key={item.id} data-clock-timed-task="true" data-clock-planned-span={layout.span.minutes ? "true" : "false"} data-active={props.activeRange?.item.id === item.id ? "true" : "false"} data-conflict={layout.conflict ? "true" : "false"}>
           <Link href={item.taskId ? taskHref(item.taskId, props.dateIso) : `/clock?date=${props.dateIso}`}><small>{layout.span.minutes ? `${minuteLabel(layout.startMinute)}–${minuteLabel(layout.endMinute)}` : `${minuteLabel(layout.startMinute)} · Start only`}</small><strong>{item.title}</strong>{item.location ? <span>{item.location}</span> : null}{layout.conflict ? <span className={styles.conflictNote}>Overlaps another planned block</span> : null}</Link>
-          <ClockOwnerControls item={item} dateIso={props.dateIso} canManage={props.canManage} onChanged={props.onChanged} onError={props.onError} showTime />
+          <ClockOwnerControls item={item} dateIso={props.dateIso} canManage={props.canManage} onChanged={props.onChanged} onError={props.onError} showTime compact />
         </div>;
       })}
     </div>
