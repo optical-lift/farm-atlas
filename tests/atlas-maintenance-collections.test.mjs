@@ -51,7 +51,7 @@ test("Weeding remains a Tending destination while every released move is a canon
   assert.match(timeline, /atlas-day-task-entry/);
   assert.match(timeline, /atlas-day-task-card/);
   assert.match(timeline, /tendingTaskHref\(track, returnTo\)/);
-  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
+  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} assemblyLoading=\{assemblyLoading\} \/>/);
   assert.match(brief, /TaskMoveSpine/);
   assert.doesNotMatch(shell, /TaskDominionTrail|fetchTendingTaskContext/);
   assert.match(layout, /tending-task-timeline\.css/);

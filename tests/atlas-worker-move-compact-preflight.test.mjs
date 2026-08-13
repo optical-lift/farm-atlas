@@ -13,7 +13,8 @@ test("Farm Hand Task Move is visual-first and keeps explanatory internals out of
   assert.match(spine, /requirementSection/);
   assert.match(spine, /return requirement\.label\.toLowerCase\(\)\.includes\("tray"\) \? "Trays" : "Container"/);
   assert.match(spine, /requirementStatusLabel/);
-  assert.match(spine, /final \? "└──" : "├──"/);
+  assert.match(spine, /atlas-worker-move__requirements::before/);
+  assert.match(spine, /atlas-worker-move__requirement::before/);
   assert.match(spine, /return unconfirmedCapacity \? "Not yet confirmed" : "Check"/);
   assert.match(spine, /if \(status === "blocked"\) return "Blocked"/);
   assert.match(spine, /4 lit tray spots|lit tray spots/);
@@ -25,7 +26,8 @@ test("Farm Hand Task Move is visual-first and keeps explanatory internals out of
   assert.doesNotMatch(spine, /requirementGlyph/);
 
   assert.match(brief, /function VisibleMethod/);
-  assert.match(brief, /className="atlas-worker-method"/);
+  assert.match(brief, /className="atlas-worker-method atlas-task-trail-section"/);
+  assert.match(brief, /atlas-worker-method::before/);
   assert.match(brief, /const fallbackDetail = !lines\.length/);
   assert.doesNotMatch(brief, /<details className="atlas-worker-instructions">/);
   assert.doesNotMatch(brief, /<summary>Instructions<\/summary>/);

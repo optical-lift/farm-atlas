@@ -155,9 +155,41 @@ export default function TaskMoveSpine({ assembly }: Props) {
         .atlas-worker-move__section { margin-top:20px; }
         .atlas-worker-move__label { display:block; margin-bottom:8px; color:#8589a6; font-size:.64rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
         .atlas-worker-move__value { display:block; font-size:.96rem; line-height:1.3; }
-        .atlas-worker-move__requirements { display:grid; gap:12px; margin:22px 0 0; padding:0; list-style:none; }
-        .atlas-worker-move__requirement { display:grid; grid-template-columns:42px minmax(0,1fr) auto; gap:7px; align-items:start; color:#555766; }
-        .atlas-worker-move__branch { margin-left:-5px; padding-top:3px; color:#9a9cac; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.83rem; line-height:1.25; letter-spacing:-.08em; white-space:pre; }
+        .atlas-worker-move__requirements {
+          position:relative;
+          display:grid;
+          gap:13px;
+          margin:22px 0 0;
+          padding:0 0 4px 60px;
+          list-style:none;
+        }
+        .atlas-worker-move__requirements::before {
+          content:"";
+          position:absolute;
+          left:8px;
+          top:10px;
+          bottom:-23px;
+          width:1px;
+          background:rgba(86,89,112,.28);
+        }
+        .atlas-worker-move__requirement {
+          position:relative;
+          display:grid;
+          grid-template-columns:minmax(0,1fr) auto;
+          gap:7px;
+          align-items:start;
+          min-height:42px;
+          color:#555766;
+        }
+        .atlas-worker-move__requirement::before {
+          content:"";
+          position:absolute;
+          left:-52px;
+          top:10px;
+          width:42px;
+          height:1px;
+          background:rgba(86,89,112,.42);
+        }
         .atlas-worker-move__requirement-label { display:block; margin-bottom:3px; color:#8589a6; font-size:.62rem; font-weight:950; letter-spacing:.1em; text-transform:uppercase; }
         .atlas-worker-move__requirement-items { display:grid; gap:3px; margin:0; padding:0; list-style:none; }
         .atlas-worker-move__requirement-items strong { display:block; font-size:.88rem; line-height:1.32; }
@@ -168,19 +200,47 @@ export default function TaskMoveSpine({ assembly }: Props) {
         .atlas-worker-move__requirement[data-state="missing"] .atlas-worker-move__requirement-label,
         .atlas-worker-move__requirement[data-state="blocked"] .atlas-worker-move__requirement-items,
         .atlas-worker-move__requirement[data-state="missing"] .atlas-worker-move__requirement-items { color:#704d43; }
-        .atlas-worker-move__issue { display:grid; grid-template-columns:22px minmax(0,1fr); gap:8px; margin:10px 0 0; color:#704d43; font-size:.82rem; font-weight:760; }
-        .atlas-worker-move__flow { display:grid; gap:0; margin-top:22px; padding-left:28px; }
+        .atlas-worker-move__issue { display:grid; grid-template-columns:22px minmax(0,1fr); gap:8px; margin:10px 0 0 60px; color:#704d43; font-size:.82rem; font-weight:760; }
+        .atlas-worker-move__flow {
+          position:relative;
+          display:grid;
+          gap:0;
+          margin-top:22px;
+          padding-left:60px;
+        }
+        .atlas-worker-move__flow::before {
+          content:"";
+          position:absolute;
+          left:8px;
+          top:-22px;
+          bottom:-18px;
+          width:1px;
+          background:rgba(86,89,112,.28);
+        }
         .atlas-worker-move__step { position:relative; padding:0 0 22px; }
         .atlas-worker-move__step:last-child { padding-bottom:0; }
-        .atlas-worker-move__step:not(:last-child)::after { content:""; position:absolute; left:-20px; top:18px; bottom:0; width:1px; background:rgba(86,89,112,.28); }
-        .atlas-worker-move__dot { position:absolute; left:-28px; top:2px; width:16px; height:16px; display:grid; place-items:center; border:2px solid #6d7088; border-radius:50%; background:#fff; color:#6d7088; font-size:.58rem; font-weight:950; box-shadow:0 0 0 4px #fff; }
+        .atlas-worker-move__dot {
+          position:absolute;
+          z-index:2;
+          left:-60px;
+          top:2px;
+          width:16px;
+          height:16px;
+          display:grid;
+          place-items:center;
+          border:2px solid #6d7088;
+          border-radius:50%;
+          background:#fff;
+          color:#6d7088;
+          font-size:.58rem;
+          font-weight:950;
+          box-shadow:0 0 0 4px #fff;
+        }
         .atlas-worker-move__step[data-kind="action"] .atlas-worker-move__dot { background:#6d7088; }
         .atlas-worker-move__step-label { display:block; margin-bottom:4px; color:#8589a6; font-size:.64rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
         .atlas-worker-move__step strong { display:block; font-size:1.02rem; line-height:1.32; }
         @media (max-width:560px) {
           .atlas-worker-move { padding:20px 21px 16px; }
-          .atlas-worker-move__requirement { grid-template-columns:34px minmax(0,1fr) auto; gap:5px; }
-          .atlas-worker-move__branch { margin-left:-9px; }
           .atlas-worker-move__requirement-status { font-size:.64rem; }
         }
       `}</style>
@@ -200,13 +260,11 @@ export default function TaskMoveSpine({ assembly }: Props) {
 
       {requirementGroups.length ? (
         <ul className="atlas-worker-move__requirements" aria-label="What this work needs">
-          {requirementGroups.map(([label, requirements], index) => {
+          {requirementGroups.map(([label, requirements]) => {
             const status = groupStatus(requirements);
             const statusLabel = requirementStatusLabel(requirements);
-            const final = index === requirementGroups.length - 1;
             return (
               <li key={label} className="atlas-worker-move__requirement" data-state={status}>
-                <span className="atlas-worker-move__branch" aria-hidden="true">{final ? "└──" : "├──"}</span>
                 <div>
                   <span className="atlas-worker-move__requirement-label">{label}</span>
                   <ul className="atlas-worker-move__requirement-items">

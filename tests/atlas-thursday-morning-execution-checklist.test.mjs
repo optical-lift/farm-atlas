@@ -21,7 +21,7 @@ test("Thursday morning preparation opens as four themed tasks with visible check
   assert.match(canonical, /execution_checklist_template_key/);
   assert.match(detail, /AssignedTaskExecutionShell/);
   assert.match(detail, /methodInstrument=\{methodInstrument\}/);
-  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
+  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} assemblyLoading=\{assemblyLoading\} \/>/);
   assert.match(detail, /atlas-execution-checklist__section/);
   assert.match(detail, /execution_checklist_kicker/);
   assert.match(detail, /execution_checklist_title/);

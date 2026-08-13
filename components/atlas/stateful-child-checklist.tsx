@@ -97,46 +97,110 @@ export default function StatefulChildChecklist({
   }
 
   return (
-    <section className="atlas-stateful-children" aria-label={heading}>
+    <section className="atlas-stateful-children atlas-task-trail-section" aria-label={heading}>
       <style>{`
-        .atlas-stateful-children { margin:0 28px 20px; padding:16px 0 0; border-top:1px solid rgba(66,65,82,.11); color:#3d3e50; }
-        .atlas-stateful-children__heading { display:block; margin-bottom:10px; color:#777ca0; font-size:.66rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
-        .atlas-stateful-children__list { display:grid; gap:12px; margin:0; padding:0; list-style:none; }
-        .atlas-stateful-children__row { display:grid; grid-template-columns:42px minmax(0,1fr) auto; gap:7px; align-items:start; min-height:42px; color:#555766; }
-        .atlas-stateful-children__branch { margin-left:-5px; padding-top:3px; color:#9a9cac; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.83rem; line-height:1.25; letter-spacing:-.08em; white-space:pre; }
+        .atlas-stateful-children {
+          --atlas-task-trail-x:36px;
+          position:relative;
+          margin:0;
+          padding:17px 28px 8px;
+          border-top:1px solid rgba(66,65,82,.11);
+          color:#3d3e50;
+          background:#fff;
+        }
+        .atlas-stateful-children::before {
+          content:"";
+          position:absolute;
+          left:var(--atlas-task-trail-x);
+          top:-1px;
+          bottom:-1px;
+          width:1px;
+          background:rgba(86,89,112,.28);
+        }
+        .atlas-stateful-children__heading {
+          display:block;
+          margin:0 0 13px 28px;
+          color:#777ca0;
+          font-size:.66rem;
+          font-weight:950;
+          letter-spacing:.11em;
+          text-transform:uppercase;
+        }
+        .atlas-stateful-children__list { display:grid; gap:0; margin:0; padding:0; list-style:none; }
+        .atlas-stateful-children__row {
+          position:relative;
+          min-height:58px;
+          padding:1px 0 15px 60px;
+          color:#555766;
+        }
+        .atlas-stateful-children__row::before {
+          content:"";
+          position:absolute;
+          left:var(--atlas-task-trail-x);
+          top:10px;
+          width:27px;
+          height:1px;
+          background:rgba(86,89,112,.42);
+        }
+        .atlas-stateful-children__checkpoint {
+          position:absolute;
+          z-index:2;
+          left:calc(var(--atlas-task-trail-x) - 9px);
+          top:1px;
+          width:19px;
+          height:19px;
+          display:grid;
+          place-items:center;
+          border:2px solid #6d7088;
+          border-radius:50%;
+          padding:0;
+          background:#fff;
+          color:#fff;
+          font:inherit;
+          font-size:.62rem;
+          font-weight:950;
+          line-height:1;
+          box-shadow:0 0 0 4px #fff;
+        }
+        .atlas-stateful-children__checkpoint[data-state="done"] { background:#6d7088; }
+        .atlas-stateful-children__checkpoint:disabled { opacity:.5; }
         .atlas-stateful-children__body { min-width:0; }
         .atlas-stateful-children__body strong { display:block; font-size:.9rem; line-height:1.3; }
         .atlas-stateful-children__body p { margin:3px 0 0; color:#747582; font-size:.75rem; line-height:1.35; }
         .atlas-stateful-children__row.is-done .atlas-stateful-children__body strong { color:#696b76; text-decoration:line-through; text-decoration-thickness:1px; }
-        .atlas-stateful-children__action { margin-top:-2px; border:0; padding:4px 0 4px 9px; background:transparent; color:#675b8f; font:inherit; font-size:.72rem; font-weight:900; white-space:nowrap; text-align:right; }
-        .atlas-stateful-children__row.is-done .atlas-stateful-children__action { color:#72746e; }
-        .atlas-stateful-children__action:disabled { opacity:.48; }
-        .atlas-stateful-children__message { grid-column:2 / -1; margin:0; color:#865f4f; font-size:.72rem; font-weight:700; line-height:1.3; }
+        .atlas-stateful-children__message { margin:6px 0 0; color:#865f4f; font-size:.72rem; font-weight:700; line-height:1.3; }
         @media (max-width:560px) {
-          .atlas-stateful-children { margin:0 21px 18px; }
-          .atlas-stateful-children__row { grid-template-columns:34px minmax(0,1fr) auto; gap:5px; }
-          .atlas-stateful-children__branch { margin-left:-9px; }
-          .atlas-stateful-children__action { font-size:.68rem; }
+          .atlas-stateful-children { --atlas-task-trail-x:29px; padding:17px 21px 6px; }
+          .atlas-stateful-children__heading { margin-left:28px; }
+          .atlas-stateful-children__row { padding-left:54px; }
+          .atlas-stateful-children__row::before { width:24px; }
         }
       `}</style>
       <span className="atlas-stateful-children__heading">{heading}</span>
       <ul className="atlas-stateful-children__list">
-        {orderedTasks.map((task, index) => {
+        {orderedTasks.map((task) => {
           const done = isDone(task);
           const saving = savingId === task.task_id;
           const detail = rowDetail(task);
-          const final = index === orderedTasks.length - 1;
+          const accessibleAction = done ? `Reopen ${rowLabel(task)}` : `${actionLabel(task)}: ${rowLabel(task)}`;
           return (
             <li key={task.task_id} className={`atlas-stateful-children__row${done ? " is-done" : ""}`} data-stateful-child-task-id={task.task_id}>
-              <span className="atlas-stateful-children__branch" aria-hidden="true">{final ? "└──" : "├──"}</span>
+              <button
+                className="atlas-stateful-children__checkpoint"
+                data-state={done ? "done" : "open"}
+                type="button"
+                aria-label={accessibleAction}
+                title={accessibleAction}
+                disabled={Boolean(savingId)}
+                onClick={() => void toggle(task, done ? "open" : "done")}
+              >
+                {saving ? "…" : done ? "✓" : <span aria-hidden="true" />}
+              </button>
               <div className="atlas-stateful-children__body">
                 <strong>{rowLabel(task)}</strong>
                 {detail ? <p>{detail}</p> : null}
+                {message[task.task_id] ? <p className="atlas-stateful-children__message">{message[task.task_id]}</p> : null}
               </div>
-              <button className="atlas-stateful-children__action" type="button" disabled={Boolean(savingId)} onClick={() => void toggle(task, done ? "open" : "done")}>
-                {saving ? "Saving…" : done ? "Reopen" : actionLabel(task)}
-              </button>
-              {message[task.task_id] ? <p className="atlas-stateful-children__message">{message[task.task_id]}</p> : null}
             </li>
           );
         })}

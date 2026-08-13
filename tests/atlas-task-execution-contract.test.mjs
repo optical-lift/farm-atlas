@@ -25,8 +25,9 @@ test("assigned work has one visible compact Move plus visible execution facts an
   assert.doesNotMatch(move, />Done</);
   assert.doesNotMatch(move, />Right now</);
   assert.doesNotMatch(move, /Target held/);
-  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
+  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} assemblyLoading=\{assemblyLoading\} \/>/);
   assert.match(shell, /TaskPrimaryResultControls/);
+  assert.match(shell, /atlas-task-finish-node/);
   assert.doesNotMatch(shell, /TaskDominionTrail/);
   assert.doesNotMatch(shell, /taskConditionRailModel/);
   assert.equal(exists("components/atlas/dominion-assigned-task-detail.tsx"), false);

@@ -21,7 +21,7 @@ test("Task Move presents physical facts and action without manufacturing a redun
 
 test("Task Focus reads the canonical Task Move assembly and keeps one worker grammar", () => {
   assert.match(shell, /\/api\/atlas\/task-move\?taskId=/);
-  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
+  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} assemblyLoading=\{assemblyLoading\} \/>/);
   assert.match(brief, /<TaskMoveSpine assembly=\{resolvedAssembly\} \/>/);
 });
 
@@ -30,7 +30,8 @@ test("worker requirements retain quantities and state in the shared branch gramm
   assert.match(spine, /return `\$\{quantity\} × \$\{label\}`/);
   assert.match(spine, /return `\$\{quantity\} \$\{readable\(requirement\.unit\)\}`/);
   assert.match(spine, /data-state=\{requirement.status\}/);
-  assert.match(spine, /final \? "└──" : "├──"/);
+  assert.match(spine, /atlas-worker-move__requirements::before/);
+  assert.match(spine, /atlas-worker-move__requirement::before/);
   assert.match(spine, /requirementStatusLabel/);
   assert.match(spine, /Not yet confirmed/);
   assert.doesNotMatch(spine, /requirement\.note/);
@@ -38,10 +39,11 @@ test("worker requirements retain quantities and state in the shared branch gramm
   assert.doesNotMatch(spine, /requirementGlyph/);
 });
 
-test("execution instructions are visible compact steps instead of a prose drawer", () => {
+test("execution instructions are visible compact trail steps instead of a prose drawer", () => {
   assert.match(brief, /function VisibleMethod/);
-  assert.match(brief, /className="atlas-worker-method"/);
+  assert.match(brief, /className="atlas-worker-method atlas-task-trail-section"/);
   assert.match(brief, /className="atlas-worker-method__list"/);
+  assert.match(brief, /atlas-worker-method::before/);
   assert.match(brief, /fallbackDetail = !lines\.length/);
   assert.doesNotMatch(brief, /<details className="atlas-worker-instructions">/);
   assert.doesNotMatch(brief, /<summary>Instructions<\/summary>/);

@@ -21,7 +21,7 @@ test("focused work uses one compact Task Move execution grammar while linked Tra
   assert.doesNotMatch(layout, /import TaskFocusTendingTrail/);
   assert.doesNotMatch(layout, /^\s*<TaskFocusTendingTrail/m);
   assert.match(detail, /data-atlas-assigned-task-execution-shell="true"/);
-  assert.match(detail, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
+  assert.match(detail, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} assemblyLoading=\{assemblyLoading\} \/>/);
   assert.doesNotMatch(detail, /TaskDominionTrail/);
   assert.match(brief, /TaskMoveSpine/);
   assert.match(brief, /function VisibleMethod/);
@@ -34,6 +34,7 @@ test("focused work uses one compact Task Move execution grammar while linked Tra
   assert.doesNotMatch(move, /data-kind="current"/);
   assert.doesNotMatch(move, />Right now<\/span>/);
   assert.match(detail, /TaskPrimaryResultControls/);
+  assert.match(detail, /atlas-task-finish-node/);
   assert.match(results, /doneLabel = "Done"/);
   assert.match(results, />\s*Unfinished\s*</);
   assert.match(detail, /Partly done/);

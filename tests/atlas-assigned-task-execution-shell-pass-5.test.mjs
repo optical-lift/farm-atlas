@@ -27,7 +27,7 @@ test("the shell owns canonical Task Move blockers and gating while the brief own
 
   assert.match(shell, /\/api\/atlas\/task-move\?taskId=/);
   assert.match(shell, /assembly\?\.unresolved/);
-  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
+  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} assemblyLoading=\{assemblyLoading\} \/>/);
   assert.match(shell, /const canonicalDoneDisabled =/);
   assert.match(shell, /!assembly \|\|/);
   assert.match(shell, /assembly\.readiness\.status === "blocked"/);
@@ -37,6 +37,7 @@ test("the shell owns canonical Task Move blockers and gating while the brief own
 
   assert.match(brief, /assemblyControlled = assembly !== undefined/);
   assert.match(brief, /resolvedAssembly\?\.execution\.dueLabel/);
+  assert.match(brief, /StableTaskMoveLoading/);
   assert.match(brief, /atlas-worker-fallback__due/);
   assert.match(spine, /assembly\.execution\.dueLabel/);
   assert.match(spine, /data-state=\{requirement.status\}/);

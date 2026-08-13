@@ -16,7 +16,7 @@ test("the Weed task keeps its complete canonical action and bed name through the
   assert.match(focus, /AssignedTaskExecutionShell/);
   assert.match(focus, /task=\{task\}/);
   assert.doesNotMatch(focus, /instruction=|TaskDominionTrail/);
-  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} \/>/);
+  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} assemblyLoading=\{assemblyLoading\} \/>/);
   assert.match(brief, /TaskMoveSpine/);
   assert.match(migration, /NEW\.title := 'Weed ' \|\| v_object_label/);
   assert.match(migration, /'display_title', NEW\.title/);
