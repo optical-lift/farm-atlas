@@ -11,6 +11,7 @@ import type { TaskMoveAssembly } from "@/lib/atlas/task-move-assembly";
 type Props = {
   task?: AtlasTaskCard;
   assembly?: TaskMoveAssembly | null;
+  assemblyLoading?: boolean;
   doText?: string;
   placeText?: string;
   howLines?: string[];
@@ -63,28 +64,63 @@ function VisibleMethod({ label, how, details }: { label: string; how: string[]; 
   if (!lines.length && !fallbackDetail) return null;
 
   return (
-    <section className="atlas-worker-method" aria-label={label}>
+    <section className="atlas-worker-method atlas-task-trail-section" aria-label={label}>
       <style>{`
-        .atlas-worker-method { margin:0 28px 20px; padding:14px 0 0; border-top:1px solid rgba(66,65,82,.11); color:#3d3e50; }
-        .atlas-worker-method__label { display:block; margin-bottom:9px; color:#777ca0; font-size:.66rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
-        .atlas-worker-method__list { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
-        .atlas-worker-method__item { display:grid; grid-template-columns:17px minmax(0,1fr); gap:8px; align-items:start; font-size:.87rem; font-weight:720; line-height:1.35; }
-        .atlas-worker-method__mark { color:#767a98; font-weight:950; }
+        .atlas-worker-method {
+          --atlas-task-trail-x:36px;
+          position:relative;
+          margin:0;
+          padding:17px 28px 6px 88px;
+          border-top:1px solid rgba(66,65,82,.11);
+          color:#3d3e50;
+          background:#fff;
+        }
+        .atlas-worker-method::before {
+          content:"";
+          position:absolute;
+          left:var(--atlas-task-trail-x);
+          top:-1px;
+          bottom:-1px;
+          width:1px;
+          background:rgba(86,89,112,.28);
+        }
+        .atlas-worker-method__label { display:block; margin-bottom:12px; color:#777ca0; font-size:.66rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
+        .atlas-worker-method__list { display:grid; gap:0; margin:0; padding:0; list-style:none; }
+        .atlas-worker-method__item {
+          position:relative;
+          min-height:48px;
+          padding:0 0 13px;
+          font-size:.87rem;
+          font-weight:720;
+          line-height:1.35;
+        }
+        .atlas-worker-method__item::before,
+        .atlas-worker-method__fallback::before {
+          content:"";
+          position:absolute;
+          left:-52px;
+          top:9px;
+          width:42px;
+          height:1px;
+          background:rgba(86,89,112,.42);
+        }
+        .atlas-worker-method__fallback { position:relative; min-height:40px; padding:0 0 12px; }
         .atlas-worker-method p { margin:0; font-size:.87rem; font-weight:680; line-height:1.4; white-space:pre-line; }
-        @media (max-width:560px) { .atlas-worker-method { margin:0 21px 18px; } }
+        @media (max-width:560px) {
+          .atlas-worker-method { --atlas-task-trail-x:29px; padding:17px 21px 4px 81px; }
+        }
       `}</style>
       <span className="atlas-worker-method__label">{label}</span>
       {lines.length ? (
         <ul className="atlas-worker-method__list">
           {lines.map((line, index) => (
             <li className="atlas-worker-method__item" key={`${line}-${index}`}>
-              <span className="atlas-worker-method__mark" aria-hidden="true">—</span>
               <span>{line}</span>
             </li>
           ))}
         </ul>
       ) : null}
-      {fallbackDetail ? <p>{fallbackDetail}</p> : null}
+      {fallbackDetail ? <div className="atlas-worker-method__fallback"><p>{fallbackDetail}</p></div> : null}
     </section>
   );
 }
@@ -92,18 +128,79 @@ function VisibleMethod({ label, how, details }: { label: string; how: string[]; 
 function VisibleFacts({ label, lines }: { label: string; lines: string[] }) {
   if (!lines.length) return null;
   return (
-    <section className="atlas-worker-facts" aria-label={label}>
+    <section className="atlas-worker-facts atlas-task-trail-section" aria-label={label}>
       <style>{`
-        .atlas-worker-facts { margin:0 28px 20px; padding:14px 0 0; border-top:1px solid rgba(66,65,82,.11); color:#3d3e50; }
-        .atlas-worker-facts__label { display:block; margin-bottom:9px; color:#777ca0; font-size:.66rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
-        .atlas-worker-facts__list { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
-        .atlas-worker-facts__item { font-size:.82rem; font-weight:710; line-height:1.35; color:#5a5c6a; }
-        @media (max-width:560px) { .atlas-worker-facts { margin:0 21px 18px; } }
+        .atlas-worker-facts {
+          --atlas-task-trail-x:36px;
+          position:relative;
+          margin:0;
+          padding:17px 28px 6px 88px;
+          border-top:1px solid rgba(66,65,82,.11);
+          color:#3d3e50;
+          background:#fff;
+        }
+        .atlas-worker-facts::before {
+          content:"";
+          position:absolute;
+          left:var(--atlas-task-trail-x);
+          top:-1px;
+          bottom:-1px;
+          width:1px;
+          background:rgba(86,89,112,.28);
+        }
+        .atlas-worker-facts__label { display:block; margin-bottom:11px; color:#777ca0; font-size:.66rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
+        .atlas-worker-facts__list { display:grid; gap:0; margin:0; padding:0; list-style:none; }
+        .atlas-worker-facts__item {
+          position:relative;
+          min-height:42px;
+          padding:0 0 11px;
+          font-size:.82rem;
+          font-weight:710;
+          line-height:1.35;
+          color:#5a5c6a;
+        }
+        .atlas-worker-facts__item::before {
+          content:"";
+          position:absolute;
+          left:-52px;
+          top:8px;
+          width:42px;
+          height:1px;
+          background:rgba(86,89,112,.42);
+        }
+        @media (max-width:560px) {
+          .atlas-worker-facts { --atlas-task-trail-x:29px; padding:17px 21px 4px 81px; }
+        }
       `}</style>
       <span className="atlas-worker-facts__label">{label}</span>
       <ul className="atlas-worker-facts__list">
         {lines.map((line, index) => <li className="atlas-worker-facts__item" key={`${line}-${index}`}>{line}</li>)}
       </ul>
+    </section>
+  );
+}
+
+function StableTaskMoveLoading({ task, place, due }: { task?: AtlasTaskCard; place: string; due: string | null }) {
+  const action = task ? atlasActionForTask(task) : "Task";
+  const title = metadataText(task, "display_subject") || task?.title || "Loading task";
+  return (
+    <section className="atlas-task-execution-brief atlas-task-execution-brief--human" aria-label="Loading task details" aria-busy="true">
+      <style>{`
+        .atlas-worker-loading { margin:0; padding:22px 28px 20px; min-height:210px; background:#fff; color:#303145; }
+        .atlas-worker-loading__place { margin:0 0 6px; color:#777ca0; font-size:.67rem; font-weight:920; letter-spacing:.11em; text-transform:uppercase; }
+        .atlas-worker-loading h1 { margin:0; font-size:clamp(1.9rem,6vw,2.7rem); line-height:1.02; letter-spacing:-.035em; }
+        .atlas-worker-loading__due { display:block; margin-top:8px; color:#6b6d7b; font-size:.75rem; font-weight:780; }
+        .atlas-worker-loading__trail { position:relative; height:74px; margin-top:24px; }
+        .atlas-worker-loading__trail::before { content:""; position:absolute; left:8px; top:0; bottom:0; width:1px; background:rgba(86,89,112,.16); }
+        .atlas-worker-loading__trail::after { content:""; position:absolute; left:8px; top:12px; width:42px; height:1px; background:rgba(86,89,112,.16); }
+        @media (max-width:560px) { .atlas-worker-loading { padding:20px 21px 18px; } }
+      `}</style>
+      <section className="atlas-worker-loading">
+        <p className="atlas-worker-loading__place">{place} · {action}</p>
+        <h1>{title}</h1>
+        {due ? <span className="atlas-worker-loading__due">{due}</span> : null}
+        <div className="atlas-worker-loading__trail" aria-hidden="true" />
+      </section>
     </section>
   );
 }
@@ -117,6 +214,7 @@ function stripLeadingAction(action: string, text: string) {
 export default function TaskExecutionBrief({
   task,
   assembly,
+  assemblyLoading = false,
   doText,
   placeText,
   howLines,
@@ -127,19 +225,23 @@ export default function TaskExecutionBrief({
   const model = task ? taskExecutionModel(task) : null;
   const assemblyControlled = assembly !== undefined;
   const [resolvedAssembly, setResolvedAssembly] = useState<TaskMoveAssembly | null>(() => presentationAssembly(assembly ?? null, task));
+  const [selfLoading, setSelfLoading] = useState(!assemblyControlled && Boolean(task?.task_id));
 
   useEffect(() => {
     if (assemblyControlled) {
       setResolvedAssembly(presentationAssembly(assembly ?? null, task));
+      setSelfLoading(false);
       return;
     }
     if (!task?.task_id) {
       setResolvedAssembly(null);
+      setSelfLoading(false);
       return;
     }
 
     const controller = new AbortController();
     setResolvedAssembly(null);
+    setSelfLoading(true);
 
     void fetch(`/api/atlas/task-move?taskId=${encodeURIComponent(task.task_id)}`, {
       method: "GET",
@@ -158,6 +260,9 @@ export default function TaskExecutionBrief({
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setSelfLoading(false);
       });
 
     return () => controller.abort();
@@ -182,6 +287,10 @@ export default function TaskExecutionBrief({
   const directDetailLines = metadataLines(task, "detail_lines");
   const detailLines = directDetailLines.length ? directDetailLines : metadataLines(task, "projection_detail_lines");
   const resultLines = metadataLines(task, "worker_result_lines");
+
+  if (assemblyLoading || selfLoading) {
+    return <StableTaskMoveLoading task={task} place={resolvedPlace} due={resolvedDue} />;
+  }
 
   if (resolvedAssembly) {
     return (
