@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { AtlasDaySequenceItem, AtlasDaySequenceWindow } from "@/lib/atlas/day-sequence";
+import { atlasTimingClassLabel } from "@/lib/atlas/timing-mobility";
 
 import ClockOwnerControls from "./clock-owner-controls";
 import styles from "./clock-surface-v2.module.css";
@@ -37,7 +38,7 @@ export default function ClockUnplacedV2(props: {
       {unplaced.map((item, index) => {
         const previous = unplaced[index - 1];
         const showWindow = item.dayWindow && (!previous || previous.dayWindow !== item.dayWindow);
-        return <div key={item.id}>{showWindow ? <div className={styles.window}>{windowLabels[item.dayWindow as AtlasDaySequenceWindow]}</div> : null}{item.kind === "committed_task" ? <div className={styles.taskShell} data-complete={item.status === "done" || item.status === "completed" ? "true" : "false"}><Link className={styles.task} href={item.taskId ? taskHref(item.taskId, props.dateIso) : `/clock?date=${props.dateIso}`}><small>{item.automatic ? "Committed · automatic" : "Committed"}{minutesLabel(item.estimatedMinutes) ? ` · ${minutesLabel(item.estimatedMinutes)}` : ""}</small><strong>{item.title}</strong>{item.location ? <span>{item.location}</span> : null}</Link><ClockOwnerControls item={item} dateIso={props.dateIso} canManage={props.canManage} onChanged={props.onChanged} onError={props.onError} showTime /></div> : item.kind === "cue" ? <div className={styles.sequenceCue}><small>Cue · {item.anchorKind.replaceAll("_", " ")}</small><strong>{item.title}</strong></div> : null}</div>;
+        return <div key={item.id}>{showWindow ? <div className={styles.window}>{windowLabels[item.dayWindow as AtlasDaySequenceWindow]}</div> : null}{item.kind === "committed_task" ? <div className={styles.taskShell} data-complete={item.status === "done" || item.status === "completed" ? "true" : "false"} data-timing-class={item.mobility.timingClass}><Link className={styles.task} href={item.taskId ? taskHref(item.taskId, props.dateIso) : `/clock?date=${props.dateIso}`}><small>{item.automatic ? "Committed · automatic" : "Committed"}{minutesLabel(item.estimatedMinutes) ? ` · ${minutesLabel(item.estimatedMinutes)}` : ""}</small><span className={styles.mobility} title={item.mobility.placementReason}>{atlasTimingClassLabel(item.mobility)}</span><strong>{item.title}</strong>{item.location ? <span>{item.location}</span> : null}</Link><ClockOwnerControls item={item} dateIso={props.dateIso} canManage={props.canManage} onChanged={props.onChanged} onError={props.onError} showTime /></div> : item.kind === "cue" ? <div className={styles.sequenceCue} data-timing-class={item.mobility.timingClass}><small>Cue · {item.anchorKind.replaceAll("_", " ")} · {atlasTimingClassLabel(item.mobility)}</small><strong>{item.title}</strong></div> : null}</div>;
       })}
     </div>
   </section>;
