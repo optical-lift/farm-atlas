@@ -400,8 +400,8 @@ export default function AssignedTaskExecutionShell({
           <article className="atlas-task-page-active atlas-task-ticket-card atlas-assigned-task-execution-card">
             <TaskExecutionBrief task={task} assembly={assembly} assemblyLoading={assemblyLoading} />
             {blockers.length ? (
-              <section className="atlas-human-task-blocker" data-atlas-task-blocker="true" aria-label="What is blocking this task">
-                <strong>This can&apos;t move yet.</strong>
+              <section className="atlas-human-task-blocker" data-atlas-task-blocker="true" aria-label="Blocked markers on this task">
+                <strong>Marked blocked — you can still finish this task.</strong>
                 <ul>{blockers.map((item, index) => <li key={`${item.kind}-${item.label}-${index}`}>{item.label}</li>)}</ul>
               </section>
             ) : null}
