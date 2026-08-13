@@ -14,6 +14,12 @@ export type AtlasClockTaskRange = {
   span: AtlasClockSpan;
 };
 
+export type AtlasClockTaskLayout = AtlasClockTaskRange & {
+  laneIndex: number;
+  laneCount: number;
+  conflict: boolean;
+};
+
 export function clockLocalMinuteOfDay(value: string | null, timeZone = "America/Chicago") {
   if (!value) return null;
   const date = new Date(value);
@@ -78,6 +84,52 @@ export function clockConflictTaskIds(ranges: AtlasClockTaskRange[]) {
     }
   }
   return conflicts;
+}
+
+export function layoutClockTaskRanges(ranges: AtlasClockTaskRange[]): AtlasClockTaskLayout[] {
+  const result: AtlasClockTaskLayout[] = [];
+  let index = 0;
+
+  while (index < ranges.length) {
+    const first = ranges[index];
+    if (!first.span.minutes) {
+      result.push({ ...first, laneIndex: 0, laneCount: 1, conflict: false });
+      index += 1;
+      continue;
+    }
+
+    const cluster: AtlasClockTaskRange[] = [first];
+    let clusterEnd = first.endMinute;
+    let cursor = index + 1;
+    while (cursor < ranges.length) {
+      const candidate = ranges[cursor];
+      if (!candidate.span.minutes || candidate.startMinute >= clusterEnd) break;
+      cluster.push(candidate);
+      clusterEnd = Math.max(clusterEnd, candidate.endMinute);
+      cursor += 1;
+    }
+
+    if (cluster.length === 1) {
+      result.push({ ...first, laneIndex: 0, laneCount: 1, conflict: false });
+      index += 1;
+      continue;
+    }
+
+    const laneEnds: number[] = [];
+    const assigned = cluster.map((range) => {
+      let laneIndex = laneEnds.findIndex((endMinute) => endMinute <= range.startMinute);
+      if (laneIndex < 0) laneIndex = laneEnds.length;
+      laneEnds[laneIndex] = range.endMinute;
+      return { range, laneIndex };
+    });
+    const laneCount = Math.max(1, laneEnds.length);
+    for (const entry of assigned) {
+      result.push({ ...entry.range, laneIndex: entry.laneIndex, laneCount, conflict: laneCount > 1 });
+    }
+    index = cursor;
+  }
+
+  return result.sort((left, right) => left.startMinute - right.startMinute || left.item.sequenceOrder - right.item.sequenceOrder);
 }
 
 function unfinished(item: AtlasCommittedClockItem) {
