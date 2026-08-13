@@ -7,6 +7,7 @@ import {
 } from "@/lib/atlas/day-sequence";
 import { atlasFarmDateIso } from "@/lib/atlas/farm-day";
 import { atlasTaskDisplay } from "@/lib/atlas/task-display";
+import { deriveAtlasTimingMobility } from "@/lib/atlas/timing-mobility";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasWorkOrderAnchorForTask, atlasWorkOrderNumber } from "@/lib/atlas/work-order";
 
@@ -33,6 +34,7 @@ function metadataMinutes(task: AtlasTaskCard) {
 
 function planRow(task: AtlasTaskCard): AtlasDaySequencePlanRowInput {
   const display = atlasTaskDisplay(task);
+  const location = task.zone_label || display.location || null;
   return {
     id: `clock:${task.task_id}`,
     kind: "real",
@@ -42,12 +44,13 @@ function planRow(task: AtlasTaskCard): AtlasDaySequencePlanRowInput {
     title: display.title,
     note: display.detail || task.note,
     status: task.status,
-    location: task.zone_label || display.location || null,
+    location,
     expectedActiveMinutes: metadataMinutes(task),
     dayWindow: dayWindowForTask(task),
     workOrderNumber: atlasWorkOrderNumber(task),
     automatic: false,
     requiresOwnerApproval: false,
+    mobility: deriveAtlasTimingMobility({ metadata: task.metadata, location, potential: false }),
   };
 }
 
