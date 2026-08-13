@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type Choice = { value: string; label: string };
 type Question = {
@@ -35,10 +35,6 @@ type ChoreographyResponse = {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PREVIEW_DISMISS_STORAGE = "atlas:owner-cue-preview-dismissed:v1";
 
-function validDate(value: string | null) {
-  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
-}
-
 function centralDateIso() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Chicago",
@@ -46,21 +42,6 @@ function centralDateIso() {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-}
-
-function routeDate(searchParams: URLSearchParams) {
-  const direct = searchParams.get("date");
-  if (validDate(direct)) return direct as string;
-  const returnTo = searchParams.get("returnTo");
-  if (returnTo?.startsWith("/")) {
-    try {
-      const nested = new URL(returnTo, "https://atlas.local").searchParams.get("date");
-      if (validDate(nested)) return nested as string;
-    } catch {
-      // Fall through to the farm's current date.
-    }
-  }
-  return centralDateIso();
 }
 
 function object(value: unknown): Record<string, unknown> | null {
@@ -133,8 +114,10 @@ function storedPreviewDismissals() {
 export default function GlobalDayCueDelivery() {
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const dateIso = useMemo(() => pathname === "/login" ? null : routeDate(searchParams), [pathname, searchParams]);
+  // Automatic app-level cues belong to the farm's real service day. Browsing
+  // tomorrow, last week, or a task whose returnTo contains another date is only
+  // inspection and must never summon that browsed day's cue.
+  const dateIso = useMemo(() => pathname === "/login" ? null : centralDateIso(), [pathname]);
   const [response, setResponse] = useState<ChoreographyResponse | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
