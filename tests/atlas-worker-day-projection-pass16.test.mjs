@@ -5,6 +5,7 @@ import test from "node:test";
 function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url), "utf8"); }
 
 const projection = read("lib/atlas/day-projection.ts");
+const projectionClient = read("lib/atlas/worker-day-projection-client.ts");
 const sequenceServer = read("lib/atlas/worker-day-sequence-server.ts");
 const ownerReader = read("components/atlas/clock/clock-owner-reader.ts");
 const workerReader = read("components/atlas/clock/clock-worker-reader.ts");
@@ -25,7 +26,7 @@ test("projection identity preserves the role lens instead of collapsing Owner an
   assert.match(projection, /"operator_lens" \| "owner_direct" \| "worker_self"/);
   assert.match(projection, /lens: input\.lens/);
   assert.match(sequenceServer, /lens: planResult\.target\.source/);
-  assert.match(workerReader, /lens: target\.source/);
+  assert.match(projectionClient, /lens: target\.source/);
 });
 
 test("projection revisions are deterministic fingerprints of identity plus sequence state", () => {
@@ -43,21 +44,20 @@ test("the owner worker-day read returns the projection envelope while preserving
   assert.match(sequenceServer, /projection: null, sequence: null/);
 });
 
-test("Owner and Farm Hand Clock readers converge on the same projection contract", () => {
-  assert.match(ownerReader, /AtlasWorkerDayProjection/);
-  assert.match(ownerReader, /readOwnerClockProjection/);
-  assert.match(ownerReader, /body\.projection/);
-  assert.match(workerReader, /buildAtlasWorkerDayProjection/);
-  assert.match(workerReader, /readWorkerClockProjection/);
-  assert.match(workerReader, /target\?\.farmId/);
-  assert.match(workerReader, /target\.membershipId/);
+test("Owner and Farm Hand reads converge on the shared projection client", () => {
+  assert.match(projectionClient, /readOwnerWorkerDayProjection/);
+  assert.match(projectionClient, /body\.projection/);
+  assert.match(projectionClient, /readWorkerSelfDayProjection/);
+  assert.match(projectionClient, /buildAtlasWorkerDayProjection/);
+  assert.match(projectionClient, /target\?\.farmId/);
+  assert.match(projectionClient, /target\.membershipId/);
+  assert.match(ownerReader, /readOwnerWorkerDayProjection/);
+  assert.match(workerReader, /readWorkerSelfDayProjection/);
 });
 
-test("Clock stores the projection as its loaded environment and derives sequence from it", () => {
-  assert.match(orchestrator, /useState<AtlasWorkerDayProjection\|null>/);
+test("Clock derives its sequence from the projection environment without a second sequence state", () => {
+  assert.match(orchestrator, /useAtlasWorkerDayProjection\(dateIso\)/);
   assert.match(orchestrator, /const sequence=projection\?\.sequence\?\?null/);
-  assert.match(orchestrator, /readOwnerClockProjection/);
-  assert.match(orchestrator, /readWorkerClockProjection/);
-  assert.match(orchestrator, /setProjection\(value\.projection\)/);
   assert.doesNotMatch(orchestrator, /setSequence\(/);
+  assert.doesNotMatch(orchestrator, /useState<AtlasWorkerDayProjection\|null>/);
 });
