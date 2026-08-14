@@ -1,4 +1,5 @@
 import type { AtlasDayReservationKind } from "@/lib/atlas/day-reservations";
+import { dispatchAtlasWorkerDayRuntimeInvalidation } from "@/lib/atlas/runtime-events";
 
 export type AtlasFixedRoutine = {
   routineId: string;
@@ -93,7 +94,11 @@ export async function readAtlasFixedRoutines(): Promise<AtlasFixedRoutineReadRes
   return result;
 }
 
-/** Canonical fixed-routine source mutation transport. Worker Day reservations remain the dated occupancy truth. */
+/**
+ * Canonical fixed-routine source mutation transport.
+ * Source edits may change many Worker Days, so Atlas does not fabricate a multi-day optimistic reservation set.
+ * After the server commit succeeds, invalidate the runtime cache and let each dated projection reconcile normally.
+ */
 export async function commitAtlasFixedRoutineCommand(command: AtlasFixedRoutineCommand): Promise<AtlasFixedRoutineCommandResponse> {
   const body: Record<string, unknown> = {
     operation: commandOperation(command),
@@ -136,5 +141,6 @@ export async function commitAtlasFixedRoutineCommand(command: AtlasFixedRoutineC
   });
   const result = await response.json() as AtlasFixedRoutineCommandResponse | { ok?: false; error?: string };
   if (!response.ok || result.ok !== true) throw new Error(responseError(result, "Atlas could not update this repeating fixed time."));
+  dispatchAtlasWorkerDayRuntimeInvalidation();
   return result;
 }
