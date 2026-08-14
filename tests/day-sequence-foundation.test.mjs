@@ -48,9 +48,9 @@ test("the sequence reader combines existing plan and target-scoped choreography 
   assert.doesNotMatch(sequenceServer, /\.from\(/);
 });
 
-test("the Day sequence API is private read-only infrastructure for Day and future Clock", () => {
-  assert.match(route, /worker-day-sequence-v1/);
-  assert.match(route, /readOwnerWorkerDaySequence/);
+test("the Day sequence API is private role-aware read-only infrastructure for Day and Clock", () => {
+  assert.match(route, /worker-day-sequence-v2/);
+  assert.match(route, /readWorkerDaySequence/);
   assert.match(route, /export async function GET/);
   assert.doesNotMatch(route, /export async function POST/);
   assert.doesNotMatch(route, /export async function PATCH/);
