@@ -67,8 +67,8 @@ test("Clock consumes projection reservations as blocking spans without convertin
   assert.match(orchestrator, /buildAtlasClockReservations\(\{timedCues,commitments,timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE\}\)/);
   assert.match(orchestrator, /buildAtlasClockProposal\(committed,\{reservations:dayReservations\}\)/);
   assert.match(timeline, /ClockReservationBlock/);
+  assert.match(planningTimeline, /ClockReservationBlock/);
   assert.match(reservationBlock, /data-clock-non-task="true"/);
-  assert.match(planningTimeline, /data-clock-non-task="true"/);
   assert.match(reservationBlock, /data-clock-reservation-source=\{reservation\.source\}/);
   assert.doesNotMatch(clockReservations, /committed_task/);
 });
