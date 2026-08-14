@@ -22,8 +22,8 @@ jobs:
           npm test > atlas-test.log 2>&1
           status=$?
           if [ "$status" -ne 0 ]; then
-            message="$(tail -n 120 atlas-test.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g' | cut -c1-6000)"
-            echo "::error title=Pass15 test failure::$message"
+            message="$(grep -B 4 -A 18 'not ok' atlas-test.log | head -n 100 | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g' | cut -c1-6000)"
+            echo "::error title=Failing Atlas tests::$message"
             exit "$status"
           fi
           tail -n 20 atlas-test.log
