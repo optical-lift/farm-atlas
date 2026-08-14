@@ -1,3 +1,5 @@
+import { dispatchAtlasWorkerDayRuntimeInvalidation } from "@/lib/atlas/runtime-events";
+
 export type AtlasTaskTransition =
   | "done"
   | "partial"
@@ -168,6 +170,9 @@ export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest)
   });
   const data = await response.json() as AtlasTaskTransitionResponse;
   if (!response.ok || !data.ok) throw new Error(taskTransitionError(data));
+
+  // Canonical mutation truth is already committed. This only expires derived runtime reads.
+  dispatchAtlasWorkerDayRuntimeInvalidation();
 
   if (input.transition === "done" || input.transition === "checklist_done") {
     rememberDependencyReleaseFlash(data);
