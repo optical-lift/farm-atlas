@@ -89,3 +89,9 @@ export async function readWorkerClockProjection(dateIso: string) {
     sequence,
   });
 }
+
+// Compatibility seam for callers that still need the sequence while Clock migrates to projections.
+export async function readWorkerClockSequence(dateIso: string) {
+  const projection = await readWorkerClockProjection(dateIso);
+  return projection.sequence;
+}
