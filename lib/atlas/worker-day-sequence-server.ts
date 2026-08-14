@@ -2,6 +2,7 @@ import "server-only";
 
 import { assembleWorkerDaySequence } from "@/lib/atlas/day-sequence";
 import { readOwnerWorkerDayChoreography } from "@/lib/atlas/day-choreography-server";
+import { buildAtlasWorkerDayProjection } from "@/lib/atlas/day-projection";
 import { readOwnerWorkerDayPlan } from "@/lib/atlas/worker-day-plan-server";
 
 function validDateIso(value: string) {
@@ -13,13 +14,13 @@ export async function readOwnerWorkerDaySequence(dateIso: string) {
   if (!validDateIso(dateIso)) throw new Error("A valid YYYY-MM-DD worker day is required.");
   const planResult = await readOwnerWorkerDayPlan(dateIso);
   if (!planResult.active || !planResult.plan || !planResult.target) {
-    return { active: false as const, operatorLabel: planResult.operatorLabel, target: null, sequence: null };
+    return { active: false as const, operatorLabel: planResult.operatorLabel, target: null, projection: null, sequence: null };
   }
   const choreographyResult = await readOwnerWorkerDayChoreography(dateIso);
   const choreography = choreographyResult.active ? choreographyResult.choreography : null;
   const sameTarget = Boolean(choreographyResult.active && choreographyResult.target?.farmId === planResult.target.farmId && choreographyResult.target?.membershipId === planResult.target.membershipId);
   const plan = planResult.plan;
-  const sequence = assembleWorkerDaySequence({
+  const assembled = assembleWorkerDaySequence({
     serviceDate: plan.serviceDate || dateIso,
     realWork: plan.realWork,
     automaticWork: plan.automaticWork,
@@ -27,19 +28,28 @@ export async function readOwnerWorkerDaySequence(dateIso: string) {
     placements: sameTarget ? (choreography?.placements ?? []) : [],
     cues: sameTarget ? (choreography?.cues ?? []) : [],
   });
+  const sequence = {
+    ...assembled,
+    farmId: plan.farmId,
+    membershipId: plan.membershipId,
+    paidTargetMinutes: plan.paidTargetMinutes,
+    committedPaidMinutes: plan.committedPaidMinutes,
+    automaticPaidMinutes: plan.automaticPaidMinutes,
+    remainingPaidMinutes: plan.remainingPaidMinutes,
+    warnings: plan.warnings,
+  };
+  const projection = buildAtlasWorkerDayProjection({
+    farmId: plan.farmId,
+    membershipId: plan.membershipId,
+    serviceDate: sequence.serviceDate,
+    lens: planResult.target.source,
+    sequence,
+  });
   return {
     active: true as const,
     operatorLabel: planResult.operatorLabel,
     target: planResult.target,
-    sequence: {
-      ...sequence,
-      farmId: plan.farmId,
-      membershipId: plan.membershipId,
-      paidTargetMinutes: plan.paidTargetMinutes,
-      committedPaidMinutes: plan.committedPaidMinutes,
-      automaticPaidMinutes: plan.automaticPaidMinutes,
-      remainingPaidMinutes: plan.remainingPaidMinutes,
-      warnings: plan.warnings,
-    },
+    projection,
+    sequence: projection.sequence,
   };
 }
