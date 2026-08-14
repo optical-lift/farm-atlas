@@ -18,6 +18,31 @@ function validDateIso(value: string) {
     && !Number.isNaN(new Date(`${value}T12:00:00`).getTime());
 }
 
+type WorkerDaySequenceTiming = {
+  dateIso: string;
+  role: "owner" | "farm_hand" | "inactive" | "unknown";
+  sessionMs: number;
+  planMs: number;
+  choreographyMs: number;
+  taskCardsMs: number;
+  assemblyMs: number;
+  totalMs: number;
+};
+
+function nowMs() {
+  return performance.now();
+}
+
+function elapsedMs(startedAt: number) {
+  return Math.round((nowMs() - startedAt) * 10) / 10;
+}
+
+async function measured<T>(read: () => Promise<T>) {
+  const startedAt = nowMs();
+  const value = await read();
+  return { value, ms: elapsedMs(startedAt) };
+}
+
 function workerSelfTarget(session: AtlasSession): AtlasDayChoreographyTarget | null {
   const activeWorker = session.activeFarmId
     ? session.memberships.find((membership) => membership.farmId === session.activeFarmId && membership.role === "farm_hand")
@@ -85,11 +110,17 @@ function assembleProjection(input: {
   };
 }
 
-export async function readOwnerWorkerDaySequence(dateIso: string, session?: AtlasSession) {
+export async function readOwnerWorkerDaySequence(
+  dateIso: string,
+  session?: AtlasSession,
+  timing?: WorkerDaySequenceTiming,
+) {
   if (!validDateIso(dateIso)) throw new Error("A valid YYYY-MM-DD worker day is required.");
-  const planResult = session
-    ? await readOwnerWorkerDayPlanForSession(dateIso, session)
-    : await readOwnerWorkerDayPlan(dateIso);
+  const planRead = await measured(() => session
+    ? readOwnerWorkerDayPlanForSession(dateIso, session)
+    : readOwnerWorkerDayPlan(dateIso));
+  if (timing) timing.planMs = planRead.ms;
+  const planResult = planRead.value;
   if (!planResult.active || !planResult.plan || !planResult.target) {
     return {
       active: false as const,
@@ -103,68 +134,110 @@ export async function readOwnerWorkerDaySequence(dateIso: string, session?: Atla
   }
 
   const plan = planResult.plan;
-  const [choreographyResult, taskCards] = await Promise.all([
-    readWorkerDayChoreographyForTarget(dateIso, planResult.target),
-    readWorkerDayOperationalTaskCards(plan),
+  const [choreographyRead, taskCardsRead] = await Promise.all([
+    measured(() => readWorkerDayChoreographyForTarget(dateIso, planResult.target)),
+    measured(() => readWorkerDayOperationalTaskCards(plan)),
   ]);
-  return assembleProjection({
+  if (timing) {
+    timing.choreographyMs = choreographyRead.ms;
+    timing.taskCardsMs = taskCardsRead.ms;
+  }
+  const assemblyStartedAt = nowMs();
+  const result = assembleProjection({
     dateIso,
     plan,
     target: planResult.target,
     operatorLabel: planResult.operatorLabel,
-    choreographyResult,
-    taskCards,
+    choreographyResult: choreographyRead.value,
+    taskCards: taskCardsRead.value,
     canManage: true,
   });
+  if (timing) timing.assemblyMs = elapsedMs(assemblyStartedAt);
+  return result;
 }
 
-async function readWorkerSelfDaySequence(dateIso: string, target: AtlasDayChoreographyTarget) {
-  const [plan, choreographyResult] = await Promise.all([
-    readWorkerSelfDayPlanForTarget(dateIso, target),
-    readWorkerDayChoreographyForTarget(dateIso, target),
+async function readWorkerSelfDaySequence(
+  dateIso: string,
+  target: AtlasDayChoreographyTarget,
+  timing?: WorkerDaySequenceTiming,
+) {
+  const [planRead, choreographyRead] = await Promise.all([
+    measured(() => readWorkerSelfDayPlanForTarget(dateIso, target)),
+    measured(() => readWorkerDayChoreographyForTarget(dateIso, target)),
   ]);
-  const taskCards = await readWorkerDayOperationalTaskCards(plan, { includeMoveContext: false });
-  return assembleProjection({
+  if (timing) {
+    timing.planMs = planRead.ms;
+    timing.choreographyMs = choreographyRead.ms;
+  }
+  const taskCardsRead = await measured(() => readWorkerDayOperationalTaskCards(planRead.value, { includeMoveContext: false }));
+  if (timing) timing.taskCardsMs = taskCardsRead.ms;
+  const assemblyStartedAt = nowMs();
+  const result = assembleProjection({
     dateIso,
-    plan,
+    plan: planRead.value,
     target,
     operatorLabel: target.displayName,
-    choreographyResult,
-    taskCards,
+    choreographyResult: choreographyRead.value,
+    taskCards: taskCardsRead.value,
     canManage: false,
   });
+  if (timing) timing.assemblyMs = elapsedMs(assemblyStartedAt);
+  return result;
 }
 
 export async function readWorkerDaySequence(dateIso: string) {
   if (!validDateIso(dateIso)) throw new Error("A valid YYYY-MM-DD worker day is required.");
-  const session = await getAtlasSession();
-  if (!session) {
-    return {
-      active: false as const,
-      operatorLabel: "Farm Hand",
-      target: null,
-      projection: null,
-      sequence: null,
-      taskCards: [] as AtlasTaskCard[],
-      canManage: false,
-    };
-  }
+  const totalStartedAt = nowMs();
+  const timing: WorkerDaySequenceTiming = {
+    dateIso,
+    role: "unknown",
+    sessionMs: 0,
+    planMs: 0,
+    choreographyMs: 0,
+    taskCardsMs: 0,
+    assemblyMs: 0,
+    totalMs: 0,
+  };
 
-  if (session.memberships.some((membership) => membership.role === "owner")) {
-    return readOwnerWorkerDaySequence(dateIso, session);
-  }
+  try {
+    const sessionRead = await measured(() => getAtlasSession());
+    timing.sessionMs = sessionRead.ms;
+    const session = sessionRead.value;
+    if (!session) {
+      timing.role = "inactive";
+      return {
+        active: false as const,
+        operatorLabel: "Farm Hand",
+        target: null,
+        projection: null,
+        sequence: null,
+        taskCards: [] as AtlasTaskCard[],
+        canManage: false,
+      };
+    }
 
-  const target = workerSelfTarget(session);
-  if (!target) {
-    return {
-      active: false as const,
-      operatorLabel: session.displayName || "Farm Hand",
-      target: null,
-      projection: null,
-      sequence: null,
-      taskCards: [] as AtlasTaskCard[],
-      canManage: false,
-    };
+    if (session.memberships.some((membership) => membership.role === "owner")) {
+      timing.role = "owner";
+      return await readOwnerWorkerDaySequence(dateIso, session, timing);
+    }
+
+    const target = workerSelfTarget(session);
+    if (!target) {
+      timing.role = "inactive";
+      return {
+        active: false as const,
+        operatorLabel: session.displayName || "Farm Hand",
+        target: null,
+        projection: null,
+        sequence: null,
+        taskCards: [] as AtlasTaskCard[],
+        canManage: false,
+      };
+    }
+    timing.role = "farm_hand";
+    return await readWorkerSelfDaySequence(dateIso, target, timing);
+  } finally {
+    timing.totalMs = elapsedMs(totalStartedAt);
+    console.info("Atlas Worker Day sequence timing", JSON.stringify(timing));
   }
-  return readWorkerSelfDaySequence(dateIso, target);
 }
