@@ -1,8 +1,11 @@
 "use client";
 
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import DayFixedTimes from "@/components/atlas/reservations/DayFixedTimes";
 import { useAtlasWorkerDayProjection } from "@/components/atlas/runtime/AtlasRuntimeProvider";
 import { atlasNormalizeFarmDate } from "@/lib/atlas/farm-day";
 
@@ -30,6 +33,20 @@ export default function DaySurface({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
   const dateIso = atlasNormalizeFarmDate(searchParams.get("date"));
   const { projection, runtimeScopeKey } = useAtlasWorkerDayProjection(dateIso);
+  const [fixedTimesHost, setFixedTimesHost] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const header = document.querySelector<HTMLElement>(".atlas-day-command-header");
+    if (!header?.parentElement) { setFixedTimesHost(null); return; }
+    const host = document.createElement("div");
+    host.dataset.atlasDayFixedTimesHost = "true";
+    header.insertAdjacentElement("afterend", host);
+    setFixedTimesHost(host);
+    return () => {
+      setFixedTimesHost(null);
+      host.remove();
+    };
+  }, [dateIso]);
 
   function openSummary(summary: HTMLElement) {
     const href = taskHref(summary);
@@ -63,6 +80,7 @@ export default function DaySurface({ children }: { children: ReactNode }) {
       style={{ display: "contents" }}
     >
       {children}
+      {fixedTimesHost ? createPortal(<DayFixedTimes dateIso={dateIso} />, fixedTimesHost) : null}
     </div>
   );
 }

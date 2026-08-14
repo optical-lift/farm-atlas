@@ -35,6 +35,27 @@ export function buildAtlasClockPlanDraft(items: CommittedItem[], proposal: Atlas
   const committedBlocks:AtlasClockDraftBlock[]=ranges.map((range)=>{const duration=planningDuration(range.item);return {id:`clock-draft:${range.item.id}`,item:range.item,taskId:range.item.taskId,source:"committed",decision:"committed",startMinute:range.startMinute,durationMinutes:duration.minutes,initialStartMinute:range.startMinute,initialPlannedDurationMinutes:range.item.plannedDurationMinutes,durationSource:duration.source,startTouched:false,durationTouched:false,overrideWarnings:false,warnings:[],proposalReason:null};});
   return [...committedBlocks,...proposal.blocks.map(proposalDraft)].sort((a,b)=>(a.startMinute??10000)-(b.startMinute??10000)||a.item.sequenceOrder-b.item.sequenceOrder);
 }
+
+export function reconcileAtlasClockPlanDraftWithProposal(blocks: AtlasClockDraftBlock[], items: CommittedItem[], proposal: AtlasClockProposalPlan) {
+  const baseline = buildAtlasClockPlanDraft(items, proposal);
+  const currentCommitted = new Map(blocks.filter((block) => block.source === "committed").map((block) => [block.taskId ?? block.id, block]));
+  const currentProposal = new Map(blocks.filter((block) => block.source === "proposal").map((block) => [block.taskId ?? block.id, block]));
+  const next: AtlasClockDraftBlock[] = [];
+
+  for (const block of baseline.filter((candidate) => candidate.source === "committed")) {
+    next.push(currentCommitted.get(block.taskId ?? block.id) ?? block);
+  }
+  for (const block of baseline.filter((candidate) => candidate.source === "proposal")) {
+    const current = currentProposal.get(block.taskId ?? block.id);
+    next.push(current && (current.decision === "accept" || current.decision === "reject") ? current : block);
+  }
+  const baselineProposalKeys = new Set(baseline.filter((block) => block.source === "proposal").map((block) => block.taskId ?? block.id));
+  for (const block of blocks) {
+    if (block.source === "proposal" && block.decision === "accept" && !baselineProposalKeys.has(block.taskId ?? block.id)) next.push(block);
+  }
+  return next.sort((a,b)=>(a.startMinute??10000)-(b.startMinute??10000)||a.item.sequenceOrder-b.item.sequenceOrder);
+}
+
 function localTimeMinute(value:string|null){if(!value)return null;const match=value.match(/^([01]\d|2[0-3]):([0-5]\d)$/);return match?Number(match[1])*60+Number(match[2]):null;}
 function activeBlock(block:AtlasClockDraftBlock){return block.startMinute!==null&&block.decision!=="reject";}
 function blockEnd(block:AtlasClockDraftBlock){return block.startMinute===null?null:block.startMinute+block.durationMinutes;}

@@ -14,6 +14,7 @@ const sequenceServer = read("lib/atlas/worker-day-sequence-server.ts");
 const clockReservations = read("lib/atlas/clock-reservations.ts");
 const orchestrator = read("components/atlas/clock/clock-orchestrator.tsx");
 const timeline = read("components/atlas/clock/clock-timeline-v2.tsx");
+const reservationBlock = read("components/atlas/clock/ClockReservationBlock.tsx");
 const planningTimeline = read("components/atlas/clock/clock-planning-timeline.tsx");
 
 test("Pass 20 creates one exact-time non-task reservation primitive instead of overloading absence or cues", () => {
@@ -65,8 +66,9 @@ test("Clock consumes projection reservations as blocking spans without convertin
   assert.match(orchestrator, /source:reservation\.kind/);
   assert.match(orchestrator, /buildAtlasClockReservations\(\{timedCues,commitments,timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE\}\)/);
   assert.match(orchestrator, /buildAtlasClockProposal\(committed,\{reservations:dayReservations\}\)/);
-  assert.match(timeline, /data-clock-non-task="true"/);
-  assert.match(planningTimeline, /data-clock-non-task="true"/);
-  assert.match(timeline, /data-clock-reservation-source=\{reservation\.source\}/);
+  assert.match(timeline, /ClockReservationBlock/);
+  assert.match(reservationBlock, /data-clock-non-task="true"/);
+  assert.match(planningTimeline, /ClockReservationBlock/);
+  assert.match(reservationBlock, /data-clock-reservation-source=\{reservation\.source\}/);
   assert.doesNotMatch(clockReservations, /committed_task/);
 });

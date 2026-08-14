@@ -16,6 +16,11 @@ import {
   type AtlasClockCommand,
   type AtlasClockCommandResponse,
 } from "@/lib/atlas/clock-command-client";
+import {
+  commitAtlasReservationCommand,
+  type AtlasReservationCommand,
+  type AtlasReservationCommandResponse,
+} from "@/lib/atlas/reservation-command-client";
 import { registerAtlasRuntimeTaskTransitionHandler } from "@/lib/atlas/runtime-action-bridge";
 import { ATLAS_WORKER_DAY_RUNTIME_INVALIDATE_EVENT } from "@/lib/atlas/runtime-events";
 import {
@@ -41,9 +46,7 @@ type WorkerDayRuntimeEntry = {
   requestId: number;
 };
 
-type WorkerDayReadOptions = {
-  force?: boolean;
-};
+type WorkerDayReadOptions = { force?: boolean };
 
 type AtlasRuntimeContextValue = {
   scopeKey: string;
@@ -53,6 +56,7 @@ type AtlasRuntimeContextValue = {
   invalidateWorkerDay: (dateIso?: string) => void;
   dispatchTaskTransition: (request: AtlasTaskTransitionRequest) => Promise<AtlasTaskTransitionResponse>;
   dispatchClockCommand: (command: AtlasClockCommand) => Promise<AtlasClockCommandResponse>;
+  dispatchReservationCommand: (command: AtlasReservationCommand) => Promise<AtlasReservationCommandResponse>;
 };
 
 const AtlasRuntimeContext = createContext<AtlasRuntimeContextValue | null>(null);
@@ -79,13 +83,7 @@ function runtimeEntry(input: {
   };
 }
 
-export default function AtlasRuntimeProvider({
-  children,
-  scopeKey,
-}: {
-  children: ReactNode;
-  scopeKey: string;
-}) {
+export default function AtlasRuntimeProvider({ children, scopeKey }: { children: ReactNode; scopeKey: string }) {
   const entriesRef = useRef(new Map<string, WorkerDayRuntimeEntry>());
   const inFlightRef = useRef(new Map<string, Promise<AtlasWorkerDayProjectionRead>>());
   const requestSequenceRef = useRef(0);
@@ -107,10 +105,7 @@ export default function AtlasRuntimeProvider({
 
   const peekWorkerDay = useCallback((dateIso: string) => entriesRef.current.get(dateIso) ?? null, []);
 
-  const readWorkerDay = useCallback(async (
-    dateIso: string,
-    options: WorkerDayReadOptions = {},
-  ) => {
+  const readWorkerDay = useCallback(async (dateIso: string, options: WorkerDayReadOptions = {}) => {
     const cached = entriesRef.current.get(dateIso);
     if (!options.force && cached?.value) return cached.value;
 
@@ -132,13 +127,7 @@ export default function AtlasRuntimeProvider({
         const current = entriesRef.current.get(dateIso);
         const pendingActions = (current?.pendingActions ?? []).filter((action) => action.phase !== "reconciling");
         if (current?.requestId === requestId) {
-          entriesRef.current.set(dateIso, runtimeEntry({
-            canonicalValue,
-            pendingActions,
-            error: null,
-            loading: false,
-            requestId,
-          }));
+          entriesRef.current.set(dateIso, runtimeEntry({ canonicalValue, pendingActions, error: null, loading: false, requestId }));
           notify();
         }
         return applyAtlasRuntimePendingActions(canonicalValue, pendingActions) ?? canonicalValue;
@@ -174,19 +163,13 @@ export default function AtlasRuntimeProvider({
       const current = entriesRef.current.get(serviceDate);
       if (!current) continue;
       const action: AtlasRuntimePendingAction = {
-        actionId,
-        kind: "task_transition",
-        serviceDate,
-        taskId: request.taskId,
-        transition: request.transition,
-        phase: "committing",
+        actionId, kind: "task_transition", serviceDate, taskId: request.taskId,
+        transition: request.transition, phase: "committing",
       };
       entriesRef.current.set(serviceDate, runtimeEntry({
         canonicalValue: current.canonicalValue,
         pendingActions: [...current.pendingActions, action],
-        error: null,
-        loading: current.loading,
-        requestId: current.requestId,
+        error: null, loading: current.loading, requestId: current.requestId,
       }));
     }
     notify();
@@ -201,9 +184,7 @@ export default function AtlasRuntimeProvider({
         entriesRef.current.set(serviceDate, runtimeEntry({
           canonicalValue: failed.canonicalValue,
           pendingActions: failed.pendingActions.filter((pending) => pending.actionId !== actionId),
-          error: runtimeErrorMessage(error),
-          loading: failed.loading,
-          requestId: failed.requestId,
+          error: runtimeErrorMessage(error), loading: failed.loading, requestId: failed.requestId,
         }));
       }
       notify();
@@ -215,18 +196,13 @@ export default function AtlasRuntimeProvider({
       if (!committed) continue;
       entriesRef.current.set(serviceDate, runtimeEntry({
         canonicalValue: committed.canonicalValue,
-        pendingActions: committed.pendingActions.map((pending) => (
-          pending.actionId === actionId ? { ...pending, phase: "reconciling" as const } : pending
-        )),
-        error: null,
-        loading: committed.loading,
-        requestId: committed.requestId,
+        pendingActions: committed.pendingActions.map((pending) => pending.actionId === actionId
+          ? { ...pending, phase: "reconciling" as const }
+          : pending),
+        error: null, loading: committed.loading, requestId: committed.requestId,
       }));
     }
     notify();
-
-    // Reconcile every loaded Worker Day because a canonical task result can also
-    // release downstream work, alter carried work, or change more than one date.
     await Promise.allSettled(serviceDates.map((serviceDate) => readWorkerDay(serviceDate, { force: true })));
     return response;
   }, [notify, readWorkerDay]);
@@ -237,8 +213,54 @@ export default function AtlasRuntimeProvider({
 
     const actionId = `runtime-clock-command:${++actionSequenceRef.current}`;
     const action: AtlasRuntimePendingAction = {
+      actionId, kind: "clock_command", serviceDate: command.serviceDate, command, phase: "committing",
+    };
+    entriesRef.current.set(command.serviceDate, runtimeEntry({
+      canonicalValue: current.canonicalValue,
+      pendingActions: [...current.pendingActions, action],
+      error: null, loading: current.loading, requestId: current.requestId,
+    }));
+    notify();
+
+    let response: AtlasClockCommandResponse;
+    try {
+      response = await commitAtlasClockCommand(command);
+    } catch (error) {
+      const failed = entriesRef.current.get(command.serviceDate);
+      if (failed) {
+        entriesRef.current.set(command.serviceDate, runtimeEntry({
+          canonicalValue: failed.canonicalValue,
+          pendingActions: failed.pendingActions.filter((pending) => pending.actionId !== actionId),
+          error: runtimeErrorMessage(error), loading: failed.loading, requestId: failed.requestId,
+        }));
+        notify();
+      }
+      throw error;
+    }
+
+    const committed = entriesRef.current.get(command.serviceDate);
+    if (committed) {
+      entriesRef.current.set(command.serviceDate, runtimeEntry({
+        canonicalValue: committed.canonicalValue,
+        pendingActions: committed.pendingActions.map((pending) => pending.actionId === actionId
+          ? { ...pending, phase: "reconciling" as const }
+          : pending),
+        error: null, loading: committed.loading, requestId: committed.requestId,
+      }));
+      notify();
+    }
+    try { await readWorkerDay(command.serviceDate, { force: true }); } catch { /* keep committed-looking overlay */ }
+    return response;
+  }, [notify, readWorkerDay]);
+
+  const dispatchReservationCommand = useCallback(async (command: AtlasReservationCommand) => {
+    const current = entriesRef.current.get(command.serviceDate);
+    if (!current?.canonicalValue) return commitAtlasReservationCommand(command);
+
+    const actionId = `runtime-reservation-command:${++actionSequenceRef.current}`;
+    const action: AtlasRuntimePendingAction = {
       actionId,
-      kind: "clock_command",
+      kind: "reservation_command",
       serviceDate: command.serviceDate,
       command,
       phase: "committing",
@@ -252,9 +274,9 @@ export default function AtlasRuntimeProvider({
     }));
     notify();
 
-    let response: AtlasClockCommandResponse;
+    let response: AtlasReservationCommandResponse;
     try {
-      response = await commitAtlasClockCommand(command);
+      response = await commitAtlasReservationCommand(command);
     } catch (error) {
       const failed = entriesRef.current.get(command.serviceDate);
       if (failed) {
@@ -274,9 +296,9 @@ export default function AtlasRuntimeProvider({
     if (committed) {
       entriesRef.current.set(command.serviceDate, runtimeEntry({
         canonicalValue: committed.canonicalValue,
-        pendingActions: committed.pendingActions.map((pending) => (
-          pending.actionId === actionId ? { ...pending, phase: "reconciling" as const } : pending
-        )),
+        pendingActions: committed.pendingActions.map((pending) => pending.actionId === actionId
+          ? { ...pending, phase: "reconciling" as const }
+          : pending),
         error: null,
         loading: committed.loading,
         requestId: committed.requestId,
@@ -284,19 +306,15 @@ export default function AtlasRuntimeProvider({
       notify();
     }
 
-    // Clock choreography is service-date scoped. The optimistic placement stays
-    // visible until this authoritative projection read confirms the command.
     try {
       await readWorkerDay(command.serviceDate, { force: true });
     } catch {
-      // Canonical Clock truth already committed. Keep the reconciling overlay
-      // instead of presenting a false rollback when only the follow-up read failed.
+      // The reservation command already committed. Preserve its optimistic geometry while only reconciliation is unavailable.
     }
     return response;
   }, [notify, readWorkerDay]);
 
   useEffect(() => registerAtlasRuntimeTaskTransitionHandler(dispatchTaskTransition), [dispatchTaskTransition]);
-
   useEffect(() => {
     const invalidate = () => invalidateWorkerDay();
     window.addEventListener(ATLAS_WORKER_DAY_RUNTIME_INVALIDATE_EVENT, invalidate);
@@ -304,14 +322,9 @@ export default function AtlasRuntimeProvider({
   }, [invalidateWorkerDay]);
 
   const value = useMemo<AtlasRuntimeContextValue>(() => ({
-    scopeKey,
-    version,
-    peekWorkerDay,
-    readWorkerDay,
-    invalidateWorkerDay,
-    dispatchTaskTransition,
-    dispatchClockCommand,
-  }), [scopeKey, version, peekWorkerDay, readWorkerDay, invalidateWorkerDay, dispatchTaskTransition, dispatchClockCommand]);
+    scopeKey, version, peekWorkerDay, readWorkerDay, invalidateWorkerDay,
+    dispatchTaskTransition, dispatchClockCommand, dispatchReservationCommand,
+  }), [scopeKey, version, peekWorkerDay, readWorkerDay, invalidateWorkerDay, dispatchTaskTransition, dispatchClockCommand, dispatchReservationCommand]);
 
   return <AtlasRuntimeContext.Provider value={value}>{children}</AtlasRuntimeContext.Provider>;
 }
@@ -319,13 +332,10 @@ export default function AtlasRuntimeProvider({
 export function useAtlasWorkerDayProjection(dateIso: string) {
   const runtime = useContext(AtlasRuntimeContext);
   if (!runtime) throw new Error("useAtlasWorkerDayProjection must be used inside AtlasRuntimeProvider.");
-
   const entry = runtime.peekWorkerDay(dateIso);
 
   useEffect(() => {
-    if (!entry) {
-      void runtime.readWorkerDay(dateIso).catch(() => undefined);
-    }
+    if (!entry) void runtime.readWorkerDay(dateIso).catch(() => undefined);
   }, [dateIso, entry, runtime]);
 
   const reload = useCallback(async () => {
@@ -349,5 +359,6 @@ export function useAtlasRuntimeActions() {
   return {
     dispatchTaskTransition: runtime.dispatchTaskTransition,
     dispatchClockCommand: runtime.dispatchClockCommand,
+    dispatchReservationCommand: runtime.dispatchReservationCommand,
   };
 }
