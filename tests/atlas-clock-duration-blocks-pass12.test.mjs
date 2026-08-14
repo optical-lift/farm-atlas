@@ -7,6 +7,7 @@ function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url)
 const surface = read("components/atlas/clock/clock-orchestrator.tsx");
 const timeline = read("components/atlas/clock/clock-timeline-v2.tsx");
 const controls = read("components/atlas/clock/clock-owner-controls.tsx");
+const clockTransport = read("lib/atlas/clock-command-client.ts");
 const layout = read("lib/atlas/clock-layout.ts");
 const durationRoute = read("app/api/atlas/owner-day-task-duration/route.ts");
 
@@ -34,9 +35,10 @@ test("Clock NOW and NEXT use temporal ranges", () => {
 });
 
 test("Owner can explicitly commit or remove a planned span", () => {
-  assert.match(controls, /owner-clock-duration-v1/);
+  assert.match(controls, /dispatchClockCommand\(\{ kind: "clock_duration"/);
   assert.match(controls, /durationMinutes: parsedDuration/);
-  assert.match(controls, /durationMinutes: null/);
+  assert.match(controls, /saveDuration\(null\)/);
+  assert.match(clockTransport, /owner-clock-duration-v1/);
   assert.match(durationRoute, /owner_set_worker_day_task_duration_api_v1/);
   assert.match(durationRoute, /durationMinutes must be an integer from 5 to 720/);
 });
