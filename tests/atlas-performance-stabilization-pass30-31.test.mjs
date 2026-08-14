@@ -5,12 +5,30 @@ import test from "node:test";
 function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url), "utf8"); }
 
 const runtime = read("components/atlas/runtime/AtlasRuntimeProvider.tsx");
+const reconciliation = read("lib/atlas/runtime-reconciliation.ts");
+const dayPage = read("app/day/page.tsx");
 const notificationMigration = read("supabase/migrations/20260814164000_task_notification_idle_fast_path_v1.sql");
 const cardMigration = read("supabase/migrations/20260814165000_worker_day_operational_task_cards_v1.sql");
 const completedCardMigration = read("supabase/migrations/20260814165500_worker_day_operational_task_cards_v2.sql");
 const operationalCardServer = read("lib/atlas/worker-day-operational-task-cards-server.ts");
 const sequenceServer = read("lib/atlas/worker-day-sequence-server.ts");
 const projectionClient = read("lib/atlas/worker-day-projection-client.ts");
+
+test("Pass 28 Day consumes the same AtlasRuntime Worker Day read as Clock instead of fetching dated task cards separately", () => {
+  assert.match(dayPage, /useAtlasWorkerDayProjection\(dateIso\)/);
+  assert.match(dayPage, /taskCards: tasks/);
+  assert.doesNotMatch(dayPage, /fetchAtlasTaskCards/);
+  assert.doesNotMatch(dayPage, /loadTasks/);
+  assert.match(dayPage, /if \(loading\) return;[\s\S]*loadLivingDay\(true\)/);
+});
+
+test("runtime task-card sidecar receives the same optimistic Done and Reopen status as the canonical sequence", () => {
+  assert.match(reconciliation, /const taskCards = canonical\.taskCards\.map/);
+  assert.match(reconciliation, /statusByTaskId\.get\(task\.task_id\)/);
+  assert.match(reconciliation, /checklist_status: status === "done" \? "done" : "open"/);
+  assert.match(reconciliation, /taskCards,/);
+  assert.match(runtime, /read\?\.taskCards\.some\(\(task\) => taskIds\.has\(task\.task_id\)\)/);
+});
 
 test("Pass 29 hydrates only selected Worker Day task ids without the rich card view", () => {
   assert.match(cardMigration, /worker_day_operational_task_cards_v1/);
