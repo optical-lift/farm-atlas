@@ -6,10 +6,12 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("operational overview routes use the universal viewer-scoped task reader", () => {
+test("period overview routes use the universal viewer-scoped task reader while Day uses the access-scoped Worker Day runtime", () => {
   const client = read("lib/atlas/task-cards-client.ts");
   const route = read("app/api/atlas/universal-task-cards/route.ts");
   const operatorReader = read("lib/atlas/operator-universal-home.ts");
+  const day = read("app/day/page.tsx");
+  const operationalCards = read("supabase/migrations/20260814165500_worker_day_operational_task_cards_v2.sql");
 
   for (const pathname of ["/day", "/overview/week", "/overview/month"]) {
     assert.match(client, new RegExp(`pathname === "${pathname.replaceAll("/", "\\/")}"`));
@@ -28,17 +30,23 @@ test("operational overview routes use the universal viewer-scoped task reader", 
   assert.match(route, /readAtlasOperatorUniversalHome/);
   assert.match(operatorReader, /readAtlasUniversalHome/);
   assert.match(operatorReader, /owner_operator_universal_home_v1/);
+
+  assert.match(day, /useAtlasWorkerDayProjection\(dateIso\)/);
+  assert.doesNotMatch(day, /fetchAtlasTaskCards/);
+  assert.match(operationalCards, /v_target\.user_id is distinct from auth\.uid\(\)/);
+  assert.match(operationalCards, /atlas\.is_farm_manager_or_owner\(p_farm_id\)/);
 });
 
-test("day week and month cannot silently fall back to a mixed farm-wide reader", () => {
+test("Day cannot silently fall back to a mixed farm-wide reader, while Week and Month remain viewer scoped", () => {
   const day = read("app/day/page.tsx");
   const week = read("app/overview/week/page.tsx");
   const month = read("app/overview/month/page.tsx");
 
   assert.equal(existsSync(new URL("../app/DayAdjacentNavigation.tsx", import.meta.url)), false);
   assert.match(day, /useSearchParams\(\)/);
-  assert.match(day, /fetchAtlasTaskCards\(\{[\s\S]*?viewerScoped:\s*true,[\s\S]*?dueThrough:\s*dateIso,[\s\S]*?doneDate:\s*dateIso,?[\s\S]*?\}\)/);
-  assert.match(day, /requestSequence/);
+  assert.match(day, /useAtlasWorkerDayProjection\(dateIso\)/);
+  assert.match(day, /taskCards: tasks/);
+  assert.doesNotMatch(day, /fetchAtlasTaskCards|requestSequence/);
   assert.doesNotMatch(day, /atlas:day-change/);
   assert.match(day, /<nav className="atlas-day-adjacent-nav"/);
   assert.match(day, /<Link href=\{dayHref\(previousDate\)\}/);
