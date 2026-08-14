@@ -5,6 +5,7 @@ import test from "node:test";
 function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url), "utf8"); }
 
 const migration = read("supabase/migrations/20260814174157_worker_self_day_plan_api_v1.sql");
+const bundleMigration = read("supabase/migrations/20260814210129_worker_self_day_bundle_fast_path_v1.sql");
 const sequenceServer = read("lib/atlas/worker-day-sequence-server.ts");
 const projectionClient = read("lib/atlas/worker-day-projection-client.ts");
 const operationalCards = read("lib/atlas/worker-day-operational-task-cards-server.ts");
@@ -38,19 +39,23 @@ test("Farm Hand browser no longer owns a second scheduler or rich task-card requ
   assert.doesNotMatch(projectionClient, /atlasWorkOrderNumber|atlasWorkOrderAnchorForTask|planRow\(/);
 });
 
-test("Farm Hand plan and target-scoped choreography run concurrently before selected card hydration", () => {
+test("Farm Hand plan-card bundle and target-scoped choreography run concurrently with no second card RPC", () => {
   const start = sequenceServer.indexOf("async function readWorkerSelfDaySequence");
   const body = sequenceServer.slice(start, sequenceServer.indexOf("export async function readWorkerDaySequence", start));
   assert.match(body, /Promise\.all\(\[/);
-  assert.match(body, /readWorkerSelfDayPlanForTarget\(dateIso, target\)/);
+  assert.match(body, /readWorkerSelfDayBundleForTarget\(dateIso, target\)/);
   assert.match(body, /readWorkerDayChoreographyForTarget\(dateIso, target\)/);
-  assert.ok(body.indexOf("readWorkerDayOperationalTaskCards") > body.indexOf("Promise.all"));
+  assert.doesNotMatch(body, /readWorkerDayOperationalTaskCards/);
+  assert.match(body, /taskCards: bundleRead\.value\.taskCards/);
 });
 
-test("Farm Hand operational cards exclude Owner move context", () => {
+test("Farm Hand operational cards exclude Owner move context at the database and server boundaries", () => {
+  assert.match(bundleMigration, /if v_is_management then/);
+  assert.match(bundleMigration, /task_move_context_batch_v1\(v_ids\)/);
+  assert.match(bundleMigration, /card - 'move_context'/);
   assert.match(operationalCards, /includeMoveContext\?: boolean/);
   assert.match(operationalCards, /move_context: _moveContext/);
-  assert.match(sequenceServer, /includeMoveContext: false/);
+  assert.match(selfPlanServer, /normalizeWorkerDayOperationalTaskCards\(payload\.taskCards, \{ includeMoveContext: false \}\)/);
 });
 
 test("Farm Hand plan passes through the same timing enrichment seam as Owner", () => {
