@@ -4,6 +4,10 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useSearchParams } from "next/navigation";
 
+import { useAtlasWorkerDayProjection } from "@/components/atlas/runtime/AtlasRuntimeProvider";
+import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+
+type EffectiveFarmRole = "owner" | "manager" | "farm_hand" | string | null;
 type Teammate = { membershipId: string; workerKey: string | null; role: string; label: string };
 type WorkAlongsideWindow = { windowId: string; teammateMembershipId: string; startsOn: string; endsOn: string; status: string };
 type WorkAlongsideResponse = {
@@ -15,8 +19,8 @@ type WorkAlongsideResponse = {
   windows?: WorkAlongsideWindow[];
   error?: string;
 };
-type TaskCard = { task_id: string; metadata?: Record<string, unknown> | null };
-type TaskCardsResponse = { ok: boolean; taskCards?: TaskCard[] };
+type BadgeTaskCard = Pick<AtlasTaskCard, "task_id" | "metadata">;
+type TaskCardsResponse = { ok: boolean; taskCards?: BadgeTaskCard[] };
 
 function localTodayIso() {
   const date = new Date();
@@ -46,7 +50,7 @@ function clearAssigneeIdentity(target: HTMLElement | null, entry: HTMLElement | 
   target?.removeAttribute("data-atlas-assignee-key");
   entry?.removeAttribute("data-atlas-assignee-key");
 }
-function applyAssigneeBadges(taskCards: TaskCard[], viewerMembershipId: string, teammateByMembership: Map<string, Teammate>) {
+function applyAssigneeBadges(taskCards: BadgeTaskCard[], viewerMembershipId: string, teammateByMembership: Map<string, Teammate>) {
   const cardById = new Map(taskCards.map((card) => [card.task_id, card]));
   document.querySelectorAll<HTMLElement>(".atlas-day-task-card, .atlas-journal-completion-echo-copy").forEach((cardElement) => {
     const taskId = taskIdFromCard(cardElement);
@@ -69,20 +73,84 @@ function applyAssigneeBadges(taskCards: TaskCard[], viewerMembershipId: string, 
   });
 }
 
-export default function AtlasWorkAlongsideOverlay() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const selectedDate = searchParams.get("date") || localTodayIso();
+async function readWorkAlongsideSurface() {
+  const response = await fetch("/api/atlas/work-alongside", {
+    headers: { Accept: "application/json" }, credentials: "same-origin", cache: "no-store",
+  });
+  return response.json() as Promise<WorkAlongsideResponse>;
+}
+
+async function readUniversalDayTaskCards(selectedDate: string) {
+  const response = await fetch(`/api/atlas/universal-task-cards?dueThrough=${encodeURIComponent(selectedDate)}&doneDate=${encodeURIComponent(selectedDate)}`, {
+    headers: { Accept: "application/json" }, credentials: "same-origin", cache: "no-store",
+  });
+  return response.json() as Promise<TaskCardsResponse>;
+}
+
+function useAssigneeBadgeObserver(input: {
+  enabled: boolean;
+  surface: WorkAlongsideResponse | null;
+  taskCards: BadgeTaskCard[];
+}) {
+  const teammateByMembership = useMemo(
+    () => new Map((input.surface?.teammates ?? []).map((teammate) => [teammate.membershipId, teammate])),
+    [input.surface?.teammates],
+  );
+
+  useEffect(() => {
+    if (!input.enabled || !input.surface?.ok || !input.surface.viewerMembershipId) return;
+    const apply = () => applyAssigneeBadges(input.taskCards, input.surface?.viewerMembershipId as string, teammateByMembership);
+    apply();
+    const observer = new MutationObserver(() => window.requestAnimationFrame(apply));
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [input.enabled, input.surface?.ok, input.surface?.viewerMembershipId, input.taskCards, teammateByMembership]);
+}
+
+function OwnerDayWorkAlongsideBadges({ selectedDate }: { selectedDate: string }) {
+  const { taskCards } = useAtlasWorkerDayProjection(selectedDate);
   const [surface, setSurface] = useState<WorkAlongsideResponse | null>(null);
-  const [taskCards, setTaskCards] = useState<TaskCard[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    readWorkAlongsideSurface()
+      .then((nextSurface) => { if (!cancelled) setSurface(nextSurface); })
+      .catch(() => { if (!cancelled) setSurface({ ok: false }); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useAssigneeBadgeObserver({ enabled: true, surface, taskCards });
+  return null;
+}
+
+function ManagerDayWorkAlongsideBadges({ selectedDate }: { selectedDate: string }) {
+  const [surface, setSurface] = useState<WorkAlongsideResponse | null>(null);
+  const [taskCards, setTaskCards] = useState<BadgeTaskCard[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([readWorkAlongsideSurface(), readUniversalDayTaskCards(selectedDate)])
+      .then(([nextSurface, tasks]) => {
+        if (cancelled) return;
+        setSurface(nextSurface);
+        setTaskCards(tasks.ok ? tasks.taskCards ?? [] : []);
+      })
+      .catch(() => { if (!cancelled) setSurface({ ok: false }); });
+    return () => { cancelled = true; };
+  }, [selectedDate]);
+
+  useAssigneeBadgeObserver({ enabled: true, surface, taskCards });
+  return null;
+}
+
+function WorkAlongsideSettings({ selectedDate }: { selectedDate: string }) {
+  const [surface, setSurface] = useState<WorkAlongsideResponse | null>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teammateMembershipId, setTeammateMembershipId] = useState("");
   const [startsOn, setStartsOn] = useState(selectedDate);
   const [endsOn, setEndsOn] = useState(addDaysIso(selectedDate, 3));
-  const isDay = pathname === "/day";
-  const isMore = pathname === "/more";
 
   useEffect(() => {
     setStartsOn(selectedDate);
@@ -90,7 +158,6 @@ export default function AtlasWorkAlongsideOverlay() {
   }, [selectedDate]);
 
   useEffect(() => {
-    if (!isMore) { setPortalTarget(null); return; }
     const existing = document.getElementById("atlas-more-work-alongside-slot");
     if (existing) { setPortalTarget(existing); return; }
     const observer = new MutationObserver(() => {
@@ -101,42 +168,24 @@ export default function AtlasWorkAlongsideOverlay() {
     });
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [isMore]);
+  }, []);
 
   useEffect(() => {
-    if (!isDay && !isMore) return;
     let cancelled = false;
-    const workAlongsideRequest = fetch("/api/atlas/work-alongside", {
-      headers: { Accept: "application/json" }, credentials: "same-origin", cache: "no-store",
-    }).then((response) => response.json() as Promise<WorkAlongsideResponse>);
-    const taskCardsRequest: Promise<TaskCardsResponse> = isDay
-      ? fetch(`/api/atlas/universal-task-cards?dueThrough=${encodeURIComponent(selectedDate)}&doneDate=${encodeURIComponent(selectedDate)}`, {
-          headers: { Accept: "application/json" }, credentials: "same-origin", cache: "no-store",
-        }).then((response) => response.json() as Promise<TaskCardsResponse>)
-      : Promise.resolve({ ok: true, taskCards: [] });
-    Promise.all([workAlongsideRequest, taskCardsRequest]).then(([workAlongside, tasks]) => {
-      if (cancelled) return;
-      setSurface(workAlongside);
-      setTaskCards(tasks.ok ? tasks.taskCards ?? [] : []);
-      setTeammateMembershipId((current) => current || workAlongside.teammates?.[0]?.membershipId || "");
-    }).catch(() => { if (!cancelled) setSurface({ ok: false }); });
+    readWorkAlongsideSurface()
+      .then((nextSurface) => {
+        if (cancelled) return;
+        setSurface(nextSurface);
+        setTeammateMembershipId((current) => current || nextSurface.teammates?.[0]?.membershipId || "");
+      })
+      .catch(() => { if (!cancelled) setSurface({ ok: false }); });
     return () => { cancelled = true; };
-  }, [isDay, isMore, selectedDate]);
+  }, []);
 
   const teammateByMembership = useMemo(
     () => new Map((surface?.teammates ?? []).map((teammate) => [teammate.membershipId, teammate])),
     [surface?.teammates],
   );
-
-  useEffect(() => {
-    if (!isDay || !surface?.ok || !surface.viewerMembershipId) return;
-    const apply = () => applyAssigneeBadges(taskCards, surface.viewerMembershipId as string, teammateByMembership);
-    apply();
-    const observer = new MutationObserver(() => window.requestAnimationFrame(apply));
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, [isDay, surface?.ok, surface?.viewerMembershipId, taskCards, teammateByMembership]);
-
   const activeWindows = surface?.windows ?? [];
   const canManage = surface?.viewerRole === "owner" || surface?.viewerRole === "manager";
 
@@ -175,8 +224,7 @@ export default function AtlasWorkAlongsideOverlay() {
     }
   }
 
-  if (isDay) return null;
-  if (!isMore || !portalTarget || !surface?.ok || !surface.viewerMembershipId || !canManage) return null;
+  if (!portalTarget || !surface?.ok || !surface.viewerMembershipId || !canManage) return null;
 
   return createPortal(
     <section className="atlas-work-alongside-panel atlas-work-alongside-more-card" aria-label="Work alongside settings">
@@ -200,4 +248,20 @@ export default function AtlasWorkAlongsideOverlay() {
       </form>
     </section>, portalTarget,
   );
+}
+
+export default function AtlasWorkAlongsideOverlay({ effectiveFarmRole }: { effectiveFarmRole: EffectiveFarmRole }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const selectedDate = searchParams.get("date") || localTodayIso();
+  const canManage = effectiveFarmRole === "owner" || effectiveFarmRole === "manager";
+
+  if (!canManage) return null;
+  if (pathname === "/day") {
+    return effectiveFarmRole === "owner"
+      ? <OwnerDayWorkAlongsideBadges selectedDate={selectedDate} />
+      : <ManagerDayWorkAlongsideBadges selectedDate={selectedDate} />;
+  }
+  if (pathname === "/more") return <WorkAlongsideSettings selectedDate={selectedDate} />;
+  return null;
 }
