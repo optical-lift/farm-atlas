@@ -7,6 +7,7 @@ function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url)
 const mobility = read("lib/atlas/timing-mobility.ts");
 const proposal = read("lib/atlas/clock-proposal.ts");
 const sequence = read("lib/atlas/day-sequence.ts");
+const atomicCommit = read("supabase/migrations/20260814005500_owner_clock_plan_atomic_commit_v1.sql");
 
 test("Pass 37 promotes only the known intraday preference into typed Worker Day timing truth", () => {
   assert.match(mobility, /export type AtlasIntradayWorkPreference = "cool_morning_or_evening"/);
@@ -41,6 +42,11 @@ test("hard timing constraints and real reservations still outrank the soft prefe
   assert.match(proposal, /conflictsAny\(start, start \+ duration\.minutes, reservations\)/);
   assert.match(proposal, /atlasClockReservationConflicts/);
   assert.match(proposal, /anchorRange/);
+});
+
+test("accepted cross-window proposals keep Day and Clock coherent", () => {
+  assert.match(atomicCommit, /v_day_window := case when v_local_time < time '12:00' then 'morning' when v_local_time < time '17:00' then 'afternoon' else 'evening' end/);
+  assert.match(atomicCommit, /day_window=case when v_start_at is null then p\.day_window else v_day_window end/);
 });
 
 test("biological date windows remain separate from intraday Clock preference", () => {
