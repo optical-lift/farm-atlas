@@ -1,5 +1,6 @@
 import "server-only";
 
+import { normalizeWorkerDayOperationalTaskCards } from "@/lib/atlas/worker-day-operational-task-cards-server";
 import {
   enrichWorkerDayPlanTiming,
   normalizeWorkerDayPlan,
@@ -7,6 +8,17 @@ import {
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 type WorkerSelfTarget = { farmId: string; membershipId: string };
+
+type WorkerSelfDayBundlePayload = {
+  plan?: unknown;
+  taskCards?: unknown;
+};
+
+async function normalizeWorkerSelfPlan(data: unknown) {
+  const normalized = normalizeWorkerDayPlan(data);
+  const plan = await enrichWorkerDayPlanTiming({ ...normalized, suggestions: [] });
+  return { ...plan, suggestions: [] };
+}
 
 export async function readWorkerSelfDayPlanForTarget(dateIso: string, target: WorkerSelfTarget) {
   const supabase = await createAtlasServerClient();
@@ -16,8 +28,22 @@ export async function readWorkerSelfDayPlanForTarget(dateIso: string, target: Wo
     p_day: dateIso,
   });
   if (error) throw new Error(error.message);
+  return normalizeWorkerSelfPlan(data);
+}
 
-  const normalized = normalizeWorkerDayPlan(data);
-  const plan = await enrichWorkerDayPlanTiming({ ...normalized, suggestions: [] });
-  return { ...plan, suggestions: [] };
+export async function readWorkerSelfDayBundleForTarget(dateIso: string, target: WorkerSelfTarget) {
+  const supabase = await createAtlasServerClient();
+  const { data, error } = await supabase.rpc("worker_self_day_bundle_api_v1", {
+    p_farm_id: target.farmId,
+    p_membership_id: target.membershipId,
+    p_day: dateIso,
+  });
+  if (error) throw new Error(error.message);
+
+  const payload = data && typeof data === "object" && !Array.isArray(data)
+    ? data as WorkerSelfDayBundlePayload
+    : {};
+  const plan = await normalizeWorkerSelfPlan(payload.plan);
+  const taskCards = normalizeWorkerDayOperationalTaskCards(payload.taskCards, { includeMoveContext: false });
+  return { plan, taskCards };
 }
