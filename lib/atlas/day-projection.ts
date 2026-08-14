@@ -68,10 +68,11 @@ export function buildAtlasWorkerDayProjection<TSequence extends AtlasDaySequence
   sequence: TSequence;
 }): AtlasWorkerDayProjection<TSequence> {
   const identity = buildAtlasWorkerDayProjectionIdentity(input);
+  const { generatedAt: _generatedAt, ...revisionSequence } = input.sequence;
   return {
     contractVersion: "atlas_worker_day_projection_v1",
     identity,
-    revision: `r1-${projectionFingerprint({ identity, sequence: input.sequence })}`,
+    revision: `r1-${projectionFingerprint({ identity, sequence: revisionSequence })}`,
     sequence: input.sequence,
   };
 }
