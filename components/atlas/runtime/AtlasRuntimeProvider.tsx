@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { registerAtlasRuntimeTaskTransitionHandler } from "@/lib/atlas/runtime-action-bridge";
 import { ATLAS_WORKER_DAY_RUNTIME_INVALIDATE_EVENT } from "@/lib/atlas/runtime-events";
 import {
   applyAtlasRuntimePendingActions,
@@ -39,18 +40,13 @@ type WorkerDayReadOptions = {
   force?: boolean;
 };
 
-type RuntimeTaskTransitionInput = {
-  serviceDate: string;
-  request: AtlasTaskTransitionRequest;
-};
-
 type AtlasRuntimeContextValue = {
   scopeKey: string;
   version: number;
   peekWorkerDay: (dateIso: string) => WorkerDayRuntimeEntry | null;
   readWorkerDay: (dateIso: string, options?: WorkerDayReadOptions) => Promise<AtlasWorkerDayProjectionRead>;
   invalidateWorkerDay: (dateIso?: string) => void;
-  dispatchTaskTransition: (input: RuntimeTaskTransitionInput) => Promise<AtlasTaskTransitionResponse>;
+  dispatchTaskTransition: (request: AtlasTaskTransitionRequest) => Promise<AtlasTaskTransitionResponse>;
 };
 
 const AtlasRuntimeContext = createContext<AtlasRuntimeContextValue | null>(null);
@@ -128,17 +124,18 @@ export default function AtlasRuntimeProvider({
     const request = readAtlasWorkerDayProjection(dateIso)
       .then((canonicalValue) => {
         const current = entriesRef.current.get(dateIso);
+        const pendingActions = (current?.pendingActions ?? []).filter((action) => action.phase !== "reconciling");
         if (current?.requestId === requestId) {
           entriesRef.current.set(dateIso, runtimeEntry({
             canonicalValue,
-            pendingActions: current.pendingActions,
+            pendingActions,
             error: null,
             loading: false,
             requestId,
           }));
           notify();
         }
-        return applyAtlasRuntimePendingActions(canonicalValue, current?.pendingActions ?? []) ?? canonicalValue;
+        return applyAtlasRuntimePendingActions(canonicalValue, pendingActions) ?? canonicalValue;
       })
       .catch((error) => {
         const current = entriesRef.current.get(dateIso);
@@ -162,76 +159,73 @@ export default function AtlasRuntimeProvider({
     return request;
   }, [notify]);
 
-  const dispatchTaskTransition = useCallback(async (input: RuntimeTaskTransitionInput) => {
-    if (!entriesRef.current.get(input.serviceDate)?.canonicalValue) {
-      await readWorkerDay(input.serviceDate);
-    }
+  const dispatchTaskTransition = useCallback(async (request: AtlasTaskTransitionRequest) => {
+    const serviceDates = Array.from(entriesRef.current.keys());
+    if (!serviceDates.length) return commitAtlasTaskTransition(request);
 
     const actionId = `runtime-task-transition:${++actionSequenceRef.current}`;
-    const current = entriesRef.current.get(input.serviceDate);
-    const action: AtlasRuntimePendingAction = {
-      actionId,
-      kind: "task_transition",
-      serviceDate: input.serviceDate,
-      taskId: input.request.taskId,
-      transition: input.request.transition,
-      phase: "committing",
-    };
-    entriesRef.current.set(input.serviceDate, runtimeEntry({
-      canonicalValue: current?.canonicalValue ?? null,
-      pendingActions: [...(current?.pendingActions ?? []), action],
-      error: null,
-      loading: current?.loading ?? false,
-      requestId: current?.requestId ?? 0,
-    }));
+    for (const serviceDate of serviceDates) {
+      const current = entriesRef.current.get(serviceDate);
+      if (!current) continue;
+      const action: AtlasRuntimePendingAction = {
+        actionId,
+        kind: "task_transition",
+        serviceDate,
+        taskId: request.taskId,
+        transition: request.transition,
+        phase: "committing",
+      };
+      entriesRef.current.set(serviceDate, runtimeEntry({
+        canonicalValue: current.canonicalValue,
+        pendingActions: [...current.pendingActions, action],
+        error: null,
+        loading: current.loading,
+        requestId: current.requestId,
+      }));
+    }
     notify();
 
     let response: AtlasTaskTransitionResponse;
     try {
-      response = await commitAtlasTaskTransition(input.request);
+      response = await commitAtlasTaskTransition(request);
     } catch (error) {
-      const failed = entriesRef.current.get(input.serviceDate);
-      entriesRef.current.set(input.serviceDate, runtimeEntry({
-        canonicalValue: failed?.canonicalValue ?? null,
-        pendingActions: (failed?.pendingActions ?? []).filter((pending) => pending.actionId !== actionId),
-        error: runtimeErrorMessage(error),
-        loading: failed?.loading ?? false,
-        requestId: failed?.requestId ?? 0,
-      }));
+      for (const serviceDate of serviceDates) {
+        const failed = entriesRef.current.get(serviceDate);
+        if (!failed) continue;
+        entriesRef.current.set(serviceDate, runtimeEntry({
+          canonicalValue: failed.canonicalValue,
+          pendingActions: failed.pendingActions.filter((pending) => pending.actionId !== actionId),
+          error: runtimeErrorMessage(error),
+          loading: failed.loading,
+          requestId: failed.requestId,
+        }));
+      }
       notify();
       throw error;
     }
 
-    const committed = entriesRef.current.get(input.serviceDate);
-    entriesRef.current.set(input.serviceDate, runtimeEntry({
-      canonicalValue: committed?.canonicalValue ?? null,
-      pendingActions: (committed?.pendingActions ?? []).map((pending) => (
-        pending.actionId === actionId ? { ...pending, phase: "reconciling" as const } : pending
-      )),
-      error: null,
-      loading: committed?.loading ?? false,
-      requestId: committed?.requestId ?? 0,
-    }));
+    for (const serviceDate of serviceDates) {
+      const committed = entriesRef.current.get(serviceDate);
+      if (!committed) continue;
+      entriesRef.current.set(serviceDate, runtimeEntry({
+        canonicalValue: committed.canonicalValue,
+        pendingActions: committed.pendingActions.map((pending) => (
+          pending.actionId === actionId ? { ...pending, phase: "reconciling" as const } : pending
+        )),
+        error: null,
+        loading: committed.loading,
+        requestId: committed.requestId,
+      }));
+    }
     notify();
 
-    try {
-      await readWorkerDay(input.serviceDate, { force: true });
-      const reconciled = entriesRef.current.get(input.serviceDate);
-      entriesRef.current.set(input.serviceDate, runtimeEntry({
-        canonicalValue: reconciled?.canonicalValue ?? null,
-        pendingActions: (reconciled?.pendingActions ?? []).filter((pending) => pending.actionId !== actionId),
-        error: reconciled?.error ?? null,
-        loading: reconciled?.loading ?? false,
-        requestId: reconciled?.requestId ?? 0,
-      }));
-      notify();
-    } catch {
-      // The canonical command already succeeded. Keep its overlay visible and
-      // marked reconciling until an explicit or later authoritative read lands.
-    }
-
+    // Reconcile every loaded Worker Day because a canonical task result can also
+    // release downstream work, alter carried work, or change more than one date.
+    await Promise.allSettled(serviceDates.map((serviceDate) => readWorkerDay(serviceDate, { force: true })));
     return response;
   }, [notify, readWorkerDay]);
+
+  useEffect(() => registerAtlasRuntimeTaskTransitionHandler(dispatchTaskTransition), [dispatchTaskTransition]);
 
   useEffect(() => {
     const invalidate = () => invalidateWorkerDay();
