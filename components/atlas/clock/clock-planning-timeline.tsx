@@ -36,7 +36,7 @@ export default function ClockPlanningTimeline(props:{
   }
   return <section className={styles.gridShell} aria-label="Clock planning timeline" data-clock-plan-timeline="true">
     <header><h2>Time</h2><span>White = committed · purple = proposed</span>{canManage?<button type="button" onClick={()=>setCreateMinute(12*60)} style={{marginLeft:"auto",border:"1px solid rgba(88,87,111,.18)",borderRadius:999,background:"#fff",padding:"7px 10px",minHeight:36,fontSize:10,fontWeight:800}}>+ Fixed time</button>:null}</header>
-    <div className={styles.grid} style={{height:props.gridHeight}} data-clock-create-reservation={canManage?"tap-open-space":undefined} onDoubleClick={createAtGridPoint}>
+    <div className={styles.grid} style={{height:props.gridHeight}} data-clock-create-reservation={canManage?"tap-open-space":undefined} onClick={createAtGridPoint}>
       {hours.map((hour)=><div className={styles.hour} style={{top:(hour-props.startHour)*HOUR_HEIGHT}} key={hour}><span>{hourLabel(hour)}</span></div>)}
       {props.selectedToday&&props.nowMinute!==null?<div className={styles.now} style={{top:offset(props.nowMinute)}} data-clock-now-line="true"><span>NOW</span></div>:null}
       {props.timedCues.map((item)=>{const minute=clockLocalMinuteOfDay(item.scheduledAt,DEFAULT_ATLAS_FARM_TIME_ZONE);if(minute===null)return null;return <div className={styles.cue} style={{top:offset(minute)}} key={item.id} data-clock-timed-cue="true" data-clock-day-reservation="point" data-timing-class={item.mobility.timingClass}><i aria-hidden="true"/><div><small>{minuteLabel(minute)} · Cue · {atlasTimingClassLabel(item.mobility)}</small><strong>{item.title}</strong>{item.body?<span>{item.body}</span>:null}</div></div>;})}
