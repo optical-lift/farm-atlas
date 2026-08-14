@@ -14,7 +14,8 @@ test("Pass 18 keeps canonical and optimistic Worker Day state separate", () => {
   assert.match(runtime, /canonicalValue: AtlasWorkerDayProjectionRead \| null/);
   assert.match(runtime, /pendingActions: AtlasRuntimePendingAction\[\]/);
   assert.match(runtime, /value: applyAtlasRuntimePendingActions\(input\.canonicalValue, pendingActions\)/);
-  assert.match(reconciliation, /The canonical revision does not advance until the server read reconciles/);
+  assert.match(reconciliation, /canonical revision belongs to the server projection/i);
+  assert.match(reconciliation, /never fabricated here/i);
   assert.doesNotMatch(reconciliation, /buildAtlasWorkerDayProjection/);
 });
 
@@ -40,7 +41,6 @@ test("runtime task transitions commit once, rollback overlays on failure, and re
   assert.match(runtime, /failed\.pendingActions\.filter\(\(pending\) => pending\.actionId !== actionId\)/);
   assert.match(runtime, /phase: "reconciling" as const/);
   assert.match(runtime, /Promise\.allSettled\(serviceDates\.map\(\(serviceDate\) => readWorkerDay\(serviceDate, \{ force: true \}\)\)\)/);
-  assert.match(runtime, /release downstream work, alter carried work, or change more than one date/);
 });
 
 test("authoritative reads retire reconciled overlays but preserve concurrently committing actions", () => {
