@@ -30,9 +30,9 @@ test("proposal geometry obeys mobility constraints and leaves impossible work un
 });
 
 test("only Owner can open the proposed Clock and proposals remain presentation-only", () => {
-  assert.match(orchestrator, /canManage && proposalOpen \? buildAtlasClockProposal\(committed\)/);
+  assert.match(orchestrator, /canManage&&proposalOpen\?buildAtlasClockProposal\(committed,\{reservations:dayReservations\}\)/);
   assert.match(orchestrator, /item\.kind !== "potential_task"/);
-  assert.match(orchestrator, /Nothing here changes Anna's Clock/);
+  assert.match(orchestrator, /nothing changes Anna's Clock until Commit plan/i);
   assert.match(orchestrator, /Plan this Clock/);
   assert.doesNotMatch(orchestrator, /\/api\/atlas\/owner-day-task-time/);
   assert.doesNotMatch(orchestrator, /\/api\/atlas\/owner-day-task-duration/);
