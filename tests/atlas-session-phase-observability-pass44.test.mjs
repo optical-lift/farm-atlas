@@ -29,10 +29,11 @@ test("session timing is opt-in and does not change ordinary Atlas session caller
 
 test("Worker Day diagnostic carries session phases without exposing them in the API response", () => {
   assert.match(sequence, /sessionPhases: AtlasSessionTiming/);
-  assert.match(sequence, /getAtlasSession\(timing\.sessionPhases\)/);
+  assert.match(sequence, /getAtlasSessionFast\(timing\.sessionPhases\)/);
   assert.match(sequence, /clientMs: 0/);
   assert.match(sequence, /authUserMs: 0/);
+  assert.match(sequence, /sessionContextRpcMs: 0/);
   assert.match(sequence, /farmMembershipsMs: 0/);
   assert.match(sequence, /organizationMembershipsMs: 0/);
-  assert.doesNotMatch(route, /sessionPhases|authUserMs|farmMembershipsMs|organizationMembershipsMs/);
+  assert.doesNotMatch(route, /sessionPhases|authUserMs|sessionContextRpcMs|farmMembershipsMs|organizationMembershipsMs/);
 });
