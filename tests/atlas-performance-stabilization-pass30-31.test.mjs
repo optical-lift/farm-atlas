@@ -7,10 +7,11 @@ function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url)
 const runtime = read("components/atlas/runtime/AtlasRuntimeProvider.tsx");
 const notificationMigration = read("supabase/migrations/20260814164000_task_notification_idle_fast_path_v1.sql");
 const cardMigration = read("supabase/migrations/20260814165000_worker_day_operational_task_cards_v1.sql");
+const completedCardMigration = read("supabase/migrations/20260814165500_worker_day_operational_task_cards_v2.sql");
 const sequenceServer = read("lib/atlas/worker-day-sequence-server.ts");
 const projectionClient = read("lib/atlas/worker-day-projection-client.ts");
 
-test("Pass 29 hydrates only already-selected Worker Day task ids without the rich card view", () => {
+test("Pass 29 hydrates only selected Worker Day task ids without the rich card view", () => {
   assert.match(cardMigration, /worker_day_operational_task_cards_v1/);
   assert.match(cardMigration, /task\.id = any\(p_task_ids\)/);
   assert.match(cardMigration, /task_move_context_batch_v1\(p_task_ids\)/);
@@ -22,9 +23,19 @@ test("Pass 29 hydrates only already-selected Worker Day task ids without the ric
   assert.doesNotMatch(cardMigration, /atlas\.field_logs/);
 });
 
+test("completed-aware operational cards preserve Day completion echoes without restoring rich hydration", () => {
+  assert.match(completedCardMigration, /worker_day_operational_task_cards_v2/);
+  assert.match(completedCardMigration, /task\.status = 'done'/);
+  assert.match(completedCardMigration, /task\.completed_at at time zone 'America\/Chicago'/);
+  assert.match(completedCardMigration, /p_service_date/);
+  assert.match(completedCardMigration, /task_move_context_batch_v1\(v_ids\)/);
+  assert.doesNotMatch(completedCardMigration, /atlas\.v_task_cards|atlas\.field_logs/);
+});
+
 test("Worker Day sequence carries lightweight task cards beside the canonical projection", () => {
-  assert.match(sequenceServer, /worker_day_operational_task_cards_v1/);
+  assert.match(sequenceServer, /worker_day_operational_task_cards_v2/);
   assert.match(sequenceServer, /\.\.\.plan\.realWork, \.\.\.plan\.automaticWork/);
+  assert.match(sequenceServer, /p_service_date: plan\.serviceDate/);
   assert.match(sequenceServer, /Promise\.all\(\[/);
   assert.match(sequenceServer, /taskCards/);
   assert.match(projectionClient, /taskCards\?: AtlasTaskCard\[\]/);
