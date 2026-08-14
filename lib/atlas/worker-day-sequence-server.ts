@@ -18,12 +18,12 @@ async function readOperationalTaskCards(plan: WorkerDayPlan) {
       .map((row) => row.taskId)
       .filter((taskId): taskId is string => Boolean(taskId)),
   ));
-  if (!taskIds.length) return [] as AtlasTaskCard[];
 
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("worker_day_operational_task_cards_v1", {
+  const { data, error } = await supabase.rpc("worker_day_operational_task_cards_v2", {
     p_farm_id: plan.farmId,
     p_membership_id: plan.membershipId,
+    p_service_date: plan.serviceDate,
     p_task_ids: taskIds,
   });
   if (error) throw new Error(error.message);
