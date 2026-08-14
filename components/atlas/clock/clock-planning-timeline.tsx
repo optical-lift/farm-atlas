@@ -1,11 +1,12 @@
 import { useState, type MouseEvent } from "react";
+import FixedRoutineManager from "@/components/atlas/reservations/FixedRoutineManager";
+import ReservationEditor from "@/components/atlas/reservations/ReservationEditor";
 import { clockLocalMinuteOfDay } from "@/lib/atlas/clock-layout";
 import type { AtlasClockDraftBlock, AtlasClockDraftDecision } from "@/lib/atlas/clock-plan-draft";
 import type { AtlasClockReservation } from "@/lib/atlas/clock-reservations";
 import type { AtlasDaySequenceItem } from "@/lib/atlas/day-sequence";
 import { DEFAULT_ATLAS_FARM_TIME_ZONE } from "@/lib/atlas/farm-day";
 import { atlasTimingClassLabel } from "@/lib/atlas/timing-mobility";
-import ReservationEditor from "@/components/atlas/reservations/ReservationEditor";
 import ClockReservationBlock from "./ClockReservationBlock";
 import ClockPlanningBlock from "./clock-planning-block";
 import styles from "./clock-surface-v2.module.css";
@@ -24,6 +25,7 @@ export default function ClockPlanningTimeline(props:{
 }){
   const canManage=props.canManage!==false;
   const [createMinute,setCreateMinute]=useState<number|null>(null);
+  const [routineManagerOpen,setRoutineManagerOpen]=useState(false);
   const hours=Array.from({length:props.endHour-props.startHour+1},(_,index)=>props.startHour+index);
   const offset=(minute:number)=>((minute-props.startHour*60)/60)*HOUR_HEIGHT;
   function createAtGridPoint(event:MouseEvent<HTMLDivElement>){
@@ -35,7 +37,7 @@ export default function ClockPlanningTimeline(props:{
     setCreateMinute(Math.max(0,Math.min(1410,Math.round(minute/5)*5)));
   }
   return <section className={styles.gridShell} aria-label="Clock planning timeline" data-clock-plan-timeline="true">
-    <header><h2>Time</h2><span>White = committed · purple = proposed</span>{canManage?<button type="button" onClick={()=>setCreateMinute(12*60)} style={{marginLeft:"auto",border:"1px solid rgba(88,87,111,.18)",borderRadius:999,background:"#fff",padding:"7px 10px",minHeight:36,fontSize:10,fontWeight:800}}>+ Fixed time</button>:null}</header>
+    <header><h2>Time</h2><span>White = committed · purple = proposed</span>{canManage?<div style={{marginLeft:"auto",display:"flex",gap:6}}><button type="button" onClick={()=>setRoutineManagerOpen(true)} style={{border:"1px solid rgba(88,87,111,.18)",borderRadius:999,background:"#fff",padding:"7px 10px",minHeight:38,fontSize:10,fontWeight:800}}>Routines</button><button type="button" onClick={()=>setCreateMinute(12*60)} style={{border:"1px solid rgba(88,87,111,.18)",borderRadius:999,background:"#fff",padding:"7px 10px",minHeight:38,fontSize:10,fontWeight:800}}>+ Fixed time</button></div>:null}</header>
     <div className={styles.grid} style={{height:props.gridHeight}} data-clock-create-reservation={canManage?"tap-open-space":undefined} onClick={createAtGridPoint}>
       {hours.map((hour)=><div className={styles.hour} style={{top:(hour-props.startHour)*HOUR_HEIGHT}} key={hour}><span>{hourLabel(hour)}</span></div>)}
       {props.selectedToday&&props.nowMinute!==null?<div className={styles.now} style={{top:offset(props.nowMinute)}} data-clock-now-line="true"><span>NOW</span></div>:null}
@@ -44,5 +46,6 @@ export default function ClockPlanningTimeline(props:{
       {props.blocks.map((block)=>{if(block.startMinute===null||block.decision==="reject")return null;const height=Math.max(38,(block.durationMinutes/60)*HOUR_HEIGHT-2);return <ClockPlanningBlock key={block.id} block={block} dateIso={props.dateIso} top={offset(block.startMinute)} height={height} onMove={props.onMove} onResize={props.onResize} onDecision={props.onDecision} onOverride={props.onOverride} onUnplace={props.onUnplace}/>;})}
     </div>
     {createMinute!==null?<ReservationEditor dateIso={props.dateIso} defaultStartMinute={createMinute} onClose={()=>setCreateMinute(null)}/>:null}
+    {routineManagerOpen?<FixedRoutineManager dateIso={props.dateIso} onClose={()=>setRoutineManagerOpen(false)}/>:null}
   </section>;
 }
