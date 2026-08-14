@@ -5,13 +5,23 @@ import {
   type AtlasDaySequencePlanRowInput,
   type AtlasDaySequenceWindow,
 } from "@/lib/atlas/day-sequence";
+import { buildAtlasWorkerDayProjection, type AtlasWorkerDayProjectionLens } from "@/lib/atlas/day-projection";
 import { atlasFarmDateIso } from "@/lib/atlas/farm-day";
 import { atlasTaskDisplay } from "@/lib/atlas/task-display";
 import { deriveAtlasTimingMobility } from "@/lib/atlas/timing-mobility";
 import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasWorkOrderAnchorForTask, atlasWorkOrderNumber } from "@/lib/atlas/work-order";
 
-type ChoreographyResponse = { ok?: boolean; active?: boolean; choreography?: { placements?: AtlasDaySequencePlacementInput[]; cues?: AtlasDaySequenceCueInput[] } | null };
+type ChoreographyResponse = {
+  ok?: boolean;
+  active?: boolean;
+  target?: {
+    farmId?: string;
+    membershipId?: string;
+    source?: AtlasWorkerDayProjectionLens;
+  } | null;
+  choreography?: { placements?: AtlasDaySequencePlacementInput[]; cues?: AtlasDaySequenceCueInput[] } | null;
+};
 
 function isChildTask(task: AtlasTaskCard) {
   return Boolean(task.parent_task_id) || task.metadata?.is_child_task === true || task.metadata?.is_child_task === "true";
@@ -54,7 +64,7 @@ function planRow(task: AtlasTaskCard): AtlasDaySequencePlanRowInput {
   };
 }
 
-export async function readWorkerClockSequence(dateIso: string) {
+export async function readWorkerClockProjection(dateIso: string) {
   const today = atlasFarmDateIso();
   const [tasks, choreographyRequest] = await Promise.all([
     fetchAtlasTaskCards({ viewerScoped: true, dueThrough: dateIso, doneDate: dateIso, exactDate: dateIso > today ? dateIso : undefined }),
@@ -62,11 +72,20 @@ export async function readWorkerClockSequence(dateIso: string) {
   ]);
   const choreographyBody = await choreographyRequest.json() as ChoreographyResponse;
   if (!choreographyRequest.ok || !choreographyBody.ok || !choreographyBody.active) throw new Error("Atlas could not load the worker Day choreography.");
-  return assembleWorkerDaySequence({
+  const target = choreographyBody.target;
+  if (!target?.farmId || !target.membershipId || !target.source) throw new Error("Atlas could not identify the worker Day projection.");
+  const sequence = assembleWorkerDaySequence({
     serviceDate: dateIso,
     realWork: tasks.taskCards.filter((task) => task.status !== "archived" && task.status !== "skipped" && !isChildTask(task)).map(planRow),
     suggestions: [],
     placements: choreographyBody.choreography?.placements ?? [],
     cues: choreographyBody.choreography?.cues ?? [],
+  });
+  return buildAtlasWorkerDayProjection({
+    farmId: target.farmId,
+    membershipId: target.membershipId,
+    serviceDate: dateIso,
+    lens: target.source,
+    sequence,
   });
 }
