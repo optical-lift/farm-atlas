@@ -30,6 +30,7 @@ type WorkerDayReadOptions = {
 
 type AtlasRuntimeContextValue = {
   scopeKey: string;
+  version: number;
   peekWorkerDay: (dateIso: string) => WorkerDayRuntimeEntry | null;
   readWorkerDay: (dateIso: string, options?: WorkerDayReadOptions) => Promise<AtlasWorkerDayProjectionRead>;
   invalidateWorkerDay: (dateIso?: string) => void;
@@ -51,9 +52,9 @@ export default function AtlasRuntimeProvider({
   const entriesRef = useRef(new Map<string, WorkerDayRuntimeEntry>());
   const inFlightRef = useRef(new Map<string, Promise<AtlasWorkerDayProjectionRead>>());
   const requestSequenceRef = useRef(0);
-  const [, setVersion] = useState(0);
+  const [version, setVersion] = useState(0);
 
-  const notify = useCallback(() => setVersion((version) => version + 1), []);
+  const notify = useCallback(() => setVersion((current) => current + 1), []);
 
   const invalidateWorkerDay = useCallback((dateIso?: string) => {
     if (dateIso) {
@@ -125,10 +126,11 @@ export default function AtlasRuntimeProvider({
 
   const value = useMemo<AtlasRuntimeContextValue>(() => ({
     scopeKey,
+    version,
     peekWorkerDay,
     readWorkerDay,
     invalidateWorkerDay,
-  }), [scopeKey, peekWorkerDay, readWorkerDay, invalidateWorkerDay]);
+  }), [scopeKey, version, peekWorkerDay, readWorkerDay, invalidateWorkerDay]);
 
   return <AtlasRuntimeContext.Provider value={value}>{children}</AtlasRuntimeContext.Provider>;
 }
