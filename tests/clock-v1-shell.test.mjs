@@ -9,6 +9,7 @@ const surface = read("components/atlas/clock/clock-orchestrator.tsx");
 const timeline = read("components/atlas/clock/clock-timeline-v2.tsx");
 const unplaced = read("components/atlas/clock/clock-unplaced-v2.tsx");
 const projectionClient = read("lib/atlas/worker-day-projection-client.ts");
+const clockTransport = read("lib/atlas/clock-command-client.ts");
 const controls = read("components/atlas/clock/clock-owner-controls.tsx");
 const frame = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
 
@@ -25,7 +26,8 @@ test("Clock reuses Day choreography instead of creating another scheduler", () =
   assert.match(projectionClient, /\/api\/atlas\/worker-day-sequence\?date=/);
   assert.match(projectionClient, /\/api\/atlas\/day-choreography\?date=/);
   assert.match(projectionClient, /fetchAtlasTaskCards/);
-  assert.match(controls, /\/api\/atlas\/owner-day-task-time/);
+  assert.match(controls, /dispatchClockCommand/);
+  assert.match(clockTransport, /\/api\/atlas\/owner-day-task-time/);
   assert.doesNotMatch(surface, /supabase|worker_day_task_placements/);
 });
 
