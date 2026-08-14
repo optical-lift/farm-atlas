@@ -12,6 +12,7 @@ import {
   LivingDayJournal,
   LivingDayUnlocked,
 } from "@/components/atlas/living-day-primitives";
+import { useAtlasWorkerDayProjection } from "@/components/atlas/runtime/AtlasRuntimeProvider";
 import {
   atlasDayRouteState,
   atlasDayTaskCues,
@@ -30,7 +31,7 @@ import {
   atlasTaskDisplay,
   type AtlasWorkRouteKey,
 } from "@/lib/atlas/task-display";
-import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 import {
   atlasWorkOrderAnchorForTask,
@@ -312,24 +313,6 @@ function objectStateBefore(task: AtlasTaskCard) {
   }));
 }
 
-function optimisticTask(task: AtlasTaskCard, outcome: "done" | "reopened") {
-  const done = outcome === "done";
-  return {
-    ...task,
-    status: done ? "done" : "open",
-    metadata: { ...(task.metadata ?? {}), checklist_status: done ? "done" : "open" },
-    task_outcomes: [{
-      event_id: `optimistic:${task.task_id}:${outcome}`,
-      outcome,
-      lane_key: task.action_key,
-      work_key: task.action_key,
-      blocker_reason: null,
-      note: null,
-      created_at: new Date().toISOString(),
-    }, ...(task.task_outcomes ?? [])],
-  } satisfies AtlasTaskCard;
-}
-
 function latestEvidence(task: AtlasTaskCard) {
   const outcome = task.task_outcomes?.[0];
   if (outcome) return outcome.note || outcome.blocker_reason || outcome.outcome.replaceAll("_", " ");
@@ -535,18 +518,17 @@ function AtlasDayPageContent() {
   const requestedRoute = searchParams.get("route");
   const requestedView = searchParams.get("view");
   const routeFilter = requestedRoute && routeOrder.includes(requestedRoute as RouteKey) ? requestedRoute as RouteKey : null;
-  const [tasks, setTasks] = useState<AtlasTaskCard[]>([]);
+  const { taskCards: tasks, loading, error: runtimeError } = useAtlasWorkerDayProjection(dateIso);
   const [livingDay, setLivingDay] = useState<AtlasLivingDay | null>(null);
-  const [loading, setLoading] = useState(true);
   const [livingLoading, setLivingLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [taskError, setTaskError] = useState<string | null>(null);
   const [livingError, setLivingError] = useState<string | null>(null);
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const [viewMode, setViewMode] = useState<DayViewMode>("work_order");
   const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
   const [localHour, setLocalHour] = useState<number | null>(null);
-  const requestSequence = useRef(0);
   const livingRequestSequence = useRef(0);
+  const error = taskError ?? runtimeError;
 
   useEffect(() => {
     if (requestedView === "zone" || requestedView === "area") setViewMode("zone");
@@ -554,31 +536,15 @@ function AtlasDayPageContent() {
   }, [requestedView, dateIso]);
 
   useEffect(() => {
+    setTaskError(null);
+  }, [dateIso]);
+
+  useEffect(() => {
     const update = () => setLocalHour(new Date().getHours());
     update();
     const timer = window.setInterval(update, 300_000);
     return () => window.clearInterval(timer);
   }, []);
-
-  const loadTasks = useCallback(async (reset = false) => {
-    const requestId = ++requestSequence.current;
-    try {
-      if (reset) { setLoading(true); setTasks([]); }
-      setError(null);
-      const response = await fetchAtlasTaskCards({
-        viewerScoped: true,
-        dueThrough: dateIso,
-        doneDate: dateIso,
-        exactDate: isFutureDay ? dateIso : undefined,
-      });
-      if (requestId !== requestSequence.current) return;
-      setTasks(response.taskCards ?? []);
-    } catch (loadError) {
-      if (requestId === requestSequence.current) setError(loadError instanceof Error ? loadError.message : "Tasks failed.");
-    } finally {
-      if (requestId === requestSequence.current && reset) setLoading(false);
-    }
-  }, [dateIso, isFutureDay]);
 
   const loadLivingDay = useCallback(async (reset = false) => {
     const requestId = ++livingRequestSequence.current;
@@ -595,7 +561,10 @@ function AtlasDayPageContent() {
     }
   }, [dateIso]);
 
-  useEffect(() => { void loadTasks(true); void loadLivingDay(true); }, [loadLivingDay, loadTasks]);
+  useEffect(() => {
+    if (loading) return;
+    void loadLivingDay(true);
+  }, [loading, loadLivingDay]);
 
   useEffect(() => {
     async function loadWeather() {
@@ -662,11 +631,9 @@ function AtlasDayPageContent() {
     const complete = isDoneTask(task);
     if (!complete && requiresStructuredResult(task)) { window.location.assign(taskResultHref(task, returnTo)); return; }
 
-    const previousTasks = tasks;
     const transition = complete ? "reopened" : "done";
     setSavingTaskId(task.task_id);
-    setError(null);
-    setTasks((current) => current.map((row) => row.task_id === task.task_id ? optimisticTask(row, transition) : row));
+    setTaskError(null);
     try {
       await postAtlasTaskTransition({
         taskId: task.task_id,
@@ -675,11 +642,10 @@ function AtlasDayPageContent() {
         workKey: task.action_key || undefined,
         payload: complete ? { completion_source: "day_timeline_completion_echo" } : { completion_source: "day_timeline_quick_complete", objectStateBefore: objectStateBefore(task) },
       });
-      await Promise.all([loadTasks(false), loadLivingDay(false)]);
+      await loadLivingDay(false);
     } catch (transitionError) {
-      setTasks(previousTasks);
       const message = transitionError instanceof Error ? transitionError.message : "Task update failed.";
-      setError(message);
+      setTaskError(message);
       if (complete) window.location.assign(taskResultHref(task, returnTo, true));
     } finally { setSavingTaskId(null); }
   }
