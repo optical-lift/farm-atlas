@@ -36,8 +36,9 @@ test("Clock moves only exact committed starts onto the hourly grid", () => {
 });
 
 test("Owner can set, change, and remove a Clock time while Farm Hand remains read only", () => {
+  assert.match(ownerReader, /readOwnerClockProjection/);
   assert.match(ownerReader, /readOwnerClockSequence/);
-  assert.match(surface, /ownerSequence\) return \{ sequence: ownerSequence, canManage: true \}/);
+  assert.match(surface, /ownerProjection\) return \{ projection: ownerProjection, canManage: true \}/);
   assert.match(surface, /canManage: false/);
   assert.match(controls, /type="time"/);
   assert.match(controls, /owner-clock-time-v1/);
