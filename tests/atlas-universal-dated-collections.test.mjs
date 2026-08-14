@@ -6,7 +6,7 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Day Week and Month read one permission-scoped farm and project task collection", () => {
+test("Day reads one permission-scoped Worker Day while Week and Month retain the universal period collection", () => {
   const client = read("lib/atlas/task-cards-client.ts");
   const route = read("app/api/atlas/universal-task-cards/route.ts");
   const operatorReader = read("lib/atlas/operator-universal-home.ts");
@@ -14,6 +14,7 @@ test("Day Week and Month read one permission-scoped farm and project task collec
   const day = read("app/day/page.tsx");
   const week = read("app/overview/week/page.tsx");
   const month = read("app/overview/month/page.tsx");
+  const operationalCards = read("lib/atlas/worker-day-operational-task-cards-server.ts");
 
   assert.match(client, /api\/atlas\/universal-task-cards/);
   assert.match(client, /atlasIsProjectTaskCard/);
@@ -34,7 +35,10 @@ test("Day Week and Month read one permission-scoped farm and project task collec
   assert.match(adapter, /structured_result_required: true/);
   assert.doesNotMatch(adapter, /insert into atlas\.tasks/i);
 
-  assert.match(day, /fetchAtlasTaskCards\(\{[\s\S]*viewerScoped: true/);
+  assert.match(day, /useAtlasWorkerDayProjection\(dateIso\)/);
+  assert.match(day, /taskCards: tasks/);
+  assert.doesNotMatch(day, /fetchAtlasTaskCards/);
+  assert.match(operationalCards, /worker_day_operational_task_cards_v2/);
   assert.match(week, /fetchAtlasTaskCards\(\{ viewerScoped: true/);
   assert.match(month, /fetchAtlasTaskCards\(\{[\s\S]*viewerScoped: true/);
   assert.match(month, /\/task-focus\//);

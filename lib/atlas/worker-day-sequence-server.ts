@@ -3,6 +3,8 @@ import "server-only";
 import { assembleWorkerDaySequence } from "@/lib/atlas/day-sequence";
 import { readOwnerWorkerDayChoreography } from "@/lib/atlas/day-choreography-server";
 import { buildAtlasWorkerDayProjection } from "@/lib/atlas/day-projection";
+import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import { readWorkerDayOperationalTaskCards } from "@/lib/atlas/worker-day-operational-task-cards-server";
 import { readOwnerWorkerDayPlan } from "@/lib/atlas/worker-day-plan-server";
 
 function validDateIso(value: string) {
@@ -14,12 +16,16 @@ export async function readOwnerWorkerDaySequence(dateIso: string) {
   if (!validDateIso(dateIso)) throw new Error("A valid YYYY-MM-DD worker day is required.");
   const planResult = await readOwnerWorkerDayPlan(dateIso);
   if (!planResult.active || !planResult.plan || !planResult.target) {
-    return { active: false as const, operatorLabel: planResult.operatorLabel, target: null, projection: null, sequence: null };
+    return { active: false as const, operatorLabel: planResult.operatorLabel, target: null, projection: null, sequence: null, taskCards: [] as AtlasTaskCard[] };
   }
-  const choreographyResult = await readOwnerWorkerDayChoreography(dateIso);
+
+  const plan = planResult.plan;
+  const [choreographyResult, taskCards] = await Promise.all([
+    readOwnerWorkerDayChoreography(dateIso),
+    readWorkerDayOperationalTaskCards(plan),
+  ]);
   const choreography = choreographyResult.active ? choreographyResult.choreography : null;
   const sameTarget = Boolean(choreographyResult.active && choreographyResult.target?.farmId === planResult.target.farmId && choreographyResult.target?.membershipId === planResult.target.membershipId);
-  const plan = planResult.plan;
   const assembled = assembleWorkerDaySequence({
     serviceDate: plan.serviceDate || dateIso,
     realWork: plan.realWork,
@@ -52,5 +58,6 @@ export async function readOwnerWorkerDaySequence(dateIso: string) {
     target: planResult.target,
     projection,
     sequence: projection.sequence,
+    taskCards,
   };
 }

@@ -40,7 +40,8 @@ test("Owner can set, change, and remove a Clock time while Farm Hand remains rea
   assert.match(ownerReader, /readOwnerClockProjection/);
   assert.match(ownerReader, /readOwnerClockSequence/);
   assert.match(surface, /useAtlasWorkerDayProjection\(dateIso\)/);
-  assert.match(projectionClient, /ownerProjection\) return \{ projection: ownerProjection, canManage: true \}/);
+  assert.match(projectionClient, /if \(ownerProjection\) return \{ \.\.\.ownerProjection, canManage: true \}/);
+  assert.match(projectionClient, /taskCards: Array\.isArray\(body\.taskCards\)/);
   assert.match(projectionClient, /canManage: false/);
   assert.match(controls, /type="time"/);
   assert.match(controls, /dispatchClockCommand\(\{ kind: "clock_time"/);

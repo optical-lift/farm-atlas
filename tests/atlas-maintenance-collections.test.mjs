@@ -23,7 +23,9 @@ test("Day keeps canonical maintenance jobs in the mixed timeline while the compa
   assert.match(source, /label: "Afternoon"/);
   assert.match(source, /label: "Evening"/);
   assert.doesNotMatch(source, /relativeWorkerTimelineGroups/);
-  assert.match(source, /fetchAtlasTaskCards/);
+  assert.match(source, /useAtlasWorkerDayProjection\(dateIso\)/);
+  assert.match(source, /taskCards: tasks/);
+  assert.doesNotMatch(source, /fetchAtlasTaskCards/);
   assert.match(source, /mixedOpenTasks/);
   assert.match(source, /atlasRouteKeyForTask/);
   assert.doesNotMatch(source, /WorkCollectionCard/);

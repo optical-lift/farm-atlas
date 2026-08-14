@@ -34,14 +34,18 @@ test("shared operational readers require an active Atlas membership", () => {
   }
 });
 
-test("Day, Week, and Month all use the canonical task-card reader", () => {
+test("Day uses the canonical Worker Day runtime while Week and Month use the canonical period task reader", () => {
+  const day = read("app/day/page.tsx");
+  assert.match(day, /useAtlasWorkerDayProjection\(dateIso\)/);
+  assert.match(day, /taskCards: tasks/);
+  assert.doesNotMatch(day, /fetchAtlasTaskCards/);
+
   for (const pagePath of [
-    "app/day/page.tsx",
     "app/overview/week/page.tsx",
     "app/overview/month/page.tsx",
   ]) {
     const page = read(pagePath);
-    assert.match(page, /fetchAtlasTaskCards/, `${pagePath} must use canonical task cards`);
+    assert.match(page, /fetchAtlasTaskCards/, `${pagePath} must use canonical period task cards`);
   }
 
   const client = read("lib/atlas/task-cards-client.ts");

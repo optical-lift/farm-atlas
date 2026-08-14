@@ -6,6 +6,6 @@ export async function readOwnerClockProjection(dateIso: string) {
 
 // Compatibility seam for older Clock consumers while reads move into AtlasRuntime.
 export async function readOwnerClockSequence(dateIso: string) {
-  const projection = await readOwnerClockProjection(dateIso);
-  return projection?.sequence ?? null;
+  const read = await readOwnerClockProjection(dateIso);
+  return read?.projection.sequence ?? null;
 }
