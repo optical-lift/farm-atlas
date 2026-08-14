@@ -146,13 +146,13 @@ export function buildAtlasClockProposal(
       block = proposal(item, start, duration.minutes, duration.source, "window", "Fits inside the task's recorded execution window without crossing a real day reservation.", false);
     } else {
       const placement = firstFlexibleFree(item, duration.minutes, reservations);
-      if (placement === null) { unresolved.push({ id: item.id, taskId: item.taskId, title: item.title, reason: `No open ${item.dayWindow} or preferred intraday span currently fits this work around the real day reservations.` }); continue; }
+      if (placement === null) { unresolved.push({ id: item.id, taskId: item.taskId, title: item.title, reason: "No open preferred or fallback Day span currently fits this work around the real day reservations." }); continue; }
       const prefersCoolWork = mobility.intradayPreference === "cool_morning_or_evening";
       const inPreferredCoolWindow = prefersCoolWork && (placement.window === "morning" || placement.window === "evening");
       const reason = inPreferredCoolWindow
         ? `Honors the task's recorded cool-morning-or-evening preference in the ${placement.window} without crossing a recorded Clock commitment or day reservation.`
         : prefersCoolWork
-          ? `No preferred cool-work span fit, so Atlas used the existing ${placement.window} Day window without crossing a recorded Clock commitment or day reservation.`
+          ? `No preferred cool-work span fit, so Atlas used the available ${placement.window} Day window without crossing a recorded Clock commitment or day reservation.`
           : `Fits the existing ${item.dayWindow} Day order without crossing a recorded Clock commitment or day reservation.`;
       block = proposal(item, placement.start, duration.minutes, duration.source, "day_window", reason, false);
     }
