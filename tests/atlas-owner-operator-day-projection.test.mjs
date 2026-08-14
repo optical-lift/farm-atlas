@@ -11,7 +11,7 @@ test("Owner worker-day planning resolves one Farm Hand directly or through an ex
   const reader = read("lib/atlas/worker-day-plan-server.ts");
   assert.match(route, /getAtlasSession/);
   assert.match(route, /readOwnerWorkerDayPlan/);
-  assert.match(reader, /readAtlasOwnerOperatorContext/);
+  assert.match(reader, /resolveAtlasOwnerOperatorContextForSession/);
   assert.match(reader, /resolveOwnerWorkerDayPlanningTarget/);
   assert.match(reader, /source: "operator_lens"/);
   assert.match(reader, /source: "owner_direct"/);
