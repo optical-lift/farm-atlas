@@ -38,9 +38,10 @@ test("timed cue placement uses the existing work order plus expected duration in
   assert.doesNotMatch(sequence, /taskStartTime/);
 });
 
-test("the sequence reader combines existing plan and choreography truth without creating another write path", () => {
+test("the sequence reader combines existing plan and target-scoped choreography truth without creating another write path", () => {
   assert.match(sequenceServer, /readOwnerWorkerDayPlan/);
-  assert.match(sequenceServer, /readOwnerWorkerDayChoreography/);
+  assert.match(sequenceServer, /readWorkerDayChoreographyForTarget/);
+  assert.match(sequenceServer, /readWorkerDayChoreographyForTarget\(dateIso, planResult\.target\)/);
   assert.match(sequenceServer, /assembleWorkerDaySequence/);
   assert.match(sequenceServer, /sameTarget/);
   assert.doesNotMatch(sequenceServer, /\.rpc\(/);
