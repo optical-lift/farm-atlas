@@ -83,6 +83,26 @@ function runtimeEntry(input: {
   };
 }
 
+function runtimeEntryContainsTask(entry: WorkerDayRuntimeEntry, taskIds: Set<string>) {
+  if (!taskIds.size) return false;
+  const projection = entry.value?.projection ?? entry.canonicalValue?.projection ?? null;
+  const items = projection?.sequence?.items ?? [];
+  return items.some((item) => {
+    if (!item || typeof item !== "object" || !("taskId" in item)) return false;
+    const taskId = (item as { taskId?: unknown }).taskId;
+    return typeof taskId === "string" && taskIds.has(taskId);
+  });
+}
+
+function cachedDatesContainingTasks(entries: Map<string, WorkerDayRuntimeEntry>, taskIds: Iterable<string>) {
+  const ids = new Set(Array.from(taskIds).filter(Boolean));
+  const dates: string[] = [];
+  for (const [serviceDate, entry] of entries) {
+    if (runtimeEntryContainsTask(entry, ids)) dates.push(serviceDate);
+  }
+  return dates;
+}
+
 export default function AtlasRuntimeProvider({ children, scopeKey }: { children: ReactNode; scopeKey: string }) {
   const entriesRef = useRef(new Map<string, WorkerDayRuntimeEntry>());
   const inFlightRef = useRef(new Map<string, Promise<AtlasWorkerDayProjectionRead>>());
@@ -155,8 +175,9 @@ export default function AtlasRuntimeProvider({ children, scopeKey }: { children:
   }, [notify]);
 
   const dispatchTaskTransition = useCallback(async (request: AtlasTaskTransitionRequest) => {
-    const serviceDates = Array.from(entriesRef.current.keys());
-    if (!serviceDates.length) return commitAtlasTaskTransition(request);
+    const serviceDates = new Set(cachedDatesContainingTasks(entriesRef.current, [request.taskId]));
+    if (request.targetDate && entriesRef.current.has(request.targetDate)) serviceDates.add(request.targetDate);
+    if (!serviceDates.size) return commitAtlasTaskTransition(request);
 
     const actionId = `runtime-task-transition:${++actionSequenceRef.current}`;
     for (const serviceDate of serviceDates) {
@@ -203,7 +224,17 @@ export default function AtlasRuntimeProvider({ children, scopeKey }: { children:
       }));
     }
     notify();
-    await Promise.allSettled(serviceDates.map((serviceDate) => readWorkerDay(serviceDate, { force: true })));
+
+    const dependentTaskIds = response.dependencyStatus?.dependencies
+      .map((dependency) => dependency.downstreamTaskId)
+      .filter((taskId): taskId is string => Boolean(taskId)) ?? [];
+    const reconciliationDates = new Set(serviceDates);
+    for (const serviceDate of cachedDatesContainingTasks(entriesRef.current, dependentTaskIds)) {
+      reconciliationDates.add(serviceDate);
+    }
+    if (request.targetDate && entriesRef.current.has(request.targetDate)) reconciliationDates.add(request.targetDate);
+
+    await Promise.allSettled(Array.from(reconciliationDates, (serviceDate) => readWorkerDay(serviceDate, { force: true })));
     return response;
   }, [notify, readWorkerDay]);
 
