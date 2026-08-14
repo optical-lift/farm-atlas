@@ -102,7 +102,7 @@ test("Pass 27 records provenance and occurrence-level generated reservation beha
   assert.match(migration, /suppressed/);
   assert.match(editor, /editing this occurrence only/);
   assert.match(editor, /Remove occurrence/);
-  assert.match(hardeningMigration, /occurrence_override/);
+  assert.match(hardeningMigration, /occurrenceOverride/);
 });
 
 test("hard reservation boundaries preserve real-day geometry without becoming absence or cue truth", () => {
