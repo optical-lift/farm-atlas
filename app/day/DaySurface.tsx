@@ -1,7 +1,10 @@
 "use client";
 
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import { useAtlasWorkerDayProjection } from "@/components/atlas/runtime/AtlasRuntimeProvider";
+import { atlasNormalizeFarmDate } from "@/lib/atlas/farm-day";
 
 function taskIdFromSummary(summary: HTMLElement) {
   const entry = summary.closest<HTMLElement>(".atlas-day-task-entry[id^='day-task-']");
@@ -24,6 +27,9 @@ function taskSummary(target: EventTarget | null) {
 
 export default function DaySurface({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const dateIso = atlasNormalizeFarmDate(searchParams.get("date"));
+  const { projection, runtimeScopeKey } = useAtlasWorkerDayProjection(dateIso);
 
   function openSummary(summary: HTMLElement) {
     const href = taskHref(summary);
@@ -50,6 +56,8 @@ export default function DaySurface({ children }: { children: ReactNode }) {
   return (
     <div
       data-atlas-day-surface="true"
+      data-atlas-runtime-scope={runtimeScopeKey}
+      data-atlas-worker-day-revision={projection?.revision}
       onClickCapture={onClick}
       onKeyDownCapture={onKeyDown}
       style={{ display: "contents" }}
