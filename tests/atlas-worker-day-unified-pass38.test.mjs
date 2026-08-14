@@ -67,8 +67,9 @@ test("role-aware endpoint reuses its authenticated Owner session", () => {
   const body = sequenceServer.slice(start);
   assert.equal((body.match(/getAtlasSession\(\)/g) ?? []).length, 1);
   assert.match(body, /readOwnerWorkerDaySequence\(dateIso, session\)/);
-  assert.match(workerPlanServer, /readOwnerWorkerDayPlanForSession\(dateIso, session\)/);
+  assert.match(workerPlanServer, /export async function readOwnerWorkerDayPlanForSession/);
   assert.match(workerPlanServer, /resolveOwnerWorkerDayPlanningTargetForSession\(session\)/);
+  assert.equal((workerPlanServer.match(/getAtlasSession\(\)/g) ?? []).length, 1);
 });
 
 test("server projection explicitly carries management capability", () => {
