@@ -1,6 +1,6 @@
 import "server-only";
 
-import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
+import { resolveAtlasOwnerOperatorContextForSession } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
 import { deriveAtlasTimingMobility, type AtlasTimingMobility } from "@/lib/atlas/timing-mobility";
 import { createAtlasServerClient } from "@/lib/supabase/server";
@@ -133,8 +133,9 @@ async function enrichPlanTiming(plan: WorkerDayPlan) {
 }
 
 export async function resolveOwnerWorkerDayPlanningTarget(): Promise<OwnerWorkerDayPlanningTarget | null> {
-  const [operatorContext, session] = await Promise.all([readAtlasOwnerOperatorContext(), getAtlasSession()]);
+  const session = await getAtlasSession();
   if (!session) return null;
+  const operatorContext = await resolveAtlasOwnerOperatorContextForSession(session);
   if (operatorContext?.isOperating && operatorContext.effective.farmRole === "farm_hand" && operatorContext.effective.farmId && operatorContext.effective.farmMembershipId) return { farmId: operatorContext.effective.farmId, membershipId: operatorContext.effective.farmMembershipId, displayName: operatorContext.effective.displayName || labelFromWorkerKey(operatorContext.effective.workerKey), source: "operator_lens" };
   const farmId = session.activeFarmId ?? operatorContext?.actor.farmId ?? session.memberships.find((membership) => membership.role === "owner")?.farmId ?? null;
   if (!farmId) return null;

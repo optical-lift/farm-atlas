@@ -52,7 +52,7 @@ test("Owner worker-day planning is Owner-authorized while resolving the worker s
   const workerDayPlan = read("lib/atlas/worker-day-plan-server.ts");
   assert.match(operatorContext, /membership\.role === "owner"/);
   assert.match(operatorContext, /organizationMemberships\.some/);
-  assert.match(workerDayPlan, /readAtlasOwnerOperatorContext/);
+  assert.match(workerDayPlan, /resolveAtlasOwnerOperatorContextForSession/);
   assert.match(workerDayPlan, /resolveOwnerWorkerDayPlanningTarget/);
   assert.match(workerDayPlan, /ownerMembership/);
   assert.match(workerDayPlan, /farm_hand/);
