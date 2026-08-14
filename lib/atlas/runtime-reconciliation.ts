@@ -197,9 +197,22 @@ export function applyAtlasRuntimePendingActions(
       ...(clock?.setDuration ? { plannedDurationMinutes: clock.plannedDurationMinutes ?? null } : {}),
     };
   });
+  const taskCards = canonical.taskCards.map((task) => {
+    const status = statusByTaskId.get(task.task_id);
+    if (!status) return task;
+    return {
+      ...task,
+      status,
+      metadata: {
+        ...(task.metadata ?? {}),
+        checklist_status: status === "done" ? "done" : "open",
+      },
+    };
+  });
 
   return {
     ...canonical,
+    taskCards,
     projection: {
       ...canonical.projection,
       // Pending actions derive display state only. The canonical revision belongs to the server projection and is never fabricated here.
