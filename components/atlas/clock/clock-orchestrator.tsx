@@ -2,39 +2,31 @@
 import Link from "next/link";
 import {useSearchParams} from "next/navigation";
 import {useEffect,useMemo,useState} from "react";
+import {useAtlasWorkerDayProjection} from "@/components/atlas/runtime/AtlasRuntimeProvider";
 import {buildClockTaskRanges,chooseClockNextTask,clockLocalMinuteOfDay,layoutClockTaskRanges} from "@/lib/atlas/clock-layout";
 import {buildAtlasClockProposal} from "@/lib/atlas/clock-proposal";
 import {buildAtlasClockReservations} from "@/lib/atlas/clock-reservations";
 import type {AtlasDaySequenceItem} from "@/lib/atlas/day-sequence";
-import type {AtlasWorkerDayProjection} from "@/lib/atlas/day-projection";
 import {atlasFarmDateIso,atlasNormalizeFarmDate,DEFAULT_ATLAS_FARM_TIME_ZONE} from "@/lib/atlas/farm-day";
 import ClockHeaderV2 from "./clock-header-v2";
-import {readOwnerClockProjection} from "./clock-owner-reader";
 import ClockPlanBar from "./clock-plan-bar";
 import ClockPlanningTimeline from "./clock-planning-timeline";
 import ClockPlanningUnplaced from "./clock-planning-unplaced";
 import ClockTimelineV2 from "./clock-timeline-v2";
 import ClockUnplacedV2 from "./clock-unplaced-v2";
 import {useClockPlanEditor} from "./use-clock-plan-editor";
-import {readWorkerClockProjection} from "./clock-worker-reader";
 import styles from "./clock-surface-v2.module.css";
 
 type Work=Extract<AtlasDaySequenceItem,{kind:"committed_task"}>;
 type Cue=Extract<AtlasDaySequenceItem,{kind:"cue"}>;
 function timeLabel(value:Date){return new Intl.DateTimeFormat("en-US",{timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE,hour:"numeric",minute:"2-digit"}).format(value);}
-async function readClock(dateIso:string){
- const ownerProjection=await readOwnerClockProjection(dateIso);
- if (ownerProjection) return { projection: ownerProjection, canManage: true };
- return { projection: await readWorkerClockProjection(dateIso), canManage: false };
-}
 
 export default function ClockOrchestrator(){
  const search=useSearchParams(),dateIso=atlasNormalizeFarmDate(search.get("date"));
- const [projection,setProjection]=useState<AtlasWorkerDayProjection|null>(null),[canManage,setCanManage]=useState(false),[proposalOpen,setProposalOpen]=useState(false);
- const [error,setError]=useState<string|null>(null),[saveError,setSaveError]=useState<string|null>(null),[loading,setLoading]=useState(true),[now,setNow]=useState(()=>new Date());
+ const {projection,canManage,loading,error,reload}=useAtlasWorkerDayProjection(dateIso);
+ const [proposalOpen,setProposalOpen]=useState(false),[saveError,setSaveError]=useState<string|null>(null),[now,setNow]=useState(()=>new Date());
  const sequence=projection?.sequence??null;
- async function reload(){const value=await readClock(dateIso);setProjection(value.projection);setCanManage(value.canManage);}
- useEffect(()=>{let alive=true;setLoading(true);setError(null);setSaveError(null);setProposalOpen(false);void readClock(dateIso).then(value=>{if(alive){setProjection(value.projection);setCanManage(value.canManage);}}).catch(failure=>{if(alive){setProjection(null);setCanManage(false);setError(failure instanceof Error?failure.message:"Clock could not load.");}}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[dateIso]);
+ useEffect(()=>{setSaveError(null);setProposalOpen(false);},[dateIso]);
  useEffect(()=>{const timer=window.setInterval(()=>setNow(new Date()),60_000);return()=>window.clearInterval(timer);},[]);
  // Worker privacy contract: potential work never enters the worker temporal surface.
  const items=useMemo(()=>(sequence?.items??[]).filter((item) => item.kind !== "potential_task"),[sequence]);
