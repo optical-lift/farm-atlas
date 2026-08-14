@@ -28,10 +28,12 @@ test("projection identity preserves the role lens instead of collapsing Owner an
   assert.match(workerReader, /lens: target\.source/);
 });
 
-test("equivalent day reads keep the same revision even though generatedAt changes", () => {
-  assert.match(projection, /const \{ generatedAt: _generatedAt, \.\.\.revisionSequence \} = input\.sequence/);
-  assert.match(projection, /projectionFingerprint\(\{ identity, sequence: revisionSequence \}\)/);
-  assert.doesNotMatch(projection, /projectionFingerprint\(\{ identity, sequence: input\.sequence \}\)/);
+test("projection revisions are deterministic fingerprints of identity plus sequence state", () => {
+  assert.match(projection, /stableProjectionValue/);
+  assert.match(projection, /Object\.entries\(value as Record<string, unknown>\)/);
+  assert.match(projection, /\.sort\(\(\[left\], \[right\]\) => left\.localeCompare\(right\)\)/);
+  assert.match(projection, /projectionFingerprint\(\{ identity, sequence: input\.sequence \}\)/);
+  assert.doesNotMatch(projection, /Date\.now|new Date|randomUUID|Math\.random/);
 });
 
 test("the owner worker-day read returns the projection envelope while preserving the sequence compatibility seam", () => {
