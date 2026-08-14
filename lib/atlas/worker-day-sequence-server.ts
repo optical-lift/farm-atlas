@@ -44,6 +44,7 @@ export async function readOwnerWorkerDaySequence(dateIso: string) {
     serviceDate: sequence.serviceDate,
     lens: planResult.target.source,
     sequence,
+    reservations: sameTarget ? choreographyResult.reservations : [],
   });
   return {
     active: true as const,
