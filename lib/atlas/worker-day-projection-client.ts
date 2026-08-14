@@ -5,6 +5,7 @@ import {
   type AtlasDaySequencePlanRowInput,
   type AtlasDaySequenceWindow,
 } from "@/lib/atlas/day-sequence";
+import type { AtlasDayReservation } from "@/lib/atlas/day-reservations";
 import {
   buildAtlasWorkerDayProjection,
   type AtlasWorkerDayProjection,
@@ -34,6 +35,7 @@ type ChoreographyResponse = {
     placements?: AtlasDaySequencePlacementInput[];
     cues?: AtlasDaySequenceCueInput[];
   } | null;
+  reservations?: AtlasDayReservation[];
 };
 
 export type AtlasWorkerDayProjectionRead = {
@@ -133,6 +135,7 @@ export async function readWorkerSelfDayProjection(dateIso: string) {
     serviceDate: dateIso,
     lens: target.source,
     sequence,
+    reservations: choreographyBody.reservations ?? [],
   });
 }
 
