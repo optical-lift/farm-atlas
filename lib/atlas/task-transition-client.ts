@@ -151,9 +151,11 @@ function leaveCompletedTaskPage() {
 }
 
 /**
- * Commits one canonical task transition and returns the server truth. Runtime
- * callers use this primitive so they can reconcile their own derived projection
- * without a competing global invalidation clearing optimistic state first.
+ * The transition client owns transport only. AtlasRuntime may orchestrate a
+ * derived optimistic projection around this transport, but rendered checklist
+ * or task DOM state remains owned by the React surface that initiated the work.
+ *
+ * This primitive commits one canonical task transition and returns server truth.
  */
 export async function commitAtlasTaskTransition(input: AtlasTaskTransitionRequest): Promise<AtlasTaskTransitionResponse> {
   const response = await fetch("/api/atlas/task-transition", {
