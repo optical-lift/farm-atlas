@@ -5,12 +5,14 @@ import test from "node:test";
 function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url), "utf8"); }
 
 const migration = read("supabase/migrations/20260814133500_owner_day_reservation_commands_v1.sql");
+const routineHardening = read("supabase/migrations/20260814141500_fixed_routine_projection_hardening_v1.sql");
 const route = read("app/api/atlas/owner-day-reservation/route.ts");
 const commandClient = read("lib/atlas/reservation-command-client.ts");
 const runtime = read("components/atlas/runtime/AtlasRuntimeProvider.tsx");
 const reconciliation = read("lib/atlas/runtime-reconciliation.ts");
 const reservationContract = read("lib/atlas/day-reservations.ts");
 const reservationServer = read("lib/atlas/day-reservations-server.ts");
+const clockReservations = read("lib/atlas/clock-reservations.ts");
 const clockBlock = read("components/atlas/clock/ClockReservationBlock.tsx");
 const clockTimeline = read("components/atlas/clock/clock-timeline-v2.tsx");
 const planningTimeline = read("components/atlas/clock/clock-planning-timeline.tsx");
@@ -77,7 +79,10 @@ test("Pass 26 fixed routines project dated reservations instead of recurring tas
   assert.match(migration, /sync_fixed_routine_reservations_for_day_v1/);
   assert.match(migration, /insert into atlas\.day_reservations/);
   assert.match(reservationServer, /sync_fixed_routine_reservations_for_day_v1/);
+  assert.match(routineHardening, /fixed_routines_weekdays_check/);
+  assert.match(routineHardening, /insert into atlas\.day_reservations/);
   assert.doesNotMatch(migration, /insert into atlas\.tasks/);
+  assert.doesNotMatch(routineHardening, /insert into atlas\.tasks/);
 });
 
 test("Pass 27 records provenance and occurrence-level generated reservation behavior", () => {
@@ -87,9 +92,15 @@ test("Pass 27 records provenance and occurrence-level generated reservation beha
   assert.match(migration, /occurrenceOverride/);
   assert.match(migration, /suppressed/);
   assert.match(editor, /editing this occurrence only/);
+  assert.match(editor, /Remove occurrence/);
+  assert.match(routineHardening, /does not outlive a routine that no longer applies/);
 });
 
 test("hard reservation boundaries preserve real-day geometry without becoming absence or cue truth", () => {
+  assert.match(clockReservations, /cue\.anchorKind === "at_time"/);
+  assert.match(clockReservations, /startMinute < reservation\.endMinute && endMinute > reservation\.startMinute/);
+  assert.match(clockReservations, /startMinute < reservation\.startMinute && endMinute > reservation\.startMinute/);
+  assert.doesNotMatch(clockReservations, /anchorKind === "before"|anchorKind === "after"/);
   assert.match(migration, /day_reservations/);
   assert.doesNotMatch(migration, /alter table atlas\.member_unavailability/);
   assert.doesNotMatch(migration, /alter table atlas\.worker_day_cues/);
