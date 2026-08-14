@@ -3,7 +3,7 @@ import "server-only";
 import { assembleWorkerDaySequence } from "@/lib/atlas/day-sequence";
 import { readWorkerDayChoreographyForTarget, type AtlasDayChoreographyTarget } from "@/lib/atlas/day-choreography-server";
 import { buildAtlasWorkerDayProjection } from "@/lib/atlas/day-projection";
-import { getAtlasSession, type AtlasSession, type AtlasSessionTiming } from "@/lib/atlas/session";
+import { getAtlasSessionFast, type AtlasSession, type AtlasSessionTiming } from "@/lib/atlas/session";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { readWorkerDayOperationalTaskCards } from "@/lib/atlas/worker-day-operational-task-cards-server";
 import {
@@ -199,6 +199,7 @@ export async function readWorkerDaySequence(dateIso: string) {
       profileMs: 0,
       farmMembershipsMs: 0,
       organizationMembershipsMs: 0,
+      sessionContextRpcMs: 0,
       normalizeMs: 0,
       totalMs: 0,
     },
@@ -210,7 +211,7 @@ export async function readWorkerDaySequence(dateIso: string) {
   };
 
   try {
-    const sessionRead = await measured(() => getAtlasSession(timing.sessionPhases));
+    const sessionRead = await measured(() => getAtlasSessionFast(timing.sessionPhases));
     timing.sessionMs = sessionRead.ms;
     const session = sessionRead.value;
     if (!session) {

@@ -67,10 +67,11 @@ test("Farm Hand plan passes through the same timing enrichment seam as Owner", (
   assert.match(selfPlanServer, /suggestions: \[\]/);
 });
 
-test("role-aware endpoint reuses its authenticated Owner session", () => {
+test("role-aware endpoint reuses its single authenticated session projection", () => {
   const start = sequenceServer.indexOf("export async function readWorkerDaySequence");
   const body = sequenceServer.slice(start);
-  assert.equal((body.match(/getAtlasSession\([^)]*\)/g) ?? []).length, 1);
+  assert.equal((body.match(/getAtlasSession(?:Fast)?\([^)]*\)/g) ?? []).length, 1);
+  assert.match(body, /getAtlasSessionFast\(timing\.sessionPhases\)/);
   assert.match(body, /readOwnerWorkerDaySequence\(dateIso, session, timing\)/);
   assert.match(workerPlanServer, /export async function readOwnerWorkerDayPlanForSession/);
   assert.match(workerPlanServer, /resolveOwnerWorkerDayPlanningTargetForSession\(session\)/);

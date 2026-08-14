@@ -43,6 +43,7 @@ export type AtlasSessionTiming = {
   profileMs: number;
   farmMembershipsMs: number;
   organizationMembershipsMs: number;
+  sessionContextRpcMs?: number;
   normalizeMs: number;
   totalMs: number;
 };
@@ -105,6 +106,17 @@ export type AtlasSessionContext = {
   membershipRows: AtlasMembershipRow[];
   organizationMembershipRows: AtlasOrganizationMembershipRow[];
   session: AtlasSession;
+};
+
+type AtlasFastSessionPayload = {
+  user?: {
+    id?: string | null;
+    email?: string | null;
+    user_metadata?: Record<string, unknown> | null;
+  } | null;
+  profile?: AtlasProfileRow;
+  memberships?: AtlasMembershipRow[] | null;
+  organizationMemberships?: AtlasOrganizationMembershipRow[] | null;
 };
 
 function nowMs() {
@@ -195,6 +207,41 @@ export async function getAtlasSessionContext(timing?: AtlasSessionTiming): Promi
       organizationMembershipRows,
       session,
     };
+  } finally {
+    if (timing) timing.totalMs = elapsedMs(totalStartedAt);
+  }
+}
+
+export async function getAtlasSessionFast(timing?: AtlasSessionTiming): Promise<AtlasSession | null> {
+  const totalStartedAt = nowMs();
+  try {
+    const clientRead = await measured(() => createAtlasServerClient());
+    if (timing) timing.clientMs = clientRead.ms;
+    const supabase = clientRead.value;
+
+    const contextRead = await measured(() => supabase.rpc("current_session_context_api_v1"));
+    if (timing) timing.sessionContextRpcMs = contextRead.ms;
+    const { data, error } = contextRead.value;
+    if (error) throw new Error("Atlas session context read failed.");
+    if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+
+    const payload = data as unknown as AtlasFastSessionPayload;
+    const profile = (payload.profile ?? null) as AtlasProfileRow;
+    if (profile?.active === false) return null;
+
+    const membershipRows = (payload.memberships ?? []) as AtlasMembershipRow[];
+    const organizationMembershipRows = (
+      payload.organizationMemberships ?? []
+    ) as AtlasOrganizationMembershipRow[];
+    const normalizeStartedAt = nowMs();
+    const session = normalizeAtlasSession({
+      user: payload.user ?? null,
+      profile,
+      memberships: membershipRows,
+      organizationMemberships: organizationMembershipRows,
+    }) as AtlasSession | null;
+    if (timing) timing.normalizeMs = elapsedMs(normalizeStartedAt);
+    return session;
   } finally {
     if (timing) timing.totalMs = elapsedMs(totalStartedAt);
   }
