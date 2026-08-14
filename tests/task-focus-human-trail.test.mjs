@@ -42,7 +42,10 @@ test("execution facts stay visible instead of hiding useful work behind an Instr
   assert.doesNotMatch(brief, /More instructions/);
   assert.doesNotMatch(shell, /Before the move/);
   assert.doesNotMatch(shell, /data-atlas-task-readiness/);
-  assert.match(shell, /This can&apos;t move yet/);
+  assert.match(shell, /Blocked — resolve this before this task can be completed\./);
+  assert.match(shell, /task\.status === "blocked"/);
+  assert.match(shell, /blockers\.length > 0/);
+  assert.doesNotMatch(shell, /you can still finish this task/);
   assert.match(shell, /TaskPrimaryResultControls/);
 });
 
