@@ -8,8 +8,7 @@ const surfaceEntry = read("components/atlas/clock/clock-surface.tsx");
 const surface = read("components/atlas/clock/clock-orchestrator.tsx");
 const timeline = read("components/atlas/clock/clock-timeline-v2.tsx");
 const unplaced = read("components/atlas/clock/clock-unplaced-v2.tsx");
-const ownerReader = read("components/atlas/clock/clock-owner-reader.ts");
-const workerReader = read("components/atlas/clock/clock-worker-reader.ts");
+const projectionClient = read("lib/atlas/worker-day-projection-client.ts");
 const controls = read("components/atlas/clock/clock-owner-controls.tsx");
 const frame = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
 
@@ -22,17 +21,17 @@ test("Clock is a first-class Atlas tab and route", () => {
 });
 
 test("Clock reuses Day choreography instead of creating another scheduler", () => {
-  assert.match(workerReader, /assembleWorkerDaySequence/);
-  assert.match(ownerReader, /\/api\/atlas\/worker-day-sequence\?date=/);
-  assert.match(workerReader, /\/api\/atlas\/day-choreography\?date=/);
-  assert.match(workerReader, /fetchAtlasTaskCards/);
+  assert.match(projectionClient, /assembleWorkerDaySequence/);
+  assert.match(projectionClient, /\/api\/atlas\/worker-day-sequence\?date=/);
+  assert.match(projectionClient, /\/api\/atlas\/day-choreography\?date=/);
+  assert.match(projectionClient, /fetchAtlasTaskCards/);
   assert.match(controls, /\/api\/atlas\/owner-day-task-time/);
   assert.doesNotMatch(surface, /supabase|worker_day_task_placements/);
 });
 
 test("Clock keeps Owner potential out of the worker temporal surface", () => {
   assert.match(surface, /filter\(\(item\) => item\.kind !== "potential_task"\)/);
-  assert.match(workerReader, /suggestions: \[\]/);
+  assert.match(projectionClient, /suggestions: \[\]/);
   assert.doesNotMatch(surface, /PotentialCard|projectionEligible|Atlas suggests|Not today/);
 });
 
