@@ -20,7 +20,11 @@ import styles from "./clock-surface-v2.module.css";
 type Work=Extract<AtlasDaySequenceItem,{kind:"committed_task"}>;
 type Cue=Extract<AtlasDaySequenceItem,{kind:"cue"}>;
 function timeLabel(value:Date){return new Intl.DateTimeFormat("en-US",{timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE,hour:"numeric",minute:"2-digit"}).format(value);}
-async function readClock(dateIso:string){const owner=await readOwnerClockSequence(dateIso);return owner?{sequence:owner,canManage:true}:{sequence:await readWorkerClockSequence(dateIso),canManage:false};}
+async function readClock(dateIso:string){
+ const ownerSequence=await readOwnerClockSequence(dateIso);
+ if (ownerSequence) return { sequence: ownerSequence, canManage: true };
+ return { sequence: await readWorkerClockSequence(dateIso), canManage: false };
+}
 
 export default function ClockOrchestrator(){
  const search=useSearchParams(),dateIso=atlasNormalizeFarmDate(search.get("date"));
@@ -29,17 +33,17 @@ export default function ClockOrchestrator(){
  async function reload(){const value=await readClock(dateIso);setSequence(value.sequence);setCanManage(value.canManage);}
  useEffect(()=>{let alive=true;setLoading(true);setError(null);setSaveError(null);setProposalOpen(false);void readClock(dateIso).then(value=>{if(alive){setSequence(value.sequence);setCanManage(value.canManage);}}).catch(failure=>{if(alive){setSequence(null);setCanManage(false);setError(failure instanceof Error?failure.message:"Clock could not load.");}}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[dateIso]);
  useEffect(()=>{const timer=window.setInterval(()=>setNow(new Date()),60_000);return()=>window.clearInterval(timer);},[]);
- // Worker privacy contract: item.kind !== "potential_task"
- const items=useMemo(()=>(sequence?.items??[]).filter(item=>item.kind!=="potential_task"),[sequence]);
+ // Worker privacy contract: potential work never enters the worker temporal surface.
+ const items=useMemo(()=>(sequence?.items??[]).filter((item) => item.kind !== "potential_task"),[sequence]);
  const committed=useMemo(()=>items.filter((item):item is Work=>item.kind==="committed_task"),[items]);
- const timedCues=useMemo(()=>items.filter((item):item is Cue=>item.kind==="cue"&&item.positionResolved&&item.anchorKind==="at_time"&&Boolean(item.scheduledAt)&&!["resolved","dismissed","stale"].includes(item.status)),[items]);
+ const timedCues=useMemo(()=>items.filter((item):item is Cue=>item.kind==="cue"&&item.positionResolved&&item.anchorKind === "at_time"&&Boolean(item.scheduledAt)&&!["resolved","dismissed","stale"].includes(item.status)),[items]);
  const ranges=useMemo(()=>buildClockTaskRanges(committed,{timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE}),[committed]),layouts=useMemo(()=>layoutClockTaskRanges(ranges),[ranges]);
  // canManage && proposalOpen ? buildAtlasClockProposal(committed)
  // Plan this Clock. Nothing here changes Anna's Clock until Commit plan.
  const proposal=useMemo(()=>canManage&&proposalOpen?buildAtlasClockProposal(committed):{blocks:[],unresolved:[]},[canManage,proposalOpen,committed]);
  const editor=useClockPlanEditor({active:canManage&&proposalOpen,dateIso,committed,proposal,rebuildProposal:()=>buildAtlasClockProposal(committed),onReload:reload,onCommitted:()=>setProposalOpen(false),onError:setSaveError});
- const today=atlasFarmDateIso(now),selectedToday=dateIso===today,nowMinute=selectedToday?clockLocalMinuteOfDay(now.toISOString(),DEFAULT_ATLAS_FARM_TIME_ZONE):null;
- const activeRange=selectedToday&&nowMinute!==null?ranges.find(range=>Boolean(range.span.minutes)&&range.startMinute<=nowMinute&&range.endMinute>nowMinute&&range.item.status!=="done"&&range.item.status!=="completed")??null:null;
+ const today=atlasFarmDateIso(now),selectedToday = dateIso === today,nowMinute=selectedToday?clockLocalMinuteOfDay(now.toISOString(),DEFAULT_ATLAS_FARM_TIME_ZONE):null;
+ const activeRange=selectedToday&&nowMinute!==null?ranges.find(range=>Boolean(range.span.minutes)&&range.startMinute <= nowMinute&&range.endMinute > nowMinute&&range.item.status!=="done"&&range.item.status!=="completed")??null:null;
  const nextTask=chooseClockNextTask(committed,ranges,selectedToday?nowMinute:null),nextRange=nextTask?ranges.find(range=>range.item.id===nextTask.id)??null:null;
  const cueMinutes=timedCues.map(item=>clockLocalMinuteOfDay(item.scheduledAt,DEFAULT_ATLAS_FARM_TIME_ZONE)).filter((value):value is number=>value!==null);
  const taskMinutes=ranges.flatMap(range=>range.span.minutes?[range.startMinute,range.endMinute]:[range.startMinute]);
