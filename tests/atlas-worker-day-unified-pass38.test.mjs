@@ -25,8 +25,8 @@ test("one Worker Day endpoint serves Owner-managed and Farm Hand self projection
   assert.match(route, /readWorkerDaySequence/);
   assert.match(route, /worker-day-sequence-v2/);
   assert.match(sequenceServer, /session\.memberships\.some\(\(membership\) => membership\.role === "owner"\)/);
-  assert.match(sequenceServer, /readOwnerWorkerDaySequence\(dateIso, session\)/);
-  assert.match(sequenceServer, /readWorkerSelfDaySequence\(dateIso, target\)/);
+  assert.match(sequenceServer, /readOwnerWorkerDaySequence\(dateIso, session, timing\)/);
+  assert.match(sequenceServer, /readWorkerSelfDaySequence\(dateIso, target, timing\)/);
   assert.match(sequenceServer, /source: "worker_self"/);
 });
 
@@ -66,7 +66,7 @@ test("role-aware endpoint reuses its authenticated Owner session", () => {
   const start = sequenceServer.indexOf("export async function readWorkerDaySequence");
   const body = sequenceServer.slice(start);
   assert.equal((body.match(/getAtlasSession\(\)/g) ?? []).length, 1);
-  assert.match(body, /readOwnerWorkerDaySequence\(dateIso, session\)/);
+  assert.match(body, /readOwnerWorkerDaySequence\(dateIso, session, timing\)/);
   assert.match(workerPlanServer, /export async function readOwnerWorkerDayPlanForSession/);
   assert.match(workerPlanServer, /resolveOwnerWorkerDayPlanningTargetForSession\(session\)/);
   assert.equal((workerPlanServer.match(/getAtlasSession\(\)/g) ?? []).length, 1);
