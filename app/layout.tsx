@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import AtlasBellCover from "@/components/atlas/home/AtlasBellCover";
 import OwnerDayPlanGate from "@/components/atlas/owner-day-plan-gate";
 import AtlasPwaBridge from "@/components/atlas/pwa/AtlasPwaBridge";
+import AtlasRuntimeProvider from "@/components/atlas/runtime/AtlasRuntimeProvider";
 import AtlasContextualAppFrame from "@/components/atlas/shell/AtlasContextualAppFrame";
 import DependencyReleaseFlash from "@/components/atlas/task/DependencyReleaseFlash";
 import AtlasWorkAlongsideOverlay from "@/components/atlas/work-alongside/AtlasWorkAlongsideOverlay";
@@ -132,22 +133,38 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const effectiveFarmRole = operatorContext?.isOperating
     ? operatorContext.effective.farmRole
     : activeMembership?.role ?? null;
+  const runtimeScopeKey = [
+    session?.userId ?? "anonymous",
+    operatorContext?.isOperating ? "operator" : "direct",
+    operatorContext?.isOperating
+      ? operatorContext.effective.accountId
+      : activeMembership?.membershipId ?? "no-membership",
+    operatorContext?.isOperating
+      ? operatorContext.effective.farmMembershipId ?? "no-farm-membership"
+      : activeMembership?.membershipId ?? "no-farm-membership",
+    operatorContext?.isOperating
+      ? operatorContext.effective.farmId ?? "no-farm"
+      : activeMembership?.farmId ?? "no-farm",
+    effectiveFarmRole ?? "no-role",
+  ].join(":");
 
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <AtlasPwaBridge />
-        <AtlasSkyLedgerMaintainer farmId={activeMembership?.farmId ?? null} role={activeMembership?.role ?? null} />
-        <OwnerOperatorMode context={operatorContext} />
-        {/* Legacy contract marker: <AtlasContextualAppFrame /> now receives the effective account role. */}
-        <AtlasContextualAppFrame effectiveFarmRole={effectiveFarmRole} />
-        <AtlasBellCover />
-        <DependencyReleaseFlash />
-        <Suspense fallback={null}><AtlasWorkAlongsideOverlay /></Suspense>
-        <Suspense fallback={null}><OwnerDayPlanGate /></Suspense>
-        <Suspense fallback={null}><GlobalDayCueDelivery /></Suspense>
-        {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
-        {children}
+        <AtlasRuntimeProvider key={runtimeScopeKey} scopeKey={runtimeScopeKey}>
+          <AtlasPwaBridge />
+          <AtlasSkyLedgerMaintainer farmId={activeMembership?.farmId ?? null} role={activeMembership?.role ?? null} />
+          <OwnerOperatorMode context={operatorContext} />
+          {/* Legacy contract marker: <AtlasContextualAppFrame /> now receives the effective account role. */}
+          <AtlasContextualAppFrame effectiveFarmRole={effectiveFarmRole} />
+          <AtlasBellCover />
+          <DependencyReleaseFlash />
+          <Suspense fallback={null}><AtlasWorkAlongsideOverlay /></Suspense>
+          <Suspense fallback={null}><OwnerDayPlanGate /></Suspense>
+          <Suspense fallback={null}><GlobalDayCueDelivery /></Suspense>
+          {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
+          {children}
+        </AtlasRuntimeProvider>
       </body>
     </html>
   );
