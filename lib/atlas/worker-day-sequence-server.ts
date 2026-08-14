@@ -1,7 +1,7 @@
 import "server-only";
 
 import { assembleWorkerDaySequence } from "@/lib/atlas/day-sequence";
-import { readOwnerWorkerDayChoreography } from "@/lib/atlas/day-choreography-server";
+import { readWorkerDayChoreographyForTarget } from "@/lib/atlas/day-choreography-server";
 import { buildAtlasWorkerDayProjection } from "@/lib/atlas/day-projection";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { readWorkerDayOperationalTaskCards } from "@/lib/atlas/worker-day-operational-task-cards-server";
@@ -21,7 +21,7 @@ export async function readOwnerWorkerDaySequence(dateIso: string) {
 
   const plan = planResult.plan;
   const [choreographyResult, taskCards] = await Promise.all([
-    readOwnerWorkerDayChoreography(dateIso),
+    readWorkerDayChoreographyForTarget(dateIso, planResult.target),
     readWorkerDayOperationalTaskCards(plan),
   ]);
   const choreography = choreographyResult.active ? choreographyResult.choreography : null;

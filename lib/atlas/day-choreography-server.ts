@@ -165,10 +165,11 @@ export async function resolveDayChoreographyTarget(): Promise<AtlasDayChoreograp
   };
 }
 
-export async function readWorkerDayChoreography(dateIso: string) {
+export async function readWorkerDayChoreographyForTarget(
+  dateIso: string,
+  target: AtlasDayChoreographyTarget,
+) {
   if (!validDateIso(dateIso)) throw new Error("A valid YYYY-MM-DD Day is required.");
-  const target = await resolveDayChoreographyTarget();
-  if (!target) return { active: false as const, target: null, choreography: null, reservations: [] };
 
   const supabase = await createAtlasServerClient();
   const [{ data, error }, reservations] = await Promise.all([
@@ -191,6 +192,13 @@ export async function readWorkerDayChoreography(dateIso: string) {
     choreography: normalizeChoreography(data),
     reservations,
   };
+}
+
+export async function readWorkerDayChoreography(dateIso: string) {
+  if (!validDateIso(dateIso)) throw new Error("A valid YYYY-MM-DD Day is required.");
+  const target = await resolveDayChoreographyTarget();
+  if (!target) return { active: false as const, target: null, choreography: null, reservations: [] };
+  return readWorkerDayChoreographyForTarget(dateIso, target);
 }
 
 export const readOwnerWorkerDayChoreography = readWorkerDayChoreography;
