@@ -33,7 +33,7 @@ export default function ClockOrchestrator(){
  const items=useMemo(()=>(sequence?.items??[]).filter((item) => item.kind !== "potential_task"),[sequence]);
  const committed=useMemo(()=>items.filter((item):item is Work=>item.kind==="committed_task"),[items]);
  const timedCues=useMemo(()=>items.filter((item):item is Cue=>item.kind==="cue"&&item.positionResolved&&item.anchorKind === "at_time"&&Boolean(item.scheduledAt)&&!["resolved","dismissed","stale"].includes(item.status)),[items]);
- const commitments=useMemo(()=>(projection?.reservations??[]).map((reservation)=>({id:reservation.reservationId,title:reservation.title,source:reservation.kind,startAt:reservation.startAt,endAt:reservation.endAt,reason:atlasDayReservationClockReason(reservation)})),[projection]);
+ const commitments=useMemo(()=>(projection?.reservations??[]).map((reservation)=>({id:reservation.reservationId,title:reservation.title,source:reservation.kind,startAt:reservation.startAt,endAt:reservation.endAt,reason:atlasDayReservationClockReason(reservation),reservation})),[projection]);
  const dayReservations=useMemo(()=>buildAtlasClockReservations({timedCues,commitments,timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE}),[timedCues,commitments]);
  const ranges=useMemo(()=>buildClockTaskRanges(committed,{timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE}),[committed]),layouts=useMemo(()=>layoutClockTaskRanges(ranges),[ranges]);
  // Plan this Clock. Reservations are day-shaping truth, not tasks, and nothing changes Anna's Clock until Commit plan.
