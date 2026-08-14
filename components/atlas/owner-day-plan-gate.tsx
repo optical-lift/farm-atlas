@@ -8,29 +8,9 @@ import OwnerDayCueEditor from "@/components/atlas/owner-day-cue-editor";
 import OwnerDayScheduleBuilder from "@/components/atlas/owner-day-schedule-builder";
 import OwnerDayVisualGrammar from "@/components/atlas/owner-day-visual-grammar";
 import OwnerInterleavedDayProjection from "@/components/atlas/owner-interleaved-day-projection";
+import { useAtlasWorkerDayProjection } from "@/components/atlas/runtime/AtlasRuntimeProvider";
 
 /* Legacy regression vocabulary: Edit today · Purple is a draft. */
-
-type PlanProbe = {
-  ok?: boolean;
-  active?: boolean;
-  operatorLabel?: string;
-  target?: {
-    farmId?: string;
-    membershipId?: string;
-    displayName?: string;
-    source?: "operator_lens" | "owner_direct";
-  } | null;
-  plan?: {
-    availableWorkerDay?: boolean;
-    paidTargetMinutes?: number;
-    committedPaidMinutes?: number;
-    automaticPaidMinutes?: number;
-    suggestions?: Array<{ sourceKind?: string }>;
-    automaticWork?: unknown[];
-    realWork?: unknown[];
-  } | null;
-};
 
 function validDateIso(value: string | null) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
@@ -45,37 +25,16 @@ function minutesLabel(value: number) {
   return `${hours}h ${remainder}m`;
 }
 
-export default function OwnerDayPlanGate() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const requestedDate = searchParams.get("date");
-  const dateIso = pathname === "/day" && validDateIso(requestedDate) ? requestedDate : null;
-  const [probe, setProbe] = useState<PlanProbe | null>(null);
+function OwnerDayPlanGateForDate({ dateIso, pathname }: { dateIso: string; pathname: string }) {
+  const { projection, canManage, loading } = useAtlasWorkerDayProjection(dateIso);
   const [open, setOpen] = useState(false);
   const [host, setHost] = useState<HTMLElement | null>(null);
+  const sequence = projection?.sequence ?? null;
+  const canPlan = Boolean(!loading && canManage && sequence?.availableWorkerDay !== false && projection);
 
   useEffect(() => {
-    setProbe(null);
     setOpen(false);
-    if (!dateIso) return;
-
-    const controller = new AbortController();
-    void fetch(`/api/atlas/worker-day-plan?date=${encodeURIComponent(dateIso)}`, {
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
-    }).then(async (request) => {
-      const body = await request.json() as PlanProbe;
-      if (!controller.signal.aborted) setProbe(request.ok && body.ok ? body : null);
-    }).catch(() => {
-      if (!controller.signal.aborted) setProbe(null);
-    });
-
-    return () => controller.abort();
   }, [dateIso]);
-
-  const canPlan = Boolean(probe?.active && probe.plan?.availableWorkerDay !== false && probe.target?.membershipId);
 
   useEffect(() => {
     if (!dateIso || !canPlan || pathname !== "/day") {
@@ -127,12 +86,12 @@ export default function OwnerDayPlanGate() {
     };
   }, [canPlan, dateIso, pathname]);
 
-  if (!canPlan || !host?.isConnected) return null;
+  if (!canPlan || !host?.isConnected || !sequence) return null;
 
-  const operatorLabel = probe?.operatorLabel || "Farm Hand";
-  const targetMinutes = Math.max(0, Number(probe?.plan?.paidTargetMinutes) || 0);
-  const knownLoadMinutes = Math.max(0, Number(probe?.plan?.committedPaidMinutes) || 0)
-    + Math.max(0, Number(probe?.plan?.automaticPaidMinutes) || 0);
+  const operatorLabel = sequence.operatorLabel || "Farm Hand";
+  const targetMinutes = Math.max(0, Number(sequence.paidTargetMinutes) || 0);
+  const knownLoadMinutes = Math.max(0, Number(sequence.committedPaidMinutes) || 0)
+    + Math.max(0, Number(sequence.automaticPaidMinutes) || 0);
   const overByMinutes = Math.max(knownLoadMinutes - targetMinutes, 0);
   const remainingMinutes = Math.max(targetMinutes - knownLoadMinutes, 0);
 
@@ -189,7 +148,7 @@ export default function OwnerDayPlanGate() {
           </div>
         )}
       </div>
-      <OwnerInterleavedDayProjection planningActive={open} />
+      <OwnerInterleavedDayProjection planningActive={open} dateIso={dateIso} />
       <OwnerDayVisualGrammar />
       {open ? (
         <>
@@ -201,4 +160,13 @@ export default function OwnerDayPlanGate() {
     host,
     "owner-day-plan-gate",
   );
+}
+
+export default function OwnerDayPlanGate() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const requestedDate = searchParams.get("date");
+  const dateIso = pathname === "/day" && validDateIso(requestedDate) ? requestedDate as string : null;
+  if (!dateIso) return null;
+  return <OwnerDayPlanGateForDate key={dateIso} dateIso={dateIso} pathname={pathname} />;
 }

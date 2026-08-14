@@ -22,7 +22,8 @@ test("timed cues show the saved farm-local time and refresh their rail position 
   assert.match(editor, /farmTimeLabel\(cue\.scheduledAt\)/);
   assert.match(editor, /atlas-owner-day-sequence-refresh/);
   assert.match(projection, /atlas-owner-day-sequence-refresh/);
-  assert.match(projection, /setSequenceVersion/);
+  assert.match(projection, /void reload\(\)/);
+  assert.match(projection, /useAtlasWorkerDayProjection\(dateIso\)/);
   assert.match(projection, /data-cue-id=/);
 });
 

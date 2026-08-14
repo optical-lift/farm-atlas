@@ -49,7 +49,8 @@ test("the shared Day choreography read carries reservations into the server proj
   assert.match(choreographyServer, /reservations,/);
   assert.match(sequenceServer, /reservations: sameTarget \? choreographyResult\.reservations : \[\]/);
   assert.match(sequenceServer, /buildAtlasWorkerDayProjection/);
-  assert.match(projectionClient, /projection: body\.projection/);
+  assert.match(projectionClient, /\.\.\.body\.projection/);
+  assert.match(projectionClient, /\.\.\.body\.projection\.sequence/);
   assert.doesNotMatch(projectionClient, /AtlasDayReservation|choreographyBody\.reservations/);
 });
 

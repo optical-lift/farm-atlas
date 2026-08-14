@@ -83,6 +83,7 @@ function assembleProjection(input: {
   });
   const sequence = {
     ...assembled,
+    availableWorkerDay: plan.availableWorkerDay,
     farmId: plan.farmId,
     membershipId: plan.membershipId,
     paidTargetMinutes: plan.paidTargetMinutes,

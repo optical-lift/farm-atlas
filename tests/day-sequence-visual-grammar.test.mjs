@@ -9,7 +9,7 @@ const projection = read("components/atlas/owner-interleaved-day-projection.tsx")
 
 test("Owner Day declares one visual grammar for committed work, potential work, and cues", () => {
   assert.match(gate, /OwnerDayVisualGrammar/);
-  assert.match(gate, /<OwnerInterleavedDayProjection planningActive=\{open\} \/>\s*<OwnerDayVisualGrammar \/>/);
+  assert.match(gate, /<OwnerInterleavedDayProjection planningActive=\{open\} dateIso=\{dateIso\} \/>\s*<OwnerDayVisualGrammar \/>/);
   assert.match(grammar, /data-owner-day-visual-grammar="committed-white potential-purple cue-interruption"/);
   assert.match(grammar, /COMMITTED — real work already in the working Day/);
   assert.match(grammar, /POTENTIAL — an Owner planning branch/);
