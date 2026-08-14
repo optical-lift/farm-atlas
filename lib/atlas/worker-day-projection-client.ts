@@ -1,42 +1,12 @@
-import {
-  assembleWorkerDaySequence,
-  type AtlasDaySequenceCueInput,
-  type AtlasDaySequencePlacementInput,
-  type AtlasDaySequencePlanRowInput,
-  type AtlasDaySequenceWindow,
-} from "@/lib/atlas/day-sequence";
-import type { AtlasDayReservation } from "@/lib/atlas/day-reservations";
-import {
-  buildAtlasWorkerDayProjection,
-  type AtlasWorkerDayProjection,
-  type AtlasWorkerDayProjectionLens,
-} from "@/lib/atlas/day-projection";
-import { atlasFarmDateIso } from "@/lib/atlas/farm-day";
-import { atlasTaskDisplay } from "@/lib/atlas/task-display";
-import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import { deriveAtlasTimingMobility } from "@/lib/atlas/timing-mobility";
-import { atlasWorkOrderAnchorForTask, atlasWorkOrderNumber } from "@/lib/atlas/work-order";
+import type { AtlasWorkerDayProjection } from "@/lib/atlas/day-projection";
+import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
-type OwnerProjectionResponse = {
+type WorkerDaySequenceResponse = {
   ok?: boolean;
   active?: boolean;
+  canManage?: boolean;
   projection?: AtlasWorkerDayProjection | null;
   taskCards?: AtlasTaskCard[];
-};
-
-type ChoreographyResponse = {
-  ok?: boolean;
-  active?: boolean;
-  target?: {
-    farmId?: string;
-    membershipId?: string;
-    source?: AtlasWorkerDayProjectionLens;
-  } | null;
-  choreography?: {
-    placements?: AtlasDaySequencePlacementInput[];
-    cues?: AtlasDaySequenceCueInput[];
-  } | null;
-  reservations?: AtlasDayReservation[];
 };
 
 export type AtlasWorkerDayProjectionRead = {
@@ -45,107 +15,34 @@ export type AtlasWorkerDayProjectionRead = {
   taskCards: AtlasTaskCard[];
 };
 
-function isChildTask(task: AtlasTaskCard) {
-  return Boolean(task.parent_task_id)
-    || task.metadata?.is_child_task === true
-    || task.metadata?.is_child_task === "true";
-}
-
-function dayWindowForTask(task: AtlasTaskCard): AtlasDaySequenceWindow {
-  const anchor = atlasWorkOrderAnchorForTask(task);
-  if (anchor === "top" || anchor === "morning") return "morning";
-  if (anchor === "midday" || anchor === "visibility") return "afternoon";
-  return "evening";
-}
-
-function metadataMinutes(task: AtlasTaskCard) {
-  for (const key of ["expected_active_minutes", "estimated_minutes", "duration_minutes"]) {
-    const parsed = Number(task.metadata?.[key]);
-    if (Number.isFinite(parsed) && parsed > 0) return Math.round(parsed);
-  }
-  return null;
-}
-
-function planRow(task: AtlasTaskCard): AtlasDaySequencePlanRowInput {
-  const display = atlasTaskDisplay(task);
-  const location = task.zone_label || display.location || null;
-  return {
-    id: `clock:${task.task_id}`,
-    kind: "real",
-    sourceKind: "task",
-    sourceId: task.task_id,
-    taskId: task.task_id,
-    title: display.title,
-    note: display.detail || task.note,
-    status: task.status,
-    location,
-    expectedActiveMinutes: metadataMinutes(task),
-    dayWindow: dayWindowForTask(task),
-    workOrderNumber: atlasWorkOrderNumber(task),
-    automatic: false,
-    requiresOwnerApproval: false,
-    mobility: deriveAtlasTimingMobility({ metadata: task.metadata, location, potential: false }),
-  };
-}
-
-export async function readOwnerWorkerDayProjection(dateIso: string) {
+async function readWorkerDaySequenceResponse(dateIso: string) {
   const response = await fetch(`/api/atlas/worker-day-sequence?date=${encodeURIComponent(dateIso)}`, {
     cache: "no-store",
     credentials: "same-origin",
     headers: { Accept: "application/json" },
   });
-  if (!response.ok) return null;
-  const body = await response.json() as OwnerProjectionResponse;
-  if (!body.ok || !body.active || !body.projection) return null;
-  return { projection: body.projection, taskCards: Array.isArray(body.taskCards) ? body.taskCards : [] };
+  const body = await response.json() as WorkerDaySequenceResponse;
+  if (!response.ok || !body.ok || !body.active || !body.projection) return null;
+  return {
+    projection: body.projection,
+    canManage: body.canManage === true,
+    taskCards: Array.isArray(body.taskCards) ? body.taskCards : [],
+  } satisfies AtlasWorkerDayProjectionRead;
+}
+
+export async function readOwnerWorkerDayProjection(dateIso: string) {
+  const read = await readWorkerDaySequenceResponse(dateIso);
+  return read?.canManage ? { projection: read.projection, taskCards: read.taskCards } : null;
 }
 
 export async function readWorkerSelfDayProjection(dateIso: string) {
-  const today = atlasFarmDateIso();
-  const [tasks, choreographyRequest] = await Promise.all([
-    fetchAtlasTaskCards({
-      viewerScoped: true,
-      dueThrough: dateIso,
-      doneDate: dateIso,
-      exactDate: dateIso > today ? dateIso : undefined,
-    }),
-    fetch(`/api/atlas/day-choreography?date=${encodeURIComponent(dateIso)}`, {
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: { Accept: "application/json" },
-    }),
-  ]);
-  const choreographyBody = await choreographyRequest.json() as ChoreographyResponse;
-  if (!choreographyRequest.ok || !choreographyBody.ok || !choreographyBody.active) {
-    throw new Error("Atlas could not load the worker Day choreography.");
-  }
-  const target = choreographyBody.target;
-  if (!target?.farmId || !target.membershipId || !target.source) {
-    throw new Error("Atlas could not identify the worker Day projection.");
-  }
-  const sequence = assembleWorkerDaySequence({
-    serviceDate: dateIso,
-    realWork: tasks.taskCards
-      .filter((task) => task.status !== "archived" && task.status !== "skipped" && !isChildTask(task))
-      .map(planRow),
-    suggestions: [],
-    placements: choreographyBody.choreography?.placements ?? [],
-    cues: choreographyBody.choreography?.cues ?? [],
-  });
-  const projection = buildAtlasWorkerDayProjection({
-    farmId: target.farmId,
-    membershipId: target.membershipId,
-    serviceDate: dateIso,
-    lens: target.source,
-    sequence,
-    reservations: choreographyBody.reservations ?? [],
-  });
-  return { projection, taskCards: tasks.taskCards };
+  const read = await readWorkerDaySequenceResponse(dateIso);
+  if (!read || read.canManage) throw new Error("Atlas could not load the Farm Hand Worker Day projection.");
+  return { projection: read.projection, taskCards: read.taskCards };
 }
 
 export async function readAtlasWorkerDayProjection(dateIso: string): Promise<AtlasWorkerDayProjectionRead> {
-  const ownerProjection = await readOwnerWorkerDayProjection(dateIso);
-  if (ownerProjection) return { ...ownerProjection, canManage: true };
-  const workerProjection = await readWorkerSelfDayProjection(dateIso);
-  return { ...workerProjection, canManage: false };
+  const read = await readWorkerDaySequenceResponse(dateIso);
+  if (!read) throw new Error("Atlas could not load the Worker Day projection.");
+  return read;
 }
