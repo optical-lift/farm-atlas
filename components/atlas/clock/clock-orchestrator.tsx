@@ -36,7 +36,7 @@ export default function ClockOrchestrator(){
  const ranges=useMemo(()=>buildClockTaskRanges(committed,{timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE}),[committed]),layouts=useMemo(()=>layoutClockTaskRanges(ranges),[ranges]);
  // Plan this Clock. Reservations are day-shaping truth, not tasks, and nothing changes Anna's Clock until Commit plan.
  const proposal=useMemo(()=>canManage&&proposalOpen?buildAtlasClockProposal(committed,{reservations:dayReservations}):{blocks:[],unresolved:[]},[canManage,proposalOpen,committed,dayReservations]);
- const editor=useClockPlanEditor({active:canManage&&proposalOpen,dateIso,committed,proposal,reservations:dayReservations,rebuildProposal:()=>buildAtlasClockProposal(committed,{reservations:dayReservations}),onReload:reload,onCommitted:()=>setProposalOpen(false),onError:setSaveError});
+ const editor=useClockPlanEditor({active:canManage&&proposalOpen,dateIso,committed,proposal,reservations:dayReservations,rebuildProposal:()=>buildAtlasClockProposal(committed,{reservations:dayReservations}),onCommitted:()=>setProposalOpen(false),onError:setSaveError});
  const today=atlasFarmDateIso(now),selectedToday = dateIso === today,nowMinute=selectedToday ? clockLocalMinuteOfDay(now.toISOString(),DEFAULT_ATLAS_FARM_TIME_ZONE) : null;
  const activeRange=selectedToday&&nowMinute!==null?ranges.find(range=>Boolean(range.span.minutes)&&range.startMinute <= nowMinute&&range.endMinute > nowMinute&&range.item.status!=="done"&&range.item.status!=="completed")??null:null;
  const nextTask=chooseClockNextTask(committed,ranges,selectedToday?nowMinute:null),nextRange=nextTask?ranges.find(range=>range.item.id===nextTask.id)??null:null;
