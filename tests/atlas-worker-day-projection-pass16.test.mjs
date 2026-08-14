@@ -26,7 +26,9 @@ test("projection identity preserves the role lens instead of collapsing Owner an
   assert.match(projection, /"operator_lens" \| "owner_direct" \| "worker_self"/);
   assert.match(projection, /lens: input\.lens/);
   assert.match(sequenceServer, /lens: target\.source/);
-  assert.match(projectionClient, /projection: body\.projection/);
+  assert.match(projectionClient, /\.\.\.body\.projection/);
+  assert.match(projectionClient, /\.\.\.body\.projection\.sequence/);
+  assert.match(projectionClient, /operatorLabel/);
   assert.match(sequenceServer, /source: "worker_self"/);
 });
 
