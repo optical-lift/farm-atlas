@@ -50,7 +50,7 @@ test("source mutations reconcile Worker Days only after the canonical server com
   const responseCheck = client.indexOf("if (!response.ok || result.ok !== true)");
   const invalidation = client.indexOf("dispatchAtlasWorkerDayRuntimeInvalidation();");
   assert.ok(responseCheck >= 0 && invalidation > responseCheck);
-  assert.doesNotMatch(client, /optimistic.*reservation/i);
+  assert.doesNotMatch(client, /applyAtlasRuntimePendingActions|reservationOverlay|pendingActions/);
 });
 
 test("Pass 29 exposes a phone-sized Owner routine manager on Day and both Clock modes", () => {
