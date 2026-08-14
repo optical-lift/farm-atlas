@@ -11,6 +11,11 @@ import {
   type ReactNode,
 } from "react";
 
+import {
+  commitAtlasClockCommand,
+  type AtlasClockCommand,
+  type AtlasClockCommandResponse,
+} from "@/lib/atlas/clock-command-client";
 import { registerAtlasRuntimeTaskTransitionHandler } from "@/lib/atlas/runtime-action-bridge";
 import { ATLAS_WORKER_DAY_RUNTIME_INVALIDATE_EVENT } from "@/lib/atlas/runtime-events";
 import {
@@ -47,6 +52,7 @@ type AtlasRuntimeContextValue = {
   readWorkerDay: (dateIso: string, options?: WorkerDayReadOptions) => Promise<AtlasWorkerDayProjectionRead>;
   invalidateWorkerDay: (dateIso?: string) => void;
   dispatchTaskTransition: (request: AtlasTaskTransitionRequest) => Promise<AtlasTaskTransitionResponse>;
+  dispatchClockCommand: (command: AtlasClockCommand) => Promise<AtlasClockCommandResponse>;
 };
 
 const AtlasRuntimeContext = createContext<AtlasRuntimeContextValue | null>(null);
@@ -225,6 +231,70 @@ export default function AtlasRuntimeProvider({
     return response;
   }, [notify, readWorkerDay]);
 
+  const dispatchClockCommand = useCallback(async (command: AtlasClockCommand) => {
+    const current = entriesRef.current.get(command.serviceDate);
+    if (!current?.canonicalValue) return commitAtlasClockCommand(command);
+
+    const actionId = `runtime-clock-command:${++actionSequenceRef.current}`;
+    const action: AtlasRuntimePendingAction = {
+      actionId,
+      kind: "clock_command",
+      serviceDate: command.serviceDate,
+      command,
+      phase: "committing",
+    };
+    entriesRef.current.set(command.serviceDate, runtimeEntry({
+      canonicalValue: current.canonicalValue,
+      pendingActions: [...current.pendingActions, action],
+      error: null,
+      loading: current.loading,
+      requestId: current.requestId,
+    }));
+    notify();
+
+    let response: AtlasClockCommandResponse;
+    try {
+      response = await commitAtlasClockCommand(command);
+    } catch (error) {
+      const failed = entriesRef.current.get(command.serviceDate);
+      if (failed) {
+        entriesRef.current.set(command.serviceDate, runtimeEntry({
+          canonicalValue: failed.canonicalValue,
+          pendingActions: failed.pendingActions.filter((pending) => pending.actionId !== actionId),
+          error: runtimeErrorMessage(error),
+          loading: failed.loading,
+          requestId: failed.requestId,
+        }));
+        notify();
+      }
+      throw error;
+    }
+
+    const committed = entriesRef.current.get(command.serviceDate);
+    if (committed) {
+      entriesRef.current.set(command.serviceDate, runtimeEntry({
+        canonicalValue: committed.canonicalValue,
+        pendingActions: committed.pendingActions.map((pending) => (
+          pending.actionId === actionId ? { ...pending, phase: "reconciling" as const } : pending
+        )),
+        error: null,
+        loading: committed.loading,
+        requestId: committed.requestId,
+      }));
+      notify();
+    }
+
+    // Clock choreography is service-date scoped. The optimistic placement stays
+    // visible until this authoritative projection read confirms the command.
+    try {
+      await readWorkerDay(command.serviceDate, { force: true });
+    } catch {
+      // Canonical Clock truth already committed. Keep the reconciling overlay
+      // instead of presenting a false rollback when only the follow-up read failed.
+    }
+    return response;
+  }, [notify, readWorkerDay]);
+
   useEffect(() => registerAtlasRuntimeTaskTransitionHandler(dispatchTaskTransition), [dispatchTaskTransition]);
 
   useEffect(() => {
@@ -240,7 +310,8 @@ export default function AtlasRuntimeProvider({
     readWorkerDay,
     invalidateWorkerDay,
     dispatchTaskTransition,
-  }), [scopeKey, version, peekWorkerDay, readWorkerDay, invalidateWorkerDay, dispatchTaskTransition]);
+    dispatchClockCommand,
+  }), [scopeKey, version, peekWorkerDay, readWorkerDay, invalidateWorkerDay, dispatchTaskTransition, dispatchClockCommand]);
 
   return <AtlasRuntimeContext.Provider value={value}>{children}</AtlasRuntimeContext.Provider>;
 }
@@ -275,5 +346,8 @@ export function useAtlasWorkerDayProjection(dateIso: string) {
 export function useAtlasRuntimeActions() {
   const runtime = useContext(AtlasRuntimeContext);
   if (!runtime) throw new Error("useAtlasRuntimeActions must be used inside AtlasRuntimeProvider.");
-  return { dispatchTaskTransition: runtime.dispatchTaskTransition };
+  return {
+    dispatchTaskTransition: runtime.dispatchTaskTransition,
+    dispatchClockCommand: runtime.dispatchClockCommand,
+  };
 }
