@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { useAtlasRuntimeActions } from "@/components/atlas/runtime/AtlasRuntimeProvider";
 import ReservationEditor from "@/components/atlas/reservations/ReservationEditor";
@@ -42,6 +42,7 @@ export default function ClockReservationBlock({
 }) {
   const { dispatchReservationCommand } = useAtlasRuntimeActions();
   const [draft, setDraft] = useState<{ start: number; end: number } | null>(null);
+  const draftRef = useRef<{ start: number; end: number } | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const draggedRef = useRef(false);
@@ -51,7 +52,12 @@ export default function ClockReservationBlock({
   const top = ((startMinute - startHour * 60) / 60) * HOUR_HEIGHT;
   const height = Math.max(38, ((endMinute - startMinute) / 60) * HOUR_HEIGHT - 2);
 
-  function beginDrag(event: React.PointerEvent, mode: "move" | "resize") {
+  function publishDraft(value: { start: number; end: number } | null) {
+    draftRef.current = value;
+    setDraft(value);
+  }
+
+  function beginDrag(event: ReactPointerEvent, mode: "move" | "resize") {
     if (!canManage || !entity) return;
     event.preventDefault();
     event.stopPropagation();
@@ -60,6 +66,7 @@ export default function ClockReservationBlock({
     const originEnd = reservation.endMinute;
     const duration = originEnd - originStart;
     draggedRef.current = false;
+    publishDraft({ start: originStart, end: originEnd });
 
     function onMove(moveEvent: PointerEvent) {
       const rawDelta = ((moveEvent.clientY - originY) / HOUR_HEIGHT) * 60;
@@ -67,18 +74,17 @@ export default function ClockReservationBlock({
       if (Math.abs(delta) >= SNAP_MINUTES) draggedRef.current = true;
       if (mode === "move") {
         const nextStart = Math.max(0, Math.min(1440 - duration, originStart + delta));
-        setDraft({ start: nextStart, end: nextStart + duration });
+        publishDraft({ start: nextStart, end: nextStart + duration });
       } else {
         const nextEnd = Math.max(originStart + SNAP_MINUTES, Math.min(1440, originEnd + delta));
-        setDraft({ start: originStart, end: nextEnd });
+        publishDraft({ start: originStart, end: nextEnd });
       }
     }
 
     async function onUp() {
       window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
       const latest = draftRef.current;
-      if (!latest || !draggedRef.current) { setDraft(null); return; }
+      if (!latest || !draggedRef.current) { publishDraft(null); return; }
       setError(null);
       try {
         if (mode === "move") {
@@ -99,16 +105,13 @@ export default function ClockReservationBlock({
       } catch (failure) {
         setError(failure instanceof Error ? failure.message : "Atlas could not update this fixed time.");
       } finally {
-        setDraft(null);
+        publishDraft(null);
       }
     }
 
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp, { once: true });
   }
-
-  const draftRef = useRef(draft);
-  draftRef.current = draft;
 
   return (
     <>
