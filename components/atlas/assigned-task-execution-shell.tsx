@@ -270,6 +270,8 @@ export default function AssignedTaskExecutionShell({
   const openStatefulChildren = statefulChildren.some((child) => !childIsDone(child));
   const canonicalDoneDisabled =
     doneDisabled ||
+    task.status === "blocked" ||
+    blockers.length > 0 ||
     openStatefulChildren ||
     !assembly ||
     assembly.readiness.status === "blocked" ||
@@ -401,9 +403,8 @@ export default function AssignedTaskExecutionShell({
             <TaskExecutionBrief task={task} assembly={assembly} assemblyLoading={assemblyLoading} />
             {blockers.length ? (
               <>
-                {/* Legacy contract marker: This can&apos;t move yet */}
                 <section className="atlas-human-task-blocker" data-atlas-task-blocker="true" aria-label="Blocked markers on this task">
-                  <strong>Marked blocked — you can still finish this task.</strong>
+                  <strong>Blocked — resolve this before this task can be completed.</strong>
                   <ul>{blockers.map((item, index) => <li key={`${item.kind}-${item.label}-${index}`}>{item.label}</li>)}</ul>
                 </section>
               </>

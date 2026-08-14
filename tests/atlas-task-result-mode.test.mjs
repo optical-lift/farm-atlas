@@ -84,3 +84,10 @@ test("ordinary execution uses the existing canonical result grammar", () => {
   assert.match(conveyorDetail, /Farm changed/);
   assert.match(conveyorDetail, /Need lighter work/);
 });
+
+test("blocked work cannot present itself as completable", () => {
+  assert.match(executionShell, /task\.status === "blocked"/);
+  assert.match(executionShell, /blockers\.length > 0/);
+  assert.match(executionShell, /Blocked — resolve this before this task can be completed\./);
+  assert.doesNotMatch(executionShell, /you can still finish this task/);
+});
