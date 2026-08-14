@@ -29,11 +29,14 @@ test("the shell owns canonical Task Move blockers and gating while the brief own
   assert.match(shell, /assembly\?\.unresolved/);
   assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} assemblyLoading=\{assemblyLoading\} \/>/);
   assert.match(shell, /const canonicalDoneDisabled =/);
+  assert.match(shell, /task\.status === "blocked"/);
+  assert.match(shell, /blockers\.length > 0/);
   assert.match(shell, /!assembly \|\|/);
   assert.match(shell, /assembly\.readiness\.status === "blocked"/);
   assert.match(shell, /assembly\.spine\.connection === "stops_at_move"/);
   assert.match(shell, /doneDisabled=\{canonicalDoneDisabled\}/);
-  assert.match(shell, /This can&apos;t move yet/);
+  assert.match(shell, /Blocked — resolve this before this task can be completed\./);
+  assert.doesNotMatch(shell, /you can still finish this task/);
 
   assert.match(brief, /assemblyControlled = assembly !== undefined/);
   assert.match(brief, /resolvedAssembly\?\.execution\.dueLabel/);
