@@ -29,6 +29,14 @@ type DayPlacement = {
   placementReason: string | null;
   state: "placed" | "returned_to_atlas";
 };
+type DatedTaskScope = {
+  farmKey: string;
+  portalLabel: string;
+  hasFarmScope: boolean;
+  hasOrganizationScope: boolean;
+  activeFarmName: string | null;
+  role: string | null;
+};
 
 function validDateIso(value: string | null) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime()));
@@ -39,9 +47,22 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "universal-dated-task-cards-v5-day-placement",
+      "X-Atlas-Read-Path": "universal-dated-task-cards-v6-operator-direct",
     },
   });
+}
+
+function withFarmScopeMetadata(card: TaskCardRow, farmId: string, farmName: string | null) {
+  return {
+    ...card,
+    metadata: {
+      ...(card.metadata ?? {}),
+      task_scope: "farm_operation",
+      farm_id: farmId,
+      farm_name: farmName,
+      scope_label: farmName,
+    },
+  } satisfies TaskCardRow;
 }
 
 function dayPlacement(value: unknown): DayPlacement | null {
@@ -150,24 +171,72 @@ export async function GET(request: Request) {
   const placementDay = exactDate ?? (requestedDoneDate && requestedDueThrough === requestedDoneDate ? requestedDoneDate : null);
 
   try {
-    const operatorContext = await readAtlasOwnerOperatorContext();
-    const home = await readAtlasOperatorUniversalHome(viewer, {
-      doneDate,
-      dueThrough,
-      effectiveAccountId: effectiveOperatorAccountId(operatorContext),
-      effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
-    });
-    const dispositions = await readAtlasTaskDayDispositions(doneDate);
+    const [operatorContext, dispositions] = await Promise.all([
+      readAtlasOwnerOperatorContext(),
+      readAtlasTaskDayDispositions(doneDate),
+    ]);
     const setAsideTaskIds = new Set(dispositions.map((row) => row.taskId));
-
-    let baseTaskCards = atlasUniversalTaskCards(home)
-      .filter((card) => !setAsideTaskIds.has(card.task_id)) as TaskCardRow[];
-
     const effectiveMembershipId = effectiveOperatorMembershipId(operatorContext);
-    const workerMembershipId = effectiveMembershipId
-      ?? (home.activeFarm?.role === "farm_hand" ? home.activeFarm.membershipId : null);
-    const workerFarmId = home.activeFarm?.farmId ?? null;
-    const farmHandLens = home.activeFarm?.role === "farm_hand";
+    const effective = operatorContext?.effective ?? null;
+    const directOperatorFarm = Boolean(
+      operatorContext?.isOperating
+        && effective?.scopeKind === "farm"
+        && effectiveMembershipId
+        && effective?.farmId,
+    );
+
+    let baseTaskCards: TaskCardRow[];
+    let workerMembershipId: string | null;
+    let workerFarmId: string | null;
+    let farmHandLens: boolean;
+    let scope: DatedTaskScope;
+
+    if (directOperatorFarm && effective && effectiveMembershipId && effective.farmId) {
+      const supabase = await createAtlasServerClient();
+      const { data, error } = await supabase.rpc("owner_operator_home_task_cards_v1", {
+        p_effective_membership_id: effectiveMembershipId,
+        p_due_through: dueThrough,
+        p_done_date: doneDate,
+      });
+      if (error) throw new Error(error.message);
+
+      const directRows = Array.isArray(data) ? data as TaskCardRow[] : [];
+      baseTaskCards = directRows
+        .map((card) => withFarmScopeMetadata(card, effective.farmId as string, effective.farmName))
+        .filter((card) => !setAsideTaskIds.has(card.task_id));
+      workerMembershipId = effectiveMembershipId;
+      workerFarmId = effective.farmId;
+      farmHandLens = effective.farmRole === "farm_hand";
+      scope = {
+        farmKey: effective.farmKey || "farm",
+        portalLabel: effective.farmName || "Atlas",
+        hasFarmScope: true,
+        hasOrganizationScope: false,
+        activeFarmName: effective.farmName,
+        role: effective.farmRole,
+      };
+    } else {
+      const home = await readAtlasOperatorUniversalHome(viewer, {
+        doneDate,
+        dueThrough,
+        effectiveAccountId: effectiveOperatorAccountId(operatorContext),
+        effectiveMembershipId,
+      });
+      baseTaskCards = atlasUniversalTaskCards(home)
+        .filter((card) => !setAsideTaskIds.has(card.task_id)) as TaskCardRow[];
+      workerMembershipId = effectiveMembershipId
+        ?? (home.activeFarm?.role === "farm_hand" ? home.activeFarm.membershipId : null);
+      workerFarmId = home.activeFarm?.farmId ?? null;
+      farmHandLens = home.activeFarm?.role === "farm_hand";
+      scope = {
+        farmKey: home.activeFarm?.farmKey || "feast_guild",
+        portalLabel: atlasUniversalPortalLabel(home),
+        hasFarmScope: home.viewer.hasFarmScope,
+        hasOrganizationScope: home.viewer.hasOrganizationScope,
+        activeFarmName: home.activeFarm?.farmName ?? null,
+        role: home.activeFarm?.role ?? home.organizationHome?.viewer.role ?? null,
+      };
+    }
 
     if (placementDay && workerMembershipId && workerFarmId) {
       const supabase = await createAtlasServerClient();
@@ -236,15 +305,15 @@ export async function GET(request: Request) {
 
     return privateJson({
       ok: true,
-      farmKey: home.activeFarm?.farmKey || "feast_guild",
-      portalLabel: atlasUniversalPortalLabel(home),
-      hasFarmScope: home.viewer.hasFarmScope,
-      hasOrganizationScope: home.viewer.hasOrganizationScope,
-      activeFarmName: home.activeFarm?.farmName ?? null,
-      role: home.activeFarm?.role ?? home.organizationHome?.viewer.role ?? null,
+      farmKey: scope.farmKey,
+      portalLabel: scope.portalLabel,
+      hasFarmScope: scope.hasFarmScope,
+      hasOrganizationScope: scope.hasOrganizationScope,
+      activeFarmName: scope.activeFarmName,
+      role: scope.role,
       operatorMode: operatorContext?.isOperating ?? false,
       effectiveAccountId: effectiveOperatorAccountId(operatorContext),
-      effectiveMembershipId: effectiveOperatorMembershipId(operatorContext),
+      effectiveMembershipId,
       taskCards,
       window: { doneDate, dueThrough, exactDate, placementDay },
     });
