@@ -13,6 +13,7 @@ const reservationContract = read("lib/atlas/day-reservations.ts");
 const reservationServer = read("lib/atlas/day-reservations-server.ts");
 const clockBlock = read("components/atlas/clock/ClockReservationBlock.tsx");
 const clockTimeline = read("components/atlas/clock/clock-timeline-v2.tsx");
+const planningTimeline = read("components/atlas/clock/clock-planning-timeline.tsx");
 const dayStrip = read("components/atlas/reservations/DayFixedTimes.tsx");
 const editor = read("components/atlas/reservations/ReservationEditor.tsx");
 const planDraft = read("lib/atlas/clock-plan-draft.ts");
@@ -46,7 +47,7 @@ test("Pass 23 keeps editable Clock reservations outside task semantics", () => {
   assert.match(clockBlock, /data-clock-non-task="true"/);
   assert.match(clockBlock, /reservation_move/);
   assert.match(clockBlock, /reservation_resize/);
-  assert.match(clockTimeline, /double-click-open-space/);
+  assert.match(clockTimeline, /tap-open-space/);
   assert.match(clockTimeline, /ReservationEditor/);
   assert.doesNotMatch(clockBlock, /task-focus|Done|Reopen|dependency/i);
   assert.doesNotMatch(editor, /task-focus|Done|Reopen|dependency/i);
@@ -60,12 +61,15 @@ test("Pass 24 Day fixed times are informational for Farm Hand and editable only 
   assert.doesNotMatch(dayStrip, /task-focus|Mark complete|Reopen/i);
 });
 
-test("Pass 25 proposals reflow pending blocks and flag accepted reservation collisions", () => {
+test("Pass 25 proposals reflow pending blocks and stay reservation-editable while the proposal is open", () => {
   assert.match(planDraft, /reconcileAtlasClockPlanDraftWithProposal/);
   assert.match(planDraft, /current\.decision === "accept" \|\| current\.decision === "reject"/);
   assert.match(planDraft, /code:"reservation"/);
   assert.match(proposal, /atlasClockReservationConflicts/);
   assert.match(proposal, /firstFree/);
+  assert.match(planningTimeline, /ClockReservationBlock/);
+  assert.match(planningTimeline, /tap-open-space/);
+  assert.match(planningTimeline, /ReservationEditor/);
 });
 
 test("Pass 26 fixed routines project dated reservations instead of recurring tasks", () => {
