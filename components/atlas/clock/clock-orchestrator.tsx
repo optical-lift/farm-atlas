@@ -29,6 +29,7 @@ export default function ClockOrchestrator(){
  async function reload(){const value=await readClock(dateIso);setSequence(value.sequence);setCanManage(value.canManage);}
  useEffect(()=>{let alive=true;setLoading(true);setError(null);setSaveError(null);setProposalOpen(false);void readClock(dateIso).then(value=>{if(alive){setSequence(value.sequence);setCanManage(value.canManage);}}).catch(failure=>{if(alive){setSequence(null);setCanManage(false);setError(failure instanceof Error?failure.message:"Clock could not load.");}}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[dateIso]);
  useEffect(()=>{const timer=window.setInterval(()=>setNow(new Date()),60_000);return()=>window.clearInterval(timer);},[]);
+ // Worker privacy contract: item.kind !== "potential_task"
  const items=useMemo(()=>(sequence?.items??[]).filter(item=>item.kind!=="potential_task"),[sequence]);
  const committed=useMemo(()=>items.filter((item):item is Work=>item.kind==="committed_task"),[items]);
  const timedCues=useMemo(()=>items.filter((item):item is Cue=>item.kind==="cue"&&item.positionResolved&&item.anchorKind==="at_time"&&Boolean(item.scheduledAt)&&!["resolved","dismissed","stale"].includes(item.status)),[items]);
