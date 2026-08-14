@@ -58,7 +58,8 @@ test("the Day sequence API is private role-aware read-only infrastructure for Da
 });
 
 test("Owner planning consumes the shared Day sequence and can project against live draft geometry", () => {
-  assert.match(projection, /\/api\/atlas\/worker-day-sequence\?date=/);
+  assert.match(projection, /useAtlasWorkerDayProjection\(dateIso\)/);
+  assert.match(projection, /projection\?\.sequence\.items/);
   assert.match(projection, /data-owner-potential-day-card/);
   assert.match(projection, /data-owner-day-sequence-cue/);
   assert.match(projection, /positionResolved/);
@@ -66,6 +67,7 @@ test("Owner planning consumes the shared Day sequence and can project against li
   assert.match(projection, /effectivePlacement/);
   assert.match(projection, /ownerDraftWindow/);
   assert.match(projection, /ownerDraftOrder/);
+  assert.doesNotMatch(projection, /\/api\/atlas\/worker-day-sequence\?date=/);
   assert.doesNotMatch(projection, /\/api\/atlas\/worker-day-plan\?date=/);
   assert.doesNotMatch(projection, /method:\s*"POST"/);
 });
@@ -74,8 +76,9 @@ test("Pass 4 keeps live cues in normal Owner Day and Pass 5 adds purple only whi
   assert.match(projection, /function visibleSequenceItems\(items: SequenceItem\[\], planningActive: boolean, hiddenPotential: Set<string>\)/);
   assert.match(projection, /if \(item\.kind === "cue"\) return isVisibleCue\(item\)/);
   assert.match(projection, /planningActive && item\.projectionEligible/);
-  assert.match(projection, /if \(!dateIso\) return/);
-  assert.match(planGate, /<OwnerInterleavedDayProjection planningActive=\{open\} \/>/);
+  assert.match(projection, /dateIso: string/);
+  assert.match(projection, /useAtlasWorkerDayProjection\(dateIso\)/);
+  assert.match(planGate, /<OwnerInterleavedDayProjection planningActive=\{open\} dateIso=\{dateIso\} \/>/);
   assert.match(projection, /data-owner-day-normal-sequence-cues/);
 });
 
