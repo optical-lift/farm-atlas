@@ -4,6 +4,7 @@ import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
 export type AtlasWorkerDayRuntimeSequence = AtlasDaySequence & {
   availableWorkerDay: boolean;
+  operatorLabel: string;
   farmId: string;
   membershipId: string;
   paidTargetMinutes: number;
