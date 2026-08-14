@@ -68,6 +68,12 @@ const dayChoreographyRegistryMigrationName =
   "20260811162500_atlas_day_choreography_rpc_registry_v1.sql";
 const dayAcceptanceRegistryMigrationName =
   "20260811193000_atlas_day_choreography_acceptance_rpc_registry_v1.sql";
+const ownerDayReservationCommandMigrationName =
+  "20260814133500_owner_day_reservation_commands_v1.sql";
+const ownerDayReservationHardeningMigrationName =
+  "20260814141500_fixed_routine_projection_hardening_v1.sql";
+const ownerDayReservationRegistryMigrationName =
+  "20260814141600_owner_day_reservation_rpc_registry_v1.sql";
 const dayAcceptanceRpcMigrations = new Set([
   "20260811180500_atlas_day_cue_observation_result_contract_v1.sql",
   "20260811183000_atlas_departure_requirement_cues_v1.sql",
@@ -180,6 +186,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const buyerOutreachRegistry = readMigration(buyerOutreachRegistryMigrationName);
   const dayChoreographyRegistry = readMigration(dayChoreographyRegistryMigrationName);
   const dayAcceptanceRegistry = readMigration(dayAcceptanceRegistryMigrationName);
+  const ownerDayReservationRegistry = readMigration(ownerDayReservationRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -219,7 +226,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                                   ? dayChoreographyRegistryMigrationName
                                   : dayAcceptanceRpcMigrations.has(name)
                                     ? dayAcceptanceRegistryMigrationName
-                                    : null;
+                                    : name === ownerDayReservationCommandMigrationName || name === ownerDayReservationHardeningMigrationName
+                                      ? ownerDayReservationRegistryMigrationName
+                                      : null;
 
       assert.ok(
         pairedRegistryName,
@@ -339,6 +348,15 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   }
   assert.match(dayAcceptanceRegistry, /owner_admin_endpoint/);
   assert.match(dayAcceptanceRegistry, /app_endpoint/);
+
+  for (const signature of [
+    "atlas.owner_command_day_reservation_api_v1(uuid, uuid, date, jsonb)",
+    "atlas.sync_fixed_routine_reservations_for_day_v1(uuid, uuid, date)",
+  ]) {
+    assert.ok(ownerDayReservationRegistry.includes(signature));
+  }
+  assert.match(ownerDayReservationRegistry, /owner_admin_endpoint/);
+  assert.match(ownerDayReservationRegistry, /app_endpoint/);
 });
 
 test("live registry proof is rollback-only and fail-closed", () => {
