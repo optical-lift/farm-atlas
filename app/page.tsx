@@ -14,7 +14,7 @@ import { readAtlasOperatorHomeTaskOverview } from "@/lib/atlas/home-task-overvie
 import {
   effectiveOperatorAccountId,
   effectiveOperatorMembershipId,
-  readAtlasOwnerOperatorContext,
+  resolveAtlasOwnerOperatorContextForSession,
 } from "@/lib/atlas/operator-context";
 import { readAtlasOperatorUniversalHome } from "@/lib/atlas/operator-universal-home";
 import { ensureAtlasProjectPullTask } from "@/lib/atlas/project-pull";
@@ -49,7 +49,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
 
   const [params, operatorContext] = await Promise.all([
     searchParams ? searchParams : Promise.resolve({} as AtlasHomeSearchParams),
-    readAtlasOwnerOperatorContext(),
+    resolveAtlasOwnerOperatorContextForSession(session),
   ]);
   const selectedFarmKey = firstParam(params.farm);
   const preferredFarmId = selectedFarmKey
