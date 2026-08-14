@@ -9,6 +9,7 @@ import {
   buildAtlasClockDraftCommitChanges,
   buildAtlasClockPlanDraft,
   evaluateAtlasClockPlanDraft,
+  reconcileAtlasClockPlanDraftWithProposal,
   summarizeAtlasClockDraft,
   updateAtlasClockDraftBlock,
   type AtlasClockDraftBlock,
@@ -39,7 +40,9 @@ export function useClockPlanEditor(input: {
       setRawBlocks(null);
       return;
     }
-    setRawBlocks((current) => current ?? buildAtlasClockPlanDraft(input.committed, input.proposal));
+    setRawBlocks((current) => current
+      ? reconcileAtlasClockPlanDraftWithProposal(current, input.committed, input.proposal)
+      : buildAtlasClockPlanDraft(input.committed, input.proposal));
   }, [input.active, input.committed, input.proposal]);
 
   const blocks = useMemo(() => rawBlocks ? evaluateAtlasClockPlanDraft(rawBlocks, input.reservations) : null, [rawBlocks, input.reservations]);
@@ -54,25 +57,11 @@ export function useClockPlanEditor(input: {
     }) : current);
   }
 
-  function move(id: string, startMinute: number) {
-    mutate(id, { startMinute, startTouched: true, overrideWarnings: false });
-  }
-
-  function resize(id: string, durationMinutes: number) {
-    mutate(id, { durationMinutes, durationTouched: true, overrideWarnings: false });
-  }
-
-  function decide(id: string, decision: AtlasClockDraftDecision) {
-    mutate(id, { decision, overrideWarnings: false });
-  }
-
-  function setWarningOverride(id: string, value: boolean) {
-    mutate(id, { overrideWarnings: value });
-  }
-
-  function unplace(id: string) {
-    mutate(id, { startMinute: null, startTouched: true, durationTouched: true, overrideWarnings: false });
-  }
+  function move(id: string, startMinute: number) { mutate(id, { startMinute, startTouched: true, overrideWarnings: false }); }
+  function resize(id: string, durationMinutes: number) { mutate(id, { durationMinutes, durationTouched: true, overrideWarnings: false }); }
+  function decide(id: string, decision: AtlasClockDraftDecision) { mutate(id, { decision, overrideWarnings: false }); }
+  function setWarningOverride(id: string, value: boolean) { mutate(id, { overrideWarnings: value }); }
+  function unplace(id: string) { mutate(id, { startMinute: null, startTouched: true, durationTouched: true, overrideWarnings: false }); }
 
   function acceptAll() {
     setRawBlocks((current) => current?.map((block) => block.source === "proposal" && block.decision !== "reject"
