@@ -6,6 +6,7 @@ import {useAtlasWorkerDayProjection} from "@/components/atlas/runtime/AtlasRunti
 import {buildClockTaskRanges,chooseClockNextTask,clockLocalMinuteOfDay,layoutClockTaskRanges} from "@/lib/atlas/clock-layout";
 import {buildAtlasClockProposal} from "@/lib/atlas/clock-proposal";
 import {buildAtlasClockReservations} from "@/lib/atlas/clock-reservations";
+import {atlasDayReservationClockReason} from "@/lib/atlas/day-reservations";
 import type {AtlasDaySequenceItem} from "@/lib/atlas/day-sequence";
 import {atlasFarmDateIso,atlasNormalizeFarmDate,DEFAULT_ATLAS_FARM_TIME_ZONE} from "@/lib/atlas/farm-day";
 import ClockHeaderV2 from "./clock-header-v2";
@@ -32,7 +33,8 @@ export default function ClockOrchestrator(){
  const items=useMemo(()=>(sequence?.items??[]).filter((item) => item.kind !== "potential_task"),[sequence]);
  const committed=useMemo(()=>items.filter((item):item is Work=>item.kind==="committed_task"),[items]);
  const timedCues=useMemo(()=>items.filter((item):item is Cue=>item.kind==="cue"&&item.positionResolved&&item.anchorKind === "at_time"&&Boolean(item.scheduledAt)&&!["resolved","dismissed","stale"].includes(item.status)),[items]);
- const dayReservations=useMemo(()=>buildAtlasClockReservations({timedCues,timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE}),[timedCues]);
+ const commitments=useMemo(()=>(projection?.reservations??[]).map((reservation)=>({id:reservation.reservationId,title:reservation.title,source:reservation.kind,startAt:reservation.startAt,endAt:reservation.endAt,reason:atlasDayReservationClockReason(reservation)})),[projection]);
+ const dayReservations=useMemo(()=>buildAtlasClockReservations({timedCues,commitments,timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE}),[timedCues,commitments]);
  const ranges=useMemo(()=>buildClockTaskRanges(committed,{timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE}),[committed]),layouts=useMemo(()=>layoutClockTaskRanges(ranges),[ranges]);
  // Plan this Clock. Reservations are day-shaping truth, not tasks, and nothing changes Anna's Clock until Commit plan.
  const proposal=useMemo(()=>canManage&&proposalOpen?buildAtlasClockProposal(committed,{reservations:dayReservations}):{blocks:[],unresolved:[]},[canManage,proposalOpen,committed,dayReservations]);
@@ -42,8 +44,9 @@ export default function ClockOrchestrator(){
  const nextTask=chooseClockNextTask(committed,ranges,selectedToday?nowMinute:null),nextRange=nextTask?ranges.find(range=>range.item.id===nextTask.id)??null:null;
  const cueMinutes=timedCues.map(item=>clockLocalMinuteOfDay(item.scheduledAt,DEFAULT_ATLAS_FARM_TIME_ZONE)).filter((value):value is number=>value!==null);
  const taskMinutes=ranges.flatMap(range=>range.span.minutes?[range.startMinute,range.endMinute]:[range.startMinute]);
+ const reservationMinutes=dayReservations.flatMap(reservation=>reservation.kind==="span"?[reservation.startMinute,reservation.endMinute]:[reservation.startMinute]);
  const planMinutes=editor.blocks?editor.blocks.flatMap(block=>block.startMinute===null||block.decision==="reject"?[]:[block.startMinute,block.startMinute+block.durationMinutes]):proposal.blocks.flatMap(block=>[block.startMinute,block.endMinute]);
- const all=[...taskMinutes,...cueMinutes,...planMinutes],floor=Math.min(360,...(all.length?all:[360]),...(nowMinute!==null?[nowMinute]:[])),ceiling=Math.max(1320,...(all.length?all:[1320]),...(nowMinute!==null?[nowMinute]:[]));
+ const all=[...taskMinutes,...cueMinutes,...reservationMinutes,...planMinutes],floor=Math.min(360,...(all.length?all:[360]),...(nowMinute!==null?[nowMinute]:[])),ceiling=Math.max(1320,...(all.length?all:[1320]),...(nowMinute!==null?[nowMinute]:[]));
  const startHour=Math.max(0,Math.floor(floor/60)),endHour=Math.min(24,Math.max(startHour+1,Math.ceil(ceiling/60))),gridHeight=(endHour-startHour)*64,planning=canManage&&proposalOpen&&Boolean(editor.blocks);
  return <main className="atlas-phone-shell"><section className={`atlas-phone ${styles.phone}`}><header className="atlas-phone-top"><Link href="/" className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Clock</span></Link></header><div className={styles.body}>
   <ClockHeaderV2 dateIso={dateIso} selectedToday={selectedToday} nowLabel={timeLabel(now)} activeRange={activeRange} nextTask={nextTask} nextRange={nextRange} loading={loading}/>
