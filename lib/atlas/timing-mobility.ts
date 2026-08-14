@@ -1,6 +1,7 @@
 export type AtlasTimingConstraintClass = "fixed" | "anchored" | "windowed" | "flexible";
 export type AtlasTimingClass = AtlasTimingConstraintClass | "potential";
 export type AtlasAnchorRelation = "before" | "after";
+export type AtlasIntradayWorkPreference = "cool_morning_or_evening";
 
 export type AtlasTimingMobility = {
   timingClass: AtlasTimingClass;
@@ -12,6 +13,7 @@ export type AtlasTimingMobility = {
   anchorRelation: AtlasAnchorRelation | null;
   minimumGapMinutes: number | null;
   travelLocation: string | null;
+  intradayPreference?: AtlasIntradayWorkPreference | null;
   placementReason: string;
 };
 
@@ -60,6 +62,10 @@ function localTime(value: unknown) {
   const rawHour = Number(twelveHour[1]) % 12;
   const hour = rawHour + (twelveHour[3].toLowerCase() === "p" ? 12 : 0);
   return `${String(hour).padStart(2, "0")}:${twelveHour[2]}`;
+}
+
+function intradayPreference(value: unknown): AtlasIntradayWorkPreference | null {
+  return text(value) === "cool_morning_or_evening" ? "cool_morning_or_evening" : null;
 }
 
 function explicitConstraint(metadata: Record<string, unknown>) {
@@ -114,6 +120,7 @@ export function deriveAtlasTimingMobility(input: MobilityInput): AtlasTimingMobi
       ?? metadata.location_label
       ?? input.location,
   );
+  const preferredIntradayWindow = intradayPreference(metadata.preferred_window);
 
   const explicit = explicitConstraint(metadata);
   const constraintClass: AtlasTimingConstraintClass = explicit
@@ -144,6 +151,7 @@ export function deriveAtlasTimingMobility(input: MobilityInput): AtlasTimingMobi
     anchorRelation,
     minimumGapMinutes,
     travelLocation,
+    intradayPreference: preferredIntradayWindow,
     placementReason,
   };
 }
