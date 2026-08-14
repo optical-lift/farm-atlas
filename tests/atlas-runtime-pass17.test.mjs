@@ -53,11 +53,11 @@ test("shared runtime reader preserves Owner-first access and Farm Hand fallback"
   assert.match(projectionClient, /canManage: false/);
 });
 
-test("canonical task transitions expire derived runtime reads only after mutation succeeds", () => {
+test("non-runtime task transitions retain commit-then-expire compatibility behavior", () => {
   assert.match(runtimeEvents, /ATLAS_WORKER_DAY_RUNTIME_INVALIDATE_EVENT/);
   assert.match(runtime, /addEventListener\(ATLAS_WORKER_DAY_RUNTIME_INVALIDATE_EVENT/);
-  const successCheck = transitionClient.indexOf("if (!response.ok || !data.ok)");
+  assert.match(transitionClient, /const data = await commitAtlasTaskTransition\(input\);/);
+  const commit = transitionClient.indexOf("const data = await commitAtlasTaskTransition(input);");
   const invalidation = transitionClient.indexOf("dispatchAtlasWorkerDayRuntimeInvalidation();");
-  assert.ok(successCheck >= 0 && invalidation > successCheck);
-  assert.match(transitionClient, /Canonical mutation truth is already committed\. This only expires derived runtime reads\./);
+  assert.ok(commit >= 0 && invalidation > commit);
 });
