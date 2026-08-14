@@ -33,16 +33,18 @@ test("Clock moves only exact committed starts onto the hourly grid", () => {
   assert.match(unplaced, /item\.kind === "committed_task" \? !item\.plannedStartAt/);
   assert.match(timeline, /data-clock-timed-task="true"/);
   assert.match(unplaced, /data-clock-unplaced-today="true"/);
-  assert.match(projectionClient, /suggestions: \[\]/);
+  assert.match(sequenceServer, /suggestions: canManage \? plan\.suggestions : \[\]/);
+  assert.doesNotMatch(projectionClient, /suggestions:/);
 });
 
 test("Owner can set, change, and remove a Clock time while Farm Hand remains read only", () => {
   assert.match(ownerReader, /readOwnerClockProjection/);
   assert.match(ownerReader, /readOwnerClockSequence/);
   assert.match(surface, /useAtlasWorkerDayProjection\(dateIso\)/);
-  assert.match(projectionClient, /if \(ownerProjection\) return \{ \.\.\.ownerProjection, canManage: true \}/);
+  assert.match(projectionClient, /canManage: body\.canManage === true/);
   assert.match(projectionClient, /taskCards: Array\.isArray\(body\.taskCards\)/);
-  assert.match(projectionClient, /canManage: false/);
+  assert.match(sequenceServer, /canManage: true/);
+  assert.match(sequenceServer, /canManage: false/);
   assert.match(controls, /type="time"/);
   assert.match(controls, /dispatchClockCommand\(\{ kind: "clock_time"/);
   assert.match(clockTransport, /owner-clock-time-v1/);
