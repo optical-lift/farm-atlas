@@ -7,6 +7,7 @@ function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url)
 const mobility = read("lib/atlas/timing-mobility.ts");
 const sequence = read("lib/atlas/day-sequence.ts");
 const planServer = read("lib/atlas/worker-day-plan-server.ts");
+const selfPlanServer = read("lib/atlas/worker-self-day-plan-server.ts");
 const projectionClient = read("lib/atlas/worker-day-projection-client.ts");
 const timeline = read("components/atlas/clock/clock-timeline-v2.tsx");
 const unplaced = read("components/atlas/clock/clock-unplaced-v2.tsx");
@@ -33,11 +34,13 @@ test("shared Day sequence carries mobility for committed potential and cue items
   assert.match(sequence, /immediately before its task/);
 });
 
-test("Owner and Farm Hand Clock derive mobility from task metadata", () => {
+test("Owner and Farm Hand Clock derive mobility once on the server from task metadata", () => {
   assert.match(planServer, /deriveAtlasTimingMobility/);
   assert.match(planServer, /commitment_kind, metadata/);
-  assert.match(projectionClient, /deriveAtlasTimingMobility/);
-  assert.match(projectionClient, /metadata: task.metadata/);
+  assert.match(planServer, /export async function enrichWorkerDayPlanTiming/);
+  assert.match(selfPlanServer, /enrichWorkerDayPlanTiming/);
+  assert.doesNotMatch(projectionClient, /deriveAtlasTimingMobility/);
+  assert.doesNotMatch(projectionClient, /metadata: task\.metadata/);
 });
 
 test("Clock visually distinguishes mobility classes", () => {
