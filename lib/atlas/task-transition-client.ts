@@ -150,11 +150,11 @@ function leaveCompletedTaskPage() {
 }
 
 /**
- * The transition client owns transport only. Visual task/checklist state belongs
- * to the React surface that initiated the mutation; this module never reaches
- * into rendered task markup to simulate state after the fact.
+ * Commits one canonical task transition and returns the server truth. Runtime
+ * callers use this primitive so they can reconcile their own derived projection
+ * without a competing global invalidation clearing optimistic state first.
  */
-export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest): Promise<AtlasTaskTransitionResponse> {
+export async function commitAtlasTaskTransition(input: AtlasTaskTransitionRequest): Promise<AtlasTaskTransitionResponse> {
   const response = await fetch("/api/atlas/task-transition", {
     method: "POST",
     headers: {
@@ -171,9 +171,6 @@ export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest)
   const data = await response.json() as AtlasTaskTransitionResponse;
   if (!response.ok || !data.ok) throw new Error(taskTransitionError(data));
 
-  // Canonical mutation truth is already committed. This only expires derived runtime reads.
-  dispatchAtlasWorkerDayRuntimeInvalidation();
-
   if (input.transition === "done" || input.transition === "checklist_done") {
     rememberDependencyReleaseFlash(data);
   }
@@ -181,5 +178,15 @@ export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest)
     leaveCompletedTaskPage();
   }
 
+  return data;
+}
+
+/**
+ * Compatibility command for Atlas surfaces not yet migrated into AtlasRuntime.
+ * Canonical truth commits first; only then does this expire derived runtime reads.
+ */
+export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest): Promise<AtlasTaskTransitionResponse> {
+  const data = await commitAtlasTaskTransition(input);
+  dispatchAtlasWorkerDayRuntimeInvalidation();
   return data;
 }
