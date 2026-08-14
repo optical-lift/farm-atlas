@@ -11,7 +11,8 @@ test("Worker Day production timing covers the server-owned request phases", () =
   for (const field of ["sessionMs", "planMs", "choreographyMs", "taskCardsMs", "assemblyMs", "totalMs"]) {
     assert.match(sequenceServer, new RegExp(`${field}:`));
   }
-  assert.match(sequenceServer, /measured\(\(\) => getAtlasSession\(timing\.sessionPhases\)\)/);
+  assert.match(sequenceServer, /sessionContextRpcMs: 0/);
+  assert.match(sequenceServer, /measured\(\(\) => getAtlasSessionFast\(timing\.sessionPhases\)\)/);
   assert.match(sequenceServer, /measured\(\(\) => readWorkerSelfDayBundleForTarget/);
   assert.match(sequenceServer, /measured\(\(\) => readWorkerDayChoreographyForTarget/);
   assert.match(sequenceServer, /measured\(\(\) => readWorkerDayOperationalTaskCards/);
