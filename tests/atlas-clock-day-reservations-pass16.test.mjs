@@ -11,6 +11,7 @@ const editor = read("components/atlas/clock/use-clock-plan-editor.ts");
 const orchestrator = read("components/atlas/clock/clock-orchestrator.tsx");
 const planningTimeline = read("components/atlas/clock/clock-planning-timeline.tsx");
 const timeline = read("components/atlas/clock/clock-timeline-v2.tsx");
+const reservationBlock = read("components/atlas/clock/ClockReservationBlock.tsx");
 const route = read("app/api/atlas/owner-clock-plan-commit/route.ts");
 
 test("Pass 16 introduces non-task day reservations without creating another scheduler", () => {
@@ -71,7 +72,8 @@ test("Clock surfaces mark day reservations without turning them into task blocks
   assert.match(timeline, /data-clock-day-reservation="point"/);
   assert.match(planningTimeline, /data-clock-timed-cue="true"/);
   assert.match(timeline, /data-clock-timed-cue="true"/);
-  assert.match(planningTimeline, /data-clock-non-task="true"/);
-  assert.match(timeline, /data-clock-non-task="true"/);
+  assert.match(planningTimeline, /ClockReservationBlock/);
+  assert.match(timeline, /ClockReservationBlock/);
+  assert.match(reservationBlock, /data-clock-non-task="true"/);
   assert.doesNotMatch(reservations, /committed_task/);
 });
