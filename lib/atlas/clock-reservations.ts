@@ -1,7 +1,7 @@
 import { clockLocalMinuteOfDay } from "@/lib/atlas/clock-layout";
 import type { AtlasDaySequenceItem } from "@/lib/atlas/day-sequence";
 
-export type AtlasClockReservationSource = "timed_cue" | "routine" | "external_commitment";
+export type AtlasClockReservationSource = "timed_cue" | "routine" | "meal" | "external_commitment";
 export type AtlasClockReservationKind = "point" | "span";
 
 export type AtlasClockReservation = {
