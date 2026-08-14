@@ -29,11 +29,12 @@ test("projection identity preserves the role lens instead of collapsing Owner an
   assert.match(projectionClient, /lens: target\.source/);
 });
 
-test("projection revisions are deterministic fingerprints of identity plus sequence state", () => {
+test("projection revisions are deterministic fingerprints of identity, sequence, and real-day reservations", () => {
   assert.match(projection, /stableProjectionValue/);
   assert.match(projection, /Object\.entries\(value as Record<string, unknown>\)/);
   assert.match(projection, /\.sort\(\(\[left\], \[right\]\) => left\.localeCompare\(right\)\)/);
-  assert.match(projection, /projectionFingerprint\(\{ identity, sequence: input\.sequence \}\)/);
+  assert.match(projection, /projectionFingerprint\(\{ identity, sequence: input\.sequence, reservations \}\)/);
+  assert.match(projection, /reservations: AtlasDayReservation\[\]/);
   assert.doesNotMatch(projection, /Date\.now|new Date|randomUUID|Math\.random/);
 });
 
