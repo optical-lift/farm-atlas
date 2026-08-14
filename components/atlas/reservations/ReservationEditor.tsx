@@ -93,11 +93,13 @@ export default function ReservationEditor({
     } finally { setSaving(false); }
   }
 
+  const generatedOccurrence = reservation ? reservation.source !== "owner_manual" : false;
+
   return (
     <div role="dialog" aria-modal="true" aria-label={reservation ? `Edit ${reservation.title}` : "Add fixed time"} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(18,20,27,.42)", display: "grid", alignItems: "end" }} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section style={{ background: "#fff", borderRadius: "18px 18px 0 0", padding: "18px", boxShadow: "0 -12px 40px rgba(0,0,0,.18)", maxWidth: 520, width: "100%", margin: "0 auto" }}>
         <header style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
-          <div><small style={{ display: "block", textTransform: "uppercase", letterSpacing: ".08em", color: "#777" }}>{reservation ? "Fixed time" : "Add fixed time"}</small><strong style={{ fontSize: 18 }}>Reservation, not task</strong>{reservation ? <span style={{ display: "block", fontSize: 11, color: "#777", marginTop: 3 }}>{atlasDayReservationSourceLabel(reservation.source)}{reservation.source !== "owner_manual" ? " · editing this occurrence only" : ""}</span> : null}</div>
+          <div><small style={{ display: "block", textTransform: "uppercase", letterSpacing: ".08em", color: "#777" }}>{reservation ? "Fixed time" : "Add fixed time"}</small><strong style={{ fontSize: 18 }}>Reservation, not task</strong>{reservation ? <span style={{ display: "block", fontSize: 11, color: "#777", marginTop: 3 }}>{atlasDayReservationSourceLabel(reservation.source)}{generatedOccurrence ? " · editing this occurrence only" : ""}</span> : null}</div>
           <button type="button" onClick={onClose} aria-label="Close reservation editor" style={{ border: 0, background: "transparent", fontSize: 22 }}>×</button>
         </header>
         <label style={{ display: "grid", gap: 5, marginBottom: 10 }}><span style={{ fontSize: 11, fontWeight: 800 }}>Label</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Walmart Pickup" style={{ padding: 10, border: "1px solid #d8d8dc", borderRadius: 9 }} /></label>
@@ -110,7 +112,7 @@ export default function ReservationEditor({
         {error ? <p style={{ color: "#9c3434", fontSize: 12, margin: "0 0 10px" }}>{error}</p> : null}
         <div style={{ display: "flex", gap: 8 }}>
           <button type="button" onClick={() => void save()} disabled={saving} style={{ flex: 1, border: 0, borderRadius: 10, padding: 11, background: "#262833", color: "white", fontWeight: 800 }}>{saving ? "Saving…" : "Save fixed time"}</button>
-          {reservation ? <button type="button" onClick={() => void remove()} disabled={saving} style={{ border: "1px solid #e0c9c9", borderRadius: 10, padding: "11px 13px", background: "#fff", color: "#8b3d3d", fontWeight: 800 }}>Remove</button> : null}
+          {reservation ? <button type="button" onClick={() => void remove()} disabled={saving} style={{ border: "1px solid #e0c9c9", borderRadius: 10, padding: "11px 13px", background: "#fff", color: "#8b3d3d", fontWeight: 800 }}>{generatedOccurrence ? "Remove occurrence" : "Remove"}</button> : null}
         </div>
       </section>
     </div>
