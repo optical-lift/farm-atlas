@@ -36,7 +36,7 @@ test("Clock NOW and NEXT use temporal ranges", () => {
 
 test("Owner can explicitly commit or remove a planned span", () => {
   assert.match(controls, /dispatchClockCommand\(\{ kind: "clock_duration"/);
-  assert.match(controls, /durationMinutes: parsedDuration/);
+  assert.match(controls, /saveDuration\(parsedDuration\)/);
   assert.match(controls, /saveDuration\(null\)/);
   assert.match(clockTransport, /owner-clock-duration-v1/);
   assert.match(durationRoute, /owner_set_worker_day_task_duration_api_v1/);
