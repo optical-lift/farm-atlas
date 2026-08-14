@@ -14,7 +14,7 @@ const timeline = read("components/atlas/clock/clock-timeline-v2.tsx");
 const route = read("app/api/atlas/owner-clock-plan-commit/route.ts");
 
 test("Pass 16 introduces non-task day reservations without creating another scheduler", () => {
-  assert.match(reservations, /"timed_cue" \| "routine" \| "external_commitment"/);
+  assert.match(reservations, /"timed_cue" \| "routine" \| "meal" \| "external_commitment"/);
   assert.match(reservations, /AtlasClockReservationKind = "point" \| "span"/);
   assert.match(reservations, /buildAtlasClockReservations/);
   assert.doesNotMatch(reservations, /fetch\s*\(/);
@@ -56,8 +56,9 @@ test("manual Owner moves across a reservation become an explicit override warnin
   assert.match(editor, /unresolvedWarningCount/);
 });
 
-test("Owner proposal wiring uses timed cues as reservations while Farm Hand privacy stays intact", () => {
-  assert.match(orchestrator, /buildAtlasClockReservations\(\{timedCues,timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE\}\)/);
+test("Owner proposal wiring uses timed cues and projected commitments while Farm Hand privacy stays intact", () => {
+  assert.match(orchestrator, /projection\?\.reservations\?\?\[\]/);
+  assert.match(orchestrator, /buildAtlasClockReservations\(\{timedCues,commitments,timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE\}\)/);
   assert.match(orchestrator, /buildAtlasClockProposal\(committed,\{reservations:dayReservations\}\)/);
   assert.match(orchestrator, /reservations:dayReservations/);
   assert.match(orchestrator, /item\.kind !== "potential_task"/);
@@ -65,10 +66,12 @@ test("Owner proposal wiring uses timed cues as reservations while Farm Hand priv
   assert.doesNotMatch(draft, /readiness|doneDisabled|blocker/i);
 });
 
-test("Clock surfaces mark timed cues as day reservations without turning them into task blocks", () => {
+test("Clock surfaces mark day reservations without turning them into task blocks", () => {
   assert.match(planningTimeline, /data-clock-day-reservation="point"/);
   assert.match(timeline, /data-clock-day-reservation="point"/);
   assert.match(planningTimeline, /data-clock-timed-cue="true"/);
   assert.match(timeline, /data-clock-timed-cue="true"/);
+  assert.match(planningTimeline, /data-clock-non-task="true"/);
+  assert.match(timeline, /data-clock-non-task="true"/);
   assert.doesNotMatch(reservations, /committed_task/);
 });
