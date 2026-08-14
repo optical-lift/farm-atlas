@@ -45,12 +45,13 @@ test("Day and Clock acquire the same Worker Day projection through AtlasRuntime"
   assert.doesNotMatch(clock, /readOwnerClockProjection|readWorkerClockProjection/);
 });
 
-test("shared runtime reader preserves Owner-first access and Farm Hand fallback", () => {
+test("shared runtime reader uses one role-aware Worker Day endpoint with explicit management capability", () => {
   assert.match(projectionClient, /readAtlasWorkerDayProjection/);
-  assert.match(projectionClient, /readOwnerWorkerDayProjection\(dateIso\)/);
-  assert.match(projectionClient, /canManage: true/);
-  assert.match(projectionClient, /readWorkerSelfDayProjection\(dateIso\)/);
-  assert.match(projectionClient, /canManage: false/);
+  assert.match(projectionClient, /readWorkerDaySequenceResponse\(dateIso\)/);
+  assert.match(projectionClient, /\/api\/atlas\/worker-day-sequence/);
+  assert.match(projectionClient, /canManage: body\.canManage === true/);
+  assert.doesNotMatch(projectionClient, /const ownerProjection = await readOwnerWorkerDayProjection/);
+  assert.doesNotMatch(projectionClient, /const workerProjection = await readWorkerSelfDayProjection/);
 });
 
 test("non-runtime task transitions retain commit-then-expire compatibility behavior", () => {
