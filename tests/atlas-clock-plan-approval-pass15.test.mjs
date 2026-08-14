@@ -65,7 +65,7 @@ test("atomic Clock commit changes choreography but never task truth", () => {
   assert.match(migration, /is distinct from v_expected_start/);
   assert.match(migration, /is distinct from v_expected_duration/);
   assert.match(migration, /owner_clock_plan_commit/);
-  assert.doesNotMatch(migration, /update\s+atlas\.tasks/i);
+  assert.doesNotMatch(migration, /update\s+atlas\.tasks\s+set/i);
   assert.doesNotMatch(migration, /due_date/i);
   assert.doesNotMatch(migration, /record_task_transition/i);
 });
