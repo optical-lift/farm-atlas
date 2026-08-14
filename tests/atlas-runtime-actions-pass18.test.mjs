@@ -36,11 +36,14 @@ test("shared task transition calls enter AtlasRuntime automatically while it is 
   assert.match(daySurface, /useAtlasWorkerDayProjection\(dateIso\)/);
 });
 
-test("runtime task transitions commit once, rollback overlays on failure, and reconcile all loaded days on success", () => {
+test("runtime task transitions commit once, rollback overlays on failure, and reconcile only affected loaded days on success", () => {
   assert.match(runtime, /response = await commitAtlasTaskTransition\(request\)/);
   assert.match(runtime, /failed\.pendingActions\.filter\(\(pending\) => pending\.actionId !== actionId\)/);
   assert.match(runtime, /phase: "reconciling" as const/);
-  assert.match(runtime, /Promise\.allSettled\(serviceDates\.map\(\(serviceDate\) => readWorkerDay\(serviceDate, \{ force: true \}\)\)\)/);
+  assert.match(runtime, /cachedDatesContainingTasks/);
+  assert.match(runtime, /const reconciliationDates = new Set\(serviceDates\)/);
+  assert.match(runtime, /Array\.from\(reconciliationDates, \(serviceDate\) => readWorkerDay\(serviceDate, \{ force: true \}\)\)/);
+  assert.doesNotMatch(runtime, /Array\.from\(entriesRef\.current\.keys\(\)\)/);
 });
 
 test("authoritative reads retire reconciled overlays but preserve concurrently committing actions", () => {
