@@ -2,7 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
-import type { AtlasFarmRole, AtlasOrganizationRole } from "@/lib/atlas/session";
+import type { AtlasFarmRole, AtlasOrganizationRole, AtlasSession } from "@/lib/atlas/session";
 import { getAtlasSession } from "@/lib/atlas/session";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
@@ -121,13 +121,13 @@ async function callOperatorContext(requestedAccountId: string | null) {
   return { context: normalizeContext(data), error: error as OperatorRpcError | null };
 }
 
-export async function resolveAtlasOwnerOperatorContext(
+export async function resolveAtlasOwnerOperatorContextForSession(
+  session: AtlasSession,
   requestedAccountId?: string | null,
 ): Promise<AtlasOwnerOperatorContext | null> {
-  const session = await getAtlasSession();
-  const canOperate = Boolean(session?.memberships.some((membership) => membership.role === "owner")
-    || session?.organizationMemberships.some((membership) => membership.role === "owner"));
-  if (!session || !canOperate) return null;
+  const canOperate = Boolean(session.memberships.some((membership) => membership.role === "owner")
+    || session.organizationMemberships.some((membership) => membership.role === "owner"));
+  if (!canOperate) return null;
 
   let candidate: string | null;
   if (requestedAccountId === undefined) {
@@ -149,6 +149,14 @@ export async function resolveAtlasOwnerOperatorContext(
   }
 
   return null;
+}
+
+export async function resolveAtlasOwnerOperatorContext(
+  requestedAccountId?: string | null,
+): Promise<AtlasOwnerOperatorContext | null> {
+  const session = await getAtlasSession();
+  if (!session) return null;
+  return resolveAtlasOwnerOperatorContextForSession(session, requestedAccountId);
 }
 
 export async function readAtlasOwnerOperatorContext() {
