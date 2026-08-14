@@ -1,3 +1,4 @@
+import { readAtlasRuntimeTaskTransitionHandler } from "@/lib/atlas/runtime-action-bridge";
 import { dispatchAtlasWorkerDayRuntimeInvalidation } from "@/lib/atlas/runtime-events";
 
 export type AtlasTaskTransition =
@@ -182,10 +183,14 @@ export async function commitAtlasTaskTransition(input: AtlasTaskTransitionReques
 }
 
 /**
- * Compatibility command for Atlas surfaces not yet migrated into AtlasRuntime.
- * Canonical truth commits first; only then does this expire derived runtime reads.
+ * Shared Atlas task command. When AtlasRuntime is mounted it owns the action,
+ * optimistic projection overlay, rollback, and reconciliation. Older/non-runtime
+ * surfaces preserve the compatibility behavior of commit then cache expiry.
  */
 export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest): Promise<AtlasTaskTransitionResponse> {
+  const runtimeHandler = readAtlasRuntimeTaskTransitionHandler();
+  if (runtimeHandler) return runtimeHandler(input);
+
   const data = await commitAtlasTaskTransition(input);
   dispatchAtlasWorkerDayRuntimeInvalidation();
   return data;
