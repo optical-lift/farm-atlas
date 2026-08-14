@@ -95,6 +95,14 @@ export type AtlasTaskProjectPathNode = {
   portfolioType: string;
 };
 
+export type AtlasTaskProjectGoalContext = {
+  goalId: string;
+  label: string;
+  successDefinition: string | null;
+  targetDueDate: string | null;
+  planningStatus: string | null;
+};
+
 export type AtlasTaskProjectContext = {
   projectId: string;
   projectKey: string;
@@ -103,6 +111,10 @@ export type AtlasTaskProjectContext = {
   targetDate: string | null;
   linkRole: string;
   path: AtlasTaskProjectPathNode[];
+  goalText?: string | null;
+  outcomeText?: string | null;
+  currentMilestone?: string | null;
+  goals?: AtlasTaskProjectGoalContext[];
 };
 
 export type AtlasTaskDependencyContext = {

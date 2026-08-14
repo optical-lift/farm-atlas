@@ -52,6 +52,66 @@
   font-weight: 800;
 }
 
+.instructions {
+  margin: 9px 0 4px;
+  border-top: 1px solid var(--atlas-border-soft);
+  border-bottom: 1px solid var(--atlas-border-soft);
+  padding: 12px 0;
+  display: grid;
+  gap: 11px;
+}
+
+.instructionRow {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.instructionRow small {
+  color: #8588ad;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 950;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.instructionRow div,
+.instructionRow > span {
+  color: var(--atlas-text);
+  font-size: 13px;
+  line-height: 1.42;
+  font-weight: 790;
+}
+
+.instructionRow p {
+  margin: 0;
+}
+
+.instructionRow p + p {
+  margin-top: 5px;
+}
+
+.moreDetail {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1.42;
+  font-weight: 720;
+}
+
+.fullTaskLink {
+  display: inline-flex;
+  width: fit-content;
+  margin: 0 0 4px;
+  color: #62668c;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .loggedState {
   border: 1px solid var(--atlas-border-soft);
   border-radius: 18px;
@@ -217,5 +277,10 @@
 @media (max-width: 420px) {
   .secondaryRow {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .instructionRow {
+    grid-template-columns: 62px minmax(0, 1fr);
+    gap: 8px;
   }
 }

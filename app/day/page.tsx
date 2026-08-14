@@ -330,14 +330,6 @@ function optimisticTask(task: AtlasTaskCard, outcome: "done" | "reopened") {
   } satisfies AtlasTaskCard;
 }
 
-function latestEvidence(task: AtlasTaskCard) {
-  const outcome = task.task_outcomes?.[0];
-  if (outcome) return outcome.note || outcome.blocker_reason || outcome.outcome.replaceAll("_", " ");
-  const transition = task.task_transitions?.[0];
-  if (transition) return transition.note || transition.reason || transition.transition.replaceAll("_", " ");
-  return "No result has been recorded yet.";
-}
-
 function shortProjectTitle(title: string) {
   return title
     .replace(/^First Ticketed Thursday\s*[—-]\s*/i, "")
@@ -370,13 +362,16 @@ function projectPathLabel(task: AtlasTaskCard, projectIndex: number) {
 function whyMoveMatters(task: AtlasTaskCard) {
   const context = task.move_context;
   const primary = context?.projects?.[0];
-  if (!primary) return "This task has no project outcome attached yet.";
-  if (context.unlocks.length) {
+  if (primary?.outcomeText) return primary.outcomeText;
+  if (primary?.goalText) return primary.goalText;
+  if (task.unlock_text) return task.unlock_text;
+  if (context?.unlocks.length) {
     const noun = context.unlocks.length === 1 ? "downstream move" : "downstream moves";
     return `Finish this and ${context.unlocks.length} ${noun} can move.`;
   }
-  if (context.waitingOn.length) return `This advances ${primary.title}, but another move has to land first.`;
-  return `This is a concrete move toward ${primary.title}.`;
+  const doneWhen = text(meta(task, "execution_done_when"));
+  if (doneWhen) return doneWhen;
+  return "No larger goal is attached to this move yet.";
 }
 
 type TaskCardProps = {
@@ -424,61 +419,76 @@ function TaskCard({ task, complete = false, overdue = false, expandable = false,
 
   const card = expandable ? (
     <details id={onNodePress ? undefined : taskAnchorId(task)} className={`${className} atlas-journal-task-row${projectMove ? " atlas-project-move-card" : ""}`} aria-current={routeState === "current" ? "step" : undefined}>
-      <summary>{summaryContent}<b className="atlas-journal-row-caret" aria-hidden="true">⌄</b></summary>
+      <summary>
+        {summaryContent}
+        <Link
+          href={taskHref(task, returnTo)}
+          className="atlas-day-task-open-hit-area"
+          aria-label={`Open ${display.title}`}
+          onClick={(event) => event.stopPropagation()}
+        />
+        <b className="atlas-journal-row-caret" aria-label={`Show big picture for ${display.title}`}>⌄</b>
+      </summary>
       <div className="atlas-journal-task-detail">
-        {projectMove && moveContext ? (
-          <div className="atlas-project-move-context">
-            <section className="atlas-project-move-block atlas-project-move-why">
-              <small>Why this move matters</small>
-              <strong>{whyMoveMatters(task)}</strong>
+        <div className="atlas-project-move-context">
+          <section className="atlas-project-move-block atlas-project-move-why">
+            <small>Big picture</small>
+            <strong>{whyMoveMatters(task)}</strong>
+          </section>
+
+          {moveContext?.projects?.map((project, index) => (
+            <section className="atlas-project-move-block" key={project.projectId}>
+              <small>Project goal</small>
+              <Link className="atlas-project-move-path" href={`/project/${encodeURIComponent(project.projectId)}`}>
+                <span>{projectPathLabel(task, index)}</span>
+                {project.portfolioType === "event" && project.targetDate ? <em>{prettyShortDate(project.targetDate)}</em> : <em>{project.portfolioType.replaceAll("_", " ")}</em>}
+              </Link>
+              {project.goalText ? <p className="atlas-project-goal-copy"><b>Goal</b><span>{project.goalText}</span></p> : null}
+              {project.outcomeText ? <p className="atlas-project-goal-copy"><b>Finish line</b><span>{project.outcomeText}</span></p> : null}
+              {project.currentMilestone ? <p className="atlas-project-goal-copy"><b>Right now</b><span>{project.currentMilestone}</span></p> : null}
+              {project.goals?.map((goal) => (
+                <p className="atlas-project-goal-copy" key={goal.goalId}>
+                  <b>{goal.label}</b>
+                  <span>{goal.successDefinition || (goal.targetDueDate ? `Target ${prettyShortDate(goal.targetDueDate)}` : "Goal attached")}</span>
+                </p>
+              ))}
             </section>
+          ))}
 
-            {moveContext.unlocks.length ? (
-              <section className="atlas-project-move-block">
-                <small>Unlocks</small>
-                <div className="atlas-project-move-list">
-                  {moveContext.unlocks.map((item) => (
-                    <div className="atlas-project-move-row" key={item.taskId}>
-                      <b>{item.assigneeName} →</b><span>{item.title}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
+          {!moveContext?.projects?.length ? (
+            <section className="atlas-project-move-block atlas-project-link-gap">
+              <small>Project</small>
+              <strong>No larger project is linked to this task yet.</strong>
+            </section>
+          ) : null}
 
+          {(moveContext?.unlocks?.length || task.unlock_text) ? (
             <section className="atlas-project-move-block">
-              <small>Advances</small>
+              <small>Unlocks</small>
               <div className="atlas-project-move-list">
-                {moveContext.projects.map((project, index) => (
-                  <Link className="atlas-project-move-path" href={`/project/${encodeURIComponent(project.projectId)}`} key={project.projectId}>
-                    <span>{projectPathLabel(task, index)}</span>
-                    {project.portfolioType === "event" && project.targetDate ? <em>{prettyShortDate(project.targetDate)}</em> : <em>{project.portfolioType.replaceAll("_", " ")}</em>}
-                  </Link>
+                {moveContext?.unlocks?.map((item) => (
+                  <div className="atlas-project-move-row" key={item.taskId}>
+                    <b>{item.assigneeName} →</b><span>{item.title}</span>
+                  </div>
+                ))}
+                {!moveContext?.unlocks?.length && task.unlock_text ? <div className="atlas-project-move-row"><span>{task.unlock_text}</span></div> : null}
+              </div>
+            </section>
+          ) : null}
+
+          {moveContext?.waitingOn?.length ? (
+            <section className="atlas-project-move-block">
+              <small>Waiting on</small>
+              <div className="atlas-project-move-list">
+                {moveContext.waitingOn.map((item) => (
+                  <div className="atlas-project-move-row is-waiting" key={item.taskId}>
+                    <b>{item.assigneeName} →</b><span>{item.title}</span>
+                  </div>
                 ))}
               </div>
             </section>
-
-            <section className="atlas-project-move-block">
-              <small>Waiting on</small>
-              {moveContext.waitingOn.length ? (
-                <div className="atlas-project-move-list">
-                  {moveContext.waitingOn.map((item) => (
-                    <div className="atlas-project-move-row is-waiting" key={item.taskId}>
-                      <b>{item.assigneeName} →</b><span>{item.title}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : <strong>Nothing. This is your move.</strong>}
-            </section>
-          </div>
-        ) : (
-          <dl>
-            <div><dt>Place</dt><dd>{task.objects.length ? task.objects.map((object) => object.object_label).join(" · ") : zone}</dd></div>
-            <div><dt>Time</dt><dd>{task.due_date ? prettyDate(task.due_date) : "No date recorded"}</dd></div>
-            <div><dt>Evidence</dt><dd>{latestEvidence(task)}</dd></div>
-            <div><dt>Effect</dt><dd>{task.unlock_text || task.blocker_text || "No secondary effect is recorded."}</dd></div>
-          </dl>
-        )}
+          ) : null}
+        </div>
         <Link href={taskHref(task, returnTo)}>Open full task <span aria-hidden="true">→</span></Link>
       </div>
     </details>
@@ -724,6 +734,18 @@ function AtlasDayPageContent() {
           font-style: normal;
           font-weight: 900;
         }
+        .atlas-journal-task-row > summary { position: relative; }
+        .atlas-day-task-open-hit-area {
+          position: absolute;
+          inset: 0 44px 0 0;
+          z-index: 4;
+          border-radius: inherit;
+        }
+        .atlas-journal-task-row > summary .atlas-journal-row-caret {
+          position: relative;
+          z-index: 5;
+          cursor: pointer;
+        }
         .atlas-project-move-card > summary { background: linear-gradient(90deg, rgba(174,179,212,.055), transparent 62%); }
         .atlas-project-move-context { display: grid; gap: 0; }
         .atlas-project-move-block { display: grid; gap: 7px; padding: 11px 0; border-top: 1px solid rgba(88,87,111,.1); }
@@ -736,6 +758,7 @@ function AtlasDayPageContent() {
           text-transform: uppercase;
         }
         .atlas-project-move-block > strong { color: #303243; font-size: 12px; line-height: 1.4; }
+        .atlas-project-link-gap > strong { color: #7a756c; font-weight: 750; }
         .atlas-project-move-list { display: grid; gap: 6px; }
         .atlas-project-move-row {
           display: grid;
@@ -766,6 +789,16 @@ function AtlasDayPageContent() {
         }
         .atlas-project-move-path span { min-width: 0; line-height: 1.3; }
         .atlas-project-move-path em { color: #8881b7; font-size: 8px; font-style: normal; text-transform: uppercase; white-space: nowrap; }
+        .atlas-project-goal-copy {
+          display: grid;
+          grid-template-columns: 58px minmax(0, 1fr);
+          gap: 7px;
+          margin: 0;
+          color: #5f625b;
+          font-size: 10px;
+          line-height: 1.4;
+        }
+        .atlas-project-goal-copy b { color: #5f6282; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; }
       `}</style>
       <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
         <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
@@ -842,7 +875,7 @@ function AtlasDayPageContent() {
                 {!routeFilter && pageResolved && livingDay ? <LivingDayCompletionSummary summary={livingDay.completionSummary} /> : null}
                 {!routeFilter && livingLoading ? <div className="atlas-journal-loading">Loading Journal and goals…</div> : null}
 
-                {!routeFilter && extraCreditTasks.length ? <article className="atlas-day-route-group atlas-day-extra-credit-group"><h3>Extra Credit</h3><div className="atlas-day-zone-group">{extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />)}</div></article> : null}
+                {!routeFilter && extraCreditTasks.length ? <article className="atlas-day-route-group atlas-day-extra-credit-group"><h3>Extra Credit</h3><div className="atlas-day-zone-group">{extraCreditTasks.map((task) => <TaskCard task={task} key={task.task_id} returnTo={returnTo} />}</div></article> : null}
               </div>
 
               {!routeFilter ? <nav className="atlas-day-adjacent-nav" aria-label="Browse adjacent days"><Link href={dayHref(previousDate)} aria-label="Open yesterday"><span aria-hidden="true">←</span><em>Yesterday</em></Link><Link href={dayHref(nextDate)} aria-label="Open tomorrow"><em>Tomorrow</em><span aria-hidden="true">→</span></Link></nav> : null}
