@@ -16,3 +16,9 @@ export async function readOwnerClockProjection(dateIso: string) {
   const body = await response.json() as OwnerSequenceResponse;
   return body.ok && body.active && body.projection ? body.projection : null;
 }
+
+// Compatibility seam for older Clock consumers while the projection contract rolls upward.
+export async function readOwnerClockSequence(dateIso: string) {
+  const projection = await readOwnerClockProjection(dateIso);
+  return projection?.sequence ?? null;
+}
