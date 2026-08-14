@@ -4,30 +4,12 @@ import { assembleWorkerDaySequence } from "@/lib/atlas/day-sequence";
 import { readOwnerWorkerDayChoreography } from "@/lib/atlas/day-choreography-server";
 import { buildAtlasWorkerDayProjection } from "@/lib/atlas/day-projection";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import { readOwnerWorkerDayPlan, type WorkerDayPlan } from "@/lib/atlas/worker-day-plan-server";
-import { createAtlasServerClient } from "@/lib/supabase/server";
+import { readWorkerDayOperationalTaskCards } from "@/lib/atlas/worker-day-operational-task-cards-server";
+import { readOwnerWorkerDayPlan } from "@/lib/atlas/worker-day-plan-server";
 
 function validDateIso(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value)
     && !Number.isNaN(new Date(`${value}T12:00:00`).getTime());
-}
-
-async function readOperationalTaskCards(plan: WorkerDayPlan) {
-  const taskIds = Array.from(new Set(
-    [...plan.realWork, ...plan.automaticWork]
-      .map((row) => row.taskId)
-      .filter((taskId): taskId is string => Boolean(taskId)),
-  ));
-
-  const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("worker_day_operational_task_cards_v2", {
-    p_farm_id: plan.farmId,
-    p_membership_id: plan.membershipId,
-    p_service_date: plan.serviceDate,
-    p_task_ids: taskIds,
-  });
-  if (error) throw new Error(error.message);
-  return Array.isArray(data) ? data as AtlasTaskCard[] : [];
 }
 
 export async function readOwnerWorkerDaySequence(dateIso: string) {
@@ -40,7 +22,7 @@ export async function readOwnerWorkerDaySequence(dateIso: string) {
   const plan = planResult.plan;
   const [choreographyResult, taskCards] = await Promise.all([
     readOwnerWorkerDayChoreography(dateIso),
-    readOperationalTaskCards(plan),
+    readWorkerDayOperationalTaskCards(plan),
   ]);
   const choreography = choreographyResult.active ? choreographyResult.choreography : null;
   const sameTarget = Boolean(choreographyResult.active && choreographyResult.target?.farmId === planResult.target.farmId && choreographyResult.target?.membershipId === planResult.target.membershipId);
