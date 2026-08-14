@@ -41,15 +41,16 @@ test("reservation reads are scoped by farm, membership, service day, and active 
   assert.doesNotMatch(migration, /grant update on atlas\.day_reservations to authenticated/i);
 });
 
-test("the shared Day choreography read carries reservations for both Owner and Farm Hand projection paths", () => {
+test("the shared Day choreography read carries reservations into the server projection for both roles", () => {
   assert.match(choreographyServer, /readAtlasDayReservations/);
   assert.match(choreographyServer, /farmId: target\.farmId/);
   assert.match(choreographyServer, /membershipId: target\.membershipId/);
   assert.match(choreographyServer, /serviceDate: dateIso/);
   assert.match(choreographyServer, /reservations,/);
   assert.match(sequenceServer, /reservations: sameTarget \? choreographyResult\.reservations : \[\]/);
-  assert.match(projectionClient, /reservations\?: AtlasDayReservation\[\]/);
-  assert.match(projectionClient, /reservations: choreographyBody\.reservations \?\? \[\]/);
+  assert.match(sequenceServer, /buildAtlasWorkerDayProjection/);
+  assert.match(projectionClient, /projection: body\.projection/);
+  assert.doesNotMatch(projectionClient, /AtlasDayReservation|choreographyBody\.reservations/);
 });
 
 test("real-day reservations are projection state and participate in deterministic revisioning", () => {
