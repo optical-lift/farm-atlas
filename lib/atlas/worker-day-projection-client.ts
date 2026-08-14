@@ -19,7 +19,7 @@ type WorkerDaySequenceResponse = {
   active?: boolean;
   operatorLabel?: string;
   canManage?: boolean;
-  projection?: AtlasWorkerDayProjection<AtlasWorkerDayRuntimeSequence> | null;
+  projection?: AtlasWorkerDayProjection<Omit<AtlasWorkerDayRuntimeSequence, "operatorLabel">> | null;
   taskCards?: AtlasTaskCard[];
 };
 
@@ -38,9 +38,17 @@ async function readWorkerDaySequenceResponse(dateIso: string) {
   });
   const body = await response.json() as WorkerDaySequenceResponse;
   if (!response.ok || !body.ok || !body.active || !body.projection) return null;
+  const operatorLabel = typeof body.operatorLabel === "string" && body.operatorLabel.trim() ? body.operatorLabel : "Farm Hand";
+  const projection: AtlasWorkerDayProjection<AtlasWorkerDayRuntimeSequence> = {
+    ...body.projection,
+    sequence: {
+      ...body.projection.sequence,
+      operatorLabel,
+    },
+  };
   return {
-    projection: body.projection,
-    operatorLabel: typeof body.operatorLabel === "string" && body.operatorLabel.trim() ? body.operatorLabel : "Farm Hand",
+    projection,
+    operatorLabel,
     canManage: body.canManage === true,
     taskCards: Array.isArray(body.taskCards) ? body.taskCards : [],
   } satisfies AtlasWorkerDayProjectionRead;
