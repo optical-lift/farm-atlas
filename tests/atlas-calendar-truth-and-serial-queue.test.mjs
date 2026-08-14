@@ -14,6 +14,7 @@ const dayRoute = readFileSync(new URL("../lib/atlas/day-route.ts", import.meta.u
 const taskCardsClient = readFileSync(new URL("../lib/atlas/task-cards-client.ts", import.meta.url), "utf8");
 const universalRoute = readFileSync(new URL("../app/api/atlas/universal-task-cards/route.ts", import.meta.url), "utf8");
 const dayPage = readFileSync(new URL("../app/day/page.tsx", import.meta.url), "utf8");
+const projectionClient = readFileSync(new URL("../lib/atlas/worker-day-projection-client.ts", import.meta.url), "utf8");
 
 test("serial weed backlog is not calendar truth", () => {
   assert.match(migration, /calendar_commitment_kind','queue_only'/);
@@ -40,7 +41,7 @@ test("future presented work remains exact-date calendar truth before carry-forwa
   assert.match(carryMigration, /prior_presented/);
 });
 
-test("future Day asks for one date, preserves carry-forward, and then applies explicit Owner placement", () => {
+test("future Day asks the canonical Worker Day runtime for one date and preserves explicit Owner placement", () => {
   assert.match(taskCardsClient, /exactDate\?: string/);
   assert.match(taskCardsClient, /viewerParams\.set\("exactDate", viewerWindow\.exactDate\)/);
   assert.match(universalRoute, /requestedExactDate/);
@@ -49,7 +50,9 @@ test("future Day asks for one date, preserves carry-forward, and then applies ex
   assert.match(universalRoute, /baselineSurvivesPlacement/);
   assert.match(universalRoute, /placement\?\.state === "placed" && placement\.serviceDate === placementDay/);
   assert.doesNotMatch(universalRoute, /card\.due_date === exactDate/);
-  assert.match(dayPage, /exactDate: isFutureDay \? dateIso : undefined/);
+  assert.match(dayPage, /useAtlasWorkerDayProjection\(dateIso\)/);
+  assert.doesNotMatch(dayPage, /fetchAtlasTaskCards/);
+  assert.match(projectionClient, /worker-day-sequence\?date=\$\{encodeURIComponent\(dateIso\)\}/);
   assert.match(carryMigration, /member_day_carryover_v1/);
   assert.match(carryMigration, /withheldUnderSky/);
 });
