@@ -21,6 +21,7 @@ type OwnerProjectionResponse = {
   ok?: boolean;
   active?: boolean;
   projection?: AtlasWorkerDayProjection | null;
+  taskCards?: AtlasTaskCard[];
 };
 
 type ChoreographyResponse = {
@@ -41,6 +42,7 @@ type ChoreographyResponse = {
 export type AtlasWorkerDayProjectionRead = {
   projection: AtlasWorkerDayProjection;
   canManage: boolean;
+  taskCards: AtlasTaskCard[];
 };
 
 function isChildTask(task: AtlasTaskCard) {
@@ -94,7 +96,8 @@ export async function readOwnerWorkerDayProjection(dateIso: string) {
   });
   if (!response.ok) return null;
   const body = await response.json() as OwnerProjectionResponse;
-  return body.ok && body.active && body.projection ? body.projection : null;
+  if (!body.ok || !body.active || !body.projection) return null;
+  return { projection: body.projection, taskCards: Array.isArray(body.taskCards) ? body.taskCards : [] };
 }
 
 export async function readWorkerSelfDayProjection(dateIso: string) {
@@ -129,7 +132,7 @@ export async function readWorkerSelfDayProjection(dateIso: string) {
     placements: choreographyBody.choreography?.placements ?? [],
     cues: choreographyBody.choreography?.cues ?? [],
   });
-  return buildAtlasWorkerDayProjection({
+  const projection = buildAtlasWorkerDayProjection({
     farmId: target.farmId,
     membershipId: target.membershipId,
     serviceDate: dateIso,
@@ -137,10 +140,12 @@ export async function readWorkerSelfDayProjection(dateIso: string) {
     sequence,
     reservations: choreographyBody.reservations ?? [],
   });
+  return { projection, taskCards: tasks.taskCards };
 }
 
 export async function readAtlasWorkerDayProjection(dateIso: string): Promise<AtlasWorkerDayProjectionRead> {
   const ownerProjection = await readOwnerWorkerDayProjection(dateIso);
-  if (ownerProjection) return { projection: ownerProjection, canManage: true };
-  return { projection: await readWorkerSelfDayProjection(dateIso), canManage: false };
+  if (ownerProjection) return { ...ownerProjection, canManage: true };
+  const workerProjection = await readWorkerSelfDayProjection(dateIso);
+  return { ...workerProjection, canManage: false };
 }
