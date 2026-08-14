@@ -9,6 +9,7 @@ const surface = read("components/atlas/clock/clock-orchestrator.tsx");
 const timeline = read("components/atlas/clock/clock-timeline-v2.tsx");
 const unplaced = read("components/atlas/clock/clock-unplaced-v2.tsx");
 const projectionClient = read("lib/atlas/worker-day-projection-client.ts");
+const sequenceServer = read("lib/atlas/worker-day-sequence-server.ts");
 const clockTransport = read("lib/atlas/clock-command-client.ts");
 const controls = read("components/atlas/clock/clock-owner-controls.tsx");
 const frame = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
@@ -21,11 +22,12 @@ test("Clock is a first-class Atlas tab and route", () => {
   assert.match(frame, /\/clock\?date=/);
 });
 
-test("Clock reuses Day choreography instead of creating another scheduler", () => {
-  assert.match(projectionClient, /assembleWorkerDaySequence/);
+test("Clock reuses the server-owned Worker Day projection instead of creating another scheduler", () => {
   assert.match(projectionClient, /\/api\/atlas\/worker-day-sequence\?date=/);
-  assert.match(projectionClient, /\/api\/atlas\/day-choreography\?date=/);
-  assert.match(projectionClient, /fetchAtlasTaskCards/);
+  assert.doesNotMatch(projectionClient, /assembleWorkerDaySequence/);
+  assert.doesNotMatch(projectionClient, /\/api\/atlas\/day-choreography\?date=/);
+  assert.doesNotMatch(projectionClient, /fetchAtlasTaskCards/);
+  assert.match(sequenceServer, /assembleWorkerDaySequence/);
   assert.match(controls, /dispatchClockCommand/);
   assert.match(clockTransport, /\/api\/atlas\/owner-day-task-time/);
   assert.doesNotMatch(surface, /supabase|worker_day_task_placements/);
@@ -33,7 +35,7 @@ test("Clock reuses Day choreography instead of creating another scheduler", () =
 
 test("Clock keeps Owner potential out of the worker temporal surface", () => {
   assert.match(surface, /filter\(\(item\) => item\.kind !== "potential_task"\)/);
-  assert.match(projectionClient, /suggestions: \[\]/);
+  assert.match(sequenceServer, /suggestions: canManage \? plan\.suggestions : \[\]/);
   assert.doesNotMatch(surface, /PotentialCard|projectionEligible|Atlas suggests|Not today/);
 });
 

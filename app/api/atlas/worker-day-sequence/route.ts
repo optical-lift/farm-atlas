@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { readOwnerWorkerDaySequence } from "@/lib/atlas/worker-day-sequence-server";
+import { readWorkerDaySequence } from "@/lib/atlas/worker-day-sequence-server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, no-store",
-      "X-Atlas-Read-Path": "worker-day-sequence-v1",
+      "X-Atlas-Read-Path": "worker-day-sequence-v2",
     },
   });
 }
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   if (!validDateIso(date)) return privateJson({ ok: false, error: "date must be YYYY-MM-DD." }, 400);
 
   try {
-    const result = await readOwnerWorkerDaySequence(date as string);
+    const result = await readWorkerDaySequence(date as string);
     return privateJson({ ok: true, date, ...result });
   } catch (error) {
     console.error("Atlas worker Day sequence read failed:", error);

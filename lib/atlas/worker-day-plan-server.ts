@@ -1,7 +1,7 @@
 import "server-only";
 
 import { resolveAtlasOwnerOperatorContextForSession } from "@/lib/atlas/operator-context";
-import { getAtlasSession } from "@/lib/atlas/session";
+import { getAtlasSession, type AtlasSession } from "@/lib/atlas/session";
 import { deriveAtlasTimingMobility, type AtlasTimingMobility } from "@/lib/atlas/timing-mobility";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
@@ -83,7 +83,7 @@ function normalizeRows(value: unknown): WorkerDayPlanRow[] {
   ));
 }
 
-function normalizePlan(value: unknown): WorkerDayPlan {
+export function normalizeWorkerDayPlan(value: unknown): WorkerDayPlan {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Atlas returned an invalid worker day plan.");
   const row = value as Record<string, unknown>;
   return {
@@ -109,7 +109,7 @@ function timingWindow(task: TimingTaskRow) {
   return { start, preferredEnd, safeEnd, warning };
 }
 
-async function enrichPlanTiming(plan: WorkerDayPlan) {
+export async function enrichWorkerDayPlanTiming(plan: WorkerDayPlan) {
   const taskIds = Array.from(new Set([...plan.realWork, ...plan.automaticWork, ...plan.suggestions].map((row) => row.taskId).filter((value): value is string => Boolean(value))));
   const fallback = (row: WorkerDayPlanRow): WorkerDayPlanRow => ({ ...row, mobility: deriveAtlasTimingMobility({ location: row.location, potential: row.kind === "suggestion" }) });
   if (!taskIds.length) return { ...plan, realWork: plan.realWork.map(fallback), automaticWork: plan.automaticWork.map(fallback), suggestions: plan.suggestions.map(fallback) };
@@ -132,9 +132,7 @@ async function enrichPlanTiming(plan: WorkerDayPlan) {
   return { ...plan, realWork: plan.realWork.map(enrich), automaticWork: plan.automaticWork.map(enrich), suggestions: plan.suggestions.map(enrich) };
 }
 
-export async function resolveOwnerWorkerDayPlanningTarget(): Promise<OwnerWorkerDayPlanningTarget | null> {
-  const session = await getAtlasSession();
-  if (!session) return null;
+export async function resolveOwnerWorkerDayPlanningTargetForSession(session: AtlasSession): Promise<OwnerWorkerDayPlanningTarget | null> {
   const operatorContext = await resolveAtlasOwnerOperatorContextForSession(session);
   if (operatorContext?.isOperating && operatorContext.effective.farmRole === "farm_hand" && operatorContext.effective.farmId && operatorContext.effective.farmMembershipId) return { farmId: operatorContext.effective.farmId, membershipId: operatorContext.effective.farmMembershipId, displayName: operatorContext.effective.displayName || labelFromWorkerKey(operatorContext.effective.workerKey), source: "operator_lens" };
   const farmId = session.activeFarmId ?? operatorContext?.actor.farmId ?? session.memberships.find((membership) => membership.role === "owner")?.farmId ?? null;
@@ -151,13 +149,25 @@ export async function resolveOwnerWorkerDayPlanningTarget(): Promise<OwnerWorker
   return { farmId, membershipId: worker.id, displayName: option?.displayName || labelFromWorkerKey(worker.worker_key), source: "owner_direct" };
 }
 
-export async function readOwnerWorkerDayPlan(dateIso: string) {
+export async function resolveOwnerWorkerDayPlanningTarget(): Promise<OwnerWorkerDayPlanningTarget | null> {
+  const session = await getAtlasSession();
+  return session ? resolveOwnerWorkerDayPlanningTargetForSession(session) : null;
+}
+
+async function readOwnerWorkerDayPlanForTarget(dateIso: string, target: OwnerWorkerDayPlanningTarget | null) {
   if (!validDateIso(dateIso)) throw new Error("A valid YYYY-MM-DD worker day is required.");
-  const target = await resolveOwnerWorkerDayPlanningTarget();
   if (!target) return { active: false as const, operatorLabel: "Farm Hand", target: null, plan: null };
   const supabase = await createAtlasServerClient();
   const { data, error } = await supabase.rpc("owner_worker_day_plan_choreographed_api_v1", { p_farm_id: target.farmId, p_membership_id: target.membershipId, p_day: dateIso });
   if (error) throw new Error(error.message);
-  const plan = await enrichPlanTiming(normalizePlan(data));
+  const plan = await enrichWorkerDayPlanTiming(normalizeWorkerDayPlan(data));
   return { active: true as const, operatorLabel: target.displayName, target, plan };
+}
+
+export async function readOwnerWorkerDayPlanForSession(dateIso: string, session: AtlasSession) {
+  return readOwnerWorkerDayPlanForTarget(dateIso, await resolveOwnerWorkerDayPlanningTargetForSession(session));
+}
+
+export async function readOwnerWorkerDayPlan(dateIso: string) {
+  return readOwnerWorkerDayPlanForTarget(dateIso, await resolveOwnerWorkerDayPlanningTarget());
 }

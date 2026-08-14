@@ -4,7 +4,9 @@ import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import type { WorkerDayPlan } from "@/lib/atlas/worker-day-plan-server";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
-export async function readWorkerDayOperationalTaskCards(plan: WorkerDayPlan) {
+type OperationalCardReadOptions = { includeMoveContext?: boolean };
+
+export async function readWorkerDayOperationalTaskCards(plan: WorkerDayPlan, options: OperationalCardReadOptions = {}) {
   const taskIds = Array.from(new Set(
     [...plan.realWork, ...plan.automaticWork]
       .map((row) => row.taskId)
@@ -19,5 +21,10 @@ export async function readWorkerDayOperationalTaskCards(plan: WorkerDayPlan) {
     p_task_ids: taskIds,
   });
   if (error) throw new Error(error.message);
-  return Array.isArray(data) ? data as AtlasTaskCard[] : [];
+  const cards = Array.isArray(data) ? data as AtlasTaskCard[] : [];
+  if (options.includeMoveContext !== false) return cards;
+  return cards.map((card) => {
+    const { move_context: _moveContext, ...workerSafeCard } = card;
+    return workerSafeCard as AtlasTaskCard;
+  });
 }

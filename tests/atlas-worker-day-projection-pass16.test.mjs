@@ -25,8 +25,9 @@ test("Pass 16 gives Worker Day an explicit projection identity and revision boun
 test("projection identity preserves the role lens instead of collapsing Owner and Farm Hand state", () => {
   assert.match(projection, /"operator_lens" \| "owner_direct" \| "worker_self"/);
   assert.match(projection, /lens: input\.lens/);
-  assert.match(sequenceServer, /lens: planResult\.target\.source/);
-  assert.match(projectionClient, /lens: target\.source/);
+  assert.match(sequenceServer, /lens: target\.source/);
+  assert.match(projectionClient, /projection: body\.projection/);
+  assert.match(sequenceServer, /source: "worker_self"/);
 });
 
 test("projection revisions are deterministic fingerprints of identity, sequence, and real-day reservations", () => {
@@ -38,20 +39,22 @@ test("projection revisions are deterministic fingerprints of identity, sequence,
   assert.doesNotMatch(projection, /Date\.now|new Date|randomUUID|Math\.random/);
 });
 
-test("the owner worker-day read returns the projection envelope while preserving the sequence compatibility seam", () => {
+test("the worker-day read returns the projection envelope while preserving the sequence compatibility seam", () => {
   assert.match(sequenceServer, /const projection = buildAtlasWorkerDayProjection/);
   assert.match(sequenceServer, /projection,/);
   assert.match(sequenceServer, /sequence: projection\.sequence/);
-  assert.match(sequenceServer, /projection: null, sequence: null/);
+  assert.match(sequenceServer, /projection: null/);
+  assert.match(sequenceServer, /sequence: null/);
 });
 
-test("Owner and Farm Hand reads converge on the shared projection client", () => {
+test("Owner and Farm Hand reads converge on the shared server projection client", () => {
   assert.match(projectionClient, /readOwnerWorkerDayProjection/);
   assert.match(projectionClient, /body\.projection/);
   assert.match(projectionClient, /readWorkerSelfDayProjection/);
-  assert.match(projectionClient, /buildAtlasWorkerDayProjection/);
-  assert.match(projectionClient, /target\?\.farmId/);
-  assert.match(projectionClient, /target\.membershipId/);
+  assert.match(projectionClient, /readWorkerDaySequenceResponse/);
+  assert.match(projectionClient, /\/api\/atlas\/worker-day-sequence/);
+  assert.doesNotMatch(projectionClient, /buildAtlasWorkerDayProjection/);
+  assert.doesNotMatch(projectionClient, /target\?\.farmId|target\.membershipId/);
   assert.match(ownerReader, /readOwnerWorkerDayProjection/);
   assert.match(workerReader, /readWorkerSelfDayProjection/);
 });
