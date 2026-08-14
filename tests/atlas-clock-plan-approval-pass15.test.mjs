@@ -6,6 +6,7 @@ function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url)
 
 const draft = read("lib/atlas/clock-plan-draft.ts");
 const editor = read("components/atlas/clock/use-clock-plan-editor.ts");
+const clockTransport = read("lib/atlas/clock-command-client.ts");
 const block = read("components/atlas/clock/clock-planning-block.tsx");
 const bar = read("components/atlas/clock/clock-plan-bar.tsx");
 const orchestrator = read("components/atlas/clock/clock-orchestrator.tsx");
@@ -43,10 +44,12 @@ test("Owner can accept the whole proposal or cancel/reset without mutation", () 
 });
 
 test("Clock plan editor has one atomic mutation seam", () => {
-  assert.match(editor, /\/api\/atlas\/owner-clock-plan-commit/);
-  assert.match(editor, /owner-clock-plan-commit-v1/);
+  assert.match(editor, /dispatchClockCommand\(\{ kind: "clock_plan_commit"/);
   assert.doesNotMatch(editor, /owner-day-task-time/);
   assert.doesNotMatch(editor, /owner-day-task-duration/);
+  assert.doesNotMatch(editor, /fetch\(/);
+  assert.match(clockTransport, /\/api\/atlas\/owner-clock-plan-commit/);
+  assert.match(clockTransport, /owner-clock-plan-commit-v1/);
   assert.match(editor, /unresolvedWarningCount/);
 });
 
