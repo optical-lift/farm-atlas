@@ -9,6 +9,10 @@ const migration = readFileSync(
   join(root, "supabase/migrations/20260814043920_external_readiness_gate_v1.sql"),
   "utf8",
 );
+const preservationMigration = readFileSync(
+  join(root, "supabase/migrations/20260814044133_external_readiness_gate_preserve_blocker_v1.sql"),
+  "utf8",
+);
 
 test("external readiness is a durable release gate rather than worker-facing blocked work", () => {
   assert.match(migration, /create table if not exists atlas\.task_external_readiness_gates/);
@@ -36,6 +40,10 @@ test("Home Depot pickup is repaired by stable identity behind the real pickup-re
   assert.match(migration, /home_depot_order_ready_for_pickup/);
   assert.match(migration, /Home Depot order ready for pickup/);
   assert.match(migration, /Home Depot order is not ready for pickup yet/);
+});
+
+test("readiness cycling preserves the real blocker text instead of degrading to a generic wait", () => {
+  assert.match(preservationMigration, /blocker_text=coalesce\(nullif\(atlas\.task_external_readiness_gates\.blocker_text, ''''\),excluded\.blocker_text\)/);
 });
 
 test("external readiness gate is service-owned and owner mutation is explicitly registered", () => {
