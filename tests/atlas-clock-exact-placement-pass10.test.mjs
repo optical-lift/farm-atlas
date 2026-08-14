@@ -9,6 +9,7 @@ function read(path) {
 const sequence = read("lib/atlas/day-sequence.ts");
 const sequenceServer = read("lib/atlas/worker-day-sequence-server.ts");
 const projectionClient = read("lib/atlas/worker-day-projection-client.ts");
+const clockTransport = read("lib/atlas/clock-command-client.ts");
 const choreography = read("lib/atlas/day-choreography-server.ts");
 const surface = read("components/atlas/clock/clock-orchestrator.tsx");
 const timeline = read("components/atlas/clock/clock-timeline-v2.tsx");
@@ -42,8 +43,9 @@ test("Owner can set, change, and remove a Clock time while Farm Hand remains rea
   assert.match(projectionClient, /ownerProjection\) return \{ projection: ownerProjection, canManage: true \}/);
   assert.match(projectionClient, /canManage: false/);
   assert.match(controls, /type="time"/);
-  assert.match(controls, /owner-clock-time-v1/);
-  assert.match(controls, /localTime: null/);
+  assert.match(controls, /dispatchClockCommand\(\{ kind: "clock_time"/);
+  assert.match(clockTransport, /owner-clock-time-v1/);
+  assert.match(controls, /saveTime\(null\)/);
   assert.match(route, /owner_set_worker_day_task_time_api_v1/);
   assert.match(route, /request\.headers\.get\("x-atlas-intent"\)/);
 });
