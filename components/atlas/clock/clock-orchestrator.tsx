@@ -42,7 +42,7 @@ export default function ClockOrchestrator(){
  // Plan this Clock. Nothing here changes Anna's Clock until Commit plan.
  const proposal=useMemo(()=>canManage&&proposalOpen?buildAtlasClockProposal(committed):{blocks:[],unresolved:[]},[canManage,proposalOpen,committed]);
  const editor=useClockPlanEditor({active:canManage&&proposalOpen,dateIso,committed,proposal,rebuildProposal:()=>buildAtlasClockProposal(committed),onReload:reload,onCommitted:()=>setProposalOpen(false),onError:setSaveError});
- const today=atlasFarmDateIso(now),selectedToday = dateIso === today,nowMinute=selectedToday?clockLocalMinuteOfDay(now.toISOString(),DEFAULT_ATLAS_FARM_TIME_ZONE):null;
+ const today=atlasFarmDateIso(now),selectedToday = dateIso === today,nowMinute=selectedToday ? clockLocalMinuteOfDay(now.toISOString(),DEFAULT_ATLAS_FARM_TIME_ZONE) : null;
  const activeRange=selectedToday&&nowMinute!==null?ranges.find(range=>Boolean(range.span.minutes)&&range.startMinute <= nowMinute&&range.endMinute > nowMinute&&range.item.status!=="done"&&range.item.status!=="completed")??null:null;
  const nextTask=chooseClockNextTask(committed,ranges,selectedToday?nowMinute:null),nextRange=nextTask?ranges.find(range=>range.item.id===nextTask.id)??null:null;
  const cueMinutes=timedCues.map(item=>clockLocalMinuteOfDay(item.scheduledAt,DEFAULT_ATLAS_FARM_TIME_ZONE)).filter((value):value is number=>value!==null);
