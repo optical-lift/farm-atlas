@@ -26,7 +26,8 @@ test("runtime pending actions can overlay service-date scoped Clock choreography
   assert.match(reconciliation, /plannedDurationMinutes/);
   assert.match(reconciliation, /localClockInstant/);
   assert.match(reconciliation, /America\/Chicago/);
-  assert.match(reconciliation, /canonical revision does not advance until the server read reconciles/i);
+  assert.match(reconciliation, /canonical revision belongs to the server projection/i);
+  assert.match(reconciliation, /never fabricated here/i);
   assert.doesNotMatch(reconciliation, /revision:/);
 });
 
@@ -38,7 +39,7 @@ test("AtlasRuntime owns optimistic Clock commit, isolated rollback, and authorit
   assert.match(runtime, /pending\.actionId !== actionId/);
   assert.match(runtime, /phase: "reconciling" as const/);
   assert.match(runtime, /readWorkerDay\(command\.serviceDate, \{ force: true \}\)/);
-  assert.match(runtime, /Keep the reconciling overlay/);
+  assert.match(runtime, /keep committed-looking overlay/i);
 });
 
 test("direct Owner Clock placement and duration edits use runtime commands instead of fetch plus reload", () => {
