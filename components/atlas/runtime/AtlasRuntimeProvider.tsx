@@ -375,6 +375,7 @@ export function useAtlasWorkerDayProjection(dateIso: string) {
 
   return {
     projection: entry?.value?.projection ?? null,
+    taskCards: entry?.value?.taskCards ?? [],
     canManage: entry?.value?.canManage ?? false,
     loading: entry?.loading ?? true,
     error: entry?.error ?? null,
