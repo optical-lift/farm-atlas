@@ -26,7 +26,7 @@ function localTime(value: number) {
 function typeLabel(source: AtlasClockReservation["source"]) {
   if (source === "routine") return "Routine";
   if (source === "meal") return "Meal";
-  return "Commitment";
+  return "External commitment";
 }
 
 export default function ClockReservationBlock({
@@ -59,7 +59,6 @@ export default function ClockReservationBlock({
 
   function beginDrag(event: ReactPointerEvent, mode: "move" | "resize") {
     if (!canManage || !entity) return;
-    event.preventDefault();
     event.stopPropagation();
     const originY = event.clientY;
     const originStart = reservation.startMinute;
