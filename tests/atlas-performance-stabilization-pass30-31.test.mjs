@@ -8,6 +8,7 @@ const runtime = read("components/atlas/runtime/AtlasRuntimeProvider.tsx");
 const notificationMigration = read("supabase/migrations/20260814164000_task_notification_idle_fast_path_v1.sql");
 const cardMigration = read("supabase/migrations/20260814165000_worker_day_operational_task_cards_v1.sql");
 const completedCardMigration = read("supabase/migrations/20260814165500_worker_day_operational_task_cards_v2.sql");
+const operationalCardServer = read("lib/atlas/worker-day-operational-task-cards-server.ts");
 const sequenceServer = read("lib/atlas/worker-day-sequence-server.ts");
 const projectionClient = read("lib/atlas/worker-day-projection-client.ts");
 
@@ -32,12 +33,14 @@ test("completed-aware operational cards preserve Day completion echoes without r
   assert.doesNotMatch(completedCardMigration, /atlas\.v_task_cards|atlas\.field_logs/);
 });
 
-test("Worker Day sequence carries lightweight task cards beside the canonical projection", () => {
-  assert.match(sequenceServer, /worker_day_operational_task_cards_v2/);
-  assert.match(sequenceServer, /\.\.\.plan\.realWork, \.\.\.plan\.automaticWork/);
-  assert.match(sequenceServer, /p_service_date: plan\.serviceDate/);
+test("Worker Day sequence carries lightweight task cards through a dedicated read boundary", () => {
+  assert.match(operationalCardServer, /worker_day_operational_task_cards_v2/);
+  assert.match(operationalCardServer, /\.\.\.plan\.realWork, \.\.\.plan\.automaticWork/);
+  assert.match(operationalCardServer, /p_service_date: plan\.serviceDate/);
+  assert.match(sequenceServer, /readWorkerDayOperationalTaskCards/);
   assert.match(sequenceServer, /Promise\.all\(\[/);
   assert.match(sequenceServer, /taskCards/);
+  assert.doesNotMatch(sequenceServer, /\.rpc\(|\.from\(/);
   assert.match(projectionClient, /taskCards\?: AtlasTaskCard\[\]/);
   assert.match(projectionClient, /taskCards: Array\.isArray\(body\.taskCards\)/);
   assert.match(projectionClient, /AtlasWorkerDayProjectionRead[\s\S]*taskCards: AtlasTaskCard\[\]/);
