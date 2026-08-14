@@ -11,7 +11,7 @@ test("Worker Day production timing covers the server-owned request phases", () =
   for (const field of ["sessionMs", "planMs", "choreographyMs", "taskCardsMs", "assemblyMs", "totalMs"]) {
     assert.match(sequenceServer, new RegExp(`${field}:`));
   }
-  assert.match(sequenceServer, /measured\(\(\) => getAtlasSession\(\)\)/);
+  assert.match(sequenceServer, /measured\(\(\) => getAtlasSession\(timing\.sessionPhases\)\)/);
   assert.match(sequenceServer, /measured\(\(\) => readWorkerSelfDayBundleForTarget/);
   assert.match(sequenceServer, /measured\(\(\) => readWorkerDayChoreographyForTarget/);
   assert.match(sequenceServer, /measured\(\(\) => readWorkerDayOperationalTaskCards/);
@@ -20,7 +20,7 @@ test("Worker Day production timing covers the server-owned request phases", () =
 });
 
 test("timing instrumentation remains server-only and does not alter the Worker Day API response", () => {
-  assert.doesNotMatch(route, /sessionMs|planMs|choreographyMs|taskCardsMs|assemblyMs|totalMs/);
+  assert.doesNotMatch(route, /sessionMs|sessionPhases|planMs|choreographyMs|taskCardsMs|assemblyMs|totalMs/);
   assert.doesNotMatch(sequenceServer, /farmId.*timing|membershipId.*timing|displayName.*timing/);
   assert.match(route, /return privateJson\(\{ ok: true, date, \.\.\.result \}\)/);
 });
