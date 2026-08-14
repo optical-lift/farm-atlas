@@ -1,16 +1,30 @@
+import type { AtlasDaySequence } from "@/lib/atlas/day-sequence";
 import type { AtlasWorkerDayProjection } from "@/lib/atlas/day-projection";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+
+export type AtlasWorkerDayRuntimeSequence = AtlasDaySequence & {
+  availableWorkerDay: boolean;
+  farmId: string;
+  membershipId: string;
+  paidTargetMinutes: number;
+  committedPaidMinutes: number;
+  automaticPaidMinutes: number;
+  remainingPaidMinutes: number;
+  warnings: string[];
+};
 
 type WorkerDaySequenceResponse = {
   ok?: boolean;
   active?: boolean;
+  operatorLabel?: string;
   canManage?: boolean;
-  projection?: AtlasWorkerDayProjection | null;
+  projection?: AtlasWorkerDayProjection<AtlasWorkerDayRuntimeSequence> | null;
   taskCards?: AtlasTaskCard[];
 };
 
 export type AtlasWorkerDayProjectionRead = {
-  projection: AtlasWorkerDayProjection;
+  projection: AtlasWorkerDayProjection<AtlasWorkerDayRuntimeSequence>;
+  operatorLabel: string;
   canManage: boolean;
   taskCards: AtlasTaskCard[];
 };
@@ -25,6 +39,7 @@ async function readWorkerDaySequenceResponse(dateIso: string) {
   if (!response.ok || !body.ok || !body.active || !body.projection) return null;
   return {
     projection: body.projection,
+    operatorLabel: typeof body.operatorLabel === "string" && body.operatorLabel.trim() ? body.operatorLabel : "Farm Hand",
     canManage: body.canManage === true,
     taskCards: Array.isArray(body.taskCards) ? body.taskCards : [],
   } satisfies AtlasWorkerDayProjectionRead;
@@ -32,13 +47,13 @@ async function readWorkerDaySequenceResponse(dateIso: string) {
 
 export async function readOwnerWorkerDayProjection(dateIso: string) {
   const read = await readWorkerDaySequenceResponse(dateIso);
-  return read?.canManage ? { projection: read.projection, taskCards: read.taskCards } : null;
+  return read?.canManage ? { projection: read.projection, operatorLabel: read.operatorLabel, taskCards: read.taskCards } : null;
 }
 
 export async function readWorkerSelfDayProjection(dateIso: string) {
   const read = await readWorkerDaySequenceResponse(dateIso);
   if (!read || read.canManage) throw new Error("Atlas could not load the Farm Hand Worker Day projection.");
-  return { projection: read.projection, taskCards: read.taskCards };
+  return { projection: read.projection, operatorLabel: read.operatorLabel, taskCards: read.taskCards };
 }
 
 export async function readAtlasWorkerDayProjection(dateIso: string): Promise<AtlasWorkerDayProjectionRead> {
