@@ -15,9 +15,10 @@ test("operated Farm Hand Home selects work without rich task-card hydration", ()
   assert.doesNotMatch(migration, /atlas\.v_task_cards/);
 });
 
-test("operated Home public RPC delegates to the lightweight read model", () => {
+test("operated Home public RPC delegates to the lightweight read model without changing its RPC ACL", () => {
   const migration = read("supabase/migrations/20260814182000_operator_home_switch_to_light_read_v1.sql");
   assert.match(migration, /owner_operator_universal_home_fast_v1/);
   assert.doesNotMatch(migration, /atlas\.universal_home_v1\s*\(/);
-  assert.match(migration, /grant execute[\s\S]*authenticated/i);
+  assert.doesNotMatch(migration, /grant\s+execute/i);
+  assert.doesNotMatch(migration, /revoke\s+/i);
 });
