@@ -8,7 +8,8 @@ const read = (filePath) => fs.readFileSync(path.join(repoRoot, filePath), "utf8"
 
 test("Owner planning controls stay hidden until the Owner opens Edit today", () => {
   const gate = read("components/atlas/owner-day-plan-gate.tsx");
-  assert.match(gate, /worker-day-plan/);
+  assert.match(gate, /useAtlasWorkerDayProjection\(dateIso\)/);
+  assert.doesNotMatch(gate, /worker-day-plan/);
   assert.match(gate, /Edit today/);
   assert.match(gate, /Purple is a draft/);
   assert.match(gate, /\{open \? \(/);
@@ -28,6 +29,14 @@ test("Owner Edit today reveals the starting paid-load budget without changing th
   assert.match(gate, /Starting load/);
   assert.match(gate, /data-over-capacity/);
   assert.doesNotMatch(gate, /method:\s*"POST"/);
+});
+
+test("the richer planning read is deferred into the explicit edit drawer", () => {
+  const gate = read("components/atlas/owner-day-plan-gate.tsx");
+  const builder = read("components/atlas/owner-day-schedule-builder.tsx");
+  assert.doesNotMatch(gate, /\/api\/atlas\/worker-day-plan/);
+  assert.match(builder, /\/api\/atlas\/worker-day-plan/);
+  assert.match(builder, /\/api\/atlas\/day-choreography/);
 });
 
 test("purple additions and inline Day changes remain drafts until one explicit atomic commit", () => {
