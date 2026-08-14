@@ -159,7 +159,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <AtlasContextualAppFrame effectiveFarmRole={effectiveFarmRole} />
           <AtlasBellCover />
           <DependencyReleaseFlash />
-          <Suspense fallback={null}><AtlasWorkAlongsideOverlay /></Suspense>
+          <Suspense fallback={null}><AtlasWorkAlongsideOverlay effectiveFarmRole={effectiveFarmRole} /></Suspense>
           <Suspense fallback={null}><OwnerDayPlanGate /></Suspense>
           <Suspense fallback={null}><GlobalDayCueDelivery /></Suspense>
           {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
