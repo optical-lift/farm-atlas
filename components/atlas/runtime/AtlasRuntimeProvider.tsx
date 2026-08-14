@@ -85,8 +85,9 @@ function runtimeEntry(input: {
 
 function runtimeEntryContainsTask(entry: WorkerDayRuntimeEntry, taskIds: Set<string>) {
   if (!taskIds.size) return false;
-  const projection = entry.value?.projection ?? entry.canonicalValue?.projection ?? null;
-  const items = projection?.sequence?.items ?? [];
+  const read = entry.value ?? entry.canonicalValue;
+  if (read?.taskCards.some((task) => taskIds.has(task.task_id))) return true;
+  const items = read?.projection.sequence?.items ?? [];
   return items.some((item) => {
     if (!item || typeof item !== "object" || !("taskId" in item)) return false;
     const taskId = (item as { taskId?: unknown }).taskId;
