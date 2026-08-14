@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useAtlasRuntimeActions } from "@/components/atlas/runtime/AtlasRuntimeProvider";
 import {
   atlasClockDraftReturnedTaskIds,
   atlasClockDraftVisibleTaskIds,
@@ -26,10 +27,10 @@ export function useClockPlanEditor(input: {
   proposal: AtlasClockProposalPlan;
   reservations: AtlasClockReservation[];
   rebuildProposal: () => AtlasClockProposalPlan;
-  onReload: () => Promise<void>;
   onCommitted: () => void;
   onError: (message: string | null) => void;
 }) {
+  const { dispatchClockCommand } = useAtlasRuntimeActions();
   const [rawBlocks, setRawBlocks] = useState<AtlasClockDraftBlock[] | null>(null);
   const [committing, setCommitting] = useState(false);
 
@@ -99,20 +100,7 @@ export function useClockPlanEditor(input: {
     setCommitting(true);
     input.onError(null);
     try {
-      const response = await fetch("/api/atlas/owner-clock-plan-commit", {
-        method: "POST",
-        credentials: "same-origin",
-        cache: "no-store",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "x-atlas-intent": "owner-clock-plan-commit-v1",
-        },
-        body: JSON.stringify({ date: input.dateIso, changes }),
-      });
-      const result = await response.json() as { ok?: boolean; error?: string };
-      if (!response.ok || !result.ok) throw new Error(result.error || "Atlas could not commit this Clock plan.");
-      await input.onReload();
+      await dispatchClockCommand({ kind: "clock_plan_commit", serviceDate: input.dateIso, changes });
       input.onCommitted();
       setRawBlocks(null);
     } catch (failure) {
