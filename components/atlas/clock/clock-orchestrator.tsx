@@ -4,6 +4,7 @@ import {useSearchParams} from "next/navigation";
 import {useEffect,useMemo,useState} from "react";
 import {buildClockTaskRanges,chooseClockNextTask,clockLocalMinuteOfDay,layoutClockTaskRanges} from "@/lib/atlas/clock-layout";
 import {buildAtlasClockProposal} from "@/lib/atlas/clock-proposal";
+import {buildAtlasClockReservations} from "@/lib/atlas/clock-reservations";
 import type {AtlasDaySequence,AtlasDaySequenceItem} from "@/lib/atlas/day-sequence";
 import {atlasFarmDateIso,atlasNormalizeFarmDate,DEFAULT_ATLAS_FARM_TIME_ZONE} from "@/lib/atlas/farm-day";
 import ClockHeaderV2 from "./clock-header-v2";
@@ -37,11 +38,11 @@ export default function ClockOrchestrator(){
  const items=useMemo(()=>(sequence?.items??[]).filter((item) => item.kind !== "potential_task"),[sequence]);
  const committed=useMemo(()=>items.filter((item):item is Work=>item.kind==="committed_task"),[items]);
  const timedCues=useMemo(()=>items.filter((item):item is Cue=>item.kind==="cue"&&item.positionResolved&&item.anchorKind === "at_time"&&Boolean(item.scheduledAt)&&!["resolved","dismissed","stale"].includes(item.status)),[items]);
+ const dayReservations=useMemo(()=>buildAtlasClockReservations({timedCues,timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE}),[timedCues]);
  const ranges=useMemo(()=>buildClockTaskRanges(committed,{timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE}),[committed]),layouts=useMemo(()=>layoutClockTaskRanges(ranges),[ranges]);
- // canManage && proposalOpen ? buildAtlasClockProposal(committed)
- // Plan this Clock. Nothing here changes Anna's Clock until Commit plan.
- const proposal=useMemo(()=>canManage&&proposalOpen?buildAtlasClockProposal(committed):{blocks:[],unresolved:[]},[canManage,proposalOpen,committed]);
- const editor=useClockPlanEditor({active:canManage&&proposalOpen,dateIso,committed,proposal,rebuildProposal:()=>buildAtlasClockProposal(committed),onReload:reload,onCommitted:()=>setProposalOpen(false),onError:setSaveError});
+ // Plan this Clock. Reservations are day-shaping truth, not tasks, and nothing changes Anna's Clock until Commit plan.
+ const proposal=useMemo(()=>canManage&&proposalOpen?buildAtlasClockProposal(committed,{reservations:dayReservations}):{blocks:[],unresolved:[]},[canManage,proposalOpen,committed,dayReservations]);
+ const editor=useClockPlanEditor({active:canManage&&proposalOpen,dateIso,committed,proposal,reservations:dayReservations,rebuildProposal:()=>buildAtlasClockProposal(committed,{reservations:dayReservations}),onReload:reload,onCommitted:()=>setProposalOpen(false),onError:setSaveError});
  const today=atlasFarmDateIso(now),selectedToday = dateIso === today,nowMinute=selectedToday ? clockLocalMinuteOfDay(now.toISOString(),DEFAULT_ATLAS_FARM_TIME_ZONE) : null;
  const activeRange=selectedToday&&nowMinute!==null?ranges.find(range=>Boolean(range.span.minutes)&&range.startMinute <= nowMinute&&range.endMinute > nowMinute&&range.item.status!=="done"&&range.item.status!=="completed")??null:null;
  const nextTask=chooseClockNextTask(committed,ranges,selectedToday?nowMinute:null),nextRange=nextTask?ranges.find(range=>range.item.id===nextTask.id)??null:null;
