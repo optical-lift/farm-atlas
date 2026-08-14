@@ -59,6 +59,7 @@ export default function ClockReservationBlock({
 
   function beginDrag(event: ReactPointerEvent, mode: "move" | "resize") {
     if (!canManage || !entity) return;
+    const reservationEntity = entity;
     event.preventDefault();
     event.stopPropagation();
     const originY = event.clientY;
@@ -91,14 +92,14 @@ export default function ClockReservationBlock({
           await dispatchReservationCommand({
             kind: "reservation_move",
             serviceDate: dateIso,
-            reservationId: entity.reservationId,
+            reservationId: reservationEntity.reservationId,
             startLocalTime: localTime(latest.start),
           });
         } else {
           await dispatchReservationCommand({
             kind: "reservation_resize",
             serviceDate: dateIso,
-            reservationId: entity.reservationId,
+            reservationId: reservationEntity.reservationId,
             endLocalTime: localTime(latest.end),
           });
         }
