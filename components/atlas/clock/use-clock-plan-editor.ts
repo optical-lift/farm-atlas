@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useAtlasRuntimeActions } from "@/components/atlas/runtime/AtlasRuntimeProvider";
 import {
   atlasClockDraftReturnedTaskIds,
   atlasClockDraftVisibleTaskIds,
@@ -14,6 +15,7 @@ import {
   type AtlasClockDraftDecision,
 } from "@/lib/atlas/clock-plan-draft";
 import type { AtlasClockProposalPlan } from "@/lib/atlas/clock-proposal";
+import type { AtlasClockReservation } from "@/lib/atlas/clock-reservations";
 import type { AtlasDaySequenceItem } from "@/lib/atlas/day-sequence";
 
 type CommittedItem = Extract<AtlasDaySequenceItem, { kind: "committed_task" }>;
@@ -23,11 +25,12 @@ export function useClockPlanEditor(input: {
   dateIso: string;
   committed: CommittedItem[];
   proposal: AtlasClockProposalPlan;
+  reservations: AtlasClockReservation[];
   rebuildProposal: () => AtlasClockProposalPlan;
-  onReload: () => Promise<void>;
   onCommitted: () => void;
   onError: (message: string | null) => void;
 }) {
+  const { dispatchClockCommand } = useAtlasRuntimeActions();
   const [rawBlocks, setRawBlocks] = useState<AtlasClockDraftBlock[] | null>(null);
   const [committing, setCommitting] = useState(false);
 
@@ -39,8 +42,8 @@ export function useClockPlanEditor(input: {
     setRawBlocks((current) => current ?? buildAtlasClockPlanDraft(input.committed, input.proposal));
   }, [input.active, input.committed, input.proposal]);
 
-  const blocks = useMemo(() => rawBlocks ? evaluateAtlasClockPlanDraft(rawBlocks) : null, [rawBlocks]);
-  const summary = useMemo(() => blocks ? summarizeAtlasClockDraft(blocks) : null, [blocks]);
+  const blocks = useMemo(() => rawBlocks ? evaluateAtlasClockPlanDraft(rawBlocks, input.reservations) : null, [rawBlocks, input.reservations]);
+  const summary = useMemo(() => blocks ? summarizeAtlasClockDraft(blocks, input.reservations) : null, [blocks, input.reservations]);
   const visibleProposalTaskIds = useMemo(() => blocks ? atlasClockDraftVisibleTaskIds(blocks) : new Set<string>(), [blocks]);
   const returnedTaskIds = useMemo(() => blocks ? atlasClockDraftReturnedTaskIds(blocks) : new Set<string>(), [blocks]);
 
@@ -84,7 +87,7 @@ export function useClockPlanEditor(input: {
 
   async function commit() {
     if (!blocks || !summary) return;
-    const changes = buildAtlasClockDraftCommitChanges(blocks);
+    const changes = buildAtlasClockDraftCommitChanges(blocks, input.reservations);
     if (!changes.length) {
       input.onError("Choose at least one proposed time or move a committed block before committing.");
       return;
@@ -97,20 +100,7 @@ export function useClockPlanEditor(input: {
     setCommitting(true);
     input.onError(null);
     try {
-      const response = await fetch("/api/atlas/owner-clock-plan-commit", {
-        method: "POST",
-        credentials: "same-origin",
-        cache: "no-store",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "x-atlas-intent": "owner-clock-plan-commit-v1",
-        },
-        body: JSON.stringify({ date: input.dateIso, changes }),
-      });
-      const result = await response.json() as { ok?: boolean; error?: string };
-      if (!response.ok || !result.ok) throw new Error(result.error || "Atlas could not commit this Clock plan.");
-      await input.onReload();
+      await dispatchClockCommand({ kind: "clock_plan_commit", serviceDate: input.dateIso, changes });
       input.onCommitted();
       setRawBlocks(null);
     } catch (failure) {

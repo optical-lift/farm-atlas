@@ -1,14 +1,11 @@
-import type { AtlasDaySequence } from "@/lib/atlas/day-sequence";
+import { readOwnerWorkerDayProjection } from "@/lib/atlas/worker-day-projection-client";
 
-type OwnerSequenceResponse = { ok?: boolean; active?: boolean; sequence?: AtlasDaySequence | null };
+export async function readOwnerClockProjection(dateIso: string) {
+  return readOwnerWorkerDayProjection(dateIso);
+}
 
+// Compatibility seam for older Clock consumers while reads move into AtlasRuntime.
 export async function readOwnerClockSequence(dateIso: string) {
-  const response = await fetch(`/api/atlas/worker-day-sequence?date=${encodeURIComponent(dateIso)}`, {
-    cache: "no-store",
-    credentials: "same-origin",
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) return null;
-  const body = await response.json() as OwnerSequenceResponse;
-  return body.ok && body.active && body.sequence ? body.sequence : null;
+  const projection = await readOwnerClockProjection(dateIso);
+  return projection?.sequence ?? null;
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { useAtlasRuntimeActions } from "@/components/atlas/runtime/AtlasRuntimeProvider";
 import type { AtlasDaySequenceItem } from "@/lib/atlas/day-sequence";
 
 type Item = Extract<AtlasDaySequenceItem, { kind: "committed_task" }>;
@@ -16,27 +17,35 @@ export default function ClockOwnerControls(props: {
   compact?: boolean;
 }) {
   const { item } = props;
+  const { dispatchClockCommand } = useAtlasRuntimeActions();
   const [time, setTime] = useState("");
   const [duration, setDuration] = useState("");
   const [saving, setSaving] = useState(false);
   if (!props.canManage || !item.taskId) return null;
 
-  async function post(path: string, intent: string, body: Record<string, unknown>) {
+  async function saveTime(localTime: string | null) {
+    if (!item.taskId) return;
     setSaving(true);
     props.onError(null);
     try {
-      const response = await fetch(path, {
-        method: "POST",
-        credentials: "same-origin",
-        cache: "no-store",
-        headers: { Accept: "application/json", "Content-Type": "application/json", "x-atlas-intent": intent },
-        body: JSON.stringify(body),
-      });
-      const result = await response.json() as { ok?: boolean; error?: string };
-      if (!response.ok || !result.ok) throw new Error(result.error || "Clock update failed.");
+      await dispatchClockCommand({ kind: "clock_time", serviceDate: props.dateIso, taskId: item.taskId, localTime });
       setTime("");
       setDuration("");
-      await props.onChanged();
+    } catch (error) {
+      props.onError(error instanceof Error ? error.message : "Clock update failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveDuration(durationMinutes: number | null) {
+    if (!item.taskId) return;
+    setSaving(true);
+    props.onError(null);
+    try {
+      await dispatchClockCommand({ kind: "clock_duration", serviceDate: props.dateIso, taskId: item.taskId, durationMinutes });
+      setTime("");
+      setDuration("");
     } catch (error) {
       props.onError(error instanceof Error ? error.message : "Clock update failed.");
     } finally {
@@ -50,14 +59,14 @@ export default function ClockOwnerControls(props: {
   const panel = <div data-clock-owner-controls="true" style={{ display: "grid", gap: 5 }}>
     {props.showTime !== false ? <div style={{ display: "flex", gap: 5 }}>
       <input aria-label={`Start time for ${item.title}`} type="time" value={time} onChange={(event) => setTime(event.target.value)} />
-      <button type="button" disabled={!time || saving} onClick={() => void post("/api/atlas/owner-day-task-time", "owner-clock-time-v1", { date: props.dateIso, taskId: item.taskId, localTime: time })}>{item.plannedStartAt ? "Save time" : "Place"}</button>
-      {item.plannedStartAt ? <button type="button" disabled={saving} onClick={() => void post("/api/atlas/owner-day-task-time", "owner-clock-time-v1", { date: props.dateIso, taskId: item.taskId, localTime: null })}>Remove time</button> : null}
+      <button type="button" disabled={!time || saving} onClick={() => void saveTime(time)}>{item.plannedStartAt ? "Save time" : "Place"}</button>
+      {item.plannedStartAt ? <button type="button" disabled={saving} onClick={() => void saveTime(null)}>Remove time</button> : null}
     </div> : null}
     {item.plannedStartAt ? <div data-clock-owner-duration-controls="true" style={{ display: "flex", gap: 5, alignItems: "center" }}>
       <input aria-label={`Planned duration for ${item.title}`} type="number" min="5" max="720" step="5" value={durationValue} placeholder="minutes" onChange={(event) => setDuration(event.target.value)} />
-      <button type="button" disabled={!durationValid || saving} onClick={() => void post("/api/atlas/owner-day-task-duration", "owner-clock-duration-v1", { date: props.dateIso, taskId: item.taskId, durationMinutes: parsedDuration })}>Save span</button>
-      {!item.plannedDurationMinutes && item.estimatedMinutes ? <button type="button" disabled={saving} onClick={() => void post("/api/atlas/owner-day-task-duration", "owner-clock-duration-v1", { date: props.dateIso, taskId: item.taskId, durationMinutes: item.estimatedMinutes })}>Use estimate</button> : null}
-      {item.plannedDurationMinutes ? <button type="button" disabled={saving} onClick={() => void post("/api/atlas/owner-day-task-duration", "owner-clock-duration-v1", { date: props.dateIso, taskId: item.taskId, durationMinutes: null })}>Remove span</button> : null}
+      <button type="button" disabled={!durationValid || saving} onClick={() => void saveDuration(parsedDuration)}>Save span</button>
+      {!item.plannedDurationMinutes && item.estimatedMinutes ? <button type="button" disabled={saving} onClick={() => void saveDuration(item.estimatedMinutes)}>Use estimate</button> : null}
+      {item.plannedDurationMinutes ? <button type="button" disabled={saving} onClick={() => void saveDuration(null)}>Remove span</button> : null}
     </div> : null}
   </div>;
 

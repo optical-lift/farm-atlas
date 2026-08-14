@@ -1,3 +1,6 @@
+import { readAtlasRuntimeTaskTransitionHandler } from "@/lib/atlas/runtime-action-bridge";
+import { dispatchAtlasWorkerDayRuntimeInvalidation } from "@/lib/atlas/runtime-events";
+
 export type AtlasTaskTransition =
   | "done"
   | "partial"
@@ -148,11 +151,13 @@ function leaveCompletedTaskPage() {
 }
 
 /**
- * The transition client owns transport only. Visual task/checklist state belongs
- * to the React surface that initiated the mutation; this module never reaches
- * into rendered task markup to simulate state after the fact.
+ * The transition client owns transport only. AtlasRuntime may orchestrate a
+ * derived optimistic projection around this transport, but rendered checklist
+ * or task DOM state remains owned by the React surface that initiated the work.
+ *
+ * This primitive commits one canonical task transition and returns server truth.
  */
-export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest): Promise<AtlasTaskTransitionResponse> {
+export async function commitAtlasTaskTransition(input: AtlasTaskTransitionRequest): Promise<AtlasTaskTransitionResponse> {
   const response = await fetch("/api/atlas/task-transition", {
     method: "POST",
     headers: {
@@ -176,5 +181,19 @@ export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest)
     leaveCompletedTaskPage();
   }
 
+  return data;
+}
+
+/**
+ * Shared Atlas task command. When AtlasRuntime is mounted it owns the action,
+ * optimistic projection overlay, rollback, and reconciliation. Older/non-runtime
+ * surfaces preserve the compatibility behavior of commit then cache expiry.
+ */
+export async function postAtlasTaskTransition(input: AtlasTaskTransitionRequest): Promise<AtlasTaskTransitionResponse> {
+  const runtimeHandler = readAtlasRuntimeTaskTransitionHandler();
+  if (runtimeHandler) return runtimeHandler(input);
+
+  const data = await commitAtlasTaskTransition(input);
+  dispatchAtlasWorkerDayRuntimeInvalidation();
   return data;
 }

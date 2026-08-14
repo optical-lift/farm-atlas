@@ -1,10 +1,11 @@
 import { buildClockTaskRanges, clockLocalMinuteOfDay } from "@/lib/atlas/clock-layout";
 import type { AtlasClockProposalBlock, AtlasClockProposalPlan } from "@/lib/atlas/clock-proposal";
+import { atlasClockReservationConflicts, type AtlasClockReservation } from "@/lib/atlas/clock-reservations";
 import type { AtlasDaySequenceItem } from "@/lib/atlas/day-sequence";
 
 export type AtlasClockDraftDecision = "committed" | "pending" | "accept" | "reject";
 export type AtlasClockDraftSource = "committed" | "proposal";
-export type AtlasClockDraftWarningCode = "outside_day" | "fixed_time" | "window" | "anchor" | "overlap";
+export type AtlasClockDraftWarningCode = "outside_day" | "fixed_time" | "window" | "anchor" | "overlap" | "reservation";
 export type AtlasClockDraftWarning = { code: AtlasClockDraftWarningCode; message: string };
 type CommittedItem = Extract<AtlasDaySequenceItem, { kind: "committed_task" }>;
 
@@ -40,7 +41,7 @@ function blockEnd(block:AtlasClockDraftBlock){return block.startMinute===null?nu
 function blockChanged(block:AtlasClockDraftBlock){return block.source==="proposal"?block.decision==="accept":block.startTouched||block.durationTouched;}
 function taskBlock(taskId:string|null,blocks:AtlasClockDraftBlock[]){return taskId?blocks.find(candidate=>candidate.taskId===taskId&&activeBlock(candidate))??null:null;}
 
-function warningsForBlock(block:AtlasClockDraftBlock,blocks:AtlasClockDraftBlock[]){
+function warningsForBlock(block:AtlasClockDraftBlock,blocks:AtlasClockDraftBlock[],reservations:AtlasClockReservation[]){
  if(!activeBlock(block))return [] as AtlasClockDraftWarning[];
  const warnings:AtlasClockDraftWarning[]=[],start=block.startMinute as number,end=start+block.durationMinutes,mobility=block.item.mobility;
  const shouldValidate=block.source==="proposal"||block.startTouched||block.durationTouched;
@@ -64,17 +65,19 @@ function warningsForBlock(block:AtlasClockDraftBlock,blocks:AtlasClockDraftBlock
  if(shouldValidate){
    const collision=blocks.some(other=>{if(other.id===block.id||!activeBlock(other)||other.startMinute===null)return false;const otherEnd=blockEnd(other)??other.startMinute;return start<otherEnd&&end>other.startMinute;});
    if(collision)warnings.push({code:"overlap",message:"This block overlaps another active Clock block."});
+   const dayReservation=reservations.find(reservation=>reservation.blocking&&atlasClockReservationConflicts(start,end,reservation));
+   if(dayReservation)warnings.push({code:"reservation",message:`This block crosses the real day reservation “${dayReservation.title}”.`});
  }
  return warnings;
 }
-export function evaluateAtlasClockPlanDraft(blocks:AtlasClockDraftBlock[]){return blocks.map(block=>({...block,warnings:warningsForBlock(block,blocks)}));}
+export function evaluateAtlasClockPlanDraft(blocks:AtlasClockDraftBlock[],reservations:AtlasClockReservation[]=[]){return blocks.map(block=>({...block,warnings:warningsForBlock(block,blocks,reservations)}));}
 export function updateAtlasClockDraftBlock(blocks:AtlasClockDraftBlock[],id:string,patch:Partial<Pick<AtlasClockDraftBlock,"startMinute"|"durationMinutes"|"decision"|"overrideWarnings"|"startTouched"|"durationTouched">>){return blocks.map(block=>block.id===id?{...block,...patch}:block);}
 export function clockMinuteToLocalTime(value:number){const minute=Math.max(0,Math.min(1439,Math.round(value)));return `${String(Math.floor(minute/60)).padStart(2,"0")}:${String(minute%60).padStart(2,"0")}`;}
-export function buildAtlasClockDraftCommitChanges(blocks:AtlasClockDraftBlock[]):AtlasClockDraftCommitChange[]{
- const evaluated=evaluateAtlasClockPlanDraft(blocks),changes:AtlasClockDraftCommitChange[]=[];
+export function buildAtlasClockDraftCommitChanges(blocks:AtlasClockDraftBlock[],reservations:AtlasClockReservation[]=[]):AtlasClockDraftCommitChange[]{
+ const evaluated=evaluateAtlasClockPlanDraft(blocks,reservations),changes:AtlasClockDraftCommitChange[]=[];
  for(const block of evaluated){if(!block.taskId)continue;if(block.source==="proposal"&&block.decision!=="accept")continue;if(block.source==="committed"&&!blockChanged(block))continue;const unplaced=block.startMinute===null;changes.push({taskId:block.taskId,setStart:block.source==="proposal"||block.startTouched,startLocalTime:unplaced?null:clockMinuteToLocalTime(block.startMinute as number),setDuration:block.source==="proposal"||block.durationTouched||unplaced,durationMinutes:unplaced?null:block.durationMinutes,expectedStartAt:block.item.plannedStartAt,expectedDurationMinutes:block.item.plannedDurationMinutes,source:block.source,warningCodes:block.warnings.map(w=>w.code),overrideWarnings:block.overrideWarnings});}
  return changes;
 }
-export function summarizeAtlasClockDraft(blocks:AtlasClockDraftBlock[]):AtlasClockDraftSummary{const evaluated=evaluateAtlasClockPlanDraft(blocks),changes=buildAtlasClockDraftCommitChanges(evaluated),warningChanges=changes.filter(change=>change.warningCodes.length>0);return {acceptedProposalCount:evaluated.filter(block=>block.source==="proposal"&&block.decision==="accept").length,changedCommittedCount:evaluated.filter(block=>block.source==="committed"&&blockChanged(block)).length,warningCount:warningChanges.reduce((sum,change)=>sum+change.warningCodes.length,0),unresolvedWarningCount:warningChanges.filter(change=>!change.overrideWarnings).length,changeCount:changes.length};}
+export function summarizeAtlasClockDraft(blocks:AtlasClockDraftBlock[],reservations:AtlasClockReservation[]=[]):AtlasClockDraftSummary{const evaluated=evaluateAtlasClockPlanDraft(blocks,reservations),changes=buildAtlasClockDraftCommitChanges(evaluated,reservations),warningChanges=changes.filter(change=>change.warningCodes.length>0);return {acceptedProposalCount:evaluated.filter(block=>block.source==="proposal"&&block.decision==="accept").length,changedCommittedCount:evaluated.filter(block=>block.source==="committed"&&blockChanged(block)).length,warningCount:warningChanges.reduce((sum,change)=>sum+change.warningCodes.length,0),unresolvedWarningCount:warningChanges.filter(change=>!change.overrideWarnings).length,changeCount:changes.length};}
 export function atlasClockDraftVisibleTaskIds(blocks:AtlasClockDraftBlock[]){return new Set(blocks.filter(block=>block.source==="proposal"&&block.decision!=="reject"&&block.startMinute!==null).map(block=>block.item.id));}
 export function atlasClockDraftReturnedTaskIds(blocks:AtlasClockDraftBlock[]){return new Set(blocks.filter(block=>block.source==="committed"&&block.startTouched&&block.startMinute===null).map(block=>block.item.id));}

@@ -6,7 +6,7 @@ import { resolveOwnerWorkerDayPlanningTarget } from "@/lib/atlas/worker-day-plan
 
 export const dynamic = "force-dynamic";
 
-const warningCodes = new Set(["outside_day", "fixed_time", "window", "anchor", "overlap"]);
+const warningCodes = new Set(["outside_day", "fixed_time", "window", "anchor", "overlap", "reservation"]);
 function validDateIso(value: unknown): value is string { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T12:00:00`).getTime()); }
 function uuid(value: unknown): value is string { return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
 function localTime(value: unknown): value is string | null { return value === null || (typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value)); }
