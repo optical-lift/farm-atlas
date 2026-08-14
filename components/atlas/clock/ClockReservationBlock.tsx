@@ -26,7 +26,7 @@ function localTime(value: number) {
 function typeLabel(source: AtlasClockReservation["source"]) {
   if (source === "routine") return "Routine";
   if (source === "meal") return "Meal";
-  return "External commitment";
+  return "Commitment";
 }
 
 export default function ClockReservationBlock({
@@ -59,6 +59,7 @@ export default function ClockReservationBlock({
 
   function beginDrag(event: ReactPointerEvent, mode: "move" | "resize") {
     if (!canManage || !entity) return;
+    event.preventDefault();
     event.stopPropagation();
     const originY = event.clientY;
     const originStart = reservation.startMinute;
@@ -152,7 +153,7 @@ export default function ClockReservationBlock({
             title="Drag to resize"
             onPointerDown={(event) => beginDrag(event, "resize")}
             onClick={(event) => event.stopPropagation()}
-            style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 9, cursor: "ns-resize", border: 0, background: "transparent", padding: 0 }}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 12, cursor: "ns-resize", border: 0, background: "transparent", padding: 0, touchAction: "none" }}
           />
         ) : null}
       </div>
