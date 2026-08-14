@@ -6,6 +6,10 @@ const migration = readFileSync(
   new URL("../supabase/migrations/20260814155500_atlas_interactive_read_performance_v1.sql", import.meta.url),
   "utf8",
 );
+const datedRoute = readFileSync(
+  new URL("../app/api/atlas/universal-task-cards/route.ts", import.meta.url),
+  "utf8",
+);
 
 test("Pass 31 bounds rich task-card hydration to already-selected task ids", () => {
   assert.match(migration, /function atlas\.task_card_for_id_v1\(p_task_id uuid\)/i);
@@ -34,4 +38,24 @@ test("notification refresh probe is supported without replacing notification tru
   assert.match(migration, /ensure_task_notification_moments_v1/i);
   assert.match(migration, /refresh_task_notification_day_plan_v1/i);
   assert.doesNotMatch(migration, /delete\s+from\s+atlas\.task_notification_moments/i);
+});
+
+test("operating on a farm reads that worker's canonical cards without paying the Universal Home wrapper", () => {
+  assert.match(datedRoute, /operatorContext\?\.isOperating/);
+  assert.match(datedRoute, /effective\?\.scopeKind === "farm"/);
+  assert.match(datedRoute, /owner_operator_home_task_cards_v1/);
+  assert.match(datedRoute, /withFarmScopeMetadata\(card, effective\.farmId/);
+  assert.match(datedRoute, /task_scope: "farm_operation"/);
+  assert.match(datedRoute, /hasOrganizationScope: false/);
+  assert.match(datedRoute, /else \{\s*const home = await readAtlasOperatorUniversalHome/s);
+});
+
+test("the operator fast path rejoins the same Day placement, privacy, and Move-context pipeline", () => {
+  assert.match(datedRoute, /readAtlasTaskDayDispositions/);
+  assert.match(datedRoute, /worker_day_choreography_api_v1/);
+  assert.match(datedRoute, /worker_day_placed_task_cards_v1/);
+  assert.match(datedRoute, /farmHandMoveContext/);
+  assert.match(datedRoute, /readAtlasTaskMoveContexts\(baseTaskCards\.map/);
+  assert.match(datedRoute, /X-Atlas-Read-Path": "universal-dated-task-cards-v6-operator-direct"/);
+  assert.doesNotMatch(datedRoute, /service[_-]?role/i);
 });
