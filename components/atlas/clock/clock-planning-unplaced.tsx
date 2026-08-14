@@ -4,13 +4,12 @@ import type { AtlasClockProposalUnresolved } from "@/lib/atlas/clock-proposal";
 import type { AtlasDaySequenceItem, AtlasDaySequenceWindow } from "@/lib/atlas/day-sequence";
 import { atlasTimingClassLabel } from "@/lib/atlas/timing-mobility";
 import styles from "./clock-surface-v2.module.css";
+import planStyles from "./clock-planning.module.css";
 
 const windowLabels:Record<AtlasDaySequenceWindow,string>={morning:"Morning",afternoon:"Afternoon",evening:"Evening"};
 function taskHref(taskId:string,dateIso:string){const returnTo=`/clock?date=${encodeURIComponent(dateIso)}`;return `/task-focus/${encodeURIComponent(taskId)}?returnTo=${encodeURIComponent(returnTo)}`;}
 
-export default function ClockPlanningUnplaced(props:{
-  items:AtlasDaySequenceItem[];dateIso:string;visibleProposalTaskIds:Set<string>;returnedTaskIds:Set<string>;proposalUnresolved:AtlasClockProposalUnresolved[];
-}){
+export default function ClockPlanningUnplaced(props:{items:AtlasDaySequenceItem[];dateIso:string;visibleProposalTaskIds:Set<string>;returnedTaskIds:Set<string>;proposalUnresolved:AtlasClockProposalUnresolved[];}){
   const unplaced=props.items.filter((item)=>{
     if(item.kind==="committed_task"){
       if(props.returnedTaskIds.has(item.id))return true;
@@ -23,7 +22,7 @@ export default function ClockPlanningUnplaced(props:{
     <header><h2>Still unplaced</h2><span>{waitingCount} tasks need a time</span></header>
     <div className={styles.unplacedList}>
       {!unplaced.length&&!props.proposalUnresolved.length?<div className={styles.empty}>Everything in this draft has a Clock position.</div>:null}
-      {props.proposalUnresolved.map((entry)=><div className={`${styles.taskShell} ${styles.planUnresolved}`} key={`unresolved:${entry.id}`} data-clock-proposal-unresolved="true"><small>Atlas left unplaced</small><strong>{entry.title}</strong><span>{entry.reason}</span></div>)}
+      {props.proposalUnresolved.map((entry)=><div className={`${styles.taskShell} ${planStyles.planUnresolved}`} key={`unresolved:${entry.id}`} data-clock-proposal-unresolved="true"><small>Atlas left unplaced</small><strong>{entry.title}</strong><span>{entry.reason}</span></div>)}
       {unplaced.map((item,index)=>{
         const previous=unplaced[index-1];const showWindow=item.dayWindow&&(!previous||previous.dayWindow!==item.dayWindow);
         return <div key={item.id}>{showWindow?<div className={styles.window}>{windowLabels[item.dayWindow as AtlasDaySequenceWindow]}</div>:null}
