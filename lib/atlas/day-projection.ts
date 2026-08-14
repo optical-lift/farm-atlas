@@ -1,4 +1,5 @@
 import type { AtlasDaySequence } from "@/lib/atlas/day-sequence";
+import type { AtlasDayReservation } from "@/lib/atlas/day-reservations";
 
 export type AtlasWorkerDayProjectionLens = "operator_lens" | "owner_direct" | "worker_self";
 
@@ -17,6 +18,7 @@ export type AtlasWorkerDayProjection<TSequence extends AtlasDaySequence = AtlasD
   identity: AtlasWorkerDayProjectionIdentity;
   revision: string;
   sequence: TSequence;
+  reservations: AtlasDayReservation[];
 };
 
 function stableProjectionValue(value: unknown): unknown {
@@ -66,12 +68,15 @@ export function buildAtlasWorkerDayProjection<TSequence extends AtlasDaySequence
   serviceDate: string;
   lens: AtlasWorkerDayProjectionLens;
   sequence: TSequence;
+  reservations?: AtlasDayReservation[];
 }): AtlasWorkerDayProjection<TSequence> {
   const identity = buildAtlasWorkerDayProjectionIdentity(input);
+  const reservations = input.reservations ?? [];
   return {
     contractVersion: "atlas_worker_day_projection_v1",
     identity,
-    revision: `r1-${projectionFingerprint({ identity, sequence: input.sequence })}`,
+    revision: `r1-${projectionFingerprint({ identity, sequence: input.sequence, reservations })}`,
     sequence: input.sequence,
+    reservations,
   };
 }
