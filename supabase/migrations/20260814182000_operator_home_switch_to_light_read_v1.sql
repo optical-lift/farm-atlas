@@ -22,7 +22,8 @@ as $function$
   );
 $function$;
 
-revoke all on function atlas.owner_operator_universal_home_v1(uuid,uuid,uuid,date,date) from public, anon;
-grant execute on function atlas.owner_operator_universal_home_v1(uuid,uuid,uuid,date,date) to authenticated;
+-- CREATE OR REPLACE preserves the existing authenticated EXECUTE ACL and the
+-- endpoint's existing registry entry. This migration changes implementation,
+-- not the supported RPC surface.
 
 commit;
