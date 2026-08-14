@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getAtlasSession } from "@/lib/atlas/session";
+import { readAtlasDayReservations } from "@/lib/atlas/day-reservations-server";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 import { resolveOwnerWorkerDayPlanningTarget } from "@/lib/atlas/worker-day-plan-server";
 
@@ -167,20 +168,28 @@ export async function resolveDayChoreographyTarget(): Promise<AtlasDayChoreograp
 export async function readWorkerDayChoreography(dateIso: string) {
   if (!validDateIso(dateIso)) throw new Error("A valid YYYY-MM-DD Day is required.");
   const target = await resolveDayChoreographyTarget();
-  if (!target) return { active: false as const, target: null, choreography: null };
+  if (!target) return { active: false as const, target: null, choreography: null, reservations: [] };
 
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("worker_day_choreography_api_v1", {
-    p_farm_id: target.farmId,
-    p_membership_id: target.membershipId,
-    p_day: dateIso,
-  });
+  const [{ data, error }, reservations] = await Promise.all([
+    supabase.rpc("worker_day_choreography_api_v1", {
+      p_farm_id: target.farmId,
+      p_membership_id: target.membershipId,
+      p_day: dateIso,
+    }),
+    readAtlasDayReservations({
+      farmId: target.farmId,
+      membershipId: target.membershipId,
+      serviceDate: dateIso,
+    }),
+  ]);
   if (error) throw new Error(error.message);
 
   return {
     active: true as const,
     target,
     choreography: normalizeChoreography(data),
+    reservations,
   };
 }
 
