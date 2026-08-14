@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import FixedRoutineManager from "@/components/atlas/reservations/FixedRoutineManager";
 import { useAtlasRuntimeActions } from "@/components/atlas/runtime/AtlasRuntimeProvider";
 import {
   atlasDayReservationSourceLabel,
@@ -47,6 +48,7 @@ export default function ReservationEditor({
   const [note, setNote] = useState(reservation?.note ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [routineManagerOpen, setRoutineManagerOpen] = useState(false);
 
   async function save() {
     if (!title.trim()) { setError("Give this fixed time a label."); return; }
@@ -93,28 +95,33 @@ export default function ReservationEditor({
     } finally { setSaving(false); }
   }
 
+  const generatedRoutine = reservation?.source === "fixed_routine" && reservation.sourceReference ? reservation.sourceReference : null;
   const removeLabel = reservation?.source && reservation.source !== "owner_manual" ? "Remove occurrence" : "Remove";
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={reservation ? `Edit ${reservation.title}` : "Add fixed time"} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(18,20,27,.42)", display: "grid", alignItems: "end" }} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section style={{ background: "#fff", borderRadius: "18px 18px 0 0", padding: "18px max(18px, env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left))", boxShadow: "0 -12px 40px rgba(0,0,0,.18)", maxWidth: 520, width: "100%", margin: "0 auto", maxHeight: "88dvh", overflowY: "auto" }}>
-        <header style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
-          <div><small style={{ display: "block", textTransform: "uppercase", letterSpacing: ".08em", color: "#777" }}>{reservation ? "Fixed time" : "Add fixed time"}</small><strong style={{ fontSize: 18 }}>Reservation, not task</strong>{reservation ? <span style={{ display: "block", fontSize: 11, color: "#777", marginTop: 3 }}>{atlasDayReservationSourceLabel(reservation.source)}{reservation.source !== "owner_manual" ? " · editing this occurrence only" : ""}</span> : null}</div>
-          <button type="button" onClick={onClose} aria-label="Close reservation editor" style={{ border: 0, background: "transparent", fontSize: 22, minWidth: 44, minHeight: 44 }}>×</button>
-        </header>
-        <label style={{ display: "grid", gap: 5, marginBottom: 10 }}><span style={{ fontSize: 11, fontWeight: 800 }}>Label</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Walmart Pickup" style={{ padding: 10, border: "1px solid #d8d8dc", borderRadius: 9, minHeight: 44 }} /></label>
-        <label style={{ display: "grid", gap: 5, marginBottom: 10 }}><span style={{ fontSize: 11, fontWeight: 800 }}>Type</span><select value={kind} onChange={(event) => setKind(event.target.value as AtlasDayReservationKind)} style={{ padding: 10, border: "1px solid #d8d8dc", borderRadius: 9, minHeight: 44 }}><option value="external_commitment">External commitment</option><option value="meal">Meal</option><option value="routine">Routine</option></select></label>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10, marginBottom: 10 }}>
-          <label style={{ display: "grid", gap: 5 }}><span style={{ fontSize: 11, fontWeight: 800 }}>Start</span><input type="time" step="300" value={startTime} onChange={(event) => setStartTime(event.target.value)} style={{ padding: 10, border: "1px solid #d8d8dc", borderRadius: 9, minHeight: 44, minWidth: 0 }} /></label>
-          <label style={{ display: "grid", gap: 5 }}><span style={{ fontSize: 11, fontWeight: 800 }}>End</span><input type="time" step="300" value={endTime} onChange={(event) => setEndTime(event.target.value)} style={{ padding: 10, border: "1px solid #d8d8dc", borderRadius: 9, minHeight: 44, minWidth: 0 }} /></label>
-        </div>
-        <label style={{ display: "grid", gap: 5, marginBottom: 12 }}><span style={{ fontSize: 11, fontWeight: 800 }}>Operational note <i style={{ fontWeight: 400 }}>optional</i></span><input value={note} onChange={(event) => setNote(event.target.value)} style={{ padding: 10, border: "1px solid #d8d8dc", borderRadius: 9, minHeight: 44 }} /></label>
-        {error ? <p style={{ color: "#9c3434", fontSize: 12, margin: "0 0 10px" }}>{error}</p> : null}
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" onClick={() => void save()} disabled={saving} style={{ flex: 1, border: 0, borderRadius: 10, minHeight: 46, padding: 11, background: "#262833", color: "white", fontWeight: 800 }}>{saving ? "Saving…" : "Save fixed time"}</button>
-          {reservation ? <button type="button" onClick={() => void remove()} disabled={saving} style={{ border: "1px solid #e0c9c9", borderRadius: 10, minHeight: 46, padding: "11px 13px", background: "#fff", color: "#8b3d3d", fontWeight: 800 }}>{removeLabel}</button> : null}
-        </div>
-      </section>
-    </div>
+    <>
+      <div role="dialog" aria-modal="true" aria-label={reservation ? `Edit ${reservation.title}` : "Add fixed time"} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(18,20,27,.42)", display: "grid", alignItems: "end" }} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+        <section style={{ background: "#fff", borderRadius: "18px 18px 0 0", padding: "18px max(18px, env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left))", boxShadow: "0 -12px 40px rgba(0,0,0,.18)", maxWidth: 520, width: "100%", margin: "0 auto", maxHeight: "88dvh", overflowY: "auto" }}>
+          <header style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
+            <div><small style={{ display: "block", textTransform: "uppercase", letterSpacing: ".08em", color: "#777" }}>{reservation ? "Fixed time" : "Add fixed time"}</small><strong style={{ fontSize: 18 }}>Reservation, not task</strong>{reservation ? <span style={{ display: "block", fontSize: 11, color: "#777", marginTop: 3 }}>{atlasDayReservationSourceLabel(reservation.source)}{reservation.source !== "owner_manual" ? " · editing this occurrence only" : ""}</span> : null}</div>
+            <button type="button" onClick={onClose} aria-label="Close reservation editor" style={{ border: 0, background: "transparent", fontSize: 22, minWidth: 44, minHeight: 44 }}>×</button>
+          </header>
+          {generatedRoutine ? <button type="button" data-edit-fixed-routine-source="true" onClick={() => setRoutineManagerOpen(true)} style={{ width: "100%", minHeight: 44, border: "1px solid #d9dce6", borderRadius: 9, background: "#f7f8fb", padding: "9px 10px", marginBottom: 12, textAlign: "left", color: "inherit" }}><strong style={{ display: "block", fontSize: 11 }}>Edit repeating routine</strong><span style={{ display: "block", fontSize: 10, color: "#777", marginTop: 2 }}>Change the source that produces future dated reservations. This occurrence stays separately editable.</span></button> : null}
+          <label style={{ display: "grid", gap: 5, marginBottom: 10 }}><span style={{ fontSize: 11, fontWeight: 800 }}>Label</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Walmart Pickup" style={{ padding: 10, border: "1px solid #d8d8dc", borderRadius: 9, minHeight: 44 }} /></label>
+          <label style={{ display: "grid", gap: 5, marginBottom: 10 }}><span style={{ fontSize: 11, fontWeight: 800 }}>Type</span><select value={kind} onChange={(event) => setKind(event.target.value as AtlasDayReservationKind)} style={{ padding: 10, border: "1px solid #d8d8dc", borderRadius: 9, minHeight: 44 }}><option value="external_commitment">External commitment</option><option value="meal">Meal</option><option value="routine">Routine</option></select></label>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10, marginBottom: 10 }}>
+            <label style={{ display: "grid", gap: 5 }}><span style={{ fontSize: 11, fontWeight: 800 }}>Start</span><input type="time" step="300" value={startTime} onChange={(event) => setStartTime(event.target.value)} style={{ padding: 10, border: "1px solid #d8d8dc", borderRadius: 9, minHeight: 44, minWidth: 0 }} /></label>
+            <label style={{ display: "grid", gap: 5 }}><span style={{ fontSize: 11, fontWeight: 800 }}>End</span><input type="time" step="300" value={endTime} onChange={(event) => setEndTime(event.target.value)} style={{ padding: 10, border: "1px solid #d8d8dc", borderRadius: 9, minHeight: 44, minWidth: 0 }} /></label>
+          </div>
+          <label style={{ display: "grid", gap: 5, marginBottom: 12 }}><span style={{ fontSize: 11, fontWeight: 800 }}>Operational note <i style={{ fontWeight: 400 }}>optional</i></span><input value={note} onChange={(event) => setNote(event.target.value)} style={{ padding: 10, border: "1px solid #d8d8dc", borderRadius: 9, minHeight: 44 }} /></label>
+          {error ? <p style={{ color: "#9c3434", fontSize: 12, margin: "0 0 10px" }}>{error}</p> : null}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button type="button" onClick={() => void save()} disabled={saving} style={{ flex: 1, border: 0, borderRadius: 10, minHeight: 46, padding: 11, background: "#262833", color: "white", fontWeight: 800 }}>{saving ? "Saving…" : "Save fixed time"}</button>
+            {reservation ? <button type="button" onClick={() => void remove()} disabled={saving} style={{ border: "1px solid #e0c9c9", borderRadius: 10, minHeight: 46, padding: "11px 13px", background: "#fff", color: "#8b3d3d", fontWeight: 800 }}>{removeLabel}</button> : null}
+          </div>
+        </section>
+      </div>
+      {routineManagerOpen && generatedRoutine ? <FixedRoutineManager dateIso={dateIso} focusRoutineId={generatedRoutine} onClose={() => setRoutineManagerOpen(false)} /> : null}
+    </>
   );
 }
