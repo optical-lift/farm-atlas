@@ -11,7 +11,7 @@ import {
   readOwnerWorkerDayPlanForSession,
   type WorkerDayPlan,
 } from "@/lib/atlas/worker-day-plan-server";
-import { readWorkerSelfDayPlanForTarget } from "@/lib/atlas/worker-self-day-plan-server";
+import { readWorkerSelfDayBundleForTarget } from "@/lib/atlas/worker-self-day-plan-server";
 
 function validDateIso(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value)
@@ -162,24 +162,23 @@ async function readWorkerSelfDaySequence(
   target: AtlasDayChoreographyTarget,
   timing?: WorkerDaySequenceTiming,
 ) {
-  const [planRead, choreographyRead] = await Promise.all([
-    measured(() => readWorkerSelfDayPlanForTarget(dateIso, target)),
+  const [bundleRead, choreographyRead] = await Promise.all([
+    measured(() => readWorkerSelfDayBundleForTarget(dateIso, target)),
     measured(() => readWorkerDayChoreographyForTarget(dateIso, target)),
   ]);
   if (timing) {
-    timing.planMs = planRead.ms;
+    timing.planMs = bundleRead.ms;
     timing.choreographyMs = choreographyRead.ms;
+    timing.taskCardsMs = 0;
   }
-  const taskCardsRead = await measured(() => readWorkerDayOperationalTaskCards(planRead.value, { includeMoveContext: false }));
-  if (timing) timing.taskCardsMs = taskCardsRead.ms;
   const assemblyStartedAt = nowMs();
   const result = assembleProjection({
     dateIso,
-    plan: planRead.value,
+    plan: bundleRead.value.plan,
     target,
     operatorLabel: target.displayName,
     choreographyResult: choreographyRead.value,
-    taskCards: taskCardsRead.value,
+    taskCards: bundleRead.value.taskCards,
     canManage: false,
   });
   if (timing) timing.assemblyMs = elapsedMs(assemblyStartedAt);

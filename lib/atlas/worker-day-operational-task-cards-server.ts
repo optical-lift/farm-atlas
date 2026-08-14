@@ -6,6 +6,18 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 
 type OperationalCardReadOptions = { includeMoveContext?: boolean };
 
+export function normalizeWorkerDayOperationalTaskCards(
+  data: unknown,
+  options: OperationalCardReadOptions = {},
+) {
+  const cards = Array.isArray(data) ? data as AtlasTaskCard[] : [];
+  if (options.includeMoveContext !== false) return cards;
+  return cards.map((card) => {
+    const { move_context: _moveContext, ...workerSafeCard } = card;
+    return workerSafeCard as AtlasTaskCard;
+  });
+}
+
 export async function readWorkerDayOperationalTaskCards(plan: WorkerDayPlan, options: OperationalCardReadOptions = {}) {
   const taskIds = Array.from(new Set(
     [...plan.realWork, ...plan.automaticWork]
@@ -21,10 +33,5 @@ export async function readWorkerDayOperationalTaskCards(plan: WorkerDayPlan, opt
     p_task_ids: taskIds,
   });
   if (error) throw new Error(error.message);
-  const cards = Array.isArray(data) ? data as AtlasTaskCard[] : [];
-  if (options.includeMoveContext !== false) return cards;
-  return cards.map((card) => {
-    const { move_context: _moveContext, ...workerSafeCard } = card;
-    return workerSafeCard as AtlasTaskCard;
-  });
+  return normalizeWorkerDayOperationalTaskCards(data, options);
 }
