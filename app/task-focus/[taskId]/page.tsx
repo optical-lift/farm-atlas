@@ -25,6 +25,7 @@ type TaskRow = {
   task_type: string | null;
   task_scope: string | null;
   due_date: string | null;
+  visibility_scope: string | null;
   metadata: Record<string, unknown> | null;
 };
 
@@ -200,11 +201,16 @@ function isProductionSowingTask(task: TaskRow) {
   return task.task_type === "production_sowing" && Boolean(text(metadata.production_succession_id));
 }
 
+function isDayCueStateSource(task: TaskRow) {
+  return task.visibility_scope === "system_internal"
+    && text(task.metadata?.observation_delivery_mode) === "day_cue";
+}
+
 async function loadTask(taskId: string) {
   const { data, error } = await atlasSupabase
     .schema("atlas")
     .from("tasks")
-    .select("id, farm_id, title, task_type, task_scope, due_date, metadata")
+    .select("id, farm_id, title, task_type, task_scope, due_date, visibility_scope, metadata")
     .eq("id", taskId)
     .limit(1)
     .maybeSingle();
@@ -444,10 +450,11 @@ async function loadHarvestAvailability(cropCycleId: string | null) {
 export default async function TaskFocusPage({ params, searchParams }: { params: Promise<{ taskId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ taskId }, query] = await Promise.all([params, searchParams]);
   const returnTo = safeReturnPath(firstValue(query.returnTo));
+  const task = await loadTask(taskId);
+  if (task && isDayCueStateSource(task)) notFound();
+
   const projectFocus = await readAtlasProjectTaskFocus(taskId).catch(() => null);
   if (projectFocus) return <ProjectTaskFocus focus={projectFocus} returnTo={returnTo} />;
-
-  const task = await loadTask(taskId);
   if (!task || task.task_scope === "project") notFound();
 
   if (isGrowRoomRoundTask(task)) {
