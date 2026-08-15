@@ -5,6 +5,7 @@ import test from "node:test";
 function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url), "utf8"); }
 
 const migration = read("supabase/migrations/20260815000421_worker_day_system_internal_visibility_boundary_v1.sql");
+const dbContract = read("tests/sql/worker_day_system_internal_visibility_boundary.sql");
 const taskFocus = read("app/task-focus/[taskId]/page.tsx");
 const cueDelivery = read("app/GlobalDayCueDelivery.tsx");
 const cueResponseRoute = read("app/api/atlas/day-cue-response/route.ts");
@@ -32,6 +33,23 @@ test("operational card hydration fails closed for system_internal task ids", () 
   const v2 = migration.slice(migration.indexOf("worker_day_operational_task_cards_v2"));
   assert.match(v1, /task\.id = any\(p_task_ids\)[\s\S]*coalesce\(task\.visibility_scope/);
   assert.match(v2, /task\.id = any\(v_ids\)[\s\S]*coalesce\(task\.visibility_scope/);
+});
+
+test("database acceptance contract exercises hidden source, visible cue, and authoritative cue results", () => {
+  assert.match(dbContract, /begin;/);
+  assert.match(dbContract, /rollback;/);
+  assert.match(dbContract, /visibility_scope[\s\S]*system_internal/);
+  assert.match(dbContract, /owner_worker_day_plan_v1/);
+  assert.match(dbContract, /owner_worker_day_plan_choreographed_v1/);
+  assert.match(dbContract, /worker_self_day_bundle_api_v1/);
+  assert.match(dbContract, /worker_day_operational_task_cards_v2/);
+  assert.match(dbContract, /worker_day_choreography_api_v1/);
+  assert.match(dbContract, /worker_resolve_day_cue_api_v1\(v_ready_cue/);
+  assert.match(dbContract, /'readiness','ready'/);
+  assert.match(dbContract, /transplant_ready/);
+  assert.match(dbContract, /worker_resolve_day_cue_api_v1\(v_not_ready_cue/);
+  assert.match(dbContract, /'readiness','not_ready'/);
+  assert.match(dbContract, /next worker-day observation/);
 });
 
 test("day-cue-backed internal tasks cannot render the ordinary Task Focus surface", () => {
