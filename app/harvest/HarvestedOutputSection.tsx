@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AtlasCard, AtlasSectionHeading } from "@/components/atlas/ui/AtlasPrimitives";
 import FlowerCommercialSection from "./FlowerCommercialSection";
 import FlowerPostharvestSection from "./FlowerPostharvestSection";
+import HarvestCommercialScoreSection from "./HarvestCommercialScoreSection";
 import "./harvested.css";
 
 type HarvestedEntry = {
@@ -137,6 +138,7 @@ export default function HarvestedOutputSection() {
 
       <FlowerPostharvestSection />
       <FlowerCommercialSection />
+      <HarvestCommercialScoreSection />
     </>
   );
 }
