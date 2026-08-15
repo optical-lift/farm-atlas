@@ -5,17 +5,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AtlasCard, AtlasSectionHeading } from "@/components/atlas/ui/AtlasPrimitives";
 import "./commerce.css";
 
-type AvailableLot = { id: string; inventoryKind: string; unit: string; quantityExactness: string; readyDate: string; birthQuantity: number; committedQuantity: number; availableQuantity: number };
+type AvailableLot = { id: string; inventoryKind: string; unit: string; quantityExactness: string; readyDate: string; birthQuantity: number; committedQuantity: number; disposedQuantity: number; availableQuantity: number };
 type OrderLine = { id: string; readyLotId: string; inventoryKind: string; quantity: number; unit: string; unitPrice: number; lineTotal: number };
-type Order = { id: string; customerLabel: string; salesChannel: string; eventKey: string | null; saleDate: string; fulfillmentMode: string; fulfillmentDueDate: string | null; fulfillmentDueTime: string | null; totalAmount: number; lines: OrderLine[]; fulfillment: { id: string; fulfilledAt: string; method: string } | null };
+type Order = { id: string; customerLabel: string; salesChannel: string; eventKey: string | null; saleDate: string; fulfillmentMode: string; fulfillmentDueDate: string | null; fulfillmentDueTime: string | null; totalAmount: number; lines: OrderLine[]; fulfillment: { id: string; fulfilledAt: string; method: string } | null; cancellation?: { id: string; reasonKind: string; note: string | null; cancelledAt: string } | null };
+type Disposition = { id: string; readyLotId: string; dispositionKind: string; quantity: number; unit: string; note: string | null; recordedAt: string };
 type Buyer = { id: string; businessName: string; buyerType: string | null; relationshipStatus: string | null; priorityRank: number | null };
 type Member = { id: string; role: string; workerKey: string | null; displayName: string };
-type Farm = { id: string; key: string; name: string; available: AvailableLot[]; goingOut: Order[]; fulfilled: Order[]; buyers: Buyer[]; members: Member[] };
+type Farm = { id: string; key: string; name: string; available: AvailableLot[]; goingOut: Order[]; fulfilled: Order[]; cancelled: Order[]; dispositions: Disposition[]; buyers: Buyer[]; members: Member[] };
 type Response = { ok?: boolean; error?: string; farms?: Farm[] };
 type DraftLine = { id: string; readyLotId: string; quantity: string; unitPrice: string };
 
+type DispositionDraft = { readyLotId: string; kind: "spoilage" | "donation" | "write_off"; quantity: string; note: string };
+
 const KIND_LABELS: Record<string, string> = { conditioned_bucket: "Conditioned flowers", counted_stems: "Counted stems", posy: "Posy", bouquet: "Bouquet", lobby_arrangement: "Lobby arrangement" };
 const CHANNELS = [["wholesale", "Wholesale"], ["farm_pickup", "Farm pickup"], ["delivery", "Delivery"], ["market", "Market"], ["subscription", "Subscription"], ["event", "Event"], ["other", "Other"]] as const;
+const CANCEL_REASONS = [["customer_cancelled", "Customer cancelled"], ["seller_cancelled", "Elm cancelled"], ["entry_correction", "Entry correction"], ["other", "Other"]] as const;
 
 function prettyDate(value: string | null) {
   if (!value) return "Not set";
@@ -51,8 +55,14 @@ export default function FlowerCommercialSection() {
   const [lines, setLines] = useState<DraftLine[]>([{ id: "sale-line-1", readyLotId: "", quantity: "", unitPrice: "" }]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [cancelReasonByOrder, setCancelReasonByOrder] = useState<Record<string, string>>({});
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [dispositionDraft, setDispositionDraft] = useState<DispositionDraft | null>(null);
+  const [savingDisposition, setSavingDisposition] = useState(false);
   const nextLineId = useRef(2);
   const pendingSaleKey = useRef<string | null>(null);
+  const cancellationKeys = useRef(new Map<string, string>());
+  const pendingDispositionKey = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -131,9 +141,63 @@ export default function FlowerCommercialSection() {
     }
   }
 
+  async function cancelOrder(order: Order, orderFarm: Farm) {
+    const reasonKind = cancelReasonByOrder[order.id] || "customer_cancelled";
+    if (!window.confirm(`Cancel ${order.customerLabel}'s flower order and release its Ready claim?`)) return;
+    const idempotencyKey = cancellationKeys.current.get(order.id) ?? `flower-sale-cancel:${order.id}:${crypto.randomUUID()}`;
+    cancellationKeys.current.set(order.id, idempotencyKey);
+    try {
+      setCancellingOrderId(order.id);
+      setMessage(null);
+      const response = await fetch("/api/atlas/flower-sale-cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ farmId: orderFarm.id, saleOrderId: order.id, reasonKind, idempotencyKey }),
+      });
+      const payload = await response.json() as { ok?: boolean; error?: string };
+      if (!response.ok || !payload.ok) throw new Error(payload.error || "Flower sale could not be cancelled.");
+      cancellationKeys.current.delete(order.id);
+      setMessage("Sale cancellation recorded. Its unfulfilled Ready claim is Available again.");
+      await load();
+    } catch (cancelError) {
+      setMessage(cancelError instanceof Error ? cancelError.message : "Flower sale could not be cancelled.");
+    } finally {
+      setCancellingOrderId(null);
+    }
+  }
+
+  async function submitDisposition() {
+    if (!farm || !dispositionDraft) return;
+    const lot = farm.available.find((candidate) => candidate.id === dispositionDraft.readyLotId);
+    const quantity = Number(dispositionDraft.quantity);
+    if (!lot || !Number.isFinite(quantity) || quantity <= 0 || quantity > lot.availableQuantity) return;
+    const idempotencyKey = pendingDispositionKey.current ?? `flower-ready-disposition:${lot.id}:${crypto.randomUUID()}`;
+    pendingDispositionKey.current = idempotencyKey;
+    try {
+      setSavingDisposition(true);
+      setMessage(null);
+      const response = await fetch("/api/atlas/flower-ready-disposition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ farmId: farm.id, readyLotId: lot.id, dispositionKind: dispositionDraft.kind, quantity, note: dispositionDraft.note.trim() || null, idempotencyKey }),
+      });
+      const payload = await response.json() as { ok?: boolean; error?: string };
+      if (!response.ok || !payload.ok) throw new Error(payload.error || "Ready disposition could not be recorded.");
+      pendingDispositionKey.current = null;
+      setDispositionDraft(null);
+      setMessage("Ready disposition recorded. Available inventory now reflects the physical removal.");
+      await load();
+    } catch (dispositionError) {
+      setMessage(dispositionError instanceof Error ? dispositionError.message : "Ready disposition could not be recorded.");
+    } finally {
+      setSavingDisposition(false);
+    }
+  }
+
   const hasAvailable = (data?.farms ?? []).some((candidate) => candidate.available.length);
   const hasGoingOut = (data?.farms ?? []).some((candidate) => candidate.goingOut.length);
   const hasFulfilled = (data?.farms ?? []).some((candidate) => candidate.fulfilled.length);
+  const hasAdjustments = (data?.farms ?? []).some((candidate) => candidate.cancelled.length || candidate.dispositions.length);
   const selectedLotIds = lines.map((line) => line.readyLotId).filter(Boolean);
   const distinctLots = new Set(selectedLotIds).size === selectedLotIds.length;
   const validLines = Boolean(farm && lines.length > 0 && distinctLots && lines.every((line) => {
@@ -143,13 +207,17 @@ export default function FlowerCommercialSection() {
     return lot && Number.isFinite(quantity) && quantity > 0 && quantity <= lot.availableQuantity && Number.isFinite(unitPrice) && unitPrice >= 0;
   }));
   const canSubmit = Boolean(farm && validLines && (fulfillmentMode === "immediate_handoff" || (dueDate && fulfillmentMembershipId)));
+  const dispositionLot = farm?.available.find((candidate) => candidate.id === dispositionDraft?.readyLotId) ?? null;
+  const dispositionQuantity = Number(dispositionDraft?.quantity ?? 0);
+  const canSubmitDisposition = Boolean(dispositionLot && Number.isFinite(dispositionQuantity) && dispositionQuantity > 0 && dispositionQuantity <= dispositionLot.availableQuantity);
 
   return <>
     <AtlasCard as="section" className="atlas-commerce" ariaLabelledBy="atlas-available-title">
-      <header className="atlas-commerce__heading"><div><AtlasSectionHeading kicker="Unclaimed Ready inventory" title="Available" id="atlas-available-title" /><p>Available is derived from Ready birth quantity minus explicit sale claims. Ready history itself is never rewritten.</p></div></header>
+      <header className="atlas-commerce__heading"><div><AtlasSectionHeading kicker="Unclaimed Ready inventory" title="Available" id="atlas-available-title" /><p>Available is derived from Ready birth quantity minus active sale claims and explicit dispositions. Cancellation releases an unfulfilled claim; Ready history itself is never rewritten.</p></div></header>
       {error ? <div className="atlas-commerce__state atlas-commerce__state--error"><span>{error}</span><button type="button" onClick={() => void load()}>Try again</button></div> : null}
-      {data && !hasAvailable ? <div className="atlas-commerce__empty"><b>No unclaimed Ready flower inventory.</b><span>Prepared output appears here only while a known Ready quantity remains unclaimed.</span></div> : null}
-      {(data?.farms ?? []).filter((candidate) => candidate.available.length).map((candidate) => <section className="atlas-commerce__farm" key={candidate.id}><header><small>Available at</small><h3>{candidate.name}</h3></header><div className="atlas-commerce__list">{candidate.available.map((lot) => <article className="atlas-commerce-item" key={lot.id}><div><small>Ready {prettyDate(lot.readyDate)}</small><h4>{KIND_LABELS[lot.inventoryKind] ?? lot.inventoryKind}</h4><p>{amount(lot.committedQuantity, lot.unit)} already committed from {amount(lot.birthQuantity, lot.unit, lot.quantityExactness === "lower_bound")}</p></div><strong>{amount(lot.availableQuantity, lot.unit, lot.quantityExactness === "lower_bound")}</strong></article>)}</div></section>)}
+      {data && !hasAvailable ? <div className="atlas-commerce__empty"><b>No unclaimed Ready flower inventory.</b><span>Prepared output appears here only while a known Ready quantity remains unclaimed and undisposed.</span></div> : null}
+      {(data?.farms ?? []).filter((candidate) => candidate.available.length).map((candidate) => <section className="atlas-commerce__farm" key={candidate.id}><header><small>Available at</small><h3>{candidate.name}</h3></header><div className="atlas-commerce__list">{candidate.available.map((lot) => <article className="atlas-commerce-item" key={lot.id}><div><small>Ready {prettyDate(lot.readyDate)}</small><h4>{KIND_LABELS[lot.inventoryKind] ?? lot.inventoryKind}</h4><p>{amount(lot.committedQuantity, lot.unit)} committed · {amount(lot.disposedQuantity, lot.unit)} removed from {amount(lot.birthQuantity, lot.unit, lot.quantityExactness === "lower_bound")}</p><button type="button" className="atlas-commerce__secondary" onClick={() => { setFarmId(candidate.id); setDispositionDraft({ readyLotId: lot.id, kind: "spoilage", quantity: "", note: "" }); pendingDispositionKey.current = null; }}>Record spoilage / disposition</button></div><strong>{amount(lot.availableQuantity, lot.unit, lot.quantityExactness === "lower_bound")}</strong></article>)}</div></section>)}
+      {dispositionDraft && dispositionLot ? <div className="atlas-commerce-form"><h3>Remove Ready inventory</h3><p>This records a physical/commercial disposition. It does not rewrite the Ready birth record.</p><div className="atlas-commerce-form__grid"><label><span>Reason</span><select value={dispositionDraft.kind} onChange={(event) => { setDispositionDraft((current) => current ? { ...current, kind: event.target.value as DispositionDraft["kind"] } : current); pendingDispositionKey.current = null; }}><option value="spoilage">Spoilage</option><option value="donation">Donation</option><option value="write_off">Write-off</option></select></label><label><span>Quantity · max {amount(dispositionLot.availableQuantity, dispositionLot.unit)}</span><input type="number" min={dispositionLot.unit === "bucket_equivalent" ? "0.25" : "1"} step={dispositionLot.unit === "bucket_equivalent" ? "0.25" : "1"} value={dispositionDraft.quantity} onChange={(event) => { setDispositionDraft((current) => current ? { ...current, quantity: event.target.value } : current); pendingDispositionKey.current = null; }} /></label></div><label><span>Note (optional)</span><textarea rows={2} value={dispositionDraft.note} onChange={(event) => { setDispositionDraft((current) => current ? { ...current, note: event.target.value } : current); pendingDispositionKey.current = null; }} /></label><div className="atlas-commerce-line"><button type="button" className="atlas-commerce__submit" disabled={savingDisposition || !canSubmitDisposition} onClick={() => void submitDisposition()}>{savingDisposition ? "Recording…" : "Record disposition"}</button><button type="button" className="atlas-commerce__secondary" onClick={() => { setDispositionDraft(null); pendingDispositionKey.current = null; }}>Cancel</button></div></div> : null}
     </AtlasCard>
 
     <AtlasCard as="section" className="atlas-commerce" ariaLabelledBy="atlas-sale-title">
@@ -187,15 +255,21 @@ export default function FlowerCommercialSection() {
     </AtlasCard>
 
     <AtlasCard as="section" className="atlas-commerce" ariaLabelledBy="atlas-going-out-title">
-      <header className="atlas-commerce__heading"><div><AtlasSectionHeading kicker="Committed inventory" title="Going out" id="atlas-going-out-title" /><p>Sold flower orders awaiting actual pickup or delivery. A due date is not fulfillment proof.</p></div></header>
+      <header className="atlas-commerce__heading"><div><AtlasSectionHeading kicker="Committed inventory" title="Going out" id="atlas-going-out-title" /><p>Sold flower orders awaiting actual pickup or delivery. A due date is not fulfillment proof. Cancellation releases an unfulfilled Ready claim without deleting the sale history.</p></div></header>
       {data && !hasGoingOut ? <div className="atlas-commerce__empty"><b>No committed flower orders are awaiting handoff.</b></div> : null}
-      {(data?.farms ?? []).filter((candidate) => candidate.goingOut.length).map((candidate) => <section className="atlas-commerce__farm" key={candidate.id}><header><small>Committed at</small><h3>{candidate.name}</h3></header><div className="atlas-commerce__list">{candidate.goingOut.map((order) => <article className="atlas-commerce-item" key={order.id}><div><small>{order.fulfillmentMode === "delivery" ? "Delivery" : "Pickup"} {prettyDate(order.fulfillmentDueDate)}</small><h4>{order.customerLabel}</h4><p>{order.lines.map((line) => `${amount(line.quantity, line.unit)} ${KIND_LABELS[line.inventoryKind] ?? line.inventoryKind}`).join(" · ")}</p></div><strong>${order.totalAmount.toFixed(2)}</strong></article>)}</div></section>)}
+      {(data?.farms ?? []).filter((candidate) => candidate.goingOut.length).map((candidate) => <section className="atlas-commerce__farm" key={candidate.id}><header><small>Committed at</small><h3>{candidate.name}</h3></header><div className="atlas-commerce__list">{candidate.goingOut.map((order) => <article className="atlas-commerce-item" key={order.id}><div><small>{order.fulfillmentMode === "delivery" ? "Delivery" : "Pickup"} {prettyDate(order.fulfillmentDueDate)}</small><h4>{order.customerLabel}</h4><p>{order.lines.map((line) => `${amount(line.quantity, line.unit)} ${KIND_LABELS[line.inventoryKind] ?? line.inventoryKind}`).join(" · ")}</p><div className="atlas-commerce-line"><select aria-label={`Cancellation reason for ${order.customerLabel}`} value={cancelReasonByOrder[order.id] || "customer_cancelled"} onChange={(event) => setCancelReasonByOrder((current) => ({ ...current, [order.id]: event.target.value }))}>{CANCEL_REASONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select><button type="button" className="atlas-commerce__secondary" disabled={cancellingOrderId === order.id} onClick={() => void cancelOrder(order, candidate)}>{cancellingOrderId === order.id ? "Cancelling…" : "Cancel order + release claim"}</button></div></div><strong>${order.totalAmount.toFixed(2)}</strong></article>)}</div></section>)}
     </AtlasCard>
 
     <AtlasCard as="section" className="atlas-commerce" ariaLabelledBy="atlas-fulfilled-title">
       <header className="atlas-commerce__heading"><div><AtlasSectionHeading kicker="Actual handoff" title="Fulfilled" id="atlas-fulfilled-title" /><p>Completed commercial handoffs. These exist only after the customer actually receives the flowers.</p></div></header>
       {data && !hasFulfilled ? <div className="atlas-commerce__empty"><b>No flower fulfillment events have been recorded yet.</b></div> : null}
       {(data?.farms ?? []).filter((candidate) => candidate.fulfilled.length).map((candidate) => <section className="atlas-commerce__farm" key={candidate.id}><header><small>Fulfilled from</small><h3>{candidate.name}</h3></header><div className="atlas-commerce__list">{candidate.fulfilled.map((order) => <article className="atlas-commerce-item" key={order.id}><div><small>{prettyDateTime(order.fulfillment?.fulfilledAt)}</small><h4>{order.customerLabel}</h4><p>{order.salesChannel.replace(/_/g, " ")} · sold {prettyDate(order.saleDate)}</p></div><strong>${order.totalAmount.toFixed(2)}</strong></article>)}</div></section>)}
+    </AtlasCard>
+
+    <AtlasCard as="section" className="atlas-commerce" ariaLabelledBy="atlas-commercial-adjustments-title">
+      <header className="atlas-commerce__heading"><div><AtlasSectionHeading kicker="Append-only corrections" title="Cancelled + removed" id="atlas-commercial-adjustments-title" /><p>These facts explain why a Ready quantity returned to Available or permanently left Available without rewriting the original sale or Ready birth.</p></div></header>
+      {data && !hasAdjustments ? <div className="atlas-commerce__empty"><b>No sale cancellations or Ready dispositions have been recorded.</b></div> : null}
+      {(data?.farms ?? []).filter((candidate) => candidate.cancelled.length || candidate.dispositions.length).map((candidate) => <section className="atlas-commerce__farm" key={candidate.id}><header><small>Adjustments at</small><h3>{candidate.name}</h3></header><div className="atlas-commerce__list">{candidate.cancelled.map((order) => <article className="atlas-commerce-item" key={`cancel-${order.id}`}><div><small>Cancelled {prettyDateTime(order.cancellation?.cancelledAt)}</small><h4>{order.customerLabel}</h4><p>{order.cancellation?.reasonKind.replace(/_/g, " ")} · claim released</p></div><strong>${order.totalAmount.toFixed(2)}</strong></article>)}{candidate.dispositions.map((disposition) => <article className="atlas-commerce-item" key={`disposition-${disposition.id}`}><div><small>{prettyDateTime(disposition.recordedAt)}</small><h4>{disposition.dispositionKind.replace(/_/g, " ")}</h4><p>{disposition.note || "Ready inventory removed from Available."}</p></div><strong>{amount(disposition.quantity, disposition.unit)}</strong></article>)}</div></section>)}
     </AtlasCard>
   </>;
 }
