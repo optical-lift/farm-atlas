@@ -89,6 +89,10 @@ const flowerCommercialRpcMigrations = new Set([
   "20260815143050_harvest_flower_commercial_owner_context_hardening_v1.sql",
   "20260815143075_harvest_flower_sale_buyer_options_v1.sql",
 ]);
+const flowerCommercialReversalMigrationName =
+  "20260815143200_harvest_flower_commercial_reversals_v1.sql";
+const flowerCommercialReversalRegistryMigrationName =
+  "20260815143300_harvest_flower_commercial_reversals_rpc_registry_v1.sql";
 const dayAcceptanceRpcMigrations = new Set([
   "20260811180500_atlas_day_cue_observation_result_contract_v1.sql",
   "20260811183000_atlas_departure_requirement_cues_v1.sql",
@@ -205,6 +209,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const flowerHarvestOutputRegistry = readMigration(flowerHarvestOutputRegistryMigrationName);
   const flowerPreparationRegistry = readMigration(flowerPreparationRegistryMigrationName);
   const flowerCommercialRegistry = readMigration(flowerCommercialRegistryMigrationName);
+  const flowerCommercialReversalRegistry = readMigration(flowerCommercialReversalRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -252,7 +257,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                                           ? flowerPreparationRegistryMigrationName
                                           : flowerCommercialRpcMigrations.has(name)
                                             ? flowerCommercialRegistryMigrationName
-                                            : null;
+                                            : name === flowerCommercialReversalMigrationName
+                                              ? flowerCommercialReversalRegistryMigrationName
+                                              : null;
 
       assert.ok(
         pairedRegistryName,
@@ -411,6 +418,17 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   }
   assert.match(flowerCommercialRegistry, /app_endpoint/);
   assert.match(flowerCommercialRegistry, /owner_admin_endpoint/);
+
+  for (const signature of [
+    "atlas.cancel_flower_sale_for_member_v1(uuid, uuid, text, text, text)",
+    "atlas.owner_operator_cancel_flower_sale_v1(uuid, uuid, text, text, text)",
+    "atlas.record_flower_ready_disposition_for_member_v1(uuid, uuid, text, numeric, text, text)",
+    "atlas.owner_operator_record_flower_ready_disposition_v1(uuid, uuid, text, numeric, text, text)",
+  ]) {
+    assert.ok(flowerCommercialReversalRegistry.includes(signature));
+  }
+  assert.match(flowerCommercialReversalRegistry, /app_endpoint/);
+  assert.match(flowerCommercialReversalRegistry, /owner_admin_endpoint/);
 });
 
 test("live registry proof is rollback-only and fail-closed", () => {
