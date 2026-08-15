@@ -4,6 +4,7 @@
 -- 2. A sale linked to a known buyer snapshots the business name when no explicit
 --    customer label is supplied, so fulfillment does not depend on reopening sealed
 --    relationship data later.
+-- 3. Optional source-task provenance is accepted only from the same farm.
 
 create or replace function atlas.owner_operator_record_flower_sale_v1(
   p_effective_membership_id uuid,
@@ -57,6 +58,7 @@ as $function$
 declare
   v_buyer_farm uuid;
   v_buyer_name text;
+  v_source_task_farm uuid;
   v_member atlas.farm_memberships%rowtype;
 begin
   if new.buyer_relationship_id is not null then
@@ -68,6 +70,15 @@ begin
     end if;
     if nullif(btrim(coalesce(new.customer_label,'')),'') is null then
       new.customer_label:=nullif(btrim(coalesce(v_buyer_name,'')),'');
+    end if;
+  end if;
+
+  if new.source_task_id is not null then
+    select farm_id into v_source_task_farm
+    from atlas.tasks
+    where id=new.source_task_id;
+    if v_source_task_farm is null or v_source_task_farm is distinct from new.farm_id then
+      raise exception 'Sale source task is outside the sale farm.' using errcode='22023';
     end if;
   end if;
 
