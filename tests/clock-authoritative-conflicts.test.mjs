@@ -25,7 +25,7 @@ test("Clock conflict truth is derived from server capacity rather than client wa
   assert.match(conflictBlock, /v_capacity->'warningCodes'/);
   assert.match(conflictBlock, /day_capacity_maximum_exceeded/);
   assert.doesNotMatch(conflictBlock, /p_plan->'warnings'/);
-  assert.doesNotMatch(conflictBlock, /p_changes|warningCodes/);
+  assert.doesNotMatch(conflictBlock, /p_changes|v_change/);
 });
 
 test("Clock Pass 2 preserves authority boundaries and API security", () => {
