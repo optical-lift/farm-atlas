@@ -74,6 +74,10 @@ const ownerDayReservationHardeningMigrationName =
   "20260814141500_fixed_routine_projection_hardening_v1.sql";
 const ownerDayReservationRegistryMigrationName =
   "20260814141600_owner_day_reservation_rpc_registry_v1.sql";
+const flowerHarvestOutputMigrationName =
+  "20260815141000_harvest_flower_bucket_output_v1.sql";
+const flowerHarvestOutputRegistryMigrationName =
+  "20260815141100_harvest_flower_bucket_output_rpc_registry_v1.sql";
 const dayAcceptanceRpcMigrations = new Set([
   "20260811180500_atlas_day_cue_observation_result_contract_v1.sql",
   "20260811183000_atlas_departure_requirement_cues_v1.sql",
@@ -187,6 +191,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const dayChoreographyRegistry = readMigration(dayChoreographyRegistryMigrationName);
   const dayAcceptanceRegistry = readMigration(dayAcceptanceRegistryMigrationName);
   const ownerDayReservationRegistry = readMigration(ownerDayReservationRegistryMigrationName);
+  const flowerHarvestOutputRegistry = readMigration(flowerHarvestOutputRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -228,7 +233,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                                     ? dayAcceptanceRegistryMigrationName
                                     : name === ownerDayReservationCommandMigrationName || name === ownerDayReservationHardeningMigrationName
                                       ? ownerDayReservationRegistryMigrationName
-                                      : null;
+                                      : name === flowerHarvestOutputMigrationName
+                                        ? flowerHarvestOutputRegistryMigrationName
+                                        : null;
 
       assert.ok(
         pairedRegistryName,
@@ -357,6 +364,15 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   }
   assert.match(ownerDayReservationRegistry, /owner_admin_endpoint/);
   assert.match(ownerDayReservationRegistry, /app_endpoint/);
+
+  for (const signature of [
+    "atlas.record_flower_harvest_output_for_member_v1(uuid, uuid, text, boolean, text, text)",
+    "atlas.owner_operator_record_flower_harvest_output_v1(uuid, uuid, text, boolean, text, text)",
+  ]) {
+    assert.ok(flowerHarvestOutputRegistry.includes(signature));
+  }
+  assert.match(flowerHarvestOutputRegistry, /app_endpoint/);
+  assert.match(flowerHarvestOutputRegistry, /owner_admin_endpoint/);
 });
 
 test("live registry proof is rollback-only and fail-closed", () => {
