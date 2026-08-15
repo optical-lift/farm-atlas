@@ -1,31 +1,35 @@
 -- Harvest Pass 5 authenticated RPC registry reconciliation.
 -- Commercial commitment and fulfillment writes stay explicit; internal validation/planning
--- and core mutation functions remain outside the signed-in execution surface.
+-- and core mutation functions remain outside the signed-in execution surface. Buyer selection
+-- uses a minimal scoped reader instead of weakening the relationship table's direct RLS.
 
+revoke all on function atlas.flower_sale_buyer_options_v1(uuid) from public,anon;
 revoke all on function atlas.record_flower_sale_for_member_v1(uuid,uuid,text,text,text,jsonb,numeric,numeric,text,date,time,uuid,uuid,text,text) from public,anon;
 revoke all on function atlas.owner_operator_record_flower_sale_v1(uuid,uuid,text,text,text,jsonb,numeric,numeric,text,date,time,uuid,uuid,text,text) from public,anon;
 revoke all on function atlas.record_flower_fulfillment_for_member_v1(uuid,uuid,text,text) from public,anon;
 revoke all on function atlas.owner_operator_record_flower_fulfillment_v1(uuid,uuid,text,text) from public,anon;
 
+grant execute on function atlas.flower_sale_buyer_options_v1(uuid) to authenticated,service_role;
 grant execute on function atlas.record_flower_sale_for_member_v1(uuid,uuid,text,text,text,jsonb,numeric,numeric,text,date,time,uuid,uuid,text,text) to authenticated,service_role;
 grant execute on function atlas.owner_operator_record_flower_sale_v1(uuid,uuid,text,text,text,jsonb,numeric,numeric,text,date,time,uuid,uuid,text,text) to authenticated,service_role;
 grant execute on function atlas.record_flower_fulfillment_for_member_v1(uuid,uuid,text,text) to authenticated,service_role;
 grant execute on function atlas.owner_operator_record_flower_fulfillment_v1(uuid,uuid,text,text) to authenticated,service_role;
 
 insert into atlas.authenticated_rpc_registry (
-  signature,
-  classification,
-  confidence,
-  review_status,
-  authenticated_execute_expected,
-  security_definer_expected,
-  service_execute_expected,
-  caller_count,
-  policy_reference_count,
-  evidence,
-  reviewed_at
+  signature,classification,confidence,review_status,authenticated_execute_expected,
+  security_definer_expected,service_execute_expected,caller_count,policy_reference_count,evidence,reviewed_at
 )
 values
+(
+  'atlas.flower_sale_buyer_options_v1(uuid)',
+  'app_endpoint','verified','active',true,true,true,1,0,
+  jsonb_build_object(
+    'purpose','Return minimal buyer identity/status fields needed to attach an explicit flower sale',
+    'boundary','active farm membership required; direct buyer_relationship_reconstruction RLS remains sealed',
+    'dataMinimization','returns id, business name, buyer type, relationship status, and priority only',
+    'relationshipTruth','reader does not create outreach, sale, or fulfillment truth'
+  ),now()
+),
 (
   'atlas.record_flower_sale_for_member_v1(uuid, uuid, text, text, text, jsonb, numeric, numeric, text, date, time without time zone, uuid, uuid, text, text)',
   'app_endpoint','verified','active',true,true,true,1,0,
