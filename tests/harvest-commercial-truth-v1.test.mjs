@@ -8,6 +8,7 @@ const migration = read("supabase/migrations/20260815143000_harvest_flower_commer
 const ownerHardening = read("supabase/migrations/20260815143050_harvest_flower_commercial_owner_context_hardening_v1.sql");
 const buyerOptions = read("supabase/migrations/20260815143075_harvest_flower_sale_buyer_options_v1.sql");
 const registry = read("supabase/migrations/20260815143100_harvest_flower_commercial_truth_rpc_registry_v1.sql");
+const reversals = read("supabase/migrations/20260815143200_harvest_flower_commercial_reversals_v1.sql");
 const commerceRoute = read("app/api/atlas/flower-commerce/route.ts");
 const fulfillmentContext = read("app/api/atlas/flower-fulfillment-context/route.ts");
 const fulfillmentRoute = read("app/api/atlas/flower-fulfillment/route.ts");
@@ -28,14 +29,15 @@ test("commercial truth has append-only sale, Ready claim, and fulfillment facts"
   assert.match(migration, /flower_fulfillment_events_append_only_v1/i);
 });
 
-test("Ready birth truth remains immutable and availability is derived from explicit claims", () => {
-  assert.match(migration, /Sale would claim more than the Ready quantity still available/i);
+test("Ready birth truth remains immutable and availability is derived from active claims plus dispositions", () => {
+  assert.match(migration + reversals, /Sale would claim more than the Ready quantity still (?:available|Available)/i);
   assert.match(migration, /Sale line must preserve Ready product kind and unit exactly/i);
-  assert.doesNotMatch(migration, /update\s+atlas\.flower_ready_inventory_lots/i);
+  assert.doesNotMatch(migration + reversals, /update\s+atlas\.flower_ready_inventory_lots/i);
   assert.doesNotMatch(commerceRoute, /\.update\([^\n]*flower_ready_inventory_lots|from\("flower_ready_inventory_lots"\)\.update/i);
-  assert.match(commerceRoute, /birthQuantity - committedQuantity/);
+  assert.match(commerceRoute, /birthQuantity - committedQuantity - disposedQuantity/);
+  assert.match(commerceRoute, /cancellationByOrder\.has\(line\.sale_order_id\)/);
   assert.match(commercialSurface, /title="Available"/);
-  assert.match(commercialSurface, /Ready birth quantity minus explicit sale claims/);
+  assert.match(commercialSurface, /Ready birth quantity minus active sale claims and explicit dispositions/);
 });
 
 test("outreach and community registration remain upstream or separate from flower sale truth", () => {
@@ -115,13 +117,15 @@ test("buyer selection uses a minimal scoped reader without reopening direct rela
 
 test("Harvest surface extends truth chain after Ready without replacing Ready birth history", () => {
   assert.match(harvestedSurface, /FlowerCommercialSection/);
-  for (const title of ["Available", "Record sale", "Going out", "Fulfilled"]) assert.match(commercialSurface, new RegExp(`title=\\"${title}\\"`));
+  for (const title of ["Available", "Record sale", "Going out", "Fulfilled", "Cancelled \+ removed"]) assert.match(commercialSurface, new RegExp(`title=\\"${title}\\"`));
   assert.match(commercialSurface, /Buyer outreach, quoted quantity, or a task note is not a sale/);
   assert.match(commercialSurface, /A due date is not fulfillment proof/);
+  assert.match(commercialSurface, /Cancel order \+ release claim/);
+  assert.match(commercialSurface, /Record spoilage \/ disposition/);
 });
 
 test("commercial path does not revive unused stem-count custody engine", () => {
-  for (const source of [migration, commerceRoute, fulfillmentContext, fulfillmentRoute, commercialSurface]) {
+  for (const source of [migration, reversals, commerceRoute, fulfillmentContext, fulfillmentRoute, commercialSurface]) {
     assert.doesNotMatch(source, /production_harvest_lots|production_harvest_stand_entries|production_harvest_container_assignments|production_postharvest_gates|postharvest_containers|postharvest_container_events/);
   }
 });
