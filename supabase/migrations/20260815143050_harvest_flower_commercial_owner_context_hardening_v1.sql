@@ -29,7 +29,7 @@ declare
   v_farm_id uuid;
 begin
   v_context:=atlas.owner_operator_context_v1(p_effective_membership_id);
-  v_farm_id:nullif(v_context->>'farmId','')::uuid;
+  v_farm_id:=nullif(v_context->>'farmId','')::uuid;
   if v_farm_id is null then
     raise exception 'Owner operator context has no farm scope.' using errcode='42501';
   end if;
