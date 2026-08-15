@@ -95,6 +95,13 @@ test("commercial writes are membership scoped with explicit authenticated regist
   assert.doesNotMatch(ownerHardening, /effective,farmId/);
 });
 
+test("optional sale task provenance cannot cross farm boundaries", () => {
+  assert.match(ownerHardening, /if new\.source_task_id is not null then/i);
+  assert.match(ownerHardening, /from atlas\.tasks/i);
+  assert.match(ownerHardening, /v_source_task_farm is distinct from new\.farm_id/i);
+  assert.match(ownerHardening, /Sale source task is outside the sale farm/i);
+});
+
 test("buyer selection uses a minimal scoped reader without reopening direct relationship RLS", () => {
   assert.match(buyerOptions, /flower_sale_buyer_options_v1/);
   assert.match(buyerOptions, /current_farm_role\(p_farm_id\)/);
