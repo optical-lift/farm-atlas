@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AtlasCard, AtlasSectionHeading } from "@/components/atlas/ui/AtlasPrimitives";
+import "./harvested.css";
 
 type HarvestedEntry = {
   id: string;
