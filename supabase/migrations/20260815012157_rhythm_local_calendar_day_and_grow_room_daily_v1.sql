@@ -107,12 +107,27 @@ set version=2,
       true
     ),
     updated_at=now()
-where id='e35c0531-dae6-4a4e-b0df-cccc66c52249'
-  and rule_key='elm_grow_room_care_daily'
-  and rhythm_key='grow_room_care';
+where rule_key='elm_grow_room_care_daily'
+  and rhythm_key='grow_room_care'
+  and status='active';
 
-select atlas.evaluate_rhythm_binding_v1(
-  '19f21b28-8160-473e-80b9-2a5bf4742f26',
-  now(),
-  'grow_room_calendar_day_repair_v1'
-);
+-- Re-evaluate every live state bound to this canonical rule. This is replay-safe
+-- across environments where generated UUIDs differ.
+do $evaluate$
+declare state_row record;
+begin
+  for state_row in
+    select state.id
+    from atlas.rhythm_state state
+    join atlas.rhythm_rules rule on rule.id=state.rhythm_rule_id
+    where rule.rule_key='elm_grow_room_care_daily'
+      and rule.rhythm_key='grow_room_care'
+      and rule.status='active'
+  loop
+    perform atlas.evaluate_rhythm_binding_v1(
+      state_row.id,
+      now(),
+      'grow_room_calendar_day_repair_v1'
+    );
+  end loop;
+end $evaluate$;
