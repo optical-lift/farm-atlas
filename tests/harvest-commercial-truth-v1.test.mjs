@@ -117,7 +117,8 @@ test("buyer selection uses a minimal scoped reader without reopening direct rela
 
 test("Harvest surface extends truth chain after Ready without replacing Ready birth history", () => {
   assert.match(harvestedSurface, /FlowerCommercialSection/);
-  for (const title of ["Available", "Record sale", "Going out", "Fulfilled", "Cancelled \+ removed"]) assert.match(commercialSurface, new RegExp(`title=\\"${title}\\"`));
+  for (const title of ["Available", "Record sale", "Going out", "Fulfilled"]) assert.match(commercialSurface, new RegExp(`title=\\"${title}\\"`));
+  assert.ok(commercialSurface.includes('title="Cancelled + removed"'));
   assert.match(commercialSurface, /Buyer outreach, quoted quantity, or a task note is not a sale/);
   assert.match(commercialSurface, /A due date is not fulfillment proof/);
   assert.match(commercialSurface, /Cancel order \+ release claim/);
