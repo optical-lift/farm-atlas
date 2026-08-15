@@ -33,6 +33,14 @@ begin
     raise exception 'Contract fixture could not resolve Elm Farm / Anna.';
   end if;
 
+  -- Exercise authenticated worker readers under the same role boundary used by
+  -- Farm Hand Day, rather than relying on database-admin context.
+  perform set_config(
+    'request.jwt.claims',
+    jsonb_build_object('sub',v_user_id,'role','authenticated')::text,
+    true
+  );
+
   insert into atlas.resources(
     id,farm_id,stable_key,label,resource_type,resource_category,status,quantity,unit,
     restock_needed,consumable,borrow_or_owner,metadata,created_at,updated_at
