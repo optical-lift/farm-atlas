@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { AtlasCard, AtlasSectionHeading } from "@/components/atlas/ui/AtlasPrimitives";
 import "./harvested.css";
@@ -53,7 +53,7 @@ function formatBucketFloor(value: number, lowerBound: boolean) {
   return `${lowerBound ? "≥" : ""}${amount} ${noun}`;
 }
 
-export default function HarvestedOutputSection({ asOf }: { asOf: string | undefined }) {
+export default function HarvestedOutputSection() {
   const [data, setData] = useState<HarvestedResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,8 +62,7 @@ export default function HarvestedOutputSection({ asOf }: { asOf: string | undefi
     try {
       setLoading(true);
       setError(null);
-      const query = asOf ? `?asOf=${encodeURIComponent(asOf)}` : "";
-      const response = await fetch(`/api/atlas/harvested${query}`, { cache: "no-store" });
+      const response = await fetch("/api/atlas/harvested", { cache: "no-store" });
       const payload = await response.json() as HarvestedResponse;
       if (!response.ok || !payload.ok) throw new Error(payload.error || "Harvested output could not be loaded.");
       setData(payload);
@@ -72,14 +71,11 @@ export default function HarvestedOutputSection({ asOf }: { asOf: string | undefi
     } finally {
       setLoading(false);
     }
-  }, [asOf]);
+  }, []);
 
   useEffect(() => { void load(); }, [load]);
 
-  const farmsWithOutput = useMemo(
-    () => (data?.farms ?? []).filter((farm) => farm.entries.length),
-    [data],
-  );
+  const farmsWithOutput = (data?.farms ?? []).filter((farm) => farm.entries.length);
   const totalEntries = farmsWithOutput.reduce((sum, farm) => sum + farm.entries.length, 0);
 
   return (
