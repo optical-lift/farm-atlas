@@ -388,10 +388,10 @@ export default function HarvestHorizonPage() {
                 })}
               </AtlasCard>
             ))}
-
-            <HarvestedOutputSection asOf={data.asOf} />
           </>
         ) : null}
+
+        <HarvestedOutputSection />
       </div>
     </AtlasAppShell>
   );
