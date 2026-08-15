@@ -5,8 +5,20 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const migrationPath = "supabase/migrations/20260815155500_clock_authoritative_capacity_conflicts_v1.sql";
-const migration = readFileSync(join(root, migrationPath), "utf8");
+const foundationPath = "supabase/migrations/20260815153320_clock_capacity_conflicts_v1.sql";
+const authorityPath = "supabase/migrations/20260815160125_clock_authoritative_capacity_conflicts_v1.sql";
+const foundation = readFileSync(join(root, foundationPath), "utf8");
+const migration = readFileSync(join(root, authorityPath), "utf8");
+
+test("Clock capacity foundation preserves the 420 target and 480 maximum boundary", () => {
+  assert.match(foundation, /v_target integer := 420/);
+  assert.match(foundation, /v_maximum integer := 480/);
+  assert.match(foundation, /'status', case when v_over_maximum > 0 then 'conflict' when v_over_target > 0 then 'warning' else 'ok' end/);
+  assert.match(foundation, /'hasConflict', v_over_maximum > 0/);
+  assert.match(foundation, /'day_capacity_target_exceeded'/);
+  assert.match(foundation, /'day_capacity_maximum_exceeded'/);
+  assert.match(foundation, /'owner_clock_plan_commit'::text/);
+});
 
 test("Clock capacity conflict is exposed separately from compatibility warnings", () => {
   assert.match(migration, /'warnings', v_warnings/);
@@ -39,9 +51,9 @@ test("Clock Pass 2 preserves authority boundaries and API security", () => {
 });
 
 test("Clock Pass 2 does not create a parallel scheduler ontology", () => {
-  assert.doesNotMatch(migration, /create\s+table/i);
-  assert.doesNotMatch(migration, /create\s+(?:materialized\s+)?view/i);
-  assert.doesNotMatch(migration, /create\s+type/i);
-  assert.match(migration, /clock_day_capacity_state_v1/);
-  assert.match(migration, /worker_day_task_placements/);
+  assert.doesNotMatch(foundation + migration, /create\s+table/i);
+  assert.doesNotMatch(foundation + migration, /create\s+(?:materialized\s+)?view/i);
+  assert.doesNotMatch(foundation + migration, /create\s+type/i);
+  assert.match(foundation, /clock_day_capacity_state_v1/);
+  assert.match(foundation + migration, /worker_day_task_placements/);
 });
