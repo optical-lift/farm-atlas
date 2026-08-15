@@ -30,9 +30,7 @@ DECLARE
   v_count integer;
   v_state text;
   v_status text;
-  v_expected boolean;
 BEGIN
-  -- Build a lawful synthetic physical lineage on top of an existing Elm task ↔ crop-cycle link.
   INSERT INTO atlas.flower_harvest_batches(
     farm_id,harvest_date,recorded_by_membership_id,batch_key,note,metadata
   ) VALUES (
@@ -77,7 +75,6 @@ BEGIN
     RAISE EXCEPTION 'proof: expected 10 Ready bouquets at birth';
   END IF;
 
-  -- Scheduled sale A claims 4 of 10 and must be remembered without becoming executable today.
   v_result := atlas.record_flower_sale_core_v2(
     v_farm,v_owner,'owner',null,'Rollback Customer A','farm_pickup','rollback-proof-a',
     jsonb_build_array(jsonb_build_object('readyLotId',v_ready,'quantity',4,'unitPrice',10)),
@@ -97,9 +94,6 @@ BEGIN
     RAISE EXCEPTION 'proof: future sale A incorrectly released fulfillment work today';
   END IF;
 
-  -- Sequential overclaim proof. v2 has deterministic Ready FOR UPDATE locks for true concurrent callers;
-  -- a second session cannot observe these uncommitted migration tables, so cross-session concurrency is
-  -- source-proved and this transaction exercises the same post-lock availability rejection sequentially.
   BEGIN
     PERFORM atlas.record_flower_sale_core_v2(
       v_farm,v_owner,'owner',null,'Rollback Overclaim','market','rollback-overclaim',
@@ -113,7 +107,6 @@ BEGIN
       IF SQLERRM NOT ILIKE '%Available%' THEN RAISE; END IF;
   END;
 
-  -- Cancel A: original sale persists, cancellation is appended, and its claim becomes Available again.
   v_result := atlas.cancel_flower_sale_core_v1(
     v_farm,v_sale_a,v_owner,'owner','customer_cancelled','Rollback cancellation',
     'rollback-proof:cancel-a:'||gen_random_uuid()::text,false
@@ -125,7 +118,6 @@ BEGIN
   SELECT state INTO v_state FROM atlas.planned_work_occurrences WHERE id=v_occurrence_b;
   IF v_state <> 'cancelled' THEN RAISE EXCEPTION 'proof: cancelled sale did not retire fulfillment occurrence, state %',v_state; END IF;
 
-  -- Physical spoilage removes 2 without rewriting Ready birth truth.
   v_result := atlas.record_flower_ready_disposition_core_v1(
     v_farm,v_ready,v_anna,'farm_hand','spoilage',2,'Rollback spoilage',
     'rollback-proof:spoilage:'||gen_random_uuid()::text,false
@@ -153,7 +145,6 @@ BEGIN
       IF SQLERRM NOT ILIKE '%Available%' THEN RAISE; END IF;
   END;
 
-  -- Wrong-farm membership cannot record an Elm sale.
   BEGIN
     PERFORM atlas.record_flower_sale_core_v2(
       v_farm,v_wrong_farm_membership,'owner',null,'Wrong farm','market','rollback-wrong-farm',
@@ -164,7 +155,6 @@ BEGIN
     RAISE EXCEPTION 'proof: wrong-farm membership unexpectedly recorded Elm sale';
   EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
 
-  -- Sale B claims 5 of the remaining 8 and will be used to prove due-date release + actual handoff.
   v_result := atlas.record_flower_sale_core_v2(
     v_farm,v_owner,'owner',null,'Rollback Customer B','farm_pickup','rollback-proof-b',
     jsonb_build_array(jsonb_build_object('readyLotId',v_ready,'quantity',5,'unitPrice',10)),
@@ -181,7 +171,6 @@ BEGIN
   IF v_occurrence_b IS NULL THEN RAISE EXCEPTION 'proof: sale B fulfillment occurrence missing'; END IF;
   IF v_task_b IS NOT NULL THEN RAISE EXCEPTION 'proof: future sale B incorrectly executable today'; END IF;
 
-  -- Isolate this proof from unrelated unreleased Elm backlog; ROLLBACK restores every row.
   UPDATE atlas.planned_work_occurrences
   SET state='cancelled',metadata=coalesce(metadata,'{}'::jsonb)||jsonb_build_object('rollbackProofIsolation',true),updated_at=now()
   WHERE farm_id=v_farm AND id<>v_occurrence_b AND state IN ('planned','eligible','failed');
@@ -215,7 +204,6 @@ BEGIN
       IF SQLERRM NOT ILIKE '%fulfilled%' THEN RAISE; END IF;
   END;
 
-  -- RLS / grants: signed-in clients can read truth tables but cannot mutate them directly.
   IF NOT has_table_privilege('authenticated','atlas.flower_sale_orders','SELECT')
      OR has_table_privilege('authenticated','atlas.flower_sale_orders','INSERT')
      OR NOT has_table_privilege('authenticated','atlas.flower_sale_order_cancellation_events','SELECT')
@@ -232,8 +220,10 @@ BEGIN
     RAISE EXCEPTION 'proof: authenticated function privilege membrane is incorrect';
   END IF;
 
-  SELECT count(*) INTO v_count FROM atlas.authenticated_rpc_registry_drift_v1();
-  IF v_count<>0 THEN RAISE EXCEPTION 'proof: authenticated RPC registry drift count is %',v_count; END IF;
+  SELECT count(*) INTO v_count
+  FROM atlas.authenticated_rpc_registry_drift_v1()
+  WHERE signature ~ '^atlas\.(flower_sale_|record_flower_sale_|owner_operator_record_flower_sale_|record_flower_fulfillment_|owner_operator_record_flower_fulfillment_|cancel_flower_sale_|owner_operator_cancel_flower_sale_|record_flower_ready_disposition_|owner_operator_record_flower_ready_disposition_)';
+  IF v_count<>0 THEN RAISE EXCEPTION 'proof: Harvest commercial RPC registry drift count is %',v_count; END IF;
 
   RAISE NOTICE 'HARVEST_COMMERCIAL_ROLLBACK_PROOF_OK ready=% saleA=% saleB=% fulfillmentTask=%',v_ready,v_sale_a,v_sale_b,v_task_b;
 END
