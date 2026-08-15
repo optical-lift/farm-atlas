@@ -95,3 +95,32 @@ test("the homepage reader is membership scoped instead of metadata assigned", ()
   assert.match(growRoomMigration, /is_farm_member|home_task_cards_v1/);
   assert.match(growRoomMigration, /grant execute .* to authenticated/is);
 });
+
+test("Production, Obligation/Release, and Clock retain separate authority", () => {
+  const constitution = read("docs/architecture/production-obligation-clock-constitution.md");
+
+  for (const canonicalStructure of [
+    "atlas.production_plans",
+    "atlas.production_lots",
+    "atlas.production_capacity_reservations",
+    "atlas.planned_work_occurrences",
+    "atlas.work_release_policies",
+    "atlas.task_release_queue_items",
+    "atlas.worker_day_task_placements",
+    "atlas.worker_day_task_placement_events",
+    "atlas.member_capacity_settings",
+    "atlas.member_workload_settings",
+    "atlas.task_capacity_profiles",
+  ]) {
+    assert.match(constitution, new RegExp(canonicalStructure.replaceAll(".", "\\.")));
+  }
+
+  assert.match(
+    constitution,
+    /Production truth → Work obligation → Release\/legal window → Clock placement → Execution\/result/,
+  );
+  assert.match(constitution, /capacity may control presentation, but never whether Atlas remembers real work/i);
+  assert.match(constitution, /explicit scheduling conflict/i);
+  assert.match(constitution, /No duplicate scheduler ontology/i);
+  assert.match(constitution, /Farm capacity and human capacity stay distinct/i);
+});
