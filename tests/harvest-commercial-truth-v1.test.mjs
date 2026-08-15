@@ -6,6 +6,7 @@ function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url)
 
 const migration = read("supabase/migrations/20260815143000_harvest_flower_commercial_truth_v1.sql");
 const ownerHardening = read("supabase/migrations/20260815143050_harvest_flower_commercial_owner_context_hardening_v1.sql");
+const buyerOptions = read("supabase/migrations/20260815143075_harvest_flower_sale_buyer_options_v1.sql");
 const registry = read("supabase/migrations/20260815143100_harvest_flower_commercial_truth_rpc_registry_v1.sql");
 const commerceRoute = read("app/api/atlas/flower-commerce/route.ts");
 const fulfillmentContext = read("app/api/atlas/flower-fulfillment-context/route.ts");
@@ -59,7 +60,7 @@ test("future fulfillment uses the planned-work membrane but does not place Clock
 test("sale and fulfillment remain separate truths while immediate handoff records both atomically", () => {
   assert.match(migration, /fulfillment_mode='immediate_handoff'/i);
   assert.match(migration, /insert into atlas\.flower_fulfillment_events/i);
-  assert.match(migration, /sale does not imply handoff/i);
+  assert.match(migration + registry, /sale does not imply handoff|A sale or fulfillment task does not imply this event occurred/i);
   assert.match(fulfillmentFocus, /Were these flowers actually handed off\?/);
   assert.match(fulfillmentFocus, /due date, and this task prove commitment only/);
   assert.match(commercialSurface, /title="Going out"/);
@@ -92,6 +93,17 @@ test("commercial writes are membership scoped with explicit authenticated regist
   assert.doesNotMatch(commerceRoute + fulfillmentRoute, /SUPABASE_SERVICE_ROLE_KEY|atlasSupabase/);
   assert.match(ownerHardening, /v_context->>'farmId'/);
   assert.doesNotMatch(ownerHardening, /effective,farmId/);
+});
+
+test("buyer selection uses a minimal scoped reader without reopening direct relationship RLS", () => {
+  assert.match(buyerOptions, /flower_sale_buyer_options_v1/);
+  assert.match(buyerOptions, /current_farm_role\(p_farm_id\)/);
+  assert.match(buyerOptions, /businessName/);
+  assert.match(registry, /atlas\.flower_sale_buyer_options_v1\(uuid\)/);
+  assert.match(commerceRoute, /rpc\("flower_sale_buyer_options_v1"/);
+  assert.doesNotMatch(commerceRoute, /from\("buyer_relationship_reconstruction"\)/);
+  assert.doesNotMatch(fulfillmentContext, /buyer_relationship_reconstruction/);
+  assert.match(ownerHardening, /new\.customer_label:=nullif\(btrim\(coalesce\(v_buyer_name,''\)\),''\)/);
 });
 
 test("Harvest surface extends truth chain after Ready without replacing Ready birth history", () => {
