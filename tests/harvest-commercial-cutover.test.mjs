@@ -42,5 +42,7 @@ test("canonical commercial reader does not reconstruct inventory or sales from l
   }
   assert.match(commerceRoute, /flower_ready_inventory_lots/);
   assert.match(commerceRoute, /flower_sale_order_lines/);
-  assert.match(commercialSurface, /Ready birth quantity minus explicit sale claims/);
+  assert.match(commerceRoute, /flower_sale_order_cancellation_events/);
+  assert.match(commerceRoute, /flower_ready_inventory_disposition_events/);
+  assert.match(commercialSurface, /Ready birth quantity minus active sale claims and explicit dispositions/);
 });
