@@ -5,6 +5,7 @@ import test from "node:test";
 function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url), "utf8"); }
 
 const migration = read("supabase/migrations/20260815143200_harvest_flower_commercial_reversals_v1.sql");
+const fulfillmentLane = read("supabase/migrations/20260815143250_harvest_flower_fulfillment_required_lane_v1.sql");
 const registry = read("supabase/migrations/20260815143300_harvest_flower_commercial_reversals_rpc_registry_v1.sql");
 
 test("commercial reversals are append-only facts, not mutation of sale or Ready birth truth", () => {
@@ -30,6 +31,13 @@ test("cancellation releases only unfulfilled claims and retires future fulfillme
   assert.match(migration, /'changed_plan'/);
   assert.match(migration, /state='cancelled'/);
   assert.match(migration, /A cancelled flower sale cannot be fulfilled/i);
+});
+
+test("customer-committed flower fulfillment is required hard-date work, not discretionary budget work", () => {
+  assert.match(fulfillmentLane, /source_kind='flower_sale_order'/);
+  assert.match(fulfillmentLane, /new\.work_lane:='required'/);
+  assert.match(fulfillmentLane, /new\.commitment_kind:='hard_date'/);
+  assert.match(fulfillmentLane, /cannot be suppressed by discretionary daily budget/i);
 });
 
 test("role boundaries distinguish physical spoilage from management dispositions", () => {
