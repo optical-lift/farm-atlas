@@ -4,7 +4,7 @@ import test from "node:test";
 
 function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url), "utf8"); }
 
-const migration = read("supabase/migrations/20260814235000_worker_day_system_internal_visibility_boundary_v1.sql");
+const migration = read("supabase/migrations/20260815000421_worker_day_system_internal_visibility_boundary_v1.sql");
 const taskFocus = read("app/task-focus/[taskId]/page.tsx");
 const cueDelivery = read("app/GlobalDayCueDelivery.tsx");
 const cueResponseRoute = read("app/api/atlas/day-cue-response/route.ts");
@@ -24,23 +24,23 @@ test("system_internal tasks are state sources, not Worker Day cards", () => {
 
 test("explicit choreography placement cannot override system_internal visibility", () => {
   const choreographedPatch = migration.slice(migration.indexOf("owner_worker_day_plan_choreographed_v1"));
-  assert.match(choreographedPatch, /task\.status = ''open''[\\n\s\S]*visibility_scope/);
+  assert.match(choreographedPatch, /task\.status = ''open''[\s\S]*coalesce\(task\.visibility_scope/);
 });
 
 test("operational card hydration fails closed for system_internal task ids", () => {
   const v1 = migration.slice(migration.indexOf("worker_day_operational_task_cards_v1"));
   const v2 = migration.slice(migration.indexOf("worker_day_operational_task_cards_v2"));
-  assert.match(v1, /task\.id = any\(p_task_ids\)[\\n\s\S]*visibility_scope/);
-  assert.match(v2, /task\.id = any\(v_ids\)[\\n\s\S]*visibility_scope/);
+  assert.match(v1, /task\.id = any\(p_task_ids\)[\s\S]*coalesce\(task\.visibility_scope/);
+  assert.match(v2, /task\.id = any\(v_ids\)[\s\S]*coalesce\(task\.visibility_scope/);
 });
 
 test("day-cue-backed internal tasks cannot render the ordinary Task Focus surface", () => {
   assert.match(taskFocus, /visibility_scope: string \| null/);
-  assert.match(taskFocus, /visibility_scope/);
+  assert.match(taskFocus, /select\("id, farm_id, title, task_type, task_scope, due_date, visibility_scope, metadata"\)/);
   assert.match(taskFocus, /task\.visibility_scope === "system_internal"/);
   assert.match(taskFocus, /observation_delivery_mode/);
-  assert.match(taskFocus, /day_cue/);
-  assert.match(taskFocus, /notFound\(\)/);
+  assert.match(taskFocus, /=== "day_cue"/);
+  assert.match(taskFocus, /if \(task && isDayCueStateSource\(task\)\) notFound\(\)/);
 });
 
 test("the existing Day cue response path remains the worker-facing interaction", () => {
