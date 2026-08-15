@@ -82,6 +82,13 @@ const flowerPreparationMigrationName =
   "20260815142000_harvest_flower_preparation_ready_v1.sql";
 const flowerPreparationRegistryMigrationName =
   "20260815142100_harvest_flower_preparation_ready_rpc_registry_v1.sql";
+const flowerCommercialRegistryMigrationName =
+  "20260815143100_harvest_flower_commercial_truth_rpc_registry_v1.sql";
+const flowerCommercialRpcMigrations = new Set([
+  "20260815143000_harvest_flower_commercial_truth_v1.sql",
+  "20260815143050_harvest_flower_commercial_owner_context_hardening_v1.sql",
+  "20260815143075_harvest_flower_sale_buyer_options_v1.sql",
+]);
 const dayAcceptanceRpcMigrations = new Set([
   "20260811180500_atlas_day_cue_observation_result_contract_v1.sql",
   "20260811183000_atlas_departure_requirement_cues_v1.sql",
@@ -197,6 +204,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const ownerDayReservationRegistry = readMigration(ownerDayReservationRegistryMigrationName);
   const flowerHarvestOutputRegistry = readMigration(flowerHarvestOutputRegistryMigrationName);
   const flowerPreparationRegistry = readMigration(flowerPreparationRegistryMigrationName);
+  const flowerCommercialRegistry = readMigration(flowerCommercialRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -242,7 +250,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                                         ? flowerHarvestOutputRegistryMigrationName
                                         : name === flowerPreparationMigrationName
                                           ? flowerPreparationRegistryMigrationName
-                                          : null;
+                                          : flowerCommercialRpcMigrations.has(name)
+                                            ? flowerCommercialRegistryMigrationName
+                                            : null;
 
       assert.ok(
         pairedRegistryName,
@@ -389,6 +399,18 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   }
   assert.match(flowerPreparationRegistry, /app_endpoint/);
   assert.match(flowerPreparationRegistry, /owner_admin_endpoint/);
+
+  for (const signature of [
+    "atlas.flower_sale_buyer_options_v1(uuid)",
+    "atlas.record_flower_sale_for_member_v1(uuid, uuid, text, text, text, jsonb, numeric, numeric, text, date, time without time zone, uuid, uuid, text, text)",
+    "atlas.owner_operator_record_flower_sale_v1(uuid, uuid, text, text, text, jsonb, numeric, numeric, text, date, time without time zone, uuid, uuid, text, text)",
+    "atlas.record_flower_fulfillment_for_member_v1(uuid, uuid, text, text)",
+    "atlas.owner_operator_record_flower_fulfillment_v1(uuid, uuid, text, text)",
+  ]) {
+    assert.ok(flowerCommercialRegistry.includes(signature));
+  }
+  assert.match(flowerCommercialRegistry, /app_endpoint/);
+  assert.match(flowerCommercialRegistry, /owner_admin_endpoint/);
 });
 
 test("live registry proof is rollback-only and fail-closed", () => {
