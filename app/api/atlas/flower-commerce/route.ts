@@ -18,6 +18,8 @@ type ReadyRow = { id: string; farm_id: string; inventory_kind: string; quantity:
 type OrderRow = { id: string; farm_id: string; buyer_relationship_id: string | null; customer_label: string | null; sales_channel: string; event_key: string | null; sale_date: string; fulfillment_mode: string; fulfillment_due_date: string | null; fulfillment_due_time: string | null; subtotal_amount: number | string; tax_amount: number | string; tip_amount: number | string; total_amount: number | string; note: string | null; created_at: string };
 type LineRow = { id: string; farm_id: string; sale_order_id: string; ready_lot_id: string; inventory_kind: string; quantity: number | string; unit: string; unit_price: number | string; line_total: number | string };
 type FulfillmentRow = { id: string; farm_id: string; sale_order_id: string; fulfilled_at: string; fulfillment_method: string; note: string | null };
+type CancellationRow = { id: string; farm_id: string; sale_order_id: string; reason_kind: string; note: string | null; created_at: string };
+type DispositionRow = { id: string; farm_id: string; ready_lot_id: string; disposition_kind: string; quantity: number | string; unit: string; note: string | null; created_at: string };
 type BuyerOption = { id: string; businessName: string; buyerType: string | null; relationshipStatus: string | null; priorityRank: number | null };
 type MemberRow = { id: string; farm_id: string; role: string; worker_key: string | null };
 
@@ -40,31 +42,41 @@ export async function GET() {
   const farmIds = Array.from(new Set(session.memberships.map((membership) => membership.farmId)));
   const supabase = await createAtlasServerClient();
 
-  const [farmsResult, readyResult, ordersResult, linesResult, fulfillmentResult, membersResult, buyerResults] = await Promise.all([
+  const [farmsResult, readyResult, ordersResult, linesResult, fulfillmentResult, cancellationResult, dispositionResult, membersResult, buyerResults] = await Promise.all([
     supabase.from("farms").select("id, stable_key, name").in("id", farmIds),
     supabase.from("flower_ready_inventory_lots").select("id, farm_id, inventory_kind, quantity, unit, quantity_exactness, ready_date").in("farm_id", farmIds).order("ready_date", { ascending: false }),
     supabase.from("flower_sale_orders").select("id, farm_id, buyer_relationship_id, customer_label, sales_channel, event_key, sale_date, fulfillment_mode, fulfillment_due_date, fulfillment_due_time, subtotal_amount, tax_amount, tip_amount, total_amount, note, created_at").in("farm_id", farmIds).order("created_at", { ascending: false }),
     supabase.from("flower_sale_order_lines").select("id, farm_id, sale_order_id, ready_lot_id, inventory_kind, quantity, unit, unit_price, line_total").in("farm_id", farmIds),
     supabase.from("flower_fulfillment_events").select("id, farm_id, sale_order_id, fulfilled_at, fulfillment_method, note").in("farm_id", farmIds).order("fulfilled_at", { ascending: false }),
+    supabase.from("flower_sale_order_cancellation_events").select("id, farm_id, sale_order_id, reason_kind, note, created_at").in("farm_id", farmIds).order("created_at", { ascending: false }),
+    supabase.from("flower_ready_inventory_disposition_events").select("id, farm_id, ready_lot_id, disposition_kind, quantity, unit, note, created_at").in("farm_id", farmIds).order("created_at", { ascending: false }),
     supabase.from("farm_memberships").select("id, farm_id, role, worker_key").in("farm_id", farmIds).eq("active", true),
     Promise.all(farmIds.map(async (farmId) => ({ farmId, result: await supabase.rpc("flower_sale_buyer_options_v1", { p_farm_id: farmId }) }))),
   ]);
 
-  const error = farmsResult.error || readyResult.error || ordersResult.error || linesResult.error || fulfillmentResult.error || membersResult.error || buyerResults.find(({ result }) => result.error)?.result.error;
+  const error = farmsResult.error || readyResult.error || ordersResult.error || linesResult.error || fulfillmentResult.error || cancellationResult.error || dispositionResult.error || membersResult.error || buyerResults.find(({ result }) => result.error)?.result.error;
   if (error) return privateJson({ ok: false, error: "Flower commercial truth could not be loaded." }, 500);
 
   const ready = (readyResult.data ?? []) as ReadyRow[];
   const orders = (ordersResult.data ?? []) as OrderRow[];
   const lines = (linesResult.data ?? []) as LineRow[];
   const fulfillments = (fulfillmentResult.data ?? []) as FulfillmentRow[];
+  const cancellations = (cancellationResult.data ?? []) as CancellationRow[];
+  const dispositions = (dispositionResult.data ?? []) as DispositionRow[];
   const members = (membersResult.data ?? []) as MemberRow[];
   const buyersByFarm = new Map<string, BuyerOption[]>();
   for (const { farmId, result } of buyerResults) buyersByFarm.set(farmId, Array.isArray(result.data) ? result.data as BuyerOption[] : []);
   const buyerById = new Map<string, BuyerOption>();
   for (const buyers of buyersByFarm.values()) for (const buyer of buyers) buyerById.set(buyer.id, buyer);
 
+  const cancellationByOrder = new Map(cancellations.map((row) => [row.sale_order_id, row]));
   const claimedByLot = new Map<string, number>();
-  for (const line of lines) claimedByLot.set(line.ready_lot_id, (claimedByLot.get(line.ready_lot_id) ?? 0) + Number(line.quantity));
+  for (const line of lines) {
+    if (cancellationByOrder.has(line.sale_order_id)) continue;
+    claimedByLot.set(line.ready_lot_id, (claimedByLot.get(line.ready_lot_id) ?? 0) + Number(line.quantity));
+  }
+  const disposedByLot = new Map<string, number>();
+  for (const disposition of dispositions) disposedByLot.set(disposition.ready_lot_id, (disposedByLot.get(disposition.ready_lot_id) ?? 0) + Number(disposition.quantity));
   const linesByOrder = new Map<string, LineRow[]>();
   for (const line of lines) linesByOrder.set(line.sale_order_id, [...(linesByOrder.get(line.sale_order_id) ?? []), line]);
   const fulfillmentByOrder = new Map(fulfillments.map((row) => [row.sale_order_id, row]));
@@ -73,7 +85,8 @@ export async function GET() {
     const available = ready.filter((lot) => lot.farm_id === farm.id).map((lot) => {
       const birthQuantity = Number(lot.quantity);
       const committedQuantity = claimedByLot.get(lot.id) ?? 0;
-      return { id: lot.id, inventoryKind: lot.inventory_kind, unit: lot.unit, quantityExactness: lot.quantity_exactness, readyDate: lot.ready_date, birthQuantity, committedQuantity, availableQuantity: Math.max(0, birthQuantity - committedQuantity) };
+      const disposedQuantity = disposedByLot.get(lot.id) ?? 0;
+      return { id: lot.id, inventoryKind: lot.inventory_kind, unit: lot.unit, quantityExactness: lot.quantity_exactness, readyDate: lot.ready_date, birthQuantity, committedQuantity, disposedQuantity, availableQuantity: Math.max(0, birthQuantity - committedQuantity - disposedQuantity) };
     }).filter((lot) => lot.availableQuantity > 0);
 
     const decorateOrder = (order: OrderRow) => ({
@@ -92,6 +105,7 @@ export async function GET() {
       totalAmount: Number(order.total_amount),
       lines: (linesByOrder.get(order.id) ?? []).map((line) => ({ id: line.id, readyLotId: line.ready_lot_id, inventoryKind: line.inventory_kind, quantity: Number(line.quantity), unit: line.unit, unitPrice: Number(line.unit_price), lineTotal: Number(line.line_total) })),
       fulfillment: fulfillmentByOrder.get(order.id) ? { id: fulfillmentByOrder.get(order.id)!.id, fulfilledAt: fulfillmentByOrder.get(order.id)!.fulfilled_at, method: fulfillmentByOrder.get(order.id)!.fulfillment_method } : null,
+      cancellation: cancellationByOrder.get(order.id) ? { id: cancellationByOrder.get(order.id)!.id, reasonKind: cancellationByOrder.get(order.id)!.reason_kind, note: cancellationByOrder.get(order.id)!.note, cancelledAt: cancellationByOrder.get(order.id)!.created_at } : null,
     });
 
     const farmOrders = orders.filter((order) => order.farm_id === farm.id);
@@ -100,8 +114,10 @@ export async function GET() {
       key: farm.stable_key,
       name: farm.name,
       available,
-      goingOut: farmOrders.filter((order) => !fulfillmentByOrder.has(order.id)).map(decorateOrder),
+      goingOut: farmOrders.filter((order) => !fulfillmentByOrder.has(order.id) && !cancellationByOrder.has(order.id)).map(decorateOrder),
       fulfilled: farmOrders.filter((order) => fulfillmentByOrder.has(order.id)).slice(0, 30).map(decorateOrder),
+      cancelled: farmOrders.filter((order) => cancellationByOrder.has(order.id)).slice(0, 30).map(decorateOrder),
+      dispositions: dispositions.filter((row) => row.farm_id === farm.id).slice(0, 30).map((row) => ({ id: row.id, readyLotId: row.ready_lot_id, dispositionKind: row.disposition_kind, quantity: Number(row.quantity), unit: row.unit, note: row.note, recordedAt: row.created_at })),
       buyers: buyersByFarm.get(farm.id) ?? [],
       members: members.filter((member) => member.farm_id === farm.id).map((member) => ({ id: member.id, role: member.role, workerKey: member.worker_key, displayName: member.worker_key ? member.worker_key.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : member.role.replace("_", " ") })),
     };
