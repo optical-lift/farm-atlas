@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import styles from "./HarvestFocus.module.css";
 
@@ -56,12 +56,13 @@ function cropLabel(input: FlowerPreparationInput) {
   return input.variety.toLowerCase().includes(input.cropLabel.toLowerCase()) ? input.variety : `${input.variety} ${input.cropLabel}`;
 }
 
-function newOutput(kind: ReadyKind = "conditioned_bucket"): DraftOutput {
-  return { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, kind, quantity: "", lowerBound: false };
+function newOutput(id: string, kind: ReadyKind = "conditioned_bucket"): DraftOutput {
+  return { id, kind, quantity: "", lowerBound: false };
 }
 
 export default function FlowerPreparationFocusPage({ task }: { task: FlowerPreparationTask }) {
-  const [outputs, setOutputs] = useState<DraftOutput[]>([newOutput()]);
+  const nextOutputId = useRef(2);
+  const [outputs, setOutputs] = useState<DraftOutput[]>(() => [newOutput("ready-output-1")]);
   const [nothingSaleable, setNothingSaleable] = useState(false);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -80,6 +81,12 @@ export default function FlowerPreparationFocusPage({ task }: { task: FlowerPrepa
 
   function removeOutput(id: string) {
     setOutputs((current) => current.filter((output) => output.id !== id));
+  }
+
+  function addOutput() {
+    const id = `ready-output-${nextOutputId.current}`;
+    nextOutputId.current += 1;
+    setOutputs((current) => [...current, newOutput(id, "bouquet")]);
   }
 
   const normalizedOutputs = outputs.flatMap((output) => {
@@ -191,7 +198,7 @@ export default function FlowerPreparationFocusPage({ task }: { task: FlowerPrepa
                           step={bucketKind ? "0.25" : "1"}
                           value={output.quantity}
                           onChange={(event) => updateOutput(output.id, { quantity: event.target.value })}
-                          placeholder={bucketKind ? "1" : "1"}
+                          placeholder="1"
                         />
                       </label>
                       {bucketKind ? (
@@ -204,7 +211,7 @@ export default function FlowerPreparationFocusPage({ task }: { task: FlowerPrepa
                     </div>
                   );
                 })}
-                <button type="button" className={styles.choice} onClick={() => setOutputs((current) => [...current, newOutput("bouquet")])}>+ Add another Ready output</button>
+                <button type="button" className={styles.choice} onClick={addOutput}>+ Add another Ready output</button>
               </div>
             ) : null}
 
