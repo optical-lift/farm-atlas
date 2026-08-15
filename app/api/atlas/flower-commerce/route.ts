@@ -18,7 +18,7 @@ type ReadyRow = { id: string; farm_id: string; inventory_kind: string; quantity:
 type OrderRow = { id: string; farm_id: string; buyer_relationship_id: string | null; customer_label: string | null; sales_channel: string; event_key: string | null; sale_date: string; fulfillment_mode: string; fulfillment_due_date: string | null; fulfillment_due_time: string | null; subtotal_amount: number | string; tax_amount: number | string; tip_amount: number | string; total_amount: number | string; note: string | null; created_at: string };
 type LineRow = { id: string; farm_id: string; sale_order_id: string; ready_lot_id: string; inventory_kind: string; quantity: number | string; unit: string; unit_price: number | string; line_total: number | string };
 type FulfillmentRow = { id: string; farm_id: string; sale_order_id: string; fulfilled_at: string; fulfillment_method: string; note: string | null };
-type BuyerRow = { id: string; farm_id: string; business_name: string; buyer_type: string | null; relationship_status: string | null; priority_rank: number | null };
+type BuyerOption = { id: string; businessName: string; buyerType: string | null; relationshipStatus: string | null; priorityRank: number | null };
 type MemberRow = { id: string; farm_id: string; role: string; worker_key: string | null };
 
 function clean(value: unknown) { return typeof value === "string" ? value.trim() : ""; }
@@ -40,31 +40,34 @@ export async function GET() {
   const farmIds = Array.from(new Set(session.memberships.map((membership) => membership.farmId)));
   const supabase = await createAtlasServerClient();
 
-  const [farmsResult, readyResult, ordersResult, linesResult, fulfillmentResult, buyersResult, membersResult] = await Promise.all([
+  const [farmsResult, readyResult, ordersResult, linesResult, fulfillmentResult, membersResult, buyerResults] = await Promise.all([
     supabase.from("farms").select("id, stable_key, name").in("id", farmIds),
     supabase.from("flower_ready_inventory_lots").select("id, farm_id, inventory_kind, quantity, unit, quantity_exactness, ready_date").in("farm_id", farmIds).order("ready_date", { ascending: false }),
     supabase.from("flower_sale_orders").select("id, farm_id, buyer_relationship_id, customer_label, sales_channel, event_key, sale_date, fulfillment_mode, fulfillment_due_date, fulfillment_due_time, subtotal_amount, tax_amount, tip_amount, total_amount, note, created_at").in("farm_id", farmIds).order("created_at", { ascending: false }),
     supabase.from("flower_sale_order_lines").select("id, farm_id, sale_order_id, ready_lot_id, inventory_kind, quantity, unit, unit_price, line_total").in("farm_id", farmIds),
     supabase.from("flower_fulfillment_events").select("id, farm_id, sale_order_id, fulfilled_at, fulfillment_method, note").in("farm_id", farmIds).order("fulfilled_at", { ascending: false }),
-    supabase.from("buyer_relationship_reconstruction").select("id, farm_id, business_name, buyer_type, relationship_status, priority_rank").in("farm_id", farmIds).order("priority_rank", { ascending: true, nullsFirst: false }).order("business_name", { ascending: true }),
     supabase.from("farm_memberships").select("id, farm_id, role, worker_key").in("farm_id", farmIds).eq("active", true),
+    Promise.all(farmIds.map(async (farmId) => ({ farmId, result: await supabase.rpc("flower_sale_buyer_options_v1", { p_farm_id: farmId }) }))),
   ]);
 
-  const error = farmsResult.error || readyResult.error || ordersResult.error || linesResult.error || fulfillmentResult.error || buyersResult.error || membersResult.error;
+  const error = farmsResult.error || readyResult.error || ordersResult.error || linesResult.error || fulfillmentResult.error || membersResult.error || buyerResults.find(({ result }) => result.error)?.result.error;
   if (error) return privateJson({ ok: false, error: "Flower commercial truth could not be loaded." }, 500);
 
   const ready = (readyResult.data ?? []) as ReadyRow[];
   const orders = (ordersResult.data ?? []) as OrderRow[];
   const lines = (linesResult.data ?? []) as LineRow[];
   const fulfillments = (fulfillmentResult.data ?? []) as FulfillmentRow[];
-  const buyers = (buyersResult.data ?? []) as BuyerRow[];
   const members = (membersResult.data ?? []) as MemberRow[];
+  const buyersByFarm = new Map<string, BuyerOption[]>();
+  for (const { farmId, result } of buyerResults) buyersByFarm.set(farmId, Array.isArray(result.data) ? result.data as BuyerOption[] : []);
+  const buyerById = new Map<string, BuyerOption>();
+  for (const buyers of buyersByFarm.values()) for (const buyer of buyers) buyerById.set(buyer.id, buyer);
+
   const claimedByLot = new Map<string, number>();
   for (const line of lines) claimedByLot.set(line.ready_lot_id, (claimedByLot.get(line.ready_lot_id) ?? 0) + Number(line.quantity));
   const linesByOrder = new Map<string, LineRow[]>();
   for (const line of lines) linesByOrder.set(line.sale_order_id, [...(linesByOrder.get(line.sale_order_id) ?? []), line]);
   const fulfillmentByOrder = new Map(fulfillments.map((row) => [row.sale_order_id, row]));
-  const buyerById = new Map(buyers.map((row) => [row.id, row]));
 
   const farms = ((farmsResult.data ?? []) as FarmRow[]).map((farm) => {
     const available = ready.filter((lot) => lot.farm_id === farm.id).map((lot) => {
@@ -75,7 +78,7 @@ export async function GET() {
 
     const decorateOrder = (order: OrderRow) => ({
       id: order.id,
-      customerLabel: order.customer_label || (order.buyer_relationship_id ? buyerById.get(order.buyer_relationship_id)?.business_name : null) || "Flower customer",
+      customerLabel: order.customer_label || (order.buyer_relationship_id ? buyerById.get(order.buyer_relationship_id)?.businessName : null) || "Flower customer",
       buyerRelationshipId: order.buyer_relationship_id,
       salesChannel: order.sales_channel,
       eventKey: order.event_key,
@@ -99,7 +102,7 @@ export async function GET() {
       available,
       goingOut: farmOrders.filter((order) => !fulfillmentByOrder.has(order.id)).map(decorateOrder),
       fulfilled: farmOrders.filter((order) => fulfillmentByOrder.has(order.id)).slice(0, 30).map(decorateOrder),
-      buyers: buyers.filter((buyer) => buyer.farm_id === farm.id).map((buyer) => ({ id: buyer.id, businessName: buyer.business_name, buyerType: buyer.buyer_type, relationshipStatus: buyer.relationship_status, priorityRank: buyer.priority_rank })),
+      buyers: buyersByFarm.get(farm.id) ?? [],
       members: members.filter((member) => member.farm_id === farm.id).map((member) => ({ id: member.id, role: member.role, workerKey: member.worker_key, displayName: member.worker_key ? member.worker_key.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : member.role.replace("_", " ") })),
     };
   }).sort((left, right) => left.name.localeCompare(right.name));
