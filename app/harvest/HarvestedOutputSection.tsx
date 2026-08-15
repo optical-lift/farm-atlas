@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { AtlasCard, AtlasSectionHeading } from "@/components/atlas/ui/AtlasPrimitives";
+import FlowerPostharvestSection from "./FlowerPostharvestSection";
 import "./harvested.css";
 
 type HarvestedEntry = {
@@ -79,57 +80,61 @@ export default function HarvestedOutputSection() {
   const totalEntries = farmsWithOutput.reduce((sum, farm) => sum + farm.entries.length, 0);
 
   return (
-    <AtlasCard as="section" className="atlas-harvested" ariaLabelledBy="atlas-harvested-title">
-      <header className="atlas-harvested__heading">
-        <div>
-          <AtlasSectionHeading kicker="Physical output" title="Harvested" id="atlas-harvested-title" />
-          <p>What physically came out of the field. This is not prepared or ready inventory.</p>
-        </div>
-        {data?.rangeStart && data.asOf ? <span>{pretty(data.rangeStart)}–{pretty(data.asOf)}</span> : null}
-      </header>
-
-      {loading && !data ? <div className="atlas-harvested__state">Reading recorded harvest output…</div> : null}
-      {error ? (
-        <div className="atlas-harvested__state atlas-harvested__state--error">
-          <span>{error}</span>
-          <button type="button" onClick={() => void load()}>Try again</button>
-        </div>
-      ) : null}
-
-      {data && !totalEntries ? (
-        <div className="atlas-harvested__empty">
-          <b>No harvested flower output has been recorded in this window.</b>
-          <span>When a Harvest task records a bucket amount, the physical output will appear here.</span>
-        </div>
-      ) : null}
-
-      {farmsWithOutput.map((farm) => (
-        <section className="atlas-harvested__farm" key={farm.id}>
-          <header>
-            <div><small>Harvested at</small><h3>{farm.name}</h3></div>
-            <strong>{formatBucketFloor(farm.totals.bucketEquivalentFloor, farm.totals.lowerBound)}</strong>
-          </header>
-          <div className="atlas-harvested__entries">
-            {farm.entries.map((entry) => (
-              <article className="atlas-harvested-entry" key={entry.id} data-lower-bound={entry.lowerBound ? "true" : "false"}>
-                <div>
-                  <small>{pretty(entry.observedDate)}</small>
-                  <h4>{entry.cropLabel}{entry.variety ? ` · ${entry.variety}` : ""}</h4>
-                  {entry.note ? <p>{entry.note}</p> : null}
-                </div>
-                <div className="atlas-harvested-entry__amount">
-                  <b>{formatBucketFloor(entry.bucketEquivalentFloor, entry.lowerBound)}</b>
-                  {entry.moreAvailable ? <span>More remained</span> : <span>Cut reported complete</span>}
-                </div>
-              </article>
-            ))}
+    <>
+      <AtlasCard as="section" className="atlas-harvested" ariaLabelledBy="atlas-harvested-title">
+        <header className="atlas-harvested__heading">
+          <div>
+            <AtlasSectionHeading kicker="Physical output" title="Harvested" id="atlas-harvested-title" />
+            <p>What physically came out of the field. This is not prepared or ready inventory.</p>
           </div>
-        </section>
-      ))}
+          {data?.rangeStart && data.asOf ? <span>{pretty(data.rangeStart)}–{pretty(data.asOf)}</span> : null}
+        </header>
 
-      {farmsWithOutput.some((farm) => farm.totals.lowerBound) ? (
-        <p className="atlas-harvested__lower-bound"><b>≥</b> means “at least.” A 1+ bucket observation stays a lower bound instead of being turned into invented precision.</p>
-      ) : null}
-    </AtlasCard>
+        {loading && !data ? <div className="atlas-harvested__state">Reading recorded harvest output…</div> : null}
+        {error ? (
+          <div className="atlas-harvested__state atlas-harvested__state--error">
+            <span>{error}</span>
+            <button type="button" onClick={() => void load()}>Try again</button>
+          </div>
+        ) : null}
+
+        {data && !totalEntries ? (
+          <div className="atlas-harvested__empty">
+            <b>No harvested flower output has been recorded in this window.</b>
+            <span>When a Harvest task records a bucket amount, the physical output will appear here.</span>
+          </div>
+        ) : null}
+
+        {farmsWithOutput.map((farm) => (
+          <section className="atlas-harvested__farm" key={farm.id}>
+            <header>
+              <div><small>Harvested at</small><h3>{farm.name}</h3></div>
+              <strong>{formatBucketFloor(farm.totals.bucketEquivalentFloor, farm.totals.lowerBound)}</strong>
+            </header>
+            <div className="atlas-harvested__entries">
+              {farm.entries.map((entry) => (
+                <article className="atlas-harvested-entry" key={entry.id} data-lower-bound={entry.lowerBound ? "true" : "false"}>
+                  <div>
+                    <small>{pretty(entry.observedDate)}</small>
+                    <h4>{entry.cropLabel}{entry.variety ? ` · ${entry.variety}` : ""}</h4>
+                    {entry.note ? <p>{entry.note}</p> : null}
+                  </div>
+                  <div className="atlas-harvested-entry__amount">
+                    <b>{formatBucketFloor(entry.bucketEquivalentFloor, entry.lowerBound)}</b>
+                    {entry.moreAvailable ? <span>More remained</span> : <span>Cut reported complete</span>}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))}
+
+        {farmsWithOutput.some((farm) => farm.totals.lowerBound) ? (
+          <p className="atlas-harvested__lower-bound"><b>≥</b> means “at least.” A 1+ bucket observation stays a lower bound instead of being turned into invented precision.</p>
+        ) : null}
+      </AtlasCard>
+
+      <FlowerPostharvestSection />
+    </>
   );
 }
