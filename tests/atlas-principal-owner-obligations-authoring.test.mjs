@@ -31,6 +31,7 @@ test("Owner Obligation form preserves differentiated timing vocabulary", () => {
   assert.doesNotMatch(client, /name="becomesRelevantAt"[^>]*required/);
   assert.doesNotMatch(client, /name="mustBeginBy"[^>]*required/);
   assert.doesNotMatch(client, /name="mustFinishBy"[^>]*required/);
+  assert.doesNotMatch(client, /type="datetime-local"[^>]*defaultValue/);
 });
 
 test("Owner Obligation responsibility semantics are explicit rather than inferred from a due date", () => {
