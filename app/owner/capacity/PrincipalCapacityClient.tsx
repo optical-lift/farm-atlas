@@ -102,7 +102,8 @@ export default function PrincipalCapacityClient() {
     setError(null);
     setSuccess(null);
 
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const payload = {
       name: String(form.get("name") ?? "").trim(),
       weekdays: selectedDays,
@@ -130,7 +131,7 @@ export default function PrincipalCapacityClient() {
       if (!response.ok || !body.ok) throw new Error(body.error || "Principal Capacity policy could not be saved.");
 
       setSuccess("Principal Capacity policy saved. Atlas can now resolve capacity on matching effective days.");
-      event.currentTarget.reset();
+      formElement.reset();
       setSelectedDays([]);
       await loadPolicies();
     } catch (saveError) {
