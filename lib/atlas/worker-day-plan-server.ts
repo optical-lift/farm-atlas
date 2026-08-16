@@ -51,7 +51,7 @@ export type WorkerDayPlan = {
   automaticWork: WorkerDayPlanRow[];
   suggestions: WorkerDayPlanRow[];
   warnings: string[];
-  clockTimeline: AtlasWorkerDayChronology | null;
+  clockTimeline?: AtlasWorkerDayChronology | null;
 };
 
 export type OwnerWorkerDayPlanningTarget = {
