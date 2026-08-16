@@ -4,6 +4,7 @@ import { resolveAtlasOwnerOperatorContextForSession } from "@/lib/atlas/operator
 import { getAtlasSession, type AtlasSession } from "@/lib/atlas/session";
 import { deriveAtlasTimingMobility, type AtlasTimingMobility } from "@/lib/atlas/timing-mobility";
 import { createAtlasServerClient } from "@/lib/supabase/server";
+import { normalizeAtlasWorkerDayChronology, type AtlasWorkerDayChronology } from "@/lib/atlas/worker-day-chronology";
 
 export type WorkerDayPlanWindow = "morning" | "afternoon" | "evening";
 export type WorkerDayPlanSourceKind = "task" | "queue" | "rhythm" | "project_pull" | "floating_task";
@@ -50,6 +51,7 @@ export type WorkerDayPlan = {
   automaticWork: WorkerDayPlanRow[];
   suggestions: WorkerDayPlanRow[];
   warnings: string[];
+  clockTimeline: AtlasWorkerDayChronology | null;
 };
 
 export type OwnerWorkerDayPlanningTarget = {
@@ -93,6 +95,7 @@ export function normalizeWorkerDayPlan(value: unknown): WorkerDayPlan {
     paidTargetMinutes: Math.max(0, Number(row.paidTargetMinutes) || 0), committedPaidMinutes: Math.max(0, Number(row.committedPaidMinutes) || 0), automaticPaidMinutes: Math.max(0, Number(row.automaticPaidMinutes) || 0), remainingPaidMinutes: Math.max(0, Number(row.remainingPaidMinutes) || 0),
     realWork: normalizeRows(row.realWork), automaticWork: normalizeRows(row.automaticWork), suggestions: normalizeRows(row.suggestions),
     warnings: Array.isArray(row.warnings) ? row.warnings.map(String) : [],
+    clockTimeline: normalizeAtlasWorkerDayChronology(row.clockTimeline),
   };
 }
 
