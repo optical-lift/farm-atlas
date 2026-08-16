@@ -148,3 +148,19 @@ test("the scheduler primitive audit extends existing authorities instead of inve
   assert.match(audit, /another human-capacity model/i);
   assert.match(audit, /special Worker Day weed\/mowing injection toward the common released-task → Clock-placement path/i);
 });
+
+test("Clock placements snapshot durable occurrence provenance instead of inferring it later", () => {
+  const migration = read("supabase/migrations/20260816002500_clock_placement_occurrence_provenance_v1.sql");
+
+  assert.match(migration, /alter table atlas\.worker_day_task_placements[\s\S]*planned_occurrence_id uuid/i);
+  assert.match(migration, /from_planned_occurrence_id uuid/i);
+  assert.match(migration, /to_planned_occurrence_id uuid/i);
+  assert.match(migration, /resolve_clock_placement_occurrence_v1/i);
+  assert.match(migration, /task_release_events/i);
+  assert.match(migration, /Task occurrence provenance is not confirmed; Clock placement refused/i);
+  assert.match(migration, /capture_clock_placement_occurrence_v1/i);
+  assert.match(migration, /occurrence_rebased/i);
+  assert.match(migration, /provenance_backfilled/i);
+  assert.match(migration, /do not create a parallel history table/i);
+  assert.match(migration, /on delete restrict/i);
+});
