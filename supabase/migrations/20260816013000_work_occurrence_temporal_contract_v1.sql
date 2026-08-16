@@ -111,71 +111,6 @@ comment on column atlas.planned_work_occurrences.temporal_contract_source is
 comment on column atlas.planned_work_occurrences.temporal_contract_updated_at is
   'When the typed lawful-time contract was last replaced from an authoritative source.';
 
-create or replace function atlas.replace_work_occurrence_temporal_contract_v1(
-  p_occurrence_id uuid,
-  p_earliest_lawful_date date default null,
-  p_preferred_start_date date default null,
-  p_preferred_end_date date default null,
-  p_latest_lawful_date date default null,
-  p_hard_finish_date date default null,
-  p_miss_consequence jsonb default '{}'::jsonb,
-  p_source text default null
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = pg_catalog, atlas
-as $$
-declare
-  v_occurrence atlas.planned_work_occurrences%rowtype;
-  v_has_contract boolean;
-begin
-  select *
-  into v_occurrence
-  from atlas.planned_work_occurrences occurrence
-  where occurrence.id=p_occurrence_id
-  for update;
-
-  if v_occurrence.id is null then
-    raise exception 'Planned work occurrence was not found.' using errcode='P0002';
-  end if;
-
-  v_has_contract :=
-    p_earliest_lawful_date is not null
-    or p_preferred_start_date is not null
-    or p_preferred_end_date is not null
-    or p_latest_lawful_date is not null
-    or p_hard_finish_date is not null
-    or coalesce(p_miss_consequence,'{}'::jsonb) <> '{}'::jsonb;
-
-  if v_has_contract and nullif(btrim(coalesce(p_source,'')),'') is null then
-    raise exception 'A temporal contract source is required when lawful timing or miss consequence is supplied.'
-      using errcode='22023';
-  end if;
-
-  if jsonb_typeof(coalesce(p_miss_consequence,'{}'::jsonb)) <> 'object' then
-    raise exception 'Miss consequence must be a JSON object.' using errcode='22023';
-  end if;
-
-  update atlas.planned_work_occurrences occurrence
-  set earliest_lawful_date=p_earliest_lawful_date,
-      preferred_start_date=p_preferred_start_date,
-      preferred_end_date=p_preferred_end_date,
-      latest_lawful_date=p_latest_lawful_date,
-      hard_finish_date=p_hard_finish_date,
-      miss_consequence=coalesce(p_miss_consequence,'{}'::jsonb),
-      temporal_contract_source=nullif(btrim(coalesce(p_source,'')),''),
-      temporal_contract_updated_at=case when v_has_contract then now() else null end,
-      updated_at=now()
-  where occurrence.id=p_occurrence_id
-  returning * into v_occurrence;
-
-  return atlas.work_occurrence_temporal_contract_v1(v_occurrence.id,null);
-end;
-$$;
-
--- Forward declaration is replaced immediately below. It lets the replacement helper
--- return the same canonical contract without duplicating interpretation logic.
 create or replace function atlas.work_occurrence_temporal_contract_v1(
   p_occurrence_id uuid,
   p_service_date date default null
@@ -200,14 +135,22 @@ declare
   v_succession atlas.production_successions%rowtype;
   v_plan atlas.production_plans%rowtype;
 begin
-  select occurrence.*, policy.*
-  into v_occurrence, v_policy
+  select occurrence.*
+  into v_occurrence
   from atlas.planned_work_occurrences occurrence
-  join atlas.work_release_policies policy on policy.id=occurrence.release_policy_id
   where occurrence.id=p_occurrence_id;
 
   if v_occurrence.id is null then
     raise exception 'Planned work occurrence was not found.' using errcode='P0002';
+  end if;
+
+  select policy.*
+  into v_policy
+  from atlas.work_release_policies policy
+  where policy.id=v_occurrence.release_policy_id;
+
+  if v_policy.id is null then
+    raise exception 'Work occurrence release policy was not found.' using errcode='55000';
   end if;
 
   if auth.uid() is not null and not exists (
@@ -225,7 +168,10 @@ begin
   from atlas.farms farm
   where farm.id=v_occurrence.farm_id;
 
-  v_service_date:=coalesce(p_service_date,(now() at time zone coalesce(v_timezone,'America/Chicago'))::date);
+  v_service_date:=coalesce(
+    p_service_date,
+    (now() at time zone coalesce(v_timezone,'America/Chicago'))::date
+  );
   v_upper_bound:=coalesce(v_occurrence.latest_lawful_date,v_occurrence.hard_finish_date);
   v_has_any_legal_bound:=
     v_occurrence.earliest_lawful_date is not null
@@ -251,7 +197,9 @@ begin
 
   v_flexibility:=case
     when v_fully_bounded and v_occurrence.earliest_lawful_date=v_upper_bound then 'fixed'
-    when v_has_any_legal_bound or v_occurrence.preferred_start_date is not null or v_occurrence.preferred_end_date is not null then 'bounded_window'
+    when v_has_any_legal_bound
+      or v_occurrence.preferred_start_date is not null
+      or v_occurrence.preferred_end_date is not null then 'bounded_window'
     when v_occurrence.commitment_kind='floating' then 'floating'
     when v_occurrence.commitment_kind='dependency' then 'dependency'
     when v_occurrence.commitment_kind='persistent' then 'persistent'
@@ -341,7 +289,7 @@ begin
 
     'legalWindowKnown',v_has_any_legal_bound,
     'legalWindowFullyBounded',v_fully_bounded,
-    'lawfulOnServiceDate',to_jsonb(v_lawful),
+    'lawfulOnServiceDate',v_lawful,
     'hardDeadlineMissed',case
       when v_occurrence.hard_finish_date is null then null
       else v_service_date > v_occurrence.hard_finish_date
@@ -353,6 +301,69 @@ $$;
 
 comment on function atlas.work_occurrence_temporal_contract_v1(uuid,date) is
   'Canonical read contract for durable obligation timing. planned_due_date is a target and not_before_date is release timing; neither is promoted into lawful execution bounds. lawfulOnServiceDate is NULL when lawful bounds are insufficiently known.';
+
+create or replace function atlas.replace_work_occurrence_temporal_contract_v1(
+  p_occurrence_id uuid,
+  p_earliest_lawful_date date default null,
+  p_preferred_start_date date default null,
+  p_preferred_end_date date default null,
+  p_latest_lawful_date date default null,
+  p_hard_finish_date date default null,
+  p_miss_consequence jsonb default '{}'::jsonb,
+  p_source text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, atlas
+as $$
+declare
+  v_occurrence atlas.planned_work_occurrences%rowtype;
+  v_has_contract boolean;
+begin
+  select occurrence.*
+  into v_occurrence
+  from atlas.planned_work_occurrences occurrence
+  where occurrence.id=p_occurrence_id
+  for update;
+
+  if v_occurrence.id is null then
+    raise exception 'Planned work occurrence was not found.' using errcode='P0002';
+  end if;
+
+  v_has_contract :=
+    p_earliest_lawful_date is not null
+    or p_preferred_start_date is not null
+    or p_preferred_end_date is not null
+    or p_latest_lawful_date is not null
+    or p_hard_finish_date is not null
+    or coalesce(p_miss_consequence,'{}'::jsonb) <> '{}'::jsonb;
+
+  if v_has_contract and nullif(btrim(coalesce(p_source,'')),'') is null then
+    raise exception 'A temporal contract source is required when lawful timing or miss consequence is supplied.'
+      using errcode='22023';
+  end if;
+
+  if jsonb_typeof(coalesce(p_miss_consequence,'{}'::jsonb)) <> 'object' then
+    raise exception 'Miss consequence must be a JSON object.' using errcode='22023';
+  end if;
+
+  update atlas.planned_work_occurrences occurrence
+  set earliest_lawful_date=p_earliest_lawful_date,
+      preferred_start_date=p_preferred_start_date,
+      preferred_end_date=p_preferred_end_date,
+      latest_lawful_date=p_latest_lawful_date,
+      hard_finish_date=p_hard_finish_date,
+      miss_consequence=coalesce(p_miss_consequence,'{}'::jsonb),
+      temporal_contract_source=nullif(btrim(coalesce(p_source,'')),''),
+      temporal_contract_updated_at=case when v_has_contract then now() else null end,
+      updated_at=now()
+  where occurrence.id=p_occurrence_id
+  returning * into v_occurrence;
+
+  return atlas.work_occurrence_temporal_contract_v1(v_occurrence.id,null);
+end;
+$$;
 
 comment on function atlas.replace_work_occurrence_temporal_contract_v1(uuid,date,date,date,date,date,jsonb,text) is
   'Replaces the typed lawful-time contract from an explicit authoritative source. This helper never infers lawful bounds from occurrence target dates or executable task dates.';
