@@ -16,6 +16,7 @@ import ClockPlanningTimeline from "./clock-planning-timeline";
 import ClockPlanningUnplaced from "./clock-planning-unplaced";
 import ClockTimelineV2 from "./clock-timeline-v2";
 import ClockUnplacedV2 from "./clock-unplaced-v2";
+import ClockWeeklyFarmContract from "./clock-weekly-farm-contract";
 import {useClockPlanEditor} from "./use-clock-plan-editor";
 import styles from "./clock-surface-v2.module.css";
 
@@ -28,6 +29,7 @@ export default function ClockOrchestrator(){
  const {projection,canManage,loading,error,reload}=useAtlasWorkerDayProjection(dateIso);
  const [proposalOpen,setProposalOpen]=useState(false),[saveError,setSaveError]=useState<string|null>(null),[now,setNow]=useState(()=>new Date());
  const sequence=projection?.sequence??null,chronology=sequence?.clockTimeline??null,dayShapeReady=chronology?.dayShape.state==="resolved";
+ const weeklyRefreshToken=`${chronology?.dayShape.policyId??"none"}:${chronology?.dayShape.policyVersion??0}:${chronology?.dayShape.state??"unknown"}`;
  useEffect(()=>{setSaveError(null);setProposalOpen(false);},[dateIso]);
  useEffect(()=>{const timer=window.setInterval(()=>setNow(new Date()),60_000);return()=>window.clearInterval(timer);},[]);
  // Worker privacy contract: potential work never enters the worker temporal surface.
@@ -53,6 +55,7 @@ export default function ClockOrchestrator(){
  return <main className="atlas-phone-shell"><section className={`atlas-phone ${styles.phone}`}><header className="atlas-phone-top"><Link href="/" className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Clock</span></Link></header><div className={styles.body}>
   <ClockHeaderV2 dateIso={dateIso} selectedToday={selectedToday} nowLabel={timeLabel(now)} activeRange={activeRange} nextTask={nextTask} nextRange={nextRange} loading={loading}/>
   {error?<div className={styles.error}>{error}</div>:null}{saveError?<div className={styles.error}>{saveError}</div>:null}
+  {canManage?<ClockWeeklyFarmContract dateIso={dateIso} canManage={canManage} refreshToken={weeklyRefreshToken} onError={setSaveError}/>:null}
   {canManage?<ClockDayShapeControl dateIso={dateIso} canManage={canManage} dayShape={chronology?.dayShape??null} onChanged={reload} onError={setSaveError}/>:null}
   {canManage&&dayShapeReady?<ClockPlanBar open={proposalOpen} summary={editor.summary} committing={editor.committing} onOpen={()=>{setSaveError(null);setProposalOpen(true);}} onAcceptAll={editor.acceptAll} onReset={editor.reset} onCancel={()=>{setSaveError(null);setProposalOpen(false);}} onCommit={()=>void editor.commit()}/>:null}
   {planning?<><ClockPlanningTimeline dateIso={dateIso} blocks={editor.blocks??[]} timedCues={timedCues} dayReservations={dayReservations} selectedToday={selectedToday} nowMinute={nowMinute} startHour={startHour} endHour={endHour} gridHeight={gridHeight} onMove={editor.move} onResize={editor.resize} onDecision={editor.decide} onOverride={editor.setWarningOverride} onUnplace={editor.unplace}/><ClockPlanningUnplaced items={items} dateIso={dateIso} visibleProposalTaskIds={editor.visibleProposalTaskIds} returnedTaskIds={editor.returnedTaskIds} proposalUnresolved={proposal.unresolved}/></>
