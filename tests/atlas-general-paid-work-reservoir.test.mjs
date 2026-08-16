@@ -4,10 +4,10 @@ import test from "node:test";
 
 const migration = await readFile(new URL("../supabase/migrations/20260809030500_general_paid_work_reservoir_v1.sql", import.meta.url), "utf8");
 const projectPull = await readFile(new URL("../lib/atlas/project-pull.ts", import.meta.url), "utf8");
-const projectionReader = await readFile(new URL("../lib/atlas-data/owner-week-projection.ts", import.meta.url), "utf8");
+const projectionReader = await readFile(new URL("../lib/atlas-data/worker-week-projection.ts", import.meta.url), "utf8");
 const projectionUi = await readFile(new URL("../components/atlas/owner-tentative-day-projection.tsx", import.meta.url), "utf8");
 
-test("Owner projection has a first-class source kind for existing undated paid Atlas tasks", () => {
+test("Worker projection has a first-class source kind for existing undated paid Atlas tasks", () => {
   assert.match(migration, /'floating_task'::text/);
   assert.match(migration, /create or replace function atlas\.floating_paid_work_candidates_v1/);
   assert.match(projectionReader, /"floating_task"/);
