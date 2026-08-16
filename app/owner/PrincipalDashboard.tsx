@@ -182,6 +182,9 @@ export default function PrincipalDashboard({ context }: { context: PrincipalSelf
               <p style={{ margin: 0, opacity: .74 }}>
                 Household reality belongs at the Principal layer. It constrains capacity without becoming farm-output work.
               </p>
+              <Link href="/owner/household" style={{ display: "inline-block", marginTop: 10, fontWeight: 800 }}>
+                Author Household rhythms →
+              </Link>
             </div>
           </section>
 
