@@ -124,3 +124,27 @@ test("Production, Obligation/Release, and Clock retain separate authority", () =
   assert.match(constitution, /No duplicate scheduler ontology/i);
   assert.match(constitution, /Farm capacity and human capacity stay distinct/i);
 });
+
+test("the scheduler primitive audit extends existing authorities instead of inventing a second scheduler", () => {
+  const audit = read("docs/architecture/production-obligation-clock-primitive-audit.md");
+
+  for (const canonicalPrimitive of [
+    "production_lot_crop_cycles",
+    "planned_work_occurrences",
+    "worker_day_task_placements",
+    "member_capacity_settings",
+    "member_workload_settings",
+    "clock_day_capacity_state_v1",
+  ]) {
+    assert.match(audit, new RegExp(canonicalPrimitive));
+  }
+
+  assert.match(audit, /task_id` is not sufficient as an immutable historical occurrence snapshot/i);
+  assert.match(audit, /worker_day_task_placements` is \*\*EXTEND\*\* for provenance/i);
+  assert.match(audit, /member_workload_settings` \+ `member_day_load_core_v1` effort-unit budget \| \*\*DEPRECATE\*\* as human-capacity authority/i);
+  assert.match(audit, /do \*\*not\*\* add, yet:/i);
+  assert.match(audit, /another scheduler queue/i);
+  assert.match(audit, /another worker placement table/i);
+  assert.match(audit, /another human-capacity model/i);
+  assert.match(audit, /special Worker Day weed\/mowing injection toward the common released-task → Clock-placement path/i);
+});
