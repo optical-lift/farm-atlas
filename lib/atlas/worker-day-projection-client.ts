@@ -1,6 +1,7 @@
 import type { AtlasDaySequence } from "@/lib/atlas/day-sequence";
 import type { AtlasWorkerDayProjection } from "@/lib/atlas/day-projection";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import type { AtlasWorkerDayChronology } from "@/lib/atlas/worker-day-chronology";
 
 export type AtlasWorkerDayRuntimeSequence = AtlasDaySequence & {
   availableWorkerDay: boolean;
@@ -12,6 +13,7 @@ export type AtlasWorkerDayRuntimeSequence = AtlasDaySequence & {
   automaticPaidMinutes: number;
   remainingPaidMinutes: number;
   warnings: string[];
+  clockTimeline: AtlasWorkerDayChronology | null;
 };
 
 type WorkerDaySequenceResponse = {
