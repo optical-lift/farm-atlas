@@ -147,6 +147,9 @@ export default function PrincipalDashboard({ context }: { context: PrincipalSelf
                   ? "Atlas has a capacity contract for this day."
                   : "Atlas will not treat an empty calendar as infinite capacity.")}
               </p>
+              <Link href="/owner/capacity" style={{ display: "inline-block", marginTop: 10, fontWeight: 800 }}>
+                {capacity?.capacityKnown ? "Review capacity policies →" : "Establish Principal Capacity →"}
+              </Link>
             </div>
           </section>
 
