@@ -28,6 +28,7 @@ test("capacity blocking and Principal Clock candidacy are separately authored", 
   assert.match(route, /const blocksCapacity = booleanValue\(body\.blocksCapacity\)/);
   assert.match(route, /principalRequired,/);
   assert.match(route, /blocksCapacity,/);
+  assert.match(route, /active: true/);
   assert.doesNotMatch(client, /name="blocksCapacity"[^>]*checked/);
   assert.doesNotMatch(client, /name="principalRequired"[^>]*checked/);
 });
