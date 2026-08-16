@@ -190,7 +190,7 @@ export default function PrincipalDashboard({ context }: { context: PrincipalSelf
               <div><strong>Principal Office</strong><span>Strategy · attention · functions · treasury</span></div>
               <b>{label(office?.state)}</b>
             </summary>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, padding: "0 14px 14px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, padding: "0 14px 8px" }}>
               <article style={{ border: "1px solid rgba(0,0,0,.08)", borderRadius: 14, padding: 12 }}><strong style={{ display: "block", fontSize: 20 }}>{count(office?.portfolioTheses)}</strong><span style={{ opacity: .64 }}>portfolio theses</span></article>
               <article style={{ border: "1px solid rgba(0,0,0,.08)", borderRadius: 14, padding: 12 }}><strong style={{ display: "block", fontSize: 20 }}>{count(office?.greatGame)}</strong><span style={{ opacity: .64 }}>scoreboards</span></article>
               <article style={{ border: "1px solid rgba(0,0,0,.08)", borderRadius: 14, padding: 12, gridColumn: "1 / -1" }}>
@@ -201,6 +201,9 @@ export default function PrincipalDashboard({ context }: { context: PrincipalSelf
                     : `Freshness: ${label(housePosition?.freshness)}${housePosition?.asOf ? ` · as of ${housePosition.asOf}` : ""}`}
                 </span>
               </article>
+            </div>
+            <div style={{ padding: "0 18px 16px" }}>
+              <Link href="/owner/obligations" style={{ fontWeight: 800 }}>Author Owner Obligations →</Link>
             </div>
           </section>
 
