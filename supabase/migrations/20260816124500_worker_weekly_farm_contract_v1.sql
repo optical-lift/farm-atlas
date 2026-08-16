@@ -410,7 +410,7 @@ insert into atlas.authenticated_rpc_registry(
 ) values
 (
   'atlas.owner_weekly_farm_contract_api_v1(uuid, uuid, date)',
-  'owner_read_endpoint','verified','active',true,true,true,1,0,
+  'owner_admin_endpoint','verified','active',true,true,true,1,0,
   jsonb_build_object(
     'purpose','Read the Worker Day Weekly Farm Contract before day assignment.',
     'boundary','Owner can read only for an active Farm Hand on a farm they own. Read-only; no placement or production mutation.',
@@ -419,7 +419,7 @@ insert into atlas.authenticated_rpc_registry(
 ),
 (
   'atlas.worker_self_weekly_farm_contract_api_v1(uuid, uuid, date)',
-  'worker_self_read_endpoint','verified','active',true,true,true,1,0,
+  'app_endpoint','verified','active',true,true,true,1,0,
   jsonb_build_object(
     'purpose','Allow the active Farm Hand to read their own Weekly Farm Contract.',
     'boundary','Self-only Farm Hand read. Read-only; no placement or production mutation.',
