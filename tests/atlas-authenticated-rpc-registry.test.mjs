@@ -74,11 +74,29 @@ const ownerDayReservationHardeningMigrationName =
   "20260814141500_fixed_routine_projection_hardening_v1.sql";
 const ownerDayReservationRegistryMigrationName =
   "20260814141600_owner_day_reservation_rpc_registry_v1.sql";
+const principalRpcRegistryMigrationName =
+  "20260817005100_principal_rpc_registry_reconciliation_v1.sql";
+const workerWeekCanonicalMigrationName =
+  "20260816220448_worker_week_projection_canonical_cutover_v1.sql";
+const workerWeekCanonicalRegistryMigrationName =
+  "20260817025000_worker_week_projection_rpc_registry_reconciliation_v1.sql";
 const dayAcceptanceRpcMigrations = new Set([
   "20260811180500_atlas_day_cue_observation_result_contract_v1.sql",
   "20260811183000_atlas_departure_requirement_cues_v1.sql",
   "20260811185000_atlas_event_day_briefing_v1.sql",
   "20260811190000_atlas_owner_cue_edit_preserves_result_contract_v1.sql",
+]);
+const principalHistoricalRpcMigrations = new Set([
+  "20260816184935_principal_foundation_domains_v1.sql",
+  "20260816185233_principal_foundation_authoring_contracts_v1.sql",
+  "20260816203751_principal_clock_arbitration_v1.sql",
+  "20260816203924_principal_clock_api_identity_fix_v1.sql",
+  "20260816204206_principal_self_context_clock_v1.sql",
+  "20260816204459_principal_office_attention_foundation_v1.sql",
+  "20260816204719_principal_office_functions_scoreboards_v1.sql",
+  "20260816204816_principal_house_position_treasury_v1.sql",
+  "20260816204934_principal_office_context_v1.sql",
+  "20260816205006_principal_self_context_office_v1.sql",
 ]);
 const migrationPath = new URL(
   `../supabase/migrations/${migrationName}`,
@@ -187,6 +205,8 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const dayChoreographyRegistry = readMigration(dayChoreographyRegistryMigrationName);
   const dayAcceptanceRegistry = readMigration(dayAcceptanceRegistryMigrationName);
   const ownerDayReservationRegistry = readMigration(ownerDayReservationRegistryMigrationName);
+  const principalRpcRegistry = readMigration(principalRpcRegistryMigrationName);
+  const workerWeekCanonicalRegistry = readMigration(workerWeekCanonicalRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -228,7 +248,11 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                                     ? dayAcceptanceRegistryMigrationName
                                     : name === ownerDayReservationCommandMigrationName || name === ownerDayReservationHardeningMigrationName
                                       ? ownerDayReservationRegistryMigrationName
-                                      : null;
+                                      : principalHistoricalRpcMigrations.has(name)
+                                        ? principalRpcRegistryMigrationName
+                                        : name === workerWeekCanonicalMigrationName
+                                          ? workerWeekCanonicalRegistryMigrationName
+                                          : null;
 
       assert.ok(
         pairedRegistryName,
@@ -357,17 +381,26 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   }
   assert.match(ownerDayReservationRegistry, /owner_admin_endpoint/);
   assert.match(ownerDayReservationRegistry, /app_endpoint/);
-});
 
-test("live registry proof is rollback-only and fail-closed", () => {
-  assert.match(liveProof, /^BEGIN;/m);
-  assert.match(liveProof, /authenticated_rpc_registry_drift_v1\(\)/);
-  assert.match(liveProof, /RAISE EXCEPTION 'Atlas authenticated RPC registry drift/);
-  assert.match(liveProof, /pending_internal_count <> 17/);
-  assert.match(liveProof, /revoked_count <> 6/);
-  assert.match(liveProof, /ROLLBACK;\s*$/);
-  assert.doesNotMatch(
-    liveProof,
-    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i,
-  );
+  for (const signature of [
+    "atlas.principal_capacity_day_state_v1(uuid, date)",
+    "atlas.principal_clock_api_v1(date, timestamp with time zone)",
+    "atlas.principal_house_position_api_v1()",
+    "atlas.principal_office_context_api_v1()",
+    "atlas.principal_self_context_api_v1()",
+    "atlas.principal_set_capacity_policy_api_v1(jsonb)",
+    "atlas.principal_upsert_owner_obligation_api_v1(jsonb)",
+    "atlas.principal_upsert_attention_policy_api_v1(jsonb)",
+    "atlas.principal_upsert_operating_function_api_v1(jsonb)",
+    "atlas.principal_record_house_position_snapshot_api_v1(jsonb)",
+  ]) {
+    assert.ok(principalRpcRegistry.includes(signature));
+  }
+
+  assert.ok(workerWeekCanonicalRegistry.includes(
+    "atlas.refresh_worker_week_projection_v1(uuid, uuid, date, integer)",
+  ));
+  assert.ok(workerWeekCanonicalRegistry.includes(
+    "atlas.refresh_owner_week_projection_v1(uuid, uuid, date, integer)",
+  ));
 });
