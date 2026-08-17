@@ -8,6 +8,7 @@ function read(path) {
 
 const manifest = read("app/manifest.ts");
 const layout = read("app/layout.tsx");
+const operationalGlobals = read("components/atlas/shell/AtlasOperationalProjectionGlobals.tsx");
 const serviceWorker = read("public/sw.js");
 const pwaClient = read("lib/atlas/pwa-client.ts");
 const bridge = read("components/atlas/pwa/AtlasPwaBridge.tsx");
@@ -26,6 +27,7 @@ const proxy = read("proxy.ts");
 const build = [
   manifest,
   layout,
+  operationalGlobals,
   serviceWorker,
   pwaClient,
   bridge,
@@ -118,7 +120,9 @@ test("Safari installation guidance remains explicit and the Home cover stays rec
   assert.match(setup, /Add to Home Screen/);
   assert.match(setup, /AtlasPwaCoverPrompt/);
   assert.match(home, /<AtlasUniversalHome/);
-  assert.match(layout, /<AtlasBellCover \/>/);
+  assert.match(layout, /AtlasOperationalProjectionGlobals/);
+  assert.match(operationalGlobals, /<AtlasBellCover \/>/);
+  assert.match(operationalGlobals, /if \(isPrincipalProjection\(pathname\)\) return null/);
   assert.match(home, /<AtlasPwaCoverPrompt/);
   assert.match(installPage, /Let Atlas carry the workday/);
 });
