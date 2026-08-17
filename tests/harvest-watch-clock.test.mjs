@@ -61,15 +61,14 @@ test("harvestable observations release one canonical count task through the cent
   assert.match(migration, /task_objects/);
 });
 
-test("actual harvest keeps marketable seconds and discarded quantities separate", () => {
-  assert.match(migration, /marketable_quantity numeric/);
-  assert.match(migration, /seconds_quantity numeric/);
-  assert.match(migration, /discarded_quantity numeric/);
-  assert.match(migration, /record_crop_harvest_cut_for_member_v1/);
-  assert.match(migration, /owner_operator_record_crop_harvest_cut_v1/);
-  assert.match(cutRoute, /p_marketable/);
-  assert.match(cutRoute, /p_seconds/);
-  assert.match(cutRoute, /p_discarded/);
+test("ordinary flower harvest records coarse physical output before later saleable classification", () => {
+  assert.match(cutRoute, /BUCKET_BANDS/);
+  assert.match(cutRoute, /p_bucket_band/);
+  assert.match(cutRoute, /owner_operator_record_flower_harvest_output_v1/);
+  assert.match(cutRoute, /record_flower_harvest_output_for_member_v1/);
+  assert.doesNotMatch(cutRoute, /p_marketable|p_seconds|p_discarded/);
+  assert.match(cutPage, /Use the bucket scale\. Don’t stop to count stems\./);
+  assert.match(cutPage, /physical harvest, not finished saleable inventory/);
   assert.match(cutPage, /Is there more to harvest from this crop\?/);
 });
 
