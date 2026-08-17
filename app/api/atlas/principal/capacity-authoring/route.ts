@@ -53,10 +53,9 @@ function isoDate(value: string | null) {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
-function isoTimestamp(value: string | null) {
-  if (!value) return null;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+function localDateTime(value: string | null) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(value)) return null;
+  return value;
 }
 
 async function requirePrincipalOwner() {
@@ -130,8 +129,8 @@ function normalizeHouseholdRhythm(input: Record<string, unknown>) {
   const title = nonBlank(input.title);
   const area = nonBlank(input.area);
   const cadenceRule = nonBlank(input.cadenceRule);
-  const nextWindowStart = isoTimestamp(nonBlank(input.nextWindowStart));
-  const nextWindowEnd = isoTimestamp(nonBlank(input.nextWindowEnd));
+  const nextWindowStartLocal = localDateTime(nonBlank(input.nextWindowStartLocal));
+  const nextWindowEndLocal = localDateTime(nonBlank(input.nextWindowEndLocal));
   const expectedMinutes = positiveInteger(input.expectedMinutes);
   const protectionLevel = nonBlank(input.protectionLevel);
   const floorClass = positiveInteger(input.floorClass);
@@ -142,7 +141,7 @@ function normalizeHouseholdRhythm(input: Record<string, unknown>) {
   if (!title || !area || !cadenceRule || !cadenceValues.has(cadenceRule)) {
     throw new Error("Household rhythm needs a title, area, and supported cadence.");
   }
-  if (!nextWindowStart || !nextWindowEnd || new Date(nextWindowEnd) <= new Date(nextWindowStart)) {
+  if (!nextWindowStartLocal || !nextWindowEndLocal || nextWindowEndLocal <= nextWindowStartLocal) {
     throw new Error("Choose a valid first household window with an end after its start.");
   }
   if (!expectedMinutes) {
@@ -166,8 +165,8 @@ function normalizeHouseholdRhythm(input: Record<string, unknown>) {
     area,
     title,
     cadenceRule,
-    nextWindowStart,
-    nextWindowEnd,
+    nextWindowStartLocal,
+    nextWindowEndLocal,
     expectedMinutes,
     protectionLevel,
     floorClass,
@@ -208,7 +207,7 @@ export async function POST(request: Request) {
       : normalizeHouseholdRhythm(input as Record<string, unknown>);
     const rpc = kind === "capacity_policy"
       ? "principal_set_capacity_policy_api_v1"
-      : "principal_upsert_household_rhythm_api_v1";
+      : "principal_upsert_household_rhythm_local_api_v1";
     const { data, error } = await supabase.rpc(rpc, { p_input: normalized });
     if (error) throw error;
 
