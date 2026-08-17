@@ -27,11 +27,18 @@ function visibleHeaderBottom() {
 
 export default function AtlasBellCover() {
   const pathname = usePathname();
+  const principalProjection = pathname === "/principal" || pathname.startsWith("/principal/");
   const [bell, setBell] = useState<AtlasBell | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [top, setTop] = useState(74);
 
   useEffect(() => {
+    if (principalProjection) {
+      setBell(null);
+      setExpanded(false);
+      return;
+    }
+
     let active = true;
     let requestSequence = 0;
 
@@ -78,9 +85,10 @@ export default function AtlasBellCover() {
       navigator.serviceWorker?.removeEventListener("controllerchange", refreshNow);
       window.clearInterval(refreshTimer);
     };
-  }, [pathname]);
+  }, [pathname, principalProjection]);
 
   useEffect(() => {
+    if (principalProjection) return;
     function place() {
       setTop(visibleHeaderBottom());
     }
@@ -93,7 +101,7 @@ export default function AtlasBellCover() {
       window.removeEventListener("scroll", place);
       window.clearTimeout(timer);
     };
-  }, [pathname, bell?.preparedAt]);
+  }, [pathname, bell?.preparedAt, principalProjection]);
 
   const newest = useMemo(
     () => bell?.items.find((item) => item.whileAway && item.requiresAction && !item.baseline && item.unread)
@@ -102,6 +110,7 @@ export default function AtlasBellCover() {
     [bell],
   );
 
+  if (principalProjection) return null;
   if (!bell || bell.badgeCount <= 0) return null;
   if (pathname === "/bell" || pathname.startsWith("/bell/") || pathname === "/login" || pathname.startsWith("/auth/")) return null;
 
