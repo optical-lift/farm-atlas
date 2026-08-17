@@ -26,6 +26,7 @@ const capacityResolutionPage = read("app/principal/resolve/farm-capacity/page.ts
 const capacityResolutionClient = read("app/principal/resolve/farm-capacity/WorkerDayShapeResolutionClient.tsx");
 const ownerPage = read("app/owner/page.tsx");
 const ownerDashboardClient = read("app/owner/OwnerDashboardClient.tsx");
+const workerTodayPage = read("app/work/today/page.tsx");
 const ownerWeekRetirement = read("supabase/migrations/20260817123000_owner_week_projection_compat_retirement_v1.sql");
 
 /**
@@ -110,12 +111,13 @@ test("Acceptance 8: House Position fails open to uncertainty, never fake zero fi
 test("Acceptance 9: Worker Week is canonical and Owner Week compatibility is retired", () => {
   assert.match(migrations, /alter table atlas\.owner_week_projection rename to worker_week_projection/i);
   assert.match(migrations, /worker_future_day_projection_source_v1[\s\S]{0,2500}worker_week_projection/i);
+  for (const caller of [ownerPage, ownerDashboardClient, workerTodayPage]) {
+    assert.match(caller, /@\/lib\/atlas-data\/worker-week-projection/);
+    assert.doesNotMatch(caller, /owner-week-projection|readOwnerWeekProjection|OwnerWeekProjection/);
+  }
   assert.match(ownerPage, /readWorkerWeekProjection/);
-  assert.match(ownerPage, /@\/lib\/atlas-data\/worker-week-projection/);
   assert.match(ownerDashboardClient, /WorkerWeekProjection/);
-  assert.match(ownerDashboardClient, /@\/lib\/atlas-data\/worker-week-projection/);
-  assert.doesNotMatch(ownerPage, /owner-week-projection|readOwnerWeekProjection/);
-  assert.doesNotMatch(ownerDashboardClient, /owner-week-projection|OwnerWeekProjection/);
+  assert.match(workerTodayPage, /readWorkerWeekProjection/);
   assert.ok(!existsSync(join(root, "lib/atlas-data/owner-week-projection.ts")));
   assert.match(ownerWeekRetirement, /drop view if exists atlas\.owner_week_projection/i);
   assert.match(ownerWeekRetirement, /drop function if exists atlas\.refresh_owner_week_projection_v1\(uuid,uuid,date,integer\)/i);
