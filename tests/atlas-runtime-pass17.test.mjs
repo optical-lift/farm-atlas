@@ -17,7 +17,7 @@ test("Pass 17 mounts one persistent AtlasRuntime above Day and Clock", () => {
   assert.match(layout, /runtimeScopeKey/);
   assert.match(layout, /operatorContext\?\.isOperating \? "operator" : "direct"/);
   assert.match(layout, /operatorContext\.effective\.accountId/);
-  assert.match(layout, /<AtlasRuntimeProvider key=\{runtimeScopeKey\} scopeKey=\{runtimeScopeKey\}>/);
+  assert.match(layout, /<AtlasRuntimeProvider key=\{runtimeScopeKey\} scopeKey=\{runtimeScopeKey\} effectiveFarmRole=\{effectiveFarmRole\}>/);
   assert.match(layout, /\{children\}[\s\S]*<\/AtlasRuntimeProvider>/);
 });
 
