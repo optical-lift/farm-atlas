@@ -10,6 +10,7 @@ import {
   AtlasSectionHeading,
   AtlasTopBar,
 } from "@/components/atlas/ui/AtlasPrimitives";
+import HarvestedOutputSection from "./HarvestedOutputSection";
 import "./harvest.css";
 
 type EvidenceState = "calculated" | "seen" | "confirmed";
@@ -309,12 +310,12 @@ export default function HarvestHorizonPage() {
 
       <div className="atlas-harvest-body">
         <AtlasCard as="section" variant="cream" className="atlas-harvest-intro" ariaLabelledBy="atlas-harvest-title">
-          <AtlasSectionHeading kicker="What is entering the routine" title="Harvest Horizon" id="atlas-harvest-title" />
-          <p>Forecasts live here. Work receives only actual cutting, picking, clearing or decision-making.</p>
+          <AtlasSectionHeading kicker="Harvest Horizon" title="In the field" id="atlas-harvest-title" />
+          <p>Forecasts and field evidence live here. They describe what may be entering harvest, not what has physically come out of the field.</p>
         </AtlasCard>
 
         {data ? (
-          <AtlasMetricStrip className="atlas-harvest-summary" ariaLabel="Harvest Horizon totals">
+          <AtlasMetricStrip className="atlas-harvest-summary" ariaLabel="In the field totals">
             <span><b>{totalNow}</b> now</span>
             <span><b>{totalAhead}</b> ahead</span>
             <span><b>{totalConfirmation}</b> check</span>
@@ -389,6 +390,8 @@ export default function HarvestHorizonPage() {
             ))}
           </>
         ) : null}
+
+        <HarvestedOutputSection />
       </div>
     </AtlasAppShell>
   );

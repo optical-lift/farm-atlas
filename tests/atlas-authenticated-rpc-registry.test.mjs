@@ -74,6 +74,25 @@ const ownerDayReservationHardeningMigrationName =
   "20260814141500_fixed_routine_projection_hardening_v1.sql";
 const ownerDayReservationRegistryMigrationName =
   "20260814141600_owner_day_reservation_rpc_registry_v1.sql";
+const flowerHarvestOutputMigrationName =
+  "20260815141000_harvest_flower_bucket_output_v1.sql";
+const flowerHarvestOutputRegistryMigrationName =
+  "20260815141100_harvest_flower_bucket_output_rpc_registry_v1.sql";
+const flowerPreparationMigrationName =
+  "20260815142000_harvest_flower_preparation_ready_v1.sql";
+const flowerPreparationRegistryMigrationName =
+  "20260815142100_harvest_flower_preparation_ready_rpc_registry_v1.sql";
+const flowerCommercialRegistryMigrationName =
+  "20260815143100_harvest_flower_commercial_truth_rpc_registry_v1.sql";
+const flowerCommercialRpcMigrations = new Set([
+  "20260815143000_harvest_flower_commercial_truth_v1.sql",
+  "20260815143050_harvest_flower_commercial_owner_context_hardening_v1.sql",
+  "20260815143075_harvest_flower_sale_buyer_options_v1.sql",
+]);
+const flowerCommercialReversalMigrationName =
+  "20260815143200_harvest_flower_commercial_reversals_v1.sql";
+const flowerCommercialReversalRegistryMigrationName =
+  "20260815143300_harvest_flower_commercial_reversals_rpc_registry_v1.sql";
 const dayAcceptanceRpcMigrations = new Set([
   "20260811180500_atlas_day_cue_observation_result_contract_v1.sql",
   "20260811183000_atlas_departure_requirement_cues_v1.sql",
@@ -187,6 +206,10 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const dayChoreographyRegistry = readMigration(dayChoreographyRegistryMigrationName);
   const dayAcceptanceRegistry = readMigration(dayAcceptanceRegistryMigrationName);
   const ownerDayReservationRegistry = readMigration(ownerDayReservationRegistryMigrationName);
+  const flowerHarvestOutputRegistry = readMigration(flowerHarvestOutputRegistryMigrationName);
+  const flowerPreparationRegistry = readMigration(flowerPreparationRegistryMigrationName);
+  const flowerCommercialRegistry = readMigration(flowerCommercialRegistryMigrationName);
+  const flowerCommercialReversalRegistry = readMigration(flowerCommercialReversalRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -228,7 +251,15 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                                     ? dayAcceptanceRegistryMigrationName
                                     : name === ownerDayReservationCommandMigrationName || name === ownerDayReservationHardeningMigrationName
                                       ? ownerDayReservationRegistryMigrationName
-                                      : null;
+                                      : name === flowerHarvestOutputMigrationName
+                                        ? flowerHarvestOutputRegistryMigrationName
+                                        : name === flowerPreparationMigrationName
+                                          ? flowerPreparationRegistryMigrationName
+                                          : flowerCommercialRpcMigrations.has(name)
+                                            ? flowerCommercialRegistryMigrationName
+                                            : name === flowerCommercialReversalMigrationName
+                                              ? flowerCommercialReversalRegistryMigrationName
+                                              : null;
 
       assert.ok(
         pairedRegistryName,
@@ -357,6 +388,47 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   }
   assert.match(ownerDayReservationRegistry, /owner_admin_endpoint/);
   assert.match(ownerDayReservationRegistry, /app_endpoint/);
+
+  for (const signature of [
+    "atlas.record_flower_harvest_output_for_member_v1(uuid, uuid, text, boolean, text, text)",
+    "atlas.owner_operator_record_flower_harvest_output_v1(uuid, uuid, text, boolean, text, text)",
+  ]) {
+    assert.ok(flowerHarvestOutputRegistry.includes(signature));
+  }
+  assert.match(flowerHarvestOutputRegistry, /app_endpoint/);
+  assert.match(flowerHarvestOutputRegistry, /owner_admin_endpoint/);
+
+  for (const signature of [
+    "atlas.record_flower_preparation_for_member_v1(uuid, uuid, jsonb, boolean, text, text)",
+    "atlas.owner_operator_record_flower_preparation_v1(uuid, uuid, jsonb, boolean, text, text)",
+  ]) {
+    assert.ok(flowerPreparationRegistry.includes(signature));
+  }
+  assert.match(flowerPreparationRegistry, /app_endpoint/);
+  assert.match(flowerPreparationRegistry, /owner_admin_endpoint/);
+
+  for (const signature of [
+    "atlas.flower_sale_buyer_options_v1(uuid)",
+    "atlas.record_flower_sale_for_member_v1(uuid, uuid, text, text, text, jsonb, numeric, numeric, text, date, time without time zone, uuid, uuid, text, text)",
+    "atlas.owner_operator_record_flower_sale_v1(uuid, uuid, text, text, text, jsonb, numeric, numeric, text, date, time without time zone, uuid, uuid, text, text)",
+    "atlas.record_flower_fulfillment_for_member_v1(uuid, uuid, text, text)",
+    "atlas.owner_operator_record_flower_fulfillment_v1(uuid, uuid, text, text)",
+  ]) {
+    assert.ok(flowerCommercialRegistry.includes(signature));
+  }
+  assert.match(flowerCommercialRegistry, /app_endpoint/);
+  assert.match(flowerCommercialRegistry, /owner_admin_endpoint/);
+
+  for (const signature of [
+    "atlas.cancel_flower_sale_for_member_v1(uuid, uuid, text, text, text)",
+    "atlas.owner_operator_cancel_flower_sale_v1(uuid, uuid, text, text, text)",
+    "atlas.record_flower_ready_disposition_for_member_v1(uuid, uuid, text, numeric, text, text)",
+    "atlas.owner_operator_record_flower_ready_disposition_v1(uuid, uuid, text, numeric, text, text)",
+  ]) {
+    assert.ok(flowerCommercialReversalRegistry.includes(signature));
+  }
+  assert.match(flowerCommercialReversalRegistry, /app_endpoint/);
+  assert.match(flowerCommercialReversalRegistry, /owner_admin_endpoint/);
 });
 
 test("live registry proof is rollback-only and fail-closed", () => {

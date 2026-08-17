@@ -5,6 +5,8 @@ import BuyerOutreachTaskDetail from "@/components/atlas/buyer-outreach-task-deta
 import ContractorServiceTaskDetail from "@/components/atlas/contractor-service-task-detail";
 import DecisionSelectorTaskDetail from "@/components/atlas/decision-selector-task-detail";
 import ExecutionChecklistTaskDetail from "@/components/atlas/execution-checklist-task-detail";
+import FlowerFulfillmentTaskLoader from "@/components/atlas/flower-fulfillment-task-loader";
+import FlowerPreparationTaskLoader from "@/components/atlas/flower-preparation-task-loader";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
 import NetworkOutreachTaskDetail from "@/components/atlas/network-outreach-task-detail";
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
@@ -79,6 +81,16 @@ function isTransplantReadinessTask(task: AtlasTaskCard) {
     || task.metadata?.requires_transplant_readiness_check === "true";
 }
 
+function isFlowerPreparationTask(task: AtlasTaskCard) {
+  return task.task_type === "flower_preparation"
+    || task.metadata?.task_style === "flower_preparation";
+}
+
+function isFlowerFulfillmentTask(task: AtlasTaskCard) {
+  return task.task_type === "flower_fulfillment"
+    || task.metadata?.task_style === "flower_fulfillment";
+}
+
 function isWeeklyHarvestTask(task: AtlasTaskCard) {
   return task.task_type === "harvest"
     && (task.metadata?.weekly_routine === true || task.metadata?.weekly_routine === "true");
@@ -95,6 +107,8 @@ export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
   if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
   if (isTransplantReadinessTask(props.task)) return <TransplantReadinessTaskDetail {...props} />;
+  if (isFlowerPreparationTask(props.task)) return <FlowerPreparationTaskLoader {...props} />;
+  if (isFlowerFulfillmentTask(props.task)) return <FlowerFulfillmentTaskLoader {...props} />;
   if (isWeeklyHarvestTask(props.task)) return <WeeklyHarvestTaskDetail {...props} />;
 
   return <AssignedTaskExecutionShell {...props} />;

@@ -7,6 +7,7 @@ function read(path) {
 }
 
 const migration = read("supabase/migrations/20260731121000_harvest_watch_clock_v1.sql");
+const bucketMigration = read("supabase/migrations/20260815141000_harvest_flower_bucket_output_v1.sql");
 const watchRoute = read("app/api/atlas/harvest-watch/route.ts");
 const cutRoute = read("app/api/atlas/harvest-cut/route.ts");
 const focusRoute = read("app/task-focus/[taskId]/page.tsx");
@@ -52,24 +53,35 @@ test("specialized harvest outcomes renew, release, finish, or return uncertainty
   assert.match(watchRoute, /record_harvest_watch_observation_for_member_v1/);
 });
 
-test("harvestable observations release one canonical count task through the central gate", () => {
-  assert.match(migration, /p_task_type=>'crop_harvest'/);
-  assert.match(migration, /p_maximum_active_instances=>1/);
-  assert.match(migration, /p_gate_type=>'event'/);
-  assert.match(migration, /Harvest \+ count/);
-  assert.match(migration, /task_crop_cycles/);
-  assert.match(migration, /task_objects/);
+test("harvestable observations release one canonical harvest task through the central gate", () => {
+  assert.match(bucketMigration, /p_task_type=>'crop_harvest'/);
+  assert.match(bucketMigration, /p_maximum_active_instances=>1/);
+  assert.match(bucketMigration, /p_gate_type=>'event'/);
+  assert.match(bucketMigration, /v_title:='Harvest — '/);
+  assert.match(bucketMigration, /physical_output_mode','bucket_scale/);
+  assert.match(bucketMigration, /task_crop_cycles/);
+  assert.match(bucketMigration, /task_objects/);
+  assert.doesNotMatch(bucketMigration, /v_title:='Harvest \+ count/);
 });
 
-test("actual harvest keeps marketable seconds and discarded quantities separate", () => {
+test("canonical flower harvest records physical bucket output without requiring accounting precision", () => {
+  // The July schema retains legacy precision columns/RPCs for compatibility.
   assert.match(migration, /marketable_quantity numeric/);
   assert.match(migration, /seconds_quantity numeric/);
   assert.match(migration, /discarded_quantity numeric/);
   assert.match(migration, /record_crop_harvest_cut_for_member_v1/);
-  assert.match(migration, /owner_operator_record_crop_harvest_cut_v1/);
-  assert.match(cutRoute, /p_marketable/);
-  assert.match(cutRoute, /p_seconds/);
-  assert.match(cutRoute, /p_discarded/);
+
+  // The canonical August worker path no longer uses those fields.
+  assert.match(bucketMigration, /create table atlas\.flower_harvest_batches/);
+  assert.match(bucketMigration, /create table atlas\.flower_harvest_bucket_observations/);
+  assert.match(bucketMigration, /record_flower_harvest_output_for_member_v1/);
+  assert.match(bucketMigration, /owner_operator_record_flower_harvest_output_v1/);
+  assert.match(cutRoute, /p_bucket_band/);
+  assert.doesNotMatch(cutRoute, /p_marketable|p_seconds|p_discarded/);
+  assert.match(cutPage, /¼ bucket/);
+  assert.match(cutPage, /½ bucket/);
+  assert.match(cutPage, /¾ bucket/);
+  assert.match(cutPage, /1\+ bucket/);
   assert.match(cutPage, /Is there more to harvest from this crop\?/);
 });
 
