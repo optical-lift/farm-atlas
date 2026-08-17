@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import type { OwnerFinishProjectSummary } from "@/lib/atlas-data/owner-finish-project";
-import type { OwnerWeekProjection } from "@/lib/atlas-data/owner-week-projection";
+import type { WorkerWeekProjection } from "@/lib/atlas-data/worker-week-projection";
 import type {
   OwnerAction,
   OwnerDashboardProjection,
@@ -95,7 +95,7 @@ function FinishProjectStewardship({ project }: { project: OwnerFinishProjectSumm
   );
 }
 
-function AnnaWeekProjection({ projection }: { projection: OwnerWeekProjection }) {
+function AnnaWeekProjection({ projection }: { projection: WorkerWeekProjection }) {
   return (
     <section className="atlas-overview-zone-card atlas-owner-section" style={{ overflow: "hidden" }}>
       <summary>
@@ -135,7 +135,7 @@ function AnnaWeekProjection({ projection }: { projection: OwnerWeekProjection })
   );
 }
 
-export default function OwnerDashboardClient({ dashboard, finishProject, weekProjection }: { dashboard: OwnerDashboardProjection; finishProject: OwnerFinishProjectSummary | null; weekProjection: OwnerWeekProjection | null }) {
+export default function OwnerDashboardClient({ dashboard, finishProject, weekProjection }: { dashboard: OwnerDashboardProjection; finishProject: OwnerFinishProjectSummary | null; weekProjection: WorkerWeekProjection | null }) {
   const { counts, ownerActions } = dashboard;
 
   return (

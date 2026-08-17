@@ -5,7 +5,7 @@ import WorkerDayModeCheckIn from "@/components/atlas/work/WorkerDayModeCheckIn";
 import { buildAdaptiveDayPlan, type AdaptiveDayTask } from "@/lib/atlas/adaptive-day-overview";
 import { getWorkerDayRoutingState } from "@/lib/atlas-data/worker-day-routing";
 import { getWorkerHand } from "@/lib/atlas-data/worker-hand";
-import { readOwnerWeekProjection } from "@/lib/atlas-data/owner-week-projection";
+import { readWorkerWeekProjection } from "@/lib/atlas-data/worker-week-projection";
 import { requireAtlasRole } from "@/lib/atlas/role-access";
 import WorkerTaskActions from "./WorkerTaskActions";
 import styles from "./work.module.css";
@@ -82,7 +82,7 @@ export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageP
   const plan = buildAdaptiveDayPlan(allTasks, routingState);
   const futureInspection = inspectMode && requestedDate > today;
   const projection = futureInspection && hand.worker
-    ? await readOwnerWeekProjection(access.membership.farmId, hand.worker.membershipId, requestedDate, 1).catch(() => null)
+    ? await readWorkerWeekProjection(access.membership.farmId, hand.worker.membershipId, requestedDate, 1).catch(() => null)
     : null;
   const projectedItems = projection?.days[0]?.items ?? [];
 

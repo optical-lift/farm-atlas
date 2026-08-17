@@ -24,6 +24,10 @@ const principalPage = read("app/principal/page.tsx");
 const principalContext = read("lib/atlas/principal-self-context.ts");
 const capacityResolutionPage = read("app/principal/resolve/farm-capacity/page.tsx");
 const capacityResolutionClient = read("app/principal/resolve/farm-capacity/WorkerDayShapeResolutionClient.tsx");
+const ownerPage = read("app/owner/page.tsx");
+const ownerDashboardClient = read("app/owner/OwnerDashboardClient.tsx");
+const workerTodayPage = read("app/work/today/page.tsx");
+const ownerWeekRetirement = read("supabase/migrations/20260817123000_owner_week_projection_compat_retirement_v1.sql");
 
 /**
  * Governing source: Atlas Principal Operating System — Build v1, acceptance tests 1–9.
@@ -104,11 +108,20 @@ test("Acceptance 8: House Position fails open to uncertainty, never fake zero fi
   assert.match(principalPage, /Financial source required\. Atlas is not substituting zero balances for unknown data\./i);
 });
 
-test("Acceptance 9: Worker Week is canonical and Owner Week remains compatibility-only", () => {
+test("Acceptance 9: Worker Week is canonical and Owner Week compatibility is retired", () => {
   assert.match(migrations, /alter table atlas\.owner_week_projection rename to worker_week_projection/i);
-  assert.match(migrations, /create(?: or replace)? view atlas\.owner_week_projection[\s\S]{0,500}worker_week_projection/i);
-  assert.match(migrations, /refresh_owner_week_projection_v1[\s\S]{0,1200}refresh_worker_week_projection_v1/i);
   assert.match(migrations, /worker_future_day_projection_source_v1[\s\S]{0,2500}worker_week_projection/i);
+  for (const caller of [ownerPage, ownerDashboardClient, workerTodayPage]) {
+    assert.match(caller, /@\/lib\/atlas-data\/worker-week-projection/);
+    assert.doesNotMatch(caller, /owner-week-projection|readOwnerWeekProjection|OwnerWeekProjection/);
+  }
+  assert.match(ownerPage, /readWorkerWeekProjection/);
+  assert.match(ownerDashboardClient, /WorkerWeekProjection/);
+  assert.match(workerTodayPage, /readWorkerWeekProjection/);
+  assert.ok(!existsSync(join(root, "lib/atlas-data/owner-week-projection.ts")));
+  assert.match(ownerWeekRetirement, /drop view if exists atlas\.owner_week_projection/i);
+  assert.match(ownerWeekRetirement, /drop function if exists atlas\.refresh_owner_week_projection_v1\(uuid,uuid,date,integer\)/i);
+  assert.match(ownerWeekRetirement, /delete from atlas\.authenticated_rpc_registry[\s\S]{0,300}refresh_owner_week_projection_v1/i);
   assert.doesNotMatch(principalPage, /owner_week_projection/);
 });
 
