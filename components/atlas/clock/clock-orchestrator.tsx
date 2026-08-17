@@ -4,17 +4,19 @@ import {useSearchParams} from "next/navigation";
 import {useEffect,useMemo,useState} from "react";
 import {useAtlasWorkerDayProjection} from "@/components/atlas/runtime/AtlasRuntimeProvider";
 import {buildClockTaskRanges,chooseClockNextTask,clockLocalMinuteOfDay,layoutClockTaskRanges} from "@/lib/atlas/clock-layout";
-import {buildAtlasClockProposal} from "@/lib/atlas/clock-proposal";
 import {buildAtlasClockReservations} from "@/lib/atlas/clock-reservations";
+import {buildAtlasClockProposalFromChronology} from "@/lib/atlas/clock-server-proposal";
 import {atlasDayReservationClockReason} from "@/lib/atlas/day-reservations";
 import type {AtlasDaySequenceItem} from "@/lib/atlas/day-sequence";
 import {atlasFarmDateIso,atlasNormalizeFarmDate,DEFAULT_ATLAS_FARM_TIME_ZONE} from "@/lib/atlas/farm-day";
+import ClockDayShapeControl from "./clock-day-shape-control";
 import ClockHeaderV2 from "./clock-header-v2";
 import ClockPlanBar from "./clock-plan-bar";
 import ClockPlanningTimeline from "./clock-planning-timeline";
 import ClockPlanningUnplaced from "./clock-planning-unplaced";
 import ClockTimelineV2 from "./clock-timeline-v2";
 import ClockUnplacedV2 from "./clock-unplaced-v2";
+import ClockWeeklyFarmContract from "./clock-weekly-farm-contract";
 import {useClockPlanEditor} from "./use-clock-plan-editor";
 import styles from "./clock-surface-v2.module.css";
 
@@ -26,7 +28,8 @@ export default function ClockOrchestrator(){
  const search=useSearchParams(),dateIso=atlasNormalizeFarmDate(search.get("date"));
  const {projection,canManage,loading,error,reload}=useAtlasWorkerDayProjection(dateIso);
  const [proposalOpen,setProposalOpen]=useState(false),[saveError,setSaveError]=useState<string|null>(null),[now,setNow]=useState(()=>new Date());
- const sequence=projection?.sequence??null;
+ const sequence=projection?.sequence??null,chronology=sequence?.clockTimeline??null,dayShapeReady=chronology?.dayShape.state==="resolved";
+ const weeklyRefreshToken=`${chronology?.dayShape.policyId??"none"}:${chronology?.dayShape.policyVersion??0}:${chronology?.dayShape.state??"unknown"}`;
  useEffect(()=>{setSaveError(null);setProposalOpen(false);},[dateIso]);
  useEffect(()=>{const timer=window.setInterval(()=>setNow(new Date()),60_000);return()=>window.clearInterval(timer);},[]);
  // Worker privacy contract: potential work never enters the worker temporal surface.
@@ -36,9 +39,10 @@ export default function ClockOrchestrator(){
  const commitments=useMemo(()=>(projection?.reservations??[]).map((reservation)=>({id:reservation.reservationId,title:reservation.title,source:reservation.kind,startAt:reservation.startAt,endAt:reservation.endAt,reason:atlasDayReservationClockReason(reservation),reservation})),[projection]);
  const dayReservations=useMemo(()=>buildAtlasClockReservations({timedCues,commitments,timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE}),[timedCues,commitments]);
  const ranges=useMemo(()=>buildClockTaskRanges(committed,{timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE}),[committed]),layouts=useMemo(()=>layoutClockTaskRanges(ranges),[ranges]);
- // Plan this Clock. Reservations are day-shaping truth, not tasks, and nothing changes Anna's Clock until Commit plan.
- const proposal=useMemo(()=>canManage&&proposalOpen?buildAtlasClockProposal(committed,{reservations:dayReservations}):{blocks:[],unresolved:[]},[canManage,proposalOpen,committed,dayReservations]);
- const editor=useClockPlanEditor({active:canManage&&proposalOpen,dateIso,committed,proposal,reservations:dayReservations,rebuildProposal:()=>buildAtlasClockProposal(committed,{reservations:dayReservations}),onCommitted:()=>setProposalOpen(false),onError:setSaveError});
+ // Server chronology owns proposal geometry. The client editor only lets the Owner review/adjust/commit it.
+ const serverProposal=useMemo(()=>buildAtlasClockProposalFromChronology(committed,chronology),[committed,chronology]);
+ const proposal=useMemo(()=>canManage&&proposalOpen?serverProposal:{blocks:[],unresolved:[]},[canManage,proposalOpen,serverProposal]);
+ const editor=useClockPlanEditor({active:canManage&&proposalOpen,dateIso,committed,proposal,reservations:dayReservations,rebuildProposal:()=>buildAtlasClockProposalFromChronology(committed,chronology),onCommitted:()=>setProposalOpen(false),onError:setSaveError});
  const today=atlasFarmDateIso(now),selectedToday = dateIso === today,nowMinute=selectedToday ? clockLocalMinuteOfDay(now.toISOString(),DEFAULT_ATLAS_FARM_TIME_ZONE) : null;
  const activeRange=selectedToday&&nowMinute!==null?ranges.find(range=>Boolean(range.span.minutes)&&range.startMinute <= nowMinute&&range.endMinute > nowMinute&&range.item.status!=="done"&&range.item.status!=="completed")??null:null;
  const nextTask=chooseClockNextTask(committed,ranges,selectedToday?nowMinute:null),nextRange=nextTask?ranges.find(range=>range.item.id===nextTask.id)??null:null;
@@ -51,7 +55,9 @@ export default function ClockOrchestrator(){
  return <main className="atlas-phone-shell"><section className={`atlas-phone ${styles.phone}`}><header className="atlas-phone-top"><Link href="/" className="atlas-phone-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Clock</span></Link></header><div className={styles.body}>
   <ClockHeaderV2 dateIso={dateIso} selectedToday={selectedToday} nowLabel={timeLabel(now)} activeRange={activeRange} nextTask={nextTask} nextRange={nextRange} loading={loading}/>
   {error?<div className={styles.error}>{error}</div>:null}{saveError?<div className={styles.error}>{saveError}</div>:null}
-  {canManage?<ClockPlanBar open={proposalOpen} summary={editor.summary} committing={editor.committing} onOpen={()=>{setSaveError(null);setProposalOpen(true);}} onAcceptAll={editor.acceptAll} onReset={editor.reset} onCancel={()=>{setSaveError(null);setProposalOpen(false);}} onCommit={()=>void editor.commit()}/>:null}
+  {canManage?<ClockWeeklyFarmContract dateIso={dateIso} canManage={canManage} refreshToken={weeklyRefreshToken} onError={setSaveError}/>:null}
+  {canManage?<ClockDayShapeControl dateIso={dateIso} canManage={canManage} dayShape={chronology?.dayShape??null} onChanged={reload} onError={setSaveError}/>:null}
+  {canManage&&dayShapeReady?<ClockPlanBar open={proposalOpen} summary={editor.summary} committing={editor.committing} onOpen={()=>{setSaveError(null);setProposalOpen(true);}} onAcceptAll={editor.acceptAll} onReset={editor.reset} onCancel={()=>{setSaveError(null);setProposalOpen(false);}} onCommit={()=>void editor.commit()}/>:null}
   {planning?<><ClockPlanningTimeline dateIso={dateIso} blocks={editor.blocks??[]} timedCues={timedCues} dayReservations={dayReservations} selectedToday={selectedToday} nowMinute={nowMinute} startHour={startHour} endHour={endHour} gridHeight={gridHeight} onMove={editor.move} onResize={editor.resize} onDecision={editor.decide} onOverride={editor.setWarningOverride} onUnplace={editor.unplace}/><ClockPlanningUnplaced items={items} dateIso={dateIso} visibleProposalTaskIds={editor.visibleProposalTaskIds} returnedTaskIds={editor.returnedTaskIds} proposalUnresolved={proposal.unresolved}/></>
   :<><ClockTimelineV2 dateIso={dateIso} canManage={canManage} layouts={layouts} proposals={proposal.blocks} timedCues={timedCues} dayReservations={dayReservations} activeRange={activeRange} selectedToday={selectedToday} nowMinute={nowMinute} startHour={startHour} endHour={endHour} gridHeight={gridHeight} onChanged={reload} onError={setSaveError}/><ClockUnplacedV2 items={items} dateIso={dateIso} canManage={canManage} loading={loading} proposedTaskIds={proposalOpen?editor.visibleProposalTaskIds:undefined} proposalUnresolved={proposalOpen?proposal.unresolved:[]} onChanged={reload} onError={setSaveError}/></>}
  </div></section></main>;
