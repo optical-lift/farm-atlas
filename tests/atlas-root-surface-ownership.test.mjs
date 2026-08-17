@@ -18,18 +18,21 @@ const retiredRootPatches = [
   "AtlasFarmConditionsHomePatch",
 ];
 
-test("RootLayout mounts services, not corrective render patches", () => {
+test("RootLayout mounts shared services while farm services stay behind the operational projection boundary", () => {
   const layout = read("app/layout.tsx");
+  const operationalGlobals = read("components/atlas/shell/AtlasOperationalProjectionGlobals.tsx");
 
   for (const patch of retiredRootPatches) {
     assert.doesNotMatch(layout, new RegExp(patch));
     assert.equal(existsSync(new URL(`../app/${patch}.tsx`, import.meta.url)), false);
   }
 
-  assert.match(layout, /AtlasSkyLedgerMaintainer/);
   assert.match(layout, /AtlasContextualAppFrame/);
-  assert.match(layout, /DependencyReleaseFlash/);
-  assert.match(layout, /OwnerDayPlanGate/);
+  assert.match(layout, /AtlasOperationalProjectionGlobals/);
+  assert.match(operationalGlobals, /AtlasSkyLedgerMaintainer/);
+  assert.match(operationalGlobals, /DependencyReleaseFlash/);
+  assert.match(operationalGlobals, /OwnerDayPlanGate/);
+  assert.match(operationalGlobals, /if \(isPrincipalProjection\(pathname\)\) return null/);
 });
 
 test("set-aside task membership is enforced by the dated task reader, not hidden after render", () => {
