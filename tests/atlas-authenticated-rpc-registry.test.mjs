@@ -74,6 +74,10 @@ const ownerDayReservationHardeningMigrationName =
   "20260814141500_fixed_routine_projection_hardening_v1.sql";
 const ownerDayReservationRegistryMigrationName =
   "20260814141600_owner_day_reservation_rpc_registry_v1.sql";
+const clockOccurrenceProvenanceMigrationName =
+  "20260816001514_clock_placement_occurrence_provenance_v1.sql";
+const clockOccurrenceRegistryMigrationName =
+  "20260817151627_clock_occurrence_internal_rpc_reconciliation_v1.sql";
 const principalRpcRegistryMigrationName =
   "20260817005100_principal_rpc_registry_reconciliation_v1.sql";
 const workerWeekCanonicalMigrationName =
@@ -205,6 +209,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const dayChoreographyRegistry = readMigration(dayChoreographyRegistryMigrationName);
   const dayAcceptanceRegistry = readMigration(dayAcceptanceRegistryMigrationName);
   const ownerDayReservationRegistry = readMigration(ownerDayReservationRegistryMigrationName);
+  const clockOccurrenceRegistry = readMigration(clockOccurrenceRegistryMigrationName);
   const principalRpcRegistry = readMigration(principalRpcRegistryMigrationName);
   const workerWeekCanonicalRegistry = readMigration(workerWeekCanonicalRegistryMigrationName);
 
@@ -248,11 +253,13 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                                     ? dayAcceptanceRegistryMigrationName
                                     : name === ownerDayReservationCommandMigrationName || name === ownerDayReservationHardeningMigrationName
                                       ? ownerDayReservationRegistryMigrationName
-                                      : principalHistoricalRpcMigrations.has(name)
-                                        ? principalRpcRegistryMigrationName
-                                        : name === workerWeekCanonicalMigrationName
-                                          ? workerWeekCanonicalRegistryMigrationName
-                                          : null;
+                                      : name === clockOccurrenceProvenanceMigrationName
+                                        ? clockOccurrenceRegistryMigrationName
+                                        : principalHistoricalRpcMigrations.has(name)
+                                          ? principalRpcRegistryMigrationName
+                                          : name === workerWeekCanonicalMigrationName
+                                            ? workerWeekCanonicalRegistryMigrationName
+                                            : null;
 
       assert.ok(
         pairedRegistryName,
@@ -381,6 +388,15 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   }
   assert.match(ownerDayReservationRegistry, /owner_admin_endpoint/);
   assert.match(ownerDayReservationRegistry, /app_endpoint/);
+
+  assert.ok(clockOccurrenceRegistry.includes(
+    "atlas.resolve_clock_placement_occurrence_v1(uuid)",
+  ));
+  assert.match(clockOccurrenceRegistry, /service_internal/);
+  assert.match(
+    clockOccurrenceRegistry,
+    /revoke execute on function atlas\.resolve_clock_placement_occurrence_v1\(uuid\) from anon, authenticated/i,
+  );
 
   for (const signature of [
     "atlas.principal_capacity_day_state_v1(uuid, date)",
