@@ -16,6 +16,16 @@ export type HarvestCutTask = {
   returnTo?: string | null;
 };
 
+type BucketBand = "quarter" | "half" | "three_quarters" | "one" | "more_than_one";
+
+const BUCKET_CHOICES: Array<{ key: BucketBand; label: string; detail: string }> = [
+  { key: "quarter", label: "¼ bucket", detail: "About a quarter full" },
+  { key: "half", label: "½ bucket", detail: "About half full" },
+  { key: "three_quarters", label: "¾ bucket", detail: "About three-quarters full" },
+  { key: "one", label: "1 bucket", detail: "About one full bucket" },
+  { key: "more_than_one", label: "1+ bucket", detail: "More than one bucket" },
+];
+
 function prettyDate(value: string | null) {
   if (!value) return "Today";
   const date = new Date(`${value}T12:00:00`);
@@ -28,10 +38,7 @@ function displayCrop(task: HarvestCutTask) {
 }
 
 export default function HarvestCutFocusPage({ task }: { task: HarvestCutTask }) {
-  const [marketable, setMarketable] = useState("");
-  const [seconds, setSeconds] = useState("");
-  const [discarded, setDiscarded] = useState("");
-  const [unit, setUnit] = useState(task.estimatedUnit || "stems");
+  const [bucketBand, setBucketBand] = useState<BucketBand | null>(null);
   const [moreAvailable, setMoreAvailable] = useState<boolean | null>(null);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -40,6 +47,7 @@ export default function HarvestCutFocusPage({ task }: { task: HarvestCutTask }) 
   const returnTo = task.returnTo || (task.dueDate ? `/day?date=${encodeURIComponent(task.dueDate)}` : "/");
 
   async function submit() {
+    if (!bucketBand || moreAvailable === null) return;
     try {
       setSaving(true);
       setMessage(null);
@@ -48,21 +56,18 @@ export default function HarvestCutFocusPage({ task }: { task: HarvestCutTask }) 
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           taskId: task.id,
-          marketableQuantity: marketable,
-          secondsQuantity: seconds || 0,
-          discardedQuantity: discarded || 0,
-          unit,
+          bucketBand,
           moreAvailable,
           note: note.trim() || null,
-          idempotencyKey: `crop-harvest:${task.id}:${Date.now()}`,
+          idempotencyKey: `flower-harvest:${task.id}:${Date.now()}`,
         }),
       });
       const data = await response.json() as { ok?: boolean; error?: string };
-      if (!response.ok || !data.ok) throw new Error(data.error || "Harvest count failed.");
+      if (!response.ok || !data.ok) throw new Error(data.error || "Harvest output failed.");
       setMessage(moreAvailable ? "Harvest recorded. Atlas will open the next field watch tomorrow." : "Harvest recorded. This crop’s harvest window is closed.");
       window.setTimeout(() => window.location.assign(returnTo), 900);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Harvest count failed.");
+      setMessage(error instanceof Error ? error.message : "Harvest output failed.");
     } finally {
       setSaving(false);
     }
@@ -71,48 +76,51 @@ export default function HarvestCutFocusPage({ task }: { task: HarvestCutTask }) 
   return (
     <main className={styles.shell}>
       <header className={styles.top}>
-        <Link href={returnTo} className={styles.brand}><small>Atlas</small><strong>Harvest + Count</strong></Link>
-        <Link href={returnTo} className={styles.close} aria-label="Close harvest count">×</Link>
+        <Link href={returnTo} className={styles.brand}><small>Atlas</small><strong>Harvest</strong></Link>
+        <Link href={returnTo} className={styles.close} aria-label="Close harvest">×</Link>
       </header>
 
       <div className={styles.body}>
         <article className={styles.ticket}>
           <section className={styles.hero}>
-            <div className={styles.kicker}><span>Actual cut</span><span>{prettyDate(task.dueDate)}</span></div>
+            <div className={styles.kicker}><span>Actual harvest</span><span>{prettyDate(task.dueDate)}</span></div>
             <h1>{crop}</h1>
             <p>{task.objectLabel}</p>
           </section>
 
           <section className={styles.facts} aria-label="Harvest source">
-            <div className={`${styles.fact} ${styles.factWide}`}><small>Readiness observation</small><strong>{task.estimatedQuantity === null ? "Harvestable; no quantity estimate recorded" : `About ${task.estimatedQuantity} ${task.estimatedUnit || "units"} looked ready`}</strong></div>
-            <div className={`${styles.fact} ${styles.factWide}`}><small>Count rule</small><strong>Record what was actually cut—not the earlier estimate.</strong></div>
+            <div className={`${styles.fact} ${styles.factWide}`}><small>Earlier readiness observation</small><strong>{task.estimatedQuantity === null ? "Harvestable; no rough amount was recorded" : `About ${task.estimatedQuantity} ${task.estimatedUnit || "units"} looked ready earlier`}</strong></div>
+            <div className={`${styles.fact} ${styles.factWide}`}><small>Harvest rule</small><strong>Use the bucket scale. Don’t stop to count stems.</strong></div>
           </section>
 
           <section className={styles.prompt}>
-            <small>Harvest result</small>
+            <small>Physical output</small>
             <h2>What came out of the field?</h2>
-            <p>Marketable, seconds, and discarded quantities stay separate so future availability can be honest.</p>
+            <p>Choose the closest bucket equivalent. This records physical harvest, not finished saleable inventory.</p>
           </section>
 
-          <section className={styles.form}>
-            <div className={styles.countGrid}>
-              <label><span>Marketable</span><input inputMode="decimal" value={marketable} onChange={(event) => setMarketable(event.target.value)} placeholder="0" /></label>
-              <label><span>Seconds</span><input inputMode="decimal" value={seconds} onChange={(event) => setSeconds(event.target.value)} placeholder="0" /></label>
-              <label><span>Discarded</span><input inputMode="decimal" value={discarded} onChange={(event) => setDiscarded(event.target.value)} placeholder="0" /></label>
-            </div>
+          <div className={styles.choices} aria-label="Flower harvest bucket amount">
+            {BUCKET_CHOICES.map((choice) => (
+              <button key={choice.key} type="button" className={styles.choice} data-active={bucketBand === choice.key} onClick={() => setBucketBand(choice.key)}>
+                <strong>{choice.label}</strong>
+                <span>{choice.detail}</span>
+              </button>
+            ))}
+          </div>
 
-            <label><span>Unit</span><select value={unit} onChange={(event) => setUnit(event.target.value)}><option value="stems">stems</option><option value="pods">pods</option><option value="fruit">fruit</option><option value="bunches">bunches</option><option value="pounds">pounds</option><option value="plants">plants</option></select></label>
+          {bucketBand ? (
+            <section className={styles.form}>
+              <label><span>Is there more to harvest from this crop?</span></label>
+              <div className={styles.toggle}>
+                <button type="button" data-active={moreAvailable === true} onClick={() => setMoreAvailable(true)}>Yes · watch again</button>
+                <button type="button" data-active={moreAvailable === false} onClick={() => setMoreAvailable(false)}>No · finished</button>
+              </div>
 
-            <label><span>Is there more to harvest from this crop?</span></label>
-            <div className={styles.toggle}>
-              <button type="button" data-active={moreAvailable === true} onClick={() => setMoreAvailable(true)}>Yes · watch again</button>
-              <button type="button" data-active={moreAvailable === false} onClick={() => setMoreAvailable(false)}>No · finished</button>
-            </div>
-
-            <label><span>Harvest note (optional)</span><textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Condition, quality, or handling note." /></label>
-            <button type="button" className={styles.submit} disabled={saving || !marketable.trim() || moreAvailable === null || !unit} onClick={() => void submit()}>{saving ? "Recording…" : "Record harvest"}</button>
-            {message ? <p className={styles.message}>{message}</p> : null}
-          </section>
+              <label><span>Harvest note (optional)</span><textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Condition, quality, or handling note." /></label>
+              <button type="button" className={styles.submit} disabled={saving || moreAvailable === null} onClick={() => void submit()}>{saving ? "Recording…" : "Record harvest"}</button>
+              {message ? <p className={styles.message}>{message}</p> : null}
+            </section>
+          ) : null}
         </article>
       </div>
     </main>
