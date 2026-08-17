@@ -12,7 +12,7 @@ const serverProposal = readFileSync(join(root, "lib/atlas/clock-server-proposal.
 const orchestrator = readFileSync(join(root, "components/atlas/clock/clock-orchestrator.tsx"), "utf8");
 
 test("clockTimeline survives plan normalization and enters the runtime sequence", () => {
-  assert.match(planServer, /clockTimeline: AtlasWorkerDayChronology \| null/i);
+  assert.match(planServer, /clockTimeline\?: AtlasWorkerDayChronology \| null/i);
   assert.match(planServer, /normalizeAtlasWorkerDayChronology\(row\.clockTimeline\)/i);
   assert.match(sequenceServer, /clockTimeline: plan\.clockTimeline/i);
   assert.match(projectionClient, /clockTimeline: AtlasWorkerDayChronology \| null/i);
