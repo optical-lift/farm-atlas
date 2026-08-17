@@ -6,8 +6,21 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-type AuthoringKind = "owner_obligation" | "portfolio_thesis";
+type AuthoringKind =
+  | "owner_obligation"
+  | "portfolio_thesis"
+  | "attention_policy"
+  | "operating_function"
+  | "great_game_scorecard"
+  | "capital_request"
+  | "investment_opportunity";
+
 type RpcError = { code?: string; message?: string };
+
+type AuthoringRoute = {
+  rpc: string;
+  normalize: (input: Record<string, unknown>) => Record<string, unknown>;
+};
 
 function privateJson(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, {
@@ -26,6 +39,11 @@ function nonBlank(value: unknown) {
 function positiveInteger(value: unknown) {
   const number = Number(value);
   return Number.isInteger(number) && number > 0 ? number : null;
+}
+
+function positiveNumber(value: unknown) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : null;
 }
 
 function slug(value: string) {
@@ -137,6 +155,168 @@ function portfolioThesisInput(input: Record<string, unknown>) {
   };
 }
 
+function attentionPolicyInput(input: Record<string, unknown>) {
+  const subjectTitle = nonBlank(input.subjectTitle);
+  const subjectType = nonBlank(input.subjectType);
+  const portfolioUnitStableKey = nonBlank(input.portfolioUnitStableKey);
+  const cadenceDays = positiveInteger(input.cadenceDays);
+  const firstDueAt = nonBlank(input.firstDueAt);
+  const protectedOwnerMinutes = positiveInteger(input.protectedOwnerMinutes);
+  const floorClass = positiveInteger(input.floorClass);
+  const protectionLevel = nonBlank(input.protectionLevel);
+  const consequence = nonBlank(input.consequence);
+  const reasonForFloor = nonBlank(input.reasonForFloor);
+
+  if (
+    !subjectTitle || !subjectType || !cadenceDays || !firstDueAt || !protectedOwnerMinutes ||
+    !floorClass || floorClass > 7 || !protectionLevel || !consequence || !reasonForFloor
+  ) {
+    throw new Error("Complete the required Attention Policy fields before saving.");
+  }
+  if (subjectType === "portfolio_unit" && !portfolioUnitStableKey) {
+    throw new Error("Choose the portfolio unit this attention policy protects.");
+  }
+
+  const subjectStableKey = nonBlank(input.subjectStableKey)
+    ?? slug(`${subjectType}-${portfolioUnitStableKey ?? subjectTitle}`);
+
+  return {
+    subjectStableKey,
+    subjectTitle,
+    subjectType,
+    portfolioUnitStableKey,
+    policyStableKey: nonBlank(input.policyStableKey) ?? "cadence",
+    cadenceDays,
+    firstDueAt,
+    protectedOwnerMinutes,
+    floorClass,
+    protectionLevel,
+    interruptibility: nonBlank(input.interruptibility) ?? "low_interruptibility",
+    consequence,
+    reasonForFloor,
+    source: "principal_ui_v1",
+    subjectMetadata: { authoredFrom: "/principal/author/office" },
+    policyMetadata: { authoredFrom: "/principal/author/office" },
+  };
+}
+
+function operatingFunctionInput(input: Record<string, unknown>) {
+  const name = nonBlank(input.name);
+  const charter = nonBlank(input.charter);
+  if (!name || !charter) {
+    throw new Error("Name and charter are required for a durable operating function.");
+  }
+
+  const reviewCadenceDays = input.reviewCadenceDays === null || input.reviewCadenceDays === undefined || input.reviewCadenceDays === ""
+    ? null
+    : positiveInteger(input.reviewCadenceDays);
+  if (input.reviewCadenceDays && !reviewCadenceDays) {
+    throw new Error("Function review cadence must be a positive number of days.");
+  }
+
+  return {
+    stableKey: nonBlank(input.stableKey) ?? slug(name),
+    name,
+    charter,
+    portfolioUnitStableKey: nonBlank(input.portfolioUnitStableKey),
+    capacityState: nonBlank(input.capacityState),
+    reviewCadenceDays,
+    active: true,
+    source: "principal_ui_v1",
+    metadata: { authoredFrom: "/principal/author/office" },
+  };
+}
+
+function greatGameScorecardInput(input: Record<string, unknown>) {
+  const name = nonBlank(input.name);
+  const criticalNumber = nonBlank(input.criticalNumber);
+  const operatingFunctionStableKey = nonBlank(input.operatingFunctionStableKey);
+  const portfolioUnitStableKey = nonBlank(input.portfolioUnitStableKey);
+  if (!name || !criticalNumber || (!operatingFunctionStableKey && !portfolioUnitStableKey)) {
+    throw new Error("A scorecard needs a name, Critical Number, and a function or portfolio-unit scope.");
+  }
+
+  const scope = operatingFunctionStableKey ?? portfolioUnitStableKey ?? "principal";
+  return {
+    stableKey: nonBlank(input.stableKey) ?? slug(`${scope}-${name}`),
+    name,
+    criticalNumber,
+    drivers: Array.isArray(input.drivers) ? input.drivers : [],
+    operatingFunctionStableKey,
+    portfolioUnitStableKey,
+    active: true,
+    source: "principal_ui_v1",
+    metadata: { authoredFrom: "/principal/author/office" },
+  };
+}
+
+function capitalRequestInput(input: Record<string, unknown>) {
+  const title = nonBlank(input.title);
+  const amount = positiveNumber(input.amount);
+  const currency = nonBlank(input.currency);
+  const reason = nonBlank(input.reason);
+  const portfolioUnitStableKey = nonBlank(input.portfolioUnitStableKey);
+  if (!title || !amount || !currency || !reason) {
+    throw new Error("Capital requests require a title, positive amount, currency, and reason.");
+  }
+
+  return {
+    stableKey: nonBlank(input.stableKey) ?? slug(`${portfolioUnitStableKey ?? "principal"}-${title}`),
+    title,
+    portfolioUnitStableKey,
+    amount,
+    currency: currency.toUpperCase(),
+    neededBy: nonBlank(input.neededBy),
+    reason,
+    status: "requested",
+    source: "principal_ui_v1",
+    metadata: { authoredFrom: "/principal/author/office" },
+  };
+}
+
+function investmentOpportunityInput(input: Record<string, unknown>) {
+  const title = nonBlank(input.title);
+  const readinessState = nonBlank(input.readinessState);
+  const portfolioUnitStableKey = nonBlank(input.portfolioUnitStableKey);
+  const capitalRequired = input.capitalRequired === null || input.capitalRequired === undefined || input.capitalRequired === ""
+    ? null
+    : positiveNumber(input.capitalRequired);
+  const currency = nonBlank(input.currency);
+
+  if (!title || !readinessState) {
+    throw new Error("Investment opportunities require a title and readiness state.");
+  }
+  if (input.capitalRequired && !capitalRequired) {
+    throw new Error("Capital required must be a positive amount when supplied.");
+  }
+  if (capitalRequired && !currency) {
+    throw new Error("Currency is required when capital required is supplied.");
+  }
+
+  return {
+    stableKey: nonBlank(input.stableKey) ?? slug(`${portfolioUnitStableKey ?? "principal"}-${title}`),
+    title,
+    portfolioUnitStableKey,
+    capitalRequired,
+    currency: currency?.toUpperCase() ?? null,
+    readinessState,
+    nextValueMilestone: nonBlank(input.nextValueMilestone),
+    status: "active",
+    source: "principal_ui_v1",
+    metadata: { authoredFrom: "/principal/author/office" },
+  };
+}
+
+const authoringRoutes: Record<AuthoringKind, AuthoringRoute> = {
+  owner_obligation: { rpc: "principal_upsert_owner_obligation_api_v1", normalize: ownerObligationInput },
+  portfolio_thesis: { rpc: "principal_upsert_portfolio_thesis_api_v1", normalize: portfolioThesisInput },
+  attention_policy: { rpc: "principal_upsert_attention_policy_api_v1", normalize: attentionPolicyInput },
+  operating_function: { rpc: "principal_upsert_operating_function_api_v1", normalize: operatingFunctionInput },
+  great_game_scorecard: { rpc: "principal_upsert_great_game_scorecard_api_v1", normalize: greatGameScorecardInput },
+  capital_request: { rpc: "principal_upsert_capital_request_api_v1", normalize: capitalRequestInput },
+  investment_opportunity: { rpc: "principal_upsert_investment_opportunity_api_v1", normalize: investmentOpportunityInput },
+};
+
 export async function POST(request: Request) {
   const authorized = await requirePrincipalOwner();
   if (!authorized.ok) return authorized.response;
@@ -150,20 +330,15 @@ export async function POST(request: Request) {
 
   const kind = nonBlank(body.kind) as AuthoringKind | null;
   const input = body.input;
-  if ((kind !== "owner_obligation" && kind !== "portfolio_thesis") || !input || typeof input !== "object" || Array.isArray(input)) {
+  const route = kind ? authoringRoutes[kind] : null;
+  if (!kind || !route || !input || typeof input !== "object" || Array.isArray(input)) {
     return atlasApiError(400, "invalid_authoring_input", "A supported Principal authoring kind and input object are required.");
   }
 
   try {
     const supabase = await createAtlasServerClient();
-    const normalizedInput = kind === "owner_obligation"
-      ? ownerObligationInput(input as Record<string, unknown>)
-      : portfolioThesisInput(input as Record<string, unknown>);
-    const rpc = kind === "owner_obligation"
-      ? "principal_upsert_owner_obligation_api_v1"
-      : "principal_upsert_portfolio_thesis_api_v1";
-
-    const { data, error } = await supabase.rpc(rpc, { p_input: normalizedInput });
+    const normalizedInput = route.normalize(input as Record<string, unknown>);
+    const { data, error } = await supabase.rpc(route.rpc, { p_input: normalizedInput });
     if (error) throw error;
 
     return privateJson({ ok: true, kind, result: data });

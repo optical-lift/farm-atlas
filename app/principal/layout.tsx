@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+const linkStyle = { color: "#262626", fontSize: 12, fontWeight: 900, textDecoration: "none" } as const;
+
 export default function PrincipalLayout({ children }: { children: ReactNode }) {
   return (
     <>
@@ -11,6 +13,7 @@ export default function PrincipalLayout({ children }: { children: ReactNode }) {
           top: 0,
           zIndex: 30,
           display: "flex",
+          flexWrap: "wrap",
           justifyContent: "center",
           gap: 10,
           padding: "9px 14px",
@@ -19,13 +22,11 @@ export default function PrincipalLayout({ children }: { children: ReactNode }) {
           backdropFilter: "blur(10px)",
         }}
       >
-        <Link href="/principal" style={{ color: "#262626", fontSize: 12, fontWeight: 900, textDecoration: "none" }}>
-          Principal
-        </Link>
+        <Link href="/principal" style={linkStyle}>Principal</Link>
         <span aria-hidden="true" style={{ opacity: .3 }}>·</span>
-        <Link href="/principal/author" style={{ color: "#262626", fontSize: 12, fontWeight: 900, textDecoration: "none" }}>
-          Author truth
-        </Link>
+        <Link href="/principal/author" style={linkStyle}>Obligations &amp; theses</Link>
+        <span aria-hidden="true" style={{ opacity: .3 }}>·</span>
+        <Link href="/principal/author/office" style={linkStyle}>Office authoring</Link>
       </nav>
       {children}
     </>
