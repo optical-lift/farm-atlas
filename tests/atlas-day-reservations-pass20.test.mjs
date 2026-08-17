@@ -62,12 +62,14 @@ test("real-day reservations are projection state and participate in deterministi
   assert.doesNotMatch(reservationServer, /tasks|task_transition|record_task_transition/);
 });
 
-test("Clock consumes projection reservations as blocking spans without converting them into work", () => {
+test("Clock keeps projection reservations as blocking spans while server chronology owns proposal geometry", () => {
   assert.match(clockReservations, /"timed_cue" \| "routine" \| "meal" \| "external_commitment"/);
   assert.match(orchestrator, /projection\?\.reservations\?\?\[\]/);
   assert.match(orchestrator, /source:reservation\.kind/);
   assert.match(orchestrator, /buildAtlasClockReservations\(\{timedCues,commitments,timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE\}\)/);
-  assert.match(orchestrator, /buildAtlasClockProposal\(committed,\{reservations:dayReservations\}\)/);
+  assert.match(orchestrator, /buildAtlasClockProposalFromChronology\(committed,chronology\)/);
+  assert.match(orchestrator, /reservations:dayReservations/);
+  assert.doesNotMatch(orchestrator, /buildAtlasClockProposal\(/);
   assert.match(timeline, /ClockReservationBlock/);
   assert.match(reservationBlock, /data-clock-non-task="true"/);
   assert.match(planningTimeline, /ClockReservationBlock/);
