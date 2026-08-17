@@ -51,6 +51,12 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     searchParams ? searchParams : Promise.resolve({} as AtlasHomeSearchParams),
     resolveAtlasOwnerOperatorContextForSession(session),
   ]);
+
+  const principalOrganizationMembership = organizationMembershipForViewer(viewer);
+  if (principalOrganizationMembership?.role === "owner" && !operatorContext?.isOperating) {
+    redirect("/principal");
+  }
+
   const selectedFarmKey = firstParam(params.farm);
   const preferredFarmId = selectedFarmKey
     ? viewer.farmMemberships.find((membership) => membership.farmKey === selectedFarmKey)?.farmId ?? viewer.activeFarmId
