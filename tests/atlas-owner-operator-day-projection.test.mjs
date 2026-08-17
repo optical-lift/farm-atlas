@@ -28,6 +28,7 @@ test("Owner Day Edit manipulates the visible Day and still commits atomically", 
   const gate = read("components/atlas/owner-day-plan-gate.tsx");
   const daySummary = read("components/atlas/day-trail-summary.tsx");
   const layout = read("app/layout.tsx");
+  const operationalGlobals = read("components/atlas/shell/AtlasOperationalProjectionGlobals.tsx");
   const commitRoute = read("app/api/atlas/owner-day-commit/route.ts");
   const postRoute = read("app/api/atlas/owner-day-schedule/route.ts");
   const editRoute = read("app/api/atlas/owner-day-edit/route.ts");
@@ -56,7 +57,9 @@ test("Owner Day Edit manipulates the visible Day and still commits atomically", 
   assert.match(gate, /<OwnerDayCueEditor \/>/);
   assert.match(gate, /working Day changes only when you commit it/);
   assert.doesNotMatch(daySummary, /OwnerDayScheduleBuilder/);
-  assert.match(layout, /OwnerDayPlanGate/);
+  assert.match(layout, /AtlasOperationalProjectionGlobals/);
+  assert.match(operationalGlobals, /OwnerDayPlanGate/);
+  assert.match(operationalGlobals, /if \(isPrincipalProjection\(pathname\)\) return null/);
 
   assert.match(commitRoute, /owner_commit_worker_day_choreography_api_v1/);
   assert.match(commitRoute, /resolveOwnerWorkerDayPlanningTarget/);

@@ -9,6 +9,7 @@ function read(path) {
 const layout = read("app/layout.tsx");
 const page = read("app/page.tsx");
 const frame = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
+const operationalGlobals = read("components/atlas/shell/AtlasOperationalProjectionGlobals.tsx");
 const around = read("components/atlas/home/AtlasAroundRoutes.tsx");
 const operator = read("app/OwnerOperatorMode.tsx");
 const morePage = read("app/more/page.tsx");
@@ -90,8 +91,10 @@ test("narrow Home date rows prioritize the useful range over repeated labels", (
   assert.match(shellCss, /atlas-home-overview-row-link b[\s\S]*text-overflow: ellipsis/);
 });
 
-test("the floating Bell is global, header-aware, role-aware, and disappears when no new attention is waiting", () => {
-  assert.match(layout, /<AtlasBellCover \/>/);
+test("the floating Bell is universal to operational projections, header-aware, role-aware, and absent from Principal root", () => {
+  assert.match(layout, /<AtlasOperationalProjectionGlobals/);
+  assert.match(operationalGlobals, /<AtlasBellCover \/>/);
+  assert.match(operationalGlobals, /if \(isPrincipalProjection\(pathname\)\) return null/);
   assert.doesNotMatch(page, /AtlasBellCover/);
   assert.match(bellCover, /visibleHeaderBottom/);
   assert.match(bellCover, /bell\.badgeCount <= 0/);
@@ -100,6 +103,7 @@ test("the floating Bell is global, header-aware, role-aware, and disappears when
   assert.match(bellCover, /atlasBellActionTitle\(newest\)/);
   assert.match(bellCover, /management \? "New attention" : "New follow-through"/);
   assert.match(bellCover, /item\.unread/);
+  assert.match(bellCover, /principalProjection/);
 });
 
 test("Bell preserves the v2 monitoring baseline while the API reads the additive v4 review contract", () => {

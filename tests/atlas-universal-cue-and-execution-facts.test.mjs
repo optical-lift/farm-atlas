@@ -7,6 +7,7 @@ function read(path) {
 }
 
 const rootLayout = read("app/layout.tsx");
+const operationalGlobals = read("components/atlas/shell/AtlasOperationalProjectionGlobals.tsx");
 const dayLayout = read("app/day/layout.tsx");
 const taskLayout = read("app/task-focus/[taskId]/layout.tsx");
 const globalCue = read("app/GlobalDayCueDelivery.tsx");
@@ -16,8 +17,10 @@ const executionBrief = read("components/atlas/task-execution-brief.tsx");
 const checklist = read("components/atlas/stateful-child-checklist.tsx");
 const factsMigration = read("supabase/migrations/20260813023000_restore_worker_execution_facts_v1.sql");
 
-test("worker Day cues mount once in the universal app shell and follow the real service day, not a browsed calendar day", () => {
-  assert.match(rootLayout, /GlobalDayCueDelivery/);
+test("worker Day cues mount once in the universal operational shell and follow the real service day, not a browsed calendar day", () => {
+  assert.match(rootLayout, /AtlasOperationalProjectionGlobals/);
+  assert.match(operationalGlobals, /GlobalDayCueDelivery/);
+  assert.match(operationalGlobals, /if \(isPrincipalProjection\(pathname\)\) return null/);
   assert.doesNotMatch(dayLayout, /DayCueDelivery/);
   assert.doesNotMatch(taskLayout, /TaskFocusCueDelivery/);
   assert.match(globalCue, /data-atlas-global-cue-delivery/);

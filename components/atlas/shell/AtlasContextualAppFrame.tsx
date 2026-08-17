@@ -26,8 +26,12 @@ function managerHref() {
   return `/manage/day?date=${encodeURIComponent(atlasFarmDateIso())}`;
 }
 
+function isPrincipalProjection(pathname: string) {
+  return pathname === "/principal" || pathname.startsWith("/principal/");
+}
+
 function routeGroup(pathname: string) {
-  if (pathname === "/") return "home";
+  if (pathname === "/" || isPrincipalProjection(pathname)) return "home";
   if (pathname.startsWith("/clock")) return "clock";
   if (pathname.startsWith("/manage/day")) return "manager";
   if (
@@ -119,6 +123,7 @@ const HIDDEN_PATHS = ["/login", "/auth", "/offline"];
 
 export default function AtlasContextualAppFrame({ effectiveFarmRole = null }: AtlasContextualAppFrameProps) {
   const pathname = usePathname();
+  const principalProjection = isPrincipalProjection(pathname);
   const active = routeGroup(pathname);
   const workHref = useMemo(todayHref, []);
   const currentClockHref = useMemo(clockHref, []);
@@ -128,26 +133,34 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null }: At
 
   useEffect(() => {
     document.body.dataset.atlasRouteGroup = active;
+    document.body.dataset.atlasProjection = principalProjection ? "principal" : "operational";
     return () => {
       delete document.body.dataset.atlasRouteGroup;
+      delete document.body.dataset.atlasProjection;
     };
-  }, [active]);
+  }, [active, principalProjection]);
 
   if (hidden) return null;
 
-  const items: Array<{ key: DockIconKey; label: string; href: string }> = [
-    { key: "home", label: "Home", href: "/" },
-    { key: "work", label: "Work", href: workHref },
-    { key: "clock", label: "Clock", href: currentClockHref },
-    ...(canManage ? [{ key: "manager" as const, label: "Manager", href: farmManagerHref }] : []),
-    { key: "harvest", label: "Harvest", href: "/harvest" },
-    { key: "more", label: "More", href: "/more" },
-  ];
+  const items: Array<{ key: DockIconKey; label: string; href: string }> = principalProjection
+    ? [
+        { key: "home", label: "Home", href: "/principal" },
+        { key: "work", label: "Farm Ops", href: "/overview/week" },
+        { key: "more", label: "More", href: "/more" },
+      ]
+    : [
+        { key: "home", label: "Home", href: "/" },
+        { key: "work", label: "Work", href: workHref },
+        { key: "clock", label: "Clock", href: currentClockHref },
+        ...(canManage ? [{ key: "manager" as const, label: "Manager", href: farmManagerHref }] : []),
+        { key: "harvest", label: "Harvest", href: "/harvest" },
+        { key: "more", label: "More", href: "/more" },
+      ];
 
   // Legacy route marker retained for contract search: "/#work-board".
   return (
     <>
-      <GlobalAtlasAdd />
+      {!principalProjection ? <GlobalAtlasAdd /> : null}
       <nav className="atlas-context-footer" aria-label="Atlas destinations">
         <div
           className="atlas-context-footer__rail"

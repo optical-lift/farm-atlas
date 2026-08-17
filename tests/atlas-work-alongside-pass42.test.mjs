@@ -12,12 +12,16 @@ function section(source, startMarker, endMarker) {
 }
 
 const layout = read("app/layout.tsx");
+const operationalGlobals = read("components/atlas/shell/AtlasOperationalProjectionGlobals.tsx");
 const overlay = read("components/atlas/work-alongside/AtlasWorkAlongsideOverlay.tsx");
 const route = read("app/api/atlas/work-alongside/route.ts");
 
-test("Root layout gives Work Alongside the already-resolved effective farm role", () => {
+test("Operational shell gives Work Alongside the already-resolved effective farm role while Principal stays quiet", () => {
   assert.match(layout, /const effectiveFarmRole = operatorContext\?\.isOperating/);
-  assert.match(layout, /<AtlasWorkAlongsideOverlay effectiveFarmRole=\{effectiveFarmRole\} \/>/);
+  assert.match(layout, /<AtlasOperationalProjectionGlobals/);
+  assert.match(layout, /effectiveFarmRole=\{effectiveFarmRole\}/);
+  assert.match(operationalGlobals, /<AtlasWorkAlongsideOverlay effectiveFarmRole=\{effectiveFarmRole\} \/>/);
+  assert.match(operationalGlobals, /if \(isPrincipalProjection\(pathname\)\) return null/);
 });
 
 test("Farm Hand and non-management surfaces exit before Work Alongside readers mount", () => {

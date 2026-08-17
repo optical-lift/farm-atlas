@@ -1,17 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Suspense } from "react";
-import AtlasBellCover from "@/components/atlas/home/AtlasBellCover";
-import OwnerDayPlanGate from "@/components/atlas/owner-day-plan-gate";
 import AtlasPwaBridge from "@/components/atlas/pwa/AtlasPwaBridge";
 import AtlasRuntimeProvider from "@/components/atlas/runtime/AtlasRuntimeProvider";
 import AtlasContextualAppFrame from "@/components/atlas/shell/AtlasContextualAppFrame";
-import DependencyReleaseFlash from "@/components/atlas/task/DependencyReleaseFlash";
-import AtlasWorkAlongsideOverlay from "@/components/atlas/work-alongside/AtlasWorkAlongsideOverlay";
+import AtlasOperationalProjectionGlobals from "@/components/atlas/shell/AtlasOperationalProjectionGlobals";
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
-import AtlasSkyLedgerMaintainer from "./AtlasSkyLedgerMaintainer";
-import GlobalDayCueDelivery from "./GlobalDayCueDelivery";
 import OwnerOperatorMode from "./OwnerOperatorMode";
 import "./globals.css";
 import "./atlas-primitives.css";
@@ -153,15 +147,14 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className="min-h-full flex flex-col">
         <AtlasRuntimeProvider key={runtimeScopeKey} scopeKey={runtimeScopeKey}>
           <AtlasPwaBridge />
-          <AtlasSkyLedgerMaintainer farmId={activeMembership?.farmId ?? null} role={activeMembership?.role ?? null} />
           <OwnerOperatorMode context={operatorContext} />
           {/* Legacy contract marker: <AtlasContextualAppFrame /> now receives the effective account role. */}
           <AtlasContextualAppFrame effectiveFarmRole={effectiveFarmRole} />
-          <AtlasBellCover />
-          <DependencyReleaseFlash />
-          <Suspense fallback={null}><AtlasWorkAlongsideOverlay effectiveFarmRole={effectiveFarmRole} /></Suspense>
-          <Suspense fallback={null}><OwnerDayPlanGate /></Suspense>
-          <Suspense fallback={null}><GlobalDayCueDelivery /></Suspense>
+          <AtlasOperationalProjectionGlobals
+            farmId={activeMembership?.farmId ?? null}
+            directFarmRole={activeMembership?.role ?? null}
+            effectiveFarmRole={effectiveFarmRole}
+          />
           {/* Legacy contract marker: <TaskFocusTendingTrail was absorbed into the opened Dominion card. */}
           {children}
         </AtlasRuntimeProvider>

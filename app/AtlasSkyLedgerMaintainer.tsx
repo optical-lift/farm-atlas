@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 type Props = {
   farmId: string | null;
@@ -8,7 +9,11 @@ type Props = {
 };
 
 export default function AtlasSkyLedgerMaintainer({ farmId, role }: Props) {
+  const pathname = usePathname();
+  const principalProjection = pathname === "/principal" || pathname.startsWith("/principal/");
+
   useEffect(() => {
+    if (principalProjection) return;
     if (!farmId || !role || !["owner", "manager"].includes(role)) return;
 
     const controller = new AbortController();
@@ -21,7 +26,7 @@ export default function AtlasSkyLedgerMaintainer({ farmId, role }: Props) {
     }).catch(() => undefined);
 
     return () => controller.abort();
-  }, [farmId, role]);
+  }, [farmId, principalProjection, role]);
 
   return null;
 }
