@@ -94,8 +94,5 @@ begin
 end;
 $function$;
 
-revoke all on function atlas.principal_set_capacity_policy_api_v1(jsonb) from public, anon;
-grant execute on function atlas.principal_set_capacity_policy_api_v1(jsonb) to authenticated, service_role;
-
 comment on function atlas.principal_set_capacity_policy_api_v1(jsonb) is
 'Authenticated Principal authoring contract for explicit capacity policy. Validates weekday, local-time, minute, and effective-date invariants; maximum planned minutes cannot exceed the local day envelope; never seeds or infers a schedule.';
