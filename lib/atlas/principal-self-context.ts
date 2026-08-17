@@ -12,6 +12,16 @@ export type AtlasPrincipalPortfolioUnit = {
   archivedAt: string | null;
 };
 
+export type AtlasPrincipalHousehold = {
+  id: string;
+  principal_id: string;
+  stable_key: string;
+  name: string;
+  timezone: string;
+  status: string;
+  metadata?: Record<string, unknown> | null;
+};
+
 export type AtlasPrincipalCapacityState = {
   state: string;
   capacityKnown?: boolean;
@@ -49,15 +59,121 @@ export type AtlasPrincipalClock = {
   candidates?: AtlasPrincipalClockFloor[];
 };
 
+export type AtlasPrincipalClockCandidate = {
+  domain: string;
+  sourceType: string;
+  sourceId: string;
+  title: string;
+  floorClass: number;
+  windowStart: string | null;
+  windowEnd: string | null;
+  fixedStart: string | null;
+  mustBeginBy: string | null;
+  mustFinishBy: string | null;
+  expectedMinutes: number | null;
+  protectionLevel: string | null;
+  ownerRequired: boolean;
+  consequence: string | null;
+  reasonForFloor: string | null;
+  portfolioUnitId: string | null;
+  horizon: string | null;
+};
+
 export type AtlasPrincipalAttentionItem = {
   subjectId?: string;
+  subjectStableKey?: string;
+  subjectType?: string;
   title?: string;
+  portfolioUnitId?: string | null;
   horizon?: string | null;
+  cadenceDays?: number | null;
+  protectedOwnerMinutes?: number | null;
+  floorClass?: number | null;
+  protectionLevel?: string | null;
+  lastMeaningfulAt?: string | null;
   nextDueAt?: string | null;
   attentionState?: string | null;
   attentionDebtDays?: number | null;
-  protectedOwnerMinutes?: number | null;
+  consequence?: string | null;
   reasonForFloor?: string | null;
+};
+
+export type AtlasPrincipalPortfolioThesis = {
+  id: string;
+  stableKey: string;
+  portfolioUnitId: string;
+  portfolioUnitStableKey: string;
+  portfolioUnitName: string;
+  horizon: string | null;
+  thesisStatement: string | null;
+  valueCreationLogic: string | null;
+  mustBecomeTrue: unknown;
+  capitalRequired: unknown;
+  nextValueMilestone: string | null;
+  assumptions: unknown;
+  reconsiderationConditions: unknown;
+  reviewCadenceDays: number | null;
+  nextReviewAt: string | null;
+  status: string;
+  source: string | null;
+};
+
+export type AtlasPrincipalOperatingFunction = {
+  id: string;
+  stableKey: string;
+  name: string;
+  charter: string | null;
+  portfolioUnitId: string | null;
+  accountablePersonId: string | null;
+  capacityState: string | null;
+  reviewCadenceDays: number | null;
+  active: boolean;
+  source: string | null;
+};
+
+export type AtlasPrincipalGreatGameScore = {
+  scorecardId: string;
+  stableKey: string;
+  name: string;
+  criticalNumber: unknown;
+  drivers: unknown;
+  operatingFunctionId: string | null;
+  functionName: string | null;
+  portfolioUnitId: string | null;
+  portfolioUnitName: string | null;
+  horizon: string | null;
+  accountableOperatorId: string | null;
+  asOf: string | null;
+  actual: unknown;
+  forecast: unknown;
+  target: unknown;
+  trend: string | null;
+  nextPlay: string | null;
+  measurementState: string | null;
+};
+
+export type AtlasPrincipalCapitalRequest = {
+  id: string;
+  stableKey: string;
+  title: string;
+  portfolioUnitId: string | null;
+  amount: number | null;
+  currency: string;
+  neededBy: string | null;
+  reason: string | null;
+  status: string;
+};
+
+export type AtlasPrincipalInvestmentOpportunity = {
+  id: string;
+  stableKey: string;
+  title: string;
+  portfolioUnitId: string | null;
+  capitalRequired: number | null;
+  currency: string;
+  readinessState: string | null;
+  nextValueMilestone: string | null;
+  status: string;
 };
 
 export type AtlasHousePosition = {
@@ -75,20 +191,28 @@ export type AtlasHousePosition = {
   currencySummaries?: Array<{
     currency?: string;
     liquidResources?: number | null;
+    committedOutflows30?: number | null;
+    expectedInflows30?: number | null;
     projectedLiquidity30?: number | null;
+    committedOutflows60?: number | null;
+    expectedInflows60?: number | null;
     projectedLiquidity60?: number | null;
+    committedOutflows90?: number | null;
+    expectedInflows90?: number | null;
     projectedLiquidity90?: number | null;
+    recurringObligationsRecorded?: number | null;
+    committedCapitalRecorded?: number | null;
   }>;
-  capitalRequests?: unknown[];
-  investmentOpportunities?: unknown[];
+  capitalRequests?: AtlasPrincipalCapitalRequest[];
+  investmentOpportunities?: AtlasPrincipalInvestmentOpportunity[];
 };
 
 export type AtlasPrincipalOffice = {
   state: string;
-  portfolioTheses?: unknown[];
+  portfolioTheses?: AtlasPrincipalPortfolioThesis[];
   attention?: AtlasPrincipalAttentionItem[];
-  operatingFunctions?: unknown[];
-  greatGame?: unknown[];
+  operatingFunctions?: AtlasPrincipalOperatingFunction[];
+  greatGame?: AtlasPrincipalGreatGameScore[];
   housePosition?: AtlasHousePosition | null;
 };
 
@@ -103,10 +227,10 @@ export type AtlasPrincipalSelfContext = {
     homeTimezone: string;
     activeHouseholdId: string | null;
   } | null;
-  household?: Record<string, unknown> | null;
+  household?: AtlasPrincipalHousehold | null;
   portfolioUnits?: AtlasPrincipalPortfolioUnit[];
   clockCandidatesMode?: string;
-  clockCandidates?: unknown[];
+  clockCandidates?: AtlasPrincipalClockCandidate[];
   principalClock?: AtlasPrincipalClock | null;
   principalOffice?: AtlasPrincipalOffice | null;
   capacityToday?: AtlasPrincipalCapacityState | null;
