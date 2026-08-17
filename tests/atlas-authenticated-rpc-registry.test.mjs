@@ -86,6 +86,10 @@ const workerWeekCanonicalMigrationName =
   "20260816220448_worker_week_projection_canonical_cutover_v1.sql";
 const workerWeekCanonicalRegistryMigrationName =
   "20260817025000_worker_week_projection_rpc_registry_reconciliation_v1.sql";
+const realityExpressionSpatialMigrationName =
+  "20260817213537_reality_expression_spatial_truth_v1.sql";
+const realityExpressionSpatialRegistryMigrationName =
+  "20260817214322_reality_expression_spatial_rpc_registry_v1.sql";
 const dayAcceptanceRpcMigrations = new Set([
   "20260811180500_atlas_day_cue_observation_result_contract_v1.sql",
   "20260811183000_atlas_departure_requirement_cues_v1.sql",
@@ -258,6 +262,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const workerHarvestRpcRegistry = readMigration(workerHarvestRpcRegistryMigrationName);
   const principalRpcRegistry = readMigration(principalRpcRegistryMigrationName);
   const workerWeekCanonicalRegistry = readMigration(workerWeekCanonicalRegistryMigrationName);
+  const realityExpressionSpatialRegistry = readMigration(realityExpressionSpatialRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -307,7 +312,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                                             ? principalRpcRegistryMigrationName
                                             : name === workerWeekCanonicalMigrationName
                                               ? workerWeekCanonicalRegistryMigrationName
-                                              : null;
+                                              : name === realityExpressionSpatialMigrationName
+                                                ? realityExpressionSpatialRegistryMigrationName
+                                                : null;
 
       assert.ok(
         pairedRegistryName,
@@ -503,4 +510,13 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   assert.ok(workerWeekCanonicalRegistry.includes(
     "atlas.refresh_owner_week_projection_v1(uuid, uuid, date, integer)",
   ));
+
+  for (const signature of [
+    "atlas.crop_cycle_spatial_truth_v1(uuid)",
+    "atlas.crop_cycle_reality_expression_v2(uuid)",
+  ]) {
+    assert.ok(realityExpressionSpatialRegistry.includes(signature));
+  }
+  assert.match(realityExpressionSpatialRegistry, /service_internal/);
+  assert.match(realityExpressionSpatialRegistry, /'verified','active',false,false,true/);
 });
