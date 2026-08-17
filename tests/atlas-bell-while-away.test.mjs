@@ -18,8 +18,9 @@ const view = read("lib/atlas/bell-view.ts");
 const css = read("app/bell.css");
 const home = read("app/page.tsx");
 const layout = read("app/layout.tsx");
+const operationalGlobals = read("components/atlas/shell/AtlasOperationalProjectionGlobals.tsx");
 
-const ui = `${cover}\n${page}\n${action}\n${view}\n${css}\n${home}\n${layout}`;
+const ui = `${cover}\n${page}\n${action}\n${view}\n${css}\n${home}\n${layout}\n${operationalGlobals}`;
 
 test("Bell receipts never become a second Atlas event truth", () => {
   assert.match(migration, /references atlas\.journal_event_index\(id\)/);
@@ -83,10 +84,12 @@ test("Bell entries carry safe canonical deep links while the action UI opens the
   assert.doesNotMatch(page, /Acknowledge|Mark reviewed/);
 });
 
-test("Home stays recognizable while the floating Bell and role-aware action queues belong to the global app shell", () => {
+test("Home stays recognizable while the floating Bell and role-aware action queues belong to the operational app shell", () => {
   assert.match(home, /<AtlasUniversalHome/);
   assert.doesNotMatch(home, /<AtlasBellCover/);
-  assert.match(layout, /<AtlasBellCover \/>/);
+  assert.match(layout, /AtlasOperationalProjectionGlobals/);
+  assert.match(operationalGlobals, /<AtlasBellCover \/>/);
+  assert.match(operationalGlobals, /if \(isPrincipalProjection\(pathname\)\) return null/);
   assert.match(cover, /atlas-bell-edge-tab/);
   assert.match(cover, /atlas-while-away-slip/);
   assert.match(page, />Do now</);
