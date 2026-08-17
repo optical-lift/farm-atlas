@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { readAtlasPrincipalCapacityPolicies } from "@/lib/atlas/principal-capacity-policy";
 import { readAtlasPrincipalSelfContext } from "@/lib/atlas/principal-self-context";
 import { getAtlasSession } from "@/lib/atlas/session";
 
@@ -28,11 +29,15 @@ export default async function AtlasPrincipalCapacityAuthorPage() {
   if (!session) redirect("/login");
   if (!session.organizationMemberships.some((membership) => membership.role === "owner")) redirect("/");
 
-  const context = await readAtlasPrincipalSelfContext();
+  const [context, capacityPolicies] = await Promise.all([
+    readAtlasPrincipalSelfContext(),
+    readAtlasPrincipalCapacityPolicies(),
+  ]);
   if (context.state !== "ready" || !context.principal) redirect("/principal");
 
   const householdName = context.household?.name || "Household";
   const householdTimezone = context.household?.timezone || context.principal.homeTimezone || "America/Chicago";
+  const currentPolicy = capacityPolicies[0] ?? null;
 
   return (
     <main style={shellStyle}>
@@ -57,7 +62,7 @@ export default async function AtlasPrincipalCapacityAuthorPage() {
           </p>
         </section>
 
-        <PrincipalCapacityAuthoringClient householdName={householdName} householdTimezone={householdTimezone} />
+        <PrincipalCapacityAuthoringClient householdName={householdName} householdTimezone={householdTimezone} currentPolicy={currentPolicy} />
       </div>
     </main>
   );
