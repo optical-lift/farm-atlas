@@ -89,7 +89,7 @@ test("Acceptance 7: H2/H3 attention debt can earn protected Principal floor", ()
   assert.match(migrations, /create table(?: if not exists)? atlas\.attention_subjects/i);
   assert.match(migrations, /create table(?: if not exists)? atlas\.attention_policies/i);
   assert.match(migrations, /attention_debt_v1/i);
-  assert.match(migrations, /attention_state = 'needs_attention'/i);
+  assert.match(migrations, /attention_state\s*=\s*'needs_attention'/i);
   assert.match(migrations, /'attention_debt'::text AS source_type/i);
   assert.match(principalPage, /H1 current engines remain visible without consuming H2 emerging engines or H3 future options/i);
 });
@@ -105,7 +105,7 @@ test("Acceptance 8: House Position fails open to uncertainty, never fake zero fi
 });
 
 test("Acceptance 9: Worker Week is canonical and Owner Week remains compatibility-only", () => {
-  assert.match(migrations, /create table(?: if not exists)? atlas\.worker_week_projection/i);
+  assert.match(migrations, /alter table atlas\.owner_week_projection rename to worker_week_projection/i);
   assert.match(migrations, /create(?: or replace)? view atlas\.owner_week_projection[\s\S]{0,500}worker_week_projection/i);
   assert.match(migrations, /refresh_owner_week_projection_v1[\s\S]{0,1200}refresh_worker_week_projection_v1/i);
   assert.match(migrations, /worker_future_day_projection_source_v1[\s\S]{0,2500}worker_week_projection/i);
