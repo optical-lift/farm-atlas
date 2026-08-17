@@ -29,6 +29,8 @@ export default function PrincipalLayout({ children }: { children: ReactNode }) {
         <Link href="/principal/author/office" style={linkStyle}>Office authoring</Link>
         <span aria-hidden="true" style={{ opacity: .3 }}>·</span>
         <Link href="/principal/author/capacity" style={linkStyle}>Household &amp; capacity</Link>
+        <span aria-hidden="true" style={{ opacity: .3 }}>·</span>
+        <Link href="/principal/resolve/farm-capacity" style={linkStyle}>Farm capacity exceptions</Link>
       </nav>
       {children}
     </>
