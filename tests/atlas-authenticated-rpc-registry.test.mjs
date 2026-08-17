@@ -88,6 +88,8 @@ const workerWeekCanonicalRegistryMigrationName =
   "20260817025000_worker_week_projection_rpc_registry_reconciliation_v1.sql";
 const realityExpressionSpatialMigrationName =
   "20260817213537_reality_expression_spatial_truth_v1.sql";
+const realityExpressionSpatialRefinementMigrationName =
+  "20260817213813_refine_spatial_supersession_evidence_v1.sql";
 const realityExpressionSpatialRegistryMigrationName =
   "20260817214322_reality_expression_spatial_rpc_registry_v1.sql";
 const dayAcceptanceRpcMigrations = new Set([
@@ -312,7 +314,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                                             ? principalRpcRegistryMigrationName
                                             : name === workerWeekCanonicalMigrationName
                                               ? workerWeekCanonicalRegistryMigrationName
-                                              : name === realityExpressionSpatialMigrationName
+                                              : name === realityExpressionSpatialMigrationName || name === realityExpressionSpatialRefinementMigrationName
                                                 ? realityExpressionSpatialRegistryMigrationName
                                                 : null;
 
