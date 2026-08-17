@@ -145,7 +145,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <AtlasRuntimeProvider key={runtimeScopeKey} scopeKey={runtimeScopeKey}>
+        <AtlasRuntimeProvider key={runtimeScopeKey} scopeKey={runtimeScopeKey} effectiveFarmRole={effectiveFarmRole}>
           <AtlasPwaBridge />
           <OwnerOperatorMode context={operatorContext} />
           {/* Legacy contract marker: <AtlasContextualAppFrame /> now receives the effective account role. */}

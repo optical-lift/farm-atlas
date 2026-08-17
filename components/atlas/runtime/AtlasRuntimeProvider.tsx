@@ -16,6 +16,7 @@ import {
   type AtlasClockCommand,
   type AtlasClockCommandResponse,
 } from "@/lib/atlas/clock-command-client";
+import { atlasFarmDateIso } from "@/lib/atlas/farm-day";
 import {
   commitAtlasReservationCommand,
   type AtlasReservationCommand,
@@ -27,6 +28,7 @@ import {
   applyAtlasRuntimePendingActions,
   type AtlasRuntimePendingAction,
 } from "@/lib/atlas/runtime-reconciliation";
+import { fetchAtlasTaskCards, type AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import {
   commitAtlasTaskTransition,
   type AtlasTaskTransitionRequest,
@@ -36,6 +38,8 @@ import {
   readAtlasWorkerDayProjection,
   type AtlasWorkerDayProjectionRead,
 } from "@/lib/atlas/worker-day-projection-client";
+
+type EffectiveFarmRole = "owner" | "manager" | "farm_hand" | string | null;
 
 type WorkerDayRuntimeEntry = {
   canonicalValue: AtlasWorkerDayProjectionRead | null;
@@ -50,6 +54,7 @@ type WorkerDayReadOptions = { force?: boolean };
 
 type AtlasRuntimeContextValue = {
   scopeKey: string;
+  effectiveFarmRole: EffectiveFarmRole;
   version: number;
   peekWorkerDay: (dateIso: string) => WorkerDayRuntimeEntry | null;
   readWorkerDay: (dateIso: string, options?: WorkerDayReadOptions) => Promise<AtlasWorkerDayProjectionRead>;
@@ -104,7 +109,15 @@ function cachedDatesContainingTasks(entries: Map<string, WorkerDayRuntimeEntry>,
   return dates;
 }
 
-export default function AtlasRuntimeProvider({ children, scopeKey }: { children: ReactNode; scopeKey: string }) {
+export default function AtlasRuntimeProvider({
+  children,
+  scopeKey,
+  effectiveFarmRole,
+}: {
+  children: ReactNode;
+  scopeKey: string;
+  effectiveFarmRole: EffectiveFarmRole;
+}) {
   const entriesRef = useRef(new Map<string, WorkerDayRuntimeEntry>());
   const inFlightRef = useRef(new Map<string, Promise<AtlasWorkerDayProjectionRead>>());
   const requestSequenceRef = useRef(0);
@@ -178,7 +191,11 @@ export default function AtlasRuntimeProvider({ children, scopeKey }: { children:
   const dispatchTaskTransition = useCallback(async (request: AtlasTaskTransitionRequest) => {
     const serviceDates = new Set(cachedDatesContainingTasks(entriesRef.current, [request.taskId]));
     if (request.targetDate && entriesRef.current.has(request.targetDate)) serviceDates.add(request.targetDate);
-    if (!serviceDates.size) return commitAtlasTaskTransition(request);
+    if (!serviceDates.size) {
+      const response = await commitAtlasTaskTransition(request);
+      if (effectiveFarmRole === "manager") notify();
+      return response;
+    }
 
     const actionId = `runtime-task-transition:${++actionSequenceRef.current}`;
     for (const serviceDate of serviceDates) {
@@ -237,7 +254,7 @@ export default function AtlasRuntimeProvider({ children, scopeKey }: { children:
 
     await Promise.allSettled(Array.from(reconciliationDates, (serviceDate) => readWorkerDay(serviceDate, { force: true })));
     return response;
-  }, [notify, readWorkerDay]);
+  }, [effectiveFarmRole, notify, readWorkerDay]);
 
   const dispatchClockCommand = useCallback(async (command: AtlasClockCommand) => {
     const current = entriesRef.current.get(command.serviceDate);
@@ -279,8 +296,9 @@ export default function AtlasRuntimeProvider({ children, scopeKey }: { children:
           : pending),
         error: null, loading: committed.loading, requestId: committed.requestId,
       }));
-      notify();
     }
+    notify();
+
     try { await readWorkerDay(command.serviceDate, { force: true }); } catch { /* keep committed-looking overlay */ }
     return response;
   }, [notify, readWorkerDay]);
@@ -335,8 +353,8 @@ export default function AtlasRuntimeProvider({ children, scopeKey }: { children:
         loading: committed.loading,
         requestId: committed.requestId,
       }));
-      notify();
     }
+    notify();
 
     try {
       await readWorkerDay(command.serviceDate, { force: true });
@@ -354,9 +372,9 @@ export default function AtlasRuntimeProvider({ children, scopeKey }: { children:
   }, [invalidateWorkerDay]);
 
   const value = useMemo<AtlasRuntimeContextValue>(() => ({
-    scopeKey, version, peekWorkerDay, readWorkerDay, invalidateWorkerDay,
+    scopeKey, effectiveFarmRole, version, peekWorkerDay, readWorkerDay, invalidateWorkerDay,
     dispatchTaskTransition, dispatchClockCommand, dispatchReservationCommand,
-  }), [scopeKey, version, peekWorkerDay, readWorkerDay, invalidateWorkerDay, dispatchTaskTransition, dispatchClockCommand, dispatchReservationCommand]);
+  }), [scopeKey, effectiveFarmRole, version, peekWorkerDay, readWorkerDay, invalidateWorkerDay, dispatchTaskTransition, dispatchClockCommand, dispatchReservationCommand]);
 
   return <AtlasRuntimeContext.Provider value={value}>{children}</AtlasRuntimeContext.Provider>;
 }
@@ -364,15 +382,65 @@ export default function AtlasRuntimeProvider({ children, scopeKey }: { children:
 export function useAtlasWorkerDayProjection(dateIso: string) {
   const runtime = useContext(AtlasRuntimeContext);
   if (!runtime) throw new Error("useAtlasWorkerDayProjection must be used inside AtlasRuntimeProvider.");
+  const managerMode = runtime.effectiveFarmRole === "manager";
   const entry = runtime.peekWorkerDay(dateIso);
+  const [managerTaskCards, setManagerTaskCards] = useState<AtlasTaskCard[]>([]);
+  const [managerLoading, setManagerLoading] = useState(managerMode);
+  const [managerError, setManagerError] = useState<string | null>(null);
+  const managerRequestId = useRef(0);
+
+  const readManagerDay = useCallback(async () => {
+    if (!managerMode) return;
+    const requestId = ++managerRequestId.current;
+    setManagerLoading(true);
+    setManagerError(null);
+    setManagerTaskCards([]);
+    try {
+      const today = atlasFarmDateIso();
+      const response = await fetchAtlasTaskCards({
+        viewerScoped: true,
+        dueThrough: dateIso,
+        doneDate: dateIso,
+        exactDate: dateIso > today ? dateIso : undefined,
+      });
+      if (managerRequestId.current !== requestId) return;
+      setManagerTaskCards(response.taskCards ?? []);
+    } catch (error) {
+      if (managerRequestId.current !== requestId) return;
+      setManagerError(runtimeErrorMessage(error));
+    } finally {
+      if (managerRequestId.current === requestId) setManagerLoading(false);
+    }
+  }, [dateIso, managerMode]);
 
   useEffect(() => {
+    if (managerMode) {
+      void readManagerDay();
+      return;
+    }
     if (!entry) void runtime.readWorkerDay(dateIso).catch(() => undefined);
-  }, [dateIso, entry, runtime]);
+  }, [dateIso, entry, managerMode, readManagerDay, runtime.readWorkerDay, runtime.version]);
 
   const reload = useCallback(async () => {
+    if (managerMode) {
+      await readManagerDay();
+      return;
+    }
     await runtime.readWorkerDay(dateIso, { force: true });
-  }, [dateIso, runtime]);
+  }, [dateIso, managerMode, readManagerDay, runtime]);
+
+  if (managerMode) {
+    return {
+      projection: null,
+      taskCards: managerTaskCards,
+      canManage: true,
+      loading: managerLoading,
+      error: managerError,
+      pendingActions: [] as AtlasRuntimePendingAction[],
+      reload,
+      runtimeScopeKey: runtime.scopeKey,
+    };
+  }
 
   return {
     projection: entry?.value?.projection ?? null,
