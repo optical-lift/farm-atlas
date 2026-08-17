@@ -31,7 +31,9 @@ function isPrincipalProjection(pathname: string) {
 }
 
 function routeGroup(pathname: string) {
-  if (pathname === "/" || isPrincipalProjection(pathname)) return "home";
+  if (pathname === "/" || pathname === "/principal") return "home";
+  if (pathname === "/principal/capacity" || pathname.startsWith("/principal/capacity/")) return "clock";
+  if (pathname.startsWith("/principal/")) return "home";
   if (pathname.startsWith("/clock")) return "clock";
   if (pathname.startsWith("/manage/day")) return "manager";
   if (
@@ -145,6 +147,7 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null }: At
   const items: Array<{ key: DockIconKey; label: string; href: string }> = principalProjection
     ? [
         { key: "home", label: "Home", href: "/principal" },
+        { key: "clock", label: "Capacity", href: "/principal/capacity" },
         { key: "work", label: "Farm Ops", href: "/overview/week" },
         { key: "more", label: "More", href: "/more" },
       ]
