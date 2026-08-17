@@ -368,7 +368,7 @@ export default function AtlasWeekOverviewPage() {
 
     async function loadProjection() {
       try {
-        const response = await fetch(`/api/atlas/owner-week-projection?start=${encodeURIComponent(resolvedAnchor)}&end=${encodeURIComponent(resolvedEnd)}`, {
+        const response = await fetch(`/api/atlas/worker-week-projection?start=${encodeURIComponent(resolvedAnchor)}&end=${encodeURIComponent(resolvedEnd)}`, {
           cache: "no-store",
           credentials: "same-origin",
           headers: { Accept: "application/json" },
