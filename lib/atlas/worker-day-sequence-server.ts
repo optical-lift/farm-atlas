@@ -92,6 +92,7 @@ function assembleProjection(input: {
     automaticPaidMinutes: plan.automaticPaidMinutes,
     remainingPaidMinutes: plan.remainingPaidMinutes,
     warnings: plan.warnings,
+    clockTimeline: plan.clockTimeline ?? null,
   };
   const projection = buildAtlasWorkerDayProjection({
     farmId: plan.farmId,

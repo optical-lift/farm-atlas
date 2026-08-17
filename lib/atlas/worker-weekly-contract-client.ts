@@ -54,7 +54,11 @@ export type AtlasWeeklyFarmContract = {
   work: AtlasWeeklyFarmWorkItem[];
 };
 
-type WeeklyFarmContractResponse = { ok: true; date: string; contract: AtlasWeeklyFarmContract };
+type WeeklyFarmContractResponse = {
+  ok: true;
+  date: string;
+  contract: AtlasWeeklyFarmContract;
+};
 
 function numberOrNull(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
@@ -104,7 +108,11 @@ function errorMessage(value: unknown) {
 }
 
 export async function readAtlasWeeklyFarmContract(serviceDate: string): Promise<AtlasWeeklyFarmContract> {
-  const response = await fetch(`/api/atlas/worker-weekly-contract?date=${encodeURIComponent(serviceDate)}`, { method: "GET", cache: "no-store", credentials: "same-origin" });
+  const response = await fetch(`/api/atlas/worker-weekly-contract?date=${encodeURIComponent(serviceDate)}`, {
+    method: "GET",
+    cache: "no-store",
+    credentials: "same-origin",
+  });
   const result = await response.json() as WeeklyFarmContractResponse | { ok?: false; error?: string };
   if (!response.ok || result.ok !== true) throw new Error(errorMessage(result));
   return normalizeContract(result.contract);
