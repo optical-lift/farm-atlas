@@ -5,6 +5,17 @@ import { useState, type FormEvent } from "react";
 
 type SaveKind = "capacity_policy" | "household_rhythm";
 type SaveState = { kind: SaveKind | null; status: "idle" | "saving" | "saved" | "error"; message: string };
+type CapacityPolicy = {
+  stableKey: string;
+  name: string;
+  weekdays: number[];
+  localStart: string;
+  localEnd: string;
+  defaultDiscretionaryMinutes: number;
+  maximumPlannedMinutes: number;
+  effectiveFrom: string;
+  effectiveThrough: string | null;
+};
 
 const panelStyle = {
   border: "1px solid rgba(38,38,38,.12)",
@@ -62,7 +73,15 @@ const weekdays = [
   [0, "Sun"], [1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"],
 ] as const;
 
-export default function PrincipalCapacityAuthoringClient({ householdName, householdTimezone }: { householdName: string; householdTimezone: string }) {
+export default function PrincipalCapacityAuthoringClient({
+  householdName,
+  householdTimezone,
+  currentPolicy,
+}: {
+  householdName: string;
+  householdTimezone: string;
+  currentPolicy: CapacityPolicy | null;
+}) {
   const router = useRouter();
   const [state, setState] = useState<SaveState>({ kind: null, status: "idle", message: "" });
 
@@ -74,6 +93,7 @@ export default function PrincipalCapacityAuthoringClient({ householdName, househ
     setState({ kind: "capacity_policy", status: "saving", message: "Saving Principal capacity policy…" });
     try {
       await save("capacity_policy", {
+        stableKey: optionalText(data, "stableKey"),
         name: text(data, "name"),
         weekdays: selectedWeekdays,
         localStart: text(data, "localStart"),
@@ -122,37 +142,39 @@ export default function PrincipalCapacityAuthoringClient({ householdName, househ
     <div style={{ display: "grid", gap: 18 }}>
       <form onSubmit={submitPolicy} style={panelStyle}>
         <span style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".13em", textTransform: "uppercase", opacity: .58 }}>Principal Capacity</span>
-        <h2 style={{ margin: "6px 0 0", fontSize: 24 }}>Define the day Atlas is allowed to allocate</h2>
+        <h2 style={{ margin: "6px 0 0", fontSize: 24 }}>{currentPolicy ? "Edit the day Atlas is allowed to allocate" : "Define the day Atlas is allowed to allocate"}</h2>
         <p style={{ margin: "8px 0 16px", lineHeight: 1.55, opacity: .72 }}>
           This is not a productivity target. It is the outer boundary of available Principal time before household blocks, fixed commitments, and protected rhythms subtract from it. Times are interpreted in {householdTimezone}.
         </p>
+        {currentPolicy ? <p style={{ margin: "-6px 0 16px", fontSize: 12, lineHeight: 1.45, opacity: .65 }}>This form is loaded from the active authored policy. Keeping the effective-from date updates that policy version; changing the effective-from date creates a new version under the same policy identity.</p> : null}
         <div style={{ display: "grid", gap: 13 }}>
-          <label style={fieldStyle}><span style={labelStyle}>Policy name *</span><input name="name" required style={inputStyle} placeholder="Normal weekday capacity" /></label>
+          <input type="hidden" name="stableKey" defaultValue={currentPolicy?.stableKey ?? ""} />
+          <label style={fieldStyle}><span style={labelStyle}>Policy name *</span><input name="name" required style={inputStyle} placeholder="Normal weekday capacity" defaultValue={currentPolicy?.name ?? ""} /></label>
           <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
             <legend style={{ ...labelStyle, marginBottom: 8 }}>Days this policy applies *</legend>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {weekdays.map(([value, label]) => (
                 <label key={value} style={{ display: "inline-flex", alignItems: "center", gap: 6, minHeight: 38, padding: "7px 10px", border: "1px solid rgba(38,38,38,.14)", borderRadius: 10, background: "#fffdf8" }}>
-                  <input type="checkbox" name="weekdays" value={value} /> {label}
+                  <input type="checkbox" name="weekdays" value={value} defaultChecked={currentPolicy?.weekdays.includes(value) ?? false} /> {label}
                 </label>
               ))}
             </div>
           </fieldset>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-            <label style={fieldStyle}><span style={labelStyle}>Local day starts *</span><input name="localStart" type="time" required style={inputStyle} /></label>
-            <label style={fieldStyle}><span style={labelStyle}>Local day ends *</span><input name="localEnd" type="time" required style={inputStyle} /></label>
-            <label style={fieldStyle}><span style={labelStyle}>Discretionary minutes *</span><input name="defaultDiscretionaryMinutes" type="number" min="0" step="1" required style={inputStyle} /></label>
-            <label style={fieldStyle}><span style={labelStyle}>Maximum planned minutes *</span><input name="maximumPlannedMinutes" type="number" min="0" step="1" required style={inputStyle} /></label>
+            <label style={fieldStyle}><span style={labelStyle}>Local day starts *</span><input name="localStart" type="time" required style={inputStyle} defaultValue={currentPolicy?.localStart ?? ""} /></label>
+            <label style={fieldStyle}><span style={labelStyle}>Local day ends *</span><input name="localEnd" type="time" required style={inputStyle} defaultValue={currentPolicy?.localEnd ?? ""} /></label>
+            <label style={fieldStyle}><span style={labelStyle}>Discretionary minutes *</span><input name="defaultDiscretionaryMinutes" type="number" min="0" step="1" required style={inputStyle} defaultValue={currentPolicy?.defaultDiscretionaryMinutes ?? ""} /></label>
+            <label style={fieldStyle}><span style={labelStyle}>Maximum planned minutes *</span><input name="maximumPlannedMinutes" type="number" min="0" step="1" required style={inputStyle} defaultValue={currentPolicy?.maximumPlannedMinutes ?? ""} /></label>
           </div>
           <p style={{ margin: 0, fontSize: 12, lineHeight: 1.45, opacity: .65 }}>
             Discretionary minutes are how much of the remaining window Atlas may normally allocate. Maximum planned minutes are the hard ceiling even on an unusually open day.
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-            <label style={fieldStyle}><span style={labelStyle}>Effective from *</span><input name="effectiveFrom" type="date" required style={inputStyle} /></label>
-            <label style={fieldStyle}><span style={labelStyle}>Effective through</span><input name="effectiveThrough" type="date" style={inputStyle} /></label>
+            <label style={fieldStyle}><span style={labelStyle}>Effective from *</span><input name="effectiveFrom" type="date" required style={inputStyle} defaultValue={currentPolicy?.effectiveFrom ?? ""} /></label>
+            <label style={fieldStyle}><span style={labelStyle}>Effective through</span><input name="effectiveThrough" type="date" style={inputStyle} defaultValue={currentPolicy?.effectiveThrough ?? ""} /></label>
           </div>
         </div>
-        <button type="submit" disabled={state.status === "saving" && state.kind === "capacity_policy"} style={{ marginTop: 16, minHeight: 44, border: 0, borderRadius: 12, padding: "10px 16px", background: "#24251f", color: "#f8f4e8", fontWeight: 900 }}>Save Capacity Policy</button>
+        <button type="submit" disabled={state.status === "saving" && state.kind === "capacity_policy"} style={{ marginTop: 16, minHeight: 44, border: 0, borderRadius: 12, padding: "10px 16px", background: "#24251f", color: "#f8f4e8", fontWeight: 900 }}>{currentPolicy ? "Update Capacity Policy" : "Save Capacity Policy"}</button>
         <Result state={state} kind="capacity_policy" />
       </form>
 
