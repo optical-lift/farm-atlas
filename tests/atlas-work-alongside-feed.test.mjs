@@ -41,6 +41,7 @@ test("only work-alongside teammate cards receive executor badges", () => {
 test("Owner manages reusable visit windows from More instead of the Work trail", () => {
   const route = read("app/api/atlas/work-alongside/route.ts");
   const overlay = read("components/atlas/work-alongside/AtlasWorkAlongsideOverlay.tsx");
+  const operationalGlobals = read("components/atlas/shell/AtlasOperationalProjectionGlobals.tsx");
   const morePage = read("app/more/page.tsx");
   const layout = read("app/layout.tsx");
 
@@ -53,6 +54,8 @@ test("Owner manages reusable visit windows from More instead of the Work trail",
   assert.match(overlay, /Add to my Work feed/);
   assert.match(morePage, /atlas-more-work-alongside-slot/);
   assert.doesNotMatch(overlay, /atlas-work-alongside-toggle/);
-  assert.match(layout, /AtlasWorkAlongsideOverlay/);
+  assert.match(layout, /AtlasOperationalProjectionGlobals/);
+  assert.match(operationalGlobals, /AtlasWorkAlongsideOverlay/);
+  assert.match(operationalGlobals, /if \(isPrincipalProjection\(pathname\)\) return null/);
   assert.match(layout, /work-alongside\.css/);
 });
