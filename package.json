@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "audit:migrations:production": "bash scripts/reconcile-production-migration-history.sh --check",
+    "restore:migrations:production": "bash scripts/reconcile-production-migration-history.sh --restore"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
