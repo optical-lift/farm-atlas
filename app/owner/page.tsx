@@ -1,6 +1,6 @@
 import { getOwnerDashboard } from "@/lib/atlas-data/owner-dashboard";
 import { readOwnerFinishProjectSummary } from "@/lib/atlas-data/owner-finish-project";
-import { readOwnerWeekProjection } from "@/lib/atlas-data/owner-week-projection";
+import { readWorkerWeekProjection } from "@/lib/atlas-data/worker-week-projection";
 import { requireAtlasRole } from "@/lib/atlas/role-access";
 import OwnerDashboardClient from "./OwnerDashboardClient";
 
@@ -16,7 +16,7 @@ export default async function AtlasOwnerPage() {
   const [finishProject, weekProjection] = await Promise.all([
     readOwnerFinishProjectSummary().catch(() => null),
     farmId
-      ? readOwnerWeekProjection(farmId, annaMembershipId, weekStart, 7).catch(() => null)
+      ? readWorkerWeekProjection(farmId, annaMembershipId, weekStart, 7).catch(() => null)
       : Promise.resolve(null),
   ]);
 
