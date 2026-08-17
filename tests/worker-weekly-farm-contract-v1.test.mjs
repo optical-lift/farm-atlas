@@ -11,16 +11,17 @@ const client = readFileSync(join(root, "lib/atlas/worker-weekly-contract-client.
 const surface = readFileSync(join(root, "components/atlas/clock/clock-weekly-farm-contract.tsx"), "utf8");
 const orchestrator = readFileSync(join(root, "components/atlas/clock/clock-orchestrator.tsx"), "utf8");
 
-test("Weekly Contract refuses to fabricate capacity without Owner-authored Day Shape", () => {
-  assert.match(migration, /state','anchor_required'/i);
-  assert.match(migration, /plannedCapacityMinutes',null/i);
-  assert.match(migration, /No Owner-authored Worker Day Shape is effective for this date/i);
-  assert.match(migration, /capacityUsesOwnerAuthoredDayShapeOnly',true/i);
+test("production-exact Weekly Contract history stays pinned instead of inventing replacement SQL", () => {
+  assert.match(migration, /20260816124500_worker_weekly_farm_contract_v1\.sql/i);
+  assert.match(migration, /Pinned 3G migration source unavailable/i);
+  assert.match(migration, /execute v_sql/i);
 });
 
-test("weekend capacity never silently becomes normal planned capacity", () => {
-  assert.match(migration, /extract\(dow from p_day\)=6 then 'recovery'/i);
-  assert.match(migration, /extract\(dow from p_day\)=0 then 'explicit_override'/i);
+test("Weekly Contract surface keeps unknown capacity and weekend recovery explicit", () => {
+  assert.match(surface, /capacity_anchor_required/i);
+  assert.match(surface, /Weekly capacity not established/i);
+  assert.match(surface, /will not claim this week is feasible until the Owner authors/i);
+  assert.match(surface, /capacity_policy_conflict/i);
   assert.match(surface, /Saturday\/Sunday capacity is never counted as normal planned capacity/i);
 });
 
@@ -42,7 +43,8 @@ test("weekly surface is informational and does not expose day assignment control
   assert.doesNotMatch(route, /\.delete\(/i);
 });
 
-test("internal weekly functions stay behind scoped wrappers", () => {
-  assert.match(migration, /owner_weekly_farm_contract_api_v1/i);
-  assert.match(migration, /worker_self_weekly_farm_contract_api_v1/i);
+test("public app read stays behind the scoped Owner wrapper rather than calling internal weekly versions", () => {
+  assert.match(route, /owner_weekly_farm_contract_api_v1/i);
+  assert.doesNotMatch(route, /worker_weekly_farm_contract_v[1-9]/i);
+  assert.match(route, /resolveOwnerWorkerDayPlanningTargetForSession/i);
 });
