@@ -8,6 +8,7 @@ function read(path) {
 
 const delivery = read("app/GlobalDayCueDelivery.tsx");
 const rootLayout = read("app/layout.tsx");
+const operationalGlobals = read("components/atlas/shell/AtlasOperationalProjectionGlobals.tsx");
 const dayLayout = read("app/day/layout.tsx");
 const taskLayout = read("app/task-focus/[taskId]/layout.tsx");
 const responseRoute = read("app/api/atlas/day-cue-response/route.ts");
@@ -15,13 +16,15 @@ const dismissRoute = read("app/api/atlas/day-cue-dismiss/route.ts");
 const cueMigration = read("supabase/migrations/20260811162000_atlas_day_cue_mutations_v1.sql");
 const dismissMigration = read("supabase/migrations/20260813022500_worker_day_cue_dismiss_v1.sql");
 
-test("Day cue delivery reaches the worker and deliberate Owner operator-lens preview from the universal app shell", () => {
+test("Day cue delivery reaches the worker and deliberate Owner operator-lens preview from the universal operational shell", () => {
   assert.match(delivery, /targetSource !== "worker_self" && targetSource !== "operator_lens"/);
   assert.match(delivery, /isOperatorPreview = targetSource === "operator_lens"/);
   assert.match(delivery, /Owner cue preview · testing will not clear this for the worker/);
   assert.match(delivery, /cue\.anchorKind === "first_open" \|\| cue\.anchorKind === "at_time"/);
   assert.match(delivery, /recoveryPolicy === "expire"/);
-  assert.match(rootLayout, /<GlobalDayCueDelivery \/>/);
+  assert.match(rootLayout, /<AtlasOperationalProjectionGlobals/);
+  assert.match(operationalGlobals, /<GlobalDayCueDelivery \/>/);
+  assert.match(operationalGlobals, /if \(isPrincipalProjection\(pathname\)\) return null/);
   assert.doesNotMatch(dayLayout, /DayCueDelivery/);
   assert.doesNotMatch(taskLayout, /TaskFocusCueDelivery/);
 });
