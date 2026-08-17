@@ -37,14 +37,12 @@ test("a point reservation blocks crossing through the cue but permits a task to 
   assert.doesNotMatch(reservations, /startMinute <= reservation\.startMinute && endMinute >= reservation\.startMinute/);
 });
 
-test("Atlas proposed Clock geometry searches around real day reservations", () => {
+test("legacy proposal geometry remains reservation-aware while server chronology owns current proposals", () => {
   assert.match(proposal, /options: \{ reservations\?: AtlasClockReservation\[\] \} = \{\}/);
   assert.match(proposal, /atlasClockReservationConflicts/);
   assert.match(proposal, /options\.reservations \?\? \[\]/);
-  assert.match(proposal, /conflictsAny/);
-  assert.match(proposal, /firstFree/);
-  assert.match(proposal, /lastFree/);
-  assert.match(proposal, /day reservation/);
+  assert.match(orchestrator, /buildAtlasClockProposalFromChronology\(committed,chronology\)/);
+  assert.doesNotMatch(orchestrator, /buildAtlasClockProposal\(/);
 });
 
 test("manual Owner moves across a reservation become an explicit override warning", () => {
@@ -57,10 +55,10 @@ test("manual Owner moves across a reservation become an explicit override warnin
   assert.match(editor, /unresolvedWarningCount/);
 });
 
-test("Owner proposal wiring uses timed cues and projected commitments while Farm Hand privacy stays intact", () => {
+test("Owner Clock keeps real reservations around server-owned proposal geometry while Farm Hand privacy stays intact", () => {
   assert.match(orchestrator, /projection\?\.reservations\?\?\[\]/);
   assert.match(orchestrator, /buildAtlasClockReservations\(\{timedCues,commitments,timeZone:DEFAULT_ATLAS_FARM_TIME_ZONE\}\)/);
-  assert.match(orchestrator, /buildAtlasClockProposal\(committed,\{reservations:dayReservations\}\)/);
+  assert.match(orchestrator, /buildAtlasClockProposalFromChronology\(committed,chronology\)/);
   assert.match(orchestrator, /reservations:dayReservations/);
   assert.match(orchestrator, /item\.kind !== "potential_task"/);
   assert.doesNotMatch(reservations, /readiness|doneDisabled|blocker/i);
