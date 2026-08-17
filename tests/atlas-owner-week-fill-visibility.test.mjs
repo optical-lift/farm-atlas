@@ -7,7 +7,8 @@ const workerWeekProjectionRoute = await readFile(new URL("../app/api/atlas/worke
 const ownerWeekProjectionCompatibilityRoute = await readFile(new URL("../app/api/atlas/owner-week-projection/route.ts", import.meta.url), "utf8");
 
 test("Owner Week reads the farm-hand paid-work projection instead of showing only hard-date cards", () => {
-  assert.match(weekPage, /owner-week-projection\?start=/);
+  assert.match(weekPage, /worker-week-projection\?start=/);
+  assert.doesNotMatch(weekPage, /owner-week-projection\?start=/);
   assert.match(weekPage, /Atlas fill plan/);
   assert.match(weekPage, /Planned fill/);
   assert.match(weekPage, /Finish Elm/);
