@@ -1,0 +1,11 @@
+insert into atlas.authenticated_rpc_registry(signature,classification,confidence,review_status,authenticated_execute_expected,security_definer_expected,service_execute_expected,caller_count,policy_reference_count,evidence,reviewed_at) values
+('atlas.ensure_flower_standing_demand_window_for_member_v1(uuid, date, date)','app_endpoint','verified','active',true,true,true,1,0,jsonb_build_object('purpose','Ensure dated committed demand exists for standing flower-order recurrence dates in a bounded horizon','boundary','Owner or Manager authority required; horizon is at most 366 days','standingTruth','recurrence dates are deterministic from first due date and interval; reruns are idempotent','clockTruth','materialization creates commercial demand only and schedules no worker time','inventoryTruth','materialized demand claims no supply'),now()),
+('atlas.owner_operator_ensure_flower_standing_demand_window_v1(uuid, date, date)','owner_admin_endpoint','verified','active',true,true,true,1,0,jsonb_build_object('purpose','Ensure standing-demand recurrence horizon while Owner operates as an effective farm membership','boundary','effective role must retain Owner or Manager authority','clockTruth','operator mode creates no Worker Day or Principal scheduling'),now())
+on conflict(signature) do update set classification=excluded.classification,confidence=excluded.confidence,review_status=excluded.review_status,authenticated_execute_expected=excluded.authenticated_execute_expected,security_definer_expected=excluded.security_definer_expected,service_execute_expected=excluded.service_execute_expected,caller_count=excluded.caller_count,policy_reference_count=excluded.policy_reference_count,evidence=excluded.evidence,reviewed_at=excluded.reviewed_at;
+
+update atlas.authenticated_rpc_registry
+set evidence=evidence||jsonb_build_object('firstOccurrenceTruth','recording a standing order also materializes its first dated committed demand occurrence; no supply or worker time is created'),reviewed_at=now()
+where signature in (
+'atlas.record_flower_standing_order_for_member_v1(uuid, uuid, text, text, text, time without time zone, date, date, integer, jsonb, text, text)',
+'atlas.owner_operator_record_flower_standing_order_v1(uuid, uuid, text, text, text, time without time zone, date, date, integer, jsonb, text, text)'
+);

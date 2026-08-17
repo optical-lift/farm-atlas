@@ -74,6 +74,12 @@ const ownerDayReservationHardeningMigrationName =
   "20260814141500_fixed_routine_projection_hardening_v1.sql";
 const ownerDayReservationRegistryMigrationName =
   "20260814141600_owner_day_reservation_rpc_registry_v1.sql";
+const clockOccurrenceProvenanceMigrationName =
+  "20260816001514_clock_placement_occurrence_provenance_v1.sql";
+const clockOccurrenceRegistryMigrationName =
+  "20260817151627_clock_occurrence_internal_rpc_reconciliation_v1.sql";
+const workerHarvestRpcRegistryMigrationName =
+  "20260817153523_worker_harvest_rpc_registry_reconciliation_v1.sql";
 const principalRpcRegistryMigrationName =
   "20260817005100_principal_rpc_registry_reconciliation_v1.sql";
 const workerWeekCanonicalMigrationName =
@@ -85,6 +91,49 @@ const dayAcceptanceRpcMigrations = new Set([
   "20260811183000_atlas_departure_requirement_cues_v1.sql",
   "20260811185000_atlas_event_day_briefing_v1.sql",
   "20260811190000_atlas_owner_cue_edit_preserves_result_contract_v1.sql",
+]);
+const workerHarvestHistoricalRpcMigrations = new Set([
+  "20260816001514_clock_placement_occurrence_provenance_v1.sql",
+  "20260816003305_work_occurrence_temporal_contract_v1.sql",
+  "20260816010010_day_aware_human_capacity_v1.sql",
+  "20260816025802_worker_day_deferrability_v1.sql",
+  "20260816025928_worker_day_real_day_synthetic_cleanup_v1.sql",
+  "20260816041034_worker_day_chronology_foundation_v1.sql",
+  "20260816041346_worker_day_chronology_ordering_hardening_v1.sql",
+  "20260816132822_worker_weekly_farm_contract_boolean_classification_fix_v1.sql",
+  "20260816133225_worker_weekly_farm_contract_exclude_personal_noncounting_v1.sql",
+  "20260816133340_worker_weekly_farm_contract_no_silent_hard_date_carry_v1.sql",
+  "20260816133532_worker_delay_consequence_classifier_v1.sql",
+  "20260816133707_worker_dependency_consequence_inheritance_v1.sql",
+  "20260816133801_worker_weekly_farm_contract_consequence_overlay_v1.sql",
+  "20260816134246_protected_farm_minimum_classifier_v1.sql",
+  "20260816134337_worker_weekly_farm_contract_protected_minimum_v2.sql",
+  "20260816141452_clock_functional_taxonomy_v1.sql",
+  "20260816141523_worker_weekly_farm_contract_clock_traits_v3.sql",
+  "20260816141729_worker_human_time_reservation_contract_v1.sql",
+  "20260816141937_worker_farm_admin_lane_v1.sql",
+  "20260816142156_clock_functional_taxonomy_location_environment_fix_v1.sql",
+  "20260816142426_worker_living_propagation_lane_v1.sql",
+  "20260816142732_worker_next_up_contract_v1.sql",
+  "20260816142939_execution_destination_readiness_v1.sql",
+  "20260816142959_clock_functional_taxonomy_transplant_execution_v2.sql",
+  "20260816143105_worker_next_up_contract_v2.sql",
+  "20260816143411_worker_weekly_farm_contract_readiness_protected_promotion_v5.sql",
+  "20260816143506_worker_living_propagation_lane_readiness_v2.sql",
+  "20260816144147_worker_capacity_window_and_farm_clock_conflict_v1.sql",
+  "20260816154444_farm_continuity_auditor_v1.sql",
+  "20260816155032_production_actual_reforecast_v1.sql",
+  "20260816155520_production_operation_actuals_v1.sql",
+  "20260816155555_production_clear_turnover_actuals_v1.sql",
+  "20260816155741_farm_continuity_auditor_reforecast_v2.sql",
+  "20260816162548_harvest_flower_independent_demand_schema_v1.sql",
+  "20260816162649_harvest_flower_independent_demand_commands_v1.sql",
+  "20260816163428_harvest_flower_demand_allocation_truth_v1.sql",
+  "20260816163512_harvest_flower_demand_allocation_commands_v1.sql",
+  "20260816163711_harvest_flower_demand_to_sale_conversion_v1.sql",
+  "20260816163953_harvest_flower_standing_demand_materialization_v1.sql",
+  "20260816164306_harvest_flower_prospect_route_commands_v1.sql",
+  "20260816164704_harvest_flower_prospect_to_sale_conversion_v1.sql",
 ]);
 const principalHistoricalRpcMigrations = new Set([
   "20260816184935_principal_foundation_domains_v1.sql",
@@ -205,6 +254,8 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const dayChoreographyRegistry = readMigration(dayChoreographyRegistryMigrationName);
   const dayAcceptanceRegistry = readMigration(dayAcceptanceRegistryMigrationName);
   const ownerDayReservationRegistry = readMigration(ownerDayReservationRegistryMigrationName);
+  const clockOccurrenceRegistry = readMigration(clockOccurrenceRegistryMigrationName);
+  const workerHarvestRpcRegistry = readMigration(workerHarvestRpcRegistryMigrationName);
   const principalRpcRegistry = readMigration(principalRpcRegistryMigrationName);
   const workerWeekCanonicalRegistry = readMigration(workerWeekCanonicalRegistryMigrationName);
 
@@ -248,11 +299,15 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                                     ? dayAcceptanceRegistryMigrationName
                                     : name === ownerDayReservationCommandMigrationName || name === ownerDayReservationHardeningMigrationName
                                       ? ownerDayReservationRegistryMigrationName
-                                      : principalHistoricalRpcMigrations.has(name)
-                                        ? principalRpcRegistryMigrationName
-                                        : name === workerWeekCanonicalMigrationName
-                                          ? workerWeekCanonicalRegistryMigrationName
-                                          : null;
+                                      : name === clockOccurrenceProvenanceMigrationName
+                                        ? clockOccurrenceRegistryMigrationName
+                                        : workerHarvestHistoricalRpcMigrations.has(name)
+                                          ? workerHarvestRpcRegistryMigrationName
+                                          : principalHistoricalRpcMigrations.has(name)
+                                            ? principalRpcRegistryMigrationName
+                                            : name === workerWeekCanonicalMigrationName
+                                              ? workerWeekCanonicalRegistryMigrationName
+                                              : null;
 
       assert.ok(
         pairedRegistryName,
@@ -381,6 +436,51 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   }
   assert.match(ownerDayReservationRegistry, /owner_admin_endpoint/);
   assert.match(ownerDayReservationRegistry, /app_endpoint/);
+
+  assert.ok(clockOccurrenceRegistry.includes(
+    "atlas.resolve_clock_placement_occurrence_v1(uuid)",
+  ));
+  assert.match(clockOccurrenceRegistry, /service_internal/);
+  assert.match(
+    clockOccurrenceRegistry,
+    /revoke execute on function atlas\.resolve_clock_placement_occurrence_v1\(uuid\) from anon, authenticated/i,
+  );
+
+  for (const signature of [
+    "atlas.capture_clock_placement_event_occurrence_v1()",
+    "atlas.capture_clock_placement_occurrence_v1()",
+    "atlas.log_clock_placement_occurrence_rebase_v1()",
+    "atlas.task_prerequisites_ready_v1(uuid)",
+    "atlas.work_occurrence_temporal_contract_v1(uuid, date)",
+    "atlas.owner_worker_next_up_api_v1(uuid, uuid, date)",
+    "atlas.worker_self_next_up_api_v1(uuid, uuid, date)",
+    "atlas.owner_worker_weekly_capacity_conflict_api_v1(uuid, uuid, date)",
+    "atlas.farm_continuity_audit_v1(uuid, date)",
+    "atlas.prevent_production_reforecast_event_mutation_v1()",
+    "atlas.reforecast_from_production_lot_event_v1()",
+    "atlas.prevent_production_operation_actual_mutation_v1()",
+    "atlas.ensure_production_clear_path_v1(uuid, uuid)",
+    "atlas.production_lot_reforecast_preview_v1(uuid, uuid)",
+    "atlas.apply_production_lot_reforecast_v1(uuid, uuid)",
+    "atlas.record_production_operation_actual_v1(uuid, integer, numeric, text, date, text, text)",
+    "atlas.record_production_clear_v1(uuid, date, text, text)",
+    "atlas.record_production_turnover_v1(uuid, date, text, text)",
+    "atlas.farm_continuity_audit_v2(uuid, date)",
+  ]) {
+    assert.ok(workerHarvestRpcRegistry.includes(signature));
+  }
+  for (const classification of [
+    "service_internal",
+    "policy_or_composition_helper",
+    "owner_admin_endpoint",
+    "app_endpoint",
+  ]) {
+    assert.ok(workerHarvestRpcRegistry.includes(`'${classification}'`));
+  }
+  assert.match(
+    workerHarvestRpcRegistry,
+    /revoke execute on function atlas\.task_prerequisites_ready_v1\(uuid\) from anon, authenticated/i,
+  );
 
   for (const signature of [
     "atlas.principal_capacity_day_state_v1(uuid, date)",
