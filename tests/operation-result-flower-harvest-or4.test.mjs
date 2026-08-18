@@ -31,6 +31,9 @@ const continuityRepair = read(
 const destinationFix = read(
   "supabase/migrations/20260818195503_continuity_materialized_production_destination_false_positive_fix_v1.sql",
 );
+const replayGuard = read(
+  "supabase/migrations/20260818200632_continuity_repair_paths_replay_guard_v2.sql",
+);
 
 test("OR4 harvest witness preserves yes/no/unsure instead of manufacturing certainty", () => {
   assert.match(harvest, /alter column more_available drop not null/i);
@@ -108,6 +111,14 @@ test("continuity repair is function-owned management work, not worker blame or P
   assert.match(continuityRepair, /inspection itself does not invent a transplant destination or claim the body is healthy/i);
   assert.match(continuityRepair, /task completion alone must not imply the body is empty/i);
   assert.doesNotMatch(continuityRepair, /principal/i);
+});
+
+test("continuity repair replay has hard postconditions", () => {
+  assert.match(replayGuard, /expected 21 propagation links/i);
+  assert.match(replayGuard, /expected 1 cleanup link/i);
+  assert.match(replayGuard, /v_prop_links <> 21/i);
+  assert.match(replayGuard, /v_cleanup_links <> 1/i);
+  assert.match(replayGuard, /expected repair tasks are missing/i);
 });
 
 test("materialized Production bodies are not mislabeled as missing a future destination", () => {
