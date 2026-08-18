@@ -59,7 +59,7 @@ declare
 begin
   select p.oid into v_oid
   from pg_proc p
-  join pg_namespace n on n.oid=p.relnamespace
+  join pg_namespace n on n.oid=p.pronamespace
   where n.nspname='atlas'
     and p.proname='farm_continuity_audit_v1'
     and pg_get_function_identity_arguments(p.oid)='p_farm_id uuid, p_as_of_date date';
