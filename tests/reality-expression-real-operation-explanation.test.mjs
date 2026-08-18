@@ -48,6 +48,14 @@ test("historical Done is evidence rather than retroactive complete fruit", () =>
   );
 });
 
+test("task-required fruit stays separate from the historical completion claim", () => {
+  assert.match(phase8, /execution_done_when/i);
+  assert.match(phase8, /worker_result_lines/i);
+  assert.match(phase8, /requiredResultEvidence/i);
+  assert.match(phase8, /resultEvidenceCaptureState/i);
+  assert.match(phase8, /allSubjectsHaveContinuation/i);
+});
+
 test("claim movement and Production reforecast remain evidence-gated", () => {
   assert.match(
     phase8,
