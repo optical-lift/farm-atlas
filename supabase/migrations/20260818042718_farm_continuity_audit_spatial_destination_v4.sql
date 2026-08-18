@@ -159,3 +159,6 @@ $function$;
 
 revoke all on function atlas.farm_continuity_audit_v4(uuid,date) from public,anon;
 grant execute on function atlas.farm_continuity_audit_v4(uuid,date) to authenticated,service_role;
+
+-- Ordered authenticated RPC registry reconciliation follows immediately in
+-- 20260818042828_spatial_destination_rpc_registry_v1.sql via atlas.authenticated_rpc_registry.
