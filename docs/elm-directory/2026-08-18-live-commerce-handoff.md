@@ -33,14 +33,15 @@ The stored gaps remain open because live questions cannot be resolved forever. T
 - `covered` while a matching unexpired assertion exists
 - `open` again automatically when that assertion expires
 
-At the end of this pass:
+After two public-source passes on August 18:
 
-- **3 currently covered** by fresh business-controlled observations
-- **24 currently open**
-- of the 24 open, **23 have a ready-to-contact availability-refresh target**
-- **1 needs a contact path**: Old Earth Acres & Old Earth Sips
+- **6 currently covered** by fresh current-state observations
+- **21 currently open**
+- the remaining open gaps stay in the availability-refresh acquisition queue rather than being inferred from general service/category evidence
 
-The three current observations were intentionally written as expiring data in the live database and are **not replayed by migration as perpetual current truth**.
+Current covered examples include same-day seasonal/location/floral state plus current new-patient/application status from provider-controlled sources. Every assertion has its own hard expiry.
+
+These current observations were intentionally written as expiring data in the live database and are **not replayed by migration as perpetual current truth**.
 
 ### One separate P1 connection gap
 
@@ -137,7 +138,7 @@ The entire test transaction was rolled back, so no fake Parks Mtn Apiary availab
 
 ## Next implementation work
 
-1. Work the 24 live-availability acquisition targets, prioritizing provider-controlled/direct evidence over weak directory evidence.
+1. Work the **21 remaining live-availability acquisition targets**, prioritizing provider-controlled/direct evidence over weak directory evidence.
 2. Create the inbound SMS transport/webhook that writes raw messages to `provider_messages` and links them to verified channels.
 3. Build the parser that converts provider language into one or more `provider_update_candidates`, including Central-time expiry resolution.
 4. Add the provider verification/onboarding flow so a business can authorize a phone number and the exact current-state lanes it may report.
