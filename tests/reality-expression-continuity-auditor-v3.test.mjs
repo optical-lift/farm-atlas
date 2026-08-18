@@ -79,15 +79,13 @@ test("availability overallocation requires trusted canonical conflict evidence",
 });
 
 test("missing destination remains distinct from an orphaned future stage", () => {
-  assert.match(
-    auditorV3,
-    /flowBufferClaim,claims,destination,state/i,
-  );
+  assert.match(auditorV3, /flowBufferClaim,claims,destination,state/i);
   assert.match(auditorV3, /next_expected_date/i);
   assert.match(
     auditorV3,
-    /operationFunction[^\n]*,'\)' in \('','inspect','inspect_continuity'\)/i,
+    /flowBufferClaim,nextTransitionAvailability,operationFunction/i,
   );
+  assert.match(auditorV3, /in \('','inspect','inspect_continuity'\)/i);
 });
 
 test("committed labor capacity means a real Worker Day claim, not an estimate", () => {
