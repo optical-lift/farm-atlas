@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo } from "react";
 
-import GlobalAtlasAdd from "@/components/atlas/global-atlas-add";
 import { atlasFarmDateIso } from "@/lib/atlas/farm-day";
 import type { AtlasFarmRole } from "@/lib/atlas/session";
 
@@ -159,26 +158,23 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null }: At
 
   // Legacy route marker retained for contract search: "/#work-board".
   return (
-    <>
-      {!principalProjection ? <GlobalAtlasAdd /> : null}
-      <nav className="atlas-context-footer" aria-label="Atlas destinations">
-        <div
-          className="atlas-context-footer__rail"
-          style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
-        >
-          {items.map((item) => (
-            <Link
-              key={item.key}
-              href={item.href}
-              className="atlas-context-footer__item"
-              aria-current={active === item.key ? "page" : undefined}
-            >
-              <span className="atlas-context-footer__icon" aria-hidden="true"><DockIcon kind={item.key} /></span>
-              <strong>{item.label}</strong>
-            </Link>
-          ))}
-        </div>
-      </nav>
-    </>
+    <nav className="atlas-context-footer" aria-label="Atlas destinations">
+      <div
+        className="atlas-context-footer__rail"
+        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+      >
+        {items.map((item) => (
+          <Link
+            key={item.key}
+            href={item.href}
+            className="atlas-context-footer__item"
+            aria-current={active === item.key ? "page" : undefined}
+          >
+            <span className="atlas-context-footer__icon" aria-hidden="true"><DockIcon kind={item.key} /></span>
+            <strong>{item.label}</strong>
+          </Link>
+        ))}
+      </div>
+    </nav>
   );
 }
