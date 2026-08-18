@@ -13,7 +13,11 @@ test("Principal projection has a small Principal dock instead of Farm Clock and 
   assert.match(frame, /label: "Home", href: "\/principal"/);
   assert.match(frame, /label: "Farm Ops", href: "\/overview\/week"/);
   assert.match(frame, /principalProjection\s*\? \[/);
-  assert.match(frame, /!principalProjection \? <GlobalAtlasAdd \/>/);
+});
+
+test("the global Atlas add control is retired from the contextual shell", () => {
+  assert.doesNotMatch(frame, /GlobalAtlasAdd/);
+  assert.doesNotMatch(frame, /Add to Atlas/);
 });
 
 test("farm-global runtime surfaces do not mount on the Principal projection", () => {
