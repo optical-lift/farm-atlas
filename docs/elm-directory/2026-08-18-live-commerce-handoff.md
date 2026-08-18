@@ -37,7 +37,10 @@ After two public-source passes on August 18:
 
 - **6 currently covered** by fresh current-state observations
 - **21 currently open**
+- of those 21, **20 are ready to contact** and **1 still needs a contact path**
 - the remaining open gaps stay in the availability-refresh acquisition queue rather than being inferred from general service/category evidence
+
+The remaining needs-contact-path entity is **Old Earth Acres & Old Earth Sips**.
 
 Current covered examples include same-day seasonal/location/floral state plus current new-patient/application status from provider-controlled sources. Every assertion has its own hard expiry.
 
@@ -71,6 +74,33 @@ Only assertions whose validity window contains `now()` are visible as current.
 New view: `local_intel.v_live_availability_gap_state`
 
 This joins P1 live questions to current assertions and computes temporal coverage without permanently resolving the underlying question gap.
+
+## Availability-aware answer layer
+
+New view: `local_intel.v_entity_availability_summary`
+
+This gives each known entity an explicit availability freshness state:
+
+- `current` — at least one unexpired current-state assertion exists
+- `stale` — Elm has seen availability state before, but the last assertion has expired
+- `unknown` — Elm has no availability assertion for the entity
+
+New function: `local_intel.search_local_answers_v2(...)`
+
+`search_local_answers_v1` was preserved unchanged. V2 adds:
+
+- `availability_freshness`
+- `current_availability`
+- `latest_current_observation_at`
+- `next_current_expiry_at`
+- `last_availability_expired_at`
+
+This is the resident-answer boundary that prevents durable category truth from silently becoming an `available now` claim.
+
+Read-layer verification examples:
+
+- searching `dental` returns Artizan Dental Care and Marshfield Family Dental Care with `availability_freshness = current` and their current new-patient assertions
+- searching `honey` still returns Parks Mtn Apiary as a known honey source, but `availability_freshness = unknown` because the Parks provider-text test was rolled back and no real current honey assertion exists
 
 ## Provider texting / provider-push ingress
 
@@ -134,7 +164,7 @@ The flow successfully produced a current `product_inventory` assertion equivalen
 
 > Honey restocked: pints and quarts available for farm pickup this week.
 
-The entire test transaction was rolled back, so no fake Parks Mtn Apiary availability remains in live data.
+The entire test transaction was rolled back, so no fake Parks Mtn Apiary availability remains in live data. The provider ingress tables are currently empty until real channels/providers are onboarded.
 
 ## Next implementation work
 
@@ -142,5 +172,4 @@ The entire test transaction was rolled back, so no fake Parks Mtn Apiary availab
 2. Create the inbound SMS transport/webhook that writes raw messages to `provider_messages` and links them to verified channels.
 3. Build the parser that converts provider language into one or more `provider_update_candidates`, including Central-time expiry resolution.
 4. Add the provider verification/onboarding flow so a business can authorize a phone number and the exact current-state lanes it may report.
-5. Put current availability into the Elm answer/read layer so resident answers can distinguish `known source`, `available now`, `sold out`, `closed`, `unknown`, and `stale`.
-6. Reconcile/export the pre-existing `local_intel` baseline into repository migration history before expecting clean-environment bootstrap.
+5. Reconcile/export the pre-existing `local_intel` baseline into repository migration history before expecting clean-environment bootstrap.
