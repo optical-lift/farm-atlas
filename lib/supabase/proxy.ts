@@ -28,6 +28,7 @@ function isPublicPath(pathname: string) {
     pathname === "/manifest.webmanifest" ||
     pathname === "/sw.js" ||
     pathname === "/offline" ||
+    pathname === "/dev/worker-blocked-task-preview" ||
     pathname.startsWith("/api/pwa/icon") ||
     pathname.startsWith("/api/atlas/auth/")
   );
