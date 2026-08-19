@@ -1,11 +1,14 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import OwnerNetworkConfirmationModal from "@/components/atlas/owner-network-confirmation-modal";
+
 const linkStyle = { color: "#262626", fontSize: 12, fontWeight: 900, textDecoration: "none" } as const;
 
 export default function PrincipalLayout({ children }: { children: ReactNode }) {
   return (
     <>
+      <OwnerNetworkConfirmationModal />
       <nav
         aria-label="Principal workspace"
         style={{
