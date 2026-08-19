@@ -11,6 +11,7 @@ test("task transition client owns transport, not checklist DOM state", () => {
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
   const checklist = read("components/atlas/task-child-checklist.tsx");
   const stateful = read("components/atlas/stateful-child-checklist.tsx");
+  const harvestRound = read("components/atlas/harvest-readiness-round-checklist.tsx");
 
   assert.doesNotMatch(client, /MutationObserver/);
   assert.doesNotMatch(client, /querySelector/);
@@ -19,8 +20,13 @@ test("task transition client owns transport, not checklist DOM state", () => {
   assert.match(client, /transition client owns transport only/i);
   assert.match(shell, /refreshTaskAndChildren/);
   assert.match(shell, /<StatefulChildChecklist childTasks=\{statefulChildren\} onChange=\{refreshTaskAndChildren\}/);
-  assert.match(shell, /<TaskChildChecklist childTasks=\{ordinaryChildren\} onChange=\{refreshTaskAndChildren\}/);
+  assert.match(shell, /<HarvestReadinessRoundChecklist childTasks=\{harvestRoundChildren\} onChange=\{refreshTaskAndChildren\}/);
+  assert.match(shell, /<TaskChildChecklist childTasks=\{regularOrdinaryChildren\} onChange=\{refreshTaskAndChildren\}/);
+  assert.match(shell, /harvest_readiness_round_role === "observation_child"/);
   assert.match(checklist, /const \[savingId, setSavingId\]/);
   assert.match(stateful, /postAtlasTaskTransition/);
   assert.match(stateful, /transition: next === "done" \? "checklist_done" : "checklist_open"/);
+  assert.match(harvestRound, /\/api\/atlas\/harvest-watch/);
+  assert.match(harvestRound, /Record this crop/);
+  assert.doesNotMatch(harvestRound, /Mark done/);
 });
