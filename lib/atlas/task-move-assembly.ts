@@ -167,9 +167,9 @@ function metadataText(task: AtlasTaskCard, key: string) {
  * another. Worker presentation then labels those facts with the farm language
  * attached to the canonical task rather than exposing implementation vocabulary.
  *
- * A blocked or missing requirement is descriptive farm truth, not an execution
- * lock. Atlas may mark a task blocked so a human understands the condition while
- * still allowing that human to record the real outcome when the work is done.
+ * Required blocked or missing requirements are execution truth. The core assembly
+ * decides whether the MOVE stops at readiness; presentation may explain that state
+ * simply, but it must not overwrite the canonical executable decision.
  */
 export function assembleTaskMove(task: AtlasTaskCard): TaskMoveAssembly {
   const execution = taskExecutionModel(task);
@@ -202,17 +202,9 @@ export function assembleTaskMove(task: AtlasTaskCard): TaskMoveAssembly {
       displayAction: metadataText(task, "display_action") || display.action || null,
       operationFamily: metadataText(task, "display_family") || metadataText(task, "operation_family") || null,
     },
-    spine: {
-      ...baseAssembly.spine,
-      connection: "continuous",
-    },
     execution: {
       ...baseAssembly.execution,
       howLabel: metadataText(task, "execution_how_label"),
-    },
-    readiness: {
-      ...baseAssembly.readiness,
-      executable: true,
     },
   };
 }
