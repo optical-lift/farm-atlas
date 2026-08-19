@@ -41,7 +41,8 @@ test("missing transplant destination blocks execution but does not erase the req
   assert.match(sql, /'destination_required'/);
   assert.match(sql, /'blocksExecution',true/);
   assert.match(sql, /'doesNotEraseRequirement',true/);
-  assert.match(sql, /'warrant','missing_truth'/);
+  assert.match(sql, /v_warrant:=case when v_ready then 'ready' else 'missing_truth' end;/);
+  assert.match(sql, /'warrant',v_warrant/);
   assert.match(sql, /'missingDestinationBlocksExecutionNotRequirement',true/);
   assert.match(sql, /'requirementExistsIndependentlyOfExecutionWarrant',true/);
 });
