@@ -97,18 +97,25 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
   const [saving, setSaving] = useState(false);
   const [previewDismissed, setPreviewDismissed] = useState<Set<string>>(new Set());
 
+  async function fetchCues(signal?: AbortSignal) {
+    const request = await fetch(`/api/atlas/task-day-cues?taskId=${encodeURIComponent(taskId)}&date=${encodeURIComponent(dateIso)}`, {
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+      signal,
+    });
+    const body = await request.json() as CueResponse;
+    return request.ok && body.ok ? body : null;
+  }
+
   async function load(signal?: AbortSignal) {
     try {
-      const request = await fetch(`/api/atlas/task-day-cues?taskId=${encodeURIComponent(taskId)}&date=${encodeURIComponent(dateIso)}`, {
-        cache: "no-store",
-        credentials: "same-origin",
-        headers: { Accept: "application/json" },
-        signal,
-      });
-      const body = await request.json() as CueResponse;
-      if (!signal?.aborted) setResponse(request.ok && body.ok ? body : null);
+      const body = await fetchCues(signal);
+      if (!signal?.aborted) setResponse(body);
+      return body;
     } catch {
       if (!signal?.aborted) setResponse(null);
+      return null;
     }
   }
 
@@ -128,19 +135,39 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
     ? (response?.cues ?? []).filter((cue) => !previewDismissed.has(cue.cueId))
     : [];
   const beforeCue = workerCues.find((cue) => cue.anchorKind === "before_task" && cueDue(cue)) ?? null;
-  const afterCue = workerCues.find((cue) => cue.anchorKind === "after_task" && cueDue(cue)) ?? null;
 
   useEffect(() => {
     function onTaskCompleted(event: Event) {
       const custom = event as CustomEvent<CompletionDetail>;
-      if (!custom.detail || custom.detail.taskId !== taskId || !afterCue) return;
+      if (!custom.detail || custom.detail.taskId !== taskId) return;
+
+      // Result-driven consequences (for example mower recharge) are created by
+      // the result write itself. Hold navigation, refresh cue truth, and only
+      // interrupt the worker if the completed operation actually produced one.
       custom.preventDefault();
-      setCompletion(custom.detail);
-      setActiveAfter(afterCue);
+      const detail = custom.detail;
+      setCompletion(detail);
+
+      void (async () => {
+        const refreshed = await load();
+        const targetSource = refreshed?.targetSource ?? null;
+        const visible = targetSource === "worker_self" || targetSource === "operator_lens";
+        const afterCue = visible
+          ? (refreshed?.cues ?? []).find((candidate) => candidate.anchorKind === "after_task" && cueDue(candidate)) ?? null
+          : null;
+
+        if (afterCue) {
+          setActiveAfter(afterCue);
+          return;
+        }
+
+        window.location.assign(completionReturn(detail, "/day"));
+      })();
     }
+
     window.addEventListener("atlas:task-completed", onTaskCompleted);
     return () => window.removeEventListener("atlas:task-completed", onTaskCompleted);
-  }, [afterCue, taskId]);
+  }, [dateIso, taskId]);
 
   const cue = activeAfter ?? beforeCue;
   if (!cue) return null;
@@ -159,7 +186,10 @@ export default function TaskFocusCueDelivery({ taskId }: { taskId: string }) {
 
     if (isOperatorPreview) {
       setPreviewDismissed((current) => new Set(current).add(activeCue.cueId));
-      if (activeCue.anchorKind === "after_task") setActiveAfter(null);
+      if (activeCue.anchorKind === "after_task") {
+        setActiveAfter(null);
+        window.location.assign(completionReturn(completion, "/day"));
+      }
       return;
     }
 
