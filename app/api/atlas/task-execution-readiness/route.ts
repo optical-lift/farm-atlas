@@ -41,11 +41,11 @@ function workerPresentation(readiness: JsonObject): WorkerPresentation {
   }
 
   const consequenceGate = object(readiness.stateConsequenceGate);
-  const requirements = rows(consequenceGate?.resourceRequirements);
-  const blockingConsequences = rows(consequenceGate?.blockingConsequences);
+  const requirements = rows(consequenceGate?.resourceRequirements ?? readiness.resourceRequirements);
+  const blockingConsequences = rows(consequenceGate?.blockingConsequences ?? readiness.blockingConsequences);
 
   const battery = requirements.find((requirement) => text(requirement.resourceKey) === "battery_push_mower_battery_set");
-  const batteryState = text(battery?.readinessState || battery?.resourceStatus);
+  const batteryState = text(battery?.readinessState || battery?.resourceStatus || battery?.status);
   if (battery && ["needs_charge", "charging"].includes(batteryState)) {
     return {
       title: "Not ready yet",
@@ -57,9 +57,10 @@ function workerPresentation(readiness: JsonObject): WorkerPresentation {
 
   const managementEquipmentBlock = blockingConsequences.some((entry) => {
     const consequence = object(entry.consequence);
-    const requirement = object(entry.requirement);
-    return text(consequence?.audience) === "farm_operations_management"
-      || text(requirement?.resourceStatus) === "needs_repair";
+    return text(entry.audience) === "farm_operations_management"
+      || text(consequence?.audience) === "farm_operations_management"
+      || text(entry.resourceStatus) === "needs_repair"
+      || text(consequence?.resourceStatus) === "needs_repair";
   });
 
   if (managementEquipmentBlock || readiness.resourcesReady === false) {
