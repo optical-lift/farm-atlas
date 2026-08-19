@@ -71,7 +71,7 @@ jobs:
           fi
 
       - name: Capture browser screenshot
-        run: npx -y playwright@1.55.0 screenshot --device="iPhone 13" --wait-for-timeout=1000 http://127.0.0.1:3000/dev/worker-blocked-task-preview worker-blocked.png
+        run: npx -y playwright@1.55.0 screenshot --browser=chromium --viewport-size="390,844" --wait-for-timeout=1000 http://127.0.0.1:3000/dev/worker-blocked-task-preview worker-blocked.png
 
       - name: Upload rendered witness
         uses: actions/upload-artifact@v4
