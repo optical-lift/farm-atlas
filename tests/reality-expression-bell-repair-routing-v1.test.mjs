@@ -37,7 +37,7 @@ test("capacity remains a management repair condition before Principal", () => {
   assert.match(packets, /estimateIsCapacityClaimNotLaborActual',true/i);
   assert.match(packets, /optionalWorkDisplacedBeforeRequiredWorkDeclaredImpossible',true/i);
   assert.match(packets, /workerBlameNotInferred',true/i);
-  assert.match(packets, /principalEscalationWarrant/i);
+  assert.match(packets, /principalEscalationNotCreated',true/i);
 });
 
 test("one stable repair obligation evolves instead of producing daily Bell noise", () => {
