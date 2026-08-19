@@ -7,8 +7,9 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 function read(path) { return readFileSync(join(root, path), "utf8"); }
 
-test("Pass 5 gives ordinary assigned tasks one neutral execution shell", () => {
+test("Pass 5 gives ordinary assigned tasks one neutral execution shell behind readiness", () => {
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
+  const readiness = read("components/atlas/worker-ready-assigned-task-execution-shell.tsx");
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
 
   assert.match(shell, /export default function AssignedTaskExecutionShell/);
@@ -16,7 +17,10 @@ test("Pass 5 gives ordinary assigned tasks one neutral execution shell", () => {
   assert.match(shell, /TaskChildChecklist/);
   assert.match(shell, /TaskPrimaryResultControls/);
   assert.match(shell, /data-atlas-assigned-task-execution-shell="true"/);
-  assert.match(canonical, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
+  assert.match(canonical, /return <WorkerReadyAssignedTaskExecutionShell \{\.\.\.props\} \/>/);
+  assert.match(readiness, /readiness\?\.executable !== true/);
+  assert.match(readiness, /return <WaitingScreen/);
+  assert.match(readiness, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
   assert.doesNotMatch(canonical, /DominionAssignedTaskDetail/);
 });
 
