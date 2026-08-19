@@ -92,6 +92,10 @@ const realityExpressionSpatialRefinementMigrationName =
   "20260817213813_refine_spatial_supersession_evidence_v1.sql";
 const realityExpressionSpatialRegistryMigrationName =
   "20260817214322_reality_expression_spatial_rpc_registry_v1.sql";
+const workerCapacityManagementOutcomeMigrationName =
+  "20260818140510_worker_capacity_management_outcome_and_principal_gate_functions_v2.sql";
+const workerCapacityManagementRegistryMigrationName =
+  "20260818140525_worker_capacity_management_rpc_registry_v1.sql";
 const dayAcceptanceRpcMigrations = new Set([
   "20260811180500_atlas_day_cue_observation_result_contract_v1.sql",
   "20260811183000_atlas_departure_requirement_cues_v1.sql",
@@ -265,6 +269,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const principalRpcRegistry = readMigration(principalRpcRegistryMigrationName);
   const workerWeekCanonicalRegistry = readMigration(workerWeekCanonicalRegistryMigrationName);
   const realityExpressionSpatialRegistry = readMigration(realityExpressionSpatialRegistryMigrationName);
+  const workerCapacityManagementRegistry = readMigration(workerCapacityManagementRegistryMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -316,7 +321,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                                               ? workerWeekCanonicalRegistryMigrationName
                                               : name === realityExpressionSpatialMigrationName || name === realityExpressionSpatialRefinementMigrationName
                                                 ? realityExpressionSpatialRegistryMigrationName
-                                                : null;
+                                                : name === workerCapacityManagementOutcomeMigrationName
+                                                  ? workerCapacityManagementRegistryMigrationName
+                                                  : null;
 
       assert.ok(
         pairedRegistryName,
