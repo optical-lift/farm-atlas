@@ -96,6 +96,10 @@ const workerCapacityManagementOutcomeMigrationName =
   "20260818140510_worker_capacity_management_outcome_and_principal_gate_functions_v2.sql";
 const workerCapacityManagementRegistryMigrationName =
   "20260818140525_worker_capacity_management_rpc_registry_v1.sql";
+const rpcPrivilegeReconciliationStartMigrationName =
+  "20260818162107_operation_result_generic_resource_event_state_v1.sql";
+const rpcPrivilegeReconciliationMigrationName =
+  "20260819225100_atlas_rpc_privilege_registry_reconciliation_v2.sql";
 const dayAcceptanceRpcMigrations = new Set([
   "20260811180500_atlas_day_cue_observation_result_contract_v1.sql",
   "20260811183000_atlas_departure_requirement_cues_v1.sql",
@@ -270,6 +274,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const workerWeekCanonicalRegistry = readMigration(workerWeekCanonicalRegistryMigrationName);
   const realityExpressionSpatialRegistry = readMigration(realityExpressionSpatialRegistryMigrationName);
   const workerCapacityManagementRegistry = readMigration(workerCapacityManagementRegistryMigrationName);
+  const rpcPrivilegeReconciliation = readMigration(rpcPrivilegeReconciliationMigrationName);
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
@@ -323,7 +328,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                                                 ? realityExpressionSpatialRegistryMigrationName
                                                 : name === workerCapacityManagementOutcomeMigrationName
                                                   ? workerCapacityManagementRegistryMigrationName
-                                                  : null;
+                                                  : name >= rpcPrivilegeReconciliationStartMigrationName && name < rpcPrivilegeReconciliationMigrationName
+                                                    ? rpcPrivilegeReconciliationMigrationName
+                                                    : null;
 
       assert.ok(
         pairedRegistryName,
@@ -341,6 +348,15 @@ test("future authenticated EXECUTE changes must update the registry", () => {
       `${name} must not broadly grant authenticated function execution`,
     );
   }
+
+  assert.match(
+    rpcPrivilegeReconciliation,
+    /ALTER DEFAULT PRIVILEGES IN SCHEMA atlas[\s\S]*REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC/i,
+  );
+  assert.match(rpcPrivilegeReconciliation, /anonymous_execute_expected boolean NOT NULL DEFAULT false/i);
+  assert.match(rpcPrivilegeReconciliation, /to_regprocedure\(r\.signature\)::oid/i);
+  assert.match(rpcPrivilegeReconciliation, /public_endpoint/);
+  assert.match(rpcPrivilegeReconciliation, /REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC/i);
 
   for (const signature of [
     "atlas.member_day_load_v1(uuid, uuid, date)",
