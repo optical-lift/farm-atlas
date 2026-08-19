@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: worker-readiness-browser-witness-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   witness:
     runs-on: ubuntu-latest
@@ -33,7 +37,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: atlas-ci-publishable-placeholder
 
       - name: Install browser
-        run: npx -y playwright@1.55.0 install chromium --with-deps
+        run: npx -y playwright@1.55.0 install chromium
 
       - name: Start Atlas
         shell: bash
