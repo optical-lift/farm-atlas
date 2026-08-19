@@ -113,6 +113,6 @@ test("the only new authenticated Phase 11 mutation endpoint is registry-governed
   assert.match(registry, /atlas\.management_mark_worker_weekly_capacity_owner_decision_api_v1\(uuid, uuid, date, text, text, text\)/i);
   assert.match(registry, /'owner_admin_endpoint','verified','active',true,true,true/i);
   assert.match(registry, /only new Phase 11 action that grants a Principal escalation warrant/i);
-  assert.match(registry, /worker_weekly_farm_contract_v6/i);
+  assert.match(registry, /Weekly Farm Contract v6/i);
   assert.match(registry, /worker_weekly_capacity_conflict_v2/i);
 });
