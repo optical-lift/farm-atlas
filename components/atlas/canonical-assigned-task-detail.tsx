@@ -1,6 +1,5 @@
 "use client";
 
-import AssignedTaskExecutionShell from "@/components/atlas/assigned-task-execution-shell";
 import BuyerOutreachTaskDetail from "@/components/atlas/buyer-outreach-task-detail";
 import ContractorServiceTaskDetail from "@/components/atlas/contractor-service-task-detail";
 import DecisionSelectorTaskDetail from "@/components/atlas/decision-selector-task-detail";
@@ -14,6 +13,7 @@ import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-load
 import TransplantReadinessTaskDetail from "@/components/atlas/transplant-readiness-task-detail";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import WeeklyHarvestTaskDetail from "@/components/atlas/weekly-harvest-task-detail";
+import WorkerReadyAssignedTaskExecutionShell from "@/components/atlas/worker-ready-assigned-task-execution-shell";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
@@ -111,5 +111,5 @@ export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isFlowerFulfillmentTask(props.task)) return <FlowerFulfillmentTaskLoader {...props} />;
   if (isWeeklyHarvestTask(props.task)) return <WeeklyHarvestTaskDetail {...props} />;
 
-  return <AssignedTaskExecutionShell {...props} />;
+  return <WorkerReadyAssignedTaskExecutionShell {...props} />;
 }
