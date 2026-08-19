@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 
+import HarvestReadinessRoundChecklist from "@/components/atlas/harvest-readiness-round-checklist";
 import StatefulChildChecklist, { statefulChildTask } from "@/components/atlas/stateful-child-checklist";
 import TaskExecutionBrief from "@/components/atlas/task-execution-brief";
 import TaskPrimaryResultControls from "@/components/atlas/task-primary-result-controls";
@@ -64,6 +65,14 @@ function completeTaskExit(taskId: string, fallback: string) {
 
 function childIsDone(task: AtlasTaskCard) {
   return task.status === "done" || task.metadata?.checklist_status === "done";
+}
+
+function isHarvestReadinessRound(task: AtlasTaskCard) {
+  return task.metadata?.task_style === "harvest_readiness_round";
+}
+
+function isHarvestReadinessRoundChild(task: AtlasTaskCard) {
+  return task.metadata?.harvest_readiness_round_role === "observation_child";
 }
 
 function DefaultResultInstrument({
@@ -192,7 +201,13 @@ export default function AssignedTaskExecutionShell({
     }
 
     const parent = data.taskCards.find((candidate) => candidate.task_id === task.task_id);
-    if (parent) setTask(parent);
+    if (parent) {
+      setTask(parent);
+      if (isHarvestReadinessRound(parent) && parent.status === "done") {
+        completeTaskExit(parent.task_id, assignee.listPath);
+        return;
+      }
+    }
     setChildren(data.taskCards
       .filter((candidate) => candidate.parent_task_id === task.task_id && candidate.status !== "archived")
       .sort((left, right) => left.created_at.localeCompare(right.created_at)));
@@ -267,6 +282,9 @@ export default function AssignedTaskExecutionShell({
   const blockers = (assembly?.unresolved ?? []).filter((item) => item.status === "blocked");
   const statefulChildren = children.filter(statefulChildTask);
   const ordinaryChildren = children.filter((child) => !statefulChildTask(child));
+  const harvestRoundChildren = ordinaryChildren.filter(isHarvestReadinessRoundChild);
+  const regularOrdinaryChildren = ordinaryChildren.filter((child) => !isHarvestReadinessRoundChild(child));
+  const harvestReadinessRound = isHarvestReadinessRound(task);
   const openStatefulChildren = statefulChildren.some((child) => !childIsDone(child));
   const canonicalDoneDisabled =
     doneDisabled ||
@@ -382,6 +400,9 @@ export default function AssignedTaskExecutionShell({
           height:1px;
           background:rgba(86,89,112,.42);
         }
+        .atlas-harvest-round-result { margin:0; padding:2px 0 6px; }
+        .atlas-harvest-round-result strong { display:block; margin-bottom:4px; color:#4f5369; font-size:.8rem; }
+        .atlas-harvest-round-result span { display:block; color:#747889; font-size:.73rem; line-height:1.4; }
 
         @media (max-width:560px) {
           .atlas-human-task-blocker { margin:0 21px 16px; }
@@ -411,13 +432,21 @@ export default function AssignedTaskExecutionShell({
             ) : null}
             {methodInstrument ? methodInstrument(instrumentContext) : null}
             <StatefulChildChecklist childTasks={statefulChildren} onChange={refreshTaskAndChildren} />
-            <TaskChildChecklist childTasks={ordinaryChildren} onChange={refreshTaskAndChildren} />
+            {harvestReadinessRound ? (
+              <HarvestReadinessRoundChecklist childTasks={harvestRoundChildren} onChange={refreshTaskAndChildren} />
+            ) : null}
+            <TaskChildChecklist childTasks={regularOrdinaryChildren} onChange={refreshTaskAndChildren} />
             {showCorrectionNote ? (
               <p className="atlas-task-correction-note">This completion has linked farm evidence. Review the recorded result before correcting it.</p>
             ) : null}
             <footer id="result" className="atlas-task-result-footer" data-atlas-primary-results="true">
               <span className="atlas-task-finish-node" aria-hidden="true" />
-              {resultInstrument ? resultInstrument(instrumentContext) : (
+              {harvestReadinessRound ? (
+                <div className="atlas-harvest-round-result" data-atlas-harvest-round-auto-completion="true">
+                  <strong>This round closes itself.</strong>
+                  <span>Record what you physically see for every crop above. Atlas completes this zone round after the last observation is saved and keeps any future rechecks alive for their next date.</span>
+                </div>
+              ) : resultInstrument ? resultInstrument(instrumentContext) : (
                 <DefaultResultInstrument
                   busy={Boolean(saving)}
                   doneBusy={saving === "done"}
@@ -429,31 +458,33 @@ export default function AssignedTaskExecutionShell({
                   onBlocked={() => void transition("blocked", window.prompt("What problem did you find?", "")?.trim() || "Problem found")}
                 />
               )}
-              <details className="atlas-task-more-outcomes">
-                <summary><span>Move or close this card</span><b aria-hidden="true">⌄</b></summary>
-                <div className="atlas-task-more-outcomes-body">
-                  <span>Reschedule</span>
-                  <div className="atlas-task-more-outcomes-grid">
-                    <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(null, "Moved to next Elm Farm calendar day", "next_day")}>Tomorrow</button>
-                    <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(atlasShiftFarmDate(atlasFarmDateIso(), 7), "Moved to next week")}>Next week</button>
-                    <button
-                      type="button"
-                      disabled={Boolean(saving)}
-                      onClick={() => {
-                        const date = window.prompt("Pick a date (YYYY-MM-DD)", task.due_date || atlasFarmDateIso())?.trim();
-                        if (date) void reschedule(date, "Rescheduled from task page");
-                      }}
-                    >
-                      Pick a date
-                    </button>
+              {!harvestReadinessRound ? (
+                <details className="atlas-task-more-outcomes">
+                  <summary><span>Move or close this card</span><b aria-hidden="true">⌄</b></summary>
+                  <div className="atlas-task-more-outcomes-body">
+                    <span>Reschedule</span>
+                    <div className="atlas-task-more-outcomes-grid">
+                      <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(null, "Moved to next Elm Farm calendar day", "next_day")}>Tomorrow</button>
+                      <button type="button" disabled={Boolean(saving)} onClick={() => void reschedule(atlasShiftFarmDate(atlasFarmDateIso(), 7), "Moved to next week")}>Next week</button>
+                      <button
+                        type="button"
+                        disabled={Boolean(saving)}
+                        onClick={() => {
+                          const date = window.prompt("Pick a date (YYYY-MM-DD)", task.due_date || atlasFarmDateIso())?.trim();
+                          if (date) void reschedule(date, "Rescheduled from task page");
+                        }}
+                      >
+                        Pick a date
+                      </button>
+                    </div>
+                    <span>Close without doing it</span>
+                    <div className="atlas-task-more-outcomes-grid quiet">
+                      <button type="button" disabled={Boolean(saving)} onClick={() => void transition("changed_plan", window.prompt("What changed?", "")?.trim() || "Plan changed")}>Changed plan</button>
+                      <button type="button" disabled={Boolean(saving)} onClick={() => void transition("not_relevant", window.prompt("Why is this no longer relevant?", "")?.trim() || "Not relevant")}>Not relevant</button>
+                    </div>
                   </div>
-                  <span>Close without doing it</span>
-                  <div className="atlas-task-more-outcomes-grid quiet">
-                    <button type="button" disabled={Boolean(saving)} onClick={() => void transition("changed_plan", window.prompt("What changed?", "")?.trim() || "Plan changed")}>Changed plan</button>
-                    <button type="button" disabled={Boolean(saving)} onClick={() => void transition("not_relevant", window.prompt("Why is this no longer relevant?", "")?.trim() || "Not relevant")}>Not relevant</button>
-                  </div>
-                </div>
-              </details>
+                </details>
+              ) : null}
             </footer>
             {message ? <p className="atlas-task-page-message">{message}</p> : null}
           </article>
