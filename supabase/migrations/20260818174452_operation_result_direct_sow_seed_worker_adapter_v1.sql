@@ -1,0 +1,13 @@
+-- OR3 historical source-parity marker.
+-- The production migration 20260818174452_operation_result_direct_sow_seed_worker_adapter_v1
+-- was applied successfully with Git blob SHA-1 ba00d0c62c2d9da6d20c5a83256055b1a7197f7d.
+-- Its single statement is intentionally not reconstructed approximately here after connector transport
+-- rejected the oversized exact payload. Fresh replay is made complete by the immediately following,
+-- production-applied normalization migrations:
+--   20260818180847_operation_result_direct_sow_seed_effect_normalization_v2
+--   20260818180910_operation_result_direct_sow_seed_member_endpoint_normalization_v2
+--   20260818180930_operation_result_seed_completion_guard_normalization_v2
+--   20260818180951_operation_result_direct_sow_worker_card_normalization_v2
+-- Those migrations redeclare the live functions, grants, RPC registry, completion guard, and Worker card
+-- in small independently source-verifiable units. Do not replace this marker with guessed SQL or a
+-- near-match historical body; the live hash above is the authority for the original payload.
