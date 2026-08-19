@@ -1,0 +1,80 @@
+name: Worker readiness browser witness
+
+on:
+  push:
+    branches: [agent/worker-resource-readiness-screen]
+
+permissions:
+  contents: read
+
+jobs:
+  witness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Atlas
+        run: npm run build
+        env:
+          SUPABASE_URL: https://atlas-ci.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: atlas-ci-service-role-placeholder
+          NEXT_PUBLIC_SUPABASE_URL: https://atlas-ci.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: atlas-ci-publishable-placeholder
+
+      - name: Install browser
+        run: npx -y playwright@1.55.0 install chromium --with-deps
+
+      - name: Start Atlas
+        shell: bash
+        env:
+          SUPABASE_URL: https://atlas-ci.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: atlas-ci-service-role-placeholder
+          NEXT_PUBLIC_SUPABASE_URL: https://atlas-ci.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: atlas-ci-publishable-placeholder
+        run: |
+          npm start > atlas-browser-server.log 2>&1 &
+          echo $! > atlas-browser-server.pid
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3000/dev/worker-blocked-task-preview > worker-blocked.html; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat atlas-browser-server.log
+          exit 1
+
+      - name: Assert rendered blocked membrane
+        shell: bash
+        run: |
+          grep -q 'data-atlas-worker-hard-block="true"' worker-blocked.html
+          grep -q 'Not ready to start yet' worker-blocked.html
+          grep -q 'This job is waiting on equipment.' worker-blocked.html
+          grep -q 'No action is needed from you on this task right now.' worker-blocked.html
+          if grep -Eq '>Done<|>Unfinished<|Partly done|Problem found|Tomorrow|Next week|Pick a date' worker-blocked.html; then
+            echo 'Blocked Worker witness leaked execution or move controls.'
+            exit 1
+          fi
+
+      - name: Capture browser screenshot
+        run: npx -y playwright@1.55.0 screenshot --device="iPhone 13" --wait-for-timeout=1000 http://127.0.0.1:3000/dev/worker-blocked-task-preview worker-blocked.png
+
+      - name: Upload rendered witness
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker-readiness-browser-witness
+          path: |
+            worker-blocked.png
+            worker-blocked.html
+            atlas-browser-server.log
+          retention-days: 3
