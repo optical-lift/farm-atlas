@@ -1,0 +1,371 @@
+.archive {
+  margin: 0 0 34px;
+  scroll-margin-top: 68px;
+}
+
+.archiveHeader {
+  display: grid;
+  gap: 7px;
+  padding: 18px 4px 14px;
+}
+
+.archiveHeader > span,
+.preview label {
+  color: #858bb8;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.archiveHeader h2 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: clamp(24px, 7vw, 34px);
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -.05em;
+}
+
+.archiveHeader p {
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 740;
+}
+
+.patterns {
+  overflow: hidden;
+  border: 1px solid rgba(207, 196, 179, .88);
+  border-radius: 22px;
+  background: rgba(255,255,255,.72);
+}
+
+.pattern + .pattern {
+  border-top: 1px solid rgba(215, 204, 189, .62);
+}
+
+.pattern > summary {
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.pattern > summary::-webkit-details-marker {
+  display: none;
+}
+
+.pattern > summary > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.pattern > summary strong {
+  color: var(--atlas-text);
+  font-size: 14px;
+  line-height: 1.15;
+  font-weight: 930;
+}
+
+.pattern > summary span {
+  color: #81827b;
+  font-size: 9px;
+  line-height: 1.2;
+  font-weight: 720;
+}
+
+.pattern > summary > b {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(139,145,194,.24);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #6f7189;
+  font-size: 16px;
+  font-weight: 700;
+  background: rgba(239,237,244,.66);
+}
+
+.pattern[open] > summary > b {
+  transform: rotate(45deg);
+}
+
+.patternBody {
+  display: grid;
+  gap: 12px;
+  padding: 0 14px 16px;
+}
+
+.patternBody > p {
+  margin: 0;
+  color: #606269;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 760;
+}
+
+.patternBody ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #65675f;
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 740;
+}
+
+.preview {
+  display: grid;
+  gap: 9px;
+  padding: 13px;
+  border: 1px solid rgba(111,97,76,.18);
+  border-radius: 17px;
+  background: rgba(250,248,239,.78);
+}
+
+.preview > strong {
+  color: var(--atlas-text);
+  font-size: 18px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -.035em;
+}
+
+.preview > b {
+  color: #55586c;
+  font-size: 13px;
+  font-weight: 930;
+}
+
+.preview > small {
+  color: #797b73;
+  font-size: 10px;
+  line-height: 1.25;
+  font-weight: 760;
+}
+
+.cockpit {
+  border-color: rgba(93,78,133,.2);
+  background: linear-gradient(145deg, rgba(91,69,129,.94), rgba(113,86,150,.88));
+}
+
+.cockpit > strong,
+.cockpit > small,
+.cockpit .previewFooter,
+.cockpit .previewMiniRow {
+  color: #fff;
+}
+
+.previewMiniRow,
+.previewFooter,
+.chips,
+.previewActions,
+.resultRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.previewMiniRow span,
+.previewFooter span {
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 10px;
+  padding: 6px 8px;
+  background: rgba(255,255,255,.09);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.previewFooter {
+  padding-top: 3px;
+}
+
+.pill,
+.chips span,
+.choiceGrid span,
+.previewActions span,
+.resultRow span {
+  width: fit-content;
+  border: 1px solid rgba(139,145,194,.23);
+  border-radius: 999px;
+  padding: 7px 9px;
+  background: rgba(255,255,255,.78);
+  color: #626578;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 880;
+}
+
+.pill {
+  background: rgba(214,225,177,.58);
+  color: #515b34;
+}
+
+.previewHead,
+.titleRow,
+.moveRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.previewHead small {
+  color: #74766f;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.checkRows {
+  display: grid;
+  gap: 6px;
+}
+
+.checkRows span {
+  border: 1px solid rgba(111,97,76,.16);
+  border-radius: 11px;
+  padding: 8px 9px;
+  background: rgba(255,255,255,.78);
+  color: #595b55;
+  font-size: 10px;
+  font-weight: 780;
+}
+
+.checkRows .checked {
+  border-color: rgba(97,112,59,.22);
+  background: #eef3df;
+  color: #55603a;
+}
+
+.choiceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 6px;
+}
+
+.choiceGrid span {
+  width: auto;
+  text-align: center;
+}
+
+.dotTrail {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0,1fr));
+  align-items: center;
+  gap: 0;
+  padding: 3px 6px;
+}
+
+.dotTrail::before {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 50%;
+  height: 1px;
+  background: rgba(185,183,171,.7);
+}
+
+.dotTrail i {
+  position: relative;
+  z-index: 1;
+  justify-self: center;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid #a0a199;
+  border-radius: 50%;
+  background: #fffefa;
+}
+
+.dotTrail .doneDot {
+  border-color: #8e9279;
+  background: #8e9279;
+}
+
+.dotTrail .nowDot {
+  width: 13px;
+  height: 13px;
+  border: 2px solid #343542;
+  background: #343542;
+  box-shadow: 0 0 0 3px rgba(201,192,198,.28);
+}
+
+.factPair {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 6px;
+}
+
+.factPair span {
+  display: grid;
+  gap: 4px;
+  padding: 9px;
+  border: 1px solid rgba(111,97,76,.16);
+  border-radius: 11px;
+  background: rgba(255,255,255,.72);
+  color: #565850;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.factPair small {
+  color: #858bb8;
+  font-size: 7px;
+  font-weight: 950;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.moveRow {
+  min-height: 34px;
+  border-top: 1px solid rgba(111,101,82,.13);
+  color: #777970;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.titleRow strong {
+  color: var(--atlas-text);
+  font-size: 14px;
+  font-weight: 930;
+  text-decoration: underline;
+  text-decoration-color: rgba(133,139,192,.35);
+  text-underline-offset: 3px;
+}
+
+.titleRow span {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(239,237,244,.7);
+  color: #6f7189;
+}
+
+.resultRow {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+}
+
+.resultRow span {
+  width: auto;
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+}
+
+.resultRow .doneAction {
+  background: rgba(214,225,177,.72);
+  color: #515b34;
+}

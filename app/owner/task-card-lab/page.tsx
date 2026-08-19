@@ -1,0 +1,351 @@
+import type { Metadata } from "next";
+
+import styles from "./task-card-lab.module.css";
+
+export const metadata: Metadata = {
+  title: "Task Card Lab · Atlas",
+};
+
+type Resource = {
+  label: string;
+  kind: string;
+  state?: string;
+  actions: string[];
+};
+
+type Fact = {
+  label: string;
+  value: string;
+};
+
+type CardSpec = {
+  family: string;
+  variant: string;
+  title: string;
+  place: string;
+  timing: string;
+  play: string;
+  desiredLabel: string;
+  desired: string[];
+  facts?: Fact[];
+  references?: string[];
+  resources?: Resource[];
+  finish: string;
+  partial?: string;
+};
+
+const cards: CardSpec[] = [
+  {
+    family: "Setup / Reset",
+    variant: "station setup",
+    title: "Coffee + Water",
+    place: "Community Morning · Coffee bar + dining room",
+    timing: "Today · before guests arrive",
+    play: "Prepare the coffee and water stations so guests can serve themselves without Anna managing the station.",
+    desiredLabel: "Stations should be",
+    desired: [
+      "Coffee station · Keurig ready · mugs available from the mug hutch",
+      "Water station · dispenser full · clear cups arranged on the tray beside it",
+    ],
+    facts: [
+      { label: "Coffee station", value: "Coffee bar" },
+      { label: "Water station", value: "Dining room" },
+      { label: "Guest flow", value: "Self-serve" },
+    ],
+    references: ["Guests may choose a mug from the mug hutch."],
+    resources: [
+      { label: "Coffee", kind: "Consumable", state: "On hand", actions: ["Running low", "Out", "Estimate remaining", "Request change"] },
+      { label: "Keurig", kind: "Equipment", state: "Ready", actions: ["Problem", "Broken / cannot use", "Working again", "Request change"] },
+      { label: "Clear cups", kind: "Consumable", state: "On hand", actions: ["Running low", "Out", "Count remaining", "Request change"] },
+      { label: "Water dispenser", kind: "Equipment", state: "Ready", actions: ["Needs refill", "Problem", "Working again", "Request change"] },
+    ],
+    finish: "Stations ready",
+    partial: "Something is not ready",
+  },
+  {
+    family: "Sow",
+    variant: "direct sow bed",
+    title: "ProCut White Lite",
+    place: "Field Row 6",
+    timing: "Today · sowing window open",
+    play: "Sow Field Row 6 with the linked ProCut White Lite seed using the specified bed pattern.",
+    desiredLabel: "Finished bed should be",
+    desired: ["Three lengthwise rows · 4 in spacing · 1/2 in depth"],
+    facts: [
+      { label: "Rows", value: "3" },
+      { label: "Spacing", value: "4 in" },
+      { label: "Depth", value: "1/2 in" },
+      { label: "Bed", value: "Field Row 6" },
+    ],
+    references: ["The crop clock begins from the actual sow date."],
+    resources: [
+      { label: "ProCut White Lite", kind: "Seed lot", state: "Packet open", actions: ["Packet empty", "Estimate remaining", "Quantity does not match", "Request change"] },
+      { label: "Field Row 6", kind: "Managed bed", state: "Prepared", actions: ["Choose a new state", "Something changed", "Add note", "Request change"] },
+    ],
+    finish: "Sowing complete",
+    partial: "Partly sown",
+  },
+  {
+    family: "Weed",
+    variant: "recovery weeding",
+    title: "Finish Field Row 13",
+    place: "Field Rows · pollenless sunflower",
+    timing: "Today · crop visibility compromised",
+    play: "Clear weed pressure until the crop is readable and the bed reaches the best true condition you can get it to today.",
+    desiredLabel: "Possible resulting states",
+    desired: [
+      "Still rough",
+      "Guest-presentable, not sow-ready",
+      "Ready for seeds",
+    ],
+    facts: [
+      { label: "Protect", value: "Sunflowers + marked volunteer celosia" },
+      { label: "Current", value: "Heavy weed pressure" },
+    ],
+    references: ["Do not call the bed sow-ready merely because it looks presentable."],
+    resources: [
+      { label: "Field Row 13", kind: "Managed bed", state: "Heavy pressure", actions: ["Still rough", "Guest-presentable, not sow-ready", "Ready for seeds", "Something changed"] },
+    ],
+    finish: "Choose final bed state",
+    partial: "Made progress",
+  },
+  {
+    family: "Mow",
+    variant: "guest route",
+    title: "U-Pick Walkways",
+    place: "U-Pick",
+    timing: "Today · guest-facing area",
+    play: "Return the U-Pick walkways to their intended guest-ready condition without mowing into the beds.",
+    desiredLabel: "Finished area should be",
+    desired: ["Walkways mowed to 3 in · clean edges · beds untouched"],
+    facts: [
+      { label: "Height", value: "3 in" },
+      { label: "Boundary", value: "Walkways only" },
+      { label: "Finish", value: "Guest-ready" },
+      { label: "Equipment", value: "Riding mower" },
+    ],
+    resources: [
+      { label: "Riding mower", kind: "Equipment", state: "Ready", actions: ["Problem", "Broken / cannot use", "Working again", "Request change"] },
+      { label: "U-Pick walkways", kind: "Managed area", state: "Due", actions: ["Choose a new state", "Obstacle found", "Add note", "Request change"] },
+    ],
+    finish: "Mowing complete",
+    partial: "Some area remains",
+  },
+  {
+    family: "Harvest",
+    variant: "repeat cut",
+    title: "White Lite Sunflowers",
+    place: "Berry Walk",
+    timing: "Morning · harvest window",
+    play: "Cut stems that meet the harvest-stage standard and place them directly into the specified harvest container.",
+    desiredLabel: "Harvest standard",
+    desired: ["First petals lifting · marketable stems only · immediately into water"],
+    facts: [
+      { label: "Target", value: "60 stems" },
+      { label: "Container", value: "Black bucket" },
+      { label: "Destination", value: "Cool room" },
+    ],
+    references: ["Leave stems that have not reached the harvest-stage standard."],
+    resources: [
+      { label: "White Lite stand", kind: "Crop", state: "Harvestable", actions: ["Condition changed", "Damage / loss", "Estimate remaining", "Request change"] },
+      { label: "Black harvest buckets", kind: "Inventory", state: "Available", actions: ["Running low", "Out", "Count remaining", "Request change"] },
+    ],
+    finish: "Record harvest",
+    partial: "Harvested some",
+  },
+  {
+    family: "Water / Care",
+    variant: "establishment water",
+    title: "New Zinnia Transplants",
+    place: "Curve Garden",
+    timing: "Due now · establishment care",
+    play: "Deep-water the newly transplanted zinnias until the root zone reaches the defined adequate-moisture condition.",
+    desiredLabel: "Enough means",
+    desired: ["Root zone evenly moist · no standing runoff · flag plants that wilt again immediately"],
+    facts: [
+      { label: "Plants", value: "15 zinnias" },
+      { label: "Stage", value: "Establishing" },
+      { label: "Method", value: "Deep water" },
+    ],
+    resources: [
+      { label: "15 zinnias", kind: "Living crop", state: "Establishing", actions: ["Condition changed", "Damage / loss", "Plant missing", "Request change"] },
+      { label: "Water source", kind: "Equipment", state: "Available", actions: ["Problem", "Unavailable", "Working again", "Request change"] },
+    ],
+    finish: "Care complete",
+    partial: "Problem found",
+  },
+  {
+    family: "Check",
+    variant: "germination observation",
+    title: "Germination Check",
+    place: "Barn Bed 4 · white sunflower",
+    timing: "Today · observation window",
+    play: "Look at the stand and record the smallest observation Atlas needs to decide what can happen next.",
+    desiredLabel: "Choose what is true",
+    desired: ["Strong", "Patchy", "Failed", "Too early to tell"],
+    facts: [
+      { label: "Question", value: "Did enough emerge to keep this planting?" },
+      { label: "Next", value: "Continue · gap fill · restart · wait" },
+    ],
+    resources: [
+      { label: "Barn Bed 4", kind: "Observed bed", state: "Needs observation", actions: ["Strong", "Patchy", "Failed", "Too early to tell"] },
+    ],
+    finish: "Record observation",
+  },
+  {
+    family: "Transplant",
+    variant: "tray to field",
+    title: "Move 15 Zinnias",
+    place: "Grow Room → Curve Garden",
+    timing: "Today · destination prepared",
+    play: "Move the selected zinnias from the source tray into the prepared Curve Garden strip and establish them there.",
+    desiredLabel: "Finished move should be",
+    desired: ["15 plants in destination · correct spacing · watered immediately"],
+    facts: [
+      { label: "Count", value: "15" },
+      { label: "Source", value: "Grow Room" },
+      { label: "Destination", value: "Curve Garden" },
+      { label: "Aftercare", value: "Water immediately" },
+    ],
+    resources: [
+      { label: "Zinnia tray", kind: "Living crop", state: "15 selected", actions: ["Count changed", "Damage / loss", "Plants remain", "Request change"] },
+      { label: "Curve Garden strip", kind: "Managed place", state: "Prepared", actions: ["Choose a new state", "Something changed", "Add note", "Request change"] },
+    ],
+    finish: "Transplant complete",
+    partial: "Some plants remain",
+  },
+];
+
+function ResourceDrawer({ resource }: { resource: Resource }) {
+  return (
+    <details className={styles.resource}>
+      <summary>
+        <span>
+          <strong>{resource.label}</strong>
+          <small>{resource.kind}{resource.state ? ` · ${resource.state}` : ""}</small>
+        </span>
+        <span className={styles.resourceChevron}>+</span>
+      </summary>
+      <div className={styles.resourceDrawer}>
+        <p>What changed?</p>
+        <div className={styles.resourceActions}>
+          {resource.actions.map((action) => (
+            <button key={action} type="button">{action}</button>
+          ))}
+        </div>
+        <label>
+          Tell Lex something else
+          <textarea rows={2} placeholder="Only what changed or what she needs to know…" />
+        </label>
+        <button className={styles.noteButton} type="button">Send note</button>
+        <small>Mock only · nothing on this page writes to Atlas.</small>
+      </div>
+    </details>
+  );
+}
+
+function TaskCard({ card, index }: { card: CardSpec; index: number }) {
+  return (
+    <article className={styles.card}>
+      <header className={styles.cardHeader}>
+        <div className={styles.familyRow}>
+          <span>{card.family}</span>
+          <small>{card.variant}</small>
+        </div>
+        <h2>{card.title}</h2>
+        <p>{card.place}</p>
+        <div className={styles.timing}>{card.timing}</div>
+      </header>
+
+      <div className={styles.trail} aria-label="Mock process trail">
+        <span className={styles.trailDone}>Prior</span>
+        <span className={styles.trailDone}>Ready</span>
+        <span className={styles.trailNow}>{card.family}</span>
+        <span>Next</span>
+        <span>Later</span>
+      </div>
+
+      <section className={styles.section}>
+        <span className={styles.sectionLabel}>The play</span>
+        <p className={styles.play}>{card.play}</p>
+      </section>
+
+      <section className={styles.section}>
+        <span className={styles.sectionLabel}>{card.desiredLabel}</span>
+        <div className={styles.desiredList}>
+          {card.desired.map((item) => <div key={item}>{item}</div>)}
+        </div>
+      </section>
+
+      {card.facts?.length ? (
+        <section className={styles.section}>
+          <span className={styles.sectionLabel}>Operating facts</span>
+          <div className={styles.factGrid}>
+            {card.facts.map((fact) => (
+              <div key={`${fact.label}-${fact.value}`} className={styles.fact}>
+                <small>{fact.label}</small>
+                <strong>{fact.value}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {card.references?.length ? (
+        <section className={styles.section}>
+          <span className={styles.sectionLabel}>Know while doing</span>
+          <div className={styles.referenceList}>
+            {card.references.map((reference) => <p key={reference}>{reference}</p>)}
+          </div>
+        </section>
+      ) : null}
+
+      {card.resources?.length ? (
+        <section className={styles.section}>
+          <span className={styles.sectionLabel}>Things in this work</span>
+          <p className={styles.tapHint}>Tap a thing when reality changes.</p>
+          <div className={styles.resourceList}>
+            {card.resources.map((resource) => <ResourceDrawer key={resource.label} resource={resource} />)}
+          </div>
+        </section>
+      ) : null}
+
+      <footer className={styles.finish}>
+        <span className={styles.sectionLabel}>Finish this play</span>
+        <div className={styles.finishButtons}>
+          <button type="button" className={styles.primaryFinish}>{card.finish}</button>
+          {card.partial ? <button type="button">{card.partial}</button> : null}
+        </div>
+        <small>Specimen {index + 1} of {cards.length} · visual lab only</small>
+      </footer>
+    </article>
+  );
+}
+
+export default function TaskCardLabPage() {
+  return (
+    <main className={styles.page}>
+      <header className={styles.labHeader}>
+        <span>ATLAS · OWNER DESIGN LAB</span>
+        <h1>Task Card Gallery</h1>
+        <p>
+          Every current Dominion family, fully exposed in one vertical scroll. These are fixture-only CSS mockups: no task feed, no scheduling, no Supabase writes.
+        </p>
+      </header>
+
+      <nav className={styles.jumpNav} aria-label="Jump to task family">
+        {cards.map((card, index) => (
+          <a key={card.family} href={`#task-card-${index + 1}`}>{card.family}</a>
+        ))}
+      </nav>
+
+      <div className={styles.gallery}>
+        {cards.map((card, index) => (
+          <div id={`task-card-${index + 1}`} key={`${card.family}-${card.variant}`} className={styles.cardAnchor}>
+            <TaskCard card={card} index={index} />
+          </div>
+        ))}
+      </div>
+    </main>
+  );
+}
