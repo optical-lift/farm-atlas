@@ -43,8 +43,9 @@ test("set-aside visibility lasts until the actual return date", () => {
   assert.match(migration, /'requestedReturnDate',coalesce\(d\.requested_return_date,d\.returns_on\)/);
 });
 
-test("Anna generic task detail uses the regular Done and Unfinished result set", () => {
+test("Anna generic task detail uses the regular Done and Unfinished result set only after readiness clears", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const readiness = read("components/atlas/worker-ready-assigned-task-execution-shell.tsx");
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
   const results = read("components/atlas/task-primary-result-controls.tsx");
   const weed = read("components/atlas/weed-card-task-focus.tsx");
@@ -52,7 +53,10 @@ test("Anna generic task detail uses the regular Done and Unfinished result set",
 
   assert.doesNotMatch(canonical, /FarmHandConveyorTaskDetail/);
   assert.doesNotMatch(canonical, /props\.assignee\.key === "anna"/);
-  assert.match(canonical, /return <AssignedTaskExecutionShell/);
+  assert.match(canonical, /return <WorkerReadyAssignedTaskExecutionShell/);
+  assert.match(readiness, /readiness\?\.executable !== true/);
+  assert.match(readiness, /return <WaitingScreen/);
+  assert.match(readiness, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
   assert.match(shell, /TaskPrimaryResultControls/);
   assert.match(results, /doneLabel = "Done"/);
   assert.match(results, />\s*Unfinished\s*</);
