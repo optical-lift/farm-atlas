@@ -18,6 +18,10 @@ const canonicalDetail = readFileSync(
   new URL("../components/atlas/canonical-assigned-task-detail.tsx", import.meta.url),
   "utf8",
 );
+const readinessShell = readFileSync(
+  new URL("../components/atlas/worker-ready-assigned-task-execution-shell.tsx", import.meta.url),
+  "utf8",
+);
 const conveyorDetail = readFileSync(
   new URL("../components/atlas/farm-hand-conveyor-task-detail.tsx", import.meta.url),
   "utf8",
@@ -44,12 +48,13 @@ test("operation class remains available without replacing the canonical result g
 
   assert.doesNotMatch(canonicalDetail, /atlasTaskResultMode\(props\.task\)/);
   assert.doesNotMatch(canonicalDetail, /props\.assignee\.key === "anna" && resultMode === "field_execution"/);
-  assert.match(canonicalDetail, /return <AssignedTaskExecutionShell/);
+  assert.match(canonicalDetail, /return <WorkerReadyAssignedTaskExecutionShell/);
+  assert.match(readinessShell, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
 });
 
 test("specialized task families resolve before ordinary canonical result fallback", () => {
-  const fallbackIndex = canonicalDetail.indexOf("return <AssignedTaskExecutionShell");
-  assert.ok(fallbackIndex >= 0, "ordinary task fallback should use AssignedTaskExecutionShell");
+  const fallbackIndex = canonicalDetail.indexOf("return <WorkerReadyAssignedTaskExecutionShell");
+  assert.ok(fallbackIndex >= 0, "ordinary task fallback should use the Worker readiness membrane");
   for (const specialized of [
     "ContractorServiceTaskDetail",
     "DecisionSelectorTaskDetail",
@@ -67,7 +72,10 @@ test("specialized task families resolve before ordinary canonical result fallbac
   }
 });
 
-test("ordinary execution uses the existing canonical result grammar", () => {
+test("ordinary execution uses the existing canonical result grammar once readiness is executable", () => {
+  assert.match(readinessShell, /readiness\?\.executable !== true/);
+  assert.match(readinessShell, /return <WaitingScreen/);
+  assert.match(readinessShell, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
   assert.match(primaryResults, /doneLabel = "Done"/);
   assert.match(primaryResults, /doneBusyLabel = "Finishing"/);
   assert.match(primaryResults, />\s*Unfinished\s*</);
@@ -86,6 +94,9 @@ test("ordinary execution uses the existing canonical result grammar", () => {
 });
 
 test("blocked work cannot present itself as completable", () => {
+  assert.match(readinessShell, /data-atlas-worker-waiting-screen="true"/);
+  assert.match(readinessShell, /readiness\?\.executable !== true/);
+  assert.match(readinessShell, /return <WaitingScreen/);
   assert.match(executionShell, /task\.status === "blocked"/);
   assert.match(executionShell, /blockers\.length > 0/);
   assert.match(executionShell, /Blocked — resolve this before this task can be completed\./);
