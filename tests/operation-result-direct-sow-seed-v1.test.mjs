@@ -50,7 +50,7 @@ test("post-sow seed result records only the remainder the worker actually knows"
 test("generic Done cannot bypass the required seed-result membrane", () => {
   assert.match(completionGuard, /seed_inventory_report_required/i);
   assert.match(completionGuard, /seed_governance_required/i);
-  assert.match(completionGuard, /operationEffect','direct_sow_seed_result/i);
+  assert.match(completionGuard, /metadata->>'operationEffect'.*direct_sow_seed_result/i);
   assert.match(completionGuard, /Done rejected: this sowing operation requires its post-sow seed inventory result before completion/i);
 });
 
