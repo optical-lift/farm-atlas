@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireAtlasApiAccess } from "@/lib/atlas/api-access";
-import { createAtlasServerClient } from "@/lib/supabase/server";
+import { createAtlasAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -96,8 +96,36 @@ export async function GET(request: NextRequest) {
     return privateJson({ ok: false, error: "A valid task ID is required." }, 400);
   }
 
-  const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("task_execution_readiness_v1", {
+  // task_execution_readiness_v1 is intentionally service-only because it composes
+  // internal canonical readiness state. Keep that boundary intact: authenticate the
+  // caller first, then prove this task belongs to the caller's active farm before
+  // evaluating it with the service client.
+  const admin = createAtlasAdminClient();
+  const { data: task, error: taskError } = await admin
+    .from("tasks")
+    .select("id, assigned_membership_id, visibility_scope")
+    .eq("id", taskId)
+    .eq("farm_id", authorized.access.membership.farmId)
+    .maybeSingle();
+
+  if (taskError) {
+    console.error("Task readiness authorization lookup failed.", taskError);
+    return privateJson({ ok: false, error: "Atlas could not confirm this task." }, 500);
+  }
+  if (!task) {
+    return privateJson({ ok: false, error: "Task not found." }, 404);
+  }
+
+  if (authorized.access.membership.role === "farm_hand") {
+    const visibleToWorker = task.visibility_scope === "farm_shared"
+      || (task.visibility_scope === "assigned_worker"
+        && task.assigned_membership_id === authorized.access.membership.membershipId);
+    if (!visibleToWorker) {
+      return privateJson({ ok: false, error: "Task not found." }, 404);
+    }
+  }
+
+  const { data, error } = await admin.rpc("task_execution_readiness_v1", {
     p_task_id: taskId,
   });
 
