@@ -99,7 +99,7 @@ const workerCapacityManagementRegistryMigrationName =
 const rpcPrivilegeReconciliationStartMigrationName =
   "20260818162107_operation_result_generic_resource_event_state_v1.sql";
 const rpcPrivilegeReconciliationMigrationName =
-  "20260819225100_atlas_rpc_privilege_registry_reconciliation_v2.sql";
+  "20260819225913_atlas_rpc_privilege_registry_reconciliation_v2.sql";
 const dayAcceptanceRpcMigrations = new Set([
   "20260811180500_atlas_day_cue_observation_result_contract_v1.sql",
   "20260811183000_atlas_departure_requirement_cues_v1.sql",
