@@ -1,8 +1,8 @@
 name: Worker readiness browser witness
 
 on:
-  push:
-    branches: [agent/worker-resource-readiness-screen]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
