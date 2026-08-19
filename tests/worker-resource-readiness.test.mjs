@@ -48,7 +48,7 @@ test("full mowing completion pauses navigation for any after-task consequence cu
   assert.match(mowing, /new CustomEvent\("atlas:task-completed"/);
   assert.match(mowing, /if \(window\.dispatchEvent\(completionEvent\)\) window\.location\.assign\(returnTo\)/);
   assert.match(taskCue, /atlas:task-completed/);
-  assert.match(taskCue, /event\.preventDefault\(\)/);
+  assert.match(taskCue, /custom\.preventDefault\(\)/);
   assert.match(taskCue, /anchorKind === "after_task"/);
   assert.match(taskCue, /day-cue-response/);
 });
