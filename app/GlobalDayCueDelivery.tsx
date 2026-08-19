@@ -181,7 +181,7 @@ export default function GlobalDayCueDelivery() {
   }
 
   async function dismissCue() {
-    if (!currentCue || saving) return;
+    if (!currentCue || saving || currentCue.payload.dismissible === false) return;
     if (isOperatorPreview) {
       hideCueForSession(true);
       return;
@@ -271,6 +271,7 @@ export default function GlobalDayCueDelivery() {
     ?? (typeof currentCue.payload.prompt === "string" ? currentCue.payload.prompt : null)
     ?? currentCue.body;
   const targetTaskId = cueTaskId(currentCue);
+  const dismissible = currentCue.payload.dismissible !== false;
 
   return (
     <aside
@@ -301,24 +302,26 @@ export default function GlobalDayCueDelivery() {
         border: "1px solid rgba(50,72,56,.16)",
         pointerEvents: "auto",
       }}>
-        <button
-          type="button"
-          aria-label={isOperatorPreview ? "Dismiss cue preview" : "Dismiss cue"}
-          disabled={saving}
-          onClick={() => void dismissCue()}
-          style={{ position: "absolute", top: 10, right: 10, width: 34, height: 34, border: 0, borderRadius: 17, background: "rgba(55,61,49,.07)", color: "#4c5148", font: "inherit", fontSize: 20, lineHeight: 1, cursor: "pointer" }}
-        >
-          ×
-        </button>
+        {dismissible ? (
+          <button
+            type="button"
+            aria-label={isOperatorPreview ? "Dismiss cue preview" : "Dismiss cue"}
+            disabled={saving}
+            onClick={() => void dismissCue()}
+            style={{ position: "absolute", top: 10, right: 10, width: 34, height: 34, border: 0, borderRadius: 17, background: "rgba(55,61,49,.07)", color: "#4c5148", font: "inherit", fontSize: 20, lineHeight: 1, cursor: "pointer" }}
+          >
+            ×
+          </button>
+        ) : null}
         {isOperatorPreview ? (
           <small style={{ display: "block", margin: "0 38px 8px 0", paddingBottom: 8, borderBottom: "1px solid rgba(50,72,56,.12)", fontSize: 9.5, fontWeight: 950, letterSpacing: ".1em", textTransform: "uppercase", color: "#665d91" }}>
             Owner cue preview · testing will not clear this for the worker
           </small>
         ) : null}
-        <small style={{ display: "block", paddingRight: 38, fontSize: 10, fontWeight: 900, letterSpacing: ".11em", textTransform: "uppercase", opacity: .5 }}>
+        <small style={{ display: "block", paddingRight: dismissible ? 38 : 0, fontSize: 10, fontWeight: 900, letterSpacing: ".11em", textTransform: "uppercase", opacity: .5 }}>
           {currentCue.cueKind === "briefing" || currentCue.cueKind === "hard_stop_sowing" ? "Today at Elm" : currentCue.cueKind === "observation" ? "Quick check" : "Before we keep going"}
         </small>
-        <strong style={{ display: "block", marginTop: 5, paddingRight: 30, fontSize: 19, lineHeight: 1.15 }}>{currentCue.title}</strong>
+        <strong style={{ display: "block", marginTop: 5, paddingRight: dismissible ? 30 : 0, fontSize: 19, lineHeight: 1.15 }}>{currentCue.title}</strong>
         {prompt ? <p style={{ margin: "8px 0 0", fontSize: 13.5, lineHeight: 1.45, opacity: .78 }}>{prompt}</p> : null}
 
         {currentQuestion?.choices?.length ? (
