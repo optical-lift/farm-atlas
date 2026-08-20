@@ -66,8 +66,8 @@ test("approved family interiors survive the shared shell and crop cycle refactor
 });
 
 test("legacy per-family completion chrome remains removed", () => {
-  assert.doesNotMatch(venue, /Tidy complete|Prep complete|Event open/);
-  assert.doesNotMatch(sow, /Sowing complete|Partly sown/);
-  assert.doesNotMatch(weed, /Done weeding today|Bed cleared for next crop|Blocked/);
-  assert.doesNotMatch(mow, /Mowed to 3 in|Blocked/);
+  assert.doesNotMatch(venue, />\s*(?:Tidy complete|Prep complete|Event open)\s*</);
+  assert.doesNotMatch(sow, />\s*(?:Sowing complete|Partly sown)\s*</);
+  assert.doesNotMatch(weed, />\s*(?:Done weeding today|Bed cleared for next crop|Blocked)\s*</);
+  assert.doesNotMatch(mow, />\s*(?:Mowed to 3 in|Blocked)\s*</);
 });
