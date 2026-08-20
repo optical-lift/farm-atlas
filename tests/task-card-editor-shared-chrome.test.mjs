@@ -10,43 +10,51 @@ const mow = readFileSync("app/owner/task-card-lab/MowCardSpecimen.tsx", "utf8");
 const harvest = readFileSync("app/owner/task-card-lab/HarvestCardSpecimen.tsx", "utf8");
 const remaining = readFileSync("app/owner/task-card-lab/RemainingDominionCardSpecimens.tsx", "utf8");
 
-test("shared Dominion frame owns the universal Task Card Editor top and bottom", () => {
+test("shared Dominion frame owns universal family title place and completion chrome", () => {
   assert.match(frame, /<span>\{family\}<\/span>/);
   assert.match(frame, /<h2>\{title\}<\/h2>/);
+  assert.match(frame, /subtitle \? <p className=\{styles\.subtitle\}>\{subtitle\}<\/p> : null/);
   assert.match(frame, />Done<\/button>/);
   assert.match(frame, />Unfinished<\/button>/);
 });
 
-test("every displayed Dominion family uses the shared frame", () => {
-  assert.match(venue, /<DominionCardFrame family="Venue" title="Tidy Community Thursday">/);
-  assert.match(venue, /<DominionCardFrame family="Venue" title="Prep Community Thursday">/);
-  assert.match(venue, /<DominionCardFrame family="Venue" title="Host Community Thursday"/);
-  assert.match(sow, /<DominionCardFrame family="Sow" title="Field Row 6">/);
-  assert.match(weed, /<DominionCardFrame family="Weed" title="Field Row 13">/);
-  assert.match(weed, /<DominionCardFrame family="Clear \/ Turn over" title="Field Row 13">/);
-  assert.match(mow, /<DominionCardFrame family="Mow" title="U-Pick Walkways">/);
-  assert.match(harvest, /<DominionCardFrame family="Harvest" title="Harvest Stems">/);
-  assert.match(remaining, /<DominionCardFrame family="Water \/ Care" title="New Zinnia Transplants">/);
-  assert.match(remaining, /<DominionCardFrame family="Check" title="Germination Check">/);
-  assert.match(remaining, /<DominionCardFrame family="Transplant" title="Move 15 Zinnias">/);
+test("designed card shells restore their place or zone subtitles", () => {
+  assert.match(venue, /title="Tidy Community Thursday" subtitle="Elm Farm"/);
+  assert.match(venue, /title="Prep Community Thursday" subtitle="Elm Farm"/);
+  assert.match(venue, /title="Host Community Thursday" subtitle="Elm Farm"/);
+  assert.match(sow, /title="Field Row 6" subtitle="Field Rows"/);
+  assert.match(weed, /title="Field Row 13" subtitle="Field Rows"/);
+  assert.match(mow, /title="U-Pick Walkways" subtitle="U-Pick"/);
+  assert.match(harvest, /title="Harvest Stems" subtitle=\{zones\.join\(" · "\)\}/);
+  assert.match(remaining, /title="Move 15 Zinnias" subtitle="Curve Garden"/);
 });
 
-test("approved family interiors survive the shared shell swap", () => {
+test("crop-cycle actions share one bed wrapper rather than their own task shells", () => {
+  assert.match(weed, /function CropCycleBedCard/);
+  assert.match(weed, /family="Weed"/);
+  assert.match(weed, /family="Irrigation"/);
+  assert.match(weed, /family="Check"/);
+  assert.match(weed, /family="Clear \/ Turn over"/);
+  assert.match(weed, /Field Row 13 crop-cycle trail/);
+});
+
+test("approved family interiors survive the shared shell and crop cycle refactor", () => {
   assert.match(venue, /Tidy → Prep → Host → Reset/);
   assert.match(venue, /Turn on the ice maker/);
   assert.match(sow, /Projections/);
   assert.match(sow, /Seed estimate/);
   assert.match(weed, /Bed map/);
   assert.match(weed, /How’d we do\?/);
+  assert.match(weed, /Field Rows hose line/);
+  assert.match(weed, /Did enough emerge to keep this planting\?/);
   assert.match(mow, /Mow height/);
   assert.match(mow, /3 in/);
   assert.match(mow, /Riding mower/);
   assert.match(harvest, /Harvest season pulse/);
-  assert.match(remaining, /Did enough emerge to keep this planting\?/);
   assert.match(remaining, /Water immediately/);
 });
 
-test("legacy per-family completion chrome is removed from bespoke specimens", () => {
+test("legacy per-family completion chrome remains removed", () => {
   assert.doesNotMatch(venue, /Tidy complete|Prep complete|Event open/);
   assert.doesNotMatch(sow, /Sowing complete|Partly sown/);
   assert.doesNotMatch(weed, /Done weeding today|Bed cleared for next crop|Blocked/);
