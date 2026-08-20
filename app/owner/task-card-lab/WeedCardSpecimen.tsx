@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import DominionCardFrame from "./DominionCardFrame";
 import styles from "./weed-card-specimen.module.css";
 import extras from "./weed-turnover-additions.module.css";
 
@@ -30,19 +31,9 @@ const turnoverTrail = [
 ] as const;
 
 const turnoverCategories = [
-  {
-    title: "Clear",
-    items: ["Cut at soil level", "Take to compost"],
-  },
-  {
-    title: "Weed",
-    items: ["Remove roots", "Take to compost"],
-  },
-  {
-    title: "Amend",
-    items: ["Add available inputs"],
-    availability: "No inputs available",
-  },
+  { title: "Clear", items: ["Cut at soil level", "Take to compost"] },
+  { title: "Weed", items: ["Remove roots", "Take to compost"] },
+  { title: "Amend", items: ["Add available inputs"], availability: "No inputs available" },
 ] as const;
 
 const harvestTaskHistory = [
@@ -77,7 +68,6 @@ function Trail({ steps, label }: { steps: readonly { label: string; detail: stri
 
 function ResultPill({ label }: { label: string }) {
   const id = `weed-result-${label.toLowerCase().replaceAll(" ", "-")}`;
-
   return (
     <label className={styles.resultPill} htmlFor={id}>
       <input id={id} type="radio" name="weed-result" />
@@ -102,7 +92,6 @@ function BedMap({ cropLabel }: { cropLabel: string }) {
   const [selectedBlock, setSelectedBlock] = useState(0);
   const [logMode, setLogMode] = useState(false);
   const [loggedBlocks, setLoggedBlocks] = useState<number[]>([0]);
-
   const activeBlock = mapBlocks[selectedBlock];
   const selected = logMode ? loggedBlocks : [selectedBlock];
   const selectedSorted = [...selected].sort((a, b) => a - b);
@@ -118,11 +107,8 @@ function BedMap({ cropLabel }: { cropLabel: string }) {
       setLoggedBlocks([blockIndex]);
       return;
     }
-
     setLoggedBlocks((current) => {
-      if (current.includes(blockIndex)) {
-        return current.length === 1 ? current : current.filter((index) => index !== blockIndex);
-      }
+      if (current.includes(blockIndex)) return current.length === 1 ? current : current.filter((index) => index !== blockIndex);
       return [...current, blockIndex];
     });
   }
@@ -134,56 +120,29 @@ function BedMap({ cropLabel }: { cropLabel: string }) {
 
   return (
     <section className={styles.bedMap}>
-      <header>
-        <span>Bed map</span>
-        <small>{BED_WIDTH_FT} ft × {BED_LENGTH_FT} ft</small>
-      </header>
-
+      <header><span>Bed map</span><small>{BED_WIDTH_FT} ft × {BED_LENGTH_FT} ft</small></header>
       <div className={extras.mapOrientation}>↑ back fence this side</div>
-
       <div className={styles.bedRectangle} aria-label={`Square-foot crop map for ${cropLabel}`}>
         {mapBlocks.map((block, blockIndex) => {
           const selectedForLog = logMode && loggedBlocks.includes(blockIndex);
           const inspected = !logMode && blockIndex === selectedBlock;
           return (
-            <button
-              type="button"
-              className={selectedForLog || inspected ? styles.mapBlockActive : styles.mapBlock}
-              key={block.start}
-              onClick={() => selectBlock(blockIndex)}
-              aria-label={`Feet ${block.start} to ${block.end}, ${cropLabel}`}
-            >
-              {Array.from({ length: BED_WIDTH_FT * MAP_BLOCK_FT }, (_, squareIndex) => (
-                <span key={squareIndex}>o</span>
-              ))}
+            <button type="button" className={selectedForLog || inspected ? styles.mapBlockActive : styles.mapBlock} key={block.start} onClick={() => selectBlock(blockIndex)} aria-label={`Feet ${block.start} to ${block.end}, ${cropLabel}`}>
+              {Array.from({ length: BED_WIDTH_FT * MAP_BLOCK_FT }, (_, squareIndex) => <span key={squareIndex}>o</span>)}
             </button>
           );
         })}
       </div>
-
-      <div className={styles.mapScale} aria-hidden="true">
-        <span>0 ft</span>
-        <span>15 ft</span>
-        <span>30 ft</span>
-      </div>
-
+      <div className={styles.mapScale} aria-hidden="true"><span>0 ft</span><span>15 ft</span><span>30 ft</span></div>
       <div className={`${styles.mapDetail} ${extras.mapDetailWithLog}`}>
         <span>{logMode ? selectionLabel : `${activeBlock.start}–${activeBlock.end} ft`}</span>
         <strong>{cropLabel}</strong>
         <button type="button" className={extras.mapLogButton} onClick={toggleLogMode}>{logMode ? "Done" : "Log"}</button>
-        <small>
-          {logMode
-            ? `${selectedSqFt} sq ft selected · tap neighboring sections to add or remove them`
-            : `${BED_WIDTH_FT * MAP_BLOCK_FT} sq ft shown · tap another section to inspect it`}
-        </small>
-
+        <small>{logMode ? `${selectedSqFt} sq ft selected · tap neighboring sections to add or remove them` : `${BED_WIDTH_FT * MAP_BLOCK_FT} sq ft shown · tap another section to inspect it`}</small>
         {logMode ? (
           <div className={extras.mapLogPanel}>
             <div className={extras.mapLogPills}>
-              <button type="button">Deer damage</button>
-              <button type="button">Crop missing</button>
-              <button type="button">Extra weedy</button>
-              <button type="button">Other</button>
+              <button type="button">Deer damage</button><button type="button">Crop missing</button><button type="button">Extra weedy</button><button type="button">Other</button>
             </div>
             <div className={extras.mapLogNote}>
               <input type="text" placeholder="Add note…" aria-label="Add a bed-section note" />
@@ -192,7 +151,6 @@ function BedMap({ cropLabel }: { cropLabel: string }) {
           </div>
         ) : null}
       </div>
-
       <div className={styles.mapLegend}><code>o</code> sunflower square</div>
     </section>
   );
@@ -200,100 +158,46 @@ function BedMap({ cropLabel }: { cropLabel: string }) {
 
 function WeedCard() {
   const [today, setToday] = useState<Date | null>(null);
-
-  useEffect(() => {
-    setToday(new Date());
-  }, []);
-
+  useEffect(() => { setToday(new Date()); }, []);
   const cropTiming = useMemo(() => {
-    if (!today) {
-      return { stage: "Updating…", harvest: "Updating…" };
-    }
-
+    if (!today) return { stage: "Updating…", harvest: "Updating…" };
     const day = dayDiff(SOWN_ON, today);
     const toHarvestStart = Math.round((HARVEST_START.getTime() - today.getTime()) / 86_400_000);
     const toHarvestEnd = Math.round((HARVEST_END.getTime() - today.getTime()) / 86_400_000);
-
     let harvest = "Harvest watch now";
     if (toHarvestEnd < 0) harvest = "Harvest window passed";
     else if (toHarvestStart > 0) harvest = `${toHarvestStart}–${toHarvestEnd} days to harvest watch`;
-
     return { stage: `Day ${day} since sowing`, harvest };
   }, [today]);
 
   return (
-    <article className={styles.card}>
-      <header className={styles.header}>
-        <div className={styles.familyRow}>
-          <span>Weed</span>
-          <small>bed care</small>
-        </div>
-        <h2>Field Row 13</h2>
-        <p>Field Rows</p>
-        <div className={styles.timing}>Today · weeding due</div>
-      </header>
-
+    <DominionCardFrame family="Weed" title="Field Row 13">
       <Trail steps={weedTrail} label="Field Row 13 history and next crop-cycle moves" />
-
       <section className={styles.cropState}>
-        <span>Bed now</span>
-        <strong>ProCut Orange sunflower</strong>
-        <div>
-          <b>{cropTiming.stage}</b>
-          <b>{cropTiming.harvest}</b>
-        </div>
+        <span>Bed now</span><strong>ProCut Orange sunflower</strong>
+        <div><b>{cropTiming.stage}</b><b>{cropTiming.harvest}</b></div>
       </section>
-
       <BedMap cropLabel="ProCut Orange sunflower" />
-
       <section className={styles.results}>
         <header><span>How’d we do?</span></header>
         <div className={styles.resultPills}>
-          <ResultPill label="Still rough" />
-          <ResultPill label="Crop readable" />
-          <ResultPill label="Clear" />
-          <LogItDrawer />
+          <ResultPill label="Still rough" /><ResultPill label="Crop readable" /><ResultPill label="Clear" /><LogItDrawer />
         </div>
       </section>
-
-      <footer className={styles.finish}>
-        <span>Finish Weed</span>
-        <div>
-          <button type="button" className={styles.primaryFinish}>Done weeding today</button>
-          <button type="button">Blocked</button>
-        </div>
-      </footer>
-    </article>
+    </DominionCardFrame>
   );
 }
 
 function TurnoverReminder({ id, label }: { id: string; label: string }) {
-  return (
-    <div className={extras.turnoverReminderRow}>
-      <input id={id} type="checkbox" />
-      <label htmlFor={id}><strong>{label}</strong></label>
-    </div>
-  );
+  return <div className={extras.turnoverReminderRow}><input id={id} type="checkbox" /><label htmlFor={id}><strong>{label}</strong></label></div>;
 }
 
-function TurnoverCategory({
-  title,
-  items,
-  availability,
-  prefix,
-}: {
-  title: string;
-  items: readonly string[];
-  availability?: string;
-  prefix: string;
-}) {
+function TurnoverCategory({ title, items, availability, prefix }: { title: string; items: readonly string[]; availability?: string; prefix: string }) {
   return (
     <section className={extras.turnoverCategory}>
       <header><h3>{title}</h3></header>
       <div className={extras.turnoverCategoryRail}>
-        {items.map((item, index) => (
-          <TurnoverReminder id={`${prefix}-${index}`} label={item} key={item} />
-        ))}
+        {items.map((item, index) => <TurnoverReminder id={`${prefix}-${index}`} label={item} key={item} />)}
       </div>
       {availability ? <div className={extras.turnoverAvailability}>{availability}</div> : null}
     </section>
@@ -302,73 +206,28 @@ function TurnoverCategory({
 
 function TurnoverCard() {
   return (
-    <article className={styles.card}>
-      <header className={styles.header}>
-        <div className={styles.familyRow}>
-          <span>Clear / Turn over</span>
-          <small>bed turnover</small>
-        </div>
-        <h2>Field Row 13</h2>
-        <p>Field Rows</p>
-        <div className={styles.timing}>After harvest · turnover due</div>
-      </header>
-
+    <DominionCardFrame family="Clear / Turn over" title="Field Row 13">
       <Trail steps={turnoverTrail} label="Field Row 13 turnover and next bed task" />
-
       <section className={styles.cropState}>
-        <span>Bed now</span>
-        <strong>Black oil sunflower</strong>
-        <div>
-          <b>Harvest window Aug 1–6</b>
-          <b>Next sowing Aug 16</b>
-        </div>
+        <span>Bed now</span><strong>Black oil sunflower</strong>
+        <div><b>Harvest window Aug 1–6</b><b>Next sowing Aug 16</b></div>
       </section>
-
       <BedMap cropLabel="Black oil sunflower" />
-
       <section className={extras.turnoverMethod}>
         <div className={extras.turnoverMethodKey}>tap to cross off</div>
-        {turnoverCategories.map((category) => (
-          <TurnoverCategory
-            title={category.title}
-            items={category.items}
-            availability={"availability" in category ? category.availability : undefined}
-            prefix={`turnover-${category.title.toLowerCase()}`}
-            key={category.title}
-          />
-        ))}
+        {turnoverCategories.map((category) => <TurnoverCategory title={category.title} items={category.items} availability={"availability" in category ? category.availability : undefined} prefix={`turnover-${category.title.toLowerCase()}`} key={category.title} />)}
       </section>
-
       <section className={extras.harvestHistory}>
         <header><span>Harvest</span></header>
         <div className={extras.harvestSummary}>
-          <div>
-            <small>Recorded harvest</small>
-            <strong>None logged</strong>
-          </div>
-          <div>
-            <small>Harvest-window tasks</small>
-            <strong>3</strong>
-          </div>
+          <div><small>Recorded harvest</small><strong>None logged</strong></div>
+          <div><small>Harvest-window tasks</small><strong>3</strong></div>
         </div>
         <div className={extras.harvestTaskList}>
-          {harvestTaskHistory.map((item) => (
-            <div key={`${item.date}-${item.detail}`}>
-              <span>{item.date}</span>
-              <strong>{item.detail}</strong>
-            </div>
-          ))}
+          {harvestTaskHistory.map((item) => <div key={`${item.date}-${item.detail}`}><span>{item.date}</span><strong>{item.detail}</strong></div>)}
         </div>
       </section>
-
-      <footer className={styles.finish}>
-        <span>Finish Turnover</span>
-        <div>
-          <button type="button" className={styles.primaryFinish}>Bed cleared for next crop</button>
-          <button type="button">Blocked</button>
-        </div>
-      </footer>
-    </article>
+    </DominionCardFrame>
   );
 }
 
