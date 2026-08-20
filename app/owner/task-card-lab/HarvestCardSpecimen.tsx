@@ -41,6 +41,7 @@ function formatBuckets(bucketHalves: number) {
 function CropRow({ crop }: { crop: HarvestCrop }) {
   const [bucketHalves, setBucketHalves] = useState(0);
   const [outcome, setOutcome] = useState<HarvestOutcome | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   function chooseOutcome(next: HarvestOutcome) {
     setOutcome(next);
@@ -48,11 +49,20 @@ function CropRow({ crop }: { crop: HarvestCrop }) {
   }
 
   return (
-    <div className={styles.cropRow}>
-      <div className={styles.cropIdentity}>
-        <strong>{crop.crop}</strong>
-        <span>{crop.bed}</span>
-      </div>
+    <div className={styles.cropRow} data-open={drawerOpen ? "true" : "false"}>
+      <button
+        type="button"
+        className={styles.cropIdentity}
+        aria-expanded={drawerOpen}
+        aria-controls={`harvest-outcomes-${crop.id}`}
+        onClick={() => setDrawerOpen((current) => !current)}
+      >
+        <span className={styles.cropText}>
+          <strong>{crop.crop}</strong>
+          <small>{crop.bed}</small>
+        </span>
+        <span className={styles.drawerCue} aria-hidden="true">⌄</span>
+      </button>
 
       <div className={styles.bucketCounter} aria-label={`${crop.crop} bucket count`}>
         <button
@@ -64,7 +74,7 @@ function CropRow({ crop }: { crop: HarvestCrop }) {
             setBucketHalves((current) => Math.max(0, current - 1));
           }}
         >
-          −
+          −½
         </button>
         <strong>{formatBuckets(bucketHalves)}</strong>
         <button
@@ -75,13 +85,12 @@ function CropRow({ crop }: { crop: HarvestCrop }) {
             setBucketHalves((current) => current + 1);
           }}
         >
-          +
+          +½
         </button>
       </div>
 
-      <details className={styles.exceptionDrawer}>
-        <summary aria-label={`More harvest outcomes for ${crop.crop}`}>•••</summary>
-        <div className={styles.exceptionPanel}>
+      {drawerOpen ? (
+        <div className={styles.exceptionPanel} id={`harvest-outcomes-${crop.id}`}>
           <span>What happened?</span>
           <div className={styles.outcomeGrid}>
             {outcomeChoices.map((choice) => (
@@ -97,7 +106,7 @@ function CropRow({ crop }: { crop: HarvestCrop }) {
           </div>
           <button type="button" className={styles.exhaustedAction}>Crop exhausted</button>
         </div>
-      </details>
+      ) : null}
     </div>
   );
 }
@@ -108,13 +117,7 @@ export default function HarvestCardSpecimen() {
   return (
     <article className={styles.card}>
       <header className={styles.header}>
-        <div className={styles.familyRow}>
-          <span>Harvest</span>
-          <small>weekly round</small>
-        </div>
-        <h2>Thursday Harvest</h2>
-        <p>Elm Farm</p>
-        <div className={styles.timing}>Thursday morning</div>
+        <h2>Harvest Stems</h2>
       </header>
 
       <div className={styles.trail} aria-label="Harvest season pulse">
