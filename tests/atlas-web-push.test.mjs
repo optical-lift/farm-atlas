@@ -74,7 +74,7 @@ test("quiet hours delay optional transport while required work timing remains de
   assert.match(setup, /Save optional choices/);
 });
 
-test("the dispatcher leases deliveries, sends encrypted Web Push, retries transient failures, and retires stale devices", () => {
+test("the dispatcher infrastructure remains intact while Bell delivery is paused", () => {
   assert.match(migration, /create table if not exists atlas\.notification_deliveries/);
   assert.match(migration, /for update of delivery skip locked/);
   assert.match(migration, /lease_until/);
@@ -95,11 +95,12 @@ test("the dispatcher uses custom server authentication and never accepts caller-
   assert.match(migration, /revoke all on table atlas\.web_push_settings from public, anon, authenticated/);
 });
 
-test("notification taps keep exact Atlas deep links and Bell-derived badges", () => {
-  assert.match(serviceWorker, /payload\.deepLink/);
+test("the paused worker suppresses new push presentation while preserving old notification click routing", () => {
+  assert.match(serviceWorker, /atlas-pwa-shell-v11/);
+  assert.match(serviceWorker, /event\.waitUntil\(setAtlasBadge\(0\)\)/);
+  assert.doesNotMatch(serviceWorker, /registration\.showNotification/);
   assert.match(serviceWorker, /const deepLink = data\.deepLink \|\| "\/bell"/);
   assert.match(serviceWorker, /openAtlasDestination\(deepLink\)/);
-  assert.match(serviceWorker, /setAtlasBadge\(badgeCount\)/);
   assert.match(migration, /bell_badge_count_for_user_v1/);
   assert.doesNotMatch(build, /total open tasks.*badge/i);
 });
