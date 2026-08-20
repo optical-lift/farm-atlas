@@ -74,7 +74,7 @@ export default function SowCardSpecimen() {
   }, [today]);
 
   return (
-    <DominionCardFrame family="Sow" title="Field Row 6" subtitle="Field Rows">
+    <DominionCardFrame family="Sow" familyDetail="direct sow bed" title="Field Row 6" subtitle="Field Rows" timing="Today · sowing window open">
       <div className={styles.trail} aria-label="Field Row 6 crop-cycle trail">
         {bedTrail.map((step) => (
           <span className={step.state === "done" ? styles.trailDone : step.state === "now" ? styles.trailNow : styles.trailLater} key={step.label}>
