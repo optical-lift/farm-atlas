@@ -7,19 +7,18 @@
 }
 
 .header {
-  display: grid;
-  gap: 6px;
-  padding: 20px 18px 17px;
+  padding: 22px 18px 18px;
 }
 
-.familyRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.header h2 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: clamp(29px, 8vw, 41px);
+  line-height: 0.98;
+  font-weight: 950;
+  letter-spacing: -0.06em;
 }
 
-.familyRow span,
 .listKey span {
   color: #858bb8;
   font-size: 10px;
@@ -29,41 +28,11 @@
   text-transform: uppercase;
 }
 
-.familyRow small,
 .listKey small {
   color: #999992;
   font-size: 9px;
   line-height: 1.2;
   font-weight: 800;
-}
-
-.header h2 {
-  margin: 5px 0 0;
-  color: var(--atlas-text);
-  font-size: clamp(29px, 8vw, 41px);
-  line-height: 0.98;
-  font-weight: 950;
-  letter-spacing: -0.06em;
-}
-
-.header p {
-  margin: 0;
-  color: #6f706a;
-  font-size: 13px;
-  line-height: 1.25;
-  font-weight: 820;
-}
-
-.timing {
-  justify-self: start;
-  margin-top: 8px;
-  border-radius: 999px;
-  background: rgba(239, 237, 244, 0.72);
-  color: #6f7292;
-  padding: 7px 10px;
-  font-size: 10px;
-  line-height: 1;
-  font-weight: 900;
 }
 
 .trail {
@@ -181,22 +150,39 @@
 }
 
 .cropRow {
-  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
   padding: 11px 14px 11px 18px;
   border-top: 1px solid rgba(223, 215, 202, 0.48);
 }
 
+.cropRow[data-open="true"] {
+  background: rgba(249, 247, 241, 0.72);
+}
+
 .cropIdentity {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 4px 0;
+  text-align: left;
+  font: inherit;
+}
+
+.cropText {
   min-width: 0;
   display: grid;
   gap: 3px;
 }
 
-.cropIdentity strong {
+.cropText strong {
   overflow: hidden;
   color: var(--atlas-text);
   font-size: 14px;
@@ -205,38 +191,48 @@
   text-overflow: ellipsis;
 }
 
-.cropIdentity span {
+.cropText small {
   color: #8c8d85;
   font-size: 9px;
   line-height: 1;
   font-weight: 850;
 }
 
+.drawerCue {
+  flex: 0 0 auto;
+  color: #92938c;
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 140ms ease;
+}
+
+.cropIdentity[aria-expanded="true"] .drawerCue {
+  transform: rotate(180deg);
+}
+
 .bucketCounter {
   display: grid;
-  grid-template-columns: 30px 34px 30px;
+  grid-template-columns: auto 34px auto;
   align-items: center;
-  border: 1px solid rgba(139, 145, 194, 0.22);
-  border-radius: 999px;
-  background: rgba(247, 246, 250, 0.86);
-  padding: 2px;
+  gap: 5px;
 }
 
 .bucketCounter button {
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: #5e6071;
+  min-width: 39px;
+  height: 32px;
+  border: 1px solid rgba(121, 109, 89, 0.18);
+  border-radius: 10px;
+  background: rgba(244, 239, 227, 0.92);
+  color: #5f594d;
+  padding: 0 7px;
   font: inherit;
-  font-size: 18px;
+  font-size: 11px;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 900;
 }
 
 .bucketCounter button:disabled {
-  opacity: 0.28;
+  opacity: 0.3;
 }
 
 .bucketCounter strong {
@@ -247,42 +243,13 @@
   text-align: center;
 }
 
-.exceptionDrawer {
-  position: relative;
-}
-
-.exceptionDrawer > summary {
-  list-style: none;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid rgba(139, 145, 194, 0.18);
-  border-radius: 50%;
-  color: #8c8e98;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-}
-
-.exceptionDrawer > summary::-webkit-details-marker {
-  display: none;
-}
-
 .exceptionPanel {
-  position: absolute;
-  z-index: 8;
-  top: 36px;
-  right: 0;
-  width: min(270px, calc(100vw - 72px));
+  grid-column: 1 / -1;
   display: grid;
   gap: 9px;
-  border: 1px solid rgba(215, 204, 189, 0.72);
-  border-radius: 15px;
-  background: #fffefb;
-  box-shadow: 0 12px 28px rgba(58, 46, 30, 0.14);
-  padding: 11px;
+  margin: 2px 0 4px;
+  border-top: 1px solid rgba(215, 204, 189, 0.56);
+  padding: 12px 0 2px;
 }
 
 .exceptionPanel > span {
@@ -364,21 +331,19 @@
     padding-left: 14px;
   }
 
-  .cropIdentity strong {
+  .cropText strong {
     font-size: 13px;
   }
 
   .bucketCounter {
-    grid-template-columns: 28px 30px 28px;
+    grid-template-columns: auto 28px auto;
+    gap: 3px;
   }
 
-  .bucketCounter button,
-  .exceptionDrawer > summary {
-    width: 28px;
-    height: 28px;
-  }
-
-  .exceptionPanel {
-    right: -2px;
+  .bucketCounter button {
+    min-width: 35px;
+    height: 30px;
+    padding: 0 5px;
+    font-size: 10px;
   }
 }
