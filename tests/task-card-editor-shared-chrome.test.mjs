@@ -11,12 +11,14 @@ const mow = readFileSync("app/owner/task-card-lab/MowCardSpecimen.tsx", "utf8");
 const harvest = readFileSync("app/owner/task-card-lab/HarvestCardSpecimen.tsx", "utf8");
 const remaining = readFileSync("app/owner/task-card-lab/RemainingDominionCardSpecimens.tsx", "utf8");
 
-test("shared Dominion frame owns the approved card top and universal completion chrome", () => {
+test("shared Dominion frame owns the approved card top and default completion chrome", () => {
   assert.match(frame, /<span>\{family\}<\/span>/);
   assert.match(frame, /familyDetail \? <small>\{familyDetail\}<\/small> : null/);
   assert.match(frame, /<h2>\{title\}<\/h2>/);
   assert.match(frame, /subtitle \? <p className=\{styles\.subtitle\}>\{subtitle\}<\/p> : null/);
   assert.match(frame, /timing \? <div className=\{styles\.timing\}>\{timing\}<\/div> : null/);
+  assert.match(frame, /completion === false \? null/);
+  assert.match(frame, /completion !== undefined/);
   assert.match(frame, />Done<\/button>/);
   assert.match(frame, />Unfinished<\/button>/);
 });
@@ -29,24 +31,26 @@ test("shared frame uses the approved pre-flattening header visuals", () => {
   assert.match(frameStyles, /\.timing \{[\s\S]*border-radius: 999px[\s\S]*rgba\(214, 225, 177, 0\.52\)/);
 });
 
-test("designed card shells restore place zone variant and state details", () => {
+test("designed card shells retain place zone variant and state details", () => {
   assert.match(venue, /familyDetail="weekly event template" title="Tidy Community Thursday" subtitle="Community Thursday · Elm Farm" timing="Wednesday · whole-space tidy"/);
   assert.match(venue, /familyDetail="weekly event template" title="Prep Community Thursday" subtitle="Community Thursday · Elm Farm" timing="Wednesday · night-before prep"/);
   assert.match(venue, /familyDetail="event opening" title="Host Community Thursday" subtitle="Community Thursday · Elm Farm" timing="Thursday morning · Prep complete"/);
   assert.match(sow, /familyDetail="direct sow bed" title="Field Row 6" subtitle="Field Rows" timing="Today · sowing window open"/);
-  assert.match(weed, /familyDetail=\{familyDetail\} title="Field Row 13" subtitle="Field Rows" timing=\{timing\}/);
-  assert.match(mow, /title="U-Pick Walkways" subtitle="U-Pick"/);
+  assert.match(weed, /title="Field Row 13"[\s\S]*subtitle="Field Rows"[\s\S]*timing=\{timing\}/);
+  assert.match(mow, /title="U-Pick Walkways"[\s\S]*zone="U-Pick"/);
   assert.match(harvest, /title="Harvest Stems" subtitle=\{zones\.join\(" · "\)\}/);
-  assert.match(remaining, /title="Move 15 Zinnias" subtitle="Curve Garden"/);
+  assert.match(remaining, /title="Transplant 15 Zinnias"[\s\S]*subtitle="Curve Garden"[\s\S]*timing="5 wk 6 d since seeding"/);
 });
 
 test("crop-cycle actions share one bed wrapper rather than their own task shells", () => {
   assert.match(weed, /function CropCycleBedCard/);
-  assert.match(weed, /family="Weed" familyDetail="bed care" timing="Today · weeding due"/);
-  assert.match(weed, /family="Irrigation" familyDetail="care pulse" timing="Germination window · irrigate"/);
-  assert.match(weed, /family="Check" familyDetail="crop check" timing="Germination window · check stand"/);
-  assert.match(weed, /family="Clear \/ Turn over" familyDetail="bed turnover" timing="After harvest · turnover due"/);
-  assert.match(weed, /Field Row 13 crop-cycle trail/);
+  assert.match(weed, /family="Weed"/);
+  assert.match(weed, /family="Irrigation"/);
+  assert.match(weed, /family="Germination"/);
+  assert.match(weed, /family="Clear"/);
+  assert.doesNotMatch(weed, /family="Check"/);
+  assert.doesNotMatch(weed, /family="Clear \/ Turn over"/);
+  assert.match(weed, /Field Row 13 crop-cycle/);
 });
 
 test("approved family interiors survive the shared shell and crop cycle refactor", () => {
@@ -62,7 +66,9 @@ test("approved family interiors survive the shared shell and crop cycle refactor
   assert.match(mow, /3 in/);
   assert.match(mow, /Riding mower/);
   assert.match(harvest, /Harvest season pulse/);
-  assert.match(remaining, /Water immediately/);
+  assert.match(remaining, /Shelf ID/);
+  assert.match(remaining, /Tray slot/);
+  assert.doesNotMatch(remaining, /Water immediately/);
 });
 
 test("legacy per-family completion chrome remains removed", () => {
