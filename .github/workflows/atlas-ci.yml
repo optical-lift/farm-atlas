@@ -7,58 +7,13 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: atlas-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  recover-production-source:
-    if: github.event_name == 'pull_request' && github.head_ref == 'agent/release-clean-p9-p10'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout recovery branch
-        uses: actions/checkout@v4
-        with:
-          ref: agent/release-clean-p9-p10
-          fetch-depth: 0
-      - name: Recover and checksum exact current production P9 P10 SQL
-        shell: bash
-        env:
-          SUPABASE_URL: https://zirqkouammpwxlqfbsvf.supabase.co
-          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcnFrb3VhbW1wd3hscWZic3ZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MjU2MjAsImV4cCI6MjA4NzEwMTYyMH0.Y4zgLr-cEx1DH3_0QUrHl4CAVzVBLYFlqM8zHxyE61c
-        run: |
-          set -euo pipefail
-          base="$SUPABASE_URL/functions/v1/temporary-p9-p10-source-recovery"
-          mkdir -p supabase/migrations
-          fetch() {
-            local version="$1"
-            local name="$2"
-            local expected_sha256="$3"
-            local path="supabase/migrations/${version}_${name}.sql"
-            curl -fsSL --retry 3 -H "Authorization: Bearer $SUPABASE_ANON_KEY" "$base?version=$version" -o "$path"
-            actual_sha256="$(sha256sum "$path" | awk '{print $1}')"
-            test "$actual_sha256" = "$expected_sha256" || { echo "checksum mismatch $path expected=$expected_sha256 actual=$actual_sha256" >&2; exit 1; }
-            echo "verified $path $actual_sha256"
-          }
-          fetch 20260820011351 p9_harvest_requirement_expression_v2 2f1802b73984b820fcf5cc8c3d7f33e04c40f03d54e9667eb361687d3fa64014
-          fetch 20260820011525 p9_harvest_acquisition_execution_core_v4 1bf31be349e837c0cd5502851022091da91736ce7cfca8ac709e90635b2f3a0b
-          fetch 20260820011548 p9_commercial_target_reconciliation_v5 67c4aea383e28bc9644266bf3319a8baf8f99aec86775c22ddb305bf74b6868d
-          fetch 20260820013332 p10_crop_harvest_realization_contract_v1 a477af41a12f92aeaee12d9d1180a69019d7ff449392cef427c07c1aed95163d
-          fetch 20260820013443 p10_harvest_realization_continuity_audit_v1 e5a7970822229c4bc55d72694339856de56f6c36994a35968b25a80c431e7f31
-          fetch 20260820014014 p10_downstream_sale_resolves_harvest_disposition_v1 9cc0c181b19137f3b06a7acb78bacc0e2d5b2dddd1beeb0c78119bd1898b4a29
-          fetch 20260820014529 p10_harvest_commercialization_readiness_v1 0490d9de9544aab3fe84b328a7a8c93e441c01c197433de6179ed6a14c8f1311
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/atlas-ci.yml
-          rm -f .github/workflows/recover-p9-p10-source.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add supabase/migrations .github/workflows/atlas-ci.yml .github/workflows/recover-p9-p10-source.yml
-          git commit -m "Recover exact current production P9 P10 migration source"
-          git push origin HEAD:agent/release-clean-p9-p10
-
   architecture:
     runs-on: ubuntu-latest
     timeout-minutes: 5
