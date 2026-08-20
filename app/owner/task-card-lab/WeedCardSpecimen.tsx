@@ -10,9 +10,7 @@ const HARVEST_END = new Date("2026-10-14T12:00:00-05:00");
 
 const BED_WIDTH_FT = 3;
 const BED_LENGTH_FT = 30;
-const PLANT_ROWS = 3;
-const IN_ROW_SPACING_IN = 4;
-const SEGMENT_FT = 10;
+const MAP_BLOCK_FT = 3;
 
 const bedTrail = [
   { label: "Weeded", detail: "Jul 23", state: "done" },
@@ -22,28 +20,14 @@ const bedTrail = [
   { label: "Harvest", detail: "Oct 4–14", state: "later" },
 ] as const;
 
+const mapBlocks = Array.from({ length: BED_LENGTH_FT / MAP_BLOCK_FT }, (_, index) => ({
+  start: index * MAP_BLOCK_FT,
+  end: (index + 1) * MAP_BLOCK_FT,
+}));
+
 function dayDiff(from: Date, to: Date) {
   return Math.max(0, Math.round((to.getTime() - from.getTime()) / 86_400_000));
 }
-
-function renderBedSegment(startFoot: number) {
-  const cells = Array.from({ length: SEGMENT_FT }, () => "ooo");
-  const horizontal = Array.from({ length: SEGMENT_FT }, () => "───");
-  const top = `┌${horizontal.join("┬")}┐`;
-  const middle = `├${horizontal.join("┼")}┤`;
-  const bottom = `└${horizontal.join("┴")}┘`;
-  const cropRow = `│${cells.join("│")}│`;
-
-  return {
-    label: `${startFoot}–${startFoot + SEGMENT_FT} ft`,
-    drawing: [top, cropRow, middle, cropRow, middle, cropRow, bottom].join("\n"),
-  };
-}
-
-const bedSegments = Array.from(
-  { length: BED_LENGTH_FT / SEGMENT_FT },
-  (_, index) => renderBedSegment(index * SEGMENT_FT),
-);
 
 function ResultPill({ label }: { label: string }) {
   const id = `weed-result-${label.toLowerCase().replaceAll(" ", "-")}`;
@@ -70,6 +54,7 @@ function LogItDrawer() {
 
 export default function WeedCardSpecimen() {
   const [today, setToday] = useState<Date | null>(null);
+  const [selectedBlock, setSelectedBlock] = useState(0);
 
   useEffect(() => {
     setToday(new Date());
@@ -97,9 +82,7 @@ export default function WeedCardSpecimen() {
     };
   }, [today]);
 
-  const estimatedPositions = Math.round(
-    (BED_LENGTH_FT * 12 / IN_ROW_SPACING_IN) * PLANT_ROWS,
-  );
+  const activeBlock = mapBlocks[selectedBlock];
 
   return (
     <article className={styles.card}>
@@ -137,22 +120,38 @@ export default function WeedCardSpecimen() {
       <section className={styles.bedMap}>
         <header>
           <span>Bed map</span>
-          <small>{BED_WIDTH_FT} ft × {BED_LENGTH_FT} ft · each box = 1 sq ft</small>
+          <small>{BED_WIDTH_FT} ft × {BED_LENGTH_FT} ft · one mark = 1 sq ft</small>
         </header>
-        <div className={styles.mapMeta}>
-          <b>{PLANT_ROWS} rows</b>
-          <b>{IN_ROW_SPACING_IN} in spacing</b>
-          <b>~{estimatedPositions} positions</b>
-        </div>
-        <div className={styles.mapSegments} aria-label="Expected sunflower positions in Field Row 13">
-          {bedSegments.map((segment) => (
-            <figure key={segment.label}>
-              <figcaption>{segment.label}</figcaption>
-              <pre>{segment.drawing}</pre>
-            </figure>
+
+        <div className={styles.bedRectangle} aria-label="Square-foot crop map for Field Row 13">
+          {mapBlocks.map((block, blockIndex) => (
+            <button
+              type="button"
+              className={blockIndex === selectedBlock ? styles.mapBlockActive : styles.mapBlock}
+              key={block.start}
+              onClick={() => setSelectedBlock(blockIndex)}
+              aria-label={`Feet ${block.start} to ${block.end}, ProCut Orange sunflower`}
+            >
+              {Array.from({ length: BED_WIDTH_FT * MAP_BLOCK_FT }, (_, squareIndex) => (
+                <span key={squareIndex}>o</span>
+              ))}
+            </button>
           ))}
         </div>
-        <div className={styles.mapLegend}><code>o</code> expected sunflower position</div>
+
+        <div className={styles.mapScale} aria-hidden="true">
+          <span>0 ft</span>
+          <span>15 ft</span>
+          <span>30 ft</span>
+        </div>
+
+        <div className={styles.mapDetail}>
+          <span>{activeBlock.start}–{activeBlock.end} ft</span>
+          <strong>ProCut Orange sunflower</strong>
+          <small>{BED_WIDTH_FT * MAP_BLOCK_FT} sq ft shown · tap another section to inspect it</small>
+        </div>
+
+        <div className={styles.mapLegend}><code>o</code> sunflower square</div>
       </section>
 
       <section className={styles.results}>
