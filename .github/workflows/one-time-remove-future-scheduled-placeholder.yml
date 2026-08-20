@@ -1,0 +1,57 @@
+name: One-time remove future card placeholder
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-remove-future-scheduled-placeholder.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Install future card placeholder cleanup'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remove future placeholder copy
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          day = Path('app/day/page.tsx')
+          text = day.read_text()
+          old = '      <span>{item.location || "Scheduled for this day"}</span>'
+          new = '      {item.location ? <span>{item.location}</span> : null}'
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected exactly one future placeholder line, found {text.count(old)}')
+          day.write_text(text.replace(old, new, 1))
+
+          test = Path('tests/atlas-future-day-calendar-contract.test.mjs')
+          t = test.read_text()
+          anchor = '  assert.match(day, /pointer-events: none/);\n'
+          addition = '  assert.doesNotMatch(day, /Scheduled for this day/);\n'
+          if addition not in t:
+              if t.count(anchor) != 1:
+                  raise SystemExit('Future-card regression anchor missing or ambiguous')
+              t = t.replace(anchor, anchor + addition, 1)
+              test.write_text(t)
+          PY
+
+          git diff --check
+          node --test tests/atlas-future-day-calendar-contract.test.mjs
+
+      - name: Commit cleanup
+        shell: bash
+        run: |
+          git config user.name "atlas-build"
+          git config user.email "atlas-build@users.noreply.github.com"
+          git add app/day/page.tsx tests/atlas-future-day-calendar-contract.test.mjs
+          git rm .github/workflows/one-time-remove-future-scheduled-placeholder.yml
+          git commit -m "Remove future Day placeholder copy"
+          git push origin HEAD:main
