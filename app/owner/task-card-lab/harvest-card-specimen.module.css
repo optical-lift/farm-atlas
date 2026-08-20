@@ -2,7 +2,7 @@
   overflow: hidden;
   border: 1px solid rgba(207, 196, 179, 0.92);
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 16px 34px rgba(58, 46, 30, 0.07);
 }
 
@@ -20,12 +20,7 @@
 }
 
 .familyRow span,
-.cropTruth span,
-.sharedTruth span,
-.quantity header span,
-.results header span,
-.exhaustedSection header span,
-.finish > span {
+.listKey span {
   color: #858bb8;
   font-size: 10px;
   line-height: 1;
@@ -35,18 +30,15 @@
 }
 
 .familyRow small,
-.quantity header small,
-.results header small,
-.exhaustedSection header small {
+.listKey small {
   color: #999992;
   font-size: 9px;
-  line-height: 1.25;
+  line-height: 1.2;
   font-weight: 800;
 }
 
 .header h2 {
   margin: 5px 0 0;
-  max-width: 16ch;
   color: var(--atlas-text);
   font-size: clamp(29px, 8vw, 41px);
   line-height: 0.98;
@@ -76,10 +68,10 @@
 
 .trail {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border-top: 1px solid rgba(215, 204, 189, 0.62);
   border-bottom: 1px solid rgba(215, 204, 189, 0.62);
-  padding: 12px 9px 16px;
+  padding: 12px 14px 15px;
 }
 
 .trail > span {
@@ -124,7 +116,6 @@
 }
 
 .trail small {
-  max-width: 10ch;
   color: #9a9a93;
   font-size: 8px;
   line-height: 1.15;
@@ -154,391 +145,200 @@
   font-weight: 950;
 }
 
-.trailLater b,
-.trailLater small {
-  color: #a1a29c;
-}
-
-.cropTruth,
-.sharedTruth,
-.quantity,
-.results,
-.exhaustedSection {
+.harvestList {
+  display: grid;
   border-bottom: 1px solid rgba(215, 204, 189, 0.62);
 }
 
-.cropTruth {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
-}
-
-.cropTruth > div:first-child {
+.listKey {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
+  padding: 15px 18px 11px;
 }
 
-.cropTruth strong {
-  color: var(--atlas-text);
-  font-size: 25px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: -0.04em;
+.zone {
+  border-top: 1px solid rgba(215, 204, 189, 0.5);
 }
 
-.cropFacts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
+.zone > header {
+  padding: 12px 18px 8px;
 }
 
-.cropFacts b {
-  border-radius: 999px;
-  background: rgba(239, 237, 244, 0.58);
-  color: #686a7c;
-  padding: 7px 9px;
-  font-size: 9px;
-  line-height: 1.1;
-  font-weight: 900;
-}
-
-.sharedTruth {
-  display: grid;
-  gap: 8px;
-  padding: 17px 18px;
-  background: rgba(246, 242, 230, 0.42);
-}
-
-.sharedTruth > div {
-  display: grid;
-  gap: 4px;
-}
-
-.sharedTruth strong {
-  color: var(--atlas-text);
-  font-size: 16px;
-  line-height: 1.2;
-  font-weight: 930;
-}
-
-.sharedTruth p,
-.observationPanel p,
-.backwardPanel p,
-.exhaustedTruth p {
+.zone h3 {
   margin: 0;
-  color: #74756f;
-  font-size: 11px;
-  line-height: 1.45;
-  font-weight: 700;
-}
-
-.quantity {
-  display: grid;
-  gap: 15px;
-  padding: 18px;
-}
-
-.quantity[data-zero-outcome="true"] {
-  background: rgba(247, 247, 244, 0.72);
-}
-
-.quantity header,
-.results header,
-.exhaustedSection header {
-  display: grid;
-  gap: 4px;
-}
-
-.conversion {
-  margin-top: 6px;
-  color: #66685f;
-  font-size: 10px;
-  line-height: 1.3;
-  font-weight: 820;
-}
-
-.counter {
-  display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) 54px;
-  align-items: stretch;
-  gap: 9px;
-}
-
-.counter > button {
-  min-height: 68px;
-  border: 1px solid rgba(139, 145, 194, 0.24);
-  border-radius: 18px;
-  background: rgba(239, 237, 244, 0.54);
-  color: #55576a;
-  font: inherit;
-  font-size: 28px;
-  line-height: 1;
-  font-weight: 600;
-}
-
-.counter > button:disabled {
-  opacity: 0.32;
-}
-
-.total {
-  display: grid;
-  place-content: center;
-  gap: 4px;
-  min-width: 0;
-  border: 1px solid rgba(215, 204, 189, 0.68);
-  border-radius: 18px;
-  background: #fffef9;
-  padding: 10px;
-  text-align: center;
-}
-
-.total strong {
-  color: var(--atlas-text);
-  font-size: 23px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: -0.04em;
-}
-
-.total span {
   color: #777970;
   font-size: 11px;
-  line-height: 1.2;
-  font-weight: 850;
-}
-
-.zeroNote,
-.validation {
-  margin: -3px 0 0;
-  border-radius: 12px;
-  padding: 9px 10px;
-  font-size: 10px;
-  line-height: 1.35;
-  font-weight: 800;
-}
-
-.zeroNote {
-  background: rgba(239, 237, 244, 0.48);
-  color: #656879;
-}
-
-.validation {
-  background: rgba(244, 230, 223, 0.62);
-  color: #79584f;
-}
-
-.results {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
-}
-
-.resultGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.resultGrid button {
-  min-height: 72px;
-  display: grid;
-  align-content: center;
-  gap: 4px;
-  border: 1px solid rgba(139, 145, 194, 0.22);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.88);
-  color: var(--atlas-text);
-  padding: 11px;
-  text-align: left;
-  font: inherit;
-}
-
-.resultGrid button[data-active="true"] {
-  border-color: rgba(111, 118, 158, 0.7);
-  background: rgba(239, 237, 244, 0.78);
-  box-shadow: inset 0 0 0 1px rgba(111, 118, 158, 0.28);
-}
-
-.resultGrid strong {
-  font-size: 13px;
-  line-height: 1.1;
-  font-weight: 930;
-}
-
-.resultGrid span {
-  color: #7a7b75;
-  font-size: 9px;
-  line-height: 1.3;
-  font-weight: 760;
-}
-
-.observationDrawer,
-.backwardLog {
-  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
-}
-
-.observationDrawer > summary,
-.backwardLog > summary {
-  list-style: none;
-  cursor: pointer;
-  display: grid;
-  gap: 4px;
-  padding: 16px 18px;
-}
-
-.observationDrawer > summary::-webkit-details-marker,
-.backwardLog > summary::-webkit-details-marker {
-  display: none;
-}
-
-.observationDrawer > summary span,
-.backwardLog > summary span {
-  color: var(--atlas-text);
-  font-size: 14px;
-  line-height: 1.15;
-  font-weight: 920;
-}
-
-.observationDrawer > summary small,
-.backwardLog > summary small {
-  color: #888981;
-  font-size: 9px;
-  line-height: 1.35;
-  font-weight: 760;
-}
-
-.observationPanel,
-.backwardPanel {
-  display: grid;
-  gap: 9px;
-  padding: 0 18px 17px;
-}
-
-.observationPanel {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.observationPanel button {
-  min-height: 39px;
-  border: 1px solid rgba(139, 145, 194, 0.2);
-  border-radius: 999px;
-  background: rgba(250, 248, 239, 0.92);
-  color: #646676;
-  padding: 8px 10px;
-  font: inherit;
-  font-size: 9px;
-  line-height: 1.15;
-  font-weight: 880;
-}
-
-.observationPanel p {
-  grid-column: 1 / -1;
-}
-
-.backwardPanel label {
-  display: grid;
-  gap: 6px;
-}
-
-.backwardPanel label span {
-  color: #7f8179;
-  font-size: 9px;
   line-height: 1;
-  font-weight: 880;
+  font-weight: 920;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.backwardPanel input {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid rgba(111, 97, 76, 0.2);
-  border-radius: 13px;
-  background: #fff;
-  color: var(--atlas-text);
-  padding: 10px 11px;
-  font: inherit;
-  font-size: 16px;
-}
-
-.exhaustedSection {
+.zoneRows {
   display: grid;
-  gap: 11px;
-  padding: 18px;
-  background: rgba(247, 242, 234, 0.72);
 }
 
-.exhaustedSection[data-open="true"] {
-  background: rgba(244, 232, 226, 0.62);
+.cropRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 11px 14px 11px 18px;
+  border-top: 1px solid rgba(223, 215, 202, 0.48);
 }
 
-.exhaustedButton {
-  min-height: 50px;
-  border: 1px solid rgba(147, 91, 74, 0.35);
-  border-radius: 16px;
-  background: rgba(255, 251, 248, 0.92);
-  color: #784f43;
-  padding: 10px 13px;
-  font: inherit;
-  font-size: 13px;
+.cropIdentity {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.cropIdentity strong {
+  overflow: hidden;
+  color: var(--atlas-text);
+  font-size: 14px;
   line-height: 1.15;
   font-weight: 930;
+  text-overflow: ellipsis;
 }
 
-.exhaustedTruth {
+.cropIdentity span {
+  color: #8c8d85;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.bucketCounter {
   display: grid;
-  gap: 8px;
-  border: 1px solid rgba(147, 91, 74, 0.18);
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.64);
-  padding: 12px;
+  grid-template-columns: 30px 34px 30px;
+  align-items: center;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 999px;
+  background: rgba(247, 246, 250, 0.86);
+  padding: 2px;
 }
 
-.exhaustedTruth > strong {
-  color: #69483f;
+.bucketCounter button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #5e6071;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.bucketCounter button:disabled {
+  opacity: 0.28;
+}
+
+.bucketCounter strong {
+  color: var(--atlas-text);
   font-size: 13px;
-  line-height: 1.2;
-  font-weight: 930;
+  line-height: 1;
+  font-weight: 950;
+  text-align: center;
 }
 
-.exhaustedTruth > div {
+.exceptionDrawer {
+  position: relative;
+}
+
+.exceptionDrawer > summary {
+  list-style: none;
+  cursor: pointer;
   display: grid;
-  gap: 4px;
-  border-top: 1px solid rgba(147, 91, 74, 0.15);
-  padding-top: 8px;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 50%;
+  color: #8c8e98;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
 }
 
-.exhaustedTruth small {
-  color: #8b665c;
-  font-size: 8px;
+.exceptionDrawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.exceptionPanel {
+  position: absolute;
+  z-index: 8;
+  top: 36px;
+  right: 0;
+  width: min(270px, calc(100vw - 72px));
+  display: grid;
+  gap: 9px;
+  border: 1px solid rgba(215, 204, 189, 0.72);
+  border-radius: 15px;
+  background: #fffefb;
+  box-shadow: 0 12px 28px rgba(58, 46, 30, 0.14);
+  padding: 11px;
+}
+
+.exceptionPanel > span {
+  color: #777970;
+  font-size: 9px;
   line-height: 1;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.exhaustedTruth span {
-  color: #765f58;
-  font-size: 10px;
-  line-height: 1.4;
-  font-weight: 730;
+.outcomeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.outcomeGrid button,
+.exhaustedAction {
+  min-height: 36px;
+  border: 1px solid rgba(139, 145, 194, 0.2);
+  border-radius: 999px;
+  background: rgba(250, 248, 239, 0.9);
+  color: #646676;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 9px;
+  line-height: 1.1;
+  font-weight: 880;
+}
+
+.outcomeGrid button[data-active="true"] {
+  border-color: rgba(111, 118, 158, 0.62);
+  background: rgba(239, 237, 244, 0.86);
+  color: #4f5268;
+}
+
+.exhaustedAction {
+  justify-self: start;
+  border-color: rgba(147, 91, 74, 0.2);
+  color: #865f54;
+  background: rgba(250, 242, 237, 0.72);
 }
 
 .finish {
   display: grid;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 9px;
   padding: 17px 18px 20px;
   background: rgba(246, 242, 230, 0.48);
 }
 
-.primaryFinish {
-  min-height: 54px;
-  border: 0;
+.primaryFinish,
+.secondaryFinish {
+  min-height: 52px;
   border-radius: 17px;
-  background: rgba(214, 225, 177, 0.76);
-  color: #515b34;
   padding: 11px;
   font: inherit;
   font-size: 13px;
@@ -546,36 +346,39 @@
   font-weight: 930;
 }
 
-.primaryFinish:disabled {
-  opacity: 0.43;
+.primaryFinish {
+  border: 0;
+  background: rgba(214, 225, 177, 0.76);
+  color: #515b34;
 }
 
-.finish small {
-  color: #97988f;
-  font-size: 8px;
-  line-height: 1.35;
-  font-weight: 720;
+.secondaryFinish {
+  border: 1px solid rgba(111, 97, 76, 0.18);
+  background: rgba(255, 255, 255, 0.76);
+  color: #696b63;
 }
 
-@media (max-width: 430px) {
-  .trail {
-    padding-inline: 5px;
+@media (max-width: 520px) {
+  .cropRow {
+    gap: 7px;
+    padding-left: 14px;
   }
 
-  .trail b {
-    font-size: 8px;
+  .cropIdentity strong {
+    font-size: 13px;
   }
 
-  .trail small {
-    font-size: 7px;
+  .bucketCounter {
+    grid-template-columns: 28px 30px 28px;
   }
 
-  .resultGrid,
-  .observationPanel {
-    grid-template-columns: 1fr;
+  .bucketCounter button,
+  .exceptionDrawer > summary {
+    width: 28px;
+    height: 28px;
   }
 
-  .observationPanel p {
-    grid-column: auto;
+  .exceptionPanel {
+    right: -2px;
   }
 }
