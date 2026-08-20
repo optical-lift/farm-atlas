@@ -1,0 +1,288 @@
+name: One-time future Day calendar contract patch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-future-day-calendar-contract.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Install future Day calendar contract patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply future Day contract
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: Path, old: str, new: str):
+              text = path.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}: {old[:100]!r}")
+              path.write_text(text.replace(old, new, 1))
+
+          route = Path('app/api/atlas/universal-task-cards/route.ts')
+          replace_once(
+              route,
+              "\n    if (placementDay && workerMembershipId && workerFarmId) {",
+              """
+    // A future calendar read is an exact-date projection, not simulated passage
+    // of time. Open work from the real current day must not become overdue merely
+    // because the owner browsed forward. Explicit Day placements are re-added
+    // below from the placement ledger, even when their canonical due date differs.
+    const farmToday = atlasFarmDateIso();
+    const futureExactDate = exactDate && exactDate > farmToday ? exactDate : null;
+    if (futureExactDate) {
+      baseTaskCards = baseTaskCards.filter((card) => card.due_date === futureExactDate);
+    }
+
+    if (placementDay && workerMembershipId && workerFarmId) {""",
+          )
+
+          day = Path('app/day/page.tsx')
+          replace_once(
+              day,
+              'import type { AtlasJournalEvent } from "@/lib/atlas/journal-contract";\n',
+              'import type { AtlasJournalEvent } from "@/lib/atlas/journal-contract";\nimport type { AtlasCommittedDaySequenceItem } from "@/lib/atlas/day-sequence";\n',
+          )
+          replace_once(
+              day,
+              """function todayIso() {
+  const date = new Date();
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+""",
+              """function todayIso() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+""",
+          )
+          replace_once(
+              day,
+              """function isOverdueTask(task: AtlasTaskCard, selectedDay: string) {
+  return !isDoneTask(task) && Boolean(task.due_date && task.due_date < selectedDay);
+}
+""",
+              """function isOverdueTask(task: AtlasTaskCard, selectedDay: string) {
+  const farmToday = todayIso();
+  if (selectedDay !== farmToday) return false;
+  return !isDoneTask(task) && Boolean(task.due_date && task.due_date < farmToday);
+}
+""",
+          )
+          replace_once(
+              day,
+              '  const { taskCards: tasks, loading, error: runtimeError } = useAtlasWorkerDayProjection(dateIso);',
+              '  const { projection, taskCards: tasks, loading, error: runtimeError } = useAtlasWorkerDayProjection(dateIso);',
+          )
+          replace_once(
+              day,
+              """function ViewToggle({ viewMode, onChange }: { viewMode: DayViewMode; onChange: (mode: DayViewMode) => void }) {
+""",
+              """function FuturePlanCard({ item }: { item: AtlasCommittedDaySequenceItem }) {
+  const firstWord = item.title.trim().split(/\\s+/, 1)[0] || "Planned";
+  return (
+    <div className="atlas-day-task-card atlas-day-future-plan-card" data-future-projection-source={item.sourceKind}>
+      <small className="atlas-day-task-family">{firstWord}</small>
+      <strong>{item.title}</strong>
+      <span>{item.location || "Scheduled for this day"}</span>
+    </div>
+  );
+}
+
+function ViewToggle({ viewMode, onChange }: { viewMode: DayViewMode; onChange: (mode: DayViewMode) => void }) {
+""",
+          )
+          replace_once(
+              day,
+              """  const extraCreditTasks = useMemo(() => dayTasks.filter(isExtraCredit), [dayTasks]);
+  const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask).filter((task) => !isExtraCredit(task)), [allDayTasks]);
+""",
+              """  const extraCreditTasks = useMemo(() => dayTasks.filter(isExtraCredit), [dayTasks]);
+  const futureAutomaticItems = useMemo(() => {
+    if (!isFutureDay) return [] as AtlasCommittedDaySequenceItem[];
+    return (projection?.sequence.items ?? []).filter(
+      (item): item is AtlasCommittedDaySequenceItem => item.kind === "committed_task" && item.automatic,
+    );
+  }, [isFutureDay, projection]);
+  const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask).filter((task) => !isExtraCredit(task)), [allDayTasks]);
+""",
+          )
+          replace_once(
+              day,
+              '  const openRequiredCount = mixedOpenTasks.length;\n',
+              '  const openRequiredCount = mixedOpenTasks.length;\n  const displayedOpenCount = isFutureDay ? openRequiredCount + futureAutomaticItems.length : openRequiredCount;\n',
+          )
+          replace_once(
+              day,
+              '    return <TaskCard key={task.task_id} task={task} overdue={overdue} expandable routeState={atlasDayRouteState(task, currentTask?.task_id ?? null)} returnTo={returnTo} onNodePress={(row) => void toggleTaskCompletion(row)} nodeSaving={savingTaskId === task.task_id} />;',
+              '    return <TaskCard key={task.task_id} task={task} overdue={overdue} expandable routeState={atlasDayRouteState(task, currentTask?.task_id ?? null)} returnTo={returnTo} onNodePress={isFutureDay ? undefined : (row) => void toggleTaskCompletion(row)} nodeSaving={savingTaskId === task.task_id} />;',
+          )
+          replace_once(
+              day,
+              '`${openRequiredCount} scheduled · ${doneDayTasks.length} done`',
+              '`${displayedOpenCount} scheduled · ${doneDayTasks.length} done`',
+          )
+          replace_once(
+              day,
+              '`${openRequiredCount} tasks scheduled for this day`',
+              '`${displayedOpenCount} tasks scheduled for this day`',
+          )
+          replace_once(
+              day,
+              '`${openRequiredCount} ${isFutureDay ? "scheduled" : "still in today"}${blockedProgressTasks.length ? ` · ${blockedProgressTasks.length} blocked` : ""}`',
+              '`${displayedOpenCount} ${isFutureDay ? "scheduled" : "still in today"}${blockedProgressTasks.length ? ` · ${blockedProgressTasks.length} blocked` : ""}`',
+          )
+          replace_once(
+              day,
+              '                  <DayTrailSummary compact loading={loading} completed={finishedProgressTasks.length} total={progressTasks.length} blocked={blockedProgressTasks.length} />',
+              '                  {!isFutureDay ? <DayTrailSummary compact loading={loading} completed={finishedProgressTasks.length} total={progressTasks.length} blocked={blockedProgressTasks.length} /> : null}',
+          )
+          replace_once(
+              day,
+              '                  <article className="atlas-day-route-group atlas-day-work-order-group atlas-day-timeline-group"><h3>Work the day</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{windowedTimeline(visibleTimelineGroups)}{!loading && !timelineTasks.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}</div></article>',
+              '                  <article className="atlas-day-route-group atlas-day-work-order-group atlas-day-timeline-group"><h3>Work the day</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{isFutureDay ? futureAutomaticItems.map((item) => <FuturePlanCard item={item} key={item.id} />) : null}{windowedTimeline(visibleTimelineGroups)}{!loading && !timelineTasks.length && !futureAutomaticItems.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}</div></article>',
+          )
+
+          migration = Path('supabase/migrations/20260820231500_future_day_calendar_projection_contract.sql')
+          migration.write_text(r'''create or replace function atlas.worker_day_temporal_mode_v1(
+  p_farm_id uuid,
+  p_day date
+)
+returns text
+language plpgsql
+stable
+security definer
+set search_path to 'pg_catalog','atlas','auth'
+as $function$
+declare
+  v_timezone text := 'America/Chicago';
+  v_today date;
+begin
+  if p_day is null then
+    raise exception 'Worker day is required.' using errcode='22023';
+  end if;
+
+  select coalesce(nullif(f.metadata->>'timezone',''),'America/Chicago')
+    into v_timezone
+  from atlas.farms f
+  where f.id=p_farm_id;
+
+  v_today := (now() at time zone coalesce(v_timezone,'America/Chicago'))::date;
+
+  if p_day < v_today then return 'historical'; end if;
+  if p_day > v_today then return 'future'; end if;
+  return 'live';
+end;
+$function$;
+
+create or replace function atlas.worker_day_selection_overlay_v1(
+  p_farm_id uuid,
+  p_membership_id uuid,
+  p_day date,
+  p_plan jsonb
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path to 'pg_catalog','atlas','auth'
+as $function$
+declare
+  v_mode text;
+  v_plan jsonb := coalesce(p_plan,'{}'::jsonb);
+begin
+  v_mode := atlas.worker_day_temporal_mode_v1(p_farm_id,p_day);
+
+  if v_mode='historical' or coalesce((v_plan->>'historicalDay')::boolean,false) then
+    return jsonb_set(
+      jsonb_set(v_plan,'{nextUp}','[]'::jsonb,true),
+      '{suggestions}','[]'::jsonb,true
+    );
+  end if;
+
+  if v_mode='future' then
+    -- Future calendar browsing is a projection, not simulated passage of time.
+    -- Preserve exact-date work, explicit placements, and automatic queue/rhythm
+    -- continuations already produced by the future planner. Never run the live
+    -- selector against today's still-open state.
+    v_plan := jsonb_set(v_plan,'{nextUp}','[]'::jsonb,true);
+    v_plan := jsonb_set(v_plan,'{futureDay}',to_jsonb(true),true);
+    v_plan := jsonb_set(v_plan,'{temporalMode}',to_jsonb('future'::text),true);
+    v_plan := jsonb_set(v_plan,'{selectionContractVersion}',to_jsonb('worker_day_future_projection_v1'::text),true);
+    return v_plan;
+  end if;
+
+  v_plan := atlas.worker_day_selection_overlay_live_v1(p_farm_id,p_membership_id,p_day,v_plan);
+  v_plan := jsonb_set(v_plan,'{temporalMode}',to_jsonb('live'::text),true);
+  return v_plan;
+end;
+$function$;
+''')
+
+          test = Path('tests/atlas-future-day-calendar-contract.test.mjs')
+          test.write_text(r'''import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const day = readFileSync(new URL("../app/day/page.tsx", import.meta.url), "utf8");
+const cardsRoute = readFileSync(new URL("../app/api/atlas/universal-task-cards/route.ts", import.meta.url), "utf8");
+const migration = readFileSync(new URL("../supabase/migrations/20260820231500_future_day_calendar_projection_contract.sql", import.meta.url), "utf8");
+
+test("future browsing cannot manufacture overdue work", () => {
+  assert.match(day, /const farmToday = todayIso\(\);/);
+  assert.match(day, /if \(selectedDay !== farmToday\) return false;/);
+  assert.match(day, /task\.due_date < farmToday/);
+});
+
+test("future dated cards use an exact-date boundary", () => {
+  assert.match(cardsRoute, /const futureExactDate = exactDate && exactDate > farmToday \? exactDate : null;/);
+  assert.match(cardsRoute, /card\.due_date === futureExactDate/);
+  assert.match(cardsRoute, /Explicit Day placements are re-added/);
+});
+
+test("future Day renders automatic queue continuations without making them executable", () => {
+  assert.match(day, /projection\?\.sequence\.items/);
+  assert.match(day, /item\.kind === "committed_task" && item\.automatic/);
+  assert.match(day, /function FuturePlanCard/);
+  assert.match(day, /onNodePress=\{isFutureDay \? undefined/);
+});
+
+test("database overlay has distinct historical live and future temporal modes", () => {
+  assert.match(migration, /worker_day_temporal_mode_v1/);
+  assert.match(migration, /if p_day > v_today then return 'future';/);
+  assert.match(migration, /worker_day_future_projection_v1/);
+  assert.match(migration, /Never run the live/);
+});
+''')
+          PY
+
+          git diff --check
+          git status --short
+
+      - name: Commit durable contract
+        shell: bash
+        run: |
+          git config user.name "atlas-build"
+          git config user.email "atlas-build@users.noreply.github.com"
+          git add app/day/page.tsx app/api/atlas/universal-task-cards/route.ts supabase/migrations/20260820231500_future_day_calendar_projection_contract.sql tests/atlas-future-day-calendar-contract.test.mjs
+          git commit -m "Separate future Day projection from live carryover"
+          git push origin HEAD:main
