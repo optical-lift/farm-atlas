@@ -1,16 +1,14 @@
 import styles from "./venue-card-specimen.module.css";
 
-type VenueThing = {
+type VenueResource = {
   label: string;
-  detail?: string;
-  actions: string[];
 };
 
 type VenueStation = {
   id: string;
   title: string;
   location?: string;
-  resources: VenueThing[];
+  resources: VenueResource[];
 };
 
 const stations: VenueStation[] = [
@@ -19,31 +17,11 @@ const stations: VenueStation[] = [
     title: "Coffee bar",
     location: "Dining room",
     resources: [
-      {
-        label: "Keurig",
-        detail: "Equipment · Ready",
-        actions: ["Problem", "Broken / cannot use", "Working again", "Request change"],
-      },
-      {
-        label: "Coffee",
-        detail: "Consumable · On hand",
-        actions: ["Running low", "Out", "Estimate remaining", "Request change"],
-      },
-      {
-        label: "Milk",
-        detail: "Consumable · On hand",
-        actions: ["Running low", "Out", "Estimate remaining", "Request change"],
-      },
-      {
-        label: "Flavored syrup",
-        detail: "Consumable · On hand",
-        actions: ["Running low", "Out", "Estimate remaining", "Request change"],
-      },
-      {
-        label: "Mug hutch",
-        detail: "Mugs available",
-        actions: ["Running low", "Empty", "Something changed", "Request change"],
-      },
+      { label: "Keurig" },
+      { label: "Coffee grounds" },
+      { label: "Milk" },
+      { label: "Flavored syrup" },
+      { label: "Mug hutch" },
     ],
   },
   {
@@ -51,16 +29,8 @@ const stations: VenueStation[] = [
     title: "Water",
     location: "Dining room",
     resources: [
-      {
-        label: "Water dispenser",
-        detail: "Equipment · Full",
-        actions: ["Needs refill", "Problem", "Working again", "Request change"],
-      },
-      {
-        label: "Clear cups",
-        detail: "On tray beside dispenser",
-        actions: ["Running low", "Out", "Count remaining", "Request change"],
-      },
+      { label: "Water dispenser" },
+      { label: "Clear cups" },
     ],
   },
   {
@@ -68,60 +38,63 @@ const stations: VenueStation[] = [
     title: "Blooms",
     location: "For sale at Community Thursday",
     resources: [
-      {
-        label: "12 posies",
-        detail: "Presold · live from event orders",
-        actions: ["Count changed", "Order changed", "Cannot fulfill", "Request change"],
-      },
-      {
-        label: "6 bouquets",
-        detail: "Presold · live from event orders",
-        actions: ["Count changed", "Order changed", "Cannot fulfill", "Request change"],
-      },
+      { label: "12 posies" },
+      { label: "6 bouquets" },
     ],
   },
 ];
 
-function IssueDrawer({ thing }: { thing: VenueThing }) {
+function RestockDrawer({ label }: { label: string }) {
   return (
-    <details className={styles.issueDrawer}>
-      <summary aria-label={`Report a problem with ${thing.label}`} title={`Problem with ${thing.label}`}>
+    <details className={styles.restockDrawer}>
+      <summary aria-label={`Request restock for ${label}`}>
         <span aria-hidden="true">+</span>
-        <small>issue</small>
+        <small>request restock</small>
       </summary>
-      <div className={styles.resourceDrawer}>
-        {thing.detail ? (
-          <div className={styles.currentTruth}>
-            <span>Current truth</span>
-            <strong>{thing.detail}</strong>
-          </div>
-        ) : null}
-        <p>What is wrong?</p>
-        <div className={styles.resourceActions}>
-          {thing.actions.map((action) => (
-            <button type="button" key={action}>{action}</button>
-          ))}
-        </div>
+      <div className={styles.restockPanel}>
+        <button type="button">Restock</button>
         <label>
-          Tell Lex something else
-          <textarea rows={2} placeholder="Only what changed or what she needs to know…" />
+          <span>Note</span>
+          <input type="text" placeholder="Add note…" />
         </label>
-        <button type="button" className={styles.noteButton}>Send note</button>
-        <small>Mock only · this does not write to Atlas yet.</small>
       </div>
     </details>
   );
 }
 
-function CheckableThing({ thing, id }: { thing: VenueThing; id: string }) {
+function ReminderRow({ resource, id }: { resource: VenueResource; id: string }) {
   return (
-    <div className={styles.checkableThing}>
-      <label className={styles.checkTarget} htmlFor={id}>
-        <input id={id} type="checkbox" />
-        <span className={styles.box} aria-hidden="true" />
-        <strong>{thing.label}</strong>
+    <div className={styles.reminderRow}>
+      <input className={styles.reminderToggle} id={id} type="checkbox" />
+      <label className={styles.reminderCheck} htmlFor={id}>
+        <strong>{resource.label}</strong>
+        <small>check</small>
       </label>
-      <IssueDrawer thing={thing} />
+      <RestockDrawer label={resource.label} />
+    </div>
+  );
+}
+
+function RoomReminderRow({ label, id }: { label: string; id: string }) {
+  return (
+    <div className={styles.reminderRow}>
+      <input className={styles.reminderToggle} id={id} type="checkbox" />
+      <label className={styles.reminderCheck} htmlFor={id}>
+        <strong>{label}</strong>
+        <small>check</small>
+      </label>
+      <details className={styles.restockDrawer}>
+        <summary aria-label={`Add a note about ${label}`}>
+          <span aria-hidden="true">+</span>
+          <small>note</small>
+        </summary>
+        <div className={styles.restockPanel}>
+          <label>
+            <span>Note</span>
+            <input type="text" placeholder="Add note…" />
+          </label>
+        </div>
+      </details>
     </div>
   );
 }
@@ -145,11 +118,11 @@ function EventTrail({ current }: { current: "prep" | "host" }) {
   );
 }
 
-function RowKey() {
+function PrepKey() {
   return (
-    <div className={styles.rowKey} aria-label="Venue row controls">
-      <span><b>□</b> check when it is set</span>
-      <span><b>+</b> issue only</span>
+    <div className={styles.rowKey} aria-label="Venue prep reminder controls">
+      <span>check when it is set</span>
+      <span><b>+</b> request restock</span>
     </div>
   );
 }
@@ -168,7 +141,7 @@ function PrepCard() {
       </header>
 
       <EventTrail current="prep" />
-      <RowKey />
+      <PrepKey />
 
       <div className={styles.stations}>
         {stations.map((station) => (
@@ -178,12 +151,11 @@ function PrepCard() {
                 <h3>{station.title}</h3>
                 {station.location ? <span>{station.location}</span> : null}
               </div>
-              <small>{station.resources.length} checks</small>
             </header>
             <div className={styles.resourceList}>
               {station.resources.map((resource, index) => (
-                <CheckableThing
-                  thing={resource}
+                <ReminderRow
+                  resource={resource}
                   id={`prep-${station.id}-${index}`}
                   key={resource.label}
                 />
@@ -199,29 +171,27 @@ function PrepCard() {
           <button type="button" className={styles.primaryFinish}>Prep complete</button>
           <button type="button">Something is not ready</button>
         </div>
-        <small>Completing Prep unlocks Host Community Thursday.</small>
+        <small>The reminder marks above are optional memory aids. They do not gate Prep completion.</small>
       </footer>
     </article>
   );
 }
 
+function ClassicChecklistRow({ label, id }: { label: string; id: string }) {
+  return (
+    <label className={styles.classicCheckItem} htmlFor={id}>
+      <input id={id} type="checkbox" />
+      <span className={styles.classicCircle} aria-hidden="true" />
+      <strong>{label}</strong>
+    </label>
+  );
+}
+
 function HostCard() {
-  const checklist: VenueThing[] = [
-    {
-      label: "Turn on the ice maker",
-      detail: "Opening action",
-      actions: ["Cannot turn on", "Equipment problem", "Already on", "Request change"],
-    },
-    {
-      label: "Turn on the OPEN sign",
-      detail: "Opening action",
-      actions: ["Cannot turn on", "Sign problem", "Already on", "Request change"],
-    },
-    {
-      label: "Open the yellow door",
-      detail: "Opening action",
-      actions: ["Cannot open", "Door problem", "Already open", "Request change"],
-    },
+  const checklist = [
+    "Turn on the ice maker",
+    "Turn on the OPEN sign",
+    "Open the yellow door",
   ];
 
   return (
@@ -237,16 +207,15 @@ function HostCard() {
       </header>
 
       <EventTrail current="host" />
-      <RowKey />
 
       <section className={styles.hostChecklist}>
         <header>
           <span>Open the event</span>
-          <small>3 checks</small>
+          <small>3 steps</small>
         </header>
-        <div className={styles.hostRows}>
+        <div className={styles.classicChecklist}>
           {checklist.map((item, index) => (
-            <CheckableThing thing={item} id={`host-${index}`} key={item.label} />
+            <ClassicChecklistRow label={item} id={`host-${index}`} key={item} />
           ))}
         </div>
       </section>
@@ -257,29 +226,17 @@ function HostCard() {
           <button type="button" className={styles.primaryFinish}>Event open</button>
           <button type="button">Blocked</button>
         </div>
-        <small>Check confirms the physical state changed. The + opens an issue drawer only when the action cannot be completed normally.</small>
+        <small>Host is a true execution checklist, so it uses the original Atlas checklist grammar.</small>
       </footer>
     </article>
   );
 }
 
 function GuestRoomsCard() {
-  const rooms: VenueThing[] = [
-    {
-      label: "Library · visibly guest-ready",
-      detail: "Room reset standard",
-      actions: ["Still needs work", "Something is missing", "Damage / problem", "Request change"],
-    },
-    {
-      label: "Meeting room · visibly guest-ready",
-      detail: "Room reset standard",
-      actions: ["Still needs work", "Something is missing", "Damage / problem", "Request change"],
-    },
-    {
-      label: "Kitchen · trash cleared",
-      detail: "Room reset standard",
-      actions: ["Still needs work", "Something is missing", "Damage / problem", "Request change"],
-    },
+  const rooms = [
+    "Library · visibly guest-ready",
+    "Meeting room · visibly guest-ready",
+    "Kitchen · trash cleared",
   ];
 
   return (
@@ -294,11 +251,9 @@ function GuestRoomsCard() {
         <div className={styles.timing}>Before guests arrive</div>
       </header>
 
-      <RowKey />
-
       <div className={styles.roomRows}>
         {rooms.map((room, index) => (
-          <CheckableThing thing={room} id={`guest-room-${index}`} key={room.label} />
+          <RoomReminderRow label={room} id={`guest-room-${index}`} key={room} />
         ))}
       </div>
 
@@ -308,7 +263,7 @@ function GuestRoomsCard() {
           <button type="button" className={styles.primaryFinish}>Rooms ready</button>
           <button type="button">Something remains</button>
         </div>
-        <small>The same Venue interaction grammar now carries across station prep, event opening, and room reset.</small>
+        <small>Room checks are reminders, not completion gates, unless a future Venue variant explicitly defines them as execution steps.</small>
       </footer>
     </article>
   );
@@ -325,10 +280,10 @@ export default function VenueCardSpecimen() {
           Community Thursday repeats as one governed event cycle. Prep unlocks Host; Host can unlock Reset. Readiness requirements such as mowing being current by the day before the event belong to the event template but do not appear as Worker Trail nodes.
         </p>
         <p>
-          Venue rows now have two completely separate meanings: the square is the ordinary successful check, while + means there is a problem and is the only control that opens the object drawer. The same interaction premise applies to station resources, Host opening actions, and room-reset checks.
+          Prep and room-reset rows are reminders: tapping “check” simply crosses out what Anna has looked at, and none of those marks are required to complete the task. The + affordance is reserved for a tiny Restock / Note request drawer.
         </p>
         <p>
-          Event quantities remain live while future tasks sit in the queue. Presold posies and bouquets come from event demand; harvest results can later update fulfillment truth or create a Bell decision without silently lowering the sold quantity.
+          Host is different because its rows are genuine state-changing actions. It therefore uses the first Atlas checklist visual grammar recovered from July 6: a rounded task row with a round completion control.
         </p>
       </aside>
 
