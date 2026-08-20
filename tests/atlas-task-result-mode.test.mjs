@@ -73,7 +73,8 @@ test("specialized task families resolve before ordinary canonical result fallbac
 });
 
 test("ordinary execution uses the existing canonical result grammar once readiness is executable", () => {
-  assert.match(readinessShell, /readiness\?\.executable !== true/);
+  assert.match(canonicalDetail, /worker_task_execution_readiness_api_v1/);
+  assert.match(readinessShell, /initialReadiness\.executable !== true/);
   assert.match(readinessShell, /return <WaitingScreen/);
   assert.match(readinessShell, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
   assert.match(primaryResults, /doneLabel = "Done"/);
@@ -95,7 +96,7 @@ test("ordinary execution uses the existing canonical result grammar once readine
 
 test("blocked work cannot present itself as completable", () => {
   assert.match(readinessShell, /data-atlas-worker-waiting-screen="true"/);
-  assert.match(readinessShell, /readiness\?\.executable !== true/);
+  assert.match(readinessShell, /initialReadiness\.executable !== true/);
   assert.match(readinessShell, /return <WaitingScreen/);
   assert.match(executionShell, /task\.status === "blocked"/);
   assert.match(executionShell, /blockers\.length > 0/);

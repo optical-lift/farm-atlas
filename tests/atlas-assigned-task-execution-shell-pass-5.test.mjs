@@ -17,10 +17,12 @@ test("Pass 5 gives ordinary assigned tasks one neutral execution shell behind re
   assert.match(shell, /TaskChildChecklist/);
   assert.match(shell, /TaskPrimaryResultControls/);
   assert.match(shell, /data-atlas-assigned-task-execution-shell="true"/);
-  assert.match(canonical, /return <WorkerReadyAssignedTaskExecutionShell \{\.\.\.props\} \/>/);
-  assert.match(readiness, /readiness\?\.executable !== true/);
+  assert.match(canonical, /worker_task_execution_readiness_api_v1/);
+  assert.match(canonical, /return <WorkerReadyAssignedTaskExecutionShell \{\.\.\.props\} initialReadiness=\{initialReadiness\} \/>/);
+  assert.match(readiness, /initialReadiness\.executable !== true/);
   assert.match(readiness, /return <WaitingScreen/);
   assert.match(readiness, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
+  assert.doesNotMatch(readiness, /fetch\(`\/api\/atlas\/task-execution-readiness/);
   assert.doesNotMatch(canonical, /DominionAssignedTaskDetail/);
 });
 

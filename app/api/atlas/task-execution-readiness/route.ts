@@ -1,84 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireAtlasApiAccess } from "@/lib/atlas/api-access";
+import { normalizeWorkerReadiness } from "@/lib/atlas/worker-readiness";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-type JsonObject = Record<string, unknown>;
-
-type WorkerPresentation = {
-  title: string;
-  body: string;
-  detail: string | null;
-  kind: "prerequisite" | "battery_charge" | "equipment" | "waiting";
-};
-
-function object(value: unknown): JsonObject | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : null;
-}
-
-function rows(value: unknown) {
-  return Array.isArray(value) ? value.map(object).filter((row): row is JsonObject => Boolean(row)) : [];
-}
-
-function text(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function workerPresentation(readiness: JsonObject): WorkerPresentation {
-  // A prerequisite is the clearest explanation when the job is waiting on
-  // another operation. Resource details are secondary until that work clears.
-  if (readiness.prerequisitesReady === false) {
-    return {
-      title: "Not ready yet",
-      body: "This job is waiting on another job to be finished first.",
-      detail: "Atlas will make it available when that work is done.",
-      kind: "prerequisite",
-    };
-  }
-
-  const consequenceGate = object(readiness.stateConsequenceGate);
-  const requirements = rows(consequenceGate?.resourceRequirements ?? readiness.resourceRequirements);
-  const blockingConsequences = rows(consequenceGate?.blockingConsequences ?? readiness.blockingConsequences);
-
-  const battery = requirements.find((requirement) => text(requirement.resourceKey) === "battery_push_mower_battery_set");
-  const batteryState = text(battery?.readinessState || battery?.resourceStatus || battery?.status);
-  if (battery && ["needs_charge", "charging"].includes(batteryState)) {
-    return {
-      title: "Not ready yet",
-      body: "The mower batteries need to be charged before this job can start.",
-      detail: "Charge them and tap Charged in the reminder. Then this job will be ready.",
-      kind: "battery_charge",
-    };
-  }
-
-  const managementEquipmentBlock = blockingConsequences.some((entry) => {
-    const consequence = object(entry.consequence);
-    return text(entry.audience) === "farm_operations_management"
-      || text(consequence?.audience) === "farm_operations_management"
-      || text(entry.resourceStatus) === "needs_repair"
-      || text(consequence?.resourceStatus) === "needs_repair";
-  });
-
-  if (managementEquipmentBlock || readiness.resourcesReady === false) {
-    return {
-      title: "Not ready yet",
-      body: "This job is waiting on equipment.",
-      detail: "Nothing you need to do here right now.",
-      kind: "equipment",
-    };
-  }
-
-  return {
-    title: "Not ready yet",
-    body: "This job can’t be done yet.",
-    detail: "Atlas will make it available when the thing it is waiting on is ready.",
-    kind: "waiting",
-  };
-}
 
 function privateJson(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, {
@@ -106,15 +34,7 @@ export async function GET(request: NextRequest) {
     return privateJson({ ok: false, error: "Task readiness could not be loaded." }, 500);
   }
 
-  const readiness = object(data);
-  if (!readiness) {
-    return privateJson({ ok: false, error: "Task readiness returned an invalid result." }, 500);
-  }
-
-  const executable = readiness.ready === true;
-  return privateJson({
-    ok: true,
-    executable,
-    presentation: executable ? null : workerPresentation(readiness),
-  });
+  const readiness = normalizeWorkerReadiness(data);
+  if (!readiness.ok) return privateJson(readiness, 500);
+  return privateJson(readiness);
 }
