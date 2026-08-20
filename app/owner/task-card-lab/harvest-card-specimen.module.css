@@ -7,7 +7,19 @@
 }
 
 .header {
-  padding: 22px 18px 18px;
+  display: grid;
+  gap: 7px;
+  padding: 20px 18px 18px;
+}
+
+.familyRow span,
+.listKey span {
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
 }
 
 .header h2 {
@@ -17,15 +29,6 @@
   line-height: 0.98;
   font-weight: 950;
   letter-spacing: -0.06em;
-}
-
-.listKey span {
-  color: #858bb8;
-  font-size: 10px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
 }
 
 .listKey small {
@@ -164,10 +167,7 @@
 
 .cropIdentity {
   min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  display: block;
   border: 0;
   background: transparent;
   color: inherit;
@@ -198,49 +198,46 @@
   font-weight: 850;
 }
 
-.drawerCue {
-  flex: 0 0 auto;
-  color: #92938c;
-  font-size: 14px;
-  line-height: 1;
-  transition: transform 140ms ease;
-}
-
-.cropIdentity[aria-expanded="true"] .drawerCue {
-  transform: rotate(180deg);
-}
-
 .bucketCounter {
   display: grid;
-  grid-template-columns: auto 34px auto;
+  grid-template-columns: 28px 38px 28px;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 
 .bucketCounter button {
-  min-width: 39px;
-  height: 32px;
-  border: 1px solid rgba(121, 109, 89, 0.18);
-  border-radius: 10px;
-  background: rgba(244, 239, 227, 0.92);
-  color: #5f594d;
-  padding: 0 7px;
+  width: 28px;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  color: #67655e;
+  padding: 0;
   font: inherit;
-  font-size: 11px;
+  font-size: 22px;
   line-height: 1;
-  font-weight: 900;
+  font-weight: 600;
 }
 
 .bucketCounter button:disabled {
-  opacity: 0.3;
+  opacity: 0.25;
 }
 
 .bucketCounter strong {
+  display: grid;
+  place-items: center;
+  min-width: 38px;
+  height: 34px;
+  box-sizing: border-box;
+  border: 1px solid rgba(121, 109, 89, 0.22);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.94);
   color: var(--atlas-text);
+  padding: 0 5px;
   font-size: 13px;
   line-height: 1;
   font-weight: 950;
   text-align: center;
+  box-shadow: inset 0 1px 2px rgba(58, 46, 30, 0.03);
 }
 
 .exceptionPanel {
@@ -263,18 +260,17 @@
 
 .outcomeGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
 }
 
-.outcomeGrid button,
-.exhaustedAction {
+.outcomeGrid button {
   min-height: 36px;
   border: 1px solid rgba(139, 145, 194, 0.2);
   border-radius: 999px;
   background: rgba(250, 248, 239, 0.9);
   color: #646676;
-  padding: 8px 10px;
+  padding: 8px 9px;
   font: inherit;
   font-size: 9px;
   line-height: 1.1;
@@ -287,8 +283,7 @@
   color: #4f5268;
 }
 
-.exhaustedAction {
-  justify-self: start;
+.outcomeGrid button:last-child {
   border-color: rgba(147, 91, 74, 0.2);
   color: #865f54;
   background: rgba(250, 242, 237, 0.72);
@@ -336,14 +331,28 @@
   }
 
   .bucketCounter {
-    grid-template-columns: auto 28px auto;
+    grid-template-columns: 24px 34px 24px;
     gap: 3px;
   }
 
   .bucketCounter button {
-    min-width: 35px;
-    height: 30px;
-    padding: 0 5px;
-    font-size: 10px;
+    width: 24px;
+    height: 32px;
+    font-size: 20px;
+  }
+
+  .bucketCounter strong {
+    min-width: 34px;
+    height: 32px;
+  }
+
+  .outcomeGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .outcomeGrid button {
+    padding: 7px 5px;
+    font-size: 8px;
   }
 }

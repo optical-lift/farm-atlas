@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import styles from "./harvest-card-specimen.module.css";
 
-type HarvestOutcome = "harvested" | "nothing_ready" | "left_for_later" | "deadheaded";
+type HarvestOutcome = "nothing_ready" | "deadheaded" | "crop_exhausted";
 
 type HarvestCrop = {
   id: string;
@@ -27,10 +27,9 @@ const crops: HarvestCrop[] = [
 ];
 
 const outcomeChoices: Array<{ value: HarvestOutcome; label: string }> = [
-  { value: "harvested", label: "Harvested" },
   { value: "nothing_ready", label: "Nothing ready" },
-  { value: "left_for_later", label: "Left for later" },
   { value: "deadheaded", label: "Deadheaded" },
+  { value: "crop_exhausted", label: "Crop exhausted" },
 ];
 
 function formatBuckets(bucketHalves: number) {
@@ -45,7 +44,12 @@ function CropRow({ crop }: { crop: HarvestCrop }) {
 
   function chooseOutcome(next: HarvestOutcome) {
     setOutcome(next);
-    if (next !== "harvested") setBucketHalves(0);
+    setBucketHalves(0);
+  }
+
+  function changeBucketCount(delta: number) {
+    setOutcome(null);
+    setBucketHalves((current) => Math.max(0, current + delta));
   }
 
   return (
@@ -61,7 +65,6 @@ function CropRow({ crop }: { crop: HarvestCrop }) {
           <strong>{crop.crop}</strong>
           <small>{crop.bed}</small>
         </span>
-        <span className={styles.drawerCue} aria-hidden="true">⌄</span>
       </button>
 
       <div className={styles.bucketCounter} aria-label={`${crop.crop} bucket count`}>
@@ -69,23 +72,17 @@ function CropRow({ crop }: { crop: HarvestCrop }) {
           type="button"
           aria-label={`Remove half bucket from ${crop.crop}`}
           disabled={bucketHalves === 0}
-          onClick={() => {
-            setOutcome("harvested");
-            setBucketHalves((current) => Math.max(0, current - 1));
-          }}
+          onClick={() => changeBucketCount(-1)}
         >
-          −½
+          −
         </button>
         <strong>{formatBuckets(bucketHalves)}</strong>
         <button
           type="button"
           aria-label={`Add half bucket to ${crop.crop}`}
-          onClick={() => {
-            setOutcome("harvested");
-            setBucketHalves((current) => current + 1);
-          }}
+          onClick={() => changeBucketCount(1)}
         >
-          +½
+          +
         </button>
       </div>
 
@@ -104,7 +101,6 @@ function CropRow({ crop }: { crop: HarvestCrop }) {
               </button>
             ))}
           </div>
-          <button type="button" className={styles.exhaustedAction}>Crop exhausted</button>
         </div>
       ) : null}
     </div>
@@ -117,6 +113,9 @@ export default function HarvestCardSpecimen() {
   return (
     <article className={styles.card}>
       <header className={styles.header}>
+        <div className={styles.familyRow}>
+          <span>Harvest</span>
+        </div>
         <h2>Harvest Stems</h2>
       </header>
 

@@ -11,15 +11,14 @@ test("Task Card Editor renders the dedicated Harvest specimen", () => {
   assert.match(editorSource, /index === 4[\s\S]*<HarvestCardSpecimen \/>/);
 });
 
-test("Harvest is one multi-crop round without a hardcoded weekday or farm subtitle", () => {
-  assert.match(harvestSource, /Harvest Stems/);
-  assert.match(harvestSource, /Ready to harvest/);
-  assert.match(harvestSource, /Berry Walk/);
-  assert.match(harvestSource, /Field Rows/);
+test("Harvest keeps ordinary task-family identity without hardcoded schedule copy", () => {
+  assert.match(harvestSource, /className=\{styles\.familyRow\}/);
+  assert.match(harvestSource, /<span>Harvest<\/span>/);
+  assert.match(harvestSource, /<h2>Harvest Stems<\/h2>/);
+  assert.match(harvestStyles, /\.familyRow span,[\s\S]*color: #858bb8/);
   assert.doesNotMatch(harvestSource, /Thursday Harvest/);
   assert.doesNotMatch(harvestSource, /Thursday morning/);
   assert.doesNotMatch(harvestSource, />Elm Farm</);
-  assert.doesNotMatch(harvestSource, /weekly round/);
 });
 
 test("Harvest season pulse uses last round, this round, and next watch", () => {
@@ -27,34 +26,34 @@ test("Harvest season pulse uses last round, this round, and next watch", () => {
   assert.match(harvestSource, /This round/);
   assert.match(harvestSource, /Next watch/);
   assert.match(harvestSource, /Harvest season pulse/);
-  assert.doesNotMatch(harvestSource, /Sown/);
-  assert.doesNotMatch(harvestSource, /Harvest again/);
 });
 
-test("every harvestable crop row owns its own half-bucket stepper", () => {
+test("every harvestable crop row owns a quiet half-bucket counter", () => {
   assert.match(harvestSource, /function CropRow/);
   assert.match(harvestSource, /bucketHalves/);
   assert.match(harvestSource, /½ bucket · 10 stems/);
-  assert.match(harvestSource, /−½/);
-  assert.match(harvestSource, /\+½/);
-  assert.match(harvestSource, /setBucketHalves\(\(current\) => current \+ 1\)/);
-  assert.match(harvestSource, /Math\.max\(0, current - 1\)/);
-  assert.match(harvestStyles, /background: rgba\(244, 239, 227, 0\.92\)/);
-  assert.doesNotMatch(harvestStyles, /\.bucketCounter[^}]*rgba\(239, 237, 244/);
+  assert.match(harvestSource, />\s*−\s*<\/button>/);
+  assert.match(harvestSource, />\s*\+\s*<\/button>/);
+  assert.doesNotMatch(harvestSource, /−½/);
+  assert.doesNotMatch(harvestSource, /\+½/);
+  assert.match(harvestStyles, /\.bucketCounter button \{[\s\S]*border: 0;[\s\S]*background: transparent/);
+  assert.match(harvestStyles, /\.bucketCounter strong \{[\s\S]*border: 1px solid/);
 });
 
-test("crop name and bed toggle the inline nonstandard-outcome drawer", () => {
+test("crop name and bed quietly toggle an inline drawer with only real alternate outcomes", () => {
   assert.match(harvestSource, /className=\{styles\.cropIdentity\}/);
   assert.match(harvestSource, /aria-expanded=\{drawerOpen\}/);
   assert.match(harvestSource, /setDrawerOpen\(\(current\) => !current\)/);
   assert.match(harvestSource, /What happened\?/);
-  assert.match(harvestSource, /Harvested/);
   assert.match(harvestSource, /Nothing ready/);
-  assert.match(harvestSource, /Left for later/);
   assert.match(harvestSource, /Deadheaded/);
   assert.match(harvestSource, /Crop exhausted/);
+  assert.doesNotMatch(harvestSource, /Harvested/);
+  assert.doesNotMatch(harvestSource, /Left for later/);
+  assert.doesNotMatch(harvestSource, /drawerCue/);
+  assert.doesNotMatch(harvestSource, /⌄/);
   assert.doesNotMatch(harvestSource, /•••/);
-  assert.doesNotMatch(harvestStyles, /position: absolute;[\s\S]{0,180}exceptionPanel/);
+  assert.match(harvestStyles, /\.outcomeGrid \{[\s\S]*repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(harvestStyles, /\.exceptionPanel \{[\s\S]*grid-column: 1 \/ -1/);
 });
 
@@ -64,8 +63,6 @@ test("Harvest ends with ordinary completion controls and no instructional prose"
   assert.doesNotMatch(harvestSource, /Mock only/);
   assert.doesNotMatch(harvestSource, /Worker/);
   assert.doesNotMatch(harvestSource, /Atlas keeps/);
-  assert.doesNotMatch(harvestSource, /For an annual crop/);
-  assert.doesNotMatch(harvestSource, /Perennial rule/);
   assert.doesNotMatch(harvestSource, /fetch\s*\(/);
   assert.doesNotMatch(harvestSource, /supabase/i);
 });
