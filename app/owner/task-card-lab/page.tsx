@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { CheckCardSpecimen, WaterCareCardSpecimen } from "./CropCareCardSpecimen";
 import HarvestCardSpecimen from "./HarvestCardSpecimen";
 import MowCardSpecimen from "./MowCardSpecimen";
 import SowCardSpecimen from "./SowCardSpecimen";
@@ -101,42 +102,26 @@ const cards: CardSpec[] = [
   },
   {
     family: "Water / Care",
-    variant: "establishment water",
-    title: "New Zinnia Transplants",
-    place: "Curve Garden",
-    timing: "Due now · establishment care",
-    play: "Deep-water the newly transplanted zinnias until the root zone reaches the defined adequate-moisture condition.",
-    desiredLabel: "Enough means",
-    desired: ["Root zone evenly moist · no standing runoff · flag plants that wilt again immediately"],
-    facts: [
-      { label: "Plants", value: "15 zinnias" },
-      { label: "Stage", value: "Establishing" },
-      { label: "Method", value: "Deep water" },
-    ],
-    resources: [
-      { label: "15 zinnias", kind: "Living crop", state: "Establishing", actions: ["Condition changed", "Damage / loss", "Plant missing", "Request change"] },
-      { label: "Water source", kind: "Equipment", state: "Available", actions: ["Problem", "Unavailable", "Working again", "Request change"] },
-    ],
-    finish: "Care complete",
-    partial: "Problem found",
+    variant: "crop-attached operations",
+    title: "Water + Spray examples",
+    place: "Crop and bed share one continuing Trail",
+    timing: "",
+    play: "Water/Care is no longer treated as a floating generic family. The active operation sits on the crop/place Trail.",
+    desiredLabel: "Crop operation",
+    desired: [],
+    finish: "Operation recorded",
+    partial: "Blocked",
   },
   {
     family: "Check",
-    variant: "germination observation",
+    variant: "crop-attached observation",
     title: "Germination Check",
     place: "Barn Bed 4 · white sunflower",
-    timing: "Today · observation window",
-    play: "Look at the stand and record the smallest observation Atlas needs to decide what can happen next.",
-    desiredLabel: "Choose what is true",
-    desired: ["Strong", "Patchy", "Failed", "Too early to tell"],
-    facts: [
-      { label: "Question", value: "Did enough emerge to keep this planting?" },
-      { label: "Next", value: "Continue · gap fill · restart · wait" },
-    ],
-    resources: [
-      { label: "Barn Bed 4", kind: "Observed bed", state: "Needs observation", actions: ["Strong", "Patchy", "Failed", "Too early to tell"] },
-    ],
-    finish: "Record observation",
+    timing: "",
+    play: "Check is an observation move on the same crop/place Trail used by Sow, Weed, Harvest, and later care operations.",
+    desiredLabel: "Observation",
+    desired: [],
+    finish: "Observation recorded",
   },
   {
     family: "Transplant",
@@ -298,7 +283,11 @@ export default function TaskCardLabPage() {
                     ? <MowCardSpecimen />
                     : index === 4
                       ? <HarvestCardSpecimen />
-                      : <TaskCard card={card} index={index} />}
+                      : index === 5
+                        ? <WaterCareCardSpecimen />
+                        : index === 6
+                          ? <CheckCardSpecimen />
+                          : <TaskCard card={card} index={index} />}
           </div>
         ))}
       </div>
