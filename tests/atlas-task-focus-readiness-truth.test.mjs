@@ -4,11 +4,15 @@ import test from "node:test";
 
 const route = fs.readFileSync("app/api/atlas/task-execution-readiness/route.ts", "utf8");
 const shell = fs.readFileSync("components/atlas/worker-ready-assigned-task-execution-shell.tsx", "utf8");
+const canonical = fs.readFileSync("components/atlas/canonical-assigned-task-detail.tsx", "utf8");
+const readiness = fs.readFileSync("lib/atlas/worker-readiness.ts", "utf8");
 const migration = fs.readFileSync("supabase/migrations/20260820193337_worker_task_execution_readiness_api_v1.sql", "utf8");
 
 test("Task Focus reads readiness through the worker-safe RPC", () => {
   assert.match(route, /worker_task_execution_readiness_api_v1/);
+  assert.match(canonical, /worker_task_execution_readiness_api_v1/);
   assert.doesNotMatch(route, /\.rpc\("task_execution_readiness_v1"/);
+  assert.doesNotMatch(canonical, /\.rpc\("task_execution_readiness_v1"/);
 });
 
 test("worker-safe readiness wrapper enforces farm authority before internal readiness", () => {
@@ -21,8 +25,16 @@ test("worker-safe readiness wrapper enforces farm authority before internal read
 });
 
 test("readiness transport failure never renders as canonical Waiting", () => {
-  assert.match(shell, /if \(failed\) return <ReadinessFailureScreen/);
-  assert.match(shell, /if \(readiness\?\.executable !== true\) return <WaitingScreen/);
+  assert.match(shell, /if \(!initialReadiness\.ok \|\| typeof initialReadiness\.executable !== "boolean"\)/);
+  assert.match(shell, /return <ReadinessFailureScreen/);
+  assert.match(shell, /if \(initialReadiness\.executable !== true\)/);
+  assert.match(shell, /return <WaitingScreen/);
   assert.match(shell, /data-atlas-worker-readiness-failure="true"/);
   assert.match(shell, /This task didn’t load/);
+});
+
+test("API and server render share one readiness presentation contract", () => {
+  assert.match(route, /normalizeWorkerReadiness/);
+  assert.match(canonical, /normalizeWorkerReadiness/);
+  assert.match(readiness, /workerReadinessPresentation/);
 });
