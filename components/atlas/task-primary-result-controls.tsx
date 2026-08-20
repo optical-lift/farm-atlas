@@ -28,7 +28,8 @@ export default function TaskPrimaryResultControls({
   return (
     <>
       <style>{`
-        [data-atlas-assigned-task-execution-shell="true"] .atlas-task-more-outcomes {
+        [data-atlas-assigned-task-execution-shell="true"] .atlas-task-more-outcomes,
+        [data-atlas-assigned-task-execution-shell="true"] .task-receipt-secondary {
           display: none !important;
         }
       `}</style>
