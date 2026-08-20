@@ -34,7 +34,10 @@ jobs:
           base="$SUPABASE_URL/functions/v1/temporary-p9-p10-source-recovery"
           mkdir -p supabase/migrations
           fetch() {
-            local version="$1" name="$2" expected="$3" path="supabase/migrations/${version}_${name}.sql"
+            local version="$1"
+            local name="$2"
+            local expected="$3"
+            local path="supabase/migrations/${version}_${name}.sql"
             curl -fsSL --retry 3 -H "Authorization: Bearer $SUPABASE_ANON_KEY" "$base?version=$version" -o "$path"
             actual="$(git hash-object "$path")"
             test "$actual" = "$expected" || { echo "checksum mismatch $path expected=$expected actual=$actual" >&2; exit 1; }
