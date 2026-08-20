@@ -22,11 +22,32 @@ const weedTrail = [
 ] as const;
 
 const turnoverTrail = [
-  { label: "Sown", detail: "Aug 16 · Orange", state: "done" },
-  { label: "Harvest", detail: "Oct 4–14", state: "done" },
-  { label: "Turn over", detail: "today", state: "now" },
-  { label: "Rest", detail: "5 days", state: "later" },
-  { label: "Cover crop", detail: "Oct 20", state: "later" },
+  { label: "Sown", detail: "Jun 7 · black oil", state: "done" },
+  { label: "Harvest", detail: "Aug 1–6", state: "done" },
+  { label: "Turn over", detail: "after harvest", state: "now" },
+  { label: "Sow", detail: "Aug 16 · Orange", state: "later" },
+  { label: "Harvest", detail: "Oct 4–14", state: "later" },
+] as const;
+
+const turnoverCategories = [
+  {
+    title: "Clear",
+    items: ["Cut at soil level", "Take to compost"],
+  },
+  {
+    title: "Weed",
+    items: ["Remove roots", "Take to compost"],
+  },
+  {
+    title: "Amend",
+    items: ["Add available inputs"],
+    availability: "No inputs available",
+  },
+] as const;
+
+const harvestTaskHistory = [
+  { date: "Aug 3", detail: "2 harvest-watch tasks" },
+  { date: "Aug 5", detail: "1 harvest-watch task" },
 ] as const;
 
 const mapBlocks = Array.from({ length: BED_LENGTH_FT / MAP_BLOCK_FT }, (_, index) => ({
@@ -77,7 +98,7 @@ function LogItDrawer() {
   );
 }
 
-function BedMap({ cropLabel, spent = false }: { cropLabel: string; spent?: boolean }) {
+function BedMap({ cropLabel }: { cropLabel: string }) {
   const [selectedBlock, setSelectedBlock] = useState(0);
   const [logMode, setLogMode] = useState(false);
   const [loggedBlocks, setLoggedBlocks] = useState<number[]>([0]);
@@ -172,7 +193,7 @@ function BedMap({ cropLabel, spent = false }: { cropLabel: string; spent?: boole
         ) : null}
       </div>
 
-      <div className={styles.mapLegend}><code>o</code> {spent ? "spent sunflower square" : "sunflower square"}</div>
+      <div className={styles.mapLegend}><code>o</code> sunflower square</div>
     </section>
   );
 }
@@ -246,13 +267,36 @@ function WeedCard() {
   );
 }
 
-function TurnoverCheck({ id, label }: { id: string; label: string }) {
+function TurnoverReminder({ id, label }: { id: string; label: string }) {
   return (
-    <label className={extras.turnoverCheck} htmlFor={id}>
+    <div className={extras.turnoverReminderRow}>
       <input id={id} type="checkbox" />
-      <span aria-hidden="true" />
-      <strong>{label}</strong>
-    </label>
+      <label htmlFor={id}><strong>{label}</strong></label>
+    </div>
+  );
+}
+
+function TurnoverCategory({
+  title,
+  items,
+  availability,
+  prefix,
+}: {
+  title: string;
+  items: readonly string[];
+  availability?: string;
+  prefix: string;
+}) {
+  return (
+    <section className={extras.turnoverCategory}>
+      <header><h3>{title}</h3></header>
+      <div className={extras.turnoverCategoryRail}>
+        {items.map((item, index) => (
+          <TurnoverReminder id={`${prefix}-${index}`} label={item} key={item} />
+        ))}
+      </div>
+      {availability ? <div className={extras.turnoverAvailability}>{availability}</div> : null}
+    </section>
   );
 }
 
@@ -266,47 +310,61 @@ function TurnoverCard() {
         </div>
         <h2>Field Row 13</h2>
         <p>Field Rows</p>
-        <div className={styles.timing}>After final harvest · turnover due</div>
+        <div className={styles.timing}>After harvest · turnover due</div>
       </header>
 
-      <Trail steps={turnoverTrail} label="Field Row 13 turnover and next bed phase" />
+      <Trail steps={turnoverTrail} label="Field Row 13 turnover and next bed task" />
 
       <section className={styles.cropState}>
         <span>Bed now</span>
-        <strong>Spent ProCut Orange sunflower</strong>
+        <strong>Black oil sunflower</strong>
         <div>
-          <b>Final harvest complete</b>
-          <b>Biomass still in bed</b>
+          <b>Harvest window Aug 1–6</b>
+          <b>Next sowing Aug 16</b>
         </div>
       </section>
 
-      <BedMap cropLabel="Spent ProCut Orange sunflower" spent />
+      <BedMap cropLabel="Black oil sunflower" />
 
-      <section className={extras.turnoverBiomass}>
-        <header><span>Biomass</span></header>
-        <div><small>Leaving the bed</small><strong>Spent sunflower</strong></div>
-        <div><small>Destination</small><strong>Compost pile</strong></div>
+      <section className={extras.turnoverMethod}>
+        <div className={extras.turnoverMethodKey}>tap to cross off</div>
+        {turnoverCategories.map((category) => (
+          <TurnoverCategory
+            title={category.title}
+            items={category.items}
+            availability={"availability" in category ? category.availability : undefined}
+            prefix={`turnover-${category.title.toLowerCase()}`}
+            key={category.title}
+          />
+        ))}
       </section>
 
-      <section className={extras.turnoverActions}>
-        <header><span>Turn over</span><small>3 steps</small></header>
-        <div>
-          <TurnoverCheck id="turnover-remove" label="Remove spent crop from the bed" />
-          <TurnoverCheck id="turnover-move" label="Move biomass to its destination" />
-          <TurnoverCheck id="turnover-roots" label="Clear remaining roots and debris" />
+      <section className={extras.harvestHistory}>
+        <header><span>Harvest</span></header>
+        <div className={extras.harvestSummary}>
+          <div>
+            <small>Recorded harvest</small>
+            <strong>None logged</strong>
+          </div>
+          <div>
+            <small>Harvest-window tasks</small>
+            <strong>3</strong>
+          </div>
         </div>
-      </section>
-
-      <section className={extras.nextBedPhase}>
-        <header><span>Next for this bed</span></header>
-        <div><small>Phase</small><strong>Fall cover crop</strong></div>
-        <div><small>Target</small><strong>Oct 20</strong></div>
+        <div className={extras.harvestTaskList}>
+          {harvestTaskHistory.map((item) => (
+            <div key={`${item.date}-${item.detail}`}>
+              <span>{item.date}</span>
+              <strong>{item.detail}</strong>
+            </div>
+          ))}
+        </div>
       </section>
 
       <footer className={styles.finish}>
         <span>Finish Turnover</span>
         <div>
-          <button type="button" className={styles.primaryFinish}>Bed cleared + biomass moved</button>
+          <button type="button" className={styles.primaryFinish}>Bed cleared for next crop</button>
           <button type="button">Blocked</button>
         </div>
       </footer>
