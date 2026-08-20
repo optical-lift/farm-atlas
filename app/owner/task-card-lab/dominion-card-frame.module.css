@@ -73,6 +73,11 @@
   background: rgba(246, 242, 230, 0.48);
 }
 
+.customFinish {
+  padding: 17px 18px 20px;
+  background: rgba(246, 242, 230, 0.48);
+}
+
 .primaryFinish,
 .secondaryFinish {
   min-height: 52px;
