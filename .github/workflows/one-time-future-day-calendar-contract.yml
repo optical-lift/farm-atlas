@@ -286,3 +286,5 @@ test("database overlay has distinct historical live and future temporal modes", 
           git add app/day/page.tsx app/api/atlas/universal-task-cards/route.ts supabase/migrations/20260820231500_future_day_calendar_projection_contract.sql tests/atlas-future-day-calendar-contract.test.mjs
           git commit -m "Separate future Day projection from live carryover"
           git push origin HEAD:main
+
+# trigger-installed-workflow
