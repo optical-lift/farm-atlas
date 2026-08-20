@@ -10,6 +10,7 @@ type DominionCardFrameProps = {
   timing?: string;
   children: ReactNode;
   className?: string;
+  completion?: ReactNode | false;
 };
 
 export default function DominionCardFrame({
@@ -20,6 +21,7 @@ export default function DominionCardFrame({
   timing,
   children,
   className,
+  completion,
 }: DominionCardFrameProps) {
   const cardClassName = className ? `${styles.card} ${className}` : styles.card;
 
@@ -37,10 +39,14 @@ export default function DominionCardFrame({
 
       {children}
 
-      <footer className={styles.finish}>
-        <button type="button" className={styles.primaryFinish}>Done</button>
-        <button type="button" className={styles.secondaryFinish}>Unfinished</button>
-      </footer>
+      {completion === false ? null : completion !== undefined ? (
+        <footer className={styles.customFinish}>{completion}</footer>
+      ) : (
+        <footer className={styles.finish}>
+          <button type="button" className={styles.primaryFinish}>Done</button>
+          <button type="button" className={styles.secondaryFinish}>Unfinished</button>
+        </footer>
+      )}
     </article>
   );
 }
