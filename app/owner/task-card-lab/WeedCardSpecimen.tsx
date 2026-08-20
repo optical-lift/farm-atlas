@@ -8,6 +8,10 @@ const SOWN_ON = new Date("2026-08-16T12:00:00-05:00");
 const HARVEST_START = new Date("2026-10-04T12:00:00-05:00");
 const HARVEST_END = new Date("2026-10-14T12:00:00-05:00");
 
+const BED_WIDTH_FT = 3;
+const BED_LENGTH_FT = 30;
+const MAP_BLOCK_FT = 3;
+
 const bedTrail = [
   { label: "Weeded", detail: "Jul 23", state: "done" },
   { label: "Sown", detail: "Aug 16 · Orange", state: "done" },
@@ -15,6 +19,11 @@ const bedTrail = [
   { label: "Germination", detail: "Aug 20–26", state: "later" },
   { label: "Harvest", detail: "Oct 4–14", state: "later" },
 ] as const;
+
+const mapBlocks = Array.from({ length: BED_LENGTH_FT / MAP_BLOCK_FT }, (_, index) => ({
+  start: index * MAP_BLOCK_FT,
+  end: (index + 1) * MAP_BLOCK_FT,
+}));
 
 function dayDiff(from: Date, to: Date) {
   return Math.max(0, Math.round((to.getTime() - from.getTime()) / 86_400_000));
@@ -45,6 +54,7 @@ function LogItDrawer() {
 
 export default function WeedCardSpecimen() {
   const [today, setToday] = useState<Date | null>(null);
+  const [selectedBlock, setSelectedBlock] = useState(0);
 
   useEffect(() => {
     setToday(new Date());
@@ -71,6 +81,8 @@ export default function WeedCardSpecimen() {
       harvest,
     };
   }, [today]);
+
+  const activeBlock = mapBlocks[selectedBlock];
 
   return (
     <article className={styles.card}>
@@ -103,6 +115,43 @@ export default function WeedCardSpecimen() {
           <b>{cropTiming.stage}</b>
           <b>{cropTiming.harvest}</b>
         </div>
+      </section>
+
+      <section className={styles.bedMap}>
+        <header>
+          <span>Bed map</span>
+          <small>{BED_WIDTH_FT} ft × {BED_LENGTH_FT} ft · one mark = 1 sq ft</small>
+        </header>
+
+        <div className={styles.bedRectangle} aria-label="Square-foot crop map for Field Row 13">
+          {mapBlocks.map((block, blockIndex) => (
+            <button
+              type="button"
+              className={blockIndex === selectedBlock ? styles.mapBlockActive : styles.mapBlock}
+              key={block.start}
+              onClick={() => setSelectedBlock(blockIndex)}
+              aria-label={`Feet ${block.start} to ${block.end}, ProCut Orange sunflower`}
+            >
+              {Array.from({ length: BED_WIDTH_FT * MAP_BLOCK_FT }, (_, squareIndex) => (
+                <span key={squareIndex}>o</span>
+              ))}
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.mapScale} aria-hidden="true">
+          <span>0 ft</span>
+          <span>15 ft</span>
+          <span>30 ft</span>
+        </div>
+
+        <div className={styles.mapDetail}>
+          <span>{activeBlock.start}–{activeBlock.end} ft</span>
+          <strong>ProCut Orange sunflower</strong>
+          <small>{BED_WIDTH_FT * MAP_BLOCK_FT} sq ft shown · tap another section to inspect it</small>
+        </div>
+
+        <div className={styles.mapLegend}><code>o</code> sunflower square</div>
       </section>
 
       <section className={styles.results}>

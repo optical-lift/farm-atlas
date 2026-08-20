@@ -22,7 +22,8 @@
 .familyRow > span,
 .results > header > span,
 .finish > span,
-.cropState > span {
+.cropState > span,
+.bedMap > header > span {
   color: #858bb8;
   font-size: 10px;
   line-height: 1;
@@ -159,7 +160,7 @@
   gap: 7px;
   padding: 18px;
   border-bottom: 1px solid rgba(215, 204, 189, 0.62);
-  background: linear-gradient(180deg, rgba(238, 242, 219, 0.58), rgba(255, 255, 255, 0));
+  background: #fff;
 }
 
 .cropState > strong {
@@ -186,6 +187,149 @@
   font-size: 9px;
   line-height: 1;
   font-weight: 880;
+}
+
+.bedMap {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+  background: rgba(248, 246, 238, 0.42);
+}
+
+.bedMap > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bedMap > header small {
+  color: #8b8c84;
+  font-size: 8px;
+  line-height: 1.15;
+  font-weight: 760;
+  text-align: right;
+}
+
+.bedRectangle {
+  width: 100%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid rgba(94, 96, 89, 0.38);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.mapBlock,
+.mapBlockActive {
+  min-width: 0;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+  gap: 0;
+  border: 0;
+  border-right: 1px dashed rgba(133, 139, 192, 0.22);
+  background: transparent;
+  color: #5e635b;
+  padding: 5px 2px;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.mapBlock:last-child,
+.mapBlockActive:last-child {
+  border-right: 0;
+}
+
+.mapBlock span,
+.mapBlockActive span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.mapBlockActive {
+  background: rgba(214, 225, 177, 0.34);
+  color: #515b34;
+  box-shadow: inset 0 0 0 1px rgba(81, 91, 52, 0.18);
+}
+
+.mapScale {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #92938d;
+  font-size: 7px;
+  line-height: 1;
+  font-weight: 780;
+}
+
+.mapDetail {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 9px;
+  align-items: baseline;
+  padding: 9px 10px;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.mapDetail > span {
+  color: #858bb8;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mapDetail strong {
+  color: var(--atlas-text);
+  font-size: 12px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.mapDetail small {
+  grid-column: 1 / -1;
+  color: #85867f;
+  font-size: 8px;
+  line-height: 1.2;
+  font-weight: 760;
+}
+
+.mapLegend {
+  color: #85867f;
+  font-size: 8px;
+  line-height: 1.2;
+  font-weight: 760;
+}
+
+.mapLegend code {
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  margin-right: 4px;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 50%;
+  background: #fff;
+  color: #565a5c;
+  font-size: 10px;
+  font-weight: 900;
 }
 
 .results {
@@ -335,10 +479,26 @@
 @media (max-width: 520px) {
   .header,
   .cropState,
+  .bedMap,
   .results,
   .finish {
     padding-left: 16px;
     padding-right: 16px;
+  }
+
+  .bedMap > header {
+    align-items: flex-start;
+  }
+
+  .mapBlock,
+  .mapBlockActive {
+    min-height: 52px;
+    padding-inline: 1px;
+  }
+
+  .mapBlock span,
+  .mapBlockActive span {
+    font-size: 8px;
   }
 
   .logPanel {
