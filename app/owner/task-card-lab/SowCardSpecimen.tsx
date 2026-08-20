@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
 import styles from "./sow-card-specimen.module.css";
 
 const bedTrail = [
@@ -8,31 +12,88 @@ const bedTrail = [
   { label: "Clear", detail: "75 days", state: "later" },
 ] as const;
 
-const roster = [
+const factCards = [
+  { label: "Rows", value: "3 rows" },
   { label: "Spacing", value: "4 in" },
-  { label: "Germination", value: "4–10 days" },
-  { label: "Harvest watch", value: "50–60 days" },
-  { label: "Clear bed", value: "75 days" },
+  { label: "Seed estimate", value: "~270 seeds" },
 ] as const;
 
-function SeedIssueDrawer() {
+function addDays(date: Date, days: number) {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+function monthDay(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function dateRange(start: Date, end: Date) {
+  const monthFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    month: "short",
+  });
+  const dayFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    day: "numeric",
+  });
+
+  const startMonth = monthFormatter.format(start);
+  const endMonth = monthFormatter.format(end);
+  const startDay = dayFormatter.format(start);
+  const endDay = dayFormatter.format(end);
+
+  return startMonth === endMonth
+    ? `${startMonth} ${startDay}–${endDay}`
+    : `${startMonth} ${startDay}–${endMonth} ${endDay}`;
+}
+
+function SurprisePill({ label }: { label: string }) {
+  const id = `sow-surprise-${label.toLowerCase().replaceAll(" ", "-")}`;
+
   return (
-    <details className={styles.seedDrawer}>
-      <summary aria-label="Report a seed issue" title="Report a seed issue">
-        <span aria-hidden="true">+</span>
-      </summary>
-      <div className={styles.seedPanel}>
-        <button type="button">Packet empty</button>
-        <label>
-          <span>Note</span>
-          <input type="text" placeholder="Add note…" />
-        </label>
+    <label className={styles.surprisePill} htmlFor={id}>
+      <input id={id} type="checkbox" />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+function LogItDrawer() {
+  return (
+    <details className={styles.logDrawer}>
+      <summary>Log it</summary>
+      <div className={styles.logPanel}>
+        <input type="text" placeholder="Add note…" aria-label="Add a sowing note" />
+        <button type="button">Save note</button>
       </div>
     </details>
   );
 }
 
 export default function SowCardSpecimen() {
+  const [today, setToday] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setToday(new Date());
+  }, []);
+
+  const projections = useMemo(() => {
+    if (!today) {
+      return {
+        bloom: "Updating…",
+        clear: "Updating…",
+      };
+    }
+
+    return {
+      bloom: dateRange(addDays(today, 50), addDays(today, 60)),
+      clear: monthDay(addDays(today, 75)),
+    };
+  }, [today]);
+
   return (
     <article className={styles.card}>
       <header className={styles.header}>
@@ -42,7 +103,7 @@ export default function SowCardSpecimen() {
         </div>
         <h2>Field Row 6</h2>
         <p>ProCut White Lite · sunflower</p>
-        <div className={styles.timing}>Tonight · sowing window open</div>
+        <div className={styles.timing}>Today · sowing window open</div>
       </header>
 
       <div className={styles.trail} aria-label="Field Row 6 crop-cycle trail">
@@ -66,25 +127,46 @@ export default function SowCardSpecimen() {
         </header>
 
         <div className={styles.seedRow}>
-          <div>
-            <small>Seed</small>
-            <strong>ProCut White Lite</strong>
-          </div>
-          <SeedIssueDrawer />
+          <small>Seed</small>
+          <strong>ProCut White Lite</strong>
         </div>
 
-        <div className={styles.pattern}>
-          <small>Sow pattern</small>
-          <strong>3 lengthwise rows · 1/2 in deep</strong>
-        </div>
-
-        <div className={styles.roster} aria-label="ProCut White Lite crop profile projections">
-          {roster.map((item) => (
-            <div key={item.label}>
-              <small>{item.label}</small>
-              <strong>{item.value}</strong>
+        <div className={styles.factRow}>
+          {factCards.map((fact) => (
+            <div key={fact.label}>
+              <small>{fact.label}</small>
+              <strong>{fact.value}</strong>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className={styles.projections}>
+        <header>
+          <span>Projections</span>
+          <small>from today’s real calendar date</small>
+        </header>
+        <div className={styles.projectionGrid}>
+          <div>
+            <small>Bloom / harvest window</small>
+            <strong>{projections.bloom}</strong>
+          </div>
+          <div>
+            <small>Ready to clear</small>
+            <strong>{projections.clear}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.surprises}>
+        <header>
+          <span>Surprises</span>
+          <small>only if something differed</small>
+        </header>
+        <div className={styles.surprisePills}>
+          <SurprisePill label="It was weedy" />
+          <SurprisePill label="Ran out of seeds" />
+          <LogItDrawer />
         </div>
       </section>
 
@@ -95,7 +177,7 @@ export default function SowCardSpecimen() {
           <button type="button">Partly sown</button>
         </div>
         <small>
-          The bed is the enduring object. Completing Sow advances Field Row 6 into the crop cycle and dates its next projected states.
+          The Trail keeps the bed lifecycle. The projection dates recalculate from the day this card is actually viewed, not from the task’s created or due date.
         </small>
       </footer>
     </article>
