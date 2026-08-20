@@ -5,11 +5,12 @@ import styles from "./dominion-card-frame.module.css";
 type DominionCardFrameProps = {
   family: string;
   title: string;
+  subtitle?: string;
   children: ReactNode;
   className?: string;
 };
 
-export default function DominionCardFrame({ family, title, children, className }: DominionCardFrameProps) {
+export default function DominionCardFrame({ family, title, subtitle, children, className }: DominionCardFrameProps) {
   const cardClassName = className ? `${styles.card} ${className}` : styles.card;
 
   return (
@@ -19,6 +20,7 @@ export default function DominionCardFrame({ family, title, children, className }
           <span>{family}</span>
         </div>
         <h2>{title}</h2>
+        {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
       </header>
 
       {children}
