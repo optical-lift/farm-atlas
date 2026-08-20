@@ -78,7 +78,7 @@
 .trail {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: 12px 10px 16px;
   border-top: 1px solid rgba(215, 204, 189, 0.62);
   border-bottom: 1px solid rgba(215, 204, 189, 0.62);
@@ -300,6 +300,7 @@
   list-style: none;
   cursor: pointer;
   min-height: 30px;
+  min-width: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
