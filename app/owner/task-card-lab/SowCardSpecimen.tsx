@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import adjust from "./sow-card-adjust.module.css";
 import styles from "./sow-card-specimen.module.css";
 
 const bedTrail = [
@@ -121,7 +122,7 @@ export default function SowCardSpecimen() {
       <section className={styles.bedSection}>
         <header className={styles.bedHeader}>
           <div>
-            <h3>Field Row 6</h3>
+            <h3 className={adjust.bedTitle}>Field Row 6</h3>
             <span>Field Rows</span>
           </div>
         </header>
