@@ -27,6 +27,11 @@ export default function TaskPrimaryResultControls({
 }: Props) {
   return (
     <>
+      <style>{`
+        [data-atlas-assigned-task-execution-shell="true"] .atlas-task-more-outcomes {
+          display: none !important;
+        }
+      `}</style>
       <div className="atlas-task-result-actions atlas-task-result-actions-simple">
         <button
           type="button"
