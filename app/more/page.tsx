@@ -35,6 +35,7 @@ export default async function AtlasMorePage() {
     ...(isFarmOwner ? [
       { label: "Rulebook + Clock", detail: "Farm rhythms, evidence and Owner controls", href: "/manage/rhythms" },
       { label: "Task Card Editor", detail: "Review, refine and extend Dominion card families and interaction specs", href: "/owner/task-card-lab" },
+      { label: "Project Trail Editor", detail: "Design destination-led project Trails, moves, gates and arrival evidence", href: "/owner/project-trail-lab" },
     ] : []),
     { label: "Atlas app", detail: "Farm Alerts, installation and connected devices", href: "/install" },
     { label: "Account", detail: "Password and sign-in settings", href: "/settings/password" },
