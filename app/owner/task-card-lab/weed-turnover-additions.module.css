@@ -8,9 +8,7 @@
 }
 
 .variantLabel span,
-.turnoverBiomass > header > span,
-.turnoverActions > header > span,
-.nextBedPhase > header > span {
+.harvestHistory > header > span {
   color: #858bb8;
   font-size: 10px;
   line-height: 1;
@@ -118,27 +116,176 @@
   font-weight: 900;
 }
 
-.turnoverBiomass,
-.turnoverActions,
-.nextBedPhase {
+.turnoverMethod {
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.turnoverMethodKey {
+  padding: 13px 18px 11px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.55);
+  color: #898a82;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.turnoverCategory {
+  position: relative;
   display: grid;
-  gap: 10px;
+  gap: 0;
+  padding: 16px 18px 14px 42px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.52);
+}
+
+.turnoverCategory:last-child {
+  border-bottom: 0;
+}
+
+.turnoverCategory::before {
+  content: "";
+  position: absolute;
+  left: 24px;
+  top: 29px;
+  bottom: 30px;
+  width: 1px;
+  background: rgba(181, 181, 192, 0.72);
+}
+
+.turnoverCategory > header {
+  position: relative;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.48);
+}
+
+.turnoverCategory > header::before {
+  content: "";
+  position: absolute;
+  left: -23px;
+  top: 1px;
+  z-index: 2;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  border: 2px solid #858bb8;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(239, 237, 244, 0.72);
+}
+
+.turnoverCategory h3 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.turnoverCategoryRail {
+  display: grid;
+}
+
+.turnoverReminderRow {
+  position: relative;
+  min-height: 48px;
+  display: grid;
+  align-items: center;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.42);
+}
+
+.turnoverReminderRow:last-child {
+  border-bottom: 0;
+}
+
+.turnoverReminderRow::before {
+  content: "";
+  position: absolute;
+  left: -18px;
+  top: 24px;
+  width: 18px;
+  height: 1px;
+  background: rgba(181, 181, 192, 0.72);
+}
+
+.turnoverReminderRow::after {
+  content: "";
+  position: absolute;
+  left: -21px;
+  top: 21px;
+  z-index: 2;
+  width: 7px;
+  height: 7px;
+  box-sizing: border-box;
+  border: 1.5px solid #858bb8;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.turnoverReminderRow input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.turnoverReminderRow label {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.turnoverReminderRow strong {
+  color: var(--atlas-text);
+  font-size: 13px;
+  line-height: 1.15;
+  font-weight: 900;
+  transition: color 120ms ease, opacity 120ms ease;
+}
+
+.turnoverReminderRow:has(input:checked) strong {
+  color: #93948e;
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  opacity: 0.88;
+}
+
+.turnoverReminderRow:has(input:checked)::after {
+  border-color: #8e9279;
+  background: #dce5bd;
+}
+
+.turnoverAvailability {
+  width: fit-content;
+  margin-top: 8px;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 999px;
+  background: rgba(248, 246, 238, 0.65);
+  color: #85867f;
+  padding: 6px 8px;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 820;
+}
+
+.harvestHistory {
+  display: grid;
+  gap: 11px;
   padding: 18px;
   border-bottom: 1px solid rgba(215, 204, 189, 0.62);
 }
 
-.turnoverBiomass {
+.harvestSummary {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
-.turnoverBiomass > header,
-.turnoverActions > header,
-.nextBedPhase > header {
-  grid-column: 1 / -1;
-}
-
-.turnoverBiomass > div,
-.nextBedPhase > div {
+.harvestSummary > div {
   min-height: 64px;
   display: grid;
   gap: 5px;
@@ -149,8 +296,7 @@
   background: rgba(248, 246, 238, 0.58);
 }
 
-.turnoverBiomass small,
-.nextBedPhase small {
+.harvestSummary small {
   color: #858bb8;
   font-size: 8px;
   line-height: 1;
@@ -159,8 +305,7 @@
   text-transform: uppercase;
 }
 
-.turnoverBiomass strong,
-.nextBedPhase strong {
+.harvestSummary strong {
   color: var(--atlas-text);
   font-size: 15px;
   line-height: 1.08;
@@ -168,88 +313,54 @@
   letter-spacing: -0.025em;
 }
 
-.turnoverActions > header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.turnoverActions > header small {
-  color: #85867f;
-  font-size: 9px;
-  line-height: 1;
-  font-weight: 800;
-}
-
-.turnoverActions > div {
+.harvestTaskList {
   display: grid;
-  gap: 8px;
+  border-top: 1px solid rgba(215, 204, 189, 0.44);
 }
 
-.turnoverCheck {
-  position: relative;
-  min-height: 56px;
+.harvestTaskList > div {
+  min-height: 38px;
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-columns: 55px minmax(0, 1fr);
   align-items: center;
-  gap: 11px;
-  padding: 10px 12px;
-  border: 1px solid rgba(111, 97, 76, 0.16);
-  border-radius: 16px;
-  background: rgba(250, 248, 239, 0.74);
-  cursor: pointer;
+  gap: 8px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.4);
 }
 
-.turnoverCheck input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
+.harvestTaskList > div:last-child {
+  border-bottom: 0;
 }
 
-.turnoverCheck > span {
-  width: 24px;
-  height: 24px;
-  box-sizing: border-box;
-  border: 2px solid #acadb5;
-  border-radius: 50%;
-  background: #fff;
+.harvestTaskList span {
+  color: #858bb8;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-.turnoverCheck strong {
-  color: var(--atlas-text);
-  font-size: 12px;
-  line-height: 1.2;
-  font-weight: 900;
-}
-
-.turnoverCheck:has(input:checked) {
-  background: rgba(238, 243, 223, 0.72);
-}
-
-.turnoverCheck:has(input:checked) > span {
-  border-color: #8e9279;
-  background: #8e9279;
-  box-shadow: inset 0 0 0 5px rgba(238, 243, 223, 0.95);
-}
-
-.turnoverCheck:has(input:checked) strong {
-  color: #74766f;
-  text-decoration: line-through;
-}
-
-.nextBedPhase {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.harvestTaskList strong {
+  color: #66685f;
+  font-size: 10px;
+  line-height: 1.15;
+  font-weight: 850;
 }
 
 @media (max-width: 520px) {
-  .turnoverBiomass,
-  .turnoverActions,
-  .nextBedPhase {
+  .turnoverMethodKey,
+  .harvestHistory {
     padding-left: 16px;
     padding-right: 16px;
+  }
+
+  .turnoverCategory {
+    padding-left: 40px;
+    padding-right: 16px;
+  }
+
+  .turnoverCategory::before {
+    left: 22px;
   }
 
   .mapLogNote {
