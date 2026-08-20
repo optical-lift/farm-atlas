@@ -1,24 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 import AssignedTaskExecutionShell, {
   type AssignedTaskExecutionShellProps,
 } from "@/components/atlas/assigned-task-execution-shell";
+import type { WorkerReadinessPresentation, WorkerReadinessResponse } from "@/lib/atlas/worker-readiness";
 
-type WorkerReadinessPresentation = {
-  title: string;
-  body: string;
-  detail: string | null;
-  kind: "prerequisite" | "battery_charge" | "equipment" | "waiting";
-};
-
-type ReadinessResponse = {
-  ok?: boolean;
-  executable?: boolean;
-  presentation?: WorkerReadinessPresentation | null;
-  error?: string;
+type Props = AssignedTaskExecutionShellProps & {
+  initialReadiness: WorkerReadinessResponse;
 };
 
 const sharedCardCss = `
@@ -35,17 +25,13 @@ const sharedCardCss = `
 function WaitingScreen({
   props,
   presentation,
-  checking = false,
 }: {
   props: AssignedTaskExecutionShellProps;
   presentation?: WorkerReadinessPresentation | null;
-  checking?: boolean;
 }) {
-  const title = checking ? "Checking this job" : presentation?.title || "Not ready yet";
-  const body = checking
-    ? "Atlas is checking whether everything this job needs is ready."
-    : presentation?.body || "This job is not executable yet.";
-  const detail = checking ? "" : presentation?.detail || "Nothing you need to do on this card right now.";
+  const title = presentation?.title || "Not ready yet";
+  const body = presentation?.body || "This job is not executable yet.";
+  const detail = presentation?.detail || "Nothing you need to do on this card right now.";
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell" data-atlas-worker-waiting-screen="true">
@@ -56,18 +42,18 @@ function WaitingScreen({
             <span className="atlas-phone-kicker">Atlas</span>
             <span className="atlas-phone-title">{props.assignee.label}</span>
           </Link>
-          <span className="atlas-weather-line">{checking ? "checking readiness…" : "waiting"}</span>
+          <span className="atlas-weather-line">waiting</span>
           <Link href={props.assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${props.assignee.label} work`}>↩</Link>
         </header>
         <div className="atlas-task-page-body">
           <article className="atlas-task-page-active atlas-task-ticket-card">
             <section className="atlas-worker-waiting-card" aria-live="polite">
-              <span className="atlas-worker-waiting-kicker">{checking ? "Atlas" : "Waiting"}</span>
+              <span className="atlas-worker-waiting-kicker">Waiting</span>
               <h2>{title}</h2>
               <span className="atlas-worker-waiting-task">{props.task.title}</span>
               <p>{body}</p>
               {detail ? <p>{detail}</p> : null}
-              {!checking ? <Link className="atlas-worker-waiting-back" href={props.assignee.listPath}>Back to today’s work</Link> : null}
+              <Link className="atlas-worker-waiting-back" href={props.assignee.listPath}>Back to today’s work</Link>
             </section>
           </article>
         </div>
@@ -105,46 +91,18 @@ function ReadinessFailureScreen({ props }: { props: AssignedTaskExecutionShellPr
   );
 }
 
-export default function WorkerReadyAssignedTaskExecutionShell(props: AssignedTaskExecutionShellProps) {
-  const [readiness, setReadiness] = useState<ReadinessResponse | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  // Owner pages retain their management surface. This membrane protects assigned
-  // execution views from exposing controls before canonical reality says the
-  // operation is executable.
+export default function WorkerReadyAssignedTaskExecutionShell({ initialReadiness, ...props }: Props) {
+  // Owner-assigned work retains its management surface. Worker-assigned work is
+  // rendered only after the server has already resolved the canonical execution warrant.
   const workerFacing = props.assignee.key !== "owner";
 
-  useEffect(() => {
-    if (!workerFacing) return;
-
-    const controller = new AbortController();
-    setReadiness(null);
-    setFailed(false);
-
-    void (async () => {
-      try {
-        const response = await fetch(`/api/atlas/task-execution-readiness?taskId=${encodeURIComponent(props.task.task_id)}`, {
-          cache: "no-store",
-          credentials: "same-origin",
-          headers: { Accept: "application/json" },
-          signal: controller.signal,
-        });
-        const body = await response.json() as ReadinessResponse;
-        if (controller.signal.aborted) return;
-        if (response.ok && body.ok && typeof body.executable === "boolean") setReadiness(body);
-        else setFailed(true);
-      } catch {
-        if (!controller.signal.aborted) setFailed(true);
-      }
-    })();
-
-    return () => controller.abort();
-  }, [props.task.task_id, props.task.status, props.task.updated_at, workerFacing]);
-
   if (!workerFacing) return <AssignedTaskExecutionShell {...props} />;
-  if (!readiness && !failed) return <WaitingScreen props={props} checking />;
-  if (failed) return <ReadinessFailureScreen props={props} />;
-  if (readiness?.executable !== true) return <WaitingScreen props={props} presentation={readiness?.presentation} />;
+  if (!initialReadiness.ok || typeof initialReadiness.executable !== "boolean") {
+    return <ReadinessFailureScreen props={props} />;
+  }
+  if (initialReadiness.executable !== true) {
+    return <WaitingScreen props={props} presentation={initialReadiness.presentation} />;
+  }
 
   return <AssignedTaskExecutionShell {...props} />;
 }
