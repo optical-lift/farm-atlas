@@ -1,0 +1,41 @@
+create table if not exists atlas.community_registration_offerings (
+  id uuid primary key default gen_random_uuid(),
+  farm_id uuid not null references atlas.farms(id) on delete cascade,
+  program_id uuid references atlas.community_programs(id) on delete cascade,
+  event_id uuid references atlas.community_events(id) on delete cascade,
+  stable_key text not null,
+  title text not null,
+  registration_type text not null check (registration_type in ('household_participation','individual_participation','vendor')),
+  status text not null default 'draft' check (status in ('draft','open','closed','cancelled')),
+  opens_at timestamptz,
+  closes_at timestamptz,
+  fee_amount numeric(10,2) not null default 0 check (fee_amount >= 0),
+  fee_currency text not null default 'USD',
+  fee_basis text not null check (fee_basis in ('per_household','per_person','per_vendor','per_booth','free')),
+  registration_scope text not null check (registration_scope in ('entire_program','single_event')),
+  public_description text,
+  terms_version text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (farm_id, stable_key),
+  check (program_id is not null or event_id is not null)
+);
+
+create table if not exists atlas.community_registrations (
+  id uuid primary key default gen_random_uuid(),
+  offering_id uuid not null references atlas.community_registration_offerings(id) on delete cascade,
+  registration_number text not null unique,
+  registrant_type text not null check (registrant_type in ('household','individual','vendor')),
+  status text not null default 'started' check (status in ('started','submitted','payment_pending','confirmed','cancelled','refunded')),
+  primary_name text not null,
+  primary_email text not null,
+  primary_phone text,
+  household_name text,
+  submitted_at timestamptz,
+  confirmed_at timestamptz,
+  cancelled_at timestamptz,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
