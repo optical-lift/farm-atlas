@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import DominionCardFrame from "./DominionCardFrame";
 import adjust from "./sow-card-adjust.module.css";
 import styles from "./sow-card-specimen.module.css";
 
@@ -96,17 +97,7 @@ export default function SowCardSpecimen() {
   }, [today]);
 
   return (
-    <article className={styles.card}>
-      <header className={styles.header}>
-        <div className={styles.familyRow}>
-          <span>Sow</span>
-          <small>direct sow bed</small>
-        </div>
-        <h2>Field Row 6</h2>
-        <p>ProCut White Lite · sunflower</p>
-        <div className={styles.timing}>Today · sowing window open</div>
-      </header>
-
+    <DominionCardFrame family="Sow" title="Field Row 6">
       <div className={styles.trail} aria-label="Field Row 6 crop-cycle trail">
         {bedTrail.map((step) => (
           <span
@@ -170,17 +161,6 @@ export default function SowCardSpecimen() {
           <LogItDrawer />
         </div>
       </section>
-
-      <footer className={styles.finish}>
-        <span>Finish Sow</span>
-        <div>
-          <button type="button" className={styles.primaryFinish}>Sowing complete</button>
-          <button type="button">Partly sown</button>
-        </div>
-        <small>
-          The Trail keeps the bed lifecycle. The projection dates recalculate from the day this card is actually viewed, not from the task’s created or due date.
-        </small>
-      </footer>
-    </article>
+    </DominionCardFrame>
   );
 }
