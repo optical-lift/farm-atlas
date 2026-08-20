@@ -84,11 +84,11 @@ test("Bell entries carry safe canonical deep links while the action UI opens the
   assert.doesNotMatch(page, /Acknowledge|Mark reviewed/);
 });
 
-test("Home stays recognizable while the floating Bell and role-aware action queues belong to the operational app shell", () => {
+test("Home stays recognizable while the paused Bell implementation remains preserved but unmounted", () => {
   assert.match(home, /<AtlasUniversalHome/);
   assert.doesNotMatch(home, /<AtlasBellCover/);
   assert.match(layout, /AtlasOperationalProjectionGlobals/);
-  assert.match(operationalGlobals, /<AtlasBellCover \/>/);
+  assert.doesNotMatch(operationalGlobals, /AtlasBellCover/);
   assert.match(operationalGlobals, /if \(isPrincipalProjection\(pathname\)\) return null/);
   assert.match(cover, /atlas-bell-edge-tab/);
   assert.match(cover, /atlas-while-away-slip/);
