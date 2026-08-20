@@ -6,9 +6,11 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("Bell pause suppresses push presentation while retaining old-notification click fallback plumbing", () => {
+test("Bell pause removes the global Bell surface and suppresses push presentation", () => {
+  const globals = read("components/atlas/shell/AtlasOperationalProjectionGlobals.tsx");
   const worker = read("public/sw.js");
 
+  assert.doesNotMatch(globals, /AtlasBellCover/);
   assert.match(worker, /atlas-pwa-shell-v11/);
   assert.match(worker, /Bell is intentionally paused/);
   assert.match(worker, /self\.addEventListener\("push"/);
