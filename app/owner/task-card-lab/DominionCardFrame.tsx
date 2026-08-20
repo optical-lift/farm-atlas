@@ -6,11 +6,14 @@ type DominionCardFrameProps = {
   family: string;
   title: string;
   children: ReactNode;
+  className?: string;
 };
 
-export default function DominionCardFrame({ family, title, children }: DominionCardFrameProps) {
+export default function DominionCardFrame({ family, title, children, className }: DominionCardFrameProps) {
+  const cardClassName = className ? `${styles.card} ${className}` : styles.card;
+
   return (
-    <article className={styles.card}>
+    <article className={cardClassName}>
       <header className={styles.header}>
         <div className={styles.familyRow}>
           <span>{family}</span>
