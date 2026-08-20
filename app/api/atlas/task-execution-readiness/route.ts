@@ -97,18 +97,18 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("task_execution_readiness_v1", {
+  const { data, error } = await supabase.rpc("worker_task_execution_readiness_api_v1", {
     p_task_id: taskId,
   });
 
   if (error) {
     console.error("Task execution readiness failed.", error);
-    return privateJson({ ok: false, error: "Atlas could not confirm whether this task is ready." }, 500);
+    return privateJson({ ok: false, error: "Task readiness could not be loaded." }, 500);
   }
 
   const readiness = object(data);
   if (!readiness) {
-    return privateJson({ ok: false, error: "Atlas returned an invalid task readiness result." }, 500);
+    return privateJson({ ok: false, error: "Task readiness returned an invalid result." }, 500);
   }
 
   const executable = readiness.ready === true;

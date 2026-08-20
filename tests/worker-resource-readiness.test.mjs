@@ -17,8 +17,9 @@ const readinessRoute = read("app/api/atlas/task-execution-readiness/route.ts");
 test("ordinary Worker execution cannot reach result controls until canonical readiness is executable", () => {
   assert.match(canonical, /return <WorkerReadyAssignedTaskExecutionShell/);
   assert.match(wrapper, /fetch\(`\/api\/atlas\/task-execution-readiness\?taskId=/);
-  assert.match(wrapper, /if \(failed \|\| readiness\?\.executable !== true\)/);
-  assert.match(wrapper, /return <WaitingScreen/);
+  assert.match(wrapper, /if \(failed\) return <ReadinessFailureScreen/);
+  assert.match(wrapper, /if \(readiness\?\.executable !== true\) return <WaitingScreen/);
+  assert.match(wrapper, /data-atlas-worker-readiness-failure="true"/);
   assert.match(wrapper, /data-atlas-worker-waiting-screen="true"/);
   assert.match(wrapper, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
   assert.match(execution, /TaskPrimaryResultControls/);
@@ -35,7 +36,8 @@ test("blocked mowing suppresses Done and unfinished controls at the task-focus m
 });
 
 test("Worker readiness copy stays human while distinguishing battery recovery from management equipment repair", () => {
-  assert.match(readinessRoute, /task_execution_readiness_v1/);
+  assert.match(readinessRoute, /worker_task_execution_readiness_api_v1/);
+  assert.doesNotMatch(readinessRoute, /\.rpc\("task_execution_readiness_v1"/);
   assert.match(readinessRoute, /\["needs_charge", "charging"\]\.includes\(batteryState\)/);
   assert.match(readinessRoute, /The mower batteries need to be charged before this job can start\./);
   assert.match(readinessRoute, /Charge them and tap Charged in the reminder\. Then this job will be ready\./);
