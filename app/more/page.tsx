@@ -23,7 +23,6 @@ export default async function AtlasMorePage() {
   const isFarmOwner = effectiveRole === "owner";
   const destinations = [
     { label: "Zone Registry", detail: "Beds, rooms, gardens and every canonical farm place", href: "/zones" },
-    { label: "Bell", detail: "Future gaps, handoffs and meaningful farm movement", href: "/bell" },
     { label: "Projects", detail: "Builds, venue work and multi-step initiatives", href: "/projects" },
     { label: "Production", detail: "Crop cycles and production state", href: "/production" },
     { label: "Seed inventory", detail: "Verified counts, freshness and crop commitments", href: "/inventory/seeds" },
