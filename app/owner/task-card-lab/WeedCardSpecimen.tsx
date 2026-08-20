@@ -33,27 +33,23 @@ const irrigationTrail = [
 
 const germinationTrail = [
   { label: "Sown", detail: "Aug 16 · Orange", state: "done" },
-  { label: "Germination", detail: "check stand", state: "now" },
+  { label: "Germination", detail: "Aug 20", state: "now" },
   { label: "Next move", detail: "from result", state: "later" },
-  { label: "Tend", detail: "protect crop", state: "later" },
+  { label: "Tend", detail: "Aug 27", state: "later" },
   { label: "Harvest", detail: "Oct 4–14", state: "later" },
 ] as const;
 
-const turnoverTrail = [
+const clearTrail = [
   { label: "Sown", detail: "Jun 7 · black oil", state: "done" },
   { label: "Harvest", detail: "Aug 1–6", state: "done" },
-  { label: "Turn over", detail: "after harvest", state: "now" },
+  { label: "Clear", detail: "Aug 7", state: "now" },
   { label: "Sow", detail: "Aug 16 · Orange", state: "later" },
   { label: "Harvest", detail: "Oct 4–14", state: "later" },
 ] as const;
 
-type TrailStep = {
-  label: string;
-  detail: string;
-  state: string;
-};
+type TrailStep = { label: string; detail: string; state: string };
 
-const turnoverCategories = [
+const clearCategories = [
   { title: "Clear", items: ["Cut at soil level", "Take to compost"] },
   { title: "Weed", items: ["Remove roots", "Take to compost"] },
   { title: "Amend", items: ["Add available inputs"], availability: "No inputs available" },
@@ -77,7 +73,10 @@ function Trail({ steps, label }: { steps: readonly TrailStep[]; label: string })
   return (
     <div className={styles.trail} aria-label={label}>
       {steps.map((step) => (
-        <span className={step.state === "done" ? styles.trailDone : step.state === "now" ? styles.trailNow : styles.trailLater} key={`${step.label}-${step.detail}`}>
+        <span
+          className={step.state === "done" ? styles.trailDone : step.state === "now" ? styles.trailNow : styles.trailLater}
+          key={`${step.label}-${step.detail}`}
+        >
           <b>{step.label}</b>
           <small>{step.detail}</small>
         </span>
@@ -96,6 +95,7 @@ function CropCycleBedCard({
   stage,
   harvest,
   children,
+  completion,
 }: {
   family: string;
   familyDetail: string;
@@ -106,9 +106,17 @@ function CropCycleBedCard({
   stage: string;
   harvest: string;
   children: ReactNode;
+  completion?: ReactNode | false;
 }) {
   return (
-    <DominionCardFrame family={family} familyDetail={familyDetail} title="Field Row 13" subtitle="Field Rows" timing={timing}>
+    <DominionCardFrame
+      family={family}
+      familyDetail={familyDetail}
+      title="Field Row 13"
+      subtitle="Field Rows"
+      timing={timing}
+      completion={completion}
+    >
       <Trail steps={trail} label={trailLabel} />
       <section className={styles.cropState}>
         <span>Bed now</span>
@@ -142,7 +150,13 @@ function LogItDrawer() {
   );
 }
 
-function BedMap({ cropLabel, logChoices = ["Deer damage", "Crop missing", "Extra weedy", "Other"] }: { cropLabel: string; logChoices?: string[] }) {
+function BedMap({
+  cropLabel,
+  logChoices = ["Deer damage", "Crop missing", "Extra weedy", "Other"],
+}: {
+  cropLabel: string;
+  logChoices?: string[];
+}) {
   const [selectedBlock, setSelectedBlock] = useState(0);
   const [logMode, setLogMode] = useState(false);
   const [loggedBlocks, setLoggedBlocks] = useState<number[]>([0]);
@@ -162,7 +176,9 @@ function BedMap({ cropLabel, logChoices = ["Deer damage", "Crop missing", "Extra
       return;
     }
     setLoggedBlocks((current) => {
-      if (current.includes(blockIndex)) return current.length === 1 ? current : current.filter((index) => index !== blockIndex);
+      if (current.includes(blockIndex)) {
+        return current.length === 1 ? current : current.filter((index) => index !== blockIndex);
+      }
       return [...current, blockIndex];
     });
   }
@@ -181,7 +197,13 @@ function BedMap({ cropLabel, logChoices = ["Deer damage", "Crop missing", "Extra
           const selectedForLog = logMode && loggedBlocks.includes(blockIndex);
           const inspected = !logMode && blockIndex === selectedBlock;
           return (
-            <button type="button" className={selectedForLog || inspected ? styles.mapBlockActive : styles.mapBlock} key={block.start} onClick={() => selectBlock(blockIndex)} aria-label={`Feet ${block.start} to ${block.end}, ${cropLabel}`}>
+            <button
+              type="button"
+              className={selectedForLog || inspected ? styles.mapBlockActive : styles.mapBlock}
+              key={block.start}
+              onClick={() => selectBlock(blockIndex)}
+              aria-label={`Feet ${block.start} to ${block.end}, ${cropLabel}`}
+            >
               {Array.from({ length: BED_WIDTH_FT * MAP_BLOCK_FT }, (_, squareIndex) => <span key={squareIndex}>o</span>)}
             </button>
           );
@@ -192,7 +214,11 @@ function BedMap({ cropLabel, logChoices = ["Deer damage", "Crop missing", "Extra
         <span>{logMode ? selectionLabel : `${activeBlock.start}–${activeBlock.end} ft`}</span>
         <strong>{cropLabel}</strong>
         <button type="button" className={extras.mapLogButton} onClick={toggleLogMode}>{logMode ? "Done" : "Log"}</button>
-        <small>{logMode ? `${selectedSqFt} sq ft selected · tap neighboring sections to add or remove them` : `${BED_WIDTH_FT * MAP_BLOCK_FT} sq ft shown · tap another section to inspect it`}</small>
+        <small>
+          {logMode
+            ? `${selectedSqFt} sq ft selected · tap neighboring sections to add or remove them`
+            : `${BED_WIDTH_FT * MAP_BLOCK_FT} sq ft shown · tap another section to inspect it`}
+        </small>
         {logMode ? (
           <div className={extras.mapLogPanel}>
             <div className={extras.mapLogPills}>
@@ -213,7 +239,9 @@ function BedMap({ cropLabel, logChoices = ["Deer damage", "Crop missing", "Extra
 function CropIssueDrawer({ label, choices }: { label: string; choices: string[] }) {
   return (
     <details className={variants.issueDrawer}>
-      <summary aria-label={`Log an issue with ${label}`} title={`Log an issue with ${label}`}><span aria-hidden="true">+</span></summary>
+      <summary aria-label={`Log an issue with ${label}`} title={`Log an issue with ${label}`}>
+        <span aria-hidden="true">+</span>
+      </summary>
       <div className={variants.issuePanel}>
         {choices.map((choice) => <button type="button" key={choice}>{choice}</button>)}
       </div>
@@ -236,12 +264,24 @@ function WeedCard() {
   }, [today]);
 
   return (
-    <CropCycleBedCard family="Weed" familyDetail="bed care" timing="Today · weeding due" trail={weedTrail} trailLabel="Field Row 13 crop-cycle trail" crop="ProCut Orange sunflower" stage={cropTiming.stage} harvest={cropTiming.harvest}>
+    <CropCycleBedCard
+      family="Weed"
+      familyDetail="bed care"
+      timing="Today · weeding due"
+      trail={weedTrail}
+      trailLabel="Field Row 13 crop-cycle trail"
+      crop="ProCut Orange sunflower"
+      stage={cropTiming.stage}
+      harvest={cropTiming.harvest}
+    >
       <BedMap cropLabel="ProCut Orange sunflower" />
       <section className={styles.results}>
         <header><span>How’d we do?</span></header>
         <div className={styles.resultPills}>
-          <ResultPill label="Still rough" /><ResultPill label="Crop readable" /><ResultPill label="Clear" /><LogItDrawer />
+          <ResultPill label="Still rough" />
+          <ResultPill label="Crop readable" />
+          <ResultPill label="Clear" />
+          <LogItDrawer />
         </div>
       </section>
     </CropCycleBedCard>
@@ -250,7 +290,16 @@ function WeedCard() {
 
 function IrrigationCard() {
   return (
-    <CropCycleBedCard family="Irrigation" familyDetail="care pulse" timing="Germination window · irrigate" trail={irrigationTrail} trailLabel="Field Row 13 crop-cycle trail with irrigation care pulse" crop="ProCut Orange sunflower" stage="Germination window" harvest="Harvest watch Oct 4–14">
+    <CropCycleBedCard
+      family="Irrigation"
+      familyDetail="care pulse"
+      timing="Germination window · irrigate"
+      trail={irrigationTrail}
+      trailLabel="Field Row 13 crop-cycle trail with irrigation care pulse"
+      crop="ProCut Orange sunflower"
+      stage="Germination window"
+      harvest="Harvest watch Oct 4–14"
+    >
       <BedMap cropLabel="ProCut Orange sunflower" logChoices={["Dry section", "Runoff", "Crop stress", "Other"]} />
       <section className={variants.careSection}>
         <div className={variants.careFacts}>
@@ -277,47 +326,101 @@ const germinationNext: Record<GerminationChoice, string> = {
 
 function GerminationCard() {
   const [choice, setChoice] = useState<GerminationChoice | null>(null);
-  const trail = germinationTrail.map((step) => step.label === "Next move" && choice ? { ...step, detail: germinationNext[choice] } : step);
+  const trail = germinationTrail.map((step) =>
+    step.label === "Next move" && choice ? { ...step, detail: germinationNext[choice] } : step,
+  );
+
+  const completion = (
+    <div className={variants.germinationCompletion} aria-label="Log germination result and complete task">
+      {(Object.keys(germinationNext) as GerminationChoice[]).map((item) => (
+        <button
+          type="button"
+          data-active={choice === item ? "true" : "false"}
+          key={item}
+          onClick={() => setChoice(item)}
+        >
+          {item}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
-    <CropCycleBedCard family="Check" familyDetail="crop check" timing="Germination window · check stand" trail={trail} trailLabel="Field Row 13 crop-cycle germination trail" crop="ProCut Orange sunflower" stage="Day 4 since sowing" harvest="Harvest watch Oct 4–14">
+    <CropCycleBedCard
+      family="Germination"
+      familyDetail="crop check"
+      timing="Germination window · check stand"
+      trail={trail}
+      trailLabel="Field Row 13 crop-cycle germination trail"
+      crop="ProCut Orange sunflower"
+      stage="Day 4 since sowing"
+      harvest="Harvest watch Oct 4–14"
+      completion={completion}
+    >
       <BedMap cropLabel="ProCut Orange sunflower" logChoices={["Patchy", "Crop missing", "Late emergence", "Other"]} />
       <section className={variants.checkSection}>
         <div className={variants.checkPrompt}>Did enough emerge to keep this planting?</div>
-        <div className={variants.checkChoices}>
-          {(Object.keys(germinationNext) as GerminationChoice[]).map((item) => (
-            <button type="button" data-active={choice === item ? "true" : "false"} key={item} onClick={() => setChoice(item)}>{item}</button>
-          ))}
-        </div>
         {choice ? <div className={variants.nextMove}><small>Next</small><strong>{germinationNext[choice]}</strong></div> : null}
       </section>
     </CropCycleBedCard>
   );
 }
 
-function TurnoverReminder({ id, label }: { id: string; label: string }) {
-  return <div className={extras.turnoverReminderRow}><input id={id} type="checkbox" /><label htmlFor={id}><strong>{label}</strong></label></div>;
+function ClearReminder({ id, label }: { id: string; label: string }) {
+  return (
+    <div className={extras.turnoverReminderRow}>
+      <input id={id} type="checkbox" />
+      <label htmlFor={id}><strong>{label}</strong></label>
+    </div>
+  );
 }
 
-function TurnoverCategory({ title, items, availability, prefix }: { title: string; items: readonly string[]; availability?: string; prefix: string }) {
+function ClearCategory({
+  title,
+  items,
+  availability,
+  prefix,
+}: {
+  title: string;
+  items: readonly string[];
+  availability?: string;
+  prefix: string;
+}) {
   return (
     <section className={extras.turnoverCategory}>
       <header><h3>{title}</h3></header>
       <div className={extras.turnoverCategoryRail}>
-        {items.map((item, index) => <TurnoverReminder id={`${prefix}-${index}`} label={item} key={item} />)}
+        {items.map((item, index) => <ClearReminder id={`${prefix}-${index}`} label={item} key={item} />)}
       </div>
       {availability ? <div className={extras.turnoverAvailability}>{availability}</div> : null}
     </section>
   );
 }
 
-function TurnoverCard() {
+function ClearCard() {
   return (
-    <CropCycleBedCard family="Clear / Turn over" familyDetail="bed turnover" timing="After harvest · turnover due" trail={turnoverTrail} trailLabel="Field Row 13 crop-cycle turnover trail" crop="Black oil sunflower" stage="Harvest window Aug 1–6" harvest="Next sowing Aug 16">
+    <CropCycleBedCard
+      family="Clear"
+      familyDetail="bed turnover"
+      timing="After harvest · clearing due"
+      trail={clearTrail}
+      trailLabel="Field Row 13 crop-cycle clearing trail"
+      crop="Black oil sunflower"
+      stage="Harvest window Aug 1–6"
+      harvest="Next sowing Aug 16"
+    >
       <BedMap cropLabel="Black oil sunflower" />
       <section className={extras.turnoverMethod}>
         <div className={extras.turnoverMethodKey}>tap to cross off</div>
-        {turnoverCategories.map((category) => <TurnoverCategory title={category.title} items={category.items} availability={"availability" in category ? category.availability : undefined} prefix={`turnover-${category.title.toLowerCase()}`} key={category.title} />)}
+        {clearCategories.map((category) => (
+          <ClearCategory
+            title={category.title}
+            items={category.items}
+            availability={"availability" in category ? category.availability : undefined}
+            prefix={`clear-${category.title.toLowerCase()}`}
+            key={category.title}
+          />
+        ))}
       </section>
       <section className={extras.harvestHistory}>
         <header><span>Harvest</span></header>
@@ -326,7 +429,9 @@ function TurnoverCard() {
           <div><small>Harvest-window tasks</small><strong>3</strong></div>
         </div>
         <div className={extras.harvestTaskList}>
-          {harvestTaskHistory.map((item) => <div key={`${item.date}-${item.detail}`}><span>{item.date}</span><strong>{item.detail}</strong></div>)}
+          {harvestTaskHistory.map((item) => (
+            <div key={`${item.date}-${item.detail}`}><span>{item.date}</span><strong>{item.detail}</strong></div>
+          ))}
         </div>
       </section>
     </CropCycleBedCard>
@@ -339,10 +444,10 @@ export default function WeedCardSpecimen() {
       <WeedCard />
       <div className={extras.variantLabel}><span>Same crop-cycle bed shell · irrigation care pulse</span></div>
       <IrrigationCard />
-      <div className={extras.variantLabel}><span>Same crop-cycle bed shell · germination observation</span></div>
+      <div className={extras.variantLabel}><span>Same crop-cycle bed shell · germination logging</span></div>
       <GerminationCard />
-      <div className={extras.variantLabel}><span>Same crop-cycle bed shell · clear / turn over variant</span></div>
-      <TurnoverCard />
+      <div className={extras.variantLabel}><span>Same crop-cycle bed shell · clear variant</span></div>
+      <ClearCard />
     </div>
   );
 }
