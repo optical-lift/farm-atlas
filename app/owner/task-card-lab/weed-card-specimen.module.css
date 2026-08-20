@@ -22,7 +22,8 @@
 .familyRow > span,
 .results > header > span,
 .finish > span,
-.cropState > span {
+.cropState > span,
+.bedMap > header > span {
   color: #858bb8;
   font-size: 10px;
   line-height: 1;
@@ -159,7 +160,7 @@
   gap: 7px;
   padding: 18px;
   border-bottom: 1px solid rgba(215, 204, 189, 0.62);
-  background: linear-gradient(180deg, rgba(238, 242, 219, 0.58), rgba(255, 255, 255, 0));
+  background: #fff;
 }
 
 .cropState > strong {
@@ -186,6 +187,101 @@
   font-size: 9px;
   line-height: 1;
   font-weight: 880;
+}
+
+.bedMap {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+  background: rgba(248, 246, 238, 0.5);
+}
+
+.bedMap > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bedMap > header small {
+  color: #8b8c84;
+  font-size: 8px;
+  line-height: 1.15;
+  font-weight: 760;
+  text-align: right;
+}
+
+.mapMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mapMeta b {
+  width: fit-content;
+  border: 1px solid rgba(139, 145, 194, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #6a6c64;
+  padding: 6px 8px;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.mapSegments {
+  display: grid;
+  gap: 12px;
+}
+
+.mapSegments figure {
+  min-width: 0;
+  margin: 0;
+}
+
+.mapSegments figcaption {
+  margin: 0 0 5px;
+  color: #7a7c75;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mapSegments pre {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0;
+  color: #54585a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 7.4px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  white-space: pre;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mapLegend {
+  color: #85867f;
+  font-size: 8px;
+  line-height: 1.2;
+  font-weight: 760;
+}
+
+.mapLegend code {
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  margin-right: 4px;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 50%;
+  background: #fff;
+  color: #565a5c;
+  font-size: 10px;
+  font-weight: 900;
 }
 
 .results {
@@ -335,10 +431,19 @@
 @media (max-width: 520px) {
   .header,
   .cropState,
+  .bedMap,
   .results,
   .finish {
     padding-left: 16px;
     padding-right: 16px;
+  }
+
+  .bedMap > header {
+    align-items: flex-start;
+  }
+
+  .mapSegments pre {
+    font-size: 7px;
   }
 
   .logPanel {
