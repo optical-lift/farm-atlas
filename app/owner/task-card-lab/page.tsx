@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CheckCardSpecimen, WaterCareCardSpecimen } from "./CropCareCardSpecimen";
 import HarvestCardSpecimen from "./HarvestCardSpecimen";
 import MowCardSpecimen from "./MowCardSpecimen";
+import PlantMoveCardSpecimen from "./PlantMoveCardSpecimen";
 import SowCardSpecimen from "./SowCardSpecimen";
 import VenueCardSpecimen from "./VenueCardSpecimen";
 import WeedCardSpecimen from "./WeedCardSpecimen";
@@ -124,26 +125,16 @@ const cards: CardSpec[] = [
     finish: "Observation recorded",
   },
   {
-    family: "Transplant",
-    variant: "tray to field",
-    title: "Move 15 Zinnias",
-    place: "Grow Room → Curve Garden",
-    timing: "Today · destination prepared",
-    play: "Move the selected zinnias from the source tray into the prepared Curve Garden strip and establish them there.",
-    desiredLabel: "Finished move should be",
-    desired: ["15 plants in destination · correct spacing · watered immediately"],
-    facts: [
-      { label: "Count", value: "15" },
-      { label: "Source", value: "Grow Room" },
-      { label: "Destination", value: "Curve Garden" },
-      { label: "Aftercare", value: "Water immediately" },
-    ],
-    resources: [
-      { label: "Zinnia tray", kind: "Living crop", state: "15 selected", actions: ["Count changed", "Damage / loss", "Plants remain", "Request change"] },
-      { label: "Curve Garden strip", kind: "Managed place", state: "Prepared", actions: ["Choose a new state", "Something changed", "Add note", "Request change"] },
-    ],
-    finish: "Transplant complete",
-    partial: "Some plants remain",
+    family: "Plant / Move",
+    variant: "transplant + divide",
+    title: "Destination-led movement",
+    place: "Living material moves into its next physical place",
+    timing: "",
+    play: "Transplant, Plant, Divide + Plant, and Move + Replant share one movement grammar while preserving the destination Trail.",
+    desiredLabel: "Movement",
+    desired: [],
+    finish: "Living material established",
+    partial: "Blocked",
   },
 ];
 
@@ -262,6 +253,7 @@ export default function TaskCardLabPage() {
         <p>
           Every current Dominion family, fully exposed in one vertical scroll. These are fixture-only CSS mockups: no task feed, no scheduling, no Supabase writes.
         </p>
+        <a href="/owner/grow-room-lab">Next system: Grow Room Board →</a>
       </header>
 
       <nav className={styles.jumpNav} aria-label="Jump to task family">
@@ -287,7 +279,9 @@ export default function TaskCardLabPage() {
                         ? <WaterCareCardSpecimen />
                         : index === 6
                           ? <CheckCardSpecimen />
-                          : <TaskCard card={card} index={index} />}
+                          : index === 7
+                            ? <PlantMoveCardSpecimen />
+                            : <TaskCard card={card} index={index} />}
           </div>
         ))}
       </div>
