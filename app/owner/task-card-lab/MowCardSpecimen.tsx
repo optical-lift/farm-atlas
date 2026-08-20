@@ -1,3 +1,4 @@
+import DominionCardFrame from "./DominionCardFrame";
 import styles from "./mow-card-specimen.module.css";
 
 type EquipmentSection = {
@@ -61,15 +62,7 @@ function RecurrenceTrail() {
 
 export default function MowCardSpecimen() {
   return (
-    <article className={styles.card}>
-      <header className={styles.header}>
-        <div className={styles.familyRow}>
-          <span>Mow</span>
-        </div>
-        <h2>U-Pick Walkways</h2>
-        <p>U-Pick</p>
-      </header>
-
+    <DominionCardFrame family="Mow" title="U-Pick Walkways">
       <RecurrenceTrail />
 
       <section className={styles.heightSection}>
@@ -90,14 +83,6 @@ export default function MowCardSpecimen() {
           </section>
         ))}
       </div>
-
-      <footer className={styles.finish}>
-        <span>Finish mow</span>
-        <div>
-          <button type="button" className={styles.primaryFinish}>Mowed to 3 in</button>
-          <button type="button">Blocked</button>
-        </div>
-      </footer>
-    </article>
+    </DominionCardFrame>
   );
 }
