@@ -88,6 +88,8 @@ function Trail({ steps, label }: { steps: readonly TrailStep[]; label: string })
 
 function CropCycleBedCard({
   family,
+  familyDetail,
+  timing,
   trail,
   trailLabel,
   crop,
@@ -96,6 +98,8 @@ function CropCycleBedCard({
   children,
 }: {
   family: string;
+  familyDetail: string;
+  timing: string;
   trail: readonly TrailStep[];
   trailLabel: string;
   crop: string;
@@ -104,7 +108,7 @@ function CropCycleBedCard({
   children: ReactNode;
 }) {
   return (
-    <DominionCardFrame family={family} title="Field Row 13" subtitle="Field Rows">
+    <DominionCardFrame family={family} familyDetail={familyDetail} title="Field Row 13" subtitle="Field Rows" timing={timing}>
       <Trail steps={trail} label={trailLabel} />
       <section className={styles.cropState}>
         <span>Bed now</span>
@@ -232,7 +236,7 @@ function WeedCard() {
   }, [today]);
 
   return (
-    <CropCycleBedCard family="Weed" trail={weedTrail} trailLabel="Field Row 13 crop-cycle trail" crop="ProCut Orange sunflower" stage={cropTiming.stage} harvest={cropTiming.harvest}>
+    <CropCycleBedCard family="Weed" familyDetail="bed care" timing="Today · weeding due" trail={weedTrail} trailLabel="Field Row 13 crop-cycle trail" crop="ProCut Orange sunflower" stage={cropTiming.stage} harvest={cropTiming.harvest}>
       <BedMap cropLabel="ProCut Orange sunflower" />
       <section className={styles.results}>
         <header><span>How’d we do?</span></header>
@@ -246,7 +250,7 @@ function WeedCard() {
 
 function IrrigationCard() {
   return (
-    <CropCycleBedCard family="Irrigation" trail={irrigationTrail} trailLabel="Field Row 13 crop-cycle trail with irrigation care pulse" crop="ProCut Orange sunflower" stage="Germination window" harvest="Harvest watch Oct 4–14">
+    <CropCycleBedCard family="Irrigation" familyDetail="care pulse" timing="Germination window · irrigate" trail={irrigationTrail} trailLabel="Field Row 13 crop-cycle trail with irrigation care pulse" crop="ProCut Orange sunflower" stage="Germination window" harvest="Harvest watch Oct 4–14">
       <BedMap cropLabel="ProCut Orange sunflower" logChoices={["Dry section", "Runoff", "Crop stress", "Other"]} />
       <section className={variants.careSection}>
         <div className={variants.careFacts}>
@@ -276,7 +280,7 @@ function GerminationCard() {
   const trail = germinationTrail.map((step) => step.label === "Next move" && choice ? { ...step, detail: germinationNext[choice] } : step);
 
   return (
-    <CropCycleBedCard family="Check" trail={trail} trailLabel="Field Row 13 crop-cycle germination trail" crop="ProCut Orange sunflower" stage="Day 4 since sowing" harvest="Harvest watch Oct 4–14">
+    <CropCycleBedCard family="Check" familyDetail="crop check" timing="Germination window · check stand" trail={trail} trailLabel="Field Row 13 crop-cycle germination trail" crop="ProCut Orange sunflower" stage="Day 4 since sowing" harvest="Harvest watch Oct 4–14">
       <BedMap cropLabel="ProCut Orange sunflower" logChoices={["Patchy", "Crop missing", "Late emergence", "Other"]} />
       <section className={variants.checkSection}>
         <div className={variants.checkPrompt}>Did enough emerge to keep this planting?</div>
@@ -309,7 +313,7 @@ function TurnoverCategory({ title, items, availability, prefix }: { title: strin
 
 function TurnoverCard() {
   return (
-    <CropCycleBedCard family="Clear / Turn over" trail={turnoverTrail} trailLabel="Field Row 13 crop-cycle turnover trail" crop="Black oil sunflower" stage="Harvest window Aug 1–6" harvest="Next sowing Aug 16">
+    <CropCycleBedCard family="Clear / Turn over" familyDetail="bed turnover" timing="After harvest · turnover due" trail={turnoverTrail} trailLabel="Field Row 13 crop-cycle turnover trail" crop="Black oil sunflower" stage="Harvest window Aug 1–6" harvest="Next sowing Aug 16">
       <BedMap cropLabel="Black oil sunflower" />
       <section className={extras.turnoverMethod}>
         <div className={extras.turnoverMethodKey}>tap to cross off</div>
