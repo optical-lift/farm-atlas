@@ -2,25 +2,54 @@ import styles from "./venue-card-specimen.module.css";
 
 type VenueResource = {
   label: string;
+  restockLabel?: string;
 };
 
-type VenueStation = {
+type VenueSection = {
   id: string;
   title: string;
   location?: string;
   resources: VenueResource[];
 };
 
-const stations: VenueStation[] = [
+const tidySections: VenueSection[] = [
+  {
+    id: "library",
+    title: "Library",
+    resources: [
+      { label: "Tidy chairs" },
+      { label: "Beat rug outside" },
+      { label: "Clean windows" },
+    ],
+  },
+  {
+    id: "conference-room",
+    title: "Conference room",
+    resources: [
+      { label: "Tidy chairs" },
+      { label: "Clean windows" },
+    ],
+  },
+  {
+    id: "kitchen",
+    title: "Kitchen",
+    resources: [
+      { label: "Empty trash", restockLabel: "Trash bags" },
+      { label: "Clean counters" },
+    ],
+  },
+];
+
+const prepSections: VenueSection[] = [
   {
     id: "coffee-bar",
     title: "Coffee bar",
     location: "Dining room",
     resources: [
       { label: "Keurig" },
-      { label: "Coffee grounds" },
-      { label: "Milk" },
-      { label: "Flavored syrup" },
+      { label: "Coffee grounds", restockLabel: "Coffee grounds" },
+      { label: "Milk", restockLabel: "Milk" },
+      { label: "Flavored syrup", restockLabel: "Flavored syrup" },
       { label: "Mug hutch" },
     ],
   },
@@ -30,7 +59,7 @@ const stations: VenueStation[] = [
     location: "Dining room",
     resources: [
       { label: "Water dispenser" },
-      { label: "Clear cups" },
+      { label: "Clear cups", restockLabel: "Clear cups" },
     ],
   },
   {
@@ -68,58 +97,98 @@ function ReminderRow({ resource, id }: { resource: VenueResource; id: string }) 
       <label className={styles.reminderCheck} htmlFor={id}>
         <strong>{resource.label}</strong>
       </label>
-      <RestockDrawer label={resource.label} />
+      {resource.restockLabel ? <RestockDrawer label={resource.restockLabel} /> : null}
     </div>
   );
 }
 
-function RoomReminderRow({ label, id }: { label: string; id: string }) {
-  return (
-    <div className={styles.reminderRow}>
-      <input className={styles.reminderToggle} id={id} type="checkbox" />
-      <label className={styles.reminderCheck} htmlFor={id}>
-        <strong>{label}</strong>
-      </label>
-      <details className={styles.restockDrawer}>
-        <summary aria-label={`Add a note about ${label}`} title={`Add a note about ${label}`}>
-          <span aria-hidden="true">+</span>
-        </summary>
-        <div className={styles.restockPanel}>
-          <label>
-            <span>Note</span>
-            <input type="text" placeholder="Add note…" />
-          </label>
-        </div>
-      </details>
-    </div>
-  );
-}
+const trailSteps = ["Tidy", "Prep", "Host", "Reset"] as const;
+type TrailStep = (typeof trailSteps)[number];
 
-function EventTrail({ current }: { current: "prep" | "host" }) {
+function EventTrail({ current }: { current: Lowercase<TrailStep> }) {
+  const currentIndex = trailSteps.findIndex((step) => step.toLowerCase() === current);
+
   return (
     <div className={styles.trail} aria-label="Community Thursday task dependency trail">
-      <span className={current === "host" ? styles.trailDone : styles.trailNow}>
-        <b>Prep</b>
-        <small>Community Thursday</small>
-      </span>
-      <span className={current === "host" ? styles.trailNow : styles.trailLocked}>
-        <b>Host</b>
-        <small>Community Thursday</small>
-      </span>
-      <span className={styles.trailLocked}>
-        <b>Reset</b>
-        <small>Community Thursday</small>
-      </span>
+      {trailSteps.map((step, index) => {
+        const stateClass = index < currentIndex
+          ? styles.trailDone
+          : index === currentIndex
+            ? styles.trailNow
+            : styles.trailLocked;
+
+        return (
+          <span className={stateClass} key={step}>
+            <b>{step}</b>
+            <small>Community Thursday</small>
+          </span>
+        );
+      })}
     </div>
   );
 }
 
-function PrepKey() {
+function ReminderKey() {
   return (
-    <div className={styles.rowKey} aria-label="Venue prep reminder controls">
+    <div className={styles.rowKey} aria-label="Venue reminder controls">
       <span>tap to cross off</span>
       <span><b>+</b> request restock</span>
     </div>
+  );
+}
+
+function ReminderSections({ sections, prefix }: { sections: VenueSection[]; prefix: string }) {
+  return (
+    <div className={styles.stations}>
+      {sections.map((section) => (
+        <section className={styles.station} key={section.title}>
+          <header className={styles.stationHeader}>
+            <div>
+              <h3>{section.title}</h3>
+              {section.location ? <span>{section.location}</span> : null}
+            </div>
+          </header>
+          <div className={styles.resourceList}>
+            {section.resources.map((resource, index) => (
+              <ReminderRow
+                resource={resource}
+                id={`${prefix}-${section.id}-${index}`}
+                key={resource.label}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function TidyCard() {
+  return (
+    <article className={styles.card}>
+      <header className={styles.header}>
+        <div className={styles.familyRow}>
+          <span>Venue</span>
+          <small>weekly event template</small>
+        </div>
+        <h2>Tidy Community Thursday</h2>
+        <p>Community Thursday · Elm Farm</p>
+        <div className={styles.timing}>Wednesday · whole-space tidy</div>
+      </header>
+
+      <EventTrail current="tidy" />
+      <ReminderKey />
+      <ReminderSections sections={tidySections} prefix="tidy" />
+
+      <footer className={styles.finish}>
+        <span>Finish Tidy</span>
+        <div>
+          <button type="button" className={styles.primaryFinish}>Tidy complete</button>
+          <button type="button">Something remains</button>
+        </div>
+        <small>The crossed-off rows are memory aids, not completion gates. Finishing Tidy unlocks Prep.</small>
+      </footer>
+    </article>
   );
 }
 
@@ -137,29 +206,8 @@ function PrepCard() {
       </header>
 
       <EventTrail current="prep" />
-      <PrepKey />
-
-      <div className={styles.stations}>
-        {stations.map((station) => (
-          <section className={styles.station} key={station.title}>
-            <header className={styles.stationHeader}>
-              <div>
-                <h3>{station.title}</h3>
-                {station.location ? <span>{station.location}</span> : null}
-              </div>
-            </header>
-            <div className={styles.resourceList}>
-              {station.resources.map((resource, index) => (
-                <ReminderRow
-                  resource={resource}
-                  id={`prep-${station.id}-${index}`}
-                  key={resource.label}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
+      <ReminderKey />
+      <ReminderSections sections={prepSections} prefix="prep" />
 
       <footer className={styles.finish}>
         <span>Finish Prep</span>
@@ -167,7 +215,7 @@ function PrepCard() {
           <button type="button" className={styles.primaryFinish}>Prep complete</button>
           <button type="button">Something is not ready</button>
         </div>
-        <small>The reminder marks above are optional memory aids. They do not gate Prep completion.</small>
+        <small>The crossed-off rows are memory aids, not completion gates. Finishing Prep unlocks Host.</small>
       </footer>
     </article>
   );
@@ -222,44 +270,7 @@ function HostCard() {
           <button type="button" className={styles.primaryFinish}>Event open</button>
           <button type="button">Blocked</button>
         </div>
-        <small>Host is a true execution checklist, so it uses the original Atlas checklist grammar.</small>
-      </footer>
-    </article>
-  );
-}
-
-function GuestRoomsCard() {
-  const rooms = [
-    "Library · visibly guest-ready",
-    "Meeting room · visibly guest-ready",
-    "Kitchen · trash cleared",
-  ];
-
-  return (
-    <article className={`${styles.card} ${styles.roomCard}`}>
-      <header className={styles.header}>
-        <div className={styles.familyRow}>
-          <span>Venue</span>
-          <small>room reset</small>
-        </div>
-        <h2>Guest rooms</h2>
-        <p>Library · Meeting room · Kitchen</p>
-        <div className={styles.timing}>Before guests arrive</div>
-      </header>
-
-      <div className={styles.roomRows}>
-        {rooms.map((room, index) => (
-          <RoomReminderRow label={room} id={`guest-room-${index}`} key={room} />
-        ))}
-      </div>
-
-      <footer className={styles.finish}>
-        <span>Finish Guest rooms</span>
-        <div>
-          <button type="button" className={styles.primaryFinish}>Rooms ready</button>
-          <button type="button">Something remains</button>
-        </div>
-        <small>Room checks are reminders, not completion gates, unless a future Venue variant explicitly defines them as execution steps.</small>
+        <small>Host is a true execution checklist, so its steps use the shared Atlas checklist grammar.</small>
       </footer>
     </article>
   );
@@ -268,32 +279,32 @@ function GuestRoomsCard() {
 export default function VenueCardSpecimen() {
   return (
     <div className={styles.venueSpecimen}>
+      <TidyCard />
+
+      <div className={styles.nextVariantLabel}>
+        <span>Same repeating event · unlocked next</span>
+      </div>
+
       <PrepCard />
 
       <aside className={styles.templateTruth}>
-        <span>Template truth · owner-only note</span>
+        <span>Venue grammar · owner-only note</span>
         <p>
-          Community Thursday repeats as one governed event cycle. Prep unlocks Host; Host can unlock Reset. Readiness requirements such as mowing being current by the day before the event belong to the event template but do not appear as Worker Trail nodes.
+          Community Thursday is one governed repeating event cycle: Tidy → Prep → Host → Reset. Hidden readiness requirements such as mowing being current by the day before the event affect release, but they do not become Worker-facing Trail nodes.
         </p>
         <p>
-          Prep and room-reset rows are reminders: tapping the resource itself simply crosses out what Anna has looked at, and none of those marks are required to complete the task. The + affordance is reserved for the tiny Restock / Note request drawer.
+          Every Venue task uses one of only two interaction methods. Instructional / resource cards use titled rooms or stations with tap-to-cross-off reminders and a + only where a restock request makes sense. Execution cards use the shared Atlas checklist for actions that must actually be accomplished.
         </p>
         <p>
-          Host is different because its rows are genuine state-changing actions. It therefore uses the first Atlas checklist visual grammar recovered from July 6: a rounded task row with a round completion control.
+          One-off Venue work does not invent a third card style. Stringing lights can use the checklist method. Painting the doors purple can use the instructional / resource method with Entry room ↔ Library as location context and Purple paint, Drop cloth, Roller, and Brush as the live resources.
         </p>
       </aside>
 
       <div className={styles.nextVariantLabel}>
-        <span>Same Venue family · next unlocked task</span>
+        <span>Same repeating event · unlocked next</span>
       </div>
 
       <HostCard />
-
-      <div className={styles.nextVariantLabel}>
-        <span>Same Venue family · room reset variant</span>
-      </div>
-
-      <GuestRoomsCard />
     </div>
   );
 }
