@@ -91,9 +91,9 @@ test("narrow Home date rows prioritize the useful range over repeated labels", (
   assert.match(shellCss, /atlas-home-overview-row-link b[\s\S]*text-overflow: ellipsis/);
 });
 
-test("the floating Bell is universal to operational projections, header-aware, role-aware, and absent from Principal root", () => {
+test("Bell is intentionally absent from operational globals while its implementation remains preserved", () => {
   assert.match(layout, /<AtlasOperationalProjectionGlobals/);
-  assert.match(operationalGlobals, /<AtlasBellCover \/>/);
+  assert.doesNotMatch(operationalGlobals, /AtlasBellCover/);
   assert.match(operationalGlobals, /if \(isPrincipalProjection\(pathname\)\) return null/);
   assert.doesNotMatch(page, /AtlasBellCover/);
   assert.match(bellCover, /visibleHeaderBottom/);
