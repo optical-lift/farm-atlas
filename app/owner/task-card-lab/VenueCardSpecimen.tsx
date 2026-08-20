@@ -14,6 +14,13 @@ type VenueSection = {
 
 const tidySections: VenueSection[] = [
   {
+    id: "entry",
+    title: "Entry",
+    resources: [
+      { label: "Closet closed" },
+    ],
+  },
+  {
     id: "library",
     title: "Library",
     resources: [
@@ -293,7 +300,10 @@ export default function VenueCardSpecimen() {
           Community Thursday is one governed repeating event cycle: Tidy → Prep → Host → Reset. Hidden readiness requirements such as mowing being current by the day before the event affect release, but they do not become Worker-facing Trail nodes.
         </p>
         <p>
-          Every Venue task uses one of only two interaction methods. Instructional / resource cards use titled rooms or stations with tap-to-cross-off reminders and a + only where a restock request makes sense. Execution cards use the shared Atlas checklist for actions that must actually be accomplished.
+          Every Venue task uses one of only two interaction methods. Instructional / resource cards use titled rooms or stations connected by the same quiet dot-and-line visual language as the Day Overview, with tap-to-cross-off reminders and a + only where a restock request makes sense. Execution cards use the shared Atlas checklist for actions that must actually be accomplished.
+        </p>
+        <p>
+          Restock requests stay inline beneath the exact resource that raised them; the + remains a compact circular exception affordance. Note inputs use iOS-safe text sizing so opening the keyboard does not zoom the card.
         </p>
         <p>
           One-off Venue work does not invent a third card style. Stringing lights can use the checklist method. Painting the doors purple can use the instructional / resource method with Entry room ↔ Library as location context and Purple paint, Drop cloth, Roller, and Brush as the live resources.
