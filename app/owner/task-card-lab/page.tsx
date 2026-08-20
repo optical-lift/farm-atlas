@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import VenueCardSpecimen from "./VenueCardSpecimen";
 import styles from "./task-card-lab.module.css";
 
 export const metadata: Metadata = {
@@ -36,30 +37,15 @@ type CardSpec = {
 
 const cards: CardSpec[] = [
   {
-    family: "Setup / Reset",
-    variant: "station setup",
-    title: "Coffee + Water",
-    place: "Community Morning · Coffee bar + dining room",
-    timing: "Today · before guests arrive",
-    play: "Prepare the coffee and water stations so guests can serve themselves without Anna managing the station.",
-    desiredLabel: "Stations should be",
-    desired: [
-      "Coffee station · Keurig ready · mugs available from the mug hutch",
-      "Water station · dispenser full · clear cups arranged on the tray beside it",
-    ],
-    facts: [
-      { label: "Coffee station", value: "Coffee bar" },
-      { label: "Water station", value: "Dining room" },
-      { label: "Guest flow", value: "Self-serve" },
-    ],
-    references: ["Guests may choose a mug from the mug hutch."],
-    resources: [
-      { label: "Coffee", kind: "Consumable", state: "On hand", actions: ["Running low", "Out", "Estimate remaining", "Request change"] },
-      { label: "Keurig", kind: "Equipment", state: "Ready", actions: ["Problem", "Broken / cannot use", "Working again", "Request change"] },
-      { label: "Clear cups", kind: "Consumable", state: "On hand", actions: ["Running low", "Out", "Count remaining", "Request change"] },
-      { label: "Water dispenser", kind: "Equipment", state: "Ready", actions: ["Needs refill", "Problem", "Working again", "Request change"] },
-    ],
-    finish: "Stations ready",
+    family: "Venue",
+    variant: "recurring event cycle",
+    title: "Prep Community Thursday",
+    place: "Community Thursday · Elm Farm",
+    timing: "Wednesday · night-before prep",
+    play: "Venue uses its own approved specimen below.",
+    desiredLabel: "Venue stations",
+    desired: [],
+    finish: "Prep complete",
     partial: "Something is not ready",
   },
   {
@@ -342,7 +328,7 @@ export default function TaskCardLabPage() {
       <div className={styles.gallery}>
         {cards.map((card, index) => (
           <div id={`task-card-${index + 1}`} key={`${card.family}-${card.variant}`} className={styles.cardAnchor}>
-            <TaskCard card={card} index={index} />
+            {index === 0 ? <VenueCardSpecimen /> : <TaskCard card={card} index={index} />}
           </div>
         ))}
       </div>
