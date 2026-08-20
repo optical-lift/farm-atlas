@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import DominionCardFrame from "./DominionCardFrame";
 import styles from "./weed-card-specimen.module.css";
 import extras from "./weed-turnover-additions.module.css";
+import variants from "./crop-cycle-bed-variants.module.css";
 
 const SOWN_ON = new Date("2026-08-16T12:00:00-05:00");
 const HARVEST_START = new Date("2026-10-04T12:00:00-05:00");
@@ -22,6 +23,22 @@ const weedTrail = [
   { label: "Harvest", detail: "Oct 4–14", state: "later" },
 ] as const;
 
+const irrigationTrail = [
+  { label: "Sown", detail: "Aug 16 · Orange", state: "done" },
+  { label: "Irrigate", detail: "care pulse", state: "now" },
+  { label: "Germination", detail: "Aug 20–26", state: "later" },
+  { label: "Tend", detail: "protect crop", state: "later" },
+  { label: "Harvest", detail: "Oct 4–14", state: "later" },
+] as const;
+
+const germinationTrail = [
+  { label: "Sown", detail: "Aug 16 · Orange", state: "done" },
+  { label: "Germination", detail: "check stand", state: "now" },
+  { label: "Next move", detail: "from result", state: "later" },
+  { label: "Tend", detail: "protect crop", state: "later" },
+  { label: "Harvest", detail: "Oct 4–14", state: "later" },
+] as const;
+
 const turnoverTrail = [
   { label: "Sown", detail: "Jun 7 · black oil", state: "done" },
   { label: "Harvest", detail: "Aug 1–6", state: "done" },
@@ -29,6 +46,12 @@ const turnoverTrail = [
   { label: "Sow", detail: "Aug 16 · Orange", state: "later" },
   { label: "Harvest", detail: "Oct 4–14", state: "later" },
 ] as const;
+
+type TrailStep = {
+  label: string;
+  detail: string;
+  state: string;
+};
 
 const turnoverCategories = [
   { title: "Clear", items: ["Cut at soil level", "Take to compost"] },
@@ -50,19 +73,46 @@ function dayDiff(from: Date, to: Date) {
   return Math.max(0, Math.round((to.getTime() - from.getTime()) / 86_400_000));
 }
 
-function Trail({ steps, label }: { steps: readonly { label: string; detail: string; state: string }[]; label: string }) {
+function Trail({ steps, label }: { steps: readonly TrailStep[]; label: string }) {
   return (
     <div className={styles.trail} aria-label={label}>
       {steps.map((step) => (
-        <span
-          className={step.state === "done" ? styles.trailDone : step.state === "now" ? styles.trailNow : styles.trailLater}
-          key={`${step.label}-${step.detail}`}
-        >
+        <span className={step.state === "done" ? styles.trailDone : step.state === "now" ? styles.trailNow : styles.trailLater} key={`${step.label}-${step.detail}`}>
           <b>{step.label}</b>
           <small>{step.detail}</small>
         </span>
       ))}
     </div>
+  );
+}
+
+function CropCycleBedCard({
+  family,
+  trail,
+  trailLabel,
+  crop,
+  stage,
+  harvest,
+  children,
+}: {
+  family: string;
+  trail: readonly TrailStep[];
+  trailLabel: string;
+  crop: string;
+  stage: string;
+  harvest: string;
+  children: ReactNode;
+}) {
+  return (
+    <DominionCardFrame family={family} title="Field Row 13" subtitle="Field Rows">
+      <Trail steps={trail} label={trailLabel} />
+      <section className={styles.cropState}>
+        <span>Bed now</span>
+        <strong>{crop}</strong>
+        <div><b>{stage}</b><b>{harvest}</b></div>
+      </section>
+      {children}
+    </DominionCardFrame>
   );
 }
 
@@ -82,13 +132,13 @@ function LogItDrawer() {
       <summary>Log it</summary>
       <div className={styles.logPanel}>
         <input type="text" placeholder="Add note…" aria-label="Add a weeding note" />
-        <button type="button">Save note</button>
+        <button type="button">Save log</button>
       </div>
     </details>
   );
 }
 
-function BedMap({ cropLabel }: { cropLabel: string }) {
+function BedMap({ cropLabel, logChoices = ["Deer damage", "Crop missing", "Extra weedy", "Other"] }: { cropLabel: string; logChoices?: string[] }) {
   const [selectedBlock, setSelectedBlock] = useState(0);
   const [logMode, setLogMode] = useState(false);
   const [loggedBlocks, setLoggedBlocks] = useState<number[]>([0]);
@@ -142,7 +192,7 @@ function BedMap({ cropLabel }: { cropLabel: string }) {
         {logMode ? (
           <div className={extras.mapLogPanel}>
             <div className={extras.mapLogPills}>
-              <button type="button">Deer damage</button><button type="button">Crop missing</button><button type="button">Extra weedy</button><button type="button">Other</button>
+              {logChoices.map((choice) => <button type="button" key={choice}>{choice}</button>)}
             </div>
             <div className={extras.mapLogNote}>
               <input type="text" placeholder="Add note…" aria-label="Add a bed-section note" />
@@ -153,6 +203,17 @@ function BedMap({ cropLabel }: { cropLabel: string }) {
       </div>
       <div className={styles.mapLegend}><code>o</code> sunflower square</div>
     </section>
+  );
+}
+
+function CropIssueDrawer({ label, choices }: { label: string; choices: string[] }) {
+  return (
+    <details className={variants.issueDrawer}>
+      <summary aria-label={`Log an issue with ${label}`} title={`Log an issue with ${label}`}><span aria-hidden="true">+</span></summary>
+      <div className={variants.issuePanel}>
+        {choices.map((choice) => <button type="button" key={choice}>{choice}</button>)}
+      </div>
+    </details>
   );
 }
 
@@ -171,12 +232,7 @@ function WeedCard() {
   }, [today]);
 
   return (
-    <DominionCardFrame family="Weed" title="Field Row 13">
-      <Trail steps={weedTrail} label="Field Row 13 history and next crop-cycle moves" />
-      <section className={styles.cropState}>
-        <span>Bed now</span><strong>ProCut Orange sunflower</strong>
-        <div><b>{cropTiming.stage}</b><b>{cropTiming.harvest}</b></div>
-      </section>
+    <CropCycleBedCard family="Weed" trail={weedTrail} trailLabel="Field Row 13 crop-cycle trail" crop="ProCut Orange sunflower" stage={cropTiming.stage} harvest={cropTiming.harvest}>
       <BedMap cropLabel="ProCut Orange sunflower" />
       <section className={styles.results}>
         <header><span>How’d we do?</span></header>
@@ -184,7 +240,54 @@ function WeedCard() {
           <ResultPill label="Still rough" /><ResultPill label="Crop readable" /><ResultPill label="Clear" /><LogItDrawer />
         </div>
       </section>
-    </DominionCardFrame>
+    </CropCycleBedCard>
+  );
+}
+
+function IrrigationCard() {
+  return (
+    <CropCycleBedCard family="Irrigation" trail={irrigationTrail} trailLabel="Field Row 13 crop-cycle trail with irrigation care pulse" crop="ProCut Orange sunflower" stage="Germination window" harvest="Harvest watch Oct 4–14">
+      <BedMap cropLabel="ProCut Orange sunflower" logChoices={["Dry section", "Runoff", "Crop stress", "Other"]} />
+      <section className={variants.careSection}>
+        <div className={variants.careFacts}>
+          <div><small>Method</small><strong>Hose line</strong></div>
+          <div><small>Enough</small><strong>Evenly moist</strong></div>
+        </div>
+        <div className={variants.resourceRow}>
+          <div><span>Water source</span><strong>Field Rows hose line</strong><small>Available</small></div>
+          <CropIssueDrawer label="Field Rows hose line" choices={["Won't run", "Leak", "Low pressure", "Other"]} />
+        </div>
+      </section>
+    </CropCycleBedCard>
+  );
+}
+
+type GerminationChoice = "Strong" | "Patchy" | "Failed" | "Too early to tell";
+
+const germinationNext: Record<GerminationChoice, string> = {
+  Strong: "Continue",
+  Patchy: "Gap fill",
+  Failed: "Restart",
+  "Too early to tell": "Wait",
+};
+
+function GerminationCard() {
+  const [choice, setChoice] = useState<GerminationChoice | null>(null);
+  const trail = germinationTrail.map((step) => step.label === "Next move" && choice ? { ...step, detail: germinationNext[choice] } : step);
+
+  return (
+    <CropCycleBedCard family="Check" trail={trail} trailLabel="Field Row 13 crop-cycle germination trail" crop="ProCut Orange sunflower" stage="Day 4 since sowing" harvest="Harvest watch Oct 4–14">
+      <BedMap cropLabel="ProCut Orange sunflower" logChoices={["Patchy", "Crop missing", "Late emergence", "Other"]} />
+      <section className={variants.checkSection}>
+        <div className={variants.checkPrompt}>Did enough emerge to keep this planting?</div>
+        <div className={variants.checkChoices}>
+          {(Object.keys(germinationNext) as GerminationChoice[]).map((item) => (
+            <button type="button" data-active={choice === item ? "true" : "false"} key={item} onClick={() => setChoice(item)}>{item}</button>
+          ))}
+        </div>
+        {choice ? <div className={variants.nextMove}><small>Next</small><strong>{germinationNext[choice]}</strong></div> : null}
+      </section>
+    </CropCycleBedCard>
   );
 }
 
@@ -206,12 +309,7 @@ function TurnoverCategory({ title, items, availability, prefix }: { title: strin
 
 function TurnoverCard() {
   return (
-    <DominionCardFrame family="Clear / Turn over" title="Field Row 13">
-      <Trail steps={turnoverTrail} label="Field Row 13 turnover and next bed task" />
-      <section className={styles.cropState}>
-        <span>Bed now</span><strong>Black oil sunflower</strong>
-        <div><b>Harvest window Aug 1–6</b><b>Next sowing Aug 16</b></div>
-      </section>
+    <CropCycleBedCard family="Clear / Turn over" trail={turnoverTrail} trailLabel="Field Row 13 crop-cycle turnover trail" crop="Black oil sunflower" stage="Harvest window Aug 1–6" harvest="Next sowing Aug 16">
       <BedMap cropLabel="Black oil sunflower" />
       <section className={extras.turnoverMethod}>
         <div className={extras.turnoverMethodKey}>tap to cross off</div>
@@ -227,7 +325,7 @@ function TurnoverCard() {
           {harvestTaskHistory.map((item) => <div key={`${item.date}-${item.detail}`}><span>{item.date}</span><strong>{item.detail}</strong></div>)}
         </div>
       </section>
-    </DominionCardFrame>
+    </CropCycleBedCard>
   );
 }
 
@@ -235,7 +333,11 @@ export default function WeedCardSpecimen() {
   return (
     <div className={extras.weedSpecimen}>
       <WeedCard />
-      <div className={extras.variantLabel}><span>Same bed shell · clear / turn over variant</span></div>
+      <div className={extras.variantLabel}><span>Same crop-cycle bed shell · irrigation care pulse</span></div>
+      <IrrigationCard />
+      <div className={extras.variantLabel}><span>Same crop-cycle bed shell · germination observation</span></div>
+      <GerminationCard />
+      <div className={extras.variantLabel}><span>Same crop-cycle bed shell · clear / turn over variant</span></div>
       <TurnoverCard />
     </div>
   );
