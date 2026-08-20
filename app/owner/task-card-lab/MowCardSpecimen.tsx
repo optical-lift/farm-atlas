@@ -1,4 +1,5 @@
 import DominionCardFrame from "./DominionCardFrame";
+import variantStyles from "./mow-card-variants.module.css";
 import styles from "./mow-card-specimen.module.css";
 
 type EquipmentSection = {
@@ -38,10 +39,7 @@ function IssueDrawer({ section }: { section: EquipmentSection }) {
         <div className={styles.issuePills}>
           {section.issues.map((issue) => <button key={issue} type="button">{issue}</button>)}
         </div>
-        <label>
-          <span>Note</span>
-          <input type="text" placeholder="What happened?" />
-        </label>
+        <label><span>Note</span><input type="text" placeholder="What happened?" /></label>
       </div>
     </details>
   );
@@ -61,12 +59,7 @@ function MowVariant({ title, zone, previous, current, next, equipment }: MowVari
   return (
     <DominionCardFrame family="Mow" title={title} subtitle={zone}>
       <RecurrenceTrail title={title} previous={previous} current={current} next={next} />
-
-      <section className={styles.heightSection}>
-        <span>Mow height</span>
-        <strong>3 in</strong>
-      </section>
-
+      <section className={styles.heightSection}><span>Mow height</span><strong>3 in</strong></section>
       <div className={styles.equipmentList}>
         <section className={styles.equipmentSection}>
           <header className={styles.equipmentHeader}><h3>{equipment.title}</h3></header>
@@ -80,7 +73,7 @@ function MowVariant({ title, zone, previous, current, next, equipment }: MowVari
 
 export default function MowCardSpecimen() {
   return (
-    <div className={styles.mowSpecimen}>
+    <div className={variantStyles.mowSpecimen}>
       <MowVariant
         title="U-Pick Walkways"
         zone="U-Pick"
@@ -89,7 +82,7 @@ export default function MowCardSpecimen() {
         next="Aug 26"
         equipment={ridingMower}
       />
-      <div className={styles.variantLabel}><span>Same Mow family · different route, different required resource</span></div>
+      <div className={variantStyles.variantLabel}><span>Same Mow family · different route, different required resource</span></div>
       <MowVariant
         title="Field Rows Back Half"
         zone="Field Rows"
