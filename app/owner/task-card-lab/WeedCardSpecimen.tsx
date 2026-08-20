@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import styles from "./weed-card-specimen.module.css";
+import extras from "./weed-turnover-additions.module.css";
 
 const SOWN_ON = new Date("2026-08-16T12:00:00-05:00");
 const HARVEST_START = new Date("2026-10-04T12:00:00-05:00");
@@ -87,9 +88,7 @@ function BedMap({ cropLabel, spent = false }: { cropLabel: string; spent?: boole
   const first = mapBlocks[selectedSorted[0] ?? 0];
   const last = mapBlocks[selectedSorted[selectedSorted.length - 1] ?? 0];
   const contiguous = selectedSorted.every((value, index) => index === 0 || value === selectedSorted[index - 1] + 1);
-  const selectionLabel = contiguous
-    ? `${first.start}–${last.end} ft`
-    : `${selectedSorted.length} sections`;
+  const selectionLabel = contiguous ? `${first.start}–${last.end} ft` : `${selectedSorted.length} sections`;
   const selectedSqFt = selectedSorted.length * BED_WIDTH_FT * MAP_BLOCK_FT;
 
   function selectBlock(blockIndex: number) {
@@ -119,7 +118,7 @@ function BedMap({ cropLabel, spent = false }: { cropLabel: string; spent?: boole
         <small>{BED_WIDTH_FT} ft × {BED_LENGTH_FT} ft</small>
       </header>
 
-      <div className={styles.mapOrientation}>↑ back fence this side</div>
+      <div className={extras.mapOrientation}>↑ back fence this side</div>
 
       <div className={styles.bedRectangle} aria-label={`Square-foot crop map for ${cropLabel}`}>
         {mapBlocks.map((block, blockIndex) => {
@@ -147,10 +146,10 @@ function BedMap({ cropLabel, spent = false }: { cropLabel: string; spent?: boole
         <span>30 ft</span>
       </div>
 
-      <div className={styles.mapDetail}>
+      <div className={`${styles.mapDetail} ${extras.mapDetailWithLog}`}>
         <span>{logMode ? selectionLabel : `${activeBlock.start}–${activeBlock.end} ft`}</span>
         <strong>{cropLabel}</strong>
-        <button type="button" className={styles.mapLogButton} onClick={toggleLogMode}>{logMode ? "Done" : "Log"}</button>
+        <button type="button" className={extras.mapLogButton} onClick={toggleLogMode}>{logMode ? "Done" : "Log"}</button>
         <small>
           {logMode
             ? `${selectedSqFt} sq ft selected · tap neighboring sections to add or remove them`
@@ -158,14 +157,14 @@ function BedMap({ cropLabel, spent = false }: { cropLabel: string; spent?: boole
         </small>
 
         {logMode ? (
-          <div className={styles.mapLogPanel}>
-            <div className={styles.mapLogPills}>
+          <div className={extras.mapLogPanel}>
+            <div className={extras.mapLogPills}>
               <button type="button">Deer damage</button>
               <button type="button">Crop missing</button>
               <button type="button">Extra weedy</button>
               <button type="button">Other</button>
             </div>
-            <div className={styles.mapLogNote}>
+            <div className={extras.mapLogNote}>
               <input type="text" placeholder="Add note…" aria-label="Add a bed-section note" />
               <button type="button">Save log</button>
             </div>
@@ -187,10 +186,7 @@ function WeedCard() {
 
   const cropTiming = useMemo(() => {
     if (!today) {
-      return {
-        stage: "Updating…",
-        harvest: "Updating…",
-      };
+      return { stage: "Updating…", harvest: "Updating…" };
     }
 
     const day = dayDiff(SOWN_ON, today);
@@ -201,10 +197,7 @@ function WeedCard() {
     if (toHarvestEnd < 0) harvest = "Harvest window passed";
     else if (toHarvestStart > 0) harvest = `${toHarvestStart}–${toHarvestEnd} days to harvest watch`;
 
-    return {
-      stage: `Day ${day} since sowing`,
-      harvest,
-    };
+    return { stage: `Day ${day} since sowing`, harvest };
   }, [today]);
 
   return (
@@ -233,9 +226,7 @@ function WeedCard() {
       <BedMap cropLabel="ProCut Orange sunflower" />
 
       <section className={styles.results}>
-        <header>
-          <span>How’d we do?</span>
-        </header>
+        <header><span>How’d we do?</span></header>
         <div className={styles.resultPills}>
           <ResultPill label="Still rough" />
           <ResultPill label="Crop readable" />
@@ -257,7 +248,7 @@ function WeedCard() {
 
 function TurnoverCheck({ id, label }: { id: string; label: string }) {
   return (
-    <label className={styles.turnoverCheck} htmlFor={id}>
+    <label className={extras.turnoverCheck} htmlFor={id}>
       <input id={id} type="checkbox" />
       <span aria-hidden="true" />
       <strong>{label}</strong>
@@ -291,23 +282,14 @@ function TurnoverCard() {
 
       <BedMap cropLabel="Spent ProCut Orange sunflower" spent />
 
-      <section className={styles.turnoverBiomass}>
+      <section className={extras.turnoverBiomass}>
         <header><span>Biomass</span></header>
-        <div>
-          <small>Leaving the bed</small>
-          <strong>Spent sunflower</strong>
-        </div>
-        <div>
-          <small>Destination</small>
-          <strong>Compost pile</strong>
-        </div>
+        <div><small>Leaving the bed</small><strong>Spent sunflower</strong></div>
+        <div><small>Destination</small><strong>Compost pile</strong></div>
       </section>
 
-      <section className={styles.turnoverActions}>
-        <header>
-          <span>Turn over</span>
-          <small>3 steps</small>
-        </header>
+      <section className={extras.turnoverActions}>
+        <header><span>Turn over</span><small>3 steps</small></header>
         <div>
           <TurnoverCheck id="turnover-remove" label="Remove spent crop from the bed" />
           <TurnoverCheck id="turnover-move" label="Move biomass to its destination" />
@@ -315,16 +297,10 @@ function TurnoverCard() {
         </div>
       </section>
 
-      <section className={styles.nextBedPhase}>
+      <section className={extras.nextBedPhase}>
         <header><span>Next for this bed</span></header>
-        <div>
-          <small>Phase</small>
-          <strong>Fall cover crop</strong>
-        </div>
-        <div>
-          <small>Target</small>
-          <strong>Oct 20</strong>
-        </div>
+        <div><small>Phase</small><strong>Fall cover crop</strong></div>
+        <div><small>Target</small><strong>Oct 20</strong></div>
       </section>
 
       <footer className={styles.finish}>
@@ -340,9 +316,9 @@ function TurnoverCard() {
 
 export default function WeedCardSpecimen() {
   return (
-    <div className={styles.weedSpecimen}>
+    <div className={extras.weedSpecimen}>
       <WeedCard />
-      <div className={styles.variantLabel}><span>Same bed shell · clear / turn over variant</span></div>
+      <div className={extras.variantLabel}><span>Same bed shell · clear / turn over variant</span></div>
       <TurnoverCard />
     </div>
   );
