@@ -85,7 +85,7 @@ function ReminderSections({ sections, prefix }: { sections: VenueSection[]; pref
 
 function TidyCard() {
   return (
-    <DominionCardFrame family="Venue" title="Tidy Community Thursday">
+    <DominionCardFrame family="Venue" title="Tidy Community Thursday" subtitle="Elm Farm">
       <EventTrail current="tidy" />
       <ReminderKey />
       <ReminderSections sections={tidySections} prefix="tidy" />
@@ -95,7 +95,7 @@ function TidyCard() {
 
 function PrepCard() {
   return (
-    <DominionCardFrame family="Venue" title="Prep Community Thursday">
+    <DominionCardFrame family="Venue" title="Prep Community Thursday" subtitle="Elm Farm">
       <EventTrail current="prep" />
       <ReminderKey />
       <ReminderSections sections={prepSections} prefix="prep" />
@@ -116,7 +116,7 @@ function ClassicChecklistRow({ label, id }: { label: string; id: string }) {
 function HostCard() {
   const checklist = ["Turn on the ice maker", "Turn on the OPEN sign", "Open the yellow door"];
   return (
-    <DominionCardFrame family="Venue" title="Host Community Thursday" className={styles.hostCard}>
+    <DominionCardFrame family="Venue" title="Host Community Thursday" subtitle="Elm Farm" className={styles.hostCard}>
       <EventTrail current="host" />
       <section className={styles.hostChecklist}>
         <header><span>Open the event</span><small>3 steps</small></header>
