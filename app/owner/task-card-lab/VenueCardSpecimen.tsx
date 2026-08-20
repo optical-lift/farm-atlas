@@ -47,9 +47,8 @@ const stations: VenueStation[] = [
 function RestockDrawer({ label }: { label: string }) {
   return (
     <details className={styles.restockDrawer}>
-      <summary aria-label={`Request restock for ${label}`}>
+      <summary aria-label={`Request restock for ${label}`} title={`Request restock for ${label}`}>
         <span aria-hidden="true">+</span>
-        <small>request restock</small>
       </summary>
       <div className={styles.restockPanel}>
         <button type="button">Restock</button>
@@ -68,7 +67,6 @@ function ReminderRow({ resource, id }: { resource: VenueResource; id: string }) 
       <input className={styles.reminderToggle} id={id} type="checkbox" />
       <label className={styles.reminderCheck} htmlFor={id}>
         <strong>{resource.label}</strong>
-        <small>check</small>
       </label>
       <RestockDrawer label={resource.label} />
     </div>
@@ -81,12 +79,10 @@ function RoomReminderRow({ label, id }: { label: string; id: string }) {
       <input className={styles.reminderToggle} id={id} type="checkbox" />
       <label className={styles.reminderCheck} htmlFor={id}>
         <strong>{label}</strong>
-        <small>check</small>
       </label>
       <details className={styles.restockDrawer}>
-        <summary aria-label={`Add a note about ${label}`}>
+        <summary aria-label={`Add a note about ${label}`} title={`Add a note about ${label}`}>
           <span aria-hidden="true">+</span>
-          <small>note</small>
         </summary>
         <div className={styles.restockPanel}>
           <label>
@@ -121,7 +117,7 @@ function EventTrail({ current }: { current: "prep" | "host" }) {
 function PrepKey() {
   return (
     <div className={styles.rowKey} aria-label="Venue prep reminder controls">
-      <span>check when it is set</span>
+      <span>tap to cross off</span>
       <span><b>+</b> request restock</span>
     </div>
   );
@@ -280,7 +276,7 @@ export default function VenueCardSpecimen() {
           Community Thursday repeats as one governed event cycle. Prep unlocks Host; Host can unlock Reset. Readiness requirements such as mowing being current by the day before the event belong to the event template but do not appear as Worker Trail nodes.
         </p>
         <p>
-          Prep and room-reset rows are reminders: tapping “check” simply crosses out what Anna has looked at, and none of those marks are required to complete the task. The + affordance is reserved for a tiny Restock / Note request drawer.
+          Prep and room-reset rows are reminders: tapping the resource itself simply crosses out what Anna has looked at, and none of those marks are required to complete the task. The + affordance is reserved for the tiny Restock / Note request drawer.
         </p>
         <p>
           Host is different because its rows are genuine state-changing actions. It therefore uses the first Atlas checklist visual grammar recovered from July 6: a rounded task row with a round completion control.
