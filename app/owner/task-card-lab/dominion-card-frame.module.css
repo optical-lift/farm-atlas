@@ -30,6 +30,14 @@
   letter-spacing: -0.06em;
 }
 
+.subtitle {
+  margin: 0;
+  color: #888981;
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 780;
+}
+
 .finish {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
