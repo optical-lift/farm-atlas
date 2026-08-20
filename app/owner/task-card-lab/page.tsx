@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CheckCardSpecimen, WaterCareCardSpecimen } from "./CropCareCardSpecimen";
 import HarvestCardSpecimen from "./HarvestCardSpecimen";
 import MowCardSpecimen from "./MowCardSpecimen";
+import PinchCardSpecimen from "./PinchCardSpecimen";
 import PlantMoveCardSpecimen from "./PlantMoveCardSpecimen";
 import SowCardSpecimen from "./SowCardSpecimen";
 import VenueCardSpecimen from "./VenueCardSpecimen";
@@ -104,7 +105,7 @@ const cards: CardSpec[] = [
   {
     family: "Water / Care",
     variant: "crop-attached operations",
-    title: "Water + Spray examples",
+    title: "Water + Spray + Pinch examples",
     place: "Crop and bed share one continuing Trail",
     timing: "",
     play: "Water/Care is no longer treated as a floating generic family. The active operation sits on the crop/place Trail.",
@@ -276,7 +277,7 @@ export default function TaskCardLabPage() {
                     : index === 4
                       ? <HarvestCardSpecimen />
                       : index === 5
-                        ? <WaterCareCardSpecimen />
+                        ? <div style={{ display: "grid", gap: 22 }}><WaterCareCardSpecimen /><PinchCardSpecimen /></div>
                         : index === 6
                           ? <CheckCardSpecimen />
                           : index === 7
