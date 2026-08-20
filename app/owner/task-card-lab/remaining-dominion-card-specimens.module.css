@@ -195,7 +195,18 @@
   display: none;
 }
 
+.issueDrawer[open] {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.issueDrawer[open] > summary {
+  margin-left: auto;
+}
+
 .issuePanel {
+  width: 100%;
+  box-sizing: border-box;
   display: grid;
   gap: 7px;
   margin-top: 10px;
