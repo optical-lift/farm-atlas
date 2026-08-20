@@ -1,5 +1,3 @@
-"use client";
-
 import BuyerOutreachTaskDetail from "@/components/atlas/buyer-outreach-task-detail";
 import ContractorServiceTaskDetail from "@/components/atlas/contractor-service-task-detail";
 import DecisionSelectorTaskDetail from "@/components/atlas/decision-selector-task-detail";
@@ -16,13 +14,13 @@ import WeeklyHarvestTaskDetail from "@/components/atlas/weekly-harvest-task-deta
 import WorkerReadyAssignedTaskExecutionShell from "@/components/atlas/worker-ready-assigned-task-execution-shell";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import type { WorkerReadinessResponse } from "@/lib/atlas/worker-readiness";
+import { normalizeWorkerReadiness, type WorkerReadinessResponse } from "@/lib/atlas/worker-readiness";
+import { createAtlasServerClient } from "@/lib/supabase/server";
 
 type Props = {
   task: AtlasTaskCard;
   childTasks: AtlasTaskCard[];
   assignee: AtlasAssigneeConfig;
-  initialReadiness: WorkerReadinessResponse;
 };
 
 function isContractorServiceTask(task: AtlasTaskCard) {
@@ -98,7 +96,19 @@ function isWeeklyHarvestTask(task: AtlasTaskCard) {
     && (task.metadata?.weekly_routine === true || task.metadata?.weekly_routine === "true");
 }
 
-export default function CanonicalAssignedTaskDetail({ initialReadiness, ...props }: Props) {
+async function loadWorkerReadiness(taskId: string): Promise<WorkerReadinessResponse> {
+  const supabase = await createAtlasServerClient();
+  const { data, error } = await supabase.rpc("worker_task_execution_readiness_api_v1", {
+    p_task_id: taskId,
+  });
+  if (error) {
+    console.error("Task execution readiness failed during Task Focus render.", error);
+    return { ok: false, error: "Task readiness could not be loaded." };
+  }
+  return normalizeWorkerReadiness(data);
+}
+
+export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isContractorServiceTask(props.task)) return <ContractorServiceTaskDetail {...props} />;
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
@@ -113,5 +123,6 @@ export default function CanonicalAssignedTaskDetail({ initialReadiness, ...props
   if (isFlowerFulfillmentTask(props.task)) return <FlowerFulfillmentTaskLoader {...props} />;
   if (isWeeklyHarvestTask(props.task)) return <WeeklyHarvestTaskDetail {...props} />;
 
+  const initialReadiness = await loadWorkerReadiness(props.task.task_id);
   return <WorkerReadyAssignedTaskExecutionShell {...props} initialReadiness={initialReadiness} />;
 }
