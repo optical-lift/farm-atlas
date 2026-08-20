@@ -191,10 +191,10 @@
 
 .bedMap {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   padding: 18px;
   border-bottom: 1px solid rgba(215, 204, 189, 0.62);
-  background: rgba(248, 246, 238, 0.5);
+  background: rgba(248, 246, 238, 0.42);
 }
 
 .bedMap > header {
@@ -212,55 +212,103 @@
   text-align: right;
 }
 
-.mapMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.mapMeta b {
-  width: fit-content;
-  border: 1px solid rgba(139, 145, 194, 0.16);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  color: #6a6c64;
-  padding: 6px 8px;
-  font-size: 8px;
-  line-height: 1;
-  font-weight: 850;
-}
-
-.mapSegments {
+.bedRectangle {
+  width: 100%;
+  box-sizing: border-box;
   display: grid;
-  gap: 12px;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid rgba(94, 96, 89, 0.38);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
 }
 
-.mapSegments figure {
+.mapBlock,
+.mapBlockActive {
   min-width: 0;
-  margin: 0;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+  gap: 0;
+  border: 0;
+  border-right: 1px dashed rgba(133, 139, 192, 0.22);
+  background: transparent;
+  color: #5e635b;
+  padding: 5px 2px;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
-.mapSegments figcaption {
-  margin: 0 0 5px;
-  color: #7a7c75;
+.mapBlock:last-child,
+.mapBlockActive:last-child {
+  border-right: 0;
+}
+
+.mapBlock span,
+.mapBlockActive span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.mapBlockActive {
+  background: rgba(214, 225, 177, 0.34);
+  color: #515b34;
+  box-shadow: inset 0 0 0 1px rgba(81, 91, 52, 0.18);
+}
+
+.mapScale {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #92938d;
+  font-size: 7px;
+  line-height: 1;
+  font-weight: 780;
+}
+
+.mapDetail {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 9px;
+  align-items: baseline;
+  padding: 9px 10px;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.mapDetail > span {
+  color: #858bb8;
   font-size: 8px;
   line-height: 1;
-  font-weight: 900;
+  font-weight: 950;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.mapSegments pre {
-  max-width: 100%;
-  overflow-x: auto;
-  margin: 0;
-  color: #54585a;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  font-size: 7.4px;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
-  white-space: pre;
-  -webkit-overflow-scrolling: touch;
+.mapDetail strong {
+  color: var(--atlas-text);
+  font-size: 12px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.mapDetail small {
+  grid-column: 1 / -1;
+  color: #85867f;
+  font-size: 8px;
+  line-height: 1.2;
+  font-weight: 760;
 }
 
 .mapLegend {
@@ -442,8 +490,15 @@
     align-items: flex-start;
   }
 
-  .mapSegments pre {
-    font-size: 7px;
+  .mapBlock,
+  .mapBlockActive {
+    min-height: 52px;
+    padding-inline: 1px;
+  }
+
+  .mapBlock span,
+  .mapBlockActive span {
+    font-size: 8px;
   }
 
   .logPanel {
