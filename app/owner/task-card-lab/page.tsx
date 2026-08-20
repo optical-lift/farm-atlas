@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import MowCardSpecimen from "./MowCardSpecimen";
 import SowCardSpecimen from "./SowCardSpecimen";
 import VenueCardSpecimen from "./VenueCardSpecimen";
 import WeedCardSpecimen from "./WeedCardSpecimen";
@@ -76,25 +77,15 @@ const cards: CardSpec[] = [
   },
   {
     family: "Mow",
-    variant: "guest route",
+    variant: "recurring area care",
     title: "U-Pick Walkways",
     place: "U-Pick",
-    timing: "Today · guest-facing area",
-    play: "Return the U-Pick walkways to their intended guest-ready condition without mowing into the beds.",
-    desiredLabel: "Finished area should be",
-    desired: ["Walkways mowed to 3 in · clean edges · beds untouched"],
-    facts: [
-      { label: "Height", value: "3 in" },
-      { label: "Boundary", value: "Walkways only" },
-      { label: "Finish", value: "Guest-ready" },
-      { label: "Equipment", value: "Riding mower" },
-    ],
-    resources: [
-      { label: "Riding mower", kind: "Equipment", state: "Ready", actions: ["Problem", "Broken / cannot use", "Working again", "Request change"] },
-      { label: "U-Pick walkways", kind: "Managed area", state: "Due", actions: ["Choose a new state", "Obstacle found", "Add note", "Request change"] },
-    ],
-    finish: "Mowing complete",
-    partial: "Some area remains",
+    timing: "",
+    play: "Mow uses its own recurrence-first specimen below.",
+    desiredLabel: "Mow height",
+    desired: ["3 in"],
+    finish: "Mowed to 3 in",
+    partial: "Blocked",
   },
   {
     family: "Harvest",
@@ -219,7 +210,7 @@ function TaskCard({ card, index }: { card: CardSpec; index: number }) {
         </div>
         <h2>{card.title}</h2>
         <p>{card.place}</p>
-        <div className={styles.timing}>{card.timing}</div>
+        {card.timing ? <div className={styles.timing}>{card.timing}</div> : null}
       </header>
 
       <div className={styles.trail} aria-label="Mock process trail">
@@ -313,7 +304,9 @@ export default function TaskCardLabPage() {
                 ? <SowCardSpecimen />
                 : index === 2
                   ? <WeedCardSpecimen />
-                  : <TaskCard card={card} index={index} />}
+                  : index === 3
+                    ? <MowCardSpecimen />
+                    : <TaskCard card={card} index={index} />}
           </div>
         ))}
       </div>
