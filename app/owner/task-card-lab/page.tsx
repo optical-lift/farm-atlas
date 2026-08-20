@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import HarvestCardSpecimen from "./HarvestCardSpecimen";
 import MowCardSpecimen from "./MowCardSpecimen";
 import SowCardSpecimen from "./SowCardSpecimen";
 import VenueCardSpecimen from "./VenueCardSpecimen";
@@ -89,25 +90,14 @@ const cards: CardSpec[] = [
   },
   {
     family: "Harvest",
-    variant: "repeat cut",
-    title: "White Lite Sunflowers",
-    place: "Berry Walk",
-    timing: "Morning · harvest window",
-    play: "Cut stems that meet the harvest-stage standard and place them directly into the specified harvest container.",
-    desiredLabel: "Harvest standard",
-    desired: ["First petals lifting · marketable stems only · immediately into water"],
-    facts: [
-      { label: "Target", value: "60 stems" },
-      { label: "Container", value: "Black bucket" },
-      { label: "Destination", value: "Cool room" },
-    ],
-    references: ["Leave stems that have not reached the harvest-stage standard."],
-    resources: [
-      { label: "White Lite stand", kind: "Crop", state: "Harvestable", actions: ["Condition changed", "Damage / loss", "Estimate remaining", "Request change"] },
-      { label: "Black harvest buckets", kind: "Inventory", state: "Available", actions: ["Running low", "Out", "Count remaining", "Request change"] },
-    ],
-    finish: "Record harvest",
-    partial: "Harvested some",
+    variant: "weekly harvest collection",
+    title: "Thursday Harvest",
+    place: "Beds entering or inside a harvest window this week",
+    timing: "Thursday harvest round",
+    play: "Harvest uses its own collection specimen below.",
+    desiredLabel: "Harvest route",
+    desired: [],
+    finish: "Harvest round checked",
   },
   {
     family: "Water / Care",
@@ -306,7 +296,9 @@ export default function TaskCardLabPage() {
                   ? <WeedCardSpecimen />
                   : index === 3
                     ? <MowCardSpecimen />
-                    : <TaskCard card={card} index={index} />}
+                    : index === 4
+                      ? <HarvestCardSpecimen />
+                      : <TaskCard card={card} index={index} />}
           </div>
         ))}
       </div>
