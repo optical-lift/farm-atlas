@@ -53,10 +53,12 @@ test("Anna generic task detail uses the regular Done and Unfinished result set o
 
   assert.doesNotMatch(canonical, /FarmHandConveyorTaskDetail/);
   assert.doesNotMatch(canonical, /props\.assignee\.key === "anna"/);
+  assert.match(canonical, /worker_task_execution_readiness_api_v1/);
   assert.match(canonical, /return <WorkerReadyAssignedTaskExecutionShell/);
-  assert.match(readiness, /readiness\?\.executable !== true/);
+  assert.match(readiness, /initialReadiness\.executable !== true/);
   assert.match(readiness, /return <WaitingScreen/);
   assert.match(readiness, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
+  assert.doesNotMatch(readiness, /fetch\(`\/api\/atlas\/task-execution-readiness/);
   assert.match(shell, /TaskPrimaryResultControls/);
   assert.match(results, /doneLabel = "Done"/);
   assert.match(results, />\s*Unfinished\s*</);
