@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import DominionCardFrame from "./DominionCardFrame";
+import localStyles from "./venue-local-rail.module.css";
+import venueStyles from "./venue-card-specimen.module.css";
 import styles from "./farm-round-card-specimen.module.css";
 
 type RoundItem = {
@@ -47,11 +49,13 @@ const route: RoundStop[] = [
   },
 ];
 
+const dueItems = route.flatMap((stop) => stop.items);
+
 function IssueDrawer({ item }: { item: RoundItem }) {
   if (!item.issues?.length) return null;
   return (
-    <details className={styles.issueDrawer}>
-      <summary aria-label={`Log an issue with ${item.label}`} title={`Log an issue with ${item.label}`}>
+    <details className={`${venueStyles.restockDrawer} ${styles.issueDrawer}`}>
+      <summary aria-label={`Report an issue with ${item.label}`} title={`Report an issue with ${item.label}`}>
         <span aria-hidden="true">+</span>
       </summary>
       <div className={styles.issuePanel}>
@@ -61,9 +65,24 @@ function IssueDrawer({ item }: { item: RoundItem }) {
   );
 }
 
+function RoundRow({ item, checked, onToggle }: { item: RoundItem; checked: boolean; onToggle: () => void }) {
+  const id = `farm-round-${item.id}`;
+  return (
+    <div className={`${venueStyles.reminderRow} ${localStyles.localReminderRow} ${styles.roundRow}`} data-done={checked ? "true" : "false"}>
+      <input className={venueStyles.reminderToggle} id={id} type="checkbox" checked={checked} onChange={onToggle} />
+      <label className={venueStyles.reminderCheck} htmlFor={id}>
+        <span className={styles.itemCopy}>
+          <strong>{item.label}</strong>
+          {item.detail ? <small>{item.detail}</small> : null}
+        </span>
+      </label>
+      <IssueDrawer item={item} />
+    </div>
+  );
+}
+
 export default function FarmRoundCardSpecimen() {
   const [done, setDone] = useState<string[]>([]);
-  const dueItems = useMemo(() => route.flatMap((stop) => stop.items), []);
   const complete = done.length === dueItems.length;
 
   function toggle(itemId: string) {
@@ -71,41 +90,49 @@ export default function FarmRoundCardSpecimen() {
   }
 
   return (
-    <DominionCardFrame
-      family="Stewardship"
-      familyDetail="recurring round"
-      title="Farm Round"
-      subtitle="Elm Farm"
-      timing={complete ? "Round complete" : `${dueItems.length - done.length} items due`}
-      completion={false}
-    >
-      <div className={styles.route} aria-label="Farm Round walking route">
-        {route.map((stop, stopIndex) => (
-          <section className={styles.stop} key={stop.place}>
-            <header>
-              <span>{stopIndex + 1}</span>
-              <h3>{stop.place}</h3>
-            </header>
-            <div className={styles.items}>
-              {stop.items.map((item) => {
-                const checked = done.includes(item.id);
-                return (
-                  <div className={styles.item} data-done={checked ? "true" : "false"} key={item.id}>
-                    <button type="button" className={styles.completeButton} aria-pressed={checked} onClick={() => toggle(item.id)}>
-                      <span className={styles.circle} aria-hidden="true" />
-                      <span className={styles.itemText}>
-                        <strong>{item.label}</strong>
-                        {item.detail ? <small>{item.detail}</small> : null}
-                      </span>
-                    </button>
-                    <IssueDrawer item={item} />
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        ))}
-      </div>
-    </DominionCardFrame>
+    <div className={styles.specimen}>
+      <DominionCardFrame
+        family="Stewardship"
+        familyDetail="recurring round"
+        title="Farm Round"
+        subtitle="Elm Farm"
+        timing={complete ? "Round complete" : `${dueItems.length - done.length} items due`}
+        completion={false}
+      >
+        <div className={venueStyles.rowKey} aria-label="Farm Round controls">
+          <span>tap to cross off</span>
+          <span><b>+</b> report issue</span>
+        </div>
+
+        <div className={venueStyles.stations} aria-label="Farm Round walking route">
+          {route.map((stop) => (
+            <section className={`${venueStyles.station} ${localStyles.localStation}`} key={stop.place}>
+              <header className={venueStyles.stationHeader}>
+                <div><h3>{stop.place}</h3></div>
+              </header>
+              <div className={venueStyles.resourceList}>
+                {stop.items.map((item) => (
+                  <RoundRow
+                    item={item}
+                    checked={done.includes(item.id)}
+                    onToggle={() => toggle(item.id)}
+                    key={item.id}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </DominionCardFrame>
+
+      <aside className={styles.dayPreviewTruth}>
+        <span>Day overview contract · owner-only note</span>
+        <p>The collapsed Day-feed Farm Round must expose the actual due stewardship rows in miniature, in the same physical route order, so the Worker can see Sweep porches, Trash to street, Chicken chore, Water outdoor plants, or whatever is due without opening the round. Do not collapse this to only a title or an item count.</p>
+        <div className={styles.dayPreviewMock} aria-label="Future Day-feed Farm Round miniature preview">
+          <header><strong>Farm Round</strong><small>4 due</small></header>
+          <div>{dueItems.map((item) => <span key={item.id}>{item.label}</span>)}</div>
+        </div>
+      </aside>
+    </div>
   );
 }
