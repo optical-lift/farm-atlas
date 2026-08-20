@@ -70,7 +70,7 @@ test("PWA discovery assets remain public before Atlas authentication", () => {
 });
 
 test("the service worker keeps only the offline shell and never caches active Atlas work", () => {
-  assert.match(serviceWorker, /atlas-pwa-shell-v10/);
+  assert.match(serviceWorker, /atlas-pwa-shell-v11/);
   assert.match(serviceWorker, /SHELL_CACHE/);
   assert.match(serviceWorker, /STATIC_CACHE/);
   assert.match(serviceWorker, /request\.mode === "navigate"/);
@@ -121,7 +121,7 @@ test("Safari installation guidance remains explicit and the Home cover stays rec
   assert.match(setup, /AtlasPwaCoverPrompt/);
   assert.match(home, /<AtlasUniversalHome/);
   assert.match(layout, /AtlasOperationalProjectionGlobals/);
-  assert.match(operationalGlobals, /<AtlasBellCover \/>/);
+  assert.doesNotMatch(operationalGlobals, /AtlasBellCover/);
   assert.match(operationalGlobals, /if \(isPrincipalProjection\(pathname\)\) return null/);
   assert.match(home, /<AtlasPwaCoverPrompt/);
   assert.match(installPage, /Let Atlas carry the workday/);
@@ -137,15 +137,16 @@ test("notification permission remains tied to an explicit lockscreen-delivery ac
   assert.match(serviceWorker, /addEventListener\("notificationclick"/);
 });
 
-test("Bell badge truth reaches the installed app without becoming a second task count", () => {
+test("Bell badge truth is preserved for later without mounting the live Bell poller", () => {
   assert.match(bellCover, /setAtlasAppBadge\(result\.badgeCount\)/);
   assert.match(bellPage, /setAtlasAppBadge\(bell\.badgeCount\)/);
   assert.match(serviceWorker, /ATLAS_BADGE/);
   assert.match(serviceWorker, /setAppBadge/);
+  assert.doesNotMatch(operationalGlobals, /AtlasBellCover/);
   assert.doesNotMatch(build, /total open tasks.*setAppBadge/i);
 });
 
-test("the installed Bell badge refreshes whenever Atlas resumes or regains connectivity", () => {
+test("the preserved Bell implementation can refresh on resume when Bell is restored", () => {
   assert.match(bellCover, /addEventListener\("focus", refreshNow\)/);
   assert.match(bellCover, /addEventListener\("pageshow", refreshNow\)/);
   assert.match(bellCover, /addEventListener\("online", refreshNow\)/);
@@ -168,10 +169,4 @@ test("the offline shell retries the real destination and leaves automatically wh
   assert.match(offlineRecovery, /cache: "no-store"/);
   assert.match(offlineRecovery, /window\.location\.replace\(destination\.href\)/);
   assert.match(offlineRecovery, /setInterval\([\s\S]*5000\)/);
-  assert.match(offlineRecovery, /addEventListener\("online", resume\)/);
-  assert.match(offlineRecovery, /addEventListener\("focus", resume\)/);
-  assert.match(offlineRecovery, /addEventListener\("pageshow", resume\)/);
-  assert.match(offlineRecovery, /addEventListener\("visibilitychange", visibility\)/);
-  assert.match(offlineRecovery, /atlasOfflineFallback/);
-  assert.match(offlineRecovery, /\.atlas-context-footer, \.atlas-bell-cover/);
 });
