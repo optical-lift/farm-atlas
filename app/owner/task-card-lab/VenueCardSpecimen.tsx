@@ -1,6 +1,6 @@
 import styles from "./venue-card-specimen.module.css";
 
-type VenueResource = {
+type VenueThing = {
   label: string;
   detail?: string;
   actions: string[];
@@ -10,7 +10,7 @@ type VenueStation = {
   id: string;
   title: string;
   location?: string;
-  resources: VenueResource[];
+  resources: VenueThing[];
 };
 
 const stations: VenueStation[] = [
@@ -82,32 +82,23 @@ const stations: VenueStation[] = [
   },
 ];
 
-function QuickCheck({ id }: { id: string }) {
+function IssueDrawer({ thing }: { thing: VenueThing }) {
   return (
-    <span className={styles.quickCheck}>
-      <input id={id} type="checkbox" />
-      <label htmlFor={id}>Check</label>
-    </span>
-  );
-}
-
-function ResourceRow({ resource }: { resource: VenueResource }) {
-  return (
-    <details className={styles.resource}>
-      <summary>
-        <strong>{resource.label}</strong>
-        <span className={styles.resourceChevron}>+</span>
+    <details className={styles.issueDrawer}>
+      <summary aria-label={`Report a problem with ${thing.label}`} title={`Problem with ${thing.label}`}>
+        <span aria-hidden="true">+</span>
+        <small>issue</small>
       </summary>
       <div className={styles.resourceDrawer}>
-        {resource.detail ? (
+        {thing.detail ? (
           <div className={styles.currentTruth}>
             <span>Current truth</span>
-            <strong>{resource.detail}</strong>
+            <strong>{thing.detail}</strong>
           </div>
         ) : null}
-        <p>What changed?</p>
+        <p>What is wrong?</p>
         <div className={styles.resourceActions}>
-          {resource.actions.map((action) => (
+          {thing.actions.map((action) => (
             <button type="button" key={action}>{action}</button>
           ))}
         </div>
@@ -119,6 +110,19 @@ function ResourceRow({ resource }: { resource: VenueResource }) {
         <small>Mock only · this does not write to Atlas yet.</small>
       </div>
     </details>
+  );
+}
+
+function CheckableThing({ thing, id }: { thing: VenueThing; id: string }) {
+  return (
+    <div className={styles.checkableThing}>
+      <label className={styles.checkTarget} htmlFor={id}>
+        <input id={id} type="checkbox" />
+        <span className={styles.box} aria-hidden="true" />
+        <strong>{thing.label}</strong>
+      </label>
+      <IssueDrawer thing={thing} />
+    </div>
   );
 }
 
@@ -141,6 +145,15 @@ function EventTrail({ current }: { current: "prep" | "host" }) {
   );
 }
 
+function RowKey() {
+  return (
+    <div className={styles.rowKey} aria-label="Venue row controls">
+      <span><b>□</b> check when it is set</span>
+      <span><b>+</b> issue only</span>
+    </div>
+  );
+}
+
 function PrepCard() {
   return (
     <article className={styles.card}>
@@ -155,6 +168,7 @@ function PrepCard() {
       </header>
 
       <EventTrail current="prep" />
+      <RowKey />
 
       <div className={styles.stations}>
         {stations.map((station) => (
@@ -164,11 +178,15 @@ function PrepCard() {
                 <h3>{station.title}</h3>
                 {station.location ? <span>{station.location}</span> : null}
               </div>
-              <QuickCheck id={`prep-${station.id}-check`} />
+              <small>{station.resources.length} checks</small>
             </header>
             <div className={styles.resourceList}>
-              {station.resources.map((resource) => (
-                <ResourceRow resource={resource} key={resource.label} />
+              {station.resources.map((resource, index) => (
+                <CheckableThing
+                  thing={resource}
+                  id={`prep-${station.id}-${index}`}
+                  key={resource.label}
+                />
               ))}
             </div>
           </section>
@@ -188,10 +206,22 @@ function PrepCard() {
 }
 
 function HostCard() {
-  const checklist = [
-    "Turn on the ice maker",
-    "Turn on the OPEN sign",
-    "Open the yellow door",
+  const checklist: VenueThing[] = [
+    {
+      label: "Turn on the ice maker",
+      detail: "Opening action",
+      actions: ["Cannot turn on", "Equipment problem", "Already on", "Request change"],
+    },
+    {
+      label: "Turn on the OPEN sign",
+      detail: "Opening action",
+      actions: ["Cannot turn on", "Sign problem", "Already on", "Request change"],
+    },
+    {
+      label: "Open the yellow door",
+      detail: "Opening action",
+      actions: ["Cannot open", "Door problem", "Already open", "Request change"],
+    },
   ];
 
   return (
@@ -207,18 +237,16 @@ function HostCard() {
       </header>
 
       <EventTrail current="host" />
+      <RowKey />
 
       <section className={styles.hostChecklist}>
         <header>
           <span>Open the event</span>
-          <small>0 / 3</small>
+          <small>3 checks</small>
         </header>
-        <div>
-          {checklist.map((item) => (
-            <label key={item}>
-              <input type="checkbox" />
-              <span>{item}</span>
-            </label>
+        <div className={styles.hostRows}>
+          {checklist.map((item, index) => (
+            <CheckableThing thing={item} id={`host-${index}`} key={item.label} />
           ))}
         </div>
       </section>
@@ -229,17 +257,29 @@ function HostCard() {
           <button type="button" className={styles.primaryFinish}>Event open</button>
           <button type="button">Blocked</button>
         </div>
-        <small>Checklist actions are real state changes, so they stay checkable.</small>
+        <small>Check confirms the physical state changed. The + opens an issue drawer only when the action cannot be completed normally.</small>
       </footer>
     </article>
   );
 }
 
 function GuestRoomsCard() {
-  const rooms = [
-    { id: "library", title: "Library", state: "Visibly guest-ready" },
-    { id: "meeting-room", title: "Meeting room", state: "Visibly guest-ready" },
-    { id: "kitchen", title: "Kitchen", state: "Trash cleared" },
+  const rooms: VenueThing[] = [
+    {
+      label: "Library · visibly guest-ready",
+      detail: "Room reset standard",
+      actions: ["Still needs work", "Something is missing", "Damage / problem", "Request change"],
+    },
+    {
+      label: "Meeting room · visibly guest-ready",
+      detail: "Room reset standard",
+      actions: ["Still needs work", "Something is missing", "Damage / problem", "Request change"],
+    },
+    {
+      label: "Kitchen · trash cleared",
+      detail: "Room reset standard",
+      actions: ["Still needs work", "Something is missing", "Damage / problem", "Request change"],
+    },
   ];
 
   return (
@@ -254,17 +294,11 @@ function GuestRoomsCard() {
         <div className={styles.timing}>Before guests arrive</div>
       </header>
 
-      <div className={styles.rooms}>
-        {rooms.map((room) => (
-          <section className={styles.room} key={room.id}>
-            <header>
-              <div>
-                <h3>{room.title}</h3>
-                <p>{room.state}</p>
-              </div>
-              <QuickCheck id={`guest-room-${room.id}-check`} />
-            </header>
-          </section>
+      <RowKey />
+
+      <div className={styles.roomRows}>
+        {rooms.map((room, index) => (
+          <CheckableThing thing={room} id={`guest-room-${index}`} key={room.label} />
         ))}
       </div>
 
@@ -274,7 +308,7 @@ function GuestRoomsCard() {
           <button type="button" className={styles.primaryFinish}>Rooms ready</button>
           <button type="button">Something remains</button>
         </div>
-        <small>The same Venue shell can present rooms instead of stations. Real objects become tappable resources only when the room actually needs them.</small>
+        <small>The same Venue interaction grammar now carries across station prep, event opening, and room reset.</small>
       </footer>
     </article>
   );
@@ -291,7 +325,7 @@ export default function VenueCardSpecimen() {
           Community Thursday repeats as one governed event cycle. Prep unlocks Host; Host can unlock Reset. Readiness requirements such as mowing being current by the day before the event belong to the event template but do not appear as Worker Trail nodes.
         </p>
         <p>
-          Venue resources stay visually compact: the card names the thing once, while current state and update choices live inside its tap drawer. Each station or room gets a small Check control for a human return-pass without turning every resource into a checklist item.
+          Venue rows now have two completely separate meanings: the square is the ordinary successful check, while + means there is a problem and is the only control that opens the object drawer. The same interaction premise applies to station resources, Host opening actions, and room-reset checks.
         </p>
         <p>
           Event quantities remain live while future tasks sit in the queue. Presold posies and bouquets come from event demand; harvest results can later update fulfillment truth or create a Bell decision without silently lowering the sold quantity.
