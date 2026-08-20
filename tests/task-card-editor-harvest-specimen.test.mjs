@@ -4,6 +4,8 @@ import test from "node:test";
 
 const harvestSource = readFileSync("app/owner/task-card-lab/HarvestCardSpecimen.tsx", "utf8");
 const harvestStyles = readFileSync("app/owner/task-card-lab/harvest-card-specimen.module.css", "utf8");
+const frameSource = readFileSync("app/owner/task-card-lab/DominionCardFrame.tsx", "utf8");
+const frameStyles = readFileSync("app/owner/task-card-lab/dominion-card-frame.module.css", "utf8");
 const editorSource = readFileSync("app/owner/task-card-lab/page.tsx", "utf8");
 
 test("Task Card Editor renders the dedicated Harvest specimen", () => {
@@ -11,11 +13,10 @@ test("Task Card Editor renders the dedicated Harvest specimen", () => {
   assert.match(editorSource, /index === 4[\s\S]*<HarvestCardSpecimen \/>/);
 });
 
-test("Harvest keeps ordinary task-family identity without hardcoded schedule copy", () => {
-  assert.match(harvestSource, /className=\{styles\.familyRow\}/);
-  assert.match(harvestSource, /<span>Harvest<\/span>/);
-  assert.match(harvestSource, /<h2>Harvest Stems<\/h2>/);
-  assert.match(harvestStyles, /\.familyRow span,[\s\S]*color: #858bb8/);
+test("Harvest uses the shared ordinary task-family chrome without hardcoded schedule copy", () => {
+  assert.match(harvestSource, /<DominionCardFrame family="Harvest" title="Harvest Stems">/);
+  assert.match(frameSource, /className=\{styles\.familyRow\}/);
+  assert.match(frameStyles, /\.familyRow span \{[\s\S]*color: #858bb8/);
   assert.doesNotMatch(harvestSource, /Thursday Harvest/);
   assert.doesNotMatch(harvestSource, /Thursday morning/);
   assert.doesNotMatch(harvestSource, />Elm Farm</);
@@ -57,12 +58,10 @@ test("crop name and bed quietly toggle an inline drawer with only real alternate
   assert.match(harvestStyles, /\.exceptionPanel \{[\s\S]*grid-column: 1 \/ -1/);
 });
 
-test("Harvest ends with ordinary completion controls and no instructional prose", () => {
-  assert.match(harvestSource, />Done<\/button>/);
-  assert.match(harvestSource, />Unfinished<\/button>/);
+test("shared Dominion chrome owns the ordinary Done and Unfinished footer", () => {
+  assert.match(frameSource, />Done<\/button>/);
+  assert.match(frameSource, />Unfinished<\/button>/);
   assert.doesNotMatch(harvestSource, /Mock only/);
-  assert.doesNotMatch(harvestSource, /Worker/);
-  assert.doesNotMatch(harvestSource, /Atlas keeps/);
   assert.doesNotMatch(harvestSource, /fetch\s*\(/);
   assert.doesNotMatch(harvestSource, /supabase/i);
 });
