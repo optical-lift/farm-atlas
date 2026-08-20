@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 
+import { CheckCardSpecimen, WaterCareCardSpecimen } from "./CropCareCardSpecimen";
+import HarvestCardSpecimen from "./HarvestCardSpecimen";
 import MowCardSpecimen from "./MowCardSpecimen";
+import PinchCardSpecimen from "./PinchCardSpecimen";
+import PlantMoveCardSpecimen from "./PlantMoveCardSpecimen";
 import SowCardSpecimen from "./SowCardSpecimen";
 import VenueCardSpecimen from "./VenueCardSpecimen";
 import WeedCardSpecimen from "./WeedCardSpecimen";
@@ -89,86 +93,49 @@ const cards: CardSpec[] = [
   },
   {
     family: "Harvest",
-    variant: "repeat cut",
-    title: "White Lite Sunflowers",
-    place: "Berry Walk",
-    timing: "Morning · harvest window",
-    play: "Cut stems that meet the harvest-stage standard and place them directly into the specified harvest container.",
-    desiredLabel: "Harvest standard",
-    desired: ["First petals lifting · marketable stems only · immediately into water"],
-    facts: [
-      { label: "Target", value: "60 stems" },
-      { label: "Container", value: "Black bucket" },
-      { label: "Destination", value: "Cool room" },
-    ],
-    references: ["Leave stems that have not reached the harvest-stage standard."],
-    resources: [
-      { label: "White Lite stand", kind: "Crop", state: "Harvestable", actions: ["Condition changed", "Damage / loss", "Estimate remaining", "Request change"] },
-      { label: "Black harvest buckets", kind: "Inventory", state: "Available", actions: ["Running low", "Out", "Count remaining", "Request change"] },
-    ],
-    finish: "Record harvest",
-    partial: "Harvested some",
+    variant: "weekly harvest collection",
+    title: "Thursday Harvest",
+    place: "Beds entering or inside a harvest window this week",
+    timing: "Thursday harvest round",
+    play: "Harvest uses its own collection specimen below.",
+    desiredLabel: "Harvest route",
+    desired: [],
+    finish: "Harvest round checked",
   },
   {
     family: "Water / Care",
-    variant: "establishment water",
-    title: "New Zinnia Transplants",
-    place: "Curve Garden",
-    timing: "Due now · establishment care",
-    play: "Deep-water the newly transplanted zinnias until the root zone reaches the defined adequate-moisture condition.",
-    desiredLabel: "Enough means",
-    desired: ["Root zone evenly moist · no standing runoff · flag plants that wilt again immediately"],
-    facts: [
-      { label: "Plants", value: "15 zinnias" },
-      { label: "Stage", value: "Establishing" },
-      { label: "Method", value: "Deep water" },
-    ],
-    resources: [
-      { label: "15 zinnias", kind: "Living crop", state: "Establishing", actions: ["Condition changed", "Damage / loss", "Plant missing", "Request change"] },
-      { label: "Water source", kind: "Equipment", state: "Available", actions: ["Problem", "Unavailable", "Working again", "Request change"] },
-    ],
-    finish: "Care complete",
-    partial: "Problem found",
+    variant: "crop-attached operations",
+    title: "Water + Spray + Pinch examples",
+    place: "Crop and bed share one continuing Trail",
+    timing: "",
+    play: "Water/Care is no longer treated as a floating generic family. The active operation sits on the crop/place Trail.",
+    desiredLabel: "Crop operation",
+    desired: [],
+    finish: "Operation recorded",
+    partial: "Blocked",
   },
   {
     family: "Check",
-    variant: "germination observation",
+    variant: "crop-attached observation",
     title: "Germination Check",
     place: "Barn Bed 4 · white sunflower",
-    timing: "Today · observation window",
-    play: "Look at the stand and record the smallest observation Atlas needs to decide what can happen next.",
-    desiredLabel: "Choose what is true",
-    desired: ["Strong", "Patchy", "Failed", "Too early to tell"],
-    facts: [
-      { label: "Question", value: "Did enough emerge to keep this planting?" },
-      { label: "Next", value: "Continue · gap fill · restart · wait" },
-    ],
-    resources: [
-      { label: "Barn Bed 4", kind: "Observed bed", state: "Needs observation", actions: ["Strong", "Patchy", "Failed", "Too early to tell"] },
-    ],
-    finish: "Record observation",
+    timing: "",
+    play: "Check is an observation move on the same crop/place Trail used by Sow, Weed, Harvest, and later care operations.",
+    desiredLabel: "Observation",
+    desired: [],
+    finish: "Observation recorded",
   },
   {
-    family: "Transplant",
-    variant: "tray to field",
-    title: "Move 15 Zinnias",
-    place: "Grow Room → Curve Garden",
-    timing: "Today · destination prepared",
-    play: "Move the selected zinnias from the source tray into the prepared Curve Garden strip and establish them there.",
-    desiredLabel: "Finished move should be",
-    desired: ["15 plants in destination · correct spacing · watered immediately"],
-    facts: [
-      { label: "Count", value: "15" },
-      { label: "Source", value: "Grow Room" },
-      { label: "Destination", value: "Curve Garden" },
-      { label: "Aftercare", value: "Water immediately" },
-    ],
-    resources: [
-      { label: "Zinnia tray", kind: "Living crop", state: "15 selected", actions: ["Count changed", "Damage / loss", "Plants remain", "Request change"] },
-      { label: "Curve Garden strip", kind: "Managed place", state: "Prepared", actions: ["Choose a new state", "Something changed", "Add note", "Request change"] },
-    ],
-    finish: "Transplant complete",
-    partial: "Some plants remain",
+    family: "Plant / Move",
+    variant: "transplant + divide",
+    title: "Destination-led movement",
+    place: "Living material moves into its next physical place",
+    timing: "",
+    play: "Transplant, Plant, Divide + Plant, and Move + Replant share one movement grammar while preserving the destination Trail.",
+    desiredLabel: "Movement",
+    desired: [],
+    finish: "Living material established",
+    partial: "Blocked",
   },
 ];
 
@@ -287,6 +254,7 @@ export default function TaskCardLabPage() {
         <p>
           Every current Dominion family, fully exposed in one vertical scroll. These are fixture-only CSS mockups: no task feed, no scheduling, no Supabase writes.
         </p>
+        <a href="/owner/grow-room-lab">Next system: Grow Room Board →</a>
       </header>
 
       <nav className={styles.jumpNav} aria-label="Jump to task family">
@@ -306,7 +274,15 @@ export default function TaskCardLabPage() {
                   ? <WeedCardSpecimen />
                   : index === 3
                     ? <MowCardSpecimen />
-                    : <TaskCard card={card} index={index} />}
+                    : index === 4
+                      ? <HarvestCardSpecimen />
+                      : index === 5
+                        ? <div style={{ display: "grid", gap: 22 }}><WaterCareCardSpecimen /><PinchCardSpecimen /></div>
+                        : index === 6
+                          ? <CheckCardSpecimen />
+                          : index === 7
+                            ? <PlantMoveCardSpecimen />
+                            : <TaskCard card={card} index={index} />}
           </div>
         ))}
       </div>

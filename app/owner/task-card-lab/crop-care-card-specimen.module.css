@@ -1,0 +1,226 @@
+.specimenStack {
+  display: grid;
+  gap: 18px;
+}
+
+.variantLabel {
+  display: flex;
+  justify-content: center;
+  padding: 2px 12px;
+}
+
+.variantLabel span {
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 999px;
+  background: rgba(239, 237, 244, 0.48);
+  color: #74788c;
+  padding: 7px 10px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.resourceMethod {
+  display: grid;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.resourceCategory {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 17px 18px 15px 48px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.52);
+}
+
+.resourceCategory:last-child {
+  border-bottom: 0;
+}
+
+.resourceCategory::before {
+  content: "";
+  position: absolute;
+  left: 23px;
+  top: 26px;
+  bottom: 20px;
+  width: 1px;
+  background: rgba(181, 181, 192, 0.56);
+}
+
+.resourceCategory > header {
+  position: relative;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.resourceCategory > header::before {
+  content: "";
+  position: absolute;
+  left: -30px;
+  top: 8px;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #858bb8;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(239, 237, 244, 0.72);
+}
+
+.resourceCategory h3 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 21px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.resourceRail {
+  position: relative;
+  min-height: 42px;
+  display: grid;
+  align-items: center;
+  gap: 5px;
+  border-top: 1px solid rgba(215, 204, 189, 0.48);
+  border-bottom: 1px solid rgba(215, 204, 189, 0.48);
+  padding-block: 8px;
+}
+
+.resourceRail::before {
+  content: "";
+  position: absolute;
+  left: -27px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  transform: translateY(-50%);
+  border: 1.5px solid #858bb8;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.resourceRail::after {
+  content: "";
+  position: absolute;
+  left: -23px;
+  top: 50%;
+  width: 17px;
+  height: 1px;
+  background: rgba(181, 181, 192, 0.56);
+}
+
+.resourceRail strong {
+  color: var(--atlas-text);
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 910;
+}
+
+.resourceCategory > small {
+  color: #85867f;
+  font-size: 9px;
+  line-height: 1.35;
+  font-weight: 760;
+}
+
+.resourceIssue {
+  position: relative;
+}
+
+.resourceIssue > summary {
+  width: 32px;
+  height: 32px;
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  border: 1px solid rgba(139, 145, 194, 0.24);
+  border-radius: 50%;
+  background: rgba(239, 237, 244, 0.5);
+  color: #75788f;
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 760;
+}
+
+.resourceIssue > summary::-webkit-details-marker {
+  display: none;
+}
+
+.resourceIssue[open] > summary {
+  background: rgba(239, 237, 244, 0.76);
+}
+
+.resourceIssue > div {
+  position: absolute;
+  z-index: 5;
+  top: 38px;
+  right: 0;
+  width: min(250px, calc(100vw - 80px));
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid rgba(207, 196, 179, 0.78);
+  border-radius: 14px;
+  background: #fffdf7;
+  box-shadow: 0 12px 24px rgba(58, 46, 30, 0.09);
+}
+
+.resourceIssue button {
+  min-height: 34px;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 999px;
+  background: rgba(250, 248, 239, 0.92);
+  color: #606275;
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.resourceIssue input {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 34px;
+  box-sizing: border-box;
+  border: 1px solid rgba(111, 97, 76, 0.18);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--atlas-text);
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+@media (max-width: 520px) {
+  .resourceCategory {
+    padding-left: 46px;
+    padding-right: 16px;
+  }
+
+  .resourceCategory::before {
+    left: 21px;
+  }
+
+  .resourceCategory > header::before {
+    left: -29px;
+  }
+
+  .resourceRail::before {
+    left: -26px;
+  }
+
+  .resourceRail::after {
+    left: -22px;
+  }
+}

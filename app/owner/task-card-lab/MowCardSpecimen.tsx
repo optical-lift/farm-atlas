@@ -6,18 +6,11 @@ type EquipmentSection = {
   issues: string[];
 };
 
-const equipment: EquipmentSection[] = [
-  {
-    title: "Riding mower",
-    resource: "Gas",
-    issues: ["Won't start", "Needs gas", "Something broke", "Other"],
-  },
-  {
-    title: "Battery-powered push mower",
-    resource: "2 batteries",
-    issues: ["Battery problem", "Mower problem", "Battery missing", "Other"],
-  },
-];
+const routeEquipment: EquipmentSection = {
+  title: "Riding mower",
+  resource: "Gas",
+  issues: ["Won't start", "Needs gas", "Something broke", "Other"],
+};
 
 function IssueDrawer({ section }: { section: EquipmentSection }) {
   return (
@@ -78,21 +71,20 @@ export default function MowCardSpecimen() {
       </section>
 
       <div className={styles.equipmentList}>
-        {equipment.map((section) => (
-          <section className={styles.equipmentSection} key={section.title}>
-            <header className={styles.equipmentHeader}>
-              <h3>{section.title}</h3>
-            </header>
-            <div className={styles.resourceRow}>
-              <strong>{section.resource}</strong>
-            </div>
-            <IssueDrawer section={section} />
-          </section>
-        ))}
+        <section className={styles.equipmentSection}>
+          <header className={styles.equipmentHeader}>
+            <h3>{routeEquipment.title}</h3>
+          </header>
+          <div className={styles.resourceRow}>
+            <strong>{routeEquipment.resource}</strong>
+          </div>
+          <IssueDrawer section={routeEquipment} />
+        </section>
       </div>
 
       <footer className={styles.finish}>
         <span>Finish mow</span>
+        <button type="button" className={styles.contractorFinish}>Master Trimmers came</button>
         <div>
           <button type="button" className={styles.primaryFinish}>Mowed to 3 in</button>
           <button type="button">Blocked</button>
