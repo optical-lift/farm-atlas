@@ -1,8 +1,8 @@
 /* Atlas PWA shell. Canonical farm truth remains server-authoritative. */
 // This byte change refreshes the installed offline document and any open stale client.
 // Bump this version whenever the offline document or global app chrome changes.
-// v10 refreshes installed clients after removing the remaining Day timeline backplates.
-const ATLAS_PWA_VERSION = "atlas-pwa-shell-v10";
+// v11 pauses Atlas push presentation while Bell is intentionally offline.
+const ATLAS_PWA_VERSION = "atlas-pwa-shell-v11";
 const SHELL_CACHE = `${ATLAS_PWA_VERSION}:shell`;
 const STATIC_CACHE = `${ATLAS_PWA_VERSION}:static`;
 const PRIVATE_CACHE_SUFFIXES = [":pages", ":prepared-data"];
@@ -162,70 +162,10 @@ self.addEventListener("message", (event) => {
   }
 });
 
-function taskNotificationActions(payload) {
-  const momentId = typeof payload.taskNotificationMomentId === "string"
-    ? payload.taskNotificationMomentId
-    : "";
-  const taskIds = Array.isArray(payload.taskIds)
-    ? payload.taskIds.filter((taskId) => typeof taskId === "string")
-    : [];
-
-  if (!momentId || !taskIds.length) return [];
-
-  const actions = [];
-  if (taskIds.length === 1) actions.push({ action: "done", title: "Done" });
-  actions.push({ action: "snooze-5h", title: "Remind in 5h" });
-  return actions;
-}
-
-async function showAtlasNotification(title, options) {
-  try {
-    await self.registration.showNotification(title, options);
-  } catch {
-    // Some Web Push surfaces accept the notification but not action buttons.
-    // Retrying without actions keeps the notification body tap dependable.
-    const fallback = { ...options };
-    delete fallback.actions;
-    await self.registration.showNotification(title, fallback);
-  }
-}
-
+// Bell is intentionally paused. Keep the subscription and worker plumbing intact
+// so the feature can be rebuilt later, but do not present incoming Atlas pushes.
 self.addEventListener("push", (event) => {
-  event.waitUntil((async () => {
-    let payload = {};
-    try {
-      payload = event.data ? event.data.json() : {};
-    } catch {
-      payload = { body: event.data ? event.data.text() : "Farm movement is waiting in Atlas." };
-    }
-
-    const title = payload.title || "Atlas";
-    const deepLink = payload.deepLink || payload.url || "/bell";
-    const badgeCount = Number(payload.badgeCount || 0);
-    const taskIds = Array.isArray(payload.taskIds)
-      ? payload.taskIds.filter((taskId) => typeof taskId === "string")
-      : [];
-    const actions = taskNotificationActions(payload);
-
-    await Promise.all([
-      showAtlasNotification(title, {
-        body: payload.body || "Farm movement is waiting in the Bell.",
-        icon: payload.icon || "/api/pwa/icon?size=192",
-        badge: payload.badge || "/api/pwa/icon?size=192",
-        tag: payload.tag || payload.dedupeKey || "atlas-farm-change",
-        renotify: Boolean(payload.renotify),
-        actions,
-        data: {
-          deepLink,
-          eventId: payload.eventId || null,
-          taskNotificationMomentId: payload.taskNotificationMomentId || null,
-          taskIds,
-          badgeCount,
-        },
-      }),
-      setAtlasBadge(badgeCount),
-    ]);
-  })());
+  event.waitUntil(setAtlasBadge(0));
 });
 
 async function openAtlasDestination(deepLink) {
