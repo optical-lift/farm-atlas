@@ -1,6 +1,6 @@
-.localStation::before {
-  top: 27px;
-  bottom: 38px;
+.localStation.localStation::before {
+  top: 27px !important;
+  bottom: 39px !important;
 }
 
 .localReminderRow::before {
@@ -13,9 +13,27 @@
   background: rgba(181, 181, 192, 0.72);
 }
 
+.localReminderRow::after {
+  content: "";
+  position: absolute;
+  left: -28px;
+  top: 21px;
+  z-index: 1;
+  width: 7px;
+  height: 7px;
+  box-sizing: border-box;
+  border: 1.5px solid #858bb8;
+  border-radius: 50%;
+  background: #fff;
+}
+
 @media (max-width: 520px) {
   .localReminderRow::before {
     left: -23px;
     width: 23px;
+  }
+
+  .localReminderRow::after {
+    left: -26px;
   }
 }
