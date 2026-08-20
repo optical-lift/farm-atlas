@@ -363,3 +363,11 @@
   background: rgba(214, 225, 177, 0.72);
   color: #515b34;
 }
+
+.finish .contractorFinish {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 15px;
+  background: rgba(239, 237, 244, 0.68);
+  color: #5f6278;
+}
