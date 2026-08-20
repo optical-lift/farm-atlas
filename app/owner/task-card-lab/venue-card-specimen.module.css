@@ -167,16 +167,23 @@
 
 .station {
   display: grid;
-  gap: 10px;
-  padding: 18px;
+  gap: 8px;
+  padding: 16px 18px 14px;
   border-bottom: 1px solid rgba(215, 204, 189, 0.62);
 }
 
 .stationHeader {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.stationHeader > div {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
 }
 
 .stationHeader h3 {
@@ -188,77 +195,94 @@
   letter-spacing: -0.04em;
 }
 
-.stationHeader span {
+.stationHeader > div > span {
   color: #85867f;
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1.1;
   font-weight: 790;
-  text-align: right;
+}
+
+.quickCheck {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.quickCheck input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.quickCheck label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #777a94;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 920;
+  cursor: pointer;
+  user-select: none;
+  text-decoration-thickness: 1.5px;
+}
+
+.quickCheck label:hover {
+  background: rgba(239, 237, 244, 0.58);
+}
+
+.quickCheck input:checked + label {
+  color: #a0a19a;
+  text-decoration-line: line-through;
+  text-decoration-color: #696b62;
 }
 
 .resourceList {
   display: grid;
-  border-top: 1px solid rgba(215, 204, 189, 0.54);
+  border-top: 1px solid rgba(215, 204, 189, 0.48);
 }
 
 .resource {
-  border-bottom: 1px solid rgba(215, 204, 189, 0.54);
+  border-bottom: 1px solid rgba(215, 204, 189, 0.48);
 }
 
 .resource > summary {
-  min-height: 60px;
+  min-height: 46px;
   list-style: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 2px;
+  padding: 6px 2px;
 }
 
 .resource > summary::-webkit-details-marker {
   display: none;
 }
 
-.resource > summary > span:first-child {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
 .resource > summary strong {
+  min-width: 0;
   color: var(--atlas-text);
-  font-size: 15px;
-  line-height: 1.15;
-  font-weight: 930;
-}
-
-.resource > summary small {
-  color: var(--atlas-muted);
-  font-size: 10px;
-  line-height: 1.2;
-  font-weight: 760;
-}
-
-.resource > summary em {
-  color: #858bb8;
-  font-size: 9px;
-  line-height: 1.15;
-  font-style: normal;
-  font-weight: 820;
+  font-size: 14px;
+  line-height: 1.1;
+  font-weight: 910;
 }
 
 .resourceChevron {
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
-  border: 1px solid rgba(139, 145, 194, 0.26);
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  border: 1px solid rgba(139, 145, 194, 0.24);
   border-radius: 50%;
-  background: rgba(239, 237, 244, 0.72);
+  background: rgba(239, 237, 244, 0.64);
   color: #6f7189;
   display: grid;
   place-items: center;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
   font-weight: 700;
 }
@@ -271,6 +295,32 @@
   display: grid;
   gap: 10px;
   padding: 5px 0 15px;
+}
+
+.currentTruth {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 9px;
+  border-radius: 12px;
+  background: rgba(246, 242, 230, 0.58);
+}
+
+.currentTruth span {
+  color: #858bb8;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.currentTruth strong {
+  color: #64665f;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 820;
 }
 
 .resourceDrawer > p {
@@ -391,7 +441,8 @@
   padding: 4px 4px 0;
 }
 
-.hostCard {
+.hostCard,
+.roomCard {
   background: rgba(255, 255, 255, 0.92);
 }
 
@@ -442,16 +493,57 @@
   accent-color: #7d8266;
 }
 
+.rooms {
+  display: grid;
+}
+
+.room {
+  padding: 15px 18px;
+  border-top: 1px solid rgba(215, 204, 189, 0.56);
+}
+
+.room header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.room header > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.room h3 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 18px;
+  line-height: 1.05;
+  font-weight: 930;
+  letter-spacing: -0.03em;
+}
+
+.room p {
+  margin: 0;
+  color: #777970;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 760;
+}
+
 @media (max-width: 520px) {
   .header,
   .station,
   .finish,
-  .hostChecklist {
+  .hostChecklist,
+  .room {
     padding-left: 16px;
     padding-right: 16px;
   }
 
-  .stationHeader {
-    align-items: flex-start;
+  .stationHeader > div {
+    display: grid;
+    gap: 3px;
   }
 }
