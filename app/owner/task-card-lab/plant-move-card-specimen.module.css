@@ -1,0 +1,345 @@
+.stack {
+  display: grid;
+  gap: 22px;
+}
+
+.variantLabel {
+  display: flex;
+  justify-content: center;
+}
+
+.variantLabel span {
+  border-radius: 999px;
+  background: rgba(239, 237, 244, 0.72);
+  color: #696c7d;
+  padding: 7px 10px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.moveBlock {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+  background: #fff;
+}
+
+.moveBlock > span,
+.placementSection > header > span,
+.surprises > header > span,
+.divideYield > span {
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.moveBlock > strong {
+  color: var(--atlas-text);
+  font-size: 24px;
+  line-height: 1.02;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.moveBlock > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  color: #696b65;
+  font-size: 11px;
+}
+
+.moveBlock b {
+  min-width: 0;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 12px;
+  background: rgba(248, 246, 238, 0.5);
+  padding: 9px 10px;
+  font-weight: 850;
+}
+
+.moveBlock i {
+  color: #858bb8;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.facts > div {
+  display: grid;
+  gap: 4px;
+  padding: 14px 12px;
+  text-align: center;
+}
+
+.facts > div + div {
+  border-left: 1px solid rgba(215, 204, 189, 0.52);
+}
+
+.facts small {
+  color: #8a8b84;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.facts strong {
+  color: var(--atlas-text);
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.placementSection {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+  background: rgba(248, 246, 238, 0.42);
+}
+
+.placementSection > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.placementSection > header small {
+  color: #8b8c84;
+  font-size: 8px;
+  font-weight: 760;
+}
+
+.placementMap {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid rgba(94, 96, 89, 0.32);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.placementCell {
+  min-height: 46px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-right: 1px dashed rgba(133, 139, 192, 0.2);
+  border-bottom: 1px dashed rgba(133, 139, 192, 0.2);
+  background: transparent;
+  color: #9b9d95;
+  font: inherit;
+  cursor: pointer;
+}
+
+.placementCell:nth-child(6n) {
+  border-right: 0;
+}
+
+.placementCell span {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.planned span {
+  border: 1px dashed rgba(81, 91, 52, 0.38);
+  background: rgba(214, 225, 177, 0.32);
+  color: #596237;
+}
+
+.occupied span {
+  border: 1px solid rgba(96, 98, 86, 0.26);
+  background: rgba(239, 237, 244, 0.72);
+  color: #656778;
+}
+
+.selected {
+  background: rgba(214, 225, 177, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(81, 91, 52, 0.13);
+}
+
+.placementDetail {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 9px 10px;
+}
+
+.placementDetail span {
+  color: #858bb8;
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.placementDetail strong {
+  color: var(--atlas-text);
+  font-size: 11px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #85867f;
+  font-size: 8px;
+  font-weight: 760;
+}
+
+.legend b {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 50%;
+  background: #fff;
+}
+
+.surprises {
+  display: grid;
+  gap: 11px;
+  padding: 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.surprises > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.surprises button,
+.surprises summary {
+  min-height: 38px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(139, 145, 194, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  color: #626578;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.surprises .selectedSurprise {
+  border-color: rgba(81, 91, 52, 0.22);
+  background: rgba(214, 225, 177, 0.62);
+  color: #515b34;
+}
+
+.surprises details {
+  width: fit-content;
+}
+
+.surprises details[open] {
+  width: 100%;
+}
+
+.surprises summary {
+  list-style: none;
+}
+
+.surprises summary::-webkit-details-marker {
+  display: none;
+}
+
+.surprises details > div {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.surprises input,
+.divideYield input {
+  min-width: 0;
+  min-height: 36px;
+  box-sizing: border-box;
+  border: 1px solid rgba(111, 97, 76, 0.18);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--atlas-text);
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 16px;
+}
+
+.divideYield {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
+  align-items: center;
+  padding: 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.divideYield > span {
+  grid-column: 1 / -1;
+}
+
+.divideYield > strong {
+  color: var(--atlas-text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.divideYield input {
+  width: 72px;
+}
+
+@media (max-width: 520px) {
+  .moveBlock,
+  .placementSection,
+  .surprises,
+  .divideYield {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .placementMap {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .placementCell {
+    min-height: 42px;
+  }
+
+  .surprises details > div {
+    grid-template-columns: 1fr;
+  }
+}
