@@ -10,38 +10,51 @@ test("Task Card Editor renders the dedicated Harvest specimen", () => {
   assert.match(editorSource, /index === 4[\s\S]*<HarvestCardSpecimen \/>/);
 });
 
-test("Harvest specimen keeps one crop truth shared with the Harvest board", () => {
-  assert.match(harvestSource, /Harvest board/);
-  assert.match(harvestSource, /Same crop · same daily total/);
-  assert.match(harvestSource, /two doors into one crop-cycle record/);
-  assert.match(harvestSource, /Cumulative for this bed \/ crop/);
+test("Harvest is one weekly multi-crop round", () => {
+  assert.match(harvestSource, /Thursday Harvest/);
+  assert.match(harvestSource, /weekly round/);
+  assert.match(harvestSource, /Ready to harvest/);
+  assert.match(harvestSource, /Berry Walk/);
+  assert.match(harvestSource, /Field Rows/);
+  assert.doesNotMatch(harvestSource, /Same crop · same daily total/);
+  assert.doesNotMatch(harvestSource, /two doors into one crop-cycle record/);
 });
 
-test("Harvest quantity uses the settled half-bucket daily-total grammar", () => {
-  assert.match(harvestSource, /½ bucket = 10 stems · 1 bucket = 20 stems/);
-  assert.match(harvestSource, /const stems = bucketHalves \* 10/);
+test("Harvest season pulse uses last round, this round, and next watch", () => {
+  assert.match(harvestSource, /Last round/);
+  assert.match(harvestSource, /This round/);
+  assert.match(harvestSource, /Next watch/);
+  assert.match(harvestSource, /Harvest season pulse/);
+  assert.doesNotMatch(harvestSource, /Sown/);
+  assert.doesNotMatch(harvestSource, /Harvest again/);
+});
+
+test("every harvestable crop row owns its own half-bucket counter", () => {
+  assert.match(harvestSource, /function CropRow/);
+  assert.match(harvestSource, /bucketHalves/);
+  assert.match(harvestSource, /½ bucket · 10 stems/);
   assert.match(harvestSource, /setBucketHalves\(\(current\) => current \+ 1\)/);
-  assert.match(harvestSource, /setBucketHalves\(\(current\) => Math\.max\(0, current - 1\)\)/);
+  assert.match(harvestSource, /Math\.max\(0, current - 1\)/);
 });
 
-test("Harvest zero-quantity outcomes remain distinct farmer decisions", () => {
+test("nonstandard Harvest outcomes stay behind the per-crop demure drawer", () => {
+  assert.match(harvestSource, /exceptionDrawer/);
+  assert.match(harvestSource, /What happened\?/);
+  assert.match(harvestSource, /Harvested/);
   assert.match(harvestSource, /Nothing ready/);
   assert.match(harvestSource, /Left for later/);
   assert.match(harvestSource, /Deadheaded/);
-  assert.match(harvestSource, /Harvested needs at least ½ bucket/);
+  assert.match(harvestSource, /Crop exhausted/);
 });
 
-test("crop exhaustion is visually and semantically separate from ordinary Harvest results", () => {
-  assert.match(harvestSource, /Major crop judgment/);
-  assert.match(harvestSource, /Mark crop exhausted/);
-  assert.match(harvestSource, /For an annual crop/);
-  assert.match(harvestSource, /Perennial rule/);
-  assert.match(harvestSource, /instead of annual turnover/);
-});
-
-test("Harvest specimen exposes backward logging without becoming a production writer", () => {
-  assert.match(harvestSource, /Log an earlier harvest/);
-  assert.match(harvestSource, /evidence-entry time/);
+test("Harvest ends with the ordinary task completion controls and no instructional prose", () => {
+  assert.match(harvestSource, />Done<\/button>/);
+  assert.match(harvestSource, />Unfinished<\/button>/);
+  assert.doesNotMatch(harvestSource, /Mock only/);
+  assert.doesNotMatch(harvestSource, /Worker/);
+  assert.doesNotMatch(harvestSource, /Atlas keeps/);
+  assert.doesNotMatch(harvestSource, /For an annual crop/);
+  assert.doesNotMatch(harvestSource, /Perennial rule/);
   assert.doesNotMatch(harvestSource, /fetch\s*\(/);
   assert.doesNotMatch(harvestSource, /supabase/i);
 });
