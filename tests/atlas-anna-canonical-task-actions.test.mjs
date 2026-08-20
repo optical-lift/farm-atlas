@@ -27,10 +27,13 @@ test("Anna generic assigned tasks use the canonical regular result grammar once 
   assert.doesNotMatch(canonicalDetail, /StructuredUnfinishedControl/);
   assert.doesNotMatch(canonicalDetail, /assignee\.key === "anna"/);
   assert.doesNotMatch(canonicalDetail, /FarmHandConveyorTaskDetail/);
+  assert.match(canonicalDetail, /worker_task_execution_readiness_api_v1/);
+  assert.match(canonicalDetail, /initialReadiness=\{initialReadiness\}/);
   assert.match(canonicalDetail, /return <WorkerReadyAssignedTaskExecutionShell/);
-  assert.match(readinessShell, /readiness\?\.executable !== true/);
+  assert.match(readinessShell, /initialReadiness\.executable !== true/);
   assert.match(readinessShell, /return <WaitingScreen/);
   assert.match(readinessShell, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
+  assert.doesNotMatch(readinessShell, /fetch\(`\/api\/atlas\/task-execution-readiness/);
   assert.match(canonicalDetail, /TransplantReadinessTaskDetail/);
   assert.match(executionShell, /"Partly done"/);
   assert.match(executionShell, /"Problem found"/);
