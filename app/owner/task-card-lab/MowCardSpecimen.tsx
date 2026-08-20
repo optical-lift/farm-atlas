@@ -62,7 +62,7 @@ function RecurrenceTrail() {
 
 export default function MowCardSpecimen() {
   return (
-    <DominionCardFrame family="Mow" title="U-Pick Walkways">
+    <DominionCardFrame family="Mow" title="U-Pick Walkways" subtitle="U-Pick">
       <RecurrenceTrail />
 
       <section className={styles.heightSection}>

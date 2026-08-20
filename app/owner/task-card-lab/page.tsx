@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import HarvestCardSpecimen from "./HarvestCardSpecimen";
 import MowCardSpecimen from "./MowCardSpecimen";
-import { CheckCardSpecimen, TransplantCardSpecimen, WaterCareCardSpecimen } from "./RemainingDominionCardSpecimens";
+import { TransplantCardSpecimen } from "./RemainingDominionCardSpecimens";
 import SowCardSpecimen from "./SowCardSpecimen";
 import VenueCardSpecimen from "./VenueCardSpecimen";
 import WeedCardSpecimen from "./WeedCardSpecimen";
@@ -18,8 +18,6 @@ const families = [
   "Weed",
   "Mow",
   "Harvest",
-  "Water / Care",
-  "Check",
   "Transplant",
 ] as const;
 
@@ -29,8 +27,6 @@ function Specimen({ index }: { index: number }) {
   if (index === 2) return <WeedCardSpecimen />;
   if (index === 3) return <MowCardSpecimen />;
   if (index === 4) return <HarvestCardSpecimen />;
-  if (index === 5) return <WaterCareCardSpecimen />;
-  if (index === 6) return <CheckCardSpecimen />;
   return <TransplantCardSpecimen />;
 }
 
@@ -41,7 +37,7 @@ export default function TaskCardLabPage() {
         <span>ATLAS · OWNER DESIGN LAB</span>
         <h1>Task Card Gallery</h1>
         <p>
-          Every current Dominion family, fully exposed in one vertical scroll. These are fixture-only CSS mockups: no task feed, no scheduling, no Supabase writes.
+          Current Dominion shells and crop-cycle variants, fully exposed in one vertical scroll. These are fixture-only CSS mockups: no task feed, no scheduling, no Supabase writes.
         </p>
       </header>
 

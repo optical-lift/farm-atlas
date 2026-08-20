@@ -13,8 +13,8 @@ test("Task Card Editor renders the dedicated Harvest specimen", () => {
   assert.match(editorSource, /index === 4[\s\S]*<HarvestCardSpecimen \/>/);
 });
 
-test("Harvest uses the shared ordinary task-family chrome without hardcoded schedule copy", () => {
-  assert.match(harvestSource, /<DominionCardFrame family="Harvest" title="Harvest Stems">/);
+test("Harvest uses shared task chrome with a current-zone subtitle and no hardcoded schedule copy", () => {
+  assert.match(harvestSource, /<DominionCardFrame family="Harvest" title="Harvest Stems" subtitle=\{zones\.join\(" · "\)\}>/);
   assert.match(frameSource, /className=\{styles\.familyRow\}/);
   assert.match(frameStyles, /\.familyRow span \{[\s\S]*color: #858bb8/);
   assert.doesNotMatch(harvestSource, /Thursday Harvest/);
