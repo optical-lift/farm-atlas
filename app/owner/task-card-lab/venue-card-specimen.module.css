@@ -164,7 +164,7 @@
 .rowKey {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 18px;
   padding: 9px 18px;
   border-bottom: 1px solid rgba(215, 204, 189, 0.5);
   background: rgba(248, 246, 238, 0.44);
@@ -185,7 +185,6 @@
 .rowKey b {
   color: #71748d;
   font-size: 12px;
-  line-height: 1;
 }
 
 .stations {
@@ -222,29 +221,22 @@
   letter-spacing: -0.04em;
 }
 
-.stationHeader > div > span,
-.stationHeader > small {
+.stationHeader span {
   color: #85867f;
   font-size: 9px;
   line-height: 1.1;
   font-weight: 790;
 }
 
-.stationHeader > small {
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
 .resourceList,
-.hostRows,
 .roomRows {
   display: grid;
   border-top: 1px solid rgba(215, 204, 189, 0.48);
 }
 
-.checkableThing {
+.reminderRow {
   position: relative;
-  min-height: 54px;
+  min-height: 48px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -252,19 +244,7 @@
   border-bottom: 1px solid rgba(215, 204, 189, 0.48);
 }
 
-.checkTarget {
-  min-width: 0;
-  min-height: 54px;
-  display: grid;
-  grid-template-columns: 25px minmax(0, 1fr);
-  align-items: center;
-  gap: 11px;
-  padding: 7px 0;
-  cursor: pointer;
-  user-select: none;
-}
-
-.checkTarget input {
+.reminderToggle {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -272,27 +252,19 @@
   pointer-events: none;
 }
 
-.box {
-  width: 23px;
-  height: 23px;
-  border: 2px solid #a8a9b1;
-  border-radius: 7px;
-  background: #fff;
-  display: grid;
-  place-items: center;
-  transition: 120ms ease;
+.reminderCheck {
+  min-width: 0;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 0;
 }
 
-.box::after {
-  content: "";
-  width: 9px;
-  height: 5px;
-  border-left: 2px solid transparent;
-  border-bottom: 2px solid transparent;
-  transform: rotate(-45deg) translateY(-1px);
-}
-
-.checkTarget strong {
+.reminderCheck strong {
   min-width: 0;
   color: var(--atlas-text);
   font-size: 14px;
@@ -301,178 +273,123 @@
   transition: 120ms ease;
 }
 
-.checkTarget input:focus-visible + .box {
-  outline: 3px solid rgba(133, 139, 184, 0.23);
-  outline-offset: 2px;
-}
-
-.checkTarget input:checked + .box {
-  border-color: #858a6d;
-  background: rgba(214, 225, 177, 0.76);
-}
-
-.checkTarget input:checked + .box::after {
-  border-left-color: #58603f;
-  border-bottom-color: #58603f;
-}
-
-.checkTarget:has(input:checked) strong {
-  color: #a0a19a;
-  text-decoration-line: line-through;
-  text-decoration-color: #696b62;
-  text-decoration-thickness: 1.5px;
-}
-
-.issueDrawer {
-  position: static;
-}
-
-.issueDrawer > summary {
-  list-style: none;
-  cursor: pointer;
-  min-width: 47px;
-  min-height: 36px;
-  border: 1px solid rgba(139, 145, 194, 0.24);
-  border-radius: 999px;
-  background: rgba(239, 237, 244, 0.58);
-  color: #6f7189;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 5px 7px;
-  font-weight: 800;
-}
-
-.issueDrawer > summary::-webkit-details-marker {
-  display: none;
-}
-
-.issueDrawer > summary > span {
-  font-size: 16px;
-  line-height: 1;
-  font-weight: 720;
-}
-
-.issueDrawer > summary > small {
-  font-size: 7px;
+.reminderCheck small {
+  flex: 0 0 auto;
+  color: #7a7d98;
+  font-size: 8px;
   line-height: 1;
   font-weight: 900;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  text-decoration-thickness: 1.4px;
 }
 
-.issueDrawer[open] > summary {
-  border-color: rgba(154, 117, 121, 0.26);
-  background: rgba(245, 235, 234, 0.78);
-  color: #7b6264;
+.reminderToggle:checked + .reminderCheck strong,
+.reminderToggle:checked + .reminderCheck small {
+  color: #9a9b94;
+  text-decoration-line: line-through;
+  text-decoration-color: #6f7168;
+  text-decoration-thickness: 1.5px;
 }
 
-.issueDrawer[open] > summary > span {
-  transform: rotate(45deg);
+.restockDrawer {
+  position: static;
 }
 
-.resourceDrawer {
-  position: absolute;
-  z-index: 3;
-  left: 0;
-  right: 0;
-  top: calc(100% - 1px);
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid rgba(207, 196, 179, 0.9);
-  border-radius: 14px;
-  background: #fffefa;
-  box-shadow: 0 16px 30px rgba(58, 46, 30, 0.12);
+.restockDrawer > summary {
+  list-style: none;
+  cursor: pointer;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border: 1px solid rgba(139, 145, 194, 0.2);
+  border-radius: 999px;
+  background: rgba(239, 237, 244, 0.46);
+  color: #75788f;
 }
 
-.currentTruth {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: baseline;
-  gap: 8px;
-  padding: 8px 9px;
-  border-radius: 12px;
-  background: rgba(246, 242, 230, 0.58);
+.restockDrawer > summary::-webkit-details-marker {
+  display: none;
 }
 
-.currentTruth span {
-  color: #858bb8;
-  font-size: 8px;
+.restockDrawer > summary > span {
+  font-size: 14px;
   line-height: 1;
-  font-weight: 950;
-  letter-spacing: 0.1em;
+  font-weight: 760;
+}
+
+.restockDrawer > summary > small {
+  font-size: 7px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.035em;
   text-transform: uppercase;
 }
 
-.currentTruth strong {
-  color: #64665f;
-  font-size: 10px;
-  line-height: 1.2;
-  font-weight: 820;
+.restockDrawer[open] > summary {
+  background: rgba(239, 237, 244, 0.72);
 }
 
-.resourceDrawer > p {
-  margin: 0;
-  color: #6a6c72;
-  font-size: 11px;
-  font-weight: 850;
+.restockDrawer[open] > summary > span {
+  transform: rotate(45deg);
 }
 
-.resourceActions {
-  display: flex;
-  flex-wrap: wrap;
+.restockPanel {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  top: calc(100% - 2px);
+  width: min(260px, calc(100vw - 70px));
+  display: grid;
   gap: 7px;
+  padding: 9px;
+  border: 1px solid rgba(207, 196, 179, 0.84);
+  border-radius: 12px;
+  background: #fffefa;
+  box-shadow: 0 12px 24px rgba(58, 46, 30, 0.1);
 }
 
-.resourceActions button,
-.noteButton,
-.finish button {
-  min-height: 38px;
-  border: 1px solid rgba(139, 145, 194, 0.25);
+.restockPanel button {
+  width: fit-content;
+  min-height: 31px;
+  border: 1px solid rgba(139, 145, 194, 0.22);
   border-radius: 999px;
-  background: rgba(250, 248, 239, 0.92);
+  background: rgba(246, 242, 230, 0.72);
   color: #606275;
-  padding: 8px 11px;
+  padding: 6px 10px;
   font: inherit;
-  font-size: 11px;
-  line-height: 1.05;
+  font-size: 9px;
+  line-height: 1;
   font-weight: 900;
 }
 
-.resourceDrawer label {
+.restockPanel label {
   display: grid;
-  gap: 6px;
-  color: #6a6c72;
-  font-size: 10px;
-  font-weight: 850;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  color: #777970;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.resourceDrawer textarea {
+.restockPanel input {
   width: 100%;
-  resize: vertical;
-  border: 1px solid rgba(111, 97, 76, 0.23);
-  border-radius: 14px;
+  min-height: 32px;
+  border: 1px solid rgba(111, 97, 76, 0.18);
+  border-radius: 9px;
   background: #fff;
   color: var(--atlas-text);
-  padding: 10px 11px;
+  padding: 6px 8px;
   font: inherit;
-  font-size: 13px;
-  line-height: 1.3;
-}
-
-.resourceDrawer > small {
-  color: #8a8b84;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.2;
-  font-weight: 720;
-}
-
-.noteButton {
-  width: fit-content;
-  background: rgba(167, 171, 214, 0.2) !important;
-  color: #56596f !important;
 }
 
 .finish {
@@ -490,11 +407,15 @@
 
 .finish button {
   min-height: 54px;
+  border: 1px solid rgba(139, 145, 194, 0.25);
   border-radius: 17px;
   background: rgba(255, 255, 255, 0.82);
   color: var(--atlas-muted);
   padding: 10px;
+  font: inherit;
   font-size: 12px;
+  line-height: 1.05;
+  font-weight: 900;
   text-wrap: balance;
 }
 
@@ -556,27 +477,87 @@
   font-weight: 850;
 }
 
-.hostRows .checkableThing {
-  min-height: 62px;
+.classicChecklist {
+  border: 1px solid rgba(139, 145, 194, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
 }
 
-.hostRows .checkTarget {
-  min-height: 62px;
+.classicCheckItem {
+  position: relative;
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 16px;
+  background: rgba(246, 242, 230, 0.52);
+  color: var(--atlas-text);
+  padding: 9px 10px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
 }
 
-.hostRows .checkTarget strong {
-  font-size: 13px;
-  line-height: 1.22;
-  font-weight: 850;
+.classicCheckItem input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.classicCircle {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(139, 145, 194, 0.44);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #515b34;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.classicCircle::after {
+  content: "";
+}
+
+.classicCheckItem strong {
+  min-width: 0;
+  color: var(--atlas-text);
+  font-size: 15px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+}
+
+.classicCheckItem:has(input:checked) {
+  background: rgba(214, 225, 177, 0.35);
+}
+
+.classicCheckItem input:checked + .classicCircle {
+  border-color: rgba(81, 91, 52, 0.34);
+  background: rgba(214, 225, 177, 0.62);
+}
+
+.classicCheckItem input:checked + .classicCircle::after {
+  content: "✓";
+}
+
+.classicCheckItem:has(input:checked) strong {
+  color: #73776b;
 }
 
 .roomRows {
-  padding: 0 18px 4px;
-  border-top: none;
-}
-
-.roomRows .checkableThing:first-child {
-  border-top: 1px solid rgba(215, 204, 189, 0.48);
+  padding: 0 18px 14px;
 }
 
 @media (max-width: 520px) {
@@ -588,18 +569,21 @@
     padding-right: 16px;
   }
 
-  .rowKey {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
   .stationHeader > div {
     display: grid;
     gap: 3px;
   }
 
-  .issueDrawer > summary {
-    min-width: 43px;
+  .rowKey {
+    gap: 12px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .restockDrawer > summary > small {
+    max-width: 62px;
+    line-height: 1.1;
+    text-align: center;
   }
 
   .roomRows {
