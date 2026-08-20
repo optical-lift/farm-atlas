@@ -23,6 +23,7 @@ test("future calendar cards are previews rather than completion surfaces", () =>
   assert.match(day, /!isFutureDay \? <DayTrailSummary/);
   assert.match(day, /atlas-day-future-plan-card/);
   assert.match(day, /pointer-events: none/);
+  assert.doesNotMatch(day, /Scheduled for this day/);
 });
 
 test("future universal card reads admit exact-date work plus explicit placements only", () => {

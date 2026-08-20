@@ -521,7 +521,7 @@ function FuturePlanCard({ item }: { item: FutureProjectionItem }) {
     <div className="atlas-day-task-card atlas-day-future-plan-card" data-future-projection-source={item.sourceKind} data-day-window={item.dayWindow}>
       <small className="atlas-day-task-family">{firstWord}</small>
       <strong>{item.title}</strong>
-      <span>{item.location || "Scheduled for this day"}</span>
+      {item.location ? <span>{item.location}</span> : null}
     </div>
   );
 }
