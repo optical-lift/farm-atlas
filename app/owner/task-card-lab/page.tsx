@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import SowCardSpecimen from "./SowCardSpecimen";
 import VenueCardSpecimen from "./VenueCardSpecimen";
+import WeedCardSpecimen from "./WeedCardSpecimen";
 import styles from "./task-card-lab.module.css";
 
 export const metadata: Metadata = {
@@ -63,27 +64,15 @@ const cards: CardSpec[] = [
   },
   {
     family: "Weed",
-    variant: "recovery weeding",
-    title: "Finish Field Row 13",
-    place: "Field Rows · pollenless sunflower",
-    timing: "Today · crop visibility compromised",
-    play: "Clear weed pressure until the crop is readable and the bed reaches the best true condition you can get it to today.",
-    desiredLabel: "Possible resulting states",
-    desired: [
-      "Still rough",
-      "Guest-presentable, not sow-ready",
-      "Ready for seeds",
-    ],
-    facts: [
-      { label: "Protect", value: "Sunflowers + marked volunteer celosia" },
-      { label: "Current", value: "Heavy weed pressure" },
-    ],
-    references: ["Do not call the bed sow-ready merely because it looks presentable."],
-    resources: [
-      { label: "Field Row 13", kind: "Managed bed", state: "Heavy pressure", actions: ["Still rough", "Guest-presentable, not sow-ready", "Ready for seeds", "Something changed"] },
-    ],
-    finish: "Choose final bed state",
-    partial: "Made progress",
+    variant: "bed care",
+    title: "Field Row 13",
+    place: "Field Rows · ProCut Orange sunflower",
+    timing: "Today · weeding due",
+    play: "Weed uses its own bed-history specimen below.",
+    desiredLabel: "Bed state",
+    desired: [],
+    finish: "Done weeding today",
+    partial: "Blocked",
   },
   {
     family: "Mow",
@@ -318,7 +307,13 @@ export default function TaskCardLabPage() {
       <div className={styles.gallery}>
         {cards.map((card, index) => (
           <div id={`task-card-${index + 1}`} key={`${card.family}-${card.variant}`} className={styles.cardAnchor}>
-            {index === 0 ? <VenueCardSpecimen /> : index === 1 ? <SowCardSpecimen /> : <TaskCard card={card} index={index} />}
+            {index === 0
+              ? <VenueCardSpecimen />
+              : index === 1
+                ? <SowCardSpecimen />
+                : index === 2
+                  ? <WeedCardSpecimen />
+                  : <TaskCard card={card} index={index} />}
           </div>
         ))}
       </div>
