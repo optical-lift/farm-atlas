@@ -1,0 +1,62 @@
+.card {
+  overflow: hidden;
+  border: 1px solid rgba(207, 196, 179, 0.92);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 16px 34px rgba(58, 46, 30, 0.07);
+}
+
+.header {
+  display: grid;
+  gap: 7px;
+  padding: 20px 18px 18px;
+}
+
+.familyRow span {
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.header h2 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: clamp(29px, 8vw, 41px);
+  line-height: 0.98;
+  font-weight: 950;
+  letter-spacing: -0.06em;
+}
+
+.finish {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 9px;
+  padding: 17px 18px 20px;
+  background: rgba(246, 242, 230, 0.48);
+}
+
+.primaryFinish,
+.secondaryFinish {
+  min-height: 52px;
+  border-radius: 17px;
+  padding: 11px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 930;
+}
+
+.primaryFinish {
+  border: 0;
+  background: rgba(214, 225, 177, 0.76);
+  color: #515b34;
+}
+
+.secondaryFinish {
+  border: 1px solid rgba(111, 97, 76, 0.18);
+  background: rgba(255, 255, 255, 0.76);
+  color: #696b63;
+}
