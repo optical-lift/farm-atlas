@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import HarvestCardSpecimen from "./HarvestCardSpecimen";
 import MowCardSpecimen from "./MowCardSpecimen";
+import { CheckCardSpecimen, TransplantCardSpecimen, WaterCareCardSpecimen } from "./RemainingDominionCardSpecimens";
 import SowCardSpecimen from "./SowCardSpecimen";
 import VenueCardSpecimen from "./VenueCardSpecimen";
 import WeedCardSpecimen from "./WeedCardSpecimen";
@@ -298,7 +299,13 @@ export default function TaskCardLabPage() {
                     ? <MowCardSpecimen />
                     : index === 4
                       ? <HarvestCardSpecimen />
-                      : <TaskCard card={card} index={index} />}
+                      : index === 5
+                        ? <WaterCareCardSpecimen />
+                        : index === 6
+                          ? <CheckCardSpecimen />
+                          : index === 7
+                            ? <TransplantCardSpecimen />
+                            : <TaskCard card={card} index={index} />}
           </div>
         ))}
       </div>
