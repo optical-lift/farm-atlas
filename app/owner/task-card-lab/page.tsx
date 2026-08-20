@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import SowCardSpecimen from "./SowCardSpecimen";
 import VenueCardSpecimen from "./VenueCardSpecimen";
 import styles from "./task-card-lab.module.css";
 
@@ -51,23 +52,12 @@ const cards: CardSpec[] = [
   {
     family: "Sow",
     variant: "direct sow bed",
-    title: "ProCut White Lite",
-    place: "Field Row 6",
-    timing: "Today · sowing window open",
-    play: "Sow Field Row 6 with the linked ProCut White Lite seed using the specified bed pattern.",
-    desiredLabel: "Finished bed should be",
-    desired: ["Three lengthwise rows · 4 in spacing · 1/2 in depth"],
-    facts: [
-      { label: "Rows", value: "3" },
-      { label: "Spacing", value: "4 in" },
-      { label: "Depth", value: "1/2 in" },
-      { label: "Bed", value: "Field Row 6" },
-    ],
-    references: ["The crop clock begins from the actual sow date."],
-    resources: [
-      { label: "ProCut White Lite", kind: "Seed lot", state: "Packet open", actions: ["Packet empty", "Estimate remaining", "Quantity does not match", "Request change"] },
-      { label: "Field Row 6", kind: "Managed bed", state: "Prepared", actions: ["Choose a new state", "Something changed", "Add note", "Request change"] },
-    ],
+    title: "Field Row 6",
+    place: "ProCut White Lite · sunflower",
+    timing: "Tonight · sowing window open",
+    play: "Sow uses its own bed-first specimen below.",
+    desiredLabel: "Bed cycle",
+    desired: [],
     finish: "Sowing complete",
     partial: "Partly sown",
   },
@@ -328,7 +318,7 @@ export default function TaskCardLabPage() {
       <div className={styles.gallery}>
         {cards.map((card, index) => (
           <div id={`task-card-${index + 1}`} key={`${card.family}-${card.variant}`} className={styles.cardAnchor}>
-            {index === 0 ? <VenueCardSpecimen /> : <TaskCard card={card} index={index} />}
+            {index === 0 ? <VenueCardSpecimen /> : index === 1 ? <SowCardSpecimen /> : <TaskCard card={card} index={index} />}
           </div>
         ))}
       </div>

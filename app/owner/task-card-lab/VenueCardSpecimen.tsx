@@ -1,3 +1,4 @@
+import localStyles from "./venue-local-rail.module.css";
 import styles from "./venue-card-specimen.module.css";
 
 type VenueResource = {
@@ -21,12 +22,11 @@ const tidySections: VenueSection[] = [
     ],
   },
   {
-    id: "library",
-    title: "Library",
+    id: "kitchen",
+    title: "Kitchen",
     resources: [
-      { label: "Tidy chairs" },
-      { label: "Beat rug outside" },
-      { label: "Clean windows" },
+      { label: "Empty trash", restockLabel: "Trash bags" },
+      { label: "Clean counters" },
     ],
   },
   {
@@ -38,11 +38,12 @@ const tidySections: VenueSection[] = [
     ],
   },
   {
-    id: "kitchen",
-    title: "Kitchen",
+    id: "library",
+    title: "Library",
     resources: [
-      { label: "Empty trash", restockLabel: "Trash bags" },
-      { label: "Clean counters" },
+      { label: "Tidy chairs" },
+      { label: "Beat rug outside" },
+      { label: "Clean windows" },
     ],
   },
 ];
@@ -99,7 +100,7 @@ function RestockDrawer({ label }: { label: string }) {
 
 function ReminderRow({ resource, id }: { resource: VenueResource; id: string }) {
   return (
-    <div className={styles.reminderRow}>
+    <div className={`${styles.reminderRow} ${localStyles.localReminderRow}`}>
       <input className={styles.reminderToggle} id={id} type="checkbox" />
       <label className={styles.reminderCheck} htmlFor={id}>
         <strong>{resource.label}</strong>
@@ -148,7 +149,7 @@ function ReminderSections({ sections, prefix }: { sections: VenueSection[]; pref
   return (
     <div className={styles.stations}>
       {sections.map((section) => (
-        <section className={styles.station} key={section.title}>
+        <section className={`${styles.station} ${localStyles.localStation}`} key={section.title}>
           <header className={styles.stationHeader}>
             <div>
               <h3>{section.title}</h3>
@@ -300,7 +301,7 @@ export default function VenueCardSpecimen() {
           Community Thursday is one governed repeating event cycle: Tidy → Prep → Host → Reset. Hidden readiness requirements such as mowing being current by the day before the event affect release, but they do not become Worker-facing Trail nodes.
         </p>
         <p>
-          Every Venue task uses one of only two interaction methods. Instructional / resource cards use titled rooms or stations connected by the same quiet dot-and-line visual language as the Day Overview, with tap-to-cross-off reminders and a + only where a restock request makes sense. Execution cards use the shared Atlas checklist for actions that must actually be accomplished.
+          Every Venue task uses one of only two interaction methods. Instructional / resource cards use titled rooms or stations, each with its own quiet local dot-and-line rail through the things to inspect. Tap-to-cross-off reminders remain memory aids; a + appears only where a restock request makes sense. Execution cards use the shared Atlas checklist for actions that must actually be accomplished.
         </p>
         <p>
           Restock requests stay inline beneath the exact resource that raised them; the + remains a compact circular exception affordance. Note inputs use iOS-safe text sizing so opening the keyboard does not zoom the card.

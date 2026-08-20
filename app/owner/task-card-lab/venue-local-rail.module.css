@@ -1,0 +1,21 @@
+.localStation::before {
+  top: 27px;
+  bottom: 38px;
+}
+
+.localReminderRow::before {
+  content: "";
+  position: absolute;
+  left: -25px;
+  top: 24px;
+  width: 25px;
+  height: 1px;
+  background: rgba(181, 181, 192, 0.72);
+}
+
+@media (max-width: 520px) {
+  .localReminderRow::before {
+    left: -23px;
+    width: 23px;
+  }
+}
