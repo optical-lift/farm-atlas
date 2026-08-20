@@ -2,17 +2,8 @@ import DominionCardFrame from "./DominionCardFrame";
 import localStyles from "./venue-local-rail.module.css";
 import styles from "./venue-card-specimen.module.css";
 
-type VenueResource = {
-  label: string;
-  restockLabel?: string;
-};
-
-type VenueSection = {
-  id: string;
-  title: string;
-  location?: string;
-  resources: VenueResource[];
-};
+type VenueResource = { label: string; restockLabel?: string };
+type VenueSection = { id: string; title: string; location?: string; resources: VenueResource[] };
 
 const tidySections: VenueSection[] = [
   { id: "entry", title: "Entry", resources: [{ label: "Closet closed" }] },
@@ -85,7 +76,7 @@ function ReminderSections({ sections, prefix }: { sections: VenueSection[]; pref
 
 function TidyCard() {
   return (
-    <DominionCardFrame family="Venue" title="Tidy Community Thursday" subtitle="Elm Farm">
+    <DominionCardFrame family="Venue" familyDetail="weekly event template" title="Tidy Community Thursday" subtitle="Community Thursday · Elm Farm" timing="Wednesday · whole-space tidy">
       <EventTrail current="tidy" />
       <ReminderKey />
       <ReminderSections sections={tidySections} prefix="tidy" />
@@ -95,7 +86,7 @@ function TidyCard() {
 
 function PrepCard() {
   return (
-    <DominionCardFrame family="Venue" title="Prep Community Thursday" subtitle="Elm Farm">
+    <DominionCardFrame family="Venue" familyDetail="weekly event template" title="Prep Community Thursday" subtitle="Community Thursday · Elm Farm" timing="Wednesday · night-before prep">
       <EventTrail current="prep" />
       <ReminderKey />
       <ReminderSections sections={prepSections} prefix="prep" />
@@ -116,7 +107,7 @@ function ClassicChecklistRow({ label, id }: { label: string; id: string }) {
 function HostCard() {
   const checklist = ["Turn on the ice maker", "Turn on the OPEN sign", "Open the yellow door"];
   return (
-    <DominionCardFrame family="Venue" title="Host Community Thursday" subtitle="Elm Farm" className={styles.hostCard}>
+    <DominionCardFrame family="Venue" familyDetail="event opening" title="Host Community Thursday" subtitle="Community Thursday · Elm Farm" timing="Thursday morning · Prep complete" className={styles.hostCard}>
       <EventTrail current="host" />
       <section className={styles.hostChecklist}>
         <header><span>Open the event</span><small>3 steps</small></header>
