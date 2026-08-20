@@ -6,21 +6,23 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("task notifications offer Done and a five-hour reminder with an Open fallback", () => {
+test("Bell pause removes the global Bell surface and suppresses push presentation", () => {
+  const globals = read("components/atlas/shell/AtlasOperationalProjectionGlobals.tsx");
   const worker = read("public/sw.js");
 
-  assert.match(worker, /atlas-pwa-shell-v10/);
-  assert.match(worker, /action: "done", title: "Done"/);
-  assert.match(worker, /action: "snooze-5h", title: "Remind in 5h"/);
-  assert.match(worker, /delayMinutes: action === "snooze" \? 300/);
+  assert.doesNotMatch(globals, /AtlasBellCover/);
+  assert.match(worker, /atlas-pwa-shell-v11/);
+  assert.match(worker, /Bell is intentionally paused/);
+  assert.match(worker, /self\.addEventListener\("push"/);
+  assert.match(worker, /event\.waitUntil\(setAtlasBadge\(0\)\)/);
+  assert.doesNotMatch(worker, /registration\.showNotification/);
   assert.match(worker, /event\.action \|\| "open"/);
   assert.match(worker, /openAtlasDestination\(deepLink\)/);
   assert.match(worker, /credentials: "include"/);
   assert.match(worker, /x-atlas-intent": "notification-action-v1"/);
-  assert.match(worker, /delete fallback\.actions/);
 });
 
-test("notification actions are authenticated and server-authoritative", () => {
+test("notification actions remain authenticated and server-authoritative for already-delivered notifications", () => {
   const route = read("app/api/atlas/notification-action/route.ts");
   const migration = read("supabase/migrations/20260804225015_task_notification_actions_v1.sql");
 
@@ -42,18 +44,17 @@ test("notification actions are authenticated and server-authoritative", () => {
   assert.match(migration, /grant execute.*authenticated/);
 });
 
-test("grouped or structured notifications cannot falsely quick-complete work", () => {
+test("already-delivered grouped or structured notifications still cannot falsely quick-complete work", () => {
   const worker = read("public/sw.js");
   const migration = read("supabase/migrations/20260804225015_task_notification_actions_v1.sql");
 
-  assert.match(worker, /if \(taskIds\.length === 1\) actions\.push/);
   assert.match(migration, /if v_open_count <> 1 then/);
   assert.match(migration, /status', 'open_required'/);
   assert.match(migration, /requiresOpen', true/);
   assert.doesNotMatch(worker, /record_task_transition_v1/);
 });
 
-test("rhythm pushes describe the work instead of exposing Clock internals", () => {
+test("rhythm push copy remains preserved while Bell delivery is paused", () => {
   const migration = read("supabase/migrations/20260805002453_user_facing_rhythm_push_copy.sql");
 
   assert.match(migration, /when 'rhythm_failure' then 'Atlas · Overdue'/);

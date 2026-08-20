@@ -10,16 +10,17 @@ const worker = read("public/sw.js");
 const offline = read("app/offline/page.tsx");
 const frame = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
 
-test("dock and client-version changes invalidate the previously cached offline shell", () => {
-  assert.match(worker, /atlas-pwa-shell-v10/);
-  assert.match(worker, /removing the remaining Day timeline backplates/);
+test("Bell-pause and client-version changes invalidate the previously cached offline shell", () => {
+  assert.match(worker, /atlas-pwa-shell-v11/);
+  assert.match(worker, /pauses Atlas push presentation while Bell is intentionally offline/);
   assert.match(worker, /Bump this version whenever the offline document or global app chrome changes/);
   assert.match(worker, /cache: "reload"/);
   assert.match(worker, /reloadOpenAtlasClients/);
 });
 
-test("the offline fallback uses current Atlas navigation language", () => {
-  assert.match(offline, /Home, Work, Bell, Zone Registry, or Project/);
+test("the offline fallback uses current Atlas navigation language without advertising paused Bell", () => {
+  assert.match(offline, /Home, Work, Zone Registry, or Project/);
+  assert.doesNotMatch(offline, /Home, Work, Bell/);
   assert.match(offline, />Work<\/Link>/);
   assert.doesNotMatch(offline, /Home, Day, Bell, Place/);
 });

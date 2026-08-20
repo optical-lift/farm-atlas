@@ -20,9 +20,9 @@ test("the global Atlas add control is retired from the contextual shell", () => 
   assert.doesNotMatch(frame, /Add to Atlas/);
 });
 
-test("farm-global runtime surfaces do not mount on the Principal projection", () => {
+test("farm-global runtime surfaces do not mount on the Principal projection and paused Bell does not mount anywhere", () => {
   assert.match(operationalGlobals, /if \(isPrincipalProjection\(pathname\)\) return null/);
-  assert.match(operationalGlobals, /AtlasBellCover/);
+  assert.doesNotMatch(operationalGlobals, /AtlasBellCover/);
   assert.match(operationalGlobals, /GlobalDayCueDelivery/);
   assert.match(operationalGlobals, /DependencyReleaseFlash/);
   assert.match(operationalGlobals, /OwnerDayPlanGate/);
@@ -31,7 +31,7 @@ test("farm-global runtime surfaces do not mount on the Principal projection", ()
   assert.match(layout, /AtlasOperationalProjectionGlobals/);
 });
 
-test("farm Bell and Sky refresh also fail closed if mounted directly on Principal routes", () => {
+test("farm Bell and Sky retain their direct Principal fail-closed guards for later restoration", () => {
   assert.match(skyMaintainer, /principalProjection/);
   assert.match(skyMaintainer, /if \(principalProjection\) return/);
   assert.match(bell, /principalProjection/);

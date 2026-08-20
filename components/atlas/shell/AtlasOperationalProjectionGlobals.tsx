@@ -3,7 +3,6 @@
 import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 
-import AtlasBellCover from "@/components/atlas/home/AtlasBellCover";
 import OwnerDayPlanGate from "@/components/atlas/owner-day-plan-gate";
 import DependencyReleaseFlash from "@/components/atlas/task/DependencyReleaseFlash";
 import AtlasWorkAlongsideOverlay from "@/components/atlas/work-alongside/AtlasWorkAlongsideOverlay";
@@ -28,7 +27,6 @@ export default function AtlasOperationalProjectionGlobals({ farmId, directFarmRo
   return (
     <>
       <AtlasSkyLedgerMaintainer farmId={farmId} role={directFarmRole} />
-      <AtlasBellCover />
       <DependencyReleaseFlash />
       <Suspense fallback={null}><AtlasWorkAlongsideOverlay effectiveFarmRole={effectiveFarmRole} /></Suspense>
       <Suspense fallback={null}><OwnerDayPlanGate /></Suspense>
