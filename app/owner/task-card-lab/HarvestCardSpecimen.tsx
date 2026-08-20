@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import DominionCardFrame from "./DominionCardFrame";
 import styles from "./harvest-card-specimen.module.css";
 
 type HarvestOutcome = "nothing_ready" | "deadheaded" | "crop_exhausted";
@@ -111,14 +112,7 @@ export default function HarvestCardSpecimen() {
   const zones = [...new Set(crops.map((crop) => crop.zone))];
 
   return (
-    <article className={styles.card}>
-      <header className={styles.header}>
-        <div className={styles.familyRow}>
-          <span>Harvest</span>
-        </div>
-        <h2>Harvest Stems</h2>
-      </header>
-
+    <DominionCardFrame family="Harvest" title="Harvest Stems">
       <div className={styles.trail} aria-label="Harvest season pulse">
         {seasonPulse.map((step) => (
           <span
@@ -148,11 +142,6 @@ export default function HarvestCardSpecimen() {
           </section>
         ))}
       </div>
-
-      <footer className={styles.finish}>
-        <button type="button" className={styles.primaryFinish}>Done</button>
-        <button type="button" className={styles.secondaryFinish}>Unfinished</button>
-      </footer>
-    </article>
+    </DominionCardFrame>
   );
 }
