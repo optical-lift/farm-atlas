@@ -33,28 +33,17 @@ function monthDay(date: Date) {
 }
 
 function dateRange(start: Date, end: Date) {
-  const monthFormatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
-    month: "short",
-  });
-  const dayFormatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
-    day: "numeric",
-  });
-
+  const monthFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", month: "short" });
+  const dayFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", day: "numeric" });
   const startMonth = monthFormatter.format(start);
   const endMonth = monthFormatter.format(end);
   const startDay = dayFormatter.format(start);
   const endDay = dayFormatter.format(end);
-
-  return startMonth === endMonth
-    ? `${startMonth} ${startDay}–${endDay}`
-    : `${startMonth} ${startDay}–${endMonth} ${endDay}`;
+  return startMonth === endMonth ? `${startMonth} ${startDay}–${endDay}` : `${startMonth} ${startDay}–${endMonth} ${endDay}`;
 }
 
 function SurprisePill({ label }: { label: string }) {
   const id = `sow-surprise-${label.toLowerCase().replaceAll(" ", "-")}`;
-
   return (
     <label className={styles.surprisePill} htmlFor={id}>
       <input id={id} type="checkbox" />
@@ -77,33 +66,18 @@ function LogItDrawer() {
 
 export default function SowCardSpecimen() {
   const [today, setToday] = useState<Date | null>(null);
-
-  useEffect(() => {
-    setToday(new Date());
-  }, []);
+  useEffect(() => { setToday(new Date()); }, []);
 
   const projections = useMemo(() => {
-    if (!today) {
-      return {
-        bloom: "Updating…",
-        clear: "Updating…",
-      };
-    }
-
-    return {
-      bloom: dateRange(addDays(today, 50), addDays(today, 60)),
-      clear: monthDay(addDays(today, 75)),
-    };
+    if (!today) return { bloom: "Updating…", clear: "Updating…" };
+    return { bloom: dateRange(addDays(today, 50), addDays(today, 60)), clear: monthDay(addDays(today, 75)) };
   }, [today]);
 
   return (
-    <DominionCardFrame family="Sow" title="Field Row 6">
+    <DominionCardFrame family="Sow" title="Field Row 6" subtitle="Field Rows">
       <div className={styles.trail} aria-label="Field Row 6 crop-cycle trail">
         {bedTrail.map((step) => (
-          <span
-            className={step.state === "done" ? styles.trailDone : step.state === "now" ? styles.trailNow : styles.trailLater}
-            key={step.label}
-          >
+          <span className={step.state === "done" ? styles.trailDone : step.state === "now" ? styles.trailNow : styles.trailLater} key={step.label}>
             <b>{step.label}</b>
             <small>{step.detail}</small>
           </span>
@@ -112,49 +86,24 @@ export default function SowCardSpecimen() {
 
       <section className={styles.bedSection}>
         <header className={styles.bedHeader}>
-          <div>
-            <h3 className={adjust.bedTitle}>Field Row 6</h3>
-            <span>Field Rows</span>
-          </div>
+          <div><h3 className={adjust.bedTitle}>Field Row 6</h3><span>Field Rows</span></div>
         </header>
-
-        <div className={styles.seedRow}>
-          <small>Seed</small>
-          <strong>ProCut White Lite</strong>
-        </div>
-
+        <div className={styles.seedRow}><small>Seed</small><strong>ProCut White Lite</strong></div>
         <div className={styles.factRow}>
-          {factCards.map((fact) => (
-            <div key={fact.label}>
-              <small>{fact.label}</small>
-              <strong>{fact.value}</strong>
-            </div>
-          ))}
+          {factCards.map((fact) => <div key={fact.label}><small>{fact.label}</small><strong>{fact.value}</strong></div>)}
         </div>
       </section>
 
       <section className={styles.projections}>
-        <header>
-          <span>Projections</span>
-          <small>from today’s real calendar date</small>
-        </header>
+        <header><span>Projections</span><small>from today’s real calendar date</small></header>
         <div className={styles.projectionGrid}>
-          <div>
-            <small>Bloom / harvest window</small>
-            <strong>{projections.bloom}</strong>
-          </div>
-          <div>
-            <small>Ready to clear</small>
-            <strong>{projections.clear}</strong>
-          </div>
+          <div><small>Bloom / harvest window</small><strong>{projections.bloom}</strong></div>
+          <div><small>Ready to clear</small><strong>{projections.clear}</strong></div>
         </div>
       </section>
 
       <section className={styles.surprises}>
-        <header>
-          <span>Surprises</span>
-          <small>only if something differed</small>
-        </header>
+        <header><span>Surprises</span><small>only if something differed</small></header>
         <div className={styles.surprisePills}>
           <SurprisePill label="It was weedy" />
           <SurprisePill label="Ran out of seeds" />
