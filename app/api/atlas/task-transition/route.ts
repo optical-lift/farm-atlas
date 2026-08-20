@@ -46,6 +46,7 @@ function rpcError(error: RpcError) {
   if (error.code === "42501") return atlasApiError(403, "task_transition_forbidden", "This task cannot be changed by the selected account.");
   if (error.code === "P0002") return atlasApiError(404, "task_not_found", "The task was not found.");
   if (error.code === "P0003") return atlasApiError(409, "owner_correction_required", error.message || "This completion has linked farm evidence and needs review before it can be corrected.");
+  if (error.code === "23514") return atlasApiError(409, "task_execution_not_authorized", error.message || "This work is not executable in current farm reality.");
   if (error.code === "22023") return atlasApiError(400, "task_transition_rejected", "The task update was rejected.");
   return atlasApiError(500, "task_transition_failed", "Atlas could not update the task.");
 }
