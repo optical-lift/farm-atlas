@@ -100,6 +100,10 @@ const rpcPrivilegeReconciliationStartMigrationName =
   "20260818162107_operation_result_generic_resource_event_state_v1.sql";
 const rpcPrivilegeReconciliationMigrationName =
   "20260819225913_atlas_rpc_privilege_registry_reconciliation_v2.sql";
+const workerTaskExecutionReadinessMigrationName =
+  "20260820193337_worker_task_execution_readiness_api_v1.sql";
+const workerTaskExecutionReadinessRegistryMigrationName =
+  "20260820193959_worker_task_execution_readiness_rpc_registry_v1.sql";
 const dayAcceptanceRpcMigrations = new Set([
   "20260811180500_atlas_day_cue_observation_result_contract_v1.sql",
   "20260811183000_atlas_departure_requirement_cues_v1.sql",
@@ -274,6 +278,7 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   const workerWeekCanonicalRegistry = readMigration(workerWeekCanonicalRegistryMigrationName);
   const realityExpressionSpatialRegistry = readMigration(realityExpressionSpatialRegistryMigrationName);
   const workerCapacityManagementRegistry = readMigration(workerCapacityManagementRegistryMigrationName);
+  const workerTaskExecutionReadinessRegistry = readMigration(workerTaskExecutionReadinessRegistryMigrationName);
   const rpcPrivilegeReconciliation = readMigration(rpcPrivilegeReconciliationMigrationName);
 
   for (const name of laterMigrations) {
@@ -328,9 +333,11 @@ test("future authenticated EXECUTE changes must update the registry", () => {
                                                 ? realityExpressionSpatialRegistryMigrationName
                                                 : name === workerCapacityManagementOutcomeMigrationName
                                                   ? workerCapacityManagementRegistryMigrationName
-                                                  : name >= rpcPrivilegeReconciliationStartMigrationName && name < rpcPrivilegeReconciliationMigrationName
-                                                    ? rpcPrivilegeReconciliationMigrationName
-                                                    : null;
+                                                  : name === workerTaskExecutionReadinessMigrationName
+                                                    ? workerTaskExecutionReadinessRegistryMigrationName
+                                                    : name >= rpcPrivilegeReconciliationStartMigrationName && name < rpcPrivilegeReconciliationMigrationName
+                                                      ? rpcPrivilegeReconciliationMigrationName
+                                                      : null;
 
       assert.ok(
         pairedRegistryName,
@@ -544,4 +551,9 @@ test("future authenticated EXECUTE changes must update the registry", () => {
   }
   assert.match(realityExpressionSpatialRegistry, /service_internal/);
   assert.match(realityExpressionSpatialRegistry, /'verified','active',false,false,true/);
+
+  assert.ok(workerTaskExecutionReadinessRegistry.includes(
+    "atlas.worker_task_execution_readiness_api_v1(uuid)",
+  ));
+  assert.match(workerTaskExecutionReadinessRegistry, /app_endpoint/);
 });
