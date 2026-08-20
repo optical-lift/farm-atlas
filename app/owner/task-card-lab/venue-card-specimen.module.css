@@ -1,0 +1,457 @@
+.venueSpecimen {
+  display: grid;
+  gap: 16px;
+}
+
+.card {
+  overflow: hidden;
+  border: 1px solid rgba(207, 196, 179, 0.92);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 34px rgba(58, 46, 30, 0.07);
+}
+
+.header {
+  display: grid;
+  gap: 6px;
+  padding: 20px 18px 17px;
+}
+
+.familyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.familyRow > span,
+.finish > span,
+.hostChecklist > header > span,
+.templateTruth > span,
+.nextVariantLabel > span {
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.familyRow small {
+  color: #74766f;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 850;
+  text-transform: lowercase;
+}
+
+.header h2 {
+  margin: 5px 0 0;
+  max-width: 16ch;
+  color: var(--atlas-text);
+  font-size: clamp(29px, 8vw, 41px);
+  line-height: 0.98;
+  font-weight: 950;
+  letter-spacing: -0.06em;
+}
+
+.header p {
+  margin: 0;
+  color: #6f706a;
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 820;
+}
+
+.timing {
+  width: fit-content;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: rgba(214, 225, 177, 0.52);
+  color: #515b34;
+  padding: 8px 11px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.trail {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 12px 10px 16px;
+  border-top: 1px solid rgba(215, 204, 189, 0.62);
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.trail > span {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  padding-top: 22px;
+  text-align: center;
+}
+
+.trail > span::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 3px;
+  left: 50%;
+  width: 11px;
+  height: 11px;
+  transform: translateX(-50%);
+  border: 1.5px solid #a0a199;
+  border-radius: 50%;
+  background: #fffefa;
+}
+
+.trail > span:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: calc(50% + 7px);
+  width: calc(100% - 14px);
+  height: 1px;
+  background: rgba(185, 183, 171, 0.65);
+}
+
+.trail b {
+  color: #85867f;
+  font-size: 10px;
+  line-height: 1.05;
+  font-weight: 900;
+}
+
+.trail small {
+  max-width: 90px;
+  color: #9a9a93;
+  font-size: 8px;
+  line-height: 1.12;
+  font-weight: 760;
+}
+
+.trailDone::before {
+  border-color: #8e9279 !important;
+  background: #8e9279 !important;
+}
+
+.trailDone::after {
+  background: rgba(142, 146, 121, 0.65) !important;
+}
+
+.trailNow::before {
+  top: 1px !important;
+  width: 15px !important;
+  height: 15px !important;
+  border: 2px solid #343542 !important;
+  background: #343542 !important;
+  box-shadow: 0 0 0 4px rgba(201, 192, 198, 0.32);
+}
+
+.trailNow b {
+  color: var(--atlas-text);
+  font-weight: 950;
+}
+
+.trailLocked b,
+.trailLocked small {
+  color: #a1a29c;
+}
+
+.stations {
+  display: grid;
+}
+
+.station {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.stationHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stationHeader h3 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 21px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.stationHeader span {
+  color: #85867f;
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 790;
+  text-align: right;
+}
+
+.resourceList {
+  display: grid;
+  border-top: 1px solid rgba(215, 204, 189, 0.54);
+}
+
+.resource {
+  border-bottom: 1px solid rgba(215, 204, 189, 0.54);
+}
+
+.resource > summary {
+  min-height: 60px;
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 2px;
+}
+
+.resource > summary::-webkit-details-marker {
+  display: none;
+}
+
+.resource > summary > span:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.resource > summary strong {
+  color: var(--atlas-text);
+  font-size: 15px;
+  line-height: 1.15;
+  font-weight: 930;
+}
+
+.resource > summary small {
+  color: var(--atlas-muted);
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 760;
+}
+
+.resource > summary em {
+  color: #858bb8;
+  font-size: 9px;
+  line-height: 1.15;
+  font-style: normal;
+  font-weight: 820;
+}
+
+.resourceChevron {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border: 1px solid rgba(139, 145, 194, 0.26);
+  border-radius: 50%;
+  background: rgba(239, 237, 244, 0.72);
+  color: #6f7189;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.resource[open] .resourceChevron {
+  transform: rotate(45deg);
+}
+
+.resourceDrawer {
+  display: grid;
+  gap: 10px;
+  padding: 5px 0 15px;
+}
+
+.resourceDrawer > p {
+  margin: 0;
+  color: #6a6c72;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.resourceActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.resourceActions button,
+.noteButton,
+.finish button {
+  min-height: 38px;
+  border: 1px solid rgba(139, 145, 194, 0.25);
+  border-radius: 999px;
+  background: rgba(250, 248, 239, 0.92);
+  color: #606275;
+  padding: 8px 11px;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.05;
+  font-weight: 900;
+}
+
+.resourceDrawer label {
+  display: grid;
+  gap: 6px;
+  color: #6a6c72;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.resourceDrawer textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgba(111, 97, 76, 0.23);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--atlas-text);
+  padding: 10px 11px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.resourceDrawer > small {
+  color: #8a8b84;
+  font-size: 9px;
+  line-height: 1.2;
+  font-weight: 720;
+}
+
+.noteButton {
+  width: fit-content;
+  background: rgba(167, 171, 214, 0.2) !important;
+  color: #56596f !important;
+}
+
+.finish {
+  display: grid;
+  gap: 11px;
+  padding: 17px 18px 20px;
+  background: rgba(246, 242, 230, 0.48);
+}
+
+.finish > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.finish button {
+  min-height: 54px;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--atlas-muted);
+  padding: 10px;
+  font-size: 12px;
+  text-wrap: balance;
+}
+
+.finish .primaryFinish {
+  background: rgba(214, 225, 177, 0.72);
+  color: #515b34;
+}
+
+.finish > small {
+  color: #8b8c84;
+  font-size: 9px;
+  line-height: 1.25;
+  font-weight: 730;
+}
+
+.templateTruth {
+  display: grid;
+  gap: 8px;
+  padding: 14px 15px;
+  border: 1px dashed rgba(133, 139, 184, 0.42);
+  border-radius: 18px;
+  background: rgba(239, 237, 244, 0.42);
+}
+
+.templateTruth p {
+  margin: 0;
+  color: #62646b;
+  font-size: 11px;
+  line-height: 1.4;
+  font-weight: 740;
+}
+
+.nextVariantLabel {
+  padding: 4px 4px 0;
+}
+
+.hostCard {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.hostChecklist {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.hostChecklist > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hostChecklist > header small {
+  color: #777970;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.hostChecklist > div {
+  display: grid;
+  gap: 8px;
+}
+
+.hostChecklist label {
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  border: 1px solid rgba(111, 97, 76, 0.17);
+  border-radius: 15px;
+  background: rgba(250, 248, 239, 0.68);
+  color: var(--atlas-text);
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 840;
+}
+
+.hostChecklist input {
+  width: 20px;
+  height: 20px;
+  accent-color: #7d8266;
+}
+
+@media (max-width: 520px) {
+  .header,
+  .station,
+  .finish,
+  .hostChecklist {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .stationHeader {
+    align-items: flex-start;
+  }
+}
