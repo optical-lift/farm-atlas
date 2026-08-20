@@ -16,11 +16,13 @@ import WeeklyHarvestTaskDetail from "@/components/atlas/weekly-harvest-task-deta
 import WorkerReadyAssignedTaskExecutionShell from "@/components/atlas/worker-ready-assigned-task-execution-shell";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import type { WorkerReadinessResponse } from "@/lib/atlas/worker-readiness";
 
 type Props = {
   task: AtlasTaskCard;
   childTasks: AtlasTaskCard[];
   assignee: AtlasAssigneeConfig;
+  initialReadiness: WorkerReadinessResponse;
 };
 
 function isContractorServiceTask(task: AtlasTaskCard) {
@@ -96,7 +98,7 @@ function isWeeklyHarvestTask(task: AtlasTaskCard) {
     && (task.metadata?.weekly_routine === true || task.metadata?.weekly_routine === "true");
 }
 
-export default function CanonicalAssignedTaskDetail(props: Props) {
+export default function CanonicalAssignedTaskDetail({ initialReadiness, ...props }: Props) {
   if (isContractorServiceTask(props.task)) return <ContractorServiceTaskDetail {...props} />;
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
@@ -111,5 +113,5 @@ export default function CanonicalAssignedTaskDetail(props: Props) {
   if (isFlowerFulfillmentTask(props.task)) return <FlowerFulfillmentTaskLoader {...props} />;
   if (isWeeklyHarvestTask(props.task)) return <WeeklyHarvestTaskDetail {...props} />;
 
-  return <WorkerReadyAssignedTaskExecutionShell {...props} />;
+  return <WorkerReadyAssignedTaskExecutionShell {...props} initialReadiness={initialReadiness} />;
 }
