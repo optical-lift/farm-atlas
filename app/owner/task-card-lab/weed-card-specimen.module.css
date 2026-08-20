@@ -1,0 +1,347 @@
+.card {
+  overflow: hidden;
+  border: 1px solid rgba(207, 196, 179, 0.92);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 34px rgba(58, 46, 30, 0.07);
+}
+
+.header {
+  display: grid;
+  gap: 6px;
+  padding: 20px 18px 17px;
+}
+
+.familyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.familyRow > span,
+.results > header > span,
+.finish > span,
+.cropState > span {
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.familyRow small {
+  color: #74766f;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 850;
+  text-transform: lowercase;
+}
+
+.header h2 {
+  margin: 5px 0 0;
+  color: var(--atlas-text);
+  font-size: clamp(32px, 9vw, 45px);
+  line-height: 0.98;
+  font-weight: 950;
+  letter-spacing: -0.06em;
+}
+
+.header p {
+  margin: 0;
+  color: #6f706a;
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 820;
+}
+
+.timing {
+  width: fit-content;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: rgba(214, 225, 177, 0.52);
+  color: #515b34;
+  padding: 8px 11px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.trail {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 12px 7px 16px;
+  border-top: 1px solid rgba(215, 204, 189, 0.62);
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.trail > span {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  padding-top: 22px;
+  text-align: center;
+}
+
+.trail > span::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 3px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translateX(-50%);
+  border: 1.5px solid #a0a199;
+  border-radius: 50%;
+  background: #fffefa;
+}
+
+.trail > span:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: calc(50% + 7px);
+  width: calc(100% - 14px);
+  height: 1px;
+  background: rgba(185, 183, 171, 0.65);
+}
+
+.trail b {
+  color: #85867f;
+  font-size: 9px;
+  line-height: 1.05;
+  font-weight: 900;
+}
+
+.trail small {
+  max-width: 72px;
+  color: #9a9a93;
+  font-size: 7px;
+  line-height: 1.1;
+  font-weight: 760;
+}
+
+.trailDone::before {
+  border-color: #8e9279 !important;
+  background: #8e9279 !important;
+}
+
+.trailDone::after {
+  background: rgba(142, 146, 121, 0.65) !important;
+}
+
+.trailNow::before {
+  top: 1px !important;
+  width: 15px !important;
+  height: 15px !important;
+  border: 2px solid #343542 !important;
+  background: #343542 !important;
+  box-shadow: 0 0 0 4px rgba(201, 192, 198, 0.32);
+}
+
+.trailNow b {
+  color: var(--atlas-text);
+  font-weight: 950;
+}
+
+.trailLater b,
+.trailLater small {
+  color: #a1a29c;
+}
+
+.cropState {
+  display: grid;
+  gap: 7px;
+  padding: 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+  background: linear-gradient(180deg, rgba(238, 242, 219, 0.58), rgba(255, 255, 255, 0));
+}
+
+.cropState > strong {
+  color: var(--atlas-text);
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.cropState > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.cropState b {
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  color: #65685d;
+  padding: 7px 9px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 880;
+}
+
+.results {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.resultPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.resultPill {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+}
+
+.resultPill input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.resultPill span,
+.logDrawer > summary {
+  min-height: 38px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(139, 145, 194, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  color: #626578;
+  padding: 9px 12px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.resultPill:has(input:checked) span {
+  border-color: rgba(81, 91, 52, 0.22);
+  background: rgba(214, 225, 177, 0.62);
+  color: #515b34;
+}
+
+.logDrawer {
+  width: fit-content;
+}
+
+.logDrawer[open] {
+  width: 100%;
+}
+
+.logDrawer > summary {
+  width: fit-content;
+  list-style: none;
+  cursor: pointer;
+}
+
+.logDrawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.logDrawer[open] > summary {
+  background: rgba(239, 237, 244, 0.66);
+}
+
+.logPanel {
+  width: 100%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid rgba(207, 196, 179, 0.72);
+  border-radius: 12px;
+  background: rgba(250, 248, 239, 0.78);
+}
+
+.logPanel input {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  box-sizing: border-box;
+  border: 1px solid rgba(111, 97, 76, 0.18);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--atlas-text);
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.logPanel button {
+  min-height: 34px;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 10px;
+  background: rgba(239, 237, 244, 0.7);
+  color: #606275;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.finish {
+  display: grid;
+  gap: 11px;
+  padding: 17px 18px 20px;
+  background: rgba(246, 242, 230, 0.48);
+}
+
+.finish > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.finish button {
+  min-height: 54px;
+  border: 1px solid rgba(139, 145, 194, 0.25);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--atlas-muted);
+  padding: 10px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.05;
+  font-weight: 900;
+}
+
+.finish .primaryFinish {
+  background: rgba(214, 225, 177, 0.72);
+  color: #515b34;
+}
+
+@media (max-width: 520px) {
+  .header,
+  .cropState,
+  .results,
+  .finish {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .logPanel {
+    grid-template-columns: 1fr;
+  }
+}
