@@ -238,6 +238,15 @@ export async function GET(request: Request) {
       };
     }
 
+    // Future calendar browsing is an exact-date projection. Earlier open work is
+    // allowed into a later Day only through an explicit Day placement below, not
+    // merely because it remains open while the owner looks ahead.
+    const farmToday = atlasFarmDateIso();
+    const futureExactDate = exactDate && exactDate > farmToday ? exactDate : null;
+    if (futureExactDate) {
+      baseTaskCards = baseTaskCards.filter((card) => card.due_date === futureExactDate);
+    }
+
     if (placementDay && workerMembershipId && workerFarmId) {
       const supabase = await createAtlasServerClient();
       const [choreographyResponse, placedCardsResponse] = await Promise.all([
