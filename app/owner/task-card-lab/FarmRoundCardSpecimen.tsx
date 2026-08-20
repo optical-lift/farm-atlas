@@ -76,7 +76,7 @@ export default function FarmRoundCardSpecimen() {
       familyDetail="recurring round"
       title="Farm Round"
       subtitle="Elm Farm"
-      timing={complete ? "Round complete" : `${dueItems.length - done.length} stops due`}
+      timing={complete ? "Round complete" : `${dueItems.length - done.length} items due`}
       completion={false}
     >
       <div className={styles.route} aria-label="Farm Round walking route">
