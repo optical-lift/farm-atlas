@@ -1,0 +1,258 @@
+.weedSpecimen {
+  display: grid;
+  gap: 26px;
+}
+
+.variantLabel {
+  padding: 2px 6px 0;
+}
+
+.variantLabel span,
+.turnoverBiomass > header > span,
+.turnoverActions > header > span,
+.nextBedPhase > header > span {
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.mapOrientation {
+  margin: -2px 0 -3px;
+  color: #83857d;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mapDetailWithLog {
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+}
+
+.mapDetailWithLog > small {
+  grid-column: 1 / -1 !important;
+}
+
+.mapLogButton {
+  min-height: 30px;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 999px;
+  background: rgba(239, 237, 244, 0.64);
+  color: #676a7d;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.mapLogPanel {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  margin-top: 5px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(215, 204, 189, 0.54);
+}
+
+.mapLogPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mapLogPills button {
+  min-height: 32px;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #626578;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.mapLogPills button:focus,
+.mapLogPills button:active {
+  background: rgba(214, 225, 177, 0.58);
+  color: #515b34;
+}
+
+.mapLogNote {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+}
+
+.mapLogNote input {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  box-sizing: border-box;
+  border: 1px solid rgba(111, 97, 76, 0.18);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--atlas-text);
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.mapLogNote button {
+  min-height: 34px;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 10px;
+  background: rgba(239, 237, 244, 0.7);
+  color: #606275;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.turnoverBiomass,
+.turnoverActions,
+.nextBedPhase {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.turnoverBiomass {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.turnoverBiomass > header,
+.turnoverActions > header,
+.nextBedPhase > header {
+  grid-column: 1 / -1;
+}
+
+.turnoverBiomass > div,
+.nextBedPhase > div {
+  min-height: 64px;
+  display: grid;
+  gap: 5px;
+  align-content: center;
+  padding: 10px 11px;
+  border: 1px solid rgba(139, 145, 194, 0.2);
+  border-radius: 15px;
+  background: rgba(248, 246, 238, 0.58);
+}
+
+.turnoverBiomass small,
+.nextBedPhase small {
+  color: #858bb8;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.turnoverBiomass strong,
+.nextBedPhase strong {
+  color: var(--atlas-text);
+  font-size: 15px;
+  line-height: 1.08;
+  font-weight: 950;
+  letter-spacing: -0.025em;
+}
+
+.turnoverActions > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.turnoverActions > header small {
+  color: #85867f;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.turnoverActions > div {
+  display: grid;
+  gap: 8px;
+}
+
+.turnoverCheck {
+  position: relative;
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border: 1px solid rgba(111, 97, 76, 0.16);
+  border-radius: 16px;
+  background: rgba(250, 248, 239, 0.74);
+  cursor: pointer;
+}
+
+.turnoverCheck input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.turnoverCheck > span {
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  border: 2px solid #acadb5;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.turnoverCheck strong {
+  color: var(--atlas-text);
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.turnoverCheck:has(input:checked) {
+  background: rgba(238, 243, 223, 0.72);
+}
+
+.turnoverCheck:has(input:checked) > span {
+  border-color: #8e9279;
+  background: #8e9279;
+  box-shadow: inset 0 0 0 5px rgba(238, 243, 223, 0.95);
+}
+
+.turnoverCheck:has(input:checked) strong {
+  color: #74766f;
+  text-decoration: line-through;
+}
+
+.nextBedPhase {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 520px) {
+  .turnoverBiomass,
+  .turnoverActions,
+  .nextBedPhase {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .mapLogNote {
+    grid-template-columns: 1fr;
+  }
+}
