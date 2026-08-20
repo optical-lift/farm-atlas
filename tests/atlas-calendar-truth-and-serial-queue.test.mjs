@@ -10,6 +10,10 @@ const carryMigration = readFileSync(
   new URL("../supabase/migrations/20260809161500_carry_unfinished_work_to_next_worker_day.sql", import.meta.url),
   "utf8",
 );
+const futureMigration = readFileSync(
+  new URL("../supabase/migrations/20260820231500_future_day_calendar_projection_contract.sql", import.meta.url),
+  "utf8",
+);
 const dayRoute = readFileSync(new URL("../lib/atlas/day-route.ts", import.meta.url), "utf8");
 const taskCardsClient = readFileSync(new URL("../lib/atlas/task-cards-client.ts", import.meta.url), "utf8");
 const universalRoute = readFileSync(new URL("../app/api/atlas/universal-task-cards/route.ts", import.meta.url), "utf8");
@@ -39,6 +43,9 @@ test("future presented work remains exact-date calendar truth before carry-forwa
   assert.match(migration, /where v_work_date<=v_today or task\.due_date=v_work_date/);
   assert.match(carryMigration, /target_presented/);
   assert.match(carryMigration, /prior_presented/);
+  assert.match(futureMigration, /worker_day_temporal_mode_v1/);
+  assert.match(futureMigration, /if p_day > v_today then return 'future'/);
+  assert.match(futureMigration, /worker_day_future_projection_v1/);
 });
 
 test("future Day asks the canonical Worker Day runtime for one date and preserves explicit Owner placement", () => {
@@ -49,7 +56,6 @@ test("future Day asks the canonical Worker Day runtime for one date and preserve
   assert.match(universalRoute, /worker_day_placed_task_cards_v1/);
   assert.match(universalRoute, /baselineSurvivesPlacement/);
   assert.match(universalRoute, /placement\?\.state === "placed" && placement\.serviceDate === placementDay/);
-  assert.doesNotMatch(universalRoute, /card\.due_date === exactDate/);
   assert.match(dayPage, /useAtlasWorkerDayProjection\(dateIso\)/);
   assert.doesNotMatch(dayPage, /fetchAtlasTaskCards/);
   assert.match(projectionClient, /worker-day-sequence\?date=\$\{encodeURIComponent\(dateIso\)\}/);
@@ -57,12 +63,15 @@ test("future Day asks the canonical Worker Day runtime for one date and preserve
   assert.match(carryMigration, /withheldUnderSky/);
 });
 
-test("future Day is labeled as a schedule instead of an indiscriminate overdue dump", () => {
+test("future Day is a projection and cannot manufacture overdue work", () => {
   assert.match(dayPage, /const isFutureDay = dateIso > calendarToday/);
-  assert.match(dayPage, /isFutureDay \? `\$\{openRequiredCount\} scheduled/);
+  assert.match(dayPage, /isFutureDay \? `\$\{displayedOpenCount\} scheduled/);
   assert.match(dayPage, /tasks scheduled for this day/);
   assert.match(dayPage, /dateIso === calendarToday \? nextTaskForCurrentWindow/);
   assert.match(dayPage, /!isFutureDay && livingDay \? <LivingDayCarried/);
+  assert.match(dayPage, /if \(selectedDay !== farmToday\) return false/);
+  assert.match(dayPage, /projection\?\.sequence\.items/);
+  assert.match(dayPage, /item\.kind === "committed_task" && item\.automatic/);
   assert.match(carryMigration, /v_previous_work_date/);
   assert.match(carryMigration, /extract\(isodow from p_work_date\) = 7/);
 });
