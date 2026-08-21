@@ -42,8 +42,8 @@ begin
     array['wooden_layout_stakes','layout_string','layout_scissors','layout_measuring_tape']::text[],
     '{}'::text[],
     '{}'::text[],
-    array['Keep bed and walkway widths physically legible before mowing.']::text[],
-    array['Mowing can follow the established lanes without guessing.']::text[],
+    jsonb_build_array('Keep bed and walkway widths physically legible before mowing.'),
+    jsonb_build_array('Mowing can follow the established lanes without guessing.'),
     'Canonical visual/resource recipe for measure + stake/string site-layout work.',
     jsonb_build_object(
       'card_family', 'setup',
