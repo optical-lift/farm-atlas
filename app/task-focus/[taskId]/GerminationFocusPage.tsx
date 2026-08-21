@@ -1,11 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+
+import CropCycleTaskCardBody, { type CropCycleTrailStep } from "@/components/atlas/crop-cycle-task-card-body";
+import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
+import styles from "./GerminationFocus.module.css";
 
 type GerminationOutcome = "thin" | "on_target" | "patch";
-type GerminationAction = "not_yet" | "beginning" | "germinated" | "failed_or_uncertain" | "problem_found";
-type GerminationIssueAction = Extract<GerminationAction, "failed_or_uncertain" | "problem_found">;
+type GerminationAction = "not_yet" | "germinated" | "failed_or_uncertain";
+type GerminationChoice = "Strong" | "Patchy" | "Failed" | "Too early to tell";
 
 type GerminationTask = {
   id: string;
@@ -24,23 +28,11 @@ type GerminationTask = {
   targetSpacingInches?: number | null;
 };
 
-type WeatherResponse = { ok?: boolean; label?: string };
-
-type HydratedFacts = {
-  cropLabel: string;
-  variety: string | null;
-  objectLabel: string;
-  locationLabel: string | null;
-  containerLabel: string | null;
-  sownDate: string | null;
-  plantingMethod: string | null;
-  cycleState: string | null;
-  expectedGerminationStart: string | null;
-  expectedGerminationEnd: string | null;
-  expectedHarvestStart: string | null;
-  expectedHarvestEnd: string | null;
-  spacing: string | null;
-  targetSpacingInches: number | null;
+const nextMove: Record<GerminationChoice, string> = {
+  Strong: "Continue",
+  Patchy: "Gap fill",
+  Failed: "Owner review",
+  "Too early to tell": "Wait",
 };
 
 function returnDestination() {
@@ -51,259 +43,134 @@ function returnDestination() {
 
 function prettyDate(dateIso: string | null | undefined) {
   if (!dateIso) return "";
-  const date = new Date(`${dateIso}T12:00:00`);
+  const date = new Date(`${dateIso.slice(0, 10)}T12:00:00`);
   return Number.isNaN(date.getTime()) ? dateIso : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function prettyRange(start: string | null | undefined, end: string | null | undefined) {
   if (!start && !end) return "";
-  if (start && end) {
-    const startDate = new Date(`${start}T12:00:00`);
-    const endDate = new Date(`${end}T12:00:00`);
-    if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())) {
-      return startDate.getMonth() === endDate.getMonth()
-        ? `${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}–${endDate.toLocaleDateString("en-US", { day: "numeric" })}`
-        : `${prettyDate(start)}–${prettyDate(end)}`;
-    }
+  if (!start) return prettyDate(end);
+  if (!end) return prettyDate(start);
+  const startDate = new Date(`${start.slice(0, 10)}T12:00:00`);
+  const endDate = new Date(`${end.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return `${prettyDate(start)}–${prettyDate(end)}`;
+  if (startDate.getMonth() === endDate.getMonth()) {
+    return `${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}–${endDate.toLocaleDateString("en-US", { day: "numeric" })}`;
   }
-  return prettyDate(start || end);
+  return `${prettyDate(start)}–${prettyDate(end)}`;
 }
 
 function cropName(cropLabel: string, variety: string | null) {
   if (!variety) return cropLabel;
-  return variety.toLowerCase().includes(cropLabel.toLowerCase()) ? variety : `${variety} ${cropLabel}`;
+  return variety.toLowerCase().includes(cropLabel.toLowerCase()) ? variety : `${variety} ${cropLabel.toLowerCase()}`;
 }
 
-function plantingRecordLabel(method: string | null, dateIso: string | null, isGrowRoom: boolean) {
-  if (!dateIso) return "";
-  const date = prettyDate(dateIso);
-  if (isGrowRoom) return `Sown ${date}`;
-  const normalized = (method || "").toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
-  if (normalized.includes("transplant") || normalized.includes("plug") || normalized.includes("division")) return `Transplanted ${date}`;
-  if (normalized.includes("direct_sow") || normalized === "sown" || normalized === "sow") return `Direct sown ${date}`;
-  return `Planted ${date}`;
-}
-
-function stringValue(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function numberValue(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
-  return null;
-}
-
-function compactSpacing(value: unknown) {
-  if (!Array.isArray(value)) return null;
-  const lines = value.filter((line): line is string => typeof line === "string");
-  const rowMatch = lines.find((line) => /row/i.test(line))?.match(/(\d+(?:\.\d+)?)\s*rows?/i);
-  const spacingMatch = lines.find((line) => /apart|spacing|inch|"|″/i.test(line))?.match(/(\d+(?:\.\d+)?)\s*(?:in|inch|inches|"|″)/i);
-  return [rowMatch ? `${rowMatch[1]} rows` : "", spacingMatch ? `${spacingMatch[1]}″ spacing` : ""].filter(Boolean).join(" · ") || null;
-}
-
-function normalizeGrowRoom(value: string | null) {
-  return value && value.toLowerCase().replaceAll("-", " ").includes("grow room") ? "Grow Room" : value;
-}
-
-function initialLocation(objectLabel: string) {
-  const normalized = normalizeGrowRoom(objectLabel);
-  if (normalized === "Grow Room") return normalized;
-  return /(pot(?:\s|$)|tray|nursery box|seed shelves)/i.test(objectLabel) ? "Grow Room" : objectLabel;
-}
-
-function initialContainer(objectLabel: string) {
-  const labels = objectLabel.split("·").map((value) => value.trim()).filter(Boolean);
-  if (/pot/i.test(objectLabel)) return labels.length > 1 ? `${labels.length} pots` : "Pot";
-  if (/tray/i.test(objectLabel)) return labels.length > 1 ? `${labels.length} trays` : "Tray";
-  if (/nursery box/i.test(objectLabel)) return labels.length > 1 ? `${labels.length} nursery boxes` : "Nursery box";
-  return null;
-}
-
-function containerSummary(metadata: Record<string, unknown>) {
-  const detail = stringValue(metadata.display_detail);
-  if (detail && /(tray|pot|box|block|flat)/i.test(detail)) return detail;
-  const kind = stringValue(metadata.container_kind);
-  const count = numberValue(metadata.container_count) || numberValue(metadata.actual_tray_count) || numberValue(metadata.tray_count);
-  if (!kind) return null;
-  return count && count > 1 ? `${count} × ${kind}` : kind;
-}
-
-function resultMessage(action: GerminationAction, nextDate?: string) {
-  if (action === "not_yet") return `Not yet recorded. Check again ${nextDate ?? "tomorrow"}.`;
-  if (action === "beginning") return `Beginning to germinate recorded. Check again ${nextDate ?? "tomorrow"}.`;
-  if (action === "germinated") return "Germination recorded. Atlas advanced the crop.";
-  return "Returned to the Owner for review.";
+function backendResult(choice: GerminationChoice): { action: GerminationAction; spacingOutcome?: GerminationOutcome; note?: string } {
+  if (choice === "Strong") return { action: "germinated", spacingOutcome: "on_target" };
+  if (choice === "Patchy") return { action: "germinated", spacingOutcome: "patch" };
+  if (choice === "Failed") return { action: "failed_or_uncertain", note: "Germination failed." };
+  return { action: "not_yet" };
 }
 
 export default function GerminationFocusPage({ task }: { task: GerminationTask }) {
-  const [outcomeOpen, setOutcomeOpen] = useState(false);
-  const [issueAction, setIssueAction] = useState<GerminationIssueAction | null>(null);
-  const [issueNote, setIssueNote] = useState("");
-  const [saving, setSaving] = useState<string | null>(null);
+  const [choice, setChoice] = useState<GerminationChoice | null>(null);
+  const [saving, setSaving] = useState<GerminationChoice | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
-  const [facts, setFacts] = useState<HydratedFacts>({
-    cropLabel: task.cropLabel,
-    variety: task.variety,
-    objectLabel: task.objectLabel,
-    locationLabel: initialLocation(task.objectLabel),
-    containerLabel: initialContainer(task.objectLabel),
-    sownDate: task.sownDate || task.plantedDate || null,
-    plantingMethod: task.plantingMethod || null,
-    cycleState: task.cycleState || null,
-    expectedGerminationStart: task.expectedGerminationStart || null,
-    expectedGerminationEnd: task.expectedGerminationEnd || null,
-    expectedHarvestStart: task.expectedHarvestStart || null,
-    expectedHarvestEnd: task.expectedHarvestEnd || null,
-    spacing: task.targetSpacingInches ? `${task.targetSpacingInches}″ spacing` : null,
-    targetSpacingInches: task.targetSpacingInches || null,
-  });
+  const displayCrop = cropName(task.cropLabel, task.variety);
+  const sownDate = task.sownDate || task.plantedDate || null;
+  const germinationRange = prettyRange(task.expectedGerminationStart, task.expectedGerminationEnd);
+  const harvestRange = prettyRange(task.expectedHarvestStart, task.expectedHarvestEnd);
+  const timing = germinationRange
+    ? `Germination window · ${germinationRange}`
+    : task.dueDate
+      ? `Check stand · ${prettyDate(task.dueDate)}`
+      : undefined;
 
-  const target = facts.targetSpacingInches;
-  const isLettuceContainer = facts.cropLabel.toLowerCase().includes("lettuce");
-  const displayCrop = useMemo(() => cropName(facts.cropLabel, facts.variety), [facts.cropLabel, facts.variety]);
-  const displayLocation = facts.locationLabel || initialLocation(facts.objectLabel);
-  const isGrowRoom = displayLocation === "Grow Room";
-  const plantingRecord = plantingRecordLabel(facts.plantingMethod, facts.sownDate, isGrowRoom);
+  const trail = useMemo<CropCycleTrailStep[]>(() => {
+    const steps: CropCycleTrailStep[] = [];
+    if (sownDate) steps.push({ label: "Sown", detail: prettyDate(sownDate), state: "done" });
+    steps.push({ label: "Germination", detail: prettyDate(task.dueDate) || germinationRange || "Now", state: "now" });
+    steps.push({ label: "Next move", detail: choice ? nextMove[choice] : "from result", state: "later" });
+    if (harvestRange) steps.push({ label: "Harvest", detail: harvestRange, state: "later" });
+    return steps;
+  }, [choice, germinationRange, harvestRange, sownDate, task.dueDate]);
 
-  useEffect(() => {
-    let active = true;
-    void fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" })
-      .then((response) => response.json() as Promise<WeatherResponse>)
-      .then((data) => { if (active) setWeatherLabel(data.ok && data.label ? data.label : "weather unavailable"); })
-      .catch(() => { if (active) setWeatherLabel("weather unavailable"); });
-
-    void fetch(`/api/atlas/task-cards?taskId=${encodeURIComponent(task.id)}`, { headers: { Accept: "application/json" }, cache: "no-store" })
-      .then((response) => response.json())
-      .then((data: { taskCards?: Array<{ metadata?: Record<string, unknown>; objects?: Array<{ object_label?: string }> }> }) => {
-        if (!active) return;
-        const card = data.taskCards?.[0];
-        const metadata = card?.metadata ?? {};
-        const spacing = compactSpacing(metadata.plant_spacing_lines);
-        const spacingNumber = numberValue(metadata.target_spacing_inches)
-          || numberValue(Array.isArray(metadata.plant_spacing_lines)
-            ? metadata.plant_spacing_lines.map((line) => typeof line === "string" ? line.match(/(\d+(?:\.\d+)?)\s*(?:in|inch|inches|"|″)/i)?.[1] : null).find(Boolean)
-            : null);
-        const objectLabel = card?.objects?.map((object) => object.object_label).filter(Boolean).join(" · ") || stringValue(metadata.object_label);
-        const location = normalizeGrowRoom(stringValue(metadata.location_label) || stringValue(metadata.collection_zone));
-        setFacts((current) => ({
-          cropLabel: stringValue(metadata.crop_label) || current.cropLabel,
-          variety: stringValue(metadata.crop_variety) || stringValue(metadata.variety) || current.variety || stringValue(metadata.crop_profile_variety),
-          objectLabel: objectLabel || current.objectLabel,
-          locationLabel: location || current.locationLabel,
-          containerLabel: containerSummary(metadata) || current.containerLabel,
-          sownDate: stringValue(metadata.source_sown_date) || stringValue(metadata.actual_sow_date) || current.sownDate,
-          plantingMethod: stringValue(metadata.planting_method) || stringValue(metadata.default_planting_method) || current.plantingMethod,
-          cycleState: stringValue(metadata.current_state) || stringValue(metadata.cycle_state) || current.cycleState,
-          expectedGerminationStart: stringValue(metadata.expected_germination_start) || current.expectedGerminationStart,
-          expectedGerminationEnd: stringValue(metadata.expected_germination_end) || current.expectedGerminationEnd,
-          expectedHarvestStart: stringValue(metadata.expected_harvest_watch_start) || current.expectedHarvestStart,
-          expectedHarvestEnd: stringValue(metadata.expected_harvest_watch_end) || current.expectedHarvestEnd,
-          spacing: spacing || current.spacing,
-          targetSpacingInches: spacingNumber || current.targetSpacingInches,
-        }));
-      })
-      .catch(() => undefined);
-    return () => { active = false; };
-  }, [task.id]);
-
-  async function submit(action: GerminationAction, spacingOutcome?: GerminationOutcome, note?: string) {
+  async function submit(selected: GerminationChoice) {
+    const result = backendResult(selected);
     try {
-      setSaving(spacingOutcome || action);
+      setChoice(selected);
+      setSaving(selected);
       setMessage(null);
       const response = await fetch("/api/atlas/germination-check", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ taskId: task.id, action, spacingOutcome, targetSpacingInches: target, note }),
+        body: JSON.stringify({
+          taskId: task.id,
+          action: result.action,
+          spacingOutcome: result.spacingOutcome,
+          targetSpacingInches: task.targetSpacingInches,
+          note: result.note,
+        }),
       });
-      const data = (await response.json()) as { ok?: boolean; nextDate?: string; error?: string; details?: string };
+      const data = await response.json() as { ok?: boolean; error?: string; details?: string };
       if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Germination update failed.");
-      setMessage(resultMessage(action, data.nextDate));
-      window.setTimeout(() => window.location.assign(returnDestination()), 700);
+      setMessage(`${selected} recorded.`);
+      window.setTimeout(() => window.location.assign(returnDestination()), 450);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Germination update failed.");
-    } finally {
       setSaving(null);
     }
   }
 
-  const factCardStyle = { padding: "14px 16px", border: "1px solid rgba(111, 97, 76, .24)", borderRadius: "18px" } as const;
-  const factLabelStyle = { display: "block", fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase", opacity: .62 } as const;
-  const factValueStyle = { display: "block", marginTop: "3px", lineHeight: 1.2 } as const;
+  const completion = (
+    <div className={styles.completion} aria-label="Log germination result and complete this check">
+      {(Object.keys(nextMove) as GerminationChoice[]).map((item) => (
+        <button
+          type="button"
+          data-active={choice === item ? "true" : "false"}
+          disabled={saving !== null}
+          key={item}
+          onClick={() => void submit(item)}
+        >
+          {saving === item ? "Saving…" : item}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
-    <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell">
-      <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
-        <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">Atlas</span><span className="atlas-phone-title">Elm Farm</span></Link>
-          <span className="atlas-weather-line">{weatherLabel}</span>
-          <button type="button" className="atlas-note-plus" aria-label="Log germination result" onClick={() => setOutcomeOpen(true)}>+</button>
-        </header>
-        <div className="atlas-task-page-body">
-          <article className="atlas-task-page-active atlas-task-ticket-card atlas-germination-task">
-            <div className="atlas-task-page-kicker"><span>Up Now</span><small>Germination</small></div>
-            <h1>{`${facts.cropLabel} · ${displayLocation}`.toUpperCase()}</h1>
-            <div className="atlas-task-page-time-row"><span>Germination</span><span>{prettyDate(task.dueDate)}</span></div>
-            <section aria-label="Germination crop facts" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", margin: "18px 0 4px" }}>
-              <div style={{ ...factCardStyle, gridColumn: "1 / -1" }}><small style={factLabelStyle}>Crop</small><strong style={{ ...factValueStyle, fontSize: "1.28rem", lineHeight: 1.15 }}>{displayCrop}</strong></div>
-              <div style={factCardStyle}><small style={factLabelStyle}>Location</small><strong style={factValueStyle}>{displayLocation}</strong></div>
-              {facts.containerLabel ? <div style={factCardStyle}><small style={factLabelStyle}>Container</small><strong style={factValueStyle}>{facts.containerLabel}</strong></div> : null}
-              {!isGrowRoom && facts.spacing ? <div style={factCardStyle}><small style={factLabelStyle}>Spacing</small><strong style={factValueStyle}>{facts.spacing}</strong></div> : null}
-              {plantingRecord ? <div style={{ ...factCardStyle, gridColumn: "1 / -1" }}><small style={factLabelStyle}>Planting</small><strong style={factValueStyle}>{plantingRecord}</strong></div> : null}
+    <main className={styles.shell}>
+      <header className={styles.top}>
+        <Link href="/" className={styles.brand}><small>Atlas</small><strong>Work</strong></Link>
+        <Link href="/" className={styles.close} aria-label="Close task">×</Link>
+      </header>
+
+      <div className={styles.body}>
+        <article className={styles.ticket}>
+          <AtlasTaskCardFrame
+            family="Germination"
+            familyDetail="crop check"
+            title={task.objectLabel}
+            timing={timing}
+            completion={completion}
+          >
+            <CropCycleTaskCardBody
+              state={{
+                crop: displayCrop,
+                stage: sownDate ? `Sown ${prettyDate(sownDate)}` : task.cycleState || null,
+                harvest: harvestRange ? `Harvest watch ${harvestRange}` : null,
+                trail,
+                trailLabel: `${task.objectLabel} crop-cycle germination trail`,
+              }}
+            />
+            <section className={styles.checkSection}>
+              <div className={styles.prompt}>Did enough emerge to keep this planting?</div>
+              {choice ? <div className={styles.nextMove}><small>Next</small><strong>{nextMove[choice]}</strong></div> : null}
             </section>
-            {(facts.expectedGerminationStart || facts.expectedGerminationEnd || facts.expectedHarvestStart || facts.expectedHarvestEnd) ? (
-              <section className="atlas-task-detail-card" aria-label="Crop timing">
-                <strong>Crop timing</strong>
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "10px", marginTop: "12px" }}>
-                  {(facts.expectedGerminationStart || facts.expectedGerminationEnd) ? <div style={{ ...factCardStyle, padding: "12px 14px" }}><small style={factLabelStyle}>Germination window</small><strong style={{ ...factValueStyle, fontSize: "1.02rem" }}>{prettyRange(facts.expectedGerminationStart, facts.expectedGerminationEnd)}</strong></div> : null}
-                  {(facts.expectedHarvestStart || facts.expectedHarvestEnd) ? <div style={{ ...factCardStyle, padding: "12px 14px" }}><small style={factLabelStyle}>Harvest watch</small><strong style={{ ...factValueStyle, fontSize: "1.02rem" }}>{prettyRange(facts.expectedHarvestStart, facts.expectedHarvestEnd)}</strong></div> : null}
-                </div>
-              </section>
-            ) : null}
-            <section className="atlas-germination-check-panel">
-              {issueAction ? (
-                <div className="atlas-germination-inline-log">
-                  <div className="atlas-germination-check-head">
-                    <span>Owner handoff</span>
-                    <strong>{issueAction === "problem_found" ? "What problem did you find?" : "What looks failed or uncertain?"}</strong>
-                  </div>
-                  <textarea
-                    value={issueNote}
-                    onChange={(event) => setIssueNote(event.target.value)}
-                    placeholder="Describe what you can actually see."
-                    rows={4}
-                    style={{ width: "100%", borderRadius: "15px", border: "1px solid rgba(111, 97, 76, .28)", padding: "12px", font: "inherit", resize: "vertical" }}
-                  />
-                  <div className="atlas-germination-actions atlas-germination-stand-actions">
-                    <button type="button" className="poor" disabled={Boolean(saving) || !issueNote.trim()} onClick={() => void submit(issueAction, undefined, issueNote.trim())}>{saving === issueAction ? "Sending…" : "Send to Owner"}</button>
-                    <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => { setIssueAction(null); setIssueNote(""); }}>Back</button>
-                  </div>
-                </div>
-              ) : outcomeOpen ? (
-                <div className="atlas-germination-inline-log">
-                  <div className="atlas-germination-check-head"><span>{isLettuceContainer ? `${displayCrop} pots` : `${displayCrop} spacing`}</span><strong>{isLettuceContainer ? "How did the seven lettuce pots germinate?" : target ? `How does the stand compare with the ${target}-inch target?` : "How does the stand look?"}</strong></div>
-                  <div className="atlas-germination-actions atlas-germination-stand-actions">
-                    <button type="button" className="good" disabled={Boolean(saving)} onClick={() => void submit("germinated", "thin")}>{saving === "thin" ? "Saving…" : isLettuceContainer ? "Great · multiple seedlings per pot · Thin" : `Great · closer than ${target ?? "target"} in · Thin`}</button>
-                    <button type="button" className="spotty" disabled={Boolean(saving)} onClick={() => void submit("germinated", "on_target")}>{saving === "on_target" ? "Saving…" : isLettuceContainer ? "Good · one healthy seedling per pot · No action" : `Good · about ${target ?? "target"} in · No action`}</button>
-                    <button type="button" className="poor" disabled={Boolean(saving)} onClick={() => void submit("germinated", "patch")}>{saving === "patch" ? "Saving…" : isLettuceContainer ? "Poor · empty or failed pots · Reseed" : `Poor · wider than ${target ?? "target"} in · Patch seed`}</button>
-                    <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => setOutcomeOpen(false)}>Back</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="atlas-germination-actions atlas-germination-primary-actions">
-                  <button type="button" className="good" disabled={Boolean(saving)} onClick={() => setOutcomeOpen(true)}>Germinated</button>
-                  <button type="button" className="spotty" disabled={Boolean(saving)} onClick={() => void submit("beginning")}>{saving === "beginning" ? "Saving…" : "Beginning"}</button>
-                  <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => void submit("not_yet")}>{saving === "not_yet" ? "Saving…" : "Not yet"}</button>
-                  <button type="button" className="poor" disabled={Boolean(saving)} onClick={() => setIssueAction("failed_or_uncertain")}>Failed or uncertain</button>
-                  <button type="button" className="not-yet" disabled={Boolean(saving)} onClick={() => setIssueAction("problem_found")}>Problem found</button>
-                </div>
-              )}
-              {message ? <p className="atlas-task-page-message">{message}</p> : null}
-            </section>
-          </article>
-        </div>
-      </section>
+            {message ? <p className={styles.message}>{message}</p> : null}
+          </AtlasTaskCardFrame>
+        </article>
+      </div>
     </main>
   );
 }
