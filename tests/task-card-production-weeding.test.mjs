@@ -28,9 +28,11 @@ test("production Weed Card uses bed truth with current use, history, and active 
   assert.match(focus, /title=\{card\.objectLabel\}/);
   assert.match(focus, /subtitle=\{card\.zoneLabel/);
   assert.match(focus, /Last weeded ·/);
-  assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v2-bed-truth"/);
+  assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v3-three-way-result"/);
   assert.match(focus, />Bed now</);
-  assert.match(focus, /Last logged as/);
+  assert.match(focus, /card\.mainCropLabel/);
+  assert.match(focus, /Unknown main crop/);
+  assert.doesNotMatch(focus, /Last logged as/);
   assert.match(focus, />Active Crops</);
   assert.match(focus, /card\.bedTrail/);
   assert.match(focus, />How’d we do\?</);
@@ -41,14 +43,16 @@ test("production Weed Card uses bed truth with current use, history, and active 
   assert.doesNotMatch(focus, /AssignedTaskExecutionShell|atlas-phone-top|atlas-phone-brand|atlas-note-plus/);
 });
 
-test("Weed Card reports canonical physical condition without fabricating elapsed time", () => {
-  assert.match(focus, /PARTIAL_RESULTS/);
+test("Weed Card reports canonical physical condition through one three-way Save result control", () => {
+  assert.match(focus, /WEED_RESULTS/);
   assert.match(focus, /Still rough/);
   assert.match(focus, /Mostly clear/);
+  assert.match(focus, /All clear/);
+  assert.match(focus, /Save result/);
   assert.match(focus, /postAtlasFinishPartialWeedCardDay/);
   assert.match(focus, /postAtlasWeedCardSession/);
-  assert.match(focus, /All clear/);
   assert.match(focus, />Blocked</);
+  assert.doesNotMatch(focus, /Finish Weed/);
   assert.doesNotMatch(focus, /postAtlasTaskSetAsideToday|Move this card/);
   assert.doesNotMatch(focus, /minutes:\s*[1-9]/);
   assert.match(focus, /minutes: null/);
@@ -57,6 +61,8 @@ test("Weed Card reports canonical physical condition without fabricating elapsed
 
 test("Weed Card keeps notes secondary and does not let the worker move the persistent card", () => {
   assert.match(focus, /Log it/);
+  assert.match(focus, /aria-expanded=\{logOpen\}/);
+  assert.match(focus, /logOpen \? \(/);
   assert.match(focus, /Note \(optional\)/);
   assert.doesNotMatch(focus, /Move this card|Tomorrow|Choose return date|postAtlasTaskSetAsideToday/);
 });
