@@ -7,6 +7,7 @@ import { AtlasPwaCoverPrompt } from "@/components/atlas/pwa/AtlasPwaSetup";
 import { buildAtlasOwnerDailyHand } from "@/lib/atlas/daily-hand";
 import { adaptiveHomeConveyorMoves } from "@/lib/atlas/adaptive-home-conveyor";
 import { atlasFarmHandConveyorMoves, atlasFarmHandOutdoorEligibleNow } from "@/lib/atlas/farm-hand-conveyor-window";
+import { atlasFarmDateIso } from "@/lib/atlas/farm-day";
 import { withAtlasHomeCarryForward } from "@/lib/atlas/home-carry-forward";
 import { readAtlasHomeFarmSeasonProfiles } from "@/lib/atlas/home-farm-seasons";
 import { readAtlasPersonalDayProgress } from "@/lib/atlas/home-personal-day-progress";
@@ -62,7 +63,23 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     ? viewer.farmMemberships.find((membership) => membership.farmKey === selectedFarmKey)?.farmId ?? viewer.activeFarmId
     : viewer.activeFarmId;
   const selectedMembershipId = effectiveOperatorMembershipId(operatorContext);
-  let home = await readAtlasOperatorUniversalHome(viewer, {
+
+  // Deal the same-day paid-work serving before the one authoritative Home read.
+  // The old path read the complete Home payload, dealt the serving, then read the
+  // complete payload a second time on every farm-hand Home navigation.
+  const directFarmHandMembership = !operatorContext?.isOperating && preferredFarmId
+    ? viewer.farmMemberships.find((membership) => membership.farmId === preferredFarmId && membership.role === "farm_hand") ?? null
+    : null;
+  if (directFarmHandMembership && preferredFarmId) {
+    try {
+      const allowOutdoor = await atlasFarmHandOutdoorEligibleNow();
+      await ensureAtlasProjectPullTask(preferredFarmId, directFarmHandMembership.membershipId, atlasFarmDateIso(), { allowOutdoor });
+    } catch {
+      // Ordinary Living Day work remains available if project dealing cannot run.
+    }
+  }
+
+  const home = await readAtlasOperatorUniversalHome(viewer, {
     preferredFarmId,
     effectiveAccountId: effectiveOperatorAccountId(operatorContext),
     effectiveMembershipId: selectedMembershipId,
@@ -72,20 +89,6 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     ? viewer.farmMemberships.find((membership) => membership.farmId === home.activeFarm?.farmId && membership.role === "farm_hand") ?? null
     : null;
   const farmHandMode = Boolean(actualFarmHandMembership);
-
-  if (farmHandMode && actualFarmHandMembership && home.activeFarm?.farmId) {
-    try {
-      const allowOutdoor = await atlasFarmHandOutdoorEligibleNow();
-      await ensureAtlasProjectPullTask(home.activeFarm.farmId, actualFarmHandMembership.membershipId, home.window.doneDate, { allowOutdoor });
-      home = await readAtlasOperatorUniversalHome(viewer, {
-        preferredFarmId,
-        effectiveAccountId: effectiveOperatorAccountId(operatorContext),
-        effectiveMembershipId: selectedMembershipId,
-      });
-    } catch {
-      // Ordinary Living Day work remains available if project dealing cannot run.
-    }
-  }
 
   let setAsideTaskIds = new Set<string>();
   try {
