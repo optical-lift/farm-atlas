@@ -74,7 +74,7 @@
 .trailLater b, .trailLater small { color: #a1a29c; }
 
 .bedSection,
-.method,
+.zoneBeds,
 .projections,
 .surprises {
   display: grid;
@@ -83,43 +83,17 @@
   border-bottom: 1px solid rgba(215, 204, 189, 0.62);
 }
 
-.bedHeader > div {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-}
-
-.bedHeader h3 {
-  margin: 0;
-  color: var(--atlas-text);
-  font-size: 22px;
-  line-height: 1;
-  font-weight: 950;
-  letter-spacing: -0.04em;
-}
-
-.bedHeader span,
-.targets {
-  color: #85867f;
-  font-size: 9px;
-  line-height: 1.2;
-  font-weight: 790;
-}
-
-.targets { margin: -2px 0 0; }
-
 .seedRow {
   display: grid;
   gap: 3px;
-  padding: 11px 0 12px;
-  border-top: 1px solid rgba(215, 204, 189, 0.48);
+  padding: 2px 0 12px;
   border-bottom: 1px solid rgba(215, 204, 189, 0.48);
 }
 
 .seedRow small,
 .factRow small,
 .projectionGrid small,
-.method > header span,
+.zoneBeds > header span,
 .projections > header > span,
 .surprises > header > span {
   color: #858bb8;
@@ -159,15 +133,80 @@
 .factRow > div { min-height: 60px; }
 .factRow strong { color: var(--atlas-text); font-size: 15px; line-height: 1.02; font-weight: 950; letter-spacing: -0.035em; }
 
-.method ol {
+.zoneBeds > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.zoneName {
+  color: #85867f;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.zoneBedRows {
   display: grid;
-  gap: 7px;
-  margin: 0;
-  padding-left: 20px;
-  color: #595b59;
-  font-size: 12px;
-  line-height: 1.35;
-  font-weight: 760;
+  gap: 8px;
+}
+
+.zoneBedRow {
+  position: relative;
+}
+
+.zoneBedRow input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.zoneBedRow label {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 12px;
+  border: 1px solid rgba(139, 145, 194, 0.24);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--atlas-text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.zoneBedRow label > span {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border: 2px solid rgba(101, 105, 128, 0.56);
+  border-radius: 50%;
+  background: #fffefa;
+  box-sizing: border-box;
+}
+
+.zoneBedRow label strong {
+  font-size: 13px;
+  line-height: 1.15;
+  font-weight: 900;
+}
+
+.zoneBedRow input:checked + label {
+  background: rgba(214, 225, 177, 0.42);
+  color: #70736a;
+}
+
+.zoneBedRow input:checked + label > span {
+  border-color: #6e7650;
+  box-shadow: inset 0 0 0 5px #fffefa;
+  background: #6e7650;
+}
+
+.zoneBedRow input:checked + label strong {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
 }
 
 .projections > header,
@@ -301,7 +340,7 @@
 
 @media (max-width: 520px) {
   .shell { padding-left: 10px; padding-right: 10px; }
-  .bedSection, .method, .projections, .surprises { padding-left: 16px; padding-right: 16px; }
+  .bedSection, .zoneBeds, .projections, .surprises { padding-left: 16px; padding-right: 16px; }
   .factRow, .projectionGrid { gap: 6px; }
   .factRow strong { font-size: 14px; }
   .projectionGrid strong { font-size: 14px; }
