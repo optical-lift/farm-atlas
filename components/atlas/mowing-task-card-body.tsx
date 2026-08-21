@@ -25,6 +25,7 @@ type Props = {
   card: MowingCardViewModel;
   resourceLabel?: string | null;
   resourceStatus?: string | null;
+  resourceDetail?: string | null;
   issueChoices?: string[];
   issueDisabled?: boolean;
   showRecurrence?: boolean;
@@ -35,6 +36,7 @@ export default function MowingTaskCardBody({
   card,
   resourceLabel = null,
   resourceStatus = null,
+  resourceDetail = null,
   issueChoices = [],
   issueDisabled = false,
   showRecurrence = true,
@@ -68,7 +70,11 @@ export default function MowingTaskCardBody({
             <header className={styles.equipmentHeader}><h3>{card.equipment.label}</h3></header>
             {resourceLabel ? (
               <div className={styles.resourceRow}>
-                <div><strong>{resourceLabel}</strong>{resourceState ? <small>{resourceState}</small> : null}</div>
+                <div>
+                  <strong>{resourceLabel}</strong>
+                  {resourceDetail ? <small>{resourceDetail}</small> : resourceState ? <small>{resourceState}</small> : null}
+                  {resourceDetail && resourceState ? <small>{resourceState}</small> : null}
+                </div>
               </div>
             ) : null}
 
