@@ -35,7 +35,9 @@ test("blocked mowing keeps the truthful card visible but suppresses Done and unf
   assert.match(mowing, /const completion = taskReady \? \(/);
   assert.match(mowing, /data-atlas-task-readiness="blocked"/);
   assert.match(mowing, /<TaskPrimaryResultControls/);
-  assert.match(mowing, /<MowingTaskCardBody card=\{card\} \/>/);
+  assert.match(mowing, /<MowingTaskCardBody/);
+  assert.match(mowing, /card=\{card\}/);
+  assert.match(mowing, /issueDisabled=\{!taskReady \|\| saving\}/);
   assert.match(mowingViewModel, /equipmentGroup/);
   assert.doesNotMatch(mowingViewModel, /Gas|2 batteries/);
 });
