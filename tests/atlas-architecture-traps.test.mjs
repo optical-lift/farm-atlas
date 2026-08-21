@@ -106,7 +106,7 @@ test("Day progress is derived from the rendered Day collection", () => {
 });
 
 test("future fixed recurrences preview without releasing duplicate tasks", () => {
-  const migration = read("supabase/migrations/20260821195500_future_recurring_occurrences_in_day_preview_v1.sql");
+  const migration = read("supabase/migrations/20260821200114_future_recurring_occurrences_in_day_preview_v1.sql");
 
   assert.match(migration, /p_day > v_today/);
   assert.match(migration, /released_task_id is null/);
