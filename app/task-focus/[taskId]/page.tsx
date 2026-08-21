@@ -10,8 +10,6 @@ import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
 import GerminationFocusPage from "./GerminationFocusPage";
 import GuestReadinessFocusPage, { type GuestReadinessRoom } from "./GuestReadinessFocusPage";
-import HarvestCutFocusPage from "./HarvestCutFocusPage";
-import HarvestWatchFocusPage from "./HarvestWatchFocusPage";
 import MowingFocusPage, { type MowingFocusTask } from "./MowingFocusPage";
 import SowingFocusPage, { type ProductionSowingTask } from "./SowingFocusPage";
 import "./focused-task-only.css";
@@ -64,11 +62,6 @@ type CropContext = {
   expectedHarvestEnd: string | null;
   targetSpacingInches: number | null;
   successionNumber: number | null;
-};
-
-type HarvestAvailability = {
-  estimated_quantity?: number | string | null;
-  unit?: string | null;
 };
 
 type GuestObjectLink = {
@@ -177,13 +170,11 @@ function isGerminationTask(task: TaskRow) {
   return task.task_type === "germination_check" || text(metadata.task_style) === "germination_check" || text(metadata.milestone) === "germination_check";
 }
 
-function isHarvestWatchTask(task: TaskRow) {
-  const metadata = task.metadata ?? {};
-  return task.task_type === "harvest_watch" && (truthy(metadata.clock_managed) || text(metadata.rhythm_key) === "harvest_watch" || text(metadata.task_style) === "harvest_watch");
-}
-
-function isCropHarvestTask(task: TaskRow) {
-  return task.task_type === "crop_harvest" && truthy(task.metadata?.crop_harvest_clock);
+function isLegacyStandaloneHarvestTask(task: TaskRow) {
+  return task.task_type === "harvest_watch"
+    || task.task_type === "crop_harvest"
+    || task.task_type === "harvest_window"
+    || (task.task_type === "field_check" && text(task.metadata?.task_style) === "harvest_readiness_round");
 }
 
 function isGuestReadinessTask(task: TaskRow) {
@@ -469,17 +460,11 @@ async function loadCropContext(task: TaskRow): Promise<CropContext> {
   };
 }
 
-async function loadHarvestAvailability(cropCycleId: string | null) {
-  if (!cropCycleId) return null;
-  const { data } = await atlasSupabase.schema("atlas").from("crop_harvest_availability").select("estimated_quantity, unit").eq("crop_cycle_id", cropCycleId).limit(1).maybeSingle();
-  return data as HarvestAvailability | null;
-}
-
 export default async function TaskFocusPage({ params, searchParams }: { params: Promise<{ taskId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ taskId }, query] = await Promise.all([params, searchParams]);
   const returnTo = safeReturnPath(firstValue(query.returnTo));
   const task = await loadTask(taskId);
-  if (task && isDayCueStateSource(task)) notFound();
+  if (task && (isDayCueStateSource(task) || isLegacyStandaloneHarvestTask(task))) notFound();
 
   const projectFocus = await readAtlasProjectTaskFocus(taskId).catch(() => null);
   if (projectFocus) return <ProjectTaskFocus focus={projectFocus} returnTo={returnTo} />;
@@ -514,16 +499,6 @@ export default async function TaskFocusPage({ params, searchParams }: { params: 
     const mowingTask = await loadMowingFocus(task);
     if (!mowingTask) notFound();
     return <MowingFocusPage task={{ ...mowingTask, returnTo: returnTo || "/collections/mowing" }} />;
-  }
-
-  if (isHarvestWatchTask(task) || isCropHarvestTask(task)) {
-    const [objectLabel, crop] = await Promise.all([loadObjectLabel(task.id), loadCropContext(task)]);
-    if (isHarvestWatchTask(task)) {
-      return <HarvestWatchFocusPage task={{ id: task.id, cropLabel: crop.cropLabel, variety: crop.variety, objectLabel, dueDate: task.due_date, cycleState: crop.cycleState, expectedHarvestStart: crop.expectedHarvestStart, expectedHarvestEnd: crop.expectedHarvestEnd, returnTo }} />;
-    }
-    const availability = await loadHarvestAvailability(crop.cropCycleId);
-    const estimate = availability?.estimated_quantity === null || availability?.estimated_quantity === undefined ? null : Number(availability.estimated_quantity);
-    return <HarvestCutFocusPage task={{ id: task.id, cropLabel: crop.cropLabel, variety: crop.variety, objectLabel, dueDate: task.due_date, estimatedQuantity: Number.isFinite(estimate) ? estimate : null, estimatedUnit: text(availability?.unit) || null, returnTo }} />;
   }
 
   if (!isGerminationTask(task)) {
