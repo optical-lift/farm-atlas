@@ -23,11 +23,22 @@ test("germination cards record biological observations in the selected worker co
   assert.match(route, /effectiveMembershipId/);
   assert.doesNotMatch(route, /SUPABASE_SERVICE_ROLE_KEY|atlasSupabase/);
 
-  assert.match(focus, /"Beginning"/);
-  assert.match(focus, /Failed or uncertain/);
-  assert.match(focus, /Problem found/);
-  assert.match(focus, /Send to Owner/);
-  assert.match(focus, /Atlas advanced the crop/);
+  assert.match(focus, /AtlasTaskCardFrame/);
+  assert.match(focus, /CropCycleTaskCardBody/);
+  assert.match(focus, /"Strong"/);
+  assert.match(focus, /"Patchy"/);
+  assert.match(focus, /"Failed"/);
+  assert.match(focus, /"Too early to tell"/);
+  assert.match(focus, /choice === "Strong"[\s\S]*action: "germinated", spacingOutcome: "on_target"/);
+  assert.match(focus, /choice === "Patchy"[\s\S]*action: "germinated", spacingOutcome: "patch"/);
+  assert.match(focus, /choice === "Failed"[\s\S]*action: "failed_or_uncertain"/);
+  assert.match(focus, /return \{ action: "not_yet" \}/);
+  assert.match(focus, /Failed: "Owner review"/);
+  assert.match(focus, /completion=\{completion\}/);
+  assert.doesNotMatch(focus, /TaskPrimaryResultControls/);
+  assert.doesNotMatch(focus, /"Beginning"/);
+  assert.doesNotMatch(focus, /Send to Owner/);
+  assert.doesNotMatch(focus, /Atlas advanced the crop/);
 
   assert.match(originalOperatorMigration, /owner_operator_record_germination_check_v1/);
   assert.match(originalOperatorMigration, /effective_membership_id/);
