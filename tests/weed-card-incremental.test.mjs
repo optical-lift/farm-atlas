@@ -45,7 +45,7 @@ test("legacy time remains optional evidence while the live Weed Card is state-fi
   assert.match(focus, /minutes: null/);
   assert.match(focus, /Bed now/);
   assert.match(focus, /How’d we do\?/);
-  assert.match(focus, /ATLAS_WEED_CONDITIONS\.slice\(currentIndex\)/);
+  assert.match(focus, /PARTIAL_RESULTS/);
   assert.doesNotMatch(focus, /QUICK_MINUTES|Add time|<span>Time<\/span>|atlas-weed-invested/);
 });
 
@@ -54,7 +54,6 @@ test("the Weed Card keeps canonical state mutations inside the approved standalo
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
   const client = read("lib/atlas/weed-card-client.ts");
-  const setAsideClient = read("lib/atlas/task-set-aside-client.ts");
   const passApi = read("app/api/atlas/weed-card-session/route.ts");
   const partialApi = read("app/api/atlas/weed-card-partial/route.ts");
 
@@ -64,28 +63,23 @@ test("the Weed Card keeps canonical state mutations inside the approved standalo
   assert.match(loader, /childTasks=\{childTasks\}/);
   assert.match(focus, /AtlasTaskCardFrame/);
   assert.match(focus, /family="Weed"/);
-  assert.match(focus, /familyDetail="bed care"/);
-  assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v1"/);
+  assert.match(focus, /familyDetail=\{card\.bedUseCategory\}/);
+  assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v2-bed-truth"/);
   assert.doesNotMatch(focus, /AssignedTaskExecutionShell|methodInstrument=|resultInstrument=/);
   assert.doesNotMatch(focus, /TaskDominionTrail|atlas-phone-shell|atlas-task-page-shell/);
 
-  assert.match(focus, /<CropOccupancyList groups=\{card\.occupancyGroups\} \/>/);
+  assert.match(focus, />Active Crops</);
+  assert.match(focus, /card\.occupancyGroups/);
   assert.doesNotMatch(focus, /CropOccupancyBedMap|variant="notebook"/);
   assert.match(focus, /MaintenanceDirectiveStrip taskId=\{task\.task_id\}/);
-  assert.match(focus, /Done weeding today/);
+  assert.match(focus, /All clear/);
   assert.match(focus, />Blocked<\/button>/);
   assert.match(focus, /postAtlasFinishPartialWeedCardDay/);
   assert.match(focus, /conditionAfter: "clear"/);
-  assert.match(focus, /Move this card/);
-  assert.match(focus, />Tomorrow<\/button>/);
-  assert.match(focus, /Choose return date/);
-  assert.match(focus, /type="date"/);
-  assert.match(focus, /postAtlasTaskSetAsideToday\(task\.task_id, requestedReturnDate\)/);
-  assert.doesNotMatch(focus, />\s*Do tomorrow\s*</);
+  assert.doesNotMatch(focus, /Move this card|Choose return date|postAtlasTaskSetAsideToday/);
 
   assert.match(client, /weed-card-partial-v1/);
   assert.match(client, /\/api\/atlas\/weed-card-partial/);
-  assert.match(setAsideClient, /task-set-aside-v2/);
   assert.match(passApi, /record_weed_card_pass_v1/);
   assert.match(partialApi, /finish_partial_weed_card_day_v1/);
   assert.match(partialApi, /conditionAfter === "clear"/);
@@ -94,13 +88,15 @@ test("the Weed Card keeps canonical state mutations inside the approved standalo
 test("Weed-specific field truth now lives directly in the approved card instead of a second generic execution instrument", () => {
   const focus = read("components/atlas/weed-card-task-focus.tsx");
 
-  assert.match(focus, /primaryCohort/);
+  assert.match(focus, /card\.bedTrail/);
   assert.match(focus, /card\.occupancyGroups/);
-  assert.match(focus, /card\.condition/);
-  assert.match(focus, /card\.targetCondition/);
+  assert.match(focus, /card\.lastLoggedCondition/);
+  assert.match(focus, /card\.lastLoggedOn/);
   assert.match(focus, /Recent passes/);
   assert.match(focus, /card\.sessions\.slice\(0, 3\)/);
   assert.match(focus, /Log it/);
+  assert.match(focus, /Needs field confirmation/);
+  assert.doesNotMatch(focus, /card\.targetCondition|Target ·/);
   assert.doesNotMatch(focus, /presentation="weed-sheet"|moveDetails=|instruction=\{/);
   assert.doesNotMatch(focus, /Field Row 13|ProCut Orange|12 ft|3 rows|Jun 10/);
 });
