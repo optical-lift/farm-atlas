@@ -61,6 +61,7 @@ test("legacy mowing work becomes governed baselines without reviving date recrea
 test("mowing result UI and API preserve observation, operator mode, and canonical task focus", () => {
   const api = read("app/api/atlas/mowing/route.ts");
   const focus = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
+  const body = read("components/atlas/mowing-task-card-body.tsx");
   const taskFocus = read("app/task-focus/[taskId]/page.tsx");
   const collection = read("app/collections/mowing/page.tsx");
   const rulebook = read("app/manage/rhythms/BiologicalRhythmManager.tsx");
@@ -78,8 +79,11 @@ test("mowing result UI and API preserve observation, operator mode, and canonica
     "equipment_or_area_problem",
     "closed_not_mowable",
   ]) assert.match(focus, new RegExp(outcome));
-  assert.match(focus, /TaskExecutionBrief/);
+  assert.match(focus, /AtlasTaskCardFrame/);
   assert.match(focus, /TaskPrimaryResultControls/);
+  assert.match(body, /Mow height/);
+  assert.match(body, /Equipment/);
+  assert.doesNotMatch(focus, /TaskExecutionBrief/);
   assert.doesNotMatch(focus, /Time does not claim the grass is long, dry, or safe to mow/);
   assert.match(taskFocus, /isMowingTask/);
   assert.match(taskFocus, /MowingFocusPage/);
