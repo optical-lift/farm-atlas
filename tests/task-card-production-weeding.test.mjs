@@ -16,8 +16,9 @@ test("canonical weed work enters the persistent Weed Card family", () => {
   assert.match(canonical, /task\.action_key === "weed"/);
   assert.match(canonical, /task\.task_type === "weed"/);
   assert.match(canonical, /WeedCardTaskLoader/);
-  assert.match(loader, /weed_card_task_focus_v1/);
+  assert.match(loader, /\/api\/atlas\/weed-card\?taskId=/);
   assert.match(loader, /WeedCardTaskFocus/);
+  assert.match(loader, /if \(card\) return <WeedCardTaskFocus/);
 });
 
 test("production Weed Card uses the approved bed-care grammar with live object truth", () => {
