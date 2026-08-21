@@ -7,6 +7,7 @@ import FlowerFulfillmentTaskLoader from "@/components/atlas/flower-fulfillment-t
 import FlowerPreparationTaskLoader from "@/components/atlas/flower-preparation-task-loader";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
 import NetworkOutreachTaskDetail from "@/components/atlas/network-outreach-task-detail";
+import OneOffMowingTaskDetail from "@/components/atlas/one-off-mowing-task-detail";
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import SiteLayoutTaskDetail from "@/components/atlas/site-layout-task-detail";
@@ -59,6 +60,18 @@ function isSowCardTask(task: AtlasTaskCard) {
       task.metadata?.task_style === "sowing"
       || task.metadata?.operation_result_membrane === "or3_direct_sow_seed_v1"
     );
+}
+
+function isOneOffMowingCardTask(task: AtlasTaskCard) {
+  const clockManaged = task.metadata?.clock_managed === true || task.metadata?.clock_managed === "true";
+  return task.task_type === "mowing"
+    && task.action_key === "mow"
+    && !clockManaged
+    && task.operation_class === "cut_separate"
+    && typeof task.metadata?.execution_place === "string"
+    && task.metadata.execution_place.trim().length > 0
+    && task.metadata?.target_cut_height_inches !== null
+    && task.metadata?.target_cut_height_inches !== undefined;
 }
 
 function isWeedTask(task: AtlasTaskCard) {
@@ -179,6 +192,7 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isContractorServiceTask(props.task)) return <ContractorServiceTaskDetail {...props} />;
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
   if (isSowCardTask(props.task)) return <DirectSowTaskDetail task={props.task} assignee={props.assignee} />;
+  if (isOneOffMowingCardTask(props.task)) return <OneOffMowingTaskDetail task={props.task} assignee={props.assignee} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isBuyerOutreachTask(props.task)) return <BuyerOutreachTaskDetail {...props} />;
