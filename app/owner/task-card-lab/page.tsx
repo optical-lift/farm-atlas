@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import FarmRoundCardSpecimen from "./FarmRoundCardSpecimen";
 import HarvestCardSpecimen from "./HarvestCardSpecimen";
 import MowCardSpecimen from "./MowCardSpecimen";
+import OneOffFieldWorkCardSpecimen from "./OneOffFieldWorkCardSpecimen";
 import { TransplantCardSpecimen } from "./RemainingDominionCardSpecimens";
 import SowCardSpecimen from "./SowCardSpecimen";
 import VenueCardSpecimen from "./VenueCardSpecimen";
@@ -21,6 +22,7 @@ const families = [
   "Harvest",
   "Transplant",
   "Stewardship",
+  "One-off",
 ] as const;
 
 function Specimen({ index }: { index: number }) {
@@ -30,7 +32,8 @@ function Specimen({ index }: { index: number }) {
   if (index === 3) return <MowCardSpecimen />;
   if (index === 4) return <HarvestCardSpecimen />;
   if (index === 5) return <TransplantCardSpecimen />;
-  return <FarmRoundCardSpecimen />;
+  if (index === 6) return <FarmRoundCardSpecimen />;
+  return <OneOffFieldWorkCardSpecimen />;
 }
 
 export default function TaskCardLabPage() {
