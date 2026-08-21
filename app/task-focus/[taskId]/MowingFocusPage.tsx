@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import MaintenanceDirectiveStrip from "@/components/atlas/maintenance-directive-strip";
 import MowingTaskCardBody from "@/components/atlas/mowing-task-card-body";
@@ -48,7 +48,7 @@ function tomorrowIso(days = 1) {
   return date.toISOString().slice(0, 10);
 }
 
-export default function MowingFocusPage({ task, readiness }: { task: MowingFocusTask; readiness: WorkerReadinessResponse }) {
+export default function MowingFocusPage({ task }: { task: MowingFocusTask }) {
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const [completionPercent, setCompletionPercent] = useState("50");
@@ -56,9 +56,10 @@ export default function MowingFocusPage({ task, readiness }: { task: MowingFocus
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [readiness, setReadiness] = useState<WorkerReadinessResponse | null>(null);
   const returnTo = task.returnTo || "/collections/mowing";
-  const taskReady = readiness.ok && readiness.executable === true;
-  const blockedPresentation = readiness.ok ? readiness.presentation ?? null : null;
+  const taskReady = readiness?.ok === true && readiness.executable === true;
+  const blockedPresentation = readiness?.ok ? readiness.presentation ?? null : null;
   const card = buildMowingCardViewModel({
     routeLabel: task.routeLabel,
     zoneLabel: task.zoneLabel,
@@ -68,6 +69,28 @@ export default function MowingFocusPage({ task, readiness }: { task: MowingFocus
     targetCutHeightInches: task.targetCutHeightInches,
     equipmentGroup: task.equipmentGroup,
   });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setReadiness(null);
+
+    void (async () => {
+      try {
+        const response = await fetch(`/api/atlas/task-execution-readiness?taskId=${encodeURIComponent(task.id)}`, {
+          cache: "no-store",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
+        const body = await response.json() as WorkerReadinessResponse;
+        if (!controller.signal.aborted) setReadiness(response.ok ? body : { ok: false, error: body.error || "Task readiness could not be loaded." });
+      } catch {
+        if (!controller.signal.aborted) setReadiness({ ok: false, error: "Task readiness could not be loaded." });
+      }
+    })();
+
+    return () => controller.abort();
+  }, [task.id]);
 
   async function save(selectedOutcome: Outcome) {
     if (!taskReady) {
@@ -198,7 +221,7 @@ export default function MowingFocusPage({ task, readiness }: { task: MowingFocus
           >
             <MowingTaskCardBody card={card} />
 
-            {!readiness.ok ? (
+            {readiness === null ? null : !readiness.ok ? (
               <section role="status" style={{ margin: 18, borderRadius: 18, padding: "16px 17px", background: "rgba(54, 70, 58, .055)", color: "#4b554c" }}>
                 <small style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".1em", textTransform: "uppercase", opacity: .55 }}>Task unavailable</small>
                 <strong style={{ display: "block", marginTop: 5, fontSize: 18 }}>Readiness could not be loaded</strong>
