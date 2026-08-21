@@ -95,3 +95,12 @@ test("the homepage reader is membership scoped instead of metadata assigned", ()
   assert.match(growRoomMigration, /is_farm_member|home_task_cards_v1/);
   assert.match(growRoomMigration, /grant execute .* to authenticated/is);
 });
+
+test("Day progress is derived from the rendered Day collection", () => {
+  const summary = read("components/atlas/day-trail-summary.tsx");
+
+  assert.doesNotMatch(summary, /living-day-plan/);
+  assert.doesNotMatch(summary, /resolvedCount|denominator/);
+  assert.match(summary, /safeTotal = Math\.max\(0, total\)/);
+  assert.match(summary, /safeCompleted = Math\.max\(0, Math\.min\(completed, safeTotal\)\)/);
+});
