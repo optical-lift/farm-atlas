@@ -8,9 +8,11 @@ function read(path) {
 
 const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
 const taskPage = read("app/task-focus/[taskId]/page.tsx");
-const focus = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
+const focusPage = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
+const focus = read("components/atlas/mowing-focus-card.tsx");
 const body = read("components/atlas/mowing-task-card-body.tsx");
 const model = read("lib/atlas/mowing-card-view-model.ts");
+const readiness = read("lib/atlas/worker-readiness.ts");
 const route = read("app/api/atlas/mowing/route.ts");
 
 test("only Clock-governed mowing routes enter the production Mow result family", () => {
@@ -34,6 +36,16 @@ test("Mow card preserves the Task Card Editor recurrence, height, and equipment 
   assert.doesNotMatch(body, />3 in</);
 });
 
+test("Mow card reads canonical mower resource state from execution readiness", () => {
+  assert.match(readiness, /resources\?: WorkerReadinessResource\[\]/);
+  assert.match(readiness, /resourceLabel: nullableText\(requirement\.resourceLabel\)/);
+  assert.match(readiness, /readinessState: nullableText\(requirement\.readinessState\)/);
+  assert.match(focus, /readiness\?\.resources\?\.find/);
+  assert.match(focus, /readinessResource\?\.resourceLabel/);
+  assert.match(focus, /readinessResource\?\.readinessState/);
+  assert.match(focus, /resourceStatus=\{resourceStatus\}/);
+});
+
 test("Mow equipment plus drawer reports through the canonical mowing result contract", () => {
   assert.match(focus, /Won't start/);
   assert.match(focus, /Needs gas/);
@@ -49,7 +61,7 @@ test("Mow equipment plus drawer reports through the canonical mowing result cont
 });
 
 test("Mow focus uses the global Atlas shell instead of keeping a private Atlas Work header", () => {
-  assert.doesNotMatch(focus, /import Link from "next\/link"/);
+  assert.doesNotMatch(focusPage, /import Link from "next\/link"/);
   assert.doesNotMatch(focus, /className=\{styles\.top\}/);
   assert.doesNotMatch(focus, /className=\{styles\.close\}/);
 });
