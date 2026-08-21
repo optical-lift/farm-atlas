@@ -22,6 +22,9 @@ declare
   v_sessions jsonb;
   v_occupancy jsonb;
   v_condition text;
+  v_state_logged_on date;
+  v_state_condition text;
+  v_state_last_weeded_on date;
   v_last_weeded_on date;
   v_last_logged_condition text;
   v_last_logged_on date;
@@ -59,29 +62,59 @@ begin
   order by ws.work_date desc, ws.recorded_at desc
   limit 1;
 
-  v_last_weeded_on := coalesce(v_latest_session.work_date, v_state.last_weeded_at::date);
-  v_last_logged_on := coalesce(
-    v_latest_session.work_date,
-    v_state.last_checked_at::date,
-    nullif(v_state.metadata->>'photo_truth_date','')::date
-  );
-  v_last_logged_condition := coalesce(
-    v_latest_session.condition_after,
-    case lower(coalesce(v_state.weed_pressure,''))
-      when 'high' then 'heavy'
-      when 'heavy' then 'heavy'
-      when 'severe' then 'heavy'
-      when 'medium' then 'heavy'
-      when 'moderate' then 'heavy'
-      when 'low' then 'mostly_clear'
-      when 'light' then 'mostly_clear'
-      when 'maintained' then 'clear'
-      when 'none' then 'clear'
-      when 'clear' then 'clear'
+  v_state_last_weeded_on := case
+    when v_state.last_weeded_at is not null
+      then (v_state.last_weeded_at at time zone 'America/Chicago')::date
+    else null
+  end;
+
+  v_last_weeded_on := case
+    when v_latest_session.work_date is null then v_state_last_weeded_on
+    when v_state_last_weeded_on is null then v_latest_session.work_date
+    else greatest(v_latest_session.work_date,v_state_last_weeded_on)
+  end;
+
+  v_state_logged_on := coalesce(
+    case
+      when v_state.last_checked_at is not null
+        then (v_state.last_checked_at at time zone 'America/Chicago')::date
       else null
     end,
-    v_condition
+    case
+      when coalesce(v_state.metadata->>'photo_truth_date','') ~ '^\d{4}-\d{2}-\d{2}$'
+        then (v_state.metadata->>'photo_truth_date')::date
+      else null
+    end
   );
+
+  v_state_condition := case lower(coalesce(v_state.weed_pressure,''))
+    when 'high' then 'heavy'
+    when 'heavy' then 'heavy'
+    when 'severe' then 'heavy'
+    when 'medium' then 'heavy'
+    when 'moderate' then 'heavy'
+    when 'low' then 'mostly_clear'
+    when 'light' then 'mostly_clear'
+    when 'maintained' then 'clear'
+    when 'none' then 'clear'
+    when 'clear' then 'clear'
+    else null
+  end;
+
+  -- A Weed session and an object-state check are both observations of the physical
+  -- bed. Keep the date and condition from the newest observation together.
+  if v_latest_session.id is not null
+     and (v_state_logged_on is null or v_latest_session.work_date >= v_state_logged_on)
+  then
+    v_last_logged_on := v_latest_session.work_date;
+    v_last_logged_condition := coalesce(v_latest_session.condition_after,v_state_condition,v_condition);
+  elsif v_state_logged_on is not null then
+    v_last_logged_on := v_state_logged_on;
+    v_last_logged_condition := coalesce(v_state_condition,v_condition,v_latest_session.condition_after);
+  else
+    v_last_logged_on := coalesce(v_latest_session.work_date,v_last_weeded_on);
+    v_last_logged_condition := coalesce(v_latest_session.condition_after,v_state_condition,v_condition);
+  end if;
 
   -- Prefer an explicit owner-curated current use. Fall back only to established
   -- object/zone semantics; mixed beds stay mixed rather than being misclassified.
@@ -108,8 +141,8 @@ begin
       else null
     end,
     case
-      when coalesce((v_object.metadata->>'perennial_zone')::boolean,false) then 'Perennial bed'
-      when coalesce((v_object.metadata->>'landscape_strip')::boolean,false) then 'Landscaping'
+      when lower(coalesce(v_object.metadata->>'perennial_zone','')) in ('true','1','yes','y') then 'Perennial bed'
+      when lower(coalesce(v_object.metadata->>'landscape_strip','')) in ('true','1','yes','y') then 'Landscaping'
       when lower(coalesce(v_state.metadata->>'role','')) like '%mixed%' then 'Mixed bed'
       when lower(coalesce(v_state.metadata->>'purpose','')) like '%hospitality%' then 'Hospitality'
       when lower(coalesce(v_state.metadata->>'purpose','')) like '%landscap%' then 'Landscaping'
@@ -187,7 +220,7 @@ begin
       else 'Worked'
     end,
     'cropCycleId',r.crop_cycle_id,
-    'cropLabel',coalesce(r.crop_label,nullif(v_task.metadata->>'display_subject','')),
+    'cropLabel',r.crop_label,
     'title',r.title,
     'lifeCycle',r.life_cycle,
     'eventDate',r.event_date
