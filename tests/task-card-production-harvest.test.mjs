@@ -30,7 +30,8 @@ test("Harvest recording follows the approved half-bucket counter grammar", () =>
   assert.match(weekly, /Remove half bucket/);
   assert.match(weekly, /Add half bucket/);
   assert.match(weekly, /setBucketHalves\(\(current\) => Math\.max\(0, current \+ delta\)\)/);
-  assert.match(weekly, /resultKind: resultKind === "harvest_amount"/);
+  assert.match(weekly, /resultKind,/);
+  assert.match(weekly, /bucketHalves: resultKind === "harvest_amount" \? bucketHalves : null/);
   assert.match(weekly, /Record \$\{formatBuckets\(bucketHalves\)\}/);
   assert.match(migrationV2, /positiveBucketCountIsHarvestResult/);
   assert.match(migrationV2, /'bucketIncrement',0\.5/);
