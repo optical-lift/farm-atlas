@@ -12,7 +12,8 @@ const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 const checklist = read("components/atlas/execution-checklist-task-detail.tsx");
 const taskCardFrame = read("components/atlas/task-card-frame.tsx");
 const mowingBody = read("components/atlas/mowing-task-card-body.tsx");
-const mowing = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
+const mowingPage = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
+const mowing = read("components/atlas/mowing-focus-card.tsx");
 const display = read("lib/atlas/task-display.ts");
 const migration = read("supabase/migrations/20260810144000_atlas_task_execution_contract_v1.sql");
 
@@ -46,6 +47,8 @@ test("the primary result language is shared instead of reinvented per card", () 
 });
 
 test("mowing uses the approved family card instead of an operating-system lecture", () => {
+  assert.match(mowingPage, /MowingFocusCard/);
+  assert.match(mowingPage, /TaskFocusCueDelivery/);
   assert.match(mowing, /AtlasTaskCardFrame/);
   assert.match(mowing, /MowingTaskCardBody/);
   assert.match(mowing, /buildMowingCardViewModel/);
