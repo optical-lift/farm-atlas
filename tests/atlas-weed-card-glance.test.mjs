@@ -15,8 +15,10 @@ test("the Weed task keeps its complete canonical action and bed name in the appr
   assert.match(focus, /family="Weed"/);
   assert.match(focus, /title=\{card\.objectLabel\}/);
   assert.match(focus, /subtitle=\{card\.zoneLabel/);
-  assert.match(focus, /CropOccupancyList/);
-  assert.doesNotMatch(focus, /AssignedTaskExecutionShell|instruction=|TaskDominionTrail/);
+  assert.match(focus, />Active Crops</);
+  assert.match(focus, /card\.occupancyGroups/);
+  assert.match(focus, /card\.bedTrail/);
+  assert.doesNotMatch(focus, /CropOccupancyList|AssignedTaskExecutionShell|instruction=|TaskDominionTrail/);
   assert.match(migration, /NEW\.title := 'Weed ' \|\| v_object_label/);
   assert.match(migration, /'display_title', NEW\.title/);
   assert.match(migration, /NEW\.generated_from = 'rhythm_clock'/);
