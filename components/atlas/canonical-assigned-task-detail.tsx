@@ -42,6 +42,9 @@ const VENUE_STATION_TEMPLATES = new Set([
   "community_thursday_morning_outdoor_v2",
   "community_thursday_morning_coffee_water_v2",
   "community_thursday_morning_rooms_v2",
+  "community_thursday_venue_tidy_v1",
+  "community_thursday_venue_prep_v1",
+  "community_thursday_venue_host_v1",
 ]);
 
 function isContractorServiceTask(task: AtlasTaskCard) {
