@@ -25,6 +25,17 @@ type Props = {
   assignee: AtlasAssigneeConfig;
 };
 
+type SetupRecipeRow = {
+  label?: string | null;
+  required_resource_keys?: string[] | null;
+  optional_resource_keys?: string[] | null;
+};
+
+type SetupResourceRow = {
+  stable_key?: string | null;
+  label?: string | null;
+};
+
 function isContractorServiceTask(task: AtlasTaskCard) {
   return task.task_type === "contractor_service_status"
     || task.metadata?.task_style === "contractor_service_status";
@@ -123,6 +134,47 @@ async function loadWorkerReadiness(taskId: string): Promise<WorkerReadinessRespo
   return normalizeWorkerReadiness(data);
 }
 
+async function loadSiteLayoutRecipe(task: AtlasTaskCard) {
+  if (!task.action_key) return { label: null as string | null, tools: [] as string[] };
+  const supabase = await createAtlasServerClient();
+  const { data: farm } = await supabase
+    .schema("atlas")
+    .from("farms")
+    .select("id")
+    .eq("stable_key", task.farm_key)
+    .limit(1)
+    .maybeSingle();
+  if (!farm?.id) return { label: null as string | null, tools: [] as string[] };
+
+  const { data: recipe, error: recipeError } = await supabase
+    .schema("atlas")
+    .from("action_requirement_templates")
+    .select("label, required_resource_keys, optional_resource_keys")
+    .eq("farm_id", farm.id)
+    .eq("action_type", task.action_key)
+    .eq("applies_to_task_type", task.task_type)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (recipeError) console.error("Setup recipe lookup failed.", recipeError);
+  const row = recipe as SetupRecipeRow | null;
+  const keys = Array.from(new Set([...(row?.required_resource_keys ?? []), ...(row?.optional_resource_keys ?? [])].filter(Boolean)));
+  if (!keys.length) return { label: row?.label?.trim() || null, tools: [] as string[] };
+
+  const { data: resources, error: resourceError } = await supabase
+    .schema("atlas")
+    .from("resources")
+    .select("stable_key, label")
+    .eq("farm_id", farm.id)
+    .in("stable_key", keys);
+  if (resourceError) console.error("Setup resource-label lookup failed.", resourceError);
+  const labelByKey = new Map(((resources ?? []) as SetupResourceRow[]).map((resource) => [resource.stable_key || "", resource.label?.trim() || ""]));
+  return {
+    label: row?.label?.trim() || null,
+    tools: keys.map((key) => labelByKey.get(key) || "").filter(Boolean),
+  };
+}
+
 export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isContractorServiceTask(props.task)) return <ContractorServiceTaskDetail {...props} />;
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
@@ -140,6 +192,9 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isWeeklyHarvestTask(props.task)) return <WeeklyHarvestTaskDetail {...props} />;
 
   const initialReadiness = await loadWorkerReadiness(props.task.task_id);
-  if (isSiteLayoutTask(props.task)) return <SiteLayoutTaskDetail {...props} initialReadiness={initialReadiness} />;
+  if (isSiteLayoutTask(props.task)) {
+    const recipe = await loadSiteLayoutRecipe(props.task);
+    return <SiteLayoutTaskDetail {...props} initialReadiness={initialReadiness} recipeLabel={recipe.label} recipeTools={recipe.tools} />;
+  }
   return <WorkerReadyAssignedTaskExecutionShell {...props} initialReadiness={initialReadiness} />;
 }
