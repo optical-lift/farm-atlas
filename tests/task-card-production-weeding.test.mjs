@@ -10,6 +10,8 @@ const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
 const loader = read("components/atlas/weed-card-task-loader.tsx");
 const focus = read("components/atlas/weed-card-task-focus.tsx");
 const client = read("lib/atlas/weed-card-client.ts");
+const sessionRoute = read("app/api/atlas/weed-card-session/route.ts");
+const partialRoute = read("app/api/atlas/weed-card-partial/route.ts");
 
 test("canonical weed work enters the persistent Weed Card family", () => {
   assert.match(canonical, /function isWeedTask\(task: AtlasTaskCard\)/);
@@ -59,10 +61,16 @@ test("Weed Card reports canonical physical condition through one three-way Save 
   assert.match(client, /finish-partial-day|weed-card/);
 });
 
-test("Weed Card keeps notes secondary and does not let the worker move the persistent card", () => {
+test("Weed Card requires a written observation before Save result at UI and API boundaries", () => {
   assert.match(focus, /Log it/);
   assert.match(focus, /aria-expanded=\{logOpen\}/);
   assert.match(focus, /logOpen \? \(/);
-  assert.match(focus, /Note \(optional\)/);
+  assert.match(focus, /Log what you observed/);
+  assert.match(focus, /disabled=\{busy \|\| !selectedCondition \|\| !note\.trim\(\)\}/);
+  assert.doesNotMatch(focus, /Note \(optional\)/);
+  assert.match(sessionRoute, /weed_card_observation_required/);
+  assert.match(partialRoute, /weed_card_observation_required/);
+  assert.match(sessionRoute, /if \(!note\)/);
+  assert.match(partialRoute, /if \(!note\)/);
   assert.doesNotMatch(focus, /Move this card|Tomorrow|Choose return date|postAtlasTaskSetAsideToday/);
 });
