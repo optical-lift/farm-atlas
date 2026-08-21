@@ -29,13 +29,15 @@ test("Germination logging is completion rather than Done plus a separate log", (
   assert.doesNotMatch(germination, />Unfinished<\/button>/);
 });
 
-test("live Germination maps only to existing canonical observation semantics", () => {
+test("live Germination preserves crop-cycle consequences for each observation", () => {
   assert.match(germination, /Strong[\s\S]*germinated[\s\S]*on_target/);
   assert.match(germination, /Patchy[\s\S]*germinated[\s\S]*patch/);
-  assert.match(germination, /Failed[\s\S]*failed_or_uncertain/);
+  assert.match(germination, /choice === "Failed"[\s\S]*action: "failed"/);
   assert.match(germination, /Too early to tell[\s\S]*not_yet/);
-  assert.match(germination, /Failed: "Owner review"/);
+  assert.match(germination, /Failed: "Bed open · choose next crop"/);
+  assert.match(germination, /harvestRange && choice !== "Failed"/);
   assert.doesNotMatch(germination, /Failed: "Restart"/);
+  assert.doesNotMatch(germination, /Failed: "Owner review"/);
 });
 
 test("crop-cycle card uses only dated biological truth it actually has", () => {
