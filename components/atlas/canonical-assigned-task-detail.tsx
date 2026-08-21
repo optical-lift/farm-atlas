@@ -7,6 +7,7 @@ import FlowerFulfillmentTaskLoader from "@/components/atlas/flower-fulfillment-t
 import FlowerPreparationTaskLoader from "@/components/atlas/flower-preparation-task-loader";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
 import NetworkOutreachTaskDetail from "@/components/atlas/network-outreach-task-detail";
+import OneOffMowingTaskDetail from "@/components/atlas/one-off-mowing-task-detail";
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import SiteLayoutTaskDetail from "@/components/atlas/site-layout-task-detail";
@@ -23,6 +24,17 @@ type Props = {
   task: AtlasTaskCard;
   childTasks: AtlasTaskCard[];
   assignee: AtlasAssigneeConfig;
+};
+
+type SetupRecipeRow = {
+  label?: string | null;
+  required_resource_keys?: string[] | null;
+  optional_resource_keys?: string[] | null;
+};
+
+type SetupResourceRow = {
+  stable_key?: string | null;
+  label?: string | null;
 };
 
 function isContractorServiceTask(task: AtlasTaskCard) {
@@ -48,6 +60,18 @@ function isSowCardTask(task: AtlasTaskCard) {
       task.metadata?.task_style === "sowing"
       || task.metadata?.operation_result_membrane === "or3_direct_sow_seed_v1"
     );
+}
+
+function isOneOffMowingCardTask(task: AtlasTaskCard) {
+  const clockManaged = task.metadata?.clock_managed === true || task.metadata?.clock_managed === "true";
+  return task.task_type === "mowing"
+    && task.action_key === "mow"
+    && !clockManaged
+    && task.operation_class === "cut_separate"
+    && typeof task.metadata?.execution_place === "string"
+    && task.metadata.execution_place.trim().length > 0
+    && task.metadata?.target_cut_height_inches !== null
+    && task.metadata?.target_cut_height_inches !== undefined;
 }
 
 function isWeedTask(task: AtlasTaskCard) {
@@ -123,10 +147,52 @@ async function loadWorkerReadiness(taskId: string): Promise<WorkerReadinessRespo
   return normalizeWorkerReadiness(data);
 }
 
+async function loadSiteLayoutRecipe(task: AtlasTaskCard) {
+  if (!task.action_key) return { label: null as string | null, tools: [] as string[] };
+  const supabase = await createAtlasServerClient();
+  const { data: farm } = await supabase
+    .schema("atlas")
+    .from("farms")
+    .select("id")
+    .eq("stable_key", task.farm_key)
+    .limit(1)
+    .maybeSingle();
+  if (!farm?.id) return { label: null as string | null, tools: [] as string[] };
+
+  const { data: recipe, error: recipeError } = await supabase
+    .schema("atlas")
+    .from("action_requirement_templates")
+    .select("label, required_resource_keys, optional_resource_keys")
+    .eq("farm_id", farm.id)
+    .eq("action_type", task.action_key)
+    .eq("applies_to_task_type", task.task_type)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (recipeError) console.error("Setup recipe lookup failed.", recipeError);
+  const row = recipe as SetupRecipeRow | null;
+  const keys = Array.from(new Set([...(row?.required_resource_keys ?? []), ...(row?.optional_resource_keys ?? [])].filter(Boolean)));
+  if (!keys.length) return { label: row?.label?.trim() || null, tools: [] as string[] };
+
+  const { data: resources, error: resourceError } = await supabase
+    .schema("atlas")
+    .from("resources")
+    .select("stable_key, label")
+    .eq("farm_id", farm.id)
+    .in("stable_key", keys);
+  if (resourceError) console.error("Setup resource-label lookup failed.", resourceError);
+  const labelByKey = new Map(((resources ?? []) as SetupResourceRow[]).map((resource) => [resource.stable_key || "", resource.label?.trim() || ""]));
+  return {
+    label: row?.label?.trim() || null,
+    tools: keys.map((key) => labelByKey.get(key) || "").filter(Boolean),
+  };
+}
+
 export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isContractorServiceTask(props.task)) return <ContractorServiceTaskDetail {...props} />;
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
   if (isSowCardTask(props.task)) return <DirectSowTaskDetail task={props.task} assignee={props.assignee} />;
+  if (isOneOffMowingCardTask(props.task)) return <OneOffMowingTaskDetail task={props.task} assignee={props.assignee} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isBuyerOutreachTask(props.task)) return <BuyerOutreachTaskDetail {...props} />;
@@ -140,6 +206,9 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isWeeklyHarvestTask(props.task)) return <WeeklyHarvestTaskDetail {...props} />;
 
   const initialReadiness = await loadWorkerReadiness(props.task.task_id);
-  if (isSiteLayoutTask(props.task)) return <SiteLayoutTaskDetail {...props} initialReadiness={initialReadiness} />;
+  if (isSiteLayoutTask(props.task)) {
+    const recipe = await loadSiteLayoutRecipe(props.task);
+    return <SiteLayoutTaskDetail {...props} initialReadiness={initialReadiness} recipeLabel={recipe.label} recipeTools={recipe.tools} />;
+  }
   return <WorkerReadyAssignedTaskExecutionShell {...props} initialReadiness={initialReadiness} />;
 }

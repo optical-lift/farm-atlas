@@ -27,6 +27,7 @@ type Props = {
   resourceStatus?: string | null;
   issueChoices?: string[];
   issueDisabled?: boolean;
+  showRecurrence?: boolean;
   onEquipmentIssue?: (issue: string, note: string) => void | Promise<void>;
 };
 
@@ -36,6 +37,7 @@ export default function MowingTaskCardBody({
   resourceStatus = null,
   issueChoices = [],
   issueDisabled = false,
+  showRecurrence = true,
   onEquipmentIssue,
 }: Props) {
   const [selectedIssue, setSelectedIssue] = useState("");
@@ -47,11 +49,13 @@ export default function MowingTaskCardBody({
 
   return (
     <>
-      <div className={styles.trail} data-has-next={next ? "true" : "false"} aria-label={`${card.route} mowing recurrence`}>
-        <span className={styles.done}><b>Mowed</b><small>{last || "Not recorded"}</small></span>
-        <span className={styles.now}><b>Mow</b><small>{current || "Current"}</small></span>
-        {next ? <span className={styles.next}><b>Next mow</b><small>{next}</small></span> : null}
-      </div>
+      {showRecurrence ? (
+        <div className={styles.trail} data-has-next={next ? "true" : "false"} aria-label={`${card.route} mowing recurrence`}>
+          <span className={styles.done}><b>Mowed</b><small>{last || "Not recorded"}</small></span>
+          <span className={styles.now}><b>Mow</b><small>{current || "Current"}</small></span>
+          {next ? <span className={styles.next}><b>Next mow</b><small>{next}</small></span> : null}
+        </div>
+      ) : null}
 
       <section className={styles.height}>
         <span>Mow height</span>

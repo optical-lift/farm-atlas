@@ -52,5 +52,6 @@ test("execution facts stay visible instead of hiding useful work behind an Instr
 test("Weed Card stops rendering the fake geometry bed map", () => {
   assert.doesNotMatch(weed, /CropOccupancyBedMap/);
   assert.match(weed, /CropOccupancyList/);
-  assert.match(weed, /condition-summary/);
+  assert.match(weed, /AtlasTaskCardFrame/);
+  assert.match(weed, /className=\{styles\.bedNow\}/);
 });

@@ -23,6 +23,12 @@
   display: none !important;
 }
 
+/* Future Clock mowing is a real planning slot even before it has a task UUID. */
+.atlas-day-future-plan-card[data-future-projection-source="rhythm"] {
+  pointer-events: auto !important;
+  cursor: pointer;
+}
+
 .atlas-day-complete-drawer {
   width: 100%;
   margin-top: 14px;

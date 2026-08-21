@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import FutureMowPreviewTapBridge from "@/components/atlas/future-mow-preview-tap-bridge";
 import AtlasPwaBridge from "@/components/atlas/pwa/AtlasPwaBridge";
 import AtlasRuntimeProvider from "@/components/atlas/runtime/AtlasRuntimeProvider";
 import AtlasContextualAppFrame from "@/components/atlas/shell/AtlasContextualAppFrame";
@@ -73,8 +74,8 @@ import "./bell-cover-quiet.css";
 import "./pwa.css";
 import "./web-push.css";
 import "./contextual-app-shell.css";
-import "./global-atlas-header.css";
 import "./app-shell-regression-fixes.css";
+import "./global-atlas-header.css";
 import "./dependency-release-flash.css";
 import "./work-alongside.css";
 import "./day-single-scroll.css";
@@ -148,6 +149,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className="min-h-full flex flex-col">
         <AtlasRuntimeProvider key={runtimeScopeKey} scopeKey={runtimeScopeKey} effectiveFarmRole={effectiveFarmRole}>
           <AtlasPwaBridge />
+          <FutureMowPreviewTapBridge />
           <OwnerOperatorMode context={operatorContext} />
           {/* Legacy contract marker: <AtlasContextualAppFrame /> now receives the effective account role. */}
           <AtlasContextualAppFrame effectiveFarmRole={effectiveFarmRole} activeFarmName={activeMembership?.farmName ?? null} />

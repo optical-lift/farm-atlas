@@ -9,7 +9,11 @@ body:has(.atlas-global-header) {
   inset: 0 0 auto !important;
   width: auto !important;
   max-width: none !important;
-  min-height: calc(var(--atlas-context-header-height) + env(safe-area-inset-top));
+  height: calc(var(--atlas-context-header-height) + env(safe-area-inset-top)) !important;
+  min-height: calc(var(--atlas-context-header-height) + env(safe-area-inset-top)) !important;
+  box-sizing: border-box !important;
+  padding-top: calc(env(safe-area-inset-top) + 9px) !important;
+  padding-bottom: 8px !important;
   transform: none !important;
   border: 0 !important;
   border-bottom: 1px solid rgba(215, 204, 189, 0.78) !important;

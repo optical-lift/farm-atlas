@@ -8,6 +8,19 @@ type Props = {
   assignee: AtlasAssigneeConfig;
 };
 
+type CropCycleTargetRow = {
+  object_id?: string | null;
+};
+
+type GrowingObjectTargetRow = {
+  label?: string | null;
+  zone_id?: string | null;
+};
+
+type ZoneRow = {
+  label?: string | null;
+};
+
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -55,11 +68,62 @@ async function successionNumberForTask(task: AtlasTaskCard) {
   return numberOrNull(byCycle.data?.sequence_number);
 }
 
+async function canonicalSowTarget(task: AtlasTaskCard) {
+  const cropCycleId = text(task.metadata?.crop_cycle_id);
+  if (!cropCycleId) return { targetLabel: null as string | null, zoneLabel: null as string | null };
+  const supabase = await createAtlasServerClient();
+  const { data: cycle, error: cycleError } = await supabase
+    .schema("atlas")
+    .from("crop_cycles")
+    .select("object_id")
+    .eq("id", cropCycleId)
+    .limit(1)
+    .maybeSingle();
+  if (cycleError) console.error("Sow crop-cycle target lookup failed.", cycleError);
+  const objectId = text((cycle as CropCycleTargetRow | null)?.object_id);
+  if (!objectId) return { targetLabel: null as string | null, zoneLabel: null as string | null };
+
+  const { data: object, error: objectError } = await supabase
+    .schema("atlas")
+    .from("growing_objects")
+    .select("label, zone_id")
+    .eq("id", objectId)
+    .limit(1)
+    .maybeSingle();
+  if (objectError) console.error("Sow growing-object target lookup failed.", objectError);
+  const target = object as GrowingObjectTargetRow | null;
+  const zoneId = text(target?.zone_id);
+  let zoneLabel: string | null = null;
+  if (zoneId) {
+    const { data: zone, error: zoneError } = await supabase
+      .schema("atlas")
+      .from("zones")
+      .select("label")
+      .eq("id", zoneId)
+      .limit(1)
+      .maybeSingle();
+    if (zoneError) console.error("Sow target-zone lookup failed.", zoneError);
+    zoneLabel = text((zone as ZoneRow | null)?.label) || null;
+  }
+  return { targetLabel: text(target?.label) || null, zoneLabel };
+}
+
 export default async function DirectSowTaskDetail({ task, assignee }: Props) {
   const metadata = task.metadata ?? {};
-  const successionNumber = await successionNumberForTask(task);
+  const [successionNumber, canonicalTarget] = await Promise.all([
+    successionNumberForTask(task),
+    canonicalSowTarget(task),
+  ]);
   const explicitTargets = stringList(metadata.target_labels);
-  const locationLabel = text(metadata.execution_place) || text(metadata.display_location) || text(metadata.collection_label) || "Growing bed";
+  const metadataLocation = text(metadata.execution_place) || text(metadata.display_location) || text(metadata.collection_label);
+  const targetLabels = explicitTargets.length
+    ? explicitTargets
+    : canonicalTarget.targetLabel
+      ? [canonicalTarget.targetLabel]
+      : metadataLocation
+        ? [metadataLocation]
+        : [];
+  const locationLabel = targetLabels[0] || text(metadata.display_detail) || text(metadata.collection_zone) || "Elm Farm";
   const inventoryResult = metadata.operation_result_membrane === "or3_direct_sow_seed_v1"
     && (metadata.seed_inventory_report_required === true || metadata.seed_inventory_report_required === "true");
 
@@ -70,8 +134,8 @@ export default async function DirectSowTaskDetail({ task, assignee }: Props) {
     cropLabel: text(metadata.crop_label) || "Crop",
     variety: text(metadata.variety) || null,
     locationLabel,
-    zoneLabel: text(task.zone_label) || text(metadata.collection_zone) || null,
-    targetLabels: explicitTargets.length ? explicitTargets : [locationLabel],
+    zoneLabel: text(task.zone_label) || canonicalTarget.zoneLabel || text(metadata.collection_zone) || null,
+    targetLabels,
     rowsPerBed: numberOrNull(metadata.rows_per_3ft_bed),
     spacingInches: numberOrNull(metadata.in_row_spacing_in),
     seedRequirementQuantity: numberOrNull(metadata.seed_requirement_quantity),

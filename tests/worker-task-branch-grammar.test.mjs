@@ -10,6 +10,8 @@ const stateful = read("components/atlas/stateful-child-checklist.tsx");
 const move = read("components/atlas/task-move-spine.tsx");
 const execution = read("lib/atlas/task-execution.ts");
 const harvest = read("components/atlas/weekly-harvest-task-detail.tsx");
+const harvestRoute = read("app/api/atlas/weekly-harvest/route.ts");
+const harvestMigration = read("supabase/migrations/20260821161000_unify_weekly_harvest_card_v1.sql");
 const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
 const cleanup = read("supabase/migrations/20260813025500_worker_task_content_cleanup_v1.sql");
 
@@ -37,12 +39,17 @@ test("tasks with no actual method do not invent a fake instructions step", () =>
   assert.doesNotMatch(execution, /Follow the task instructions for this move/);
 });
 
-test("weekly harvest candidates come from Harvest Horizon rather than hardcoded crop names", () => {
+test("weekly Harvest rows come from canonical crop-cycle truth rather than hardcoded crop names or child tasks", () => {
   assert.match(canonical, /isWeeklyHarvestTask/);
   assert.match(canonical, /WeeklyHarvestTaskDetail/);
-  assert.match(harvest, /\/api\/atlas\/harvest-horizon/);
-  assert.match(harvest, /wave\.bucket === "cutting" \|\| wave\.bucket === "now"/);
-  assert.match(harvest, /wave\.cropLabel/);
+  assert.match(harvest, /\/api\/atlas\/weekly-harvest/);
+  assert.match(harvest, /row\.zoneLabel/);
+  assert.match(harvest, /row\.objectLabel/);
+  assert.match(harvest, /row\.cropLabel/);
+  assert.match(harvestRoute, /weekly_harvest_task_state_for_member_v1/);
+  assert.match(harvestMigration, /weekly_harvest_candidate_cycles_v1/);
+  assert.match(harvestMigration, /crop_rows_derived_from_domain_truth/);
+  assert.doesNotMatch(harvest, /childTasks\.map|parent_task_id/);
   for (const crop of ["lemon basil", "goldenrod", "yarrow", "lamb’s ear", "lamb's ear"]) {
     assert.doesNotMatch(harvest.toLowerCase(), new RegExp(crop.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }

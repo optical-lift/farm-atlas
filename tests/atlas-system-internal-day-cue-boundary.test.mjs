@@ -58,7 +58,7 @@ test("day-cue-backed internal tasks cannot render the ordinary Task Focus surfac
   assert.match(taskFocus, /task\.visibility_scope === "system_internal"/);
   assert.match(taskFocus, /observation_delivery_mode/);
   assert.match(taskFocus, /=== "day_cue"/);
-  assert.match(taskFocus, /if \(task && isDayCueStateSource\(task\)\) notFound\(\)/);
+  assert.match(taskFocus, /if \(task && \(isDayCueStateSource\(task\) \|\| isLegacyStandaloneHarvestTask\(task\)\)\) notFound\(\)/);
 });
 
 test("the existing Day cue response path remains the worker-facing interaction", () => {

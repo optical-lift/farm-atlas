@@ -2,9 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import AssignedTaskExecutionShell, {
-  type AssignedTaskInstrumentContext,
-} from "@/components/atlas/assigned-task-execution-shell";
+import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import CropOccupancyList from "@/components/atlas/crop-occupancy-list";
 import MaintenanceDirectiveStrip from "@/components/atlas/maintenance-directive-strip";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
@@ -24,7 +22,6 @@ import {
   postAtlasFinishPartialWeedCardDay,
   postAtlasWeedCardSession,
 } from "@/lib/atlas/weed-card-client";
-import cohesionStyles from "./weed-card-cohesion.module.css";
 import styles from "./weed-card-task-focus.module.css";
 
 type Props = {
@@ -34,7 +31,15 @@ type Props = {
   assignee: AtlasAssigneeConfig;
 };
 
-type SavingAction = "clear" | "partial" | "set_aside" | null;
+type SavingAction = "result" | "blocked" | "log" | "set_aside" | null;
+
+const RESULT_LABELS: Record<AtlasWeedCondition, string> = {
+  heavy: "Still rough",
+  medium_pressure: "Medium pressure",
+  row_readable: "Crop readable",
+  mostly_clear: "Mostly clear",
+  clear: "Clear",
+};
 
 function todayIso() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -45,44 +50,68 @@ function todayIso() {
   }).format(new Date());
 }
 
-function prettyDate(value: string) {
+function prettyDate(value: string | null | undefined) {
+  if (!value) return null;
   const date = new Date(`${value.slice(0, 10)}T12:00:00`);
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export default function WeedCardTaskFocus({ task, card, childTasks, assignee }: Props) {
-  const currentIndex = ATLAS_WEED_CONDITIONS.indexOf(card.condition);
-  const availableConditions = ATLAS_WEED_CONDITIONS
-    .slice(Math.max(0, currentIndex))
-    .filter((condition) => condition !== "clear");
+function returnTo(path: string) {
+  const requested = new URLSearchParams(window.location.search).get("returnTo");
+  return requested && requested.startsWith("/") && !requested.startsWith("//") ? requested : path;
+}
+
+export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
+  const currentIndex = Math.max(0, ATLAS_WEED_CONDITIONS.indexOf(card.condition));
+  const resultChoices = ATLAS_WEED_CONDITIONS.slice(currentIndex);
   const tomorrow = useMemo(() => addDaysIso(centralDateIso(), 1), []);
+  const latestSession = card.sessions[0] ?? null;
+  const primaryCohort = card.occupancyGroups.flatMap((group) => group.cohorts)[0] ?? null;
+  const [selectedCondition, setSelectedCondition] = useState<AtlasWeedCondition | null>(null);
   const [logOpen, setLogOpen] = useState(false);
-  const [conditionOpen, setConditionOpen] = useState(false);
-  const [conditionAfter, setConditionAfter] = useState<AtlasWeedCondition>(card.condition);
-  const [moveDate, setMoveDate] = useState(tomorrow);
+  const [blockedOpen, setBlockedOpen] = useState(false);
   const [note, setNote] = useState("");
+  const [blockedNote, setBlockedNote] = useState("");
+  const [moveDate, setMoveDate] = useState(tomorrow);
   const [saving, setSaving] = useState<SavingAction>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function savePartial() {
-    if (conditionAfter === card.condition && !note.trim()) {
-      setMessage("Choose the bed’s current condition or add a field note.");
+  const trail = [
+    { label: "Weeded", detail: latestSession ? prettyDate(latestSession.workDate) || "recorded" : "not recorded", state: latestSession ? "done" : "later" },
+    { label: "Bed", detail: primaryCohort?.stageLabel || "crop state", state: "done" },
+    { label: "Weed", detail: "today", state: "now" },
+    { label: "Target", detail: ATLAS_WEED_CONDITION_LABELS[card.targetCondition], state: "later" },
+    { label: "Review", detail: card.nextReviewOn ? prettyDate(card.nextReviewOn) || card.nextReviewOn : "after this pass", state: "later" },
+  ] as const;
+
+  async function finishResult() {
+    if (!selectedCondition) {
+      setMessage("Choose what the bed looks like now.");
       return;
     }
-
     try {
-      setSaving("partial");
+      setSaving("result");
       setMessage(null);
-      await postAtlasFinishPartialWeedCardDay({
-        taskId: task.task_id,
-        minutes: null,
-        conditionAfter,
-        workDate: todayIso(),
-        note,
-      });
-      window.location.assign(assignee.listPath);
+      if (selectedCondition === "clear") {
+        await postAtlasWeedCardSession({
+          taskId: task.task_id,
+          minutes: null,
+          conditionAfter: "clear",
+          workDate: todayIso(),
+          note: note.trim() || undefined,
+        });
+      } else {
+        await postAtlasFinishPartialWeedCardDay({
+          taskId: task.task_id,
+          minutes: null,
+          conditionAfter: selectedCondition,
+          workDate: todayIso(),
+          note: note.trim() || undefined,
+        });
+      }
+      window.location.assign(returnTo(assignee.listPath));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not save the bed’s current state.");
     } finally {
@@ -90,19 +119,50 @@ export default function WeedCardTaskFocus({ task, card, childTasks, assignee }: 
     }
   }
 
-  async function markClear() {
+  async function logPass() {
+    if (!note.trim()) {
+      setMessage("Add the field note you want Atlas to keep.");
+      return;
+    }
     try {
-      setSaving("clear");
+      setSaving("log");
       setMessage(null);
       await postAtlasWeedCardSession({
         taskId: task.task_id,
         minutes: null,
-        conditionAfter: "clear",
+        conditionAfter: selectedCondition || card.condition,
         workDate: todayIso(),
+        note: note.trim(),
       });
-      window.location.assign(assignee.listPath);
+      setNote("");
+      setLogOpen(false);
+      setMessage("Field note logged.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Atlas could not mark the bed clear.");
+      setMessage(error instanceof Error ? error.message : "Atlas could not log the field note.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function finishBlocked() {
+    const blocker = blockedNote.trim();
+    if (!blocker) {
+      setMessage("Say what stopped the weeding.");
+      return;
+    }
+    try {
+      setSaving("blocked");
+      setMessage(null);
+      await postAtlasFinishPartialWeedCardDay({
+        taskId: task.task_id,
+        minutes: null,
+        conditionAfter: selectedCondition || card.condition,
+        workDate: todayIso(),
+        note: `Blocked: ${blocker}`,
+      });
+      window.location.assign(returnTo(assignee.listPath));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Atlas could not record the blocker.");
     } finally {
       setSaving(null);
     }
@@ -114,180 +174,109 @@ export default function WeedCardTaskFocus({ task, card, childTasks, assignee }: 
       setMessage(null);
       const result = await postAtlasTaskSetAsideToday(task.task_id, requestedReturnDate);
       setMessage(result.message);
-      window.setTimeout(() => window.location.assign(assignee.listPath), 1200);
+      window.setTimeout(() => window.location.assign(returnTo(assignee.listPath)), 900);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Atlas could not set this task aside today.");
+      setMessage(error instanceof Error ? error.message : "Atlas could not move this Weed Card.");
       setSaving(null);
     }
   }
 
-  function methodInstrument(_context: AssignedTaskInstrumentContext) {
-    return (
-      <section
-        className={`${styles.root} ${cohesionStyles.cohesive} atlas-weed-card-method-instrument`}
-        data-atlas-method-instrument="weed-card"
-        aria-label={`${card.objectLabel} weed state`}
-      >
-        {/* The old rectangle map was decorative unless Atlas happened to have
-            hard-coded geometry. Until a real state portrait exists, show only
-            crop occupancy Atlas can actually support from canonical cohort data. */}
-        <div className="atlas-weed-card-occupancy" aria-label={`${card.objectLabel} crop occupancy`}>
-          <CropOccupancyList groups={card.occupancyGroups} />
-        </div>
-        <MaintenanceDirectiveStrip taskId={task.task_id} />
-        <section className="atlas-weed-pass">
-          <div className="atlas-weed-condition-summary">
-            <strong>{ATLAS_WEED_CONDITION_LABELS[card.condition]}</strong>
-            <span aria-hidden="true">→</span>
-            <small>{ATLAS_WEED_CONDITION_LABELS[card.targetCondition]}</small>
-          </div>
+  const busy = saving !== null;
+  const timingDate = prettyDate(task.due_date);
+  const completion = (
+    <div className={styles.finish}>
+      <span>Finish Weed</span>
+      <div className={styles.finishButtons}>
+        <button type="button" className={styles.primaryFinish} disabled={busy || !selectedCondition} onClick={() => void finishResult()}>
+          {saving === "result" ? "Saving…" : "Done weeding today"}
+        </button>
+        <button type="button" disabled={busy} onClick={() => setBlockedOpen((open) => !open)}>Blocked</button>
+      </div>
 
-          <div
-            className="atlas-weed-condition-scale"
-            aria-label={`Current condition ${ATLAS_WEED_CONDITION_LABELS[card.condition]}; target ${ATLAS_WEED_CONDITION_LABELS[card.targetCondition]}`}
-          >
-            {ATLAS_WEED_CONDITIONS.map((condition, index) => (
-              <span
-                key={condition}
-                className={`${index <= currentIndex ? "is-reached " : ""}${condition === card.condition ? "is-current " : ""}${condition === card.targetCondition ? "is-target" : ""}`.trim()}
-                title={ATLAS_WEED_CONDITION_LABELS[condition]}
-              />
+      {blockedOpen ? (
+        <div className={styles.blockedDrawer}>
+          <input value={blockedNote} disabled={busy} onChange={(event) => setBlockedNote(event.target.value)} placeholder="What stopped the work?" aria-label="Weeding blocker" />
+          <button type="button" disabled={busy || !blockedNote.trim()} onClick={() => void finishBlocked()}>{saving === "blocked" ? "Saving…" : "Record blocker"}</button>
+        </div>
+      ) : null}
+
+      <details className={styles.moveDrawer}>
+        <summary><span>Move this card</span><b aria-hidden="true">⌄</b></summary>
+        <div className={styles.moveOptions}>
+          <button type="button" disabled={busy} onClick={() => void setAsideToday(tomorrow)}>Tomorrow</button>
+          <label><span>Choose return date</span><input type="date" min={tomorrow} value={moveDate} disabled={busy} onChange={(event) => setMoveDate(event.target.value)} /></label>
+          <button type="button" disabled={busy || !moveDate} onClick={() => void setAsideToday(moveDate)}>{saving === "set_aside" ? "Saving…" : `Move to ${prettyDate(moveDate)}`}</button>
+        </div>
+      </details>
+      {message ? <p className={styles.message}>{message}</p> : null}
+    </div>
+  );
+
+  return (
+    <main className={styles.shell} data-atlas-weed-card-template="task-card-lab-v1">
+      <div className={styles.body}>
+        <AtlasTaskCardFrame
+          family="Weed"
+          familyDetail="bed care"
+          title={card.objectLabel}
+          subtitle={card.zoneLabel || undefined}
+          timing={timingDate ? `Today · ${timingDate}` : "Weeding due"}
+          completion={completion}
+        >
+          <div className={styles.trail} aria-label={`${card.objectLabel} weed continuity`}>
+            {trail.map((step) => (
+              <span key={`${step.label}-${step.detail}`} data-state={step.state}>
+                <b>{step.label}</b><small>{step.detail}</small>
+              </span>
             ))}
           </div>
 
-          {card.sessions.length ? (
-            <ol className="atlas-weed-session-history" aria-label="Recent bed states">
-              {card.sessions.slice(0, 4).map((session) => (
-                <li key={session.id}>
-                  <span>{prettyDate(session.workDate)}</span>
-                  <strong>{ATLAS_WEED_CONDITION_LABELS[session.conditionAfter]}</strong>
-                  <small>{session.conditionBefore === session.conditionAfter ? "state held" : "improved"}</small>
-                </li>
-              ))}
-            </ol>
-          ) : null}
-        </section>
-      </section>
-    );
-  }
-
-  function resultInstrument(context: AssignedTaskInstrumentContext) {
-    const busy = Boolean(saving) || context.busy;
-    return (
-      <section
-        className={`${styles.root} ${cohesionStyles.cohesive} atlas-weed-session-entry`}
-        data-atlas-result-instrument="weed-card"
-      >
-        <style>{`
-          .atlas-task-result-footer > .atlas-task-more-outcomes { display: none; }
-          .atlas-weed-card-method-instrument { margin: 0 10px 18px; }
-          .atlas-weed-card-occupancy:empty { display:none; }
-          .atlas-weed-card-occupancy { margin: 0 18px 14px; }
-        `}</style>
-        {!logOpen ? (
-          <>
-            <div className="atlas-task-result-actions atlas-task-result-actions-simple atlas-weed-day-actions">
-              <button type="button" className="done" disabled={busy} onClick={() => void markClear()}>
-                {saving === "clear" ? "Saving" : "Clear"}
-              </button>
-              <button
-                type="button"
-                className="unfinished"
-                disabled={busy}
-                onClick={() => setLogOpen(true)}
-              >
-                Partly finished
-              </button>
-            </div>
-            <details className="atlas-task-move-drawer atlas-weed-move-drawer">
-              <summary>
-                <span>Set aside</span>
-                <b aria-hidden="true">⌄</b>
-              </summary>
-              <div className="atlas-task-move-options">
-                <button type="button" disabled={busy} onClick={() => void setAsideToday(tomorrow)}>
-                  Tomorrow
-                </button>
-                <label>
-                  <span>Choose return date</span>
-                  <input
-                    type="date"
-                    min={tomorrow}
-                    value={moveDate}
-                    disabled={busy}
-                    onChange={(event) => setMoveDate(event.target.value)}
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="atlas-task-move-date-button"
-                  disabled={busy || !moveDate}
-                  onClick={() => void setAsideToday(moveDate)}
-                >
-                  {saving === "set_aside" ? "Saving" : `Set aside until ${prettyDate(moveDate)}`}
-                </button>
-              </div>
-            </details>
-          </>
-        ) : (
-          <section className="atlas-weed-log-drawer" aria-label="Partly finished">
-            <button
-              type="button"
-              className="atlas-weed-log-row"
-              aria-expanded={conditionOpen}
-              onClick={() => setConditionOpen((value) => !value)}
-            >
-              <span>Bed now</span>
-              <strong>{ATLAS_WEED_CONDITION_LABELS[conditionAfter]}</strong>
-              <b aria-hidden="true">›</b>
-            </button>
-
-            {conditionOpen ? (
-              <div className="atlas-weed-condition-buttons" aria-label="Current bed condition">
-                {availableConditions.map((condition) => (
-                  <button
-                    type="button"
-                    key={condition}
-                    className={conditionAfter === condition ? "is-selected" : ""}
-                    disabled={busy}
-                    onClick={() => { setConditionAfter(condition); setConditionOpen(false); }}
-                  >
-                    {ATLAS_WEED_CONDITION_LABELS[condition]}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            <input
-              className="atlas-weed-note"
-              aria-label="Field note"
-              placeholder="Field note"
-              value={note}
-              disabled={busy}
-              onChange={(event) => setNote(event.target.value)}
-            />
-
-            <div className="atlas-weed-log-actions">
-              <button type="button" disabled={busy} onClick={() => { setLogOpen(false); setMessage(null); }}>Cancel</button>
-              <button type="button" className="atlas-weed-session-save" disabled={busy} onClick={() => void savePartial()}>
-                {saving === "partial" ? "Saving" : "Save state"}
-              </button>
+          <section className={styles.bedNow}>
+            <span>Bed now</span>
+            <strong>{primaryCohort?.displayLabel || ATLAS_WEED_CONDITION_LABELS[card.condition]}</strong>
+            <div className={styles.factPills}>
+              {primaryCohort?.stageLabel ? <b>{primaryCohort.stageLabel}</b> : null}
+              <b>{ATLAS_WEED_CONDITION_LABELS[card.condition]}</b>
+              <b>Target · {ATLAS_WEED_CONDITION_LABELS[card.targetCondition]}</b>
             </div>
           </section>
-        )}
 
-        {message ? <p className="atlas-task-page-message atlas-task-set-aside-message">{message}</p> : null}
-      </section>
-    );
-  }
+          {card.occupancyGroups.some((group) => group.cohorts.length) ? (
+            <section className={styles.occupancy} aria-label={`${card.objectLabel} crop occupancy`}>
+              <CropOccupancyList groups={card.occupancyGroups} />
+            </section>
+          ) : null}
 
-  return (
-    <AssignedTaskExecutionShell
-      task={task}
-      childTasks={childTasks}
-      assignee={assignee}
-      methodInstrument={methodInstrument}
-      resultInstrument={resultInstrument}
-    />
+          <div className={styles.directive}><MaintenanceDirectiveStrip taskId={task.task_id} /></div>
+
+          {card.sessions.length ? (
+            <section className={styles.history}>
+              <header><span>Recent passes</span></header>
+              <ol>{card.sessions.slice(0, 3).map((session) => (
+                <li key={session.id}><span>{prettyDate(session.workDate)}</span><strong>{ATLAS_WEED_CONDITION_LABELS[session.conditionAfter]}</strong><small>{session.conditionBefore === session.conditionAfter ? "state held" : "improved"}</small></li>
+              ))}</ol>
+            </section>
+          ) : null}
+
+          <section className={styles.results}>
+            <header><span>How’d we do?</span></header>
+            <div className={styles.resultPills}>
+              {resultChoices.map((condition) => (
+                <button type="button" key={condition} data-active={selectedCondition === condition ? "true" : "false"} disabled={busy} onClick={() => { setSelectedCondition(condition); setMessage(null); }}>
+                  {RESULT_LABELS[condition]}
+                </button>
+              ))}
+              <button type="button" className={styles.logButton} data-active={logOpen ? "true" : "false"} disabled={busy} onClick={() => setLogOpen((open) => !open)}>Log it</button>
+            </div>
+            {logOpen ? (
+              <div className={styles.logPanel}>
+                <input value={note} disabled={busy} onChange={(event) => setNote(event.target.value)} placeholder="Add note…" aria-label="Add a weeding note" />
+                <button type="button" disabled={busy || !note.trim()} onClick={() => void logPass()}>{saving === "log" ? "Saving…" : "Save note"}</button>
+              </div>
+            ) : null}
+          </section>
+        </AtlasTaskCardFrame>
+      </div>
+    </main>
   );
 }

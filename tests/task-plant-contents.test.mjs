@@ -6,26 +6,30 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("every weed task routes to the occupancy-aware persistent Weed Card inside the universal shell", () => {
+test("every weed task routes to the occupancy-aware persistent Weed Card with the approved Weed presentation", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
-  const shell = read("components/atlas/assigned-task-execution-shell.tsx");
   const occupancy = read("components/atlas/crop-occupancy-list.tsx");
 
   assert.match(canonical, /isWeedTask/);
   assert.match(canonical, /if \(isWeedTask\(props\.task\)\) return <WeedCardTaskLoader/);
   assert.doesNotMatch(canonical, /<ConciseWeedTaskDetail/);
-  assert.match(loader, /<AssignedTaskExecutionShell task=\{task\} childTasks=\{childTasks\} assignee=\{assignee\} \/>/);
+
+  assert.match(loader, /<WeedCardTaskFocus task=\{task\} card=\{card\} childTasks=\{childTasks\} assignee=\{assignee\} \/>/);
   assert.match(loader, /childTasks=\{childTasks\}/);
   assert.doesNotMatch(loader, /ConciseWeedTaskDetail/);
-  assert.match(focus, /AssignedTaskExecutionShell/);
+  assert.match(loader, /if \(failed\) return <AssignedTaskExecutionShell/);
+
+  assert.match(focus, /AtlasTaskCardFrame/);
+  assert.match(focus, /family="Weed"/);
   assert.match(focus, /<CropOccupancyList groups=\{card\.occupancyGroups\} \/>/);
-  assert.match(focus, /data-atlas-method-instrument="weed-card"/);
-  assert.match(focus, /methodInstrument=\{methodInstrument\}/);
-  assert.match(focus, /resultInstrument=\{resultInstrument\}/);
+  assert.match(focus, /card\.occupancyGroups/);
+  assert.match(focus, /postAtlasWeedCardSession/);
+  assert.match(focus, /postAtlasFinishPartialWeedCardDay/);
+  assert.doesNotMatch(focus, /AssignedTaskExecutionShell/);
   assert.doesNotMatch(focus, /TaskDominionTrail|showSubjectLabel|moveDetails=|presentation="weed-sheet"/);
-  assert.match(shell, /methodInstrument \? methodInstrument\(instrumentContext\)/);
+
   assert.match(occupancy, /group\.groupLabel/);
   assert.match(occupancy, /cohort\.placementSummary/);
   assert.match(occupancy, /cohort\.stageLabel/);

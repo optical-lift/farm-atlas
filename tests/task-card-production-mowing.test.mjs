@@ -7,6 +7,7 @@ function read(path) {
 }
 
 const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
+const oneOff = read("components/atlas/one-off-mowing-task-detail.tsx");
 const taskPage = read("app/task-focus/[taskId]/page.tsx");
 const focusPage = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
 const focus = read("components/atlas/mowing-focus-card.tsx");
@@ -15,12 +16,30 @@ const model = read("lib/atlas/mowing-card-view-model.ts");
 const readiness = read("lib/atlas/worker-readiness.ts");
 const route = read("app/api/atlas/mowing/route.ts");
 
-test("only Clock-governed mowing routes enter the production Mow result family", () => {
+test("Clock-governed mowing stays on the specialized mowing result engine", () => {
   assert.match(taskPage, /task\.task_type === "mowing"/);
   assert.match(taskPage, /task_style\) === "mowing_round"/);
   assert.match(taskPage, /truthy\(task\.metadata\?\.clock_managed\)/);
   assert.match(taskPage, /MowingFocusPage/);
-  assert.doesNotMatch(canonical, /MowCardTaskDetail/);
+  assert.match(focus, /resultMode = task\.resultMode \?\? "clock"/);
+  assert.match(focus, /if \(resultMode === "canonical"\)/);
+  assert.match(focus, /fetch\("\/api\/atlas\/mowing"/);
+  assert.match(route, /record_mowing_result_for_member_v1/);
+});
+
+test("semantically complete one-off mowing uses the same Mow visual family with canonical task results", () => {
+  assert.match(canonical, /function isOneOffMowingCardTask/);
+  assert.match(canonical, /task\.operation_class === "cut_separate"/);
+  assert.match(canonical, /!clockManaged/);
+  assert.match(canonical, /<OneOffMowingTaskDetail/);
+  assert.match(oneOff, /resultMode: "canonical"/);
+  assert.match(oneOff, /target_cut_height_inches/);
+  assert.match(oneOff, /equipment_group/);
+  assert.match(focus, /postAtlasTaskTransition/);
+  assert.match(focus, /transition: "done"/);
+  assert.match(focus, /transition: "partial"/);
+  assert.match(focus, /transition: "blocked"/);
+  assert.match(body, /showRecurrence/);
 });
 
 test("Mow card preserves the Task Card Editor recurrence, height, and equipment grammar with live values", () => {
@@ -46,7 +65,7 @@ test("Mow card reads canonical mower resource state from execution readiness", (
   assert.match(focus, /resourceStatus=\{resourceStatus\}/);
 });
 
-test("Mow equipment plus drawer reports through the canonical mowing result contract", () => {
+test("Clock Mow equipment plus drawer reports through the canonical mowing result contract", () => {
   assert.match(focus, /Won't start/);
   assert.match(focus, /Needs gas/);
   assert.match(focus, /Battery problem/);
@@ -54,8 +73,6 @@ test("Mow equipment plus drawer reports through the canonical mowing result cont
   assert.match(body, /Log an issue with/);
   assert.match(body, /Report problem/);
   assert.match(focus, /equipment_or_area_problem/);
-  assert.match(focus, /\/api\/atlas\/mowing/);
-  assert.match(route, /record_mowing_result_for_member_v1/);
   assert.match(route, /requestOrigin !== request\.nextUrl\.origin/);
   assert.doesNotMatch(route, /SUPABASE_SERVICE_ROLE_KEY|atlasSupabase/);
 });

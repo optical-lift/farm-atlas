@@ -64,7 +64,8 @@ test("Anna generic task detail uses the regular Done and Unfinished result set o
   assert.match(results, />\s*Unfinished\s*</);
   assert.match(shell, /"Partly done"/);
   assert.match(shell, /"Problem found"/);
-  assert.match(weed, /atlas-task-move-drawer atlas-weed-move-drawer/);
+  assert.match(weed, /Move this card/);
+  assert.match(weed, /className=\{styles\.moveDrawer\}/);
   assert.match(display, /Continued/);
 });
 
