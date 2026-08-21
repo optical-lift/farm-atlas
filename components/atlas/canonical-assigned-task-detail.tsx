@@ -3,6 +3,7 @@ import ContractorServiceTaskDetail from "@/components/atlas/contractor-service-t
 import DecisionSelectorTaskDetail from "@/components/atlas/decision-selector-task-detail";
 import DirectSowTaskDetail from "@/components/atlas/direct-sow-task-detail";
 import ExecutionChecklistTaskDetail from "@/components/atlas/execution-checklist-task-detail";
+import FarmRoundTaskDetail from "@/components/atlas/farm-round-task-detail";
 import FlowerFulfillmentTaskLoader from "@/components/atlas/flower-fulfillment-task-loader";
 import FlowerPreparationTaskLoader from "@/components/atlas/flower-preparation-task-loader";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
@@ -114,6 +115,11 @@ function isNetworkInputsTask(task: AtlasTaskCard) {
     || task.metadata?.task_key === "anna_20260730_source_free_farm_inputs";
 }
 
+function isFarmRoundTask(task: AtlasTaskCard) {
+  return task.task_type === "stewardship_round"
+    && (task.metadata?.farm_round_parent === true || task.metadata?.farm_round_parent === "true");
+}
+
 function isVenueTask(task: AtlasTaskCard) {
   const template = task.metadata?.execution_checklist_template_key;
   return task.task_type === "event_setup"
@@ -216,6 +222,7 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isBuyerOutreachTask(props.task)) return <BuyerOutreachTaskDetail {...props} />;
   if (isNetworkOutreachTask(props.task)) return <NetworkOutreachTaskDetail {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
+  if (isFarmRoundTask(props.task)) return <FarmRoundTaskDetail {...props} />;
   if (isVenueTask(props.task)) return <VenueTaskDetail {...props} />;
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
   if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
