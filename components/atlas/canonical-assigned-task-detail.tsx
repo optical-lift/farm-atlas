@@ -9,6 +9,7 @@ import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-deta
 import NetworkOutreachTaskDetail from "@/components/atlas/network-outreach-task-detail";
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
+import SiteLayoutTaskDetail from "@/components/atlas/site-layout-task-detail";
 import TransplantReadinessTaskDetail from "@/components/atlas/transplant-readiness-task-detail";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import WeeklyHarvestTaskDetail from "@/components/atlas/weekly-harvest-task-detail";
@@ -104,6 +105,10 @@ function isWeeklyHarvestTask(task: AtlasTaskCard) {
     && (task.metadata?.weekly_routine === true || task.metadata?.weekly_routine === "true");
 }
 
+function isSiteLayoutTask(task: AtlasTaskCard) {
+  return task.task_type === "site_layout";
+}
+
 async function loadWorkerReadiness(taskId: string): Promise<WorkerReadinessResponse> {
   const supabase = await createAtlasServerClient();
   const { data, error } = await supabase.rpc("worker_task_execution_readiness_api_v1", {
@@ -133,5 +138,6 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isWeeklyHarvestTask(props.task)) return <WeeklyHarvestTaskDetail {...props} />;
 
   const initialReadiness = await loadWorkerReadiness(props.task.task_id);
+  if (isSiteLayoutTask(props.task)) return <SiteLayoutTaskDetail {...props} initialReadiness={initialReadiness} />;
   return <WorkerReadyAssignedTaskExecutionShell {...props} initialReadiness={initialReadiness} />;
 }
