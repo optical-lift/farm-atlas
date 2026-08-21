@@ -10,7 +10,6 @@ import {
   ATLAS_WEED_CONDITION_LABELS,
   type AtlasCropOccupancyCohort,
   type AtlasWeedCardContext,
-  type AtlasWeedCondition,
 } from "@/lib/atlas/weed-card-contract";
 import {
   postAtlasFinishPartialWeedCardDay,
