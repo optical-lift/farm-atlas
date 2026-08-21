@@ -12,6 +12,7 @@ const route = read("app/api/atlas/weekly-harvest/route.ts");
 const taskPage = read("app/task-focus/[taskId]/page.tsx");
 const migrationV1 = read("supabase/migrations/20260821161000_unify_weekly_harvest_card_v1.sql");
 const migrationV2 = read("supabase/migrations/20260821162442_align_weekly_harvest_mockup_recording_v2.sql");
+const migrationV3 = read("supabase/migrations/20260821163300_preserve_exact_weekly_harvest_bucket_quantity_v3.sql");
 
 test("the weekly Thursday Harvest card is the canonical worker-facing Harvest family", () => {
   assert.match(canonical, /function isWeeklyHarvestTask\(task: AtlasTaskCard\)/);
@@ -72,6 +73,14 @@ test("weekly Harvest API writes only through the v2 result membrane", () => {
   assert.match(migrationV2, /grant execute on function atlas\.record_weekly_harvest_row_for_member_v2/);
 });
 
+test("exact half-bucket quantities survive harvest through preparation lineage", () => {
+  assert.match(migrationV3, /v_floor:=v_halves::numeric\/2/);
+  assert.match(migrationV3, /bucket_equivalent_floor=\(bucket_halves::numeric\/2\)/);
+  assert.match(migrationV3, /quantityExactness','exact'/);
+  assert.match(migrationV3, /h\.bucket_band='more_than_one' and h\.bucket_halves is null/);
+  assert.match(migrationV3, /exactHalfBucketHarvestQuantityPreserved/);
+});
+
 test("production Harvest never copies specimen crops, fake beds, or stem-conversion math", () => {
   for (const specimenOnly of ["White Lite", "Italian White", "BW5", "FR2", "10 stems", "20 stems"]) {
     assert.doesNotMatch(weekly, new RegExp(specimenOnly));
@@ -79,11 +88,11 @@ test("production Harvest never copies specimen crops, fake beds, or stem-convers
   assert.doesNotMatch(weekly, /Growing area|Growing bed/);
 });
 
-test("legacy direct Harvest task-focus displays are not part of the canonical weekly card contract", () => {
+test("legacy direct Harvest task-focus displays are retired", () => {
   assert.match(migrationV1, /noStandaloneHarvestReadinessTask/);
   assert.match(migrationV1, /zoneHarvestRoundsRetired/);
   assert.match(migrationV1, /weeklyHarvestCardIsOnlyWorkerCarrier/);
-  assert.doesNotMatch(canonical, /HarvestWatchFocusPage|HarvestCutFocusPage/);
-  // Task-focus cleanup is required before merge: old task ids must not become a second Worker Harvest surface.
-  assert.doesNotMatch(taskPage, /return <HarvestWatchFocusPage|return <HarvestCutFocusPage/);
+  assert.match(taskPage, /function isLegacyStandaloneHarvestTask/);
+  assert.match(taskPage, /isDayCueStateSource\(task\) \|\| isLegacyStandaloneHarvestTask\(task\)/);
+  assert.doesNotMatch(taskPage, /HarvestWatchFocusPage|HarvestCutFocusPage/);
 });
