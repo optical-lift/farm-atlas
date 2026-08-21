@@ -12,6 +12,7 @@ import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import SiteLayoutTaskDetail from "@/components/atlas/site-layout-task-detail";
 import TransplantReadinessTaskDetail from "@/components/atlas/transplant-readiness-task-detail";
+import VenueTaskDetail from "@/components/atlas/venue-task-detail";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import WeeklyHarvestTaskDetail from "@/components/atlas/weekly-harvest-task-detail";
 import WorkerReadyAssignedTaskExecutionShell from "@/components/atlas/worker-ready-assigned-task-execution-shell";
@@ -36,6 +37,12 @@ type SetupResourceRow = {
   stable_key?: string | null;
   label?: string | null;
 };
+
+const VENUE_STATION_TEMPLATES = new Set([
+  "community_thursday_morning_outdoor_v2",
+  "community_thursday_morning_coffee_water_v2",
+  "community_thursday_morning_rooms_v2",
+]);
 
 function isContractorServiceTask(task: AtlasTaskCard) {
   return task.task_type === "contractor_service_status"
@@ -102,6 +109,14 @@ function isNetworkInputsTask(task: AtlasTaskCard) {
     || task.metadata?.checklist_mode === "network_input_research"
     || task.metadata?.task_key === "anna_20260728_call_local_companies_florist_buckets"
     || task.metadata?.task_key === "anna_20260730_source_free_farm_inputs";
+}
+
+function isVenueTask(task: AtlasTaskCard) {
+  const template = task.metadata?.execution_checklist_template_key;
+  return task.task_type === "event_setup"
+    && task.metadata?.collection_zone === "Venue"
+    && typeof template === "string"
+    && VENUE_STATION_TEMPLATES.has(template);
 }
 
 function isExecutionChecklistTask(task: AtlasTaskCard) {
@@ -198,6 +213,7 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isBuyerOutreachTask(props.task)) return <BuyerOutreachTaskDetail {...props} />;
   if (isNetworkOutreachTask(props.task)) return <NetworkOutreachTaskDetail {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
+  if (isVenueTask(props.task)) return <VenueTaskDetail {...props} />;
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
   if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
   if (isTransplantReadinessTask(props.task)) return <TransplantReadinessTaskDetail {...props} />;
