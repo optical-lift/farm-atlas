@@ -70,7 +70,7 @@ export default async function DirectSowTaskDetail({ task, assignee }: Props) {
     cropLabel: text(metadata.crop_label) || "Crop",
     variety: text(metadata.variety) || null,
     locationLabel,
-    zoneLabel: text(metadata.collection_zone) || null,
+    zoneLabel: text(task.zone_label) || text(metadata.collection_zone) || null,
     targetLabels: explicitTargets.length ? explicitTargets : [locationLabel],
     rowsPerBed: numberOrNull(metadata.rows_per_3ft_bed),
     spacingInches: numberOrNull(metadata.in_row_spacing_in),
