@@ -45,7 +45,8 @@ test("legacy time remains optional evidence while the live Weed Card is state-fi
   assert.match(focus, /minutes: null/);
   assert.match(focus, /Bed now/);
   assert.match(focus, /How’d we do\?/);
-  assert.match(focus, /PARTIAL_RESULTS/);
+  assert.match(focus, /WEED_RESULTS/);
+  assert.match(focus, /Save result/);
   assert.doesNotMatch(focus, /QUICK_MINUTES|Add time|<span>Time<\/span>|atlas-weed-invested/);
 });
 
@@ -64,7 +65,7 @@ test("the Weed Card keeps canonical state mutations inside the approved standalo
   assert.match(focus, /AtlasTaskCardFrame/);
   assert.match(focus, /family="Weed"/);
   assert.match(focus, /familyDetail=\{card\.bedUseCategory\}/);
-  assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v2-bed-truth"/);
+  assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v3-three-way-result"/);
   assert.doesNotMatch(focus, /AssignedTaskExecutionShell|methodInstrument=|resultInstrument=/);
   assert.doesNotMatch(focus, /TaskDominionTrail|atlas-phone-shell|atlas-task-page-shell/);
 
@@ -72,10 +73,15 @@ test("the Weed Card keeps canonical state mutations inside the approved standalo
   assert.match(focus, /card\.occupancyGroups/);
   assert.doesNotMatch(focus, /CropOccupancyBedMap|variant="notebook"/);
   assert.match(focus, /MaintenanceDirectiveStrip taskId=\{task\.task_id\}/);
+  assert.match(focus, /Still rough/);
+  assert.match(focus, /Mostly clear/);
   assert.match(focus, /All clear/);
+  assert.match(focus, /Save result/);
   assert.match(focus, />Blocked<\/button>/);
   assert.match(focus, /postAtlasFinishPartialWeedCardDay/);
+  assert.match(focus, /postAtlasWeedCardSession/);
   assert.match(focus, /conditionAfter: "clear"/);
+  assert.doesNotMatch(focus, /Finish Weed/);
   assert.doesNotMatch(focus, /Move this card|Choose return date|postAtlasTaskSetAsideToday/);
 
   assert.match(client, /weed-card-partial-v1/);
@@ -90,11 +96,14 @@ test("Weed-specific field truth now lives directly in the approved card instead 
 
   assert.match(focus, /card\.bedTrail/);
   assert.match(focus, /card\.occupancyGroups/);
-  assert.match(focus, /card\.lastLoggedCondition/);
-  assert.match(focus, /card\.lastLoggedOn/);
+  assert.match(focus, /card\.mainCropLabel/);
+  assert.match(focus, /Unknown main crop/);
+  assert.doesNotMatch(focus, /card\.lastLoggedCondition/);
+  assert.doesNotMatch(focus, /card\.lastLoggedOn/);
   assert.match(focus, /Recent passes/);
   assert.match(focus, /card\.sessions\.slice\(0, 3\)/);
   assert.match(focus, /Log it/);
+  assert.match(focus, /aria-expanded=\{logOpen\}/);
   assert.match(focus, /Needs field confirmation/);
   assert.doesNotMatch(focus, /card\.targetCondition|Target ·/);
   assert.doesNotMatch(focus, /presentation="weed-sheet"|moveDetails=|instruction=\{/);
