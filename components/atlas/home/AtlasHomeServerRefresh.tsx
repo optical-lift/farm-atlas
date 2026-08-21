@@ -3,16 +3,18 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-const MIN_REFRESH_INTERVAL_MS = 1_500;
+const STALE_AFTER_BACKGROUND_MS = 30_000;
+const MIN_REFRESH_INTERVAL_MS = 5_000;
 
 /**
- * Next's client router can restore a previously rendered Home payload when the
- * user returns from Work. Farm assignments and availability are live data, so
- * Home must immediately reconcile that restored payload with the server.
+ * Normal client navigation to Home already receives a fresh server payload.
+ * Reconcile only when the browser restores Home from bfcache or after Atlas has
+ * actually been backgrounded long enough for operational truth to become stale.
  */
 export default function AtlasHomeServerRefresh() {
   const router = useRouter();
   const lastRefreshAt = useRef(0);
+  const hiddenAt = useRef<number | null>(null);
 
   useEffect(() => {
     function refreshFromServer() {
@@ -22,19 +24,24 @@ export default function AtlasHomeServerRefresh() {
       router.refresh();
     }
 
-    const initialRefresh = window.setTimeout(refreshFromServer, 0);
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") refreshFromServer();
-    };
-    const handlePageShow = () => refreshFromServer();
+    function handleVisibilityChange() {
+      if (document.visibilityState !== "visible") {
+        hiddenAt.current = Date.now();
+        return;
+      }
+      const backgroundedAt = hiddenAt.current;
+      hiddenAt.current = null;
+      if (backgroundedAt && Date.now() - backgroundedAt >= STALE_AFTER_BACKGROUND_MS) refreshFromServer();
+    }
 
-    window.addEventListener("focus", refreshFromServer);
+    function handlePageShow(event: PageTransitionEvent) {
+      if (event.persisted) refreshFromServer();
+    }
+
     window.addEventListener("pageshow", handlePageShow);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.clearTimeout(initialRefresh);
-      window.removeEventListener("focus", refreshFromServer);
       window.removeEventListener("pageshow", handlePageShow);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
