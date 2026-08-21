@@ -75,6 +75,9 @@ export async function POST(request: Request) {
   if (!ATLAS_WEED_CONDITIONS.includes(conditionAfter) || conditionAfter === "clear") {
     return atlasApiError(400, "invalid_weed_card_condition", "Choose the bed's remaining condition, or use Clear.");
   }
+  if (!note) {
+    return atlasApiError(400, "weed_card_observation_required", "Log what you observed before saving the Weed result.");
+  }
 
   const supabase = await createAtlasServerClient();
   const { data, error } = await supabase.rpc("finish_partial_weed_card_day_v1", {
@@ -82,7 +85,7 @@ export async function POST(request: Request) {
     p_minutes: minutes,
     p_condition_after: conditionAfter,
     p_work_date: workDate,
-    p_note: note || null,
+    p_note: note,
     p_idempotency_key: idempotencyKey,
   });
 
