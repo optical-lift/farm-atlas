@@ -74,13 +74,15 @@ test("status-trigger chaining cannot silently release outdoor work without weath
   assert.match(projectPull, /p_allow_outdoor: constraints\.allowOutdoor !== false/);
 });
 
-test("real farm-hand Home refills through the general paid-work conveyor without exposing a choice menu", () => {
+test("real farm-hand Home deals before one authoritative Home read without exposing a choice menu", () => {
   assert.match(projectPull, /ensureAtlasProjectPullTask/);
   assert.match(projectPull, /deal_next_paid_work_v1/);
   assert.match(projectPull, /p_allow_outdoor/);
   assert.doesNotMatch(projectPull, /Automatically dealt by the Farm Hand Conveyor/);
-  assert.match(homePage, /farmHandMode && actualFarmHandMembership/);
-  assert.match(homePage, /ensureAtlasProjectPullTask/);
+  assert.match(homePage, /const directFarmHandMembership = !operatorContext\?\.isOperating && preferredFarmId/);
+  assert.match(homePage, /if \(directFarmHandMembership && preferredFarmId\)/);
+  assert.match(homePage, /ensureAtlasProjectPullTask\(preferredFarmId, directFarmHandMembership\.membershipId/);
+  assert.equal((homePage.match(/readAtlasOperatorUniversalHome\(/g) ?? []).length, 1, "Home should perform one universal payload read");
   assert.doesNotMatch(homePage, /Choose today’s Finish Project work/);
 });
 
