@@ -19,6 +19,7 @@ const ACTIONS = new Set([
   "problem_found",
 ]);
 const SPACING_OUTCOMES = new Set(["thin", "on_target", "patch"]);
+const STAND_CONDITIONS = new Set(["patchy"]);
 
 type SourceTask = {
   id: string;
@@ -53,8 +54,10 @@ type GerminationBody = {
   taskId?: unknown;
   taskTitle?: unknown;
   action?: unknown;
+  standCondition?: unknown;
   spacingOutcome?: unknown;
   targetSpacingInches?: unknown;
+  observedGapInches?: unknown;
   note?: unknown;
 };
 
@@ -93,7 +96,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "germination-observation-clock-v3",
+      "X-Atlas-Read-Path": "germination-observation-clock-v4",
     },
   });
 }
@@ -155,6 +158,35 @@ export async function GET(request: NextRequest) {
   const profile = source.profile;
   if (!profile) return privateJson({ ok: false, error: "Seed profile was not found." }, 500);
 
+  let cropCycleId = clean(metadata.crop_cycle_id) || null;
+  if (!cropCycleId || !UUID_PATTERN.test(cropCycleId)) {
+    const { data: cycleLink, error: cycleLinkError } = await supabase
+      .schema("atlas")
+      .from("task_crop_cycles")
+      .select("crop_cycle_id")
+      .eq("task_id", task.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (cycleLinkError) console.error("Germination succession cycle lookup failed.", cycleLinkError);
+    const linkedCycleId = clean((cycleLink as { crop_cycle_id?: unknown } | null)?.crop_cycle_id);
+    cropCycleId = UUID_PATTERN.test(linkedCycleId) ? linkedCycleId : null;
+  }
+
+  let successionNumber: number | null = null;
+  if (cropCycleId) {
+    const { data: succession, error: successionError } = await supabase
+      .schema("atlas")
+      .from("production_successions")
+      .select("sequence_number")
+      .eq("crop_cycle_id", cropCycleId)
+      .order("sequence_number", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (successionError) console.error("Germination succession lookup failed.", successionError);
+    successionNumber = positiveInteger((succession as { sequence_number?: unknown } | null)?.sequence_number);
+  }
+
   return privateJson({
     ok: true,
     germinationCheck: true,
@@ -167,6 +199,7 @@ export async function GET(request: NextRequest) {
       cropLabel: profile.crop_label,
       variety: profile.variety,
       targetSpacingInches: spacingFromProfile(profile.metadata),
+      successionNumber,
       expectedMinDays: profile.days_to_germination_min,
       expectedMaxDays: profile.days_to_germination_max,
       notYetCount: positiveInteger(metadata.not_yet_count) ?? 0,
@@ -193,8 +226,10 @@ export async function POST(request: NextRequest) {
   const taskId = clean(body.taskId);
   const taskTitle = clean(body.taskTitle) || null;
   const action = clean(body.action);
+  const standCondition = clean(body.standCondition) || null;
   const spacingOutcome = clean(body.spacingOutcome) || null;
   const targetSpacingInches = positiveNumber(body.targetSpacingInches);
+  const observedGapInches = positiveNumber(body.observedGapInches);
   const note = clean(body.note) || null;
 
   if (!UUID_PATTERN.test(taskId)) {
@@ -203,8 +238,14 @@ export async function POST(request: NextRequest) {
   if (!ACTIONS.has(action)) {
     return privateJson({ ok: false, error: "Choose not yet, beginning, germinated, failed, failed or uncertain, or problem found." }, 400);
   }
+  if (standCondition && !STAND_CONDITIONS.has(standCondition)) {
+    return privateJson({ ok: false, error: "Unsupported stand condition." }, 400);
+  }
   if (action === "germinated" && (!spacingOutcome || !SPACING_OUTCOMES.has(spacingOutcome))) {
     return privateJson({ ok: false, error: "Choose thin, on target, or patch." }, 400);
+  }
+  if (standCondition === "patchy" && (action !== "germinated" || observedGapInches === null)) {
+    return privateJson({ ok: false, error: "Patchy germination requires an observed gap size." }, 400);
   }
 
   const operatorContext = await readAtlasOwnerOperatorContext();
@@ -215,21 +256,25 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createAtlasServerClient();
   const response = operatorMembershipId
-    ? await supabase.rpc("owner_operator_record_germination_observation_v3", {
+    ? await supabase.rpc("owner_operator_record_germination_observation_v4", {
         p_effective_membership_id: operatorMembershipId,
         p_task_id: taskId,
         p_action: action,
+        p_stand_condition: standCondition,
         p_spacing_outcome: action === "germinated" ? spacingOutcome : null,
         p_target_spacing_inches: action === "germinated" ? targetSpacingInches : null,
+        p_observed_gap_inches: standCondition === "patchy" ? observedGapInches : null,
         p_note: note,
       })
-    : await supabase.rpc("record_germination_observation_for_member_v3", {
+    : await supabase.rpc("record_germination_observation_for_member_v4", {
         p_farm_id: authorized.access.membership.farmId,
         p_task_id: taskId,
         p_task_title: taskTitle,
         p_action: action,
+        p_stand_condition: standCondition,
         p_spacing_outcome: action === "germinated" ? spacingOutcome : null,
         p_target_spacing_inches: action === "germinated" ? targetSpacingInches : null,
+        p_observed_gap_inches: standCondition === "patchy" ? observedGapInches : null,
         p_note: note,
       });
   const { data, error } = response;

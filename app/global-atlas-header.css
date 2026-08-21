@@ -1,0 +1,50 @@
+/* The Atlas identity/action header belongs to the app shell, not an individual page. */
+body:has(.atlas-global-header) {
+  padding-top: calc(var(--atlas-context-header-height) + env(safe-area-inset-top));
+}
+
+.atlas-global-header {
+  position: fixed !important;
+  z-index: 960 !important;
+  top: 0 !important;
+  left: 50% !important;
+  width: min(100%, var(--atlas-shell-max, 430px));
+  min-height: calc(var(--atlas-context-header-height) + env(safe-area-inset-top));
+  transform: translateX(-50%);
+  border-right: 1px solid rgba(215, 204, 189, 0.78);
+  border-bottom: 1px solid rgba(215, 204, 189, 0.78);
+  border-left: 1px solid rgba(215, 204, 189, 0.78);
+  border-radius: 0 0 18px 18px;
+  background: rgba(251, 250, 244, 0.985) !important;
+}
+
+.atlas-global-note-plus {
+  width: 44px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d5cb78;
+  border-radius: 16px;
+  background: var(--atlas-butter);
+  color: var(--atlas-text);
+  padding: 0;
+  font: inherit;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 950;
+  box-shadow: 0 7px 16px rgba(58, 46, 30, 0.08);
+}
+
+/* Home used to own this header. Once the shell owns it, do not render a second one. */
+body:has(.atlas-global-header) .atlas-home-shell > .atlas-app-frame > .atlas-topbar {
+  display: none !important;
+}
+
+@media (max-width: 430px) {
+  .atlas-global-header {
+    width: 100%;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+}

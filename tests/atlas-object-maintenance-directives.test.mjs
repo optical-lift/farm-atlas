@@ -9,7 +9,7 @@ const composer = readFileSync(new URL("../components/atlas/maintenance-directive
 const strip = readFileSync(new URL("../components/atlas/maintenance-directive-strip.tsx", import.meta.url), "utf8");
 const objectPage = readFileSync(new URL("../app/objects/[objectKey]/page.tsx", import.meta.url), "utf8");
 const weedCard = readFileSync(new URL("../components/atlas/weed-card-task-focus.tsx", import.meta.url), "utf8");
-const mowingCard = readFileSync(new URL("../app/task-focus/[taskId]/MowingFocusPage.tsx", import.meta.url), "utf8");
+const mowingCard = readFileSync(new URL("../components/atlas/mowing-focus-card.tsx", import.meta.url), "utf8");
 
 const migrations = `${core}\n${authoring}\n${completion}`;
 

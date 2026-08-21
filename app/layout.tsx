@@ -73,6 +73,7 @@ import "./bell-cover-quiet.css";
 import "./pwa.css";
 import "./web-push.css";
 import "./contextual-app-shell.css";
+import "./global-atlas-header.css";
 import "./app-shell-regression-fixes.css";
 import "./dependency-release-flash.css";
 import "./work-alongside.css";
@@ -149,7 +150,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <AtlasPwaBridge />
           <OwnerOperatorMode context={operatorContext} />
           {/* Legacy contract marker: <AtlasContextualAppFrame /> now receives the effective account role. */}
-          <AtlasContextualAppFrame effectiveFarmRole={effectiveFarmRole} />
+          <AtlasContextualAppFrame effectiveFarmRole={effectiveFarmRole} activeFarmName={activeMembership?.farmName ?? null} />
           <AtlasOperationalProjectionGlobals
             farmId={activeMembership?.farmId ?? null}
             directFarmRole={activeMembership?.role ?? null}

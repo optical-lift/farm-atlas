@@ -60,7 +60,8 @@ test("legacy mowing work becomes governed baselines without reviving date recrea
 
 test("mowing result UI and API preserve observation, operator mode, and canonical task focus", () => {
   const api = read("app/api/atlas/mowing/route.ts");
-  const focus = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
+  const focusPage = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
+  const focus = read("components/atlas/mowing-focus-card.tsx");
   const body = read("components/atlas/mowing-task-card-body.tsx");
   const taskFocus = read("app/task-focus/[taskId]/page.tsx");
   const collection = read("app/collections/mowing/page.tsx");
@@ -79,6 +80,8 @@ test("mowing result UI and API preserve observation, operator mode, and canonica
     "equipment_or_area_problem",
     "closed_not_mowable",
   ]) assert.match(focus, new RegExp(outcome));
+  assert.match(focusPage, /MowingFocusCard/);
+  assert.match(focusPage, /TaskFocusCueDelivery/);
   assert.match(focus, /AtlasTaskCardFrame/);
   assert.match(focus, /TaskPrimaryResultControls/);
   assert.match(body, /Mow height/);

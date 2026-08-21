@@ -7,10 +7,20 @@ export type WorkerReadinessPresentation = {
   kind: "prerequisite" | "battery_charge" | "equipment" | "waiting";
 };
 
+export type WorkerReadinessResource = {
+  resourceKey: string | null;
+  resourceLabel: string | null;
+  resourceStatus: string | null;
+  readinessState: string | null;
+  requirementStatus: string | null;
+  requirementReady: boolean | null;
+};
+
 export type WorkerReadinessResponse = {
   ok: boolean;
   executable?: boolean;
   presentation?: WorkerReadinessPresentation | null;
+  resources?: WorkerReadinessResource[];
   error?: string;
 };
 
@@ -24,6 +34,28 @@ function rows(value: unknown) {
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function nullableText(value: unknown) {
+  const result = text(value);
+  return result || null;
+}
+
+function nullableBoolean(value: unknown) {
+  return typeof value === "boolean" ? value : null;
+}
+
+function readinessResources(readiness: JsonObject): WorkerReadinessResource[] {
+  const consequenceGate = object(readiness.stateConsequenceGate);
+  const requirements = rows(consequenceGate?.resourceRequirements ?? readiness.resourceRequirements);
+  return requirements.map((requirement) => ({
+    resourceKey: nullableText(requirement.resourceKey),
+    resourceLabel: nullableText(requirement.resourceLabel),
+    resourceStatus: nullableText(requirement.resourceStatus),
+    readinessState: nullableText(requirement.readinessState),
+    requirementStatus: nullableText(requirement.requirementStatus ?? requirement.status),
+    requirementReady: nullableBoolean(requirement.requirementReady),
+  }));
 }
 
 export function workerReadinessPresentation(readiness: JsonObject): WorkerReadinessPresentation {
@@ -87,5 +119,6 @@ export function normalizeWorkerReadiness(data: unknown): WorkerReadinessResponse
     ok: true,
     executable,
     presentation: executable ? null : workerReadinessPresentation(readiness),
+    resources: readinessResources(readiness),
   };
 }

@@ -9,7 +9,8 @@ function read(path) {
 const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
 const wrapper = read("components/atlas/worker-ready-assigned-task-execution-shell.tsx");
 const execution = read("components/atlas/assigned-task-execution-shell.tsx");
-const mowing = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
+const mowingPage = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
+const mowing = read("components/atlas/mowing-focus-card.tsx");
 const mowingViewModel = read("lib/atlas/mowing-card-view-model.ts");
 const taskCue = read("app/task-focus/[taskId]/TaskFocusCueDelivery.tsx");
 const globalCue = read("app/GlobalDayCueDelivery.tsx");
@@ -29,13 +30,16 @@ test("ordinary Worker execution cannot reach result controls until canonical rea
 });
 
 test("blocked mowing keeps the truthful card visible but suppresses Done and unfinished controls", () => {
+  assert.match(mowingPage, /MowingFocusCard/);
   assert.match(mowing, /const taskReady = readiness\?\.ok === true && readiness\.executable === true/);
   assert.match(mowing, /if \(!taskReady\)/);
   assert.match(mowing, /This job is not ready yet\./);
   assert.match(mowing, /const completion = taskReady \? \(/);
   assert.match(mowing, /data-atlas-task-readiness="blocked"/);
   assert.match(mowing, /<TaskPrimaryResultControls/);
-  assert.match(mowing, /<MowingTaskCardBody card=\{card\} \/>/);
+  assert.match(mowing, /<MowingTaskCardBody/);
+  assert.match(mowing, /card=\{card\}/);
+  assert.match(mowing, /issueDisabled=\{!taskReady \|\| saving\}/);
   assert.match(mowingViewModel, /equipmentGroup/);
   assert.doesNotMatch(mowingViewModel, /Gas|2 batteries/);
 });
@@ -48,6 +52,7 @@ test("Worker readiness copy stays human while distinguishing battery recovery fr
   assert.match(readinessContract, /Charge them and tap Charged in the reminder\. Then this job will be ready\./);
   assert.match(readinessContract, /This job is waiting on equipment\./);
   assert.match(readinessContract, /Nothing you need to do here right now\./);
+  assert.match(readinessContract, /resources: readinessResources\(readiness\)/);
   assert.doesNotMatch(wrapper, /battery_push_mower_battery_set|needs_charge|needs_repair|resourceId|stableKey/);
 });
 

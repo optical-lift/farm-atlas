@@ -1,6 +1,7 @@
 import BuyerOutreachTaskDetail from "@/components/atlas/buyer-outreach-task-detail";
 import ContractorServiceTaskDetail from "@/components/atlas/contractor-service-task-detail";
 import DecisionSelectorTaskDetail from "@/components/atlas/decision-selector-task-detail";
+import DirectSowTaskDetail from "@/components/atlas/direct-sow-task-detail";
 import ExecutionChecklistTaskDetail from "@/components/atlas/execution-checklist-task-detail";
 import FlowerFulfillmentTaskLoader from "@/components/atlas/flower-fulfillment-task-loader";
 import FlowerPreparationTaskLoader from "@/components/atlas/flower-preparation-task-loader";
@@ -8,6 +9,7 @@ import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-deta
 import NetworkOutreachTaskDetail from "@/components/atlas/network-outreach-task-detail";
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
+import SiteLayoutTaskDetail from "@/components/atlas/site-layout-task-detail";
 import TransplantReadinessTaskDetail from "@/components/atlas/transplant-readiness-task-detail";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import WeeklyHarvestTaskDetail from "@/components/atlas/weekly-harvest-task-detail";
@@ -37,6 +39,13 @@ function isDecisionSelectorTask(task: AtlasTaskCard) {
 function isProjectPullTask(task: AtlasTaskCard) {
   return typeof task.metadata?.project_pull_item_id === "string"
     && task.metadata.project_pull_item_id.length > 0;
+}
+
+function isDirectSowTask(task: AtlasTaskCard) {
+  return task.task_type === "sowing"
+    && task.action_key === "sow"
+    && task.metadata?.operation_result_membrane === "or3_direct_sow_seed_v1"
+    && (task.metadata?.seed_inventory_report_required === true || task.metadata?.seed_inventory_report_required === "true");
 }
 
 function isWeedTask(task: AtlasTaskCard) {
@@ -96,6 +105,10 @@ function isWeeklyHarvestTask(task: AtlasTaskCard) {
     && (task.metadata?.weekly_routine === true || task.metadata?.weekly_routine === "true");
 }
 
+function isSiteLayoutTask(task: AtlasTaskCard) {
+  return task.task_type === "site_layout";
+}
+
 async function loadWorkerReadiness(taskId: string): Promise<WorkerReadinessResponse> {
   const supabase = await createAtlasServerClient();
   const { data, error } = await supabase.rpc("worker_task_execution_readiness_api_v1", {
@@ -111,6 +124,7 @@ async function loadWorkerReadiness(taskId: string): Promise<WorkerReadinessRespo
 export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isContractorServiceTask(props.task)) return <ContractorServiceTaskDetail {...props} />;
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
+  if (isDirectSowTask(props.task)) return <DirectSowTaskDetail task={props.task} assignee={props.assignee} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isBuyerOutreachTask(props.task)) return <BuyerOutreachTaskDetail {...props} />;
@@ -124,5 +138,6 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isWeeklyHarvestTask(props.task)) return <WeeklyHarvestTaskDetail {...props} />;
 
   const initialReadiness = await loadWorkerReadiness(props.task.task_id);
+  if (isSiteLayoutTask(props.task)) return <SiteLayoutTaskDetail {...props} initialReadiness={initialReadiness} />;
   return <WorkerReadyAssignedTaskExecutionShell {...props} initialReadiness={initialReadiness} />;
 }
