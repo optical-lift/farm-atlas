@@ -10,6 +10,7 @@ const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
 const adapter = read("components/atlas/direct-sow-task-detail.tsx");
 const sow = read("app/task-focus/[taskId]/DirectSowFocusPage.tsx");
 const route = read("app/api/atlas/direct-sow-result/route.ts");
+const migration = read("supabase/migrations/20260821044846_direct_sow_result_without_duration_v2.sql");
 
 test("canonical direct-sow work uses the production Sow family instead of the generic shell", () => {
   assert.match(canonical, /task\.task_type === "sowing"/);
@@ -35,18 +36,23 @@ test("Sow card is driven by task truth rather than Task Card Editor specimen val
   assert.match(sow, /from this sowing&apos;s planned date/);
 });
 
-test("Sow completion returns the seed remainder and actual time through the authenticated OR3 result boundary", () => {
+test("Sow completion records seed remainder without asking the worker to time sowing", () => {
   assert.match(sow, /Used the rest/);
   assert.match(sow, /Some left/);
   assert.match(sow, /I know how many/);
-  assert.match(sow, /Minutes this took/);
+  assert.doesNotMatch(sow, /Minutes this took|actualMinutes|minutes this sowing took/i);
   assert.match(sow, /\/api\/atlas\/direct-sow-result/);
-  assert.match(route, /record_direct_sow_seed_result_for_member_v1/);
+  assert.match(route, /record_direct_sow_seed_result_for_member_v2/);
   assert.match(route, /p_membership_id: authorized\.access\.membership\.membershipId/);
-  assert.match(route, /p_actual_minutes: actualMinutes/);
+  assert.doesNotMatch(route, /p_actual_minutes|actualMinutes/);
   assert.match(route, /p_remaining_quantity: result === "exact_remaining"/);
   assert.match(route, /requestOrigin !== request\.nextUrl\.origin/);
   assert.doesNotMatch(route, /SUPABASE_SERVICE_ROLE_KEY|atlasSupabase/);
+  assert.match(migration, /record_direct_sow_seed_result_for_member_v2/);
+  assert.match(migration, /'timingCaptured',false/);
+  assert.match(migration, /'operationActualId',null/);
+  assert.match(migration, /Duration is not collected or fabricated/);
+  assert.doesNotMatch(migration, /insert into atlas\.production_operation_actuals/i);
 });
 
 test("Sow card preserves unfinished reporting through the canonical task transition route", () => {
