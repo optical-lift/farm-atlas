@@ -95,14 +95,14 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
       headers: { Accept: "application/json" },
     });
     const body = await response.json() as HarvestState;
-    if (!response.ok || !body.ok) throw new Error(body.error || "Weekly Harvest could not be loaded.");
+    if (!response.ok || !body.ok) throw new Error(body.error || "Crop details could not be loaded.");
     setState(body);
   }
 
   useEffect(() => {
     let cancelled = false;
     void loadState().catch((error) => {
-      if (!cancelled) setState({ ok: false, error: error instanceof Error ? error.message : "Weekly Harvest could not be loaded." });
+      if (!cancelled) setState({ ok: false, error: error instanceof Error ? error.message : "Crop details could not be loaded." });
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -188,6 +188,11 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
   const total = state?.totalRows ?? 0;
   const resolved = state?.resolvedRows ?? 0;
   const timing = task.due_date ? `Weekly · ${prettyDate(task.due_date)}` : "Weekly · Thursday";
+  const detailStatus = !state
+    ? "Loading crop details…"
+    : state.error
+      ? `${prettyDate(task.due_date) || "Thursday"} harvest · crop details unavailable`
+      : `${resolved} / ${total} recorded · ½ bucket increments`;
 
   return (
     <main className={styles.shell} data-atlas-harvest-card="weekly">
@@ -201,11 +206,16 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
       >
         <div className={styles.summary}>
           <strong>Ready to harvest</strong>
-          <span>{resolved} / {total} recorded · ½ bucket increments</span>
+          <span>{detailStatus}</span>
         </div>
 
         {!state ? <p className={styles.loading}>Loading this week’s crop and bed truth…</p> : null}
-        {state?.error ? <p className={styles.error}>{state.error}</p> : null}
+        {state?.error ? (
+          <div className={styles.error} role="status">
+            <strong>Harvest is still scheduled.</strong>
+            <span>{state.error}</span>
+          </div>
+        ) : null}
         {state?.ok && !total ? <p className={styles.empty}>No crop is in the Harvest window for this card.</p> : null}
 
         {state?.ok && total ? (

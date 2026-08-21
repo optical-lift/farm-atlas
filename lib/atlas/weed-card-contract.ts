@@ -119,6 +119,7 @@ export type AtlasWeedCardContext = {
   objectKey: string;
   objectLabel: string;
   zoneLabel: string;
+  mainCropLabel: string | null;
   occupancyGroups: AtlasCropOccupancyGroup[];
   bedMap?: AtlasBedMap | null;
   condition: AtlasWeedCondition;

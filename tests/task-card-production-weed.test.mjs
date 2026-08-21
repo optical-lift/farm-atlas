@@ -9,6 +9,7 @@ function read(path) {
 const detail = read("components/atlas/weed-card-task-focus.tsx");
 const styles = read("components/atlas/weed-card-task-focus.module.css");
 const contract = read("lib/atlas/weed-card-contract.ts");
+const route = read("app/api/atlas/weed-card/route.ts");
 const migration = read("supabase/migrations/20260821172800_weed_card_bed_truth_and_trail_v1.sql");
 
 test("Weed header describes the bed's present use and actual last-weeding date", () => {
@@ -18,13 +19,14 @@ test("Weed header describes the bed's present use and actual last-weeding date",
   assert.match(migration, /v_state\.last_weeded_at at time zone 'America\/Chicago'/);
 });
 
-test("Weed Bed Now reports the newest physical bed observation rather than a target", () => {
-  assert.match(detail, /Last logged as \{ATLAS_WEED_CONDITION_LABELS\[card\.lastLoggedCondition\]\}/);
-  assert.match(detail, /card\.lastLoggedOn/);
+test("Weed Bed Now reports only explicit canonical main-crop truth", () => {
+  assert.match(detail, /card\.mainCropLabel \|\| "Unknown main crop"/);
+  assert.doesNotMatch(detail, /Last logged as/);
+  assert.doesNotMatch(detail, /card\.lastLoggedCondition|card\.lastLoggedOn/);
   assert.doesNotMatch(detail, /Target ·|targetCondition/);
-  assert.match(migration, /v_latest_session\.work_date >= v_state_logged_on/);
-  assert.match(migration, /v_last_logged_on := v_state_logged_on/);
-  assert.match(migration, /v_last_logged_condition := coalesce\(v_state_condition/);
+  assert.match(route, /main_crop_label/);
+  assert.match(route, /active_crop_label/);
+  assert.doesNotMatch(route, /weed_trail_primary_crop_cycle_id/);
 });
 
 test("Weed Trail follows completed bed and crop work and can prioritize perennials or an owner-selected crop", () => {
@@ -49,12 +51,18 @@ test("Active Crops uses lifecycle rows and exposes stale germination truth for f
   assert.match(styles, /grid-template-columns: minmax\(0, 1fr\) minmax\(112px, 0\.78fr\)/);
 });
 
-test("Weed result controls are deliberately small and the card cannot be moved by the worker", () => {
+test("Weed result controls use one three-way selector followed by Save result", () => {
+  assert.match(detail, /WEED_RESULTS/);
   assert.match(detail, /Still rough/);
   assert.match(detail, /Mostly clear/);
-  assert.match(detail, /Log it/);
   assert.match(detail, /All clear/);
-  assert.doesNotMatch(detail, /Move this card/);
+  assert.match(detail, /Save result/);
+  assert.match(detail, /aria-pressed=\{selectedCondition === condition\}/);
+  assert.match(detail, /disabled=\{busy \|\| !selectedCondition\}/);
+  assert.match(detail, /Log it/);
+  assert.match(detail, /aria-expanded=\{logOpen\}/);
+  assert.match(detail, />Blocked<\/button>/);
+  assert.doesNotMatch(detail, /Finish Weed|Move this card/);
   assert.doesNotMatch(detail, /postAtlasTaskSetAsideToday/);
   assert.doesNotMatch(detail, /Medium pressure|Crop readable|Done weeding today/);
 });

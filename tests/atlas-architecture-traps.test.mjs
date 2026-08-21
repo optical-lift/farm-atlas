@@ -95,3 +95,47 @@ test("the homepage reader is membership scoped instead of metadata assigned", ()
   assert.match(growRoomMigration, /is_farm_member|home_task_cards_v1/);
   assert.match(growRoomMigration, /grant execute .* to authenticated/is);
 });
+
+test("Day progress is derived from the rendered Day collection", () => {
+  const summary = read("components/atlas/day-trail-summary.tsx");
+
+  assert.doesNotMatch(summary, /living-day-plan/);
+  assert.doesNotMatch(summary, /resolvedCount|denominator/);
+  assert.match(summary, /safeTotal = Math\.max\(0, total\)/);
+  assert.match(summary, /safeCompleted = Math\.max\(0, Math\.min\(completed, safeTotal\)\)/);
+});
+
+test("future fixed recurrences preview without releasing duplicate tasks", () => {
+  const migration = read("supabase/migrations/20260821200114_future_recurring_occurrences_in_day_preview_v1.sql");
+
+  assert.match(migration, /p_day > v_today/);
+  assert.match(migration, /released_task_id is null/);
+  assert.match(migration, /source_kind = 'recurring_task'/);
+  assert.match(migration, /'sourceKind', 'rhythm'/);
+  assert.doesNotMatch(migration, /insert\s+into\s+atlas\.tasks/i);
+});
+
+test("Weed result is one three-way choice followed by Save result", () => {
+  const component = read("components/atlas/weed-card-task-focus.tsx");
+  const route = read("app/api/atlas/weed-card/route.ts");
+
+  assert.match(component, /Still rough/);
+  assert.match(component, /Mostly clear/);
+  assert.match(component, /All clear/);
+  assert.match(component, /Save result/);
+  assert.match(component, /Unknown main crop/);
+  assert.match(component, /aria-expanded=\{logOpen\}/);
+  assert.doesNotMatch(component, /Finish Weed/);
+  assert.match(route, /main_crop_label/);
+  assert.match(route, /active_crop_label/);
+  assert.doesNotMatch(route, /weed_trail_primary_crop_cycle_id/);
+});
+
+test("Harvest keeps task framing when detailed crop state is unavailable", () => {
+  const component = read("components/atlas/weekly-harvest-task-detail.tsx");
+
+  assert.match(component, /title="Harvest Stems"/);
+  assert.match(component, /Harvest is still scheduled\./);
+  assert.match(component, /crop details unavailable/);
+  assert.doesNotMatch(component, /state\?\.error \? <p/);
+});

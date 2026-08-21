@@ -7,13 +7,14 @@ const componentPath = new URL(
   import.meta.url,
 );
 
-test("day progress reads the finite Living Day plan instead of visible cards alone", async () => {
+test("day progress uses the exact Day collection rendered by its caller", async () => {
   const source = await readFile(componentPath, "utf8");
 
   assert.match(source, /^"use client";/);
-  assert.match(source, /\/api\/atlas\/living-day-plan\?date=/);
-  assert.match(source, /body\.plan\.resolvedCount/);
-  assert.match(source, /body\.plan\.denominator/);
-  assert.match(source, /cache:\s*"no-store"/);
-  assert.match(source, /authoritative\s*\?\?\s*\{\s*completed,\s*total\s*\}/);
+  assert.doesNotMatch(source, /\/api\/atlas\/living-day-plan\?date=/);
+  assert.doesNotMatch(source, /body\.plan\.resolvedCount|body\.plan\.denominator/);
+  assert.doesNotMatch(source, /authoritative/);
+  assert.match(source, /const safeTotal = Math\.max\(0, total\)/);
+  assert.match(source, /const safeCompleted = Math\.max\(0, Math\.min\(completed, safeTotal\)\)/);
+  assert.match(source, /`\$\{safeCompleted\} of \$\{safeTotal\} finished`/);
 });

@@ -24,13 +24,13 @@ type Props = {
   assignee: AtlasAssigneeConfig;
 };
 
-type SavingAction = "result" | "blocked" | "clear" | null;
+type SavingAction = "result" | "blocked" | null;
+type WeedResult = "heavy" | "mostly_clear" | "clear";
 
-type PartialResult = "heavy" | "mostly_clear";
-
-const PARTIAL_RESULTS: Array<{ condition: PartialResult; label: string }> = [
+const WEED_RESULTS: Array<{ condition: WeedResult; label: string }> = [
   { condition: "heavy", label: "Still rough" },
   { condition: "mostly_clear", label: "Mostly clear" },
+  { condition: "clear", label: "All clear" },
 ];
 
 function todayIso() {
@@ -98,50 +98,42 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   const activeCrops = card.occupancyGroups
     .flatMap((group) => group.cohorts)
     .sort((a, b) => lifecycleRank(a.lifeCycle) - lifecycleRank(b.lifeCycle) || a.displayLabel.localeCompare(b.displayLabel));
-  const [selectedCondition, setSelectedCondition] = useState<PartialResult | null>(null);
+  const [selectedCondition, setSelectedCondition] = useState<WeedResult | null>(null);
+  const [logOpen, setLogOpen] = useState(false);
   const [note, setNote] = useState("");
   const [blockedOpen, setBlockedOpen] = useState(false);
   const [blockedNote, setBlockedNote] = useState("");
   const [saving, setSaving] = useState<SavingAction>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function logResult() {
+  async function saveResult() {
     if (!selectedCondition) {
-      setMessage("Choose Still rough or Mostly clear.");
+      setMessage("Choose a result first.");
       return;
     }
     try {
       setSaving("result");
       setMessage(null);
-      await postAtlasFinishPartialWeedCardDay({
-        taskId: task.task_id,
-        minutes: null,
-        conditionAfter: selectedCondition,
-        workDate: todayIso(),
-        note: note.trim() || undefined,
-      });
+      if (selectedCondition === "clear") {
+        await postAtlasWeedCardSession({
+          taskId: task.task_id,
+          minutes: null,
+          conditionAfter: "clear",
+          workDate: todayIso(),
+          note: note.trim() || undefined,
+        });
+      } else {
+        await postAtlasFinishPartialWeedCardDay({
+          taskId: task.task_id,
+          minutes: null,
+          conditionAfter: selectedCondition,
+          workDate: todayIso(),
+          note: note.trim() || undefined,
+        });
+      }
       window.location.assign(returnTo(assignee.listPath));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not save the bed’s current state.");
-    } finally {
-      setSaving(null);
-    }
-  }
-
-  async function finishClear() {
-    try {
-      setSaving("clear");
-      setMessage(null);
-      await postAtlasWeedCardSession({
-        taskId: task.task_id,
-        minutes: null,
-        conditionAfter: "clear",
-        workDate: todayIso(),
-        note: note.trim() || undefined,
-      });
-      window.location.assign(returnTo(assignee.listPath));
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Atlas could not mark the bed all clear.");
     } finally {
       setSaving(null);
     }
@@ -174,14 +166,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   const busy = saving !== null;
   const completion = (
     <div className={styles.finish}>
-      <span>Finish Weed</span>
-      <div className={styles.finishButtons}>
-        <button type="button" className={styles.primaryFinish} disabled={busy} onClick={() => void finishClear()}>
-          {saving === "clear" ? "Saving…" : "All clear"}
-        </button>
-        <button type="button" disabled={busy} onClick={() => setBlockedOpen((open) => !open)}>Blocked</button>
-      </div>
-
+      <button type="button" className={styles.blockedAction} disabled={busy} onClick={() => setBlockedOpen((open) => !open)}>Blocked</button>
       {blockedOpen ? (
         <div className={styles.blockedDrawer}>
           <input value={blockedNote} disabled={busy} onChange={(event) => setBlockedNote(event.target.value)} placeholder="What stopped the work?" aria-label="Weeding blocker" />
@@ -193,7 +178,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   );
 
   return (
-    <main className={styles.shell} data-atlas-weed-card-template="task-card-lab-v2-bed-truth">
+    <main className={styles.shell} data-atlas-weed-card-template="task-card-lab-v3-three-way-result">
       <div className={styles.body}>
         <AtlasTaskCardFrame
           family="Weed"
@@ -217,10 +202,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
 
           <section className={styles.bedNow}>
             <span>Bed now</span>
-            <strong>
-              Last logged as {ATLAS_WEED_CONDITION_LABELS[card.lastLoggedCondition]}
-              {card.lastLoggedOn ? ` on ${prettyDate(card.lastLoggedOn)}` : ""}
-            </strong>
+            <strong>{card.mainCropLabel || "Unknown main crop"}</strong>
           </section>
 
           {activeCrops.length ? (
@@ -260,17 +242,24 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
 
           <section className={styles.results}>
             <header><span>How’d we do?</span></header>
-            <div className={styles.resultPills}>
-              {PARTIAL_RESULTS.map(({ condition, label }) => (
-                <button type="button" key={condition} data-active={selectedCondition === condition ? "true" : "false"} disabled={busy} onClick={() => { setSelectedCondition(condition); setMessage(null); }}>
+            <div className={styles.resultPills} role="group" aria-label="Weed result">
+              {WEED_RESULTS.map(({ condition, label }) => (
+                <button type="button" key={condition} data-active={selectedCondition === condition ? "true" : "false"} aria-pressed={selectedCondition === condition} disabled={busy} onClick={() => { setSelectedCondition(condition); setMessage(null); }}>
                   {label}
                 </button>
               ))}
-              <button type="button" className={styles.logButton} disabled={busy || !selectedCondition} onClick={() => void logResult()}>
-                {saving === "result" ? "Saving…" : "Log it"}
+            </div>
+            <div className={styles.resultActions}>
+              <button type="button" className={styles.logButton} aria-expanded={logOpen} disabled={busy} onClick={() => setLogOpen((open) => !open)}>Log it</button>
+              <button type="button" className={styles.saveResult} disabled={busy || !selectedCondition} onClick={() => void saveResult()}>
+                {saving === "result" ? "Saving…" : "Save result"}
               </button>
             </div>
-            <input className={styles.optionalNote} value={note} disabled={busy} onChange={(event) => setNote(event.target.value)} placeholder="Note (optional)" aria-label="Optional weeding note" />
+            {logOpen ? (
+              <div className={styles.logDrawer}>
+                <input className={styles.optionalNote} value={note} disabled={busy} onChange={(event) => setNote(event.target.value)} placeholder="Note (optional)" aria-label="Optional weeding note" />
+              </div>
+            ) : null}
           </section>
         </AtlasTaskCardFrame>
       </div>
