@@ -4,8 +4,9 @@ import test from "node:test";
 
 const harvestSource = readFileSync("app/owner/task-card-lab/HarvestCardSpecimen.tsx", "utf8");
 const harvestStyles = readFileSync("app/owner/task-card-lab/harvest-card-specimen.module.css", "utf8");
-const frameSource = readFileSync("app/owner/task-card-lab/DominionCardFrame.tsx", "utf8");
-const frameStyles = readFileSync("app/owner/task-card-lab/dominion-card-frame.module.css", "utf8");
+const frameSource = readFileSync("components/atlas/task-card-frame.tsx", "utf8");
+const frameStyles = readFileSync("components/atlas/task-card-frame.module.css", "utf8");
+const editorFrame = readFileSync("app/owner/task-card-lab/DominionCardFrame.tsx", "utf8");
 const editorSource = readFileSync("app/owner/task-card-lab/page.tsx", "utf8");
 
 test("Task Card Editor renders the dedicated Harvest specimen", () => {
@@ -13,8 +14,9 @@ test("Task Card Editor renders the dedicated Harvest specimen", () => {
   assert.match(editorSource, /index === 4[\s\S]*<HarvestCardSpecimen \/>/);
 });
 
-test("Harvest uses shared task chrome with a current-zone subtitle and no hardcoded schedule copy", () => {
+test("Harvest uses shared production task chrome with a current-zone subtitle and no hardcoded schedule copy", () => {
   assert.match(harvestSource, /<DominionCardFrame family="Harvest" title="Harvest Stems" subtitle=\{zones\.join\(" · "\)\}>/);
+  assert.match(editorFrame, /@\/components\/atlas\/task-card-frame/);
   assert.match(frameSource, /className=\{styles\.familyRow\}/);
   assert.match(frameStyles, /\.familyRow > span \{[\s\S]*color: #858bb8/);
   assert.doesNotMatch(harvestSource, /Thursday Harvest/);
@@ -58,7 +60,7 @@ test("crop name and bed quietly toggle an inline drawer with only real alternate
   assert.match(harvestStyles, /\.exceptionPanel \{[\s\S]*grid-column: 1 \/ -1/);
 });
 
-test("shared Dominion chrome owns the ordinary Done and Unfinished footer", () => {
+test("shared production chrome owns the ordinary Done and Unfinished footer", () => {
   assert.match(frameSource, />Done<\/button>/);
   assert.match(frameSource, />Unfinished<\/button>/);
   assert.doesNotMatch(harvestSource, /Mock only/);
