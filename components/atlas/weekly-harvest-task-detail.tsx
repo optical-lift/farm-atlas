@@ -128,9 +128,13 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
 
   function changeBucketCount(row: HarvestRow, delta: number) {
     if (row.resolved || saving) return;
-    if (activeCycleId !== row.cropCycleId) setActiveCycleId(row.cropCycleId);
     setException(null);
     setMessage(null);
+    if (activeCycleId !== row.cropCycleId) {
+      setActiveCycleId(row.cropCycleId);
+      setBucketHalves(Math.max(0, delta));
+      return;
+    }
     setBucketHalves((current) => Math.max(0, current + delta));
   }
 
