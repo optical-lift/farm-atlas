@@ -12,7 +12,6 @@ const RESULTS = new Set(["depleted", "exact_remaining", "some_left_unknown"]);
 type Body = {
   taskId?: unknown;
   result?: unknown;
-  actualMinutes?: unknown;
   remainingQuantity?: unknown;
   note?: unknown;
 };
@@ -21,11 +20,6 @@ type RpcError = { code?: string; message?: string };
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function positiveInteger(value: unknown) {
-  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
-  return Number.isInteger(parsed) && parsed > 0 && parsed <= 1440 ? parsed : null;
 }
 
 function positiveNumber(value: unknown) {
@@ -38,7 +32,7 @@ function json(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, no-store",
-      "X-Atlas-Write-Path": "direct-sow-seed-result-v1",
+      "X-Atlas-Write-Path": "direct-sow-seed-result-v2",
     },
   });
 }
@@ -69,7 +63,6 @@ export async function POST(request: NextRequest) {
 
   const taskId = clean(body.taskId);
   const result = clean(body.result).toLowerCase();
-  const actualMinutes = positiveInteger(body.actualMinutes);
   const remainingQuantity = body.remainingQuantity === null || body.remainingQuantity === undefined || body.remainingQuantity === ""
     ? null
     : positiveNumber(body.remainingQuantity);
@@ -77,20 +70,18 @@ export async function POST(request: NextRequest) {
 
   if (!UUID_PATTERN.test(taskId)) return json({ ok: false, error: "A valid task id is required." }, 400);
   if (!RESULTS.has(result)) return json({ ok: false, error: "Choose whether the seed lot was depleted, has some left, or has an exact amount left." }, 400);
-  if (!actualMinutes) return json({ ok: false, error: "Enter how many minutes the sowing took." }, 400);
   if (result === "exact_remaining" && remainingQuantity === null) return json({ ok: false, error: "Enter the exact number of seeds remaining." }, 400);
   if (result !== "exact_remaining" && remainingQuantity !== null) return json({ ok: false, error: "An exact remaining count is only used when you know the exact amount left." }, 400);
 
   const serviceDate = atlasFarmDateIso();
   const idempotencyKey = `direct-sow-result:${taskId}:${serviceDate}`;
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("record_direct_sow_seed_result_for_member_v1", {
+  const { data, error } = await supabase.rpc("record_direct_sow_seed_result_for_member_v2", {
     p_farm_id: authorized.access.membership.farmId,
     p_membership_id: authorized.access.membership.membershipId,
     p_task_id: taskId,
     p_service_date: serviceDate,
     p_result: result,
-    p_actual_minutes: actualMinutes,
     p_idempotency_key: idempotencyKey,
     p_remaining_quantity: result === "exact_remaining" ? remainingQuantity : null,
     p_note: note,
