@@ -111,6 +111,12 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
       setMessage("Choose a result first.");
       return;
     }
+    const observation = note.trim();
+    if (!observation) {
+      setLogOpen(true);
+      setMessage("Log what you observed before saving the Weed result.");
+      return;
+    }
     try {
       setSaving("result");
       setMessage(null);
@@ -120,7 +126,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
           minutes: null,
           conditionAfter: "clear",
           workDate: todayIso(),
-          note: note.trim() || undefined,
+          note: observation,
         });
       } else {
         await postAtlasFinishPartialWeedCardDay({
@@ -128,7 +134,7 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
           minutes: null,
           conditionAfter: selectedCondition,
           workDate: todayIso(),
-          note: note.trim() || undefined,
+          note: observation,
         });
       }
       window.location.assign(returnTo(assignee.listPath));
@@ -251,13 +257,13 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
             </div>
             <div className={styles.resultActions}>
               <button type="button" className={styles.logButton} aria-expanded={logOpen} disabled={busy} onClick={() => setLogOpen((open) => !open)}>Log it</button>
-              <button type="button" className={styles.saveResult} disabled={busy || !selectedCondition} onClick={() => void saveResult()}>
+              <button type="button" className={styles.saveResult} disabled={busy || !selectedCondition || !note.trim()} onClick={() => void saveResult()}>
                 {saving === "result" ? "Saving…" : "Save result"}
               </button>
             </div>
             {logOpen ? (
               <div className={styles.logDrawer}>
-                <input className={styles.optionalNote} value={note} disabled={busy} onChange={(event) => setNote(event.target.value)} placeholder="Note (optional)" aria-label="Optional weeding note" />
+                <input className={styles.optionalNote} value={note} disabled={busy} onChange={(event) => { setNote(event.target.value); setMessage(null); }} placeholder="What did you observe?" aria-label="Weeding observation" required />
               </div>
             ) : null}
           </section>
