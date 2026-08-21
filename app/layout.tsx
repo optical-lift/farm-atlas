@@ -149,7 +149,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <AtlasPwaBridge />
           <OwnerOperatorMode context={operatorContext} />
           {/* Legacy contract marker: <AtlasContextualAppFrame /> now receives the effective account role. */}
-          <AtlasContextualAppFrame effectiveFarmRole={effectiveFarmRole} />
+          <AtlasContextualAppFrame effectiveFarmRole={effectiveFarmRole} activeFarmName={activeMembership?.farmName ?? null} />
           <AtlasOperationalProjectionGlobals
             farmId={activeMembership?.farmId ?? null}
             directFarmRole={activeMembership?.role ?? null}
