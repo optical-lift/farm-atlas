@@ -10,18 +10,14 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
-const RESULTS = new Set(["not_ready", "beginning", "harvested", "declining", "finished", "problem_or_uncertain"]);
-const BUCKET_BANDS = new Set(["quarter", "half", "three_quarters", "one", "more_than_one"]);
-const MORE = new Set(["yes", "no", "unsure"]);
+const RESULTS = new Set(["harvest_amount", "not_ready", "deadheaded", "crop_exhausted"]);
 
 type RpcError = { code?: string; message?: string };
 type Body = {
   taskId?: unknown;
   cropCycleId?: unknown;
   resultKind?: unknown;
-  bucketBand?: unknown;
-  moreAvailability?: unknown;
-  note?: unknown;
+  bucketHalves?: unknown;
   idempotencyKey?: unknown;
 };
 
@@ -29,12 +25,18 @@ function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function integerOrNull(value: unknown) {
+  if (typeof value === "number" && Number.isInteger(value)) return value;
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) return Number(value);
+  return null;
+}
+
 function privateJson(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Write-Path": "weekly-harvest-round-v1",
+      "X-Atlas-Write-Path": "weekly-harvest-round-v2",
     },
   });
 }
@@ -105,36 +107,39 @@ export async function POST(request: NextRequest) {
   const taskId = clean(body.taskId);
   const cropCycleId = clean(body.cropCycleId);
   const resultKind = clean(body.resultKind);
-  const bucketBand = clean(body.bucketBand);
-  const moreAvailability = clean(body.moreAvailability);
-  const note = clean(body.note) || null;
+  const bucketHalves = integerOrNull(body.bucketHalves);
   const idempotencyKey = clean(body.idempotencyKey);
 
-  if (!UUID_PATTERN.test(taskId) || !UUID_PATTERN.test(cropCycleId)) return privateJson({ ok: false, error: "A valid Harvest card and crop are required." }, 400);
-  if (!RESULTS.has(resultKind)) return privateJson({ ok: false, error: "Choose what is physically true for this crop." }, 400);
-  if (resultKind === "harvested" && (!BUCKET_BANDS.has(bucketBand) || !MORE.has(moreAvailability))) {
-    return privateJson({ ok: false, error: "Harvested rows require the closest bucket amount and whether more remains." }, 400);
+  if (!UUID_PATTERN.test(taskId) || !UUID_PATTERN.test(cropCycleId)) {
+    return privateJson({ ok: false, error: "A valid Harvest card and crop are required." }, 400);
   }
-  if (resultKind === "problem_or_uncertain" && !note) return privateJson({ ok: false, error: "Describe what is uncertain." }, 400);
-  if (!idempotencyKey || idempotencyKey.length > 160) return privateJson({ ok: false, error: "A valid idempotency key is required." }, 400);
-  if (note && note.length > 4000) return privateJson({ ok: false, error: "Harvest note must be 4000 characters or fewer." }, 400);
+  if (!RESULTS.has(resultKind)) {
+    return privateJson({ ok: false, error: "Record an amount, Not ready, Deadheaded, or Crop exhausted." }, 400);
+  }
+  if (resultKind === "harvest_amount" && (!bucketHalves || bucketHalves < 1)) {
+    return privateJson({ ok: false, error: "Harvest amount must be at least one half bucket." }, 400);
+  }
+  if (resultKind !== "harvest_amount" && bucketHalves !== null) {
+    return privateJson({ ok: false, error: "Not ready, Deadheaded, and Crop exhausted do not take a harvest amount." }, 400);
+  }
+  if (!idempotencyKey || idempotencyKey.length > 160) {
+    return privateJson({ ok: false, error: "A valid idempotency key is required." }, 400);
+  }
 
   const supabase = await createAtlasServerClient();
   const args = {
     p_task_id: taskId,
     p_crop_cycle_id: cropCycleId,
     p_result_kind: resultKind,
-    p_bucket_band: resultKind === "harvested" ? bucketBand : null,
-    p_more_availability: resultKind === "harvested" ? moreAvailability : null,
-    p_note: note,
+    p_bucket_halves: resultKind === "harvest_amount" ? bucketHalves : null,
     p_idempotency_key: idempotencyKey,
   };
   const response = operatorMembershipId
-    ? await supabase.rpc("owner_operator_record_weekly_harvest_row_v1", {
+    ? await supabase.rpc("owner_operator_record_weekly_harvest_row_v2", {
         p_effective_membership_id: operatorMembershipId,
         ...args,
       })
-    : await supabase.rpc("record_weekly_harvest_row_for_member_v1", {
+    : await supabase.rpc("record_weekly_harvest_row_for_member_v2", {
         p_farm_id: authorized.access.membership.farmId,
         ...args,
       });
