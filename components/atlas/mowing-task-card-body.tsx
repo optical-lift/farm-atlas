@@ -48,6 +48,8 @@ export default function MowingTaskCardBody({
   const current = dateLabel(card.recurrence.current);
   const next = dateLabel(card.recurrence.next);
   const resourceState = resourceStateLabel(resourceStatus);
+  const normalizedEquipment = `${card.equipment.label ?? ""} ${resourceLabel ?? ""}`.toLowerCase();
+  const readinessDetail = resourceDetail || (normalizedEquipment.includes("battery push mower") ? "2 charged batteries required" : null);
 
   return (
     <>
@@ -72,8 +74,8 @@ export default function MowingTaskCardBody({
               <div className={styles.resourceRow}>
                 <div>
                   <strong>{resourceLabel}</strong>
-                  {resourceDetail ? <small>{resourceDetail}</small> : resourceState ? <small>{resourceState}</small> : null}
-                  {resourceDetail && resourceState ? <small>{resourceState}</small> : null}
+                  {readinessDetail ? <small>{readinessDetail}</small> : resourceState ? <small>{resourceState}</small> : null}
+                  {readinessDetail && resourceState ? <small>{resourceState}</small> : null}
                 </div>
               </div>
             ) : null}
