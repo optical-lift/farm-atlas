@@ -14,6 +14,7 @@ const ACTIONS = new Set([
   "not_yet",
   "beginning",
   "germinated",
+  "failed",
   "failed_or_uncertain",
   "problem_found",
 ]);
@@ -92,7 +93,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "germination-observation-clock-v2",
+      "X-Atlas-Read-Path": "germination-observation-clock-v3",
     },
   });
 }
@@ -200,7 +201,7 @@ export async function POST(request: NextRequest) {
     return privateJson({ ok: false, error: "A valid task id is required." }, 400);
   }
   if (!ACTIONS.has(action)) {
-    return privateJson({ ok: false, error: "Choose not yet, beginning, germinated, failed or uncertain, or problem found." }, 400);
+    return privateJson({ ok: false, error: "Choose not yet, beginning, germinated, failed, failed or uncertain, or problem found." }, 400);
   }
   if (action === "germinated" && (!spacingOutcome || !SPACING_OUTCOMES.has(spacingOutcome))) {
     return privateJson({ ok: false, error: "Choose thin, on target, or patch." }, 400);
@@ -214,7 +215,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createAtlasServerClient();
   const response = operatorMembershipId
-    ? await supabase.rpc("owner_operator_record_germination_observation_v2", {
+    ? await supabase.rpc("owner_operator_record_germination_observation_v3", {
         p_effective_membership_id: operatorMembershipId,
         p_task_id: taskId,
         p_action: action,
@@ -222,7 +223,7 @@ export async function POST(request: NextRequest) {
         p_target_spacing_inches: action === "germinated" ? targetSpacingInches : null,
         p_note: note,
       })
-    : await supabase.rpc("record_germination_observation_for_member_v2", {
+    : await supabase.rpc("record_germination_observation_for_member_v3", {
         p_farm_id: authorized.access.membership.farmId,
         p_task_id: taskId,
         p_task_title: taskTitle,
