@@ -2,15 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { FieldLogDrawer, type AtlasFieldLogSeed } from "@/components/atlas/field-log-builder";
+import { AtlasTopBar } from "@/components/atlas/ui/AtlasPrimitives";
 import { atlasFarmDateIso } from "@/lib/atlas/farm-day";
 import type { AtlasFarmRole } from "@/lib/atlas/session";
+import { fetchAtlasZoneRegistry, type AtlasRegistryZone } from "@/lib/atlas/zone-registry-client";
 
 type DockIconKey = "home" | "work" | "clock" | "manager" | "harvest" | "more";
 
 type AtlasContextualAppFrameProps = {
   effectiveFarmRole?: AtlasFarmRole | null;
+  activeFarmName?: string | null;
 };
 
 function todayHref() {
@@ -42,6 +46,15 @@ function routeGroup(pathname: string) {
   ) return "work";
   if (pathname.startsWith("/harvest")) return "harvest";
   return "more";
+}
+
+function routeLabel(group: ReturnType<typeof routeGroup>) {
+  if (group === "home") return "Home";
+  if (group === "clock") return "Clock";
+  if (group === "manager") return "Manager";
+  if (group === "harvest") return "Harvest";
+  if (group === "work") return "Work";
+  return "More";
 }
 
 function DockIcon({ kind }: { kind: DockIconKey }) {
@@ -120,7 +133,7 @@ function DockIcon({ kind }: { kind: DockIconKey }) {
 
 const HIDDEN_PATHS = ["/login", "/auth", "/offline"];
 
-export default function AtlasContextualAppFrame({ effectiveFarmRole = null }: AtlasContextualAppFrameProps) {
+export default function AtlasContextualAppFrame({ effectiveFarmRole = null, activeFarmName = null }: AtlasContextualAppFrameProps) {
   const pathname = usePathname();
   const principalProjection = isPrincipalProjection(pathname);
   const active = routeGroup(pathname);
@@ -129,6 +142,9 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null }: At
   const farmManagerHref = useMemo(managerHref, []);
   const hidden = HIDDEN_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   const canManage = effectiveFarmRole === "owner" || effectiveFarmRole === "manager";
+  const canDocument = Boolean(effectiveFarmRole);
+  const [registryZones, setRegistryZones] = useState<AtlasRegistryZone[]>([]);
+  const [logSeed, setLogSeed] = useState<AtlasFieldLogSeed | null>(null);
 
   useEffect(() => {
     document.body.dataset.atlasRouteGroup = active;
@@ -140,6 +156,19 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null }: At
   }, [active, principalProjection]);
 
   if (hidden) return null;
+
+  async function openFieldLog() {
+    if (!canDocument) return;
+    if (registryZones.length === 0) {
+      try {
+        const response = await fetchAtlasZoneRegistry();
+        setRegistryZones(response.zones ?? []);
+      } catch {
+        setRegistryZones([]);
+      }
+    }
+    setLogSeed({ workKey: "note", zoneKeys: [], objectKeys: [] });
+  }
 
   const items: Array<{ key: DockIconKey; label: string; href: string }> = principalProjection
     ? [
@@ -158,23 +187,42 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null }: At
 
   // Legacy route marker retained for contract search: "/#work-board".
   return (
-    <nav className="atlas-context-footer" aria-label="Atlas destinations">
-      <div
-        className="atlas-context-footer__rail"
-        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
-      >
-        {items.map((item) => (
-          <Link
-            key={item.key}
-            href={item.href}
-            className="atlas-context-footer__item"
-            aria-current={active === item.key ? "page" : undefined}
-          >
-            <span className="atlas-context-footer__icon" aria-hidden="true"><DockIcon kind={item.key} /></span>
-            <strong>{item.label}</strong>
-          </Link>
-        ))}
-      </div>
-    </nav>
+    <>
+      <AtlasTopBar
+        className="atlas-global-header"
+        title={activeFarmName || "Atlas"}
+        status={<span>{routeLabel(active)}</span>}
+        action={canDocument ? (
+          <button type="button" className="atlas-global-note-plus" aria-label="Document work" onClick={() => void openFieldLog()}>+</button>
+        ) : null}
+      />
+      <nav className="atlas-context-footer" aria-label="Atlas destinations">
+        <div
+          className="atlas-context-footer__rail"
+          style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+        >
+          {items.map((item) => (
+            <Link
+              key={item.key}
+              href={item.href}
+              className="atlas-context-footer__item"
+              aria-current={active === item.key ? "page" : undefined}
+            >
+              <span className="atlas-context-footer__icon" aria-hidden="true"><DockIcon kind={item.key} /></span>
+              <strong>{item.label}</strong>
+            </Link>
+          ))}
+        </div>
+      </nav>
+      {logSeed ? (
+        <FieldLogDrawer
+          open
+          zones={registryZones}
+          seed={logSeed}
+          onClose={() => setLogSeed(null)}
+          onSaved={() => setLogSeed(null)}
+        />
+      ) : null}
+    </>
   );
 }
