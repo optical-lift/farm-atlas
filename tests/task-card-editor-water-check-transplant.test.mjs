@@ -5,7 +5,8 @@ import test from "node:test";
 const weed = readFileSync("app/owner/task-card-lab/WeedCardSpecimen.tsx", "utf8");
 const remaining = readFileSync("app/owner/task-card-lab/RemainingDominionCardSpecimens.tsx", "utf8");
 const moveStyles = readFileSync("app/owner/task-card-lab/remaining-dominion-card-specimens.module.css", "utf8");
-const frame = readFileSync("app/owner/task-card-lab/DominionCardFrame.tsx", "utf8");
+const frame = readFileSync("components/atlas/task-card-frame.tsx", "utf8");
+const editorFrame = readFileSync("app/owner/task-card-lab/DominionCardFrame.tsx", "utf8");
 const editor = readFileSync("app/owner/task-card-lab/page.tsx", "utf8");
 
 test("Irrigation and Germination are crop-cycle variants rather than standalone gallery families", () => {
@@ -20,6 +21,7 @@ test("Irrigation and Germination are crop-cycle variants rather than standalone 
 });
 
 test("shared card shell keeps the approved header and default completion while allowing logging overrides", () => {
+  assert.match(editorFrame, /@\/components\/atlas\/task-card-frame/);
   assert.match(frame, /subtitle\?: string/);
   assert.match(frame, /className=\{styles\.subtitle\}/);
   assert.match(frame, /completion\?: ReactNode \| false/);
