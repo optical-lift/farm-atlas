@@ -96,8 +96,7 @@
   border-bottom: 1px solid rgba(215, 204, 189, 0.62);
 }
 
-.height span,
-.tools > header span {
+.height span {
   color: #858bb8;
   font-size: 10px;
   line-height: 1;
@@ -119,21 +118,213 @@
   border-bottom: 1px solid rgba(215, 204, 189, 0.62);
 }
 
-.tools > header {
-  padding: 14px 18px 9px;
+.equipmentSection {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 17px 18px 15px 48px;
 }
 
-.toolRow {
-  min-height: 48px;
+.equipmentSection::before {
+  content: "";
+  position: absolute;
+  left: 23px;
+  top: 26px;
+  bottom: 34px;
+  width: 1px;
+  background: rgba(181, 181, 192, 0.56);
+}
+
+.equipmentHeader {
+  position: relative;
+  min-height: 32px;
   display: flex;
   align-items: center;
-  padding: 0 18px;
-  border-top: 1px solid rgba(223, 215, 202, 0.48);
+  padding-right: 42px;
 }
 
-.toolRow strong {
+.equipmentHeader::before {
+  content: "";
+  position: absolute;
+  left: -30px;
+  top: 8px;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #858bb8;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(239, 237, 244, 0.72);
+}
+
+.equipmentHeader h3 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 21px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.resourceRow {
+  position: relative;
+  min-height: 45px;
+  display: flex;
+  align-items: center;
+  border-top: 1px solid rgba(215, 204, 189, 0.48);
+  border-bottom: 1px solid rgba(215, 204, 189, 0.48);
+}
+
+.resourceRow::before {
+  content: "";
+  position: absolute;
+  left: -27px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  transform: translateY(-50%);
+  border: 1.5px solid #858bb8;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.resourceRow::after {
+  content: "";
+  position: absolute;
+  left: -23px;
+  top: 50%;
+  width: 17px;
+  height: 1px;
+  background: rgba(181, 181, 192, 0.56);
+}
+
+.resourceRow > div {
+  display: grid;
+  gap: 3px;
+}
+
+.resourceRow strong {
   color: var(--atlas-text);
   font-size: 14px;
-  line-height: 1.15;
+  line-height: 1.14;
   font-weight: 910;
+}
+
+.resourceRow small {
+  color: #8b8c84;
+  font-size: 9px;
+  line-height: 1.15;
+  font-weight: 760;
+  text-transform: capitalize;
+}
+
+.issueDrawer {
+  width: 100%;
+}
+
+.issueDrawer > summary {
+  position: absolute;
+  top: 17px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(139, 145, 194, 0.24);
+  border-radius: 50%;
+  background: rgba(239, 237, 244, 0.5);
+  color: #75788f;
+  touch-action: manipulation;
+}
+
+.issueDrawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.issueDrawer > summary span {
+  display: block;
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 760;
+}
+
+.issueDrawer[open] > summary {
+  background: rgba(239, 237, 244, 0.76);
+}
+
+.issueDrawer[open] > summary span {
+  transform: rotate(45deg);
+}
+
+.issuePanel {
+  display: grid;
+  gap: 9px;
+  padding-top: 2px;
+}
+
+.issuePills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.issuePills button,
+.reportIssue {
+  min-height: 34px;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 999px;
+  background: rgba(250, 248, 239, 0.92);
+  color: #606275;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.issuePills button[data-active="true"] {
+  border-color: rgba(81, 91, 52, 0.22);
+  background: rgba(214, 225, 177, 0.55);
+  color: #515b34;
+}
+
+.issuePills button:disabled,
+.reportIssue:disabled,
+.issuePanel input:disabled {
+  opacity: 0.48;
+}
+
+.issuePanel label {
+  display: grid;
+  gap: 5px;
+  color: #85867f;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.issuePanel input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(111, 97, 76, 0.2);
+  border-radius: 13px;
+  background: #fff;
+  color: var(--atlas-text);
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.reportIssue {
+  width: fit-content;
+  border-radius: 12px;
+  background: rgba(239, 237, 244, 0.72);
 }
