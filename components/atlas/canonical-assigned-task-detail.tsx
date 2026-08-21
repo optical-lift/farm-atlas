@@ -41,11 +41,13 @@ function isProjectPullTask(task: AtlasTaskCard) {
     && task.metadata.project_pull_item_id.length > 0;
 }
 
-function isDirectSowTask(task: AtlasTaskCard) {
+function isSowCardTask(task: AtlasTaskCard) {
   return task.task_type === "sowing"
     && task.action_key === "sow"
-    && task.metadata?.operation_result_membrane === "or3_direct_sow_seed_v1"
-    && (task.metadata?.seed_inventory_report_required === true || task.metadata?.seed_inventory_report_required === "true");
+    && (
+      task.metadata?.task_style === "sowing"
+      || task.metadata?.operation_result_membrane === "or3_direct_sow_seed_v1"
+    );
 }
 
 function isWeedTask(task: AtlasTaskCard) {
@@ -124,7 +126,7 @@ async function loadWorkerReadiness(taskId: string): Promise<WorkerReadinessRespo
 export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isContractorServiceTask(props.task)) return <ContractorServiceTaskDetail {...props} />;
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
-  if (isDirectSowTask(props.task)) return <DirectSowTaskDetail task={props.task} assignee={props.assignee} />;
+  if (isSowCardTask(props.task)) return <DirectSowTaskDetail task={props.task} assignee={props.assignee} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isBuyerOutreachTask(props.task)) return <BuyerOutreachTaskDetail {...props} />;
