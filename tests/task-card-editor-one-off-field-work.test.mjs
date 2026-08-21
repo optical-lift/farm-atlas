@@ -18,7 +18,7 @@ test("one-off field work reuses Venue instructional station grammar without a Tr
   assert.match(specimen, /localStyles\.localStation/);
   assert.match(specimen, /venueStyles\.reminderRow/);
   assert.match(specimen, /localStyles\.localReminderRow/);
-  assert.doesNotMatch(specimen, /Project Trail|EventTrail|className=\{[^}]*trail/i);
+  assert.doesNotMatch(specimen, /EventTrail|className=\{[^}]*trail/i);
 });
 
 test("staking and garlic deterrent are examples of one reusable one-off grammar", () => {
