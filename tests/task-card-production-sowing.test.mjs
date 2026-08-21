@@ -47,8 +47,8 @@ test("Sow card shows canonical succession and Venue-style Zone + bed rows", () =
   assert.match(sow, />Zone \+ bed</);
   assert.match(sow, /zoneBedRows/);
   assert.match(sow, /type="checkbox"/);
-  assert.match(successionMigration, /sequence_number\s*=\s*11|11,\s*v_plan_id/i);
-  assert.match(successionMigration, /151fd9fc-9180-44c8-afc4-139ed93ff5bd/);
+  assert.match(successionMigration, /sequence_number\s*=\s*11/);
+  assert.match(successionMigration, /anna_20260817_sow_procut_orange_fr11_fr12_after_turnover/);
 });
 
 test("normal direct sow keeps seed remainder result without asking the worker to time sowing", () => {
