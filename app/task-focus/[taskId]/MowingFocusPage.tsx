@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import MaintenanceDirectiveStrip from "@/components/atlas/maintenance-directive-strip";
@@ -19,6 +18,8 @@ export type MowingFocusTask = {
   routeLabel: string;
   zoneLabel: string;
   equipmentGroup: string | null;
+  resourceLabel?: string | null;
+  resourceStatus?: string | null;
   targetCutHeightInches: number | null;
   rhythmState: string;
   warningAt: string | null;
@@ -48,6 +49,13 @@ function tomorrowIso(days = 1) {
   return date.toISOString().slice(0, 10);
 }
 
+function mowingIssueChoices(equipmentGroup: string | null) {
+  const value = equipmentGroup?.toLowerCase() ?? "";
+  if (value.includes("riding")) return ["Won't start", "Needs gas", "Something broke", "Other"];
+  if (value.includes("battery") || value.includes("push mower")) return ["Battery problem", "Mower problem", "Battery missing", "Other"];
+  return ["Equipment problem", "Area problem", "Other"];
+}
+
 export default function MowingFocusPage({ task }: { task: MowingFocusTask }) {
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
@@ -69,6 +77,7 @@ export default function MowingFocusPage({ task }: { task: MowingFocusTask }) {
     targetCutHeightInches: task.targetCutHeightInches,
     equipmentGroup: task.equipmentGroup,
   });
+  const issueChoices = mowingIssueChoices(task.equipmentGroup);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -92,17 +101,18 @@ export default function MowingFocusPage({ task }: { task: MowingFocusTask }) {
     return () => controller.abort();
   }, [task.id]);
 
-  async function save(selectedOutcome: Outcome) {
+  async function save(selectedOutcome: Outcome, explicitNote?: string) {
     if (!taskReady) {
       setMessage("This job is not ready yet.");
       return;
     }
 
+    const resultNote = explicitNote?.trim() || note.trim();
     const needsPercent = selectedOutcome === "mowed_partial";
     const needsRecheck = selectedOutcome === "acceptable_no_cut" || selectedOutcome === "too_wet";
     const needsNote = selectedOutcome === "mowed_partial" || selectedOutcome === "equipment_or_area_problem";
     const validPercent = Number.isInteger(Number(completionPercent)) && Number(completionPercent) >= 1 && Number(completionPercent) <= 99;
-    const complete = (!needsPercent || validPercent) && (!needsRecheck || Boolean(recheckDate)) && (!needsNote || Boolean(note.trim()));
+    const complete = (!needsPercent || validPercent) && (!needsRecheck || Boolean(recheckDate)) && (!needsNote || Boolean(resultNote));
     if (!complete) {
       setMessage("Add the needed result detail before saving.");
       return;
@@ -119,7 +129,7 @@ export default function MowingFocusPage({ task }: { task: MowingFocusTask }) {
           outcome: selectedOutcome,
           completionPercent: needsPercent ? Number(completionPercent) : selectedOutcome === "mowed_full" ? 100 : null,
           recheckDate: needsRecheck ? recheckDate : null,
-          note: note.trim() || null,
+          note: resultNote || null,
           idempotencyKey: `mowing:${task.id}:${selectedOutcome}:${Date.now()}`,
         }),
       });
@@ -206,11 +216,6 @@ export default function MowingFocusPage({ task }: { task: MowingFocusTask }) {
 
   return (
     <main className={styles.shell}>
-      <header className={styles.top}>
-        <Link href={returnTo} className={styles.brand}><small>Atlas</small><strong>Work</strong></Link>
-        <Link href={returnTo} className={styles.close} aria-label="Close task">×</Link>
-      </header>
-
       <div className={styles.body}>
         <article className={styles.ticket}>
           <AtlasTaskCardFrame
@@ -219,7 +224,14 @@ export default function MowingFocusPage({ task }: { task: MowingFocusTask }) {
             subtitle={card.place}
             completion={completion}
           >
-            <MowingTaskCardBody card={card} />
+            <MowingTaskCardBody
+              card={card}
+              resourceLabel={task.resourceLabel}
+              resourceStatus={task.resourceStatus}
+              issueChoices={issueChoices}
+              issueDisabled={!taskReady || saving}
+              onEquipmentIssue={(issue, issueNote) => void save("equipment_or_area_problem", [issue, issueNote].filter(Boolean).join(" · "))}
+            />
 
             {readiness === null ? null : !readiness.ok ? (
               <section role="status" style={{ margin: 18, borderRadius: 18, padding: "16px 17px", background: "rgba(54, 70, 58, .055)", color: "#4b554c" }}>
