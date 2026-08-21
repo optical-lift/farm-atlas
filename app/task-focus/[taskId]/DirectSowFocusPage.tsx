@@ -116,7 +116,7 @@ export default function DirectSowFocusPage({ task }: { task: DirectSowFocusTask 
       setMessage("Enter the number of minutes this sowing took.");
       return;
     }
-    if (seedResult === "exact_remaining" && (!Number.isFinite(exactRemaining) || exactRemaining <= 0)) {
+    if (seedResult === "exact_remaining" && (exactRemaining === null || !Number.isFinite(exactRemaining) || exactRemaining <= 0)) {
       setMessage("Enter the exact number of seeds remaining.");
       return;
     }
