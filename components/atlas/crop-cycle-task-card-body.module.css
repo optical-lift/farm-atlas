@@ -1,0 +1,127 @@
+.trail {
+  position: relative;
+  display: grid;
+  padding: 12px 7px 16px;
+  border-top: 1px solid rgba(215, 204, 189, 0.62);
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.trail > span {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  padding-top: 22px;
+  text-align: center;
+}
+
+.trail > span::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 3px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translateX(-50%);
+  border: 1.5px solid #a0a199;
+  border-radius: 50%;
+  background: #fffefa;
+}
+
+.trail > span:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: calc(50% + 7px);
+  width: calc(100% - 14px);
+  height: 1px;
+  background: rgba(185, 183, 171, 0.65);
+}
+
+.trail b {
+  color: #85867f;
+  font-size: 9px;
+  line-height: 1.05;
+  font-weight: 900;
+}
+
+.trail small {
+  max-width: 72px;
+  color: #9a9a93;
+  font-size: 7px;
+  line-height: 1.1;
+  font-weight: 760;
+}
+
+.trailDone::before {
+  border-color: #8e9279 !important;
+  background: #8e9279 !important;
+}
+
+.trailDone::after {
+  background: rgba(142, 146, 121, 0.65) !important;
+}
+
+.trailNow::before {
+  top: 1px !important;
+  width: 15px !important;
+  height: 15px !important;
+  border: 2px solid #343542 !important;
+  background: #343542 !important;
+  box-shadow: 0 0 0 4px rgba(201, 192, 198, 0.32);
+}
+
+.trailNow b {
+  color: var(--atlas-text);
+  font-weight: 950;
+}
+
+.trailLater b,
+.trailLater small {
+  color: #a1a29c;
+}
+
+.cropState {
+  display: grid;
+  gap: 7px;
+  padding: 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+  background: #fff;
+}
+
+.cropState > span {
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.cropState > strong {
+  color: var(--atlas-text);
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.cropState > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.cropState b {
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  color: #65685d;
+  padding: 7px 9px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 880;
+}
