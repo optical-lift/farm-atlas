@@ -13,14 +13,14 @@ type Props = {
   assignee: AtlasAssigneeConfig;
 };
 
-type ResultKind = "not_ready" | "beginning" | "harvested" | "declining" | "finished" | "problem_or_uncertain";
-type BucketBand = "quarter" | "half" | "three_quarters" | "one" | "more_than_one";
-type MoreAvailability = "yes" | "no" | "unsure";
+type HarvestException = "not_ready" | "deadheaded" | "crop_exhausted";
+type ResultKind = "harvest_amount" | HarvestException;
 
 type HarvestRow = {
   cropCycleId: string;
   cropLabel: string;
   variety?: string | null;
+  zoneLabel: string;
   objectLabel: string;
   windowStart?: string | null;
   windowEnd?: string | null;
@@ -28,9 +28,7 @@ type HarvestRow = {
   availabilityStatus?: string | null;
   resolved: boolean;
   resultKind?: ResultKind | null;
-  bucketBand?: BucketBand | null;
-  moreAvailability?: MoreAvailability | null;
-  note?: string | null;
+  bucketHalves?: number | null;
 };
 
 type HarvestState = {
@@ -45,27 +43,10 @@ type HarvestState = {
   error?: string;
 };
 
-const results: Array<{ value: ResultKind; label: string }> = [
+const exceptions: Array<{ value: HarvestException; label: string }> = [
   { value: "not_ready", label: "Not ready" },
-  { value: "beginning", label: "Beginning" },
-  { value: "harvested", label: "Harvested" },
-  { value: "declining", label: "Declining" },
-  { value: "finished", label: "Finished" },
-  { value: "problem_or_uncertain", label: "Problem / uncertain" },
-];
-
-const buckets: Array<{ value: BucketBand; label: string }> = [
-  { value: "quarter", label: "¼ bucket" },
-  { value: "half", label: "½ bucket" },
-  { value: "three_quarters", label: "¾ bucket" },
-  { value: "one", label: "1 bucket" },
-  { value: "more_than_one", label: "> 1 bucket" },
-];
-
-const moreOptions: Array<{ value: MoreAvailability; label: string }> = [
-  { value: "yes", label: "More remains" },
-  { value: "no", label: "Harvest finished" },
-  { value: "unsure", label: "Unsure" },
+  { value: "deadheaded", label: "Deadheaded" },
+  { value: "crop_exhausted", label: "Crop exhausted" },
 ];
 
 function prettyDate(value: string | null | undefined) {
@@ -81,29 +62,29 @@ function displayCrop(row: HarvestRow) {
   return variety.toLowerCase().includes(crop.toLowerCase()) ? variety : `${variety} ${crop}`;
 }
 
-function resultLabel(row: HarvestRow) {
-  if (!row.resultKind) return "";
-  if (row.resultKind === "harvested" && row.bucketBand) {
-    const bucket = buckets.find((candidate) => candidate.value === row.bucketBand)?.label ?? "Harvested";
-    return bucket;
-  }
-  return results.find((candidate) => candidate.value === row.resultKind)?.label ?? row.resultKind.replaceAll("_", " ");
+function formatBuckets(bucketHalves: number) {
+  const buckets = bucketHalves / 2;
+  if (Number.isInteger(buckets)) return `${buckets}`;
+  return `${Math.floor(buckets)}½`.replace("0½", "½");
+}
+
+function resolvedLabel(row: HarvestRow) {
+  if (row.resultKind === "harvest_amount" && row.bucketHalves) return `${formatBuckets(row.bucketHalves)} bucket${row.bucketHalves === 2 ? "" : "s"}`;
+  return exceptions.find((choice) => choice.value === row.resultKind)?.label ?? "Recorded";
 }
 
 function idempotencyKey(taskId: string, cropCycleId: string, resultKind: ResultKind) {
   const nonce = typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  return `weekly-harvest:${taskId}:${cropCycleId}:${resultKind}:${nonce}`;
+  return `weekly-harvest:v2:${taskId}:${cropCycleId}:${resultKind}:${nonce}`;
 }
 
 export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
   const [state, setState] = useState<HarvestState | null>(null);
   const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
-  const [resultKind, setResultKind] = useState<ResultKind | null>(null);
-  const [bucketBand, setBucketBand] = useState<BucketBand | null>(null);
-  const [moreAvailability, setMoreAvailability] = useState<MoreAvailability | null>(null);
-  const [note, setNote] = useState("");
+  const [bucketHalves, setBucketHalves] = useState(0);
+  const [exception, setException] = useState<HarvestException | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -129,7 +110,10 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
 
   const groups = useMemo(() => {
     const grouped = new Map<string, HarvestRow[]>();
-    for (const row of state?.rows ?? []) grouped.set(row.objectLabel, [...(grouped.get(row.objectLabel) ?? []), row]);
+    for (const row of state?.rows ?? []) {
+      const zone = row.zoneLabel?.trim() || "Elm Farm";
+      grouped.set(zone, [...(grouped.get(zone) ?? []), row]);
+    }
     return Array.from(grouped.entries());
   }, [state?.rows]);
 
@@ -137,17 +121,30 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
     if (row.resolved) return;
     const next = activeCycleId === row.cropCycleId ? null : row.cropCycleId;
     setActiveCycleId(next);
-    setResultKind(null);
-    setBucketBand(null);
-    setMoreAvailability(null);
-    setNote("");
+    setBucketHalves(0);
+    setException(null);
+    setMessage(null);
+  }
+
+  function changeBucketCount(row: HarvestRow, delta: number) {
+    if (row.resolved || saving) return;
+    if (activeCycleId !== row.cropCycleId) setActiveCycleId(row.cropCycleId);
+    setException(null);
+    setMessage(null);
+    setBucketHalves((current) => Math.max(0, current + delta));
+  }
+
+  function chooseException(row: HarvestRow, next: HarvestException) {
+    if (row.resolved || saving) return;
+    if (activeCycleId !== row.cropCycleId) setActiveCycleId(row.cropCycleId);
+    setException(next);
+    setBucketHalves(0);
     setMessage(null);
   }
 
   async function record(row: HarvestRow) {
+    const resultKind: ResultKind | null = bucketHalves > 0 ? "harvest_amount" : exception;
     if (!resultKind) return;
-    if (resultKind === "harvested" && (!bucketBand || !moreAvailability)) return;
-    if (resultKind === "problem_or_uncertain" && !note.trim()) return;
 
     try {
       setSaving(true);
@@ -161,9 +158,7 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
           taskId: task.task_id,
           cropCycleId: row.cropCycleId,
           resultKind,
-          bucketBand: resultKind === "harvested" ? bucketBand : null,
-          moreAvailability: resultKind === "harvested" ? moreAvailability : null,
-          note: note.trim() || null,
+          bucketHalves: resultKind === "harvest_amount" ? bucketHalves : null,
           idempotencyKey: idempotencyKey(task.task_id, row.cropCycleId, resultKind),
         }),
       });
@@ -176,10 +171,8 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
       }
 
       setActiveCycleId(null);
-      setResultKind(null);
-      setBucketBand(null);
-      setMoreAvailability(null);
-      setNote("");
+      setBucketHalves(0);
+      setException(null);
       await loadState();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Harvest result failed.");
@@ -197,95 +190,85 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
       <AtlasTaskCardFrame
         family="Harvest"
         familyDetail="Thursday"
-        title="Harvest"
+        title="Harvest Stems"
         subtitle="Elm Farm"
         timing={timing}
         completion={false}
       >
         <div className={styles.summary}>
-          <strong>Work this week’s harvest rows</strong>
-          <span>{resolved} / {total} resolved</span>
+          <strong>Ready to harvest</strong>
+          <span>{resolved} / {total} recorded · ½ bucket increments</span>
         </div>
 
-        {!state ? <p className={styles.loading}>Loading the crops in this week’s harvest window…</p> : null}
+        {!state ? <p className={styles.loading}>Loading this week’s crop and bed truth…</p> : null}
         {state?.error ? <p className={styles.error}>{state.error}</p> : null}
         {state?.ok && !total ? <p className={styles.empty}>No crop is in the Harvest window for this card.</p> : null}
 
         {state?.ok && total ? (
           <div className={styles.groups}>
-            {groups.map(([location, rows]) => (
-              <section className={styles.group} key={location}>
-                <span className={styles.groupHeading}>{location}</span>
+            {groups.map(([zone, rows]) => (
+              <section className={styles.group} key={zone}>
+                <header className={styles.groupHeader}><h3>{zone}</h3></header>
                 <div className={styles.rows}>
                   {rows.map((row) => {
                     const active = activeCycleId === row.cropCycleId;
-                    const needsHarvestDetail = active && resultKind === "harvested";
-                    const canRecord = Boolean(resultKind)
-                      && (resultKind !== "harvested" || Boolean(bucketBand && moreAvailability))
-                      && (resultKind !== "problem_or_uncertain" || Boolean(note.trim()));
+                    const visibleHalves = row.resolved && row.resultKind === "harvest_amount" ? row.bucketHalves ?? 0 : active ? bucketHalves : 0;
+                    const canRecord = active && (bucketHalves > 0 || Boolean(exception));
+                    const recordLabel = bucketHalves > 0
+                      ? `Record ${formatBuckets(bucketHalves)} bucket${bucketHalves === 2 ? "" : "s"}`
+                      : exception
+                        ? `Record ${exceptions.find((choice) => choice.value === exception)?.label ?? "result"}`
+                        : "Choose an amount or outcome";
+
                     return (
-                      <div className={styles.row} key={row.cropCycleId} data-resolved={row.resolved ? "true" : "false"}>
-                        <button className={styles.rowButton} type="button" onClick={() => openRow(row)} disabled={row.resolved} aria-expanded={active}>
-                          <span className={styles.check} aria-hidden="true">{row.resolved ? "✓" : ""}</span>
-                          <span className={styles.crop}>
+                      <div className={styles.row} key={row.cropCycleId} data-open={active ? "true" : "false"} data-resolved={row.resolved ? "true" : "false"}>
+                        <button
+                          className={styles.cropIdentity}
+                          type="button"
+                          onClick={() => openRow(row)}
+                          disabled={row.resolved}
+                          aria-expanded={active}
+                          aria-controls={`harvest-outcomes-${row.cropCycleId}`}
+                        >
+                          <span className={styles.cropText}>
                             <strong>{displayCrop(row)}</strong>
-                            <small>{row.cycleState?.replaceAll("_", " ") || "Harvest window"}</small>
+                            <small>{row.objectLabel}</small>
                           </span>
-                          <span className={styles.resultLabel}>{row.resolved ? resultLabel(row) : active ? "Close" : "Open"}</span>
+                          {row.resolved ? <span className={styles.resolvedLabel}>{resolvedLabel(row)}</span> : null}
                         </button>
 
+                        <div className={styles.bucketCounter} aria-label={`${displayCrop(row)} bucket count`}>
+                          <button
+                            type="button"
+                            aria-label={`Remove half bucket from ${displayCrop(row)}`}
+                            disabled={row.resolved || saving || !active || bucketHalves === 0}
+                            onClick={() => changeBucketCount(row, -1)}
+                          >−</button>
+                          <strong>{formatBuckets(visibleHalves)}</strong>
+                          <button
+                            type="button"
+                            aria-label={`Add half bucket to ${displayCrop(row)}`}
+                            disabled={row.resolved || saving}
+                            onClick={() => changeBucketCount(row, 1)}
+                          >+</button>
+                        </div>
+
                         {active ? (
-                          <div className={styles.editor}>
-                            <div className={styles.choices}>
-                              {results.map((choice) => (
+                          <div className={styles.exceptionPanel} id={`harvest-outcomes-${row.cropCycleId}`}>
+                            <span>What happened?</span>
+                            <div className={styles.outcomeGrid}>
+                              {exceptions.map((choice) => (
                                 <button
-                                  className={styles.choice}
-                                  data-active={resultKind === choice.value ? "true" : "false"}
-                                  key={choice.value}
                                   type="button"
-                                  onClick={() => {
-                                    setResultKind(choice.value);
-                                    setBucketBand(null);
-                                    setMoreAvailability(null);
-                                    setMessage(null);
-                                  }}
-                                >
-                                  {choice.label}
-                                </button>
+                                  data-active={exception === choice.value ? "true" : "false"}
+                                  key={choice.value}
+                                  onClick={() => chooseException(row, choice.value)}
+                                >{choice.label}</button>
                               ))}
                             </div>
-
-                            {needsHarvestDetail ? (
-                              <>
-                                <fieldset className={styles.fieldset}>
-                                  <legend>How much did you cut?</legend>
-                                  <div className={styles.bucketChoices}>
-                                    {buckets.map((choice) => (
-                                      <button className={styles.smallChoice} data-active={bucketBand === choice.value ? "true" : "false"} key={choice.value} type="button" onClick={() => setBucketBand(choice.value)}>{choice.label}</button>
-                                    ))}
-                                  </div>
-                                </fieldset>
-                                <fieldset className={styles.fieldset}>
-                                  <legend>What remains?</legend>
-                                  <div className={styles.moreChoices}>
-                                    {moreOptions.map((choice) => (
-                                      <button className={styles.smallChoice} data-active={moreAvailability === choice.value ? "true" : "false"} key={choice.value} type="button" onClick={() => setMoreAvailability(choice.value)}>{choice.label}</button>
-                                    ))}
-                                  </div>
-                                </fieldset>
-                              </>
-                            ) : null}
-
-                            {resultKind ? (
-                              <label className={styles.note}>
-                                <span>{resultKind === "problem_or_uncertain" ? "What’s wrong or uncertain?" : "Note (optional)"}</span>
-                                <textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} />
-                              </label>
-                            ) : null}
-
-                            {message ? <p className={styles.error}>{message}</p> : null}
+                            {message ? <p className={styles.errorInline}>{message}</p> : null}
                             <button className={styles.record} type="button" disabled={saving || !canRecord} onClick={() => void record(row)}>
-                              {saving ? "Recording…" : "Record this crop"}
+                              {saving ? "Recording…" : recordLabel}
                             </button>
                           </div>
                         ) : null}
