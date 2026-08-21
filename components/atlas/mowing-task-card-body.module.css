@@ -1,0 +1,139 @@
+.trail {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 12px 12px 16px;
+  border-top: 1px solid rgba(215, 204, 189, 0.62);
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.trail[data-has-next="true"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.trail > span {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  padding-top: 22px;
+  text-align: center;
+}
+
+.trail > span::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 3px;
+  left: 50%;
+  width: 11px;
+  height: 11px;
+  transform: translateX(-50%);
+  border: 1.5px solid #a0a199;
+  border-radius: 50%;
+  background: #fffefa;
+}
+
+.trail > span:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: calc(50% + 7px);
+  width: calc(100% - 14px);
+  height: 1px;
+  background: rgba(185, 183, 171, 0.65);
+}
+
+.trail b {
+  color: #85867f;
+  font-size: 10px;
+  line-height: 1.05;
+  font-weight: 900;
+}
+
+.trail small {
+  color: #9a9a93;
+  font-size: 8px;
+  line-height: 1.12;
+  font-weight: 760;
+}
+
+.done::before {
+  border-color: #8e9279 !important;
+  background: #8e9279 !important;
+}
+
+.done::after {
+  background: rgba(142, 146, 121, 0.65) !important;
+}
+
+.now::before {
+  top: 1px !important;
+  width: 15px !important;
+  height: 15px !important;
+  border: 2px solid #343542 !important;
+  background: #343542 !important;
+  box-shadow: 0 0 0 4px rgba(201, 192, 198, 0.32);
+}
+
+.now b {
+  color: var(--atlas-text);
+  font-weight: 950;
+}
+
+.next b,
+.next small {
+  color: #a1a29c;
+}
+
+.height {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 19px 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.height span,
+.tools > header span {
+  color: #858bb8;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.height strong {
+  color: var(--atlas-text);
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.tools {
+  display: grid;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.tools > header {
+  padding: 14px 18px 9px;
+}
+
+.toolRow {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-top: 1px solid rgba(223, 215, 202, 0.48);
+}
+
+.toolRow strong {
+  color: var(--atlas-text);
+  font-size: 14px;
+  line-height: 1.15;
+  font-weight: 910;
+}

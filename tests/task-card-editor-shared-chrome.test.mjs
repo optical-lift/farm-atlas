@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const frame = readFileSync("app/owner/task-card-lab/DominionCardFrame.tsx", "utf8");
-const frameStyles = readFileSync("app/owner/task-card-lab/dominion-card-frame.module.css", "utf8");
+const frame = readFileSync("components/atlas/task-card-frame.tsx", "utf8");
+const frameStyles = readFileSync("components/atlas/task-card-frame.module.css", "utf8");
+const editorFrame = readFileSync("app/owner/task-card-lab/DominionCardFrame.tsx", "utf8");
 const venue = readFileSync("app/owner/task-card-lab/VenueCardSpecimen.tsx", "utf8");
 const sow = readFileSync("app/owner/task-card-lab/SowCardSpecimen.tsx", "utf8");
 const weed = readFileSync("app/owner/task-card-lab/WeedCardSpecimen.tsx", "utf8");
@@ -11,7 +12,8 @@ const mow = readFileSync("app/owner/task-card-lab/MowCardSpecimen.tsx", "utf8");
 const harvest = readFileSync("app/owner/task-card-lab/HarvestCardSpecimen.tsx", "utf8");
 const remaining = readFileSync("app/owner/task-card-lab/RemainingDominionCardSpecimens.tsx", "utf8");
 
-test("shared Dominion frame owns the approved card top and default completion chrome", () => {
+test("shared production frame owns the approved card top and default completion chrome", () => {
+  assert.match(editorFrame, /@\/components\/atlas\/task-card-frame/);
   assert.match(frame, /<span>\{family\}<\/span>/);
   assert.match(frame, /familyDetail \? <small>\{familyDetail\}<\/small> : null/);
   assert.match(frame, /<h2>\{title\}<\/h2>/);

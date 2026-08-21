@@ -1,8 +1,10 @@
+import TaskRecipeDisclosure from "@/components/atlas/task-recipe-disclosure";
+
 import DominionCardFrame from "./DominionCardFrame";
 import localStyles from "./venue-local-rail.module.css";
 import styles from "./venue-card-specimen.module.css";
 
-type VenueResource = { label: string; restockLabel?: string };
+type VenueResource = { label: string; restockLabel?: string; recipe?: string[] };
 type VenueSection = { id: string; title: string; location?: string; resources: VenueResource[] };
 
 const tidySections: VenueSection[] = [
@@ -13,7 +15,19 @@ const tidySections: VenueSection[] = [
 ];
 
 const prepSections: VenueSection[] = [
-  { id: "coffee-bar", title: "Coffee bar", location: "Dining room", resources: [{ label: "Keurig" }, { label: "Coffee grounds", restockLabel: "Coffee grounds" }, { label: "Milk", restockLabel: "Milk" }, { label: "Flavored syrup", restockLabel: "Flavored syrup" }, { label: "Mug hutch" }] },
+  {
+    id: "coffee-bar",
+    title: "Coffee bar",
+    location: "Dining room",
+    resources: [
+      { label: "Keurig" },
+      { label: "Coffee grounds", restockLabel: "Coffee grounds" },
+      { label: "Milk", restockLabel: "Milk" },
+      { label: "Flavored syrup", restockLabel: "Flavored syrup" },
+      { label: "Mug hutch" },
+      { label: "Cold brew · paid evening", recipe: ["The exact paid-evening cold brew recipe has not been recorded in Atlas yet."] },
+    ],
+  },
   { id: "water", title: "Water", location: "Dining room", resources: [{ label: "Water dispenser" }, { label: "Clear cups", restockLabel: "Clear cups" }] },
   { id: "blooms", title: "Blooms", location: "For sale at Community Thursday", resources: [{ label: "12 posies" }, { label: "6 bouquets" }] },
 ];
@@ -32,11 +46,18 @@ function RestockDrawer({ label }: { label: string }) {
 
 function ReminderRow({ resource, id }: { resource: VenueResource; id: string }) {
   return (
-    <div className={`${styles.reminderRow} ${localStyles.localReminderRow}`}>
-      <input className={styles.reminderToggle} id={id} type="checkbox" />
-      <label className={styles.reminderCheck} htmlFor={id}><strong>{resource.label}</strong></label>
-      {resource.restockLabel ? <RestockDrawer label={resource.restockLabel} /> : null}
-    </div>
+    <>
+      <div className={`${styles.reminderRow} ${localStyles.localReminderRow}`}>
+        <input className={styles.reminderToggle} id={id} type="checkbox" />
+        <label className={styles.reminderCheck} htmlFor={id}><strong>{resource.label}</strong></label>
+        {resource.restockLabel ? <RestockDrawer label={resource.restockLabel} /> : null}
+      </div>
+      {resource.recipe ? (
+        <div style={{ padding: "0 0 10px" }}>
+          <TaskRecipeDisclosure>{resource.recipe.map((line) => <p key={line}>{line}</p>)}</TaskRecipeDisclosure>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -129,8 +150,8 @@ export default function VenueCardSpecimen() {
         <span>Venue grammar · owner-only note</span>
         <p>Community Thursday is one governed repeating event cycle: Tidy → Prep → Host → Reset. Hidden readiness requirements such as mowing being current by the day before the event affect release, but they do not become Worker-facing Trail nodes.</p>
         <p>Every Venue task uses one of only two interaction methods. Instructional / resource cards use titled rooms or stations, each with its own quiet local dot-and-line rail through the things to inspect. Tap-to-cross-off reminders remain memory aids; a + appears only where a restock request makes sense. Execution cards use the shared Atlas checklist for actions that must actually be accomplished.</p>
+        <p>Recipes are reusable task resources. Paid Thursday evening coffee prep can expose the saved cold brew recipe behind the same demure Recipe disclosure used by other task families.</p>
         <p>Restock requests stay inline beneath the exact resource that raised them; the + remains a compact circular exception affordance. Note inputs use iOS-safe text sizing so opening the keyboard does not zoom the card.</p>
-        <p>One-off Venue work does not invent a third card style. Stringing lights can use the checklist method. Painting the doors purple can use the instructional / resource method with Entry room ↔ Library as location context and Purple paint, Drop cloth, Roller, and Brush as the live resources.</p>
       </aside>
       <div className={styles.nextVariantLabel}><span>Same repeating event · unlocked next</span></div>
       <HostCard />

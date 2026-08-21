@@ -1,0 +1,42 @@
+.recipe {
+  width: fit-content;
+}
+
+.recipe > summary {
+  list-style: none;
+  cursor: pointer;
+  width: fit-content;
+  border: 1px solid rgba(139, 145, 194, 0.22);
+  border-radius: 999px;
+  background: rgba(239, 237, 244, 0.56);
+  color: #666a82;
+  padding: 8px 11px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 920;
+}
+
+.recipe > summary::-webkit-details-marker {
+  display: none;
+}
+
+.body {
+  margin-top: 8px;
+  max-width: 34rem;
+  border: 1px solid rgba(207, 196, 179, 0.72);
+  border-radius: 14px;
+  background: rgba(250, 248, 239, 0.86);
+  color: #5f625b;
+  padding: 11px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 760;
+}
+
+.body p {
+  margin: 0;
+}
+
+.body p + p {
+  margin-top: 7px;
+}

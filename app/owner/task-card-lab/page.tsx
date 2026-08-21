@@ -22,7 +22,7 @@ const families = [
   "Harvest",
   "Transplant",
   "Stewardship",
-  "One-off",
+  "Setup + Protect",
 ] as const;
 
 function Specimen({ index }: { index: number }) {
