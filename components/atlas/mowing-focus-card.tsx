@@ -67,6 +67,17 @@ export default function MowingFocusCard({ task }: { task: MowingFocusTask }) {
   const returnTo = task.returnTo || "/collections/mowing";
   const taskReady = readiness?.ok === true && readiness.executable === true;
   const blockedPresentation = readiness?.ok ? readiness.presentation ?? null : null;
+  const readinessResource = readiness?.resources?.find((resource) => {
+    const key = resource.resourceKey?.toLowerCase() ?? "";
+    const label = resource.resourceLabel?.toLowerCase() ?? "";
+    return key.includes("mower") || key.includes("battery") || label.includes("mower") || label.includes("battery");
+  }) ?? readiness?.resources?.[0] ?? null;
+  const resourceLabel = task.resourceLabel || readinessResource?.resourceLabel || null;
+  const resourceStatus = task.resourceStatus
+    || readinessResource?.readinessState
+    || readinessResource?.resourceStatus
+    || readinessResource?.requirementStatus
+    || null;
   const card = buildMowingCardViewModel({
     routeLabel: task.routeLabel,
     zoneLabel: task.zoneLabel,
@@ -220,8 +231,8 @@ export default function MowingFocusCard({ task }: { task: MowingFocusTask }) {
           <AtlasTaskCardFrame family={card.family} title={card.route} subtitle={card.place} completion={completion}>
             <MowingTaskCardBody
               card={card}
-              resourceLabel={task.resourceLabel}
-              resourceStatus={task.resourceStatus}
+              resourceLabel={resourceLabel}
+              resourceStatus={resourceStatus}
               issueChoices={issueChoices}
               issueDisabled={!taskReady || saving}
               onEquipmentIssue={(issue, issueNote) => void save("equipment_or_area_problem", [issue, issueNote].filter(Boolean).join(" · "))}
