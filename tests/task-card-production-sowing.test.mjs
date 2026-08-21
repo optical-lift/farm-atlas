@@ -51,6 +51,15 @@ test("Sow card shows canonical succession and Venue-style Zone + bed rows", () =
   assert.match(successionMigration, /anna_20260817_sow_procut_orange_fr11_fr12_after_turnover/);
 });
 
+test("patch sow resolves a real bed through its crop cycle instead of inventing a target", () => {
+  assert.match(adapter, /async function canonicalSowTarget/);
+  assert.match(adapter, /\.from\("crop_cycles"\)/);
+  assert.match(adapter, /\.from\("growing_objects"\)/);
+  assert.match(adapter, /canonicalTarget\.targetLabel/);
+  assert.match(adapter, /canonicalTarget\.zoneLabel/);
+  assert.doesNotMatch(adapter, /"Growing bed"/);
+});
+
 test("normal direct sow keeps seed remainder result without asking the worker to time sowing", () => {
   assert.match(sow, /Used the rest/);
   assert.match(sow, /Some left/);
