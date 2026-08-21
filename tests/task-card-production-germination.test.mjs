@@ -7,6 +7,7 @@ function read(path) {
 }
 
 const germination = read("app/task-focus/[taskId]/GerminationFocusPage.tsx");
+const germinationRoute = read("app/api/atlas/germination-check/route.ts");
 const cropBody = read("components/atlas/crop-cycle-task-card-body.tsx");
 const frame = read("components/atlas/task-card-frame.tsx");
 
@@ -34,10 +35,29 @@ test("live Germination preserves crop-cycle consequences for each observation", 
   assert.match(germination, /Patchy[\s\S]*germinated[\s\S]*patch/);
   assert.match(germination, /choice === "Failed"[\s\S]*action: "failed"/);
   assert.match(germination, /Too early to tell[\s\S]*not_yet/);
-  assert.match(germination, /Failed: "Bed open · choose next crop"/);
+  assert.match(germination, /choice === "Failed"\) return "Bed open · choose next crop"/);
   assert.match(germination, /harvestRange && choice !== "Failed"/);
   assert.doesNotMatch(germination, /Failed: "Restart"/);
   assert.doesNotMatch(germination, /Failed: "Owner review"/);
+});
+
+test("Patchy stays an observation while gap size determines the management consequence", () => {
+  assert.match(germination, /small: targetSpacingInches \* 2/);
+  assert.match(germination, /large: targetSpacingInches \* 3/);
+  assert.match(germination, /observedGapInches >= targetSpacingInches \* 3 \? "Patch gaps" : "Keep growing"/);
+  assert.match(germination, /standCondition: selected === "Patchy" \? "patchy" : null/);
+  assert.match(germination, /observedGapInches: gapInches/);
+  assert.match(germination, /submit\("Patchy", gaps\.small\)/);
+  assert.match(germination, /submit\("Patchy", gaps\.large\)/);
+  assert.match(germinationRoute, /owner_operator_record_germination_observation_v4/);
+  assert.match(germinationRoute, /record_germination_observation_for_member_v4/);
+});
+
+test("Germination descriptor resolves the canonical production succession instead of hardcoding a crop-check label", () => {
+  assert.match(germination, /familyDetail=\{successionNumber \? `Succession \$\{successionNumber\}` : undefined\}/);
+  assert.match(germinationRoute, /from\("production_successions"\)/);
+  assert.match(germinationRoute, /select\("sequence_number"\)/);
+  assert.doesNotMatch(germination, /crop check/i);
 });
 
 test("crop-cycle card uses only dated biological truth it actually has", () => {
