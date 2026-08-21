@@ -1,4 +1,4 @@
-/* Day Route v1 refinements: keep the route quiet and let drawers carry secondary history. */
+/* Day Route v1 refinements: keep the route quiet and let the full task carry secondary history. */
 
 .atlas-day-timeline-group {
   padding-top: 4px !important;
@@ -6,6 +6,20 @@
 
 /* The route is the summary. Detailed instructions live on the opened task. */
 .atlas-day-route-spine > .atlas-day-task-card > em {
+  display: none !important;
+}
+
+/* A future day has only the command topline. Give that capsule a real bottom edge. */
+.atlas-day-command-header:has(> .atlas-day-command-topline:last-child) {
+  padding-bottom: 11px !important;
+}
+
+/* Task-row tap is primary navigation now; the route dot remains the completion control. */
+.atlas-day-route-spine .atlas-day-task-card > summary {
+  cursor: pointer;
+}
+
+.atlas-day-route-spine .atlas-day-task-card > summary .atlas-journal-row-caret {
   display: none !important;
 }
 
