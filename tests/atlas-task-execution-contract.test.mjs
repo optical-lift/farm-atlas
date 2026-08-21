@@ -10,6 +10,8 @@ const move = read("components/atlas/task-move-spine.tsx");
 const results = read("components/atlas/task-primary-result-controls.tsx");
 const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 const checklist = read("components/atlas/execution-checklist-task-detail.tsx");
+const taskCardFrame = read("components/atlas/task-card-frame.tsx");
+const mowingBody = read("components/atlas/mowing-task-card-body.tsx");
 const mowing = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
 const display = read("lib/atlas/task-display.ts");
 const migration = read("supabase/migrations/20260810144000_atlas_task_execution_contract_v1.sql");
@@ -43,11 +45,14 @@ test("the primary result language is shared instead of reinvented per card", () 
   assert.match(mowing, /TaskPrimaryResultControls/);
 });
 
-test("mowing is an instruction task, not an operating-system lecture", () => {
-  assert.match(mowing, /TaskExecutionBrief/);
-  assert.match(mowing, /Mow · \$\{task\.routeLabel\}/);
-  assert.match(move, />Mowing next</);
-  assert.match(move, /Pick up sticks \+ move hoses first/);
+test("mowing uses the approved family card instead of an operating-system lecture", () => {
+  assert.match(mowing, /AtlasTaskCardFrame/);
+  assert.match(mowing, /MowingTaskCardBody/);
+  assert.match(mowing, /buildMowingCardViewModel/);
+  assert.match(taskCardFrame, /data-atlas-task-card-frame="true"/);
+  assert.match(mowingBody, /Mow height/);
+  assert.match(mowingBody, /Equipment/);
+  assert.doesNotMatch(mowing, /TaskExecutionBrief/);
   assert.doesNotMatch(mowing, /What time means/i);
   assert.doesNotMatch(mowing, /What is physically true/i);
   assert.doesNotMatch(mowing, /Time does not claim/i);
