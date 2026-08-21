@@ -84,7 +84,6 @@ export default function DirectSowFocusPage({ task }: { task: DirectSowFocusTask 
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const [seedResult, setSeedResult] = useState<SeedResult | null>(null);
   const [remainingQuantity, setRemainingQuantity] = useState("");
-  const [actualMinutes, setActualMinutes] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -106,14 +105,9 @@ export default function DirectSowFocusPage({ task }: { task: DirectSowFocusTask 
   ] as const;
 
   async function finishSowing() {
-    const minutes = Number(actualMinutes);
     const exactRemaining = seedResult === "exact_remaining" ? Number(remainingQuantity) : null;
     if (!seedResult) {
       setMessage("Tell Atlas what is left in the seed lot.");
-      return;
-    }
-    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) {
-      setMessage("Enter the number of minutes this sowing took.");
       return;
     }
     if (seedResult === "exact_remaining" && (exactRemaining === null || !Number.isFinite(exactRemaining) || exactRemaining <= 0)) {
@@ -131,7 +125,6 @@ export default function DirectSowFocusPage({ task }: { task: DirectSowFocusTask 
         body: JSON.stringify({
           taskId: task.id,
           result: seedResult,
-          actualMinutes: minutes,
           remainingQuantity: seedResult === "exact_remaining" ? exactRemaining : null,
           note: surpriseNote || null,
         }),
@@ -191,7 +184,6 @@ export default function DirectSowFocusPage({ task }: { task: DirectSowFocusTask 
           {seedResult === "exact_remaining" ? (
             <label className={styles.inlineField}><span>Seeds left</span><input inputMode="numeric" min="1" step="1" type="number" value={remainingQuantity} onChange={(event) => setRemainingQuantity(event.target.value)} /></label>
           ) : null}
-          <label className={styles.inlineField}><span>Minutes this took</span><input inputMode="numeric" min="1" max="1440" step="1" type="number" value={actualMinutes} onChange={(event) => setActualMinutes(event.target.value)} /></label>
           <button type="button" className={styles.commitFinish} disabled={saving || !seedResult} onClick={() => void finishSowing()}>{saving ? "Saving…" : "Finish sowing"}</button>
         </section>
       ) : null}
