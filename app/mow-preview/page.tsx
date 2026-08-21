@@ -51,25 +51,28 @@ function prettyDate(value: string) {
 export default async function MowPreviewPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const query = await searchParams;
   const ruleId = firstValue(query.ruleId);
+  const ruleLabel = firstValue(query.label)?.trim();
   const date = firstValue(query.date);
-  if (!ruleId || !/^[0-9a-f-]{36}$/i.test(ruleId) || !validDate(date)) notFound();
+  if ((!ruleId && !ruleLabel) || (ruleId && !/^[0-9a-f-]{36}$/i.test(ruleId)) || !validDate(date)) notFound();
 
   const session = await getAtlasSession();
   if (!session) notFound();
+  const farmIds = Array.from(new Set(session.memberships.map((membership) => membership.farmId).filter(Boolean)));
+  if (!farmIds.length) notFound();
 
-  const { data: ruleData, error: ruleError } = await atlasSupabase
+  let ruleQuery = atlasSupabase
     .schema("atlas")
     .from("rhythm_rules")
     .select("farm_id, label, applicability, metadata")
-    .eq("id", ruleId)
     .eq("rhythm_key", "mowing")
     .eq("status", "active")
-    .limit(1)
-    .maybeSingle();
+    .in("farm_id", farmIds);
+  ruleQuery = ruleId ? ruleQuery.eq("id", ruleId) : ruleQuery.eq("label", ruleLabel as string);
+  const { data: ruleData, error: ruleError } = await ruleQuery.limit(1).maybeSingle();
   if (ruleError || !ruleData) notFound();
   const rule = ruleData as RuleRow;
   const farmId = text(rule.farm_id);
-  if (!farmId || !session.memberships.some((membership) => membership.farmId === farmId)) notFound();
+  if (!farmId) notFound();
 
   const objectKey = text(rule.applicability?.objectKey);
   if (!objectKey) notFound();
