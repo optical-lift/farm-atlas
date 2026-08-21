@@ -8,13 +8,15 @@ function read(path) {
 
 const frame = read("components/atlas/task-card-frame.tsx");
 const editorFrame = read("app/owner/task-card-lab/DominionCardFrame.tsx");
-const mowing = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
+const mowingPage = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
+const mowing = read("components/atlas/mowing-focus-card.tsx");
 const mowingBody = read("components/atlas/mowing-task-card-body.tsx");
 const mowingViewModel = read("lib/atlas/mowing-card-view-model.ts");
 
 test("Task Card Editor and live task cards now share one production frame", () => {
   assert.match(frame, /data-atlas-task-card-frame="true"/);
   assert.match(editorFrame, /@\/components\/atlas\/task-card-frame/);
+  assert.match(mowingPage, /MowingFocusCard/);
   assert.match(mowing, /AtlasTaskCardFrame/);
 });
 
