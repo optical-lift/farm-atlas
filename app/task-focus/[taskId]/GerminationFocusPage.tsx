@@ -8,7 +8,7 @@ import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import styles from "./GerminationFocus.module.css";
 
 type GerminationOutcome = "thin" | "on_target" | "patch";
-type GerminationAction = "not_yet" | "germinated" | "failed_or_uncertain";
+type GerminationAction = "not_yet" | "germinated" | "failed";
 type GerminationChoice = "Strong" | "Patchy" | "Failed" | "Too early to tell";
 
 type GerminationTask = {
@@ -31,7 +31,7 @@ type GerminationTask = {
 const nextMove: Record<GerminationChoice, string> = {
   Strong: "Continue",
   Patchy: "Gap fill",
-  Failed: "Owner review",
+  Failed: "Bed open · choose next crop",
   "Too early to tell": "Wait",
 };
 
@@ -68,7 +68,7 @@ function cropName(cropLabel: string, variety: string | null) {
 function backendResult(choice: GerminationChoice): { action: GerminationAction; spacingOutcome?: GerminationOutcome; note?: string } {
   if (choice === "Strong") return { action: "germinated", spacingOutcome: "on_target" };
   if (choice === "Patchy") return { action: "germinated", spacingOutcome: "patch" };
-  if (choice === "Failed") return { action: "failed_or_uncertain", note: "Germination failed." };
+  if (choice === "Failed") return { action: "failed", note: "Germination failed." };
   return { action: "not_yet" };
 }
 
@@ -91,7 +91,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
     if (sownDate) steps.push({ label: "Sown", detail: prettyDate(sownDate), state: "done" });
     steps.push({ label: "Germination", detail: prettyDate(task.dueDate) || germinationRange || "Now", state: "now" });
     steps.push({ label: "Next move", detail: choice ? nextMove[choice] : "from result", state: "later" });
-    if (harvestRange) steps.push({ label: "Harvest", detail: harvestRange, state: "later" });
+    if (harvestRange && choice !== "Failed") steps.push({ label: "Harvest", detail: harvestRange, state: "later" });
     return steps;
   }, [choice, germinationRange, harvestRange, sownDate, task.dueDate]);
 
@@ -112,10 +112,10 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
           note: result.note,
         }),
       });
-      const data = await response.json() as { ok?: boolean; error?: string; details?: string };
+      const data = await response.json() as { ok?: boolean; bedReleased?: boolean; error?: string; details?: string };
       if (!response.ok || !data.ok) throw new Error(data.details || data.error || "Germination update failed.");
-      setMessage(`${selected} recorded.`);
-      window.setTimeout(() => window.location.assign(returnDestination()), 450);
+      setMessage(selected === "Failed" && data.bedReleased ? "Bed open · crop decision needed." : `${selected} recorded.`);
+      window.setTimeout(() => window.location.assign(returnDestination()), 650);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Germination update failed.");
       setSaving(null);
@@ -138,6 +138,8 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
     </div>
   );
 
+  const failed = choice === "Failed";
+
   return (
     <main className={styles.shell}>
       <header className={styles.top}>
@@ -157,8 +159,8 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
             <CropCycleTaskCardBody
               state={{
                 crop: displayCrop,
-                stage: sownDate ? `Sown ${prettyDate(sownDate)}` : task.cycleState || null,
-                harvest: harvestRange ? `Harvest watch ${harvestRange}` : null,
+                stage: failed ? "Planting failed" : sownDate ? `Sown ${prettyDate(sownDate)}` : task.cycleState || null,
+                harvest: !failed && harvestRange ? `Harvest watch ${harvestRange}` : null,
                 trail,
                 trailLabel: `${task.objectLabel} crop-cycle germination trail`,
               }}
