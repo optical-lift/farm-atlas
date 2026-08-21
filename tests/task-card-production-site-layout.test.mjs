@@ -8,42 +8,51 @@ function read(path) {
 
 const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
 const detail = read("components/atlas/site-layout-task-detail.tsx");
+const migration = read("supabase/migrations/20260821140500_setup_stake_string_action_requirements_v1.sql");
 
 test("only canonical site_layout work enters the production Setup family", () => {
   assert.match(canonical, /function isSiteLayoutTask\(task: AtlasTaskCard\)/);
   assert.match(canonical, /return task\.task_type === "site_layout"/);
-  assert.match(canonical, /<SiteLayoutTaskDetail \{\.\.\.props\} initialReadiness=\{initialReadiness\} \/>/);
+  assert.match(canonical, /loadSiteLayoutRecipe/);
+  assert.match(canonical, /recipeLabel=\{recipe\.label\}/);
+  assert.match(canonical, /recipeTools=\{recipe\.tools\}/);
 });
 
 test("Setup is a standalone Task Card Editor family rather than an old generic task wrapper", () => {
   assert.match(detail, /AtlasTaskCardFrame/);
   assert.match(detail, /family="Setup"/);
   assert.match(detail, /data-atlas-site-layout-card="true"/);
+  assert.match(detail, /data-atlas-setup-display="task-card-lab-v1"/);
   assert.doesNotMatch(detail, /WorkerReadyAssignedTaskExecutionShell/);
   assert.doesNotMatch(detail, /TaskExecutionBrief/);
   assert.doesNotMatch(detail, /atlas-phone-top|atlas-phone-brand|atlas-note-plus/);
 });
 
-test("Setup card reads steps, layout dimensions, and materials from live task truth", () => {
-  assert.match(detail, /metadata\.execution_how/);
-  assert.match(detail, /metadata\.layout_dimensions/);
-  assert.match(detail, /dimensions\.bed_width_ft/);
-  assert.match(detail, /dimensions\.walkway_width_ft/);
-  assert.match(detail, /metadata\.materials_note/);
-  assert.match(detail, /task\.resource_requirements/);
-  assert.match(detail, />Steps</);
-  assert.match(detail, /Bed width/);
-  assert.match(detail, /Walkway width/);
-  assert.match(detail, /Tools \+ materials/);
+test("Setup mockup grammar puts real place and dimensions in the subtitle and tools in simple rows", () => {
+  assert.match(detail, /metadata\.display_subject/);
+  assert.match(detail, /metadata\.display_detail/);
+  assert.match(detail, /const subtitle = \[subject, detail\]/);
+  assert.match(detail, />Tools</);
+  assert.match(detail, /atlas-setup-tool-list/);
+  assert.doesNotMatch(detail, /metadata\.execution_how/);
+  assert.doesNotMatch(detail, /metadata\.layout_dimensions/);
+  assert.doesNotMatch(detail, />Steps</);
+  assert.doesNotMatch(detail, /Bed width/);
+  assert.doesNotMatch(detail, /Walkway width/);
+  assert.doesNotMatch(detail, /Tools \+ materials/);
 });
 
-test("Setup production UI does not copy specimen-only tool values or hardcode live examples", () => {
-  assert.doesNotMatch(detail, /Scissors/);
-  assert.doesNotMatch(detail, /Measuring tape/);
-  assert.doesNotMatch(detail, /Restock/);
-  assert.doesNotMatch(detail, /approximately 120/);
-  assert.doesNotMatch(detail, /Field Rows · Back Half/);
-  assert.doesNotMatch(detail, /U-Pick Beds \+ Walkways/);
+test("Setup tools come from the canonical action recipe instead of specimen strings embedded in the component", () => {
+  assert.match(canonical, /action_requirement_templates/);
+  assert.match(canonical, /required_resource_keys/);
+  assert.match(canonical, /\.from\("resources"\)/);
+  assert.doesNotMatch(detail, /Wooden stakes|String|Scissors|Measuring tape/);
+  assert.match(migration, /measure_stake_string_v1/);
+  assert.match(migration, /Stake \+ String Beds/);
+  assert.match(migration, /wooden_layout_stakes/);
+  assert.match(migration, /layout_string/);
+  assert.match(migration, /layout_scissors/);
+  assert.match(migration, /layout_measuring_tape/);
 });
 
 test("Setup keeps canonical readiness gating and canonical task transitions", () => {
