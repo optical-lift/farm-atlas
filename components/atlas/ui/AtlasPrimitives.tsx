@@ -57,10 +57,10 @@ export function AtlasTopBar({
 }: AtlasTopBarProps) {
   return (
     <header className={classes("atlas-topbar", "atlas-phone-top", "atlas-dashboard-top", className)} {...props}>
-      <div className="atlas-phone-brand atlas-topbar-brand">
+      <Link href="/" className="atlas-phone-brand atlas-topbar-brand" aria-label="Atlas Home">
         <span className="atlas-phone-kicker">{kicker}</span>
         <span className="atlas-phone-title">{title}</span>
-      </div>
+      </Link>
       {status ? <div className="atlas-topbar-status">{status}</div> : <span aria-hidden="true" />}
       {action ? <div className="atlas-topbar-action">{action}</div> : null}
     </header>
