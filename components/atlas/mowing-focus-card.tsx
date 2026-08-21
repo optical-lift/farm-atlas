@@ -7,6 +7,7 @@ import MowingTaskCardBody from "@/components/atlas/mowing-task-card-body";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import TaskPrimaryResultControls from "@/components/atlas/task-primary-result-controls";
 import { buildMowingCardViewModel } from "@/lib/atlas/mowing-card-view-model";
+import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 import type { WorkerReadinessResponse } from "@/lib/atlas/worker-readiness";
 import styles from "./mowing-focus-card.module.css";
 
@@ -30,15 +31,25 @@ export type MowingFocusTask = {
   nextCheckDate: string | null;
   currentNote: string | null;
   canCloseRoute: boolean;
+  resultMode?: "clock" | "canonical";
+  actionKey?: string | null;
+  workClass?: string | null;
   returnTo?: string | null;
 };
 
 type Outcome = "mowed_full" | "mowed_partial" | "acceptable_no_cut" | "too_wet" | "equipment_or_area_problem" | "closed_not_mowable";
 
-const unfinishedChoices: Array<{ value: Exclude<Outcome, "mowed_full" | "closed_not_mowable">; title: string; detail: string }> = [
+type UnfinishedChoice = { value: Exclude<Outcome, "mowed_full" | "closed_not_mowable">; title: string; detail: string };
+
+const clockUnfinishedChoices: UnfinishedChoice[] = [
   { value: "mowed_partial", title: "Partly mowed", detail: "Record what remains" },
   { value: "acceptable_no_cut", title: "Still acceptable", detail: "No cut needed today" },
   { value: "too_wet", title: "Too wet", detail: "Choose when to check again" },
+  { value: "equipment_or_area_problem", title: "Problem found", detail: "Record the equipment or area problem" },
+];
+
+const canonicalUnfinishedChoices: UnfinishedChoice[] = [
+  { value: "mowed_partial", title: "Partly mowed", detail: "Record what remains" },
   { value: "equipment_or_area_problem", title: "Problem found", detail: "Record the equipment or area problem" },
 ];
 
@@ -65,6 +76,7 @@ export default function MowingFocusCard({ task }: { task: MowingFocusTask }) {
   const [message, setMessage] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<WorkerReadinessResponse | null>(null);
   const returnTo = task.returnTo || "/collections/mowing";
+  const resultMode = task.resultMode ?? "clock";
   const taskReady = readiness?.ok === true && readiness.executable === true;
   const blockedPresentation = readiness?.ok ? readiness.presentation ?? null : null;
   const readinessResource = readiness?.resources?.find((resource) => {
@@ -88,6 +100,7 @@ export default function MowingFocusCard({ task }: { task: MowingFocusTask }) {
     equipmentGroup: task.equipmentGroup,
   });
   const issueChoices = mowingIssueChoices(task.equipmentGroup);
+  const unfinishedChoices = resultMode === "clock" ? clockUnfinishedChoices : canonicalUnfinishedChoices;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -111,6 +124,40 @@ export default function MowingFocusCard({ task }: { task: MowingFocusTask }) {
     return () => controller.abort();
   }, [task.id]);
 
+  async function saveCanonical(selectedOutcome: Outcome, resultNote: string) {
+    if (selectedOutcome === "mowed_full") {
+      await postAtlasTaskTransition({
+        taskId: task.id,
+        transition: "done",
+        laneKey: task.actionKey || undefined,
+        workKey: task.actionKey || undefined,
+        payload: { workClass: task.workClass || undefined, mowingCardFamily: true, resultMode: "canonical" },
+      });
+      return;
+    }
+    if (selectedOutcome === "mowed_partial") {
+      await postAtlasTaskTransition({
+        taskId: task.id,
+        transition: "partial",
+        note: resultNote,
+        reason: resultNote,
+        laneKey: task.actionKey || undefined,
+        workKey: task.actionKey || undefined,
+        payload: { workClass: task.workClass || undefined, completionPercent: Number(completionPercent), mowingCardFamily: true, resultMode: "canonical" },
+      });
+      return;
+    }
+    await postAtlasTaskTransition({
+      taskId: task.id,
+      transition: "blocked",
+      note: resultNote,
+      reason: resultNote,
+      laneKey: task.actionKey || undefined,
+      workKey: task.actionKey || undefined,
+      payload: { workClass: task.workClass || undefined, mowingCardFamily: true, resultMode: "canonical" },
+    });
+  }
+
   async function save(selectedOutcome: Outcome, explicitNote?: string) {
     if (!taskReady) {
       setMessage("This job is not ready yet.");
@@ -119,7 +166,7 @@ export default function MowingFocusCard({ task }: { task: MowingFocusTask }) {
 
     const resultNote = explicitNote?.trim() || note.trim();
     const needsPercent = selectedOutcome === "mowed_partial";
-    const needsRecheck = selectedOutcome === "acceptable_no_cut" || selectedOutcome === "too_wet";
+    const needsRecheck = resultMode === "clock" && (selectedOutcome === "acceptable_no_cut" || selectedOutcome === "too_wet");
     const needsNote = selectedOutcome === "mowed_partial" || selectedOutcome === "equipment_or_area_problem";
     const validPercent = Number.isInteger(Number(completionPercent)) && Number(completionPercent) >= 1 && Number(completionPercent) <= 99;
     const complete = (!needsPercent || validPercent) && (!needsRecheck || Boolean(recheckDate)) && (!needsNote || Boolean(resultNote));
@@ -131,20 +178,24 @@ export default function MowingFocusCard({ task }: { task: MowingFocusTask }) {
     try {
       setSaving(true);
       setMessage(null);
-      const response = await fetch("/api/atlas/mowing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          taskId: task.id,
-          outcome: selectedOutcome,
-          completionPercent: needsPercent ? Number(completionPercent) : selectedOutcome === "mowed_full" ? 100 : null,
-          recheckDate: needsRecheck ? recheckDate : null,
-          note: resultNote || null,
-          idempotencyKey: `mowing:${task.id}:${selectedOutcome}:${Date.now()}`,
-        }),
-      });
-      const data = await response.json() as { ok?: boolean; error?: string };
-      if (!response.ok || !data.ok) throw new Error(data.error || "Mowing result failed.");
+      if (resultMode === "canonical") {
+        await saveCanonical(selectedOutcome, resultNote);
+      } else {
+        const response = await fetch("/api/atlas/mowing", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
+            taskId: task.id,
+            outcome: selectedOutcome,
+            completionPercent: needsPercent ? Number(completionPercent) : selectedOutcome === "mowed_full" ? 100 : null,
+            recheckDate: needsRecheck ? recheckDate : null,
+            note: resultNote || null,
+            idempotencyKey: `mowing:${task.id}:${selectedOutcome}:${Date.now()}`,
+          }),
+        });
+        const data = await response.json() as { ok?: boolean; error?: string };
+        if (!response.ok || !data.ok) throw new Error(data.error || "Mowing result failed.");
+      }
 
       if (selectedOutcome === "mowed_full") {
         const completionEvent = new CustomEvent("atlas:task-completed", {
@@ -164,7 +215,7 @@ export default function MowingFocusCard({ task }: { task: MowingFocusTask }) {
   }
 
   const needsPercent = outcome === "mowed_partial";
-  const needsRecheck = outcome === "acceptable_no_cut" || outcome === "too_wet";
+  const needsRecheck = resultMode === "clock" && (outcome === "acceptable_no_cut" || outcome === "too_wet");
   const needsNote = outcome === "mowed_partial" || outcome === "equipment_or_area_problem";
 
   const completion = taskReady ? (
@@ -213,7 +264,7 @@ export default function MowingFocusCard({ task }: { task: MowingFocusTask }) {
         </section>
       ) : null}
 
-      {task.canCloseRoute ? (
+      {resultMode === "clock" && task.canCloseRoute ? (
         <details className="atlas-task-more-outcomes">
           <summary><span>Management</span><b aria-hidden="true">⌄</b></summary>
           <div className="atlas-task-more-outcomes-body">
@@ -235,6 +286,7 @@ export default function MowingFocusCard({ task }: { task: MowingFocusTask }) {
               resourceStatus={resourceStatus}
               issueChoices={issueChoices}
               issueDisabled={!taskReady || saving}
+              showRecurrence={resultMode === "clock"}
               onEquipmentIssue={(issue, issueNote) => void save("equipment_or_area_problem", [issue, issueNote].filter(Boolean).join(" · "))}
             />
 
@@ -255,9 +307,9 @@ export default function MowingFocusCard({ task }: { task: MowingFocusTask }) {
                 <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.48 }}>{blockedPresentation?.body ?? "This job can’t be done yet."}</p>
                 {blockedPresentation?.detail ? <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.45, opacity: .7 }}>{blockedPresentation.detail}</p> : null}
               </section>
-            ) : (
+            ) : resultMode === "clock" ? (
               <div style={{ padding: "0 18px 16px" }}><MaintenanceDirectiveStrip taskId={task.id} /></div>
-            )}
+            ) : null}
 
             {task.currentNote ? <p className={styles.message}>Previous note · {task.currentNote}</p> : null}
             {message ? <p className={styles.message}>{message}</p> : null}
