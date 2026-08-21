@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import CropCycleTaskCardBody, { type CropCycleTrailStep } from "@/components/atlas/crop-cycle-task-card-body";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
@@ -91,9 +91,9 @@ function inchesLabel(value: number) {
 export default function GerminationFocusPage({ task }: { task: GerminationTask }) {
   const [choice, setChoice] = useState<GerminationChoice | null>(null);
   const [observedGapInches, setObservedGapInches] = useState<number | null>(null);
-  const [successionNumber, setSuccessionNumber] = useState<number | null>(task.successionNumber ?? null);
   const [saving, setSaving] = useState<GerminationChoice | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const successionNumber = task.successionNumber ?? null;
   const displayCrop = cropName(task.cropLabel, task.variety);
   const sownDate = task.sownDate || task.plantedDate || null;
   const germinationRange = prettyRange(task.expectedGerminationStart, task.expectedGerminationEnd);
@@ -105,35 +105,6 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
     : task.dueDate
       ? `Check stand · ${prettyDate(task.dueDate)}`
       : undefined;
-
-  useEffect(() => {
-    if (task.successionNumber) {
-      setSuccessionNumber(task.successionNumber);
-      return;
-    }
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        const response = await fetch(`/api/atlas/germination-check?taskId=${encodeURIComponent(task.id)}`, {
-          headers: { Accept: "application/json" },
-          cache: "no-store",
-        });
-        if (!response.ok) return;
-        const data = await response.json() as { task?: { successionNumber?: number | null } };
-        const sequence = data.task?.successionNumber;
-        if (!cancelled && typeof sequence === "number" && Number.isInteger(sequence) && sequence > 0) {
-          setSuccessionNumber(sequence);
-        }
-      } catch {
-        // Succession is descriptive context; the germination observation must remain usable without it.
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [task.id, task.successionNumber]);
 
   const trail = useMemo<CropCycleTrailStep[]>(() => {
     const steps: CropCycleTrailStep[] = [];

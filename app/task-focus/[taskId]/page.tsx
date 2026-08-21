@@ -63,6 +63,7 @@ type CropContext = {
   expectedHarvestStart: string | null;
   expectedHarvestEnd: string | null;
   targetSpacingInches: number | null;
+  successionNumber: number | null;
 };
 
 type HarvestAvailability = {
@@ -425,8 +426,34 @@ async function loadCropContext(task: TaskRow): Promise<CropContext> {
     plantingMethod = text((data as { planting_method?: string | null } | null)?.planting_method) || null;
   }
 
+  const resolvedCycleId = text(cycle?.id) || cycleId || null;
+  let successionNumber: number | null = null;
+  if (resolvedCycleId) {
+    const direct = await atlasSupabase
+      .schema("atlas")
+      .from("production_successions")
+      .select("sequence_number")
+      .eq("crop_cycle_id", resolvedCycleId)
+      .order("sequence_number", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    successionNumber = numberOrNull(direct.data?.sequence_number);
+
+    if (!successionNumber) {
+      const grouped = await atlasSupabase
+        .schema("atlas")
+        .from("production_successions")
+        .select("sequence_number")
+        .contains("metadata", { crop_cycle_ids: [resolvedCycleId] })
+        .order("sequence_number", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      successionNumber = numberOrNull(grouped.data?.sequence_number);
+    }
+  }
+
   return {
-    cropCycleId: text(cycle?.id) || cycleId || null,
+    cropCycleId: resolvedCycleId,
     cropLabel: text(profile?.crop_label) || text(cycle?.crop_label) || text(metadata.crop_label) || text(metadata.crop) || task.title.split("—").pop()?.split("·")[0]?.trim() || "Crop",
     variety: text(profile?.variety) || text(cycle?.variety) || text(metadata.variety) || null,
     sownDate: text(cycle?.sown_date) || null,
@@ -438,6 +465,7 @@ async function loadCropContext(task: TaskRow): Promise<CropContext> {
     expectedHarvestStart: text(cycle?.expected_harvest_watch_start) || null,
     expectedHarvestEnd: text(cycle?.expected_harvest_watch_end) || null,
     targetSpacingInches: spacingFromProfile(profile?.metadata),
+    successionNumber,
   };
 }
 
@@ -508,7 +536,7 @@ export default async function TaskFocusPage({ params, searchParams }: { params: 
   const [objectLabel, crop] = await Promise.all([loadObjectLabel(task.id), loadCropContext(task)]);
   return (
     <div className="atlas-focused-task-only">
-      <GerminationFocusPage task={{ id: task.id, cropLabel: crop.cropLabel, variety: crop.variety, objectLabel, dueDate: task.due_date, sownDate: crop.sownDate, plantedDate: crop.plantedDate, plantingMethod: crop.plantingMethod, cycleState: crop.cycleState, expectedGerminationStart: crop.expectedGerminationStart, expectedGerminationEnd: crop.expectedGerminationEnd, expectedHarvestStart: crop.expectedHarvestStart, expectedHarvestEnd: crop.expectedHarvestEnd, targetSpacingInches: crop.targetSpacingInches }} />
+      <GerminationFocusPage task={{ id: task.id, cropLabel: crop.cropLabel, variety: crop.variety, objectLabel, dueDate: task.due_date, sownDate: crop.sownDate, plantedDate: crop.plantedDate, plantingMethod: crop.plantingMethod, cycleState: crop.cycleState, expectedGerminationStart: crop.expectedGerminationStart, expectedGerminationEnd: crop.expectedGerminationEnd, expectedHarvestStart: crop.expectedHarvestStart, expectedHarvestEnd: crop.expectedHarvestEnd, targetSpacingInches: crop.targetSpacingInches, successionNumber: crop.successionNumber }} />
     </div>
   );
 }
