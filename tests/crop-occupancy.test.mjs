@@ -92,13 +92,14 @@ test("oriented bed-map truth remains available without forcing decorative geomet
   assert.match(css, /\.endDirection\s*\{[\s\S]*position: absolute/);
   assert.match(css, /font-size: 0\.54rem/);
   assert.match(css, /border-top-style: dashed/);
-  assert.match(focus, /<CropOccupancyList groups=\{card\.occupancyGroups\} \/>/);
-  assert.doesNotMatch(focus, /CropOccupancyBedMap|variant="notebook"/);
+  assert.match(focus, /card\.occupancyGroups/);
+  assert.match(focus, />Active Crops</);
+  assert.doesNotMatch(focus, /CropOccupancyBedMap|CropOccupancyList|variant="notebook"/);
   assert.match(route, /object_crop_bed_map_v1/);
   assert.doesNotMatch(component, /Perennial|Date unknown|Observed/);
 });
 
-test("every Weed Card may retain a map frame while Task Focus shows only supported crop occupancy", () => {
+test("every Weed Card may retain a map frame while Task Focus shows supported occupancy as Active Crops", () => {
   const universal = read("supabase/migrations/20260729175000_universal_weed_card_maps_v1.sql");
   const component = read("components/atlas/crop-occupancy-bed-map.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
@@ -114,8 +115,9 @@ test("every Weed Card may retain a map frame while Task Focus shows only support
   assert.doesNotMatch(component, /!map\.placements\.length/);
   assert.match(component, /styles\.emptyBed/);
   assert.match(component, /edgeBandBasis/);
-  assert.match(focus, /CropOccupancyList/);
-  assert.doesNotMatch(focus, /const occupancy = card\.bedMap\s*\?/);
+  assert.match(focus, /card\.occupancyGroups/);
+  assert.match(focus, />Active Crops</);
+  assert.doesNotMatch(focus, /CropOccupancyList|const occupancy = card\.bedMap\s*\?/);
 });
 
 test("bed maps show establishment dates and FR4 forget-me-not is on the south endcap", () => {
