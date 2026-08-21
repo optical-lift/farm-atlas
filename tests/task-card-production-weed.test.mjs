@@ -10,6 +10,8 @@ const detail = read("components/atlas/weed-card-task-focus.tsx");
 const styles = read("components/atlas/weed-card-task-focus.module.css");
 const contract = read("lib/atlas/weed-card-contract.ts");
 const route = read("app/api/atlas/weed-card/route.ts");
+const sessionRoute = read("app/api/atlas/weed-card-session/route.ts");
+const partialRoute = read("app/api/atlas/weed-card-partial/route.ts");
 const migration = read("supabase/migrations/20260821172800_weed_card_bed_truth_and_trail_v1.sql");
 
 test("Weed header describes the bed's present use and actual last-weeding date", () => {
@@ -51,18 +53,22 @@ test("Active Crops uses lifecycle rows and exposes stale germination truth for f
   assert.match(styles, /grid-template-columns: minmax\(0, 1fr\) minmax\(112px, 0\.78fr\)/);
 });
 
-test("Weed result controls use one three-way selector followed by Save result", () => {
+test("Weed result controls require condition plus a written observation before Save result", () => {
   assert.match(detail, /WEED_RESULTS/);
   assert.match(detail, /Still rough/);
   assert.match(detail, /Mostly clear/);
   assert.match(detail, /All clear/);
   assert.match(detail, /Save result/);
   assert.match(detail, /aria-pressed=\{selectedCondition === condition\}/);
-  assert.match(detail, /disabled=\{busy \|\| !selectedCondition\}/);
+  assert.match(detail, /disabled=\{busy \|\| !selectedCondition \|\| !note\.trim\(\)\}/);
   assert.match(detail, /Log it/);
   assert.match(detail, /aria-expanded=\{logOpen\}/);
+  assert.match(detail, /placeholder="What did you observe\?"/);
+  assert.match(detail, /aria-label="Weeding observation" required/);
+  assert.match(sessionRoute, /weed_card_observation_required/);
+  assert.match(partialRoute, /weed_card_observation_required/);
   assert.match(detail, />Blocked<\/button>/);
-  assert.doesNotMatch(detail, /Finish Weed|Move this card/);
+  assert.doesNotMatch(detail, /Finish Weed|Move this card|Note \(optional\)/);
   assert.doesNotMatch(detail, /postAtlasTaskSetAsideToday/);
   assert.doesNotMatch(detail, /Medium pressure|Crop readable|Done weeding today/);
 });

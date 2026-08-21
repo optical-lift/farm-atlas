@@ -1,12 +1,15 @@
 import BuyerOutreachTaskDetail from "@/components/atlas/buyer-outreach-task-detail";
 import ContractorServiceTaskDetail from "@/components/atlas/contractor-service-task-detail";
+import CropMoveTaskDetail from "@/components/atlas/crop-move-task-detail";
 import DecisionSelectorTaskDetail from "@/components/atlas/decision-selector-task-detail";
 import DirectSowTaskDetail from "@/components/atlas/direct-sow-task-detail";
 import ExecutionChecklistTaskDetail from "@/components/atlas/execution-checklist-task-detail";
+import FarmRoundTaskDetail from "@/components/atlas/farm-round-task-detail";
 import FlowerFulfillmentTaskLoader from "@/components/atlas/flower-fulfillment-task-loader";
 import FlowerPreparationTaskLoader from "@/components/atlas/flower-preparation-task-loader";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
 import NetworkOutreachTaskDetail from "@/components/atlas/network-outreach-task-detail";
+import OneOffFieldWorkTaskDetail from "@/components/atlas/one-off-field-work-task-detail";
 import OneOffMowingTaskDetail from "@/components/atlas/one-off-mowing-task-detail";
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
@@ -42,6 +45,9 @@ const VENUE_STATION_TEMPLATES = new Set([
   "community_thursday_morning_outdoor_v2",
   "community_thursday_morning_coffee_water_v2",
   "community_thursday_morning_rooms_v2",
+  "community_thursday_venue_tidy_v1",
+  "community_thursday_venue_prep_v1",
+  "community_thursday_venue_host_v1",
 ]);
 
 function isContractorServiceTask(task: AtlasTaskCard) {
@@ -109,6 +115,23 @@ function isNetworkInputsTask(task: AtlasTaskCard) {
     || task.metadata?.checklist_mode === "network_input_research"
     || task.metadata?.task_key === "anna_20260728_call_local_companies_florist_buckets"
     || task.metadata?.task_key === "anna_20260730_source_free_farm_inputs";
+}
+
+function isFarmRoundTask(task: AtlasTaskCard) {
+  return task.task_type === "stewardship_round"
+    && (task.metadata?.farm_round_parent === true || task.metadata?.farm_round_parent === "true");
+}
+
+function isCropMoveTask(task: AtlasTaskCard) {
+  return task.task_type === "pot_up"
+    || task.action_key === "pot_up"
+    || (task.task_type === "transplanting" && task.operation_class === "divide_reestablish_belowground");
+}
+
+function isOneOffFieldWorkTask(task: AtlasTaskCard) {
+  return task.task_type === "exterior_cleaning"
+    && task.action_key === "pressure_wash"
+    && task.operation_class === "clean_restore";
 }
 
 function isVenueTask(task: AtlasTaskCard) {
@@ -213,6 +236,9 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isBuyerOutreachTask(props.task)) return <BuyerOutreachTaskDetail {...props} />;
   if (isNetworkOutreachTask(props.task)) return <NetworkOutreachTaskDetail {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
+  if (isFarmRoundTask(props.task)) return <FarmRoundTaskDetail {...props} />;
+  if (isCropMoveTask(props.task)) return <CropMoveTaskDetail {...props} />;
+  if (isOneOffFieldWorkTask(props.task)) return <OneOffFieldWorkTaskDetail {...props} />;
   if (isVenueTask(props.task)) return <VenueTaskDetail {...props} />;
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
   if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;

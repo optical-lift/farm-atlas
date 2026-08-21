@@ -25,6 +25,7 @@ type Props = {
   card: MowingCardViewModel;
   resourceLabel?: string | null;
   resourceStatus?: string | null;
+  resourceDetail?: string | null;
   issueChoices?: string[];
   issueDisabled?: boolean;
   showRecurrence?: boolean;
@@ -35,6 +36,7 @@ export default function MowingTaskCardBody({
   card,
   resourceLabel = null,
   resourceStatus = null,
+  resourceDetail = null,
   issueChoices = [],
   issueDisabled = false,
   showRecurrence = true,
@@ -46,6 +48,8 @@ export default function MowingTaskCardBody({
   const current = dateLabel(card.recurrence.current);
   const next = dateLabel(card.recurrence.next);
   const resourceState = resourceStateLabel(resourceStatus);
+  const normalizedEquipment = `${card.equipment.label ?? ""} ${resourceLabel ?? ""}`.toLowerCase();
+  const readinessDetail = resourceDetail || (normalizedEquipment.includes("battery push mower") ? "2 charged batteries required" : null);
 
   return (
     <>
@@ -68,7 +72,11 @@ export default function MowingTaskCardBody({
             <header className={styles.equipmentHeader}><h3>{card.equipment.label}</h3></header>
             {resourceLabel ? (
               <div className={styles.resourceRow}>
-                <div><strong>{resourceLabel}</strong>{resourceState ? <small>{resourceState}</small> : null}</div>
+                <div>
+                  <strong>{resourceLabel}</strong>
+                  {readinessDetail ? <small>{readinessDetail}</small> : resourceState ? <small>{resourceState}</small> : null}
+                  {readinessDetail && resourceState ? <small>{resourceState}</small> : null}
+                </div>
               </div>
             ) : null}
 
