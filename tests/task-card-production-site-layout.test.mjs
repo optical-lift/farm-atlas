@@ -8,8 +8,6 @@ function read(path) {
 
 const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
 const detail = read("components/atlas/site-layout-task-detail.tsx");
-const shell = read("components/atlas/worker-ready-assigned-task-execution-shell.tsx");
-const assignedShell = read("components/atlas/assigned-task-execution-shell.tsx");
 
 test("only canonical site_layout work enters the production Setup family", () => {
   assert.match(canonical, /function isSiteLayoutTask\(task: AtlasTaskCard\)/);
@@ -17,18 +15,29 @@ test("only canonical site_layout work enters the production Setup family", () =>
   assert.match(canonical, /<SiteLayoutTaskDetail \{\.\.\.props\} initialReadiness=\{initialReadiness\} \/>/);
 });
 
-test("Setup card reads layout dimensions and materials from live task truth", () => {
+test("Setup is a standalone Task Card Editor family rather than an old generic task wrapper", () => {
+  assert.match(detail, /AtlasTaskCardFrame/);
+  assert.match(detail, /family="Setup"/);
+  assert.match(detail, /data-atlas-site-layout-card="true"/);
+  assert.doesNotMatch(detail, /WorkerReadyAssignedTaskExecutionShell/);
+  assert.doesNotMatch(detail, /TaskExecutionBrief/);
+  assert.doesNotMatch(detail, /atlas-phone-top|atlas-phone-brand|atlas-note-plus/);
+});
+
+test("Setup card reads steps, layout dimensions, and materials from live task truth", () => {
+  assert.match(detail, /metadata\.execution_how/);
   assert.match(detail, /metadata\.layout_dimensions/);
   assert.match(detail, /dimensions\.bed_width_ft/);
   assert.match(detail, /dimensions\.walkway_width_ft/);
   assert.match(detail, /metadata\.materials_note/);
   assert.match(detail, /task\.resource_requirements/);
+  assert.match(detail, />Steps</);
   assert.match(detail, /Bed width/);
   assert.match(detail, /Walkway width/);
   assert.match(detail, /Tools \+ materials/);
 });
 
-test("Setup production UI does not copy specimen-only tool values or fake restock actions", () => {
+test("Setup production UI does not copy specimen-only tool values or hardcode live examples", () => {
   assert.doesNotMatch(detail, /Scissors/);
   assert.doesNotMatch(detail, /Measuring tape/);
   assert.doesNotMatch(detail, /Restock/);
@@ -37,17 +46,12 @@ test("Setup production UI does not copy specimen-only tool values or fake restoc
   assert.doesNotMatch(detail, /U-Pick Beds \+ Walkways/);
 });
 
-test("Setup keeps canonical worker readiness and task transition completion", () => {
-  assert.match(detail, /WorkerReadyAssignedTaskExecutionShell/);
-  assert.match(detail, /initialReadiness=\{initialReadiness\}/);
-  assert.match(shell, /initialReadiness\.executable !== true/);
-  assert.match(assignedShell, /postAtlasTaskTransition/);
-  assert.match(assignedShell, /transition\("done"\)/);
-  assert.match(assignedShell, /task\.status === "blocked"/);
-});
-
-test("Setup adds information to the real task card instead of a private Atlas header", () => {
-  assert.match(detail, /data-atlas-site-layout-setup="true"/);
-  assert.match(detail, />Setup<\/span>/);
-  assert.doesNotMatch(detail, /atlas-phone-top|atlas-phone-brand|atlas-note-plus/);
+test("Setup keeps canonical readiness gating and canonical task transitions", () => {
+  assert.match(detail, /initialReadiness\.executable === true/);
+  assert.match(detail, /initialReadiness\.presentation/);
+  assert.match(detail, /postAtlasTaskTransition/);
+  assert.match(detail, /transition: outcome/);
+  assert.match(detail, /transition\("done"\)/);
+  assert.match(detail, /Partly done/);
+  assert.match(detail, /Problem found/);
 });
