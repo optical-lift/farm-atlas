@@ -12,6 +12,18 @@ function privateJson(body: Record<string, unknown>, status = 200) {
   });
 }
 
+function explicitMainCropLabel(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const row = metadata as Record<string, unknown>;
+  // Only explicit canonical object metadata is allowed to answer "Bed now".
+  // Do not infer a primary crop from overlapping active cycles or the Weed trail.
+  for (const key of ["main_crop_label", "active_crop_label"]) {
+    const value = row[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
 export async function GET(request: Request) {
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
@@ -29,11 +41,16 @@ export async function GET(request: Request) {
   const card = data as Record<string, unknown>;
   const objectId = typeof card.objectId === "string" ? card.objectId : "";
   let bedMap: unknown = null;
+  let mainCropLabel: string | null = null;
 
   if (objectId) {
-    const mapResult = await supabase.rpc("object_crop_bed_map_v1", { p_object_id: objectId });
+    const [mapResult, objectResult] = await Promise.all([
+      supabase.rpc("object_crop_bed_map_v1", { p_object_id: objectId }),
+      supabase.from("growing_objects").select("metadata").eq("id", objectId).maybeSingle(),
+    ]);
     if (!mapResult.error) bedMap = mapResult.data;
+    if (!objectResult.error) mainCropLabel = explicitMainCropLabel(objectResult.data?.metadata);
   }
 
-  return privateJson({ ok: true, card: { ...card, bedMap } });
+  return privateJson({ ok: true, card: { ...card, mainCropLabel, bedMap } });
 }
