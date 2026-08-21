@@ -7,19 +7,18 @@ function read(path) {
 }
 
 const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
-const adapter = read("components/atlas/mow-card-task-detail.tsx");
+const taskPage = read("app/task-focus/[taskId]/page.tsx");
 const focus = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
 const body = read("components/atlas/mowing-task-card-body.tsx");
 const model = read("lib/atlas/mowing-card-view-model.ts");
 const route = read("app/api/atlas/mowing/route.ts");
 
-test("ordinary mowing tasks route into the production Mow card family", () => {
-  assert.match(canonical, /task\.task_type === "mowing"/);
-  assert.match(canonical, /MowCardTaskDetail/);
-  assert.match(adapter, /MowingFocusPage/);
-  assert.match(adapter, /task\.resource_requirements/);
-  assert.match(adapter, /metadata\?\.target_cut_height_inches/);
-  assert.match(adapter, /metadata\?\.equipment_group/);
+test("only Clock-governed mowing routes enter the production Mow result family", () => {
+  assert.match(taskPage, /task\.task_type === "mowing"/);
+  assert.match(taskPage, /task_style\) === "mowing_round"/);
+  assert.match(taskPage, /truthy\(task\.metadata\?\.clock_managed\)/);
+  assert.match(taskPage, /MowingFocusPage/);
+  assert.doesNotMatch(canonical, /MowCardTaskDetail/);
 });
 
 test("Mow card preserves the Task Card Editor recurrence, height, and equipment grammar with live values", () => {
