@@ -132,6 +132,7 @@ function DockIcon({ kind }: { kind: DockIconKey }) {
 }
 
 const HIDDEN_PATHS = ["/login", "/auth", "/offline"];
+const DAY_TASK_ID = /^day-task-([0-9a-f-]{36})$/i;
 
 export default function AtlasContextualAppFrame({ effectiveFarmRole = null, activeFarmName = null }: AtlasContextualAppFrameProps) {
   const pathname = usePathname();
@@ -145,6 +146,7 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
   const canDocument = Boolean(effectiveFarmRole);
   const [registryZones, setRegistryZones] = useState<AtlasRegistryZone[]>([]);
   const [logSeed, setLogSeed] = useState<AtlasFieldLogSeed | null>(null);
+  const [weatherLabel, setWeatherLabel] = useState<string | null>(null);
 
   useEffect(() => {
     document.body.dataset.atlasRouteGroup = active;
@@ -154,6 +156,42 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
       delete document.body.dataset.atlasProjection;
     };
   }, [active, principalProjection]);
+
+  useEffect(() => {
+    if (hidden) return;
+    let cancelled = false;
+    void fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" })
+      .then((response) => response.json())
+      .then((data: { ok?: boolean; label?: string }) => {
+        if (!cancelled) setWeatherLabel(data.ok && data.label ? data.label : null);
+      })
+      .catch(() => {
+        if (!cancelled) setWeatherLabel(null);
+      });
+    return () => { cancelled = true; };
+  }, [hidden]);
+
+  useEffect(() => {
+    if (!pathname.startsWith("/day")) return;
+
+    const openTaskFromDay = (event: MouseEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const summary = target?.closest("details.atlas-day-task-card > summary");
+      if (!summary) return;
+
+      const anchor = summary.closest("[id^='day-task-']") ?? summary.parentElement?.closest("[id^='day-task-']");
+      const match = anchor?.id.match(DAY_TASK_ID);
+      if (!match) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      window.location.assign(`/task-focus/${encodeURIComponent(match[1])}?returnTo=${encodeURIComponent(returnTo)}`);
+    };
+
+    document.addEventListener("click", openTaskFromDay, true);
+    return () => document.removeEventListener("click", openTaskFromDay, true);
+  }, [pathname]);
 
   if (hidden) return null;
 
@@ -191,7 +229,7 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
       <AtlasTopBar
         className="atlas-global-header"
         title={activeFarmName || "Atlas"}
-        status={<span>{routeLabel(active)}</span>}
+        status={<span>{weatherLabel || routeLabel(active)}</span>}
         action={canDocument ? (
           <button type="button" className="atlas-global-note-plus" aria-label="Document work" onClick={() => void openFieldLog()}>+</button>
         ) : null}
