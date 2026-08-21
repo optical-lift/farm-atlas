@@ -10,6 +10,7 @@ const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
 const wrapper = read("components/atlas/worker-ready-assigned-task-execution-shell.tsx");
 const execution = read("components/atlas/assigned-task-execution-shell.tsx");
 const mowing = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
+const mowingViewModel = read("lib/atlas/mowing-card-view-model.ts");
 const taskCue = read("app/task-focus/[taskId]/TaskFocusCueDelivery.tsx");
 const globalCue = read("app/GlobalDayCueDelivery.tsx");
 const readinessRoute = read("app/api/atlas/task-execution-readiness/route.ts");
@@ -27,14 +28,16 @@ test("ordinary Worker execution cannot reach result controls until canonical rea
   assert.match(execution, /TaskPrimaryResultControls/);
 });
 
-test("blocked mowing suppresses Done and unfinished controls at the task-focus membrane", () => {
-  assert.match(mowing, /const taskReady = readiness\?\.executable === true/);
+test("blocked mowing keeps the truthful card visible but suppresses Done and unfinished controls", () => {
+  assert.match(mowing, /const taskReady = readiness\?\.ok === true && readiness\.executable === true/);
   assert.match(mowing, /if \(!taskReady\)/);
   assert.match(mowing, /This job is not ready yet\./);
-  assert.match(mowing, /!taskReady \? \(/);
+  assert.match(mowing, /const completion = taskReady \? \(/);
   assert.match(mowing, /data-atlas-task-readiness="blocked"/);
   assert.match(mowing, /<TaskPrimaryResultControls/);
-  assert.match(mowing, /taskReady && task\.equipmentGroup/);
+  assert.match(mowing, /<MowingTaskCardBody card=\{card\} \/>/);
+  assert.match(mowingViewModel, /equipmentGroup/);
+  assert.doesNotMatch(mowingViewModel, /Gas|2 batteries/);
 });
 
 test("Worker readiness copy stays human while distinguishing battery recovery from management equipment repair", () => {
