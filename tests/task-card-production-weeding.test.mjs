@@ -21,39 +21,42 @@ test("canonical weed work enters the persistent Weed Card family", () => {
   assert.match(loader, /if \(card\) return <WeedCardTaskFocus/);
 });
 
-test("production Weed Card uses the approved bed-care grammar with live object truth", () => {
+test("production Weed Card uses bed truth with current use, history, and active crops", () => {
   assert.match(focus, /AtlasTaskCardFrame/);
   assert.match(focus, /family="Weed"/);
-  assert.match(focus, /familyDetail="bed care"/);
+  assert.match(focus, /familyDetail=\{card\.bedUseCategory\}/);
   assert.match(focus, /title=\{card\.objectLabel\}/);
   assert.match(focus, /subtitle=\{card\.zoneLabel/);
-  assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v1"/);
+  assert.match(focus, /Last weeded ·/);
+  assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v2-bed-truth"/);
   assert.match(focus, />Bed now</);
+  assert.match(focus, /Last logged as/);
+  assert.match(focus, />Active Crops</);
+  assert.match(focus, /card\.bedTrail/);
   assert.match(focus, />How’d we do\?</);
-  assert.match(focus, /CropOccupancyList/);
   assert.match(focus, /card\.sessions/);
   assert.match(focus, /card\.condition/);
-  assert.match(focus, /card\.targetCondition/);
+  assert.doesNotMatch(focus, /card\.targetCondition|Target ·/);
   assert.doesNotMatch(focus, /Field Row 13|ProCut Orange|12 ft|3 rows|Jun 10/);
   assert.doesNotMatch(focus, /AssignedTaskExecutionShell|atlas-phone-top|atlas-phone-brand|atlas-note-plus/);
 });
 
 test("Weed Card reports canonical physical condition without fabricating elapsed time", () => {
-  assert.match(focus, /ATLAS_WEED_CONDITIONS\.slice\(currentIndex\)/);
+  assert.match(focus, /PARTIAL_RESULTS/);
+  assert.match(focus, /Still rough/);
+  assert.match(focus, /Mostly clear/);
   assert.match(focus, /postAtlasFinishPartialWeedCardDay/);
   assert.match(focus, /postAtlasWeedCardSession/);
-  assert.match(focus, /Done weeding today/);
+  assert.match(focus, /All clear/);
   assert.match(focus, />Blocked</);
-  assert.match(focus, /postAtlasTaskSetAsideToday/);
+  assert.doesNotMatch(focus, /postAtlasTaskSetAsideToday|Move this card/);
   assert.doesNotMatch(focus, /minutes:\s*[1-9]/);
   assert.match(focus, /minutes: null/);
   assert.match(client, /finish-partial-day|weed-card/);
 });
 
-test("Weed Card keeps notes and movement secondary to the physical bed result", () => {
+test("Weed Card keeps notes secondary and does not let the worker move the persistent card", () => {
   assert.match(focus, /Log it/);
-  assert.match(focus, /Field note logged/);
-  assert.match(focus, /Move this card/);
-  assert.match(focus, /Tomorrow/);
-  assert.match(focus, /Choose return date/);
+  assert.match(focus, /Note \(optional\)/);
+  assert.doesNotMatch(focus, /Move this card|Tomorrow|Choose return date|postAtlasTaskSetAsideToday/);
 });

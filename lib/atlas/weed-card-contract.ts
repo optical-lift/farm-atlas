@@ -51,6 +51,16 @@ export type AtlasCropOccupancyGroup = {
   cohorts: AtlasCropOccupancyCohort[];
 };
 
+export type AtlasWeedBedTrailEvent = {
+  taskId: string;
+  eventKind: string;
+  cropCycleId?: string | null;
+  cropLabel?: string | null;
+  title: string;
+  lifeCycle?: string | null;
+  eventDate: string;
+};
+
 export type AtlasMapEdge = "north" | "south" | "east" | "west";
 
 export type AtlasBedMapPlacement = {
@@ -113,6 +123,11 @@ export type AtlasWeedCardContext = {
   bedMap?: AtlasBedMap | null;
   condition: AtlasWeedCondition;
   targetCondition: AtlasWeedCondition;
+  lastWeededOn: string | null;
+  lastLoggedCondition: AtlasWeedCondition;
+  lastLoggedOn: string | null;
+  bedUseCategory: string;
+  bedTrail: AtlasWeedBedTrailEvent[];
   totalMinutes: number;
   sessionCount: number;
   nextReviewOn: string | null;
@@ -169,9 +184,9 @@ export const ATLAS_WEED_CONDITIONS: AtlasWeedCondition[] = [
 ];
 
 export const ATLAS_WEED_CONDITION_LABELS: Record<AtlasWeedCondition, string> = {
-  heavy: "Heavy pressure",
-  medium_pressure: "Medium pressure",
-  row_readable: "Row readable",
+  heavy: "Still rough",
+  medium_pressure: "Still rough",
+  row_readable: "Mostly clear",
   mostly_clear: "Mostly clear",
   clear: "Clear",
 };

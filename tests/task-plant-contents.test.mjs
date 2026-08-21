@@ -10,7 +10,6 @@ test("every weed task routes to the occupancy-aware persistent Weed Card with th
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
-  const occupancy = read("components/atlas/crop-occupancy-list.tsx");
 
   assert.match(canonical, /isWeedTask/);
   assert.match(canonical, /if \(isWeedTask\(props\.task\)\) return <WeedCardTaskLoader/);
@@ -23,16 +22,16 @@ test("every weed task routes to the occupancy-aware persistent Weed Card with th
 
   assert.match(focus, /AtlasTaskCardFrame/);
   assert.match(focus, /family="Weed"/);
-  assert.match(focus, /<CropOccupancyList groups=\{card\.occupancyGroups\} \/>/);
   assert.match(focus, /card\.occupancyGroups/);
+  assert.match(focus, />Active Crops</);
+  assert.match(focus, /cohort\.displayLabel/);
+  assert.match(focus, /titleCase\(cohort\.lifeCycle\)/);
+  assert.match(focus, /cohort\.stageLabel/);
+  assert.match(focus, /Needs field confirmation/);
   assert.match(focus, /postAtlasWeedCardSession/);
   assert.match(focus, /postAtlasFinishPartialWeedCardDay/);
   assert.doesNotMatch(focus, /AssignedTaskExecutionShell/);
   assert.doesNotMatch(focus, /TaskDominionTrail|showSubjectLabel|moveDetails=|presentation="weed-sheet"/);
-
-  assert.match(occupancy, /group\.groupLabel/);
-  assert.match(occupancy, /cohort\.placementSummary/);
-  assert.match(occupancy, /cohort\.stageLabel/);
   assert.doesNotMatch(focus, /Continue the recovery|Current move|Keep the planted material|permanent edge/);
 });
 
