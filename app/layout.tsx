@@ -73,6 +73,7 @@ import "./bell-cover-quiet.css";
 import "./pwa.css";
 import "./web-push.css";
 import "./contextual-app-shell.css";
+import "./global-atlas-header.css";
 import "./app-shell-regression-fixes.css";
 import "./dependency-release-flash.css";
 import "./work-alongside.css";
