@@ -5,13 +5,8 @@ import { createPortal } from "react-dom";
 
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import { atlasRouteKeyForTask } from "@/lib/atlas/task-display";
 import { openAtlasTaskProblemHandoff } from "@/lib/atlas/task-problem-handoff-client";
-import {
-  addDaysIso,
-  centralDateIso,
-  postAtlasTaskSetAsideToday,
-} from "@/lib/atlas/task-set-aside-client";
+import { addDaysIso, centralDateIso } from "@/lib/atlas/task-set-aside-client";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
 type Props = {
@@ -22,30 +17,6 @@ type Props = {
 
 type UnfinishedOutcome = "partial" | "blocked";
 
-function truthy(value: unknown) {
-  return value === true || value === "true" || value === "yes" || value === "1" || value === 1;
-}
-
-function falsey(value: unknown) {
-  return value === false || value === "false" || value === "no" || value === "0" || value === 0;
-}
-
-function taskAllowsPartlyDone(task: AtlasTaskCard, childTasks: AtlasTaskCard[]) {
-  const explicit = task.metadata?.partial_completion_allowed ?? task.metadata?.resumable_task;
-  if (truthy(explicit)) return true;
-  if (falsey(explicit)) return false;
-
-  const activeChildren = childTasks.some((child) => child.status === "open" || child.status === "blocked");
-  if (activeChildren) return false;
-
-  const route = atlasRouteKeyForTask(task);
-  if (route === "mow" || route === "build" || route === "harvest") return true;
-  if (route === "seed" || route === "plant" || route === "water" || route === "propagation" || route === "crop_cycle") return false;
-
-  const text = `${task.task_type ?? ""} ${task.action_key ?? ""} ${task.title} ${task.unlock_text ?? ""}`.toLowerCase();
-  return /\b(mow|paint|trim|clear|prep|build|repair|clean|organize|install|cut|prune|harvest|gather|spread|mulch)\b/.test(text);
-}
-
 function prettyDate(value: string) {
   const date = new Date(`${value}T12:00:00`);
   return Number.isNaN(date.getTime())
@@ -53,10 +24,14 @@ function prettyDate(value: string) {
     : date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-export default function StructuredUnfinishedControl({ task, childTasks, assignee }: Props) {
+function returnDestination(fallback: string) {
+  const value = new URLSearchParams(window.location.search).get("returnTo");
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : fallback;
+}
+
+export default function StructuredUnfinishedControl({ task, assignee }: Props) {
   const today = useMemo(() => centralDateIso(), []);
   const tomorrow = useMemo(() => addDaysIso(today, 1), [today]);
-  const allowsPartial = useMemo(() => taskAllowsPartlyDone(task, childTasks), [task, childTasks]);
   const [actionsTarget, setActionsTarget] = useState<Element | null>(null);
   const [footerTarget, setFooterTarget] = useState<Element | null>(null);
   const [open, setOpen] = useState(false);
@@ -102,7 +77,7 @@ export default function StructuredUnfinishedControl({ task, childTasks, assignee
       await postAtlasTaskTransition({
         taskId: task.task_id,
         transition: "partial",
-        idempotencyKey: `unfinished-partial-v2:${today}:${returnDate}`,
+        idempotencyKey: `unfinished-partial-v3:${today}:${returnDate}`,
         note: "Partly done",
         laneKey: task.action_key || undefined,
         workKey: task.action_key || undefined,
@@ -110,18 +85,19 @@ export default function StructuredUnfinishedControl({ task, childTasks, assignee
           workClass: task.work_class,
           assigneeKey: assignee.key,
           unfinishedDisposition: {
-            version: 2,
+            version: 3,
             outcome: "partial",
             outcomeLabel: "Partly done",
             requestedReturnDate: returnDate,
             serviceDate: today,
+            preserveCompletedComponents: true,
+            carryRemainingComponents: true,
           },
         },
       });
 
-      const result = await postAtlasTaskSetAsideToday(task.task_id, returnDate);
-      setMessage(`Partial progress logged. ${result.message}`);
-      window.setTimeout(() => window.location.assign(assignee.listPath), 1200);
+      setMessage(`Progress saved. Remaining work returns ${prettyDate(returnDate)}.`);
+      window.setTimeout(() => window.location.assign(returnDestination(assignee.listPath)), 700);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not save this partial progress.");
       setSaving(false);
@@ -137,7 +113,7 @@ export default function StructuredUnfinishedControl({ task, childTasks, assignee
       setMessage(null);
       const result = await openAtlasTaskProblemHandoff(task.task_id, issue);
       setMessage(result.message || "Problem sent to the Owner.");
-      window.setTimeout(() => window.location.assign(assignee.listPath), 1200);
+      window.setTimeout(() => window.location.assign(returnDestination(assignee.listPath)), 700);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not send this problem to the Owner.");
       setSaving(false);
@@ -172,18 +148,16 @@ export default function StructuredUnfinishedControl({ task, childTasks, assignee
             <strong>What happened?</strong>
           </div>
 
-          <div className={`atlas-structured-unfinished-outcomes${allowsPartial ? "" : " single"}`}>
-            {allowsPartial ? (
-              <button
-                type="button"
-                className={outcome === "partial" ? "is-selected" : ""}
-                aria-pressed={outcome === "partial"}
-                disabled={saving}
-                onClick={() => chooseOutcome("partial")}
-              >
-                Partly done
-              </button>
-            ) : null}
+          <div className="atlas-structured-unfinished-outcomes">
+            <button
+              type="button"
+              className={outcome === "partial" ? "is-selected" : ""}
+              aria-pressed={outcome === "partial"}
+              disabled={saving}
+              onClick={() => chooseOutcome("partial")}
+            >
+              Partly done
+            </button>
             <button
               type="button"
               className={outcome === "blocked" ? "is-selected" : ""}
@@ -198,7 +172,7 @@ export default function StructuredUnfinishedControl({ task, childTasks, assignee
           {outcome === "partial" ? (
             <>
               <div className="atlas-structured-unfinished-section">
-                <span>Move it to</span>
+                <span>Return remaining work</span>
                 <div className="atlas-structured-unfinished-return">
                   <button
                     type="button"
@@ -228,7 +202,7 @@ export default function StructuredUnfinishedControl({ task, childTasks, assignee
                 disabled={saving || !returnDate}
                 onClick={() => void savePartial()}
               >
-                {saving ? "Saving partial progress" : `Log partly done · returns ${prettyDate(returnDate)}`}
+                {saving ? "Saving progress" : `Save progress · return ${prettyDate(returnDate)}`}
               </button>
             </>
           ) : null}
@@ -242,13 +216,9 @@ export default function StructuredUnfinishedControl({ task, childTasks, assignee
                   maxLength={2000}
                   value={problemText}
                   disabled={saving}
-                  placeholder="Tell Lex what stopped the task or what needs to change."
                   onChange={(event) => setProblemText(event.target.value)}
                 />
               </label>
-              <p className="atlas-structured-unfinished-owner-note">
-                This task will leave your schedule until the Owner handles the problem and sends it back.
-              </p>
               <button
                 type="button"
                 className="atlas-structured-unfinished-save"
