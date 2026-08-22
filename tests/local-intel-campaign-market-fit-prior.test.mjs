@@ -100,7 +100,7 @@ test("shadow scoring is clearly non-decision analysis", () => {
 });
 
 test("a fresh probability still cannot authorize automation before outcome calibration", () => {
-  assert.match(model, /training_outcome_count,0/i);
+  assert.match(model, /'training_outcomes_at_release',0/i);
   assert.match(model, /'uncalibrated_prior'/i);
   assert.match(authority, /elsif v_model_scorable < p\.min_model_scorable_outcomes then[\s\S]*v_state := 'human_review'[\s\S]*v_reason := 'insufficient_domain_model_outcomes'/i);
   assert.match(authority, /elsif d\.predicted_probability >= p\.min_probability_for_act then[\s\S]*v_state := 'act'/i);
