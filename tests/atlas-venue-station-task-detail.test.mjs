@@ -27,18 +27,22 @@ test("Venue event setup routes to its Venue family before the generic checklist"
   assert.ok(venueIndex < genericIndex, "Venue must route before the generic checklist");
 });
 
-test("Venue detail renders the approved Task Card Editor lifecycle and local station rail", () => {
+test("Venue detail renders the approved event-aware lifecycle and local station rail", () => {
   const component = read("components/atlas/venue-task-detail.tsx");
   const rail = read("components/atlas/task-card-venue-rail.module.css");
 
   assert.doesNotMatch(component, /AssignedTaskExecutionShell/);
   assert.match(component, /AtlasTaskCardFrame/);
+  assert.match(component, /TaskPrimaryResultControls/);
   assert.match(component, /type VenueStage = "tidy" \| "prep" \| "host" \| "reset"/);
   assert.match(component, /key: "tidy", label: "Tidy"/);
   assert.match(component, /key: "prep", label: "Prep"/);
   assert.match(component, /key: "host", label: "Host"/);
   assert.match(component, /key: "reset", label: "Reset"/);
-  assert.match(component, /aria-label="Community Thursday task trail"/);
+  assert.match(component, /community_event_display_title/);
+  assert.match(component, /aria-label=\{`\$\{eventTitle\} task trail`\}/);
+  assert.match(component, /title=\{eventTitle\}/);
+  assert.match(component, /timing=\{eventTiming\}/);
   assert.match(component, /rail\.trailNow/);
   assert.match(component, /const sections = useMemo/);
   assert.match(component, /item\.sectionKey \|\| "venue"/);
@@ -48,9 +52,9 @@ test("Venue detail renders the approved Task Card Editor lifecycle and local sta
   assert.match(component, /rail\.localReminderRow/);
   assert.match(component, /filter\(\(item\) => item\.crossedOut !== true\)/);
   assert.match(component, /item\.required \? "true" : "false"/);
-  assert.doesNotMatch(component, /const doneDisabled = !checklist \|\| !checklist\.ready/);
+  assert.match(component, /doneDisabled=\{!checklist \|\| !checklist\.ready\}/);
   assert.match(component, /completion_source: kind === "done" \? "venue_parent_attestation"/);
-  assert.match(component, /disabled=\{busy\} onClick=\{\(\) => void transition\("done"\)\}/);
+  assert.match(component, /onDone=\{\(\) => void transition\("done"\)\}/);
   assert.match(rail, /\.trailNow::before/);
   assert.match(rail, /\.localReminderRow::after/);
 });
@@ -64,6 +68,7 @@ test("Venue reads station information and restock behavior from canonical checkl
   assert.doesNotMatch(component, /coldBrew/);
   assert.match(component, /item\.stationLocation/);
   assert.match(component, /item\.restockLabel/);
+  assert.match(component, /item\.interaction === "information"/);
   assert.match(component, /Venue restock request/);
   assert.match(metadataMigration, /'coffee_mug_hutch'.*'Mug hutch'.*false,'information','Dining room'/s);
   assert.match(metadataMigration, /'water_dispenser'.*'Confirm the water dispenser is full'.*true,'action','Dining room'/s);
@@ -77,7 +82,7 @@ test("Venue Host uses the Editor classic checklist while Reset remains trail-onl
   assert.match(component, /cycleStage === "host"/);
   assert.match(component, /rail\.hostChecklist/);
   assert.match(component, /rail\.classicChecklist/);
-  assert.match(component, /Turn on the ice maker|items\.map/);
+  assert.match(component, /items\.map/);
   assert.doesNotMatch(component, /cycleStage === "reset" \?/);
   assert.doesNotMatch(component, /Reset Community Thursday.*checklist/s);
 });
