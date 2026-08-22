@@ -77,7 +77,8 @@ test("rescheduled unfinished work remains paid backlog instead of becoming permi
 
 test("Owner sees the full paid-day plan while inline choreography changes presentation and only discretionary fill needs approval", () => {
   assert.match(projectionReader, /paidTargetMinutes/);
-  assert.match(dayPlanReader, /owner_worker_day_plan_choreographed_api_v1/);
+  assert.match(dayPlanReader, /owner_worker_day_plan_choreographed_api_v2/);
+  assert.doesNotMatch(dayPlanReader, /owner_worker_day_plan_choreographed_api_v1/);
   assert.match(dayPlanRoute, /readOwnerWorkerDayPlan/);
   assert.match(dayPlanMigration, /paidTargetMinutes/);
   assert.match(dayPlanMigration, /committedPaidMinutes/);
