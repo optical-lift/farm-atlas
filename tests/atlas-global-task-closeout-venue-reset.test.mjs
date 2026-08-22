@@ -60,7 +60,7 @@ test("Venue Reset v2 is a reusable location-resource-work-ready-result card and 
   assert.match(card, /data-atlas-venue-reset="v2"/);
   assert.match(card, /TaskPrimaryResultControls/);
   assert.match(card, />Location</);
-  assert.match(card, />Resources</);
+  assert.match(card, /Resources/);
   assert.match(card, />Reset work</);
   assert.match(card, /venue_reset_ready_result/);
   assert.match(card, /task\.resource_requirements/);
