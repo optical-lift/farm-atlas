@@ -127,7 +127,7 @@ export async function enrichWorkerDayPlanTiming(plan: WorkerDayPlan) {
   const enrich = (row: WorkerDayPlanRow): WorkerDayPlanRow => {
     const timing = row.taskId ? timingByTask.get(row.taskId) : null;
     const baseMobility = timing?.mobility ?? deriveAtlasTimingMobility({ location: row.location, potential: false });
-    const mobility: AtlasTimingMobility = { ...baseMobility, timingClass: row.kind === "suggestion" ? "potential" : baseMobility.constraintClass, travelLocation: baseMobility.travelLocation ?? row.location ?? null };
+    const mobility: AtlasTimingMobility = { ...baseMobility, timingClass: row.kind === "suggestion" ? "potential" as const : baseMobility.constraintClass, travelLocation: baseMobility.travelLocation ?? row.location ?? null };
     if (!timing) return { ...row, mobility };
     return { ...row, commitmentKind: timing.commitmentKind, preferredWindowStart: timing.start, preferredWindowEnd: timing.preferredEnd, safeWindowEnd: timing.safeEnd, timingWarning: timing.warning, mobility };
   };
@@ -161,7 +161,7 @@ async function readOwnerWorkerDayPlanForTarget(dateIso: string, target: OwnerWor
   if (!validDateIso(dateIso)) throw new Error("A valid YYYY-MM-DD worker day is required.");
   if (!target) return { active: false as const, operatorLabel: "Farm Hand", target: null, plan: null };
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("owner_worker_day_plan_choreographed_api_v1", { p_farm_id: target.farmId, p_membership_id: target.membershipId, p_day: dateIso });
+  const { data, error } = await supabase.rpc("owner_worker_day_plan_choreographed_api_v2", { p_farm_id: target.farmId, p_membership_id: target.membershipId, p_day: dateIso });
   if (error) throw new Error(error.message);
   const plan = await enrichWorkerDayPlanTiming(normalizeWorkerDayPlan(data));
   return { active: true as const, operatorLabel: target.displayName, target, plan };
