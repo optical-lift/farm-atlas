@@ -24,7 +24,7 @@ test("parent Done cascades ordinary execution components while structured result
   assert.match(carryover, /unfinishedCarryover/);
 });
 
-test("ordinary checklist completeness does not disable Done on checklist, Crop Move, or Venue cards", () => {
+test("ordinary checklist attestation remains available while Venue-required actions gate Venue closeout", () => {
   const checklist = read("components/atlas/execution-checklist-task-detail.tsx");
   const cropMove = read("components/atlas/crop-move-task-detail.tsx");
   const venue = read("components/atlas/venue-task-detail.tsx");
@@ -33,9 +33,9 @@ test("ordinary checklist completeness does not disable Done on checklist, Crop M
   assert.doesNotMatch(checklist, /Finish the required lines before marking the task done/);
   assert.doesNotMatch(cropMove, /const doneDisabled = hasChecklist/);
   assert.doesNotMatch(cropMove, /disabled=\{busy \|\| doneDisabled\}/);
-  assert.doesNotMatch(venue, /Finish the required action before closing this Venue card/);
-  assert.doesNotMatch(venue, /const doneDisabled = !checklist/);
-  assert.doesNotMatch(venue, /disabled=\{busy \|\| doneDisabled\}/);
+  assert.match(venue, /TaskPrimaryResultControls/);
+  assert.match(venue, /doneDisabled=\{!checklist \|\| !checklist\.ready\}/);
+  assert.match(venue, /checklistCompleteBeforeClose: checklist\?\.ready === true/);
 });
 
 test("Unfinished is globally resumable and partial exits the current work session", () => {
@@ -51,24 +51,29 @@ test("Unfinished is globally resumable and partial exits the current work sessio
   assert.match(shell, /window\.location\.assign\(returnDestination\(assignee\.listPath\)\)/);
 });
 
-test("Venue Reset is a reusable location-resource-work-ready-result card and owns Reset routing", () => {
+test("Venue Reset v2 is a reusable location-resource-work-ready-result card and owns clean-restore routing", () => {
   const card = read("components/atlas/venue-reset-task-detail.tsx");
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const data = read("supabase/migrations/20260822010237_venue_reset_place_restore_v1.sql");
   const checklist = read("supabase/migrations/20260822010316_venue_reset_checklist_components_v1.sql");
 
-  assert.match(card, /data-atlas-venue-reset="v1"/);
+  assert.match(card, /data-atlas-venue-reset="v2"/);
+  assert.match(card, /TaskPrimaryResultControls/);
   assert.match(card, />Location</);
   assert.match(card, />Resources</);
   assert.match(card, />Reset work</);
   assert.match(card, /venue_reset_ready_result/);
   assert.match(card, /task\.resource_requirements/);
+  assert.match(card, /fallbackSteps/);
+  assert.match(card, /execution_how/);
   assert.match(card, /transition: kind/);
+  assert.match(card, /venueResetVersion: 2/);
   assert.match(card, /checklistCompleteBeforeClose/);
+  assert.match(card, /doneDisabled=\{!requiredReady\}/);
 
   assert.match(canonical, /function isVenueResetTask/);
+  assert.match(canonical, /operation_class === "clean_restore"/);
   assert.match(canonical, /<VenueResetTaskDetail \{\.\.\.props\} \/>/);
-  assert.ok(canonical.indexOf("if (isVenueResetTask") < canonical.indexOf("if (isOneOffFieldWorkTask"));
   assert.ok(canonical.indexOf("if (isVenueResetTask") < canonical.indexOf("if (isExecutionChecklistTask"));
 
   assert.match(data, /anna_20260811_gentle_pressure_wash_detached_garage_face/);
