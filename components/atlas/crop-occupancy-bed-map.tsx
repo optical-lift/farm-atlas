@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
+
 import type {
   AtlasBedMap,
   AtlasBedMapPlacement,
   AtlasMapEdge,
 } from "@/lib/atlas/weed-card-contract";
 import styles from "./crop-occupancy-bed-map.module.css";
+import square from "./square-foot-bed-map.module.css";
 
 type Props = {
   map: AtlasBedMap | null | undefined;
@@ -142,8 +145,101 @@ function chunks<T>(items: T[], size: number) {
   return result;
 }
 
+function placementCoverageIsExact(placement: AtlasBedMapPlacement, lengthFt: number) {
+  if (placement.longStartFt != null || placement.longEndFt != null) return true;
+  if (placement.placementMode === "full_rows") return true;
+  if (placement.rowLengthFt != null && placement.rowLengthFt >= lengthFt - 0.5) return true;
+  return false;
+}
+
+function placementTouchesBlock(placement: AtlasBedMapPlacement, startFt: number, endFt: number, lengthFt: number) {
+  if (placement.longStartFt != null || placement.longEndFt != null) {
+    const start = placement.longStartFt ?? 0;
+    const end = placement.longEndFt ?? Math.min(lengthFt, start + (placement.rowLengthFt ?? lengthFt));
+    return start < endFt && end > startFt;
+  }
+  if (placement.placementMode === "full_rows") return true;
+  if (placement.rowLengthFt != null && placement.rowLengthFt >= lengthFt - 0.5) return true;
+  return true;
+}
+
+function SquareFootBedMap({ map }: { map: AtlasBedMap }) {
+  const lengthFt = map.lengthFt && map.lengthFt > 0 ? map.lengthFt : null;
+  const widthFt = map.widthFt && map.widthFt > 0 ? map.widthFt : null;
+  const [selectedBlock, setSelectedBlock] = useState(0);
+
+  if (!lengthFt || !widthFt) return null;
+
+  const blockFt = Math.min(3, lengthFt);
+  const blocks = Array.from({ length: Math.ceil(lengthFt / blockFt) }, (_, index) => {
+    const start = index * blockFt;
+    return { start, end: Math.min(lengthFt, start + blockFt) };
+  });
+  const activeIndex = Math.min(selectedBlock, Math.max(0, blocks.length - 1));
+  const activeBlock = blocks[activeIndex];
+  const activePlacements = map.placements.filter((placement) => placementTouchesBlock(placement, activeBlock.start, activeBlock.end, lengthFt));
+  const activeNames = Array.from(new Set(activePlacements.map((placement) => placement.displayLabel)));
+  const activeArea = Math.max(1, Math.round(widthFt * (activeBlock.end - activeBlock.start)));
+  const widthCells = Math.max(1, Math.round(widthFt));
+  const hasUncertainPlacement = activePlacements.some((placement) => !placementCoverageIsExact(placement, lengthFt));
+
+  return (
+    <section
+      className={square.root}
+      data-atlas-square-foot-bed-map="mockup-v1"
+      aria-label={`Square-foot crop map for ${map.objectLabel}, ${numberLabel(widthFt)} feet by ${numberLabel(lengthFt)} feet.`}
+    >
+      <div
+        className={square.bedRectangle}
+        style={{ gridTemplateColumns: `repeat(${blocks.length}, minmax(0, 1fr))` }}
+      >
+        {blocks.map((block, blockIndex) => {
+          const placements = map.placements.filter((placement) => placementTouchesBlock(placement, block.start, block.end, lengthFt));
+          const exact = placements.some((placement) => placementCoverageIsExact(placement, lengthFt));
+          const cells = Math.max(1, Math.round(widthFt * (block.end - block.start)));
+          const mark = placements.length ? (exact ? "o" : "·") : "";
+          const labels = Array.from(new Set(placements.map((placement) => placement.displayLabel)));
+          return (
+            <button
+              type="button"
+              className={blockIndex === activeIndex ? square.mapBlockActive : square.mapBlock}
+              key={block.start}
+              onClick={() => setSelectedBlock(blockIndex)}
+              aria-label={`${numberLabel(block.start)} to ${numberLabel(block.end)} feet${labels.length ? `, ${labels.join(", ")}` : ", no mapped crop"}`}
+              style={{ gridTemplateColumns: `repeat(${widthCells}, minmax(0, 1fr))` }}
+            >
+              {Array.from({ length: cells }, (_, squareIndex) => <span key={squareIndex}>{mark}</span>)}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className={square.mapScale} aria-hidden="true">
+        <span>0 ft</span>
+        <span>{numberLabel(lengthFt / 2)} ft</span>
+        <span>{numberLabel(lengthFt)} ft</span>
+      </div>
+
+      <div className={square.mapDetail}>
+        <span>{numberLabel(activeBlock.start)}–{numberLabel(activeBlock.end)} ft</span>
+        <strong>{activeNames.length ? activeNames.join(" + ") : "No mapped crop"}</strong>
+        <small>{activeArea} sq ft shown · tap another section to inspect it{hasUncertainPlacement ? " · dotted marks mean the exact position is not recorded" : ""}</small>
+      </div>
+
+      <div className={square.mapLegend}>
+        <code>o</code> crop square
+        {hasUncertainPlacement ? <><code>·</code> position not precise</> : null}
+      </div>
+    </section>
+  );
+}
+
 export default function CropOccupancyBedMap({ map, variant = "default" }: Props) {
   if (!map) return null;
+
+  if (variant === "notebook" && map.lengthFt && map.widthFt) {
+    return <SquareFootBedMap map={map} />;
+  }
 
   const leftAnchored = map.placements.filter((placement) => placement.anchorEdge === map.leftEdge);
   const rightAnchored = map.placements.filter((placement) => placement.anchorEdge === map.rightEdge);
@@ -160,7 +256,7 @@ export default function CropOccupancyBedMap({ map, variant = "default" }: Props)
 
   return (
     <section
-      className={`${styles.root} ${variant === "notebook" ? styles.notebook : ""} ${map.orientationKnown ? "" : styles.unknownOrientation}`.trim()}
+      className={`${styles.root} ${map.orientationKnown ? "" : styles.unknownOrientation}`.trim()}
       aria-label={`Planting map for ${map.objectLabel}; ${orientationDescription}.`}
     >
       <div className={styles.bed}>

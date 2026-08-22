@@ -110,6 +110,7 @@
 }
 
 .task {
+  position: relative;
   display: grid;
   gap: 10px;
   border-radius: 16px;
@@ -136,10 +137,23 @@
   text-decoration: none;
 }
 
+.task h3 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
 .task h3 a:focus-visible,
 .task h3 a:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.task:has(h3 a:focus-visible) {
+  outline: 3px solid rgba(85, 50, 103, 0.32);
+  outline-offset: 2px;
 }
 
 .date {
@@ -170,6 +184,8 @@
 }
 
 .openTask {
+  position: relative;
+  z-index: 2;
   width: fit-content;
   color: #553267;
   font-size: .82rem;
@@ -186,6 +202,8 @@
 }
 
 .actions {
+  position: relative;
+  z-index: 2;
   display: grid;
   gap: 9px;
   border-top: 1px solid rgba(74, 43, 99, 0.1);
