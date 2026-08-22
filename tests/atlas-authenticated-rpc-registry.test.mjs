@@ -39,6 +39,7 @@ const paired = {
   "20260821161000_unify_weekly_harvest_card_v1.sql": "20260821163400_weekly_harvest_rpc_registry_and_privilege_hardening_v1.sql",
   "20260821162442_align_weekly_harvest_mockup_recording_v2.sql": "20260821163400_weekly_harvest_rpc_registry_and_privilege_hardening_v1.sql",
   "20260822154955_atlas_entity_identity_review_bridge_v1.sql": "20260822155702_entity_identity_review_rpc_registry_v1.sql",
+  "20260822174152_worker_fast_path_execute_scope_v1.sql": "20260822175956_reconcile_recent_atlas_rpc_execute_surface_v1.sql",
 };
 
 const batchedPresentedWorkMigrations = new Set([
@@ -180,6 +181,15 @@ test("future authenticated EXECUTE changes are registered in-place or by an orde
 
     assert.doesNotMatch(sql, /GRANT\s+EXECUTE\s+ON\s+ALL\s+FUNCTIONS[\s\S]{0,200}\bauthenticated\b/i, `${name} must not broadly grant authenticated function execution`);
   }
+});
+
+test("new Atlas functions are stripped of inherited PUBLIC execute at DDL time", () => {
+  const guard = readMigration("20260822180124_enforce_atlas_function_private_default_v1.sql");
+  assert.match(guard, /returns event_trigger/i);
+  assert.match(guard, /pg_event_trigger_ddl_commands\(\)/i);
+  assert.match(guard, /command\.schema_name = 'atlas'/i);
+  assert.match(guard, /revoke execute on function %s from public/i);
+  assert.match(guard, /create event trigger atlas_private_function_default_v1/i);
 });
 
 test("the current weekly Harvest RPC boundary is explicit, least-privilege, and versioned", () => {
