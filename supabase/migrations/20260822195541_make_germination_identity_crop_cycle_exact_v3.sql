@@ -382,4 +382,4 @@ where not exists (
 
 select atlas.enroll_germination_watch_v1('a89af374-c713-47ca-8617-905870151d1f'::uuid,'4b1c1fc2-f40b-4528-a3d3-59aaa5ca4781'::uuid);
 select atlas.enroll_germination_watch_v1('1aae29e3-d1ba-465c-8ecb-3bb574589b96'::uuid,'7d66d474-c951-4783-be9e-7cb485dd9bcf'::uuid);
-select atlas.enroll_germination_watch_v1('626ddd82-c26b-43d6-b4f7-d63d784f4c38'::uuid,'925475ad-53a6-4bc1-b4f7-d63d784f4c38'::uuid);
+select atlas.enroll_germination_watch_v1('626ddd82-c26b-43d6-b4f7-d63d784f4c38'::uuid,'925475ad-53a6-4bc1-b4db-47e2a102551b'::uuid);
