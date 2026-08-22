@@ -15,6 +15,7 @@ import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import SiteLayoutTaskDetail from "@/components/atlas/site-layout-task-detail";
 import TransplantReadinessTaskDetail from "@/components/atlas/transplant-readiness-task-detail";
+import VenueResetTaskDetail from "@/components/atlas/venue-reset-task-detail";
 import VenueTaskDetail from "@/components/atlas/venue-task-detail";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import WeeklyHarvestTaskDetail from "@/components/atlas/weekly-harvest-task-detail";
@@ -49,6 +50,10 @@ const VENUE_STATION_TEMPLATES = new Set([
   "community_thursday_venue_prep_v1",
   "community_thursday_venue_host_v1",
 ]);
+
+function text(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
 
 function isContractorServiceTask(task: AtlasTaskCard) {
   return task.task_type === "contractor_service_status"
@@ -126,6 +131,20 @@ function isCropMoveTask(task: AtlasTaskCard) {
   return task.task_type === "pot_up"
     || task.action_key === "pot_up"
     || (task.task_type === "transplanting" && task.operation_class === "divide_reestablish_belowground");
+}
+
+function isVenueResetTask(task: AtlasTaskCard) {
+  if (task.operation_class !== "clean_restore") return false;
+  if (task.metadata?.task_style === "venue_reset") return true;
+  if (task.task_type === "venue_maintenance") return true;
+  if (task.task_type === "exterior_cleaning" && task.action_key === "pressure_wash") return true;
+  const place = [
+    text(task.zone_label),
+    text(task.metadata?.collection_zone),
+    text(task.metadata?.display_location),
+    text(task.metadata?.execution_place),
+  ].join(" ").toLowerCase();
+  return /venue|farmhouse interior|lounge|library|conference|dining|studio|guest/.test(place);
 }
 
 function isOneOffFieldWorkTask(task: AtlasTaskCard) {
@@ -238,6 +257,7 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
   if (isFarmRoundTask(props.task)) return <FarmRoundTaskDetail {...props} />;
   if (isCropMoveTask(props.task)) return <CropMoveTaskDetail {...props} />;
+  if (isVenueResetTask(props.task)) return <VenueResetTaskDetail {...props} />;
   if (isOneOffFieldWorkTask(props.task)) return <OneOffFieldWorkTaskDetail {...props} />;
   if (isVenueTask(props.task)) return <VenueTaskDetail {...props} />;
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
