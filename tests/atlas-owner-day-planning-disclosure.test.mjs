@@ -65,7 +65,8 @@ test("Owner worker-day planning is Owner-authorized while resolving the worker s
   assert.match(workerDayPlan, /resolveOwnerWorkerDayPlanningTarget/);
   assert.match(workerDayPlan, /ownerMembership/);
   assert.match(workerDayPlan, /farm_hand/);
-  assert.match(workerDayPlan, /owner_worker_day_plan_choreographed_api_v1/);
+  assert.match(workerDayPlan, /owner_worker_day_plan_choreographed_api_v2/);
+  assert.doesNotMatch(workerDayPlan, /owner_worker_day_plan_choreographed_api_v1/);
 });
 
 test("the active worker-day planning RPC overloads remain Owner-only", () => {
