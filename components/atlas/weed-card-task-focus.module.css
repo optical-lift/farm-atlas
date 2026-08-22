@@ -83,6 +83,7 @@
 }
 
 .bedNow,
+.bedMapSection,
 .activeCrops,
 .history,
 .results {
@@ -97,6 +98,7 @@
 }
 
 .bedNow > span,
+.bedMapSection > header span,
 .activeCrops header span,
 .history header span,
 .results header span {
@@ -114,6 +116,27 @@
   line-height: 1.08;
   font-weight: 950;
   letter-spacing: -0.04em;
+}
+
+.bedMapSection {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px 18px;
+  background: rgba(248, 246, 238, 0.34);
+}
+
+.bedMapSection > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bedMapSection > header small {
+  color: #8b8c84;
+  font-size: 8px;
+  line-height: 1.15;
+  font-weight: 760;
 }
 
 .activeCrops {
@@ -228,8 +251,7 @@
 }
 
 .resultPills button,
-.resultActions button,
-.blockedAction {
+.resultActions button {
   min-height: 40px;
   border: 1px solid rgba(139, 145, 194, 0.24);
   border-radius: 999px;
@@ -250,16 +272,19 @@
 
 .resultActions {
   display: grid;
-  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  max-width: 270px;
 }
 
-.resultActions .saveResult {
-  background: rgba(214, 225, 177, 0.72);
-  color: #515b34;
+.logButton,
+.blockedAction {
+  min-height: 36px !important;
+  color: #676a7d !important;
 }
 
-.logDrawer {
+.logDrawer,
+.blockedDrawer {
   padding: 8px;
   border: 1px solid rgba(207, 196, 179, 0.72);
   border-radius: 12px;
@@ -284,21 +309,24 @@
 
 .finish { display: grid; gap: 9px; }
 
-.blockedAction {
+.saveResult {
   width: 100%;
-  min-height: 46px;
-  border-radius: 14px;
-  color: var(--atlas-muted);
+  min-height: 48px;
+  border: 1px solid rgba(81, 91, 52, 0.22);
+  border-radius: 15px;
+  background: rgba(214, 225, 177, 0.72);
+  color: #515b34;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.1;
+  font-weight: 900;
 }
 
 .blockedDrawer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 7px;
-  padding: 8px;
-  border: 1px solid rgba(207, 196, 179, 0.72);
-  border-radius: 12px;
-  background: rgba(250, 248, 239, 0.78);
 }
 
 .blockedDrawer button {
@@ -329,6 +357,7 @@
   .shell { padding-left: 10px; padding-right: 10px; }
 
   .bedNow,
+  .bedMapSection,
   .activeCrops,
   .history,
   .results,
