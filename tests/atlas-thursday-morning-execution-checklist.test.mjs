@@ -76,15 +76,15 @@ test("each task keeps a small, themed checklist instead of the former sixteen-li
   assert.doesNotMatch(clusters, /animal check/i);
 });
 
-test("the split preserves prior checks as history while retired v1 lines stop blocking work", () => {
+test("the split preserves prior checks as history while Done can attest remaining ordinary checklist work", () => {
   assert.match(foundation, /task_execution_checklist_events/);
   assert.match(split, /thursday_morning_v1_check_state/);
   assert.match(split, /'retired',true/);
   assert.match(split, /preservedPriorCheck/);
   assert.match(clusters, /metadata ->> 'retired'/);
-  assert.match(clusters, /Complete every required checklist item before finishing this task/);
-  assert.match(detail, /checklist\?\.ready !== true/);
-  assert.match(detail, /completion_source: outcome === "done" \? "execution_checklist" : "task_card"/);
+  assert.doesNotMatch(detail, /checklist\?\.ready !== true/);
+  assert.match(detail, /completion_source: outcome === "done" \? "execution_checklist_parent_attestation" : "task_card"/);
+  assert.match(detail, /checklistCompleteBeforeClose: checklist\?\.ready === true/);
 });
 
 test("current and future Thursday mornings expand to one occurrence per cluster", () => {
