@@ -44,6 +44,8 @@ async function writeChecklistItem(taskId: string, itemKey: string, checked: bool
 export default function VenueResetTaskDetail({ task, assignee }: Props) {
   const metadata = task.metadata ?? {};
   const templateKey = text(metadata.execution_checklist_template_key);
+  const pressureWashTargetsOnly = task.action_key === "pressure_wash"
+    && text(metadata.pressure_wash_card_content_contract) === "tools_and_spray_location_only_v1";
   const [checklist, setChecklist] = useState<ExecutionChecklist | null>(null);
   const [checklistFailed, setChecklistFailed] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export default function VenueResetTaskDetail({ task, assignee }: Props) {
   }, [metadata.detail_lines, metadata.execution_how]);
 
   useEffect(() => {
-    if (!templateKey) { setChecklist(null); setChecklistFailed(false); return; }
+    if (!templateKey || pressureWashTargetsOnly) { setChecklist(null); setChecklistFailed(false); return; }
     let cancelled = false;
     setChecklist(null);
     setChecklistFailed(false);
@@ -69,7 +71,7 @@ export default function VenueResetTaskDetail({ task, assignee }: Props) {
       .then((value) => { if (!cancelled) setChecklist(value); })
       .catch(() => { if (!cancelled) setChecklistFailed(true); });
     return () => { cancelled = true; };
-  }, [task.task_id, templateKey]);
+  }, [task.task_id, templateKey, pressureWashTargetsOnly]);
 
   async function toggle(item: ChecklistItem) {
     const nextChecked = !item.checked;
@@ -97,7 +99,7 @@ export default function VenueResetTaskDetail({ task, assignee }: Props) {
         reason: note || undefined,
         laneKey: task.action_key || undefined,
         workKey: task.action_key || undefined,
-        payload: { venueResetFamily: true, venueResetVersion: 2, completion_source: kind === "done" ? "venue_reset_card" : "task_card", checklistCompleteBeforeClose: checklist?.ready === true },
+        payload: { venueResetFamily: true, venueResetVersion: 2, completion_source: kind === "done" ? "venue_reset_card" : "task_card", checklistCompleteBeforeClose: pressureWashTargetsOnly || checklist?.ready === true },
       });
       if (kind === "done") completeTaskExit(task.task_id, assignee.listPath);
       else window.location.assign(returnDestination(assignee.listPath));
@@ -106,7 +108,7 @@ export default function VenueResetTaskDetail({ task, assignee }: Props) {
   }
 
   const busy = Boolean(saving);
-  const requiredReady = !templateKey || checklistFailed || checklist?.ready === true;
+  const requiredReady = pressureWashTargetsOnly || !templateKey || checklistFailed || checklist?.ready === true;
   const workItems = checklist?.items.slice().sort((a, b) => a.sortOrder - b.sortOrder) ?? [];
   const completion = (
     <div className="atlas-reset-finish">
@@ -155,50 +157,71 @@ export default function VenueResetTaskDetail({ task, assignee }: Props) {
       `}</style>
       <AtlasTaskCardFrame
         family="Venue"
-        familyDetail="reset"
+        familyDetail={pressureWashTargetsOnly ? "pressure wash" : "reset"}
         title={subject}
         subtitle={humanize(task.action_key)}
         timing={text(metadata.display_due_label) || (task.due_date ? `Due ${prettyDate(task.due_date)}` : undefined)}
         completion={completion}
       >
-        <div className="atlas-reset-trail" aria-label={`${subject} reset trail`}>
-          <span><b>Location</b><small>{location}</small></span>
-          <span><b>Tools</b><small>{resources.length ? `${resources.length} ready` : "none attached"}</small></span>
-          <span><b>Reset</b><small>work now</small></span>
-          <span><b>Ready</b><small>{readyLabel}</small></span>
-        </div>
-        <div className="atlas-reset-key"><span>location + tool truth</span><span>reset to ready</span></div>
-        <div className="atlas-reset-stations">
-          <section className="atlas-reset-station">
-            <header><small>Location</small><strong>{location}</strong><span>{text(metadata.collection_zone) || "Elm Farm"}</span></header>
-          </section>
-          <section className="atlas-reset-station">
-            <header><small>Tools</small><strong>{resources.length ? "Resources" : "No tools attached"}</strong></header>
-            <div className="atlas-reset-rows">
-              {resources.map((resource) => (
-                <div className="atlas-reset-row" key={resource.requirement_id}>
-                  <strong>{resource.resource_label || resource.resource_key || "Resource"}</strong>
-                  <small>{text(resource.note) || humanize(resource.status || resource.resource_status)}</small>
-                </div>
-              ))}
+        {pressureWashTargetsOnly ? (
+          <div className="atlas-reset-stations" data-atlas-pressure-wash-content="tools-and-target-only">
+            <section className="atlas-reset-station">
+              <header><small>Tools</small><strong>{resources.length ? "Tools" : "No tools attached"}</strong></header>
+              <div className="atlas-reset-rows">
+                {resources.map((resource) => (
+                  <div className="atlas-reset-row" key={resource.requirement_id}>
+                    <strong>{resource.resource_label || resource.resource_key || "Resource"}</strong>
+                    <small>{text(resource.note) || humanize(resource.status || resource.resource_status)}</small>
+                  </div>
+                ))}
+              </div>
+            </section>
+            <section className="atlas-reset-station">
+              <header><small>Spray</small><strong>{location}</strong></header>
+            </section>
+          </div>
+        ) : (
+          <>
+            <div className="atlas-reset-trail" aria-label={`${subject} reset trail`}>
+              <span><b>Location</b><small>{location}</small></span>
+              <span><b>Tools</b><small>{resources.length ? `${resources.length} ready` : "none attached"}</small></span>
+              <span><b>Reset</b><small>work now</small></span>
+              <span><b>Ready</b><small>{readyLabel}</small></span>
             </div>
-          </section>
-          <section className="atlas-reset-station">
-            <header><small>Reset work</small><strong>{text(metadata.execution_do) || task.title}</strong></header>
-            <div className="atlas-reset-rows">
-              {workItems.length ? workItems.map((item) => item.interaction === "information" ? (
-                <div className="atlas-reset-row is-information" key={item.itemKey}>
-                  <strong>{item.label}</strong><small>method</small>
+            <div className="atlas-reset-key"><span>location + tool truth</span><span>reset to ready</span></div>
+            <div className="atlas-reset-stations">
+              <section className="atlas-reset-station">
+                <header><small>Location</small><strong>{location}</strong><span>{text(metadata.collection_zone) || "Elm Farm"}</span></header>
+              </section>
+              <section className="atlas-reset-station">
+                <header><small>Tools</small><strong>{resources.length ? "Resources" : "No tools attached"}</strong></header>
+                <div className="atlas-reset-rows">
+                  {resources.map((resource) => (
+                    <div className="atlas-reset-row" key={resource.requirement_id}>
+                      <strong>{resource.resource_label || resource.resource_key || "Resource"}</strong>
+                      <small>{text(resource.note) || humanize(resource.status || resource.resource_status)}</small>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <button type="button" className="atlas-reset-row" data-checked={item.checked ? "true" : "false"} key={item.itemKey} disabled={busy} onClick={() => void toggle(item)}>
-                  <strong>{item.label}</strong><small>{item.checked ? "done" : item.required ? "required" : "tap to cross off"}</small>
-                </button>
-              )) : fallbackSteps.map((step) => <div className="atlas-reset-row is-information" key={step}><strong>{step}</strong><small>method</small></div>)}
+              </section>
+              <section className="atlas-reset-station">
+                <header><small>Reset work</small><strong>{text(metadata.execution_do) || task.title}</strong></header>
+                <div className="atlas-reset-rows">
+                  {workItems.length ? workItems.map((item) => item.interaction === "information" ? (
+                    <div className="atlas-reset-row is-information" key={item.itemKey}>
+                      <strong>{item.label}</strong><small>method</small>
+                    </div>
+                  ) : (
+                    <button type="button" className="atlas-reset-row" data-checked={item.checked ? "true" : "false"} key={item.itemKey} disabled={busy} onClick={() => void toggle(item)}>
+                      <strong>{item.label}</strong><small>{item.checked ? "done" : item.required ? "required" : "tap to cross off"}</small>
+                    </button>
+                  )) : fallbackSteps.map((step) => <div className="atlas-reset-row is-information" key={step}><strong>{step}</strong><small>method</small></div>)}
+                </div>
+              </section>
             </div>
-          </section>
-        </div>
-        <section className="atlas-reset-ready"><span>{readyLabel}</span><strong>{readyResult}</strong></section>
+            <section className="atlas-reset-ready"><span>{readyLabel}</span><strong>{readyResult}</strong></section>
+          </>
+        )}
       </AtlasTaskCardFrame>
     </main>
   );
