@@ -1,0 +1,251 @@
+.shell {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 18px 14px 40px;
+}
+
+.section {
+  padding: 24px 28px;
+  border-top: 1px solid rgba(68, 65, 89, .13);
+}
+
+.kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: #7772ad;
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.location {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.location strong {
+  display: block;
+  color: #29293f;
+  font-size: 1.45rem;
+  line-height: 1.08;
+}
+
+.location span {
+  color: #77756f;
+  font-size: .82rem;
+  font-weight: 750;
+  text-transform: capitalize;
+}
+
+.resources {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.resource,
+.emptyResource {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(68, 65, 89, .11);
+}
+
+.resource:last-child,
+.emptyResource:last-child {
+  border-bottom: 0;
+}
+
+.resource strong,
+.emptyResource strong {
+  color: #303046;
+  font-size: 1rem;
+}
+
+.resource small,
+.emptyResource small {
+  color: #8b8991;
+  font-size: .72rem;
+  font-weight: 750;
+}
+
+.resourceMeta {
+  text-align: right;
+}
+
+.workHeading {
+  margin: 0 0 18px;
+  color: #29293f;
+  font-size: 1.2rem;
+  line-height: 1.18;
+}
+
+.workRail {
+  --rail-x: 14px;
+  position: relative;
+  display: grid;
+  gap: 0;
+  padding-left: 44px;
+}
+
+.workRail::before {
+  content: "";
+  position: absolute;
+  left: var(--rail-x);
+  top: 14px;
+  bottom: 14px;
+  width: 1px;
+  background: rgba(86, 89, 112, .3);
+}
+
+.workRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  align-items: start;
+  gap: 12px;
+  min-height: 58px;
+  padding: 9px 0 13px;
+  color: #303046;
+  cursor: pointer;
+}
+
+.workRow::before {
+  content: "";
+  position: absolute;
+  left: -30px;
+  top: 22px;
+  width: 24px;
+  height: 1px;
+  background: rgba(86, 89, 112, .38);
+}
+
+.workRow input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.circle {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #aaa8b2;
+  border-radius: 50%;
+  background: #fffdf8;
+}
+
+.circle::after {
+  content: "";
+}
+
+.workRow:has(input:checked) .circle {
+  border-color: #839451;
+  background: #dce8ba;
+}
+
+.workRow:has(input:checked) .circle::after {
+  content: "✓";
+  color: #58643b;
+  font-weight: 950;
+}
+
+.workRow strong {
+  padding-top: 2px;
+  font-size: 1rem;
+  line-height: 1.32;
+}
+
+.workRow:has(input:checked) strong {
+  color: #88878d;
+  text-decoration: line-through;
+}
+
+.ready {
+  margin: 0 28px 24px;
+  padding: 20px 22px;
+  border-left: 4px solid #94a95e;
+  border-radius: 0 18px 18px 0;
+  background: #f0f4e4;
+}
+
+.ready span {
+  display: block;
+  margin-bottom: 7px;
+  color: #667442;
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.ready strong {
+  display: block;
+  color: #46512f;
+  font-size: 1.08rem;
+  line-height: 1.35;
+}
+
+.finish {
+  display: grid;
+  gap: 12px;
+}
+
+.finishButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.finish button {
+  min-height: 58px;
+  border: 1px solid rgba(68, 65, 89, .18);
+  border-radius: 22px;
+  background: #fff;
+  color: #4e4d57;
+  font: inherit;
+  font-weight: 850;
+}
+
+.finish .primary {
+  border-color: rgba(125, 145, 71, .32);
+  background: #e2ebc5;
+  color: #536137;
+}
+
+.finish button:disabled {
+  opacity: .58;
+}
+
+.unfinished {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(68, 65, 89, .12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .7);
+}
+
+.unfinished strong {
+  color: #66646e;
+  font-size: .76rem;
+}
+
+.message {
+  margin: 0;
+  color: #73564c;
+  font-size: .78rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 560px) {
+  .shell { padding-left: 10px; padding-right: 10px; }
+  .section { padding-left: 22px; padding-right: 22px; }
+  .ready { margin-left: 22px; margin-right: 22px; }
+}
