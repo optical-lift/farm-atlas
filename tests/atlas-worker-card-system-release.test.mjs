@@ -20,7 +20,11 @@ const [
   germinationCard,
   cropMoveCard,
   taskBedMapRoute,
+  taskBedMap,
+  occupancyMap,
+  squareFootCss,
   workToday,
+  workCss,
   mowerBody,
 ] = await Promise.all([
   source('components/atlas/weed-card-task-focus.tsx'),
@@ -36,7 +40,11 @@ const [
   source('app/task-focus/[taskId]/GerminationFocusPage.tsx'),
   source('components/atlas/crop-move-task-detail.tsx'),
   source('app/api/atlas/task-bed-map/route.ts'),
+  source('components/atlas/task-bed-map.tsx'),
+  source('components/atlas/crop-occupancy-bed-map.tsx'),
+  source('components/atlas/square-foot-bed-map.module.css'),
   source('app/work/today/page.tsx'),
+  source('app/work/today/work.module.css'),
   source('components/atlas/mowing-task-card-body.tsx'),
 ]);
 
@@ -82,6 +90,22 @@ test('canonical bed maps are shared by crop-cycle cards instead of copied per ta
   assert.match(taskBedMapRoute, /map: null/);
 });
 
+test('worker bed maps use the approved square-foot mockup grammar when dimensions are known', () => {
+  assert.match(taskBedMap, /data-atlas-task-bed-map="square-foot-mockup-v1"/);
+  assert.match(taskBedMap, /one mark = 1 sq ft/);
+  assert.match(taskBedMap, /variant="notebook"/);
+  assert.match(occupancyMap, /data-atlas-square-foot-bed-map="mockup-v1"/);
+  assert.match(occupancyMap, /const blockFt = Math\.min\(3, lengthFt\)/);
+  assert.match(occupancyMap, /0 ft/);
+  assert.match(occupancyMap, /tap another section to inspect it/);
+  assert.match(occupancyMap, /const mark = placements\.length \? \(exact \? "o" : "·"\) : ""/);
+  assert.match(squareFootCss, /\.bedRectangle/);
+  assert.match(squareFootCss, /\.mapBlockActive/);
+  assert.match(squareFootCss, /rgba\(214, 225, 177, 0\.34\)/);
+  assert.match(squareFootCss, /border-right: 1px dashed/);
+  assert.match(weedCard, /CropOccupancyBedMap map=\{card\.bedMap\} variant="notebook"/);
+});
+
 test('treatment target and Saturday Farm Round membership are source-controlled', () => {
   assert.match(sprayMigration, /apply_treatment_target_v1/);
   assert.match(sprayMigration, /go\.stable_key='bb_10'/);
@@ -89,10 +113,14 @@ test('treatment target and Saturday Farm Round membership are source-controlled'
   assert.match(farmRoundMigration, /'house','House',10,30/);
 });
 
-test('worker list opens the exact canonical task and mower readiness stays equipment detail', () => {
+test('worker list opens the exact canonical task from the whole card without swallowing controls', () => {
   assert.match(workToday, /taskFocusHref\(taskId: string\)/);
   assert.match(workToday, /\/task-focus\/\$\{encodeURIComponent\(taskId\)\}/);
   assert.match(workToday, /Open task/);
+  assert.match(workCss, /\.task\s*\{[\s\S]*position: relative/);
+  assert.match(workCss, /\.task h3 a::after\s*\{[\s\S]*position: absolute;[\s\S]*inset: 0/);
+  assert.match(workCss, /\.actions\s*\{[\s\S]*z-index: 2/);
+  assert.match(workCss, /\.openTask\s*\{[\s\S]*z-index: 2/);
   assert.match(mowerBody, /Battery push mower/i);
   assert.match(mowerBody, /2 charged batteries required/);
 });
