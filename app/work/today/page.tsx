@@ -37,11 +37,15 @@ function addDays(dateIso: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
+function taskFocusHref(taskId: string) {
+  return `/task-focus/${encodeURIComponent(taskId)}?returnTo=${encodeURIComponent("/work/today")}`;
+}
+
 function WorkerTaskCard({ task, emphasis = false }: { task: AdaptiveDayTask; emphasis?: boolean }) {
   return (
     <article className={`${styles.task} ${task.lane === "blocked" ? styles.blocked : ""}`} data-adaptive-now={emphasis ? "true" : undefined}>
       <div className={styles.taskTop}>
-        <h3>{task.title}</h3>
+        <h3>{task.taskId ? <Link href={taskFocusHref(task.taskId)}>{task.title}</Link> : task.title}</h3>
         <span className={styles.date}>{prettyDate(task.dueDate)}</span>
       </div>
       <p className={styles.progress} style={{ marginTop: 6, fontWeight: 700 }}>{task.reason}</p>
@@ -49,6 +53,7 @@ function WorkerTaskCard({ task, emphasis = false }: { task: AdaptiveDayTask; emp
       {task.instruction ? <p className={styles.instruction}>{task.instruction}</p> : null}
       {task.blocker ? <p className={styles.instruction}>Blocked: {task.blocker}</p> : null}
       {task.totalSteps ? <p className={styles.progress}>{task.completedSteps}/{task.totalSteps} checklist steps complete</p> : null}
+      {task.taskId ? <Link href={taskFocusHref(task.taskId)} className={styles.openTask}>Open task</Link> : null}
       {task.canAct && task.taskId ? <WorkerTaskActions taskId={task.taskId} /> : null}
     </article>
   );
