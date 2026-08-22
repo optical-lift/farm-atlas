@@ -211,7 +211,12 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
         reason: note || undefined,
         laneKey: task.action_key || undefined,
         workKey: task.action_key || undefined,
-        payload: { venueCycleStage: cycleStage, venueCardFamily: true },
+        payload: {
+          venueCycleStage: cycleStage,
+          venueCardFamily: true,
+          checklistCompleteBeforeClose: checklist?.ready === true,
+          completion_source: kind === "done" ? "venue_parent_attestation" : "venue_card",
+        },
       });
       if (kind === "done") completeTaskExit(task.task_id, assignee.listPath);
       else window.location.assign(returnDestination(assignee.listPath));
@@ -223,11 +228,10 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
   }
 
   const busy = Boolean(saving);
-  const doneDisabled = !checklist || !checklist.ready;
   const completion = (
     <div className={rail.finish}>
       <div>
-        <button type="button" className={rail.primaryFinish} disabled={busy || doneDisabled} onClick={() => void transition("done")}>Done</button>
+        <button type="button" className={rail.primaryFinish} disabled={busy} onClick={() => void transition("done")}>Done</button>
         <button type="button" disabled={busy} onClick={() => setUnfinishedOpen((open) => !open)}>Unfinished</button>
       </div>
       {unfinishedOpen ? (
@@ -239,7 +243,6 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
           </div>
         </div>
       ) : null}
-      {doneDisabled && checklist ? <small>Finish the required action before closing this Venue card.</small> : null}
       {message ? <p className={rail.message}>{message}</p> : null}
     </div>
   );
