@@ -89,7 +89,6 @@ export default function EntityIdentityReviewClient({ packet }: Props) {
           reviewId: item.review_id,
           decision,
           basis,
-          metadata: { surface: "principal_entity_identity_review_v1" },
         }),
       });
       const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
