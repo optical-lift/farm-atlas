@@ -25,6 +25,8 @@ function prettyDate(value: string | null | undefined) {
 }
 
 function dueLabel(task: AtlasTaskCard) {
+  const explicit = atlasMetaString(task, "display_due_label");
+  if (explicit) return explicit;
   if (!task.due_date) return "Open date";
   const date = new Date(`${task.due_date.slice(0, 10)}T12:00:00`);
   const now = new Date();
@@ -83,8 +85,6 @@ function fallbackHow(task: AtlasTaskCard) {
     if (noteLead) lines.push(noteLead);
   }
 
-  // No instructions is meaningful. Do not manufacture a Steps section that points
-  // the worker back to instructions which do not exist.
   return lines.slice(0, 2);
 }
 
