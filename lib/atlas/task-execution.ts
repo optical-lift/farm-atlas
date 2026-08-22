@@ -25,6 +25,8 @@ function prettyDate(value: string | null | undefined) {
 }
 
 function dueLabel(task: AtlasTaskCard) {
+  const explicit = atlasMetaString(task, "display_due_label");
+  if (explicit) return explicit;
   if (!task.due_date) return "Open date";
   const date = new Date(`${task.due_date.slice(0, 10)}T12:00:00`);
   const now = new Date();
