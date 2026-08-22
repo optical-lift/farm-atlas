@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import AssignedTaskExecutionShell, {
-  type AssignedTaskInstrumentContext,
-  type AssignedTaskOutcome,
-} from "@/components/atlas/assigned-task-execution-shell";
+import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
+import TaskPrimaryResultControls from "@/components/atlas/task-primary-result-controls";
+import rail from "@/components/atlas/task-card-venue-rail.module.css";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
 type Props = {
   task: AtlasTaskCard;
@@ -26,6 +26,9 @@ type ChecklistItem = {
   checked: boolean;
   checkedAt: string | null;
   crossedOut?: boolean;
+  interaction?: string | null;
+  stationLocation?: string | null;
+  restockLabel?: string | null;
 };
 
 type ExecutionChecklist = {
@@ -57,7 +60,7 @@ const TRAIL: Array<{ key: VenueStage; label: string }> = [
 function requestError(data: ChecklistResponse) {
   if (data.details) return data.details;
   if (typeof data.error === "string") return data.error;
-  return data.error?.message || "Atlas could not update this venue card.";
+  return data.error?.message || "Atlas could not update this Venue card.";
 }
 
 function requestKey(taskId: string, itemKey: string, checked: boolean) {
@@ -67,21 +70,27 @@ function requestKey(taskId: string, itemKey: string, checked: boolean) {
   return `${taskId}:${itemKey}:${checked ? "checked" : "reopened"}:${nonce}`;
 }
 
-function metadataText(task: AtlasTaskCard, key: string) {
-  const value = task.metadata?.[key];
+function text(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function stationInformation(task: AtlasTaskCard) {
-  const value = task.metadata?.free_thursday_service_rule;
-  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+function prettyDate(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(`${value.slice(0, 10)}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" }).format(date);
+}
 
-  const rule = value as Record<string, unknown>;
-  const information: string[] = [];
-  if (typeof rule.coffee === "string" && rule.coffee.trim()) information.push(rule.coffee.trim());
-  if (typeof rule.mugs === "string" && rule.mugs.trim()) information.push(rule.mugs.trim());
-  if (rule.coldBrew === false) information.push("No cold brew");
-  return information;
+function returnDestination(fallback: string) {
+  const query = new URLSearchParams(window.location.search).get("returnTo");
+  return query && query.startsWith("/") && !query.startsWith("//") ? query : fallback;
+}
+
+function completeTaskExit(taskId: string, fallback: string) {
+  const returnTo = returnDestination(fallback);
+  const event = new CustomEvent("atlas:task-completed", { cancelable: true, detail: { taskId, returnTo } });
+  window.dispatchEvent(event);
+  if (!event.defaultPrevented) window.location.assign(returnTo);
 }
 
 async function readChecklist(taskId: string) {
@@ -103,12 +112,7 @@ async function writeChecklistItem(taskId: string, itemKey: string, checked: bool
       "x-atlas-intent": "task-execution-checklist-v1",
     },
     cache: "no-store",
-    body: JSON.stringify({
-      taskId,
-      itemKey,
-      checked,
-      idempotencyKey: requestKey(taskId, itemKey, checked),
-    }),
+    body: JSON.stringify({ taskId, itemKey, checked, idempotencyKey: requestKey(taskId, itemKey, checked) }),
   });
   const data = await response.json() as ChecklistResponse;
   if (!response.ok || !data.ok || !data.checklist) throw new Error(requestError(data));
@@ -119,10 +123,10 @@ function stageIndex(stage: VenueStage) {
   return TRAIL.findIndex((candidate) => candidate.key === stage);
 }
 
-export default function VenueTaskDetail(props: Props) {
-  const { task } = props;
+export default function VenueTaskDetail({ task, assignee }: Props) {
   const [checklist, setChecklist] = useState<ExecutionChecklist | null>(null);
-  const [savingItem, setSavingItem] = useState<string | null>(null);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -131,178 +135,205 @@ export default function VenueTaskDetail(props: Props) {
     setMessage(null);
     void readChecklist(task.task_id)
       .then((value) => { if (!cancelled) setChecklist(value); })
-      .catch((error) => {
-        if (!cancelled) setMessage(error instanceof Error ? error.message : "Venue details unavailable.");
-      });
+      .catch((error) => { if (!cancelled) setMessage(error instanceof Error ? error.message : "Venue details unavailable."); });
     return () => { cancelled = true; };
   }, [task.task_id]);
 
-  const station = metadataText(task, "display_location") || task.zone_label || "Venue";
-  const information = useMemo(() => stationInformation(task), [task]);
-  const cycleStageRaw = metadataText(task, "venue_cycle_stage");
+  const cycleStageRaw = text(task.metadata?.venue_cycle_stage);
   const cycleStage = cycleStageRaw && TRAIL.some((candidate) => candidate.key === cycleStageRaw)
     ? cycleStageRaw as VenueStage
-    : null;
-  const interaction = metadataText(task, "venue_interaction_method") || "execution";
-  const eventKind = metadataText(task, "community_event_kind");
-  const actionItems = useMemo(
-    () => (checklist?.items ?? [])
-      .filter((item) => item.crossedOut !== true)
-      .sort((left, right) => left.sortOrder - right.sortOrder),
+    : "prep";
+  const currentTrailIndex = stageIndex(cycleStage);
+  const eventKind = text(task.metadata?.community_event_kind);
+  const eventTitle = text(task.metadata?.community_event_display_title)
+    || (eventKind === "ticketed_seasonal_evening" ? "Thursdays at Elm" : "Community Thursday");
+  const eventLabel = eventKind === "ticketed_seasonal_evening" ? "Ticketed seasonal evening" : "Free community morning";
+  const eventTiming = text(task.metadata?.display_due_label) || (task.due_date ? `Due ${prettyDate(task.due_date)}` : undefined);
+
+  const items = useMemo(
+    () => (checklist?.items ?? []).filter((item) => item.crossedOut !== true).sort((a, b) => a.sortOrder - b.sortOrder),
     [checklist],
   );
   const sections = useMemo(() => {
-    const grouped = new Map<string, { key: string; label: string; items: ChecklistItem[] }>();
-    for (const item of actionItems) {
+    const grouped = new Map<string, { key: string; label: string; location: string | null; items: ChecklistItem[] }>();
+    for (const item of items) {
       const key = item.sectionKey || "venue";
-      const label = item.sectionLabel || station;
-      const current = grouped.get(key);
-      if (current) current.items.push(item);
-      else grouped.set(key, { key, label, items: [item] });
+      const label = item.sectionLabel || "Venue";
+      const existing = grouped.get(key);
+      if (existing) existing.items.push(item);
+      else grouped.set(key, { key, label, location: item.stationLocation || null, items: [item] });
     }
     return Array.from(grouped.values());
-  }, [actionItems, station]);
+  }, [items]);
 
   async function toggle(item: ChecklistItem) {
     const nextChecked = !item.checked;
     try {
-      setSavingItem(item.itemKey);
+      setSaving(item.itemKey);
       setMessage(null);
       setChecklist((current) => current ? {
         ...current,
-        items: current.items.map((candidate) => candidate.itemKey === item.itemKey
-          ? { ...candidate, checked: nextChecked }
-          : candidate),
-        completeCount: current.completeCount + (nextChecked ? 1 : -1),
-        ready: current.items.every((candidate) => candidate.itemKey === item.itemKey
-          ? nextChecked || !candidate.required || candidate.crossedOut === true
-          : candidate.checked || !candidate.required || candidate.crossedOut === true),
+        items: current.items.map((candidate) => candidate.itemKey === item.itemKey ? { ...candidate, checked: nextChecked } : candidate),
       } : current);
       setChecklist(await writeChecklistItem(task.task_id, item.itemKey, nextChecked));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Venue update failed.");
-      try {
-        setChecklist(await readChecklist(task.task_id));
-      } catch {
-        // Keep the last known state if the authoritative reread also fails.
-      }
+      try { setChecklist(await readChecklist(task.task_id)); } catch { /* keep last known state */ }
     } finally {
-      setSavingItem(null);
+      setSaving(null);
     }
   }
 
-  function methodInstrument(context: AssignedTaskInstrumentContext) {
-    const busy = Boolean(savingItem) || context.busy;
-    const currentTrailIndex = cycleStage ? stageIndex(cycleStage) : -1;
-    const reminderMode = interaction === "resource";
-    return (
-      <>
-        <style>{`
-          .atlas-venue-cycle { margin:0 28px 28px; border-top:1px solid rgba(68,65,89,.12); }
-          .atlas-venue-cycle__trail { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:5px; padding:18px 0 8px; }
-          .atlas-venue-cycle__trail span { min-width:0; padding:8px 7px 7px; border-radius:10px; background:#f3f0ea; color:#8a8790; }
-          .atlas-venue-cycle__trail b { display:block; font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; }
-          .atlas-venue-cycle__trail small { display:block; margin-top:2px; font-size:.62rem; line-height:1.1; opacity:.72; }
-          .atlas-venue-cycle__trail .is-done { background:#eef1df; color:#667043; }
-          .atlas-venue-cycle__trail .is-now { background:#e8e3f4; color:#625c91; box-shadow:inset 0 0 0 1px rgba(98,92,145,.12); }
-          .atlas-venue-cycle__head { padding:14px 0 12px; }
-          .atlas-venue-cycle__head span, .atlas-venue-section__head span { display:block; margin:0; color:#7772ad; font-size:.7rem; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
-          .atlas-venue-cycle__head strong { display:block; margin-top:5px; color:#29293e; font-size:1.13rem; line-height:1.2; }
-          .atlas-venue-cycle__head small { display:block; margin-top:5px; color:#7b7881; font-size:.78rem; }
-          .atlas-venue-cycle__info { display:flex; flex-wrap:wrap; gap:7px; margin:0 0 17px; padding:0; list-style:none; }
-          .atlas-venue-cycle__info li { padding:8px 10px; border-radius:10px; background:#f2efe7; color:#5e5b62; font-size:.8rem; font-weight:700; line-height:1.25; }
-          .atlas-venue-cycle__key { display:flex; gap:13px; margin:2px 0 13px; color:#99959f; font-size:.67rem; font-weight:700; }
-          .atlas-venue-sections { display:grid; gap:13px; }
-          .atlas-venue-section { position:relative; padding:14px 14px 8px; border:1px solid rgba(68,65,89,.12); border-radius:15px; background:#fffdf8; }
-          .atlas-venue-section__head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:8px; }
-          .atlas-venue-section__head strong { color:#2f2e42; font-size:1rem; }
-          .atlas-venue-section__head small { color:#aaa6ae; font-size:.7rem; }
-          .atlas-venue-items { display:grid; }
-          .atlas-venue-item { width:100%; display:grid; grid-template-columns:25px 1fr auto; align-items:center; gap:10px; min-height:42px; padding:7px 0; border:0; border-top:1px solid rgba(68,65,89,.08); background:transparent; color:#3c3a47; text-align:left; font:inherit; font-weight:720; line-height:1.22; }
-          .atlas-venue-item:first-child { border-top:0; }
-          .atlas-venue-item:disabled { opacity:.62; }
-          .atlas-venue-item.is-checked { color:#858782; text-decoration:line-through; text-decoration-thickness:1px; }
-          .atlas-venue-item__mark { width:20px; height:20px; display:grid; place-items:center; border:1.5px solid #b0adb4; border-radius:50%; background:#fff; font-size:.72rem; font-weight:950; }
-          .atlas-venue-item.is-checked .atlas-venue-item__mark { border-color:#87945f; background:#e2e9c8; color:#65713f; }
-          .atlas-venue-item__required { color:#7772ad; font-size:.62rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; text-decoration:none; }
-          .atlas-venue-cycle__loading, .atlas-venue-cycle__note, .atlas-venue-cycle__message { margin:0; padding:10px 0; color:#777; font-size:.84rem; line-height:1.35; }
-          .atlas-venue-cycle__note { padding-top:12px; }
-          .atlas-venue-cycle__message { color:#704d43; }
-          @media (max-width:560px) { .atlas-venue-cycle { margin-left:21px; margin-right:21px; } .atlas-venue-cycle__trail span { padding-left:5px; padding-right:5px; } }
-        `}</style>
-        <section className="atlas-venue-cycle" aria-label="Community Thursday venue task" data-atlas-method-instrument="venue-cycle">
-          {cycleStage ? (
-            <div className="atlas-venue-cycle__trail" aria-label="Community Thursday task trail">
-              {TRAIL.map((step, index) => (
-                <span key={step.key} className={index < currentTrailIndex ? "is-done" : index === currentTrailIndex ? "is-now" : ""}>
-                  <b>{step.label}</b>
-                  <small>Community Thursday</small>
-                </span>
+  async function restock(item: ChecklistItem) {
+    if (!item.restockLabel) return;
+    try {
+      setSaving(`restock:${item.itemKey}`);
+      setMessage(null);
+      await postAtlasTaskTransition({
+        taskId: task.task_id,
+        transition: "note",
+        note: `Venue restock request: ${item.restockLabel}`,
+        payload: { venueRestockRequest: item.restockLabel, venueChecklistItemKey: item.itemKey },
+      });
+      setMessage(`${item.restockLabel} restock requested.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Atlas could not log the restock request.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function transition(kind: "done" | "partial" | "blocked") {
+    const note = kind === "done" ? "" : window.prompt(kind === "partial" ? "What is left?" : "What problem did you find?", "")?.trim();
+    if (kind !== "done" && !note) return;
+    try {
+      setSaving(kind);
+      setMessage(null);
+      await postAtlasTaskTransition({
+        taskId: task.task_id,
+        transition: kind,
+        note: note || undefined,
+        reason: note || undefined,
+        laneKey: task.action_key || undefined,
+        workKey: task.action_key || undefined,
+        payload: {
+          venueCycleStage: cycleStage,
+          venueCardFamily: true,
+          eventDisplayTitle: eventTitle,
+          checklistCompleteBeforeClose: checklist?.ready === true,
+          completion_source: kind === "done" ? "venue_parent_attestation" : "venue_card",
+        },
+      });
+      if (kind === "done") completeTaskExit(task.task_id, assignee.listPath);
+      else window.location.assign(returnDestination(assignee.listPath));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Venue result failed.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  const busy = Boolean(saving);
+  const completion = (
+    <TaskPrimaryResultControls
+      busy={busy}
+      doneBusy={saving === "done"}
+      doneDisabled={!checklist || !checklist.ready}
+      unfinishedOpen={unfinishedOpen}
+      onToggleUnfinished={() => setUnfinishedOpen((open) => !open)}
+      onDone={() => void transition("done")}
+    >
+      <section className="atlas-task-unfinished-panel atlas-task-result-unfinished">
+        <strong>What happened?</strong>
+        <div className="atlas-task-unfinished-grid">
+          <button type="button" disabled={busy} onClick={() => void transition("partial")}>Partly done</button>
+          <button type="button" disabled={busy} onClick={() => void transition("blocked")}>Problem found</button>
+        </div>
+      </section>
+    </TaskPrimaryResultControls>
+  );
+
+  return (
+    <main style={{ maxWidth: 760, margin: "0 auto", padding: "18px 14px 40px" }} data-atlas-venue-card="event-truth-v3">
+      <AtlasTaskCardFrame
+        family="Venue"
+        familyDetail={cycleStage}
+        title={eventTitle}
+        subtitle={eventLabel}
+        timing={eventTiming}
+        completion={completion}
+      >
+        <div className={rail.trail} aria-label={`${eventTitle} task trail`}>
+          {TRAIL.map((step, index) => (
+            <span key={step.key} className={index < currentTrailIndex ? rail.trailDone : index === currentTrailIndex ? rail.trailNow : rail.trailLocked}>
+              <b>{step.label}</b>
+              <small>{eventTitle}</small>
+            </span>
+          ))}
+        </div>
+
+        {cycleStage === "host" ? (
+          <section className={rail.hostChecklist} aria-label={`Open ${eventTitle} checklist`}>
+            <header><span>Checklist</span><small>{checklist ? `${checklist.completeCount}/${checklist.totalCount}` : "loading"}</small></header>
+            <div className={rail.classicChecklist}>
+              {items.map((item) => (
+                item.interaction === "information" ? (
+                  <div className={rail.informationRow} key={item.itemKey}><strong>{item.label}</strong></div>
+                ) : (
+                  <label className={rail.classicCheckItem} key={item.itemKey}>
+                    <input type="checkbox" checked={item.checked} disabled={busy} onChange={() => void toggle(item)} />
+                    <span className={rail.classicCircle} aria-hidden="true" />
+                    <strong>{item.label}</strong>
+                  </label>
+                )
               ))}
             </div>
-          ) : null}
-          <header className="atlas-venue-cycle__head">
-            <span>Venue</span>
-            <strong>{cycleStage ? `${cycleStage[0].toUpperCase()}${cycleStage.slice(1)} Community Thursday` : `Station: ${station}`}</strong>
-            {eventKind ? <small>{eventKind === "ticketed_seasonal_evening" ? "Ticketed seasonal evening" : "Free community morning"} · same initial Venue grammar</small> : null}
-          </header>
-          {information.length ? (
-            <ul className="atlas-venue-cycle__info" aria-label="Venue information">
-              {information.map((item) => <li key={item}>{item}</li>)}
-            </ul>
-          ) : null}
-          {reminderMode ? <div className="atlas-venue-cycle__key"><span>tap to cross off</span><span>room + station memory aids</span></div> : null}
-          {!checklist ? (
-            <p className="atlas-venue-cycle__loading">Loading venue card…</p>
-          ) : (
-            <div className="atlas-venue-sections">
+          </section>
+        ) : (
+          <>
+            <div className={rail.rowKey}>
+              <span>tap to cross off</span>
+              <span><b>+</b> request restock</span>
+            </div>
+            <div className={rail.stations}>
               {sections.map((section) => (
-                <section className="atlas-venue-section" key={section.key} aria-label={section.label}>
-                  <header className="atlas-venue-section__head">
-                    <strong>{section.label}</strong>
-                    <small>{section.items.length} {section.items.length === 1 ? "item" : "items"}</small>
+                <section className={`${rail.station} ${rail.localStation}`} key={section.key}>
+                  <header className={rail.stationHeader}>
+                    <div>
+                      <h3>{section.label}</h3>
+                      {section.location ? <span>{section.location}</span> : null}
+                    </div>
                   </header>
-                  <div className="atlas-venue-items">
-                    {section.items.map((item) => (
-                      <button
-                        type="button"
-                        className={`atlas-venue-item${item.checked ? " is-checked" : ""}`}
-                        key={item.itemKey}
-                        aria-pressed={item.checked}
-                        disabled={busy}
-                        onClick={() => void toggle(item)}
-                      >
-                        <span className="atlas-venue-item__mark" aria-hidden="true">{item.checked ? "✓" : ""}</span>
-                        <span>{item.label}</span>
-                        {item.required ? <span className="atlas-venue-item__required">required</span> : null}
-                      </button>
-                    ))}
+                  <div className={rail.resourceList}>
+                    {section.items.map((item) => {
+                      if (item.interaction === "information") {
+                        return <div className={`${rail.reminderRow} ${rail.localReminderRow} ${rail.informationRow}`} key={item.itemKey}><strong>{item.label}</strong></div>;
+                      }
+                      const id = `venue-${task.task_id}-${item.itemKey}`;
+                      return (
+                        <div className={`${rail.reminderRow} ${rail.localReminderRow}`} key={item.itemKey}>
+                          <input id={id} className={rail.reminderToggle} type="checkbox" checked={item.checked} disabled={busy} onChange={() => void toggle(item)} />
+                          <label className={rail.reminderCheck} data-required={item.required ? "true" : "false"} htmlFor={id}><strong>{item.label}</strong></label>
+                          {item.restockLabel ? (
+                            <details className={rail.restockDrawer}>
+                              <summary aria-label={`Request ${item.restockLabel} restock`}><span>+</span></summary>
+                              <div className={rail.restockPanel}>
+                                <button type="button" disabled={busy} onClick={() => void restock(item)}>Request restock</button>
+                                <small>{item.restockLabel}</small>
+                              </div>
+                            </details>
+                          ) : null}
+                        </div>
+                      );
+                    })}
                   </div>
                 </section>
               ))}
             </div>
-          )}
-          {checklist && !checklist.ready ? <p className="atlas-venue-cycle__note">Finish the required action before marking this Venue card ready.</p> : null}
-          {message ? <p className="atlas-venue-cycle__message">{message}</p> : null}
-        </section>
-      </>
-    );
-  }
-
-  function resultPayload(outcome: AssignedTaskOutcome) {
-    return {
-      completion_source: outcome === "done" ? "venue_cycle" : "task_card",
-      checklistComplete: checklist?.ready === true,
-      venueCycleStage: cycleStage,
-    };
-  }
-
-  return (
-    <AssignedTaskExecutionShell
-      {...props}
-      methodInstrument={methodInstrument}
-      doneDisabled={checklist?.ready !== true}
-      resultPayload={resultPayload}
-    />
+          </>
+        )}
+        {message ? <p className={rail.message}>{message}</p> : null}
+      </AtlasTaskCardFrame>
+    </main>
   );
 }
