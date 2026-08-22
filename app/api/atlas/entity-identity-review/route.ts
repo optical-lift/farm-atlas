@@ -12,7 +12,6 @@ type RequestBody = {
   reviewId?: unknown;
   decision?: unknown;
   basis?: unknown;
-  metadata?: unknown;
 };
 
 type RpcError = { code?: string; message?: string };
@@ -59,9 +58,6 @@ export async function POST(request: Request) {
   if (body.basis.trim().length > 4000) {
     return atlasApiError(400, "entity_identity_review_basis_too_long", "The reviewer reason is too long.");
   }
-  if (body.metadata !== undefined && (!body.metadata || typeof body.metadata !== "object" || Array.isArray(body.metadata))) {
-    return atlasApiError(400, "entity_identity_review_metadata_invalid", "Review metadata must be an object.");
-  }
 
   const supabase = await createAtlasServerClient();
   const { data, error } = await supabase.rpc("entity_identity_adjudicate_api_v1", {
@@ -70,7 +66,6 @@ export async function POST(request: Request) {
       reviewId: body.reviewId,
       decision: body.decision,
       basis: body.basis.trim(),
-      metadata: body.metadata ?? {},
     },
   });
 
