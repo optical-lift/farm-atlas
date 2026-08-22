@@ -9,7 +9,7 @@ import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
 type Props = { task: AtlasTaskCard; childTasks: AtlasTaskCard[]; assignee: AtlasAssigneeConfig };
-type ChecklistItem = { itemId: string; itemKey: string; sectionKey: string; sectionLabel: string; label: string; sortOrder: number; required: boolean; checked: boolean; checkedAt: string | null };
+type ChecklistItem = { itemId: string; itemKey: string; sectionKey: string; sectionLabel: string; label: string; sortOrder: number; required: boolean; checked: boolean; checkedAt: string | null; interaction?: string | null };
 type ExecutionChecklist = { taskId: string; title: string; completionLabel: string; items: ChecklistItem[]; totalCount: number; completeCount: number; ready: boolean };
 type ChecklistResponse = { ok?: boolean; checklist?: ExecutionChecklist; error?: string | { message?: string }; details?: string };
 
@@ -148,6 +148,7 @@ export default function VenueResetTaskDetail({ task, assignee }: Props) {
         .atlas-reset-station header{display:grid;gap:3px;margin-bottom:10px}.atlas-reset-station header small{color:#858bb8;font-size:8px;font-weight:950;letter-spacing:.12em;text-transform:uppercase}.atlas-reset-station header strong{color:var(--atlas-text);font-size:20px;line-height:1.05;font-weight:950;letter-spacing:-.035em}.atlas-reset-station header span{color:#85867f;font-size:10px;font-weight:800}
         .atlas-reset-rows{display:grid}.atlas-reset-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;min-height:50px;padding:9px 0;border-top:1px solid rgba(215,204,189,.5);color:#343542}.atlas-reset-row:first-child{border-top:0}.atlas-reset-row strong{font-size:13px;line-height:1.2;font-weight:900}.atlas-reset-row small{color:#8b8c84;font-size:9px;font-weight:800}
         button.atlas-reset-row{width:100%;border-left:0;border-right:0;border-bottom:0;background:transparent;text-align:left;font:inherit}.atlas-reset-row[data-checked="true"] strong{text-decoration:line-through;color:#858782}.atlas-reset-row[data-checked="true"] small{color:#87945f}
+        .atlas-reset-row.is-information{grid-template-columns:minmax(0,1fr);gap:3px;min-height:0;padding:10px 0;color:#565761}.atlas-reset-row.is-information strong{font-size:12px;font-weight:780}.atlas-reset-row.is-information small{font-size:8px;text-transform:uppercase;letter-spacing:.09em;color:#99988f}
         .atlas-reset-ready{display:grid;gap:4px;padding:16px 18px;background:rgba(214,225,177,.35)}.atlas-reset-ready span{color:#697146;font-size:9px;font-weight:950;letter-spacing:.12em;text-transform:uppercase}.atlas-reset-ready strong{color:#515b34;font-size:14px;line-height:1.3}
         .atlas-reset-message{margin:8px 0 0;color:#75594f;font-size:10px;line-height:1.35;font-weight:800}
         @media(max-width:520px){.atlas-reset-shell{padding-left:10px;padding-right:10px}.atlas-reset-station{padding-left:58px;padding-right:16px}.atlas-reset-station:before{left:27px}.atlas-reset-station:after{left:21px}}
@@ -185,11 +186,15 @@ export default function VenueResetTaskDetail({ task, assignee }: Props) {
           <section className="atlas-reset-station">
             <header><small>Reset work</small><strong>{text(metadata.execution_do) || task.title}</strong></header>
             <div className="atlas-reset-rows">
-              {workItems.length ? workItems.map((item) => (
+              {workItems.length ? workItems.map((item) => item.interaction === "information" ? (
+                <div className="atlas-reset-row is-information" key={item.itemKey}>
+                  <strong>{item.label}</strong><small>method</small>
+                </div>
+              ) : (
                 <button type="button" className="atlas-reset-row" data-checked={item.checked ? "true" : "false"} key={item.itemKey} disabled={busy} onClick={() => void toggle(item)}>
                   <strong>{item.label}</strong><small>{item.checked ? "done" : item.required ? "required" : "tap to cross off"}</small>
                 </button>
-              )) : fallbackSteps.map((step) => <div className="atlas-reset-row" key={step}><strong>{step}</strong><small>method</small></div>)}
+              )) : fallbackSteps.map((step) => <div className="atlas-reset-row is-information" key={step}><strong>{step}</strong><small>method</small></div>)}
             </div>
           </section>
         </div>
