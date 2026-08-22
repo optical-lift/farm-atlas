@@ -16,7 +16,8 @@ test("Owner worker-day planning resolves one Farm Hand directly or through an ex
   assert.match(reader, /source: "operator_lens"/);
   assert.match(reader, /source: "owner_direct"/);
   assert.match(reader, /workers\.length !== 1/);
-  assert.match(reader, /owner_worker_day_plan_choreographed_api_v1/);
+  assert.match(reader, /owner_worker_day_plan_choreographed_api_v2/);
+  assert.doesNotMatch(reader, /owner_worker_day_plan_choreographed_api_v1/);
   assert.match(reader, /realWork/);
   assert.match(reader, /automaticWork/);
   assert.match(reader, /suggestions/);
