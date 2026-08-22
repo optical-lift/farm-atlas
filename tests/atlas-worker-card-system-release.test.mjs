@@ -43,9 +43,9 @@ const [
 test('Weed cannot save a result without both condition and observation on client or server', () => {
   assert.match(weedCard, /disabled=\{busy \|\| !selectedCondition \|\| !note\.trim\(\)\}/);
   assert.match(weedCard, /Log what you observed before saving the Weed result/);
-  assert.match(weedCard, />Save result</);
-  assert.match(weedCard, />Log it</);
-  assert.match(weedCard, />Blocked</);
+  assert.match(weedCard, /"Save result"/);
+  assert.match(weedCard, /Log it/);
+  assert.match(weedCard, /Blocked/);
   for (const route of [weedSessionRoute, weedPartialRoute]) {
     assert.match(route, /if \(!note\)/);
     assert.match(route, /weed_card_observation_required/);
@@ -92,7 +92,7 @@ test('treatment target and Saturday Farm Round membership are source-controlled'
 test('worker list opens the exact canonical task and mower readiness stays equipment detail', () => {
   assert.match(workToday, /taskFocusHref\(taskId: string\)/);
   assert.match(workToday, /\/task-focus\/\$\{encodeURIComponent\(taskId\)\}/);
-  assert.match(workToday, />Open task</);
+  assert.match(workToday, /Open task/);
   assert.match(mowerBody, /Battery push mower/i);
   assert.match(mowerBody, /2 charged batteries required/);
 });
