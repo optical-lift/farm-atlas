@@ -15,6 +15,7 @@ import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import SiteLayoutTaskDetail from "@/components/atlas/site-layout-task-detail";
 import TransplantReadinessTaskDetail from "@/components/atlas/transplant-readiness-task-detail";
+import VenueResetTaskDetail from "@/components/atlas/venue-reset-task-detail";
 import VenueTaskDetail from "@/components/atlas/venue-task-detail";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import WeeklyHarvestTaskDetail from "@/components/atlas/weekly-harvest-task-detail";
@@ -128,6 +129,11 @@ function isCropMoveTask(task: AtlasTaskCard) {
     || (task.task_type === "transplanting" && task.operation_class === "divide_reestablish_belowground");
 }
 
+function isVenueResetTask(task: AtlasTaskCard) {
+  return task.metadata?.task_style === "venue_reset"
+    && task.metadata?.venue_reset_version === 1;
+}
+
 function isOneOffFieldWorkTask(task: AtlasTaskCard) {
   return task.task_type === "exterior_cleaning"
     && task.action_key === "pressure_wash"
@@ -238,6 +244,7 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
   if (isFarmRoundTask(props.task)) return <FarmRoundTaskDetail {...props} />;
   if (isCropMoveTask(props.task)) return <CropMoveTaskDetail {...props} />;
+  if (isVenueResetTask(props.task)) return <VenueResetTaskDetail {...props} />;
   if (isOneOffFieldWorkTask(props.task)) return <OneOffFieldWorkTaskDetail {...props} />;
   if (isVenueTask(props.task)) return <VenueTaskDetail {...props} />;
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
