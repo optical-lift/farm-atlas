@@ -6,9 +6,11 @@ const bundleMigration = await readFile(new URL("../supabase/migrations/202608221
 const liveSelector = await readFile(new URL("../supabase/migrations/20260822154500_worker_live_presented_selector_v1.sql", import.meta.url), "utf8");
 const feedCutover = await readFile(new URL("../supabase/migrations/20260822155500_worker_day_feed_live_selector_cutover_v2.sql", import.meta.url), "utf8");
 const reservationsMigration = await readFile(new URL("../supabase/migrations/20260822161200_day_reservations_read_bundle_v2.sql", import.meta.url), "utf8");
+const choreographyBundleMigration = await readFile(new URL("../supabase/migrations/20260822160500_worker_day_choreography_bundle_v2.sql", import.meta.url), "utf8");
 const executeScopeMigration = await readFile(new URL("../supabase/migrations/20260822174152_worker_fast_path_execute_scope_v1.sql", import.meta.url), "utf8");
 const workerSelfServer = await readFile(new URL("../lib/atlas/worker-self-day-plan-server.ts", import.meta.url), "utf8");
 const reservationsServer = await readFile(new URL("../lib/atlas/day-reservations-server.ts", import.meta.url), "utf8");
+const choreographyServer = await readFile(new URL("../lib/atlas/day-choreography-server.ts", import.meta.url), "utf8");
 
 test("today's worker bundle stays on the live selector and cheap collapsed card shell", () => {
   assert.match(bundleMigration, /if p_day = v_today then[\s\S]*worker_day_feed_plan_live_v1/);
@@ -37,6 +39,16 @@ test("reservation reconciliation is one read RPC with a no-routine fast path", (
   assert.match(reservationsMigration, /if exists\([\s\S]*from atlas\.fixed_routines/);
   assert.match(reservationsMigration, /or exists\([\s\S]*from atlas\.day_reservations/);
   assert.match(reservationsMigration, /perform atlas\.sync_fixed_routine_reservations_for_day_v1/);
+});
+
+test("Worker Day choreography and reservations share one authenticated bundle RPC", () => {
+  assert.match(choreographyServer, /rpc\("worker_day_choreography_bundle_api_v2"/);
+  assert.doesNotMatch(choreographyServer, /rpc\("worker_day_choreography_api_v1"/);
+  assert.doesNotMatch(choreographyServer, /readAtlasDayReservations/);
+  assert.match(choreographyServer, /normalizeAtlasDayReservations\(bundle\.reservations\)/);
+  assert.match(choreographyBundleMigration, /v_choreography := atlas\.worker_day_choreography_api_v1/);
+  assert.match(choreographyBundleMigration, /'choreography', v_choreography/);
+  assert.match(choreographyBundleMigration, /'reservations', v_reservations/);
 });
 
 test("internal fast-path helpers cannot become direct client RPC surfaces", () => {

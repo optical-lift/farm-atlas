@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getAtlasSession } from "@/lib/atlas/session";
-import { readAtlasDayReservations } from "@/lib/atlas/day-reservations-server";
+import { normalizeAtlasDayReservations } from "@/lib/atlas/day-reservations-server";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 import { resolveOwnerWorkerDayPlanningTarget } from "@/lib/atlas/worker-day-plan-server";
 
@@ -172,25 +172,21 @@ export async function readWorkerDayChoreographyForTarget(
   if (!validDateIso(dateIso)) throw new Error("A valid YYYY-MM-DD Day is required.");
 
   const supabase = await createAtlasServerClient();
-  const [{ data, error }, reservations] = await Promise.all([
-    supabase.rpc("worker_day_choreography_api_v1", {
-      p_farm_id: target.farmId,
-      p_membership_id: target.membershipId,
-      p_day: dateIso,
-    }),
-    readAtlasDayReservations({
-      farmId: target.farmId,
-      membershipId: target.membershipId,
-      serviceDate: dateIso,
-    }),
-  ]);
+  const { data, error } = await supabase.rpc("worker_day_choreography_bundle_api_v2", {
+    p_farm_id: target.farmId,
+    p_membership_id: target.membershipId,
+    p_day: dateIso,
+  });
   if (error) throw new Error(error.message);
+
+  const bundle = object(data);
+  if (!bundle) throw new Error("Atlas returned an invalid Worker Day choreography bundle.");
 
   return {
     active: true as const,
     target,
-    choreography: normalizeChoreography(data),
-    reservations,
+    choreography: normalizeChoreography(bundle.choreography),
+    reservations: normalizeAtlasDayReservations(bundle.reservations),
   };
 }
 

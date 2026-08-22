@@ -14,7 +14,7 @@ test("Owner Worker Day sequence reuses the plan target for choreography", () => 
   assert.doesNotMatch(sequence, /readOwnerWorkerDayChoreography/);
 });
 
-test("target-scoped choreography does not resolve identity again", () => {
+test("target-scoped choreography does not resolve identity again or split its reads", () => {
   const helperStart = choreography.indexOf("export async function readWorkerDayChoreographyForTarget");
   const publicStart = choreography.indexOf("export async function readWorkerDayChoreography(dateIso");
   assert.ok(helperStart >= 0 && publicStart > helperStart);
@@ -22,8 +22,10 @@ test("target-scoped choreography does not resolve identity again", () => {
   assert.doesNotMatch(helper, /resolveDayChoreographyTarget/);
   assert.doesNotMatch(helper, /resolveOwnerWorkerDayPlanningTarget/);
   assert.doesNotMatch(helper, /getAtlasSession/);
-  assert.match(helper, /worker_day_choreography_api_v1/);
-  assert.match(helper, /readAtlasDayReservations/);
+  assert.match(helper, /worker_day_choreography_bundle_api_v2/);
+  assert.doesNotMatch(helper, /worker_day_choreography_api_v1/);
+  assert.doesNotMatch(helper, /readAtlasDayReservations/);
+  assert.match(helper, /normalizeAtlasDayReservations\(bundle\.reservations\)/);
 });
 
 test("standalone Worker Day choreography keeps its authorization resolution path", () => {

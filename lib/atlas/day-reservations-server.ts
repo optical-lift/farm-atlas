@@ -44,6 +44,12 @@ function normalizeReservation(row: Record<string, unknown>): AtlasDayReservation
   };
 }
 
+export function normalizeAtlasDayReservations(value: unknown) {
+  return (Array.isArray(value) ? value : [])
+    .map((row) => normalizeReservation(row as Record<string, unknown>))
+    .filter((reservation): reservation is AtlasDayReservation => Boolean(reservation));
+}
+
 export async function readAtlasDayReservations(input: {
   farmId: string;
   membershipId: string;
@@ -59,7 +65,5 @@ export async function readAtlasDayReservations(input: {
   });
   if (error) throw new Error(error.message);
 
-  return (Array.isArray(data) ? data : [])
-    .map((row) => normalizeReservation(row as Record<string, unknown>))
-    .filter((reservation): reservation is AtlasDayReservation => Boolean(reservation));
+  return normalizeAtlasDayReservations(data);
 }
