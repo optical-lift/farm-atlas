@@ -6,6 +6,7 @@ function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url)
 
 const migration = read("supabase/migrations/20260814133500_owner_day_reservation_commands_v1.sql");
 const hardeningMigration = read("supabase/migrations/20260814141500_fixed_routine_projection_hardening_v1.sql");
+const reservationReadMigration = read("supabase/migrations/20260822161200_day_reservations_read_bundle_v2.sql");
 const route = read("app/api/atlas/owner-day-reservation/route.ts");
 const commandClient = read("lib/atlas/reservation-command-client.ts");
 const runtime = read("components/atlas/runtime/AtlasRuntimeProvider.tsx");
@@ -85,11 +86,14 @@ test("acceptance specimen: exact reservation boundaries are legal but crossing t
   assert.equal(overlaps(14 * 60 + 30, pickupEnd, pickupStart, pickupEnd), true, "2:30–4:00 crosses the pickup");
 });
 
-test("Pass 26 fixed routines project dated reservations instead of recurring tasks", () => {
+test("Pass 26 fixed routines still project dated reservations, but reconciliation happens inside the bundled read only when needed", () => {
   assert.match(migration, /create table if not exists atlas\.fixed_routines/);
   assert.match(migration, /sync_fixed_routine_reservations_for_day_v1/);
   assert.match(migration, /insert into atlas\.day_reservations/);
-  assert.match(reservationServer, /sync_fixed_routine_reservations_for_day_v1/);
+  assert.match(reservationServer, /supabase\.rpc\("day_reservations_api_v2"/);
+  assert.match(reservationReadMigration, /if exists\(/);
+  assert.match(reservationReadMigration, /perform atlas\.sync_fixed_routine_reservations_for_day_v1/);
+  assert.doesNotMatch(reservationServer, /sync_fixed_routine_reservations_for_day_v1/);
   assert.doesNotMatch(migration, /insert into atlas\.tasks/);
   assert.match(hardeningMigration, /weekdays/);
 });
