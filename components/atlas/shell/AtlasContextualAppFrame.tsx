@@ -42,6 +42,7 @@ function routeGroup(pathname: string) {
     || pathname.startsWith("/overview")
     || pathname.startsWith("/work")
     || pathname.startsWith("/task")
+    || pathname.startsWith("/mow-preview")
     || pathname.startsWith("/paid-schedule")
   ) return "work";
   if (pathname.startsWith("/harvest")) return "harvest";
