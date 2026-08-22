@@ -38,6 +38,7 @@ const paired = {
   "20260820193337_worker_task_execution_readiness_api_v1.sql": "20260820193959_worker_task_execution_readiness_rpc_registry_v1.sql",
   "20260821161000_unify_weekly_harvest_card_v1.sql": "20260821163400_weekly_harvest_rpc_registry_and_privilege_hardening_v1.sql",
   "20260821162442_align_weekly_harvest_mockup_recording_v2.sql": "20260821163400_weekly_harvest_rpc_registry_and_privilege_hardening_v1.sql",
+  "20260822154955_atlas_entity_identity_review_bridge_v1.sql": "20260822155702_entity_identity_review_rpc_registry_v1.sql",
 };
 
 const batchedPresentedWorkMigrations = new Set([
