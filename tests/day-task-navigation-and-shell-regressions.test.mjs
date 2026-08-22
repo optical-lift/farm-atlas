@@ -34,15 +34,20 @@ test("Mow Task Focus routing stays exact to Clock-governed mowing cards", () => 
   assert.match(taskFocus, /return <MowingFocusPage/);
 });
 
-test("future Clock mowing slots are tappable without pretending they already have task UUIDs", () => {
+test("future Clock mowing slots resolve the canonical Mowing rhythm instead of a dead suffix label", () => {
   assert.match(layout, /<FutureMowPreviewTapBridge \/>/);
   assert.match(futureMowBridge, /atlas-day-future-plan-card\[data-future-projection-source='rhythm'\]/);
-  assert.match(futureMowBridge, /\/mow-preview\?date=/);
+  assert.match(futureMowBridge, /function canonicalMowingLabel/);
+  assert.match(futureMowBridge, /`Mowing · \$\{routeLabel\}`/);
+  assert.match(futureMowBridge, /label=\$\{encodeURIComponent\(rhythmLabel\)\}/);
+  assert.doesNotMatch(futureMowBridge, /label=\$\{encodeURIComponent\(ruleLabel\)\}/);
+  assert.match(frame, /pathname\.startsWith\("\/mow-preview"\)/);
   assert.match(dayCss, /atlas-day-future-plan-card\[data-future-projection-source="rhythm"\]/);
   assert.match(dayCss, /pointer-events: auto !important/);
   assert.match(preview, /data-atlas-mow-preview="true"/);
   assert.match(preview, /Planning preview/);
   assert.match(preview, /rhythm_rules/);
+  assert.match(preview, /\.eq\("label", ruleLabel as string\)/);
   assert.match(preview, /completion=\{false\}/);
 });
 
