@@ -45,11 +45,11 @@ test("reservation reads stay scoped by farm, membership, service day, and active
 });
 
 test("the shared Day choreography read carries reservations into the server projection for both roles", () => {
-  assert.match(choreographyServer, /readAtlasDayReservations/);
-  assert.match(choreographyServer, /farmId: target\.farmId/);
-  assert.match(choreographyServer, /membershipId: target\.membershipId/);
-  assert.match(choreographyServer, /serviceDate: dateIso/);
-  assert.match(choreographyServer, /reservations,/);
+  assert.match(choreographyServer, /worker_day_choreography_bundle_api_v2/);
+  assert.match(choreographyServer, /p_farm_id: target\.farmId/);
+  assert.match(choreographyServer, /p_membership_id: target\.membershipId/);
+  assert.match(choreographyServer, /p_day: dateIso/);
+  assert.match(choreographyServer, /normalizeAtlasDayReservations\(bundle\.reservations\)/);
   assert.match(sequenceServer, /reservations: sameTarget \? choreographyResult\.reservations : \[\]/);
   assert.match(sequenceServer, /buildAtlasWorkerDayProjection/);
   assert.match(projectionClient, /\.\.\.body\.projection/);
