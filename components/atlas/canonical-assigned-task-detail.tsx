@@ -15,6 +15,7 @@ import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import SiteLayoutTaskDetail from "@/components/atlas/site-layout-task-detail";
 import TransplantReadinessTaskDetail from "@/components/atlas/transplant-readiness-task-detail";
+import VegetationControlTaskDetail from "@/components/atlas/vegetation-control-task-detail";
 import VenueResetTaskDetail from "@/components/atlas/venue-reset-task-detail";
 import VenueTaskDetail from "@/components/atlas/venue-task-detail";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
@@ -51,6 +52,10 @@ const VENUE_STATION_TEMPLATES = new Set([
   "community_thursday_venue_host_v1",
 ]);
 
+function text(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function isContractorServiceTask(task: AtlasTaskCard) {
   return task.task_type === "contractor_service_status"
     || task.metadata?.task_style === "contractor_service_status";
@@ -86,6 +91,10 @@ function isOneOffMowingCardTask(task: AtlasTaskCard) {
     && task.metadata.execution_place.trim().length > 0
     && task.metadata?.target_cut_height_inches !== null
     && task.metadata?.target_cut_height_inches !== undefined;
+}
+
+function isSprayTreatmentTask(task: AtlasTaskCard) {
+  return task.action_key === "spray" && task.operation_class === "apply_treatment";
 }
 
 function isWeedTask(task: AtlasTaskCard) {
@@ -130,8 +139,17 @@ function isCropMoveTask(task: AtlasTaskCard) {
 }
 
 function isVenueResetTask(task: AtlasTaskCard) {
-  return task.metadata?.task_style === "venue_reset"
-    && task.metadata?.venue_reset_version === 1;
+  if (task.operation_class !== "clean_restore") return false;
+  if (task.metadata?.task_style === "venue_reset") return true;
+  if (task.task_type === "venue_maintenance") return true;
+  if (task.task_type === "exterior_cleaning" && task.action_key === "pressure_wash") return true;
+  const place = [
+    task.zone_label,
+    task.metadata?.collection_zone,
+    task.metadata?.display_location,
+    task.metadata?.execution_place,
+  ].map(text).filter(Boolean).join(" ");
+  return /venue|farmhouse interior|lounge|library|conference|dining|studio|guest/i.test(place);
 }
 
 function isOneOffFieldWorkTask(task: AtlasTaskCard) {
@@ -237,6 +255,7 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
   if (isSowCardTask(props.task)) return <DirectSowTaskDetail task={props.task} assignee={props.assignee} />;
   if (isOneOffMowingCardTask(props.task)) return <OneOffMowingTaskDetail task={props.task} assignee={props.assignee} />;
+  if (isSprayTreatmentTask(props.task)) return <VegetationControlTaskDetail {...props} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isBuyerOutreachTask(props.task)) return <BuyerOutreachTaskDetail {...props} />;
