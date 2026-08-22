@@ -5,6 +5,7 @@ import Link from "next/link";
 import AssignedTaskExecutionShell, {
   type AssignedTaskExecutionShellProps,
 } from "@/components/atlas/assigned-task-execution-shell";
+import ThinCropCycleTaskCard, { isThinCropCycleTask } from "@/components/atlas/thin-crop-cycle-task-card";
 import type { WorkerReadinessPresentation, WorkerReadinessResponse } from "@/lib/atlas/worker-readiness";
 
 type Props = AssignedTaskExecutionShellProps & {
@@ -102,6 +103,9 @@ export default function WorkerReadyAssignedTaskExecutionShell({ initialReadiness
   }
   if (initialReadiness.executable !== true) {
     return <WaitingScreen props={props} presentation={initialReadiness.presentation} />;
+  }
+  if (isThinCropCycleTask(props.task)) {
+    return <ThinCropCycleTaskCard task={props.task} assignee={props.assignee} />;
   }
 
   return <AssignedTaskExecutionShell {...props} />;
