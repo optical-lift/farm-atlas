@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import CropCycleTaskCardBody, { type CropCycleTrailStep } from "@/components/atlas/crop-cycle-task-card-body";
+import TaskBedMap from "@/components/atlas/task-bed-map";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import styles from "./GerminationFocus.module.css";
 
@@ -197,6 +198,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
                 trailLabel: `${task.objectLabel} crop-cycle germination trail`,
               }}
             />
+            <TaskBedMap taskId={task.id} detail="check this canonical bed" />
             <section className={styles.checkSection}>
               <div className={styles.prompt}>How&apos;d they do?</div>
               {choice === "Patchy" && gaps ? (

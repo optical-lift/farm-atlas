@@ -131,6 +131,17 @@
   line-height: 1.3;
 }
 
+.task h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.task h3 a:focus-visible,
+.task h3 a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .date {
   flex: 0 0 auto;
   color: #786e7b;
@@ -156,6 +167,18 @@
 
 .progress {
   font-size: 0.82rem;
+}
+
+.openTask {
+  width: fit-content;
+  color: #553267;
+  font-size: .82rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.openTask::after {
+  content: " →";
 }
 
 .blocked {

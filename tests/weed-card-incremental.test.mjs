@@ -65,13 +65,15 @@ test("the Weed Card keeps canonical state mutations inside the approved standalo
   assert.match(focus, /AtlasTaskCardFrame/);
   assert.match(focus, /family="Weed"/);
   assert.match(focus, /familyDetail=\{card\.bedUseCategory\}/);
-  assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v3-three-way-result"/);
+  assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v4-spatial-result"/);
   assert.doesNotMatch(focus, /AssignedTaskExecutionShell|methodInstrument=|resultInstrument=/);
   assert.doesNotMatch(focus, /TaskDominionTrail|atlas-phone-shell|atlas-task-page-shell/);
 
   assert.match(focus, />Active Crops</);
   assert.match(focus, /card\.occupancyGroups/);
-  assert.doesNotMatch(focus, /CropOccupancyBedMap|variant="notebook"/);
+  assert.match(focus, /CropOccupancyBedMap/);
+  assert.match(focus, /variant="notebook"/);
+  assert.match(focus, /card\.bedMap/);
   assert.match(focus, /MaintenanceDirectiveStrip taskId=\{task\.task_id\}/);
   assert.match(focus, /Still rough/);
   assert.match(focus, /Mostly clear/);

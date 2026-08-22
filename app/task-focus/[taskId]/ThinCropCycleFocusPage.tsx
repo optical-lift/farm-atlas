@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import TaskBedMap from "@/components/atlas/task-bed-map";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 import styles from "./DirectSowFocus.module.css";
@@ -137,7 +138,7 @@ export default function ThinCropCycleFocusPage({ task }: { task: ThinCropCycleFo
   );
 
   return (
-    <main className={styles.shell} data-atlas-thin-crop-cycle="sow-visual-v1">
+    <main className={styles.shell} data-atlas-thin-crop-cycle="sow-visual-v2">
       <div className={styles.body}>
         <AtlasTaskCardFrame
           family="Thin"
@@ -159,6 +160,8 @@ export default function ThinCropCycleFocusPage({ task }: { task: ThinCropCycleFo
               <div><small>Crop</small><strong>{task.cropLabel}</strong></div>
             </div>
           </section>
+
+          <TaskBedMap taskId={task.id} detail="thin this canonical bed" />
 
           <section className={styles.zoneBeds} aria-label="Zone and bed">
             <header><span>Zone + bed</span></header>

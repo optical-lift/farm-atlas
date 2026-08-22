@@ -23,20 +23,23 @@ test("canonical weed work enters the persistent Weed Card family", () => {
   assert.match(loader, /if \(card\) return <WeedCardTaskFocus/);
 });
 
-test("production Weed Card uses bed truth with current use, history, and active crops", () => {
+test("production Weed Card uses bed truth with current use, history, active crops, and canonical geometry", () => {
   assert.match(focus, /AtlasTaskCardFrame/);
   assert.match(focus, /family="Weed"/);
   assert.match(focus, /familyDetail=\{card\.bedUseCategory\}/);
   assert.match(focus, /title=\{card\.objectLabel\}/);
   assert.match(focus, /subtitle=\{card\.zoneLabel/);
   assert.match(focus, /Last weeded ·/);
-  assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v3-three-way-result"/);
+  assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v4-spatial-result"/);
   assert.match(focus, />Bed now</);
   assert.match(focus, /card\.mainCropLabel/);
   assert.match(focus, /Unknown main crop/);
   assert.doesNotMatch(focus, /Last logged as/);
   assert.match(focus, />Active Crops</);
   assert.match(focus, /card\.bedTrail/);
+  assert.match(focus, /card\.bedMap/);
+  assert.match(focus, /CropOccupancyBedMap/);
+  assert.match(focus, /variant="notebook"/);
   assert.match(focus, />How’d we do\?</);
   assert.match(focus, /card\.sessions/);
   assert.match(focus, /card\.condition/);

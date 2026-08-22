@@ -49,8 +49,10 @@ test("execution facts stay visible instead of hiding useful work behind an Instr
   assert.match(shell, /TaskPrimaryResultControls/);
 });
 
-test("Weed Card stops rendering the fake geometry map and presents physical-bed truth directly", () => {
-  assert.doesNotMatch(weed, /CropOccupancyBedMap|CropOccupancyList/);
+test("Weed Card presents canonical physical-bed truth and real bed geometry directly", () => {
+  assert.match(weed, /CropOccupancyBedMap/);
+  assert.match(weed, /card\.bedMap/);
+  assert.match(weed, /variant="notebook"/);
   assert.match(weed, /AtlasTaskCardFrame/);
   assert.match(weed, /card\.bedTrail/);
   assert.match(weed, />Active Crops</);
