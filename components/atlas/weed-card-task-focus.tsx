@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import CropOccupancyBedMap from "@/components/atlas/crop-occupancy-bed-map";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import MaintenanceDirectiveStrip from "@/components/atlas/maintenance-directive-strip";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
@@ -172,19 +173,20 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
   const busy = saving !== null;
   const completion = (
     <div className={styles.finish}>
-      <button type="button" className={styles.blockedAction} disabled={busy} onClick={() => setBlockedOpen((open) => !open)}>Blocked</button>
-      {blockedOpen ? (
-        <div className={styles.blockedDrawer}>
-          <input value={blockedNote} disabled={busy} onChange={(event) => setBlockedNote(event.target.value)} placeholder="What stopped the work?" aria-label="Weeding blocker" />
-          <button type="button" disabled={busy || !blockedNote.trim()} onClick={() => void finishBlocked()}>{saving === "blocked" ? "Saving…" : "Record blocker"}</button>
-        </div>
-      ) : null}
+      <button
+        type="button"
+        className={styles.saveResult}
+        disabled={busy || !selectedCondition || !note.trim()}
+        onClick={() => void saveResult()}
+      >
+        {saving === "result" ? "Saving…" : "Save result"}
+      </button>
       {message ? <p className={styles.message}>{message}</p> : null}
     </div>
   );
 
   return (
-    <main className={styles.shell} data-atlas-weed-card-template="task-card-lab-v3-three-way-result">
+    <main className={styles.shell} data-atlas-weed-card-template="task-card-lab-v4-spatial-result">
       <div className={styles.body}>
         <AtlasTaskCardFrame
           family="Weed"
@@ -210,6 +212,13 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
             <span>Bed now</span>
             <strong>{card.mainCropLabel || "Unknown main crop"}</strong>
           </section>
+
+          {card.bedMap ? (
+            <section className={styles.bedMapSection} aria-label={`${card.objectLabel} bed diagram`}>
+              <header><span>Bed map</span><small>current crop occupancy</small></header>
+              <CropOccupancyBedMap map={card.bedMap} variant="notebook" />
+            </section>
+          ) : null}
 
           {activeCrops.length ? (
             <section className={styles.activeCrops} aria-label={`${card.objectLabel} active crops`}>
@@ -257,13 +266,17 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
             </div>
             <div className={styles.resultActions}>
               <button type="button" className={styles.logButton} aria-expanded={logOpen} disabled={busy} onClick={() => setLogOpen((open) => !open)}>Log it</button>
-              <button type="button" className={styles.saveResult} disabled={busy || !selectedCondition || !note.trim()} onClick={() => void saveResult()}>
-                {saving === "result" ? "Saving…" : "Save result"}
-              </button>
+              <button type="button" className={styles.blockedAction} aria-expanded={blockedOpen} disabled={busy} onClick={() => setBlockedOpen((open) => !open)}>Blocked</button>
             </div>
             {logOpen ? (
               <div className={styles.logDrawer}>
                 <input className={styles.optionalNote} value={note} disabled={busy} onChange={(event) => { setNote(event.target.value); setMessage(null); }} placeholder="What did you observe?" aria-label="Weeding observation" required />
+              </div>
+            ) : null}
+            {blockedOpen ? (
+              <div className={styles.blockedDrawer}>
+                <input value={blockedNote} disabled={busy} onChange={(event) => setBlockedNote(event.target.value)} placeholder="What stopped the work?" aria-label="Weeding blocker" />
+                <button type="button" disabled={busy || !blockedNote.trim()} onClick={() => void finishBlocked()}>{saving === "blocked" ? "Saving…" : "Record blocker"}</button>
               </div>
             ) : null}
           </section>
