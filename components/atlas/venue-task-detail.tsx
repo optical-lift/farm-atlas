@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
+import TaskPrimaryResultControls from "@/components/atlas/task-primary-result-controls";
 import rail from "@/components/atlas/task-card-venue-rail.module.css";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -144,7 +145,11 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
     : "prep";
   const currentTrailIndex = stageIndex(cycleStage);
   const eventKind = text(task.metadata?.community_event_kind);
+  const eventTitle = text(task.metadata?.community_event_display_title)
+    || (eventKind === "ticketed_seasonal_evening" ? "Thursdays at Elm" : "Community Thursday");
   const eventLabel = eventKind === "ticketed_seasonal_evening" ? "Ticketed seasonal evening" : "Free community morning";
+  const eventTiming = text(task.metadata?.display_due_label) || (task.due_date ? `Due ${prettyDate(task.due_date)}` : undefined);
+
   const items = useMemo(
     () => (checklist?.items ?? []).filter((item) => item.crossedOut !== true).sort((a, b) => a.sortOrder - b.sortOrder),
     [checklist],
@@ -214,6 +219,7 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
         payload: {
           venueCycleStage: cycleStage,
           venueCardFamily: true,
+          eventDisplayTitle: eventTitle,
           checklistCompleteBeforeClose: checklist?.ready === true,
           completion_source: kind === "done" ? "venue_parent_attestation" : "venue_card",
         },
@@ -229,53 +235,57 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
 
   const busy = Boolean(saving);
   const completion = (
-    <div className={rail.finish}>
-      <div>
-        <button type="button" className={rail.primaryFinish} disabled={busy} onClick={() => void transition("done")}>Done</button>
-        <button type="button" disabled={busy} onClick={() => setUnfinishedOpen((open) => !open)}>Unfinished</button>
-      </div>
-      {unfinishedOpen ? (
-        <div className={rail.unfinished}>
-          <strong>What happened?</strong>
-          <div>
-            <button type="button" disabled={busy} onClick={() => void transition("partial")}>Partly done</button>
-            <button type="button" disabled={busy} onClick={() => void transition("blocked")}>Problem found</button>
-          </div>
+    <TaskPrimaryResultControls
+      busy={busy}
+      doneBusy={saving === "done"}
+      doneDisabled={!checklist || !checklist.ready}
+      unfinishedOpen={unfinishedOpen}
+      onToggleUnfinished={() => setUnfinishedOpen((open) => !open)}
+      onDone={() => void transition("done")}
+    >
+      <section className="atlas-task-unfinished-panel atlas-task-result-unfinished">
+        <strong>What happened?</strong>
+        <div className="atlas-task-unfinished-grid">
+          <button type="button" disabled={busy} onClick={() => void transition("partial")}>Partly done</button>
+          <button type="button" disabled={busy} onClick={() => void transition("blocked")}>Problem found</button>
         </div>
-      ) : null}
-      {message ? <p className={rail.message}>{message}</p> : null}
-    </div>
+      </section>
+    </TaskPrimaryResultControls>
   );
 
   return (
-    <main style={{ maxWidth: 760, margin: "0 auto", padding: "18px 14px 40px" }} data-atlas-venue-card="editor-parity-v2">
+    <main style={{ maxWidth: 760, margin: "0 auto", padding: "18px 14px 40px" }} data-atlas-venue-card="event-truth-v3">
       <AtlasTaskCardFrame
         family="Venue"
         familyDetail={cycleStage}
-        title="Community Thursday"
+        title={eventTitle}
         subtitle={eventLabel}
-        timing={task.due_date ? `Due ${prettyDate(task.due_date)}` : undefined}
+        timing={eventTiming}
         completion={completion}
       >
-        <div className={rail.trail} aria-label="Community Thursday task trail">
+        <div className={rail.trail} aria-label={`${eventTitle} task trail`}>
           {TRAIL.map((step, index) => (
             <span key={step.key} className={index < currentTrailIndex ? rail.trailDone : index === currentTrailIndex ? rail.trailNow : rail.trailLocked}>
               <b>{step.label}</b>
-              <small>Community Thursday</small>
+              <small>{eventTitle}</small>
             </span>
           ))}
         </div>
 
         {cycleStage === "host" ? (
-          <section className={rail.hostChecklist} aria-label="Open the event checklist">
+          <section className={rail.hostChecklist} aria-label={`Open ${eventTitle} checklist`}>
             <header><span>Checklist</span><small>{checklist ? `${checklist.completeCount}/${checklist.totalCount}` : "loading"}</small></header>
             <div className={rail.classicChecklist}>
               {items.map((item) => (
-                <label className={rail.classicCheckItem} key={item.itemKey}>
-                  <input type="checkbox" checked={item.checked} disabled={busy} onChange={() => void toggle(item)} />
-                  <span className={rail.classicCircle} aria-hidden="true" />
-                  <strong>{item.label}</strong>
-                </label>
+                item.interaction === "information" ? (
+                  <div className={rail.informationRow} key={item.itemKey}><strong>{item.label}</strong></div>
+                ) : (
+                  <label className={rail.classicCheckItem} key={item.itemKey}>
+                    <input type="checkbox" checked={item.checked} disabled={busy} onChange={() => void toggle(item)} />
+                    <span className={rail.classicCircle} aria-hidden="true" />
+                    <strong>{item.label}</strong>
+                  </label>
+                )
               ))}
             </div>
           </section>
@@ -296,6 +306,9 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
                   </header>
                   <div className={rail.resourceList}>
                     {section.items.map((item) => {
+                      if (item.interaction === "information") {
+                        return <div className={`${rail.reminderRow} ${rail.localReminderRow} ${rail.informationRow}`} key={item.itemKey}><strong>{item.label}</strong></div>;
+                      }
                       const id = `venue-${task.task_id}-${item.itemKey}`;
                       return (
                         <div className={`${rail.reminderRow} ${rail.localReminderRow}`} key={item.itemKey}>
@@ -319,6 +332,7 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
             </div>
           </>
         )}
+        {message ? <p className={rail.message}>{message}</p> : null}
       </AtlasTaskCardFrame>
     </main>
   );
