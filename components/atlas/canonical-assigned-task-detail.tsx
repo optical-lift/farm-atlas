@@ -15,6 +15,7 @@ import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import SiteLayoutTaskDetail from "@/components/atlas/site-layout-task-detail";
 import TransplantReadinessTaskDetail from "@/components/atlas/transplant-readiness-task-detail";
+import VegetationControlTaskDetail from "@/components/atlas/vegetation-control-task-detail";
 import VenueResetTaskDetail from "@/components/atlas/venue-reset-task-detail";
 import VenueTaskDetail from "@/components/atlas/venue-task-detail";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
@@ -90,6 +91,11 @@ function isOneOffMowingCardTask(task: AtlasTaskCard) {
     && task.metadata.execution_place.trim().length > 0
     && task.metadata?.target_cut_height_inches !== null
     && task.metadata?.target_cut_height_inches !== undefined;
+}
+
+function isSprayTreatmentTask(task: AtlasTaskCard) {
+  return task.action_key === "spray"
+    && task.operation_class === "apply_treatment";
 }
 
 function isWeedTask(task: AtlasTaskCard) {
@@ -250,6 +256,7 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
   if (isSowCardTask(props.task)) return <DirectSowTaskDetail task={props.task} assignee={props.assignee} />;
   if (isOneOffMowingCardTask(props.task)) return <OneOffMowingTaskDetail task={props.task} assignee={props.assignee} />;
+  if (isSprayTreatmentTask(props.task)) return <VegetationControlTaskDetail {...props} />;
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isBuyerOutreachTask(props.task)) return <BuyerOutreachTaskDetail {...props} />;
