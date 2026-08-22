@@ -11,6 +11,15 @@ type Props = {
   detail?: string;
 };
 
+function numberLabel(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, "");
+}
+
+function mapDetail(map: AtlasBedMap, fallback: string) {
+  if (!map.widthFt || !map.lengthFt) return fallback;
+  return `${numberLabel(map.widthFt)} ft × ${numberLabel(map.lengthFt)} ft · one mark = 1 sq ft`;
+}
+
 export default function TaskBedMap({ taskId, label = "Bed map", detail = "current crop occupancy" }: Props) {
   const [map, setMap] = useState<AtlasBedMap | null>(null);
 
@@ -34,10 +43,10 @@ export default function TaskBedMap({ taskId, label = "Bed map", detail = "curren
   if (!map) return null;
 
   return (
-    <section data-atlas-task-bed-map="canonical-v1" style={{ display: "grid", gap: 10, padding: "16px 18px 18px", borderBottom: "1px solid rgba(215,204,189,.62)", background: "rgba(248,246,238,.34)" }}>
+    <section data-atlas-task-bed-map="square-foot-mockup-v1" style={{ display: "grid", gap: 10, padding: "16px 18px 18px", borderBottom: "1px solid rgba(215,204,189,.62)", background: "rgba(248,246,238,.34)" }}>
       <header style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
         <span style={{ color: "#858bb8", fontSize: 10, lineHeight: 1, fontWeight: 950, letterSpacing: ".15em", textTransform: "uppercase" }}>{label}</span>
-        <small style={{ color: "#8b8c84", fontSize: 8, lineHeight: 1.15, fontWeight: 760 }}>{detail}</small>
+        <small style={{ color: "#8b8c84", fontSize: 8, lineHeight: 1.15, fontWeight: 760, textAlign: "right" }}>{mapDetail(map, detail)}</small>
       </header>
       <CropOccupancyBedMap map={map} variant="notebook" />
     </section>
