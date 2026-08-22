@@ -38,7 +38,9 @@ export default function VegetationControlTaskDetail({ task, assignee }: Props) {
   },[task.task_id]);
 
   const metadata=task.metadata??{};
-  const target=task.objects.find(object=>object.role==="target")??task.objects[0];
+  const targetObjectId=text(metadata.target_object_id);
+  const targetObjectKey=text(metadata.target_object_key);
+  const target=task.objects.find(object=>(targetObjectId&&object.object_id===targetObjectId)||(targetObjectKey&&object.object_key===targetObjectKey))??task.objects[0];
   const objectLabel=card?.objectLabel||target?.object_label||text(metadata.display_location)||text(metadata.execution_place)||text(metadata.display_subject)||"Treatment area";
   const zoneLabel=card?.zoneLabel||text(task.zone_label)||text(metadata.collection_zone)||"Elm Farm";
   const objectType=text(target?.object_type)||"area";
@@ -52,7 +54,7 @@ export default function VegetationControlTaskDetail({ task, assignee }: Props) {
     if(kind!=="done"&&!note) return;
     try{
       setSaving(kind);setMessage(null);
-      await postAtlasTaskTransition({taskId:task.task_id,transition:kind,note:note||undefined,reason:note||undefined,laneKey:task.action_key||undefined,workKey:task.action_key||undefined,payload:{vegetationControlFamily:true,targetObjectId:target?.object_id||card?.objectId||undefined,targetObjectKey:text(metadata.target_object_key)||card?.objectKey||undefined}});
+      await postAtlasTaskTransition({taskId:task.task_id,transition:kind,note:note||undefined,reason:note||undefined,laneKey:task.action_key||undefined,workKey:task.action_key||undefined,payload:{vegetationControlFamily:true,targetObjectId:target?.object_id||card?.objectId||targetObjectId||undefined,targetObjectKey:targetObjectKey||card?.objectKey||target?.object_key||undefined}});
       if(kind==="done") completeTaskExit(task.task_id,assignee.listPath); else window.location.assign(returnDestination(assignee.listPath));
     }catch(error){setMessage(error instanceof Error?error.message:"Treatment result failed.");}
     finally{setSaving(null);}
@@ -82,7 +84,7 @@ export default function VegetationControlTaskDetail({ task, assignee }: Props) {
       <div className={styles.body}>
         <AtlasTaskCardFrame family="Spray" familyDetail="vegetation control" title={objectLabel} subtitle={zoneLabel} timing={task.due_date?`Treatment · ${prettyDate(task.due_date)}`:undefined} completion={completion}>
           {card?.bedTrail.length?<div className={styles.trail} aria-label={`${objectLabel} bed history`}>{card.bedTrail.map(step=><span key={`${step.taskId}-${step.eventDate}`}><b>{step.eventKind}</b><small>{step.cropLabel||step.title}</small><em>{prettyDate(step.eventDate)}</em></span>)}</div>:null}
-          <section className="atlas-treatment-target"><span>{objectType==="bed"?"Bed":"Target"}</span><strong>{objectLabel}</strong><small>{text(metadata.target_object_key)||target?.object_key||zoneLabel}</small></section>
+          <section className="atlas-treatment-target"><span>{objectType==="bed"?"Bed":"Target"}</span><strong>{objectLabel}</strong><small>{targetObjectKey||target?.object_key||zoneLabel}</small></section>
           {card?.bedMap?<section className={styles.bedMapSection}><header><span>Bed map</span><small>treatment travels with this bed</small></header><CropOccupancyBedMap map={card.bedMap} variant="notebook"/></section>:null}
           {activeCrops.length?<section className={styles.activeCrops}><header><span>Active Crops</span></header><div className={styles.cropRows}>{activeCrops.map(cohort=><article className={styles.cropRow} key={cohort.cropCycleId}><div className={styles.cropIdentity}><strong>{cohort.displayLabel}</strong><small>{cohort.lifeCycle}</small></div><div className={styles.cropState}><b>{cohort.stageLabel}</b></div></article>)}</div></section>:null}
           {!contextLoaded?<section className="atlas-treatment-target"><span>Bed context</span><strong>Loading…</strong></section>:null}
