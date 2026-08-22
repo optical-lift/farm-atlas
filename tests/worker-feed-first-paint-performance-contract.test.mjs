@@ -6,7 +6,7 @@ const bundleMigration = await readFile(new URL("../supabase/migrations/202608221
 const liveSelector = await readFile(new URL("../supabase/migrations/20260822154500_worker_live_presented_selector_v1.sql", import.meta.url), "utf8");
 const feedCutover = await readFile(new URL("../supabase/migrations/20260822155500_worker_day_feed_live_selector_cutover_v2.sql", import.meta.url), "utf8");
 const reservationsMigration = await readFile(new URL("../supabase/migrations/20260822161200_day_reservations_read_bundle_v2.sql", import.meta.url), "utf8");
-const executeScopeMigration = await readFile(new URL("../supabase/migrations/20260822172000_worker_fast_path_execute_scope_v1.sql", import.meta.url), "utf8");
+const executeScopeMigration = await readFile(new URL("../supabase/migrations/20260822174152_worker_fast_path_execute_scope_v1.sql", import.meta.url), "utf8");
 const workerSelfServer = await readFile(new URL("../lib/atlas/worker-self-day-plan-server.ts", import.meta.url), "utf8");
 const reservationsServer = await readFile(new URL("../lib/atlas/day-reservations-server.ts", import.meta.url), "utf8");
 
