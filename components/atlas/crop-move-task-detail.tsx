@@ -156,7 +156,7 @@ export default function CropMoveTaskDetail({ task, assignee }: Props) {
         reason: note || undefined,
         laneKey: task.action_key || undefined,
         workKey: task.action_key || undefined,
-        payload: { completion_source: kind === "done" ? "crop_move_card" : "task_card", cropMoveFamily: view.family, checklistComplete: hasChecklist ? checklist?.ready === true : undefined },
+        payload: { completion_source: kind === "done" ? "crop_move_parent_attestation" : "task_card", cropMoveFamily: view.family, checklistCompleteBeforeClose: hasChecklist ? checklist?.ready === true : undefined },
       });
       if (kind === "done") completeTaskExit(task.task_id, assignee.listPath);
       else window.location.assign(returnDestination(assignee.listPath));
@@ -165,11 +165,10 @@ export default function CropMoveTaskDetail({ task, assignee }: Props) {
   }
 
   const busy = Boolean(saving);
-  const doneDisabled = hasChecklist && checklist?.ready !== true;
   const completion = (
     <div className={styles.finish}>
       <div className={styles.finishButtons}>
-        <button type="button" className={styles.primary} disabled={busy || doneDisabled} onClick={() => void transition("done")}>Done</button>
+        <button type="button" className={styles.primary} disabled={busy} onClick={() => void transition("done")}>Done</button>
         <button type="button" disabled={busy} onClick={() => setUnfinishedOpen((open) => !open)}>Unfinished</button>
       </div>
       {unfinishedOpen ? <div className={styles.unfinished}><strong>What happened?</strong><div className={styles.finishButtons}><button type="button" disabled={busy} onClick={() => void transition("partial")}>Partly done</button><button type="button" disabled={busy} onClick={() => void transition("blocked")}>Problem found</button></div></div> : null}

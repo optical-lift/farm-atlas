@@ -51,12 +51,7 @@ async function writeChecklistItem(taskId: string, itemKey: string, checked: bool
       "x-atlas-intent": "task-execution-checklist-v1",
     },
     cache: "no-store",
-    body: JSON.stringify({
-      taskId,
-      itemKey,
-      checked,
-      idempotencyKey: requestKey(taskId, itemKey, checked),
-    }),
+    body: JSON.stringify({ taskId, itemKey, checked, idempotencyKey: requestKey(taskId, itemKey, checked) }),
   });
   const data = await response.json() as ChecklistResponse;
   if (!response.ok || !data.ok || !data.checklist) throw new Error(requestError(data));
@@ -144,7 +139,7 @@ export default function ExecutionChecklistTaskDetail(props: Props) {
           .atlas-execution-checklist__item.is-checked { background:#eef3df; color:#55603a; border-color:rgba(97,112,59,.22); }
           .atlas-execution-checklist__mark { width:30px; height:30px; display:grid; place-items:center; border:2px solid #aaa8b2; border-radius:10px; background:#fff; font-size:1rem; font-weight:950; }
           .atlas-execution-checklist__item.is-checked .atlas-execution-checklist__mark { border-color:#829252; background:#dce8ba; }
-          .atlas-execution-checklist__loading, .atlas-execution-checklist__completion-note, .atlas-execution-checklist__message { padding:18px 22px; color:#777; font-size:.88rem; line-height:1.35; }
+          .atlas-execution-checklist__loading, .atlas-execution-checklist__message { padding:18px 22px; color:#777; font-size:.88rem; line-height:1.35; }
           .atlas-execution-checklist__message { padding-top:0; color:#704d43; }
           @media (max-width:560px) { .atlas-execution-checklist { margin-left:16px; margin-right:16px; } }
         `}</style>
@@ -177,9 +172,6 @@ export default function ExecutionChecklistTaskDetail(props: Props) {
               </div>
             </section>
           ))}
-          {checklist && !checklist.ready ? (
-            <p className="atlas-execution-checklist__completion-note">Finish the required lines before marking the task done.</p>
-          ) : null}
           {message ? <p className="atlas-execution-checklist__message">{message}</p> : null}
         </section>
       </>
@@ -188,8 +180,8 @@ export default function ExecutionChecklistTaskDetail(props: Props) {
 
   function resultPayload(outcome: AssignedTaskOutcome) {
     return {
-      completion_source: outcome === "done" ? "execution_checklist" : "task_card",
-      checklistComplete: checklist?.ready === true,
+      completion_source: outcome === "done" ? "execution_checklist_parent_attestation" : "task_card",
+      checklistCompleteBeforeClose: checklist?.ready === true,
     };
   }
 
@@ -197,7 +189,6 @@ export default function ExecutionChecklistTaskDetail(props: Props) {
     <AssignedTaskExecutionShell
       {...props}
       methodInstrument={methodInstrument}
-      doneDisabled={checklist?.ready !== true}
       resultPayload={resultPayload}
     />
   );

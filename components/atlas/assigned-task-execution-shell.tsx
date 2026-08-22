@@ -235,7 +235,7 @@ export default function AssignedTaskExecutionShell({
         completeTaskExit(task.task_id, assignee.listPath);
         return;
       }
-      if (outcome === "not_relevant" || outcome === "changed_plan") {
+      if (outcome === "partial" || outcome === "not_relevant" || outcome === "changed_plan") {
         window.location.assign(returnDestination(assignee.listPath));
         return;
       }

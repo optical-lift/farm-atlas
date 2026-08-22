@@ -48,7 +48,9 @@ test("Venue detail renders the approved Task Card Editor lifecycle and local sta
   assert.match(component, /rail\.localReminderRow/);
   assert.match(component, /filter\(\(item\) => item\.crossedOut !== true\)/);
   assert.match(component, /item\.required \? "true" : "false"/);
-  assert.match(component, /const doneDisabled = !checklist \|\| !checklist\.ready/);
+  assert.doesNotMatch(component, /const doneDisabled = !checklist \|\| !checklist\.ready/);
+  assert.match(component, /completion_source: kind === "done" \? "venue_parent_attestation"/);
+  assert.match(component, /disabled=\{busy\} onClick=\{\(\) => void transition\("done"\)\}/);
   assert.match(rail, /\.trailNow::before/);
   assert.match(rail, /\.localReminderRow::after/);
 });

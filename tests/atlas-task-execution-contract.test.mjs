@@ -62,11 +62,12 @@ test("mowing uses the approved family card instead of an operating-system lectur
   assert.doesNotMatch(mowing, /full mow renews the cadence/i);
 });
 
-test("checklist tasks are a method instrument inside the universal task shell", () => {
+test("checklist tasks are a method instrument inside the universal task shell and Done can attest remaining ordinary rows", () => {
   assert.match(checklist, /AssignedTaskExecutionShell/);
   assert.match(checklist, /methodInstrument=\{methodInstrument\}/);
   assert.match(checklist, /data-atlas-method-instrument="execution-checklist"/);
-  assert.match(checklist, /doneDisabled=\{checklist\?\.ready !== true\}/);
+  assert.doesNotMatch(checklist, /doneDisabled=\{checklist\?\.ready !== true\}/);
+  assert.match(checklist, /completion_source: outcome === "done" \? "execution_checklist_parent_attestation" : "task_card"/);
   assert.match(checklist, /resultPayload=\{resultPayload\}/);
   assert.match(checklist, /atlas-execution-checklist/);
   assert.doesNotMatch(checklist, /TaskExecutionBrief/);
