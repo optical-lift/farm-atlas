@@ -35,9 +35,6 @@ begin
   end if;
 
   if p_day = v_today then
-    -- First paint only needs the canonical live selection and base task-card shell.
-    -- Clock choreography, next-up decisions, transition cards, readiness packets,
-    -- and resource packets belong to the opened task rather than every collapsed row.
     v_plan := atlas.worker_day_feed_plan_live_v1(p_farm_id, p_membership_id, p_day);
     v_plan := v_plan || jsonb_build_object(
       'deferredWork', '[]'::jsonb,
