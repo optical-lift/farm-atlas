@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import styles from "@/components/atlas/crop-move-task-detail.module.css";
+import TaskBedMap from "@/components/atlas/task-bed-map";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -177,7 +178,7 @@ export default function CropMoveTaskDetail({ task, assignee }: Props) {
   );
 
   return (
-    <main className={styles.shell} data-atlas-crop-move="editor-parity-v2">
+    <main className={styles.shell} data-atlas-crop-move="editor-parity-v3">
       <AtlasTaskCardFrame family={view.family} familyDetail="crop move" title={view.title} subtitle={view.subtitle} timing={task.due_date ? `Due ${prettyDate(task.due_date)}` : undefined} completion={completion}>
         <div className={styles.trail} aria-label={`${view.family} crop move trail`}>
           {view.trail.map((step) => <span key={step.label} className={step.state === "done" ? styles.trailDone : step.state === "now" ? styles.trailNow : undefined}><b>{step.label}</b><small>{step.detail}</small></span>)}
@@ -193,6 +194,7 @@ export default function CropMoveTaskDetail({ task, assignee }: Props) {
             {view.destinationFacts.length ? <div className={styles.placeFacts}>{view.destinationFacts.map((fact) => <div key={fact.label}><small>{fact.label}</small><strong>{fact.value}</strong></div>)}</div> : null}
           </div>
         </section>
+        <TaskBedMap taskId={task.task_id} detail="crop move target" />
         {hasChecklist ? <section className={styles.checklist}><header><span>{checklist?.title || "Checklist"}</span><small>{checklist ? `${checklist.completeCount}/${checklist.totalCount}` : "loading"}</small></header>{(checklist?.items ?? []).sort((a,b) => a.sortOrder-b.sortOrder).map((item) => { const id=`crop-move-${task.task_id}-${item.itemKey}`; return <label className={styles.checkRow} key={item.itemKey} htmlFor={id}><input id={id} type="checkbox" checked={item.checked} disabled={busy} onChange={() => void toggle(item)} /><span className={styles.checkCircle} aria-hidden="true"/><strong>{item.label}</strong></label>; })}</section> : null}
       </AtlasTaskCardFrame>
     </main>
