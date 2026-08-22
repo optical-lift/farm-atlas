@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import TaskBedMap from "@/components/atlas/task-bed-map";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 import styles from "./DirectSowFocus.module.css";
@@ -271,6 +272,8 @@ export default function DirectSowFocusPage({ task }: { task: DirectSowFocusTask 
               <div><small>Seed estimate</small><strong>{quantityLabel(task.seedRequirementQuantity, task.seedRequirementUnit)}</strong></div>
             </div>
           </section>
+
+          <TaskBedMap taskId={task.id} detail="sow this canonical bed" />
 
           <section className={styles.zoneBeds} aria-label="Zone and beds">
             <header><span>Zone + bed</span></header>
