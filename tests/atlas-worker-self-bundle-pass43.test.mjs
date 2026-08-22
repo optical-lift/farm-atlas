@@ -42,7 +42,9 @@ test("Farm Hand bundle removes Move context before crossing the authenticated DB
 });
 
 test("server bundle keeps canonical plan and card normalization while skipping the owner timing re-query on first paint", () => {
-  const bundleReader = section(selfPlanServer, "export async function readWorkerSelfDayBundleForTarget", "}");
+  const start = selfPlanServer.indexOf("export async function readWorkerSelfDayBundleForTarget");
+  assert.ok(start >= 0, "missing worker bundle reader");
+  const bundleReader = selfPlanServer.slice(start);
   assert.match(selfPlanServer, /supabase\.rpc\("worker_self_day_bundle_api_v1"/);
   assert.match(selfPlanServer, /normalizeWorkerDayPlan\(data\)/);
   assert.match(selfPlanServer, /if \(!enrichTiming\) return \{ \.\.\.normalized, suggestions: \[\] \}/);
