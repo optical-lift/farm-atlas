@@ -52,25 +52,14 @@ export async function readAtlasDayReservations(input: {
   if (!validDateIso(input.serviceDate)) throw new Error("A valid YYYY-MM-DD reservation day is required.");
 
   const supabase = await createAtlasServerClient();
-  const sync = await supabase.rpc("sync_fixed_routine_reservations_for_day_v1", {
+  const { data, error } = await supabase.rpc("day_reservations_api_v2", {
     p_farm_id: input.farmId,
     p_membership_id: input.membershipId,
     p_day: input.serviceDate,
   });
-  if (sync.error && sync.error.code !== "PGRST202") throw new Error(sync.error.message);
-
-  const { data, error } = await supabase
-    .from("day_reservations")
-    .select("id,service_date,kind,title,starts_at,ends_at,source,source_reference,metadata")
-    .eq("farm_id", input.farmId)
-    .eq("membership_id", input.membershipId)
-    .eq("service_date", input.serviceDate)
-    .eq("active", true)
-    .order("starts_at", { ascending: true })
-    .order("id", { ascending: true });
-
   if (error) throw new Error(error.message);
-  return (data ?? [])
+
+  return (Array.isArray(data) ? data : [])
     .map((row) => normalizeReservation(row as Record<string, unknown>))
     .filter((reservation): reservation is AtlasDayReservation => Boolean(reservation));
 }

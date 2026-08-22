@@ -14,8 +14,9 @@ type WorkerSelfDayBundlePayload = {
   taskCards?: unknown;
 };
 
-async function normalizeWorkerSelfPlan(data: unknown) {
+async function normalizeWorkerSelfPlan(data: unknown, enrichTiming = true) {
   const normalized = normalizeWorkerDayPlan(data);
+  if (!enrichTiming) return { ...normalized, suggestions: [] };
   const plan = await enrichWorkerDayPlanTiming({ ...normalized, suggestions: [] });
   return { ...plan, suggestions: [] };
 }
@@ -43,7 +44,9 @@ export async function readWorkerSelfDayBundleForTarget(dateIso: string, target: 
   const payload = data && typeof data === "object" && !Array.isArray(data)
     ? data as WorkerSelfDayBundlePayload
     : {};
-  const plan = await normalizeWorkerSelfPlan(payload.plan);
+  // The worker sequence can derive safe mobility from each row's existing location.
+  // Owner Day-editing timing enrichment belongs off the farm-hand first-paint path.
+  const plan = await normalizeWorkerSelfPlan(payload.plan, false);
   const taskCards = normalizeWorkerDayOperationalTaskCards(payload.taskCards, { includeMoveContext: false });
   return { plan, taskCards };
 }

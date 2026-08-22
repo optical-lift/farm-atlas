@@ -41,11 +41,16 @@ test("Farm Hand bundle removes Move context before crossing the authenticated DB
   assert.match(migration, /delegates to worker_self_day_plan_api_v1 self-only Farm Hand authorization/);
 });
 
-test("server bundle preserves canonical plan enrichment and shared task-card normalization", () => {
+test("server bundle keeps canonical plan and card normalization while skipping the owner timing re-query on first paint", () => {
+  const start = selfPlanServer.indexOf("export async function readWorkerSelfDayBundleForTarget");
+  assert.ok(start >= 0, "missing worker bundle reader");
+  const bundleReader = selfPlanServer.slice(start);
   assert.match(selfPlanServer, /supabase\.rpc\("worker_self_day_bundle_api_v1"/);
-  assert.match(selfPlanServer, /normalizeWorkerSelfPlan\(payload\.plan\)/);
   assert.match(selfPlanServer, /normalizeWorkerDayPlan\(data\)/);
+  assert.match(selfPlanServer, /if \(!enrichTiming\) return \{ \.\.\.normalized, suggestions: \[\] \}/);
   assert.match(selfPlanServer, /enrichWorkerDayPlanTiming\(\{ \.\.\.normalized, suggestions: \[\] \}\)/);
+  assert.match(bundleReader, /normalizeWorkerSelfPlan\(payload\.plan, false\)/);
+  assert.doesNotMatch(bundleReader, /enrichWorkerDayPlanTiming/);
   assert.match(selfPlanServer, /normalizeWorkerDayOperationalTaskCards\(payload\.taskCards, \{ includeMoveContext: false \}\)/);
   assert.match(cardServer, /export function normalizeWorkerDayOperationalTaskCards/);
 });

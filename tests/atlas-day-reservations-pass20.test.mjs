@@ -5,6 +5,7 @@ import test from "node:test";
 function read(path) { return readFileSync(new URL(`../${path}`, import.meta.url), "utf8"); }
 
 const migration = read("supabase/migrations/20260814060300_atlas_day_reservations_v1.sql");
+const reservationReadMigration = read("supabase/migrations/20260822161200_day_reservations_read_bundle_v2.sql");
 const reservationContract = read("lib/atlas/day-reservations.ts");
 const reservationServer = read("lib/atlas/day-reservations-server.ts");
 const choreographyServer = read("lib/atlas/day-choreography-server.ts");
@@ -28,17 +29,19 @@ test("Pass 20 creates one exact-time non-task reservation primitive instead of o
   assert.doesNotMatch(migration, /alter table atlas\.worker_day_cues/);
 });
 
-test("reservation reads are scoped by farm, membership, service day, and active state", () => {
-  assert.match(reservationServer, /\.from\("day_reservations"\)/);
-  assert.match(reservationServer, /\.eq\("farm_id", input\.farmId\)/);
-  assert.match(reservationServer, /\.eq\("membership_id", input\.membershipId\)/);
-  assert.match(reservationServer, /\.eq\("service_date", input\.serviceDate\)/);
-  assert.match(reservationServer, /\.eq\("active", true\)/);
+test("reservation reads stay scoped by farm, membership, service day, and active state inside one authenticated RPC", () => {
+  assert.match(reservationServer, /supabase\.rpc\("day_reservations_api_v2"/);
+  assert.match(reservationReadMigration, /reservation\.farm_id = p_farm_id/);
+  assert.match(reservationReadMigration, /reservation\.membership_id = p_membership_id/);
+  assert.match(reservationReadMigration, /reservation\.service_date = p_day/);
+  assert.match(reservationReadMigration, /and reservation\.active/);
+  assert.match(reservationReadMigration, /membership\.user_id = auth\.uid\(\)/);
   assert.match(migration, /day_reservations_read_authorized/);
   assert.match(migration, /membership\.user_id = \(select auth\.uid\(\)\)/);
   assert.match(migration, /atlas\.can_read_farm_operations\(farm_id\)/);
   assert.doesNotMatch(migration, /grant insert on atlas\.day_reservations to authenticated/i);
   assert.doesNotMatch(migration, /grant update on atlas\.day_reservations to authenticated/i);
+  assert.doesNotMatch(reservationServer, /\.from\("day_reservations"\)/);
 });
 
 test("the shared Day choreography read carries reservations into the server projection for both roles", () => {
