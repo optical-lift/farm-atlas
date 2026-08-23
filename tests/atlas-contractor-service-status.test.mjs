@@ -16,11 +16,12 @@ test("contractor status cards use a semantic Yes action instead of generic Done"
 });
 
 
-test("an off-day visit exposes an actual service date selector", () => {
-  assert.match(component, /They came on a different day/);
+test("an off-day visit exposes a compact actual service date selector", () => {
+  assert.match(component, /Different date/);
   assert.match(component, /type="date"/);
-  assert.match(component, /When did they come\?/);
+  assert.match(component, /<span>Date<\/span>/);
   assert.match(component, /serviceDate: actualDate/);
+  assert.doesNotMatch(component, /If they came today/);
 });
 
 
@@ -33,8 +34,9 @@ test("confirmed contractor visits anchor the next cadence to the actual visit da
 });
 
 
-test("not-yet keeps the question alive without falsely recording a visit", () => {
+test("not-yet keeps the status check alive without falsely recording a visit", () => {
   assert.match(component, /Not yet/);
   assert.match(component, /transition: "rescheduled"/);
+  assert.match(component, /reason: "contractor_not_yet"/);
   assert.match(component, /contractorServiceStatus: "not_yet"/);
 });
