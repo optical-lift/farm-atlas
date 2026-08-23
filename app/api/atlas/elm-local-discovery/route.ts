@@ -13,12 +13,11 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const MAX_BATCH_SIZE = 40;
 const DEFAULT_BATCH_SIZE = 24;
+const MAX_BATCH_SIZE = 40;
 
 type JsonObject = Record<string, unknown>;
 type RpcError = { code?: string; message?: string };
-
 type DiscoveryRecord = {
   source_url?: unknown;
   source_title?: unknown;
@@ -81,7 +80,10 @@ function canonicalUrl(raw: string) {
   }
 }
 
-function collectCitationUrls(value: unknown, found = new Map<string, { url: string; title: string | null }>()) {
+function collectCitationUrls(
+  value: unknown,
+  found = new Map<string, { url: string; title: string | null }>(),
+) {
   if (Array.isArray(value)) {
     for (const item of value) collectCitationUrls(item, found);
     return found;
@@ -95,7 +97,6 @@ function collectCitationUrls(value: unknown, found = new Map<string, { url: stri
     const key = canonicalUrl(rawUrl);
     if (key) found.set(key, { url: rawUrl, title: text(object.title) || null });
   }
-
   for (const nested of Object.values(object)) collectCitationUrls(nested, found);
   return found;
 }
@@ -117,8 +118,8 @@ function collectOutputText(value: unknown): string[] {
 }
 
 function parseJsonPayload(raw: string) {
-  const trimmed = raw.trim();
-  const unfenced = trimmed
+  const unfenced = raw
+    .trim()
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/i, "")
     .trim();
@@ -136,25 +137,18 @@ function explicitFields(value: unknown) {
   const object = asObject(value);
   if (!object) return {} as JsonObject;
   const result: JsonObject = {};
-  for (const [key, fieldValue] of Object.entries(object)) {
-    const cleanKey = key.trim();
-    if (!cleanKey || fieldValue === null || fieldValue === undefined) continue;
+  for (const [rawKey, fieldValue] of Object.entries(object)) {
+    const key = rawKey.trim();
+    if (!key || fieldValue === null || fieldValue === undefined) continue;
     if (typeof fieldValue === "string") {
-      const cleanValue = fieldValue.trim();
-      if (!cleanValue) continue;
-      result[cleanKey] = cleanValue;
-      continue;
-    }
-    if (typeof fieldValue === "number" || typeof fieldValue === "boolean") {
-      result[cleanKey] = fieldValue;
-      continue;
-    }
-    if (Array.isArray(fieldValue) && fieldValue.length > 0) {
-      result[cleanKey] = fieldValue;
-      continue;
-    }
-    if (asObject(fieldValue) && Object.keys(fieldValue as JsonObject).length > 0) {
-      result[cleanKey] = fieldValue;
+      const clean = fieldValue.trim();
+      if (clean) result[key] = clean;
+    } else if (typeof fieldValue === "number" || typeof fieldValue === "boolean") {
+      result[key] = fieldValue;
+    } else if (Array.isArray(fieldValue) && fieldValue.length > 0) {
+      result[key] = fieldValue;
+    } else if (asObject(fieldValue) && Object.keys(fieldValue as JsonObject).length > 0) {
+      result[key] = fieldValue;
     }
   }
   return result;
@@ -175,28 +169,30 @@ function gatewayPrompt(context: JsonObject, batchSize: number) {
 
   return [
     "You are the Elm Local mixed-batch evidence gatherer.",
-    "Your job is to search current public web reality and GATHER explicit evidence. Do not decide whether a publisher wants the information used later; source-use notices are metadata, not collection filters.",
-    "Return only evidence actually supported by pages you opened through web search. Never infer, construct, guess, or pattern-generate a missing value.",
-    "Missing fields must be omitted. Conflicts may be returned as separate source-backed records; do not silently choose one.",
-    "Every record must have exactly one source_url that you actually visited and can cite.",
-    "Prefer current first-party/current authoritative sources when they are productive, but do not exclude other public sources merely because of source class.",
-    "Do not stop because a requested field such as email is absent; gather the supported identity/role evidence and omit the absent field.",
-    `Find up to ${batchSize} useful NEW source-backed subjects for this batch.`,
+    "Search current public web reality and GATHER explicit evidence. A publisher's downstream-use preference does not determine whether publicly exposed evidence is gathered; preserve relevant notices as source context instead of suppressing collection.",
+    "Return only evidence supported by pages you actually opened through web search.",
+    "Never infer, construct, guess, complete, or pattern-generate a missing value. Omit missing fields.",
+    "Conflicting source-backed values may be separate records; do not silently choose one.",
+    "Every record must have one source_url that you actually visited and can cite.",
+    "Do not stop merely because one requested field is absent. Gather the supported fields and omit the absent one.",
+    `Find up to ${batchSize} useful new source-backed subjects for this batch.`,
     `Search query: ${text(context.query_text)}`,
     `Requested fields: ${JSON.stringify(requestedFields)}`,
     `Query parameters: ${JSON.stringify(parameters)}`,
     `Current loop state: ${JSON.stringify(loopState)}`,
-    "For this query, preserve the requested geographic scope exactly. Geography is a search filter only; do not infer travel behavior.",
-    "Output ONLY one JSON object with this shape:",
-    '{"records":[{"source_url":"https://...","source_title":"published page title if known","publisher":"publisher if explicit","subject_kind":"person|organization|business|nonprofit|government|other","organization_name":"only if explicit and relevant","fields":{"requested_field_name":"explicit source value"}}]}',
-    "The fields object is generic: use the query's requested field names exactly when the source supports them. You may also include directly observed context fields such as role_function, phone, or website when relevant, but never manufacture them.",
-    "For a person result, fields.name must be the person's explicitly published name. fields.title must be the explicitly published current title/role when available. fields.email must appear explicitly on the cited source if included.",
+    "Preserve any geographic scope in the parameters exactly. Geography is a search filter only, never a travel-behavior assumption.",
+    "Output ONLY one JSON object in this shape:",
+    '{"records":[{"source_url":"https://...","source_title":"page title if known","publisher":"publisher if explicit","subject_kind":"person|organization|business|nonprofit|government|other","organization_name":"only if explicit and relevant","fields":{"requested_field_name":"explicit source value"}}]}',
+    "The fields object is generic. Use the query's requested field names exactly when supported. You may include directly observed context fields such as role_function, phone, or website when relevant.",
+    "For person evidence, fields.name must be explicitly published. fields.title must be the explicitly published current title/role when available. fields.email may be included only when the cited source explicitly publishes that email for the person or role represented by the record.",
   ].join("\n");
 }
 
 async function gatewaySearch(context: JsonObject, batchSize: number) {
   const token = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN;
-  if (!token) throw new Error("Missing AI Gateway authentication (AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN).");
+  if (!token) {
+    throw new Error("Missing AI Gateway authentication (AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN).");
+  }
 
   const response = await fetch("https://ai-gateway.vercel.sh/v1/responses", {
     method: "POST",
@@ -206,13 +202,7 @@ async function gatewaySearch(context: JsonObject, batchSize: number) {
     },
     body: JSON.stringify({
       model: "openai/gpt-5.6-sol",
-      input: [
-        {
-          type: "message",
-          role: "user",
-          content: gatewayPrompt(context, batchSize),
-        },
-      ],
+      input: [{ type: "message", role: "user", content: gatewayPrompt(context, batchSize) }],
       tools: [{ type: "web_search" }],
       tool_choice: "auto",
       max_output_tokens: 12000,
@@ -223,16 +213,18 @@ async function gatewaySearch(context: JsonObject, batchSize: number) {
 
   const payload = (await response.json()) as unknown;
   if (!response.ok) {
-    const errorObject = asObject(payload);
-    throw new Error(text(errorObject?.error) || text(asObject(errorObject?.error)?.message) || `AI Gateway request failed (${response.status}).`);
+    const root = asObject(payload);
+    const nestedError = asObject(root?.error);
+    throw new Error(
+      text(nestedError?.message) || text(root?.error) || `AI Gateway request failed (${response.status}).`,
+    );
   }
 
   const citationUrls = collectCitationUrls(payload);
   const rawText = collectOutputText(payload).join("\n").trim();
   const parsed = parseJsonPayload(rawText);
   const records = Array.isArray(parsed?.records) ? (parsed.records as DiscoveryRecord[]) : [];
-
-  return { records, citationUrls, rawTextLength: rawText.length };
+  return { records, citationUrls };
 }
 
 async function authorizeDiscovery(request: Request) {
@@ -264,16 +256,19 @@ export async function POST(request: Request) {
   if (!UUID_PATTERN.test(searchQueryId)) {
     return atlasApiError(400, "invalid_elm_local_search_query", "A valid search query is required.");
   }
+
   const batchSize = normalizedBatchSize(body.batchSize);
   const supabase = createAtlasAdminClient().schema("local_intel");
-
   const { data: contextData, error: contextError } = await supabase.rpc(
     "get_search_discovery_execution_context_v1",
     { p_search_query_id: searchQueryId },
   );
   if (contextError) return discoveryError(contextError, "Elm Local could not read the discovery query.");
+
   const context = asObject(contextData);
-  if (!context) return atlasApiError(404, "elm_local_search_query_not_found", "The Elm Local search query was not found.");
+  if (!context) {
+    return atlasApiError(404, "elm_local_search_query_not_found", "The Elm Local search query was not found.");
+  }
   if (context.status !== "in_process") {
     return privateJson({ ok: true, status: context.status, context });
   }
@@ -283,13 +278,10 @@ export async function POST(request: Request) {
     { p_search_query_id: searchQueryId },
   );
   if (claimError) return discoveryError(claimError, "Elm Local could not claim discovery work.");
+
   const claim = asObject(claimData);
-  if (!claim) {
-    return privateJson({ ok: true, status: "no_queued_batch", context });
-  }
-  if (claim.status === "complete") {
-    return privateJson({ ok: true, status: "complete", claim });
-  }
+  if (!claim) return privateJson({ ok: true, status: "no_queued_batch", context });
+  if (claim.status === "complete") return privateJson({ ok: true, status: "complete", claim });
 
   const discoveryWorkId = text(claim.id);
   let gathered = 0;
@@ -334,13 +326,6 @@ export async function POST(request: Request) {
       );
       if (sourceError || typeof sourceId !== "string") continue;
 
-      const name = text(fields.name);
-      const title = text(fields.title);
-      const email = text(fields.email);
-      const phone = text(fields.phone);
-      const website = text(fields.website);
-      const roleFunction = text(fields.role_function);
-
       const { data: intakeData, error: intakeError } = await supabase.rpc(
         "ingest_search_discovery_evidence_v1",
         {
@@ -351,12 +336,12 @@ export async function POST(request: Request) {
             source_record_key: sourceRecordKey(cited.url, subjectKind, fields),
             subject_kind: subjectKind,
             organization_name: text(record.organization_name) || null,
-            observed_name: name || null,
-            role_title: title || null,
-            role_function: roleFunction || null,
-            email: email || null,
-            phone: phone || null,
-            website_url: website || null,
+            observed_name: text(fields.name) || null,
+            role_title: text(fields.title) || null,
+            role_function: text(fields.role_function) || null,
+            email: text(fields.email) || null,
+            phone: text(fields.phone) || null,
+            website_url: text(fields.website) || null,
             fields,
             metadata: {
               executor: "vercel_ai_gateway_web_search_v1",
@@ -389,7 +374,9 @@ export async function POST(request: Request) {
         },
       },
     );
-    if (finishError) return discoveryError(finishError, "Elm Local gathered evidence but could not close the discovery batch.");
+    if (finishError) {
+      return discoveryError(finishError, "Elm Local gathered evidence but could not close the discovery batch.");
+    }
 
     return privateJson({
       ok: true,
@@ -405,18 +392,18 @@ export async function POST(request: Request) {
       state: finishData,
     });
   } catch (error) {
-    const { error: requeueError } = await supabase
-      .from("search_discovery_queue")
-      .update({ status: "queued", claimed_at: null, updated_at: new Date().toISOString() })
-      .eq("search_query_id", searchQueryId)
-      .eq("status", "in_process");
+    const message = error instanceof Error ? error.message : String(error);
+    const { error: requeueError } = await supabase.rpc(
+      "requeue_search_discovery_batch_v1",
+      { p_search_query_id: searchQueryId, p_error: message },
+    );
 
     console.error("Elm Local discovery batch failed", {
       searchQueryId,
       discoveryWorkId,
       requeueError: requeueError?.message,
-      error: error instanceof Error ? error.message : String(error),
+      error: message,
     });
-    return atlasApiError(502, "elm_local_discovery_executor_failed", error instanceof Error ? error.message : "Elm Local discovery execution failed.");
+    return atlasApiError(502, "elm_local_discovery_executor_failed", message);
   }
 }
