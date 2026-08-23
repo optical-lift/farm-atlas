@@ -21,7 +21,7 @@ for (const relative of [adapterPath, adapterFixPath, bridgePath, consolidatePath
 
 test('1E searches canonical crop observation state rather than treating a submitted field as truth', () => {
   const sql = read(bridgePath);
-  assert.match(sql, /searchAdapter='crop_latest_observation_v1'/);
+  assert.match(sql, /v_search_adapter='crop_latest_observation_v1'/);
   assert.match(sql, /metadata->>'latest_observation'=v_observation_key/);
   assert.match(sql, /metadata->>'latest_observation_date'/);
   assert.match(sql, /authority','canonical_crop_cycle_observation_state'/);
