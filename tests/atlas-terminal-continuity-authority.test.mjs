@@ -8,6 +8,7 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
 const releasePath = 'supabase/migrations/20260823233129_farm_terminal_census_v2_release_contract.sql';
 const registryPath = 'supabase/migrations/20260823233407_farm_terminal_census_v2_rpc_registry_reconciliation_v1.sql';
+const retirementPath = 'supabase/migrations/20260823234500_retire_legacy_farm_continuity_audit_family_v1.sql';
 
 test('terminal farm continuity has one canonical current-state authority', () => {
   const release = read(releasePath);
@@ -54,4 +55,18 @@ test('terminal census helpers remain service-internal and cannot become authenti
   }
   assert.match(registry, /'service_internal','verified','active'/);
   assert.match(registry, /false,true,true,1,1/);
+});
+
+test('legacy farm continuity audit versions are lineage-only, not alternative product authorities', () => {
+  const retirement = read(retirementPath);
+  assert.match(retirement, /proname ~ '\^farm_continuity_audit_v\[0-9\]\+\$'/);
+  assert.match(retirement, /revoke execute on function %s from public, anon, authenticated/i);
+  assert.match(retirement, /grant execute on function %s to service_role/i);
+  assert.match(retirement, /classification = 'service_internal'/);
+  assert.match(retirement, /authenticated_execute_expected = false/);
+  assert.match(retirement, /anonymous_execute_expected = false/);
+  assert.match(retirement, /service_execute_expected = true/);
+  assert.match(retirement, /historical_diagnostic_lineage_only/);
+  assert.match(retirement, /farm_continuity_terminal_census_v2/);
+  assert.match(retirement, /cannot serve as present-tense farm continuity authority/);
 });
