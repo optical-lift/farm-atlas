@@ -56,6 +56,21 @@ jobs:
             exit 1
           fi
 
+  source-custody:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+      - name: Synchronize Atlas executable source with production custody
+        env:
+          ATLAS_PRODUCTION_DATABASE_URL: ${{ secrets.ATLAS_PRODUCTION_DATABASE_URL }}
+        run: npm run sync:atlas:source
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
