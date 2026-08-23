@@ -39,6 +39,8 @@ Those readers derive directly from PostgreSQL catalogs rather than from editable
 
 Each artifact has a SHA-256 fingerprint. Each family fingerprint is SHA-256 over the ordered artifact identity + artifact hash sequence. Therefore adding, removing, or changing any governed artifact changes the family contract.
 
+The bootstrap contract currently covers **4,302 governed Atlas artifacts**: 2,131 constraints, 1,158 functions, 166 RLS policies, 467 RPC privilege records, and 380 triggers.
+
 `scripts/compare-atlas-source-custody-surface.mjs` compares the repository-owned expected family contract with the live catalog-derived family contract. `SURFACE_MISMATCH`, `MISSING_LIVE_FAMILY`, and `UNEXPECTED_LIVE_FAMILY` are release failures.
 
 The source-custody registry itself is excluded from its live fingerprint so the measurement mechanism cannot create recursive fingerprint churn.
@@ -87,6 +89,17 @@ Its order is deliberate:
 
 The synchronizer is read-only against production. The production schema used to support custody is installed through ordinary governed migrations; the synchronizer itself never deploys, repairs operational data, changes scheduling, or edits adjudications.
 
+## Custody governance deployment
+
+The custody registry is governance infrastructure, not an operational Atlas feature. It was intentionally installed in production so current-state equivalence can be measured independently of repository claims.
+
+Its own deployment provenance is already reconciled exactly:
+
+- production `20260823202957_atlas_source_custody_surface_registry_v1` = repository Git blob `3d4dd53a1679e5c939fe64e257cc6b236c6e5f7f`;
+- production `20260823203337_atlas_source_custody_seed_adjudications_v1` = repository Git blob `e1c1b8fc162243f18ba4da3ae6f72d92905a261c`.
+
+These migrations add custody metadata/read surfaces only; they do not alter crops, tasks, scheduling, execution results, or other operational business state.
+
 ## Product boundary
 
 The production project also contains Noel / Intelligence Network history. Historical migration reconciliation scopes Atlas management custody to deployed SQL that touches `atlas.*`. The current executable-surface proof is likewise restricted to the `atlas` schema plus the Atlas RPC registry. Cross-product code that actually mutates Atlas remains visible; research-only product history does not become an Atlas release blocker.
@@ -113,4 +126,4 @@ Tranche 0A is complete when:
 
 Manual closure of every historical PR is **not** part of this release gate.
 
-The custody registry migration is governance infrastructure and intentionally changes production metadata/schema; it does not change Atlas operational business behavior. After this gate, ordinary Tranche 1 product work may resume: the Knowledge Acquisition Bridge and the real `Atlas Needs From You` loop.
+After this gate, ordinary Tranche 1 product work may resume: the Knowledge Acquisition Bridge and the real `Atlas Needs From You` loop.
