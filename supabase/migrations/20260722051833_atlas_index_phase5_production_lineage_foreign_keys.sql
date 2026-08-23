@@ -1,0 +1,19 @@
+create index if not exists production_field_stands_farm_id_idx on atlas.production_field_stands(farm_id);
+create index if not exists production_field_stands_object_id_idx on atlas.production_field_stands(object_id);
+create index if not exists production_field_stands_crop_cycle_id_idx on atlas.production_field_stands(crop_cycle_id);
+
+create index if not exists production_field_care_state_object_id_idx on atlas.production_field_care_state(object_id);
+create index if not exists production_field_care_state_crop_cycle_id_idx on atlas.production_field_care_state(crop_cycle_id);
+
+create index if not exists production_field_observations_field_stand_id_idx on atlas.production_field_observations(field_stand_id);
+create index if not exists production_field_observations_task_id_idx on atlas.production_field_observations(task_id);
+create index if not exists production_field_observations_object_id_idx on atlas.production_field_observations(object_id);
+create index if not exists production_field_observations_crop_cycle_id_idx on atlas.production_field_observations(crop_cycle_id);
+
+create index if not exists production_care_policies_farm_id_idx on atlas.production_care_policies(farm_id);
+create index if not exists production_care_policies_source_task_id_idx on atlas.production_care_policies(source_task_id);
+create index if not exists production_care_policies_last_observation_id_idx on atlas.production_care_policies(last_observation_id);
+
+create index if not exists production_harvest_gates_owner_decision_task_id_idx on atlas.production_harvest_gates(owner_decision_task_id);
+create index if not exists production_harvest_gates_harvest_readiness_task_id_idx on atlas.production_harvest_gates(harvest_readiness_task_id);
+create index if not exists production_harvest_gates_harvest_task_id_idx on atlas.production_harvest_gates(harvest_task_id);
