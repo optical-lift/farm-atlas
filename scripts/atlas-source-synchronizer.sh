@@ -118,7 +118,7 @@ NODE
 
 node "$comparator" "$expected_surface" "$observed_surface"
 
-rpc_drift="$(node -e 'const m=require(process.argv[1]); process.stdout.write(String(m.rpcDrift));' "$metadata")"
+rpc_drift="$(node -e 'const fs=require("node:fs"); const m=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write(String(m.rpcDrift));' "$metadata")"
 if ((rpc_drift > 0)); then
   echo "SOURCE_SYNC_RPC_DRIFT unresolved=$rpc_drift" >&2
   exit 1
@@ -131,5 +131,5 @@ fi
   --manifest "$manifest" \
   --adjudications "$adjudications"
 
-migration_count="$(node -e 'const m=require(process.argv[1]); process.stdout.write(String(m.migrationCount));' "$metadata")"
+migration_count="$(node -e 'const fs=require("node:fs"); const m=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write(String(m.migrationCount));' "$metadata")"
 echo "ATLAS_SOURCE_SYNC_OK surface=exact rpc_drift=0 migration_provenance=clean migrations=$migration_count"
