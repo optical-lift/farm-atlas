@@ -1,0 +1,24 @@
+{
+  "contractVersion": 1,
+  "authority": "repository-main",
+  "scope": "atlas-management deployment provenance",
+  "exactFromVersion": "20260823202957",
+  "legacyEpoch": {
+    "custodyKey": "atlas-management-before-20260823202957",
+    "migrationCount": 1171,
+    "firstVersion": "20260702174405",
+    "lastVersion": "20260823163557",
+    "manifestSha256": "68d1e72e8a85ac35dd892d08d2b491f435324acb26c6e0386639ef12377c0ed8",
+    "repositoryCensus": {
+      "verified": 363,
+      "unresolvedHistorical": 808,
+      "missing": 234,
+      "mismatched": 190,
+      "versionDriftMatch": 73,
+      "versionDriftMismatch": 309,
+      "ambiguousNameDrift": 2
+    },
+    "releaseSemantics": "immutable historical provenance debt; not executable-source authority and cannot waive current-surface mismatch"
+  },
+  "postCutoverRule": "every Atlas-management migration at or after exactFromVersion must reconcile to repository source exactly or through an explicit per-artifact governed adjudication"
+}
