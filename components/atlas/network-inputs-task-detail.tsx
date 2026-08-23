@@ -6,6 +6,7 @@ import AssignedTaskExecutionShell, {
   type AssignedTaskInstrumentContext,
   type AssignedTaskResultInstrumentContext,
 } from "@/components/atlas/assigned-task-execution-shell";
+import StructuredWorkResultForm from "@/components/atlas/structured-work-result-form";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
@@ -51,12 +52,6 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
   const [doneById, setDoneById] = useState<Record<string, boolean>>(() => Object.fromEntries(
     inputs.map((input) => [input.task_id, currentDone(input)]),
   ));
-  const [draftById, setDraftById] = useState<Record<string, string>>(() => Object.fromEntries(
-    inputs.map((input) => [input.task_id, input.note ?? ""]),
-  ));
-  const [savedById, setSavedById] = useState<Record<string, string>>(() => Object.fromEntries(
-    inputs.map((input) => [input.task_id, input.note ?? ""]),
-  ));
 
   async function toggleDone(input: AtlasTaskCard, shellBusy: boolean) {
     if (shellBusy || closing || savingId) return;
@@ -80,42 +75,6 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
       setMessageById((current) => ({
         ...current,
         [input.task_id]: error instanceof Error ? error.message : "Could not update this input.",
-      }));
-    } finally {
-      setSavingId(null);
-    }
-  }
-
-  async function saveFindings(input: AtlasTaskCard, shellBusy: boolean) {
-    if (shellBusy || closing || savingId) return;
-    const note = (draftById[input.task_id] ?? "").trim();
-    if (!note) {
-      setMessageById((current) => ({ ...current, [input.task_id]: "Add a company or finding first." }));
-      return;
-    }
-
-    try {
-      setSavingId(input.task_id);
-      setMessageById((current) => ({ ...current, [input.task_id]: "" }));
-      await postAtlasTaskTransition({
-        taskId: input.task_id,
-        transition: "note",
-        note,
-        laneKey: "network",
-        workKey: "input_findings",
-        payload: {
-          completion_source: "inline_subtask_note",
-          note_kind: "network_input_findings",
-          parent_task_id: task.task_id,
-          input_key: text(input.metadata?.network_input_key),
-        },
-      });
-      setSavedById((current) => ({ ...current, [input.task_id]: note }));
-      setOpenId(null);
-    } catch (error) {
-      setMessageById((current) => ({
-        ...current,
-        [input.task_id]: error instanceof Error ? error.message : "Could not save this finding.",
       }));
     } finally {
       setSavingId(null);
@@ -160,14 +119,12 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
     const methodBusy = busy || closing || Boolean(savingId);
     return (
       <>
-        <section className="atlas-network-inputs" aria-label="Disposal inputs" data-atlas-method-instrument="network-inputs">
-          <h2>Checklist</h2>
+        <section className="atlas-network-inputs" aria-label="Source research" data-atlas-method-instrument="network-inputs">
+          <h2>Sources</h2>
           <div className="atlas-network-inputs__list">
             {inputs.map((input) => {
               const done = doneById[input.task_id] ?? currentDone(input);
               const open = openId === input.task_id;
-              const saving = savingId === input.task_id;
-              const saved = savedById[input.task_id] ?? "";
               const message = messageById[input.task_id] ?? "";
 
               return (
@@ -191,29 +148,14 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
                       onClick={() => setOpenId(open ? null : input.task_id)}
                     >
                       <strong>{inputLabel(input)}</strong>
-                      <small>Tap to log info</small>
-                      {saved ? <span>{saved}</span> : null}
+                      <small>Sources</small>
                     </button>
                   </div>
 
                   {open ? (
-                    <form className="atlas-network-input__form" onSubmit={(event) => { event.preventDefault(); void saveFindings(input, busy); }}>
-                      <textarea
-                        aria-label={`Companies and findings for ${inputLabel(input)}`}
-                        value={draftById[input.task_id] ?? ""}
-                        placeholder="Company — what they have"
-                        disabled={methodBusy && !saving}
-                        onChange={(event) => {
-                          setDraftById((current) => ({ ...current, [input.task_id]: event.target.value }));
-                          setMessageById((current) => ({ ...current, [input.task_id]: "" }));
-                        }}
-                      />
-                      <div className="atlas-network-input__form-actions">
-                        <button type="submit" disabled={methodBusy}>{saving ? "Saving" : "Save"}</button>
-                        <button type="button" disabled={methodBusy} onClick={() => setOpenId(null)}>Cancel</button>
-                      </div>
-                      {message ? <p aria-live="polite">{message}</p> : null}
-                    </form>
+                    <div className="atlas-network-input__result">
+                      <StructuredWorkResultForm taskId={input.task_id} heading="Source" submitLabel="Save source" />
+                    </div>
                   ) : message ? <p className="atlas-network-input__message" aria-live="polite">{message}</p> : null}
                 </article>
               );
@@ -267,26 +209,21 @@ const networkInputsStyles = `
   .atlas-network-inputs__list { display: grid; gap: 12px; }
   .atlas-network-input { overflow: hidden; border: 1px solid rgba(139,145,194,.22); border-radius: 22px; background: rgba(255,255,255,.82); }
   .atlas-network-input.is-done { background: rgba(228,234,200,.48); }
-  .atlas-network-input__row { display: grid; grid-template-columns: 54px minmax(0,1fr); align-items: stretch; min-height: 104px; }
+  .atlas-network-input__row { display: grid; grid-template-columns: 54px minmax(0,1fr); align-items: stretch; min-height: 92px; }
   .atlas-network-input__check { align-self: center; justify-self: center; width: 42px; height: 42px; padding: 0; border: 4px solid rgba(139,145,194,.24); border-radius: 999px; background: rgba(255,255,255,.45); color: #686b7d; font-size: 25px; line-height: 1; font-weight: 950; touch-action: manipulation; }
   .atlas-network-input.is-done .atlas-network-input__check { border-color: rgba(185,204,124,.9); background: rgba(222,233,183,.96); }
-  .atlas-network-input__open { min-width: 0; padding: 18px 18px 18px 8px; border: 0; background: transparent; color: var(--atlas-text); text-align: left; touch-action: manipulation; }
+  .atlas-network-input__open { min-width: 0; padding: 16px 18px 16px 8px; border: 0; background: transparent; color: var(--atlas-text); text-align: left; touch-action: manipulation; }
   .atlas-network-input__open strong { display: block; font-size: 22px; line-height: 1.06; font-weight: 950; letter-spacing: -.035em; }
   .atlas-network-input__open small { display: block; margin-top: 7px; color: var(--atlas-purple-dark); font-size: 12px; line-height: 1.2; font-weight: 900; letter-spacing: .02em; }
-  .atlas-network-input__open span { display: block; margin-top: 9px; color: var(--atlas-muted); font-size: 14px; line-height: 1.35; font-weight: 750; white-space: pre-wrap; }
   .atlas-network-input__check:focus-visible, .atlas-network-input__open:focus-visible { outline: 3px solid rgba(85,90,134,.38); outline-offset: -3px; }
-  .atlas-network-input__form { display: grid; gap: 10px; margin: 0 12px 12px; padding: 12px; border: 1px solid rgba(91,99,71,.18); border-radius: 16px; background: rgba(246,242,230,.82); }
-  .atlas-network-input__form textarea { width: 100%; min-height: 140px; resize: vertical; padding: 12px; border: 1px solid rgba(139,145,194,.24); border-radius: 14px; background: #fff; color: var(--atlas-text); font: inherit; font-size: 16px; line-height: 1.4; }
-  .atlas-network-input__form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .atlas-network-input__form-actions button { min-height: 48px; border: 1px solid rgba(139,145,194,.2); border-radius: 14px; background: rgba(255,255,255,.92); color: var(--atlas-text); font-weight: 950; }
-  .atlas-network-input__form-actions button[type="submit"] { background: rgba(214,225,177,.78); color: #515b34; }
-  .atlas-network-input__form p, .atlas-network-input__message, .atlas-network-task-message { margin: 0; color: #835345; font-size: 12px; line-height: 1.25; font-weight: 850; }
+  .atlas-network-input__result { margin: 0 12px 12px; }
+  .atlas-network-input__message, .atlas-network-task-message { margin: 0; color: #835345; font-size: 12px; line-height: 1.25; font-weight: 850; }
   .atlas-network-input__message { padding: 0 18px 14px 62px; }
   .atlas-network-task-message { padding: 12px 4px 0; text-align: center; }
-  .atlas-network-input button:disabled, .atlas-network-input textarea:disabled { opacity: .58; }
+  .atlas-network-input button:disabled { opacity: .58; }
   @media (max-width: 430px) {
     .atlas-network-inputs { padding: 20px 12px 8px; }
-    .atlas-network-input__row { grid-template-columns: 52px minmax(0,1fr); min-height: 96px; }
+    .atlas-network-input__row { grid-template-columns: 52px minmax(0,1fr); }
     .atlas-network-input__open { padding-right: 14px; }
     .atlas-network-input__open strong { font-size: 21px; }
   }
