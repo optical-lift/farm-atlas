@@ -4,7 +4,7 @@ import { readAtlasPrincipalSelfContext } from "@/lib/atlas/principal-self-contex
 import type { AtlasRoleAccess } from "@/lib/atlas/role-access";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
-export type OwnerMyWorkBucket = "now" | "today" | "this_week" | "waiting" | "backlog";
+export type OwnerMyWorkBucket = "now" | "today" | "thisWeek" | "waiting" | "backlog";
 
 export type OwnerMyWorkItem = {
   key: string;
