@@ -4,6 +4,7 @@ import test from "node:test";
 import { buildOwnerMyWorkProjection } from "../lib/atlas/owner-my-work-core.js";
 
 const ownerMembershipId = "owner-membership";
+const ownerUserId = "owner-user";
 const otherMembershipId = "other-membership";
 
 function task(overrides) {
@@ -18,6 +19,7 @@ function task(overrides) {
     blocker: overrides.blocker ?? null,
     visibilityScope: overrides.visibilityScope ?? "assigned_worker",
     assignedMembershipId: overrides.assignedMembershipId ?? null,
+    assignedUserId: overrides.assignedUserId ?? null,
     parentTaskId: overrides.parentTaskId ?? null,
     metadata: overrides.metadata ?? {},
   };
@@ -26,12 +28,14 @@ function task(overrides) {
 test("Owner My Work reconciles responsibility without turning visibility into a date-only filter", () => {
   const projection = buildOwnerMyWorkProjection({
     ownerMembershipId,
+    ownerUserId,
     today: "2026-08-22",
     weekEnd: "2026-08-28",
     principalTimeZone: "America/Chicago",
     tasks: [
       task({ id: "today", assignedMembershipId: ownerMembershipId, dueDate: "2026-08-22" }),
       task({ id: "owner-scope", assignedMembershipId: otherMembershipId, visibilityScope: "owner", dueDate: "2026-08-25" }),
+      task({ id: "user-assigned", assignedUserId: ownerUserId, visibilityScope: "management", dueDate: "2026-08-26" }),
       task({ id: "blocked", assignedMembershipId: ownerMembershipId, status: "blocked", dueDate: "2026-08-20", blocker: "Waiting on a real prerequisite." }),
       task({ id: "overdue", assignedMembershipId: ownerMembershipId, dueDate: "2026-08-14" }),
       task({ id: "later", assignedMembershipId: ownerMembershipId, dueDate: "2026-09-15" }),
@@ -120,15 +124,15 @@ test("Owner My Work reconciles responsibility without turning visibility into a 
 
   assert.deepEqual(projection.buckets.now.map((item) => item.sourceId), ["obligation-now"]);
   assert.deepEqual(projection.buckets.today.map((item) => item.sourceId), ["today"]);
-  assert.deepEqual(projection.buckets.thisWeek.map((item) => item.sourceId), ["owner-scope", "obligation-week"]);
+  assert.deepEqual(projection.buckets.thisWeek.map((item) => item.sourceId), ["owner-scope", "user-assigned", "obligation-week"]);
   assert.deepEqual(projection.buckets.waiting.map((item) => item.sourceId), ["blocked"]);
   assert.deepEqual(projection.buckets.backlog.map((item) => item.sourceId), ["overdue", "later", "undated-principal"]);
 
-  assert.equal(projection.counts.all, 8);
+  assert.equal(projection.counts.all, 9);
   assert.equal(projection.counts.overdue, 2);
-  assert.equal(projection.counts.taskItems, 5);
+  assert.equal(projection.counts.taskItems, 6);
   assert.equal(projection.counts.principalItems, 3);
-  assert.equal(projection.audit.assignedTaskCount, 4);
+  assert.equal(projection.audit.assignedTaskCount, 5);
   assert.equal(projection.audit.ownerScopeTaskCount, 1);
   assert.equal(projection.audit.excludedTaskRows, 2);
   assert.equal(projection.audit.excludedPrincipalCandidates, 1);
@@ -139,6 +143,7 @@ test("Owner My Work reconciles responsibility without turning visibility into a 
 test("a blocked task stays visible as waiting even when its due date is old", () => {
   const projection = buildOwnerMyWorkProjection({
     ownerMembershipId,
+    ownerUserId,
     today: "2026-08-22",
     weekEnd: "2026-08-28",
     principalTimeZone: "America/Chicago",
