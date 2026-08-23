@@ -1,18 +1,13 @@
 import Link from "next/link";
 
+import type { OwnerMyWorkItem, OwnerMyWorkProjection } from "@/lib/atlas-data/owner-my-work";
 import type { OwnerFinishProjectSummary } from "@/lib/atlas-data/owner-finish-project";
-import type { WorkerWeekProjection } from "@/lib/atlas-data/worker-week-projection";
-import type {
-  OwnerAction,
-  OwnerDashboardProjection,
-} from "@/lib/atlas-data/owner-dashboard";
 
 type OwnerSectionProps = {
   title: string;
-  tasks: OwnerAction[];
+  items: OwnerMyWorkItem[];
   empty: string;
-  referenceDate?: string;
-  overdue?: boolean;
+  badge?: string;
 };
 
 function prettyDate(dateIso: string | null | undefined) {
@@ -22,48 +17,53 @@ function prettyDate(dateIso: string | null | undefined) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function prettyWeekday(dateIso: string) {
-  const date = new Date(`${dateIso}T12:00:00`);
-  return date.toLocaleDateString("en-US", { weekday: "short" });
+function sourceLabel(item: OwnerMyWorkItem) {
+  if (item.source === "principal") {
+    return item.sourceType === "owner_obligation"
+      ? "owner obligation"
+      : item.sourceType.replaceAll("_", " ");
+  }
+  return item.sourceType.replaceAll("_", " ");
 }
 
-function daysBetween(startIso: string, endIso: string) {
-  const start = new Date(`${startIso}T12:00:00Z`);
-  const end = new Date(`${endIso}T12:00:00Z`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-  return Math.max(0, Math.round((end.getTime() - start.getTime()) / 86_400_000));
+function timingLabel(item: OwnerMyWorkItem) {
+  if (item.isOverdue && item.timingDate) return `Overdue since ${prettyDate(item.timingDate)}`;
+  if (!item.timingDate) return item.source === "principal" ? "Principal" : "No date";
+  if (item.timingKind === "fixed") return `Fixed ${prettyDate(item.timingDate)}`;
+  if (item.timingKind === "available") return `Available ${prettyDate(item.timingDate)}`;
+  if (item.timingKind === "begin_by") return `Begin by ${prettyDate(item.timingDate)}`;
+  if (item.timingKind === "finish_by") return `Finish by ${prettyDate(item.timingDate)}`;
+  if (item.timingKind === "window_end") return `Window ends ${prettyDate(item.timingDate)}`;
+  return `Due ${prettyDate(item.timingDate)}`;
 }
 
-function taskDetail(task: OwnerAction) {
-  if (task.totalSteps) return `${task.completedSteps}/${task.totalSteps} steps done`;
-  if (task.blocker) return task.blocker;
-  return task.detail;
-}
-
-function OwnerTaskCard({ task, referenceDate, overdue = false }: { task: OwnerAction; referenceDate?: string; overdue?: boolean }) {
-  const detail = taskDetail(task);
-  const daysLate = overdue && task.dueDate && referenceDate ? daysBetween(task.dueDate, referenceDate) : null;
-  const dateLabel = overdue && task.dueDate
-    ? `Overdue since ${prettyDate(task.dueDate)}${daysLate ? ` · ${daysLate}d` : ""}`
-    : prettyDate(task.dueDate);
+function OwnerWorkCard({ item }: { item: OwnerMyWorkItem }) {
   const content = (
     <>
-      <div><strong>{task.title}</strong><span>{task.taskType.replaceAll("_", " ")}</span></div>
-      <em>{dateLabel}</em>
-      {detail ? <p>{detail}</p> : null}
+      <div>
+        <strong>{item.title}</strong>
+        <span>{sourceLabel(item)}</span>
+      </div>
+      <em>{timingLabel(item)}</em>
+      {item.detail ? <p>{item.detail}</p> : null}
     </>
   );
+  const classes = `atlas-overview-task-card atlas-owner-task-card${item.isOverdue ? " atlas-owner-overdue-card" : ""}`;
 
-  if (!task.id) return <article className={`atlas-overview-task-card atlas-owner-task-card${overdue ? " atlas-owner-overdue-card" : ""}`}>{content}</article>;
-  return <Link className={`atlas-overview-task-card atlas-owner-task-card${overdue ? " atlas-owner-overdue-card" : ""}`} href={`/owner/tasks/${encodeURIComponent(task.id)}`}>{content}</Link>;
+  return <Link className={classes} href={item.href}>{content}</Link>;
 }
 
-function OwnerSection({ title, tasks, empty, referenceDate, overdue = false }: OwnerSectionProps) {
+function OwnerSection({ title, items, empty, badge = "My work" }: OwnerSectionProps) {
   return (
-    <section className={`atlas-overview-zone-card atlas-owner-section${overdue ? " atlas-owner-overdue-section" : ""}`}>
-      <summary><div><strong>{title}</strong><span>{tasks.length} {tasks.length === 1 ? "task" : "tasks"}</span></div><b>{overdue ? "Needs attention" : "Owner"}</b></summary>
+    <section className="atlas-overview-zone-card atlas-owner-section">
+      <summary>
+        <div><strong>{title}</strong><span>{items.length} {items.length === 1 ? "item" : "items"}</span></div>
+        <b>{badge}</b>
+      </summary>
       <div className="atlas-overview-task-list">
-        {tasks.length ? tasks.map((task) => <OwnerTaskCard key={task.id ?? `${task.title}-${task.dueDate ?? "none"}`} task={task} referenceDate={referenceDate} overdue={overdue} />) : <p className="atlas-task-page-muted">{empty}</p>}
+        {items.length
+          ? items.map((item) => <OwnerWorkCard key={item.key} item={item} />)
+          : <p className="atlas-task-page-muted">{empty}</p>}
       </div>
     </section>
   );
@@ -82,7 +82,7 @@ function FinishProjectStewardship({ project }: { project: OwnerFinishProjectSumm
       </div>
       <div style={{ padding: "14px 18px" }}>
         <small style={{ opacity: .62 }}>{releaseLabel}</small>
-        {current ? <><strong style={{ display: "block", marginTop: 4 }}>{current.title}</strong><p style={{ margin: "5px 0 0", opacity: .72 }}>{current.minutes ? `${current.minutes} min · ` : ""}{current.taskStatus ? current.taskStatus.replaceAll("_", " ") : "in today's hand"}</p></> : <p style={{ margin: "5px 0 0", opacity: .72 }}>Atlas has not materialized a Finish Project move into Anna's day.</p>}
+        {current ? <><strong style={{ display: "block", marginTop: 4 }}>{current.title}</strong><p style={{ margin: "5px 0 0", opacity: .72 }}>{current.minutes ? `${current.minutes} min · ` : ""}{current.taskStatus ? current.taskStatus.replaceAll("_", " ") : "in today's hand"}</p></> : <p style={{ margin: "5px 0 0", opacity: .72 }}>Atlas has not materialized a Finish Project move into Anna&apos;s day.</p>}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", borderTop: "1px solid rgba(0,0,0,.08)" }}>
         <div style={{ padding: "12px 8px", textAlign: "center" }}><strong style={{ display: "block", fontSize: 18 }}>{project.annaReadyCount}</strong><span style={{ fontSize: 11, opacity: .62 }}>Anna pool</span></div>
@@ -95,82 +95,61 @@ function FinishProjectStewardship({ project }: { project: OwnerFinishProjectSumm
   );
 }
 
-function AnnaWeekProjection({ projection }: { projection: WorkerWeekProjection }) {
-  return (
-    <section className="atlas-overview-zone-card atlas-owner-section" style={{ overflow: "hidden" }}>
-      <summary>
-        <div><strong>Anna's Week</strong><span>{prettyDate(projection.startDate)}–{prettyDate(projection.endDate)}</span></div>
-        <b>Forecast</b>
-      </summary>
-      <div style={{ padding: "0 14px 14px" }}>
-        <p style={{ margin: "10px 4px 12px", opacity: .68, fontSize: 13 }}>Atlas plans ahead here without releasing the whole week into Anna's hand.</p>
-        <div style={{ display: "grid", gap: 10 }}>
-          {projection.days.map((day) => (
-            <article key={day.date} style={{ border: "1px solid rgba(0,0,0,.08)", borderRadius: 14, overflow: "hidden" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "10px 12px", background: "rgba(0,0,0,.025)" }}>
-                <strong>{prettyWeekday(day.date)} · {prettyDate(day.date)}</strong>
-                <span style={{ opacity: .6, fontSize: 12 }}>{day.items.length} {day.items.length === 1 ? "move" : "moves"}</span>
-              </div>
-              <div>
-                {day.items.length ? day.items.map((item) => (
-                  <div key={item.id} style={{ padding: "10px 12px", borderTop: "1px solid rgba(0,0,0,.06)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                      <strong>{item.title}</strong>
-                      <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em", opacity: .62 }}>{item.planState}</span>
-                    </div>
-                    <p style={{ margin: "4px 0 0", opacity: .66, fontSize: 12 }}>
-                      {item.sourceKind === "project_pull" ? "Venue project" : item.sourceKind.replaceAll("_", " ")}
-                      {item.expectedActiveMinutes ? ` · ${item.expectedActiveMinutes} min` : ""}
-                      {item.environment ? ` · ${item.environment}` : ""}
-                      {item.reason ? ` · ${item.reason}` : ""}
-                    </p>
-                  </div>
-                )) : <p style={{ margin: 0, padding: "12px", opacity: .55 }}>No planned work yet.</p>}
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-export default function OwnerDashboardClient({ dashboard, finishProject, weekProjection }: { dashboard: OwnerDashboardProjection; finishProject: OwnerFinishProjectSummary | null; weekProjection: WorkerWeekProjection | null }) {
-  const { counts, ownerActions } = dashboard;
+export default function OwnerDashboardClient({
+  myWork,
+  finishProject,
+}: {
+  myWork: OwnerMyWorkProjection;
+  finishProject: OwnerFinishProjectSummary | null;
+}) {
+  const { counts, buckets } = myWork;
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-owner-page-shell">
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone atlas-overview-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">{dashboard.farm.name}</span><span className="atlas-phone-title">Owner</span></Link>
-          <span className="atlas-weather-line">{counts.overdue} overdue</span>
+          <Link href="/" className="atlas-phone-brand atlas-task-header-brand"><span className="atlas-phone-kicker">{myWork.farm.name}</span><span className="atlas-phone-title">Owner</span></Link>
+          <span className="atlas-weather-line">{counts.all} mine · {counts.overdue} overdue</span>
           <Link href="/owner/members" className="atlas-note-plus atlas-overview-top-dot" aria-label="People and access">People</Link>
         </header>
 
         <div className="atlas-task-page-body atlas-overview-body atlas-owner-body">
           <section className="atlas-overview-hero atlas-owner-hero">
-            <div><strong>Owner Work</strong><span>{prettyDate(dashboard.generatedForDate)}–{prettyDate(dashboard.weekEndDate)}</span></div>
-            <p>{counts.overdue} overdue · {counts.today} due today · {counts.open} open total</p>
+            <div><strong>My Work</strong><span>{prettyDate(myWork.generatedForDate)}–{prettyDate(myWork.weekEndDate)}</span></div>
+            <p>{counts.now} now · {counts.today} today · {counts.thisWeek} this week · {counts.waiting} waiting</p>
           </section>
 
-          {weekProjection ? <AnnaWeekProjection projection={weekProjection} /> : null}
-          {finishProject ? <FinishProjectStewardship project={finishProject} /> : null}
+          {myWork.principalSourceState === "unavailable" ? (
+            <section className="atlas-overview-zone-card atlas-owner-section">
+              <summary><div><strong>Principal work unavailable</strong><span>Farm tasks are still shown below</span></div><b>Source check</b></summary>
+            </section>
+          ) : null}
 
-          <OwnerSection title="Fallen Through the Cracks" tasks={ownerActions.overdue} empty="No overdue owner tasks." referenceDate={dashboard.generatedForDate} overdue />
-
-          <section className="atlas-overview-stat-grid" aria-label="Owner task stats">
+          <section className="atlas-overview-stat-grid" aria-label="My Work stats">
+            <article><strong>{counts.all}</strong><span>mine</span></article>
             <article><strong>{counts.overdue}</strong><span>overdue</span></article>
-            <article><strong>{counts.today}</strong><span>today</span></article>
-            <article><strong>{counts.thisWeek}</strong><span>this week</span></article>
-            <article><strong>{counts.later}</strong><span>later</span></article>
+            <article><strong>{counts.waiting}</strong><span>waiting</span></article>
+            <article><strong>{counts.principalItems}</strong><span>Principal</span></article>
           </section>
 
-          <section className="atlas-overview-zone-list atlas-owner-list" aria-label="Owner task list">
-            <OwnerSection title="Today" tasks={ownerActions.today} empty="No owner tasks due today." />
-            <OwnerSection title="This Week" tasks={ownerActions.thisWeek} empty="No owner tasks later this week." />
-            <OwnerSection title="Later" tasks={ownerActions.later} empty="No later owner tasks." />
-            <Link className="atlas-overview-task-card atlas-owner-task-card" href="/owner/lineage"><div><strong>Trail Lineage Audit</strong><span>owner evidence review</span></div><em>Open</em><p>Confirm or reject proposed links between completed records and earlier Trail points.</p></Link>
-            {ownerActions.recentlyDone.length ? <OwnerSection title="Recently Done" tasks={ownerActions.recentlyDone} empty="No owner tasks completed yet." /> : null}
+          <section className="atlas-overview-zone-list atlas-owner-list" aria-label="My Work list">
+            <OwnerSection title="Needs You Now" items={buckets.now} empty="Nothing from the Principal Clock needs you now." badge="Now" />
+            <OwnerSection title="Today" items={buckets.today} empty="No work is due today." />
+            <OwnerSection title="This Week" items={buckets.thisWeek} empty="No additional work is due this week." />
+            <OwnerSection title="Waiting" items={buckets.waiting} empty="Nothing assigned to you is blocked." badge="Blocked" />
+            <OwnerSection title="Backlog" items={buckets.backlog} empty="No open backlog." badge={counts.overdue ? `${counts.overdue} overdue` : "My work"} />
+          </section>
+
+          <section className="atlas-overview-zone-list atlas-owner-list" aria-label="Team and operations">
+            <section className="atlas-overview-zone-card atlas-owner-section">
+              <summary><div><strong>Team &amp; Operations</strong><span>Secondary to your own work</span></div><b>Manage</b></summary>
+              <div className="atlas-overview-task-list">
+                <Link className="atlas-overview-task-card atlas-owner-task-card" href="/owner/members"><div><strong>People &amp; access</strong><span>team</span></div><em>Open</em><p>Inspect people, roles and access without replacing your own work list.</p></Link>
+                <Link className="atlas-overview-task-card atlas-owner-task-card" href="/principal"><div><strong>Principal office</strong><span>strategy and arbitration</span></div><em>Open</em><p>Capacity, portfolio, obligations and strategic context remain available without becoming the Owner task cockpit.</p></Link>
+                <Link className="atlas-overview-task-card atlas-owner-task-card" href="/owner/lineage"><div><strong>Trail Lineage Audit</strong><span>owner evidence review</span></div><em>Open</em><p>Confirm or reject proposed links between completed records and earlier Trail points.</p></Link>
+              </div>
+            </section>
+            {finishProject ? <FinishProjectStewardship project={finishProject} /> : null}
           </section>
         </div>
       </section>
