@@ -62,7 +62,7 @@ test('current executable surface equivalence is the primary custody release proo
   const comparator = read('scripts/compare-atlas-source-custody-surface.mjs');
   const expected = JSON.parse(read('docs/architecture/atlas-source-custody-surface-v1.json'));
   assert.match(contract, /Current-state equivalence — primary release proof/i);
-  assert.match(sync, /source_custody_live_surface_v1/);
+  assert.match(sync, /source_custody_release_packet_v1/);
   assert.match(sync, /compare-atlas-source-custody-surface\.mjs/);
   assert.match(comparator, /SURFACE_MISMATCH/);
   assert.match(comparator, /MISSING_LIVE_FAMILY/);
@@ -72,7 +72,8 @@ test('current executable surface equivalence is the primary custody release proo
   assert.match(expected.bootstrapEvidence.method, /catalog-derived bootstrap/i);
   assert.equal(expected.bootstrapEvidence.productionMigrationGitBlobSha, '3d4dd53a1679e5c939fe64e257cc6b236c6e5f7f');
   assert.deepEqual(expected.families.map((row) => row.familyKey).sort(), ['constraints','functions','rls_policies','rpc_privileges','triggers']);
-  assert.equal(expected.families.reduce((sum, row) => sum + row.artifactCount, 0), 4302);
+  assert.equal(expected.families.reduce((sum, row) => sum + row.artifactCount, 0), 4303);
+  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 468);
   for (const row of expected.families) assert.match(row.fingerprintSha256, /^[0-9a-f]{64}$/);
 });
 
@@ -96,24 +97,48 @@ test('custody governance migrations retain their exact production versions and s
   const contract = read('docs/architecture/atlas-source-custody.md');
   assert.equal(fs.existsSync(path.join(root, 'supabase/migrations/20260823202957_atlas_source_custody_surface_registry_v1.sql')), true);
   assert.equal(fs.existsSync(path.join(root, 'supabase/migrations/20260823203337_atlas_source_custody_seed_adjudications_v1.sql')), true);
+  assert.equal(fs.existsSync(path.join(root, 'supabase/migrations/20260823204558_atlas_source_custody_release_packet_v1.sql')), true);
+  assert.equal(fs.existsSync(path.join(root, 'supabase/migrations/20260823204641_atlas_source_custody_release_packet_registry_v1.sql')), true);
   assert.match(contract, /20260823202957_atlas_source_custody_surface_registry_v1/);
   assert.match(contract, /3d4dd53a1679e5c939fe64e257cc6b236c6e5f7f/);
   assert.match(contract, /20260823203337_atlas_source_custody_seed_adjudications_v1/);
   assert.match(contract, /e1c1b8fc162243f18ba4da3ae6f72d92905a261c/);
 });
 
-test('Atlas Source Synchronizer uses current surface first and migration provenance second', () => {
+test('Atlas Source Synchronizer uses publishable custody packet, current surface first, and migration provenance second', () => {
   const sync = read('scripts/atlas-source-synchronizer.sh');
+  const engine = read('scripts/reconcile-production-migration-history.sh');
+  const workflow = read('.github/workflows/atlas-ci.yml');
   const pkg = JSON.parse(read('package.json'));
   assert.equal(pkg.scripts['sync:atlas:source'], 'bash scripts/atlas-source-synchronizer.sh');
   assert.equal(pkg.scripts['verify:atlas:surface'], 'node scripts/compare-atlas-source-custody-surface.mjs');
+  assert.match(sync, /ATLAS_SOURCE_CUSTODY_API_URL/);
+  assert.match(sync, /ATLAS_SUPABASE_PUBLISHABLE_KEY/);
+  assert.match(sync, /source_custody_release_packet_v1/);
   assert.match(sync, /node "\$comparator"/);
-  assert.match(sync, /atlas\.authenticated_rpc_registry_drift_v1\(\)/);
-  assert.match(sync, /source_custody_adjudications/);
+  assert.match(sync, /--manifest "\$manifest"/);
   assert.match(sync, /--since 0/);
   assert.match(sync, /--scope atlas-management/);
   assert.match(sync, /ATLAS_SOURCE_SYNC_OK surface=exact rpc_drift=0 migration_provenance=clean/);
+  assert.match(engine, /--manifest/);
+  assert.match(workflow, /Prove live Atlas source custody/);
+  assert.doesNotMatch(workflow, /Live production custody check remains a release gate/);
   assert.ok(sync.indexOf('node "$comparator"') < sync.indexOf('"$engine"'), 'surface comparison must precede migration archaeology');
+});
+
+test('publishable release packet exposes custody metadata only and is explicitly governed', () => {
+  const packet = read('supabase/migrations/20260823204558_atlas_source_custody_release_packet_v1.sql');
+  const registry = read('supabase/migrations/20260823204641_atlas_source_custody_release_packet_registry_v1.sql');
+  assert.match(packet, /source_custody_release_packet_v1/);
+  assert.match(packet, /expected_blob_sha/);
+  assert.match(packet, /source_custody_live_packet_v1/);
+  assert.match(packet, /authenticated_rpc_registry_drift_v1/);
+  assert.match(packet, /Contains no operational business rows or migration SQL bodies/i);
+  assert.match(packet, /grant execute on function atlas\.source_custody_release_packet_v1\(\) to anon, authenticated, service_role/i);
+  assert.match(registry, /atlas\.source_custody_release_packet_v1\(\)/);
+  assert.match(registry, /'public_endpoint'/);
+  assert.match(registry, /'exposesOperationalBusinessRows',false/);
+  assert.match(registry, /'exposesMigrationSqlBodies',false/);
 });
 
 test('custody engine hard-fails unresolved provenance debt but permits governed identical-byte drift adjudication', () => {
@@ -123,6 +148,7 @@ test('custody engine hard-fails unresolved provenance debt but permits governed 
   assert.match(engine, /AMBIGUOUS_NAME_DRIFT/);
   assert.match(engine, /missing > 0 \|\| mismatched > 0 \|\| version_drift_match > 0/);
   assert.match(engine, /position\('atlas\.' in lower\(sql\)\) > 0/);
+  assert.match(engine, /a hash-only manifest is read-only/);
 });
 
 test('known Grow Room timestamp drift is governed in append-only production custody source', () => {
