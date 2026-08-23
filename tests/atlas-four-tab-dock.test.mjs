@@ -3,23 +3,27 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const shell = readFileSync(new URL("../components/atlas/shell/AtlasContextualAppFrame.tsx", import.meta.url), "utf8");
+const dockProfile = readFileSync(new URL("../lib/atlas/dock-profile.ts", import.meta.url), "utf8");
 const more = readFileSync(new URL("../app/more/page.tsx", import.meta.url), "utf8");
 const zones = readFileSync(new URL("../app/zones/page.tsx", import.meta.url), "utf8");
 
-test("the app dock keeps the universal destinations and adds Clock plus Manager when appropriate", () => {
-  for (const label of ["Home", "Work", "Clock", "Harvest", "More"]) {
+test("the app dock keeps universal destinations while capability profiles decide whether Manager appears", () => {
+  for (const label of ["Home", "Work", "Clock", "Manager", "Harvest", "More"]) {
     assert.match(shell, new RegExp(`label: "${label}"`));
   }
-  assert.match(shell, /effectiveFarmRole === "owner" \|\| effectiveFarmRole === "manager"/);
-  assert.match(shell, /key: "manager" as const, label: "Manager", href: farmManagerHref/);
-  assert.match(shell, /\{ key: "work"[\s\S]*\{ key: "clock"[\s\S]*Manager[\s\S]*\{ key: "harvest"/);
+  assert.match(shell, /atlasDockProfileForRole\(effectiveFarmRole\)/);
+  assert.match(shell, /manager: \{ key: "manager", label: "Manager", href: farmManagerHref \}/);
+  assert.match(shell, /atlasDockKeys\(dockProfile\)\.map/);
+  assert.match(dockProfile, /FULL_DOCK_KEYS[\s\S]*"manager"/);
+  assert.doesNotMatch(dockProfile.match(/FIELD_WORKER_DOCK_KEYS[\s\S]*?\];/)?.[0] ?? "", /"manager"/);
   assert.match(shell, /gridTemplateColumns: `repeat\(\$\{items\.length\}, minmax\(0, 1fr\)\)`/);
   assert.doesNotMatch(shell, /key: "places"/);
   assert.doesNotMatch(shell, /label: "Places"/);
 });
 
-test("dock icons are one custom SVG family including Clock and Manager", () => {
-  assert.match(shell, /type DockIconKey = "home" \| "work" \| "clock" \| "manager" \| "harvest" \| "more"/);
+test("dock icons share one canonical key type and custom SVG family including Clock and Manager", () => {
+  assert.match(dockProfile, /export type AtlasDockKey = "home" \| "work" \| "clock" \| "manager" \| "harvest" \| "more"/);
+  assert.match(shell, /type DockIconKey = AtlasDockKey/);
   assert.match(shell, /if \(kind === "clock"\)/);
   assert.match(shell, /if \(kind === "manager"\)/);
   assert.match(shell, /viewBox: "0 0 24 24"/);

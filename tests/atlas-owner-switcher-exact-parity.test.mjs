@@ -97,7 +97,7 @@ test("switched navigation and management controls use the effective role", () =>
 
   assert.match(layout, /operatorContext\?\.isOperating[\s\S]*operatorContext\.effective\.farmRole/);
   assert.match(layout, /AtlasContextualAppFrame effectiveFarmRole=\{effectiveFarmRole\}/);
-  assert.match(shell, /effectiveFarmRole === "owner" \|\| effectiveFarmRole === "manager"/);
+  assert.match(shell, /atlasDockProfileForRole\(effectiveFarmRole\)/);
   assert.match(shell, /label: "Manager"/);
   assert.match(more, /operatorContext\.effective\.farmRole/);
   assert.match(alongside, /effective\.farmMembershipId/);

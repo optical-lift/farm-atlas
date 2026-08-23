@@ -6,16 +6,19 @@ import { useEffect, useMemo, useState } from "react";
 
 import { FieldLogDrawer, type AtlasFieldLogSeed } from "@/components/atlas/field-log-builder";
 import { AtlasTopBar } from "@/components/atlas/ui/AtlasPrimitives";
+import { atlasDockKeys, atlasDockProfileForRole, type AtlasDockKey } from "@/lib/atlas/dock-profile";
 import { atlasFarmDateIso } from "@/lib/atlas/farm-day";
 import type { AtlasFarmRole } from "@/lib/atlas/session";
 import { fetchAtlasZoneRegistry, type AtlasRegistryZone } from "@/lib/atlas/zone-registry-client";
 
-type DockIconKey = "home" | "work" | "clock" | "manager" | "harvest" | "more";
+type DockIconKey = AtlasDockKey;
 
 type AtlasContextualAppFrameProps = {
   effectiveFarmRole?: AtlasFarmRole | null;
   activeFarmName?: string | null;
 };
+
+type DockItem = { key: DockIconKey; label: string; href: string };
 
 function todayHref() {
   return `/day?date=${encodeURIComponent(atlasFarmDateIso())}`;
@@ -38,7 +41,8 @@ function routeGroup(pathname: string) {
   if (pathname.startsWith("/clock")) return "clock";
   if (pathname.startsWith("/manage/day")) return "manager";
   if (
-    pathname.startsWith("/day")
+    pathname.startsWith("/owner")
+    || pathname.startsWith("/day")
     || pathname.startsWith("/overview")
     || pathname.startsWith("/work")
     || pathname.startsWith("/task")
@@ -143,7 +147,8 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
   const currentClockHref = useMemo(clockHref, []);
   const farmManagerHref = useMemo(managerHref, []);
   const hidden = HIDDEN_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
-  const canManage = effectiveFarmRole === "owner" || effectiveFarmRole === "manager";
+  const dockProfile = atlasDockProfileForRole(effectiveFarmRole);
+  const isOwner = effectiveFarmRole === "owner";
   const canDocument = Boolean(effectiveFarmRole);
   const [registryZones, setRegistryZones] = useState<AtlasRegistryZone[]>([]);
   const [logSeed, setLogSeed] = useState<AtlasFieldLogSeed | null>(null);
@@ -209,21 +214,19 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
     setLogSeed({ workKey: "note", zoneKeys: [], objectKeys: [] });
   }
 
-  const items: Array<{ key: DockIconKey; label: string; href: string }> = principalProjection
-    ? [
-        { key: "home", label: "Home", href: "/principal" },
-        { key: "work", label: "Farm Ops", href: "/overview/week" },
-        { key: "more", label: "More", href: "/more" },
-      ]
-    : [
-        { key: "home", label: "Home", href: "/" },
-        { key: "work", label: "Work", href: workHref },
-        { key: "clock", label: "Clock", href: currentClockHref },
-        ...(canManage ? [{ key: "manager" as const, label: "Manager", href: farmManagerHref }] : []),
-        { key: "harvest", label: "Harvest", href: "/harvest" },
-        { key: "more", label: "More", href: "/more" },
-      ];
+  const destinations: Record<DockIconKey, DockItem> = {
+    home: { key: "home", label: "Home", href: isOwner ? "/principal" : "/" },
+    work: { key: "work", label: "Work", href: isOwner ? "/owner" : workHref },
+    clock: { key: "clock", label: "Clock", href: currentClockHref },
+    manager: { key: "manager", label: "Manager", href: farmManagerHref },
+    harvest: { key: "harvest", label: "Harvest", href: "/harvest" },
+    more: { key: "more", label: "More", href: "/more" },
+  };
+  const items = atlasDockKeys(dockProfile).map((key) => destinations[key]);
 
+  // Dock shape is capability-profile authority, never route or person-name
+  // authority. Owners and managers receive the full Atlas dock; field workers
+  // receive the reduced profile. The same profile renders on every screen.
   // Legacy route marker retained for contract search: "/#work-board".
   return (
     <>

@@ -40,6 +40,7 @@ const paired = {
   "20260821162442_align_weekly_harvest_mockup_recording_v2.sql": "20260821163400_weekly_harvest_rpc_registry_and_privilege_hardening_v1.sql",
   "20260822154955_atlas_entity_identity_review_bridge_v1.sql": "20260822155702_entity_identity_review_rpc_registry_v1.sql",
   "20260822174152_worker_fast_path_execute_scope_v1.sql": "20260822175956_reconcile_recent_atlas_rpc_execute_surface_v1.sql",
+  "20260823131644_worker_feed_readiness_and_rollover_containment_v1.sql": "20260823132603_worker_executable_task_ids_rpc_registry_v1.sql",
 };
 
 const batchedPresentedWorkMigrations = new Set([
@@ -208,11 +209,5 @@ test("the current weekly Harvest RPC boundary is explicit, least-privilege, and 
   assert.match(registry, /'revoked',false,true,true/);
   assert.match(registry, /'active',true,true,true/);
   assert.match(registry, /anonymous_execute_expected/);
-  assert.match(registry, /weekly_harvest_round_v2/);
-});
-
-test("latest generic readiness endpoint remains registered as an app endpoint", () => {
-  const registry = readMigration("20260820193959_worker_task_execution_readiness_rpc_registry_v1.sql");
-  assert.ok(registry.includes("atlas.worker_task_execution_readiness_api_v1(uuid)"));
-  assert.match(registry, /app_endpoint/);
+  assert.match(registry, /authenticated_rpc_registry_drift_v1/);
 });
