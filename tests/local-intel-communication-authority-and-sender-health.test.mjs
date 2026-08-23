@@ -128,7 +128,18 @@ test("communication writes stay behind service-only functions rather than direct
       `${fn} must remain service-only`,
     );
   }
-  assert.match(migration, /revoke all on local_intel\.communication_permission_events from public,anon,authenticated,service_role/i);
-  assert.match(migration, /revoke all on local_intel\.communication_sender_health_events from public,anon,authenticated,service_role/i);
-  assert.match(migration, /revoke all on local_intel\.communication_authority_assessments from public,anon,authenticated,service_role/i);
+  for (const table of [
+    "communication_permission_events",
+    "communication_sender_health_events",
+    "communication_authority_assessments",
+  ]) {
+    assert.ok(
+      migration.toLowerCase().includes(`revoke all on local_intel.${table} from public,anon,authenticated`),
+      `${table} must not expose direct public/anon/authenticated DML`,
+    );
+    assert.ok(
+      migration.toLowerCase().includes(`revoke all on local_intel.${table} from service_role`),
+      `${table} must not expose direct service-role DML`,
+    );
+  }
 });
