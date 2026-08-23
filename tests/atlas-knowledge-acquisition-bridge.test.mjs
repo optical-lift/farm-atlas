@@ -10,11 +10,19 @@ const firstAnswerPath = 'supabase/migrations/20260823212832_owner_needs_from_you
 const propagationPath = 'supabase/migrations/20260823212930_owner_needs_from_you_answer_propagation_v1.sql';
 const retirePath = 'supabase/migrations/20260823213042_retire_broken_owner_needs_from_you_answer_overload_v2.sql';
 const finalFixPath = 'supabase/migrations/20260823213140_fix_owner_unknown_transition_signature_v1.sql';
+const workerPrototypePath = 'supabase/migrations/20260823214102_truth_acquisition_worker_observation_adapter_v1.sql';
+const workerPrototypeFixPath = 'supabase/migrations/20260823214157_fix_truth_acquisition_observation_carrier_sync_type_v1.sql';
+const workerBridgePath = 'supabase/migrations/20260823214200_worker_truth_acquisition_observation_bridge_v1.sql';
+const workerConsolidationPath = 'supabase/migrations/20260823214330_consolidate_worker_truth_acquisition_bridge_v1.sql';
+const workerOperationFixPath = 'supabase/migrations/20260823214334_worker_truth_observation_operation_class_fix_v1.sql';
 
 const migration = () => read(migrationPath);
 const propagation = () => read(propagationPath);
 const retire = () => read(retirePath);
 const finalFix = () => read(finalFixPath);
+const workerBridge = () => read(workerBridgePath);
+const workerConsolidation = () => read(workerConsolidationPath);
+const workerOperationFix = () => read(workerOperationFixPath);
 
 test('Tranche 1A search-before-ask contract is explicit and preserves epistemic boundaries', () => {
   const sql = migration();
@@ -184,13 +192,83 @@ test('Tranche 1D retires the broken five-argument overload and keeps the four-ar
   assert.match(canonical, /'public_endpoint','verified','active'/);
 });
 
+test('Tranche 1E searches canonical crop observation state rather than treating Worker task result fields as truth', () => {
+  const sql = workerBridge();
+  assert.match(sql, /crop_latest_observation_v1/);
+  assert.match(sql, /v_cycle\.metadata->>'latest_observation'=v_observation_key/);
+  assert.match(sql, /latest_observation_date/);
+  assert.match(sql, /canonical_crop_cycle_observation_state/);
+  assert.match(sql, /workerResultFieldAloneDoesNotBecomeTruth/);
+});
+
+test('Tranche 1E Worker return writes through the canonical domain writer and fails if canonical search cannot confirm', () => {
+  const sql = workerBridge();
+  assert.match(sql, /record_worker_truth_observation_v1/);
+  assert.match(sql, /record_crop_observation_for_member_v1/);
+  assert.match(sql, /Only the routed signed-in worker may return this observation/);
+  assert.match(sql, /Returned observation must exactly match the requested governed observation type/);
+  assert.match(sql, /Canonical observation was recorded but did not satisfy the truth gap; transaction rolled back/);
+  assert.match(sql, /observationBecameCanonicalDomainState/);
+  assert.match(sql, /carrierTaskNotReality/);
+  assert.match(sql, /transactionFailsIfCanonicalSearchCannotConfirm/);
+});
+
+test('Tranche 1E cannot-establish preserves unknown and does not make task completion become fact', () => {
+  const sql = workerBridge();
+  assert.match(sql, /v_kind='cannot_establish'/);
+  assert.match(sql, /workerObservationResponse/);
+  assert.match(sql, /'knowerClass','actually_unknown'/);
+  assert.match(sql, /'acquisitionSurface','unresolved_unknown'/);
+  assert.match(sql, /'fact_resolved',false/);
+  assert.match(sql, /unknownRemainsUnknown/);
+  assert.match(sql, /taskCompletionDoesNotInventFact/);
+});
+
+test('Tranche 1E Worker routing fails closed unless the observation path is executable and the observer is non-arbitrary', () => {
+  const sql = workerConsolidation();
+  assert.match(sql, /truth_acquisition_worker_observation_support_v1/);
+  assert.match(sql, /workerObservationAdapter/);
+  assert.match(sql, /crop_observation_v1/);
+  assert.match(sql, /searchAdapter/);
+  assert.match(sql, /crop_latest_observation_v1/);
+  assert.match(sql, /crop_observation_types/);
+  assert.match(sql, /authenticated_rpc_registry/);
+  assert.match(sql, /workerObservableDoesNotImplyExecutableWorkerPath/);
+  assert.match(sql, /workerPathRequiresGovernedCanonicalWriter/);
+  assert.match(sql, /doesNotChooseArbitraryWorker/);
+  assert.match(sql, /workerObservationRequiresExecutableSupport/);
+  assert.match(sql, /v_acquisition_surface:=case when coalesce\(\(v_worker_support->>'available'\)::boolean,false\) then 'worker_observation' else 'unresolved_unknown' end/);
+});
+
+test('Tranche 1E consolidates away the prototype live surface while preserving its production migrations', () => {
+  const sql = workerConsolidation();
+  assert.match(sql, /drop function if exists atlas\.ensure_truth_acquisition_observation_carrier_v1\(uuid\)/);
+  assert.match(sql, /drop function if exists atlas\.truth_acquisition_observation_adapter_v1\(uuid\)/);
+  assert.match(sql, /drop table if exists atlas\.truth_acquisition_observation_adapters/);
+  assert.match(sql, /generalized 21:42 bridge owns Worker acquisition/);
+  for (const relative of [workerPrototypePath, workerPrototypeFixPath, workerBridgePath, workerConsolidationPath, workerOperationFixPath]) {
+    assert.equal(fs.existsSync(path.join(root, relative)), true, `missing Worker acquisition production source: ${relative}`);
+  }
+});
+
+test('Tranche 1E uses canonical inspect action taxonomy for observation carriers', () => {
+  const sql = workerOperationFix();
+  assert.match(sql, /'action_key','inspect'/);
+  assert.match(sql, /observation_action_semantics','inspect'/);
+  assert.match(sql, /operationClassComesFromCanonicalInspectTaxonomy/);
+  assert.doesNotMatch(sql, /'action_key','observe_truth_gap'/);
+});
+
 test('knowledge acquisition source retains every exact post-cutover production migration and current custody surface', () => {
-  for (const relative of [migrationPath, firstAnswerPath, propagationPath, retirePath, finalFixPath]) {
+  for (const relative of [
+    migrationPath, firstAnswerPath, propagationPath, retirePath, finalFixPath,
+    workerPrototypePath, workerPrototypeFixPath, workerBridgePath, workerConsolidationPath, workerOperationFixPath,
+  ]) {
     assert.equal(fs.existsSync(path.join(root, relative)), true, `missing production migration source: ${relative}`);
   }
   const expected = JSON.parse(read('docs/architecture/atlas-source-custody-surface-v1.json'));
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1162);
-  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 470);
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, 'ccc8995c11acd50f787f34ee5e6cf4c5e74f9a9086ff5d2c50c9b38fa3916ee9');
-  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, '9a0d4953be77b0af5450061f51e73bce5f5df5b4c2516d5631600af2707d8e6c');
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1166);
+  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 471);
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '0a8bcf0f320a258f664e54beca737f97f4a6eb54f95344f6ed05e6b37e797eb7');
+  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, 'd2f887657009d99d4aadffe791f3b0a1cb9368ec5856a2514beac5ab0bf3294c');
 });
