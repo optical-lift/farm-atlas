@@ -14,7 +14,9 @@ test("Owner root is driven by My Work rather than a hardcoded worker forecast", 
 });
 
 test("Owner My Work reads direct assignment and owner-scope responsibility", () => {
-  assert.match(ownerMyWork, /assigned_membership_id\.eq\.\$\{ownerMembershipId\},visibility_scope\.eq\.owner/);
+  assert.match(ownerMyWork, /assigned_membership_id\.eq\.\$\{ownerMembershipId\}/);
+  assert.match(ownerMyWork, /assigned_user_id\.eq\.\$\{ownerUserId\}/);
+  assert.match(ownerMyWork, /visibility_scope\.eq\.owner/);
   assert.match(ownerMyWork, /readAtlasPrincipalSelfContext/);
   assert.match(ownerMyWork, /principalSourceState/);
   assert.match(ownerMyWork, /\.limit\(1000\)/);
