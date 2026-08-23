@@ -19,7 +19,7 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-type TaskCardRow = { task_id: string; due_date?: string | null; metadata?: Record<string, unknown> | null; [key: string]: unknown };
+type TaskCardRow = { task_id: string; status?: string | null; due_date?: string | null; metadata?: Record<string, unknown> | null; [key: string]: unknown };
 type DayPlacement = {
   taskId: string;
   serviceDate: string;
@@ -47,7 +47,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "universal-dated-task-cards-v6-operator-direct",
+      "X-Atlas-Read-Path": "universal-dated-task-cards-v7-worker-warrant",
     },
   });
 }
@@ -112,6 +112,20 @@ function baselineSurvivesPlacement(placement: DayPlacement, placementDay: string
   if (placement.state === "returned_to_atlas") return placement.serviceDate !== placementDay;
   if (placement.serviceDate === placementDay) return true;
   return placement.serviceDate < placementDay;
+}
+
+function hasExplicitCarryForward(card: TaskCardRow) {
+  const policy = typeof card.metadata?.calendar_rollover_policy === "string"
+    ? card.metadata.calendar_rollover_policy.trim().toLowerCase()
+    : "";
+  return policy === "carry_forward" || policy === "carry" || policy === "true";
+}
+
+function workerDateWindowAllows(card: TaskCardRow, windowStart: string) {
+  if (card.status !== "open" && card.status !== "blocked") return true;
+  if (!card.due_date) return false;
+  if (card.due_date >= windowStart) return true;
+  return hasExplicitCarryForward(card);
 }
 
 function farmHandMoveContext(
@@ -238,9 +252,6 @@ export async function GET(request: Request) {
       };
     }
 
-    // Future calendar browsing is an exact-date projection. Earlier open work is
-    // allowed into a later Day only through an explicit Day placement below, not
-    // merely because it remains open while the owner looks ahead.
     const farmToday = atlasFarmDateIso();
     const futureExactDate = exactDate && exactDate > farmToday ? exactDate : null;
     if (futureExactDate) {
@@ -295,6 +306,35 @@ export async function GET(request: Request) {
         if (!placement || placement.state !== "placed" || placement.serviceDate !== placementDay) continue;
         baseTaskCards.push(applyDayPlacement(card, placement));
         seen.add(card.task_id);
+      }
+    }
+
+    // Worker surfaces are execution surfaces. Expired work without an explicit
+    // carry-forward contract and open work without a current execution warrant
+    // belong in management/Owner attention, not in the worker's list.
+    if (farmHandLens && workerMembershipId && workerFarmId) {
+      baseTaskCards = baseTaskCards.filter((card) => workerDateWindowAllows(card, doneDate));
+      const openIds = baseTaskCards
+        .filter((card) => card.status === "open" || card.status === "blocked")
+        .map((card) => card.task_id);
+      if (openIds.length) {
+        const supabase = await createAtlasServerClient();
+        const { data, error } = await supabase.rpc("worker_executable_task_ids_v1", {
+          p_farm_id: workerFarmId,
+          p_membership_id: workerMembershipId,
+          p_task_ids: openIds,
+          p_day: placementDay ?? doneDate,
+        });
+        if (error) throw new Error(error.message);
+        const executableIds = new Set(
+          (Array.isArray(data) ? data : [])
+            .map((row) => row && typeof row === "object" && "task_id" in row ? String(row.task_id) : "")
+            .filter(Boolean),
+        );
+        baseTaskCards = baseTaskCards.filter((card) => {
+          if (card.status !== "open" && card.status !== "blocked") return true;
+          return executableIds.has(card.task_id);
+        });
       }
     }
 
