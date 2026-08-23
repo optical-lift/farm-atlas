@@ -3,24 +3,16 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const frame = await readFile(new URL("../components/atlas/shell/AtlasContextualAppFrame.tsx", import.meta.url), "utf8");
-const dockProfile = await readFile(new URL("../lib/atlas/dock-profile.ts", import.meta.url), "utf8");
 const operationalGlobals = await readFile(new URL("../components/atlas/shell/AtlasOperationalProjectionGlobals.tsx", import.meta.url), "utf8");
 const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
 const skyMaintainer = await readFile(new URL("../app/AtlasSkyLedgerMaintainer.tsx", import.meta.url), "utf8");
 const bell = await readFile(new URL("../components/atlas/home/AtlasBellCover.tsx", import.meta.url), "utf8");
 
-test("Principal projection keeps its runtime boundary without creating a second Owner navigation universe", () => {
+test("Principal projection has a small Principal dock instead of Farm Clock and Manager roots", () => {
   assert.match(frame, /pathname === "\/principal"/);
-  assert.match(frame, /atlasDockProfileForRole\(effectiveFarmRole\)/);
-  assert.match(frame, /isOwner \? "\/principal" : "\/"/);
-  assert.match(frame, /isOwner \? "\/owner" : workHref/);
-  assert.doesNotMatch(frame, /label: "Farm Ops", href: "\/overview\/week"/);
-  assert.doesNotMatch(frame, /principalProjection\s*\? \[/);
-  assert.match(dockProfile, /"full" \| "field_worker"/);
-  assert.match(frame, /label: "Clock"/);
-  assert.match(frame, /label: "Manager"/);
-  assert.match(frame, /label: "Harvest"/);
-  assert.match(frame, /label: "More"/);
+  assert.match(frame, /label: "Home", href: "\/principal"/);
+  assert.match(frame, /label: "Farm Ops", href: "\/overview\/week"/);
+  assert.match(frame, /principalProjection\s*\? \[/);
 });
 
 test("the global Atlas add control is retired from the contextual shell", () => {

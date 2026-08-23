@@ -56,6 +56,6 @@ test("the operator fast path rejoins the same Day placement, privacy, and Move-c
   assert.match(datedRoute, /worker_day_placed_task_cards_v1/);
   assert.match(datedRoute, /farmHandMoveContext/);
   assert.match(datedRoute, /readAtlasTaskMoveContexts\(baseTaskCards\.map/);
-  assert.match(datedRoute, /X-Atlas-Read-Path": "universal-dated-task-cards-v8-worker-warrant"/);
+  assert.match(datedRoute, /X-Atlas-Read-Path": "universal-dated-task-cards-v6-operator-direct"/);
   assert.doesNotMatch(datedRoute, /service[_-]?role/i);
 });

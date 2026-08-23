@@ -44,7 +44,7 @@ test("management is a separate role-aware dock destination rather than an inner 
   assert.match(managementMigration, /v_role NOT IN \('owner', 'manager'\)/);
   assert.match(shell, /label: "Manager"/);
   assert.match(shell, /kind === "manager"/);
-  assert.match(shell, /atlasDockProfileForRole\(effectiveFarmRole\)/);
+  assert.match(shell, /effectiveFarmRole === "owner" \|\| effectiveFarmRole === "manager"/);
   assert.match(layout, /effectiveFarmRole = operatorContext\?\.isOperating/);
   assert.match(layout, /AtlasContextualAppFrame effectiveFarmRole=\{effectiveFarmRole\}/);
   assert.match(farmDayPage, /requireAtlasEffectiveManagementAccess/);

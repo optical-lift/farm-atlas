@@ -11,9 +11,9 @@ const appFrame = readFileSync(
   "utf8",
 );
 
-test("the permanent Work tab is role-authoritative", () => {
+test("the permanent Work tab opens Living Day", () => {
   assert.match(appFrame, /return `\/day\?date=/);
-  assert.match(appFrame, /key: "work"[\s\S]*href: isOwner \? "\/owner" : workHref/);
+  assert.match(appFrame, /key: "work"[\s\S]*href: workHref/);
 });
 
 test("management restored onto the legacy worker hand returns to Living Day", () => {
