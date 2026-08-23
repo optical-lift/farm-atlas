@@ -17,12 +17,16 @@ test("network inputs execute inside the universal task shell", () => {
   assert.doesNotMatch(source, /<main className="atlas-phone-shell/);
 });
 
-test("network inputs keep their specialized child checklist without rendering a duplicate generic checklist", () => {
+test("network inputs keep their specialized child checklist and store findings as structured results", () => {
   assert.match(source, /childTasks=\{\[\]\}/);
   assert.match(source, /transition: nextDone \? "checklist_done" : "checklist_open"/);
   assert.match(source, /completion_source: "network_input_checklist"/);
-  assert.match(source, /transition: "note"/);
-  assert.match(source, /note_kind: "network_input_findings"/);
+  assert.match(source, /StructuredWorkResultForm/);
+  assert.match(source, /heading="Source"/);
+  assert.match(source, /submitLabel="Save source"/);
+  assert.doesNotMatch(source, /transition: "note"/);
+  assert.doesNotMatch(source, /note_kind: "network_input_findings"/);
+  assert.doesNotMatch(source, /<textarea/);
   assert.match(source, /parent_task_id: task\.task_id/);
   assert.match(source, /input_key: text\(input\.metadata\?\.network_input_key\)/);
 });
