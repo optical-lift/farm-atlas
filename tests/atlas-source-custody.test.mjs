@@ -44,10 +44,36 @@ test('production-live Atlas management migrations recovered by source-custody sl
   }
 });
 
-test('source-custody contract remains explicit about the single-authority boundary', () => {
+test('source-custody contract preserves distinct authorities and the separate Intelligence Network boundary', () => {
   const contract = fs.readFileSync(path.join(root, 'docs/architecture/atlas-source-custody.md'), 'utf8');
   assert.match(contract, /Repository `main` — executable source authority/i);
-  assert.match(contract, /Supabase production — deployed-state evidence/i);
-  assert.match(contract, /Intelligence Network is a separate product/i);
-  assert.match(contract, /parity-only/i);
+  assert.match(contract, /Canonical production state — operational reality/i);
+  assert.match(contract, /Supabase migration ledger — deployment provenance/i);
+  assert.match(contract, /Intelligence Network — separate product/i);
+  assert.match(contract, /Manual closure of every historical PR is \*\*not\*\* part of this release gate/i);
+});
+
+test('Atlas Source Synchronizer is the canonical all-history management custody membrane', () => {
+  const sync = fs.readFileSync(path.join(root, 'scripts/atlas-source-synchronizer.sh'), 'utf8');
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  assert.equal(pkg.scripts['sync:atlas:source'], 'bash scripts/atlas-source-synchronizer.sh');
+  assert.match(sync, /--since 0/);
+  assert.match(sync, /--scope atlas-management/);
+  assert.match(sync, /atlas\.authenticated_rpc_registry_drift_v1\(\)/);
+  assert.match(sync, /ATLAS_SOURCE_SYNC_OK/);
+});
+
+test('custody engine hard-fails unresolved source debt but permits explicit identical-byte drift adjudication', () => {
+  const engine = fs.readFileSync(path.join(root, 'scripts/reconcile-production-migration-history.sh'), 'utf8');
+  assert.match(engine, /ADJUDICATED_VERSION_DRIFT/);
+  assert.match(engine, /VERSION_DRIFT_MISMATCH/);
+  assert.match(engine, /AMBIGUOUS_NAME_DRIFT/);
+  assert.match(engine, /missing > 0 \|\| mismatched > 0 \|\| version_drift_match > 0/);
+  assert.match(engine, /position\('atlas\.' in lower\(sql\)\) > 0/);
+});
+
+test('known Grow Room timestamp drift is explicitly adjudicated without rewriting migration order', () => {
+  const adjudications = fs.readFileSync(path.join(root, 'docs/architecture/atlas-source-custody-adjudications.tsv'), 'utf8');
+  assert.match(adjudications, /^20260727181055\ttrail_foundation_grow_room_v1\tVERSION_DRIFT_ALIAS\tsupabase\/migrations\/20260727193000_trail_foundation_grow_room_v1\.sql\t/m);
+  assert.equal(fs.existsSync(path.join(root, 'supabase/migrations/20260727193000_trail_foundation_grow_room_v1.sql')), true);
 });
