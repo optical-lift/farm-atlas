@@ -38,7 +38,8 @@ function routeGroup(pathname: string) {
   if (pathname.startsWith("/clock")) return "clock";
   if (pathname.startsWith("/manage/day")) return "manager";
   if (
-    pathname.startsWith("/day")
+    pathname.startsWith("/owner")
+    || pathname.startsWith("/day")
     || pathname.startsWith("/overview")
     || pathname.startsWith("/work")
     || pathname.startsWith("/task")
@@ -144,6 +145,7 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
   const farmManagerHref = useMemo(managerHref, []);
   const hidden = HIDDEN_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   const canManage = effectiveFarmRole === "owner" || effectiveFarmRole === "manager";
+  const ownerMode = effectiveFarmRole === "owner";
   const canDocument = Boolean(effectiveFarmRole);
   const [registryZones, setRegistryZones] = useState<AtlasRegistryZone[]>([]);
   const [logSeed, setLogSeed] = useState<AtlasFieldLogSeed | null>(null);
@@ -209,21 +211,17 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
     setLogSeed({ workKey: "note", zoneKeys: [], objectKeys: [] });
   }
 
-  const items: Array<{ key: DockIconKey; label: string; href: string }> = principalProjection
-    ? [
-        { key: "home", label: "Home", href: "/principal" },
-        { key: "work", label: "Farm Ops", href: "/overview/week" },
-        { key: "more", label: "More", href: "/more" },
-      ]
-    : [
-        { key: "home", label: "Home", href: "/" },
-        { key: "work", label: "Work", href: workHref },
-        { key: "clock", label: "Clock", href: currentClockHref },
-        ...(canManage ? [{ key: "manager" as const, label: "Manager", href: farmManagerHref }] : []),
-        { key: "harvest", label: "Harvest", href: "/harvest" },
-        { key: "more", label: "More", href: "/more" },
-      ];
+  const items: Array<{ key: DockIconKey; label: string; href: string }> = [
+    { key: "home", label: "Home", href: ownerMode ? "/principal" : "/" },
+    { key: "work", label: "Work", href: ownerMode ? "/owner" : workHref },
+    { key: "clock", label: "Clock", href: currentClockHref },
+    ...(canManage ? [{ key: "manager" as const, label: "Manager", href: farmManagerHref }] : []),
+    { key: "harvest", label: "Harvest", href: "/harvest" },
+    { key: "more", label: "More", href: "/more" },
+  ];
 
+  // The dock is role-authoritative, not route-authoritative. A Principal page does
+  // not get a different navigation universe, and Owner Work always means /owner.
   // Legacy route marker retained for contract search: "/#work-board".
   return (
     <>
