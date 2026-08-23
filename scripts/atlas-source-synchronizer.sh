@@ -124,7 +124,7 @@ if ((rpc_drift > 0)); then
   exit 1
 fi
 
-"$engine" \
+bash "$engine" \
   --check \
   --since 0 \
   --scope atlas-management \
