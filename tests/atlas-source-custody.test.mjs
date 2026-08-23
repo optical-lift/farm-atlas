@@ -61,7 +61,6 @@ test('current executable surface equivalence is the primary custody release proo
   const sync = read('scripts/atlas-source-synchronizer.sh');
   const comparator = read('scripts/compare-atlas-source-custody-surface.mjs');
   const expected = JSON.parse(read('docs/architecture/atlas-source-custody-surface-v1.json'));
-
   assert.match(contract, /Current-state equivalence — primary release proof/i);
   assert.match(sync, /source_custody_live_surface_v1/);
   assert.match(sync, /compare-atlas-source-custody-surface\.mjs/);
@@ -69,9 +68,7 @@ test('current executable surface equivalence is the primary custody release proo
   assert.match(comparator, /MISSING_LIVE_FAMILY/);
   assert.match(comparator, /UNEXPECTED_LIVE_FAMILY/);
   assert.equal(expected.contractVersion, 1);
-  assert.deepEqual(expected.families.map((row) => row.familyKey).sort(), [
-    'constraints', 'functions', 'rls_policies', 'rpc_privileges', 'triggers',
-  ]);
+  assert.deepEqual(expected.families.map((row) => row.familyKey).sort(), ['constraints','functions','rls_policies','rpc_privileges','triggers']);
   assert.equal(expected.families.reduce((sum, row) => sum + row.artifactCount, 0), 4302);
   for (const row of expected.families) assert.match(row.fingerprintSha256, /^[0-9a-f]{64}$/);
 });
@@ -90,6 +87,16 @@ test('production custody registry is append-only, service-only, and catalog-deri
   assert.match(migration, /not like 'source_custody_%'/i);
   assert.match(migration, /grant execute on function atlas\.source_custody_live_surface_v1\(\) to service_role/i);
   assert.match(migration, /revoke all on function atlas\.source_custody_live_surface_v1\(\) from public,anon,authenticated/i);
+});
+
+test('custody governance migrations retain their exact production versions and source blobs', () => {
+  const contract = read('docs/architecture/atlas-source-custody.md');
+  assert.equal(fs.existsSync(path.join(root, 'supabase/migrations/20260823202957_atlas_source_custody_surface_registry_v1.sql')), true);
+  assert.equal(fs.existsSync(path.join(root, 'supabase/migrations/20260823203337_atlas_source_custody_seed_adjudications_v1.sql')), true);
+  assert.match(contract, /20260823202957_atlas_source_custody_surface_registry_v1/);
+  assert.match(contract, /3d4dd53a1679e5c939fe64e257cc6b236c6e5f7f/);
+  assert.match(contract, /20260823203337_atlas_source_custody_seed_adjudications_v1/);
+  assert.match(contract, /e1c1b8fc162243f18ba4da3ae6f72d92905a261c/);
 });
 
 test('Atlas Source Synchronizer uses current surface first and migration provenance second', () => {
