@@ -96,6 +96,7 @@ test('Atlas Source Synchronizer uses current surface first and migration provena
   const sync = read('scripts/atlas-source-synchronizer.sh');
   const pkg = JSON.parse(read('package.json'));
   assert.equal(pkg.scripts['sync:atlas:source'], 'bash scripts/atlas-source-synchronizer.sh');
+  assert.equal(pkg.scripts['verify:atlas:surface'], 'node scripts/compare-atlas-source-custody-surface.mjs');
   assert.match(sync, /node "\$comparator"/);
   assert.match(sync, /atlas\.authenticated_rpc_registry_drift_v1\(\)/);
   assert.match(sync, /source_custody_adjudications/);
@@ -116,9 +117,12 @@ test('custody engine hard-fails unresolved provenance debt but permits governed 
 
 test('known Grow Room timestamp drift is governed in append-only production custody source', () => {
   const adjudication = read('supabase/migrations/20260823203337_atlas_source_custody_seed_adjudications_v1.sql');
+  const legacy = read('docs/architecture/atlas-source-custody-adjudications.tsv');
   assert.match(adjudication, /20260727181055/);
   assert.match(adjudication, /20260727193000_trail_foundation_grow_room_v1\.sql/);
   assert.match(adjudication, /8fb94ffe8019f9829808a57d51b317614da90151/g);
   assert.match(adjudication, /'version_drift','accepted'/);
+  assert.match(legacy, /Legacy bootstrap evidence only/i);
+  assert.match(legacy, /This file is not a release authority/i);
   assert.equal(fs.existsSync(path.join(root, 'supabase/migrations/20260727193000_trail_foundation_grow_room_v1.sql')), true);
 });
