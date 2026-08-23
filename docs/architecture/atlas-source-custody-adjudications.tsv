@@ -1,0 +1,2 @@
+# production_version	production_name	disposition	repository_file	note
+20260727181055	trail_foundation_grow_room_v1	VERSION_DRIFT_ALIAS	supabase/migrations/20260727193000_trail_foundation_grow_room_v1.sql	PR #81 merged the identical deployed bytes under a later repository timestamp; preserve both identities because migration ordering semantics differ.
