@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --test tests/*.test.mjs",
+    "sync:atlas:source": "bash scripts/atlas-source-synchronizer.sh",
     "audit:migrations:production": "bash scripts/reconcile-production-migration-history.sh --check",
     "restore:migrations:production": "bash scripts/reconcile-production-migration-history.sh --restore"
   },
