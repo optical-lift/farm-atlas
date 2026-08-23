@@ -1,0 +1,1 @@
+alter table atlas.worker_day_cues add constraint worker_day_cues_timed_requires_time_ck check (anchor_kind <> 'at_time' or scheduled_at is not null) not valid;

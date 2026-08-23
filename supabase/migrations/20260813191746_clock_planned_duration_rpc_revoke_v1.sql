@@ -1,0 +1,1 @@
+revoke all on function atlas.owner_set_worker_day_task_duration_api_v1(uuid,uuid,uuid,date,integer) from public;

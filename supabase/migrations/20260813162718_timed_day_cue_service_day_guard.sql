@@ -1,0 +1,1 @@
+alter table atlas.worker_day_cues add constraint worker_day_cues_timed_service_day_ck check (anchor_kind <> 'at_time' or scheduled_at is null or (scheduled_at at time zone 'America/Chicago')::date = service_date) not valid;
