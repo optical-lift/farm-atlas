@@ -15,6 +15,7 @@ export const maxDuration = 300;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DEFAULT_BATCH_SIZE = 24;
 const MAX_BATCH_SIZE = 40;
+const SUBJECT_SOURCE_LIMIT = 8;
 
 type JsonObject = Record<string, unknown>;
 type RpcError = { code?: string; message?: string };
@@ -42,6 +43,12 @@ function asObject(value: unknown): JsonObject | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as JsonObject)
     : null;
+}
+
+function asStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
 }
 
 function discoveryError(error: RpcError, fallback: string) {
@@ -160,10 +167,8 @@ function sourceRecordKey(sourceUrl: string, subjectKind: string, fields: JsonObj
     .digest("hex");
 }
 
-function gatewayPrompt(context: JsonObject, batchSize: number) {
-  const requestedFields = Array.isArray(context.requested_fields)
-    ? context.requested_fields.filter((value): value is string => typeof value === "string")
-    : [];
+function mixedBatchPrompt(context: JsonObject, batchSize: number) {
+  const requestedFields = asStringArray(context.requested_fields);
   const parameters = asObject(context.parameters) ?? {};
   const loopState = asObject(context.loop_state) ?? {};
 
@@ -188,7 +193,38 @@ function gatewayPrompt(context: JsonObject, batchSize: number) {
   ].join("\n");
 }
 
-async function gatewaySearch(context: JsonObject, batchSize: number) {
+function subjectResearchPrompt(context: JsonObject, subject: JsonObject) {
+  const requestedFields = asStringArray(subject.requested_fields).length
+    ? asStringArray(subject.requested_fields)
+    : asStringArray(context.requested_fields);
+  const parameters = asObject(context.parameters) ?? {};
+  const seedContext = asObject(subject.context) ?? {};
+
+  return [
+    "You are the Elm Local subject-centric research worker inside a mixed-batch discovery run.",
+    "Research EXACTLY the subject described below. Temporary research ownership does not establish or change canonical identity.",
+    "If the seed is evidence-bound rather than canonical, do not merge it with another same-named person or organization unless a source explicitly establishes that identity.",
+    "Search current public web reality across multiple useful sources and gather every explicit requested fact you can support for this subject.",
+    "You may also gather directly observed context fields such as role_function, phone, website, department, organization, or location when useful.",
+    "Do not broaden into a list of other people or organizations. Other names may appear only as source context.",
+    "Never infer, construct, guess, complete, or pattern-generate a missing value. Omit unsupported fields.",
+    "Conflicting source-backed values may be separate records; do not silently reconcile them.",
+    "Every record must have one source_url that you actually visited and can cite.",
+    `Return at most ${SUBJECT_SOURCE_LIMIT} source-backed records for this one subject.`,
+    `Original search query: ${text(context.query_text)}`,
+    `Query parameters: ${JSON.stringify(parameters)}`,
+    `Requested fields: ${JSON.stringify(requestedFields)}`,
+    `Subject kind: ${text(subject.subject_kind)}`,
+    `Subject name: ${text(subject.subject_name) || "not separately established"}`,
+    `Organization context: ${text(subject.organization_name) || "not separately established"}`,
+    `Seed context: ${JSON.stringify(seedContext)}`,
+    "Preserve any geographic scope in the query parameters exactly. Geography is a search filter only, never a travel-behavior assumption.",
+    "Output ONLY one JSON object in this shape:",
+    '{"records":[{"source_url":"https://...","source_title":"page title if known","publisher":"publisher if explicit","subject_kind":"same subject kind","organization_name":"only if explicit and relevant","fields":{"requested_field_name":"explicit source value"}}]}',
+  ].join("\n");
+}
+
+async function gatewaySearch(prompt: string) {
   const token = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN;
   if (!token) {
     throw new Error("Missing AI Gateway authentication (AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN).");
@@ -202,7 +238,7 @@ async function gatewaySearch(context: JsonObject, batchSize: number) {
     },
     body: JSON.stringify({
       model: "openai/gpt-5.6-sol",
-      input: [{ type: "message", role: "user", content: gatewayPrompt(context, batchSize) }],
+      input: [{ type: "message", role: "user", content: prompt }],
       tools: [{ type: "web_search" }],
       tool_choice: "auto",
       max_output_tokens: 12000,
@@ -273,6 +309,138 @@ export async function POST(request: Request) {
     return privateJson({ ok: true, status: context.status, context });
   }
 
+  const { data: subjectClaimData, error: subjectClaimError } = await supabase.rpc(
+    "claim_search_discovery_subject_v1",
+    { p_search_query_id: searchQueryId },
+  );
+  if (subjectClaimError) {
+    return discoveryError(subjectClaimError, "Elm Local could not claim subject research work.");
+  }
+
+  const subjectClaim = asObject(subjectClaimData);
+  if (subjectClaim) {
+    const subjectWorkId = text(subjectClaim.id);
+    const discoveryWorkId = text(subjectClaim.discovery_work_id);
+    const fixedEntityId = UUID_PATTERN.test(text(subjectClaim.entity_id)) ? text(subjectClaim.entity_id) : null;
+    let gathered = 0;
+    let accepted = 0;
+    let rejectedUncited = 0;
+    let ingestionCandidates = 0;
+    let applied = 0;
+
+    try {
+      const search = await gatewaySearch(subjectResearchPrompt(context, subjectClaim));
+      gathered = search.records.length;
+
+      for (const record of search.records) {
+        const sourceUrl = text(record.source_url);
+        const sourceKey = canonicalUrl(sourceUrl);
+        if (!sourceKey) continue;
+        const cited = search.citationUrls.get(sourceKey);
+        if (!cited) {
+          rejectedUncited += 1;
+          continue;
+        }
+
+        const fields = explicitFields(record.fields);
+        if (Object.keys(fields).length === 0) continue;
+        const subjectKind = text(record.subject_kind) || text(subjectClaim.subject_kind) || "other";
+
+        const { data: sourceId, error: sourceError } = await supabase.rpc(
+          "register_search_discovery_source_v1",
+          {
+            p_payload: {
+              source_url: cited.url,
+              source_kind: "web_source",
+              publisher: text(record.publisher) || null,
+              title: text(record.source_title) || cited.title,
+              metadata: {
+                search_query_id: searchQueryId,
+                discovery_work_id: discoveryWorkId || null,
+                subject_work_id: subjectWorkId,
+                executor: "vercel_ai_gateway_subject_research_v1",
+              },
+            },
+          },
+        );
+        if (sourceError || typeof sourceId !== "string") continue;
+
+        const { data: intakeData, error: intakeError } = await supabase.rpc(
+          "ingest_search_discovery_evidence_v1",
+          {
+            p_payload: {
+              search_query_id: searchQueryId,
+              discovery_work_id: discoveryWorkId || null,
+              source_id: sourceId,
+              source_record_key: sourceRecordKey(cited.url, subjectKind, fields),
+              subject_kind: subjectKind,
+              entity_id: fixedEntityId,
+              organization_name: text(record.organization_name) || text(subjectClaim.organization_name) || null,
+              observed_name: text(fields.name) || text(subjectClaim.subject_name) || null,
+              role_title: text(fields.title) || null,
+              role_function: text(fields.role_function) || null,
+              email: text(fields.email) || null,
+              phone: text(fields.phone) || null,
+              website_url: text(fields.website) || null,
+              fields,
+              metadata: {
+                executor: "vercel_ai_gateway_subject_research_v1",
+                subject_work_id: subjectWorkId,
+                subject_key: text(subjectClaim.subject_key),
+                cited_source_url: cited.url,
+                gateway_citation_verified: true,
+              },
+            },
+          },
+        );
+        if (intakeError) continue;
+
+        accepted += 1;
+        const intake = asObject(intakeData);
+        if (intake?.status === "candidate") ingestionCandidates += 1;
+        if (intake?.status === "applied") applied += 1;
+      }
+
+      const { data: finishSubjectData, error: finishSubjectError } = await supabase.rpc(
+        "finish_search_discovery_subject_v1",
+        {
+          p_subject_work_id: subjectWorkId,
+          p_stats: {
+            gathered_records: gathered,
+            accepted_records: accepted,
+            rejected_uncited_records: rejectedUncited,
+            ingestion_candidates: ingestionCandidates,
+            applied_records: applied,
+            executor: "vercel_ai_gateway_subject_research_v1",
+          },
+        },
+      );
+      if (finishSubjectError) {
+        return discoveryError(finishSubjectError, "Elm Local gathered subject evidence but could not release the subject.");
+      }
+
+      return privateJson({
+        ok: true,
+        status: "subject_complete",
+        subject: finishSubjectData,
+        stats: { gathered, accepted, rejectedUncited, ingestionCandidates, applied },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const { error: requeueSubjectError } = await supabase.rpc(
+        "requeue_search_discovery_subject_v1",
+        { p_subject_work_id: subjectWorkId, p_error: message },
+      );
+      console.error("Elm Local subject research failed", {
+        searchQueryId,
+        subjectWorkId,
+        requeueError: requeueSubjectError?.message,
+        error: message,
+      });
+      return atlasApiError(502, "elm_local_subject_research_executor_failed", message);
+    }
+  }
+
   const { data: claimData, error: claimError } = await supabase.rpc(
     "claim_search_discovery_batch_v1",
     { p_search_query_id: searchQueryId },
@@ -289,9 +457,10 @@ export async function POST(request: Request) {
   let rejectedUncited = 0;
   let ingestionCandidates = 0;
   let applied = 0;
+  let subjectWorkSeeded = 0;
 
   try {
-    const search = await gatewaySearch(context, batchSize);
+    const search = await gatewaySearch(mixedBatchPrompt(context, batchSize));
     gathered = search.records.length;
 
     for (const record of search.records) {
@@ -357,6 +526,39 @@ export async function POST(request: Request) {
       const intake = asObject(intakeData);
       if (intake?.status === "candidate") ingestionCandidates += 1;
       if (intake?.status === "applied") applied += 1;
+
+      const entityId = UUID_PATTERN.test(text(intake?.entity_id)) ? text(intake?.entity_id) : null;
+      const evidenceId = UUID_PATTERN.test(text(intake?.evidence_id)) ? text(intake?.evidence_id) : null;
+      const subjectKey = entityId ? `entity:${entityId}` : evidenceId ? `evidence:${evidenceId}` : "";
+      if (subjectKey) {
+        const { data: subjectSeedData, error: subjectSeedError } = await supabase.rpc(
+          "enqueue_search_discovery_subject_v1",
+          {
+            p_payload: {
+              search_query_id: searchQueryId,
+              discovery_work_id: discoveryWorkId || null,
+              seed_evidence_id: evidenceId,
+              entity_id: entityId,
+              subject_key: subjectKey,
+              subject_kind: subjectKind,
+              subject_name: text(fields.name) || null,
+              organization_name: text(record.organization_name) || null,
+              requested_fields: asStringArray(context.requested_fields),
+              context: {
+                seed_source_url: cited.url,
+                seed_source_title: text(record.source_title) || cited.title,
+                seed_publisher: text(record.publisher) || null,
+                seed_fields: fields,
+              },
+              metadata: {
+                seeded_by: "mixed_batch",
+                executor: "vercel_ai_gateway_web_search_v1",
+              },
+            },
+          },
+        );
+        if (!subjectSeedError && asObject(subjectSeedData)) subjectWorkSeeded += 1;
+      }
     }
 
     const { data: finishData, error: finishError } = await supabase.rpc(
@@ -370,6 +572,7 @@ export async function POST(request: Request) {
           rejected_uncited_records: rejectedUncited,
           ingestion_candidates: ingestionCandidates,
           applied_records: applied,
+          subject_work_seeded: subjectWorkSeeded,
           executor: "vercel_ai_gateway_web_search_v1",
         },
       },
@@ -388,6 +591,7 @@ export async function POST(request: Request) {
         rejectedUncited,
         ingestionCandidates,
         applied,
+        subjectWorkSeeded,
       },
       state: finishData,
     });
