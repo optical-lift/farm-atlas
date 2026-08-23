@@ -22,7 +22,7 @@ test("task notes are evidence, never fallback instructions", () => {
   assert.doesNotMatch(execution, /firstSentence\(task\.note\)/);
   assert.doesNotMatch(execution, /task\.note\?\.trim/);
   assert.match(execution, /const details = atlasMetaString\(task, "execution_details"\)/);
-  assert.match(brief, /StructuredWorkParts/);
+  assert.match(brief, /StructuredTaskExecution/);
 });
 
 test("execution grammar is nouns values and relations instead of prose", () => {
