@@ -44,13 +44,6 @@ function metadataLines(task: AtlasTaskCard, key: string) {
   return atlasStringList(value);
 }
 
-function firstSentence(value: string | null | undefined) {
-  if (!value?.trim()) return "";
-  const normalized = value.trim().replace(/\s+/g, " ");
-  const match = normalized.match(/^.*?[.!?](?:\s|$)/);
-  return (match?.[0] || normalized).trim();
-}
-
 function physicalZone(task: AtlasTaskCard) {
   if (task.zone_label?.trim()) return task.zone_label.trim();
   const collection = atlasMetaString(task, "collection_zone");
@@ -80,13 +73,8 @@ function fallbackHow(task: AtlasTaskCard) {
   const location = atlasMetaString(task, "display_location");
   if (detail && detail.toLowerCase() !== location.toLowerCase() && !lines.includes(detail)) lines.push(detail);
 
-  if (!lines.length) {
-    const noteLead = firstSentence(task.note);
-    if (noteLead) lines.push(noteLead);
-  }
-
-  // No instructions is meaningful. Do not manufacture a Steps section that points
-  // the worker back to instructions which do not exist.
+  // A task note is evidence/context, not an instruction source. If Atlas has no
+  // structured method, leave the method empty instead of turning prose into work.
   return lines.slice(0, 2);
 }
 
@@ -120,9 +108,7 @@ export function taskExecutionModel(task: AtlasTaskCard): AtlasTaskExecutionModel
   const explicitHow = metadataLines(task, "execution_how");
   const howLines = explicitHow.length ? explicitHow : fallbackHow(task);
   const doneWhen = atlasMetaString(task, "execution_done_when") || fallbackDoneWhen(task);
-  const explicitDetails = atlasMetaString(task, "execution_details");
-  const note = task.note?.trim() || "";
-  const details = explicitDetails || (note && !howLines.some((line) => line === note) ? note : "") || null;
+  const details = atlasMetaString(task, "execution_details");
 
   return {
     doText,
