@@ -8,96 +8,124 @@ set -euo pipefail
 # Secondary proof: the production migration ledger must have no unresolved provenance
 # debt after governed version-drift adjudications are applied.
 #
-# This script is read-only against production.
+# The preferred path consumes a narrow read-only source-custody packet through the
+# Supabase API and needs no raw PostgreSQL credential. Direct database access remains
+# available for owner/admin recovery work.
 
 repo_root="$(git rev-parse --show-toplevel)"
 engine="$repo_root/scripts/reconcile-production-migration-history.sh"
 expected_surface="$repo_root/docs/architecture/atlas-source-custody-surface-v1.json"
 comparator="$repo_root/scripts/compare-atlas-source-custody-surface.mjs"
 
-: "${ATLAS_PRODUCTION_DATABASE_URL:?Set ATLAS_PRODUCTION_DATABASE_URL to a read-capable production PostgreSQL URL}"
-
-for required in psql git node; do
+for required in git node; do
   command -v "$required" >/dev/null 2>&1 || { echo "SOURCE_SYNC_INVALID missing_command=$required" >&2; exit 2; }
 done
 
+packet="$(mktemp)"
 observed_surface="$(mktemp)"
+manifest="$(mktemp)"
 adjudications="$(mktemp)"
-trap 'rm -f "$observed_surface" "$adjudications"' EXIT
+metadata="$(mktemp)"
+trap 'rm -f "$packet" "$observed_surface" "$manifest" "$adjudications" "$metadata"' EXIT
 
-# Current-state equivalence is the release verdict. The packet is derived directly
-# from pg_catalog by a service-only function; registry rows cannot hide manual drift.
-psql "$ATLAS_PRODUCTION_DATABASE_URL" -X -v ON_ERROR_STOP=1 -At -c "
-with rows as (
-  select * from atlas.source_custody_live_surface_v1()
-), families as (
-  select
-    family_key,
-    count(*) as artifact_count,
-    encode(
-      extensions.digest(
-        convert_to(string_agg(artifact_key || E'\\t' || fingerprint_sha256, E'\\n' order by artifact_key), 'UTF8'),
-        'sha256'
-      ),
-      'hex'
-    ) as family_fingerprint
-  from rows
-  group by family_key
-)
-select jsonb_build_object(
-  'contractVersion', 1,
-  'families', coalesce(jsonb_agg(jsonb_build_object(
-    'familyKey', family_key,
-    'artifactCount', artifact_count,
-    'fingerprintSha256', family_fingerprint
-  ) order by family_key), '[]'::jsonb)
-)
-from families;
-" > "$observed_surface"
+if [[ -n "${ATLAS_PRODUCTION_DATABASE_URL:-}" ]]; then
+  command -v psql >/dev/null 2>&1 || { echo "SOURCE_SYNC_INVALID missing_command=psql" >&2; exit 2; }
+  psql "$ATLAS_PRODUCTION_DATABASE_URL" -X -v ON_ERROR_STOP=1 -At \
+    -c "select atlas.source_custody_release_packet_v1();" > "$packet"
+else
+  : "${ATLAS_SOURCE_CUSTODY_API_URL:?Set ATLAS_SOURCE_CUSTODY_API_URL or ATLAS_PRODUCTION_DATABASE_URL}"
+  : "${ATLAS_SUPABASE_PUBLISHABLE_KEY:?Set ATLAS_SUPABASE_PUBLISHABLE_KEY for the read-only custody API}"
+  command -v curl >/dev/null 2>&1 || { echo "SOURCE_SYNC_INVALID missing_command=curl" >&2; exit 2; }
+  curl --fail --silent --show-error \
+    --request POST \
+    --header "apikey: $ATLAS_SUPABASE_PUBLISHABLE_KEY" \
+    --header "Content-Type: application/json" \
+    --header "Accept-Profile: atlas" \
+    --header "Content-Profile: atlas" \
+    --data '{}' \
+    "$ATLAS_SOURCE_CUSTODY_API_URL" > "$packet"
+fi
+
+node - "$packet" "$observed_surface" "$manifest" "$adjudications" "$metadata" <<'NODE'
+const fs = require('node:fs');
+const [packetPath, surfacePath, manifestPath, adjudicationsPath, metadataPath] = process.argv.slice(2);
+let packet;
+try {
+  packet = JSON.parse(fs.readFileSync(packetPath, 'utf8'));
+} catch (error) {
+  console.error(`SOURCE_SYNC_INVALID invalid_packet_json=${error.message}`);
+  process.exit(2);
+}
+if (Array.isArray(packet) && packet.length === 1) packet = packet[0];
+if (!packet || packet.contractVersion !== 1 || !packet.surface || !packet.migrationProvenance) {
+  console.error('SOURCE_SYNC_INVALID malformed_release_packet');
+  process.exit(2);
+}
+if (packet.migrationProvenance.scope !== 'atlas-management') {
+  console.error(`SOURCE_SYNC_INVALID unexpected_scope=${packet.migrationProvenance.scope}`);
+  process.exit(2);
+}
+if (!Array.isArray(packet.surface.families) || !Array.isArray(packet.migrationProvenance.manifest)) {
+  console.error('SOURCE_SYNC_INVALID packet_arrays_missing');
+  process.exit(2);
+}
+const safeField = (value, pattern, label) => {
+  const text = String(value ?? '');
+  if (!pattern.test(text)) {
+    console.error(`SOURCE_SYNC_INVALID ${label}=${JSON.stringify(text)}`);
+    process.exit(2);
+  }
+  return text;
+};
+fs.writeFileSync(surfacePath, JSON.stringify({
+  contractVersion: packet.surface.contractVersion,
+  families: packet.surface.families,
+}) + '\n');
+const manifestLines = packet.migrationProvenance.manifest.map((row) => [
+  safeField(row.version, /^\d+$/, 'migration_version'),
+  safeField(row.name, /^[A-Za-z0-9_]+$/, 'migration_name'),
+  safeField(row.expectedBlobSha, /^[0-9a-f]{40}$/, 'migration_blob_sha'),
+].join('\t'));
+fs.writeFileSync(manifestPath, manifestLines.join('\n') + (manifestLines.length ? '\n' : ''));
+const adjudicationLines = ['# production_version\tproduction_name\tdisposition\trepository_file\tcustody_key'];
+for (const row of packet.acceptedVersionDrift ?? []) {
+  const evidence = row.evidence ?? {};
+  adjudicationLines.push([
+    safeField(evidence.productionVersion, /^\d+$/, 'adjudication_production_version'),
+    safeField(evidence.productionName, /^[A-Za-z0-9_]+$/, 'adjudication_production_name'),
+    'VERSION_DRIFT_ALIAS',
+    safeField(evidence.repositoryFile, /^supabase\/migrations\/[A-Za-z0-9_.-]+\.sql$/, 'adjudication_repository_file'),
+    safeField(row.custodyKey, /^[A-Za-z0-9_.:\/-]+$/, 'adjudication_custody_key'),
+  ].join('\t'));
+}
+fs.writeFileSync(adjudicationsPath, adjudicationLines.join('\n') + '\n');
+const rpcDrift = Number(packet.rpcDriftCount);
+const migrationCount = Number(packet.migrationProvenance.migrationCount);
+if (!Number.isInteger(rpcDrift) || rpcDrift < 0 || !Number.isInteger(migrationCount) || migrationCount < 0) {
+  console.error('SOURCE_SYNC_INVALID invalid_packet_counts');
+  process.exit(2);
+}
+if (migrationCount !== manifestLines.length) {
+  console.error(`SOURCE_SYNC_INVALID manifest_count=${manifestLines.length} declared=${migrationCount}`);
+  process.exit(2);
+}
+fs.writeFileSync(metadataPath, JSON.stringify({ rpcDrift, migrationCount }) + '\n');
+NODE
 
 node "$comparator" "$expected_surface" "$observed_surface"
 
-rpc_drift="$(psql "$ATLAS_PRODUCTION_DATABASE_URL" -X -v ON_ERROR_STOP=1 -At -c \
-  "select count(*) from atlas.authenticated_rpc_registry_drift_v1();")"
-if [[ ! "$rpc_drift" =~ ^[0-9]+$ ]]; then
-  echo "SOURCE_SYNC_INVALID could_not_read_rpc_drift" >&2
-  exit 2
-fi
+rpc_drift="$(node -e 'const m=require(process.argv[1]); process.stdout.write(String(m.rpcDrift));' "$metadata")"
 if ((rpc_drift > 0)); then
   echo "SOURCE_SYNC_RPC_DRIFT unresolved=$rpc_drift" >&2
   exit 1
 fi
 
-# Export governed accepted version-drift decisions into the low-level reconciler's
-# interchange format. The database registry is authority; this temp file is not.
-printf 'production_version\tproduction_name\trepository_file\tproduction_sha\trepository_sha\tdisposition\tevidence\n' > "$adjudications"
-psql "$ATLAS_PRODUCTION_DATABASE_URL" -X -v ON_ERROR_STOP=1 -At -F $'\t' -c "
-with latest as (
-  select distinct on (custody_key)
-    custody_key, disposition, evidence
-  from atlas.source_custody_adjudications
-  where custody_class = 'version_drift'
-  order by custody_key, adjudicated_at desc
-)
-select
-  evidence->>'productionVersion',
-  evidence->>'productionName',
-  evidence->>'repositoryFile',
-  coalesce(evidence->>'productionSha',''),
-  coalesce(evidence->>'repositorySha',''),
-  'accepted',
-  custody_key
-from latest
-where disposition = 'accepted'
-  and evidence ? 'productionVersion'
-  and evidence ? 'productionName'
-  and evidence ? 'repositoryFile';
-" >> "$adjudications"
-
 "$engine" \
   --check \
   --since 0 \
   --scope atlas-management \
+  --manifest "$manifest" \
   --adjudications "$adjudications"
 
-echo "ATLAS_SOURCE_SYNC_OK surface=exact rpc_drift=0 migration_provenance=clean"
+migration_count="$(node -e 'const m=require(process.argv[1]); process.stdout.write(String(m.migrationCount));' "$metadata")"
+echo "ATLAS_SOURCE_SYNC_OK surface=exact rpc_drift=0 migration_provenance=clean migrations=$migration_count"
