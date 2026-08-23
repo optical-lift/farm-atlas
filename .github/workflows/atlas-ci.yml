@@ -56,6 +56,22 @@ jobs:
             exit 1
           fi
 
+  source-custody:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ATLAS_SOURCE_CUSTODY_API_URL: https://zirqkouammpwxlqfbsvf.supabase.co/rest/v1/rpc/source_custody_release_packet_v1
+      ATLAS_SUPABASE_PUBLISHABLE_KEY: sb_publishable_3UCb5b3USJD24c2uX6B_4A_0XWDT6si
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify synchronizer contract
+        run: node --test tests/atlas-source-custody.test.mjs
+
+      - name: Prove live Atlas source custody
+        run: npm run sync:atlas:source
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15

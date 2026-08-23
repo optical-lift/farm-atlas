@@ -1,0 +1,121 @@
+create or replace function atlas.ensure_production_care_task_v1(p_production_lot_id uuid,p_care_kind text)
+returns uuid language plpgsql security definer set search_path=pg_catalog,atlas as $$
+declare
+  v_lot atlas.production_lots%rowtype;v_policy atlas.production_care_policies%rowtype;v_task_id uuid;v_source atlas.tasks%rowtype;
+  v_role text;v_action text;v_title text;v_due date;v_today date:=(now() at time zone 'America/Chicago')::date;
+begin
+  if p_care_kind not in ('watering','weeding','pinching','support','fertility') then raise exception 'Unsupported production care kind' using errcode='22023';end if;
+  select * into v_lot from atlas.production_lots where id=p_production_lot_id;
+  select * into v_policy from atlas.production_care_policies where production_lot_id=p_production_lot_id and care_kind=p_care_kind;
+  if v_lot.id is null or v_policy.id is null or v_policy.current_status not in ('due','needs_attention') then return null;end if;
+  v_role:=case p_care_kind when 'watering' then 'water_care' when 'weeding' then 'weed_care' when 'pinching' then 'pinch_care' when 'support' then 'support_care' else 'fertility_care' end;
+  select t.id into v_task_id from atlas.production_lot_tasks plt join atlas.tasks t on t.id=plt.task_id where plt.production_lot_id=v_lot.id and plt.link_role=v_role and t.status in ('open','blocked') order by t.created_at desc limit 1;
+  if v_task_id is not null then return v_task_id;end if;
+  select t.* into v_source from atlas.production_lot_tasks plt join atlas.tasks t on t.id=plt.task_id where plt.production_lot_id=v_lot.id and plt.link_role in ('establishment_check','harvest_readiness') order by t.created_at desc limit 1;
+  v_action:=case p_care_kind when 'watering' then 'Water' when 'weeding' then 'Weed' when 'pinching' then 'Pinch' when 'support' then 'Support' else 'Feed' end;
+  v_title:=v_action||' field cohort — '||v_lot.lot_label;
+  v_due:=coalesce(v_policy.next_due_date,v_policy.due_date,v_today);
+  insert into atlas.tasks(farm_id,title,task_type,status,priority,due_date,generated_from,generated_from_id,note,metadata,action_key,work_class,task_series_key,engine_instance_key,visibility_scope,assigned_membership_id)
+  values(v_lot.farm_id,v_title,'production_field_care','open',case when v_policy.required_before_harvest then 'high' else 'medium' end,v_due,'production_care_policy',v_policy.id,v_action||' every linked living bed and record any revised plant counts.',jsonb_build_object('task_key','production_care_'||v_policy.id::text,'task_style','production_field_care','production_lot_id',v_lot.id,'production_lot_key',v_lot.stable_key,'production_care_policy_id',v_policy.id,'care_action',p_care_kind,'required_before_harvest',v_policy.required_before_harvest,'display_action',v_action,'display_subject',v_lot.lot_label,'display_detail',case when v_policy.required_before_harvest then 'Required before harvest readiness' else 'Field monitoring response' end,'collection_zone','Production beds'),case p_care_kind when 'watering' then 'water' when 'weeding' then 'weed' when 'pinching' then 'pinch' else 'maintain' end,'standard','production-lot:'||v_lot.stable_key||':'||p_care_kind,'production-field-care:'||v_policy.id::text,coalesce(v_source.visibility_scope,'assigned_worker'),v_source.assigned_membership_id)
+  returning id into v_task_id;
+  insert into atlas.production_lot_tasks(production_lot_id,task_id,link_role,source,metadata) values(v_lot.id,v_task_id,v_role,'production_stage_engine',jsonb_build_object('care_policy_id',v_policy.id));
+  insert into atlas.task_objects(task_id,object_id,role) select v_task_id,s.object_id,'target' from atlas.production_field_stands s where s.production_lot_id=v_lot.id and s.current_plants>0 and s.stand_status not in ('failed','cleared') on conflict do nothing;
+  insert into atlas.task_crop_cycles(task_id,crop_cycle_id,role,confidence,source,metadata) select v_task_id,s.crop_cycle_id,'affects','confirmed','production_stage_engine',jsonb_build_object('care_policy_id',v_policy.id) from atlas.production_field_stands s where s.production_lot_id=v_lot.id and s.current_plants>0 and s.stand_status not in ('failed','cleared') on conflict do nothing;
+  update atlas.production_care_policies set source_task_id=v_task_id,updated_at=now() where id=v_policy.id;
+  return v_task_id;
+end;$$;
+
+create or replace function atlas.refresh_production_harvest_gate_v1(p_production_lot_id uuid)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,atlas as $$
+declare
+  v_lot atlas.production_lots%rowtype;v_rule atlas.production_harvest_rules%rowtype;v_gate atlas.production_harvest_gates%rowtype;
+  v_expected integer:=0;v_resolved integer:=0;v_alive numeric:=0;v_policy_count integer:=0;v_required integer:=0;v_unsatisfied integer:=0;
+  v_status text;v_blocker text;v_owner_task atlas.tasks%rowtype;v_ready_task atlas.tasks%rowtype;v_harvest_task atlas.tasks%rowtype;
+  v_visibility text:='assigned_worker';v_membership uuid;v_transition jsonb;v_today date:=(now() at time zone 'America/Chicago')::date;v_kind text;
+begin
+  select * into v_lot from atlas.production_lots where id=p_production_lot_id for update;
+  if v_lot.id is null then raise exception 'Production lot was not found' using errcode='P0002';end if;
+  select count(*),count(*) filter(where stand_status<>'establishing'),coalesce(sum(current_plants),0) into v_expected,v_resolved,v_alive from atlas.production_field_stands where production_lot_id=v_lot.id and stand_status<>'cleared';
+  select * into v_rule from atlas.production_harvest_rules where production_lot_id=v_lot.id;
+  if v_rule.id is not null then update atlas.production_care_policies set current_status='due',updated_at=now() where production_lot_id=v_lot.id and policy_status<>'not_required' and current_status='satisfied' and next_due_date is not null and next_due_date<=v_today;end if;
+  select count(*),count(*) filter(where required_before_harvest),count(*) filter(where required_before_harvest and current_status not in ('satisfied','not_required')) into v_policy_count,v_required,v_unsatisfied from atlas.production_care_policies where production_lot_id=v_lot.id and care_kind in ('watering','weeding','pinching','support','fertility');
+  select t.visibility_scope,t.assigned_membership_id into v_visibility,v_membership from atlas.production_lot_tasks plt join atlas.tasks t on t.id=plt.task_id where plt.production_lot_id=v_lot.id and plt.link_role in ('establishment_check','water_care','weed_care','pinch_care','support_care','fertility_care','harvest_readiness') order by t.created_at desc limit 1;
+  v_visibility:=coalesce(v_visibility,'assigned_worker');
+  if v_expected=0 or v_resolved<v_expected then v_status:='waiting_establishment';v_blocker:=(v_expected-v_resolved)::text||' field stand(s) still need counted establishment.';
+  elsif v_alive<=0 then v_status:='failed';v_blocker:='No living plants remain in the field cohort.';
+  elsif v_rule.id is null or v_rule.harvest_watch_start is null or v_rule.harvest_watch_end is null or v_policy_count<5 then v_status:='waiting_rules';v_blocker:='Owner must set the harvest window and classify all five field-care policies.';
+  elsif v_unsatisfied>0 then v_status:='waiting_care';v_blocker:=v_unsatisfied::text||' required care polic'||case when v_unsatisfied=1 then 'y is' else 'ies are' end||' not satisfied.';
+  else v_status:='ready_for_watch';v_blocker:=null;end if;
+  insert into atlas.production_harvest_gates(farm_id,production_lot_id,gate_status,blocker_text,established_beds,expected_beds,plants_alive,ready_at,refresh_version,metadata)
+  values(v_lot.farm_id,v_lot.id,v_status,v_blocker,v_resolved,v_expected,v_alive,case when v_status='ready_for_watch' then now() end,1,jsonb_build_object('care_policy_count',v_policy_count,'required_care_count',v_required,'unsatisfied_required_care_count',v_unsatisfied))
+  on conflict(production_lot_id) do update set gate_status=case when atlas.production_harvest_gates.gate_status in ('harvest_watch','harvest_ready') and excluded.gate_status='ready_for_watch' then atlas.production_harvest_gates.gate_status else excluded.gate_status end,blocker_text=excluded.blocker_text,established_beds=excluded.established_beds,expected_beds=excluded.expected_beds,plants_alive=excluded.plants_alive,ready_at=case when excluded.gate_status='ready_for_watch' then coalesce(atlas.production_harvest_gates.ready_at,now()) else null end,refresh_version=atlas.production_harvest_gates.refresh_version+1,metadata=atlas.production_harvest_gates.metadata||excluded.metadata,updated_at=now() returning * into v_gate;
+  if v_status='waiting_rules' then
+    select * into v_owner_task from atlas.tasks where id=v_gate.owner_decision_task_id;
+    if v_owner_task.id is null or v_owner_task.status not in ('open','blocked') then
+      select id into v_membership from atlas.farm_memberships where farm_id=v_lot.farm_id and active and role='owner' order by created_at limit 1;
+      insert into atlas.tasks(farm_id,title,task_type,status,priority,due_date,generated_from,generated_from_id,note,metadata,action_key,work_class,task_series_key,engine_instance_key,visibility_scope,assigned_membership_id)
+      values(v_lot.farm_id,'Owner — Set field-care + harvest plan — '||v_lot.lot_label,'production_field_plan','open','high',v_today,'production_harvest_gate',v_gate.id,'Set the harvest-watch window and classify watering, weeding, pinching, support, and fertility without inventing crop policy.',jsonb_build_object('task_key','production_field_plan_'||v_gate.id::text,'owner_task',true,'production_lot_id',v_lot.id,'production_lot_key',v_lot.stable_key,'production_harvest_gate_id',v_gate.id,'display_action','Plan','display_subject',v_lot.lot_label||' field care','display_detail',v_alive::text||' living plants','collection_zone','Owner'),'plan','light','production-lot:'||v_lot.stable_key||':field-plan','production-field-plan:'||v_gate.id::text,'owner',v_membership) returning * into v_owner_task;
+      update atlas.production_harvest_gates set owner_decision_task_id=v_owner_task.id where id=v_gate.id;
+      insert into atlas.production_lot_tasks(production_lot_id,task_id,link_role,source,metadata) values(v_lot.id,v_owner_task.id,'harvest_rules_decision','production_stage_engine',jsonb_build_object('harvest_gate_id',v_gate.id));
+      insert into atlas.task_objects(task_id,object_id,role) select v_owner_task.id,object_id,'field_stand' from atlas.production_field_stands where production_lot_id=v_lot.id and current_plants>0 on conflict do nothing;
+      insert into atlas.task_crop_cycles(task_id,crop_cycle_id,role,confidence,source,metadata) select v_owner_task.id,crop_cycle_id,'plans','confirmed','production_stage_engine',jsonb_build_object('harvest_gate_id',v_gate.id) from atlas.production_field_stands where production_lot_id=v_lot.id and current_plants>0 on conflict do nothing;
+    end if;
+  end if;
+  if v_status='waiting_care' then for v_kind in select care_kind from atlas.production_care_policies where production_lot_id=v_lot.id and required_before_harvest and current_status not in ('satisfied','not_required') loop perform atlas.ensure_production_care_task_v1(v_lot.id,v_kind);end loop;end if;
+  select * into v_ready_task from atlas.tasks where id=v_gate.harvest_readiness_task_id;
+  if v_status='ready_for_watch' then
+    if v_ready_task.id is null then
+      insert into atlas.tasks(farm_id,title,task_type,status,priority,due_date,generated_from,generated_from_id,note,metadata,action_key,work_class,task_series_key,engine_instance_key,visibility_scope,assigned_membership_id)
+      values(v_lot.farm_id,'Inspect harvest readiness — '||v_lot.lot_label,'production_harvest_readiness','open','high',v_rule.harvest_watch_start,'production_harvest_gate',v_gate.id,'Inspect every living field stand for harvest stage. This confirms readiness; it does not record harvested stems.',jsonb_build_object('task_key','production_harvest_readiness_'||v_gate.id::text,'task_style','production_harvest_readiness','production_lot_id',v_lot.id,'production_lot_key',v_lot.stable_key,'production_harvest_gate_id',v_gate.id,'harvest_watch_start',v_rule.harvest_watch_start,'harvest_watch_end',v_rule.harvest_watch_end,'plants_alive',v_alive,'display_action','Inspect','display_subject',v_lot.lot_label||' harvest readiness','display_detail',v_alive::text||' living plants','collection_zone','Production beds'),'harvest','standard','production-lot:'||v_lot.stable_key||':harvest-readiness','production-harvest-readiness:'||v_gate.id::text,v_visibility,v_membership) returning * into v_ready_task;
+      update atlas.production_harvest_gates set harvest_readiness_task_id=v_ready_task.id,gate_status='harvest_watch' where id=v_gate.id;
+      insert into atlas.production_lot_tasks(production_lot_id,task_id,link_role,source,metadata) values(v_lot.id,v_ready_task.id,'harvest_readiness','production_stage_engine',jsonb_build_object('harvest_gate_id',v_gate.id));
+      insert into atlas.task_objects(task_id,object_id,role) select v_ready_task.id,object_id,'target' from atlas.production_field_stands where production_lot_id=v_lot.id and current_plants>0 on conflict do nothing;
+      insert into atlas.task_crop_cycles(task_id,crop_cycle_id,role,confidence,source,metadata) select v_ready_task.id,crop_cycle_id,'observes','confirmed','production_stage_engine',jsonb_build_object('harvest_gate_id',v_gate.id) from atlas.production_field_stands where production_lot_id=v_lot.id and current_plants>0 on conflict do nothing;
+      v_status:='harvest_watch';
+    elsif v_ready_task.status='blocked' then v_transition:=atlas.record_task_transition_v1_internal(v_ready_task.id,'rescheduled',left('production-harvest-ready:'||v_gate.id::text||':'||v_gate.refresh_version::text,160),v_rule.harvest_watch_start,'Required care is satisfied and the harvest window is confirmed.',null,'harvest','production_lot',jsonb_build_object('production_lot_id',v_lot.id,'harvest_gate_id',v_gate.id),null);update atlas.production_harvest_gates set gate_status='harvest_watch' where id=v_gate.id;v_status:='harvest_watch';
+    else update atlas.production_harvest_gates set gate_status='harvest_watch' where id=v_gate.id;v_status:='harvest_watch';end if;
+  elsif v_ready_task.id is not null and v_ready_task.status='open' then v_transition:=atlas.record_task_transition_v1_internal(v_ready_task.id,'blocked',left('production-harvest-blocked:'||v_gate.id::text||':'||v_gate.refresh_version::text,160),null,v_blocker,v_blocker,'harvest','production_lot',jsonb_build_object('production_lot_id',v_lot.id,'harvest_gate_id',v_gate.id,'gate_status',v_status),null);end if;
+  if v_gate.harvest_task_id is not null and v_status in ('waiting_establishment','waiting_rules','waiting_care','failed') then select * into v_harvest_task from atlas.tasks where id=v_gate.harvest_task_id;if v_harvest_task.status='open' then v_transition:=atlas.record_task_transition_v1_internal(v_harvest_task.id,'blocked',left('production-actual-harvest-blocked:'||v_gate.id::text||':'||v_gate.refresh_version::text,160),null,v_blocker,v_blocker,'harvest','production_lot',jsonb_build_object('production_lot_id',v_lot.id,'harvest_gate_id',v_gate.id),null);end if;end if;
+  return jsonb_build_object('productionLotId',v_lot.id,'harvestGateId',v_gate.id,'gateStatus',v_status,'blocker',v_blocker,'expectedStands',v_expected,'resolvedStands',v_resolved,'plantsAlive',v_alive,'carePolicyCount',v_policy_count,'requiredCareCount',v_required,'unsatisfiedRequiredCareCount',v_unsatisfied,'ownerDecisionTaskId',v_owner_task.id,'harvestReadinessTaskId',v_ready_task.id,'harvestTaskId',v_harvest_task.id);
+end;$$;
+
+create or replace function atlas.configure_production_field_plan_v1(p_task_id uuid,p_harvest_watch_start date,p_harvest_watch_end date,p_expected_stems_per_plant numeric,p_policies jsonb,p_confidence text,p_note text,p_idempotency_key text)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,atlas as $$
+declare
+  v_task atlas.tasks%rowtype;v_lot atlas.production_lots%rowtype;v_rule atlas.production_harvest_rules%rowtype;v_key text:=nullif(btrim(p_idempotency_key),'');v_row record;v_status text;v_due date;v_policy_id uuid;v_gate jsonb;v_today date:=(now() at time zone 'America/Chicago')::date;v_count integer;v_task_id uuid;
+begin
+  if p_task_id is null or p_harvest_watch_start is null or p_harvest_watch_end is null or p_harvest_watch_end<p_harvest_watch_start or p_policies is null or jsonb_typeof(p_policies)<>'array' or p_confidence not in ('confirmed','estimated') then raise exception 'Owner task, valid harvest window, five care policies, and confidence are required' using errcode='22023';end if;
+  if p_expected_stems_per_plant is not null and p_expected_stems_per_plant<=0 then raise exception 'Expected stems per plant must be positive when known' using errcode='22023';end if;
+  if v_key is null or length(v_key)>120 then raise exception 'A valid field-plan idempotency key is required' using errcode='22023';end if;
+  select * into v_task from atlas.tasks where id=p_task_id for update;
+  select pl.* into v_lot from atlas.production_lot_tasks plt join atlas.production_lots pl on pl.id=plt.production_lot_id where plt.task_id=p_task_id and plt.link_role='harvest_rules_decision' limit 1 for update of pl;
+  if v_task.id is null or v_lot.id is null or v_task.visibility_scope<>'owner' then raise exception 'Task is not the Owner field-plan decision' using errcode='42501';end if;
+  select * into v_rule from atlas.production_harvest_rules where farm_id=v_lot.farm_id and idempotency_key=v_key;
+  if v_rule.id is not null then return jsonb_build_object('taskId',p_task_id,'productionLotId',v_lot.id,'harvestRuleId',v_rule.id,'deduplicated',true);end if;
+  create temporary table if not exists pg_temp.production_policy_input(care_kind text primary key,policy_status text not null,required_before_harvest boolean not null,due_date date,frequency_days integer,freshness_days integer) on commit drop;
+  truncate pg_temp.production_policy_input;
+  insert into pg_temp.production_policy_input(care_kind,policy_status,required_before_harvest,due_date,frequency_days,freshness_days)
+  select x->>'careKind',x->>'policyStatus',coalesce((x->>'requiredBeforeHarvest')::boolean,false),nullif(x->>'dueDate','')::date,nullif(x->>'frequencyDays','')::integer,nullif(x->>'freshnessDays','')::integer from jsonb_array_elements(p_policies) x;
+  select count(*) into v_count from pg_temp.production_policy_input;
+  if v_count<>5 or exists(select 1 from (values('watering'),('weeding'),('pinching'),('support'),('fertility')) k(kind) left join pg_temp.production_policy_input p on p.care_kind=k.kind where p.care_kind is null) then raise exception 'The plan must classify watering, weeding, pinching, support, and fertility exactly once' using errcode='22023';end if;
+  if exists(select 1 from pg_temp.production_policy_input where policy_status not in ('required','monitor','not_required') or (required_before_harvest and policy_status<>'required') or (policy_status='not_required' and required_before_harvest) or coalesce(frequency_days,1)<=0 or coalesce(freshness_days,1)<=0) then raise exception 'Care policy values are invalid' using errcode='22023';end if;
+  insert into atlas.production_harvest_rules(farm_id,production_lot_id,pinch_required,harvest_watch_start,harvest_watch_end,expected_stems_per_plant,confidence,source,idempotency_key,metadata)
+  values(v_lot.farm_id,v_lot.id,(select policy_status='required' from pg_temp.production_policy_input where care_kind='pinching'),p_harvest_watch_start,p_harvest_watch_end,p_expected_stems_per_plant,p_confidence,'owner_field_plan',v_key,jsonb_build_object('note',p_note,'policies',p_policies))
+  on conflict(production_lot_id) do update set pinch_required=excluded.pinch_required,harvest_watch_start=excluded.harvest_watch_start,harvest_watch_end=excluded.harvest_watch_end,expected_stems_per_plant=excluded.expected_stems_per_plant,confidence=excluded.confidence,source=excluded.source,idempotency_key=excluded.idempotency_key,metadata=atlas.production_harvest_rules.metadata||excluded.metadata,updated_at=now() returning * into v_rule;
+  for v_row in select * from pg_temp.production_policy_input loop
+    v_status:=case when v_row.policy_status='not_required' then 'not_required' when v_row.care_kind='watering' and exists(select 1 from atlas.production_field_care_state where production_lot_id=v_lot.id and water_status='needs_water') then 'due' when v_row.care_kind='watering' and not exists(select 1 from atlas.production_field_care_state where production_lot_id=v_lot.id and water_status='unknown') then 'satisfied' when v_row.care_kind='weeding' and exists(select 1 from atlas.production_field_care_state where production_lot_id=v_lot.id and weed_pressure in ('moderate','heavy')) then 'due' when v_row.care_kind='weeding' and not exists(select 1 from atlas.production_field_care_state where production_lot_id=v_lot.id and weed_pressure='unknown') then 'satisfied' when v_row.care_kind='pinching' and v_row.policy_status='required' and not exists(select 1 from atlas.production_field_care_state where production_lot_id=v_lot.id and pinch_status<>'done') then 'satisfied' when v_row.care_kind='pinching' and v_row.policy_status='required' then 'due' when v_row.policy_status='required' and (v_row.due_date is null or v_row.due_date<=v_today) then 'due' else 'unknown' end;
+    v_due:=coalesce(v_row.due_date,case when v_status='due' then v_today else null end);
+    insert into atlas.production_care_policies(farm_id,production_lot_id,care_kind,policy_status,required_before_harvest,due_date,frequency_days,freshness_days,current_status,source_task_id,last_satisfied_at,next_due_date,metadata)
+    values(v_lot.farm_id,v_lot.id,v_row.care_kind,v_row.policy_status,v_row.required_before_harvest,v_row.due_date,v_row.frequency_days,v_row.freshness_days,v_status,p_task_id,case when v_status='satisfied' then v_today else null end,v_due,jsonb_build_object('field_plan_task_id',p_task_id,'confidence',p_confidence))
+    on conflict(production_lot_id,care_kind) do update set policy_status=excluded.policy_status,required_before_harvest=excluded.required_before_harvest,due_date=excluded.due_date,frequency_days=excluded.frequency_days,freshness_days=excluded.freshness_days,current_status=excluded.current_status,source_task_id=excluded.source_task_id,last_satisfied_at=excluded.last_satisfied_at,next_due_date=excluded.next_due_date,metadata=atlas.production_care_policies.metadata||excluded.metadata,updated_at=now() returning id into v_policy_id;
+    if v_row.care_kind='pinching' then update atlas.production_field_care_state set pinch_status=case when v_row.policy_status='not_required' then 'not_required' when v_status='satisfied' then 'done' else 'due' end,updated_at=now() where production_lot_id=v_lot.id;end if;
+    if v_status in ('due','needs_attention') then v_task_id:=atlas.ensure_production_care_task_v1(v_lot.id,v_row.care_kind);end if;
+  end loop;
+  update atlas.production_lots set expected_harvest_start=p_harvest_watch_start,expected_harvest_end=p_harvest_watch_end,metadata=metadata||jsonb_build_object('expected_stems_per_plant',p_expected_stems_per_plant,'field_plan_confidence',p_confidence,'field_plan_task_id',p_task_id),updated_at=now() where id=v_lot.id;
+  insert into atlas.production_lot_events(farm_id,production_lot_id,event_type,event_date,task_id,note,source,idempotency_key,metadata)
+  values(v_lot.farm_id,v_lot.id,'field_plan_set',v_today,p_task_id,p_note,'production_stage_engine',left(v_key||':event',160),jsonb_build_object('harvest_rule_id',v_rule.id,'harvest_watch_start',p_harvest_watch_start,'harvest_watch_end',p_harvest_watch_end,'expected_stems_per_plant',p_expected_stems_per_plant,'policies',p_policies,'confidence',p_confidence));
+  v_gate:=atlas.refresh_production_harvest_gate_v1(v_lot.id);
+  return jsonb_build_object('taskId',p_task_id,'productionLotId',v_lot.id,'harvestRuleId',v_rule.id,'harvestGate',v_gate,'deduplicated',false);
+end;$$;
+
+drop function if exists atlas.set_production_harvest_rules_v1(uuid,boolean,date,date,text,text,text);

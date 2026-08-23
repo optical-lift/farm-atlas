@@ -10,7 +10,9 @@
     "lint": "eslint",
     "test": "node --test tests/*.test.mjs",
     "audit:migrations:production": "bash scripts/reconcile-production-migration-history.sh --check",
-    "restore:migrations:production": "bash scripts/reconcile-production-migration-history.sh --restore"
+    "restore:migrations:production": "bash scripts/reconcile-production-migration-history.sh --restore",
+    "sync:atlas:source": "bash scripts/atlas-source-synchronizer.sh",
+    "verify:atlas:surface": "node scripts/compare-atlas-source-custody-surface.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
