@@ -23,7 +23,8 @@ function sourceLabel(item: OwnerMyWorkItem) {
       ? "owner obligation"
       : item.sourceType.replaceAll("_", " ");
   }
-  return item.sourceType.replaceAll("_", " ");
+  const taskType = item.sourceType.replaceAll("_", " ");
+  return item.principalSignal ? `${taskType} · Principal Clock` : taskType;
 }
 
 function timingLabel(item: OwnerMyWorkItem) {
@@ -103,6 +104,7 @@ export default function OwnerDashboardClient({
   finishProject: OwnerFinishProjectSummary | null;
 }) {
   const { counts, buckets } = myWork;
+  const principalSignals = counts.principalItems + counts.principalLinkedTaskItems;
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell atlas-overview-page-shell atlas-owner-page-shell">
@@ -129,7 +131,7 @@ export default function OwnerDashboardClient({
             <article><strong>{counts.all}</strong><span>mine</span></article>
             <article><strong>{counts.overdue}</strong><span>overdue</span></article>
             <article><strong>{counts.waiting}</strong><span>waiting</span></article>
-            <article><strong>{counts.principalItems}</strong><span>Principal</span></article>
+            <article><strong>{principalSignals}</strong><span>Principal</span></article>
           </section>
 
           <section className="atlas-overview-zone-list atlas-owner-list" aria-label="My Work list">
