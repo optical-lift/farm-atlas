@@ -18,10 +18,7 @@ type Props = {
 
 type VisitResponse = {
   ok?: boolean;
-  result?: {
-    serviceDate?: string;
-    nextDate?: string;
-  };
+  result?: { serviceDate?: string; nextDate?: string };
   error?: string | { message?: string };
   details?: string;
 };
@@ -55,7 +52,7 @@ function nextWorkingDay(dateIso: string) {
 function requestError(data: VisitResponse) {
   if (data.details) return data.details;
   if (typeof data.error === "string") return data.error;
-  return data.error?.message || "Atlas could not save the contractor visit.";
+  return data.error?.message || "Contractor visit save failed.";
 }
 
 function ContractorServiceInstrument({ context }: { context: AssignedTaskResultInstrumentContext }) {
@@ -66,16 +63,11 @@ function ContractorServiceInstrument({ context }: { context: AssignedTaskResultI
   const [saving, setSaving] = useState<"yes" | "not_yet" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const provider = text(task.metadata?.collection_label)
-    || text(task.metadata?.display_subject)
-    || "Contractor";
-  const question = text(task.metadata?.status_question) || `Did ${provider} come?`;
+  const provider = text(task.metadata?.collection_label) || text(task.metadata?.display_subject) || "Contractor";
+  const service = text(task.metadata?.service_type).replaceAll("_", " ");
   const cadenceDays = numberValue(task.metadata?.cadence_days);
   const price = numberValue(task.metadata?.price_per_visit);
-  const moveBlocked = busy
-    || !assembly
-    || assembly.readiness.status === "blocked"
-    || assembly.spine.connection === "stops_at_move";
+  const moveBlocked = busy || !assembly || assembly.readiness.status === "blocked" || assembly.spine.connection === "stops_at_move";
 
   async function confirmVisit() {
     const actualDate = differentDay ? serviceDate : today;
@@ -97,7 +89,7 @@ function ContractorServiceInstrument({ context }: { context: AssignedTaskResultI
       if (!response.ok || !data.ok) throw new Error(requestError(data));
       window.location.assign(returnHref);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Atlas could not save the contractor visit.");
+      setMessage(error instanceof Error ? error.message : "Contractor visit save failed.");
     } finally {
       setSaving(null);
     }
@@ -112,80 +104,50 @@ function ContractorServiceInstrument({ context }: { context: AssignedTaskResultI
         taskId: task.task_id,
         transition: "rescheduled",
         targetDate: nextWorkingDay(today),
-        reason: `${provider} has not come yet; check again next working day.`,
+        reason: "contractor_not_yet",
         laneKey: task.action_key || undefined,
         workKey: task.action_key || undefined,
         payload: { contractorServiceStatus: "not_yet" },
       });
       window.location.assign(returnHref);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Atlas could not move the contractor check.");
+      setMessage(error instanceof Error ? error.message : "Contractor check move failed.");
     } finally {
       setSaving(null);
     }
   }
 
   return (
-    <section
-      className={styles.statusCard}
-      aria-label={`${provider} visit status`}
-      data-atlas-result-instrument="contractor-service"
-    >
-      <h2 className={styles.question}>{question}</h2>
-
+    <section className={styles.statusCard} aria-label={`${provider} visit status`} data-atlas-result-instrument="contractor-service">
+      <h2 className={styles.question}>{provider}</h2>
       <div className={styles.context}>
-        {price !== null ? <span>${price.toLocaleString("en-US")} visit</span> : null}
-        {cadenceDays !== null ? <span>Every {cadenceDays} days</span> : null}
-        {task.due_date ? <span>Expected {task.due_date}</span> : null}
+        {service ? <span>{service}</span> : null}
+        {price !== null ? <span>${price.toLocaleString("en-US")}</span> : null}
+        {cadenceDays !== null ? <span>{cadenceDays} days</span> : null}
+        {task.due_date ? <span>{task.due_date}</span> : null}
       </div>
 
       <div className={styles.dateChoice}>
         <label>
-          <input
-            type="checkbox"
-            checked={differentDay}
-            disabled={Boolean(saving) || busy}
-            onChange={(event) => setDifferentDay(event.target.checked)}
-          />
-          <span>They came on a different day</span>
+          <input type="checkbox" checked={differentDay} disabled={Boolean(saving) || busy} onChange={(event) => setDifferentDay(event.target.checked)} />
+          <span>Different date</span>
         </label>
-
         {differentDay ? (
           <label className={styles.dateField}>
-            <span>When did they come?</span>
-            <input
-              type="date"
-              value={serviceDate}
-              max={today}
-              disabled={Boolean(saving) || busy}
-              onChange={(event) => setServiceDate(event.target.value)}
-            />
+            <span>Date</span>
+            <input type="date" value={serviceDate} max={today} disabled={Boolean(saving) || busy} onChange={(event) => setServiceDate(event.target.value)} />
           </label>
         ) : null}
       </div>
 
       <div className={styles.actions}>
-        <button
-          type="button"
-          className={styles.yes}
-          disabled={moveBlocked || Boolean(saving) || (differentDay && !serviceDate)}
-          onClick={() => void confirmVisit()}
-        >
+        <button type="button" className={styles.yes} disabled={moveBlocked || Boolean(saving) || (differentDay && !serviceDate)} onClick={() => void confirmVisit()}>
           {saving === "yes" ? "Saving…" : "Yes"}
         </button>
-        <button
-          type="button"
-          className={styles.notYet}
-          disabled={Boolean(saving) || busy}
-          onClick={() => void notYet()}
-        >
+        <button type="button" className={styles.notYet} disabled={Boolean(saving) || busy} onClick={() => void notYet()}>
           {saving === "not_yet" ? "Moving…" : "Not yet"}
         </button>
       </div>
-
-      <p className={styles.helper}>
-        If they came today, just tap Yes. If they came earlier, choose the date first so Atlas anchors the next mowing check to the actual visit.
-      </p>
 
       {message ? <p className={styles.message}>{message}</p> : null}
     </section>
