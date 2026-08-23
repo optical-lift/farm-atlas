@@ -6,8 +6,10 @@ import test from 'node:test';
 const root = process.cwd();
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const migrationPath = 'supabase/migrations/20260823211943_knowledge_acquisition_search_knower_and_owner_queue_v1.sql';
+const answerMigrationPath = 'supabase/migrations/20260823212832_owner_needs_from_you_answer_membrane_v1.sql';
 
 const migration = () => read(migrationPath);
+const answerMigration = () => read(answerMigrationPath);
 
 test('Tranche 1A search-before-ask contract is explicit and preserves epistemic boundaries', () => {
   const sql = migration();
@@ -107,11 +109,54 @@ test('Owner knowledge queue RPC is explicitly governed and anonymous access rema
   assert.match(sql, /'doesNotMutateTruth',true/);
 });
 
-test('knowledge acquisition migration retains exact production version and custody surface reflects live additions', () => {
+test('Tranche 1D Owner destination answer writes canonical domain truth and reuses requirement reconciliation', () => {
+  const sql = answerMigration();
+  assert.match(sql, /answer_owner_needs_from_you_v1/);
+  assert.match(sql, /auth\.uid\(\)/);
+  assert.match(sql, /active and role='owner'/);
+  assert.match(sql, /truth_acquisition_knower_v1\(v_instance\.id\)/);
+  assert.match(sql, /acquisitionSurface'<>'atlas_needs_from_you'/);
+  assert.match(sql, /record_crop_destination_claim_v1/);
+  assert.match(sql, /'committed'/);
+  assert.match(sql, /'owner_needs_from_you'/);
+  assert.match(sql, /reconcile_crop_cycle_requirement_state_v1/);
+  assert.match(sql, /answerWrittenToCanonicalDomainTruth/);
+  assert.match(sql, /carrierTaskNotUsedAsTruthStore/);
+  assert.match(sql, /downstreamExecutionReevaluatedByExistingResolutionTrigger/);
+  assert.ok(
+    sql.indexOf('record_crop_destination_claim_v1') < sql.lastIndexOf('reconcile_crop_cycle_requirement_state_v1'),
+    'canonical truth must be written before requirement reconciliation',
+  );
+});
+
+test('Tranche 1D I-do-not-know preserves the unknown and removes false Owner-knower routing', () => {
+  const sql = answerMigration();
+  assert.match(sql, /p_answer_kind='i_do_not_know'/);
+  assert.match(sql, /ownerUnableToAnswer/);
+  assert.match(sql, /v_knower_class:='actually_unknown'/);
+  assert.match(sql, /v_acquisition_surface:='unresolved_unknown'/);
+  assert.match(sql, /unknownWasNotConvertedToFact/);
+  assert.match(sql, /sourceRequirementRemainsOpen/);
+  assert.match(sql, /ownerCardRemovedFromOwnerKnownLane/);
+});
+
+test('Tranche 1D protects idempotency, farm boundary, and internal writer boundary', () => {
+  const sql = answerMigration();
+  assert.match(sql, /growing_objects/);
+  assert.match(sql, /farm_id=v_instance\.farm_id/);
+  assert.match(sql, /owner-needs-from-you:/);
+  assert.match(sql, /different destination/);
+  assert.match(sql, /revoke all on function atlas\.answer_owner_needs_from_you_v1/);
+  assert.match(sql, /grant execute on function atlas\.answer_owner_needs_from_you_v1\(uuid,text,uuid,text,text\) to authenticated,service_role/);
+  assert.match(sql, /doesNotExposeInternalDestinationWriter/);
+});
+
+test('knowledge acquisition migrations retain exact production versions and custody surface reflects live additions', () => {
   assert.equal(fs.existsSync(path.join(root, migrationPath)), true);
+  assert.equal(fs.existsSync(path.join(root, answerMigrationPath)), true);
   const expected = JSON.parse(read('docs/architecture/atlas-source-custody-surface-v1.json'));
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1161);
-  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 469);
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '04b60074ed5fe907cf4bb2c8d35d67d3735964dac360a75a92b731c635e05add');
-  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, 'a9f08360724e99bf7e6c8079b2a92bff0a88e8e26d2c8a1d4f1f9aad6193bbec');
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1162);
+  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 470);
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '6c7cf1047e4028c29d279aa1221042a33be82c99fc7bbae46bad580ebcd0f274');
+  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, '5c90954a99230a6c36516c75416cacea6399a1f61e5269a03058d9ff648486f4');
 });
