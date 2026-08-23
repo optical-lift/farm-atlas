@@ -68,8 +68,8 @@ test('current executable surface equivalence is the primary custody release proo
   assert.match(comparator, /UNEXPECTED_LIVE_FAMILY/);
   assert.equal(expected.contractVersion, 1);
   assert.equal(expected.authority, 'repository-main');
-  assert.equal(expected.families.reduce((sum, row) => sum + row.artifactCount, 0), 4303);
-  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 468);
+  assert.equal(expected.families.reduce((sum, row) => sum + row.artifactCount, 0), 4307);
+  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 469);
   for (const row of expected.families) assert.match(row.fingerprintSha256, /^[0-9a-f]{64}$/);
 });
 
