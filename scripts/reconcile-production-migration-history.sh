@@ -1,73 +1,52 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Reconcile repository migration history with the history Supabase says is already
-# applied in production. This script is intentionally source-control only: it never
-# executes a migration against production.
+# Low-level custody engine used by the Atlas Source Synchronizer.
+# It compares repository migration bytes with the immutable Supabase deployment ledger.
+# It never executes migrations against production.
 #
 # Requirements:
-#   ATLAS_PRODUCTION_DATABASE_URL  PostgreSQL connection string with read access to
-#                                  supabase_migrations.schema_migrations
+#   ATLAS_PRODUCTION_DATABASE_URL  read access to supabase_migrations.schema_migrations
 #   psql, git, node
 #
 # Modes:
-#   --check    (default) fail on any missing, byte-mismatched, or version-drifted
-#              production migration file
-#   --restore  write truly missing files from production-recorded statement bytes,
-#              then verify their Git blob SHA. Existing mismatches still require
-#              explicit replacement opt-in. Same-name/version-drift candidates are
-#              REPORT-ONLY in this mode and are never auto-renamed or deleted.
-#   --replace-mismatched may be combined with --restore only when an existing local
-#              historical file is known to be wrong and must be replaced by the
-#              exact production-recorded bytes.
+#   --check    (default) classify and verify source custody
+#   --restore  restore truly missing exact production bytes into repository source
+#   --replace-mismatched  with --restore only; replace a known wrong exact-version file
 #
-# Optional bounds:
-#   --since VERSION   default 20260815225715 (first known Atlas history-repair gap)
-#   --before VERSION  exclusive upper bound; omitted means no upper bound
+# Scope:
+#   --scope all               inspect every production migration in the version window
+#   --scope atlas-management  inspect migrations whose deployed SQL touches atlas.*
 #
-# Version-drift classes:
-#   VERSION_DRIFT_MATCH       exact production path is absent, but exactly one local
-#                             file with the same migration name has identical bytes
-#   VERSION_DRIFT_MISMATCH    same as above, but the bytes differ
-#   AMBIGUOUS_NAME_DRIFT      more than one local alternate-version file shares the
-#                             production migration name
+# Bounds:
+#   --since VERSION   default 20260815225715
+#   --before VERSION  exclusive upper bound
 #
-# These drift states are deliberately not auto-fixed. A different migration version
-# can change ordering and replay semantics even when SQL bytes match. Source custody
-# therefore reports the condition so a human can normalize it intentionally.
+# Adjudications:
+#   --adjudications FILE  TSV file for deliberate VERSION_DRIFT_ALIAS decisions.
+#                         A drift alias is accepted only when its repository blob is
+#                         byte-identical to the production ledger blob. MISSING,
+#                         MISMATCH, VERSION_DRIFT_MISMATCH and AMBIGUOUS_NAME_DRIFT
+#                         are never suppressible.
 
 mode="check"
 replace_mismatched="false"
 since_version="${ATLAS_MIGRATION_AUDIT_SINCE:-20260815225715}"
 before_version="${ATLAS_MIGRATION_AUDIT_BEFORE:-}"
+scope="${ATLAS_MIGRATION_AUDIT_SCOPE:-all}"
+adjudications_file="${ATLAS_MIGRATION_CUSTODY_ADJUDICATIONS:-}"
 
 while (($#)); do
   case "$1" in
-    --check)
-      mode="check"
-      ;;
-    --restore)
-      mode="restore"
-      ;;
-    --replace-mismatched)
-      replace_mismatched="true"
-      ;;
-    --since)
-      shift
-      since_version="${1:-}"
-      ;;
-    --before)
-      shift
-      before_version="${1:-}"
-      ;;
-    -h|--help)
-      sed -n '3,42p' "$0"
-      exit 0
-      ;;
-    *)
-      echo "Unknown argument: $1" >&2
-      exit 2
-      ;;
+    --check) mode="check" ;;
+    --restore) mode="restore" ;;
+    --replace-mismatched) replace_mismatched="true" ;;
+    --since) shift; since_version="${1:-}" ;;
+    --before) shift; before_version="${1:-}" ;;
+    --scope) shift; scope="${1:-}" ;;
+    --adjudications) shift; adjudications_file="${1:-}" ;;
+    -h|--help) sed -n '3,34p' "$0"; exit 0 ;;
+    *) echo "Unknown argument: $1" >&2; exit 2 ;;
   esac
   shift
 done
@@ -76,7 +55,6 @@ if [[ "$replace_mismatched" == "true" && "$mode" != "restore" ]]; then
   echo "--replace-mismatched requires --restore" >&2
   exit 2
 fi
-
 if [[ ! "$since_version" =~ ^[0-9]+$ ]]; then
   echo "--since must be a numeric Supabase migration version" >&2
   exit 2
@@ -85,40 +63,49 @@ if [[ -n "$before_version" && ! "$before_version" =~ ^[0-9]+$ ]]; then
   echo "--before must be a numeric Supabase migration version" >&2
   exit 2
 fi
+if [[ "$scope" != "all" && "$scope" != "atlas-management" ]]; then
+  echo "--scope must be all or atlas-management" >&2
+  exit 2
+fi
 
 : "${ATLAS_PRODUCTION_DATABASE_URL:?Set ATLAS_PRODUCTION_DATABASE_URL to a read-capable production PostgreSQL URL}"
-
 for command_name in psql git node; do
-  if ! command -v "$command_name" >/dev/null 2>&1; then
-    echo "Required command not found: $command_name" >&2
-    exit 2
-  fi
+  command -v "$command_name" >/dev/null 2>&1 || { echo "Required command not found: $command_name" >&2; exit 2; }
 done
 
 repo_root="$(git rev-parse --show-toplevel)"
 migrations_dir="$repo_root/supabase/migrations"
 mkdir -p "$migrations_dir"
 
+if [[ -z "$adjudications_file" ]]; then
+  adjudications_file="$repo_root/docs/architecture/atlas-source-custody-adjudications.tsv"
+elif [[ "$adjudications_file" != /* ]]; then
+  adjudications_file="$repo_root/$adjudications_file"
+fi
+
 manifest_file="$(mktemp)"
 trap 'rm -f "$manifest_file" "${restore_tmp:-}"' EXIT
 
 bounds_sql="version >= '$since_version'"
-if [[ -n "$before_version" ]]; then
-  bounds_sql+=" and version < '$before_version'"
+[[ -n "$before_version" ]] && bounds_sql+=" and version < '$before_version'"
+scope_sql="true"
+if [[ "$scope" == "atlas-management" ]]; then
+  # The shared Supabase project also carries Noel / Intelligence Network history.
+  # Atlas custody is intentionally limited to deployed migrations whose SQL actually
+  # touches the atlas schema. Cross-product seams that mutate atlas.* are therefore
+  # included, while research-only migrations do not become Atlas release blockers.
+  scope_sql="position('atlas.' in lower(sql)) > 0"
 fi
 
-# Compute the SHA Git itself assigns to the exact statement bytes recorded by
-# Supabase: SHA1("blob " + byte_length + NUL + bytes).
 psql "$ATLAS_PRODUCTION_DATABASE_URL" \
   -X -v ON_ERROR_STOP=1 -At -F $'\t' \
   -c "
 with migration_bytes as (
-  select
-    version,
-    name,
-    array_to_string(statements, E'\\n') as sql
+  select version, name, array_to_string(statements, E'\\n') as sql
   from supabase_migrations.schema_migrations
   where $bounds_sql
+), scoped as (
+  select * from migration_bytes where $scope_sql
 )
 select
   version,
@@ -132,7 +119,7 @@ select
     ),
     'hex'
   ) as expected_blob_sha
-from migration_bytes
+from scoped
 order by version;
 " > "$manifest_file"
 
@@ -145,80 +132,57 @@ invalid=0
 version_drift_match=0
 version_drift_mismatch=0
 ambiguous_name_drift=0
+adjudicated_drift=0
 
 restore_exact_bytes() {
-  local version="$1"
-  local expected_sha="$2"
-  local destination="$3"
-  local encoded
-
-  # Base64 gives psql a single textual value whose row terminator cannot mutate the
-  # migration body. Node strips whitespace in PostgreSQL's wrapped base64 and emits
-  # the original bytes without adding a newline.
+  local version="$1" expected_sha="$2" destination="$3" encoded
   encoded="$(
-    psql "$ATLAS_PRODUCTION_DATABASE_URL" \
-      -X -v ON_ERROR_STOP=1 -At \
+    psql "$ATLAS_PRODUCTION_DATABASE_URL" -X -v ON_ERROR_STOP=1 -At \
       -v target_version="$version" \
-      -c "
-select encode(
-  convert_to(array_to_string(statements, E'\\n'),'UTF8'),
-  'base64'
-)
-from supabase_migrations.schema_migrations
-where version = :'target_version';
-"
+      -c "select encode(convert_to(array_to_string(statements, E'\\n'),'UTF8'),'base64') from supabase_migrations.schema_migrations where version = :'target_version';"
   )"
-
   if [[ -z "$encoded" ]]; then
     echo "ERROR $version: production statement body was empty or unavailable" >&2
     return 1
   fi
-
   restore_tmp="$(mktemp)"
   printf '%s' "$encoded" | node -e '
-let input = "";
-process.stdin.setEncoding("utf8");
-process.stdin.on("data", chunk => input += chunk);
-process.stdin.on("end", () => process.stdout.write(Buffer.from(input.replace(/\\s+/g, ""), "base64")));
+let input=""; process.stdin.setEncoding("utf8");
+process.stdin.on("data",c=>input+=c);
+process.stdin.on("end",()=>process.stdout.write(Buffer.from(input.replace(/\s+/g,""),"base64")));
 ' > "$restore_tmp"
-
   local restored_sha
   restored_sha="$(git hash-object "$restore_tmp")"
   if [[ "$restored_sha" != "$expected_sha" ]]; then
     echo "ERROR $version: restored bytes hash to $restored_sha, expected $expected_sha" >&2
-    rm -f "$restore_tmp"
-    restore_tmp=""
+    rm -f "$restore_tmp"; restore_tmp=""
     return 1
   fi
+  mv "$restore_tmp" "$destination"; restore_tmp=""
+}
 
-  mv "$restore_tmp" "$destination"
-  restore_tmp=""
+lookup_drift_adjudication() {
+  local version="$1" name="$2" candidate_rel="$3"
+  [[ -f "$adjudications_file" ]] || return 1
+  awk -F '\t' -v v="$version" -v n="$name" -v c="$candidate_rel" '
+    $0 !~ /^#/ && NF >= 4 && $1==v && $2==n && $3=="VERSION_DRIFT_ALIAS" && $4==c { found=1 }
+    END { exit(found ? 0 : 1) }
+  ' "$adjudications_file"
 }
 
 report_version_drift_if_present() {
-  local version="$1"
-  local name="$2"
-  local expected_sha="$3"
-  local exact_path="$4"
-  local candidates=()
-  local candidate candidate_sha
-
+  local version="$1" name="$2" expected_sha="$3" exact_path="$4"
+  local candidates=() candidate candidate_sha candidate_rel
   shopt -s nullglob
   candidates=("$migrations_dir"/*_"$name".sql)
   shopt -u nullglob
-
-  # The exact path should be absent when this helper is called, but protect against
-  # accidental inclusion so the classifier remains deterministic.
   local filtered=()
   for candidate in "${candidates[@]}"; do
     [[ "$candidate" == "$exact_path" ]] && continue
     filtered+=("$candidate")
   done
   candidates=("${filtered[@]}")
-
-  if ((${#candidates[@]} == 0)); then
-    return 1
-  fi
+  ((${#candidates[@]} > 0)) || return 1
 
   if ((${#candidates[@]} > 1)); then
     echo "AMBIGUOUS_NAME_DRIFT ${version}_${name}.sql expected=$expected_sha candidates=${#candidates[@]}" >&2
@@ -232,12 +196,20 @@ report_version_drift_if_present() {
 
   candidate="${candidates[0]}"
   candidate_sha="$(git hash-object "$candidate")"
-  if [[ "$candidate_sha" == "$expected_sha" ]]; then
-    echo "VERSION_DRIFT_MATCH ${version}_${name}.sql source=$(basename "$candidate") sha=$candidate_sha"
-    ((version_drift_match+=1))
-  else
+  candidate_rel="${candidate#$repo_root/}"
+  if [[ "$candidate_sha" != "$expected_sha" ]]; then
     echo "VERSION_DRIFT_MISMATCH ${version}_${name}.sql source=$(basename "$candidate") actual=$candidate_sha expected=$expected_sha" >&2
     ((version_drift_mismatch+=1))
+    return 0
+  fi
+
+  if lookup_drift_adjudication "$version" "$name" "$candidate_rel"; then
+    echo "ADJUDICATED_VERSION_DRIFT ${version}_${name}.sql source=$candidate_rel sha=$candidate_sha"
+    ((adjudicated_drift+=1))
+    ((verified+=1))
+  else
+    echo "VERSION_DRIFT_MATCH ${version}_${name}.sql source=$candidate_rel sha=$candidate_sha" >&2
+    ((version_drift_match+=1))
   fi
   return 0
 }
@@ -245,33 +217,25 @@ report_version_drift_if_present() {
 while IFS=$'\t' read -r version name expected_sha; do
   [[ -z "$version" ]] && continue
   ((checked+=1))
-
   if [[ ! "$version" =~ ^[0-9]+$ || ! "$name" =~ ^[A-Za-z0-9_]+$ || ! "$expected_sha" =~ ^[0-9a-f]{40}$ ]]; then
     echo "INVALID production migration manifest row: version=$version name=$name sha=$expected_sha" >&2
-    ((invalid+=1))
-    continue
+    ((invalid+=1)); continue
   fi
 
   path="$migrations_dir/${version}_${name}.sql"
-
   if [[ ! -f "$path" ]]; then
-    # First distinguish true absence from the common historical case where the same
-    # migration was checked in later under a different timestamp. This is report-only:
-    # migration versions affect ordering and are never silently normalized.
     if report_version_drift_if_present "$version" "$name" "$expected_sha" "$path"; then
       continue
     fi
-
     if [[ "$mode" == "restore" ]]; then
       if restore_exact_bytes "$version" "$expected_sha" "$path"; then
         echo "RESTORED ${version}_${name}.sql $expected_sha"
-        ((restored+=1))
-        ((verified+=1))
+        ((restored+=1)); ((verified+=1))
       else
         ((missing+=1))
       fi
     else
-      echo "MISSING  ${version}_${name}.sql expected=$expected_sha"
+      echo "MISSING ${version}_${name}.sql expected=$expected_sha" >&2
       ((missing+=1))
     fi
     continue
@@ -279,15 +243,13 @@ while IFS=$'\t' read -r version name expected_sha; do
 
   actual_sha="$(git hash-object "$path")"
   if [[ "$actual_sha" == "$expected_sha" ]]; then
-    ((verified+=1))
-    continue
+    ((verified+=1)); continue
   fi
 
   if [[ "$mode" == "restore" && "$replace_mismatched" == "true" ]]; then
     if restore_exact_bytes "$version" "$expected_sha" "$path"; then
       echo "REPLACED ${version}_${name}.sql $actual_sha -> $expected_sha"
-      ((restored+=1))
-      ((verified+=1))
+      ((restored+=1)); ((verified+=1))
     else
       ((mismatched+=1))
     fi
@@ -297,7 +259,7 @@ while IFS=$'\t' read -r version name expected_sha; do
   fi
 done < "$manifest_file"
 
-echo "Migration history reconciliation: checked=$checked verified=$verified restored=$restored missing=$missing mismatched=$mismatched version_drift_match=$version_drift_match version_drift_mismatch=$version_drift_mismatch ambiguous_name_drift=$ambiguous_name_drift invalid=$invalid"
+echo "Migration custody: scope=$scope checked=$checked verified=$verified restored=$restored adjudicated_drift=$adjudicated_drift missing=$missing mismatched=$mismatched version_drift_match=$version_drift_match version_drift_mismatch=$version_drift_mismatch ambiguous_name_drift=$ambiguous_name_drift invalid=$invalid"
 
 if ((missing > 0 || mismatched > 0 || version_drift_match > 0 || version_drift_mismatch > 0 || ambiguous_name_drift > 0 || invalid > 0)); then
   exit 1
