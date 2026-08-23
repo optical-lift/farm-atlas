@@ -6,6 +6,15 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export type OwnerMyWorkBucket = "now" | "today" | "thisWeek" | "waiting" | "backlog";
 
+export type OwnerMyWorkPrincipalSignal = {
+  sourceType: string;
+  floorClass: number | null;
+  expectedMinutes: number | null;
+  domain: string | null;
+  timingDate: string | null;
+  timingKind: string;
+};
+
 export type OwnerMyWorkItem = {
   key: string;
   source: "task" | "principal";
@@ -24,6 +33,7 @@ export type OwnerMyWorkItem = {
   priorityRank: number;
   expectedMinutes?: number | null;
   domain?: string | null;
+  principalSignal: OwnerMyWorkPrincipalSignal | null;
 };
 
 export type OwnerMyWorkProjection = {
@@ -53,6 +63,7 @@ export type OwnerMyWorkProjection = {
     overdue: number;
     taskItems: number;
     principalItems: number;
+    principalLinkedTaskItems: number;
   };
   audit: {
     taskRowsRead: number;
@@ -61,6 +72,7 @@ export type OwnerMyWorkProjection = {
     ownerScopeTaskCount: number;
     excludedTaskRows: number;
     excludedPrincipalCandidates: number;
+    linkedPrincipalCandidates: number;
     bucketedItems: number;
     unexplainedItems: number;
   };
