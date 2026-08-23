@@ -28,6 +28,7 @@ const paired = {
   "20260811154000_atlas_day_choreography_foundation_v1.sql": "20260811162500_atlas_day_choreography_rpc_registry_v1.sql",
   "20260811160000_atlas_day_choreography_plan_overlay_v1.sql": "20260811162500_atlas_day_choreography_rpc_registry_v1.sql",
   "20260811162000_atlas_day_cue_mutations_v1.sql": "20260811162500_atlas_day_choreography_rpc_registry_v1.sql",
+  "20260813174114_worker_clock_exact_task_time_v1.sql": "20260819225913_atlas_rpc_privilege_registry_reconciliation_v2.sql",
   "20260814133500_owner_day_reservation_commands_v1.sql": "20260814141600_owner_day_reservation_rpc_registry_v1.sql",
   "20260814141500_fixed_routine_projection_hardening_v1.sql": "20260814141600_owner_day_reservation_rpc_registry_v1.sql",
   "20260816001514_clock_placement_occurrence_provenance_v1.sql": "20260817151627_clock_occurrence_internal_rpc_reconciliation_v1.sql",
