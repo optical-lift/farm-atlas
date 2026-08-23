@@ -11,9 +11,12 @@ set -euo pipefail
 #   psql, git, node
 #
 # Modes:
-#   --check    (default) fail on any missing or byte-mismatched migration file
-#   --restore  write missing files from production-recorded statement bytes, then
-#              verify their Git blob SHA. Existing mismatches are still refused.
+#   --check    (default) fail on any missing, byte-mismatched, or version-drifted
+#              production migration file
+#   --restore  write truly missing files from production-recorded statement bytes,
+#              then verify their Git blob SHA. Existing mismatches still require
+#              explicit replacement opt-in. Same-name/version-drift candidates are
+#              REPORT-ONLY in this mode and are never auto-renamed or deleted.
 #   --replace-mismatched may be combined with --restore only when an existing local
 #              historical file is known to be wrong and must be replaced by the
 #              exact production-recorded bytes.
@@ -21,6 +24,17 @@ set -euo pipefail
 # Optional bounds:
 #   --since VERSION   default 20260815225715 (first known Atlas history-repair gap)
 #   --before VERSION  exclusive upper bound; omitted means no upper bound
+#
+# Version-drift classes:
+#   VERSION_DRIFT_MATCH       exact production path is absent, but exactly one local
+#                             file with the same migration name has identical bytes
+#   VERSION_DRIFT_MISMATCH    same as above, but the bytes differ
+#   AMBIGUOUS_NAME_DRIFT      more than one local alternate-version file shares the
+#                             production migration name
+#
+# These drift states are deliberately not auto-fixed. A different migration version
+# can change ordering and replay semantics even when SQL bytes match. Source custody
+# therefore reports the condition so a human can normalize it intentionally.
 
 mode="check"
 replace_mismatched="false"
@@ -47,7 +61,7 @@ while (($#)); do
       before_version="${1:-}"
       ;;
     -h|--help)
-      sed -n '3,28p' "$0"
+      sed -n '3,42p' "$0"
       exit 0
       ;;
     *)
@@ -128,6 +142,9 @@ restored=0
 missing=0
 mismatched=0
 invalid=0
+version_drift_match=0
+version_drift_mismatch=0
+ambiguous_name_drift=0
 
 restore_exact_bytes() {
   local version="$1"
@@ -178,6 +195,53 @@ process.stdin.on("end", () => process.stdout.write(Buffer.from(input.replace(/\\
   restore_tmp=""
 }
 
+report_version_drift_if_present() {
+  local version="$1"
+  local name="$2"
+  local expected_sha="$3"
+  local exact_path="$4"
+  local candidates=()
+  local candidate candidate_sha
+
+  shopt -s nullglob
+  candidates=("$migrations_dir"/*_"$name".sql)
+  shopt -u nullglob
+
+  # The exact path should be absent when this helper is called, but protect against
+  # accidental inclusion so the classifier remains deterministic.
+  local filtered=()
+  for candidate in "${candidates[@]}"; do
+    [[ "$candidate" == "$exact_path" ]] && continue
+    filtered+=("$candidate")
+  done
+  candidates=("${filtered[@]}")
+
+  if ((${#candidates[@]} == 0)); then
+    return 1
+  fi
+
+  if ((${#candidates[@]} > 1)); then
+    echo "AMBIGUOUS_NAME_DRIFT ${version}_${name}.sql expected=$expected_sha candidates=${#candidates[@]}" >&2
+    for candidate in "${candidates[@]}"; do
+      candidate_sha="$(git hash-object "$candidate")"
+      echo "  candidate=$(basename "$candidate") sha=$candidate_sha" >&2
+    done
+    ((ambiguous_name_drift+=1))
+    return 0
+  fi
+
+  candidate="${candidates[0]}"
+  candidate_sha="$(git hash-object "$candidate")"
+  if [[ "$candidate_sha" == "$expected_sha" ]]; then
+    echo "VERSION_DRIFT_MATCH ${version}_${name}.sql source=$(basename "$candidate") sha=$candidate_sha"
+    ((version_drift_match+=1))
+  else
+    echo "VERSION_DRIFT_MISMATCH ${version}_${name}.sql source=$(basename "$candidate") actual=$candidate_sha expected=$expected_sha" >&2
+    ((version_drift_mismatch+=1))
+  fi
+  return 0
+}
+
 while IFS=$'\t' read -r version name expected_sha; do
   [[ -z "$version" ]] && continue
   ((checked+=1))
@@ -191,6 +255,13 @@ while IFS=$'\t' read -r version name expected_sha; do
   path="$migrations_dir/${version}_${name}.sql"
 
   if [[ ! -f "$path" ]]; then
+    # First distinguish true absence from the common historical case where the same
+    # migration was checked in later under a different timestamp. This is report-only:
+    # migration versions affect ordering and are never silently normalized.
+    if report_version_drift_if_present "$version" "$name" "$expected_sha" "$path"; then
+      continue
+    fi
+
     if [[ "$mode" == "restore" ]]; then
       if restore_exact_bytes "$version" "$expected_sha" "$path"; then
         echo "RESTORED ${version}_${name}.sql $expected_sha"
@@ -226,8 +297,8 @@ while IFS=$'\t' read -r version name expected_sha; do
   fi
 done < "$manifest_file"
 
-echo "Migration history reconciliation: checked=$checked verified=$verified restored=$restored missing=$missing mismatched=$mismatched invalid=$invalid"
+echo "Migration history reconciliation: checked=$checked verified=$verified restored=$restored missing=$missing mismatched=$mismatched version_drift_match=$version_drift_match version_drift_mismatch=$version_drift_mismatch ambiguous_name_drift=$ambiguous_name_drift invalid=$invalid"
 
-if ((missing > 0 || mismatched > 0 || invalid > 0)); then
+if ((missing > 0 || mismatched > 0 || version_drift_match > 0 || version_drift_mismatch > 0 || ambiguous_name_drift > 0 || invalid > 0)); then
   exit 1
 fi
