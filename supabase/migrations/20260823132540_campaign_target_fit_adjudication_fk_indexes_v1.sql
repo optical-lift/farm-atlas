@@ -1,0 +1,8 @@
+create index if not exists campaign_target_fit_adjudications_campaign_idx
+  on local_intel.campaign_target_fit_adjudications(campaign_id);
+
+create index if not exists campaign_target_fit_adjudications_offering_use_case_idx
+  on local_intel.campaign_target_fit_adjudications(offering_use_case_id);
+
+create index if not exists campaign_target_fit_adjudications_organization_idx
+  on local_intel.campaign_target_fit_adjudications(organization_entity_id);
