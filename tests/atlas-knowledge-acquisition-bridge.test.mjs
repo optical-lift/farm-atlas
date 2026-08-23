@@ -27,17 +27,7 @@ const workerOperationFix = () => read(workerOperationFixPath);
 test('Tranche 1A search-before-ask contract is explicit and preserves epistemic boundaries', () => {
   const sql = migration();
   assert.match(sql, /truth_acquisition_search_v1/);
-  for (const source of [
-    'canonical_current_state',
-    'explicit_management_decisions',
-    'observations',
-    'structured_task_results',
-    'resource_records',
-    'project_place_crop_records',
-    'related_operations_and_occurrences',
-    'structured_historical_evidence',
-    'weak_notes',
-  ]) assert.match(sql, new RegExp(source));
+  for (const source of ['canonical_current_state','explicit_management_decisions','observations','structured_task_results','resource_records','project_place_crop_records','related_operations_and_occurrences','structured_historical_evidence','weak_notes']) assert.match(sql, new RegExp(source));
   assert.match(sql, /searchedBeforeAsk/);
   assert.match(sql, /authoritativeAnswerSuppressesAsk/);
   assert.match(sql, /possibleEvidenceDoesNotBecomeFact/);
@@ -52,28 +42,11 @@ test('Tranche 1A search-before-ask contract is explicit and preserves epistemic 
 test('Tranche 1B knower classification selects one lawful acquisition surface after search', () => {
   const sql = migration();
   assert.match(sql, /truth_acquisition_knower_v1/);
-  for (const classification of [
-    'owner_known',
-    'worker_observable',
-    'management_known',
-    'external_information_required',
-    'contradictory',
-    'actually_unknown',
-  ]) assert.match(sql, new RegExp(classification));
-  for (const surface of [
-    'atlas_needs_from_you',
-    'worker_observation',
-    'management_acquisition',
-    'external_research_handoff',
-    'owner_review',
-    'unresolved_unknown',
-  ]) assert.match(sql, new RegExp(surface));
+  for (const classification of ['owner_known','worker_observable','management_known','external_information_required','contradictory','actually_unknown']) assert.match(sql, new RegExp(classification));
+  for (const surface of ['atlas_needs_from_you','worker_observation','management_acquisition','external_research_handoff','owner_review','unresolved_unknown']) assert.match(sql, new RegExp(surface));
   assert.match(sql, /already_known/);
   assert.match(sql, /v_acquisition_surface:='none'/);
-  assert.ok(
-    sql.indexOf('v_search:=atlas.truth_acquisition_search_v1') < sql.indexOf("v_knower_class:=coalesce"),
-    'search must occur before unresolved knower classification',
-  );
+  assert.ok(sql.indexOf('v_search:=atlas.truth_acquisition_search_v1') < sql.indexOf("v_knower_class:=coalesce"), 'search must occur before unresolved knower classification');
   assert.match(sql, /ownerQuestionRequiresSearchFirst/);
   assert.match(sql, /workerObservationRequiresWorkerObservableClass/);
   assert.match(sql, /externalInformationDoesNotBecomeInternalDecision/);
@@ -104,10 +77,7 @@ test('truth acquisition carrier routing is gated by knower resolution and retain
   assert.match(triggerFunction, /acquisitionSurface/);
   assert.match(triggerFunction, /ensure_truth_acquisition_task_v1\(new\.id\)/);
   assert.match(triggerFunction, /in \('atlas_needs_from_you','management_acquisition'\)/);
-  assert.ok(
-    triggerFunction.indexOf('truth_acquisition_knower_v1(new.id)') < triggerFunction.indexOf('ensure_truth_acquisition_task_v1(new.id)'),
-    'knower resolution must precede task carrier creation',
-  );
+  assert.ok(triggerFunction.indexOf('truth_acquisition_knower_v1(new.id)') < triggerFunction.indexOf('ensure_truth_acquisition_task_v1(new.id)'), 'knower resolution must precede task carrier creation');
 });
 
 test('Owner knowledge queue RPC is explicitly governed and anonymous access remains closed', () => {
@@ -138,10 +108,7 @@ test('Tranche 1D final Owner destination answer writes canonical truth and requi
   assert.match(sql, /answerRecordedCanonically/);
   assert.match(sql, /carrierTaskNotReality/);
   assert.match(sql, /transactionFailsIfPropagationFails/);
-  assert.ok(
-    sql.indexOf('record_crop_destination_claim_v1') < sql.lastIndexOf('reconcile_crop_cycle_requirement_state_v1'),
-    'canonical truth must be written before requirement reconciliation',
-  );
+  assert.ok(sql.indexOf('record_crop_destination_claim_v1') < sql.lastIndexOf('reconcile_crop_cycle_requirement_state_v1'), 'canonical truth must be written before requirement reconciliation');
 });
 
 test('Tranche 1D destination answer is farm-scoped and records the answering Owner', () => {
@@ -246,9 +213,7 @@ test('Tranche 1E consolidates away the prototype live surface while preserving i
   assert.match(sql, /drop function if exists atlas\.truth_acquisition_observation_adapter_v1\(uuid\)/);
   assert.match(sql, /drop table if exists atlas\.truth_acquisition_observation_adapters/);
   assert.match(sql, /generalized 21:42 bridge owns Worker acquisition/);
-  for (const relative of [workerPrototypePath, workerPrototypeFixPath, workerBridgePath, workerConsolidationPath, workerOperationFixPath]) {
-    assert.equal(fs.existsSync(path.join(root, relative)), true, `missing Worker acquisition production source: ${relative}`);
-  }
+  for (const relative of [workerPrototypePath, workerPrototypeFixPath, workerBridgePath, workerConsolidationPath, workerOperationFixPath]) assert.equal(fs.existsSync(path.join(root, relative)), true, `missing Worker acquisition production source: ${relative}`);
 });
 
 test('Tranche 1E uses canonical inspect action taxonomy for observation carriers', () => {
@@ -260,15 +225,10 @@ test('Tranche 1E uses canonical inspect action taxonomy for observation carriers
 });
 
 test('knowledge acquisition source retains every exact post-cutover production migration and current custody surface', () => {
-  for (const relative of [
-    migrationPath, firstAnswerPath, propagationPath, retirePath, finalFixPath,
-    workerPrototypePath, workerPrototypeFixPath, workerBridgePath, workerConsolidationPath, workerOperationFixPath,
-  ]) {
-    assert.equal(fs.existsSync(path.join(root, relative)), true, `missing production migration source: ${relative}`);
-  }
+  for (const relative of [migrationPath, firstAnswerPath, propagationPath, retirePath, finalFixPath, workerPrototypePath, workerPrototypeFixPath, workerBridgePath, workerConsolidationPath, workerOperationFixPath]) assert.equal(fs.existsSync(path.join(root, relative)), true, `missing production migration source: ${relative}`);
   const expected = JSON.parse(read('docs/architecture/atlas-source-custody-surface-v1.json'));
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1166);
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1172);
   assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 471);
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '0a8bcf0f320a258f664e54beca737f97f4a6eb54f95344f6ed05e6b37e797eb7');
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '3b3757296c4929b8e5c0a548323797d8afc1da2ee61de7d68be8186e01edbd00');
   assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, 'd2f887657009d99d4aadffe791f3b0a1cb9368ec5856a2514beac5ab0bf3294c');
 });
