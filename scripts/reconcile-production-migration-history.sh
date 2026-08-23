@@ -2,12 +2,9 @@
 set -euo pipefail
 
 # Low-level custody engine used by the Atlas Source Synchronizer.
-# It compares repository migration bytes with the immutable Supabase deployment ledger.
-# It never executes migrations against production.
-#
-# Requirements:
-#   ATLAS_PRODUCTION_DATABASE_URL  read access to supabase_migrations.schema_migrations
-#   psql, git, node
+# It compares repository migration bytes with an immutable production provenance manifest.
+# The manifest may be read directly from the Supabase deployment ledger or supplied by the
+# governed source-custody release packet. It never executes migrations against production.
 #
 # Modes:
 #   --check    (default) classify and verify source custody
@@ -22,6 +19,10 @@ set -euo pipefail
 #   --since VERSION   default 20260815225715
 #   --before VERSION  exclusive upper bound
 #
+# Inputs:
+#   --manifest FILE  pre-hashed TSV: version, name, expected Git blob SHA.
+#                    When present, no database credential or psql is required.
+#
 # Adjudications:
 #   --adjudications FILE  TSV file for deliberate VERSION_DRIFT_ALIAS decisions.
 #                         A drift alias is accepted only when its repository blob is
@@ -35,6 +36,7 @@ since_version="${ATLAS_MIGRATION_AUDIT_SINCE:-20260815225715}"
 before_version="${ATLAS_MIGRATION_AUDIT_BEFORE:-}"
 scope="${ATLAS_MIGRATION_AUDIT_SCOPE:-all}"
 adjudications_file="${ATLAS_MIGRATION_CUSTODY_ADJUDICATIONS:-}"
+manifest_input=""
 
 while (($#)); do
   case "$1" in
@@ -45,7 +47,8 @@ while (($#)); do
     --before) shift; before_version="${1:-}" ;;
     --scope) shift; scope="${1:-}" ;;
     --adjudications) shift; adjudications_file="${1:-}" ;;
-    -h|--help) sed -n '3,34p' "$0"; exit 0 ;;
+    --manifest) shift; manifest_input="${1:-}" ;;
+    -h|--help) sed -n '3,38p' "$0"; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
   esac
   shift
@@ -67,9 +70,16 @@ if [[ "$scope" != "all" && "$scope" != "atlas-management" ]]; then
   echo "--scope must be all or atlas-management" >&2
   exit 2
 fi
+if [[ -n "$manifest_input" && ! -f "$manifest_input" ]]; then
+  echo "--manifest file not found: $manifest_input" >&2
+  exit 2
+fi
+if [[ -n "$manifest_input" && "$mode" == "restore" ]]; then
+  echo "--restore requires direct production database access; a hash-only manifest is read-only" >&2
+  exit 2
+fi
 
-: "${ATLAS_PRODUCTION_DATABASE_URL:?Set ATLAS_PRODUCTION_DATABASE_URL to a read-capable production PostgreSQL URL}"
-for command_name in psql git node; do
+for command_name in git node; do
   command -v "$command_name" >/dev/null 2>&1 || { echo "Required command not found: $command_name" >&2; exit 2; }
 done
 
@@ -86,20 +96,31 @@ fi
 manifest_file="$(mktemp)"
 trap 'rm -f "$manifest_file" "${restore_tmp:-}"' EXIT
 
-bounds_sql="version >= '$since_version'"
-[[ -n "$before_version" ]] && bounds_sql+=" and version < '$before_version'"
-scope_sql="true"
-if [[ "$scope" == "atlas-management" ]]; then
-  # The shared Supabase project also carries Noel / Intelligence Network history.
-  # Atlas custody is intentionally limited to deployed migrations whose SQL actually
-  # touches the atlas schema. Cross-product seams that mutate atlas.* are therefore
-  # included, while research-only migrations do not become Atlas release blockers.
-  scope_sql="position('atlas.' in lower(sql)) > 0"
-fi
+if [[ -n "$manifest_input" ]]; then
+  # The packet already applies the Atlas-management scope and contains immutable
+  # production Git-blob hashes. Bounds are enforced locally so the classifier has
+  # identical semantics in packet and direct-database modes.
+  awk -F '\t' -v since="$since_version" -v before="$before_version" '
+    NF >= 3 && $1 ~ /^[0-9]+$/ && $1 >= since && (before == "" || $1 < before) { print $1 "\t" $2 "\t" $3 }
+  ' "$manifest_input" > "$manifest_file"
+else
+  : "${ATLAS_PRODUCTION_DATABASE_URL:?Set ATLAS_PRODUCTION_DATABASE_URL or provide --manifest}"
+  command -v psql >/dev/null 2>&1 || { echo "Required command not found: psql" >&2; exit 2; }
 
-psql "$ATLAS_PRODUCTION_DATABASE_URL" \
-  -X -v ON_ERROR_STOP=1 -At -F $'\t' \
-  -c "
+  bounds_sql="version >= '$since_version'"
+  [[ -n "$before_version" ]] && bounds_sql+=" and version < '$before_version'"
+  scope_sql="true"
+  if [[ "$scope" == "atlas-management" ]]; then
+    # The shared Supabase project also carries Noel / Intelligence Network history.
+    # Atlas custody is intentionally limited to deployed migrations whose SQL actually
+    # touches the atlas schema. Cross-product seams that mutate atlas.* are therefore
+    # included, while research-only migrations do not become Atlas release blockers.
+    scope_sql="position('atlas.' in lower(sql)) > 0"
+  fi
+
+  psql "$ATLAS_PRODUCTION_DATABASE_URL" \
+    -X -v ON_ERROR_STOP=1 -At -F $'\t' \
+    -c "
 with migration_bytes as (
   select version, name, array_to_string(statements, E'\\n') as sql
   from supabase_migrations.schema_migrations
@@ -122,6 +143,7 @@ select
 from scoped
 order by version;
 " > "$manifest_file"
+fi
 
 checked=0
 verified=0
