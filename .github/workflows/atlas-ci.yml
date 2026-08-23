@@ -1,91 +1,132 @@
-name: Atlas source custody recovery
+name: Atlas CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: atlas-source-custody-${{ github.ref }}
+  group: atlas-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  recover-production-source:
-    if: github.head_ref == 'recovery/atlas-source-custody-v1'
+  architecture:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - name: Checkout recovery branch
-        uses: actions/checkout@v4
-        with:
-          ref: recovery/atlas-source-custody-v1
-          fetch-depth: 0
-
-      - name: Recover exact deployed Worker and Day migration source
+      - name: Download source quietly
         shell: bash
         env:
-          SUPABASE_URL: https://zirqkouammpwxlqfbsvf.supabase.co
-          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcnFrb3VhbW1wd3hscWZic3ZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MjU2MjAsImV4cCI6MjA4NzEwMTYyMH0.Y4zgLr-cEx1DH3_0QUrHl4CAVzVBLYFlqM8zHxyE61c
+          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          base="$SUPABASE_URL/functions/v1/temporary-atlas-source-custody-recovery"
-          mkdir -p supabase/migrations
-          cat > /tmp/atlas-source-custody-manifest <<'MANIFEST'
-          20260812124733 gentle_pressure_wash_serial_queue_v1 2c1566e2ef05e1d1cda6f4ac11d0b097876bf4e671e8129421c2aad1a21e37f8
-          20260812125237 weed_partial_returns_to_serial_tail_v1 7ceebc123dc23053ad0bfa2b1b95a3e6b6fbfe6ba4dcfda373767fcafbd49672
-          20260812125726 gentle_pressure_wash_restore_current_v1 fb93d874eb8a8de193f08b4d871a7c5639583aa9a9dd92af21ae81448bba1dc8
-          20260812125854 worker_day_serial_queue_corrections_v1 f51c59d826eb7f43d4714acbbb5cf853df5729254a480bc1d57022dec6127ae8
-          20260812125903 restore_zinnia_house_south_sowing_to_aug12_v1 5756dc9912fd9c17e8e6a66b06822a0a4ab530c21ea369906c812467bc3297bb
-          20260812130702 restore_weed_partial_tail_after_hotfix_v1 6eeb24da9deb880cb539f83ed29dafa37666708cf1b9034398ffba63ab551161
-          20260812140018 horizon_worker_execution_normalization_v1 a4f8e166e25af771ac7862558760490681c5bec08ba27f9f10a26421c7b3cac2
-          20260812140954 task_crop_availability_gate_v1 cdddd4e5c3b4fd405ce73e5a1eb168065161c82f9cda0503e4ccb3b938efe3a8
-          20260812141519 thursday_lebanon_worker_execution_normalization_v1 230133f1863f0f4299072482f26332af2e37c2c429e5d048aac10b22993bd25c
-          20260812142203 worker_task_authoring_guard_v1 9e52f67ac9cd68384760295169ef892baad3ee388bccc2c1d1bf06d88f83a3d5
-          20260812150117 current_worker_acceptance_normalization_v1 bef135dec543dedbbd14f2ffcd15fb4d8701146d86c2e4561ac371f8167d7c3a
-          20260812150841 aug12_aug13_worker_packet_normalization_v1 8bbeeb85086b18fef978a9e4db52d9940e9f68913c46b71b374449736652f776
-          20260812151109 current_weed_card_worker_packet_v1 527ea16b190705d2672d23765d9d2535204903aa9f3e707d41bc6a03c7846bdb
-          20260812151931 enable_rls_on_unprivileged_atlas_tables_v1 b799fa11eebc1064509c89849517cb47a80c9adad0b9040eaf49d58a099082dc
-          20260812155739 aug14_worker_acceptance_normalization_v1 a39f0f0bfa60ee1e902e7dbd90be0bd93eaca98e3d5c987e6735f8086587be02
-          20260812160432 aug15_worker_acceptance_normalization_v1 84f31eed75a674036d1119439128bd73868e41724285c73ebc70ae295ff2df9b
-          20260812163059 legacy_owner_hard_date_commitment_reconciliation_v1 1e243195bd2b8edc403652f8f35a542583043208cb34a3987c20ea7984ee41e0
-          20260812163419 hard_date_overrides_legacy_discretionary_lane_v1 9764656551805bb2fed60d89a964c95d12af40cfc2cac2a7f9bf31c30a9dc682
-          20260812173855 school_enrollment_worker_packet_v1 1fa14a72ced8adc2b6ecd854fbad3f001c9e45c9b49ab1e59686341d7a43adb9
-          20260812194344 serial_outreach_conveyor_v1 097e06db6e6e13a2506638c2debc9e78e463125a24fb636699612e1aafade110
-          20260812194559 weed_projection_and_clear_crop_merge_v1 d2e6e5477ffe1c1f39dc1a0f548e501e067161d4a66a603cc9612838a9316a19
-          20260812200053 explicit_temporal_constraints_precede_generic_dayparts_v1 a51694734a6a594d554f19eb037b9794583185758547decd22f0a1a0d40d4d1d
-          20260812200212 hard_date_misses_do_not_silently_carry_v1 87ddb2567b4daaf29b9514256265373284abac072018917f2174f7b420f601c3
-          20260812201535 choreography_placement_owns_execution_date_v1 b5499ac137d7a658bf7174010f6f39ba8756a4d5ff80763bd01a99ae233f48bf
-          20260812201911 aug17_worker_execution_normalization_v1 6e6fedc5b8282a80971cb0a591f1f0295caa69c7d8a9b88f11cda49e37a040de
-          20260812202303 thursdays_retail_operation_grammar_v1 40a224ac5164fbed664269968caaa1ff356d68abfb1cd53bc6beb67d1317a8c7
-          20260812203529 aug19_paint_worker_execution_normalization_v1 6c3d60d249a8feec09103e9fa2c6391dad3336eb810a9558a952917963ffd7bf
-          20260812203734 aug18_truthful_worker_packet_hold_v1 16d3164e64b3b8d08f1abcc166a08a4d63ba2776ecf8537cf5ba207aa41c4349
-          20260812211026 horizon_in_app_hard_stop_cue_v1 aabfed191a8a572fe73d3dd0cae8f3e72bcca73951990e4ac79392afa86859e9
-          20260812214926 serial_outreach_worker_visibility_gate_v1 72b47f84bba1d0d43dc3886ab51a3f82766c70fe3c6c7dd0e65e20d214540baf
-          20260812215032 anna_day_ui_title_normalization_v1 deaaa9e38022fea5f9e84cd96be517c388b1e670c7d0f6203532177ceaff2f64
-          20260812215259 bloom_bar_worker_assignment_repair_v1 bd33260216cb6c31a07a18b081754ac72fc2f2d1fbed746eb043e08c8468f702
-          20260812215500 weed_ui_title_subject_only_v1 cb06f5a11de36e0cfe02b86554650f06bb3c5142a9cd995f44f980bd7ed0c021
-          20260812215915 weed_worker_display_title_finalizer_v1 b9de823dca76fd2fd018b3e5521d944ebe9407b4c35b1c5dbb4c25b815170327
-          20260812232356 compact_worker_move_and_mowing_preflight_v1 6c26cadf625ec4b13bd882aeb32be0cb24e93e20260d37f1b8d354f15d7ec82a
-          MANIFEST
+          mkdir source
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${GITHUB_SHA}" \
+            | tar -xz --strip-components=1 -C source
 
-          while read -r version name expected; do
-            path="supabase/migrations/${version}_${name}.sql"
-            curl -fsSL --retry 3 -H "Authorization: Bearer $SUPABASE_ANON_KEY" "$base?version=$version" -o "$path"
-            actual="$(sha256sum "$path" | awk '{print $1}')"
-            test "$actual" = "$expected" || { echo "checksum mismatch $path expected=$expected actual=$actual" >&2; exit 1; }
-            echo "verified $path $actual"
-          done < /tmp/atlas-source-custody-manifest
+      - name: Audit service-role Atlas API routes
+        run: cd source && node scripts/audit-atlas-api-boundaries.mjs
 
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/atlas-ci.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add supabase/migrations .github/workflows/atlas-ci.yml
-          if git diff --cached --quiet; then
-            echo "No source-custody changes were required."
-            exit 0
+      - name: List direct task-transition RPC routes
+        shell: bash
+        run: |
+          cd source
+          offenders="$(grep -RIlE 'worker_record_task_transition_v1|owner_record_task_transition_v1|record_task_transition_v1' app/api/atlas || true)"
+          offenders="$(printf '%s\n' "$offenders" | grep -v '^app/api/atlas/task-transition/route.ts$' || true)"
+          if [ -n "$offenders" ]; then
+            echo "Atlas API routes bypassing the shared task transition route:"
+            echo "$offenders"
+            exit 1
           fi
-          git commit -m "Recover exact deployed Worker Day migration source"
-          git push origin HEAD:recovery/atlas-source-custody-v1
+
+      - name: Reject legacy worker transition clients
+        shell: bash
+        run: |
+          cd source
+          offenders="$(grep -RIl '/api/atlas/work/tasks/' app components lib || true)"
+          if [ -n "$offenders" ]; then
+            echo "Legacy worker transition endpoint references:"
+            echo "$offenders"
+            exit 1
+          fi
+
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Guard service-role API routes
+        run: node --test --test-name-pattern="interactive Atlas API routes" tests/atlas-architecture-traps.test.mjs
+
+      - name: Guard canonical task mutations
+        run: node --test --test-name-pattern="all task mutations" tests/atlas-architecture-traps.test.mjs
+
+      - name: Guard homepage membership scope
+        run: node --test --test-name-pattern="homepage reader" tests/atlas-architecture-traps.test.mjs
+
+      - name: Guard Feast Guild portfolio
+        run: node --test tests/feast-guild-portfolio.test.mjs
+
+      - name: Run tests
+        shell: bash
+        run: |
+          set +e
+          npm test > atlas-test.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            tail -n 180 atlas-test.log
+            exit "$status"
+          fi
+          tail -n 30 atlas-test.log
+
+      - name: Upload failing test log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-test-log
+          path: atlas-test.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Build Atlas
+        shell: bash
+        run: |
+          set +e
+          npm run build > atlas-build.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            tail -n 120 atlas-build.log
+            exit "$status"
+          fi
+          tail -n 40 atlas-build.log
+        env:
+          SUPABASE_URL: https://atlas-ci.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: atlas-ci-service-role-placeholder
+          NEXT_PUBLIC_SUPABASE_URL: https://atlas-ci.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: atlas-ci-publishable-placeholder
+
+      - name: Upload failing build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-build-log
+          path: atlas-build.log
+          if-no-files-found: ignore
+          retention-days: 3
