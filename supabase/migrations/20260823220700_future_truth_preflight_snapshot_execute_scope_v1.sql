@@ -1,0 +1,2 @@
+revoke all on function atlas.crop_cycle_requirement_snapshot_v1(uuid,date) from public,anon,authenticated;
+grant execute on function atlas.crop_cycle_requirement_snapshot_v1(uuid,date) to service_role;
