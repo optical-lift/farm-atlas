@@ -78,6 +78,7 @@ type OwnerWorkTaskRow = {
   note: string | null;
   visibility_scope: string;
   assigned_membership_id: string | null;
+  assigned_user_id: string | null;
   parent_task_id: string | null;
   metadata: Record<string, unknown> | null;
 };
@@ -94,6 +95,7 @@ const OWNER_WORK_TASK_FIELDS = [
   "note",
   "visibility_scope",
   "assigned_membership_id",
+  "assigned_user_id",
   "parent_task_id",
   "metadata",
 ].join(", ");
@@ -107,6 +109,7 @@ export async function getOwnerMyWork(access: AtlasRoleAccess): Promise<OwnerMyWo
   const weekEnd = addDaysIso(today, 6);
   const supabase = await createAtlasServerClient();
   const ownerMembershipId = access.membership.membershipId;
+  const ownerUserId = access.session.userId;
 
   const [taskResult, principalRead] = await Promise.all([
     supabase
@@ -114,7 +117,7 @@ export async function getOwnerMyWork(access: AtlasRoleAccess): Promise<OwnerMyWo
       .select(OWNER_WORK_TASK_FIELDS)
       .eq("farm_id", access.membership.farmId)
       .in("status", ["open", "blocked"])
-      .or(`assigned_membership_id.eq.${ownerMembershipId},visibility_scope.eq.owner`)
+      .or(`assigned_membership_id.eq.${ownerMembershipId},assigned_user_id.eq.${ownerUserId},visibility_scope.eq.owner`)
       .order("due_date", { ascending: true, nullsFirst: false })
       .limit(1000),
     readAtlasPrincipalSelfContext()
@@ -137,6 +140,7 @@ export async function getOwnerMyWork(access: AtlasRoleAccess): Promise<OwnerMyWo
     blocker: task.blocker_text,
     visibilityScope: task.visibility_scope,
     assignedMembershipId: task.assigned_membership_id,
+    assignedUserId: task.assigned_user_id,
     parentTaskId: task.parent_task_id,
     metadata: task.metadata ?? {},
   }));
@@ -145,6 +149,7 @@ export async function getOwnerMyWork(access: AtlasRoleAccess): Promise<OwnerMyWo
   const principalTimeZone = principalRead.context?.principal?.homeTimezone ?? "UTC";
   const core = buildOwnerMyWorkProjection({
     ownerMembershipId,
+    ownerUserId,
     tasks,
     principalCandidates,
     today,
