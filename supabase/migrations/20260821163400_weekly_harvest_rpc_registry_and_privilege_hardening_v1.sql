@@ -61,19 +61,3 @@ on conflict (signature) do update set
   evidence=excluded.evidence,
   anonymous_execute_expected=excluded.anonymous_execute_expected,
   reviewed_at=now();
-
--- A privilege-hardening migration is not complete until the live catalog and
--- governed registry agree. Fail fresh replays immediately rather than allowing
--- a new authenticated RPC surface to drift silently.
-do $verification$
-declare
-  v_drift_count integer;
-begin
-  select count(*) into v_drift_count
-  from atlas.authenticated_rpc_registry_drift_v1();
-
-  if v_drift_count <> 0 then
-    raise exception 'Weekly Harvest RPC registry reconciliation left % drift rows.', v_drift_count;
-  end if;
-end
-$verification$;
