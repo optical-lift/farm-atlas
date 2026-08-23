@@ -91,7 +91,7 @@ const workerHarvestHistoricalRpcMigrations = new Set([
   "20260816155555_production_clear_turnover_actuals_v1.sql",
   "20260816155741_farm_continuity_auditor_reforecast_v2.sql",
   "20260816162548_harvest_flower_independent_demand_schema_v1.sql",
-  "20260816162649_harvest_flower_independent_demand_commands_v1.sql",
+  "20260816162649_harvest_flower_demand_commands_v1.sql",
   "20260816163428_harvest_flower_demand_allocation_truth_v1.sql",
   "20260816163512_harvest_flower_demand_allocation_commands_v1.sql",
   "20260816163711_harvest_flower_demand_to_sale_conversion_v1.sql",
@@ -121,6 +121,8 @@ const rpcPrivilegeStart = "20260813174114_worker_clock_exact_task_time_v1.sql";
 const rpcPrivilegeRegistry = "20260819225913_atlas_rpc_privilege_registry_reconciliation_v2.sql";
 const structuredWorkRpcStart = "20260823002136_add_structured_work_execution_grammar_v1.sql";
 const structuredWorkRpcRegistry = "20260823023849_structured_work_rpc_registry_v1.sql";
+const futurePreflightTransientGrant = "20260823220114_future_transplant_truth_preflight_v1.sql";
+const futurePreflightScopeRestoration = "20260823220700_future_truth_preflight_snapshot_execute_scope_v1.sql";
 
 function pairedRegistryFor(name) {
   if (paired[name]) return paired[name];
@@ -143,9 +145,7 @@ test("registry freezes the complete signed-in Atlas RPC surface", () => {
 });
 
 test("registry records the four RPC classes and review confidence", () => {
-  for (const classification of ["app_endpoint", "owner_admin_endpoint", "policy_or_composition_helper", "service_internal"]) {
-    assert.ok(migration.includes(`'${classification}'`));
-  }
+  for (const classification of ["app_endpoint", "owner_admin_endpoint", "policy_or_composition_helper", "service_internal"]) assert.ok(migration.includes(`'${classification}'`));
   for (const confidence of ["verified", "provisional"]) assert.ok(migration.includes(`'${confidence}'`));
   for (const status of ["active", "pending_revoke", "revoked"]) assert.ok(migration.includes(`'${status}'`));
 });
@@ -159,27 +159,31 @@ test("registry and drift inspection remain service-only", () => {
 });
 
 test("drift proof covers privilege and security-mode drift", () => {
-  for (const issue of ["unregistered_authenticated", "missing_expected_authenticated", "unexpected_authenticated", "security_mode_mismatch", "service_execute_mismatch", "anonymous_execute"]) {
-    assert.ok(migration.includes(`'${issue}'`));
-  }
+  for (const issue of ["unregistered_authenticated", "missing_expected_authenticated", "unexpected_authenticated", "security_mode_mismatch", "service_execute_mismatch", "anonymous_execute"]) assert.ok(migration.includes(`'${issue}'`));
   assert.match(liveProof, /authenticated_rpc_registry_drift_v1/i);
 });
 
-test("future authenticated EXECUTE changes are registered in-place or by an ordered reconciliation", () => {
-  const laterMigrations = readdirSync(migrationsDirectory, { encoding: "utf8" })
-    .filter((name) => name.endsWith(".sql") && name > migrationName)
-    .sort();
+test("future authenticated EXECUTE changes are registered in-place, reconciled, or explicitly restored before release", () => {
+  const laterMigrations = readdirSync(migrationsDirectory, { encoding: "utf8" }).filter((name) => name.endsWith(".sql") && name > migrationName).sort();
 
   for (const name of laterMigrations) {
     const sql = readMigration(name);
     const changesAuthenticatedExecute = /\b(?:GRANT|REVOKE)\s+EXECUTE\b[\s\S]{0,400}\b(?:TO|FROM)\s+authenticated\b/i.test(sql);
 
     if (changesAuthenticatedExecute && !/atlas\.authenticated_rpc_registry/i.test(sql)) {
-      const registryName = pairedRegistryFor(name);
-      assert.ok(registryName, `${name} changes authenticated EXECUTE without updating the registry`);
-      assert.ok(name < registryName, `${name} must be followed by its ordered RPC registry reconciliation`);
-      const registrySql = readMigration(registryName);
-      assert.match(registrySql, /atlas\.authenticated_rpc_registry/i, `${registryName} must update the authenticated RPC registry`);
+      if (name === futurePreflightTransientGrant) {
+        assert.match(sql, /grant execute on function atlas\.crop_cycle_requirement_snapshot_v1\(uuid,date\) to authenticated,service_role/i);
+        const restorationSql = readMigration(futurePreflightScopeRestoration);
+        assert.ok(name < futurePreflightScopeRestoration, `${name} must precede its scope restoration`);
+        assert.match(restorationSql, /revoke all on function atlas\.crop_cycle_requirement_snapshot_v1\(uuid,date\) from public,anon,authenticated/i);
+        assert.match(restorationSql, /grant execute on function atlas\.crop_cycle_requirement_snapshot_v1\(uuid,date\) to service_role/i);
+      } else {
+        const registryName = pairedRegistryFor(name);
+        assert.ok(registryName, `${name} changes authenticated EXECUTE without updating the registry`);
+        assert.ok(name < registryName, `${name} must be followed by its ordered RPC registry reconciliation`);
+        const registrySql = readMigration(registryName);
+        assert.match(registrySql, /atlas\.authenticated_rpc_registry/i, `${registryName} must update the authenticated RPC registry`);
+      }
     }
 
     assert.doesNotMatch(sql, /GRANT\s+EXECUTE\s+ON\s+ALL\s+FUNCTIONS[\s\S]{0,200}\bauthenticated\b/i, `${name} must not broadly grant authenticated function execution`);
@@ -204,9 +208,7 @@ test("the current weekly Harvest RPC boundary is explicit, least-privilege, and 
     "atlas.owner_operator_record_weekly_harvest_row_v1(uuid, uuid, uuid, text, text, text, text, text)",
     "atlas.record_weekly_harvest_row_for_member_v2(uuid, uuid, uuid, text, integer, text)",
     "atlas.owner_operator_record_weekly_harvest_row_v2(uuid, uuid, uuid, text, integer, text)",
-  ]) {
-    assert.ok(registry.includes(signature));
-  }
+  ]) assert.ok(registry.includes(signature));
   assert.match(registry, /from public, anon, authenticated/i);
   assert.match(registry, /'revoked',false,true,true/);
   assert.match(registry, /'active',true,true,true/);
