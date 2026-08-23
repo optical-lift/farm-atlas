@@ -176,7 +176,7 @@ as $function$
     s.family_key,
     s.artifact_key,
     s.canonical_definition,
-    encode(digest(convert_to(s.canonical_definition, 'UTF8'), 'sha256'), 'hex') as fingerprint_sha256
+    encode(extensions.digest(convert_to(s.canonical_definition, 'UTF8'), 'sha256'), 'hex') as fingerprint_sha256
   from all_surface s
   join governed g using (family_key)
   order by s.family_key, s.artifact_key;
@@ -197,7 +197,7 @@ as $function$
       family_key,
       count(*) as artifact_count,
       encode(
-        digest(
+        extensions.digest(
           convert_to(string_agg(artifact_key || E'\t' || fingerprint_sha256, E'\n' order by artifact_key), 'UTF8'),
           'sha256'
         ),
