@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import StructuredTaskExecution from "@/components/atlas/structured-task-execution";
 import TaskMoveSpine from "@/components/atlas/task-move-spine";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { atlasActionForTask } from "@/lib/atlas/task-display";
@@ -287,6 +288,7 @@ export default function TaskExecutionBrief({
   const directDetailLines = metadataLines(task, "detail_lines");
   const detailLines = directDetailLines.length ? directDetailLines : metadataLines(task, "projection_detail_lines");
   const resultLines = metadataLines(task, "worker_result_lines");
+  const structured = metadataText(task, "structured_execution_contract") === "work_execution_components_v1";
 
   if (assemblyLoading || selfLoading) {
     return <StableTaskMoveLoading task={task} place={resolvedPlace} due={resolvedDue} />;
@@ -296,13 +298,19 @@ export default function TaskExecutionBrief({
     return (
       <section className="atlas-task-execution-brief atlas-task-execution-brief--human" aria-label="Task instructions">
         <TaskMoveSpine assembly={resolvedAssembly} />
-        <VisibleMethod
-          label={resolvedAssembly.execution.howLabel || "Steps"}
-          how={resolvedHow}
-          details={resolvedDetails}
-        />
-        <VisibleFacts label={detailHeading} lines={detailLines} />
-        <VisibleFacts label="Next" lines={resultLines} />
+        {structured && task?.task_id ? (
+          <StructuredTaskExecution taskId={task.task_id} />
+        ) : (
+          <>
+            <VisibleMethod
+              label={resolvedAssembly.execution.howLabel || "Steps"}
+              how={resolvedHow}
+              details={resolvedDetails}
+            />
+            <VisibleFacts label={detailHeading} lines={detailLines} />
+            <VisibleFacts label="Next" lines={resultLines} />
+          </>
+        )}
       </section>
     );
   }
@@ -327,16 +335,22 @@ export default function TaskExecutionBrief({
         <p className="atlas-worker-fallback__place">{resolvedPlace} · {action}</p>
         <h1>{fallbackTitle}</h1>
         {resolvedDue ? <span className="atlas-worker-fallback__due">{resolvedDue}</span> : null}
-        {showAction ? (
+        {!structured && showAction ? (
           <div className="atlas-worker-fallback__action">
             <small>{action}</small>
             <strong>{actionDetail}</strong>
           </div>
         ) : null}
       </section>
-      <VisibleMethod label="Steps" how={resolvedHow} details={resolvedDetails} />
-      <VisibleFacts label={detailHeading} lines={detailLines} />
-      <VisibleFacts label="Next" lines={resultLines} />
+      {structured && task?.task_id ? (
+        <StructuredTaskExecution taskId={task.task_id} />
+      ) : (
+        <>
+          <VisibleMethod label="Steps" how={resolvedHow} details={resolvedDetails} />
+          <VisibleFacts label={detailHeading} lines={detailLines} />
+          <VisibleFacts label="Next" lines={resultLines} />
+        </>
+      )}
     </section>
   );
 }
