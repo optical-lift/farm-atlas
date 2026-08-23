@@ -6,10 +6,15 @@ import test from 'node:test';
 const root = process.cwd();
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const migrationPath = 'supabase/migrations/20260823211943_knowledge_acquisition_search_knower_and_owner_queue_v1.sql';
-const answerMigrationPath = 'supabase/migrations/20260823212832_owner_needs_from_you_answer_membrane_v1.sql';
+const firstAnswerPath = 'supabase/migrations/20260823212832_owner_needs_from_you_answer_membrane_v1.sql';
+const propagationPath = 'supabase/migrations/20260823212930_owner_needs_from_you_answer_propagation_v1.sql';
+const retirePath = 'supabase/migrations/20260823213042_retire_broken_owner_needs_from_you_answer_overload_v2.sql';
+const finalFixPath = 'supabase/migrations/20260823213140_fix_owner_unknown_transition_signature_v1.sql';
 
 const migration = () => read(migrationPath);
-const answerMigration = () => read(answerMigrationPath);
+const propagation = () => read(propagationPath);
+const retire = () => read(retirePath);
+const finalFix = () => read(finalFixPath);
 
 test('Tranche 1A search-before-ask contract is explicit and preserves epistemic boundaries', () => {
   const sql = migration();
@@ -109,8 +114,8 @@ test('Owner knowledge queue RPC is explicitly governed and anonymous access rema
   assert.match(sql, /'doesNotMutateTruth',true/);
 });
 
-test('Tranche 1D Owner destination answer writes canonical domain truth and reuses requirement reconciliation', () => {
-  const sql = answerMigration();
+test('Tranche 1D final Owner destination answer writes canonical truth and requires synchronous propagation', () => {
+  const sql = propagation();
   assert.match(sql, /answer_owner_needs_from_you_v1/);
   assert.match(sql, /auth\.uid\(\)/);
   assert.match(sql, /active and role='owner'/);
@@ -118,45 +123,74 @@ test('Tranche 1D Owner destination answer writes canonical domain truth and reus
   assert.match(sql, /acquisitionSurface'<>'atlas_needs_from_you'/);
   assert.match(sql, /record_crop_destination_claim_v1/);
   assert.match(sql, /'committed'/);
-  assert.match(sql, /'owner_needs_from_you'/);
+  assert.match(sql, /'principal'/);
+  assert.match(sql, /'owner_knowledge_acquisition'/);
   assert.match(sql, /reconcile_crop_cycle_requirement_state_v1/);
-  assert.match(sql, /answerWrittenToCanonicalDomainTruth/);
-  assert.match(sql, /carrierTaskNotUsedAsTruthStore/);
-  assert.match(sql, /downstreamExecutionReevaluatedByExistingResolutionTrigger/);
+  assert.match(sql, /Canonical destination was recorded but the acquisition consequence did not resolve; transaction rolled back/);
+  assert.match(sql, /answerRecordedCanonically/);
+  assert.match(sql, /carrierTaskNotReality/);
+  assert.match(sql, /transactionFailsIfPropagationFails/);
   assert.ok(
     sql.indexOf('record_crop_destination_claim_v1') < sql.lastIndexOf('reconcile_crop_cycle_requirement_state_v1'),
     'canonical truth must be written before requirement reconciliation',
   );
 });
 
-test('Tranche 1D I-do-not-know preserves the unknown and removes false Owner-knower routing', () => {
-  const sql = answerMigration();
-  assert.match(sql, /p_answer_kind='i_do_not_know'/);
-  assert.match(sql, /ownerUnableToAnswer/);
-  assert.match(sql, /v_knower_class:='actually_unknown'/);
-  assert.match(sql, /v_acquisition_surface:='unresolved_unknown'/);
-  assert.match(sql, /unknownWasNotConvertedToFact/);
-  assert.match(sql, /sourceRequirementRemainsOpen/);
-  assert.match(sql, /ownerCardRemovedFromOwnerKnownLane/);
+test('Tranche 1D destination answer is farm-scoped and records the answering Owner', () => {
+  const sql = propagation();
+  assert.match(sql, /v_destination\.farm_id is distinct from v_instance\.farm_id/);
+  assert.match(sql, /Destination object must belong to the same farm as the question/);
+  assert.match(sql, /recorded_by_membership_id=v_member\.id/);
+  assert.match(sql, /ownerMembershipId/);
+  assert.match(sql, /source','atlas_needs_from_you/);
+  assert.match(sql, /p_idempotency_key/);
 });
 
-test('Tranche 1D protects idempotency, farm boundary, and internal writer boundary', () => {
-  const sql = answerMigration();
-  assert.match(sql, /growing_objects/);
-  assert.match(sql, /farm_id=v_instance\.farm_id/);
-  assert.match(sql, /owner-needs-from-you:/);
-  assert.match(sql, /different destination/);
-  assert.match(sql, /revoke all on function atlas\.answer_owner_needs_from_you_v1/);
-  assert.match(sql, /grant execute on function atlas\.answer_owner_needs_from_you_v1\(uuid,text,uuid,text,text\) to authenticated,service_role/);
-  assert.match(sql, /doesNotExposeInternalDestinationWriter/);
+test('Tranche 1D I-do-not-know preserves unknown, removes Owner routing, and keeps source requirement independent', () => {
+  const sql = propagation();
+  assert.match(sql, /v_answer_kind='i_do_not_know'/);
+  assert.match(sql, /ownerKnowledgeResponse/);
+  assert.match(sql, /'kind','i_do_not_know'/);
+  assert.match(sql, /'knowerClass','actually_unknown'/);
+  assert.match(sql, /'acquisitionSurface','unresolved_unknown'/);
+  assert.match(sql, /'factResolved',false/);
+  assert.match(sql, /unknownRemainsUnknown/);
+  assert.match(sql, /sourceRequirementRemainsIndependent/);
+  assert.match(sql, /ownerQueueAssignmentRemovedWithoutInventingFact/);
+  assert.match(sql, /releaseGeneration/);
 });
 
-test('knowledge acquisition migrations retain exact production versions and custody surface reflects live additions', () => {
-  assert.equal(fs.existsSync(path.join(root, migrationPath)), true);
-  assert.equal(fs.existsSync(path.join(root, answerMigrationPath)), true);
+test('Tranche 1D final unknown transition uses the internal transition signature without spoofing actor membership', () => {
+  const sql = finalFix();
+  assert.match(sql, /record_task_transition_v1_internal/);
+  assert.match(sql, /'owner-does-not-know:'/);
+  assert.match(sql, /'answered_by_membership_id',v_member\.id/);
+  const callStart = sql.indexOf('v_transition:=atlas.record_task_transition_v1_internal(');
+  const callEnd = sql.indexOf(');', callStart);
+  const call = sql.slice(callStart, callEnd);
+  assert.match(call, /left\('owner-does-not-know:[\s\S]*?\),\s*null,/);
+  assert.doesNotMatch(call, /\),\s*v_member\.id,/);
+});
+
+test('Tranche 1D retires the broken five-argument overload and keeps the four-argument endpoint canonical', () => {
+  const retired = retire();
+  const canonical = propagation();
+  assert.match(retired, /revoke all on function atlas\.answer_owner_needs_from_you_v1\(uuid,text,uuid,text,text\)/);
+  assert.match(retired, /drop function atlas\.answer_owner_needs_from_you_v1\(uuid,text,uuid,text,text\)/);
+  assert.match(retired, /review_status='revoked'/);
+  assert.match(retired, /replacementSignature','atlas\.answer_owner_needs_from_you_v1\(uuid, text, uuid, text\)'/);
+  assert.match(canonical, /grant execute on function atlas\.answer_owner_needs_from_you_v1\(uuid,text,uuid,text\) to authenticated,service_role/);
+  assert.match(canonical, /'atlas\.answer_owner_needs_from_you_v1\(uuid, text, uuid, text\)'/);
+  assert.match(canonical, /'public_endpoint','verified','active'/);
+});
+
+test('knowledge acquisition source retains every exact post-cutover production migration and current custody surface', () => {
+  for (const relative of [migrationPath, firstAnswerPath, propagationPath, retirePath, finalFixPath]) {
+    assert.equal(fs.existsSync(path.join(root, relative)), true, `missing production migration source: ${relative}`);
+  }
   const expected = JSON.parse(read('docs/architecture/atlas-source-custody-surface-v1.json'));
   assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1162);
   assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 470);
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '6c7cf1047e4028c29d279aa1221042a33be82c99fc7bbae46bad580ebcd0f274');
-  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, '5c90954a99230a6c36516c75416cacea6399a1f61e5269a03058d9ff648486f4');
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, 'ccc8995c11acd50f787f34ee5e6cf4c5e74f9a9086ff5d2c50c9b38fa3916ee9');
+  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, '9a0d4953be77b0af5450061f51e73bce5f5df5b4c2516d5631600af2707d8e6c');
 });
