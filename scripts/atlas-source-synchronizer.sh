@@ -71,6 +71,7 @@ const live = legacy.live ?? {};
 const adjudication = legacy.adjudication ?? {};
 const evidence = adjudication.evidence ?? {};
 const expectedLegacy = policy.legacyEpoch ?? {};
+// legacy_manifest is a hard binding among live ledger fingerprint, append-only adjudication, and repository policy.
 const checks = [
   ['custody_key', adjudication.custodyKey, expectedLegacy.custodyKey],
   ['disposition', adjudication.disposition, 'accepted'],
