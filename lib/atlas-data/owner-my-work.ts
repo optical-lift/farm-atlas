@@ -141,7 +141,8 @@ export async function getOwnerMyWork(access: AtlasRoleAccess): Promise<OwnerMyWo
     throw new Error("Atlas Owner My Work task read failed.");
   }
 
-  const tasks = ((taskResult.data ?? []) as OwnerWorkTaskRow[]).map((task) => ({
+  const taskRows = (taskResult.data ?? []) as unknown as OwnerWorkTaskRow[];
+  const tasks = taskRows.map((task) => ({
     id: task.id,
     title: task.title,
     taskType: task.task_type,
