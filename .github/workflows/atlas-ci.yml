@@ -1,104 +1,132 @@
-name: Atlas source custody recovery
+name: Atlas CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: atlas-source-custody-${{ github.ref }}
+  group: atlas-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  recover-production-source:
-    if: github.head_ref == 'recovery/atlas-source-custody-v1'
+  architecture:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - name: Checkout recovery branch
-        uses: actions/checkout@v4
-        with:
-          ref: recovery/atlas-source-custody-v1
-          fetch-depth: 0
-
-      - name: Recover exact deployed Aug 13-14 Atlas source
+      - name: Download source quietly
         shell: bash
         env:
-          SUPABASE_URL: https://zirqkouammpwxlqfbsvf.supabase.co
-          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcnFrb3VhbW1wd3hscWZic3ZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MjU2MjAsImV4cCI6MjA4NzEwMTYyMH0.Y4zgLr-cEx1DH3_0QUrHl4CAVzVBLYFlqM8zHxyE61c
+          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          base="$SUPABASE_URL/functions/v1/temporary-atlas-source-custody-recovery"
-          mkdir -p supabase/migrations
-          cat > /tmp/atlas-source-custody-manifest <<'MANIFEST'
-          20260813012936 worker_surface_grammar_contract_v1 0566d5da4a4f7930b32d421f2a5f3f4e6520c181d4293c69de1480059b4ab5cc
-          20260813013055 elm_worker_surface_live_normalization_v1 3f25973639f763e40b66007931a2fee54e0cc95f102fc52ce187778c4ce7721d
-          20260813013542 elm_worker_surface_live_followup_v1 7f4a7c4140702724bb6264a82f0bc99ddd3ec0b8b26b4d0c753eec1ea8b4ebb8
-          20260813014512 worker_surface_direct_execution_reconcile_v1 4dc619c3d4ed30aa055869bfba1de27c787fadf5a2a00bc5d5cb6609e36b6eb2
-          20260813023743 worker_day_cue_dismiss_v1 e221891558dbd53e5a3a29358d561abb567a2584e0eb24e19018e908286c9a2b
-          20260813023755 restore_worker_execution_facts_v1 e88c717f1a8200a4ee60db2f21edc395f37f68b27459457a27e29c0dea259030
-          20260813023804 restore_horizon_worker_context_v1 50a535fc880000e05ba4972bc90a5c8951d63662a364e4972170e31e2affe206
-          20260813155545 preserve_accepted_potential_position_v1 2642fd4fb6c1cbca381ea3a2dbb52df796dd6a02bb42b14208db5a27608b5d90
-          20260813162708 timed_day_cue_requires_time_guard 4d38b456382950a1000fececd68f59774e5b05cd6b286d0e573456c00f186f91
-          20260813162718 timed_day_cue_service_day_guard d76a1497bc6a5e385ccc80a5be00970f272825c7030b47feeb44ad7a85e8825d
-          20260813174114 worker_clock_exact_task_time_v1 ecceac0481a90a7937c05660f26dac45b75cd7f8faa6754656dae3d7145eebe3
-          20260813191646 clock_planned_duration_column_v1 025c9e0b32592085b92b03fb0d890fc305f416166597486c715c5230773cef62
-          20260813191726 clock_planned_duration_rpc_v1a 72904ca97c8e213dbcd6ab6d8ecda6c5aaa7aa31a08ea73cdf2611912d8379f8
-          20260813191746 clock_planned_duration_rpc_revoke_v1 cf78abbde1a437bd9edb4383918e18a50cbb6b39324869b18503c7dff7e19c11
-          20260813191755 clock_planned_duration_rpc_grant_v1 497bfcdbf8b862a4304ef595891191958c99e401c977d56a004fad8cd76a8f13
-          20260813191831 clock_duration_choreography_reader_v1 fc97e9561755a847f97c8053ad611f2c57b2d2b62edb431d0f74c179c66a7e1a
-          20260813214005 community_registration_v1_family_ultimate dd2fbe7c84b2e98674d7d4e4b0d568d1f3fdd3f13c06a6739660c0c68882e23e
-          20260813234630 seed_arise_at_elm_project 05185905a06ae4ceb561720932e397f15a6b8803057e4818f6bdbc81bd8181a3
-          20260814002422 record_artemisia_silver_brocade_locations_20260813 9f86e6a96a3ff90d52f072114f9f206aadc9236208382ce9a1f144153b89199b
-          20260814015856 owner_clock_plan_atomic_commit_v1 f07ea391d4d07be4dcf9d66fe15c7879af1fb7dd63bd6fcc6ab710b2c003d51d
-          20260814040658 add_pot_up_serial_queue_advancer c961b4e335db81344d021e264276a9b950452e86b0dec45dd0013f8269b0766f
-          20260814041134 optimize_worker_home_completed_cards e6afc8ce5eda721d3d6bf67aa5681bfb607b940835f2290a535be9396424f9e1
-          20260814042514 enforce_blocked_work_semantics_v1 c898ef45f0e920e4027167d161820412fdb98f4e90d04fc920362142af5cd898
-          20260814042844 hide_blocked_tasks_from_farm_hand_work_v1 1eb78ff7eec091f406bbc3220655e2823469252e3b44260e7cfb8ae947caa756
-          20260814043203 hide_blocked_work_from_worker_surfaces_v1 8217b8fbacab558090246ebe98e0688972d58839c9ce61ede8540edc03bf4348
-          20260814043920 external_readiness_gate_v1 a4e27d2cdb97e3f21eb0675a0ad86c710af05152542f557c975c491190918e30
-          20260814044133 external_readiness_gate_preserve_blocker_v1 aed9fac888cba6c4338fa6966245482ea73b0ea08261e00d5319988fd28e807f
-          20260814060300 atlas_day_reservations_v1 d7ef3833b22ca10afcf0753b4edb1df10ea2a369f93181bdc6cb5d5907e558c9
-          20260814134653 owner_day_reservation_commands_v1 1d998101e9d7056e3f42c96d9b2702144e10e37da678102c463007735b762321
-          20260814135424 fixed_routine_projection_hardening_v1 0bd25af31a2e5d83ccf11b7246319f728b7277ff6f9747f0bbf4e9e8c87613cb
-          20260814145436 owner_day_reservation_rpc_registry_v1 0fc160eaabf09a6963b7e0405625a7fb04fa2bd4c9c9e8a7527ccf77c5c48275
-          20260814152438 owner_fixed_routine_commands_v1 ae8ec72e61bbd08fb31115816c634f91d4973fae616a9990782d1c6ed6d37e84
-          20260814160049 atlas_interactive_read_performance_v1 67c318552378b6580a35a1cfda2788f847e5df4a195ec3f6b27e3222410de040
-          20260814163528 task_notification_idle_fast_path_v1 82292c12060ab95aeccc937e59d8ae732cab1756735ea67b13411b16984541dc
-          20260814164229 worker_day_operational_task_cards_v1 6559f4b4fdbc18941d72090dd1229a16cc77a1efd9a13c3afd291ea14ecb5a1e
-          20260814164533 worker_day_operational_task_cards_v2 36c196ad1f26ab528fd263a4fbbcd6a58464f5f33c1e4b667b5839e0be431be1
-          20260814165824 register_worker_day_operational_task_cards_v1_v2 f953dc80bba6933b3c112fc3ea3455631ea639e80e819215012ad78557abb6e3
-          20260814172148 worker_day_presentation_selection_core_v1 58f4073cbc0462528d9a11cd982026c6539ffa848cdfc10e36f0afb70949efcf
-          20260814172728 worker_day_plan_single_carry_snapshot_v1 1241bb104b1accfeac5a01cbea2be0715a98ee530100d8cab47ab6b2b966f1ac
-          20260814172835 worker_day_plan_single_carry_snapshot_v1 dd651553ea5c9af3cb1e472fc5dc8d6f0870dffe1ffb67a91edabd7b5bf155d4
-          20260814173031 worker_day_sky_withhold_fast_path_v1 dbc2ed60ba94f1c8a7c7208ad1e8c6fd3c0672e19207f01bd8ebdf4b36913b3e
-          20260814173131 worker_day_sky_withhold_fast_path_v1 3a025a864ccf2c186764d4e3b60e57f3e0c62fddcfab707d7482c7e4921ac339
-          20260814174157 worker_self_day_plan_api_v1 963df2fbdddf7c20285f8760210e004459c6eeabfd92f44e3bb004dc5d859e49
-          20260814175726 operator_home_light_read_model_v1 ad32efdce29be462d83131563a57061ff7d4389a030d2cf17b3f85b07bd6fcf4
-          20260814182028 operator_home_switch_to_light_read_v1 6eb361e4fb04dee44d27087342a694596c0dad64688f966bd658eb1d40a3837a
-          20260814201339 worker_day_carryover_snapshot_fast_path 718427af8b77157ea63e80321d474d5e2f9cfa6009acb4440b447003807623c7
-          20260814210129 worker_self_day_bundle_fast_path_v1 851eadbca719757039ffd527f91890637e851c55872e3ef87bc8a397e66ee910
-          20260814212629 current_session_context_fast_path_v1 9eec0e2dcf0b20dd00cafca26f6762009031e72a0dbafdda9603cd8663dc62a9
-          MANIFEST
+          mkdir source
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${GITHUB_SHA}" \
+            | tar -xz --strip-components=1 -C source
 
-          while read -r version name expected; do
-            path="supabase/migrations/${version}_${name}.sql"
-            curl -fsSL --retry 3 -H "Authorization: Bearer $SUPABASE_ANON_KEY" "$base?version=$version" -o "$path"
-            actual="$(sha256sum "$path" | awk '{print $1}')"
-            test "$actual" = "$expected" || { echo "checksum mismatch $path expected=$expected actual=$actual" >&2; exit 1; }
-            echo "verified $path $actual"
-          done < /tmp/atlas-source-custody-manifest
+      - name: Audit service-role Atlas API routes
+        run: cd source && node scripts/audit-atlas-api-boundaries.mjs
 
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/atlas-ci.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add supabase/migrations .github/workflows/atlas-ci.yml
-          if git diff --cached --quiet; then
-            echo "No source-custody changes were required."
-            exit 0
+      - name: List direct task-transition RPC routes
+        shell: bash
+        run: |
+          cd source
+          offenders="$(grep -RIlE 'worker_record_task_transition_v1|owner_record_task_transition_v1|record_task_transition_v1' app/api/atlas || true)"
+          offenders="$(printf '%s\n' "$offenders" | grep -v '^app/api/atlas/task-transition/route.ts$' || true)"
+          if [ -n "$offenders" ]; then
+            echo "Atlas API routes bypassing the shared task transition route:"
+            echo "$offenders"
+            exit 1
           fi
-          git commit -m "Recover exact deployed Aug 13-14 Atlas source"
-          git push origin HEAD:recovery/atlas-source-custody-v1
+
+      - name: Reject legacy worker transition clients
+        shell: bash
+        run: |
+          cd source
+          offenders="$(grep -RIl '/api/atlas/work/tasks/' app components lib || true)"
+          if [ -n "$offenders" ]; then
+            echo "Legacy worker transition endpoint references:"
+            echo "$offenders"
+            exit 1
+          fi
+
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Guard service-role API routes
+        run: node --test --test-name-pattern="interactive Atlas API routes" tests/atlas-architecture-traps.test.mjs
+
+      - name: Guard canonical task mutations
+        run: node --test --test-name-pattern="all task mutations" tests/atlas-architecture-traps.test.mjs
+
+      - name: Guard homepage membership scope
+        run: node --test --test-name-pattern="homepage reader" tests/atlas-architecture-traps.test.mjs
+
+      - name: Guard Feast Guild portfolio
+        run: node --test tests/feast-guild-portfolio.test.mjs
+
+      - name: Run tests
+        shell: bash
+        run: |
+          set +e
+          npm test > atlas-test.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            tail -n 180 atlas-test.log
+            exit "$status"
+          fi
+          tail -n 30 atlas-test.log
+
+      - name: Upload failing test log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-test-log
+          path: atlas-test.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Build Atlas
+        shell: bash
+        run: |
+          set +e
+          npm run build > atlas-build.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            tail -n 120 atlas-build.log
+            exit "$status"
+          fi
+          tail -n 40 atlas-build.log
+        env:
+          SUPABASE_URL: https://atlas-ci.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: atlas-ci-service-role-placeholder
+          NEXT_PUBLIC_SUPABASE_URL: https://atlas-ci.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: atlas-ci-publishable-placeholder
+
+      - name: Upload failing build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-build-log
+          path: atlas-build.log
+          if-no-files-found: ignore
+          retention-days: 3

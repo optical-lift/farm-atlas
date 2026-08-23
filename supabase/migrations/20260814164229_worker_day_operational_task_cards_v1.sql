@@ -1,7 +1,6 @@
-create or replace function atlas.worker_day_operational_task_cards_v2(
+create or replace function atlas.worker_day_operational_task_cards_v1(
   p_farm_id uuid,
   p_membership_id uuid,
-  p_service_date date,
   p_task_ids uuid[]
 )
 returns jsonb
@@ -12,16 +11,11 @@ set search_path to 'pg_catalog', 'atlas', 'auth'
 as $function$
 declare
   v_target atlas.farm_memberships%rowtype;
-  v_ids uuid[] := array[]::uuid[];
   v_move_context jsonb := '{}'::jsonb;
   v_cards jsonb := '[]'::jsonb;
-  v_is_management boolean := false;
 begin
   if auth.uid() is null then
     raise exception 'Authenticated user required.' using errcode='42501';
-  end if;
-  if p_service_date is null then
-    raise exception 'Service date required.' using errcode='22023';
   end if;
 
   select * into v_target
@@ -34,42 +28,22 @@ begin
     raise exception 'Active target membership required.' using errcode='42501';
   end if;
 
-  v_is_management := atlas.is_farm_manager_or_owner(p_farm_id);
-
   if v_target.user_id is distinct from auth.uid()
-     and not v_is_management then
+     and not atlas.is_farm_manager_or_owner(p_farm_id) then
     raise exception 'Only farm management may read another member''s operational Day cards.' using errcode='42501';
   end if;
 
-  select coalesce(array_agg(distinct candidate.task_id), array[]::uuid[])
-  into v_ids
-  from (
-    select unnest(coalesce(p_task_ids, array[]::uuid[])) as task_id
-    union all
-    select task.id
-    from atlas.tasks task
-    where task.farm_id = p_farm_id
-      and task.assigned_membership_id = p_membership_id
-      and task.parent_task_id is null
-      and task.status = 'done'
-      and task.completed_at is not null
-      and (task.completed_at at time zone 'America/Chicago')::date = p_service_date
-  ) candidate;
-
-  if coalesce(array_length(v_ids, 1), 0) = 0 then
+  if coalesce(array_length(p_task_ids, 1), 0) = 0 then
     return '[]'::jsonb;
   end if;
 
-  if v_is_management then
-    v_move_context := coalesce(atlas.task_move_context_batch_v1(v_ids), '{}'::jsonb);
-  end if;
+  v_move_context := coalesce(atlas.task_move_context_batch_v1(p_task_ids), '{}'::jsonb);
 
-  select coalesce(jsonb_agg(card order by card.ordinal, card.created_at), '[]'::jsonb)
+  select coalesce(jsonb_agg(card order by card.ordinal), '[]'::jsonb)
   into v_cards
   from (
     select
-      coalesce(array_position(p_task_ids, task.id), 2147483647) as ordinal,
-      task.created_at,
+      array_position(p_task_ids, task.id) as ordinal,
       jsonb_build_object(
         'farm_key', farm.stable_key,
         'task_id', task.id,
@@ -172,7 +146,7 @@ begin
       ) latest
     ) transition on true
     where task.farm_id = p_farm_id
-      and task.id = any(v_ids)
+      and task.id = any(p_task_ids)
       and (
         task.assigned_membership_id = p_membership_id
         or task.metadata ->> 'executor_membership_id' = p_membership_id::text
@@ -190,108 +164,5 @@ begin
 end;
 $function$;
 
-create or replace function atlas.worker_self_day_bundle_api_v1(
-  p_farm_id uuid,
-  p_membership_id uuid,
-  p_day date
-)
-returns jsonb
-language plpgsql
-stable
-security definer
-set search_path to 'pg_catalog', 'atlas', 'auth'
-as $function$
-declare
-  v_plan jsonb;
-  v_task_ids uuid[] := array[]::uuid[];
-  v_cards jsonb := '[]'::jsonb;
-  v_safe_cards jsonb := '[]'::jsonb;
-begin
-  v_plan := atlas.worker_self_day_plan_api_v1(p_farm_id, p_membership_id, p_day);
-
-  select coalesce(
-    array_agg(distinct item.task_id) filter (where item.task_id is not null),
-    array[]::uuid[]
-  )
-  into v_task_ids
-  from (
-    select nullif(row->>'taskId', '')::uuid as task_id
-    from jsonb_array_elements(
-      coalesce(v_plan->'realWork', '[]'::jsonb)
-      || coalesce(v_plan->'automaticWork', '[]'::jsonb)
-    ) row
-  ) item;
-
-  v_cards := atlas.worker_day_operational_task_cards_v2(
-    p_farm_id,
-    p_membership_id,
-    p_day,
-    v_task_ids
-  );
-
-  select coalesce(jsonb_agg(card - 'move_context' order by ord), '[]'::jsonb)
-  into v_safe_cards
-  from jsonb_array_elements(v_cards) with ordinality as cards(card, ord);
-
-  return jsonb_build_object(
-    'plan', v_plan,
-    'taskCards', v_safe_cards
-  );
-end;
-$function$;
-
-revoke all on function atlas.worker_self_day_bundle_api_v1(uuid, uuid, date) from public;
-revoke all on function atlas.worker_self_day_bundle_api_v1(uuid, uuid, date) from anon;
-grant execute on function atlas.worker_self_day_bundle_api_v1(uuid, uuid, date) to authenticated;
-grant execute on function atlas.worker_self_day_bundle_api_v1(uuid, uuid, date) to service_role;
-
-insert into atlas.authenticated_rpc_registry (
-  signature,
-  classification,
-  confidence,
-  review_status,
-  authenticated_execute_expected,
-  security_definer_expected,
-  service_execute_expected,
-  caller_count,
-  policy_reference_count,
-  evidence,
-  reviewed_at
-) values (
-  'atlas.worker_self_day_bundle_api_v1(uuid, uuid, date)',
-  'app_endpoint',
-  'verified',
-  'active',
-  true,
-  true,
-  true,
-  1,
-  0,
-  jsonb_build_object(
-    'purpose', 'Compose the canonical Farm Hand self Worker Day plan and its selected operational task cards into one authenticated round trip',
-    'boundary', 'delegates to worker_self_day_plan_api_v1 self-only Farm Hand authorization; task cards are returned without Owner Move context',
-    'architecture', 'read composition only; does not create a second scheduling or task truth'
-  ),
-  now()
-)
-on conflict (signature) do update set
-  classification = excluded.classification,
-  confidence = excluded.confidence,
-  review_status = excluded.review_status,
-  authenticated_execute_expected = excluded.authenticated_execute_expected,
-  security_definer_expected = excluded.security_definer_expected,
-  service_execute_expected = excluded.service_execute_expected,
-  caller_count = excluded.caller_count,
-  policy_reference_count = excluded.policy_reference_count,
-  evidence = excluded.evidence,
-  reviewed_at = excluded.reviewed_at;
-
-update atlas.authenticated_rpc_registry
-set evidence = jsonb_build_object(
-      'purpose', 'Canonical lightweight operational Day-card reader for Worker Day runtime',
-      'boundary', 'worker self or farm manager/owner; target membership must be active',
-      'hydration', 'base task truth plus current object state and latest result/transition; batched Move context is computed only for farm management',
-      'completionEcho', 'adds top-level tasks completed on the service date without full rich-card hydration'
-    ),
-    reviewed_at = now()
-where signature = 'atlas.worker_day_operational_task_cards_v2(uuid, uuid, date, uuid[])';
+revoke all on function atlas.worker_day_operational_task_cards_v1(uuid,uuid,uuid[]) from public, anon;
+grant execute on function atlas.worker_day_operational_task_cards_v1(uuid,uuid,uuid[]) to authenticated, service_role;
