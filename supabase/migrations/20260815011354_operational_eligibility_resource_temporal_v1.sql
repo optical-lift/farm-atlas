@@ -34,10 +34,8 @@ as $$
   ),false)
 $$;
 
--- Composition helper only: Worker Day SECURITY DEFINER functions call this;
--- signed-in clients do not need a direct RPC surface.
-revoke all on function atlas.task_required_resources_available_v1(uuid) from public, anon, authenticated;
-grant execute on function atlas.task_required_resources_available_v1(uuid) to service_role;
+revoke all on function atlas.task_required_resources_available_v1(uuid) from public, anon;
+grant execute on function atlas.task_required_resources_available_v1(uuid) to authenticated, service_role;
 
 create or replace function atlas.task_temporally_eligible_v1(p_task_id uuid,p_service_date date)
 returns boolean
@@ -58,10 +56,8 @@ as $$
   ),false)
 $$;
 
--- Composition helper only: Worker Day SECURITY DEFINER functions call this;
--- signed-in clients do not need a direct RPC surface.
-revoke all on function atlas.task_temporally_eligible_v1(uuid,date) from public, anon, authenticated;
-grant execute on function atlas.task_temporally_eligible_v1(uuid,date) to service_role;
+revoke all on function atlas.task_temporally_eligible_v1(uuid,date) from public, anon;
+grant execute on function atlas.task_temporally_eligible_v1(uuid,date) to authenticated, service_role;
 
 create or replace function atlas.sync_task_required_resource_keys_v1()
 returns trigger

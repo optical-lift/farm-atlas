@@ -1,68 +1,132 @@
-name: Atlas source custody recovery
+name: Atlas CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: atlas-source-custody-${{ github.ref }}
+  group: atlas-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  recover-production-source:
-    if: github.head_ref == 'recovery/atlas-source-custody-v1'
+  architecture:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - name: Checkout recovery branch
-        uses: actions/checkout@v4
-        with:
-          ref: recovery/atlas-source-custody-v1
-          fetch-depth: 0
-      - name: Recover exact deployed Aug 15 pre-boundary Atlas source
+      - name: Download source quietly
         shell: bash
         env:
-          SUPABASE_URL: https://zirqkouammpwxlqfbsvf.supabase.co
-          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcnFrb3VhbW1wd3hscWZic3ZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MjU2MjAsImV4cCI6MjA4NzEwMTYyMH0.Y4zgLr-cEx1DH3_0QUrHl4CAVzVBLYFlqM8zHxyE61c
+          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          base="$SUPABASE_URL/functions/v1/temporary-atlas-source-custody-recovery"
-          mkdir -p supabase/migrations
-          cat > /tmp/atlas-source-custody-manifest <<'MANIFEST'
-          20260815000421 worker_day_system_internal_visibility_boundary_v1 7055ff5ca21be1a4a44ddebe08cfd73b5129b6cf1275b4df114c2aa21e4d3d0b
-          20260815011354 operational_eligibility_resource_temporal_v1 e94d816c3ac9ae62946e4ea9a65dd49d526367297baeffad85fa95817ca35b43
-          20260815012157 rhythm_local_calendar_day_and_grow_room_daily_v1 e2bd84bca1ef0078385004c03d23b37675fa64da7861c14f3d915ed4ca37aef8
-          20260815012244 rhythm_task_work_lane_projection_v1 9f5168b26d44bca0298ff84bfcefdd3084ffa679220845344db41952987390f5
-          20260815012658 field_transplant_readiness_compact_worker_interaction_v2 bb87675bd1599dba1053b14660c651961f16b3bbebdff1ce57a2b28cfb05e278
-          20260815153320 clock_capacity_conflicts_v1 090286757094e6326fa3ab0a3eef36130ed0a159fd6f62c02d7e075793a05267
-          20260815160125 clock_authoritative_capacity_conflicts_v1 482bb99382486c0d7e2005a6e951393dda4fc10ac84836df8889df9349355912
-          20260815191821 harvest_flower_bucket_output_v1 75d1aa03eab04984ca819ee4ac559461c06fbee0bbefef5f38be6f5981a55596
-          20260815192852 harvest_flower_bucket_output_rpc_registry_v1 38812d8d6853e07b6ce836213d707fd2ed8d281398b8d907412296600d60cb0d
-          20260815193019 harvest_flower_bucket_output_index_hardening_v1 556d9d6a145452d19835e019afae8f4937209324d424f60454509510da07b9b3
-          20260815201659 harvest_flower_preparation_ready_v1 53a9f10cf0f9ffdccc3c7553175b717fa27fe75e66354aaacddd05287607a364
-          20260815201712 harvest_flower_preparation_ready_rpc_registry_v1 aff396c7ea4a5a109c76760683b0a5c1b725493e127ced70456617f68dab363f
-          20260815214911 harvest_flower_commercial_truth_v1 c2ca5376620959a133c3439e00eefaa53a3f824b54b8915c41b1b50d1eecefaa
-          20260815214919 harvest_flower_commercial_owner_context_hardening_v1 cdf9de373264ca10b864799e8a429736bda70b718896537e7e87227ea666c0c9
-          20260815214928 harvest_flower_sale_buyer_options_v1 6fbcf2c64120996aa47e8b0f8981dd7cc5e95ad6166d1aa798e3704a5cba96f9
-          20260815214937 harvest_flower_commercial_truth_rpc_registry_v1 a62b78680fd6c11a19e8c5fb1261d8fb04463cd86fd1c3c149bdbb1ede17ed2d
-          20260815214948 harvest_flower_commercial_reversals_v1 0f0b2c4323c2dec4bc5ea42e9235429a81419e7cf059aa4e00c9c78f5fa8e440
-          20260815214958 harvest_flower_fulfillment_required_lane_v1 1ce365cef25e92ac96c072442defed98ecbdab3499458c92e20106d12fecaa6c
-          20260815215008 harvest_flower_commercial_reversals_rpc_registry_v1 9a444e8f3c81297e553664a9f63ad330e703b16aa64501e756e6fb1841cd846c
-          MANIFEST
-          while read -r version name expected; do
-            path="supabase/migrations/${version}_${name}.sql"
-            curl -fsSL --retry 3 -H "Authorization: Bearer $SUPABASE_ANON_KEY" "$base?version=$version" -o "$path"
-            actual="$(sha256sum "$path" | awk '{print $1}')"
-            test "$actual" = "$expected" || { echo "checksum mismatch $path expected=$expected actual=$actual" >&2; exit 1; }
-          done < /tmp/atlas-source-custody-manifest
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/atlas-ci.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add supabase/migrations .github/workflows/atlas-ci.yml
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Recover exact deployed Aug 15 pre-boundary Atlas source"
-          git push origin HEAD:recovery/atlas-source-custody-v1
+          mkdir source
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${GITHUB_SHA}" \
+            | tar -xz --strip-components=1 -C source
+
+      - name: Audit service-role Atlas API routes
+        run: cd source && node scripts/audit-atlas-api-boundaries.mjs
+
+      - name: List direct task-transition RPC routes
+        shell: bash
+        run: |
+          cd source
+          offenders="$(grep -RIlE 'worker_record_task_transition_v1|owner_record_task_transition_v1|record_task_transition_v1' app/api/atlas || true)"
+          offenders="$(printf '%s\n' "$offenders" | grep -v '^app/api/atlas/task-transition/route.ts$' || true)"
+          if [ -n "$offenders" ]; then
+            echo "Atlas API routes bypassing the shared task transition route:"
+            echo "$offenders"
+            exit 1
+          fi
+
+      - name: Reject legacy worker transition clients
+        shell: bash
+        run: |
+          cd source
+          offenders="$(grep -RIl '/api/atlas/work/tasks/' app components lib || true)"
+          if [ -n "$offenders" ]; then
+            echo "Legacy worker transition endpoint references:"
+            echo "$offenders"
+            exit 1
+          fi
+
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Guard service-role API routes
+        run: node --test --test-name-pattern="interactive Atlas API routes" tests/atlas-architecture-traps.test.mjs
+
+      - name: Guard canonical task mutations
+        run: node --test --test-name-pattern="all task mutations" tests/atlas-architecture-traps.test.mjs
+
+      - name: Guard homepage membership scope
+        run: node --test --test-name-pattern="homepage reader" tests/atlas-architecture-traps.test.mjs
+
+      - name: Guard Feast Guild portfolio
+        run: node --test tests/feast-guild-portfolio.test.mjs
+
+      - name: Run tests
+        shell: bash
+        run: |
+          set +e
+          npm test > atlas-test.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            tail -n 180 atlas-test.log
+            exit "$status"
+          fi
+          tail -n 30 atlas-test.log
+
+      - name: Upload failing test log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-test-log
+          path: atlas-test.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Build Atlas
+        shell: bash
+        run: |
+          set +e
+          npm run build > atlas-build.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            tail -n 120 atlas-build.log
+            exit "$status"
+          fi
+          tail -n 40 atlas-build.log
+        env:
+          SUPABASE_URL: https://atlas-ci.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: atlas-ci-service-role-placeholder
+          NEXT_PUBLIC_SUPABASE_URL: https://atlas-ci.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: atlas-ci-publishable-placeholder
+
+      - name: Upload failing build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-build-log
+          path: atlas-build.log
+          if-no-files-found: ignore
+          retention-days: 3

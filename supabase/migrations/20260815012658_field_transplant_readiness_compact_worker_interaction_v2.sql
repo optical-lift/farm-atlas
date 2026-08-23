@@ -20,6 +20,8 @@ begin
   execute p;
 end $patch$;
 
+-- Refresh every currently open Day-cue source through the canonical generator so
+-- existing cabbage/onion cues immediately adopt the compact interaction.
 select atlas.sync_transplant_readiness_day_cue_v1(task.id)
 from atlas.tasks task
 where task.task_type='transplant_readiness'

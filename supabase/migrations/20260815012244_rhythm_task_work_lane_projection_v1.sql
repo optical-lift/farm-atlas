@@ -11,6 +11,9 @@ begin
   execute p;
 end $patch$;
 
+-- Repair any currently unreleased rhythm occurrence whose canonical task payload
+-- already declares a recognized work lane but whose occurrence projection retained
+-- the old default.
 update atlas.planned_work_occurrences
 set work_lane=task_payload->>'work_lane',
     metadata=coalesce(metadata,'{}'::jsonb)||jsonb_build_object('workLaneProjectionReconciledAt',now()),
@@ -21,24 +24,8 @@ where source_kind='rhythm_state'
   and nullif(task_payload->>'work_lane','') in ('required','process_continuation','rhythm','discretionary')
   and work_lane is distinct from task_payload->>'work_lane';
 
--- Re-signal required rhythm work that was previously budget-blocked only because
--- the occurrence projection retained the old discretionary default.
-do $release$
-declare occurrence_row record;
-begin
-  for occurrence_row in
-    select id
-    from atlas.planned_work_occurrences
-    where source_kind='rhythm_state'
-      and state in ('planned','eligible','failed','releasing')
-      and released_task_id is null
-      and work_lane='required'
-      and task_payload->>'work_lane'='required'
-  loop
-    perform atlas.signal_work_occurrence_v1(
-      occurrence_row.id,
-      'rhythm_work_lane_projection_v1',
-      jsonb_build_object('reason','Required rhythm work lane projection reconciled.')
-    );
-  end loop;
-end $release$;
+select atlas.signal_work_occurrence_v1(
+  '76c32d70-c22c-4481-9e33-bb27329a6d09',
+  'grow_room_calendar_day_repair_v1',
+  jsonb_build_object('reason','Grow Room Care is required daily farm-calendar work; occurrence lane projection repaired.')
+);
