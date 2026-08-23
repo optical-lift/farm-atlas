@@ -8,11 +8,16 @@ const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "ut
 const skyMaintainer = await readFile(new URL("../app/AtlasSkyLedgerMaintainer.tsx", import.meta.url), "utf8");
 const bell = await readFile(new URL("../components/atlas/home/AtlasBellCover.tsx", import.meta.url), "utf8");
 
-test("Principal projection has a small Principal dock instead of Farm Clock and Manager roots", () => {
+test("Principal projection keeps its runtime boundary without creating a second Owner navigation universe", () => {
   assert.match(frame, /pathname === "\/principal"/);
-  assert.match(frame, /label: "Home", href: "\/principal"/);
-  assert.match(frame, /label: "Farm Ops", href: "\/overview\/week"/);
-  assert.match(frame, /principalProjection\s*\? \[/);
+  assert.match(frame, /ownerMode \? "\/principal" : "\/"/);
+  assert.match(frame, /ownerMode \? "\/owner" : workHref/);
+  assert.doesNotMatch(frame, /label: "Farm Ops", href: "\/overview\/week"/);
+  assert.doesNotMatch(frame, /principalProjection\s*\? \[/);
+  assert.match(frame, /label: "Clock"/);
+  assert.match(frame, /label: "Manager"/);
+  assert.match(frame, /label: "Harvest"/);
+  assert.match(frame, /label: "More"/);
 });
 
 test("the global Atlas add control is retired from the contextual shell", () => {
