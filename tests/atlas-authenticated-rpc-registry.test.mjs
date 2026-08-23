@@ -119,6 +119,8 @@ const workerHarvestRegistry = "20260817153523_worker_harvest_rpc_registry_reconc
 const principalRegistry = "20260817005100_principal_rpc_registry_reconciliation_v1.sql";
 const rpcPrivilegeStart = "20260813174114_worker_clock_exact_task_time_v1.sql";
 const rpcPrivilegeRegistry = "20260819225913_atlas_rpc_privilege_registry_reconciliation_v2.sql";
+const structuredWorkRpcStart = "20260823002136_add_structured_work_execution_grammar_v1.sql";
+const structuredWorkRpcRegistry = "20260823023849_structured_work_rpc_registry_v1.sql";
 
 function pairedRegistryFor(name) {
   if (paired[name]) return paired[name];
@@ -127,6 +129,7 @@ function pairedRegistryFor(name) {
   if (workerHarvestHistoricalRpcMigrations.has(name)) return workerHarvestRegistry;
   if (principalHistoricalRpcMigrations.has(name)) return principalRegistry;
   if (name >= rpcPrivilegeStart && name < rpcPrivilegeRegistry) return rpcPrivilegeRegistry;
+  if (name >= structuredWorkRpcStart && name < structuredWorkRpcRegistry) return structuredWorkRpcRegistry;
   return null;
 }
 
