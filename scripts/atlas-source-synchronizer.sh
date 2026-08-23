@@ -90,11 +90,15 @@ fs.writeFileSync(manifestPath, manifestLines.join('\n') + (manifestLines.length 
 const adjudicationLines = ['# production_version\tproduction_name\tdisposition\trepository_file\tcustody_key'];
 for (const row of packet.acceptedVersionDrift ?? []) {
   const evidence = row.evidence ?? {};
+  const storedRepositoryFile = safeField(evidence.repositoryFile, /^(?:supabase\/migrations\/)?[A-Za-z0-9_.-]+\.sql$/, 'adjudication_repository_file');
+  const repositoryFile = storedRepositoryFile.startsWith('supabase/migrations/')
+    ? storedRepositoryFile
+    : `supabase/migrations/${storedRepositoryFile}`;
   adjudicationLines.push([
     safeField(evidence.productionVersion, /^\d+$/, 'adjudication_production_version'),
     safeField(evidence.productionName, /^[A-Za-z0-9_]+$/, 'adjudication_production_name'),
     'VERSION_DRIFT_ALIAS',
-    safeField(evidence.repositoryFile, /^supabase\/migrations\/[A-Za-z0-9_.-]+\.sql$/, 'adjudication_repository_file'),
+    repositoryFile,
     safeField(row.custodyKey, /^[A-Za-z0-9_.:\/-]+$/, 'adjudication_custody_key'),
   ].join('\t'));
 }
