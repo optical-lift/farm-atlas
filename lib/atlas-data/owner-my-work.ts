@@ -95,6 +95,20 @@ type OwnerWorkTaskRow = {
   metadata: Record<string, unknown> | null;
 };
 
+type OperationalEscalationRow = {
+  id: string;
+  source_type: string;
+  source_id: string;
+  escalation_kind: string;
+  current_state: Record<string, unknown> | null;
+  owner_decision_required: string | null;
+  consequence: string | null;
+  reason_for_floor: string | null;
+  floor_class: number | null;
+  expected_owner_minutes: number | null;
+  metadata: Record<string, unknown> | null;
+};
+
 const OWNER_WORK_TASK_FIELDS = [
   "id",
   "title",
@@ -112,6 +126,10 @@ const OWNER_WORK_TASK_FIELDS = [
   "metadata",
 ].join(", ");
 
+function text(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
 export async function getOwnerMyWork(access: AtlasRoleAccess): Promise<OwnerMyWorkProjection> {
   if (access.membership.role !== "owner") {
     throw new Error("Owner membership required.");
@@ -123,7 +141,7 @@ export async function getOwnerMyWork(access: AtlasRoleAccess): Promise<OwnerMyWo
   const ownerMembershipId = access.membership.membershipId;
   const ownerUserId = access.session.userId;
 
-  const [taskResult, principalRead] = await Promise.all([
+  const [taskResult, principalRead, escalationResult] = await Promise.all([
     supabase
       .from("tasks")
       .select(OWNER_WORK_TASK_FIELDS)
@@ -135,6 +153,13 @@ export async function getOwnerMyWork(access: AtlasRoleAccess): Promise<OwnerMyWo
     readAtlasPrincipalSelfContext()
       .then((context) => ({ state: "ready" as const, context }))
       .catch(() => ({ state: "unavailable" as const, context: null })),
+    supabase
+      .from("operational_escalations")
+      .select("id, source_type, source_id, escalation_kind, current_state, owner_decision_required, consequence, reason_for_floor, floor_class, expected_owner_minutes, metadata")
+      .eq("status", "open")
+      .eq("source_system", "farm_clock")
+      .eq("source_type", "worker_task_execution_readiness")
+      .limit(250),
   ]);
 
   if (taskResult.error) {
@@ -158,7 +183,39 @@ export async function getOwnerMyWork(access: AtlasRoleAccess): Promise<OwnerMyWo
     metadata: task.metadata ?? {},
   }));
 
-  const principalCandidates = principalRead.context?.clockCandidates ?? [];
+  const farmReadinessCandidates = escalationResult.error
+    ? []
+    : ((escalationResult.data ?? []) as unknown as OperationalEscalationRow[])
+      .filter((row) => text(row.metadata?.farmId) === access.membership.farmId)
+      .map((row) => {
+        const state = row.current_state ?? {};
+        const taskTitle = text(state.taskTitle) || "Worker task";
+        const readinessKind = text(state.readinessKind);
+        const title = readinessKind === "destination"
+          ? `${taskTitle} needs a planting destination`
+          : `${taskTitle} needs Owner readiness`;
+        return {
+          ownerRequired: true,
+          sourceType: row.source_type,
+          sourceId: row.source_id,
+          title,
+          consequence: row.owner_decision_required || row.consequence || null,
+          reasonForFloor: row.reason_for_floor,
+          fixedStart: today,
+          windowStart: null,
+          mustBeginBy: null,
+          mustFinishBy: null,
+          windowEnd: null,
+          floorClass: row.floor_class,
+          expectedMinutes: row.expected_owner_minutes,
+          domain: "farm_operations",
+        };
+      });
+
+  const principalCandidates = [
+    ...(principalRead.context?.clockCandidates ?? []),
+    ...farmReadinessCandidates,
+  ];
   const principalTimeZone = principalRead.context?.principal?.homeTimezone ?? "UTC";
   const core = buildOwnerMyWorkProjection({
     ownerMembershipId,
