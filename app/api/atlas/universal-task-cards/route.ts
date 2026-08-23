@@ -47,7 +47,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "universal-dated-task-cards-v7-worker-warrant",
+      "X-Atlas-Read-Path": "universal-dated-task-cards-v8-worker-warrant",
     },
   });
 }
@@ -112,20 +112,6 @@ function baselineSurvivesPlacement(placement: DayPlacement, placementDay: string
   if (placement.state === "returned_to_atlas") return placement.serviceDate !== placementDay;
   if (placement.serviceDate === placementDay) return true;
   return placement.serviceDate < placementDay;
-}
-
-function hasExplicitCarryForward(card: TaskCardRow) {
-  const policy = typeof card.metadata?.calendar_rollover_policy === "string"
-    ? card.metadata.calendar_rollover_policy.trim().toLowerCase()
-    : "";
-  return policy === "carry_forward" || policy === "carry" || policy === "true";
-}
-
-function workerDateWindowAllows(card: TaskCardRow, windowStart: string) {
-  if (card.status !== "open" && card.status !== "blocked") return true;
-  if (!card.due_date) return false;
-  if (card.due_date >= windowStart) return true;
-  return hasExplicitCarryForward(card);
 }
 
 function farmHandMoveContext(
@@ -309,11 +295,11 @@ export async function GET(request: Request) {
       }
     }
 
-    // Worker surfaces are execution surfaces. Expired work without an explicit
-    // carry-forward contract and open work without a current execution warrant
-    // belong in management/Owner attention, not in the worker's list.
+    // Worker surfaces are execution surfaces. Calendar rollover owns the date
+    // movement contract; this reader only withholds open work that lacks a
+    // current execution warrant. Unfinished work is never hidden merely because
+    // it began on an earlier worker day.
     if (farmHandLens && workerMembershipId && workerFarmId) {
-      baseTaskCards = baseTaskCards.filter((card) => workerDateWindowAllows(card, doneDate));
       const openIds = baseTaskCards
         .filter((card) => card.status === "open" || card.status === "blocked")
         .map((card) => card.task_id);
