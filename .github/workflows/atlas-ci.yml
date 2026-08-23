@@ -59,6 +59,8 @@ jobs:
   source-custody:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      ATLAS_PRODUCTION_DATABASE_URL: ${{ secrets.ATLAS_PRODUCTION_DATABASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -66,19 +68,16 @@ jobs:
       - name: Verify synchronizer contract
         run: node --test tests/atlas-source-custody.test.mjs
 
-      - name: Install PostgreSQL client when live custody is configured
-        if: ${{ secrets.ATLAS_PRODUCTION_DATABASE_URL != '' }}
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
-
-      - name: Synchronize Atlas executable source with production custody
-        if: ${{ secrets.ATLAS_PRODUCTION_DATABASE_URL != '' }}
-        env:
-          ATLAS_PRODUCTION_DATABASE_URL: ${{ secrets.ATLAS_PRODUCTION_DATABASE_URL }}
-        run: npm run sync:atlas:source
-
-      - name: Record live custody credential status
-        if: ${{ secrets.ATLAS_PRODUCTION_DATABASE_URL == '' }}
-        run: echo "Live production custody check is a release gate; GitHub secret ATLAS_PRODUCTION_DATABASE_URL is not configured in this repository. Structural synchronizer guards passed."
+      - name: Run live custody synchronization when configured
+        shell: bash
+        run: |
+          if [ -z "$ATLAS_PRODUCTION_DATABASE_URL" ]; then
+            echo "Live production custody check remains a release gate; repository secret ATLAS_PRODUCTION_DATABASE_URL is not configured. Structural synchronizer guards passed."
+            exit 0
+          fi
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+          npm run sync:atlas:source
 
   validate:
     runs-on: ubuntu-latest
