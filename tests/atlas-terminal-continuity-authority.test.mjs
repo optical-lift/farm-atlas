@@ -93,7 +93,8 @@ test('superseded farm continuity audit engines are absent from the finished exec
   assert.match(cleanup, /delete from atlas\.authenticated_rpc_registry/i);
   assert.match(cleanup, /migration history remains provenance only/i);
   assert.match(cleanup, /Historical farm_continuity_audit_vN engines have been removed from the executable schema/i);
-  assert.doesNotMatch(cleanup, /cascade/i);
+  const executableCleanup = cleanup.replace(/--.*$/gm, '');
+  assert.doesNotMatch(executableCleanup, /\bcascade\b/i);
 });
 
 test('continuity has one explicit product API and exactly three current internal proof surfaces during convergence', () => {
