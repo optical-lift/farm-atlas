@@ -76,8 +76,8 @@ test('governing contract makes Boundary explicit while keeping Effect outside th
   assert.match(contract, /satisfied → open/);
   assert.match(contract, /same-state/i);
   assert.match(contract, /idempotent/i);
-  assert.match(contract, /no release/i);
-  assert.match(contract, /no notification/i);
-  assert.match(contract, /no Clock/i);
+  assert.match(contract, /no release consumer/i);
+  assert.match(contract, /no notification consumer/i);
+  assert.match(contract, /no Principal or Clock arbitration/i);
   assert.match(contract, /task_execution_readiness_v1/);
 });
