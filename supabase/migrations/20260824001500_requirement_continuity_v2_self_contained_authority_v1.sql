@@ -12,8 +12,12 @@ declare
   v_def text;
   v_start integer;
   v_finish integer;
-  v_issue_start text := E"    union all\n    select 'reconstructed_living_body_excluded_from_progression'";
-  v_next_issue text := E"    union all\n    select 'requirement_clock_reset_detected'";
+  v_issue_start text := $issue$
+    union all
+    select 'reconstructed_living_body_excluded_from_progression'$issue$;
+  v_next_issue text := $next$
+    union all
+    select 'requirement_clock_reset_detected'$next$;
 begin
   select pg_get_functiondef(p.oid)
     into v_def
@@ -52,8 +56,13 @@ begin
   -- another wrapper version.
   v_def := replace(
     v_def,
-    E"'auditDoesNotMutateDomainTruth',true\n    )",
-    E"'auditDoesNotMutateDomainTruth',true,\n      'canonicalRequirementContinuityComputesCurrentPopulationDirectly',true,\n      'supersededRequirementVersionsAreNotExecutionDependencies',true,\n      'legacyProgressionDiagnosticsRemainMigrationHistoryOnly',true\n    )"
+    $old$'auditDoesNotMutateDomainTruth',true
+    )$old$,
+    $new$'auditDoesNotMutateDomainTruth',true,
+      'canonicalRequirementContinuityComputesCurrentPopulationDirectly',true,
+      'supersededRequirementVersionsAreNotExecutionDependencies',true,
+      'legacyProgressionDiagnosticsRemainMigrationHistoryOnly',true
+    )$new$
   );
 
   execute v_def;
