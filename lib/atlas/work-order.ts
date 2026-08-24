@@ -79,10 +79,6 @@ export function atlasInferredWorkOrderAnchor(task: AtlasTaskCard): AtlasWorkOrde
   const category = lower(atlasMetaString(task, "work_category_key"));
   const collection = lower(atlasMetaString(task, "work_collection_key"));
 
-  // The canonical Worker Day authority defines Farm Round as the opening task.
-  // Any screen that must fall back to local task-card inference must preserve
-  // that same operational identity rather than silently reclassifying it.
-  if (action === "farm_round" || taskType === "stewardship_round" || lower(atlasMetadataValue(task, "farm_round_parent")) === "true") return "top";
   if (route === "mow" || action === "mow" || collection === "mowing") return "bottom";
   if (route === "plant" || action === "plant" || action === "transplant") return "evening";
   if (["signage_safety", "hospitality", "guest_readiness", "venue_reset"].includes(category)) return "visibility";
