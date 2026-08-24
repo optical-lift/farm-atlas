@@ -63,6 +63,7 @@ function returnPath(assignee: AtlasAssigneeConfig) {
 export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Props) {
   const [members, setMembers] = useState<RoundMember[]>(() => childTasks.map(asMember));
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [savingRound, setSavingRound] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const ordered = useMemo(
@@ -75,6 +76,7 @@ export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Prop
     return Array.from(grouped.entries());
   }, [ordered]);
   const remaining = ordered.filter((member) => !isDone(member)).length;
+  const completionBusy = Boolean(savingId) || savingRound;
 
   async function toggle(member: RoundMember) {
     const done = isDone(member);
@@ -99,6 +101,42 @@ export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Prop
     } finally {
       setSavingId(null);
     }
+  }
+
+  async function completeRound() {
+    const pending = ordered.filter((member) => !isDone(member));
+    if (!pending.length) {
+      window.location.assign(returnPath(assignee));
+      return;
+    }
+
+    setSavingRound(true);
+    setMessage(null);
+    let nextMembers = members;
+
+    try {
+      for (const member of pending) {
+        await postAtlasTaskTransition({
+          taskId: member.task_id,
+          transition: "done",
+          note: "Completed from Farm Round Done action.",
+          payload: { farmRoundParentTaskId: task.task_id, farmRoundMember: true, farmRoundTerminalAction: true },
+        });
+        nextMembers = nextMembers.map((candidate) => candidate.task_id === member.task_id
+          ? { ...candidate, status: "done" }
+          : candidate);
+        setMembers(nextMembers);
+      }
+      window.location.assign(returnPath(assignee));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Atlas could not complete this Farm Round.");
+    } finally {
+      setSavingRound(false);
+    }
+  }
+
+  function leaveUnfinished() {
+    window.location.assign(returnPath(assignee));
   }
 
   async function reportIssue(member: RoundMember, issue: string) {
@@ -127,6 +165,9 @@ export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Prop
         title="Farm Round"
         subtitle="Elm Farm"
         timing={remaining === 0 ? "Round complete" : `${remaining} ${remaining === 1 ? "item" : "items"} due`}
+        onDone={() => void completeRound()}
+        onUnfinished={leaveUnfinished}
+        completionDisabled={completionBusy}
       >
         <div className={rail.rowKey} aria-label="Farm Round controls">
           <span>tap to cross off</span>
@@ -151,7 +192,7 @@ export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Prop
                           className={rail.reminderToggle}
                           type="checkbox"
                           checked={done}
-                          disabled={Boolean(savingId)}
+                          disabled={completionBusy}
                           onChange={() => void toggle(member)}
                         />
                         <label className={rail.reminderCheck} htmlFor={id}>
@@ -165,7 +206,7 @@ export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Prop
                             <summary aria-label={`Report an issue with ${member.displayLabel}`}><span>+</span></summary>
                             <div className={roundStyles.issuePanel}>
                               {member.issueOptions.map((issue) => (
-                                <button type="button" key={issue} disabled={busy} onClick={() => void reportIssue(member, issue)}>{issue}</button>
+                                <button type="button" key={issue} disabled={busy || savingRound} onClick={() => void reportIssue(member, issue)}>{issue}</button>
                               ))}
                             </div>
                           </details>
