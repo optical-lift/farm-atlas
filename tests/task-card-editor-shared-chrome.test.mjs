@@ -5,6 +5,7 @@ import test from "node:test";
 const frame = readFileSync("components/atlas/task-card-frame.tsx", "utf8");
 const frameStyles = readFileSync("components/atlas/task-card-frame.module.css", "utf8");
 const editorFrame = readFileSync("app/owner/task-card-lab/DominionCardFrame.tsx", "utf8");
+const editorFrameImplementation = readFileSync("app/owner/task-card-lab/_components/DominionCardFrame.tsx", "utf8");
 const venue = readFileSync("app/owner/task-card-lab/VenueCardSpecimen.tsx", "utf8");
 const sow = readFileSync("app/owner/task-card-lab/SowCardSpecimen.tsx", "utf8");
 const weed = readFileSync("app/owner/task-card-lab/WeedCardSpecimen.tsx", "utf8");
@@ -12,15 +13,22 @@ const mow = readFileSync("app/owner/task-card-lab/MowCardSpecimen.tsx", "utf8");
 const harvest = readFileSync("app/owner/task-card-lab/HarvestCardSpecimen.tsx", "utf8");
 const remaining = readFileSync("app/owner/task-card-lab/RemainingDominionCardSpecimens.tsx", "utf8");
 
-test("shared production frame owns the approved card top and default completion chrome", () => {
-  assert.match(editorFrame, /@\/components\/atlas\/task-card-frame/);
+test("shared production frame owns approved chrome while completion authority stays explicit", () => {
+  assert.match(editorFrame, /\.\/_components\/DominionCardFrame/);
+  assert.match(editorFrameImplementation, /@\/components\/atlas\/task-card-frame/);
   assert.match(frame, /<span>\{family\}<\/span>/);
   assert.match(frame, /familyDetail \? <small>\{familyDetail\}<\/small> : null/);
   assert.match(frame, /<h2>\{title\}<\/h2>/);
   assert.match(frame, /subtitle \? <p className=\{styles\.subtitle\}>\{subtitle\}<\/p> : null/);
   assert.match(frame, /timing \? <div className=\{styles\.timing\}>\{timing\}<\/div> : null/);
-  assert.match(frame, /completion === false \? null/);
-  assert.match(frame, /completion !== undefined/);
+  assert.match(frame, /type InteractiveCompletionProps = \{/);
+  assert.match(frame, /onDone: \(\) => void;/);
+  assert.match(frame, /onUnfinished: \(\) => void;/);
+  assert.match(frame, /type CustomCompletionProps = \{/);
+  assert.match(frame, /type PreviewCompletionProps = \{/);
+  assert.match(frame, /props\.completion === false \? null/);
+  assert.match(frame, /props\.completion !== undefined/);
+  assert.match(frame, /completionPreview/);
   assert.match(frame, />Done<\/button>/);
   assert.match(frame, />Unfinished<\/button>/);
 });
