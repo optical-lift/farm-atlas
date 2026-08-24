@@ -40,6 +40,9 @@ const paired = {
   "20260821162442_align_weekly_harvest_mockup_recording_v2.sql": "20260821163400_weekly_harvest_rpc_registry_and_privilege_hardening_v1.sql",
   "20260822154955_atlas_entity_identity_review_bridge_v1.sql": "20260822155702_entity_identity_review_rpc_registry_v1.sql",
   "20260822174152_worker_fast_path_execute_scope_v1.sql": "20260822175956_reconcile_recent_atlas_rpc_execute_surface_v1.sql",
+  "20260823232012_farm_continuity_terminal_census_v1.sql": "20260823233407_farm_terminal_census_v2_rpc_registry_reconciliation_v1.sql",
+  "20260823232534_farm_continuity_terminal_census_requirement_semantics_v2.sql": "20260823233407_farm_terminal_census_v2_rpc_registry_reconciliation_v1.sql",
+  "20260823233129_farm_terminal_census_v2_release_contract.sql": "20260823233407_farm_terminal_census_v2_rpc_registry_reconciliation_v1.sql",
 };
 
 const batchedPresentedWorkMigrations = new Set([
