@@ -1,9 +1,29 @@
-.shell { max-width: 760px; margin: 0 auto; padding: 18px 14px 40px; }
+.shell { min-height: 100%; padding: 18px 14px 120px; background: var(--atlas-app-background, #f4efe6); }
+.shell > [data-atlas-task-card-frame] { width: min(100%, 520px); margin: 0 auto; }
+.key { display: flex; gap: 16px; justify-content: space-between; padding: 12px 18px; border-top: 1px solid rgba(215, 204, 189, 0.62); border-bottom: 1px solid rgba(215, 204, 189, 0.62); color: #8c8d85; font-size: 9px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.route { display: grid; }
+.stop { position: relative; padding: 17px 18px 17px 64px; border-bottom: 1px solid rgba(215, 204, 189, 0.62); background: #fff; }
+.stop::before { content: ""; position: absolute; left: 31px; top: 0; bottom: 0; width: 1px; background: rgba(133, 139, 184, 0.34); }
+.stop::after { content: ""; position: absolute; left: 25px; top: 27px; width: 12px; height: 12px; border: 2px solid #858bb8; border-radius: 50%; background: #fff; }
+.stopHeader { display: grid; gap: 3px; margin-bottom: 10px; }
+.stopHeader small { color: #858bb8; font-size: 8px; font-weight: 950; letter-spacing: 0.12em; text-transform: uppercase; }
+.stopHeader h3 { margin: 0; color: var(--atlas-text); font-size: 20px; line-height: 1.05; font-weight: 950; letter-spacing: -0.035em; }
+.stopHeader span { color: #85867f; font-size: 10px; font-weight: 800; }
+.items { display: grid; }
+.item { display: grid; grid-template-columns: 28px minmax(0, 1fr) 34px; align-items: center; gap: 8px; min-height: 54px; padding: 8px 0; border-top: 1px solid rgba(215, 204, 189, 0.5); }
+.item:first-child { border-top: 0; }
+.toggle { width: 20px; height: 20px; margin: 0; accent-color: #858bb8; }
+.itemLabel { min-width: 0; cursor: pointer; }
 .itemCopy { min-width: 0; display: grid; gap: 3px; }
-.itemCopy strong { min-width: 0; }
-.itemCopy small { color: #8b8d84; font-size: 9px; line-height: 1.1; font-weight: 780; }
-.issueDrawer[open] { padding: 0 0 10px; }
-.issuePanel { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 6px; margin: -1px 0 10px; padding: 8px; border: 1px solid rgba(207, 196, 179, 0.72); border-radius: 12px; background: rgba(250, 248, 239, 0.78); }
+.itemCopy strong { min-width: 0; color: #343542; font-size: 13px; line-height: 1.2; font-weight: 900; }
+.itemCopy small { color: #8b8d84; font-size: 9px; line-height: 1.15; font-weight: 780; }
+.item[data-done="true"] .itemCopy strong { color: #858782; text-decoration: line-through; }
+.issueDrawer { position: relative; }
+.issueDrawer summary { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid rgba(139, 145, 194, 0.28); border-radius: 50%; color: #666b8f; background: rgba(255, 255, 255, 0.9); font-size: 20px; font-weight: 800; list-style: none; cursor: pointer; }
+.issueDrawer summary::-webkit-details-marker { display: none; }
+.issueDrawer[open] { grid-column: 1 / -1; width: 100%; }
+.issuePanel { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; padding: 8px; border: 1px solid rgba(207, 196, 179, 0.72); border-radius: 12px; background: rgba(250, 248, 239, 0.78); }
 .issuePanel button { min-height: 32px; border: 1px solid rgba(139, 145, 194, 0.22); border-radius: 999px; background: rgba(255, 255, 255, 0.78); color: #606275; padding: 7px 10px; font: inherit; font-size: 9px; line-height: 1; font-weight: 900; }
 .message { margin: 0; padding: 10px 18px 18px; color: #704d43; font-size: 10px; line-height: 1.35; }
 .empty { margin: 0; padding: 18px; color: #85867f; font-size: 11px; }
+@media (max-width: 520px) { .shell { padding-left: 10px; padding-right: 10px; } .stop { padding-left: 58px; padding-right: 16px; } .stop::before { left: 27px; } .stop::after { left: 21px; } }
