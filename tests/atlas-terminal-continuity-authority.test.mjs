@@ -8,9 +8,9 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
 const releasePath = 'supabase/migrations/20260823233129_farm_terminal_census_v2_release_contract.sql';
 const registryPath = 'supabase/migrations/20260823233407_farm_terminal_census_v2_rpc_registry_reconciliation_v1.sql';
-const retirementPath = 'supabase/migrations/20260823234500_retire_legacy_farm_continuity_audit_family_v1.sql';
 const selfContainedPath = 'supabase/migrations/20260823235000_farm_terminal_census_v2_self_contained_authority_v1.sql';
 const apiBoundaryPath = 'supabase/migrations/20260823235000_continuity_single_product_api_boundary_v1.sql';
+const cleanupPath = 'supabase/migrations/20260824000500_remove_superseded_farm_continuity_audit_engines_v1.sql';
 
 test('terminal farm continuity has one self-contained canonical current-state authority', () => {
   const canonical = read(selfContainedPath);
@@ -59,18 +59,14 @@ test('terminal census helpers remain service-internal and cannot become authenti
   assert.match(registry, /false,true,true,1,1/);
 });
 
-test('legacy farm continuity audit versions are lineage-only, not alternative product authorities', () => {
-  const retirement = read(retirementPath);
-  assert.match(retirement, /proname ~ '\^farm_continuity_audit_v\[0-9\]\+\$'/);
-  assert.match(retirement, /revoke execute on function %s from public, anon, authenticated/i);
-  assert.match(retirement, /grant execute on function %s to service_role/i);
-  assert.match(retirement, /classification = 'service_internal'/);
-  assert.match(retirement, /authenticated_execute_expected = false/);
-  assert.match(retirement, /anonymous_execute_expected = false/);
-  assert.match(retirement, /service_execute_expected = true/);
-  assert.match(retirement, /historical_diagnostic_lineage_only/);
-  assert.match(retirement, /farm_continuity_terminal_census_v2/);
-  assert.match(retirement, /cannot serve as present-tense farm continuity authority/);
+test('superseded farm continuity audit engines are absent from the finished executable schema', () => {
+  const cleanup = read(cleanupPath);
+  assert.match(cleanup, /proname ~ '\^farm_continuity_audit_v\[0-9\]\+\$'/);
+  assert.match(cleanup, /drop function %s restrict/i);
+  assert.match(cleanup, /delete from atlas\.authenticated_rpc_registry/i);
+  assert.match(cleanup, /migration history remains provenance only/i);
+  assert.match(cleanup, /Historical farm_continuity_audit_vN engines have been removed from the executable schema/i);
+  assert.doesNotMatch(cleanup, /cascade/i);
 });
 
 test('continuity has one product-facing API and all lower-level proof families are service-internal', () => {
