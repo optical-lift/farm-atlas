@@ -5,6 +5,7 @@ import test from "node:test";
 const venue = await readFile(new URL("../components/atlas/venue-task-detail.tsx", import.meta.url), "utf8");
 const venueRail = await readFile(new URL("../components/atlas/task-card-venue-rail.module.css", import.meta.url), "utf8");
 const farmRound = await readFile(new URL("../components/atlas/farm-round-task-detail.tsx", import.meta.url), "utf8");
+const farmRoundCss = await readFile(new URL("../components/atlas/farm-round-task-detail.module.css", import.meta.url), "utf8");
 const cropMove = await readFile(new URL("../components/atlas/crop-move-task-detail.tsx", import.meta.url), "utf8");
 const cropMoveCss = await readFile(new URL("../components/atlas/crop-move-task-detail.module.css", import.meta.url), "utf8");
 const workerReady = await readFile(new URL("../components/atlas/worker-ready-assigned-task-execution-shell.tsx", import.meta.url), "utf8");
@@ -35,12 +36,18 @@ test("Venue checklist API preserves Editor interaction metadata instead of UI la
   assert.match(venueMetadata, /'For sale at Community Thursday'/);
 });
 
-test("Farm Round uses the same quiet local rail as the approved Editor specimen", () => {
-  assert.match(farmRound, /rail\.localStation/);
-  assert.match(farmRound, /rail\.localReminderRow/);
-  assert.match(farmRound, /rail\.reminderToggle/);
+test("Farm Round owns its route instrument inside canonical Task Focus geometry", () => {
+  assert.match(farmRound, /AtlasTaskCardFrame/);
+  assert.match(farmRound, /roundStyles\.route/);
+  assert.match(farmRound, /roundStyles\.stop/);
+  assert.match(farmRound, /roundStyles\.item/);
   assert.match(farmRound, /farm_round_issue_options/);
-  assert.doesNotMatch(farmRound, /atlas-farm-round-stop/);
+  assert.doesNotMatch(farmRound, /task-card-venue-rail/);
+  assert.doesNotMatch(farmRound, /rail\./);
+  assert.match(farmRoundCss, /width:min\(100%,520px\)/);
+  assert.match(farmRoundCss, /\.route/);
+  assert.match(farmRoundCss, /\.stop/);
+  assert.match(farmRoundCss, /\.item/);
 });
 
 test("future Farm Round projection emits only top-level parents and carries the miniature member preview", () => {
