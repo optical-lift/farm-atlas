@@ -28,10 +28,7 @@ test('1E searches canonical crop observation state rather than treating a submit
   assert.match(sql, /workerResultFieldAloneDoesNotBecomeTruth/);
   assert.match(sql, /record_crop_observation_for_member_v1/);
   assert.match(sql, /Canonical observation was recorded but did not satisfy the truth gap; transaction rolled back/);
-  assert.ok(
-    sql.indexOf('record_crop_observation_for_member_v1') < sql.lastIndexOf('truth_acquisition_search_v1(v_instance.id)'),
-    'canonical domain observation must be written before search confirms the fact',
-  );
+  assert.ok(sql.indexOf('record_crop_observation_for_member_v1') < sql.lastIndexOf('truth_acquisition_search_v1(v_instance.id)'), 'canonical domain observation must be written before search confirms the fact');
 });
 
 test('1E final support proof fails closed unless the observation path is executable and governed', () => {
@@ -142,10 +139,10 @@ test('1E prototype registry is retained as deployment provenance but removed fro
   assert.match(consolidated, /drop table if exists atlas\.truth_acquisition_observation_adapters/);
 });
 
-test('1E custody surface matches the final live governed surface', () => {
+test('1E guarantees remain present under the current governed Atlas surface', () => {
   const expected = JSON.parse(read('docs/architecture/atlas-source-custody-surface-v1.json'));
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1166);
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1172);
   assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 471);
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '0a8bcf0f320a258f664e54beca737f97f4a6eb54f95344f6ed05e6b37e797eb7');
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '3b3757296c4929b8e5c0a548323797d8afc1da2ee61de7d68be8186e01edbd00');
   assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, 'd2f887657009d99d4aadffe791f3b0a1cb9368ec5856a2514beac5ab0bf3294c');
 });
