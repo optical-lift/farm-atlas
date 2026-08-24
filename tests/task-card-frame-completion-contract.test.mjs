@@ -6,6 +6,7 @@ import test from "node:test";
 const root = process.cwd();
 const frame = fs.readFileSync(path.join(root, "components/atlas/task-card-frame.tsx"), "utf8");
 const labFrame = fs.readFileSync(path.join(root, "app/owner/task-card-lab/_components/DominionCardFrame.tsx"), "utf8");
+const siteLayout = fs.readFileSync(path.join(root, "components/atlas/site-layout-task-detail.tsx"), "utf8");
 
 test("standard Task Card completion requires executable handlers", () => {
   assert.match(frame, /type InteractiveCompletionProps = \{[\s\S]*?onDone: \(\) => void;[\s\S]*?onUnfinished: \(\) => void;/);
@@ -26,4 +27,10 @@ test("Task Card Lab owns its visual-only completion exception", () => {
   assert.match(frame, /data-atlas-completion-preview="true"/);
   assert.match(frame, /className=\{styles\.primaryFinish\} disabled>Done<\/button>/);
   assert.match(frame, /className=\{styles\.secondaryFinish\} disabled>Unfinished<\/button>/);
+});
+
+test("blocked Setup cards explicitly suppress completion instead of falling through to dead controls", () => {
+  assert.match(siteLayout, /const completion = executable \?[\s\S]*?\) : false;/);
+  assert.match(siteLayout, /completion=\{completion\}/);
+  assert.doesNotMatch(siteLayout, /\) : undefined;/);
 });
