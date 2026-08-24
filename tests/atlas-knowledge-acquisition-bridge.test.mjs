@@ -227,8 +227,8 @@ test('Tranche 1E uses canonical inspect action taxonomy for observation carriers
 test('knowledge acquisition source retains every exact post-cutover production migration and current custody surface', () => {
   for (const relative of [migrationPath, firstAnswerPath, propagationPath, retirePath, finalFixPath, workerPrototypePath, workerPrototypeFixPath, workerBridgePath, workerConsolidationPath, workerOperationFixPath]) assert.equal(fs.existsSync(path.join(root, relative)), true, `missing production migration source: ${relative}`);
   const expected = JSON.parse(read('docs/architecture/atlas-source-custody-surface-v1.json'));
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1182);
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1183);
   assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 473);
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, 'dbd1e470c16b4bd9291d96c8585d4074e942ffd7aa2ad078bda3d2a032c7af0b');
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '159353887d21b4c63899fc1cef4d609620b20065252c3985eb9fcf6e8a3c7605');
   assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, 'f21ff68b0a196f64efe69f67a1e7f28ebe92edd6b6e1aa9bd29f4ce086814439');
 });
