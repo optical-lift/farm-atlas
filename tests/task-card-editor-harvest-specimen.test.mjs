@@ -7,6 +7,7 @@ const harvestStyles = readFileSync("app/owner/task-card-lab/harvest-card-specime
 const frameSource = readFileSync("components/atlas/task-card-frame.tsx", "utf8");
 const frameStyles = readFileSync("components/atlas/task-card-frame.module.css", "utf8");
 const editorFrame = readFileSync("app/owner/task-card-lab/DominionCardFrame.tsx", "utf8");
+const editorFrameImplementation = readFileSync("app/owner/task-card-lab/_components/DominionCardFrame.tsx", "utf8");
 const editorSource = readFileSync("app/owner/task-card-lab/page.tsx", "utf8");
 
 test("Task Card Editor renders the dedicated Harvest specimen", () => {
@@ -16,7 +17,8 @@ test("Task Card Editor renders the dedicated Harvest specimen", () => {
 
 test("Harvest uses shared production task chrome with a current-zone subtitle and no hardcoded schedule copy", () => {
   assert.match(harvestSource, /<DominionCardFrame family="Harvest" title="Harvest Stems" subtitle=\{zones\.join\(" · "\)\}>/);
-  assert.match(editorFrame, /@\/components\/atlas\/task-card-frame/);
+  assert.match(editorFrame, /\.\/_components\/DominionCardFrame/);
+  assert.match(editorFrameImplementation, /@\/components\/atlas\/task-card-frame/);
   assert.match(frameSource, /className=\{styles\.familyRow\}/);
   assert.match(frameStyles, /\.familyRow > span \{[\s\S]*color: #858bb8/);
   assert.doesNotMatch(harvestSource, /Thursday Harvest/);
