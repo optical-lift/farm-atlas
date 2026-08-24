@@ -4,6 +4,7 @@ import test from "node:test";
 
 const frame = readFileSync("components/atlas/task-card-frame.tsx", "utf8");
 const editorFrame = readFileSync("app/owner/task-card-lab/DominionCardFrame.tsx", "utf8");
+const editorFrameImplementation = readFileSync("app/owner/task-card-lab/_components/DominionCardFrame.tsx", "utf8");
 const weed = readFileSync("app/owner/task-card-lab/WeedCardSpecimen.tsx", "utf8");
 const cropVariants = readFileSync("app/owner/task-card-lab/crop-cycle-bed-variants.module.css", "utf8");
 const mow = readFileSync("app/owner/task-card-lab/MowCardSpecimen.tsx", "utf8");
@@ -13,8 +14,10 @@ const farmRound = readFileSync("app/owner/task-card-lab/FarmRoundCardSpecimen.ts
 const page = readFileSync("app/owner/task-card-lab/page.tsx", "utf8");
 
 test("Germination result logging is the completion action", () => {
-  assert.match(editorFrame, /@\/components\/atlas\/task-card-frame/);
-  assert.match(frame, /completion\?: ReactNode \| false/);
+  assert.match(editorFrame, /\.\/_components\/DominionCardFrame/);
+  assert.match(editorFrameImplementation, /@\/components\/atlas\/task-card-frame/);
+  assert.match(frame, /type CustomCompletionProps = \{/);
+  assert.match(frame, /completion: Exclude<ReactNode, undefined>;/);
   assert.match(weed, /family="Germination"/);
   assert.match(weed, /Strong/);
   assert.match(weed, /Patchy/);
