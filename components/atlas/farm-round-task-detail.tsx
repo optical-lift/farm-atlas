@@ -127,7 +127,6 @@ export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Prop
         title="Farm Round"
         subtitle="Elm Farm"
         timing={remaining === 0 ? "Round complete" : `${remaining} ${remaining === 1 ? "item" : "items"} due`}
-        completion={false}
       >
         <div className={rail.rowKey} aria-label="Farm Round controls">
           <span>tap to cross off</span>
