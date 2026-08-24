@@ -2,43 +2,46 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
+const root = process.cwd();
+const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
-const recoveredMigrations = [
-  '20260729170000_add_owner_day_api_v1.sql',
-  '20260730225500_phase13_buyer_outreach_v1.sql',
-  '20260731020000_remediate_rpc_privileges_v1.sql',
-  '20260801040600_unify_application_identity_v2.sql',
-  '20260803223651_add_worker_execution_contract_v1.sql',
-  '20260803224108_add_runtime_endpoint_registry_v1.sql',
-  '20260804174146_add_task_state_machine_v1.sql',
-  '20260807122454_harden_manager_engine_delegation_v1.sql',
-  '20260807162440_knowledge_governance_hardening_v1.sql',
-  '20260818151806_disable_legacy_sow_dispatch_v1.sql',
-  '20260818180252_embed_sowing_cadence_in_crop_cycle_v1.sql',
-  '20260818191352_authoritative_sow_task_payload_v2.sql',
-  '20260818193915_retire_legacy_worker_day_api_v1.sql',
-  '20260819144840_venue_completion_membrane_v1.sql',
-  '20260819153751_restore_venue_task_completion_guard_v2.sql',
-  '20260819162710_restore_daily_worker_day_calendar_v1.sql',
-  '20260819163251_worker_day_commitment_completion_guard_v1.sql',
-  '20260819163711_worker_day_calendar_overnight_transfer_v1.sql',
-  '20260819164039_worker_day_calendar_replan_destination_v1.sql',
-  '20260819164656_worker_day_calendar_reopen_replan_destination_v1.sql',
+const recoveredProductionSources = [
+  'supabase/migrations/20260721214054_atlas_unified_workflow_handoffs.sql',
+  'supabase/migrations/20260721214203_atlas_migrate_task_handoffs_and_repair_lemon_basil.sql',
+  'supabase/migrations/20260721214529_atlas_add_workflow_coverage_audit.sql',
+  'supabase/migrations/20260721230827_atlas_classify_workflow_handoffs.sql',
+  'supabase/migrations/20260721230913_atlas_add_completion_impact_audit.sql',
+  'supabase/migrations/20260721231030_atlas_complete_completion_impact_policy_coverage.sql',
+  'supabase/migrations/20260721231615_atlas_seal_workflow_audit_internals.sql',
+  'supabase/migrations/20260722010035_atlas_add_production_lot_spine.sql',
+  'supabase/migrations/20260722010123_atlas_seed_spring_2027_snapdragon_pilot.sql',
+  'supabase/migrations/20260722012002_atlas_add_production_capacity_planner.sql',
+  'supabase/migrations/20260722012256_atlas_add_capacity_calculation_and_readiness_views.sql',
+  'supabase/migrations/20260722012511_atlas_seed_spring_2027_capacity_pilot.sql',
+  'supabase/migrations/20260722012622_atlas_fix_capacity_refresh_function_qualification.sql',
+  'supabase/migrations/20260722022823_atlas_add_owner_capacity_assignment_engine.sql',
+  'supabase/migrations/20260722023200_atlas_add_owner_capacity_snapshot.sql',
+  'supabase/migrations/20260722023535_atlas_add_owner_capacity_mutations.sql',
+  'supabase/migrations/20260722025101_atlas_reconcile_capacity_changes_and_bed_assignments.sql',
+  'supabase/migrations/20260722040535_atlas_add_production_stage_schema.sql',
+  'supabase/migrations/20260722040645_atlas_add_production_sowing_command.sql',
+  'supabase/migrations/20260722040745_atlas_add_production_germination_command.sql',
+  'supabase/migrations/20260722040832_atlas_seal_production_seedling_engine.sql',
+  'supabase/migrations/20260722040911_atlas_add_production_transplant_schema.sql',
+  'supabase/migrations/20260722040950_atlas_add_production_seedling_care_command.sql',
+  'supabase/migrations/20260722041029_atlas_add_production_transplant_gate.sql',
+  'supabase/migrations/20260722041126_atlas_add_production_readiness_command.sql',
+  'supabase/migrations/20260722041139_atlas_refresh_transplant_gate_from_bed_prep.sql',
+  'supabase/migrations/20260722041248_atlas_add_production_transplant_command.sql',
+  'supabase/migrations/20260722041314_atlas_seal_production_transplant_engine.sql',
 ];
 
-for (const migration of recoveredMigrations) {
-  test(`recovered production-live source exists: ${migration}`, () => {
-    assert.equal(fs.existsSync(path.join(root, 'supabase/migrations', migration)), true);
-  });
-}
-
 test('recovered production-live Atlas management source remains present', () => {
-  for (const migration of recoveredMigrations) {
-    assert.equal(fs.existsSync(path.join(root, 'supabase/migrations', migration)), true);
+  for (const relative of recoveredProductionSources) {
+    const absolute = path.join(root, relative);
+    assert.equal(fs.existsSync(absolute), true, `missing recovered production source: ${relative}`);
+    assert.ok(fs.statSync(absolute).size > 0, `recovered production source is empty: ${relative}`);
   }
 });
 
@@ -87,62 +90,85 @@ test('production custody registry is append-only, service-only, and catalog-deri
 });
 
 test('custody governance migrations retain exact production versions in repository source', () => {
-  const expected = [
-    '20260823202957_atlas_source_custody_surface_registry_v1.sql',
-    '20260823203337_atlas_source_custody_seed_adjudications_v1.sql',
-    '20260823204558_atlas_source_custody_release_packet_v1.sql',
-    '20260823204641_atlas_source_custody_release_packet_registry_v1.sql',
-    '20260823205508_atlas_source_custody_legacy_epoch_v1.sql',
-  ];
-  for (const migration of expected) {
-    assert.equal(fs.existsSync(path.join(root, 'supabase/migrations', migration)), true, migration);
-  }
+  for (const relative of [
+    'supabase/migrations/20260823202957_atlas_source_custody_surface_registry_v1.sql',
+    'supabase/migrations/20260823203337_atlas_source_custody_seed_adjudications_v1.sql',
+    'supabase/migrations/20260823204558_atlas_source_custody_release_packet_v1.sql',
+    'supabase/migrations/20260823204641_atlas_source_custody_release_packet_registry_v1.sql',
+    'supabase/migrations/20260823205508_atlas_source_custody_legacy_epoch_v1.sql',
+  ]) assert.equal(fs.existsSync(path.join(root, relative)), true, `missing governance source: ${relative}`);
 });
 
 test('legacy provenance epoch is immutable evidence, not a current-surface waiver', () => {
   const policy = JSON.parse(read('docs/architecture/atlas-source-custody-provenance-v1.json'));
-  assert.equal(policy.contractVersion, 1);
+  const migration = read('supabase/migrations/20260823205508_atlas_source_custody_legacy_epoch_v1.sql');
   assert.equal(policy.authority, 'repository-main');
   assert.equal(policy.exactFromVersion, '20260823202957');
   assert.equal(policy.legacyEpoch.migrationCount, 1171);
-  assert.match(policy.legacyEpoch.manifestSha256, /^[0-9a-f]{64}$/);
-  assert.equal(policy.legacyEpoch.waivesCurrentSurfaceMismatch, false);
-  assert.equal(policy.postCutover.requireExactSource, true);
+  assert.equal(policy.legacyEpoch.manifestSha256, '68d1e72e8a85ac35dd892d08d2b491f435324acb26c6e0386639ef12377c0ed8');
+  assert.equal(policy.legacyEpoch.repositoryCensus.unresolvedHistorical, 808);
+  assert.equal(policy.legacyEpoch.repositoryCensus.missing, 234);
+  assert.equal(policy.legacyEpoch.repositoryCensus.mismatched, 190);
+  assert.equal(policy.legacyEpoch.repositoryCensus.versionDriftMatch, 73);
+  assert.equal(policy.legacyEpoch.repositoryCensus.versionDriftMismatch, 309);
+  assert.equal(policy.legacyEpoch.repositoryCensus.ambiguousNameDrift, 2);
+  assert.match(migration, /'historical_provenance'/);
+  assert.match(migration, /'accepted'/);
+  assert.match(migration, /'waivesCurrentSurfaceMismatch',false/);
+  assert.match(migration, /'postCutoverSourceRequiredExact',true/);
+  assert.match(migration, /'contractVersion',2/);
+  assert.match(migration, /exactFromVersion/);
 });
 
 test('Atlas Source Synchronizer enforces surface, legacy epoch binding, then post-cutover exact provenance', () => {
   const sync = read('scripts/atlas-source-synchronizer.sh');
-  assert.match(sync, /compare-atlas-source-custody-surface\.mjs/);
+  const engine = read('scripts/reconcile-production-migration-history.sh');
+  const workflow = read('.github/workflows/atlas-ci.yml');
+  const pkg = JSON.parse(read('package.json'));
+  assert.equal(pkg.scripts['sync:atlas:source'], 'bash scripts/atlas-source-synchronizer.sh');
+  assert.match(sync, /ATLAS_SOURCE_CUSTODY_API_URL/);
+  assert.match(sync, /atlas-source-custody-provenance-v1\.json/);
+  assert.match(sync, /contractVersion !== 2/);
   assert.match(sync, /legacy_manifest/);
-  assert.match(sync, /surface_nonwaiver/);
-  assert.match(sync, /postcutover_exact/);
-  assert.match(sync, /SOURCE_SYNC_RPC_DRIFT/);
-  assert.match(sync, /reconcile-production-migration-history\.sh/);
-  assert.match(sync, /--since/);
+  assert.match(sync, /waivesCurrentSurfaceMismatch/);
+  assert.match(sync, /postCutoverSourceRequiredExact/);
+  assert.match(sync, /--since "\$exact_from"/);
+  assert.match(sync, /--manifest "\$manifest"/);
   assert.match(sync, /--scope atlas-management/);
+  assert.match(sync, /ATLAS_SOURCE_SYNC_OK surface=exact rpc_drift=0 legacy_epoch=bound/);
+  assert.match(engine, /--manifest/);
+  assert.match(workflow, /Prove live Atlas source custody/);
+  assert.ok(sync.indexOf('node "$comparator"') < sync.indexOf('bash "$engine"'), 'surface comparison must precede provenance reconciliation');
 });
 
 test('publishable release packet exposes custody metadata only and is explicitly governed', () => {
-  const migration = read('supabase/migrations/20260823204641_atlas_source_custody_release_packet_registry_v1.sql');
-  assert.match(migration, /source_custody_release_packet_v1\(\)/);
-  assert.match(migration, /publishable_readonly/);
-  assert.match(migration, /authenticated_execute_expected/);
-  assert.match(migration, /anonymous_execute_expected/);
-  assert.match(migration, /service_execute_expected/);
+  const packetV1 = read('supabase/migrations/20260823204558_atlas_source_custody_release_packet_v1.sql');
+  const packetV2 = read('supabase/migrations/20260823205508_atlas_source_custody_legacy_epoch_v1.sql');
+  const registry = read('supabase/migrations/20260823204641_atlas_source_custody_release_packet_registry_v1.sql');
+  assert.match(packetV1, /Contains no operational business rows or migration SQL bodies/i);
+  assert.match(packetV1, /grant execute on function atlas\.source_custody_release_packet_v1\(\) to anon, authenticated, service_role/i);
+  assert.match(packetV2, /pre-cutover deployment provenance is bound to an immutable legacy-epoch fingerprint/i);
+  assert.match(registry, /atlas\.source_custody_release_packet_v1\(\)/);
+  assert.match(registry, /'public_endpoint'/);
+  assert.match(registry, /'exposesOperationalBusinessRows',false/);
+  assert.match(registry, /'exposesMigrationSqlBodies',false/);
 });
 
 test('custody engine hard-fails unresolved post-cutover provenance debt', () => {
   const engine = read('scripts/reconcile-production-migration-history.sh');
-  assert.match(engine, /POST_CUTOVER_MISSING_SOURCE/);
-  assert.match(engine, /POST_CUTOVER_HASH_MISMATCH/);
-  assert.match(engine, /POST_CUTOVER_UNEXPECTED_SOURCE/);
-  assert.match(engine, /exit 1/);
+  assert.match(engine, /ADJUDICATED_VERSION_DRIFT/);
+  assert.match(engine, /VERSION_DRIFT_MISMATCH/);
+  assert.match(engine, /AMBIGUOUS_NAME_DRIFT/);
+  assert.match(engine, /missing > 0 \|\| mismatched > 0 \|\| version_drift_match > 0/);
+  assert.match(engine, /a hash-only manifest is read-only/);
 });
 
 test('known Grow Room timestamp drift remains explicit historical evidence', () => {
-  const seed = read('supabase/migrations/20260823203337_atlas_source_custody_seed_adjudications_v1.sql');
-  assert.match(seed, /20260727181055/);
-  assert.match(seed, /20260727193000_trail_foundation_grow_room_v1\.sql/);
-  assert.match(seed, /8fb94ffe8019f9829808a57d51b317614da90151/);
-  assert.match(seed, /VERSION_DRIFT_ALIAS|version_drift/i);
+  const adjudication = read('supabase/migrations/20260823203337_atlas_source_custody_seed_adjudications_v1.sql');
+  const legacy = read('docs/architecture/atlas-source-custody-adjudications.tsv');
+  assert.match(adjudication, /20260727181055/);
+  assert.match(adjudication, /20260727193000_trail_foundation_grow_room_v1\.sql/);
+  assert.match(adjudication, /8fb94ffe8019f9829808a57d51b317614da90151/g);
+  assert.match(legacy, /Legacy bootstrap evidence only/i);
+  assert.match(legacy, /This file is not a release authority/i);
 });
