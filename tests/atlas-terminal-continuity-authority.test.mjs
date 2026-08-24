@@ -13,6 +13,9 @@ const apiBoundaryPath = 'supabase/migrations/20260823235000_continuity_single_pr
 const cleanupPath = 'supabase/migrations/20260824000500_remove_superseded_farm_continuity_audit_engines_v1.sql';
 const retiredV1Path = 'supabase/migrations/20260824001000_remove_superseded_terminal_census_v1_runtime_v1.sql';
 const requirementAuthorityPath = 'supabase/migrations/20260823232534_farm_continuity_terminal_census_requirement_semantics_v2.sql';
+const finishedRequirementPath = 'supabase/migrations/20260824002000_requirement_continuity_finished_runtime_name_v1.sql';
+const finishedOperationResultPath = 'supabase/migrations/20260824002100_operation_result_continuity_finished_runtime_name_v1.sql';
+const finishedTerminalPath = 'supabase/migrations/20260824002200_farm_continuity_finished_runtime_name_v1.sql';
 
 test('terminal farm continuity has one self-contained canonical current-state authority', () => {
   const canonical = read(selfContainedPath);
@@ -66,7 +69,7 @@ test('superseded terminal census v1 is absent from the finished executable schem
   assert.doesNotMatch(retiredV1, /cascade/i);
 });
 
-test('canonical terminal census v2 and lower-level continuity proofs remain service-internal', () => {
+test('canonical terminal census v2 and lower-level continuity proofs remain service-internal during convergence', () => {
   const canonical = read(selfContainedPath);
   const registry = read(registryPath);
 
@@ -93,7 +96,7 @@ test('superseded farm continuity audit engines are absent from the finished exec
   assert.doesNotMatch(cleanup, /cascade/i);
 });
 
-test('continuity has one explicit product API and exactly three current internal proof surfaces', () => {
+test('continuity has one explicit product API and exactly three current internal proof surfaces during convergence', () => {
   const boundary = read(apiBoundaryPath);
   for (const helper of [
     'atlas.farm_continuity_terminal_census_v2(uuid,date)',
@@ -110,4 +113,34 @@ test('continuity has one explicit product API and exactly three current internal
   assert.match(boundary, /exactly the current terminal census, Requirement Continuity, and Operation→Result continuity proofs/i);
   assert.doesNotMatch(boundary, /proname ~ '\^.*continuity.*v\[0-9\]/i);
   assert.doesNotMatch(boundary, /for r in\s+select p\.oid/i);
+});
+
+test('finished Requirement Continuity has one stable unversioned runtime identity', () => {
+  const migration = read(finishedRequirementPath);
+  assert.match(migration, /rename to requirement_continuity_audit/);
+  assert.match(migration, /replace\(v_def,'requirement_continuity_audit_v2','requirement_continuity_audit'\)/);
+  assert.match(migration, /delete from atlas\.authenticated_rpc_registry/);
+  assert.match(migration, /signature='atlas\.requirement_continuity_audit_v2\(uuid, date\)'/);
+  assert.match(migration, /'atlas\.requirement_continuity_audit\(uuid, date\)'/);
+  assert.match(migration, /numbered predecessor names remain migration history only/i);
+});
+
+test('finished Operation Result Continuity has one stable unversioned runtime identity', () => {
+  const migration = read(finishedOperationResultPath);
+  assert.match(migration, /rename to operation_result_continuity_audit/);
+  assert.match(migration, /replace\(v_def,'operation_result_continuity_audit_v1','operation_result_continuity_audit'\)/);
+  assert.match(migration, /delete from atlas\.authenticated_rpc_registry/);
+  assert.match(migration, /signature='atlas\.operation_result_continuity_audit_v1\(uuid, date\)'/);
+  assert.match(migration, /'atlas\.operation_result_continuity_audit\(uuid, date\)'/);
+  assert.match(migration, /numbered predecessor names remain migration history only/i);
+});
+
+test('finished terminal farm continuity has one stable unversioned runtime identity', () => {
+  const migration = read(finishedTerminalPath);
+  assert.match(migration, /rename to farm_continuity_terminal_census/);
+  assert.match(migration, /replace\(v_def,'farm_continuity_terminal_census_v2','farm_continuity_terminal_census'\)/);
+  assert.match(migration, /delete from atlas\.authenticated_rpc_registry/);
+  assert.match(migration, /signature='atlas\.farm_continuity_terminal_census_v2\(uuid, date\)'/);
+  assert.match(migration, /'atlas\.farm_continuity_terminal_census\(uuid, date\)'/);
+  assert.match(migration, /numbered terminal census names remain migration history only/i);
 });
