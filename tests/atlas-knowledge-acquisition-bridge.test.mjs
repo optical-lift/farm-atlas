@@ -229,6 +229,6 @@ test('knowledge acquisition source retains every exact post-cutover production m
   const expected = JSON.parse(read('docs/architecture/atlas-source-custody-surface-v1.json'));
   assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1180);
   assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 472);
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, 'd479da4bc897c10a5dc7a8b6fe2fe92b18e5a34d9b5bb74fe88bcb600d4f08df');
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, 'c6f126092a1986a53649e7ce1e540447f3a6dde0ac2e644e75e542652f39c16c');
   assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, 'bc7312bbe38dbd5c2a5b5ed3fe865b9c31bc0d420fca8291d85ae649825a3c33');
 });
