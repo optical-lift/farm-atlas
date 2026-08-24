@@ -43,6 +43,7 @@ const paired = {
   "20260823232012_farm_continuity_terminal_census_v1.sql": "20260823233407_farm_terminal_census_v2_rpc_registry_reconciliation_v1.sql",
   "20260823232534_farm_continuity_terminal_census_requirement_semantics_v2.sql": "20260823233407_farm_terminal_census_v2_rpc_registry_reconciliation_v1.sql",
   "20260823233129_farm_terminal_census_v2_release_contract.sql": "20260823233407_farm_terminal_census_v2_rpc_registry_reconciliation_v1.sql",
+  "20260824134617_universal_worker_day_placement_authority_v1.sql": "20260824135421_universal_worker_day_placement_rpc_registry_v1.sql",
 };
 
 const batchedPresentedWorkMigrations = new Set([
