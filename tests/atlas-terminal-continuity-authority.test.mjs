@@ -93,20 +93,21 @@ test('superseded farm continuity audit engines are absent from the finished exec
   assert.doesNotMatch(cleanup, /cascade/i);
 });
 
-test('continuity has one product-facing API and all lower-level proof families are service-internal', () => {
+test('continuity has one explicit product API and exactly three current internal proof surfaces', () => {
   const boundary = read(apiBoundaryPath);
-  for (const family of [
-    'farm_continuity_audit_v',
-    'farm_continuity_terminal_census_v',
-    'requirement_continuity_audit_v',
-    'operation_result_continuity_audit_v',
+  for (const helper of [
+    'atlas.farm_continuity_terminal_census_v2(uuid,date)',
+    'atlas.requirement_continuity_audit_v2(uuid,date)',
+    'atlas.operation_result_continuity_audit_v1(uuid,date)',
   ]) {
-    assert.ok(boundary.includes(family), `missing continuity helper family ${family}`);
+    assert.ok(boundary.includes(helper), `missing explicit continuity helper ${helper}`);
   }
-  assert.match(boundary, /revoke execute on function %s from public, anon, authenticated/i);
-  assert.match(boundary, /grant execute on function %s to service_role/i);
+  assert.match(boundary, /to_regprocedure\('atlas\.atlas_wide_continuity_summary_v1\(uuid,date\)'\)/);
+  assert.match(boundary, /revoke execute on function atlas\.atlas_wide_continuity_summary_v1\(uuid,date\) from public, anon/i);
+  assert.match(boundary, /grant execute on function atlas\.atlas_wide_continuity_summary_v1\(uuid,date\) to authenticated, service_role/i);
   assert.match(boundary, /classification = 'service_internal'/);
   assert.match(boundary, /canonicalProductAuthority', 'atlas\.atlas_wide_continuity_summary_v1'/);
-  assert.match(boundary, /Canonical product-facing Atlas continuity API/);
-  assert.match(boundary, /Lower-level continuity proofs and diagnostics cannot serve as independent authenticated product APIs/);
+  assert.match(boundary, /exactly the current terminal census, Requirement Continuity, and Operation→Result continuity proofs/i);
+  assert.doesNotMatch(boundary, /proname ~ '\^.*continuity.*v\[0-9\]/i);
+  assert.doesNotMatch(boundary, /for r in\s+select p\.oid/i);
 });
