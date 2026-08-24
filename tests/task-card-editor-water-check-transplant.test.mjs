@@ -7,6 +7,7 @@ const remaining = readFileSync("app/owner/task-card-lab/RemainingDominionCardSpe
 const moveStyles = readFileSync("app/owner/task-card-lab/remaining-dominion-card-specimens.module.css", "utf8");
 const frame = readFileSync("components/atlas/task-card-frame.tsx", "utf8");
 const editorFrame = readFileSync("app/owner/task-card-lab/DominionCardFrame.tsx", "utf8");
+const editorFrameImplementation = readFileSync("app/owner/task-card-lab/_components/DominionCardFrame.tsx", "utf8");
 const editor = readFileSync("app/owner/task-card-lab/page.tsx", "utf8");
 
 test("Irrigation and Germination are crop-cycle variants rather than standalone gallery families", () => {
@@ -20,11 +21,19 @@ test("Irrigation and Germination are crop-cycle variants rather than standalone 
   assert.doesNotMatch(editor, /WaterCareCardSpecimen|CheckCardSpecimen/);
 });
 
-test("shared card shell keeps the approved header and default completion while allowing logging overrides", () => {
-  assert.match(editorFrame, /@\/components\/atlas\/task-card-frame/);
+test("shared card shell keeps approved chrome while completion authority stays explicit", () => {
+  assert.match(editorFrame, /\.\/_components\/DominionCardFrame/);
+  assert.match(editorFrameImplementation, /@\/components\/atlas\/task-card-frame/);
   assert.match(frame, /subtitle\?: string/);
   assert.match(frame, /className=\{styles\.subtitle\}/);
-  assert.match(frame, /completion\?: ReactNode \| false/);
+  assert.match(frame, /type InteractiveCompletionProps = \{/);
+  assert.match(frame, /onDone: \(\) => void;/);
+  assert.match(frame, /onUnfinished: \(\) => void;/);
+  assert.match(frame, /type CustomCompletionProps = \{/);
+  assert.match(frame, /completion: Exclude<ReactNode, undefined>;/);
+  assert.match(frame, /type PreviewCompletionProps = \{/);
+  assert.match(frame, /completionPreview: true;/);
+  assert.match(editorFrameImplementation, /completionPreview/);
   assert.match(frame, />Done<\/button>/);
   assert.match(frame, />Unfinished<\/button>/);
 });

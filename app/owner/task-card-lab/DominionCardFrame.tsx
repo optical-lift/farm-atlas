@@ -1,2 +1,2 @@
-export { default } from "@/components/atlas/task-card-frame";
-export type { AtlasTaskCardFrameProps as DominionCardFrameProps } from "@/components/atlas/task-card-frame";
+export { default } from "./_components/DominionCardFrame";
+export type { DominionCardFrameProps } from "./_components/DominionCardFrame";
