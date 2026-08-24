@@ -1,41 +1,53 @@
+-- Finished continuity API boundary.
+-- Atlas exposes one product continuity contract. The three current proof functions are
+-- explicit internal composition dependencies; historical version families are not part
+-- of the boundary model and are handled by their own runtime-removal migrations.
+
 do $migration$
 declare
-  r record;
-  v_identity text;
-  v_signature text;
+  v_helper text;
+  v_helpers constant text[] := array[
+    'atlas.farm_continuity_terminal_census_v2(uuid,date)',
+    'atlas.requirement_continuity_audit_v2(uuid,date)',
+    'atlas.operation_result_continuity_audit_v1(uuid,date)'
+  ];
 begin
-  for r in
-    select p.oid, p.proname, pg_get_function_identity_arguments(p.oid) as identity_args
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'atlas'
-      and (
-        p.proname ~ '^farm_continuity_audit_v[0-9]+$'
-        or p.proname ~ '^farm_continuity_terminal_census_v[0-9]+$'
-        or p.proname ~ '^requirement_continuity_audit_v[0-9]+$'
-        or p.proname ~ '^operation_result_continuity_audit_v[0-9]+$'
-      )
-  loop
-    v_identity := format('atlas.%I(%s)', r.proname, r.identity_args);
-    execute format('revoke execute on function %s from public, anon, authenticated', v_identity);
-    execute format('grant execute on function %s to service_role', v_identity);
+  if to_regprocedure('atlas.atlas_wide_continuity_summary_v1(uuid,date)') is null then
+    raise exception 'canonical Atlas-wide continuity API is missing';
+  end if;
 
-    v_signature := format('atlas.%s(%s)', r.proname, replace(r.identity_args, ', ', ', '));
-    update atlas.authenticated_rpc_registry
-       set classification = 'service_internal',
-           authenticated_execute_expected = false,
-           anonymous_execute_expected = false,
-           service_execute_expected = true,
-           reviewed_at = now(),
-           evidence = coalesce(evidence, '{}'::jsonb) || jsonb_build_object(
-             'continuityApiBoundary', 'service_internal_helper',
-             'canonicalProductAuthority', 'atlas.atlas_wide_continuity_summary_v1',
-             'boundaryRule', 'Lower-level continuity proofs and diagnostics cannot serve as independent authenticated product APIs.'
-           )
-     where signature = v_signature;
+  foreach v_helper in array v_helpers loop
+    if to_regprocedure(v_helper) is null then
+      raise exception 'required continuity proof helper is missing: %', v_helper;
+    end if;
+
+    execute format('revoke execute on function %s from public, anon, authenticated', v_helper);
+    execute format('grant execute on function %s to service_role', v_helper);
   end loop;
+
+  -- The product boundary itself is explicit rather than inherited from whatever grants
+  -- happened to survive earlier migrations.
+  revoke execute on function atlas.atlas_wide_continuity_summary_v1(uuid,date) from public, anon;
+  grant execute on function atlas.atlas_wide_continuity_summary_v1(uuid,date) to authenticated, service_role;
+
+  update atlas.authenticated_rpc_registry
+     set classification = 'service_internal',
+         authenticated_execute_expected = false,
+         anonymous_execute_expected = false,
+         service_execute_expected = true,
+         reviewed_at = now(),
+         evidence = coalesce(evidence, '{}'::jsonb) || jsonb_build_object(
+           'continuityApiBoundary', 'internal_composition_proof',
+           'canonicalProductAuthority', 'atlas.atlas_wide_continuity_summary_v1',
+           'boundaryRule', 'Only the Atlas-wide continuity summary is a product-facing continuity API; current proof functions are explicit service-internal dependencies.'
+         )
+   where signature in (
+     'atlas.farm_continuity_terminal_census_v2(uuid, date)',
+     'atlas.requirement_continuity_audit_v2(uuid, date)',
+     'atlas.operation_result_continuity_audit_v1(uuid, date)'
+   );
 end;
 $migration$;
 
 comment on function atlas.atlas_wide_continuity_summary_v1(uuid,date) is
-'Canonical product-facing Atlas continuity API. Lower-level farm, requirement, operation-result, and historical continuity functions are service-internal composition or diagnostic helpers.';
+'Canonical product-facing Atlas continuity API. It composes exactly the current terminal census, Requirement Continuity, and Operation→Result continuity proofs; historical continuity versions are not product surfaces.';
