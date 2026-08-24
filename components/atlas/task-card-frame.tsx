@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import styles from "./task-card-frame.module.css";
 
-export type AtlasTaskCardFrameProps = {
+type AtlasTaskCardFrameBaseProps = {
   family: string;
   title: string;
   subtitle?: string;
@@ -10,26 +10,50 @@ export type AtlasTaskCardFrameProps = {
   timing?: string;
   children: ReactNode;
   className?: string;
-  completion?: ReactNode | false;
-  onDone?: () => void;
-  onUnfinished?: () => void;
+};
+
+type InteractiveCompletionProps = {
+  completion?: never;
+  completionPreview?: never;
+  onDone: () => void;
+  onUnfinished: () => void;
   completionDisabled?: boolean;
 };
 
-export default function AtlasTaskCardFrame({
-  family,
-  title,
-  subtitle,
-  familyDetail,
-  timing,
-  children,
-  className,
-  completion,
-  onDone,
-  onUnfinished,
-  completionDisabled = false,
-}: AtlasTaskCardFrameProps) {
+type CustomCompletionProps = {
+  completion: Exclude<ReactNode, undefined>;
+  completionPreview?: never;
+  onDone?: never;
+  onUnfinished?: never;
+  completionDisabled?: never;
+};
+
+type PreviewCompletionProps = {
+  completion?: never;
+  completionPreview: true;
+  onDone?: never;
+  onUnfinished?: never;
+  completionDisabled?: never;
+};
+
+export type AtlasTaskCardFrameProps = AtlasTaskCardFrameBaseProps & (
+  | InteractiveCompletionProps
+  | CustomCompletionProps
+  | PreviewCompletionProps
+);
+
+export default function AtlasTaskCardFrame(props: AtlasTaskCardFrameProps) {
+  const {
+    family,
+    title,
+    subtitle,
+    familyDetail,
+    timing,
+    children,
+    className,
+  } = props;
   const cardClassName = className ? `${styles.card} ${className}` : styles.card;
+  const previewCompletion = props.completionPreview === true;
 
   return (
     <article className={cardClassName} data-atlas-task-card-frame="true">
@@ -45,12 +69,17 @@ export default function AtlasTaskCardFrame({
 
       {children}
 
-      {completion === false ? null : completion !== undefined ? (
-        <footer className={styles.customFinish}>{completion}</footer>
+      {previewCompletion ? (
+        <footer className={styles.finish} data-atlas-completion-preview="true">
+          <button type="button" className={styles.primaryFinish} disabled>Done</button>
+          <button type="button" className={styles.secondaryFinish} disabled>Unfinished</button>
+        </footer>
+      ) : props.completion === false ? null : props.completion !== undefined ? (
+        <footer className={styles.customFinish}>{props.completion}</footer>
       ) : (
         <footer className={styles.finish}>
-          <button type="button" className={styles.primaryFinish} disabled={completionDisabled} onClick={onDone}>Done</button>
-          <button type="button" className={styles.secondaryFinish} disabled={completionDisabled} onClick={onUnfinished}>Unfinished</button>
+          <button type="button" className={styles.primaryFinish} disabled={props.completionDisabled} onClick={props.onDone}>Done</button>
+          <button type="button" className={styles.secondaryFinish} disabled={props.completionDisabled} onClick={props.onUnfinished}>Unfinished</button>
         </footer>
       )}
     </article>
