@@ -136,8 +136,7 @@ function isDashboardWork(task: AtlasTaskCard) {
 }
 
 function isDoneTask(task: AtlasTaskCard) {
-  if (task.task_outcomes?.[0]?.outcome === "reopened") return false;
-  return task.status === "done" || text(meta(task, "checklist_status")) === "done" || task.task_outcomes?.[0]?.outcome === "done";
+  return task.status === "done";
 }
 
 function isOverdueTask(task: AtlasTaskCard, selectedDay: string) {
