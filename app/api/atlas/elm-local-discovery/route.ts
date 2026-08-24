@@ -13,9 +13,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const DEFAULT_BATCH_SIZE = 24;
-const MAX_BATCH_SIZE = 40;
-const SUBJECT_SOURCE_LIMIT = 8;
+const DEFAULT_BATCH_SIZE = 100;
+const MAX_BATCH_SIZE = 250;
+const SUBJECT_SOURCE_LIMIT = 4;
+const WORK_MODES = new Set(["balanced", "discovery", "subject"]);
 
 type JsonObject = Record<string, unknown>;
 type RpcError = { code?: string; message?: string };
@@ -167,12 +168,19 @@ function sourceRecordKey(sourceUrl: string, subjectKind: string, fields: JsonObj
     .digest("hex");
 }
 
-function mixedBatchPrompt(context: JsonObject, batchSize: number) {
+function mixedBatchPrompt(context: JsonObject, batchSize: number, lane: JsonObject) {
   const requestedFields = asStringArray(context.requested_fields);
   const parameters = asObject(context.parameters) ?? {};
   const loopState = asObject(context.loop_state) ?? {};
+  const laneScope = asObject(lane.lane_scope) ?? {};
 
   return [
+    "You are one independently claimable Elm Local vertical-lane evidence gatherer.",
+    `Lane key: ${text(lane.lane_key)}`,
+    `Lane label: ${text(lane.lane_label)}`,
+    `Lane scope: ${JSON.stringify(laneScope)}`,
+    "Stay inside this lane's exclusive primary organization vertical. Exclude organizations whose primary vertical belongs to another lane, even when they employ similar roles.",
+    "Prefer high-yield official directories, staff pages, team pages, leadership pages, and official PDFs that can yield many explicit contacts from one opened source.",
     "You are the Elm Local mixed-batch evidence gatherer.",
     "Search current public web reality and GATHER explicit evidence. A publisher's downstream-use preference does not determine whether publicly exposed evidence is gathered; preserve relevant notices as source context instead of suppressing collection.",
     "Return only evidence supported by pages you actually opened through web search.",
@@ -241,7 +249,7 @@ async function gatewaySearch(prompt: string) {
       input: [{ type: "message", role: "user", content: prompt }],
       tools: [{ type: "web_search" }],
       tool_choice: "auto",
-      max_output_tokens: 12000,
+      max_output_tokens: 30000,
       reasoning: { effort: "medium" },
     }),
     cache: "no-store",
@@ -293,7 +301,6 @@ export async function POST(request: Request) {
     return atlasApiError(400, "invalid_elm_local_search_query", "A valid search query is required.");
   }
 
-  const batchSize = normalizedBatchSize(body.batchSize);
   const supabase = createAtlasAdminClient().schema("local_intel");
   const { data: contextData, error: contextError } = await supabase.rpc(
     "get_search_discovery_execution_context_v1",
@@ -309,10 +316,22 @@ export async function POST(request: Request) {
     return privateJson({ ok: true, status: context.status, context });
   }
 
-  const { data: subjectClaimData, error: subjectClaimError } = await supabase.rpc(
-    "claim_search_discovery_subject_v1",
-    { p_search_query_id: searchQueryId },
-  );
+  const parameters = asObject(context.parameters) ?? {};
+  const throughput = asObject(parameters.throughput) ?? {};
+  const batchSize = normalizedBatchSize(body.batchSize ?? throughput.discovery_batch_size);
+  const requestedMode = text(body.workMode) || "balanced";
+  if (!WORK_MODES.has(requestedMode)) {
+    return atlasApiError(400, "invalid_elm_local_work_mode", "Elm Local work mode must be balanced, discovery, or subject.");
+  }
+  const requestedLaneKey = text(body.laneKey) || null;
+  const shouldClaimSubject = requestedMode !== "discovery";
+
+  const { data: subjectClaimData, error: subjectClaimError } = shouldClaimSubject
+    ? await supabase.rpc(
+        "claim_search_discovery_subject_v1",
+        { p_search_query_id: searchQueryId },
+      )
+    : { data: null, error: null };
   if (subjectClaimError) {
     return discoveryError(subjectClaimError, "Elm Local could not claim subject research work.");
   }
@@ -441,17 +460,23 @@ export async function POST(request: Request) {
     }
   }
 
+  if (requestedMode === "subject") {
+    return privateJson({ ok: true, status: "no_queued_subject", context });
+  }
+
   const { data: claimData, error: claimError } = await supabase.rpc(
-    "claim_search_discovery_batch_v1",
-    { p_search_query_id: searchQueryId },
+    "claim_search_discovery_lane_v1",
+    { p_search_query_id: searchQueryId, p_lane_key: requestedLaneKey },
   );
-  if (claimError) return discoveryError(claimError, "Elm Local could not claim discovery work.");
+  if (claimError) return discoveryError(claimError, "Elm Local could not claim a vertical discovery lane.");
 
   const claim = asObject(claimData);
-  if (!claim) return privateJson({ ok: true, status: "no_queued_batch", context });
+  if (!claim) return privateJson({ ok: true, status: "no_queued_lane", requestedLaneKey, context });
   if (claim.status === "complete") return privateJson({ ok: true, status: "complete", claim });
 
-  const discoveryWorkId = text(claim.id);
+  const laneId = text(claim.id);
+  const laneKey = text(claim.lane_key);
+  const discoveryWorkId = text(claim.discovery_work_id);
   let gathered = 0;
   let accepted = 0;
   let rejectedUncited = 0;
@@ -460,7 +485,7 @@ export async function POST(request: Request) {
   let subjectWorkSeeded = 0;
 
   try {
-    const search = await gatewaySearch(mixedBatchPrompt(context, batchSize));
+    const search = await gatewaySearch(mixedBatchPrompt(context, batchSize, claim));
     gathered = search.records.length;
 
     for (const record of search.records) {
@@ -488,7 +513,8 @@ export async function POST(request: Request) {
             metadata: {
               search_query_id: searchQueryId,
               discovery_work_id: discoveryWorkId || null,
-              executor: "vercel_ai_gateway_web_search_v1",
+              executor: "vercel_ai_gateway_vertical_lane_v1",
+              lane_key: laneKey,
             },
           },
         },
@@ -513,7 +539,8 @@ export async function POST(request: Request) {
             website_url: text(fields.website) || null,
             fields,
             metadata: {
-              executor: "vercel_ai_gateway_web_search_v1",
+              executor: "vercel_ai_gateway_vertical_lane_v1",
+              lane_key: laneKey,
               cited_source_url: cited.url,
               gateway_citation_verified: true,
             },
@@ -552,7 +579,8 @@ export async function POST(request: Request) {
               },
               metadata: {
                 seeded_by: "mixed_batch",
-                executor: "vercel_ai_gateway_web_search_v1",
+                executor: "vercel_ai_gateway_vertical_lane_v1",
+                lane_key: laneKey,
               },
             },
           },
@@ -562,10 +590,11 @@ export async function POST(request: Request) {
     }
 
     const { data: finishData, error: finishError } = await supabase.rpc(
-      "finish_search_discovery_batch_v1",
+      "finish_search_discovery_lane_v1",
       {
-        p_search_query_id: searchQueryId,
+        p_lane_id: laneId,
         p_batch_stats: {
+          lane_key: laneKey,
           requested_batch_size: batchSize,
           gathered_records: gathered,
           accepted_records: accepted,
@@ -573,17 +602,18 @@ export async function POST(request: Request) {
           ingestion_candidates: ingestionCandidates,
           applied_records: applied,
           subject_work_seeded: subjectWorkSeeded,
-          executor: "vercel_ai_gateway_web_search_v1",
+          executor: "vercel_ai_gateway_vertical_lane_v1",
         },
       },
     );
     if (finishError) {
-      return discoveryError(finishError, "Elm Local gathered evidence but could not close the discovery batch.");
+      return discoveryError(finishError, "Elm Local gathered evidence but could not close the vertical lane batch.");
     }
 
     return privateJson({
       ok: true,
-      status: "batch_complete",
+      status: "lane_batch_complete",
+      laneKey,
       stats: {
         requestedBatchSize: batchSize,
         gathered,
@@ -598,12 +628,14 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const { error: requeueError } = await supabase.rpc(
-      "requeue_search_discovery_batch_v1",
-      { p_search_query_id: searchQueryId, p_error: message },
+      "requeue_search_discovery_lane_v1",
+      { p_lane_id: laneId, p_error: message },
     );
 
-    console.error("Elm Local discovery batch failed", {
+    console.error("Elm Local vertical lane batch failed", {
       searchQueryId,
+      laneId,
+      laneKey,
       discoveryWorkId,
       requeueError: requeueError?.message,
       error: message,
