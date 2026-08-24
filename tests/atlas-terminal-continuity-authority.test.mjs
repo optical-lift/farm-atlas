@@ -11,6 +11,7 @@ const registryPath = 'supabase/migrations/20260823233407_farm_terminal_census_v2
 const selfContainedPath = 'supabase/migrations/20260823235000_farm_terminal_census_v2_self_contained_authority_v1.sql';
 const apiBoundaryPath = 'supabase/migrations/20260823235000_continuity_single_product_api_boundary_v1.sql';
 const cleanupPath = 'supabase/migrations/20260824000500_remove_superseded_farm_continuity_audit_engines_v1.sql';
+const retiredV1Path = 'supabase/migrations/20260824001000_remove_superseded_terminal_census_v1_runtime_v1.sql';
 
 test('terminal farm continuity has one self-contained canonical current-state authority', () => {
   const canonical = read(selfContainedPath);
@@ -38,18 +39,23 @@ test('Atlas-wide farm continuity is cut over to terminal census v2 rather than t
   }
 });
 
-test('terminal census helpers remain service-internal and cannot become authenticated public RPCs', () => {
-  const release = read(releasePath);
+test('superseded terminal census v1 is absent from the finished executable schema', () => {
+  const retiredV1 = read(retiredV1Path);
+  assert.match(retiredV1, /delete from atlas\.authenticated_rpc_registry/i);
+  assert.match(retiredV1, /signature = 'atlas\.farm_continuity_terminal_census_v1\(uuid, date\)'/);
+  assert.match(retiredV1, /drop function if exists atlas\.farm_continuity_terminal_census_v1\(uuid,date\) restrict/i);
+  assert.match(retiredV1, /migration history only/i);
+  assert.doesNotMatch(retiredV1, /cascade/i);
+});
+
+test('canonical terminal census v2 and lower-level continuity proofs remain service-internal', () => {
   const canonical = read(selfContainedPath);
   const registry = read(registryPath);
 
-  assert.match(release, /revoke execute on function atlas\.farm_continuity_terminal_census_v1\(uuid,date\) from public, anon, authenticated/i);
-  assert.match(release, /grant execute on function atlas\.farm_continuity_terminal_census_v1\(uuid,date\) to service_role/i);
   assert.match(canonical, /revoke execute on function atlas\.farm_continuity_terminal_census_v2\(uuid,date\) from public, anon, authenticated/i);
   assert.match(canonical, /grant execute on function atlas\.farm_continuity_terminal_census_v2\(uuid,date\) to service_role/i);
 
   for (const signature of [
-    'atlas.farm_continuity_terminal_census_v1(uuid, date)',
     'atlas.farm_continuity_terminal_census_v2(uuid, date)',
     'atlas.requirement_continuity_audit_v2(uuid, date)',
   ]) {
