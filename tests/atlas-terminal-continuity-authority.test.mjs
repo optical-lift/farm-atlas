@@ -10,6 +10,7 @@ const releasePath = 'supabase/migrations/20260823233129_farm_terminal_census_v2_
 const registryPath = 'supabase/migrations/20260823233407_farm_terminal_census_v2_rpc_registry_reconciliation_v1.sql';
 const retirementPath = 'supabase/migrations/20260823234500_retire_legacy_farm_continuity_audit_family_v1.sql';
 const selfContainedPath = 'supabase/migrations/20260823235000_farm_terminal_census_v2_self_contained_authority_v1.sql';
+const apiBoundaryPath = 'supabase/migrations/20260823235000_continuity_single_product_api_boundary_v1.sql';
 
 test('terminal farm continuity has one self-contained canonical current-state authority', () => {
   const canonical = read(selfContainedPath);
@@ -70,4 +71,22 @@ test('legacy farm continuity audit versions are lineage-only, not alternative pr
   assert.match(retirement, /historical_diagnostic_lineage_only/);
   assert.match(retirement, /farm_continuity_terminal_census_v2/);
   assert.match(retirement, /cannot serve as present-tense farm continuity authority/);
+});
+
+test('continuity has one product-facing API and all lower-level proof families are service-internal', () => {
+  const boundary = read(apiBoundaryPath);
+  for (const family of [
+    'farm_continuity_audit_v',
+    'farm_continuity_terminal_census_v',
+    'requirement_continuity_audit_v',
+    'operation_result_continuity_audit_v',
+  ]) {
+    assert.ok(boundary.includes(family), `missing continuity helper family ${family}`);
+  }
+  assert.match(boundary, /revoke execute on function %s from public, anon, authenticated/i);
+  assert.match(boundary, /grant execute on function %s to service_role/i);
+  assert.match(boundary, /classification = 'service_internal'/);
+  assert.match(boundary, /canonicalProductAuthority', 'atlas\.atlas_wide_continuity_summary_v1'/);
+  assert.match(boundary, /Canonical product-facing Atlas continuity API/);
+  assert.match(boundary, /Lower-level continuity proofs and diagnostics cannot serve as independent authenticated product APIs/);
 });
