@@ -102,7 +102,7 @@ export default function SiteLayoutTaskDetail({ task, assignee, initialReadiness,
       ) : null}
       {message ? <p className="atlas-setup-message">{message}</p> : null}
     </div>
-  ) : undefined;
+  ) : false;
 
   return (
     <main className="atlas-setup-shell" data-atlas-site-layout-card="true" data-atlas-setup-display="task-card-lab-v1">
