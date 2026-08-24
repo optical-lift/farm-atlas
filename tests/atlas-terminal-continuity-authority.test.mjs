@@ -12,7 +12,7 @@ const selfContainedPath = 'supabase/migrations/20260823235000_farm_terminal_cens
 const apiBoundaryPath = 'supabase/migrations/20260823235000_continuity_single_product_api_boundary_v1.sql';
 const cleanupPath = 'supabase/migrations/20260824000500_remove_superseded_farm_continuity_audit_engines_v1.sql';
 const retiredV1Path = 'supabase/migrations/20260824001000_remove_superseded_terminal_census_v1_runtime_v1.sql';
-const requirementAuthorityPath = 'supabase/migrations/20260824001500_requirement_continuity_v2_self_contained_authority_v1.sql';
+const requirementAuthorityPath = 'supabase/migrations/20260823232534_farm_continuity_terminal_census_requirement_semantics_v2.sql';
 
 test('terminal farm continuity has one self-contained canonical current-state authority', () => {
   const canonical = read(selfContainedPath);
@@ -27,18 +27,20 @@ test('terminal farm continuity has one self-contained canonical current-state au
   assert.match(canonical, /supersededTerminalVersionsAreNotExecutionDependencies/);
 });
 
-test('Requirement Continuity v2 is the self-contained current authority and v1 is runtime history only', () => {
+test('Requirement Continuity v2 is self-contained when introduced and v1 is runtime history only', () => {
   const requirement = read(requirementAuthorityPath);
   assert.match(requirement, /pg_get_functiondef/);
   assert.match(requirement, /replace\(v_def,'requirement_continuity_audit_v1','requirement_continuity_audit_v2'\)/);
   assert.match(requirement, /worker_day_task_placements/);
   assert.match(requirement, /task_execution_readiness_v1/);
+  assert.match(requirement, /v_old_predicate/);
   assert.match(requirement, /legacy progression diagnostic block/);
   assert.match(requirement, /canonicalRequirementContinuityComputesCurrentPopulationDirectly/);
   assert.match(requirement, /supersededRequirementVersionsAreNotExecutionDependencies/);
   assert.match(requirement, /drop function atlas\.requirement_continuity_audit_v1\(uuid,date\) restrict/i);
   assert.match(requirement, /revoke all on function atlas\.requirement_continuity_audit_v2\(uuid,date\) from public,anon,authenticated/i);
   assert.match(requirement, /grant execute on function atlas\.requirement_continuity_audit_v2\(uuid,date\) to service_role/i);
+  assert.doesNotMatch(requirement, /v_base := atlas\.requirement_continuity_audit_v1/);
   assert.doesNotMatch(requirement, /cascade/i);
 });
 
