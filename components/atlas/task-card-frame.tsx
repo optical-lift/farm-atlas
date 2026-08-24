@@ -11,6 +11,9 @@ export type AtlasTaskCardFrameProps = {
   children: ReactNode;
   className?: string;
   completion?: ReactNode | false;
+  onDone?: () => void;
+  onUnfinished?: () => void;
+  completionDisabled?: boolean;
 };
 
 export default function AtlasTaskCardFrame({
@@ -22,6 +25,9 @@ export default function AtlasTaskCardFrame({
   children,
   className,
   completion,
+  onDone,
+  onUnfinished,
+  completionDisabled = false,
 }: AtlasTaskCardFrameProps) {
   const cardClassName = className ? `${styles.card} ${className}` : styles.card;
 
@@ -43,8 +49,8 @@ export default function AtlasTaskCardFrame({
         <footer className={styles.customFinish}>{completion}</footer>
       ) : (
         <footer className={styles.finish}>
-          <button type="button" className={styles.primaryFinish}>Done</button>
-          <button type="button" className={styles.secondaryFinish}>Unfinished</button>
+          <button type="button" className={styles.primaryFinish} disabled={completionDisabled} onClick={onDone}>Done</button>
+          <button type="button" className={styles.secondaryFinish} disabled={completionDisabled} onClick={onUnfinished}>Unfinished</button>
         </footer>
       )}
     </article>
