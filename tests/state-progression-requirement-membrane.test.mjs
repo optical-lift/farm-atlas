@@ -85,7 +85,7 @@ test('first membrane creates no stateful mechanism and remains service-internal'
     assert.match(sql, new RegExp(`grant execute on function ${escaped} to service_role`, 'i'));
   }
   assert.match(contract, /does not replace `atlas\.task_execution_readiness_v1\(uuid\)`/i);
-  assert.match(contract, /Boundary recording is explicitly outside the first compatibility membrane/i);
+  assert.match(contract, /Step 1 compatibility membrane remains read-only and does not automatically write boundary events/i);
   assert.match(contract, /no production behavior has been cut over to the new membrane/i);
 });
 
