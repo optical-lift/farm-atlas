@@ -46,6 +46,19 @@ begin
     evidence=excluded.evidence,
     reviewed_at=excluded.reviewed_at,
     anonymous_execute_expected=excluded.anonymous_execute_expected;
+
+  -- Clean stale product-authority metadata from the three surviving internal proofs.
+  update atlas.authenticated_rpc_registry
+  set evidence = coalesce(evidence,'{}'::jsonb) || jsonb_build_object(
+        'canonicalProductAuthority','atlas.atlas_wide_continuity_summary',
+        'finishedSurface',true
+      ),
+      reviewed_at=now()
+  where signature in (
+    'atlas.farm_continuity_terminal_census(uuid, date)',
+    'atlas.requirement_continuity_audit(uuid, date)',
+    'atlas.operation_result_continuity_audit(uuid, date)'
+  );
 end
 $migration$;
 
