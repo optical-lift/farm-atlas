@@ -44,7 +44,7 @@ test("Farm Round owns its route instrument inside canonical Task Focus geometry"
   assert.match(farmRound, /farm_round_issue_options/);
   assert.doesNotMatch(farmRound, /task-card-venue-rail/);
   assert.doesNotMatch(farmRound, /rail\./);
-  assert.match(farmRoundCss, /width:min\(100%,520px\)/);
+  assert.match(farmRoundCss, /width:\s*min\(100%,\s*520px\)/);
   assert.match(farmRoundCss, /\.route/);
   assert.match(farmRoundCss, /\.stop/);
   assert.match(farmRoundCss, /\.item/);
