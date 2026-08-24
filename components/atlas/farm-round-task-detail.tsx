@@ -14,7 +14,7 @@ type RoundMember = AtlasTaskCard & { routeStop: string; routeOrder: number; memb
 function text(value: unknown) { return typeof value === "string" ? value.trim() : ""; }
 function number(value: unknown, fallback = 999) { const parsed = typeof value === "number" ? value : Number(value); return Number.isFinite(parsed) ? parsed : fallback; }
 function stringArray(value: unknown) { return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && Boolean(item.trim())).map((item) => item.trim()) : []; }
-function isDone(task: AtlasTaskCard) { return task.status === "done" || task.task_outcomes?.[0]?.outcome === "done"; }
+function isDone(task: AtlasTaskCard) { return task.status === "done" || task.metadata?.checklist_status === "done"; }
 function asMember(task: AtlasTaskCard): RoundMember { return Object.assign(task, { routeStop: text(task.metadata?.farm_round_route_stop_label) || "Elm Farm", routeOrder: number(task.metadata?.farm_round_route_order), memberOrder: number(task.metadata?.farm_round_member_order), displayLabel: text(task.metadata?.farm_round_display_label) || task.title, displayDetail: text(task.metadata?.farm_round_display_detail) || null, issueOptions: stringArray(task.metadata?.farm_round_issue_options) }); }
 function returnPath(assignee: AtlasAssigneeConfig) { if (typeof window === "undefined") return assignee.listPath; const requested = new URLSearchParams(window.location.search).get("returnTo"); return requested && requested.startsWith("/") && !requested.startsWith("//") ? requested : assignee.listPath; }
 
@@ -33,7 +33,7 @@ export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Prop
     try {
       setSavingId(member.task_id); setMessage(null);
       await postAtlasTaskTransition({ taskId: member.task_id, transition: done ? "reopened" : "done", note: done ? "Reopened from Farm Round." : "Completed from Farm Round.", payload: { farmRoundParentTaskId: task.task_id, farmRoundMember: true } });
-      const nextMembers = members.map((candidate) => candidate.task_id === member.task_id ? { ...candidate, status: done ? "open" : "done" } : candidate);
+      const nextMembers = members.map((candidate) => candidate.task_id === member.task_id ? { ...candidate, status: done ? "open" : "done", metadata: done ? { ...candidate.metadata, checklist_status: "open" } : candidate.metadata } : candidate);
       setMembers(nextMembers);
       if (!done && nextMembers.every((candidate) => isDone(candidate))) window.setTimeout(() => window.location.assign(returnPath(assignee)), 120);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Atlas could not update this Farm Round item."); }
@@ -41,14 +41,16 @@ export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Prop
   }
 
   async function completeRound() {
-    const pending = ordered.filter((member) => !isDone(member));
-    if (!pending.length) { window.location.assign(returnPath(assignee)); return; }
-    setSavingRound(true); setMessage(null); let nextMembers = members;
     try {
-      for (const member of pending) {
-        await postAtlasTaskTransition({ taskId: member.task_id, transition: "done", note: "Completed from Farm Round Done action.", payload: { farmRoundParentTaskId: task.task_id, farmRoundMember: true, farmRoundTerminalAction: true } });
-        nextMembers = nextMembers.map((candidate) => candidate.task_id === member.task_id ? { ...candidate, status: "done" } : candidate); setMembers(nextMembers);
-      }
+      setSavingRound(true); setMessage(null);
+      await postAtlasTaskTransition({
+        taskId: task.task_id,
+        transition: "done",
+        note: "Completed Farm Round.",
+        laneKey: task.action_key || undefined,
+        workKey: task.action_key || undefined,
+        payload: { farmRoundParent: true, farmRoundTerminalAction: true },
+      });
       window.location.assign(returnPath(assignee));
     } catch (error) { setMessage(error instanceof Error ? error.message : "Atlas could not complete this Farm Round."); }
     finally { setSavingRound(false); }
@@ -62,7 +64,7 @@ export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Prop
   }
 
   return (
-    <main className={roundStyles.shell} data-atlas-farm-round="canonical-card-geometry-v1">
+    <main className={roundStyles.shell} data-atlas-farm-round="canonical-completion-v1">
       <AtlasTaskCardFrame family="Stewardship" familyDetail="recurring round" title="Farm Round" subtitle="Elm Farm" timing={remaining === 0 ? "Round complete" : `${remaining} ${remaining === 1 ? "item" : "items"} due`} onDone={() => void completeRound()} onUnfinished={leaveUnfinished} completionDisabled={completionBusy}>
         <div className={roundStyles.key} aria-label="Farm Round controls"><span>Tap an item to cross it off</span><span>Use + to report an issue</span></div>
         {stops.length ? <div className={roundStyles.route} aria-label="Farm Round walking route">
