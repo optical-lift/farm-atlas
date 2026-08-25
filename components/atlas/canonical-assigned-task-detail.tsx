@@ -19,6 +19,7 @@ import VegetationControlTaskDetail from "@/components/atlas/vegetation-control-t
 import VenueResetTaskDetail from "@/components/atlas/venue-reset-task-detail";
 import VenueTaskDetail from "@/components/atlas/venue-task-detail";
 import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
+import WeeklyFoodHarvestTaskDetail from "@/components/atlas/weekly-food-harvest-task-detail";
 import WeeklyHarvestTaskDetail from "@/components/atlas/weekly-harvest-task-detail";
 import WorkerReadyAssignedTaskExecutionShell from "@/components/atlas/worker-ready-assigned-task-execution-shell";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
@@ -193,6 +194,11 @@ function isWeeklyHarvestTask(task: AtlasTaskCard) {
     && (task.metadata?.weekly_routine === true || task.metadata?.weekly_routine === "true");
 }
 
+function isWeeklyFoodHarvestTask(task: AtlasTaskCard) {
+  return task.task_type === "food_harvest"
+    && task.metadata?.result_contract === "weekly_food_harvest_round_v1";
+}
+
 function isSiteLayoutTask(task: AtlasTaskCard) {
   return task.task_type === "site_layout";
 }
@@ -271,6 +277,7 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isTransplantReadinessTask(props.task)) return <TransplantReadinessTaskDetail {...props} />;
   if (isFlowerPreparationTask(props.task)) return <FlowerPreparationTaskLoader {...props} />;
   if (isFlowerFulfillmentTask(props.task)) return <FlowerFulfillmentTaskLoader {...props} />;
+  if (isWeeklyFoodHarvestTask(props.task)) return <WeeklyFoodHarvestTaskDetail {...props} />;
   if (isWeeklyHarvestTask(props.task)) return <WeeklyHarvestTaskDetail {...props} />;
 
   const initialReadiness = await loadWorkerReadiness(props.task.task_id);
