@@ -42,7 +42,7 @@ begin
     ('community_thursday_venue_prep_v1','water_cups','water','Water','Clear cups',70,false,'resource'),
     ('community_thursday_venue_host_v1','ice_maker','open_event','Open the event','Turn on the ice maker',10,true,'action'),
     ('community_thursday_venue_host_v1','open_sign','open_event','Open the event','Turn on the OPEN sign',20,true,'action'),
-    ('community_thursday_venue_host_v1','yellow_door','open_event','Open the yellow door',30,true,'action')
+    ('community_thursday_venue_host_v1','yellow_door','open_event','Open the event','Open the yellow door',30,true,'action')
   ) x(template_key,item_key,section_key,section_label,item_label,sort_order,required,interaction)
   where x.template_key=v_template
   on conflict (task_id,item_key) do update set section_key=excluded.section_key,section_label=excluded.section_label,item_label=excluded.item_label,
