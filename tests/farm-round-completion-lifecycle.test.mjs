@@ -5,6 +5,8 @@ import test from "node:test";
 const frame = fs.readFileSync("components/atlas/task-card-frame.tsx", "utf8");
 const farmRound = fs.readFileSync("components/atlas/farm-round-task-detail.tsx", "utf8");
 const farmRoundCss = fs.readFileSync("components/atlas/farm-round-task-detail.module.css", "utf8");
+const transitionRoute = fs.readFileSync("app/api/atlas/task-transition/route.ts", "utf8");
+const warrantMigration = fs.readFileSync("supabase/migrations/20260825170030_farm_round_member_completion_warrant_v1.sql", "utf8");
 
 test("shared task-card footer requires executable completion actions", () => {
   assert.match(frame, /type InteractiveCompletionProps = \{[\s\S]*?onDone: \(\) => void;[\s\S]*?onUnfinished: \(\) => void;/);
@@ -48,4 +50,13 @@ test("Farm Round toggles render immediately while canonical persistence remains 
   assert.ok(optimisticRender >= 0, "Farm Round must update local row state on tap");
   assert.ok(canonicalCommit > optimisticRender, "visual completion must not wait for the network commit");
   assert.ok(rollback > canonicalCommit, "a rejected canonical transition must restore the prior row state");
+});
+
+test("current-day Farm Round member done uses the dedicated completion warrant", () => {
+  assert.match(transitionRoute, /isFarmRoundMemberDone/);
+  assert.match(transitionRoute, /worker_record_farm_round_member_done_v1/);
+  assert.match(warrantMigration, /farm_round_member_completion_v1/);
+  assert.match(warrantMigration, /v_parent\.due_date is distinct from v_service_date/);
+  assert.match(warrantMigration, /v_task\.due_date is distinct from v_service_date/);
+  assert.match(warrantMigration, /resource_truth_not_inferred/);
 });
