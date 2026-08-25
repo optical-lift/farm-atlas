@@ -57,6 +57,7 @@ type FutureProjectionItem = {
   id: string;
   sourceKind: string;
   title: string;
+  workRoute: string | null;
   location: string | null;
   dayWindow: DayWindowKey;
   sequenceOrder: number;
@@ -518,7 +519,7 @@ function CompletionEcho({ task, event, saving, returnTo, onPress }: { task: Atla
 function FuturePlanCard({ item }: { item: FutureProjectionItem }) {
   const firstWord = item.title.trim().split(/\s+/, 1)[0] || "Planned";
   return (
-    <div className="atlas-day-task-card atlas-day-future-plan-card" data-future-projection-source={item.sourceKind} data-day-window={item.dayWindow}>
+    <div className="atlas-day-task-card atlas-day-future-plan-card" data-future-projection-source={item.sourceKind} data-day-window={item.dayWindow} data-work-route={item.workRoute ?? undefined}>
       <small className="atlas-day-task-family">{firstWord}</small>
       <strong>{item.title}</strong>
       {item.location ? <span>{item.location}</span> : null}
@@ -609,9 +610,10 @@ function AtlasDayPageContent() {
   const futureAutomaticItems = useMemo<FutureProjectionItem[]>(() => {
     if (!isFutureDay) return [];
     return (projection?.sequence.items ?? []).flatMap((item) => item.kind === "committed_task" && item.automatic
-      ? [{ id: item.id, sourceKind: item.sourceKind, title: item.title, location: item.location, dayWindow: item.dayWindow, sequenceOrder: item.sequenceOrder }]
+      ? [{ id: item.id, sourceKind: item.sourceKind, title: item.title, workRoute: item.workRoute, location: item.location, dayWindow: item.dayWindow, sequenceOrder: item.sequenceOrder }]
       : []);
   }, [isFutureDay, projection]);
+  const filteredFutureAutomaticItems = useMemo(() => routeFilter ? futureAutomaticItems.filter((item) => item.workRoute === routeFilter) : futureAutomaticItems, [futureAutomaticItems, routeFilter]);
   const doneDayTasks = useMemo(() => allDayTasks.filter(isDoneTask).filter((task) => !isExtraCredit(task)), [allDayTasks]);
   const partnerPlan = useMemo(() => buildDayPartnerPlan(allDayTasks.filter((task) => !isExtraCredit(task))), [allDayTasks]);
   const overdueTasks = useMemo(() => {
@@ -633,6 +635,8 @@ function AtlasDayPageContent() {
   const nextRecoveryWindow = nextRecoveryTask ? dayWindowDefinition(resolvedDayWindowForTask(nextRecoveryTask, dateIso, partnerPlan)) : null;
   const openRequiredCount = mixedOpenTasks.length;
   const displayedOpenCount = isFutureDay ? openRequiredCount + futureAutomaticItems.length : openRequiredCount;
+  const filteredScheduledCount = filteredTasks.length + (isFutureDay ? filteredFutureAutomaticItems.length : 0);
+  const browseScheduledCount = routeFilter ? filteredScheduledCount : displayedOpenCount;
   const zones = useMemo(() => Array.from(new Set(filteredTasks.map(collectionZone))).sort((a, b) => a.localeCompare(b)), [filteredTasks]);
   const recoveryGroups = useMemo(() => dayWindows.map((window) => ({
     ...window,
@@ -643,8 +647,8 @@ function AtlasDayPageContent() {
     tasks: filteredTimelineTasks.filter((task) => resolvedDayWindowForTask(task, dateIso, partnerPlan) === window.key),
   })), [dateIso, filteredTimelineTasks, partnerPlan]);
   const visibleTimelineGroups = useMemo(() => timelineGroups.filter((window) =>
-    window.tasks.length || (!routeFilter && isFutureDay && futureAutomaticItems.some((item) => item.dayWindow === window.key))
-  ), [futureAutomaticItems, isFutureDay, routeFilter, timelineGroups]);
+    window.tasks.length || (isFutureDay && filteredFutureAutomaticItems.some((item) => item.dayWindow === window.key))
+  ), [filteredFutureAutomaticItems, isFutureDay, timelineGroups]);
 
   const returnTo = routeFilter ? routeHref(dateIso, routeFilter) : dayHref(dateIso);
   const previousDate = shiftIsoDate(dateIso, -1);
@@ -796,8 +800,8 @@ function AtlasDayPageContent() {
             <section className="atlas-task-page-section atlas-route-collection atlas-day-browse">
               <div className="atlas-day-browse-head">
                 <Link href={routeFilter ? dayHref(dateIso) : "/"} className="atlas-route-back atlas-day-back">{routeFilter ? "← Day plan" : "← Week"}</Link>
-                <div className="atlas-day-browse-title-row"><span>{routeFilter ? routeLabels[routeFilter] : dayOnly(dateIso)}</span><strong>{loading ? "Loading" : isFutureDay ? `${displayedOpenCount} scheduled · ${doneDayTasks.length} done` : `${openRequiredCount} open · ${overdueTasks.length} carried · ${doneDayTasks.length} done`}</strong></div>
-                <p>{loading ? "Loading farm work" : routeFilter ? `${filteredTasks.length} ${filteredTasks.length === 1 ? "task" : "tasks"} in this collection` : isFutureDay ? `${displayedOpenCount} tasks scheduled for this day` : `${openRequiredCount} unfinished tasks in the real day`}</p>
+                <div className="atlas-day-browse-title-row"><span>{routeFilter ? routeLabels[routeFilter] : dayOnly(dateIso)}</span><strong>{loading ? "Loading" : isFutureDay ? `${browseScheduledCount} scheduled · ${doneDayTasks.length} done` : `${openRequiredCount} open · ${overdueTasks.length} carried · ${doneDayTasks.length} done`}</strong></div>
+                <p>{loading ? "Loading farm work" : routeFilter ? `${filteredScheduledCount} ${filteredScheduledCount === 1 ? "task" : "tasks"} in this collection` : isFutureDay ? `${displayedOpenCount} tasks scheduled for this day` : `${openRequiredCount} unfinished tasks in the real day`}</p>
               </div>
 
               {error ? <div className="atlas-task-page-empty error">{error}</div> : null}
@@ -846,7 +850,7 @@ function AtlasDayPageContent() {
 
               <div className="atlas-day-task-groups">
                 {routeFilter ? (
-                  <article className="atlas-day-route-group atlas-day-work-order-group"><h3>{routeLabels[routeFilter]}</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{windowedTimeline(visibleTimelineGroups)}{!loading && !filteredTimelineTasks.length ? <div className="atlas-day-route-empty">No open tasks in this collection.</div> : null}</div></article>
+                  <article className="atlas-day-route-group atlas-day-work-order-group"><h3>{routeLabels[routeFilter]}</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{windowedTimeline(visibleTimelineGroups, isFutureDay ? filteredFutureAutomaticItems : [])}{!loading && !filteredTimelineTasks.length && !filteredFutureAutomaticItems.length ? <div className="atlas-day-route-empty">No open tasks in this collection.</div> : null}</div></article>
                 ) : viewMode === "work_order" ? (
                   <article className="atlas-day-route-group atlas-day-work-order-group atlas-day-timeline-group"><h3>Work the day</h3><div className="atlas-day-work-order-list atlas-day-route-spine atlas-day-mixed-timeline">{windowedTimeline(visibleTimelineGroups, isFutureDay ? futureAutomaticItems : [])}{!loading && !timelineTasks.length && !futureAutomaticItems.length ? <div className="atlas-day-route-empty">No open farm tasks planned for this day.</div> : null}</div></article>
                 ) : (

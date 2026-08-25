@@ -65,7 +65,7 @@ test("future Day asks the canonical Worker Day runtime for one date and preserve
 
 test("future Day is a projection and cannot manufacture overdue work", () => {
   assert.match(dayPage, /const isFutureDay = dateIso > calendarToday/);
-  assert.match(dayPage, /isFutureDay \? `\$\{displayedOpenCount\} scheduled/);
+  assert.match(dayPage, /isFutureDay \? `\$\{browseScheduledCount\} scheduled/);
   assert.match(dayPage, /tasks scheduled for this day/);
   assert.match(dayPage, /dateIso === calendarToday \? nextTaskForCurrentWindow/);
   assert.match(dayPage, /!isFutureDay && livingDay \? <LivingDayCarried/);

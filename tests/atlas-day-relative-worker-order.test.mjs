@@ -10,7 +10,7 @@ test("worker Day keeps Morning Afternoon Evening as permanent schedule structure
   assert.match(dayPage, /key: "morning", label: "Morning"/);
   assert.match(dayPage, /key: "afternoon", label: "Afternoon"/);
   assert.match(dayPage, /key: "evening", label: "Evening"/);
-  assert.match(dayPage, /windowedTimeline\(visibleTimelineGroups\)/);
+  assert.match(dayPage, /windowedTimeline\(visibleTimelineGroups, isFutureDay \? filteredFutureAutomaticItems : \[\]\)/);
   assert.doesNotMatch(dayPage, /relativeWorkerTimelineGroups/);
 });
 
