@@ -195,6 +195,19 @@ export async function POST(request: Request) {
     });
     data = response.data;
     error = response.error;
+  } else if (
+    rpcName === "worker_record_task_transition_v1"
+    && input.transition === "done"
+    && input.payload?.farmRoundMember === true
+  ) {
+    const response = await supabase.rpc("worker_record_farm_round_member_done_v1", {
+      p_task_id: input.taskId,
+      p_idempotency_key: input.idempotencyKey,
+      p_note: input.note,
+      p_payload: input.payload,
+    });
+    data = response.data;
+    error = response.error;
   } else if (rpcName === "worker_record_task_transition_v1") {
     const response = await supabase.rpc("worker_record_task_transition_v1", {
       p_task_id: input.taskId,
