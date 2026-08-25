@@ -16,7 +16,7 @@ const layout = read("app/layout.tsx");
 test("Day remains one task timeline while Living Journal sections are visually absent", () => {
   assert.match(day, /atlas-day-route-spine/);
   assert.match(day, /atlas-day-mixed-timeline/);
-  assert.match(day, /windowedTimeline\(visibleTimelineGroups\)/);
+  assert.match(day, /windowedTimeline\(visibleTimelineGroups, isFutureDay \? filteredFutureAutomaticItems : \[\]\)/);
   assert.match(day, /const dayWindows: DayWindow\[\] =/);
   assert.match(day, /label: "Morning"/);
   assert.match(day, /label: "Afternoon"/);
