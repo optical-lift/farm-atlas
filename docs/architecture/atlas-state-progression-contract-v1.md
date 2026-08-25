@@ -188,6 +188,16 @@ This step:
 
 The old automatic pot-up coupling is retired by changing its existing task trigger function into a domain adapter that must record a Boundary before invoking the release consequence. The shared lower-level queue release function remains implementation machinery; it is not itself the State Progression authorization boundary.
 
+### Step 3 release-authority seal
+
+The post-merge release audit found that correct orchestration at the pot-up adapter was not sufficient as a durable invariant: a lower-level helper must not remain capable of accepting `pot_up_serial` work without the same authorization provenance. The final Step 3 seal therefore makes the lower-level release helper also fails closed for `pot_up_serial` unless the authorizing Boundary chain is present.
+
+For pot-up serial work, `atlas.release_next_task_in_queue_v1(uuid,text,date)` now requires the queued successor to identify the Boundary event, requirement set, and immediately preceding queue item that authorized release. The immediately preceding item must already be completed by the same Boundary, and the Boundary ledger row must be a matching `closed` `open → satisfied` event whose source is that predecessor task. Other queue kinds retain their existing behavior.
+
+The dormant generic direct-release trigger function is retired rather than left as a competing authority. `atlas.advance_task_release_queue_v1()` had no live trigger attached, but removing it eliminates a second executable formulation of the old direct coupling. Pot-up release metadata now records `boundary_authorized_process_continuation_v1`; the former `direct_process_continuation_materialization_v1` label is not part of the post-cutover path.
+
+This hardening does not create another effect consumer, API, table, trigger, or generic effect router. It reduces the live governed surface while making the authorization invariant enforceable at the last shared mutation boundary.
+
 ## Third-step acceptance gate
 
 The third step is complete only when:
@@ -199,7 +209,9 @@ The third step is complete only when:
 5. the boundary ledger still has no insert-triggered effect consumer;
 6. the live task-readiness compatibility membrane still reports zero mismatches across the full task corpus;
 7. authenticated RPC registry drift remains zero and the new effect consumer remains service-internal;
-8. repository migration bytes exactly match post-cutover production provenance;
-9. source custody, architecture CI, full tests, build, merge, and production deployment verification are green.
+8. the lower-level helper rejects pot-up release without valid Boundary provenance and accepts the same release when the exact Boundary chain is present;
+9. the dormant generic direct-release function is absent from the live executable surface;
+10. repository migration bytes exactly match post-cutover production provenance;
+11. source custody, architecture CI, full tests, build, merge, and production deployment verification are green.
 
 Only after this single effect path is proven should Atlas select another competing ready/gate/release mechanism for retirement.
