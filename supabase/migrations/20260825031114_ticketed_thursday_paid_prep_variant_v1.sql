@@ -1,0 +1,6 @@
+-- Production migration provenance marker.
+-- The initial paid-evening drinkware variant was applied under this ledger version.
+-- It was immediately superseded by 20260825031157_ticketed_thursday_paid_prep_recursion_seal_v1
+-- after verification exposed task-trigger recursion. Fresh replays intentionally take
+-- the final function body from the sealing migration rather than reintroducing the
+-- transient recursive implementation.
