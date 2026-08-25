@@ -39,7 +39,7 @@ test("Day Route keeps carried work together, preserves completion echoes, and ke
 
   const commandIndex = page.indexOf("atlas-day-command-header-with-recovery");
   const overviewIndex = page.indexOf("atlas-day-recovery-overview");
-  const workOrderIndex = page.indexOf("windowedTimeline(visibleTimelineGroups)");
+  const workOrderIndex = page.indexOf("windowedTimeline(visibleTimelineGroups");
 
   assert.notEqual(commandIndex, -1);
   assert.notEqual(overviewIndex, -1);
@@ -58,7 +58,7 @@ test("Day Route keeps carried work together, preserves completion echoes, and ke
   assert.match(page, /atlas-day-route-spine/);
   assert.match(page, /atlas-day-mixed-timeline/);
   assert.match(page, /CompletionEcho/);
-  assert.match(page, /group\.tasks\.map\(timelineRow\)/);
+  assert.match(page, /row\.kind === "task" \? timelineRow\(row\.task\)/);
   assert.match(page, /atlas-day-recovery-overview/);
   assert.match(page, />Timeline<\/button>/);
   assert.match(page, />Zone<\/button>/);
