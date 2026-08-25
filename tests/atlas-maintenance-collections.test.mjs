@@ -18,7 +18,7 @@ test("Day keeps canonical maintenance jobs in the mixed timeline while the compa
   assert.match(source, /atlas-day-filter-pill/);
   assert.match(source, /atlas-day-route-spine/);
   assert.match(source, /atlas-day-mixed-timeline/);
-  assert.match(source, /windowedTimeline\(visibleTimelineGroups\)/);
+  assert.match(source, /windowedTimeline\(visibleTimelineGroups, isFutureDay \? filteredFutureAutomaticItems : \[\]\)/);
   assert.match(source, /label: "Morning"/);
   assert.match(source, /label: "Afternoon"/);
   assert.match(source, /label: "Evening"/);
