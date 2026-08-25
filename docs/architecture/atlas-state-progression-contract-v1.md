@@ -190,13 +190,13 @@ The old automatic pot-up coupling is retired by changing its existing task trigg
 
 ### Step 3 release-authority seal
 
-The post-merge release audit found that correct orchestration at the pot-up adapter was not sufficient as a durable invariant: a lower-level helper must not remain capable of accepting `pot_up_serial` work without the same authorization provenance. The final Step 3 seal therefore makes the lower-level release helper also fails closed for `pot_up_serial` unless the authorizing Boundary chain is present.
+The post-merge release audit found that correct orchestration at the pot-up adapter was not sufficient as a durable invariant: a lower-level helper must not remain capable of accepting `pot_up_serial` work without the same authorization provenance. The final Step 3 seal therefore requires the lower-level release helper to fail closed for `pot_up_serial` unless the authorizing Boundary chain is present.
 
 For pot-up serial work, `atlas.release_next_task_in_queue_v1(uuid,text,date)` now requires the queued successor to identify the Boundary event, requirement set, and immediately preceding queue item that authorized release. The immediately preceding item must already be completed by the same Boundary, and the Boundary ledger row must be a matching `closed` `open → satisfied` event whose source is that predecessor task. Other queue kinds retain their existing behavior.
 
 The dormant generic direct-release trigger function is retired rather than left as a competing authority. `atlas.advance_task_release_queue_v1()` had no live trigger attached, but removing it eliminates a second executable formulation of the old direct coupling. Pot-up release metadata now records `boundary_authorized_process_continuation_v1`; the former `direct_process_continuation_materialization_v1` label is not part of the post-cutover path.
 
-This hardening does not create another effect consumer, API, table, trigger, or generic effect router. It reduces the live governed surface while making the authorization invariant enforceable at the last shared mutation boundary.
+This hardening does not create another effect consumer, API, table, trigger, or generic effect router. The final governed artifact count is neutral relative to Step 2 at 4,368: the new bounded Effect consumer and retirement of the dormant direct-release formulation offset one another. The simplification is architectural—one fewer competing release authority—while the authorization invariant is now enforceable at the last shared mutation boundary.
 
 ## Third-step acceptance gate
 
