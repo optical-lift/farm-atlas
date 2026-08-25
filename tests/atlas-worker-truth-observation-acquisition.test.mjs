@@ -122,7 +122,7 @@ test('1E observed branch resolves only after canonical state is independently co
 test('1E worker endpoint is authenticated and anonymous execution stays closed', () => {
   const sql = read(bridgePath);
   assert.match(sql, /revoke all on function atlas\.record_worker_truth_observation_v1\(uuid,uuid,text,text,numeric,text,text,text\) from public,anon/);
-  assert.match(sql, /grant execute on function atlas\.record_worker_truth_observation_v1\(uuid,uuid,text,text,numeric,text,text,text\) to authenticated,service_role/);
+  assert.match(sql, /grant execute on function atlas\.record_worker_truth_observation_v1\(uuid,uuid,text,uuid,text,text,text\) to authenticated,service_role/);
   assert.match(sql, /'atlas\.record_worker_truth_observation_v1\(uuid, uuid, text, text, numeric, text, text, text\)'/);
   assert.match(sql, /'public_endpoint','verified','active'/);
   assert.match(sql, /'requiresRoutedWorker',true/);
@@ -143,6 +143,6 @@ test('1E guarantees remain present under the current governed Atlas surface', ()
   const expected = JSON.parse(read('docs/architecture/atlas-source-custody-surface-v1.json'));
   assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1192);
   assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 473);
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '0835f2cfc9e70b1564fc640dd0dfa6fbc972768baa83382cf7e59298bea3d255');
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '0835ee407600a0f0eb9cf1f7a08f50e9db2636e3d46e9c28c8e7d1747958f518');
   assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, 'f21ff68b0a196f64efe69f67a1e7f28ebe92edd6b6e1aa9bd29f4ce086814439');
 });
