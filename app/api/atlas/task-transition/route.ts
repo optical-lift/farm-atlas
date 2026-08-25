@@ -58,6 +58,12 @@ function projectStatus(transition: ProjectTransition) {
   return "open";
 }
 
+function isFarmRoundMemberDone(input: ReturnType<typeof normalizeAtlasTaskTransitionInput>, role: string) {
+  return input.transition === "done"
+    && input.payload?.farmRoundMember === true
+    && (role === "farm_hand" || role === "manager");
+}
+
 async function projectTaskTransition(input: ReturnType<typeof normalizeAtlasTaskTransitionInput>) {
   const session = await getAtlasSession();
   if (!session?.organizationMemberships.length) return null;
@@ -152,7 +158,16 @@ export async function POST(request: Request) {
   let data: unknown;
   let error: RpcError | null;
 
-  if (operating && operatorMembershipId) {
+  if (!operating && isFarmRoundMemberDone(input, authorized.access.membership.role)) {
+    const response = await supabase.rpc("worker_record_farm_round_member_done_v1", {
+      p_task_id: input.taskId,
+      p_idempotency_key: input.idempotencyKey,
+      p_note: input.note,
+      p_payload: input.payload,
+    });
+    data = response.data;
+    error = response.error;
+  } else if (operating && operatorMembershipId) {
     if (input.transition === "reopened") {
       const response = await supabase.rpc("owner_operator_reopen_task_completion_v1", {
         p_effective_membership_id: operatorMembershipId,
