@@ -1,9 +1,3 @@
--- Ticketed Thursday paid-prep recursion seal v1
--- Paid evenings keep the common Venue prep contract while substituting
--- disposable drinkware for the free-morning mug-hutch presentation.
--- The checklist seeder must not mutate its parent task because task updates
--- invoke the seeder trigger again.
-
 create or replace function atlas.seed_community_thursday_venue_cycle_checklist_v1(p_task_id uuid)
  returns integer
  language plpgsql
@@ -48,7 +42,7 @@ begin
     ('community_thursday_venue_prep_v1','water_cups','water','Water','Clear cups',70,false,'resource'),
     ('community_thursday_venue_host_v1','ice_maker','open_event','Open the event','Turn on the ice maker',10,true,'action'),
     ('community_thursday_venue_host_v1','open_sign','open_event','Open the event','Turn on the OPEN sign',20,true,'action'),
-    ('community_thursday_venue_host_v1','yellow_door','open_event','Open the event','Open the yellow door',30,true,'action')
+    ('community_thursday_venue_host_v1','yellow_door','open_event','Open the yellow door',30,true,'action')
   ) x(template_key,item_key,section_key,section_label,item_label,sort_order,required,interaction)
   where x.template_key=v_template
   on conflict (task_id,item_key) do update set section_key=excluded.section_key,section_label=excluded.section_label,item_label=excluded.item_label,
