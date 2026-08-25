@@ -30,14 +30,18 @@ export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Prop
 
   async function toggle(member: RoundMember) {
     const done = isDone(member);
+    const previousMembers = members;
+    const nextMembers = members.map((candidate) => candidate.task_id === member.task_id ? { ...candidate, status: done ? "open" : "done" } : candidate);
+    setMembers(nextMembers);
+    setSavingId(member.task_id);
+    setMessage(null);
     try {
-      setSavingId(member.task_id); setMessage(null);
       await postAtlasTaskTransition({ taskId: member.task_id, transition: done ? "reopened" : "done", note: done ? "Reopened from Farm Round." : "Completed from Farm Round.", payload: { farmRoundParentTaskId: task.task_id, farmRoundMember: true } });
-      const nextMembers = members.map((candidate) => candidate.task_id === member.task_id ? { ...candidate, status: done ? "open" : "done" } : candidate);
-      setMembers(nextMembers);
       if (!done && nextMembers.every((candidate) => isDone(candidate))) window.setTimeout(() => window.location.assign(returnPath(assignee)), 120);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Atlas could not update this Farm Round item."); }
-    finally { setSavingId(null); }
+    } catch (error) {
+      setMembers(previousMembers);
+      setMessage(error instanceof Error ? error.message : "Atlas could not update this Farm Round item.");
+    } finally { setSavingId(null); }
   }
 
   async function completeRound() {
