@@ -13,7 +13,7 @@ test("carried-work labeling stays on Today while each future Day trusts its cano
   assert.match(dayPage, /task\.due_date < dateIso/);
   assert.match(dayPage, /const mixedOpenTasks = useMemo\(\(\) => uniqueTasks\(requiredTasks\), \[requiredTasks\]\);/);
   assert.match(dayPage, /Unfinished work from earlier days is still real/);
-  assert.match(dayPage, /windowedTimeline\(visibleTimelineGroups\)/);
+  assert.match(dayPage, /windowedTimeline\(visibleTimelineGroups, isFutureDay \? filteredFutureAutomaticItems : \[\]\)/);
   assert.match(dayPage, /label: "Morning"/);
   assert.match(dayPage, /label: "Afternoon"/);
   assert.match(dayPage, /label: "Evening"/);
