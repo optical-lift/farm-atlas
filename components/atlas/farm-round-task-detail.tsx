@@ -64,15 +64,25 @@ export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Prop
   return (
     <main className={roundStyles.shell} data-atlas-farm-round="canonical-card-geometry-v1">
       <AtlasTaskCardFrame family="Stewardship" familyDetail="recurring round" title="Farm Round" subtitle="Elm Farm" timing={remaining === 0 ? "Round complete" : `${remaining} ${remaining === 1 ? "item" : "items"} due`} onDone={() => void completeRound()} onUnfinished={leaveUnfinished} completionDisabled={completionBusy}>
-        <div className={roundStyles.key} aria-label="Farm Round controls"><span>Tap an item to cross it off</span><span>Use + to report an issue</span></div>
+        <div className={roundStyles.key} aria-label="Farm Round controls"><span>Tap a row to cross it off</span><span>Use + to report an issue</span></div>
         {stops.length ? <div className={roundStyles.route} aria-label="Farm Round walking route">
           {stops.map(([stop, items], stopIndex) => <section className={roundStyles.stop} key={stop}>
             <header className={roundStyles.stopHeader}><small>Stop {stopIndex + 1}</small><h3>{stop}</h3><span>{items.filter((item) => !isDone(item)).length} remaining</span></header>
             <div className={roundStyles.items}>{items.map((member) => {
-              const done = isDone(member); const busy = savingId === member.task_id; const id = `farm-round-${member.task_id}`;
+              const done = isDone(member); const busy = savingId === member.task_id;
               return <div className={roundStyles.item} data-done={done ? "true" : "false"} key={member.task_id}>
-                <input id={id} className={roundStyles.toggle} type="checkbox" checked={done} disabled={completionBusy} onChange={() => void toggle(member)} />
-                <label className={roundStyles.itemLabel} htmlFor={id}><span className={roundStyles.itemCopy}><strong>{member.displayLabel}</strong>{member.displayDetail ? <small>{member.displayDetail}</small> : null}</span></label>
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={done}
+                  aria-label={done ? `Reopen ${member.displayLabel}` : `Complete ${member.displayLabel}`}
+                  className={roundStyles.itemToggle}
+                  disabled={completionBusy}
+                  onClick={() => void toggle(member)}
+                >
+                  <span className={roundStyles.check} aria-hidden="true"><span /></span>
+                  <span className={roundStyles.itemCopy}><strong>{member.displayLabel}</strong>{member.displayDetail ? <small>{member.displayDetail}</small> : null}</span>
+                </button>
                 {member.issueOptions.length ? <details className={roundStyles.issueDrawer}><summary aria-label={`Report an issue with ${member.displayLabel}`}>+</summary><div className={roundStyles.issuePanel}>{member.issueOptions.map((issue) => <button type="button" key={issue} disabled={busy || savingRound} onClick={() => void reportIssue(member, issue)}>{issue}</button>)}</div></details> : null}
               </div>;
             })}</div>
