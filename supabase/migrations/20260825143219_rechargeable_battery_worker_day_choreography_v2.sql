@@ -82,6 +82,7 @@ begin
   if p_farm_id is null or p_membership_id is null or p_service_date is null then raise exception 'Farm, membership, and service date are required.' using errcode='22023'; end if;
   perform pg_advisory_xact_lock(hashtextextended(p_farm_id::text||':'||p_membership_id::text||':battery-session-reconcile',0));
 
+  -- Older unfinished battery work owns the next available session before newer work.
   for v_task in
     select t.* from atlas.tasks t
     where t.farm_id=p_farm_id and t.assigned_membership_id=p_membership_id and t.status='open'
@@ -105,6 +106,7 @@ begin
     v_moved_in:=v_moved_in+1;
   end loop;
 
+  -- Keep at most two sessions on a day. Earlier/rolled work wins; newer work moves forward.
   loop
     v_iterations:=v_iterations+1;
     exit when v_iterations>14;
@@ -189,4 +191,5 @@ values
 ('atlas.reconcile_worker_day_battery_sessions_v1(uuid, uuid, date)','service_internal','verified','active',false,true,true,0,0,jsonb_build_object('purpose','Carry overdue battery mowing forward, cap a worker day at two sessions, place recharge between them, and push newer work.','directSignedInEndpoint',false),now(),now(),false)
 on conflict(signature) do update set classification=excluded.classification,confidence=excluded.confidence,review_status=excluded.review_status,authenticated_execute_expected=excluded.authenticated_execute_expected,security_definer_expected=excluded.security_definer_expected,service_execute_expected=excluded.service_execute_expected,caller_count=excluded.caller_count,policy_reference_count=excluded.policy_reference_count,evidence=excluded.evidence,reviewed_at=now(),anonymous_execute_expected=excluded.anonymous_execute_expected;
 
+-- Normalize the live day immediately through the same reusable membrane.
 select atlas.reconcile_worker_day_battery_sessions_v1('6a503d9f-4008-4ddb-b3f0-cc6ab825dc9f'::uuid,'23e98e5e-16ca-40d8-872c-c77e06baa167'::uuid,date '2026-08-25');
