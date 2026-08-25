@@ -11,6 +11,7 @@ export type AtlasDaySequencePlanRowInput = {
   title: string;
   note?: string | null;
   status?: string | null;
+  workRoute?: string | null;
   environment?: string | null;
   location?: string | null;
   expectedActiveMinutes?: number | null;
@@ -66,6 +67,7 @@ export type AtlasCommittedDaySequenceItem = {
   title: string;
   note: string | null;
   status: string | null;
+  workRoute: string | null;
   location: string | null;
   environment: string | null;
   estimatedMinutes: number | null;
@@ -96,6 +98,7 @@ export type AtlasPotentialDaySequenceItem = {
   title: string;
   note: string | null;
   status: string | null;
+  workRoute: string | null;
   location: string | null;
   environment: string | null;
   estimatedMinutes: number | null;
@@ -246,6 +249,7 @@ function committedItem(
     title: row.title,
     note: text(row.note),
     status: text(row.status),
+    workRoute: text(row.workRoute),
     location: text(row.location),
     environment: text(row.environment),
     estimatedMinutes: minutes(row.expectedActiveMinutes),
@@ -278,6 +282,7 @@ function potentialItem(row: AtlasDaySequencePlanRowInput): AtlasPotentialDaySequ
     title: row.title,
     note: text(row.note),
     status: text(row.status),
+    workRoute: text(row.workRoute),
     location: text(row.location),
     environment: text(row.environment),
     estimatedMinutes: minutes(row.expectedActiveMinutes),
