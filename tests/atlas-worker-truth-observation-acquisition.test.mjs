@@ -141,8 +141,8 @@ test('1E prototype registry is retained as deployment provenance but removed fro
 
 test('1E guarantees remain present under the current governed Atlas surface', () => {
   const expected = JSON.parse(read('docs/architecture/atlas-source-custody-surface-v1.json'));
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1193);
-  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 473);
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '994d02222a873acc4e5a446e0cd2001646d8bcb8331c77eb0065ae84dbf56bed');
-  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, 'f21ff68b0a196f64efe69f67a1e7f28ebe92edd6b6e1aa9bd29f4ce086814439');
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1192);
+  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 472);
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, 'ff0a4ea8e9aff0806590fbe39ed97862822e201514b4fcb80a073b7be356c33b');
+  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, '72984d8e74d42730057115e2aa6fd1bc06f370a367f69e7e7ae9c1a9146e0763');
 });
