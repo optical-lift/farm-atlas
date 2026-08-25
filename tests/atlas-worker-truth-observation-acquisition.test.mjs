@@ -141,8 +141,8 @@ test('1E prototype registry is retained as deployment provenance but removed fro
 
 test('1E guarantees remain present under the current governed Atlas surface', () => {
   const expected = JSON.parse(read('docs/architecture/atlas-source-custody-surface-v1.json'));
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1192);
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1193);
   assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 473);
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, 'de1718af44b9796719573ece639ce14e1765408bc0314bbaf88dded46336e219');
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '994d02222a873acc4e5a446e0cd2001646d8bcb8331c77eb0065ae84dbf56bed');
   assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, 'f21ff68b0a196f64efe69f67a1e7f28ebe92edd6b6e1aa9bd29f4ce086814439');
 });

@@ -1,0 +1,1 @@
+grant execute on function atlas.advance_pot_up_serial_queue_v1() to service_role;
