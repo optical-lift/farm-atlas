@@ -8,7 +8,8 @@ test("worker Day keeps Morning, Afternoon, and Evening as permanent structural l
   assert.match(day, /key: "morning", label: "Morning"/);
   assert.match(day, /key: "afternoon", label: "Afternoon"/);
   assert.match(day, /key: "evening", label: "Evening"/);
-  assert.match(day, /const visibleTimelineGroups = timelineGroups/);
+  assert.match(day, /const visibleTimelineGroups = useMemo/);
+  assert.match(day, /futureAutomaticItems\.some\(\(item\) => item\.dayWindow === window\.key\)/);
   assert.doesNotMatch(day, /relativeWorkerTimelineGroups/);
   assert.doesNotMatch(day, /label: "Now"/);
   assert.doesNotMatch(day, /label: "Coming up"/);
@@ -26,7 +27,8 @@ test("completion styling is orthogonal to canonical placement order", () => {
   assert.doesNotMatch(sortFunction, /doneRank/);
   assert.doesNotMatch(sortFunction, /isDoneTask\(task\)/);
   assert.match(day, /if \(isDoneTask\(task\)\) \{\s*return <CompletionEcho/);
-  assert.match(day, /group\.tasks\.map\(timelineRow\)/);
+  assert.match(day, /group\.tasks\.map\(\(task\) => \(\{/);
+  assert.match(day, /row\.kind === "task" \? timelineRow\(row\.task\)/);
 });
 
 test("an overdue recurring occurrence is labeled as the old occurrence, not a newly generated daily chore", () => {
