@@ -155,3 +155,51 @@ The second step is complete only when:
 6. no release, notification, scheduling, task, Worker Day, Farm Round, Principal, or Clock behavior has been cut over.
 
 Only after this boundary primitive is proven should Atlas separate one existing coupled effect path behind it.
+
+## Third implementation boundary: one boundary-authorized release effect
+
+The third implementation cuts over exactly one existing consequence path: the `pot_up_serial` task-release queue. It does not create a generic effects engine.
+
+Before this step, `atlas.advance_pot_up_serial_queue_v1()` directly treated a predecessor task transition to `done` as both the readiness decision and the command to complete the current queue item and release its successor.
+
+After this step the same domain event flows through the shared grammar:
+
+1. the existing task status remains domain evidence;
+2. the pot-up adapter normalizes predecessor completion as requirement `predecessor_task_completed` and evaluates before/after snapshots through `atlas.requirement_set_evaluate_v1(jsonb)`;
+3. `atlas.record_requirement_boundary_v1(...)` records the stable `open → satisfied` boundary for the active queue item;
+4. `atlas.apply_pot_up_serial_release_effect_v1(uuid,date)` accepts that exact boundary id as its authorization warrant;
+5. the existing `atlas.release_next_task_in_queue_v1(uuid,text,date)` remains lower-level queue/materialization machinery inside the bounded effect consumer.
+
+The release effect fails closed unless the boundary identifies a `pot_up_serial` queue item, the boundary is `closed`, its requirement set is `pot_up_serial_predecessor_completion_v1`, its source is the same authoritative task, and that task is actually `done`. The effect is idempotent for the same boundary.
+
+The authorizing boundary id is carried onto the completed predecessor queue item and the released successor queue item, planned occurrence, task payload, and materialized task. This makes the release explainable without making the boundary ledger own queue or task truth.
+
+### What Step 3 does not do
+
+This step:
+
+- does not add an `AFTER INSERT` consumer to the generic boundary ledger;
+- does not make `requirement_boundary_events` a global effect switchboard;
+- does not change task execution readiness authority;
+- does not alter Worker Day, Farm Round, Principal, Clock, notification, or UI behavior;
+- does not expose the new effect consumer as a public, authenticated, or service-role RPC;
+- does not replace the generic queue/materialization primitive used inside the bounded effect;
+- does not cut over any other ready/gate/release path.
+
+The old automatic pot-up coupling is retired by changing its existing task trigger function into a domain adapter that must record a Boundary before invoking the release consequence. The shared lower-level queue release function remains implementation machinery; it is not itself the State Progression authorization boundary.
+
+## Third-step acceptance gate
+
+The third step is complete only when:
+
+1. a real pot-up predecessor completion is proven in a rollback transaction to create exactly one `open → satisfied` boundary before successor release;
+2. the released queue item, occurrence, task payload, and task all identify the exact boundary that authorized them;
+3. replaying the same effect boundary is idempotent;
+4. the rollback proof leaves the live task, checklist, queue, occurrence, and boundary ledger unchanged;
+5. the boundary ledger still has no insert-triggered effect consumer;
+6. the live task-readiness compatibility membrane still reports zero mismatches across the full task corpus;
+7. authenticated RPC registry drift remains zero and the new effect consumer remains service-internal;
+8. repository migration bytes exactly match post-cutover production provenance;
+9. source custody, architecture CI, full tests, build, merge, and production deployment verification are green.
+
+Only after this single effect path is proven should Atlas select another competing ready/gate/release mechanism for retirement.
