@@ -3,23 +3,28 @@
 .key { display: flex; gap: 16px; justify-content: space-between; padding: 12px 18px; border-top: 1px solid rgba(215, 204, 189, 0.62); border-bottom: 1px solid rgba(215, 204, 189, 0.62); color: #8c8d85; font-size: 9px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
 .route { display: grid; }
 .stop { position: relative; padding: 17px 18px 17px 64px; border-bottom: 1px solid rgba(215, 204, 189, 0.62); background: #fff; }
-.stop::before { content: ""; position: absolute; left: 31px; top: 0; bottom: 0; width: 1px; background: rgba(133, 139, 184, 0.34); }
-.stop::after { content: ""; position: absolute; left: 25px; top: 27px; width: 12px; height: 12px; border: 2px solid #858bb8; border-radius: 50%; background: #fff; }
+.stop::before { content: ""; position: absolute; left: 31px; top: 0; bottom: 0; width: 1px; background: rgba(133, 139, 184, 0.34); pointer-events: none; }
+.stop::after { content: ""; position: absolute; left: 25px; top: 27px; width: 12px; height: 12px; border: 2px solid #858bb8; border-radius: 50%; background: #fff; pointer-events: none; }
 .stopHeader { display: grid; gap: 3px; margin-bottom: 10px; }
 .stopHeader small { color: #858bb8; font-size: 8px; font-weight: 950; letter-spacing: 0.12em; text-transform: uppercase; }
 .stopHeader h3 { margin: 0; color: var(--atlas-text); font-size: 20px; line-height: 1.05; font-weight: 950; letter-spacing: -0.035em; }
 .stopHeader span { color: #85867f; font-size: 10px; font-weight: 800; }
 .items { display: grid; }
-.item { display: grid; grid-template-columns: 28px minmax(0, 1fr) 34px; align-items: center; gap: 8px; min-height: 54px; padding: 8px 0; border-top: 1px solid rgba(215, 204, 189, 0.5); }
+.item { display: grid; grid-template-columns: minmax(0, 1fr) 34px; align-items: center; gap: 8px; min-height: 54px; padding: 8px 0; border-top: 1px solid rgba(215, 204, 189, 0.5); }
 .item:first-child { border-top: 0; }
-.toggle { width: 20px; height: 20px; margin: 0; accent-color: #858bb8; }
-.itemLabel { min-width: 0; cursor: pointer; }
+.itemToggle { min-width: 0; min-height: 44px; display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: center; gap: 8px; margin: 0; padding: 0; border: 0; border-radius: 10px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: rgba(133, 139, 184, 0.12); }
+.itemToggle:disabled { cursor: wait; opacity: 0.68; }
+.itemToggle:focus-visible { outline: 2px solid #858bb8; outline-offset: 3px; }
+.check { width: 20px; height: 20px; box-sizing: border-box; display: grid; place-items: center; border: 2px solid #858bb8; border-radius: 5px; background: #fff; }
+.check span { width: 9px; height: 5px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: translateY(-1px) rotate(-45deg); opacity: 0; }
+.item[data-done="true"] .check { background: #858bb8; }
+.item[data-done="true"] .check span { opacity: 1; }
 .itemCopy { min-width: 0; display: grid; gap: 3px; }
 .itemCopy strong { min-width: 0; color: #343542; font-size: 13px; line-height: 1.2; font-weight: 900; }
 .itemCopy small { color: #8b8d84; font-size: 9px; line-height: 1.15; font-weight: 780; }
 .item[data-done="true"] .itemCopy strong { color: #858782; text-decoration: line-through; }
 .issueDrawer { position: relative; }
-.issueDrawer summary { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid rgba(139, 145, 194, 0.28); border-radius: 50%; color: #666b8f; background: rgba(255, 255, 255, 0.9); font-size: 20px; font-weight: 800; list-style: none; cursor: pointer; }
+.issueDrawer summary { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid rgba(139, 145, 194, 0.28); border-radius: 50%; color: #666b8f; background: rgba(255, 255, 255, 0.9); font-size: 20px; font-weight: 800; list-style: none; cursor: pointer; touch-action: manipulation; }
 .issueDrawer summary::-webkit-details-marker { display: none; }
 .issueDrawer[open] { grid-column: 1 / -1; width: 100%; }
 .issuePanel { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; padding: 8px; border: 1px solid rgba(207, 196, 179, 0.72); border-radius: 12px; background: rgba(250, 248, 239, 0.78); }
