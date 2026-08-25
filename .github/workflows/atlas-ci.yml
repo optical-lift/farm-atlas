@@ -66,6 +66,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Guard shared database migration custody
+        run: bash scripts/check-shared-db-migration-custody.sh
+
       - name: Verify synchronizer contract
         run: node --test tests/atlas-source-custody.test.mjs
 
