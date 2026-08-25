@@ -11,7 +11,7 @@ test("Day timeline nodes quick-complete simple tasks and preserve a tappable ech
   assert.match(page, /day_timeline_quick_complete/);
   assert.match(page, /objectStateBefore/);
   assert.match(page, /function windowedTimeline/);
-  assert.match(page, /group\.tasks\.map\(timelineRow\)/);
+  assert.match(page, /row\.kind === "task" \? timelineRow\(row\.task\)/);
   assert.match(page, /timelineTasks = useMemo\(\(\) => uniqueTasks\(\[\.\.\.mixedOpenTasks, \.\.\.doneDayTasks\]\)/);
   assert.match(page, /if \(isDoneTask\(task\)\)[\s\S]*<CompletionEcho/);
   assert.doesNotMatch(page, /\bUndo\b/);
