@@ -15,3 +15,13 @@ test('future Worker Day collection route survives canonical plan into the shared
   assert.match(sequence, /workRoute: string \| null;/);
   assert.equal((sequence.match(/workRoute: text\(row\.workRoute\)/g) ?? []).length, 2);
 });
+
+test('future collection views consume routed projected work from the same Day sequence', () => {
+  const page = read('app/day/page.tsx');
+
+  assert.match(page, /workRoute: item\.workRoute/);
+  assert.match(page, /futureAutomaticItems\.filter\(\(item\) => item\.workRoute === routeFilter\)/);
+  assert.match(page, /windowedTimeline\(visibleTimelineGroups, isFutureDay \? filteredFutureAutomaticItems : \[\]\)/);
+  assert.match(page, /!filteredTimelineTasks\.length && !filteredFutureAutomaticItems\.length/);
+  assert.doesNotMatch(page, /!routeFilter && isFutureDay && futureAutomaticItems\.some/);
+});
