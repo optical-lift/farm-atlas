@@ -228,7 +228,7 @@ test('knowledge acquisition source retains every exact post-cutover production m
   for (const relative of [migrationPath, firstAnswerPath, propagationPath, retirePath, finalFixPath, workerPrototypePath, workerPrototypeFixPath, workerBridgePath, workerConsolidationPath, workerOperationFixPath]) assert.equal(fs.existsSync(path.join(root, relative)), true, `missing production migration source: ${relative}`);
   const expected = JSON.parse(read('docs/architecture/atlas-source-custody-surface-v1.json'));
   assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.artifactCount, 1192);
-  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 472);
-  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, 'ff0a4ea8e9aff0806590fbe39ed97862822e201514b4fcb80a073b7be356c33b');
-  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, '72984d8e74d42730057115e2aa6fd1bc06f370a367f69e7e7ae9c1a9146e0763');
+  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.artifactCount, 473);
+  assert.equal(expected.families.find((row) => row.familyKey === 'functions')?.fingerprintSha256, '0835f2cfc9e70b1564fc640dd0dfa6fbc972768baa83382cf7e59298bea3d255');
+  assert.equal(expected.families.find((row) => row.familyKey === 'rpc_privileges')?.fingerprintSha256, 'f21ff68b0a196f64efe69f67a1e7f28ebe92edd6b6e1aa9bd29f4ce086814439');
 });
