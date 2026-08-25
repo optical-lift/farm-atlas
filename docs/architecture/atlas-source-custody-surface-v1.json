@@ -11,9 +11,9 @@
   },
   "families": [
     {"familyKey":"constraints","artifactCount":2152,"fingerprintSha256":"e0615fb0a87856a9fdbb7848e3840f8723a2dc4e0d83a303e5a4005fcbbc9f6d"},
-    {"familyKey":"functions","artifactCount":1193,"fingerprintSha256":"9ec7f71051f1b84d4d85f26e40bbeedbe054ca63fa1bc7a3702879eaecd31871"},
+    {"familyKey":"functions","artifactCount":1193,"fingerprintSha256":"5b41fdf616fe5f3eba2b2e3448a6fad0da320aa09a2ebc01569725065c58c835"},
     {"familyKey":"rls_policies","artifactCount":166,"fingerprintSha256":"6c7044484f941fca4da8f185217c39e07636e750a1d53f10be0bd84664bf809a"},
-    {"familyKey":"rpc_privileges","artifactCount":473,"fingerprintSha256":"9acd7c67ab4799629338b79999b25a30a648d55142765d9a537832e01d0eb63c"},
+    {"familyKey":"rpc_privileges","artifactCount":473,"fingerprintSha256":"f21ff68b0a196f64efe69f67a1e7f28ebe92edd6b6e1aa9bd29f4ce086814439"},
     {"familyKey":"triggers","artifactCount":385,"fingerprintSha256":"48dbec65f81f0369bfb5f81ccc749ae199a664f45d0e5f2f0022654a8096a56d"}
   ]
 }
