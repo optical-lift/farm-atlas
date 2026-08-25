@@ -106,7 +106,8 @@ test('governing contract records exactly one bounded Effect cutover and leaves b
   assert.match(contract, /does not create a generic effects engine/i);
   assert.match(contract, /does not add an `AFTER INSERT` consumer to the generic boundary ledger/i);
   assert.match(contract, /does not alter Worker Day, Farm Round, Principal, Clock, notification, or UI behavior/i);
-  assert.match(contract, /lower-level release helper also fails closed for `pot_up_serial` unless the authorizing Boundary chain is present/i);
+  assert.match(contract, /requires the lower-level release helper to fail closed for `pot_up_serial` unless the authorizing Boundary chain is present/i);
   assert.match(contract, /dormant generic direct-release trigger function is retired/i);
+  assert.match(contract, /artifact-count neutral/i);
   assert.match(contract, /Only after this single effect path is proven should Atlas select another competing ready\/gate\/release mechanism for retirement/i);
 });
