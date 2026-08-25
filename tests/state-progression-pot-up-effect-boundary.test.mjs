@@ -108,6 +108,6 @@ test('governing contract records exactly one bounded Effect cutover and leaves b
   assert.match(contract, /does not alter Worker Day, Farm Round, Principal, Clock, notification, or UI behavior/i);
   assert.match(contract, /requires the lower-level release helper to fail closed for `pot_up_serial` unless the authorizing Boundary chain is present/i);
   assert.match(contract, /dormant generic direct-release trigger function is retired/i);
-  assert.match(contract, /artifact-count neutral/i);
+  assert.match(contract, /final governed artifact count is neutral relative to Step 2 at 4,368/i);
   assert.match(contract, /Only after this single effect path is proven should Atlas select another competing ready\/gate\/release mechanism for retirement/i);
 });
