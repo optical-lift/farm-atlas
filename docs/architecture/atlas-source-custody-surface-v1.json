@@ -11,7 +11,7 @@
   },
   "families": [
     {"familyKey":"constraints","artifactCount":2152,"fingerprintSha256":"e0615fb0a87856a9fdbb7848e3840f8723a2dc4e0d83a303e5a4005fcbbc9f6d"},
-    {"familyKey":"functions","artifactCount":1192,"fingerprintSha256":"0835f2cfc9e70b1564fc640dd0dfa6fbc972768baa83382cf7e59298bea3d255"},
+    {"familyKey":"functions","artifactCount":1192,"fingerprintSha256":"0835ee407600a0f0eb9cf1f7a08f50e9db2636e3d46e9c28c8e7d1747958f518"},
     {"familyKey":"rls_policies","artifactCount":166,"fingerprintSha256":"6c7044484f941fca4da8f185217c39e07636e750a1d53f10be0bd84664bf809a"},
     {"familyKey":"rpc_privileges","artifactCount":473,"fingerprintSha256":"f21ff68b0a196f64efe69f67a1e7f28ebe92edd6b6e1aa9bd29f4ce086814439"},
     {"familyKey":"triggers","artifactCount":385,"fingerprintSha256":"48dbec65f81f0369bfb5f81ccc749ae199a664f45d0e5f2f0022654a8096a56d"}
