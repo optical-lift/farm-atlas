@@ -122,7 +122,7 @@ test('1E observed branch resolves only after canonical state is independently co
 test('1E worker endpoint is authenticated and anonymous execution stays closed', () => {
   const sql = read(bridgePath);
   assert.match(sql, /revoke all on function atlas\.record_worker_truth_observation_v1\(uuid,uuid,text,text,numeric,text,text,text\) from public,anon/);
-  assert.match(sql, /grant execute on function atlas\.record_worker_truth_observation_v1\(uuid,uuid,text,uuid,text,text,text\) to authenticated,service_role/);
+  assert.match(sql, /grant execute on function atlas\.record_worker_truth_observation_v1\(uuid,uuid,text,text,numeric,text,text,text\) to authenticated,service_role/);
   assert.match(sql, /'atlas\.record_worker_truth_observation_v1\(uuid, uuid, text, text, numeric, text, text, text\)'/);
   assert.match(sql, /'public_endpoint','verified','active'/);
   assert.match(sql, /'requiresRoutedWorker',true/);
