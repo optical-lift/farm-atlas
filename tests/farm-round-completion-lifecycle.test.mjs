@@ -36,3 +36,16 @@ test("Farm Round member completion is a full-row mobile toggle rather than a tin
   assert.match(farmRoundCss, /\.stop::before \{[\s\S]*?pointer-events: none;/);
   assert.match(farmRoundCss, /\.stop::after \{[\s\S]*?pointer-events: none;/);
 });
+
+test("Farm Round toggles render immediately while canonical persistence remains authoritative", () => {
+  const toggleStart = farmRound.indexOf("async function toggle(member: RoundMember)");
+  const toggleEnd = farmRound.indexOf("async function completeRound()", toggleStart);
+  const toggleBody = farmRound.slice(toggleStart, toggleEnd);
+  const optimisticRender = toggleBody.indexOf("setMembers(nextMembers)");
+  const canonicalCommit = toggleBody.indexOf("await postAtlasTaskTransition");
+  const rollback = toggleBody.indexOf("setMembers(previousMembers)");
+
+  assert.ok(optimisticRender >= 0, "Farm Round must update local row state on tap");
+  assert.ok(canonicalCommit > optimisticRender, "visual completion must not wait for the network commit");
+  assert.ok(rollback > canonicalCommit, "a rejected canonical transition must restore the prior row state");
+});
