@@ -7,11 +7,13 @@ const root = process.cwd();
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const effectMigrationPath = 'supabase/migrations/20260825003455_state_progression_pot_up_effect_boundary_v1.sql';
 const custodyRepairPath = 'supabase/migrations/20260825003933_state_progression_pot_up_effect_rpc_custody_repair_v1.sql';
+const bypassSealPath = 'supabase/migrations/20260825011137_state_progression_pot_up_release_bypass_seal_v1.sql';
 
 const effectMigration = () => read(effectMigrationPath);
+const bypassSeal = () => read(bypassSealPath);
 
 test('Step 3 retains the exact production migrations as source', () => {
-  for (const relative of [effectMigrationPath, custodyRepairPath]) {
+  for (const relative of [effectMigrationPath, custodyRepairPath, bypassSealPath]) {
     assert.equal(fs.existsSync(path.join(root, relative)), true, `missing production migration source: ${relative}`);
     assert.ok(fs.statSync(path.join(root, relative)).size > 0, `empty production migration source: ${relative}`);
   }
@@ -60,6 +62,30 @@ test('every pot-up successor surface retains its authorizing Boundary id', () =>
   assert.match(sql, /where id=v_released_task_id/);
 });
 
+test('the lower-level queue helper independently refuses pot-up release without the exact Boundary chain', () => {
+  const sql = bypassSeal();
+  assert.match(sql, /create or replace function atlas\.release_next_task_in_queue_v1/);
+  assert.match(sql, /release_boundary_event_id/);
+  assert.match(sql, /release_authorized_from_queue_item_id/);
+  assert.match(sql, /release_requirement_set_key/);
+  assert.match(sql, /pot_up_serial_predecessor_completion_v1/);
+  assert.match(sql, /immediately preceding completed queue item/i);
+  assert.match(sql, /requirement_boundary_events/);
+  assert.match(sql, /subject_kind<>'task_release_queue_item'/);
+  assert.match(sql, /boundary_kind<>'closed'/);
+  assert.match(sql, /from_state<>'open'/);
+  assert.match(sql, /to_state<>'satisfied'/);
+  assert.match(sql, /source_kind<>'task'/);
+  assert.match(sql, /boundary_authorized_process_continuation_v1/g);
+  assert.doesNotMatch(sql, /direct_process_continuation_materialization_v1/);
+});
+
+test('the dormant generic direct-release trigger function is retired rather than left as a competing authority', () => {
+  const sql = bypassSeal();
+  assert.match(sql, /drop function atlas\.advance_task_release_queue_v1\(\);/i);
+  assert.doesNotMatch(sql, /create or replace function atlas\.advance_task_release_queue_v1/);
+});
+
 test('Step 3 does not turn the Boundary ledger into an insert-triggered effect switchboard', () => {
   const sql = effectMigration();
   assert.doesNotMatch(sql, /create\s+trigger[\s\S]*requirement_boundary_events/i);
@@ -80,5 +106,8 @@ test('governing contract records exactly one bounded Effect cutover and leaves b
   assert.match(contract, /does not create a generic effects engine/i);
   assert.match(contract, /does not add an `AFTER INSERT` consumer to the generic boundary ledger/i);
   assert.match(contract, /does not alter Worker Day, Farm Round, Principal, Clock, notification, or UI behavior/i);
+  assert.match(contract, /requires the lower-level release helper to fail closed for `pot_up_serial` unless the authorizing Boundary chain is present/i);
+  assert.match(contract, /dormant generic direct-release trigger function is retired/i);
+  assert.match(contract, /final governed artifact count is neutral relative to Step 2 at 4,368/i);
   assert.match(contract, /Only after this single effect path is proven should Atlas select another competing ready\/gate\/release mechanism for retirement/i);
 });
