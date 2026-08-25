@@ -4,6 +4,7 @@ import { assembleWorkerDaySequence } from "@/lib/atlas/day-sequence";
 import { readWorkerDayChoreographyForTarget, type AtlasDayChoreographyTarget } from "@/lib/atlas/day-choreography-server";
 import { buildAtlasWorkerDayProjection } from "@/lib/atlas/day-projection";
 import { getAtlasSessionFast, type AtlasSession, type AtlasSessionTiming } from "@/lib/atlas/session";
+import { createAtlasServerClient } from "@/lib/supabase/server";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { readWorkerDayOperationalTaskCards } from "@/lib/atlas/worker-day-operational-task-cards-server";
 import {
@@ -30,6 +31,11 @@ type WorkerDaySequenceTiming = {
   totalMs: number;
 };
 
+type OwnerRescheduledRhythmTask = {
+  due_date?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
 function nowMs() {
   return performance.now();
 }
@@ -42,6 +48,54 @@ async function measured<T>(read: () => Promise<T>) {
   const startedAt = nowMs();
   const value = await read();
   return { value, ms: elapsedMs(startedAt) };
+}
+
+async function reconcileOwnerRescheduledRhythmProjections(dateIso: string, plan: WorkerDayPlan) {
+  const projectedRuleIds = new Set(
+    plan.automaticWork
+      .filter((item) => item.sourceKind === "rhythm" && item.sourceId)
+      .map((item) => item.sourceId),
+  );
+  if (!projectedRuleIds.size) return plan;
+
+  const supabase = await createAtlasServerClient();
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("due_date, metadata")
+    .eq("farm_id", plan.farmId)
+    .eq("assigned_membership_id", plan.membershipId)
+    .in("status", ["open", "blocked"])
+    .gte("due_date", dateIso);
+
+  if (error) {
+    console.error("Atlas could not reconcile owner-rescheduled rhythm projections.", error);
+    return { ...plan, warnings: [...plan.warnings, "rescheduled_rhythm_projection_reconciliation_unavailable"] };
+  }
+
+  const reservedRuleIds = new Set<string>();
+  for (const row of (data ?? []) as OwnerRescheduledRhythmTask[]) {
+    const metadata = row.metadata ?? {};
+    const ruleId = typeof metadata.rhythm_rule_id === "string" ? metadata.rhythm_rule_id.trim() : "";
+    const ownerRescheduledTo = typeof metadata.owner_rescheduled_to === "string" ? metadata.owner_rescheduled_to.trim() : "";
+    if (!ruleId || !projectedRuleIds.has(ruleId) || !row.due_date || ownerRescheduledTo !== row.due_date) continue;
+    reservedRuleIds.add(ruleId);
+  }
+  if (!reservedRuleIds.size) return plan;
+
+  const automaticWork = plan.automaticWork.filter(
+    (item) => !(item.sourceKind === "rhythm" && reservedRuleIds.has(item.sourceId)),
+  );
+  const automaticPaidMinutes = automaticWork.reduce(
+    (sum, item) => sum + Math.max(0, item.expectedActiveMinutes || 0),
+    0,
+  );
+
+  return {
+    ...plan,
+    automaticWork,
+    automaticPaidMinutes,
+    remainingPaidMinutes: Math.max(plan.paidTargetMinutes - plan.committedPaidMinutes - automaticPaidMinutes, 0),
+  };
 }
 
 function workerSelfTarget(session: AtlasSession): AtlasDayChoreographyTarget | null {
@@ -136,7 +190,7 @@ export async function readOwnerWorkerDaySequence(
     };
   }
 
-  const plan = planResult.plan;
+  const plan = await reconcileOwnerRescheduledRhythmProjections(dateIso, planResult.plan);
   const [choreographyRead, taskCardsRead] = await Promise.all([
     measured(() => readWorkerDayChoreographyForTarget(dateIso, planResult.target)),
     measured(() => readWorkerDayOperationalTaskCards(plan)),
@@ -173,10 +227,11 @@ async function readWorkerSelfDaySequence(
     timing.choreographyMs = choreographyRead.ms;
     timing.taskCardsMs = 0;
   }
+  const plan = await reconcileOwnerRescheduledRhythmProjections(dateIso, bundleRead.value.plan);
   const assemblyStartedAt = nowMs();
   const result = assembleProjection({
     dateIso,
-    plan: bundleRead.value.plan,
+    plan,
     target,
     operatorLabel: target.displayName,
     choreographyResult: choreographyRead.value,
