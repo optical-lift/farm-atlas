@@ -9,7 +9,7 @@ test("worker Day keeps Morning, Afternoon, and Evening as permanent structural l
   assert.match(day, /key: "afternoon", label: "Afternoon"/);
   assert.match(day, /key: "evening", label: "Evening"/);
   assert.match(day, /const visibleTimelineGroups = useMemo/);
-  assert.match(day, /futureAutomaticItems\.some\(\(item\) => item\.dayWindow === window\.key\)/);
+  assert.match(day, /filteredFutureAutomaticItems\.some\(\(item\) => item\.dayWindow === window\.key\)/);
   assert.doesNotMatch(day, /relativeWorkerTimelineGroups/);
   assert.doesNotMatch(day, /label: "Now"/);
   assert.doesNotMatch(day, /label: "Coming up"/);
