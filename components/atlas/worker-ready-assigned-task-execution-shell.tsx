@@ -5,7 +5,7 @@ import Link from "next/link";
 import AssignedTaskExecutionShell, {
   type AssignedTaskExecutionShellProps,
 } from "@/components/atlas/assigned-task-execution-shell";
-import TaskFocusNavigationBoundary from "@/components/atlas/task-focus-navigation-boundary";
+import { useTaskFocusNavigation } from "@/components/atlas/task-focus-navigation-boundary";
 import ThinCropCycleTaskCard, { isThinCropCycleTask } from "@/components/atlas/thin-crop-cycle-task-card";
 import type { WorkerReadinessPresentation, WorkerReadinessResponse } from "@/lib/atlas/worker-readiness";
 
@@ -34,18 +34,19 @@ function WaitingScreen({
   const title = presentation?.title || "Not ready yet";
   const body = presentation?.body || "This job is not executable yet.";
   const detail = presentation?.detail || "Nothing you need to do on this card right now.";
+  const navigation = useTaskFocusNavigation(props.assignee.listPath);
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell" data-atlas-worker-waiting-screen="true">
       <style>{sharedCardCss}</style>
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href={props.assignee.listPath} className="atlas-phone-brand atlas-task-header-brand">
+          <Link href={navigation.returnPath} className="atlas-phone-brand atlas-task-header-brand">
             <span className="atlas-phone-kicker">Atlas</span>
             <span className="atlas-phone-title">{props.assignee.label}</span>
           </Link>
           <span className="atlas-weather-line">waiting</span>
-          <Link href={props.assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${props.assignee.label} work`}>↩</Link>
+          <Link href={navigation.returnPath} className="atlas-note-plus" aria-label={`Back to ${props.assignee.label} work`}>↩</Link>
         </header>
         <div className="atlas-task-page-body">
           <article className="atlas-task-page-active atlas-task-ticket-card">
@@ -55,7 +56,7 @@ function WaitingScreen({
               <span className="atlas-worker-waiting-task">{props.task.title}</span>
               <p>{body}</p>
               {detail ? <p>{detail}</p> : null}
-              <Link className="atlas-worker-waiting-back" href={props.assignee.listPath}>Back to today’s work</Link>
+              <Link className="atlas-worker-waiting-back" href={navigation.returnPath}>Back to today’s work</Link>
             </section>
           </article>
         </div>
@@ -65,17 +66,18 @@ function WaitingScreen({
 }
 
 function ReadinessFailureScreen({ props }: { props: AssignedTaskExecutionShellProps }) {
+  const navigation = useTaskFocusNavigation(props.assignee.listPath);
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell" data-atlas-worker-readiness-failure="true">
       <style>{sharedCardCss}</style>
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href={props.assignee.listPath} className="atlas-phone-brand atlas-task-header-brand">
+          <Link href={navigation.returnPath} className="atlas-phone-brand atlas-task-header-brand">
             <span className="atlas-phone-kicker">Atlas</span>
             <span className="atlas-phone-title">{props.assignee.label}</span>
           </Link>
           <span className="atlas-weather-line">task unavailable</span>
-          <Link href={props.assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${props.assignee.label} work`}>↩</Link>
+          <Link href={navigation.returnPath} className="atlas-note-plus" aria-label={`Back to ${props.assignee.label} work`}>↩</Link>
         </header>
         <div className="atlas-task-page-body">
           <article className="atlas-task-page-active atlas-task-ticket-card">
@@ -84,7 +86,7 @@ function ReadinessFailureScreen({ props }: { props: AssignedTaskExecutionShellPr
               <h2>This task didn’t load</h2>
               <span className="atlas-worker-waiting-task">{props.task.title}</span>
               <p>Go back to today’s work and open the task again.</p>
-              <Link className="atlas-worker-waiting-back" href={props.assignee.listPath}>Back to today’s work</Link>
+              <Link className="atlas-worker-waiting-back" href={navigation.returnPath}>Back to today’s work</Link>
             </section>
           </article>
         </div>
@@ -113,9 +115,5 @@ function CanonicalAssignedTaskExecutionSurface({ initialReadiness, ...props }: P
 }
 
 export default function WorkerReadyAssignedTaskExecutionShell(props: Props) {
-  return (
-    <TaskFocusNavigationBoundary fallbackPath={props.assignee.listPath}>
-      <CanonicalAssignedTaskExecutionSurface {...props} />
-    </TaskFocusNavigationBoundary>
-  );
+  return <CanonicalAssignedTaskExecutionSurface {...props} />;
 }
