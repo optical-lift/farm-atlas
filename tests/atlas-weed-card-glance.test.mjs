@@ -10,9 +10,9 @@ const migration = read("supabase/migrations/20260804075000_weed_cards_require_ph
 const rhythmMigration = read("supabase/migrations/20260804075100_weed_rhythm_requires_physical_need.sql");
 const cleanupMigration = read("supabase/migrations/20260804075200_retire_existing_clear_weed_work.sql");
 
-test("the Weed task keeps its complete canonical action and bed name in the approved Weed card", () => {
+test("the Weed action keeps its complete canonical action and bed name in the approved bed-work card", () => {
   assert.match(focus, /AtlasTaskCardFrame/);
-  assert.match(focus, /family="Weed"/);
+  assert.match(focus, /const actionLabel = clearMode \? "Clear" : "Weed"/);
   assert.match(focus, /title=\{card\.objectLabel\}/);
   assert.match(focus, /subtitle=\{card\.zoneLabel/);
   assert.match(focus, />Active Crops</);
