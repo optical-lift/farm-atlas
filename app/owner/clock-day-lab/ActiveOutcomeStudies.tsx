@@ -7,8 +7,6 @@ type TaskDatum = {
   title: string;
   place: string;
   amount: string;
-  window: string;
-  clock: string;
   unlock?: string;
 };
 
@@ -18,24 +16,18 @@ const TASKS: TaskDatum[] = [
     title: "Farm Round · Elm Farm",
     place: "Elm Farm",
     amount: "Farm Round",
-    window: "Morning",
-    clock: "7:00",
   },
   {
     family: "WEED",
     title: "MG11",
     place: "Main Garden",
     amount: "30 min · Heavy",
-    window: "Morning",
-    clock: "8:30",
   },
   {
     family: "POT UP",
     title: "Sweet William",
     place: "Grow Room",
     amount: "3 trays · 600 plants",
-    window: "Midafternoon",
-    clock: "2:30",
     unlock: "Harvest Stems · May 6",
   },
   {
@@ -43,14 +35,11 @@ const TASKS: TaskDatum[] = [
     title: "BB10 · Bermuda Pass 1",
     place: "Barn Beds",
     amount: "20 min · Pass 1 of 3",
-    window: "Evening",
-    clock: "7:00",
     unlock: "Choose Overwintering Crop · Sep 15",
   },
 ];
 
 const ACTIVE_TASK = TASKS[2];
-const HOURS = ["7 AM", "9 AM", "11 AM", "1 PM", "3 PM", "5 PM", "7 PM"] as const;
 
 function AppHeader() {
   return (
@@ -110,55 +99,54 @@ function UnlockBranch({ label }: { label: string }) {
   );
 }
 
-function MovingNowNode() {
+function CurrentMoveScorecard() {
   return (
-    <section className={styles.movingSurface} aria-label="Moving NOW node merged clock and task feed fixture">
-      <div className={styles.overdueLine}><strong>2 overdue</strong><span>1 connected to the current move</span></div>
-      <div className={styles.movingRail}>
-        {TASKS.map((task) => {
+    <section className={styles.scorecard} aria-label="Current move scorecard fixture">
+      <div className={styles.scoreTopline}>
+        <div><span>TODAY</span><strong>11 tasks · 6 done</strong></div>
+        <div className={styles.windowClock}><span>WINDOW</span><strong>00:33</strong></div>
+      </div>
+
+      <div className={styles.currentMove}>
+        <span>CURRENT MOVE</span>
+        <strong>Pot up Sweet William</strong>
+        <div className={styles.currentUnlock}><span>UNLOCKS</span><b>Harvest Stems · May 6</b></div>
+      </div>
+
+      <div className={styles.timeBar} aria-label="Fixture workday from 7 AM to 8 PM with current time at 3:27 PM">
+        <span>7 AM</span>
+        <div className={styles.timeTrack} aria-hidden="true">
+          <i className={styles.elapsedTime} />
+          <b className={styles.currentTimeDot} />
+        </div>
+        <span>8 PM</span>
+      </div>
+      <div className={styles.currentTimeLabel}>3:27 PM</div>
+    </section>
+  );
+}
+
+function CountdownRail() {
+  return (
+    <section className={styles.countdownSurface} aria-label="Countdown scorecard with clean task rail fixture">
+      <CurrentMoveScorecard />
+      <div className={styles.cleanRail}>
+        {TASKS.map((task, index) => {
           const active = task === ACTIVE_TASK;
+          const passed = index < 2;
           return (
-            <article className={styles.movingNode} data-active={active ? "true" : "false"} key={task.title}>
-              <div className={styles.nodeWhen}><strong>{task.window}</strong><span>{task.clock}</span></div>
+            <article
+              className={styles.cleanNode}
+              data-active={active ? "true" : "false"}
+              data-passed={passed ? "true" : "false"}
+              key={task.title}
+            >
               <i className={styles.railDot} aria-hidden="true" />
-              {active ? <div className={styles.nowCrossing}><span>3:06 PM</span></div> : null}
               <TaskIdentity task={task} />
               {task.unlock ? <UnlockBranch label={task.unlock} /> : null}
             </article>
           );
         })}
-      </div>
-    </section>
-  );
-}
-
-function ClockSpine() {
-  return (
-    <section className={styles.clockSurface} aria-label="Clock spine merged clock and task feed fixture">
-      <div className={styles.clockScale}>
-        {HOURS.map((hour) => <span key={hour}>{hour}</span>)}
-      </div>
-      <div className={styles.clockSpine}>
-        {HOURS.map((hour) => <i className={styles.hourTick} key={hour} />)}
-        <div className={styles.spineTask} data-kind="round" style={{ top: "4%" }}>
-          <i className={styles.railDot} aria-hidden="true" />
-          <TaskIdentity task={TASKS[0]} />
-        </div>
-        <div className={styles.spineTask} data-kind="weed" style={{ top: "17%" }}>
-          <i className={styles.railDot} aria-hidden="true" />
-          <TaskIdentity task={TASKS[1]} />
-        </div>
-        <div className={styles.spineTask} data-active="true" style={{ top: "58%" }}>
-          <i className={styles.railDot} aria-hidden="true" />
-          <TaskIdentity task={TASKS[2]} />
-          <UnlockBranch label="Harvest Stems · May 6" />
-        </div>
-        <div className={styles.spineTask} data-kind="spray" style={{ top: "87%" }}>
-          <i className={styles.railDot} aria-hidden="true" />
-          <TaskIdentity task={TASKS[3]} />
-          <UnlockBranch label="Choose Overwintering Crop · Sep 15" />
-        </div>
-        <div className={styles.spineNow} style={{ top: "61%" }}><span>3:06 PM</span></div>
       </div>
     </section>
   );
@@ -183,26 +171,20 @@ export default function ActiveOutcomeStudies() {
       aria-labelledby="active-outcome-studies-heading"
     >
       <header className={styles.sectionHeader}>
-        <span>CLOCK + DAYBOOK STUDY 4 · ONE SURFACE</span>
-        <h2 id="active-outcome-studies-heading">The rail is the clock.</h2>
-        <p>Two merged-surface studies. No Timeline / Daybook toggle and no calendar cards. Tasks, time, NOW, and downstream unlocks all live on one chronological rail.</p>
+        <span>CLOCK + DAYBOOK STUDY 5 · COUNTDOWN SCORECARD</span>
+        <h2 id="active-outcome-studies-heading">Time lives at the top. Work lives on the rail.</h2>
+        <p>The schedule column is gone. One compact scorecard carries day progress, the current move, its real downstream unlock, and a living countdown. The feed below stays a clean line-and-dot causal rail.</p>
       </header>
       <div className={styles.dataNote}>
         <strong>Fixture truth boundary</strong>
-        <span>Sweet William is the real open 3-tray / 600-plant pot-up task. Its crop profile carries a May 1–June 30, 2027 harvest-watch window. “Harvest Stems · May 6” remains the owner-requested design fixture date, not a materialized production harvest task.</span>
+        <span>Sweet William is the real open 3-tray / 600-plant pot-up task. Its crop profile carries a May 1–June 30, 2027 harvest-watch window. “Harvest Stems · May 6” and the 00:33 countdown are design fixtures for the editor, not materialized production timing.</span>
       </div>
-      <div className={styles.gallery}>
+      <div className={styles.singleGallery}>
         <Study
-          label="A · Moving NOW node"
-          note="Task-feed density with a single rail. The current-time rule crosses the rail exactly at the task Atlas says should be active."
+          label="A · Living countdown + clean rail"
+          note="The top scorecard owns the clock. The task feed no longer repeats Morning / Midafternoon / exact-time labels beside every node."
         >
-          <MovingNowNode />
-        </Study>
-        <Study
-          label="B · Clock spine"
-          note="A sparse real-time scale becomes the rail itself. Tasks are nodes attached to the clock instead of boxes occupying calendar blocks."
-        >
-          <ClockSpine />
+          <CountdownRail />
         </Study>
       </div>
     </section>
