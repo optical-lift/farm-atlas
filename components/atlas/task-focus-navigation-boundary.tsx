@@ -15,7 +15,11 @@ type TaskFocusNavigation = {
   complete: (taskId: string) => void;
 };
 
-const TaskFocusNavigationContext = createContext<TaskFocusNavigation | null>(null);
+type TaskFocusNavigationContextValue = {
+  requestedReturnPath: string | null;
+};
+
+const TaskFocusNavigationContext = createContext<TaskFocusNavigationContextValue | null>(null);
 
 function safeLocalReturnPath(value: string | null) {
   if (!value) return null;
@@ -61,21 +65,19 @@ export function completeTaskFocus(taskId: string, fallbackPath: string) {
 
 export function useTaskFocusNavigation(fallbackPath = "/"): TaskFocusNavigation {
   const context = useContext(TaskFocusNavigationContext);
-  const fallback = useMemo<TaskFocusNavigation>(() => ({
-    returnPath: fallbackPath,
+  const requestedReturnPath = context?.requestedReturnPath ?? null;
+  return useMemo<TaskFocusNavigation>(() => ({
+    returnPath: requestedReturnPath ?? fallbackPath,
     leave: () => leaveTaskFocus(fallbackPath),
     complete: (taskId: string) => completeTaskFocus(taskId, fallbackPath),
-  }), [fallbackPath]);
-  return context ?? fallback;
+  }), [fallbackPath, requestedReturnPath]);
 }
 
 export default function TaskFocusNavigationBoundary({ children, fallbackPath, showCloseControl = false }: Props) {
   const searchParams = useSearchParams();
   const requestedReturnPath = safeLocalReturnPath(searchParams.get("returnTo"));
-  const returnPath = requestedReturnPath ?? fallbackPath;
+  const navigationContext = useMemo<TaskFocusNavigationContextValue>(() => ({ requestedReturnPath }), [requestedReturnPath]);
   const leave = useCallback(() => leaveTaskFocus(fallbackPath), [fallbackPath]);
-  const complete = useCallback((taskId: string) => completeTaskFocus(taskId, fallbackPath), [fallbackPath]);
-  const navigation = useMemo<TaskFocusNavigation>(() => ({ returnPath, leave, complete }), [complete, leave, returnPath]);
 
   function handleNavigationCapture(event: MouseEvent<HTMLDivElement>) {
     const target = event.target;
@@ -90,7 +92,7 @@ export default function TaskFocusNavigationBoundary({ children, fallbackPath, sh
   }
 
   return (
-    <TaskFocusNavigationContext.Provider value={navigation}>
+    <TaskFocusNavigationContext.Provider value={navigationContext}>
       <div
         className="atlas-task-focus-navigation-boundary"
         data-atlas-task-focus-navigation="v1"
