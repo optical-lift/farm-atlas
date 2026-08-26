@@ -104,7 +104,8 @@ test("scrubber inspection synchronizes identity with the full task feed without 
   assert.match(smartCss, /\.feedInspected/);
   assert.match(contract, /scrubber\.inspected_task_id == task_feed\.inspected_task_id/);
   assert.match(contract, /Scrolling the scrubber never mutates a task, changes a Clock placement, changes NOW, or changes the Day Clearance Frontier/);
-  assert.match(contract, /inspecting 7:00 PM, not claiming that it is 7:00 PM/);
+  assert.match(contract, /inspecting 7:00 PM/);
+  assert.match(contract, /not claiming that it is 7:00 PM/);
 });
 
 test("scrubber has a distinct purpose from the detailed task feed and its location stays provisional", () => {
