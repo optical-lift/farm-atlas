@@ -1,0 +1,191 @@
+.specimen {
+  display: grid;
+  gap: 12px;
+}
+
+.fixtureBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  border: 1px dashed rgba(71, 63, 48, 0.34);
+  border-radius: 12px;
+  background: rgba(255, 252, 240, 0.86);
+  color: #4d463a;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.fixtureBanner strong {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+.mapSection,
+.cropSection,
+.resultSection {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(66, 59, 47, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sectionHeader > div {
+  display: grid;
+  gap: 2px;
+}
+
+.sectionHeader span,
+.sectionHeader small {
+  color: #7a7163;
+  font-size: 11px;
+}
+
+.sectionHeader strong {
+  color: #302b25;
+  font-size: 14px;
+}
+
+.orientationTop,
+.orientationBottom {
+  color: #766d5f;
+  font-size: 11px;
+  text-align: center;
+}
+
+.map {
+  width: 100%;
+  max-width: 470px;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.mapGround {
+  fill: #f2eee4;
+}
+
+.wedge,
+.activeWedge,
+.centerDiamond {
+  stroke: #f8f5ed;
+  stroke-width: 11;
+  stroke-linejoin: round;
+}
+
+.wedge {
+  fill: #ded7c8;
+}
+
+.activeWedge {
+  fill: #aebb95;
+}
+
+.centerDiamond {
+  fill: #c9c0ae;
+}
+
+.wedgeLabel,
+.activeWedgeLabel,
+.centerLabel,
+.clockMark {
+  font-family: inherit;
+  pointer-events: none;
+}
+
+.wedgeLabel,
+.activeWedgeLabel {
+  dominant-baseline: middle;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.wedgeLabel {
+  fill: #574f43;
+}
+
+.activeWedgeLabel {
+  fill: #26301f;
+}
+
+.centerLabel {
+  fill: #4f473c;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.clockMark {
+  fill: #857b6d;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.cropList {
+  display: grid;
+  gap: 6px;
+}
+
+.cropRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(238, 234, 224, 0.72);
+}
+
+.cropRow strong {
+  color: #40392f;
+  font-size: 13px;
+}
+
+.cropRow span {
+  color: #827768;
+  font-size: 11px;
+}
+
+.resultPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.resultPills button {
+  padding: 8px 12px;
+  border: 1px solid rgba(70, 63, 52, 0.18);
+  border-radius: 999px;
+  background: #f3efe6;
+  color: #756d61;
+  font: inherit;
+  font-size: 12px;
+}
+
+.resultPills button:disabled {
+  cursor: default;
+  opacity: 0.78;
+}
+
+@media (max-width: 520px) {
+  .fixtureBanner,
+  .sectionHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .mapSection,
+  .cropSection,
+  .resultSection {
+    padding: 12px;
+  }
+}
