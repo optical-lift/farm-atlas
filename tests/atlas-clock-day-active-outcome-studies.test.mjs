@@ -46,9 +46,9 @@ test("scorecard carries day progress, current move, unlock, and ambient time", (
 
 test("task feed no longer repeats a separate schedule column", () => {
   assert.doesNotMatch(study, /nodeWhen/);
-  assert.doesNotMatch(study, />Morning</);
-  assert.doesNotMatch(study, />Midafternoon</);
-  assert.doesNotMatch(study, />Evening</);
+  assert.doesNotMatch(study, /Morning/);
+  assert.doesNotMatch(study, /Midafternoon/);
+  assert.doesNotMatch(study, /Evening/);
   assert.doesNotMatch(css, /\.nodeWhen/);
   assert.match(css, /\.cleanRail::before/);
   assert.match(css, /\.cleanNode/);
