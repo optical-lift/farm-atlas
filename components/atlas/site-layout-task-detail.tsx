@@ -307,7 +307,7 @@ export default function SiteLayoutTaskDetail({ task, assignee, initialReadiness,
             subtitle={subtitle}
             onDone={() => void transition("done")}
             onUnfinished={() => setUnfinishedOpen((open) => !open)}
-            completionDisabled={saving || Boolean(savingItem)}
+            completionDisabled={saving}
           >
             {cardBody}
           </AtlasTaskCardFrame>
