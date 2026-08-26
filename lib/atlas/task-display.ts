@@ -120,7 +120,6 @@ export function atlasRouteKeyForTask(task: AtlasTaskCard): AtlasWorkRouteKey {
   const joined = `${task.task_type ?? ""} ${task.title} ${task.unlock_text ?? ""} ${atlasMetaString(task, "work_rhythm")} ${atlasMetaString(task, "display_action")} ${templateText}`.toLowerCase();
 
   if (joined.includes("propagat") || joined.includes("take cuttings") || joined.includes("root cuttings")) return "propagation";
-  if (joined.includes("water")) return "water";
   if (joined.includes("mow")) return "mow";
   if (joined.includes("weed")) return "weed";
   if (joined.includes("seed") || joined.includes("sow")) return "seed";
