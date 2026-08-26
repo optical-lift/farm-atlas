@@ -349,7 +349,7 @@ export default function GrowRoomTaskFocus({
                       </button>
                       <div className={styles.secondaryRow}>
                         <button type="button" disabled={saving} onClick={() => void resolveRequest("done", { growRoomResult: "no_germination", liveCount: 0 }, "No germination recorded.")}>No germination</button>
-                        <button type="button" disabled={saving} onClick={() => void resolveRequest("rescheduled", { growRoomResult: "not_ready_to_count" }, "Not ready yet.")}>Not ready yet</button>
+                        <button type="button" disabled={saving} onClick={() => void resolveRequest("rescheduled", { growRoomResult: "not_ready_to_count" }, "Not ready to count yet.")}>Not ready yet</button>
                       </div>
                     </div>
                   ) : (
