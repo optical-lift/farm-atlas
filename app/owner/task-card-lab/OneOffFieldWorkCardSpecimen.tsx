@@ -47,6 +47,28 @@ function Tools({ tools, prefix }: { tools: Tool[]; prefix: string }) {
   );
 }
 
+function SetupBeds() {
+  return (
+    <section className={harvestStyles.harvestList} aria-label="U-Pick beds to stake and string">
+      <div className={harvestStyles.listKey}>
+        <span>Beds</span>
+        <small>mark each bed when it is strung</small>
+      </div>
+      <div className={harvestStyles.zoneRows}>
+        {Array.from({ length: 12 }, (_, index) => index + 1).map((bedNumber) => (
+          <label className={`${harvestStyles.cropRow} ${styles.areaRow}`} key={bedNumber}>
+            <span className={harvestStyles.cropText}>
+              <strong>U-Pick Bed {bedNumber}</strong>
+              <small>3 ft × 50 ft</small>
+            </span>
+            <input type="checkbox" aria-label={`U-Pick Bed ${bedNumber} is strung`} />
+          </label>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function SprayAreas({ areas }: { areas: SprayArea[] }) {
   return (
     <section className={harvestStyles.harvestList} aria-label="Deer deterrent areas">
@@ -101,9 +123,10 @@ export default function OneOffFieldWorkCardSpecimen() {
       <DominionCardFrame
         family="Setup"
         title="Stake + String Beds"
-        subtitle="Field Rows · Back Half · 3 ft beds · 3 ft walkways"
+        subtitle="U-Pick · 3 ft beds · 5 ft walkways"
       >
         <Tools tools={stakingTools} prefix="stake-string-tool" />
+        <SetupBeds />
       </DominionCardFrame>
 
       <div className={venueStyles.nextVariantLabel}><span>Same simple resource grammar · protection task</span></div>
