@@ -187,7 +187,7 @@
 }
 
 .dayNavigation[data-position="bottom"] {
-  margin-top: 10px;
+  margin-top: 6px;
   padding-bottom: 4px;
 }
 
@@ -216,42 +216,82 @@
   letter-spacing: 0.12em;
 }
 
+.boundedPhone {
+  height: 820px;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.boundedDaySurface {
+  min-height: 0;
+}
+
+.boundedDaySurface[data-view="clock"] {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.boundedDaySurface[data-view="day"] {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+
+.boundedDaySurface[data-view="day"]::-webkit-scrollbar {
+  display: none;
+}
+
 .clockView {
-  margin-top: 10px;
-  border-top: 1px solid #ececef;
-  border-bottom: 1px solid #ececef;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid #e8e8ec;
+  border-radius: 15px;
   background: #fff;
 }
 
 .clockViewHeader {
+  position: relative;
+  z-index: 4;
   display: flex;
   gap: 12px;
   align-items: center;
   justify-content: space-between;
-  min-height: 44px;
-  padding: 8px 3px 8px;
+  min-height: 45px;
+  padding: 8px 10px;
   border-bottom: 1px solid #ededf0;
+  background: rgba(255, 255, 255, 0.985);
 }
 
 .clockViewHeader > div {
   display: grid;
   gap: 2px;
+  min-width: 0;
 }
 
 .clockViewHeader span {
   color: #929198;
   font-size: 6px;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
 }
 
 .clockViewHeader strong {
+  overflow: hidden;
   color: #34343f;
   font-size: 10px;
   font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .clockViewHeader button {
+  flex: 0 0 auto;
   padding: 5px 8px;
   border: 1px solid #dddce4;
   border-radius: 999px;
@@ -262,158 +302,218 @@
   cursor: pointer;
 }
 
-.clockDayBoundary {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 8px 2px;
-  color: #96969d;
-}
-
-.clockDayBoundary span {
-  font-size: 7px;
-  font-variant-numeric: tabular-nums;
-}
-
-.clockDayBoundary strong {
-  font-size: 6px;
-  letter-spacing: 0.12em;
-}
-
-.calendarFlow {
-  display: grid;
-  min-width: 0;
-  padding: 0 2px;
-}
-
-.calendarSequence {
-  display: grid;
-  min-width: 0;
-}
-
-.elasticGap {
-  position: relative;
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-  min-height: 16px;
-}
-
-.elasticGap span {
+.clockViewHeader button:disabled {
   color: #aaa9af;
-  font-size: 6.5px;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
+  background: #f8f8f9;
+  cursor: default;
+  opacity: 0.72;
 }
 
-.elasticGap i {
-  height: 1px;
-  background: linear-gradient(to right, #ededf0, rgba(237, 237, 240, 0));
-}
-
-.calendarNow {
+.clockLensViewport {
   position: relative;
-  z-index: 4;
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-  height: 14px;
-  margin: -4px 0 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 0;
+  height: 100%;
+  padding: 8px 7px 9px 4px;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: none;
+  user-select: none;
+  background: linear-gradient(to right, #fcfcfd 0, #fff 22%, #fff 100%);
+}
+
+.clockLensViewport:focus-visible {
+  outline: 2px solid #a49ed2;
+  outline-offset: -2px;
+}
+
+.clockLensSpine {
+  position: absolute;
+  z-index: 0;
+  left: 49px;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: #e2e2e7;
   pointer-events: none;
 }
 
-.calendarNow span {
-  color: #615a98;
-  font-size: 7px;
-  font-weight: 900;
+.clockLensRow {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 42px 12px minmax(0, 1fr);
+  gap: 4px;
+  align-items: stretch;
+  flex-basis: 0;
+  min-height: 0;
+  opacity: 0.55;
+  transition: flex-grow 150ms ease, opacity 150ms ease;
+}
+
+.clockLensRow[data-focus-tier="near"] {
+  opacity: 0.76;
+}
+
+.clockLensRow[data-focus-tier="focus"] {
+  z-index: 3;
+  opacity: 1;
+}
+
+.clockLensRow[data-now="true"] {
+  opacity: 1;
+}
+
+.clockLensTime {
+  align-self: center;
+  color: #9b9aa1;
+  font-size: 6.25px;
   font-variant-numeric: tabular-nums;
   text-align: right;
+  white-space: nowrap;
 }
 
-.calendarNow i {
+.clockLensRow[data-focus-tier="near"] .clockLensTime,
+.clockLensRow[data-focus-tier="focus"] .clockLensTime {
+  color: #777780;
+  font-size: 6.75px;
+}
+
+.clockLensRow[data-now="true"] .clockLensTime {
+  color: #625b9a;
+  font-weight: 900;
+}
+
+.clockLensDot {
   position: relative;
-  height: 1px;
-  background: #8d85cb;
+  z-index: 2;
+  align-self: center;
+  justify-self: center;
+  width: 5px;
+  height: 5px;
+  border: 1px solid #c7c7cc;
+  border-radius: 50%;
+  background: #fff;
 }
 
-.calendarNow i::before {
-  content: "";
-  position: absolute;
-  left: -3px;
-  top: -3px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #776dca;
+.clockLensRow[data-focus-tier="near"] .clockLensDot {
+  width: 6px;
+  height: 6px;
+  border-color: #aaa9b0;
+}
+
+.clockLensRow[data-focus-tier="focus"] .clockLensDot {
+  width: 8px;
+  height: 8px;
+  border: 2px solid #97969f;
+}
+
+.clockLensRow[data-now="true"] .clockLensDot {
+  width: 9px;
+  height: 9px;
+  border: 2px solid #776dca;
+  background: #f4f2fb;
 }
 
 .calendarTaskBlock {
   display: grid;
   align-content: center;
-  gap: 2px;
-  width: calc(100% - 56px);
-  margin-left: 56px;
-  padding: 7px 10px;
-  border: 1px solid #e0e0e5;
-  border-left: 2px solid #d4d4da;
-  border-radius: 8px;
+  gap: 1px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 2px 8px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-left: 2px solid #dedee3;
+  border-radius: 7px;
   background: #fff;
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
-  opacity: 0.48;
   transform-origin: left center;
-  transition: opacity 130ms ease, transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease, background 130ms ease;
+  transition: box-shadow 130ms ease, border-color 130ms ease, background 130ms ease;
 }
 
 .calendarTaskBlock > span {
-  color: #8e8e96;
-  font-size: 6.5px;
+  overflow: hidden;
+  color: #9b9ba1;
+  font-size: 5.75px;
   font-weight: 800;
   letter-spacing: 0.08em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .calendarTaskBlock > strong {
-  color: #4b4b53;
-  font-size: 10px;
-  line-height: 1.12;
+  overflow: hidden;
+  color: #5e5e66;
+  font-size: 8px;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .calendarTaskBlock > small {
+  display: none;
+  overflow: hidden;
   color: #7a7a81;
   font-size: 7px;
-  line-height: 1.2;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendarTaskBlock[data-focus-tier="near"] {
+  border-color: #e6e6e9;
+  border-left-color: #c2c2c8;
+}
+
+.calendarTaskBlock[data-focus-tier="near"] > span {
+  color: #85858d;
+  font-size: 6.25px;
+}
+
+.calendarTaskBlock[data-focus-tier="near"] > strong {
+  color: #474750;
+  font-size: 10px;
 }
 
 .calendarTaskBlock[data-inspected="true"] {
-  z-index: 2;
   border-color: #d0d0d7;
   border-left-color: #96959f;
   background: #fff;
   box-shadow: 0 6px 14px rgba(42, 42, 50, 0.07);
-  opacity: 1;
-  transform: scale(1.015);
 }
 
-.calendarTaskBlock[data-inspected="true"] > span {
+.calendarTaskBlock[data-focus-tier="focus"] {
+  gap: 2px;
+  padding: 6px 10px;
+}
+
+.calendarTaskBlock[data-focus-tier="focus"] > span {
   color: #696971;
   font-size: 7px;
 }
 
-.calendarTaskBlock[data-inspected="true"] > strong {
+.calendarTaskBlock[data-focus-tier="focus"] > strong {
   color: #2f3038;
   font-size: 14px;
+}
+
+.calendarTaskBlock[data-focus-tier="focus"] > small {
+  display: block;
 }
 
 .calendarTaskBlock[data-now="true"] {
   border-color: #d3cfee;
   border-left: 4px solid #776dca;
   background: #f4f2fb;
-  box-shadow: 0 7px 16px rgba(76, 67, 137, 0.08);
-  opacity: 1;
+  box-shadow: 0 5px 13px rgba(76, 67, 137, 0.07);
 }
 
 .calendarTaskBlock[data-now="true"] > span {
@@ -421,13 +521,12 @@
 }
 
 .calendarTaskBlock[data-now="true"] > strong {
-  color: #2d2d42;
-  font-size: 14px;
+  color: #34314d;
 }
 
 .calendarTaskBlock:focus-visible {
   outline: 2px solid #8f87c8;
-  outline-offset: 2px;
+  outline-offset: -1px;
 }
 
 .feedInspected {
@@ -468,13 +567,24 @@
     gap: 3px;
   }
 
-  .calendarTaskBlock {
-    width: calc(100% - 52px);
-    margin-left: 52px;
+  .boundedPhone {
+    height: 790px;
   }
 
-  .elasticGap,
-  .calendarNow {
-    grid-template-columns: 44px minmax(0, 1fr);
+  .clockLensViewport {
+    padding-inline: 2px 5px;
+  }
+
+  .clockLensRow {
+    grid-template-columns: 39px 11px minmax(0, 1fr);
+    gap: 3px;
+  }
+
+  .clockLensSpine {
+    left: 45px;
+  }
+
+  .calendarTaskBlock[data-focus-tier="focus"] > strong {
+    font-size: 13px;
   }
 }
