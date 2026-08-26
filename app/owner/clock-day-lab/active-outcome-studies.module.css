@@ -80,7 +80,7 @@
 .phone {
   position: relative;
   overflow: hidden;
-  min-height: 800px;
+  min-height: 820px;
   border: 1px solid #dfdee2;
   border-radius: 30px;
   background: #fff;
@@ -129,8 +129,17 @@
 }
 
 .dayHeader {
+  display: grid;
+  gap: 11px;
   padding: 14px 18px 11px;
   border-bottom: 1px solid #ecebef;
+}
+
+.dayHeaderTop {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
 }
 
 .dayIdentity {
@@ -151,62 +160,152 @@
   font-size: 23px;
 }
 
+.dayCount {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0 4px;
+  align-items: baseline;
+  text-align: right;
+}
+
+.dayCount strong {
+  color: #303243;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.dayCount span {
+  color: #6f7179;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.dayCount small {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  color: #98999f;
+  font-size: 8px;
+}
+
+.dayInstrument {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 40px;
+  padding: 6px 9px;
+  border: 1px solid #e3e2e8;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.dayDone {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.dayDone strong {
+  color: #555762;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dayDone span {
+  color: #92939a;
+  font-size: 8px;
+}
+
+.dayClock {
+  position: relative;
+  min-width: 0;
+  padding-bottom: 11px;
+}
+
+.dayClockTrack {
+  position: relative;
+  height: 2px;
+  border-radius: 999px;
+  background: #e7e6ec;
+}
+
+.dayClockElapsed {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 69%;
+  border-radius: inherit;
+  background: #a39bd6;
+}
+
+.dayClockDot {
+  position: absolute;
+  left: calc(69% - 4px);
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #776dca;
+  box-shadow: 0 0 0 1px #776dca;
+}
+
+.dayClockNow {
+  position: absolute;
+  left: 69%;
+  top: 6px;
+  transform: translateX(-50%);
+  color: #736e91;
+  font-size: 7px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dayWindow {
+  display: grid;
+  gap: 1px;
+  text-align: right;
+}
+
+.dayWindow span {
+  color: #7770a5;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.dayWindow strong {
+  color: #302d45;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
 .daySurface {
   padding: 15px 16px 74px;
 }
 
 .outcomeBox {
-  height: 128px;
+  height: 150px;
   overflow: hidden;
-  border: 1px solid #dedde4;
+  border: 1px solid #d8d5e8;
   border-radius: 20px;
   background: #fff;
   box-shadow: 0 5px 16px rgba(45, 47, 68, 0.025);
 }
 
 .timeDeck {
-  height: 48px;
-  padding: 5px 12px 4px;
-  border-bottom: 1px solid #d9d5ef;
-  background: #eeecfb;
-}
-
-.dayMeter {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 8px;
-  align-items: center;
-  height: 10px;
-}
-
-.dayMeter span {
-  color: #655f99;
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-.dayMeter i {
   position: relative;
-  display: block;
-  height: 2px;
+  height: 68px;
   overflow: hidden;
-  border-radius: 999px;
-  background: rgba(105, 98, 153, 0.15);
-}
-
-.dayMeter b {
-  display: block;
-  width: 54%;
-  height: 100%;
-  border-radius: inherit;
-  background: #7770bd;
+  border-bottom: 1px solid #d8d4ed;
+  background: #eeecfb;
 }
 
 .rollerViewport {
   position: relative;
-  height: 31px;
-  margin-top: 1px;
+  height: 68px;
   overflow: hidden;
 }
 
@@ -215,75 +314,77 @@
   z-index: 1;
   left: 0;
   right: 0;
-  top: 9px;
-  height: 15px;
-  border-top: 1px solid rgba(103, 94, 160, 0.2);
-  border-bottom: 1px solid rgba(103, 94, 160, 0.2);
-  background: rgba(255, 255, 255, 0.34);
+  top: 22px;
+  height: 24px;
+  border-top: 1px solid rgba(103, 94, 160, 0.22);
+  border-bottom: 1px solid rgba(103, 94, 160, 0.22);
+  background: rgba(255, 255, 255, 0.38);
 }
 
 .rollerRow {
   position: absolute;
   z-index: 2;
-  left: 6px;
-  right: 6px;
+  left: 14px;
+  right: 14px;
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) 48px;
-  gap: 7px;
+  grid-template-columns: 62px 52px minmax(0, 1fr);
+  gap: 8px;
   align-items: center;
   white-space: nowrap;
 }
 
-.rollerRow span,
-.rollerRow small {
+.rollerRow span {
+  color: #77729c;
+  font-size: 8px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.rollerRow span {
-  color: #77729c;
+.rollerRow small {
+  color: #7770a5;
   font-size: 7px;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: 0.1em;
 }
 
 .rollerRow strong {
   overflow: hidden;
-  color: #3a3852;
-  font-size: 8px;
+  color: #343249;
+  font-size: 10px;
   text-overflow: ellipsis;
 }
 
-.rollerRow small {
-  color: #77729c;
-  font-size: 7px;
-  font-weight: 800;
-  text-align: right;
-}
-
 .rollerRow[data-position="previous"] {
-  top: -5px;
+  top: 4px;
   transform: scale(0.94);
-  opacity: 0.27;
+  transform-origin: center;
+  opacity: 0.28;
   filter: blur(0.25px);
 }
 
 .rollerRow[data-position="current"] {
-  top: 10px;
+  top: 27px;
 }
 
-.rollerRow[data-position="current"] span,
-.rollerRow[data-position="current"] strong,
-.rollerRow[data-position="current"] small {
+.rollerRow[data-position="current"] span {
   color: #302d47;
-}
-
-.rollerRow[data-position="current"] strong {
   font-size: 9px;
 }
 
+.rollerRow[data-position="current"] small {
+  color: #675fa7;
+}
+
+.rollerRow[data-position="current"] strong {
+  color: #292c42;
+  font-size: 13px;
+}
+
 .rollerRow[data-position="next"] {
-  top: 25px;
+  top: 52px;
   transform: scale(0.94);
-  opacity: 0.23;
+  transform-origin: center;
+  opacity: 0.25;
   filter: blur(0.25px);
 }
 
@@ -293,24 +394,24 @@
   z-index: 3;
   left: 0;
   right: 0;
-  height: 8px;
+  height: 14px;
   pointer-events: none;
 }
 
 .rollerFadeTop {
   top: 0;
-  background: linear-gradient(to bottom, #eeecfb 5%, rgba(238, 236, 251, 0));
+  background: linear-gradient(to bottom, #eeecfb 8%, rgba(238, 236, 251, 0));
 }
 
 .rollerFadeBottom {
   bottom: 0;
-  background: linear-gradient(to top, #eeecfb 5%, rgba(238, 236, 251, 0));
+  background: linear-gradient(to top, #eeecfb 8%, rgba(238, 236, 251, 0));
 }
 
 .scoreBody {
   display: grid;
   grid-template-columns: 27% 73%;
-  height: 79px;
+  height: 81px;
   background: #fff;
 }
 
@@ -318,7 +419,7 @@
   display: grid;
   align-content: center;
   justify-items: start;
-  padding: 9px 14px 8px;
+  padding: 10px 14px 9px;
   border-right: 1px solid #e3e2e8;
 }
 
@@ -346,7 +447,7 @@
   align-content: center;
   gap: 3px;
   min-width: 0;
-  padding: 9px 15px 8px;
+  padding: 10px 15px 9px;
 }
 
 .scoreMove > span,
@@ -529,5 +630,12 @@
 
   .scoreMove {
     padding-inline: 13px;
+  }
+
+  .rollerRow {
+    left: 10px;
+    right: 10px;
+    grid-template-columns: 56px 48px minmax(0, 1fr);
+    gap: 6px;
   }
 }
