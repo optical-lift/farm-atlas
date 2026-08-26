@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import DestinationContactCardSpecimen from "./DestinationContactCardSpecimen";
 import FarmRoundCardSpecimen from "./FarmRoundCardSpecimen";
 import HarvestCardSpecimen from "./HarvestCardSpecimen";
+import MG11ReferencePolygonSpecimen from "./MG11ReferencePolygonSpecimen";
 import MowCardSpecimen from "./MowCardSpecimen";
 import OneOffFieldWorkCardSpecimen from "./OneOffFieldWorkCardSpecimen";
 import { TransplantCardSpecimen } from "./RemainingDominionCardSpecimens";
@@ -51,12 +52,16 @@ export default function TaskCardLabPage() {
       </header>
 
       <nav className={styles.jumpNav} aria-label="Jump to task family">
+        <a href="#task-card-mg11-reference">MG11 Map</a>
         {families.map((family, index) => (
           <a key={family} href={`#task-card-${index + 1}`}>{family}</a>
         ))}
       </nav>
 
       <div className={styles.gallery}>
+        <div id="task-card-mg11-reference" className={styles.cardAnchor}>
+          <MG11ReferencePolygonSpecimen />
+        </div>
         {families.map((family, index) => (
           <div id={`task-card-${index + 1}`} key={family} className={styles.cardAnchor}>
             <Specimen index={index} />
