@@ -120,8 +120,6 @@ function dedupeCrops(groups: AtlasCropOccupancyGroup[]) {
 }
 
 export default function WeedCardTaskFocus({ task, card, turnover, assignee }: Props) {
-  if (!card && !turnover) return null;
-
   const isClear = Boolean(turnover);
   const clearCrop = turnover ? displayCrop(turnover) : null;
   const family = isClear ? "Clear" : "Weed";
@@ -143,6 +141,8 @@ export default function WeedCardTaskFocus({ task, card, turnover, assignee }: Pr
   const [blockedNote, setBlockedNote] = useState("");
   const [saving, setSaving] = useState<SavingAction>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  if (!card && !turnover) return null;
 
   async function saveResult() {
     if (!selectedCondition) {
