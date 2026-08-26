@@ -65,9 +65,10 @@ test("the universal execution shell owns result anchoring and correction evidenc
   assert.match(shell, /This completion has linked farm evidence\. Review the recorded result before correcting it\./);
 });
 
-test("legacy single-task links hand return context to the canonical task-focus route", () => {
+test("legacy single-task links hand return context to the canonical task-focus shell", () => {
   const taskLayout = read("app/task/layout.tsx");
   const projectFocus = read("components/atlas/project-task-focus.tsx");
+  const navigation = read("components/atlas/task-focus-navigation-boundary.tsx");
 
   assert.match(taskLayout, /function canonicalTaskHref/);
   assert.match(taskLayout, /source\.get\("returnTo"\)/);
@@ -75,7 +76,9 @@ test("legacy single-task links hand return context to the canonical task-focus r
   assert.match(taskLayout, /source\.get\("correction"\)/);
   assert.match(taskLayout, /window\.location\.replace\(canonicalTaskHref\(taskId, params\)\)/);
   assert.doesNotMatch(taskLayout, /\?taskId=\$\{encoded\}/);
-  assert.match(projectFocus, /const destination = returnTo \|\| `\/project\/\$\{encodeURIComponent\(project\.projectId\)\}`/);
+  assert.match(projectFocus, /useTaskFocusNavigation\(`\/project\/\$\{encodeURIComponent\(project\.projectId\)\}`\)/);
+  assert.match(projectFocus, /const destination = navigation\.returnPath/);
+  assert.match(navigation, /safeLocalReturnPath\(searchParams\.get\("returnTo"\)\)/);
 });
 
 test("bed crop accordion and attached history are owned by the Zone component", () => {
