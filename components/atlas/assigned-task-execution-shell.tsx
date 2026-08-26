@@ -8,6 +8,7 @@ import StatefulChildChecklist, { statefulChildTask } from "@/components/atlas/st
 import TaskExecutionBrief from "@/components/atlas/task-execution-brief";
 import TaskPrimaryResultControls from "@/components/atlas/task-primary-result-controls";
 import { TaskChildChecklist } from "@/components/atlas/task-child-checklist";
+import { useTaskFocusNavigation } from "@/components/atlas/task-focus-navigation-boundary";
 import { atlasFarmDateIso, atlasShiftFarmDate } from "@/lib/atlas/farm-day";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -47,21 +48,6 @@ type TaskCardsResponse = {
   error?: string;
   details?: string;
 };
-
-function returnDestination(fallback: string) {
-  const value = new URLSearchParams(window.location.search).get("returnTo");
-  return value && value.startsWith("/") && !value.startsWith("//") ? value : fallback;
-}
-
-function completeTaskExit(taskId: string, fallback: string) {
-  const returnTo = returnDestination(fallback);
-  const event = new CustomEvent("atlas:task-completed", {
-    cancelable: true,
-    detail: { taskId, returnTo },
-  });
-  window.dispatchEvent(event);
-  if (!event.defaultPrevented) window.location.assign(returnTo);
-}
 
 function childIsDone(task: AtlasTaskCard) {
   return task.status === "done" || task.metadata?.checklist_status === "done";
@@ -132,6 +118,7 @@ export default function AssignedTaskExecutionShell({
   const [message, setMessage] = useState<string | null>(null);
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const [showCorrectionNote, setShowCorrectionNote] = useState(false);
+  const navigation = useTaskFocusNavigation(assignee.listPath);
 
   useEffect(() => {
     if (window.location.hash !== "#result") return;
@@ -204,7 +191,7 @@ export default function AssignedTaskExecutionShell({
     if (parent) {
       setTask(parent);
       if (isHarvestReadinessRound(parent) && parent.status === "done") {
-        completeTaskExit(parent.task_id, assignee.listPath);
+        navigation.complete(parent.task_id);
         return;
       }
     }
@@ -232,11 +219,11 @@ export default function AssignedTaskExecutionShell({
         },
       });
       if (outcome === "done") {
-        completeTaskExit(task.task_id, assignee.listPath);
+        navigation.complete(task.task_id);
         return;
       }
       if (outcome === "partial" || outcome === "not_relevant" || outcome === "changed_plan") {
-        window.location.assign(returnDestination(assignee.listPath));
+        navigation.leave();
         return;
       }
       await refreshTask();
@@ -262,7 +249,7 @@ export default function AssignedTaskExecutionShell({
         workKey: task.action_key || undefined,
         payload: { assigneeKey: assignee.key, ...(scheduleIntent ? { scheduleIntent } : {}) },
       });
-      window.location.assign(returnDestination(assignee.listPath));
+      navigation.leave();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Task reschedule failed.");
     } finally {
@@ -270,7 +257,7 @@ export default function AssignedTaskExecutionShell({
     }
   }
 
-  const returnHref = assignee.listPath;
+  const returnHref = navigation.returnPath;
   const instrumentContext: AssignedTaskInstrumentContext = {
     task,
     assignee,
@@ -412,12 +399,12 @@ export default function AssignedTaskExecutionShell({
       `}</style>
       <section className="atlas-phone atlas-dashboard-phone atlas-task-page-phone">
         <header className="atlas-phone-top atlas-dashboard-top">
-          <Link href={assignee.listPath} className="atlas-phone-brand atlas-task-header-brand">
+          <Link href={navigation.returnPath} className="atlas-phone-brand atlas-task-header-brand">
             <span className="atlas-phone-kicker">Atlas</span>
             <span className="atlas-phone-title">{assignee.label}</span>
           </Link>
           <span className="atlas-weather-line">{weatherLabel}</span>
-          <Link href={assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
+          <Link href={navigation.returnPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
         </header>
         <div className="atlas-task-page-body">
           <article className="atlas-task-page-active atlas-task-ticket-card atlas-assigned-task-execution-card">
