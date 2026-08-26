@@ -32,7 +32,7 @@ Production rules:
 - Nearby task dots may visually cluster, but source times stay exact.
 - Clock view, Day view, and the smart rail all use the same scheduled task identities.
 
-The compact rail remains **linear in real time** even though the large Clock view is allowed to compress empty visual space.
+The compact rail remains **linear in real time** even though the large Clock view uses focus + context compression.
 
 ## 3. Smart progress: weighted chronological clearance frontier
 
@@ -157,63 +157,109 @@ Clock fitting should consider, as governed inputs become available:
 
 There is no worker-facing flexible/unplanned pocket. If admitted work cannot be lawfully fitted, that is a **planning conflict** for governed resolution.
 
-## 9. One page owns vertical scrolling
+## 9. Clock is a bounded instrument
 
-Clock must not create a nested vertical scroll viewport inside an already scrollable Atlas page.
+Clock does not borrow the page/document scroll and it does not become a long Google-Calendar column.
 
-Required rule:
+The phone/app shell keeps its normal stable chrome. Inside the Clock surface:
 
-`page_scroll_owner = document`
+1. the Clock header and `Return to now` control form the stable top edge;
+2. the **scrubber begins immediately below that header**;
+3. only gestures inside that scrubber change temporal inspection;
+4. the scrubber itself has a bounded height and never makes the entire Atlas page move merely to inspect another task;
+5. first and last scheduled tasks remain represented inside the bounded scrubber at the same time.
 
-The Clock scrubber effect is derived from the scheduled block nearest the viewport focus/center while the ordinary page moves. This prevents a worker from trying to scroll Atlas and accidentally becoming trapped in an inner Clock scroller.
+Required conceptual ownership:
 
-Scrolling changes **inspection presentation only**. It never completes, reschedules, or moves a task.
+`screen = stable Atlas chrome + stable day context + bounded Clock scrubber`
+
+`clock_scroll_owner = bounded_scrubber`
+
+A wheel, swipe, arrow key, or direct task tap inside the scrubber changes the inspected focus. It does not mutate task truth.
+
+This is intentionally a focus + context instrument rather than a conventional overflow list.
 
 ## 10. Purple means factual NOW
 
 Purple has a narrow meaning in Clock:
 
 - the task Clock says is actually NOW may use the purple task treatment;
-- the factual NOW line/marker is purple;
-- merely scrolling past or inspecting another task must not turn that task purple.
+- the factual NOW marker is purple;
+- merely scrubbing to or inspecting another task must not turn that task purple.
 
 A non-NOW inspected task may become larger, darker, sharper, or receive neutral emphasis, but it remains neutral.
 
 The same rule applies in the alternate Day rail: inspection emphasis is neutral; actual NOW may remain purple.
 
-## 11. Calendar-shaped, elastically compressed time
+## 11. Focus + context zoom geometry
 
-The first plain Clock proved that literal Google-Calendar spacing wastes too much mobile space. The approved next study keeps calendar semantics without giving every real-world minute equal screen height.
+The large Clock must preserve the whole scheduled-day context while giving more resolution to the region under inspection.
 
-Actual Clock times remain explicit text. Order remains chronological. Task duration remains visually meaningful. Empty gaps are compressed by a monotonic function such as:
+Every scheduled task receives a positive visual allocation. A simple admissible family is:
 
-`G(g) = clamp(g_min + k * sqrt(g), g_min, g_max)`
+`z_i = z_floor + A / (1 + α * |i - f|^p)`
 
-or another governed/tuned monotonic compression.
+where:
 
-Task visual height may similarly use a bounded monotonic duration function such as:
+- `i` is the task's chronological index;
+- `f` is the current inspected/focus index;
+- `z_floor > 0` guarantees distant tasks remain represented;
+- `A`, `α`, and `p` tune the lens shape.
 
-`H(d) = clamp(h_min + k_d * log(1 + d), h_min, h_max)`
+Normalize the allocations into the available scrubber height:
 
-Important consequence: **pixel distance in the large Clock is not itself authoritative elapsed time.** Printed Clock times and governed placements are authoritative. The compact smart rail remains the linear real-time overview.
+`h_i = H_available * z_i / Σ z_j`
 
-Long gaps may show a tiny duration cue (`1h 45m`) so the compression is legible instead of deceptive.
+The important law is not the exact equation. It is this:
 
-## 12. Scrubber / inspection behavior on the page
+**focus may gain space only by compressing context, never by deleting the beginning or end of the scheduled day.**
 
-At or near NOW, the actual NOW task is visually dominant and purple.
+Initial focus is the factual NOW task when one exists. When the user scrubs away, the inspection lens moves; factual NOW remains independently marked in purple wherever it sits.
 
-When the user scrolls away:
+### Detail tiers
 
-- the scheduled task nearest the viewport focus becomes the inspected task;
-- that inspected task enlarges/sharpens neutrally;
+Focus + context also controls information density:
+
+- **focus** — full task identity plus useful place/amount detail;
+- **near** — time, family, and strong task title;
+- **context** — compact time/title representation sufficient to preserve identity and chronology.
+
+This follows the same zoom discipline used by Chronicle: the object remains part of the instrument while the amount of label/detail changes with visual scale. Do not use zoom as permission to fabricate or discard task truth.
+
+For very dense days, context rows may become tiny marks/short labels, but the first and last scheduled tasks must remain visibly represented and reachable by the scrubber.
+
+## 12. Time geometry remains truthful without literal empty space
+
+The bounded lens does not assign equal pixels to equal minutes. A two-hour empty gap therefore does not consume two hours' worth of screen height.
+
+Actual Clock times remain explicit text. Chronological order is invariant. Governed duration remains task truth even when a context row is visually compressed.
+
+Important consequence: **pixel distance and row height inside the bounded lens are not authoritative elapsed time.** Printed Clock times and governed placements are authoritative. The compact smart rail remains the linear real-time overview.
+
+If Atlas later needs gap magnitude inside the lens, it may show a small factual gap label rather than expanding dead space.
+
+## 13. Scrubber / inspection behavior
+
+At initial open:
+
+- inspected focus = NOW task when one exists;
+- the NOW task is purple and receives focus-scale detail;
+- every earlier and later task remains represented inside the scrubber, including first and last.
+
+When the user scrubs away:
+
+- the inspection focus moves one chronological region at a time;
+- the focused task enlarges/sharpens neutrally unless it is also NOW;
+- neighboring tasks receive intermediate scale;
+- distant tasks compress but stay visible;
 - NOW remains factual and purple wherever it actually sits;
-- a `Return to now` action may scroll the document back to the NOW task;
-- no separate inner-scroll gesture exists.
+- `Return to now` resets the focus lens to NOW without changing schedule state.
 
 Thus `inspected_task_id` and `now_task_id` remain independent.
 
-## 13. Clock ↔ Day inspection identity
+Scroll/swipe handling must be captured by the scrubber itself so the surrounding Clock screen does not drift during temporal inspection.
+
+## 14. Clock ↔ Day inspection identity
 
 Required identity rule:
 
@@ -221,15 +267,15 @@ Required identity rule:
 
 If the user inspects a task in Clock and switches to Day, the same task remains identifiable. The styling may differ because Clock and Day have different jobs.
 
-## 14. Adjacent-day navigation
+## 15. Adjacent-day navigation
 
 Yesterday and tomorrow navigation must exist at **both the top and bottom** of the day surface.
 
-Top navigation lets a worker browse dates before entering the day. Bottom navigation prevents forcing the worker to scroll all the way back to the top after finishing or inspecting the current date.
+In the bounded Clock composition these controls should remain outside the scrubber. Moving the scrubber focus never changes service date.
 
 Navigation changes the selected farm/service date only; it must not manufacture carryover or rewrite task dates.
 
-## 15. Global exit/back rule
+## 16. Global exit/back rule
 
 Every ordinary Atlas page except Home should expose a deterministic global exit control in the same header action position currently used by the yellow document `+`.
 
@@ -245,6 +291,6 @@ Approved shell behavior:
 
 This must be implemented once in the shared Atlas shell, not as per-page back-button hacks.
 
-## 16. Fixture-only values
+## 17. Fixture-only values
 
 The Owner editor uses specimen values such as 4:06 PM, a 43% clearance frontier, Sweet William, MG11, BB10, and Thursday Ticketed Night. Atlas-fit times are fixtures demonstrating the scheduling contract. Production wiring must replace them with canonical task, Clock placement, result, dependency, day-shape, reservation, and consequence truth.
