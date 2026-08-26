@@ -1,3 +1,4 @@
+import TaskDestinationContact from "@/components/atlas/task-destination-contact";
 import DominionCardFrame from "./DominionCardFrame";
 import styles from "./destination-contact-card-specimen.module.css";
 
@@ -24,6 +25,15 @@ const reusableExamples = [
   },
 ] as const;
 
+const maryDestination = {
+  name: "Mary",
+  address: "1908 E Farm Road 94, Springfield, MO 65803",
+  phone: "(417) 380-7830",
+  phoneLabel: "Call from Google Voice:",
+  note: "Text Mary from Elm’s Google Voice number before leaving.",
+  headerPlace: "Mary’s garden · Springfield",
+};
+
 export default function DestinationContactCardSpecimen() {
   return (
     <div className={styles.specimen}>
@@ -34,27 +44,7 @@ export default function DestinationContactCardSpecimen() {
         subtitle="Supplemental flowers for the Aug. 27 paid event."
         timing="Morning · 1 hr 45 min max"
       >
-        <section className={styles.destinationSection} aria-label="Destination contact">
-          <div className={styles.sectionLabel}>Destination</div>
-          <div className={styles.contactCard}>
-            <div className={styles.contactIdentity}>
-              <strong>Mary</strong>
-              <address>
-                1908 E Farm Road 94<br />
-                Springfield, MO 65803
-              </address>
-            </div>
-            <div className={styles.voiceCall}>
-              <span>Call from Google Voice:</span>
-              <strong>(417) 380-7830</strong>
-            </div>
-          </div>
-
-          <div className={styles.specialNote}>
-            <span>Note</span>
-            <p>Text Mary from Elm’s Google Voice number before leaving.</p>
-          </div>
-        </section>
+        <TaskDestinationContact destination={maryDestination} />
       </DominionCardFrame>
 
       <aside className={styles.reusePanel}>

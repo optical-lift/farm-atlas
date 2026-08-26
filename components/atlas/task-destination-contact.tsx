@@ -3,17 +3,19 @@ import type { TaskDestinationContactData } from "@/lib/atlas/task-destination-co
 import styles from "./task-destination-contact.module.css";
 
 function AddressLines({ address }: { address: string }) {
-  const parts = address.split(",").map((part) => part.trim()).filter(Boolean);
-  if (parts.length <= 1) return <>{address}</>;
-  return <>{parts.map((part, index) => <span key={`${part}-${index}`}>{part}{index < parts.length - 1 ? <br /> : null}</span>)}</>;
+  const comma = address.indexOf(",");
+  if (comma < 0) return <>{address}</>;
+  const first = address.slice(0, comma).trim();
+  const rest = address.slice(comma + 1).trim();
+  return <>{first}<br />{rest}</>;
 }
 
 export default function TaskDestinationContact({ destination }: { destination: TaskDestinationContactData | null | undefined }) {
   if (!destination) return null;
 
   return (
-    <section className={styles.section} data-atlas-destination-contact="true" aria-label="Destination">
-      <span className={styles.label}>Destination</span>
+    <section className={styles.section} data-atlas-destination-contact="true" aria-label="Destination contact">
+      <div className={styles.label}>Destination</div>
       <div className={styles.card}>
         <div className={styles.identity}>
           {destination.name ? <strong>{destination.name}</strong> : null}
