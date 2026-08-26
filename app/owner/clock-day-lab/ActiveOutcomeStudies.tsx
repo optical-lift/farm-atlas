@@ -124,7 +124,7 @@ function UnlockBranch({ label }: { label: string }) {
 
 function CurrentMoveRoller() {
   return (
-    <div className={styles.timeDeck} aria-label="Rolling current scheduled move viewport fixture">
+    <div className={styles.timeDeck} aria-label="Unboxed rolling current scheduled move fixture">
       <div className={styles.rollerViewport}>
         <div className={styles.rollerFadeTop} aria-hidden="true" />
         <div className={styles.rollerRow} data-position="previous">
@@ -214,7 +214,7 @@ export default function ActiveOutcomeStudies() {
       <header className={styles.sectionHeader}>
         <span>CLOCK + DAYBOOK STUDY 8 · NOW VS CONSEQUENCE</span>
         <h2 id="active-outcome-studies-heading">The clock points forward. The scorecard remembers what slipped.</h2>
-        <p>Day completion, current time, and the active work-window countdown share one compact instrument under the date. The purple roller shows the scheduled move passing through NOW. The white score below independently carries the slipped task with the most important downstream unlock.</p>
+        <p>Day completion, current time, and the active work-window countdown share one compact instrument under the date. The NOW task then ticks through an unboxed hairline viewport, while the white score below independently carries the slipped task with the most important downstream unlock.</p>
       </header>
       <div className={styles.dataNote}>
         <strong>Fixture truth boundary</strong>
@@ -223,7 +223,7 @@ export default function ActiveOutcomeStudies() {
       <div className={styles.singleGallery}>
         <Study
           label="A · Forward clock + slipped consequence score"
-          note="The shallow instrument under the date answers where the day is now. The purple roller answers what should be happening now. The white score answers which already-missed move matters most."
+          note="The shallow instrument under the date answers where the day is now. The unboxed hairline roller answers what should be happening now. The white score answers which already-missed move matters most."
         >
           <RollerScorecardDaySurface />
         </Study>
