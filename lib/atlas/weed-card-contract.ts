@@ -108,6 +108,22 @@ export type AtlasBedMap = {
   placements: AtlasBedMapPlacement[];
 };
 
+export type AtlasSelectedCropTurnoverContext = {
+  taskId: string;
+  collectionLabel: string;
+  cropCycleId: string;
+  cropLabel: string;
+  variety: string | null;
+  cycleState: string | null;
+  locations: string[];
+  bedMaps: AtlasBedMap[];
+  biomassDestination: string;
+  executionDo: string;
+  doneWhen: string;
+  preserveOtherCrops: boolean;
+  wholeBedTurnover: boolean;
+};
+
 export type AtlasWeedCardContext = {
   taskId: string;
   taskStatus: string;

@@ -59,6 +59,34 @@
   background: rgba(142, 146, 121, 0.65);
 }
 
+.trail > span[data-state="now"]::before {
+  top: 1px;
+  width: 15px;
+  height: 15px;
+  border: 2px solid #343542;
+  background: #343542;
+  box-shadow: 0 0 0 4px rgba(201, 192, 198, 0.32);
+}
+
+.trail > span[data-state="now"] b {
+  color: var(--atlas-text);
+  font-weight: 950;
+}
+
+.trail > span[data-state="later"]::before {
+  border-color: #a0a199;
+  background: #fffefa;
+}
+
+.trail > span[data-state="later"]::after {
+  background: rgba(185, 183, 171, 0.65);
+}
+
+.trail > span[data-state="later"] b,
+.trail > span[data-state="later"] small {
+  color: #a1a29c;
+}
+
 .trail b {
   color: #777a6c;
   font-size: 9px;
@@ -116,6 +144,24 @@
   line-height: 1.08;
   font-weight: 950;
   letter-spacing: -0.04em;
+}
+
+.bedFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.bedFacts b {
+  width: fit-content;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #65685d;
+  padding: 7px 9px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 880;
 }
 
 .bedMapSection {
@@ -345,12 +391,169 @@
 .finish button:disabled,
 .results button:disabled { opacity: 0.5; }
 
-.message {
+.message,
+.turnoverMessage {
   margin: 0;
   color: #75594f;
   font-size: 10px;
   line-height: 1.35;
   font-weight: 800;
+}
+
+.turnoverMessage {
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.turnoverMethod {
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+}
+
+.turnoverMethodKey {
+  padding: 13px 18px 11px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.55);
+  color: #898a82;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.turnoverCategory {
+  position: relative;
+  display: grid;
+  gap: 0;
+  padding: 16px 18px 14px 42px;
+}
+
+.turnoverCategory::before {
+  content: "";
+  position: absolute;
+  left: 24px;
+  top: 29px;
+  bottom: 30px;
+  width: 1px;
+  background: rgba(181, 181, 192, 0.72);
+}
+
+.turnoverCategory > header {
+  position: relative;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.48);
+}
+
+.turnoverCategory > header::before {
+  content: "";
+  position: absolute;
+  left: -23px;
+  top: 1px;
+  z-index: 2;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  border: 2px solid #858bb8;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(239, 237, 244, 0.72);
+}
+
+.turnoverCategory h3 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.turnoverCategoryRail {
+  display: grid;
+}
+
+.turnoverReminderRow {
+  position: relative;
+  min-height: 48px;
+  display: grid;
+  align-items: center;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.42);
+}
+
+.turnoverReminderRow:last-child {
+  border-bottom: 0;
+}
+
+.turnoverReminderRow::before {
+  content: "";
+  position: absolute;
+  left: -18px;
+  top: 24px;
+  width: 18px;
+  height: 1px;
+  background: rgba(181, 181, 192, 0.72);
+}
+
+.turnoverReminderRow::after {
+  content: "";
+  position: absolute;
+  left: -21px;
+  top: 21px;
+  z-index: 2;
+  width: 7px;
+  height: 7px;
+  box-sizing: border-box;
+  border: 1.5px solid #858bb8;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.turnoverReminderRow input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.turnoverReminderRow label {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.turnoverReminderRow strong {
+  color: var(--atlas-text);
+  font-size: 13px;
+  line-height: 1.15;
+  font-weight: 900;
+  transition: color 120ms ease, opacity 120ms ease;
+}
+
+.turnoverReminderRow:has(input:checked) strong {
+  color: #93948e;
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  opacity: 0.88;
+}
+
+.turnoverReminderRow:has(input:checked)::after {
+  border-color: #8e9279;
+  background: #dce5bd;
+}
+
+.turnoverAvailability {
+  width: fit-content;
+  margin-top: 8px;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 999px;
+  background: rgba(248, 246, 238, 0.65);
+  color: #85867f;
+  padding: 6px 8px;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 820;
 }
 
 @media (max-width: 520px) {
@@ -368,4 +571,19 @@
 
   .cropRow { grid-template-columns: minmax(0, 1fr) minmax(104px, 0.75fr); }
   .blockedDrawer { grid-template-columns: 1fr; }
+
+  .turnoverMethodKey,
+  .turnoverMessage {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .turnoverCategory {
+    padding-left: 40px;
+    padding-right: 16px;
+  }
+
+  .turnoverCategory::before {
+    left: 22px;
+  }
 }
