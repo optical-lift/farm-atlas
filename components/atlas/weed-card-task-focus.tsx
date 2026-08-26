@@ -126,6 +126,15 @@ export default function WeedCardTaskFocus({ task, card, turnover, assignee }: Pr
   const activeCrops = card.occupancyGroups
     .flatMap((group) => group.cohorts)
     .sort((a, b) => lifecycleRank(a.lifeCycle) - lifecycleRank(b.lifeCycle) || a.displayLabel.localeCompare(b.displayLabel));
+  const remainingActiveCrops = turnover
+    ? activeCrops.filter((cohort) => cohort.cropCycleId !== turnover.cropCycleId)
+    : [];
+  const remainingActiveLabels = Array.from(new Set(remainingActiveCrops.map((cohort) => cohort.displayLabel)));
+  const activeCropLabels = Array.from(new Set(activeCrops.map((cohort) => cohort.displayLabel)));
+  const partialBedClear = Boolean(turnover && !turnover.wholeBedTurnover && remainingActiveLabels.length);
+  const bedNowLabel = clearMode
+    ? activeCropLabels.join(" + ") || selectedCrop || "Unknown crop occupancy"
+    : card.mainCropLabel || "Unknown main crop";
   const resultOptions = clearMode ? CLEAR_RESULTS : WEED_RESULTS;
 
   const [selectedResult, setSelectedResult] = useState<BedWorkResult | null>(null);
@@ -288,9 +297,27 @@ export default function WeedCardTaskFocus({ task, card, turnover, assignee }: Pr
             </div>
           ) : null}
 
+          {clearMode && selectedCrop ? (
+            <section className={styles.bedNow} data-clear-termination-target="true">
+              <span>Termination target</span>
+              <strong>{selectedCrop} is ready for termination.</strong>
+            </section>
+          ) : null}
+
+          {partialBedClear ? (
+            <section className={styles.bedNow} data-clear-active-crops-remain="true">
+              <span>Partial bed clearing</span>
+              <strong>There are still active crops remaining in this bed.</strong>
+              <div className={styles.bedFacts}>
+                <b>Keep: {remainingActiveLabels.join(" · ")}</b>
+                <b>Do not clear the whole bed</b>
+              </div>
+            </section>
+          ) : null}
+
           <section className={styles.bedNow}>
             <span>Bed now</span>
-            <strong>{clearMode ? selectedCrop : card.mainCropLabel || "Unknown main crop"}</strong>
+            <strong>{bedNowLabel}</strong>
           </section>
 
           {bedMaps.map((map) => (
