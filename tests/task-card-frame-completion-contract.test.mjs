@@ -29,8 +29,9 @@ test("Task Card Lab owns its visual-only completion exception", () => {
   assert.match(frame, /className=\{styles\.secondaryFinish\} disabled>Unfinished<\/button>/);
 });
 
-test("blocked Setup cards explicitly suppress completion instead of falling through to dead controls", () => {
-  assert.match(siteLayout, /const completion = executable \?[\s\S]*?\) : false;/);
-  assert.match(siteLayout, /completion=\{completion\}/);
-  assert.doesNotMatch(siteLayout, /\) : undefined;/);
+test("Setup uses the standard Task Card completion contract when executable and explicitly suppresses it when blocked", () => {
+  assert.match(siteLayout, /\{executable \? \([\s\S]*?<AtlasTaskCardFrame[\s\S]*?onDone=\{\(\) => void transition\("done"\)\}[\s\S]*?onUnfinished=\{\(\) => setUnfinishedOpen[\s\S]*?completionDisabled=\{saving\}/);
+  assert.match(siteLayout, /<AtlasTaskCardFrame family="Setup" title=\{action\} subtitle=\{subtitle\} completion=\{false\}>/);
+  assert.doesNotMatch(siteLayout, /atlas-setup-finish-buttons/);
+  assert.doesNotMatch(siteLayout, /const completion = executable/);
 });
