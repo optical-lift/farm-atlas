@@ -51,11 +51,8 @@
   line-height: 1.45;
 }
 
-.gallery {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 22px;
-  align-items: start;
+.singleGallery {
+  max-width: 560px;
 }
 
 .study {
@@ -83,7 +80,7 @@
 .phone {
   position: relative;
   overflow: hidden;
-  min-height: 790px;
+  min-height: 800px;
   border: 1px solid #dfdee2;
   border-radius: 30px;
   background: #fff;
@@ -136,7 +133,7 @@
   grid-template-columns: 1fr auto;
   gap: 10px 14px;
   align-items: center;
-  padding: 14px 18px 14px;
+  padding: 14px 18px;
   border-bottom: 1px solid #ecebef;
 }
 
@@ -213,91 +210,183 @@
   background: #8b83ce;
 }
 
-.overdueLine {
+.countdownSurface {
+  padding: 16px 16px 74px;
+}
+
+.scorecard {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #e4e3e8;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(45, 47, 68, 0.035);
+}
+
+.scoreTopline {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  padding: 11px 18px 10px;
-  border-bottom: 1px solid #f0eff2;
+  gap: 18px;
+  align-items: start;
 }
 
-.overdueLine strong {
-  color: #6f6a8e;
-  font-size: 9px;
+.scoreTopline > div:first-child,
+.windowClock {
+  display: grid;
+  gap: 2px;
 }
 
-.overdueLine span {
-  color: #999aa0;
+.scoreTopline span,
+.currentMove > span,
+.currentUnlock span,
+.windowClock span {
+  color: #7973a4;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.scoreTopline > div:first-child strong {
+  color: #555761;
+  font-size: 10px;
+}
+
+.windowClock {
+  text-align: right;
+}
+
+.windowClock strong {
+  color: #302d45;
+  font-variant-numeric: tabular-nums;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.currentMove {
+  display: grid;
+  gap: 5px;
+  padding-top: 3px;
+}
+
+.currentMove > strong {
+  color: #292c42;
+  font-size: 23px;
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+}
+
+.currentUnlock {
+  display: flex;
+  gap: 7px;
+  align-items: baseline;
+}
+
+.currentUnlock b {
+  color: #4b4d5c;
+  font-size: 11px;
+}
+
+.timeBar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.timeBar > span {
+  color: #95969d;
   font-size: 8px;
 }
 
-.movingSurface {
-  padding-bottom: 72px;
-}
-
-.movingRail {
+.timeTrack {
   position: relative;
-  padding: 4px 18px 16px;
+  height: 2px;
+  border-radius: 999px;
+  background: #e9e9ed;
 }
 
-.movingRail::before {
+.elapsedTime {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 65%;
+  border-radius: 999px;
+  background: #bcb8dc;
+}
+
+.currentTimeDot {
+  position: absolute;
+  left: calc(65% - 4px);
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #756cc4;
+  box-shadow: 0 0 0 1px #756cc4;
+}
+
+.currentTimeLabel {
+  margin-top: -9px;
+  padding-right: 26%;
+  color: #77718f;
+  font-size: 8px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.cleanRail {
+  position: relative;
+  margin-top: 16px;
+  padding: 0 2px 14px 26px;
+}
+
+.cleanRail::before {
   content: "";
   position: absolute;
-  left: 101px;
-  top: 20px;
-  bottom: 28px;
+  left: 11px;
+  top: 22px;
+  bottom: 34px;
   width: 1px;
-  background: #d8d7de;
+  background: #d9d8df;
 }
 
-.movingNode {
+.cleanNode {
   position: relative;
   display: grid;
-  grid-template-columns: 70px 26px minmax(0, 1fr);
-  gap: 0 4px;
-  min-height: 116px;
-  padding: 16px 0 14px;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 105px;
+  padding: 18px 0 16px 18px;
 }
 
-.movingNode[data-active="true"] {
-  min-height: 170px;
-  padding-top: 25px;
+.cleanNode[data-active="true"] {
+  min-height: 145px;
+  padding-top: 23px;
 }
 
-.nodeWhen {
-  display: grid;
-  align-content: start;
-  gap: 2px;
-  padding-top: 1px;
-}
-
-.nodeWhen strong {
-  color: #5c5f6b;
-  font-size: 9px;
-}
-
-.nodeWhen span {
-  color: #999aa1;
-  font-size: 8px;
+.cleanNode[data-passed="true"] {
+  opacity: 0.58;
 }
 
 .railDot {
-  position: relative;
-  z-index: 4;
+  position: absolute;
+  z-index: 2;
+  left: -21px;
+  top: 21px;
   display: block;
   width: 10px;
   height: 10px;
-  margin: 3px auto 0;
   border: 2px solid #9b95c5;
   border-radius: 50%;
   background: #fff;
 }
 
-.movingNode[data-active="true"] > .railDot,
-.spineTask[data-active="true"] > .railDot {
+.cleanNode[data-active="true"] > .railDot {
+  left: -23px;
+  top: 24px;
   width: 14px;
   height: 14px;
-  margin-top: 1px;
   border: 3px solid #ebe9fa;
   background: #786fca;
   box-shadow: 0 0 0 1px #786fca;
@@ -329,19 +418,18 @@
   line-height: 1.35;
 }
 
-.movingNode[data-active="true"] .taskIdentity > strong,
-.spineTask[data-active="true"] .taskIdentity > strong {
-  font-size: 20px;
+.cleanNode[data-active="true"] .taskIdentity > strong {
+  font-size: 21px;
 }
 
 .unlockBranch {
-  grid-column: 3;
   position: relative;
   display: grid;
-  grid-template-columns: 36px 1fr;
-  gap: 7px;
+  grid-template-columns: 38px 1fr;
+  gap: 8px;
   align-items: start;
   margin-top: 13px;
+  margin-left: 8px;
 }
 
 .unlockBranch > i {
@@ -355,9 +443,9 @@
 .unlockBranch > i::before {
   content: "";
   position: absolute;
-  left: -5px;
+  left: -7px;
   top: -12px;
-  width: 5px;
+  width: 7px;
   height: 12px;
   border-left: 1px solid #cbc9d3;
 }
@@ -371,122 +459,6 @@
   color: #454756;
   font-size: 10px;
   line-height: 1.3;
-}
-
-.nowCrossing {
-  position: absolute;
-  z-index: 2;
-  left: 84px;
-  right: -18px;
-  top: 31px;
-  height: 1px;
-  background: #7469bd;
-  pointer-events: none;
-}
-
-.nowCrossing span {
-  position: absolute;
-  right: 6px;
-  top: -15px;
-  color: #7469bd;
-  font-size: 8px;
-  font-weight: 800;
-}
-
-.clockSurface {
-  position: relative;
-  display: grid;
-  grid-template-columns: 55px 1fr;
-  min-height: 600px;
-  margin: 8px 16px 72px;
-}
-
-.clockScale {
-  position: relative;
-  display: grid;
-  grid-template-rows: repeat(7, 1fr);
-  min-height: 600px;
-}
-
-.clockScale span {
-  padding-top: 5px;
-  color: #999aa0;
-  font-size: 8px;
-  text-align: right;
-}
-
-.clockSpine {
-  position: relative;
-  min-height: 600px;
-  margin-left: 18px;
-}
-
-.clockSpine::before {
-  content: "";
-  position: absolute;
-  left: 12px;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: #d7d6dd;
-}
-
-.hourTick {
-  display: block;
-  height: calc(100% / 7);
-  border-top: 1px solid #f0eff2;
-}
-
-.spineTask {
-  position: absolute;
-  left: 0;
-  right: 0;
-  display: grid;
-  grid-template-columns: 25px minmax(0, 1fr);
-  gap: 4px;
-  align-items: start;
-}
-
-.spineTask .taskIdentity {
-  padding-right: 6px;
-}
-
-.spineTask .unlockBranch {
-  grid-column: 2;
-  margin-top: 10px;
-}
-
-.spineTask[data-active="true"] {
-  z-index: 4;
-}
-
-.spineNow {
-  position: absolute;
-  z-index: 3;
-  left: 12px;
-  right: 0;
-  height: 1px;
-  background: #7469bd;
-}
-
-.spineNow::before {
-  content: "";
-  position: absolute;
-  left: -4px;
-  top: -4px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #7469bd;
-}
-
-.spineNow span {
-  position: absolute;
-  right: 2px;
-  top: -15px;
-  color: #7469bd;
-  font-size: 8px;
-  font-weight: 800;
 }
 
 .nav {
@@ -506,16 +478,6 @@
   color: #4f4a7a;
 }
 
-@media (max-width: 900px) {
-  .gallery {
-    grid-template-columns: 1fr;
-  }
-
-  .phone {
-    min-height: 740px;
-  }
-}
-
 @media (max-width: 520px) {
   .phone {
     border-radius: 24px;
@@ -526,24 +488,7 @@
     padding-inline: 14px;
   }
 
-  .movingRail {
+  .countdownSurface {
     padding-inline: 14px;
-  }
-
-  .movingRail::before {
-    left: 94px;
-  }
-
-  .movingNode {
-    grid-template-columns: 64px 26px minmax(0, 1fr);
-  }
-
-  .nowCrossing {
-    left: 78px;
-    right: -14px;
-  }
-
-  .clockSurface {
-    margin-inline: 12px;
   }
 }
