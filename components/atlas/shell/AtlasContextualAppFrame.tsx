@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { FieldLogDrawer, type AtlasFieldLogSeed } from "@/components/atlas/field-log-builder";
@@ -56,6 +56,11 @@ function routeLabel(group: ReturnType<typeof routeGroup>) {
   if (group === "harvest") return "Harvest";
   if (group === "work") return "Work";
   return "More";
+}
+
+function safeInternalReturnTo(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
 }
 
 function DockIcon({ kind }: { kind: DockIconKey }) {
@@ -137,6 +142,7 @@ const DAY_TASK_ID = /^day-task-([0-9a-f-]{36})$/i;
 
 export default function AtlasContextualAppFrame({ effectiveFarmRole = null, activeFarmName = null }: AtlasContextualAppFrameProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const principalProjection = isPrincipalProjection(pathname);
   const active = routeGroup(pathname);
   const workHref = useMemo(todayHref, []);
@@ -145,6 +151,16 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
   const hidden = HIDDEN_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   const canManage = effectiveFarmRole === "owner" || effectiveFarmRole === "manager";
   const canDocument = Boolean(effectiveFarmRole);
+  const requestedReturnTo = searchParams.get("returnTo");
+  const exitHref = useMemo(() => {
+    const safeReturnTo = safeInternalReturnTo(requestedReturnTo);
+    if (pathname.startsWith("/task")) return safeReturnTo ?? workHref;
+    if (pathname.startsWith("/harvest/") && pathname !== "/harvest") return "/harvest";
+    if (principalProjection) return "/principal";
+    if (pathname === "/more") return "/";
+    if (active === "more") return "/more";
+    return "/";
+  }, [active, pathname, principalProjection, requestedReturnTo, workHref]);
   const [registryZones, setRegistryZones] = useState<AtlasRegistryZone[]>([]);
   const [logSeed, setLogSeed] = useState<AtlasFieldLogSeed | null>(null);
   const [weatherLabel, setWeatherLabel] = useState<string | null>(null);
@@ -224,6 +240,12 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
         { key: "more", label: "More", href: "/more" },
       ];
 
+  const headerAction = active === "home"
+    ? canDocument
+      ? <button type="button" className="atlas-global-note-plus" aria-label="Document work" onClick={() => void openFieldLog()}>+</button>
+      : null
+    : <Link href={exitHref} className="atlas-global-note-plus atlas-global-exit" aria-label={`Exit ${routeLabel(active)}`}>×</Link>;
+
   // Legacy route marker retained for contract search: "/#work-board".
   return (
     <>
@@ -231,9 +253,7 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
         className="atlas-global-header"
         title={activeFarmName || "Atlas"}
         status={<span>{weatherLabel || routeLabel(active)}</span>}
-        action={canDocument ? (
-          <button type="button" className="atlas-global-note-plus" aria-label="Document work" onClick={() => void openFieldLog()}>+</button>
-        ) : null}
+        action={headerAction}
       />
       <nav className="atlas-context-footer" aria-label="Atlas destinations">
         <div
