@@ -32,7 +32,7 @@ test("production bed-work card uses bed truth with current use, history, active 
   assert.match(focus, /subtitle=\{card\.zoneLabel/);
   assert.match(focus, /Last weeded ·/);
   assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v4-spatial-result"/);
-  assert.match(focus, />Bed now</);
+  assert.match(focus, /clearMode \? "Terminate now" : "Bed now"/);
   assert.match(focus, /card\.mainCropLabel/);
   assert.match(focus, /Unknown main crop/);
   assert.doesNotMatch(focus, /Last logged as/);
