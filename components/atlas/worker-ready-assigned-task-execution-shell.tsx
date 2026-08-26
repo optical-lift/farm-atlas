@@ -93,30 +93,29 @@ function ReadinessFailureScreen({ props }: { props: AssignedTaskExecutionShellPr
   );
 }
 
-function withTaskFocusNavigation(content: React.ReactNode, fallbackPath: string) {
-  return (
-    <TaskFocusNavigationBoundary fallbackPath={fallbackPath}>
-      {content}
-    </TaskFocusNavigationBoundary>
-  );
-}
-
-export default function WorkerReadyAssignedTaskExecutionShell({ initialReadiness, ...props }: Props) {
+function CanonicalAssignedTaskExecutionSurface({ initialReadiness, ...props }: Props) {
   // Owner-assigned work retains its management surface. Worker-assigned work is
   // rendered only after the server has already resolved the canonical execution warrant.
   const workerFacing = props.assignee.key !== "owner";
-  const fallbackPath = props.assignee.listPath;
 
-  if (!workerFacing) return withTaskFocusNavigation(<AssignedTaskExecutionShell {...props} />, fallbackPath);
+  if (!workerFacing) return <AssignedTaskExecutionShell {...props} />;
   if (!initialReadiness.ok || typeof initialReadiness.executable !== "boolean") {
-    return withTaskFocusNavigation(<ReadinessFailureScreen props={props} />, fallbackPath);
+    return <ReadinessFailureScreen props={props} />;
   }
   if (initialReadiness.executable !== true) {
-    return withTaskFocusNavigation(<WaitingScreen props={props} presentation={initialReadiness.presentation} />, fallbackPath);
+    return <WaitingScreen props={props} presentation={initialReadiness.presentation} />;
   }
   if (isThinCropCycleTask(props.task)) {
-    return withTaskFocusNavigation(<ThinCropCycleTaskCard task={props.task} assignee={props.assignee} />, fallbackPath);
+    return <ThinCropCycleTaskCard task={props.task} assignee={props.assignee} />;
   }
 
-  return withTaskFocusNavigation(<AssignedTaskExecutionShell {...props} />, fallbackPath);
+  return <AssignedTaskExecutionShell {...props} />;
+}
+
+export default function WorkerReadyAssignedTaskExecutionShell(props: Props) {
+  return (
+    <TaskFocusNavigationBoundary fallbackPath={props.assignee.listPath}>
+      <CanonicalAssignedTaskExecutionSurface {...props} />
+    </TaskFocusNavigationBoundary>
+  );
 }
