@@ -116,7 +116,12 @@ export type AtlasSelectedCropTurnoverContext = {
   variety: string | null;
   cycleState: string | null;
   locations: string[];
+  zoneLabel: string;
+  occupancyGroups: AtlasCropOccupancyGroup[];
+  bedTrail: AtlasWeedBedTrailEvent[];
   bedMaps: AtlasBedMap[];
+  sessions: AtlasWeedSession[];
+  lastWeededOn: string | null;
   biomassDestination: string;
   executionDo: string;
   doneWhen: string;
