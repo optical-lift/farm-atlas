@@ -5,6 +5,7 @@ import { type MouseEvent, type ReactNode } from "react";
 type Props = {
   children: ReactNode;
   fallbackPath: string;
+  showCloseControl?: boolean;
 };
 
 function safeLocalReturnPath(value: string | null) {
@@ -35,7 +36,7 @@ export function leaveTaskFocus(fallbackPath: string) {
   window.location.assign(fallbackPath);
 }
 
-export default function TaskFocusNavigationBoundary({ children, fallbackPath }: Props) {
+export default function TaskFocusNavigationBoundary({ children, fallbackPath, showCloseControl = false }: Props) {
   function handleNavigationCapture(event: MouseEvent<HTMLDivElement>) {
     const target = event.target;
     if (!(target instanceof Element)) return;
@@ -63,7 +64,42 @@ export default function TaskFocusNavigationBoundary({ children, fallbackPath }: 
           font-weight: 500;
           line-height: 1;
         }
+        .atlas-task-focus-close {
+          position: fixed;
+          z-index: 80;
+          top: calc(env(safe-area-inset-top, 0px) + 14px);
+          right: max(14px, calc((100vw - 520px) / 2 + 18px));
+          display: grid;
+          place-items: center;
+          width: 38px;
+          height: 38px;
+          padding: 0;
+          border: 0;
+          border-radius: 50%;
+          background: var(--atlas-accent-soft, #e8ecb8);
+          color: var(--atlas-text, #343542);
+          box-shadow: 0 4px 14px rgba(52, 53, 66, 0.12);
+          font: inherit;
+          font-size: 1.6rem;
+          font-weight: 500;
+          line-height: 1;
+          cursor: pointer;
+        }
+        .atlas-task-focus-close:focus-visible {
+          outline: 2px solid currentColor;
+          outline-offset: 3px;
+        }
       `}</style>
+      {showCloseControl ? (
+        <button
+          type="button"
+          className="atlas-task-focus-close"
+          aria-label="Close task"
+          onClick={() => leaveTaskFocus(fallbackPath)}
+        >
+          ×
+        </button>
+      ) : null}
       {children}
     </div>
   );
