@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (path) => readFileSync(join(root, path), "utf8");
 
+// Presentation-only guard: crop identity owns the Clear warning.
 test("selected-crop Clear communicates scope through the crop row instead of warning prose", () => {
   const focus = read("components/atlas/weed-card-task-focus.tsx");
   const targetStyles = read("components/atlas/weed-card-clear-target.module.css");
