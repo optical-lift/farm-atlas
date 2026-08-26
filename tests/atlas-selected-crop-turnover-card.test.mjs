@@ -8,12 +8,14 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (path) => readFileSync(join(root, path), "utf8");
 
 test("selected crop Clear uses the exact canonical bed-work renderer instead of a Clear variant", () => {
+  const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
   const route = read("app/api/atlas/weed-card/turnover/route.ts");
 
   assert.equal(existsSync(join(root, "components/atlas/selected-crop-turnover-task-focus.tsx")), false);
   assert.doesNotMatch(focus, /SelectedCropClearCard|ClearTrail|ClearReminder|tap to cross off|bed turnover/);
+  assert.match(canonical, /task\.metadata\?\.canonical_card_family === "weed"/);
   assert.match(loader, /data\.card/);
   assert.match(loader, /<WeedCardTaskFocus[^>]*card=\{card\}[^>]*turnover=/);
 
