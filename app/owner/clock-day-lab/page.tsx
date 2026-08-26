@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import ActiveOutcomeStudies from "./ActiveOutcomeStudies";
 import ClockDayLab from "./ClockDayLab";
 import UnlockMoveStudies from "./UnlockMoveStudies";
 
@@ -11,6 +12,7 @@ export default function ClockDayLabPage() {
   return (
     <>
       <div style={{ padding: "28px 18px 0", background: "#ece9e1" }}>
+        <ActiveOutcomeStudies />
         <UnlockMoveStudies />
       </div>
       <ClockDayLab />
