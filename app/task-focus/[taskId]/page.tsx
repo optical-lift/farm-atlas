@@ -98,19 +98,6 @@ type MowingAreaRow = {
   note?: string | null;
 };
 
-const SAFE_RETURN_PATHS = new Set([
-  "/",
-  "/owner",
-  "/manage",
-  "/work/today",
-  "/collections/mowing",
-  "/collections/weeding",
-  "/day",
-  "/overview/week",
-  "/overview/month",
-  "/grow-room",
-]);
-
 const GUEST_ROOM_ORDER = [
   "venue_entry",
   "venue_bathroom",
@@ -133,17 +120,6 @@ function numberOrNull(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
   return null;
-}
-
-function firstValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function safeReturnPath(value: string | undefined) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
-  const pathname = value.split(/[?#]/, 1)[0];
-  if (/^\/project\/[^/]+$/.test(pathname)) return value;
-  return SAFE_RETURN_PATHS.has(pathname) ? value : null;
 }
 
 function spacingFromProfile(metadata: Record<string, unknown> | null | undefined) {
@@ -322,7 +298,6 @@ async function loadMowingFocus(task: TaskRow): Promise<MowingFocusTask | null> {
     nextCheckDate: text(area?.next_check_date) || null,
     currentNote: text(area?.note) || null,
     canCloseRoute: await canMakeManagementDecision(task),
-    returnTo: null,
   };
 }
 
@@ -460,19 +435,17 @@ async function loadCropContext(task: TaskRow): Promise<CropContext> {
   };
 }
 
-export default async function TaskFocusPage({ params, searchParams }: { params: Promise<{ taskId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [{ taskId }, query] = await Promise.all([params, searchParams]);
-  const returnTo = safeReturnPath(firstValue(query.returnTo));
+export default async function TaskFocusPage({ params }: { params: Promise<{ taskId: string }> }) {
+  const { taskId } = await params;
   const task = await loadTask(taskId);
   if (task && (isDayCueStateSource(task) || isLegacyStandaloneHarvestTask(task))) notFound();
 
   const projectFocus = await readAtlasProjectTaskFocus(taskId).catch(() => null);
-  if (projectFocus) return <ProjectTaskFocus focus={projectFocus} returnTo={returnTo} />;
+  if (projectFocus) return <ProjectTaskFocus focus={projectFocus} />;
   if (!task || task.task_scope === "project") notFound();
 
   if (isGrowRoomRoundTask(task)) {
-    const defaultReturnTo = task.due_date ? `/day?date=${encodeURIComponent(task.due_date)}` : "/";
-    return <GrowRoomTaskFocus visitTaskId={task.id} returnTo={returnTo || defaultReturnTo} />;
+    return <GrowRoomTaskFocus visitTaskId={task.id} />;
   }
 
   if (isProductionSowingTask(task)) {
@@ -491,21 +464,20 @@ export default async function TaskFocusPage({ params, searchParams }: { params: 
       rooms,
       canCloseRooms,
       initialAcceptance: truthy(task.metadata?.initial_guest_readiness_acceptance),
-      returnTo,
     }} />;
   }
 
   if (isMowingTask(task)) {
     const mowingTask = await loadMowingFocus(task);
     if (!mowingTask) notFound();
-    return <MowingFocusPage task={{ ...mowingTask, returnTo: returnTo || "/collections/mowing" }} />;
+    return <MowingFocusPage task={mowingTask} />;
   }
 
   if (!isGerminationTask(task)) {
     const detail = await loadGenericTaskDetail(task.id);
     if (!detail) notFound();
     const assignee = resolveTaskAssignee(task);
-    return <CanonicalAssignedTaskDetail task={detail.task} childTasks={detail.children} assignee={returnTo ? { ...assignee, listPath: returnTo } : assignee} />;
+    return <CanonicalAssignedTaskDetail task={detail.task} childTasks={detail.children} assignee={assignee} />;
   }
 
   const [objectLabel, crop] = await Promise.all([loadObjectLabel(task.id), loadCropContext(task)]);

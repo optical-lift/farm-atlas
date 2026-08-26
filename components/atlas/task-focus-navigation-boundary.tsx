@@ -1,12 +1,25 @@
 "use client";
 
-import { type MouseEvent, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
+import { createContext, useCallback, useContext, useMemo, type MouseEvent, type ReactNode } from "react";
 
 type Props = {
   children: ReactNode;
   fallbackPath: string;
   showCloseControl?: boolean;
 };
+
+type TaskFocusNavigation = {
+  returnPath: string;
+  leave: () => void;
+  complete: (taskId: string) => void;
+};
+
+type TaskFocusNavigationContextValue = {
+  requestedReturnPath: string | null;
+};
+
+const TaskFocusNavigationContext = createContext<TaskFocusNavigationContextValue | null>(null);
 
 function safeLocalReturnPath(value: string | null) {
   if (!value) return null;
@@ -23,6 +36,11 @@ function sameOriginHistoryAvailable() {
   }
 }
 
+export function taskFocusReturnPath(fallbackPath: string) {
+  const requested = safeLocalReturnPath(new URLSearchParams(window.location.search).get("returnTo"));
+  return requested ?? fallbackPath;
+}
+
 export function leaveTaskFocus(fallbackPath: string) {
   const requested = safeLocalReturnPath(new URLSearchParams(window.location.search).get("returnTo"));
   if (requested) {
@@ -36,7 +54,31 @@ export function leaveTaskFocus(fallbackPath: string) {
   window.location.assign(fallbackPath);
 }
 
+export function completeTaskFocus(taskId: string, fallbackPath: string) {
+  const returnTo = taskFocusReturnPath(fallbackPath);
+  const event = new CustomEvent("atlas:task-completed", {
+    cancelable: true,
+    detail: { taskId, returnTo },
+  });
+  if (window.dispatchEvent(event)) leaveTaskFocus(fallbackPath);
+}
+
+export function useTaskFocusNavigation(fallbackPath = "/"): TaskFocusNavigation {
+  const context = useContext(TaskFocusNavigationContext);
+  const requestedReturnPath = context?.requestedReturnPath ?? null;
+  return useMemo<TaskFocusNavigation>(() => ({
+    returnPath: requestedReturnPath ?? fallbackPath,
+    leave: () => leaveTaskFocus(fallbackPath),
+    complete: (taskId: string) => completeTaskFocus(taskId, fallbackPath),
+  }), [fallbackPath, requestedReturnPath]);
+}
+
 export default function TaskFocusNavigationBoundary({ children, fallbackPath, showCloseControl = false }: Props) {
+  const searchParams = useSearchParams();
+  const requestedReturnPath = safeLocalReturnPath(searchParams.get("returnTo"));
+  const navigationContext = useMemo<TaskFocusNavigationContextValue>(() => ({ requestedReturnPath }), [requestedReturnPath]);
+  const leave = useCallback(() => leaveTaskFocus(fallbackPath), [fallbackPath]);
+
   function handleNavigationCapture(event: MouseEvent<HTMLDivElement>) {
     const target = event.target;
     if (!(target instanceof Element)) return;
@@ -46,67 +88,69 @@ export default function TaskFocusNavigationBoundary({ children, fallbackPath, sh
     if (owningBoundary !== event.currentTarget) return;
     event.preventDefault();
     event.stopPropagation();
-    leaveTaskFocus(fallbackPath);
+    leave();
   }
 
   return (
-    <div
-      className="atlas-task-focus-navigation-boundary"
-      data-atlas-task-focus-navigation="v1"
-      onClickCapture={handleNavigationCapture}
-    >
-      <style>{`
-        .atlas-task-focus-navigation-boundary .atlas-note-plus {
-          font-size: 0 !important;
-          text-decoration: none !important;
-        }
-        .atlas-task-focus-navigation-boundary .atlas-note-plus::before {
-          content: "×";
-          font-size: 1.45rem;
-          font-weight: 500;
-          line-height: 1;
-        }
-        .atlas-task-focus-close {
-          position: fixed;
-          z-index: 80;
-          top: calc(env(safe-area-inset-top, 0px) + 14px);
-          right: max(14px, calc((100vw - 520px) / 2 + 18px));
-          display: grid;
-          place-items: center;
-          width: 38px;
-          height: 38px;
-          padding: 0;
-          border: 0;
-          border-radius: 50%;
-          background: var(--atlas-accent-soft, #e8ecb8);
-          color: var(--atlas-text, #343542);
-          box-shadow: 0 4px 14px rgba(52, 53, 66, 0.12);
-          font: inherit;
-          font-size: 1.6rem;
-          font-weight: 500;
-          line-height: 1;
-          cursor: pointer;
-        }
-        .atlas-task-focus-navigation-boundary:has(.atlas-note-plus) > .atlas-task-focus-close,
-        .atlas-task-focus-navigation-boundary:has(.atlas-task-focus-navigation-boundary .atlas-task-focus-close) > .atlas-task-focus-close {
-          display: none;
-        }
-        .atlas-task-focus-close:focus-visible {
-          outline: 2px solid currentColor;
-          outline-offset: 3px;
-        }
-      `}</style>
-      {showCloseControl ? (
-        <button
-          type="button"
-          className="atlas-task-focus-close"
-          aria-label="Close task"
-          onClick={() => leaveTaskFocus(fallbackPath)}
-        >
-          ×
-        </button>
-      ) : null}
-      {children}
-    </div>
+    <TaskFocusNavigationContext.Provider value={navigationContext}>
+      <div
+        className="atlas-task-focus-navigation-boundary"
+        data-atlas-task-focus-navigation="v1"
+        onClickCapture={handleNavigationCapture}
+      >
+        <style>{`
+          .atlas-task-focus-navigation-boundary .atlas-note-plus {
+            font-size: 0 !important;
+            text-decoration: none !important;
+          }
+          .atlas-task-focus-navigation-boundary .atlas-note-plus::before {
+            content: "×";
+            font-size: 1.45rem;
+            font-weight: 500;
+            line-height: 1;
+          }
+          .atlas-task-focus-close {
+            position: fixed;
+            z-index: 80;
+            top: calc(env(safe-area-inset-top, 0px) + 14px);
+            right: max(14px, calc((100vw - 520px) / 2 + 18px));
+            display: grid;
+            place-items: center;
+            width: 38px;
+            height: 38px;
+            padding: 0;
+            border: 0;
+            border-radius: 50%;
+            background: var(--atlas-accent-soft, #e8ecb8);
+            color: var(--atlas-text, #343542);
+            box-shadow: 0 4px 14px rgba(52, 53, 66, 0.12);
+            font: inherit;
+            font-size: 1.6rem;
+            font-weight: 500;
+            line-height: 1;
+            cursor: pointer;
+          }
+          .atlas-task-focus-navigation-boundary:has(.atlas-note-plus) > .atlas-task-focus-close,
+          .atlas-task-focus-navigation-boundary:has(.atlas-task-focus-navigation-boundary .atlas-task-focus-close) > .atlas-task-focus-close {
+            display: none;
+          }
+          .atlas-task-focus-close:focus-visible {
+            outline: 2px solid currentColor;
+            outline-offset: 3px;
+          }
+        `}</style>
+        {showCloseControl ? (
+          <button
+            type="button"
+            className="atlas-task-focus-close"
+            aria-label="Close task"
+            onClick={leave}
+          >
+            ×
+          </button>
+        ) : null}
+        {children}
+      </div>
+    </TaskFocusNavigationContext.Provider>
   );
 }

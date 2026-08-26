@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { useTaskFocusNavigation } from "@/components/atlas/task-focus-navigation-boundary";
 import styles from "./GuestReadinessFocus.module.css";
 
 export type GuestReadinessRoom = {
@@ -21,7 +22,6 @@ export type GuestReadinessTask = {
   rooms: GuestReadinessRoom[];
   canCloseRooms: boolean;
   initialAcceptance: boolean;
-  returnTo?: string | null;
 };
 
 type Outcome = "ready" | "small_reset_needed" | "not_guest_ready" | "event_damage_or_problem" | "closed_not_in_use";
@@ -62,7 +62,7 @@ export default function GuestReadinessFocusPage({ task }: { task: GuestReadiness
   const [roundNote, setRoundNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const returnTo = task.returnTo || (task.dueDate ? `/day?date=${encodeURIComponent(task.dueDate)}` : "/");
+  const navigation = useTaskFocusNavigation(task.dueDate ? `/day?date=${encodeURIComponent(task.dueDate)}` : "/");
   const options = useMemo(
     () => task.canCloseRooms ? [...baseOptions, { value: "closed_not_in_use" as Outcome, label: "Closed / not in use" }] : baseOptions,
     [task.canCloseRooms],
@@ -112,7 +112,7 @@ export default function GuestReadinessFocusPage({ task }: { task: GuestReadiness
       } else {
         setMessage("The venue is not guest-ready. Atlas preserved the room evidence and returned the round for Owner attention.");
       }
-      window.setTimeout(() => window.location.assign(returnTo), 1200);
+      window.setTimeout(navigation.leave, 1200);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Guest Readiness round failed.");
     } finally {
@@ -129,13 +129,13 @@ export default function GuestReadinessFocusPage({ task }: { task: GuestReadiness
             <span className="atlas-phone-title">Elm Farm</span>
           </Link>
           <span className="atlas-weather-line">Guest Readiness</span>
-          <Link href="/" className="atlas-note-plus" aria-label="Back to Atlas home">+</Link>
+          <Link href={navigation.returnPath} className="atlas-note-plus" aria-label="Close task">+</Link>
         </header>
 
         <div className="atlas-task-page-body">
           <section className={`atlas-task-page-section ${styles.page}`}>
             <div className={styles.pageHead}>
-              <Link href={returnTo}>← Work</Link>
+              <Link href={navigation.returnPath}>← Work</Link>
               <span>{prettyDate(task.dueDate)}</span>
             </div>
 

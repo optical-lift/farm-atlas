@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { useTaskFocusNavigation } from "@/components/atlas/task-focus-navigation-boundary";
+
 export type ProductionSowingTask = {
   taskId: string;
   successionId: string;
@@ -76,7 +78,7 @@ export default function SowingFocusPage({ task }: { task: ProductionSowingTask }
   const [error, setError] = useState<string | null>(null);
   const status = useMemo(() => statusFor(task), [task]);
   const showFrostBoundary = useMemo(() => frostBoundaryIsRelevant(task), [task]);
-  const returnTo = typeof window === "undefined" ? "/production" : new URLSearchParams(window.location.search).get("returnTo") || "/production";
+  const navigation = useTaskFocusNavigation("/production");
 
   async function update(state: "sown" | "skipped") {
     try {
@@ -89,7 +91,7 @@ export default function SowingFocusPage({ task }: { task: ProductionSowingTask }
       });
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error || "Production update failed.");
-      window.location.href = returnTo;
+      navigation.leave();
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Production update failed.");
       setSaving(false);
@@ -100,7 +102,7 @@ export default function SowingFocusPage({ task }: { task: ProductionSowingTask }
     <main className="atlas-sowing-focus-shell">
       <section className="atlas-sowing-focus-card">
         <header>
-          <Link href={returnTo}>← Back</Link>
+          <Link href={navigation.returnPath}>← Back</Link>
           <span>Production sowing</span>
         </header>
 

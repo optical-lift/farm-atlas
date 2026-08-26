@@ -6,6 +6,7 @@ import MaintenanceDirectiveStrip from "@/components/atlas/maintenance-directive-
 import MowingTaskCardBody from "@/components/atlas/mowing-task-card-body";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import TaskPrimaryResultControls from "@/components/atlas/task-primary-result-controls";
+import { useTaskFocusNavigation } from "@/components/atlas/task-focus-navigation-boundary";
 import { buildMowingCardViewModel } from "@/lib/atlas/mowing-card-view-model";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 import type { WorkerReadinessResponse } from "@/lib/atlas/worker-readiness";
@@ -34,7 +35,6 @@ export type MowingFocusTask = {
   resultMode?: "clock" | "canonical";
   actionKey?: string | null;
   workClass?: string | null;
-  returnTo?: string | null;
 };
 
 type Outcome = "mowed_full" | "mowed_partial" | "acceptable_no_cut" | "too_wet" | "equipment_or_area_problem" | "closed_not_mowable";
@@ -75,7 +75,7 @@ export default function MowingFocusCard({ task }: { task: MowingFocusTask }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<WorkerReadinessResponse | null>(null);
-  const returnTo = task.returnTo || "/collections/mowing";
+  const navigation = useTaskFocusNavigation("/collections/mowing");
   const resultMode = task.resultMode ?? "clock";
   const taskReady = readiness?.ok === true && readiness.executable === true;
   const blockedPresentation = readiness?.ok ? readiness.presentation ?? null : null;
@@ -198,15 +198,11 @@ export default function MowingFocusCard({ task }: { task: MowingFocusTask }) {
       }
 
       if (selectedOutcome === "mowed_full") {
-        const completionEvent = new CustomEvent("atlas:task-completed", {
-          cancelable: true,
-          detail: { taskId: task.id, returnTo },
-        });
-        if (window.dispatchEvent(completionEvent)) window.location.assign(returnTo);
+        navigation.complete(task.id);
         return;
       }
 
-      window.location.assign(returnTo);
+      navigation.leave();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Mowing result failed.");
     } finally {

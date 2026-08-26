@@ -14,7 +14,6 @@ import OneOffMowingTaskDetail from "@/components/atlas/one-off-mowing-task-detai
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import SiteLayoutTaskDetail from "@/components/atlas/site-layout-task-detail";
-import TaskFocusNavigationBoundary from "@/components/atlas/task-focus-navigation-boundary";
 import TransplantReadinessTaskDetail from "@/components/atlas/transplant-readiness-task-detail";
 import VegetationControlTaskDetail from "@/components/atlas/vegetation-control-task-detail";
 import VenueResetTaskDetail from "@/components/atlas/venue-reset-task-detail";
@@ -268,13 +267,7 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isBuyerOutreachTask(props.task)) return <BuyerOutreachTaskDetail {...props} />;
   if (isNetworkOutreachTask(props.task)) return <NetworkOutreachTaskDetail {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
-  if (isFarmRoundTask(props.task)) {
-    return (
-      <TaskFocusNavigationBoundary fallbackPath={props.assignee.listPath} showCloseControl>
-        <FarmRoundTaskDetail {...props} />
-      </TaskFocusNavigationBoundary>
-    );
-  }
+  if (isFarmRoundTask(props.task)) return <FarmRoundTaskDetail {...props} />;
   if (isCropMoveTask(props.task)) return <CropMoveTaskDetail {...props} />;
   if (isVenueResetTask(props.task)) return <VenueResetTaskDetail {...props} />;
   if (isOneOffFieldWorkTask(props.task)) return <OneOffFieldWorkTaskDetail {...props} />;

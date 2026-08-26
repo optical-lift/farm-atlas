@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import styles from "@/app/grow-room/grow-room.module.css";
+import { useTaskFocusNavigation } from "@/components/atlas/task-focus-navigation-boundary";
 
 type GrowRoomVisitTask = {
   taskId: string;
@@ -56,7 +57,6 @@ type WriteResponse = {
 
 type GrowRoomTaskFocusProps = {
   visitTaskId: string;
-  returnTo?: string | null;
   portalLabel?: string;
 };
 
@@ -102,7 +102,6 @@ function nonce(prefix: string) {
 
 export default function GrowRoomTaskFocus({
   visitTaskId,
-  returnTo,
   portalLabel = "Elm Farm",
 }: GrowRoomTaskFocusProps) {
   const requestedVisitTaskId = visitTaskId.trim();
@@ -115,6 +114,9 @@ export default function GrowRoomTaskFocus({
   const [liveCount, setLiveCount] = useState("");
   const [problemOpen, setProblemOpen] = useState(false);
   const [problemNote, setProblemNote] = useState("");
+  const navigation = useTaskFocusNavigation(round?.visitTask?.dueDate
+    ? `/day?date=${encodeURIComponent(round.visitTask.dueDate)}`
+    : "/");
 
   const loadRound = useCallback(async (preferFirstUnresolved = false) => {
     setError(null);
@@ -155,10 +157,6 @@ export default function GrowRoomTaskFocus({
     }
     return round.requests.find((request) => !request.resolvedAt) ?? null;
   }, [round, selectedAssignmentId]);
-
-  const resolvedReturnTo = returnTo || (round?.visitTask?.dueDate
-    ? `/day?date=${encodeURIComponent(round.visitTask.dueDate)}`
-    : "/");
 
   function resetLogForm() {
     setLiveCount("");
@@ -250,7 +248,7 @@ export default function GrowRoomTaskFocus({
         visitTaskId: round.visitTask.taskId,
         idempotencyKey: nonce(`${round.visitTask.taskId}:finish`),
       });
-      window.location.assign(resolvedReturnTo);
+      navigation.complete(round.visitTask.taskId);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "The Grow Room round could not be finished.");
       setSaving(false);
@@ -265,7 +263,7 @@ export default function GrowRoomTaskFocus({
             <span className="atlas-phone-kicker">Atlas</span>
             <strong className="atlas-phone-title">{portalLabel}</strong>
           </Link>
-          <Link href={resolvedReturnTo} className={styles.back}>← Back</Link>
+          <Link href={navigation.returnPath} className={styles.back}>← Back</Link>
         </header>
 
         <div className={`atlas-task-page-body ${styles.body}`}>
@@ -373,7 +371,7 @@ export default function GrowRoomTaskFocus({
                 <section className={`atlas-task-dominion-move ${styles.finish}`} ref={logPanelRef} id="grow-room-log-panel">
                   <small className="atlas-soft-label">Complete</small>
                   <h1>Grow Room task finished.</h1>
-                  <Link href={resolvedReturnTo}>Return</Link>
+                  <Link href={navigation.returnPath}>Return</Link>
                 </section>
               ) : (
                 <section className={`atlas-task-dominion-move ${styles.finish}`} ref={logPanelRef} id="grow-room-log-panel">
@@ -392,7 +390,7 @@ export default function GrowRoomTaskFocus({
               <section className={`atlas-task-dominion-move ${styles.finish}`}>
                 <small className="atlas-soft-label">Task unavailable</small>
                 <h1>This Grow Room Care task could not be opened.</h1>
-                <Link href={resolvedReturnTo}>Return</Link>
+                <Link href={navigation.returnPath}>Return</Link>
               </section>
             </section>
           ) : null}

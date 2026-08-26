@@ -26,15 +26,32 @@ test("Task Focus navigation normalizes the legacy top control to an X", () => {
   assert.match(boundary, /content: "×"/);
 });
 
-test("canonical generic execution and Farm Round both consume Task Focus navigation without sharing execution semantics", () => {
+test("renderers consume the route shell instead of creating nested navigation authorities", () => {
   const workerReady = read("components/atlas/worker-ready-assigned-task-execution-shell.tsx");
   const registry = read("components/atlas/canonical-assigned-task-detail.tsx");
+  const generic = read("components/atlas/assigned-task-execution-shell.tsx");
 
-  assert.match(workerReady, /function CanonicalAssignedTaskExecutionSurface/);
-  assert.match(workerReady, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
-  assert.match(workerReady, /return <WaitingScreen/);
-  assert.match(workerReady, /return <ReadinessFailureScreen/);
-  assert.match(workerReady, /<TaskFocusNavigationBoundary fallbackPath=\{props\.assignee\.listPath\}>\s*<CanonicalAssignedTaskExecutionSurface \{\.\.\.props\} \/>/s);
-  assert.match(registry, /if \(isFarmRoundTask\(props\.task\)\) \{[\s\S]*<TaskFocusNavigationBoundary fallbackPath=\{props\.assignee\.listPath\} showCloseControl>[\s\S]*<FarmRoundTaskDetail \{\.\.\.props\} \/>[\s\S]*<\/TaskFocusNavigationBoundary>/);
-  assert.match(registry, /return <WorkerReadyAssignedTaskExecutionShell/);
+  assert.doesNotMatch(workerReady, /<TaskFocusNavigationBoundary/);
+  assert.doesNotMatch(registry, /TaskFocusNavigationBoundary/);
+  assert.match(generic, /useTaskFocusNavigation\(assignee\.listPath\)/);
+  assert.match(generic, /navigation\.complete\(task\.task_id\)/);
+  assert.match(generic, /navigation\.leave\(\)/);
+});
+
+test("specialized task surfaces use the same shell return contract", () => {
+  const files = [
+    "app/task-focus/[taskId]/GerminationFocusPage.tsx",
+    "app/task-focus/[taskId]/GuestReadinessFocusPage.tsx",
+    "app/task-focus/[taskId]/SowingFocusPage.tsx",
+    "components/atlas/grow-room/GrowRoomTaskFocus.tsx",
+    "components/atlas/mowing-focus-card.tsx",
+    "components/atlas/project-task-focus.tsx",
+    "components/atlas/portfolio/ProjectReviewTaskFocus.tsx",
+  ];
+
+  for (const file of files) {
+    const source = read(file);
+    assert.match(source, /useTaskFocusNavigation/);
+    assert.doesNotMatch(source, /new URLSearchParams\(window\.location\.search\)\.get\("returnTo"\)/);
+  }
 });

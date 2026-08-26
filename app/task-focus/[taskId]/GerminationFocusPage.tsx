@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import CropCycleTaskCardBody, { type CropCycleTrailStep } from "@/components/atlas/crop-cycle-task-card-body";
 import TaskBedMap from "@/components/atlas/task-bed-map";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
+import { useTaskFocusNavigation } from "@/components/atlas/task-focus-navigation-boundary";
 import styles from "./GerminationFocus.module.css";
 
 type GerminationOutcome = "thin" | "on_target" | "patch";
@@ -28,12 +29,6 @@ type GerminationTask = {
   targetSpacingInches?: number | null;
   successionNumber?: number | null;
 };
-
-function returnDestination() {
-  const params = new URLSearchParams(window.location.search);
-  const returnTo = params.get("returnTo");
-  return returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/";
-}
 
 function prettyDate(dateIso: string | null | undefined) {
   if (!dateIso) return "";
@@ -94,6 +89,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
   const [observedGapInches, setObservedGapInches] = useState<number | null>(null);
   const [saving, setSaving] = useState<GerminationChoice | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const navigation = useTaskFocusNavigation("/");
   const successionNumber = task.successionNumber ?? null;
   const displayCrop = cropName(task.cropLabel, task.variety);
   const sownDate = task.sownDate || task.plantedDate || null;
@@ -141,7 +137,7 @@ export default function GerminationFocusPage({ task }: { task: GerminationTask }
       if (selected === "Failed" && data.bedReleased) setMessage("Bed open · crop decision needed.");
       else if (selected === "Patchy") setMessage(data.patchRequired ? "Patchy recorded · patching added." : "Patchy recorded · keep growing.");
       else setMessage(`${selected} recorded.`);
-      window.setTimeout(() => window.location.assign(returnDestination()), 650);
+      window.setTimeout(navigation.leave, 650);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Germination update failed.");
       setSaving(null);

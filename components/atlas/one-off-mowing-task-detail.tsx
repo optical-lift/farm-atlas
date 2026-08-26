@@ -16,7 +16,7 @@ function numberOrNull(value: unknown) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export default function OneOffMowingTaskDetail({ task, assignee }: Props) {
+export default function OneOffMowingTaskDetail({ task }: Props) {
   const metadata = task.metadata ?? {};
   const resource = (task.resource_requirements ?? []).find((requirement) => {
     const key = requirement.resource_key?.toLowerCase() ?? "";
@@ -49,7 +49,6 @@ export default function OneOffMowingTaskDetail({ task, assignee }: Props) {
     resultMode: "canonical",
     actionKey: task.action_key || null,
     workClass: task.work_class || null,
-    returnTo: assignee.listPath,
   };
 
   return <MowingFocusPage task={focus} />;

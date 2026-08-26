@@ -41,6 +41,7 @@ test("ordinary checklist attestation remains available while Venue-required acti
 test("Unfinished is globally resumable and partial exits the current work session", () => {
   const unfinished = read("components/atlas/structured-unfinished-control.tsx");
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
+  const navigation = read("components/atlas/task-focus-navigation-boundary.tsx");
 
   assert.doesNotMatch(unfinished, /taskAllowsPartlyDone/);
   assert.doesNotMatch(unfinished, /postAtlasTaskSetAsideToday/);
@@ -48,7 +49,8 @@ test("Unfinished is globally resumable and partial exits the current work sessio
   assert.match(unfinished, /carryRemainingComponents: true/);
   assert.match(unfinished, /requestedReturnDate: returnDate/);
   assert.match(shell, /outcome === "partial" \|\| outcome === "not_relevant"/);
-  assert.match(shell, /window\.location\.assign\(returnDestination\(assignee\.listPath\)\)/);
+  assert.match(shell, /navigation\.leave\(\)/);
+  assert.match(navigation, /leaveTaskFocus\(fallbackPath\)/);
 });
 
 test("Venue Reset v2 is a reusable location-resource-work-ready-result card and owns clean-restore routing", () => {
