@@ -137,6 +137,155 @@
   margin-left: 0;
 }
 
+.compactGeometry {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 218px) 34px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.compactBedSquare {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid rgba(94, 96, 89, 0.52);
+  border-radius: 9px;
+  background:
+    linear-gradient(rgba(133, 139, 192, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(133, 139, 192, 0.08) 1px, transparent 1px),
+    rgba(255, 255, 255, 0.82);
+  background-size: 25% 25%;
+}
+
+.dimensionTag {
+  justify-self: start;
+  margin: 7px 8px 0;
+  color: #92938d;
+  font-size: 8px;
+  font-weight: 820;
+  letter-spacing: 0.04em;
+}
+
+.compactCropList {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.compactCropList span {
+  max-width: 100%;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(214, 225, 177, 0.34);
+  color: #545b44;
+  font-size: 10px;
+  font-weight: 820;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.compactCropList em {
+  color: #a0a19a;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 720;
+}
+
+.archFeature,
+.featureSpacer {
+  width: 28px;
+  height: 74%;
+  box-sizing: border-box;
+}
+
+.archFeature {
+  border: 2px solid rgba(106, 113, 101, 0.62);
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0 13px,
+    rgba(106, 113, 101, 0.28) 13px 14px
+  );
+}
+
+.archLeft {
+  justify-self: end;
+  border-right: 0;
+  border-radius: 18px 0 0 18px;
+}
+
+.archRight {
+  justify-self: start;
+  border-left: 0;
+  border-radius: 0 18px 18px 0;
+}
+
+.addCropWide {
+  grid-column: 1 / -1;
+  border-top: 1px solid rgba(94, 96, 89, 0.22);
+}
+
+.addCrop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 6px 7px;
+  background: rgba(250, 249, 244, 0.9);
+}
+
+.addCrop input {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #4d504a;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.addCrop input::placeholder {
+  color: #8f9189;
+  opacity: 1;
+}
+
+.addCrop button {
+  border: 1px solid rgba(133, 139, 192, 0.28);
+  border-radius: 999px;
+  background: rgba(133, 139, 192, 0.1);
+  color: #676d9a;
+  padding: 4px 7px;
+  font: inherit;
+  font-size: 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.addCrop small {
+  grid-column: 1 / -1;
+  color: #75786f;
+  font-size: 8px;
+  font-weight: 720;
+  line-height: 1.15;
+}
+
+.compactBedSquare > .addCrop {
+  border-top: 1px solid rgba(94, 96, 89, 0.22);
+}
+
 @media (max-width: 520px) {
   .mapBlock,
   .mapBlockActive {
@@ -147,5 +296,14 @@
   .mapBlock span,
   .mapBlockActive span {
     font-size: 8px;
+  }
+
+  .compactGeometry {
+    grid-template-columns: 28px minmax(0, 194px) 28px;
+  }
+
+  .archFeature,
+  .featureSpacer {
+    width: 24px;
   }
 }
