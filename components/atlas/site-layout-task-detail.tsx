@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
@@ -17,8 +17,76 @@ type Props = {
   recipeTools?: string[];
 };
 
+type ChecklistItem = {
+  itemId: string;
+  itemKey: string;
+  sectionKey: string;
+  sectionLabel: string;
+  label: string;
+  sortOrder: number;
+  required: boolean;
+  checked: boolean;
+  checkedAt: string | null;
+};
+
+type ExecutionChecklist = {
+  taskId: string;
+  title: string;
+  completionLabel: string;
+  items: ChecklistItem[];
+  totalCount: number;
+  completeCount: number;
+  ready: boolean;
+};
+
+type ChecklistResponse = {
+  ok?: boolean;
+  checklist?: ExecutionChecklist;
+  error?: string | { message?: string };
+  details?: string;
+};
+
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function requestError(data: ChecklistResponse) {
+  if (data.details) return data.details;
+  if (typeof data.error === "string") return data.error;
+  return data.error?.message || "Atlas could not update the checklist.";
+}
+
+function requestKey(taskId: string, itemKey: string, checked: boolean) {
+  const nonce = typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${taskId}:${itemKey}:${checked ? "checked" : "reopened"}:${nonce}`;
+}
+
+async function readChecklist(taskId: string) {
+  const response = await fetch(`/api/atlas/task-execution-checklist?taskId=${encodeURIComponent(taskId)}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  const data = await response.json() as ChecklistResponse;
+  if (!response.ok || !data.ok || !data.checklist) throw new Error(requestError(data));
+  return data.checklist;
+}
+
+async function writeChecklistItem(taskId: string, itemKey: string, checked: boolean) {
+  const response = await fetch("/api/atlas/task-execution-checklist", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "x-atlas-intent": "task-execution-checklist-v1",
+    },
+    cache: "no-store",
+    body: JSON.stringify({ taskId, itemKey, checked, idempotencyKey: requestKey(taskId, itemKey, checked) }),
+  });
+  const data = await response.json() as ChecklistResponse;
+  if (!response.ok || !data.ok || !data.checklist) throw new Error(requestError(data));
+  return data.checklist;
 }
 
 function returnDestination(fallback: string) {
@@ -48,9 +116,60 @@ export default function SiteLayoutTaskDetail({ task, assignee, initialReadiness,
   const executable = !workerFacing || initialReadiness.executable === true;
   const waiting = workerFacing && initialReadiness.ok && initialReadiness.executable === false ? initialReadiness.presentation : null;
   const readinessFailed = workerFacing && (!initialReadiness.ok || typeof initialReadiness.executable !== "boolean");
+  const hasSetupChecklist = metadata.setup_unit_checklist === true || metadata.setup_unit_checklist === "true";
+  const partialPrompt = text(metadata.setup_unit_partial_prompt) || "What is left?";
   const [saving, setSaving] = useState(false);
+  const [savingItem, setSavingItem] = useState<string | null>(null);
+  const [checklist, setChecklist] = useState<ExecutionChecklist | null>(null);
+  const [checklistMessage, setChecklistMessage] = useState<string | null>(null);
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!hasSetupChecklist) {
+      setChecklist(null);
+      setChecklistMessage(null);
+      return () => { cancelled = true; };
+    }
+
+    setChecklist(null);
+    setChecklistMessage(null);
+    void readChecklist(task.task_id)
+      .then((value) => { if (!cancelled) setChecklist(value); })
+      .catch((error) => {
+        if (!cancelled) setChecklistMessage(error instanceof Error ? error.message : "Checklist unavailable.");
+      });
+    return () => { cancelled = true; };
+  }, [hasSetupChecklist, task.task_id]);
+
+  async function toggleChecklistItem(item: ChecklistItem) {
+    const nextChecked = !item.checked;
+    try {
+      setSavingItem(item.itemKey);
+      setChecklistMessage(null);
+      setChecklist((current) => current ? {
+        ...current,
+        items: current.items.map((candidate) => candidate.itemKey === item.itemKey
+          ? { ...candidate, checked: nextChecked }
+          : candidate),
+        completeCount: current.completeCount + (nextChecked ? 1 : -1),
+        ready: current.items.every((candidate) => candidate.itemKey === item.itemKey
+          ? nextChecked || !candidate.required
+          : candidate.checked || !candidate.required),
+      } : current);
+      setChecklist(await writeChecklistItem(task.task_id, item.itemKey, nextChecked));
+    } catch (error) {
+      setChecklistMessage(error instanceof Error ? error.message : "Checklist update failed.");
+      try {
+        setChecklist(await readChecklist(task.task_id));
+      } catch {
+        // Keep the last known state if the authoritative reread is also unavailable.
+      }
+    } finally {
+      setSavingItem(null);
+    }
+  }
 
   async function transition(outcome: "done" | "partial" | "blocked", note?: string) {
     try {
@@ -77,6 +196,10 @@ export default function SiteLayoutTaskDetail({ task, assignee, initialReadiness,
     }
   }
 
+  const checklistProgress = checklist
+    ? (checklist.ready ? checklist.completionLabel : `${checklist.completeCount} / ${checklist.totalCount}`)
+    : "Loading";
+
   const cardBody: ReactNode = (
     <>
       {tools.length ? (
@@ -88,11 +211,37 @@ export default function SiteLayoutTaskDetail({ task, assignee, initialReadiness,
         </section>
       ) : null}
 
+      {hasSetupChecklist ? (
+        <section className="atlas-setup-checklist" aria-label={checklist?.title || text(metadata.execution_checklist_title) || "Checklist"}>
+          <header className="atlas-setup-checklist-key">
+            <span>{checklist?.title || text(metadata.execution_checklist_title) || "Checklist"}</span>
+            <small>{checklistProgress}</small>
+          </header>
+          <div className="atlas-setup-checklist-rows">
+            {checklist?.items.map((item) => (
+              <button
+                type="button"
+                className={`atlas-setup-checklist-row${item.checked ? " is-checked" : ""}`}
+                key={item.itemKey}
+                aria-pressed={item.checked}
+                disabled={saving || Boolean(savingItem) || !executable}
+                onClick={() => void toggleChecklistItem(item)}
+              >
+                <strong>{item.label}</strong>
+                <span className="atlas-setup-checklist-mark" aria-hidden="true">{item.checked ? "✓" : ""}</span>
+              </button>
+            ))}
+            {checklist && checklist.totalCount === 0 ? <p className="atlas-setup-checklist-empty">No checklist rows are available.</p> : null}
+          </div>
+          {checklistMessage ? <p className="atlas-setup-checklist-message">{checklistMessage}</p> : null}
+        </section>
+      ) : null}
+
       {unfinishedOpen ? (
         <section className="atlas-setup-unfinished">
           <strong>What happened?</strong>
           <div>
-            <button type="button" disabled={saving} onClick={() => { const note = window.prompt("What is left?", "")?.trim(); if (note) void transition("partial", note); }}>Partly done</button>
+            <button type="button" disabled={saving} onClick={() => { const note = window.prompt(partialPrompt, "")?.trim(); if (note) void transition("partial", note); }}>Partly done</button>
             <button type="button" disabled={saving} onClick={() => { const note = window.prompt("What problem did you find?", "")?.trim(); if (note) void transition("blocked", note); }}>Problem found</button>
           </div>
         </section>
@@ -119,12 +268,26 @@ export default function SiteLayoutTaskDetail({ task, assignee, initialReadiness,
         .atlas-setup-tools { display:grid; border-top:1px solid rgba(215,204,189,.62); border-bottom:1px solid rgba(215,204,189,.62); }
         .atlas-setup-tools > header { padding:14px 18px 9px; }
         .atlas-setup-tools > header span,
+        .atlas-setup-checklist-key > span,
         .atlas-setup-waiting > small {
           color:#858bb8; font-size:10px; line-height:1; font-weight:950; letter-spacing:.15em; text-transform:uppercase;
         }
         .atlas-setup-tool-rows { display:grid; }
         .atlas-setup-tool-row { min-height:46px; display:flex; align-items:center; padding:0 18px; border-top:1px solid rgba(223,215,202,.48); }
         .atlas-setup-tool-row strong { color:var(--atlas-text); font-size:14px; line-height:1.15; font-weight:910; }
+        .atlas-setup-checklist { display:grid; border-bottom:1px solid rgba(215,204,189,.62); }
+        .atlas-setup-checklist-key { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px 9px; }
+        .atlas-setup-checklist-key small { color:#85867f; font-size:10px; line-height:1; font-weight:850; }
+        .atlas-setup-checklist-rows { display:grid; }
+        .atlas-setup-checklist-row { width:100%; min-height:50px; display:flex; align-items:center; justify-content:space-between; gap:14px; border:0; border-top:1px solid rgba(223,215,202,.48); background:rgba(255,255,255,.42); padding:8px 18px; color:var(--atlas-text); text-align:left; font:inherit; cursor:pointer; }
+        .atlas-setup-checklist-row strong { min-width:0; font-size:14px; line-height:1.15; font-weight:910; }
+        .atlas-setup-checklist-row:disabled { cursor:default; opacity:.62; }
+        .atlas-setup-checklist-row.is-checked { background:rgba(214,225,177,.28); }
+        .atlas-setup-checklist-row.is-checked strong { color:#85867f; text-decoration-line:line-through; text-decoration-thickness:1.4px; }
+        .atlas-setup-checklist-mark { flex:0 0 auto; width:24px; height:24px; display:grid; place-items:center; box-sizing:border-box; border:2px solid rgba(139,145,194,.42); border-radius:7px; background:#fff; color:#515b34; font-size:14px; line-height:1; font-weight:950; }
+        .atlas-setup-checklist-row.is-checked .atlas-setup-checklist-mark { border-color:rgba(112,124,72,.34); background:rgba(214,225,177,.82); }
+        .atlas-setup-checklist-empty { margin:0; padding:14px 18px 18px; color:#777970; font-size:12px; line-height:1.35; }
+        .atlas-setup-checklist-message { margin:0; padding:0 18px 14px; color:#7b5549; font-size:11px; font-weight:800; }
         .atlas-setup-waiting { display:grid; gap:8px; padding:18px; border-bottom:1px solid rgba(215,204,189,.62); }
         .atlas-setup-waiting > small { display:block; }
         .atlas-setup-waiting strong { color:#414352; font-size:19px; }
