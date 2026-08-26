@@ -12,14 +12,13 @@ const css = read("app/owner/clock-day-lab/active-outcome-studies.module.css");
 const smartCss = read("app/owner/clock-day-lab/smart-day-study.module.css");
 const contract = read("docs/architecture/clock-day-smart-rail-and-consequence-contract.md");
 
-test("Clock Day lab exposes Atlas day summary plus scrollable temporal index study", () => {
+test("Clock Day lab exposes a Clock-first calendar scrubber with a secondary Day rail", () => {
   assert.match(page, /ActiveOutcomeStudies/);
-  assert.match(study, /A · Atlas day summary \+ scrollable temporal index/);
-  assert.match(study, /The roller becomes a time index\. The feed remains the work\./);
+  assert.match(study, /A · Clock-first calendar scrubber \+ Day rail toggle/);
+  assert.match(study, /Clock schedules the day\. Day shows the whole work rail\./);
   assert.match(study, /DaySummaryPanel/);
-  assert.match(study, /SmartDayRail/);
-  assert.match(study, /ConsequenceRow/);
-  assert.match(study, /ScrollableDayIndex/);
+  assert.match(study, /ViewToggle/);
+  assert.match(study, /CalendarClockView/);
   assert.match(study, /OrderedTaskRail/);
 });
 
@@ -33,7 +32,7 @@ test("study remains fixture-only and cannot touch worker state", () => {
   assert.doesNotMatch(study, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 });
 
-test("smart progress and consequence state share one current-Atlas-style purple day card", () => {
+test("smart progress and consequence state remain one current-Atlas-style purple day card", () => {
   assert.match(study, /DaySummaryPanel/);
   assert.match(study, /6 OF 11 FINISHED/);
   assert.match(study, /WINDOW/);
@@ -45,12 +44,11 @@ test("smart progress and consequence state share one current-Atlas-style purple 
   assert.match(smartCss, /background: #f3f4fb/);
   assert.match(smartCss, /\.daySummaryDivider/);
   assert.match(smartCss, /\.consequenceRow/);
-  assert.doesNotMatch(study, /dayInstrument|ConsequenceStrip|consequenceStrip/);
-  assert.match(contract, /rail should not live in a separate white capsule/);
-  assert.match(contract, /same pale-purple rounded day-summary card/);
+  assert.match(contract, /rail must not live in a separate white capsule/);
+  assert.match(contract, /current Atlas Work day card/);
 });
 
-test("one physical rail carries smart progress, NOW, and task distribution", () => {
+test("smart rail uses a skinny progress line with larger filled task dots and a larger NOW marker", () => {
   assert.match(study, /SMART_PROGRESS_FRONTIER = 43/);
   assert.match(study, /CURRENT_TIME_POSITION = 69/);
   assert.match(study, /DAY_TASK_POSITIONS = \[6, 13, 21, 29, 38, 47, 55, 64, 72, 84, 94\]/);
@@ -58,13 +56,11 @@ test("one physical rail carries smart progress, NOW, and task distribution", () 
   assert.match(study, /smartRailProgress/);
   assert.match(study, /smartRailTaskDot/);
   assert.match(study, /smartRailNowDot/);
-  assert.match(study, /smartRailNowLabel/);
-  assert.match(study, /4:06 PM/);
   assert.match(smartCss, /\.smartRailBase,/);
-  assert.match(smartCss, /\.smartRailProgress/);
-  assert.match(smartCss, /\.smartRailTaskDot/);
-  assert.match(smartCss, /\.smartRailNowDot/);
-  assert.match(smartCss, /height: 4px/);
+  assert.match(smartCss, /height: 2px/);
+  assert.match(smartCss, /\.smartRailTaskDot[\s\S]*width: 8px;[\s\S]*height: 8px/);
+  assert.match(smartCss, /\.smartRailNowDot[\s\S]*width: 16px;[\s\S]*height: 16px/);
+  assert.match(contract, /larger faint filled circle whose diameter visibly overhangs the rail/);
 });
 
 test("smart rail contract keeps raw done count separate from chronological clearance", () => {
@@ -75,47 +71,71 @@ test("smart rail contract keeps raw done count separate from chronological clear
   assert.match(contract, /Q\(f\) = 1 - D\(f\) \/ M\(f\)/);
   assert.match(contract, /three morning tasks remain open, while an 8 PM task was completed early/);
   assert.match(contract, /frontier does not simply leap to 8 PM/);
-  assert.match(contract, /An unplaced task receives no fake dot/);
 });
 
-test("temporal index is a real vertical snap scrubber rather than a second static roller", () => {
-  assert.match(study, /^"use client";/);
-  assert.match(study, /useState\(NOW_TASK_INDEX\)/);
-  assert.match(study, /SCRUBBER_ROW_HEIGHT = 32/);
+test("Clock is the default viewer and Day remains an explicit alternate view", () => {
+  assert.match(study, /type DayView = "clock" \| "day"/);
+  assert.match(study, /useState<DayView>\("clock"\)/);
+  assert.match(study, />Clock<\/button>/);
+  assert.match(study, />Day<\/button>/);
+  assert.match(study, /view === "clock"/);
+  assert.match(smartCss, /\.viewToggle/);
+  assert.match(contract, /\*\*Clock\*\* — default/);
+  assert.match(contract, /\*\*Day\*\* — secondary toggle/);
+});
+
+test("Clock is a plain time-proportional calendar with scrub behavior", () => {
+  assert.match(study, /CALENDAR_START_MINUTE = 7 \* 60/);
+  assert.match(study, /CALENDAR_END_MINUTE = 20 \* 60/);
+  assert.match(study, /CALENDAR_PX_PER_MINUTE/);
+  assert.match(study, /minuteOfDay/);
+  assert.match(study, /durationMinutes/);
+  assert.match(study, /calendarY\(task\.minuteOfDay\)/);
+  assert.match(study, /taskBlockHeight\(task\)/);
   assert.match(study, /onScroll={handleScroll}/);
   assert.match(study, /ArrowUp/);
   assert.match(study, /ArrowDown/);
-  assert.match(study, /scrollTo\(\{/);
-  assert.match(study, /SCROLL DAY/);
-  assert.match(study, /INSPECTING/);
-  assert.match(study, /actual NOW remains 4:06 PM/);
+  assert.match(study, /Return to now/);
+  assert.match(smartCss, /\.calendarViewport/);
   assert.match(smartCss, /overflow-y: auto/);
-  assert.match(smartCss, /scroll-snap-type: y mandatory/);
-  assert.match(smartCss, /scroll-snap-align: center/);
-  assert.match(smartCss, /touch-action: pan-y/);
+  assert.match(smartCss, /scroll-snap-type: y proximity/);
+  assert.match(smartCss, /\.calendarHour/);
+  assert.match(smartCss, /\.calendarTaskBlock/);
+  assert.match(smartCss, /\.calendarNow/);
+  assert.match(contract, /vertical time-proportional axis with hour labels and faint horizontal rules/);
+  assert.match(contract, /Fancy curvature, wheel distortion, perspective, and watch-face styling are deferred/);
 });
 
-test("scrubber inspection synchronizes identity with the full task feed without moving NOW", () => {
+test("Clock owns fitting flexible work into the worker day instead of leaving an unplanned pocket", () => {
+  assert.match(study, /placementSource: "atlas-fit"/);
+  assert.match(study, /data-placement-source={task\.placementSource}/);
+  assert.match(study, /Clock is allowed to place flexible work into the worker day/);
+  assert.match(contract, /A task does not need to originate with an exact clock time in order to receive one in Clock/);
+  assert.match(contract, /Clock should assign a usable day placement/);
+  assert.match(contract, /No flexible-unplanned pocket in the worker Clock/);
+  assert.match(contract, /that is a \*\*planning conflict\*\*/);
+  assert.match(contract, /Clock choreography truth/);
+});
+
+test("calendar scrub keeps factual NOW independent from the inspected focal task", () => {
   assert.match(study, /const NOW_TASK_INDEX = 3/);
-  assert.match(study, /data-active={isNow \? "true" : "false"}/);
+  assert.match(study, /const NOW_MINUTE = 16 \* 60 \+ 6/);
+  assert.match(study, /calendarNow/);
+  assert.match(study, /INSPECTING ·/);
+  assert.match(study, /inspectedIndex === NOW_TASK_INDEX/);
+  assert.match(contract, /the nearest scheduled task becomes the inspected focal block/);
+  assert.match(contract, /the factual NOW line does not move/);
+  assert.match(contract, /focused\/inspected` and `NOW` remain separate/);
+});
+
+test("Clock and Day share inspected task identity without sharing presentation grammar", () => {
+  assert.match(study, /<CalendarClockView inspectedIndex={inspectedIndex} onInspect={setInspectedIndex} \/>/);
+  assert.match(study, /<OrderedTaskRail inspectedIndex={inspectedIndex} \/>/);
   assert.match(study, /data-inspected={isInspected \? "true" : "false"}/);
   assert.match(study, /feedInspected/);
-  assert.match(study, /INSPECTING {task\.time}/);
-  assert.match(smartCss, /\.feedInspected/);
-  assert.match(contract, /scrubber\.inspected_task_id == task_feed\.inspected_task_id/);
-  assert.match(contract, /Scrolling the scrubber never mutates a task, changes a Clock placement, changes NOW, or changes the Day Clearance Frontier/);
-  assert.match(contract, /inspecting 7:00 PM/);
-  assert.match(contract, /not claiming that it is 7:00 PM/);
-});
-
-test("scrubber has a distinct purpose from the detailed task feed and its location stays provisional", () => {
-  assert.match(contract, /vertical roller is not a second task feed/);
-  assert.match(contract, /regular task feed remains the detailed work surface/);
-  assert.match(contract, /Past tasks remain inspectable; future tasks remain inspectable/);
-  assert.match(contract, /Unplaced work does not receive an invented scrubber position/);
-  assert.match(contract, /Passive page scrolling alone should not continually rewrite scrubber inspection state/);
-  assert.match(contract, /Scrubber placement is still provisional/);
-  assert.match(study, /scrubber location is intentionally provisional/);
+  assert.match(contract, /clock\.inspected_task_id == day_feed\.inspected_task_id/);
+  assert.match(contract, /Clock remains the temporal scheduler\/orientation surface/);
+  assert.match(contract, /Day view remains the detailed work surface/);
 });
 
 test("consequence selector remains independent and governed", () => {
@@ -126,12 +146,11 @@ test("consequence selector remains independent and governed", () => {
   assert.match(contract, /real dependency\/unlock edge/);
   assert.match(contract, /hard date or fixed event/);
   assert.match(contract, /Never manufacture consequence importance from display prose/);
-  assert.match(contract, /If there is no unresolved task with a governed consequence, the divider and consequence row should be absent/);
-  assert.match(contract, /Inspected task/);
+  assert.match(contract, /If there is no unresolved task with a governed consequence/);
   assert.match(contract, /must not collapse them into one `activeTask` variable/);
 });
 
-test("all incomplete tasks remain fully represented on the detailed task rail", () => {
+test("secondary Day view retains the complete detailed task rail fixture", () => {
   assert.match(css, /\.cleanRail::before/);
   assert.match(css, /\.cleanNode/);
 
