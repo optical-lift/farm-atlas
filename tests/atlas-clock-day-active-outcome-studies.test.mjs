@@ -10,17 +10,15 @@ const page = read("app/owner/clock-day-lab/page.tsx");
 const study = read("app/owner/clock-day-lab/ActiveOutcomeStudies.tsx");
 const css = read("app/owner/clock-day-lab/active-outcome-studies.module.css");
 
-test("Clock Day lab exposes three paired Timeline and Daybook studies", () => {
+test("Clock Day lab exposes the countdown scorecard plus clean rail study", () => {
   assert.match(page, /ActiveOutcomeStudies/);
-  assert.match(study, /A · Calendar \+ branch rail/);
-  assert.match(study, /B · Quiet schedule \+ alternating map/);
-  assert.match(study, /C · Work window \+ dependency lanes/);
-  assert.match(study, /CLOCK VIEW/);
-  assert.match(study, /DAYBOOK VIEW/);
-  assert.match(study, /data-view={view}/);
+  assert.match(study, /A · Living countdown \+ clean rail/);
+  assert.match(study, /Time lives at the top\. Work lives on the rail\./);
+  assert.match(study, /CurrentMoveScorecard/);
+  assert.match(study, /CountdownRail/);
 });
 
-test("active outcome studies remain fixture-only and cannot touch worker state", () => {
+test("merged study remains fixture-only and cannot touch worker state", () => {
   assert.match(study, /data-atlas-active-outcome-studies="fixture-only"/);
   assert.match(study, /data-live-task-binding="none"/);
   assert.match(study, /data-task-transition-capability="none"/);
@@ -30,33 +28,37 @@ test("active outcome studies remain fixture-only and cannot touch worker state",
   assert.doesNotMatch(study, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 });
 
-test("tiny view toggle replaces the old full-width mode switch", () => {
-  assert.match(study, /MiniToggle/);
-  assert.match(study, />Timeline</);
-  assert.match(study, />Daybook</);
-  assert.match(css, /\.miniToggle/);
-  assert.doesNotMatch(study, /modeSwitch/);
-  assert.doesNotMatch(css, /\.modeSwitch/);
+test("scorecard carries day progress, current move, unlock, and ambient time", () => {
+  assert.match(study, /TODAY/);
+  assert.match(study, /11 tasks · 6 done/);
+  assert.match(study, /CURRENT MOVE/);
+  assert.match(study, /Pot up Sweet William/);
+  assert.match(study, /Harvest Stems · May 6/);
+  assert.match(study, /WINDOW/);
+  assert.match(study, /00:33/);
+  assert.match(study, /7 AM/);
+  assert.match(study, /3:27 PM/);
+  assert.match(study, /8 PM/);
+  assert.match(css, /\.scorecard/);
+  assert.match(css, /\.timeTrack/);
+  assert.match(css, /\.currentTimeDot/);
 });
 
-test("active focus uses day-count corner and factual unlock target", () => {
-  assert.match(study, /<strong>11<\/strong>/);
-  assert.match(study, /<span>tasks<\/span>/);
-  assert.match(study, /<small>6 done<\/small>/);
+test("task feed no longer repeats a separate schedule column", () => {
+  assert.doesNotMatch(study, /nodeWhen/);
+  assert.doesNotMatch(study, />Morning</);
+  assert.doesNotMatch(study, />Midafternoon</);
+  assert.doesNotMatch(study, />Evening</);
+  assert.doesNotMatch(css, /\.nodeWhen/);
+  assert.match(css, /\.cleanRail::before/);
+  assert.match(css, /\.cleanNode/);
+});
+
+test("factual unlock branches and consistent task grammar remain", () => {
   assert.match(study, /UNLOCKS/);
   assert.match(study, /Harvest Stems · May 6/);
-  assert.doesNotMatch(study, /next useful window/i);
-  assert.doesNotMatch(study, /stay on track/i);
-  assert.doesNotMatch(study, /Exact first-cut date not modeled/);
-});
+  assert.match(study, /Choose Overwintering Crop · Sep 15/);
 
-test("overdue area stays compact instead of restating the whole backlog", () => {
-  assert.match(study, /OVERDUE · 2/);
-  assert.match(study, /showing the one that matters now/);
-  assert.match(study, /\+1 hidden/);
-});
-
-test("standardized task data survives in both calendar and causal feed", () => {
   for (const token of [
     "STEWARDSHIP",
     "Farm Round · Elm Farm",
@@ -72,26 +74,17 @@ test("standardized task data survives in both calendar and causal feed", () => {
     "BB10 · Bermuda Pass 1",
     "Barn Beds",
     "20 min · Pass 1 of 3",
-    "Choose Overwintering Crop · Sep 15",
   ]) assert.match(study, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 
-  assert.match(study, /TaskMeta/);
+  assert.match(study, /TaskIdentity/);
   assert.match(study, /task\.place} · {task\.amount/);
 });
 
-test("Clock is calendar-shaped and Daybook restores a line-and-dot dependency rail", () => {
-  assert.match(study, /CalendarGrid/);
-  assert.match(study, /RailFeed/);
-  assert.match(css, /\.calendarBody/);
-  assert.match(css, /\.hourRule/);
-  assert.match(css, /\.nowRule/);
-  assert.match(css, /\.railBody::before/);
-  assert.match(css, /\.nodeDot/);
-  assert.match(css, /\.nodeUnlock/);
-});
-
-test("purple remains an accent on a predominantly white neutral surface", () => {
-  assert.match(css, /background: #fff/);
-  assert.match(css, /#8b83ce|#7f74c7|#7469bd/);
-  assert.match(css, /#dfdee2|#ecebef|#efeff1/);
+test("current task is emphasized by rail state rather than a nested task card", () => {
+  assert.match(study, /data-active={active \? "true" : "false"}/);
+  assert.match(css, /\.cleanNode\[data-active="true"\]/);
+  assert.match(css, /\.railDot/);
+  assert.match(css, /\.unlockBranch/);
+  assert.doesNotMatch(css, /\.calendarEvent/);
+  assert.doesNotMatch(css, /\.focusCard/);
 });
