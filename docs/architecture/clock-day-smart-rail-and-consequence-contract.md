@@ -1,32 +1,36 @@
-# Clock + Day smart rail, consequence row, and temporal scrubber contract
+# Clock + Day smart rail, consequence row, and Clock-first scheduler contract
 
 Status: design contract for the fixture-only Owner Clock + Day Editor. This document defines the behavior that production wiring must preserve. It does not authorize the fixture to read or mutate live Worker state.
 
-## 1. One rail, three truths
+## 1. One smart rail, three truths
 
-The compact rail under the date is one geometric timeline with three independent layers:
+The compact rail in the Atlas day summary is one geometric timeline with three independent layers:
 
 1. **Earned chronological progress** — the purple fill.
-2. **Current time** — the larger outlined NOW dot.
-3. **Clock placement distribution** — one faint dot for every task that has an authoritative placement in the day.
+2. **Current time** — the larger outlined NOW marker.
+3. **Clock placement distribution** — one faint filled dot for every task Clock has placed into the day.
 
-The layers share the same horizontal day coordinate but they are not aliases for one another. In particular, the purple fill is not `completed task count / total task count`, and the NOW dot is not the end of the purple fill.
+The layers share the same horizontal day coordinate but they are not aliases for one another. In particular, the purple fill is not `completed task count / total task count`, and the NOW marker is not the end of the purple fill.
 
 The literal count may still say `6 of 11 finished`; that is a count. The rail fill answers a different question: **how much of the scheduled day has actually been cleared in chronological terms?**
 
-## 2. Day coordinate
+### Dot geometry
 
-Given an authoritative Clock day span `[day_start, day_end]`, normalize any timestamp `t` onto the rail as:
+Task-placement dots must read as events sitting on a timeline, not holes cut into a progress bar. The progress rail is intentionally very thin. Each ordinary task dot is a larger faint filled circle whose diameter visibly overhangs the rail above and below. The NOW marker remains larger still and outlined so current time cannot be confused with an ordinary task placement.
+
+## 2. Shared day coordinate
+
+Given the governed Clock day span `[day_start, day_end]`, normalize any timestamp `t` onto the compact rail as:
 
 `x(t) = clamp((t - day_start) / (day_end - day_start), 0, 1)`
 
 Production rules:
 
-- `day_start` and `day_end` must come from governed Clock/day-shape truth. Do not invent a generic 7 AM–8 PM span.
+- `day_start` and `day_end` come from governed Clock/day-shape truth. Do not invent a generic workday.
 - The NOW marker is `x(current_time)` in the service-day timezone.
-- A task-placement dot is `x(planned_start_at)` for an authoritative Clock placement.
-- An unplaced task receives no fake dot. If Atlas later needs to disclose unplaced work, that is a separate count/state, not a fabricated timeline position.
-- Multiple tasks near the same time may visually cluster or slightly stack, but their source positions remain their actual placements.
+- A task-placement dot is `x(clock_placement_start)` for the placement Clock is actually presenting to the worker.
+- Several tasks near the same time may visually cluster or slightly stack, but their source placements remain their actual Clock placements.
+- The compact rail, the large Clock view, and the Day list must derive task identity from the same scheduled day sequence.
 
 ## 3. Smart progress: weighted chronological clearance frontier
 
@@ -34,7 +38,7 @@ A later task completed early must not make the bar claim that the day has been c
 
 For each placed task `i`:
 
-- `x_i` = normalized placement position.
+- `x_i` = normalized Clock placement position.
 - `c_i` = `1` when canonically completed, otherwise `0`.
 - `w_i` = governed expected-work weight. Prefer canonical expected minutes/capacity weight when available. When no governed duration exists, use a neutral unit weight; do not invent minutes.
 
@@ -60,32 +64,31 @@ The **Day Clearance Frontier** is the latest candidate point whose weighted unre
 
 `F = max { f | Q(f) >= τ }`
 
-Candidate points should come from the day start and actual placement positions, not arbitrary pixel increments.
+Candidate points should come from the day start and actual Clock placement positions, not arbitrary pixel increments.
 
 ### Consequence of this definition
 
 Suppose at 4 PM three morning tasks remain open, while an 8 PM task was completed early. Testing a frontier at 8 PM necessarily includes those three older unresolved morning tasks in `D(8 PM)`. The isolated 8 PM completion adds work mass but does not erase that debt, so the frontier does not simply leap to 8 PM.
 
-Conversely, if the worker has genuinely cleared nearly all scheduled work through a later point, the frontier may move ahead of the NOW dot. That is legitimate: Atlas can show that the person is ahead of the clock without pretending that one out-of-order completion cleared the intervening day.
+Conversely, if the worker has genuinely cleared nearly all scheduled work through a later point, the frontier may move ahead of the NOW marker. That is legitimate: Atlas can show that the person is ahead of the clock without pretending that one out-of-order completion cleared the intervening day.
 
 ### Hard blocker guard
 
 An unresolved task whose governed consequence explicitly blocks a hard downstream obligation may impose a stricter frontier ceiling according to policy. This must use structured blocker/dependency truth, not prose inference.
 
-## 4. Visual grammar for the rail
+## 4. Atlas day-summary presentation
 
-The rail should remain one compact element inside the existing Atlas-style day summary:
+The smart rail stays inside the existing Atlas-style pale-purple day summary:
 
-- pale neutral full-length base line;
-- light-purple fill from day start through `F`;
-- faint low-contrast placement dots centered on the same line;
-- one larger outlined purple NOW dot at `x(current_time)`;
-- current-time label attached to the NOW dot;
-- literal finished count and active-window countdown may remain adjacent to the rail.
+- finished-count / window state at the top;
+- one thin neutral timeline rail;
+- light-purple clearance fill from day start through `F`;
+- larger faint filled task-placement dots centered over the rail;
+- one larger outlined NOW marker at `x(current_time)`;
+- a subtle divider;
+- the compact consequential unfinished-work row beneath the divider.
 
-Task dots are distribution marks, not completion badges. Their default visual treatment should remain faint and consistent whether a task is complete or open unless a later approved design explicitly adds another encoding.
-
-The rail should not live in a separate white capsule. The approved visual direction is to preserve the current Atlas Work grammar: the smart rail belongs to the same pale-purple rounded day-summary card that also contains the consequential unfinished-work row.
+The rail must not live in a separate white capsule. The summary should continue to feel like the current Atlas Work day card, with more intelligence added to its existing visual grammar rather than a new dashboard widget inserted inside it.
 
 ## 5. Consequence selector
 
@@ -109,21 +112,15 @@ A production selector may rank candidates using structured severity, lateness, i
 
 The exact factors must be governed and testable. Never manufacture consequence importance from display prose.
 
-## 6. Consequence presentation inside the Atlas day summary
+## 6. Consequence presentation
 
-The large two-column scorecard and a second independently boxed consequence card are both rejected for this purpose. The approved direction is the existing Atlas day-summary / carried-move grammar:
+The large two-column scorecard and a second independently boxed consequence card are both rejected. The consequence row belongs inside the pale-purple Atlas day-summary card:
 
-- one pale-purple rounded day-summary card;
-- finished-count / smart-rail state at the top;
-- a subtle divider;
-- compact consequence row beneath the divider;
-- small state pill on the left;
-- strong primary line naming the unresolved task;
-- muted secondary line naming the consequence;
-- small disclosure caret on the right;
+- a small real-state pill such as `OVERDUE`, `MISSED WINDOW`, `BLOCKING`, or `AT RISK`;
+- a strong primary line naming the unresolved task;
+- a muted secondary line naming the consequence;
+- a small disclosure caret;
 - no duplicated task-count score inside the consequence row.
-
-The pill reflects the task's real state, for example `OVERDUE`, `MISSED WINDOW`, `BLOCKING`, or `AT RISK`; it is not a hardcoded universal label.
 
 Fixture example:
 
@@ -133,65 +130,113 @@ Fixture example:
 
 If there is no unresolved task with a governed consequence, the divider and consequence row should be absent rather than filled with generic overdue work.
 
-## 7. Independent selectors
+## 7. Independent day states
 
 The Clock + Day surface has at least four independent states:
 
-- **NOW task** — what the Clock says should be happening now;
+- **NOW task/time** — factual current time and the task Clock says belongs there;
 - **Day Clearance Frontier** — how far the scheduled day is chronologically cleared;
 - **Consequence task** — the unresolved task with the most important governed downstream consequence;
-- **Inspected task** — the placed task the user is currently examining with the temporal scrubber.
+- **Inspected task/time** — the scheduled task/time the user is currently examining by scrolling Clock.
 
 These are allowed to point at different tasks/times. Production must not collapse them into one `activeTask` variable.
 
-## 8. Fixture-only values
+## 8. Clock is the default worker day viewer
 
-The Owner editor currently uses specimen values such as 4:06 PM, 00:18, a 43% clearance frontier, Sweet William, MG11, BB10, and Thursday Ticketed Night. These values are visual fixtures only. Production wiring must replace them with canonical Clock placement, result, dependency, day-shape, and consequence truth.
+The approved direction is now a two-view worker-day surface:
 
-## 9. Temporal scrubber: why it exists beside the full task feed
+- **Clock** — default. A time-proportional scheduler/day-timer view that answers what fits where in the actual day.
+- **Day** — secondary toggle. The whole ordered task rail, optimized for scanning the detailed work records rather than understanding time geometry.
 
-The vertical roller is not a second task feed. Its job is **time navigation**.
+Clock and Day are two projections of the same scheduled day, not independent ordering systems.
 
-The regular task feed remains the detailed work surface: task identity, place, quantities, state, dependencies, and task-focus entry all belong there. The scrubber is intentionally information-poor so a person can move quickly through the chronology without reading or manipulating the full records.
+Conceptually:
 
-The scrubber must therefore behave as a temporal index:
+`governed task truth + day shape + constraints -> Clock choreography -> { Clock view, Day view, smart rail }`
 
-1. It contains only tasks with authoritative Clock placements.
-2. Items are ordered by authoritative placement time.
-3. The control scrolls vertically and snaps to one task at a time.
-4. The centered/snapped task becomes `inspected_task_id` presentation state.
-5. Past tasks remain inspectable; future tasks remain inspectable.
-6. Completion does not remove a placed task from the scrubber merely because it has passed.
-7. Unplaced work does not receive an invented scrubber position.
-8. Scrolling the scrubber never mutates a task, changes a Clock placement, changes NOW, or changes the Day Clearance Frontier.
+The default may later be revisited from real worker use, but the current design hypothesis is that Clock is the primary orientation surface and Day is the alternate full-list inspection surface.
 
-### NOW and inspection must remain visibly different
+## 9. Clock is allowed to place flexible work
 
-The actual NOW marker remains factual and fixed to current time on the smart rail. When the user scrolls the scrubber from a 4:06 PM task to a 7:00 PM task, Atlas is **inspecting 7:00 PM**, not claiming that it is 7:00 PM.
+A task does not need to originate with an exact clock time in order to receive one in Clock. This is a core responsibility of Clock, not an exception.
 
-At initial load the scrubber may center the actual NOW task when one exists. Once the user scrolls away, the center row represents inspection rather than current time.
+The production distinction is:
 
-## 10. Scrubber ↔ task-feed synchronization
+- **task/source truth** says what must be done and carries hard dates, real windows, dependencies, mobility, resources, durations, and other execution constraints;
+- **Clock choreography truth** says where Atlas has fitted that executable work into this particular day.
 
-The scrubber earns its place only if it indexes the regular feed rather than duplicating it.
+For work that enters the worker day without a fixed start, Clock should assign a usable day placement from the lawful space that remains after harder constraints are honored. That assignment is not a fabricated source fact; it is an explicit scheduling output.
+
+Clock fitting should consider the governed inputs that already exist or are later approved, including:
+
+- fixed starts and hard reservations;
+- allowed or preferred intraday windows;
+- expected duration/capacity weight;
+- dependencies and unlock order;
+- resource/equipment constraints and recovery time;
+- route/place efficiency;
+- worker day shape and occupied life time;
+- already committed Clock placements;
+- consequence severity and lateness where relevant.
+
+### No flexible-unplanned pocket in the worker Clock
+
+The worker-facing Clock should not contain a generic bucket that effectively says “these flexible tasks are yours too; figure out where they go.” If Atlas has admitted the work into that worker day, Clock's job is to fit it.
+
+If Atlas cannot find a lawful placement, that is a **planning conflict**, not an excuse to silently omit the work or invent an impossible time. The conflict must surface for resolution through governed planning/management machinery before the worker is expected to execute the impossible schedule.
+
+A worker-facing Clock time therefore means **this is the current executable choreography Atlas is giving the worker**, not merely a suggestion hidden in the presentation layer.
+
+## 10. Plain calendar first
+
+The first large Clock study should intentionally resemble a simple day-timer / Google Calendar before adding decorative watch-face effects.
+
+Required baseline grammar:
+
+- a vertical time-proportional axis with hour labels and faint horizontal rules;
+- task blocks positioned by Clock start time;
+- block height related to governed duration when duration is available;
+- a factual NOW line that stays at real current time;
+- one vertically scrollable viewport over the day;
+- the task nearest the scrub focus becomes visually dominant;
+- surrounding tasks remain smaller/lighter so chronology is legible without turning the view into the Day list;
+- tapping a scheduled block inspects/centers that block;
+- task execution controls remain in Task Focus rather than multiplying inside Clock.
+
+Fancy curvature, wheel distortion, perspective, and watch-face styling are deferred until the plain calendar proves the information architecture is clear.
+
+## 11. Calendar scrubber behavior
+
+The scrolling Clock is a time scrubber, but unlike the earlier compact roller it preserves actual time distance between tasks.
+
+At initial open:
+
+- Clock centers the current NOW region/task when possible;
+- that task is the enlarged focal block;
+- the factual NOW line coincides with real current time.
+
+When the user scrolls away:
+
+- the nearest scheduled task becomes the inspected focal block;
+- the header may say `INSPECTING · 7:00 PM`;
+- the factual NOW line does not move;
+- a `Return to now` action may recenter the real current-time region;
+- scrolling/inspection never completes, reschedules, or otherwise mutates a task.
+
+Thus `focused/inspected` and `NOW` remain separate even though they coincide when Clock first opens.
+
+## 12. Clock ↔ Day identity synchronization
+
+Clock and Day must share inspection identity even though only one view is visible at a time.
 
 Required identity rule:
 
-`scrubber.inspected_task_id == task_feed.inspected_task_id`
+`clock.inspected_task_id == day_feed.inspected_task_id`
 
-When the user settles the scrubber on a placed task:
+If the user inspects a future block in Clock and then toggles to Day, the corresponding Day row should remain visibly identifiable as the inspected task. Toggling views is presentation-only and must not rewrite schedule or task state.
 
-- the matching task in the full feed must become visibly inspected/highlighted;
-- the full task record remains the authoritative detailed presentation;
-- production may bring the matching feed row into view after the scrub gesture settles, but must not steal the ongoing vertical scrub gesture or make continued scrubbing impossible;
-- if auto-positioning the full feed cannot be made stable on mobile, visible identity synchronization is mandatory and automatic feed scrolling is optional until the roller can remain usable while the feed moves.
+The Day view remains the detailed work surface: task identity, place, quantities, state, dependencies, and Task Focus entry belong there. Clock remains the temporal scheduler/orientation surface.
 
-A direct explicit inspection action from the full feed may also update the scrubber to the same task. Passive page scrolling alone should not continually rewrite scrubber inspection state; that would make the two vertical surfaces fight each other.
+## 13. Fixture-only values
 
-This is presentation synchronization only. It is not a scheduling or task-state mutation.
-
-## 11. Scrubber placement is still provisional
-
-The interaction contract above is approved for study; the final physical location of the scrubber is not. The Editor may move the scrubber relative to the day-summary card and regular feed without changing its semantic role.
-
-If later testing shows that the scrubber cannot provide faster chronological inspection than the full feed, or cannot synchronize without fighting normal task-feed use, it should be removed rather than retained as a decorative duplicate.
+The Owner editor currently uses specimen values such as 4:06 PM, 00:18, a 43% clearance frontier, Sweet William, MG11, BB10, and Thursday Ticketed Night. Some specimen tasks are marked `atlas-fit` solely to demonstrate the scheduling contract. These values are visual fixtures only. Production wiring must replace them with canonical task, Clock placement, result, dependency, day-shape, reservation, and consequence truth.
