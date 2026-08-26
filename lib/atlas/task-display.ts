@@ -99,6 +99,21 @@ function normalizedRoute(value: string) : AtlasWorkRouteKey | null {
   return null;
 }
 
+function hasStructuredVenueIdentity(task: AtlasTaskCard) {
+  const taskType = atlasText(task.task_type).toLowerCase();
+  const displayFamily = atlasMetaString(task, "display_family").toLowerCase();
+  const operationFamily = atlasMetaString(task, "operation_family").toLowerCase();
+
+  return taskType === "venue"
+    || taskType.startsWith("venue_")
+    || taskType.includes("_venue_")
+    || taskType.endsWith("_venue")
+    || taskType === "event_setup"
+    || taskType === "guest_readiness_round"
+    || displayFamily === "venue"
+    || operationFamily === "venue";
+}
+
 export function atlasRouteKeyForTask(task: AtlasTaskCard): AtlasWorkRouteKey {
   const action = atlasText(task.action_key).toLowerCase();
   const workRoute = atlasMetaString(task, "work_route").toLowerCase();
@@ -112,6 +127,7 @@ export function atlasRouteKeyForTask(task: AtlasTaskCard): AtlasWorkRouteKey {
   if (explicitCollection === "propagation" || explicitRhythm === "propagation") return "propagation";
 
   if (atlasIsCropCycleTask(task)) return "crop_cycle";
+  if (hasStructuredVenueIdentity(task)) return "venue";
 
   const templateText = (task.action_templates ?? [])
     .map((template) => `${template.action_type ?? ""} ${template.template_label ?? ""} ${template.card_language ?? ""}`)
@@ -126,7 +142,6 @@ export function atlasRouteKeyForTask(task: AtlasTaskCard): AtlasWorkRouteKey {
   if (joined.includes("harvest") || joined.includes("postharvest") || joined.includes("garlic") || joined.includes("gather")) return "harvest";
   if (joined.includes("build") || joined.includes("prep") || joined.includes("string") || joined.includes("arch")) return "build";
   if (joined.includes("plant") || joined.includes("transplant")) return "plant";
-  if (joined.includes("venue") || joined.includes("guest") || joined.includes("clean") || joined.includes("wash") || joined.includes("window")) return "venue";
 
   return "general";
 }
