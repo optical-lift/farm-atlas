@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { atlasApiError, requireAtlasApiAccess } from "@/lib/atlas/api-access";
-import type { AtlasBedMap } from "@/lib/atlas/weed-card-contract";
+import type {
+  AtlasBedMap,
+  AtlasCropOccupancyGroup,
+  AtlasWeedBedTrailEvent,
+  AtlasWeedCondition,
+  AtlasWeedSession,
+} from "@/lib/atlas/weed-card-contract";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +33,34 @@ type PlacementRow = {
 type ObjectRow = {
   id: string;
   label?: string | null;
+  zone_id?: string | null;
+};
+
+type TaskHistoryRow = {
+  id: string;
+  title?: string | null;
+  action_key?: string | null;
+  task_type?: string | null;
+  status?: string | null;
+  due_date?: string | null;
+  completed_at?: string | null;
+  created_at?: string | null;
+};
+
+type WeedCardRow = {
+  id: string;
+  last_session_at?: string | null;
+};
+
+type WeedSessionRow = {
+  id: string;
+  work_date: string;
+  minutes: number | null;
+  minutes_known: boolean | null;
+  condition_before: string;
+  condition_after: string;
+  note: string | null;
+  recorded_at: string;
 };
 
 function text(value: unknown) {
@@ -38,6 +72,35 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: { "Cache-Control": "private, no-store" },
   });
+}
+
+function eventKind(row: TaskHistoryRow) {
+  const action = text(row.action_key).toLowerCase();
+  if (action === "sow") return "Sown";
+  if (action === "plant") return "Planted";
+  if (action === "transplant") return "Transplanted";
+  if (action === "deadhead") return "Deadheaded";
+  if (["divide", "cut_back", "prune", "tend", "perennial_tending", "pinch"].includes(action)) return "Tended";
+  return "Worked";
+}
+
+function eventDate(row: TaskHistoryRow) {
+  return text(row.completed_at).slice(0, 10)
+    || text(row.due_date).slice(0, 10)
+    || text(row.created_at).slice(0, 10);
+}
+
+function isBedTrailWork(row: TaskHistoryRow) {
+  const action = text(row.action_key).toLowerCase();
+  const taskType = text(row.task_type).toLowerCase();
+  return ["sow", "plant", "transplant", "divide", "deadhead", "cut_back", "prune", "tend", "perennial_tending", "pinch"].includes(action)
+    || ["sowing", "planting", "transplanting", "perennial_tending", "pinching"].includes(taskType);
+}
+
+function occupancyGroups(value: unknown): AtlasCropOccupancyGroup[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const groups = (value as { groups?: unknown }).groups;
+  return Array.isArray(groups) ? groups as AtlasCropOccupancyGroup[] : [];
 }
 
 export async function GET(request: Request) {
@@ -102,19 +165,102 @@ export async function GET(request: Request) {
   if (!objectIds.length && text(cycle.object_id)) objectIds.push(text(cycle.object_id));
 
   const { data: objectData, error: objectError } = objectIds.length
-    ? await supabase.schema("atlas").from("growing_objects").select("id, label").in("id", objectIds)
+    ? await supabase.schema("atlas").from("growing_objects").select("id, label, zone_id").in("id", objectIds)
     : { data: [], error: null };
   if (objectError) return atlasApiError(500, "turnover_location_read_failed", "Atlas could not load where this crop lives.");
   const objectRows = (objectData ?? []) as ObjectRow[];
   const labelById = new Map(objectRows.map((row) => [row.id, text(row.label)]));
   const locations = objectIds.map((id) => labelById.get(id) || "").filter(Boolean);
 
-  const mapResults = await Promise.all(objectIds.map(async (objectId) => {
-    const result = await supabase.rpc("object_crop_bed_map_v1", { p_object_id: objectId });
-    if (result.error || !result.data || typeof result.data !== "object" || Array.isArray(result.data)) return null;
-    return result.data as AtlasBedMap;
-  }));
+  const zoneIds = Array.from(new Set(objectRows.map((row) => text(row.zone_id)).filter(Boolean)));
+  let zoneLabel = "Elm Farm";
+  if (zoneIds.length) {
+    const { data: zones } = await supabase.schema("atlas").from("zones").select("id, label").in("id", zoneIds);
+    const labels = Array.from(new Set((zones ?? []).map((zone) => text(zone.label)).filter(Boolean)));
+    if (labels.length === 1) zoneLabel = labels[0];
+    else if (labels.length > 1) zoneLabel = labels.join(" + ");
+  }
+
+  const [mapResults, occupancyResults] = await Promise.all([
+    Promise.all(objectIds.map(async (objectId) => {
+      const result = await supabase.rpc("object_crop_bed_map_v1", { p_object_id: objectId });
+      if (result.error || !result.data || typeof result.data !== "object" || Array.isArray(result.data)) return null;
+      return result.data as AtlasBedMap;
+    })),
+    Promise.all(objectIds.map(async (objectId) => {
+      const result = await supabase.rpc("object_crop_occupancy_v1", { p_object_id: objectId });
+      if (result.error) return [] as AtlasCropOccupancyGroup[];
+      return occupancyGroups(result.data);
+    })),
+  ]);
   const bedMaps = mapResults.filter((map): map is AtlasBedMap => map !== null);
+  const mergedOccupancyGroups = occupancyResults.flat();
+
+  let bedTrail: AtlasWeedBedTrailEvent[] = [];
+  if (objectIds.length) {
+    const { data: taskObjectData } = await supabase
+      .schema("atlas")
+      .from("task_objects")
+      .select("task_id")
+      .in("object_id", objectIds);
+    const historyTaskIds = Array.from(new Set((taskObjectData ?? []).map((row) => text(row.task_id)).filter(Boolean)));
+    if (historyTaskIds.length) {
+      const { data: historyData } = await supabase
+        .schema("atlas")
+        .from("tasks")
+        .select("id, title, action_key, task_type, status, due_date, completed_at, created_at")
+        .in("id", historyTaskIds)
+        .eq("status", "done");
+      bedTrail = ((historyData ?? []) as TaskHistoryRow[])
+        .filter(isBedTrailWork)
+        .map((row) => ({
+          taskId: row.id,
+          eventKind: eventKind(row),
+          title: text(row.title) || "Bed work",
+          eventDate: eventDate(row),
+        }))
+        .filter((row) => Boolean(row.eventDate))
+        .sort((a, b) => b.eventDate.localeCompare(a.eventDate))
+        .slice(0, 5);
+    }
+  }
+
+  let sessions: AtlasWeedSession[] = [];
+  let lastWeededOn: string | null = null;
+  if (objectIds.length) {
+    const { data: weedCardData } = await supabase
+      .schema("atlas")
+      .from("weed_cards")
+      .select("id, last_session_at")
+      .in("object_id", objectIds);
+    const weedCards = (weedCardData ?? []) as WeedCardRow[];
+    const weedCardIds = weedCards.map((row) => row.id);
+    if (weedCardIds.length) {
+      const { data: sessionData } = await supabase
+        .schema("atlas")
+        .from("weed_sessions")
+        .select("id, work_date, minutes, minutes_known, condition_before, condition_after, note, recorded_at")
+        .in("weed_card_id", weedCardIds)
+        .order("work_date", { ascending: false })
+        .order("recorded_at", { ascending: false })
+        .limit(12);
+      sessions = ((sessionData ?? []) as WeedSessionRow[]).map((row) => ({
+        id: row.id,
+        workDate: row.work_date,
+        minutes: row.minutes ?? 0,
+        minutesKnown: row.minutes_known === true,
+        conditionBefore: row.condition_before as AtlasWeedCondition,
+        conditionAfter: row.condition_after as AtlasWeedCondition,
+        note: row.note,
+        recordedAt: row.recorded_at,
+      }));
+      lastWeededOn = sessions[0]?.workDate || null;
+    }
+    if (!lastWeededOn) {
+      const dates = weedCards.map((row) => text(row.last_session_at).slice(0, 10)).filter(Boolean).sort().reverse();
+      lastWeededOn = dates[0] || null;
+    }
+  }
 
   const cropLabel = text(cycle.crop_label) || "Selected crop";
   const variety = text(cycle.variety) || null;
@@ -122,7 +268,7 @@ export async function GET(request: Request) {
   const collectionLabel = text(metadata.turnover_collection_label)
     || text(metadata.display_location)
     || locations.join(" + ")
-    || "Bed turnover";
+    || "Bed";
   const executionDo = text(metadata.execution_do)
     || `Remove the ${cropLabel} crop biomass and take it to the ${destination}.`;
   const doneWhen = text(metadata.execution_done_when)
@@ -138,7 +284,12 @@ export async function GET(request: Request) {
       variety,
       cycleState: text(cycle.cycle_state) || null,
       locations,
+      zoneLabel,
+      occupancyGroups: mergedOccupancyGroups,
+      bedTrail,
       bedMaps,
+      sessions,
+      lastWeededOn,
       biomassDestination: destination,
       executionDo,
       doneWhen,
