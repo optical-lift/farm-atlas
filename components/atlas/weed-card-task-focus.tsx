@@ -7,9 +7,11 @@ import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import MaintenanceDirectiveStrip from "@/components/atlas/maintenance-directive-strip";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 import {
   ATLAS_WEED_CONDITION_LABELS,
   type AtlasCropOccupancyCohort,
+  type AtlasSelectedCropTurnoverContext,
   type AtlasWeedCardContext,
 } from "@/lib/atlas/weed-card-contract";
 import {
@@ -20,13 +22,19 @@ import styles from "./weed-card-task-focus.module.css";
 
 type Props = {
   task: AtlasTaskCard;
-  card: AtlasWeedCardContext;
+  card?: AtlasWeedCardContext;
+  turnover?: AtlasSelectedCropTurnoverContext;
   childTasks: AtlasTaskCard[];
   assignee: AtlasAssigneeConfig;
 };
 
+type StandardProps = Props & { card: AtlasWeedCardContext };
+type TurnoverProps = Props & { turnover: AtlasSelectedCropTurnoverContext };
 type SavingAction = "result" | "blocked" | null;
 type WeedResult = "heavy" | "mostly_clear" | "clear";
+
+type ClearTrailState = "done" | "now" | "later";
+type ClearTrailStep = { label: string; detail: string; state: ClearTrailState };
 
 const WEED_RESULTS: Array<{ condition: WeedResult; label: string }> = [
   { condition: "heavy", label: "Still rough" },
@@ -95,7 +103,154 @@ function shortTrailTitle(title: string) {
     .trim();
 }
 
-export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
+function displayCrop(turnover: AtlasSelectedCropTurnoverContext) {
+  if (!turnover.variety) return turnover.cropLabel;
+  if (turnover.cropLabel.toLowerCase().includes(turnover.variety.toLowerCase())) return turnover.cropLabel;
+  return `${turnover.variety} ${turnover.cropLabel}`;
+}
+
+function ClearTrail({ steps, label }: { steps: ClearTrailStep[]; label: string }) {
+  return (
+    <div className={styles.trail} aria-label={label}>
+      {steps.map((step) => (
+        <span data-state={step.state} key={`${step.label}-${step.detail}`}>
+          <b>{step.label}</b>
+          <small>{step.detail}</small>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ClearReminder({
+  id,
+  label,
+  checked,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <div className={styles.turnoverReminderRow}>
+      <input id={id} type="checkbox" checked={checked} onChange={onChange} />
+      <label htmlFor={id}><strong>{label}</strong></label>
+    </div>
+  );
+}
+
+function SelectedCropClearCard({ task, turnover, assignee }: TurnoverProps) {
+  const crop = displayCrop(turnover);
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+  const [saving, setSaving] = useState<"done" | "unfinished" | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const locations = turnover.locations.length ? turnover.locations : [turnover.collectionLabel];
+  const clearItems = [
+    ...locations.map((location) => `Remove ${crop} from ${location}`),
+    `Take ${crop} biomass to ${turnover.biomassDestination}`,
+  ];
+  const trail: ClearTrailStep[] = [
+    { label: "Harvest", detail: "finished", state: "done" },
+    { label: "Clear", detail: "today", state: "now" },
+    { label: "Compost", detail: turnover.biomassDestination, state: "later" },
+  ];
+
+  function toggleItem(index: number) {
+    const key = `clear-${index}`;
+    setCheckedItems((current) => ({ ...current, [key]: !current[key] }));
+  }
+
+  async function finish(outcome: "done" | "partial") {
+    try {
+      setSaving(outcome === "done" ? "done" : "unfinished");
+      setMessage(null);
+      const note = outcome === "done"
+        ? `${crop} removed from ${locations.join(" + ")}; biomass taken to ${turnover.biomassDestination}. Other foot-bed crops left in place.`
+        : `${crop} turnover unfinished; the crop remains active until the physical removal is completed.`;
+      await postAtlasTaskTransition({
+        taskId: task.task_id,
+        transition: outcome,
+        note,
+        laneKey: task.action_key || "clear",
+        workKey: task.action_key || "clear",
+        payload: {
+          weedManagementMode: "clear_selected_crop",
+          selectedCropCycleId: turnover.cropCycleId,
+          biomassDestination: turnover.biomassDestination,
+          wholeBedTurnover: false,
+        },
+      });
+      window.location.assign(returnTo(assignee.listPath));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Atlas could not save the clearing result.");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  const busy = saving !== null;
+
+  return (
+    <main className={styles.shell} data-atlas-weed-card-template="task-card-editor-clear-variant">
+      <div className={styles.body}>
+        <AtlasTaskCardFrame
+          family="Clear"
+          familyDetail="bed turnover"
+          title={turnover.collectionLabel}
+          timing="After harvest · clearing due"
+          onDone={() => void finish("done")}
+          onUnfinished={() => void finish("partial")}
+          completionDisabled={busy}
+        >
+          <ClearTrail steps={trail} label={`${turnover.collectionLabel} crop-cycle clearing trail`} />
+
+          <section className={styles.bedNow}>
+            <span>Bed now</span>
+            <strong>{crop}</strong>
+            <div className={styles.bedFacts}>
+              <b>{titleCase(turnover.cycleState || "finished_harvest")}</b>
+              <b>{locations.join(" + ")}</b>
+            </div>
+          </section>
+
+          {turnover.bedMaps.map((map) => (
+            <section className={styles.bedMapSection} aria-label={`${map.objectLabel} crop map`} key={map.objectId}>
+              <header><span>Bed map</span><small>{map.objectLabel} · current crop occupancy</small></header>
+              <CropOccupancyBedMap map={map} variant="notebook" />
+            </section>
+          ))}
+
+          <section className={styles.turnoverMethod}>
+            <div className={styles.turnoverMethodKey}>tap to cross off</div>
+            <section className={styles.turnoverCategory}>
+              <header><h3>Clear</h3></header>
+              <div className={styles.turnoverCategoryRail}>
+                {clearItems.map((item, index) => (
+                  <ClearReminder
+                    id={`turnover-clear-${index}`}
+                    label={item}
+                    checked={Boolean(checkedItems[`clear-${index}`])}
+                    onChange={() => toggleItem(index)}
+                    key={item}
+                  />
+                ))}
+              </div>
+              {turnover.preserveOtherCrops ? (
+                <div className={styles.turnoverAvailability}>Selected crop only · foot-bed crops stay in place</div>
+              ) : null}
+            </section>
+          </section>
+
+          {message ? <p className={styles.turnoverMessage}>{message}</p> : null}
+        </AtlasTaskCardFrame>
+      </div>
+    </main>
+  );
+}
+
+function StandardWeedCardTaskFocus({ task, card, assignee }: StandardProps) {
   const activeCrops = card.occupancyGroups
     .flatMap((group) => group.cohorts)
     .sort((a, b) => lifecycleRank(a.lifeCycle) - lifecycleRank(b.lifeCycle) || a.displayLabel.localeCompare(b.displayLabel));
@@ -284,4 +439,10 @@ export default function WeedCardTaskFocus({ task, card, assignee }: Props) {
       </div>
     </main>
   );
+}
+
+export default function WeedCardTaskFocus(props: Props) {
+  if (props.turnover) return <SelectedCropClearCard {...props} turnover={props.turnover} />;
+  if (props.card) return <StandardWeedCardTaskFocus {...props} card={props.card} />;
+  return null;
 }
