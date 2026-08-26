@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+  type TouchEvent,
+  type WheelEvent,
+} from "react";
 
 import styles from "./active-outcome-studies.module.css";
 import smartStyles from "./smart-day-study.module.css";
@@ -18,6 +25,7 @@ type TaskDatum = {
 };
 
 type DayView = "clock" | "day";
+type FocusTier = "focus" | "near" | "context";
 
 const TASKS: TaskDatum[] = [
   {
@@ -78,8 +86,6 @@ const TASKS: TaskDatum[] = [
 const NOW_TASK_INDEX = 3;
 const NOW_LABEL = "4:06 PM";
 const SLIPPED_OUTCOME_TASK = TASKS[2];
-const DAY_START_MINUTE = 7 * 60;
-const DAY_END_MINUTE = 20 * 60;
 
 // Fixture-only geometry for the compact smart rail. Production derives all
 // three layers independently from governed Clock and result truth.
@@ -87,30 +93,20 @@ const SMART_PROGRESS_FRONTIER = 43;
 const CURRENT_TIME_POSITION = 69;
 const DAY_TASK_POSITIONS = [6, 13, 21, 29, 38, 47, 55, 64, 72, 84, 94];
 
-function formatMinutes(minutes: number) {
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
-  if (hours && remainder) return `${hours}h ${remainder}m`;
-  if (hours) return `${hours}h`;
-  return `${remainder}m`;
+// Chronicle-style focus + context geometry. Every task keeps a share of the
+// bounded viewport. The inspected task gets the largest share, near neighbors
+// get a medium share, and distant context compresses without disappearing.
+function chronicleFocusWeight(distance: number) {
+  if (distance === 0) return 4.2;
+  if (distance === 1) return 2.15;
+  if (distance === 2) return 1.25;
+  return 0.78;
 }
 
-function taskEnd(task: TaskDatum) {
-  return task.minuteOfDay + task.durationMinutes;
-}
-
-function gapBefore(index: number) {
-  const previousEnd = index === 0 ? DAY_START_MINUTE : taskEnd(TASKS[index - 1]);
-  return Math.max(0, TASKS[index].minuteOfDay - previousEnd);
-}
-
-function elasticGapHeight(minutes: number) {
-  if (minutes <= 0) return 0;
-  return Math.min(58, Math.max(16, 11 + Math.sqrt(minutes) * 3.3));
-}
-
-function elasticTaskHeight(minutes: number) {
-  return Math.min(76, Math.max(48, 38 + Math.log1p(minutes) * 7));
+function focusDistanceTier(distance: number): FocusTier {
+  if (distance === 0) return "focus";
+  if (distance === 1) return "near";
+  return "context";
 }
 
 function AppHeader() {
@@ -219,7 +215,7 @@ function DaySummaryPanel() {
 
 function Phone({ children }: { children: ReactNode }) {
   return (
-    <div className={styles.phone}>
+    <div className={`${styles.phone} ${smartStyles.boundedPhone}`}>
       <AppHeader />
       {children}
       <footer className={styles.nav}>
@@ -248,16 +244,6 @@ function UnlockBranch({ label }: { label: string }) {
   );
 }
 
-function ElasticGap({ minutes }: { minutes: number }) {
-  if (minutes <= 0) return null;
-  return (
-    <div className={smartStyles.elasticGap} style={{ height: `${elasticGapHeight(minutes)}px` }} aria-label={`${formatMinutes(minutes)} open between scheduled tasks`}>
-      <span>{formatMinutes(minutes)}</span>
-      <i aria-hidden="true" />
-    </div>
-  );
-}
-
 function CalendarClockView({
   inspectedIndex,
   onInspect,
@@ -265,94 +251,116 @@ function CalendarClockView({
   inspectedIndex: number;
   onInspect: (index: number) => void;
 }) {
-  const taskRefs = useRef<Array<HTMLButtonElement | null>>([]);
-
-  function settleOn(index: number, behavior: ScrollBehavior = "smooth") {
-    const bounded = Math.max(0, Math.min(TASKS.length - 1, index));
-    onInspect(bounded);
-    taskRefs.current[bounded]?.scrollIntoView({ behavior, block: "center" });
-  }
-
-  useEffect(() => {
-    let frame = 0;
-    const observePageScroll = () => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        const viewportCenter = window.innerHeight / 2;
-        let closestIndex = inspectedIndex;
-        let closestDistance = Number.POSITIVE_INFINITY;
-
-        taskRefs.current.forEach((node, index) => {
-          if (!node) return;
-          const rect = node.getBoundingClientRect();
-          const center = rect.top + rect.height / 2;
-          const distance = Math.abs(center - viewportCenter);
-          if (distance < closestDistance) {
-            closestDistance = distance;
-            closestIndex = index;
-          }
-        });
-
-        if (closestIndex !== inspectedIndex) onInspect(closestIndex);
-      });
-    };
-
-    window.addEventListener("scroll", observePageScroll, { passive: true });
-    observePageScroll();
-    return () => {
-      window.removeEventListener("scroll", observePageScroll);
-      window.cancelAnimationFrame(frame);
-    };
-  }, [inspectedIndex, onInspect]);
-
+  const wheelDebt = useRef(0);
+  const touchY = useRef<number | null>(null);
   const inspectingNow = inspectedIndex === NOW_TASK_INDEX;
 
+  function settleOn(index: number) {
+    onInspect(Math.max(0, Math.min(TASKS.length - 1, index)));
+  }
+
+  function scrubBy(direction: -1 | 1) {
+    settleOn(inspectedIndex + direction);
+  }
+
+  function handleWheel(event: WheelEvent<HTMLDivElement>) {
+    event.preventDefault();
+    wheelDebt.current += event.deltaY;
+    if (Math.abs(wheelDebt.current) < 24) return;
+    scrubBy(wheelDebt.current > 0 ? 1 : -1);
+    wheelDebt.current = 0;
+  }
+
+  function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
+    touchY.current = event.touches[0]?.clientY ?? null;
+  }
+
+  function handleTouchMove(event: TouchEvent<HTMLDivElement>) {
+    const previous = touchY.current;
+    const current = event.touches[0]?.clientY;
+    if (previous === null || current === undefined) return;
+    const delta = previous - current;
+    if (Math.abs(delta) < 22) return;
+    event.preventDefault();
+    scrubBy(delta > 0 ? 1 : -1);
+    touchY.current = current;
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      scrubBy(1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      scrubBy(-1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      settleOn(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      settleOn(TASKS.length - 1);
+    }
+  }
+
   return (
-    <section className={smartStyles.clockView} aria-label="Page-scrolling elastic day-timer Clock fixture">
+    <section className={smartStyles.clockView} aria-label="Bounded focus-and-context day-timer Clock fixture">
       <header className={smartStyles.clockViewHeader}>
         <div>
-          <span>DAY TIMER</span>
-          <strong>{inspectingNow ? `NOW · ${NOW_LABEL}` : `INSPECTING · ${TASKS[inspectedIndex].time}`}</strong>
+          <span>DAY TIMER · NOW {NOW_LABEL}</span>
+          <strong>{inspectingNow ? `NOW · ${TASKS[NOW_TASK_INDEX].title}` : `INSPECTING · ${TASKS[inspectedIndex].time}`}</strong>
         </div>
-        {!inspectingNow
-          ? <button type="button" onClick={() => settleOn(NOW_TASK_INDEX)}>Return to now</button>
-          : null}
+        <button type="button" disabled={inspectingNow} onClick={() => settleOn(NOW_TASK_INDEX)}>Return to now</button>
       </header>
 
-      <div className={smartStyles.clockDayBoundary}><span>7:00 AM</span><strong>DAY START</strong></div>
-      <div className={smartStyles.calendarFlow} aria-label="Compressed calendar-shaped task chronology; the page itself owns vertical scrolling">
+      <div
+        className={smartStyles.clockLensViewport}
+        role="slider"
+        tabIndex={0}
+        aria-label="Clock task scrubber"
+        aria-valuemin={1}
+        aria-valuemax={TASKS.length}
+        aria-valuenow={inspectedIndex + 1}
+        aria-valuetext={`${TASKS[inspectedIndex].time}, ${TASKS[inspectedIndex].title}`}
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onKeyDown={handleKeyDown}
+      >
+        <div className={smartStyles.clockLensSpine} aria-hidden="true" />
         {TASKS.map((task, index) => {
+          const distance = Math.abs(index - inspectedIndex);
           const isNow = index === NOW_TASK_INDEX;
           const isInspected = index === inspectedIndex;
+          const tier = focusDistanceTier(distance);
+          const weight = chronicleFocusWeight(distance);
           return (
-            <div className={smartStyles.calendarSequence} key={`${task.time}-${task.title}`}>
-              <ElasticGap minutes={gapBefore(index)} />
-              {isNow ? (
-                <div className={smartStyles.calendarNow} aria-label={`Actual now ${NOW_LABEL}`}>
-                  <span>{NOW_LABEL}</span><i aria-hidden="true" />
-                </div>
-              ) : null}
+            <div
+              className={smartStyles.clockLensRow}
+              data-focus-tier={tier}
+              data-now={isNow ? "true" : "false"}
+              style={{ flexGrow: weight }}
+              key={`${task.time}-${task.title}`}
+            >
+              <span className={smartStyles.clockLensTime}>{task.time}</span>
+              <i className={smartStyles.clockLensDot} aria-hidden="true" />
               <button
-                ref={(node) => { taskRefs.current[index] = node; }}
                 className={smartStyles.calendarTaskBlock}
                 data-inspected={isInspected ? "true" : "false"}
                 data-now={isNow ? "true" : "false"}
                 data-placement-source={task.placementSource}
+                data-focus-tier={tier}
                 type="button"
-                style={{ minHeight: `${elasticTaskHeight(task.durationMinutes)}px` }}
                 onClick={() => settleOn(index)}
                 aria-label={`Inspect ${task.time}, ${task.family}, ${task.title}`}
               >
-                <span>{task.time} · {task.family}</span>
+                <span>{task.family}</span>
                 <strong>{task.title}</strong>
-                {(isInspected || isNow) ? <small>{task.place} · {task.amount}</small> : null}
+                <small>{task.place} · {task.amount}</small>
               </button>
             </div>
           );
         })}
-        <ElasticGap minutes={Math.max(0, DAY_END_MINUTE - taskEnd(TASKS[TASKS.length - 1]))} />
       </div>
-      <div className={smartStyles.clockDayBoundary}><span>8:00 PM</span><strong>DAY END</strong></div>
     </section>
   );
 }
@@ -393,7 +401,11 @@ function SmartRailDaySurface() {
   const [inspectedIndex, setInspectedIndex] = useState(NOW_TASK_INDEX);
 
   return (
-    <section className={styles.daySurface} aria-label="Atlas Clock-first day with secondary ordered task rail fixture">
+    <section
+      className={`${styles.daySurface} ${smartStyles.boundedDaySurface}`}
+      data-view={view}
+      aria-label="Atlas Clock-first day with secondary ordered task rail fixture"
+    >
       <DayHeader view={view} onChange={setView} />
       <DayNavigation position="top" />
       <DaySummaryPanel />
@@ -424,18 +436,18 @@ export default function ActiveOutcomeStudies() {
       aria-labelledby="active-outcome-studies-heading"
     >
       <header className={styles.sectionHeader}>
-        <span>CLOCK + DAYBOOK STUDY 12 · ONE PAGE SCROLL</span>
-        <h2 id="active-outcome-studies-heading">Clock owns the schedule, but the page owns the scroll.</h2>
-        <p>Clock remains the default worker-day viewer, but it is no longer a scrollable box inside Atlas. The ordinary page scroll drives temporal inspection. Only the real NOW task receives purple; inspecting another time enlarges a neutral task. Long empty stretches are elastically compressed instead of consuming the worker&apos;s screen.</p>
+        <span>CLOCK + DAYBOOK STUDY 13 · BOUNDED FOCUS + CONTEXT</span>
+        <h2 id="active-outcome-studies-heading">Clock stays bounded. Only its scrubber moves.</h2>
+        <p>The screen keeps its Atlas header, day context, and footer in place. Below Return to now, the Clock becomes one bounded focus-and-context instrument: the first and last tasks remain represented, while the inspected region receives more room and detail. Initial focus is NOW; scrolling inside Clock moves the lens without turning inspection into current-time truth.</p>
       </header>
       <div className={styles.dataNote}>
         <strong>Fixture truth boundary</strong>
-        <span>This study is fixture-only. Atlas-fit times demonstrate the approved scheduling responsibility: once work is admitted to the worker day, Clock must place it or raise a planning conflict. The elastic visual scale changes display distance only; it never changes the governed Clock time printed on a task.</span>
+        <span>This study is fixture-only. The focus lens changes visual allocation only. It never changes governed Clock time, task order, duration, completion, or placement. The approach borrows Chronicle&apos;s bounded-stage and zoom-detail discipline: context remains present while focus earns more visual resolution.</span>
       </div>
       <div className={styles.singleGallery}>
         <Study
-          label="A · Real-Atlas Clock + alternate Day rail"
-          note="The date header owns the Clock/Day toggle. Smart progress has no duplicate finished count or window countdown. The unlock consequence is explicit and allowed to wrap. Clock is a compressed calendar-shaped page, not a nested scrolling calendar."
+          label="A · Bounded Clock scrubber + alternate Day rail"
+          note="Return to now is the fixed top edge of the scrubber. Scroll, swipe, or use arrow keys inside Clock to move the focus lens. Every scheduled task stays represented from first through last; NOW alone stays purple."
         >
           <SmartRailDaySurface />
         </Study>
