@@ -173,4 +173,4 @@ test("Clock and Day share inspected identity while the detailed Day rail remains
     "Barn Beds",
     "20 min · Pass 1 of 3",
   ]) assert.match(study, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-}
+});
