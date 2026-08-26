@@ -42,6 +42,8 @@ export default function TaskFocusNavigationBoundary({ children, fallbackPath, sh
     if (!(target instanceof Element)) return;
     const control = target.closest(".atlas-note-plus");
     if (!control || !event.currentTarget.contains(control)) return;
+    const owningBoundary = control.closest('[data-atlas-task-focus-navigation="v1"]');
+    if (owningBoundary !== event.currentTarget) return;
     event.preventDefault();
     event.stopPropagation();
     leaveTaskFocus(fallbackPath);
@@ -84,6 +86,10 @@ export default function TaskFocusNavigationBoundary({ children, fallbackPath, sh
           font-weight: 500;
           line-height: 1;
           cursor: pointer;
+        }
+        .atlas-task-focus-navigation-boundary:has(.atlas-note-plus) > .atlas-task-focus-close,
+        .atlas-task-focus-navigation-boundary:has(.atlas-task-focus-navigation-boundary .atlas-task-focus-close) > .atlas-task-focus-close {
+          display: none;
         }
         .atlas-task-focus-close:focus-visible {
           outline: 2px solid currentColor;
