@@ -38,6 +38,12 @@ body:has(.atlas-global-header) {
   box-shadow: 0 7px 16px rgba(58, 46, 30, 0.08);
 }
 
+.atlas-global-exit {
+  text-decoration: none;
+  font-size: 22px;
+  font-weight: 780;
+}
+
 /*
   The app shell owns the one visible Atlas header. Older page shells still
   contain local top bars while their content is migrated; suppress those bars
