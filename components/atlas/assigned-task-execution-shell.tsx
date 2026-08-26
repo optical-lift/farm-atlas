@@ -9,6 +9,7 @@ import TaskExecutionBrief from "@/components/atlas/task-execution-brief";
 import TaskPrimaryResultControls from "@/components/atlas/task-primary-result-controls";
 import { TaskChildChecklist } from "@/components/atlas/task-child-checklist";
 import { atlasFarmDateIso, atlasShiftFarmDate } from "@/lib/atlas/farm-day";
+import { closeAtlasTaskDetail } from "@/lib/atlas/task-detail-navigation-client";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import type { TaskMoveAssembly } from "@/lib/atlas/task-move-assembly";
@@ -417,7 +418,16 @@ export default function AssignedTaskExecutionShell({
             <span className="atlas-phone-title">{assignee.label}</span>
           </Link>
           <span className="atlas-weather-line">{weatherLabel}</span>
-          <Link href={assignee.listPath} className="atlas-note-plus" aria-label={`Back to ${assignee.label} work`}>↩</Link>
+          <Link
+            href={assignee.listPath}
+            className="atlas-note-plus"
+            aria-label="Close task and return"
+            title="Close task"
+            onClick={(event) => {
+              event.preventDefault();
+              closeAtlasTaskDetail(assignee.listPath);
+            }}
+          >×</Link>
         </header>
         <div className="atlas-task-page-body">
           <article className="atlas-task-page-active atlas-task-ticket-card atlas-assigned-task-execution-card">
