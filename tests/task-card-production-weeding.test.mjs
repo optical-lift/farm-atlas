@@ -20,7 +20,8 @@ test("canonical weed work enters the persistent Weed Card family", () => {
   assert.match(canonical, /WeedCardTaskLoader/);
   assert.match(loader, /\/api\/atlas\/weed-card\?taskId=/);
   assert.match(loader, /WeedCardTaskFocus/);
-  assert.match(loader, /if \(card\) return <WeedCardTaskFocus/);
+  assert.match(loader, /if \(!turnoverMode && card\)/);
+  assert.match(loader, /<WeedCardTaskFocus task=\{task\} card=\{card\}/);
 });
 
 test("production Weed Card uses bed truth with current use, history, active crops, and canonical geometry", () => {
