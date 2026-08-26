@@ -12,6 +12,7 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
   const route = read("app/api/atlas/weed-card/turnover/route.ts");
+  const ordinaryRoute = read("app/api/atlas/weed-card/route.ts");
 
   assert.equal(existsSync(join(root, "components/atlas/selected-crop-turnover-task-focus.tsx")), false);
   assert.doesNotMatch(focus, /SelectedCropClearCard|ClearTrail|ClearReminder|tap to cross off|bed turnover/);
@@ -26,6 +27,8 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
   assert.match(focus, /card\.bedTrail/);
   assert.match(focus, />Bed now</);
   assert.match(focus, /CropOccupancyBedMap/);
+  assert.match(focus, />Bed Components</);
+  assert.match(focus, /component\.availableForPlanting \? "Empty" : "Occupied"/);
   assert.match(focus, />Active Crops</);
   assert.match(focus, /MaintenanceDirectiveStrip/);
   assert.match(focus, />Recent passes</);
@@ -39,13 +42,18 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
 
   assert.match(route, /weed_selected_crop_turnover_focus_v1/);
   assert.match(route, /object_crop_bed_map_v1/);
-  assert.match(route, /capacitySurfaces/);
-  assert.match(route, /const mapSources = beds\.length \? beds : capacitySurfaces/);
-  assert.doesNotMatch(route, /const mapSources = capacitySurfaces\.length \? capacitySurfaces : beds/);
+  assert.match(route, /bed_components_state_v1/);
+  assert.doesNotMatch(route, /const mapSources = capacitySurfaces/);
+  assert.doesNotMatch(route, /capacitySurfaces\.map/);
+  assert.match(route, /const locations = beds\.map/);
+  assert.match(route, /components,/);
   assert.match(route, /occupancyGroups/);
   assert.match(route, /bedTrail/);
   assert.match(route, /sessions/);
   assert.match(route, /card:/);
+
+  assert.match(ordinaryRoute, /bed_components_state_v1/);
+  assert.match(ordinaryRoute, /componentsFromState/);
 
   for (const protectedTable of ["task_crop_cycles", "crop_cycles", "crop_placements", "growing_objects", "weed_cards", "weed_sessions", "task_objects"]) {
     assert.doesNotMatch(route, new RegExp(`from\\(\\\"${protectedTable}\\\"\\)`));

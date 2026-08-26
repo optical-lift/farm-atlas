@@ -24,6 +24,12 @@ function explicitMainCropLabel(metadata: unknown) {
   return null;
 }
 
+function componentsFromState(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const components = (value as { components?: unknown }).components;
+  return Array.isArray(components) ? components : [];
+}
+
 export async function GET(request: Request) {
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
@@ -42,15 +48,18 @@ export async function GET(request: Request) {
   const objectId = typeof card.objectId === "string" ? card.objectId : "";
   let bedMap: unknown = null;
   let mainCropLabel: string | null = null;
+  let components: unknown[] = [];
 
   if (objectId) {
-    const [mapResult, objectResult] = await Promise.all([
+    const [mapResult, objectResult, componentResult] = await Promise.all([
       supabase.rpc("object_crop_bed_map_v1", { p_object_id: objectId }),
       supabase.from("growing_objects").select("metadata").eq("id", objectId).maybeSingle(),
+      supabase.rpc("bed_components_state_v1", { p_bed_id: objectId }),
     ]);
     if (!mapResult.error) bedMap = mapResult.data;
     if (!objectResult.error) mainCropLabel = explicitMainCropLabel(objectResult.data?.metadata);
+    if (!componentResult.error) components = componentsFromState(componentResult.data);
   }
 
-  return privateJson({ ok: true, card: { ...card, mainCropLabel, bedMap } });
+  return privateJson({ ok: true, card: { ...card, mainCropLabel, components, bedMap } });
 }

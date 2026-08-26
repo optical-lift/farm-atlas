@@ -122,6 +122,7 @@ export default function WeedCardTaskFocus({ task, card, turnover, assignee }: Pr
     : card.bedMap
       ? [card.bedMap]
       : [];
+  const components = card.components ?? [];
   const activeCrops = card.occupancyGroups
     .flatMap((group) => group.cohorts)
     .sort((a, b) => lifecycleRank(a.lifeCycle) - lifecycleRank(b.lifeCycle) || a.displayLabel.localeCompare(b.displayLabel));
@@ -298,6 +299,31 @@ export default function WeedCardTaskFocus({ task, card, turnover, assignee }: Pr
               <CropOccupancyBedMap map={map} variant="notebook" />
             </section>
           ))}
+
+          {components.length ? (
+            <section className={styles.activeCrops} aria-label={`${card.objectLabel} components`}>
+              <header><span>Bed Components</span></header>
+              <div className={styles.cropRows}>
+                {components.map((component) => {
+                  const componentCrops = component.occupancyGroups
+                    .flatMap((group) => group.cohorts)
+                    .map((cohort) => cohort.displayLabel);
+                  return (
+                    <article className={styles.cropRow} key={component.componentId} data-bed-component="true">
+                      <div className={styles.cropIdentity}>
+                        <strong>{component.componentLabel}</strong>
+                        <small>{[titleCase(component.componentKind), component.positionLabel].filter(Boolean).join(" · ")}</small>
+                      </div>
+                      <div className={styles.cropState}>
+                        <b>{component.availableForPlanting ? "Empty" : "Occupied"}</b>
+                        <small>{componentCrops.length ? componentCrops.join(" · ") : "No crop on component"}</small>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
 
           {activeCrops.length ? (
             <section className={styles.activeCrops} aria-label={`${card.objectLabel} active crops`}>
