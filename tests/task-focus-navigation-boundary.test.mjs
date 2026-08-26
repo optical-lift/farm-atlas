@@ -30,10 +30,11 @@ test("only the canonical generic assigned-task path adopts the boundary in this 
   const workerReady = read("components/atlas/worker-ready-assigned-task-execution-shell.tsx");
   const registry = read("components/atlas/canonical-assigned-task-detail.tsx");
 
-  assert.match(workerReady, /TaskFocusNavigationBoundary/);
-  assert.match(workerReady, /withTaskFocusNavigation\(<AssignedTaskExecutionShell/);
-  assert.match(workerReady, /withTaskFocusNavigation\(<WaitingScreen/);
-  assert.match(workerReady, /withTaskFocusNavigation\(<ReadinessFailureScreen/);
+  assert.match(workerReady, /function CanonicalAssignedTaskExecutionSurface/);
+  assert.match(workerReady, /return <AssignedTaskExecutionShell \{\.\.\.props\} \/>/);
+  assert.match(workerReady, /return <WaitingScreen/);
+  assert.match(workerReady, /return <ReadinessFailureScreen/);
+  assert.match(workerReady, /<TaskFocusNavigationBoundary fallbackPath=\{props\.assignee\.listPath\}>\s*<CanonicalAssignedTaskExecutionSurface \{\.\.\.props\} \/>/s);
   assert.match(registry, /if \(isFarmRoundTask\(props\.task\)\) return <FarmRoundTaskDetail/);
   assert.match(registry, /return <WorkerReadyAssignedTaskExecutionShell/);
 });
