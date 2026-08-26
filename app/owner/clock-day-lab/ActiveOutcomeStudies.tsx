@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import styles from "./active-outcome-studies.module.css";
 import smartStyles from "./smart-day-study.module.css";
@@ -8,6 +10,7 @@ type TaskDatum = {
   title: string;
   place: string;
   amount: string;
+  time: string;
   unlock?: string;
 };
 
@@ -17,18 +20,21 @@ const TASKS: TaskDatum[] = [
     title: "Farm Round · Elm Farm",
     place: "Elm Farm",
     amount: "Farm Round",
+    time: "8:00 AM",
   },
   {
     family: "WEED",
     title: "MG11",
     place: "Main Garden",
     amount: "30 min · Heavy",
+    time: "10:15 AM",
   },
   {
     family: "TIDY",
     title: "Farmhouse",
     place: "Interior",
     amount: "20 min · Standard",
+    time: "1:30 PM",
     unlock: "Thursday Ticketed Night · Aug 27",
   },
   {
@@ -36,6 +42,7 @@ const TASKS: TaskDatum[] = [
     title: "Sweet William",
     place: "Grow Room",
     amount: "3 trays · 600 plants",
+    time: "4:06 PM",
     unlock: "Harvest Stems · May 6",
   },
   {
@@ -43,12 +50,14 @@ const TASKS: TaskDatum[] = [
     title: "BB10 · Bermuda Pass 1",
     place: "Barn Beds",
     amount: "20 min · Pass 1 of 3",
+    time: "7:00 PM",
     unlock: "Choose Overwintering Crop · Sep 15",
   },
 ];
 
-const ACTIVE_TASK = TASKS[3];
+const NOW_TASK_INDEX = 3;
 const SLIPPED_OUTCOME_TASK = TASKS[2];
+const SCRUBBER_ROW_HEIGHT = 32;
 
 // Fixture-only geometry for the single smart rail. Production must derive all
 // three layers independently from governed Clock placement/result truth.
@@ -99,13 +108,33 @@ function SmartDayRail() {
   );
 }
 
-function DayInstrument() {
+function ConsequenceRow() {
   return (
-    <div className={styles.dayInstrument} aria-label="One smart rail plus current work-window countdown fixture">
-      <div className={styles.dayDone}><strong>6 / 11</strong><span>done</span></div>
-      <SmartDayRail />
-      <div className={styles.dayWindow}><span>WINDOW</span><strong>00:18</strong></div>
+    <div
+      className={smartStyles.consequenceRow}
+      aria-label="Most consequential unresolved task fixture"
+    >
+      <span className={smartStyles.consequencePill}>MISSED WINDOW</span>
+      <div className={smartStyles.consequenceCopy}>
+        <strong>{SLIPPED_OUTCOME_TASK.family} · {SLIPPED_OUTCOME_TASK.title} still open</strong>
+        <small>Holding {SLIPPED_OUTCOME_TASK.unlock}</small>
+      </div>
+      <span className={smartStyles.consequenceCaret} aria-hidden="true">⌄</span>
     </div>
+  );
+}
+
+function DaySummaryPanel() {
+  return (
+    <section className={smartStyles.daySummaryPanel} aria-label="Atlas day summary fixture">
+      <div className={smartStyles.daySummaryTop}>
+        <strong>6 OF 11 FINISHED</strong>
+        <div className={smartStyles.dayWindow}><span>WINDOW</span><b>00:18</b></div>
+      </div>
+      <SmartDayRail />
+      <div className={smartStyles.daySummaryDivider} aria-hidden="true" />
+      <ConsequenceRow />
+    </section>
   );
 }
 
@@ -119,7 +148,6 @@ function DayHeader() {
         </div>
         <div className={styles.dayCount}><strong>11</strong><span>tasks</span><small>6 done</small></div>
       </div>
-      <DayInstrument />
     </section>
   );
 }
@@ -156,56 +184,109 @@ function UnlockBranch({ label }: { label: string }) {
   );
 }
 
-function CurrentMoveRoller() {
-  return (
-    <div className={styles.timeDeck} aria-label="Unboxed rolling current scheduled move fixture">
-      <div className={styles.rollerViewport}>
-        <div className={styles.rollerFadeTop} aria-hidden="true" />
-        <div className={styles.rollerRow} data-position="previous">
-          <span>3:30 PM</span><small>WEED</small><strong>MG11</strong>
-        </div>
-        <div className={styles.rollerSelection} aria-hidden="true" />
-        <div className={styles.rollerRow} data-position="current">
-          <span>4:06 PM</span><small>POT UP</small><strong>Sweet William</strong>
-        </div>
-        <div className={styles.rollerRow} data-position="next">
-          <span>7:00 PM</span><small>SPRAY</small><strong>BB10 · Bermuda Pass 1</strong>
-        </div>
-        <div className={styles.rollerFadeBottom} aria-hidden="true" />
-      </div>
-    </div>
-  );
-}
+function ScrollableDayIndex({
+  inspectedIndex,
+  onInspect,
+}: {
+  inspectedIndex: number;
+  onInspect: (index: number) => void;
+}) {
+  const viewportRef = useRef<HTMLDivElement>(null);
 
-function ConsequenceStrip() {
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    viewport.scrollTop = inspectedIndex * SCRUBBER_ROW_HEIGHT;
+  }, []); // initialize the fixture on the actual NOW task only once
+
+  function settleOn(index: number) {
+    const bounded = Math.max(0, Math.min(TASKS.length - 1, index));
+    onInspect(bounded);
+    viewportRef.current?.scrollTo({
+      top: bounded * SCRUBBER_ROW_HEIGHT,
+      behavior: "smooth",
+    });
+  }
+
+  function handleScroll() {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const index = Math.max(
+      0,
+      Math.min(TASKS.length - 1, Math.round(viewport.scrollTop / SCRUBBER_ROW_HEIGHT)),
+    );
+    if (index !== inspectedIndex) onInspect(index);
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      settleOn(inspectedIndex - 1);
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      settleOn(inspectedIndex + 1);
+    }
+  }
+
   return (
-    <section
-      className={smartStyles.consequenceStrip}
-      aria-label="Most consequential unresolved task fixture"
-    >
-      <span className={smartStyles.consequencePill}>MISSED WINDOW</span>
-      <div className={smartStyles.consequenceCopy}>
-        <strong>{SLIPPED_OUTCOME_TASK.family} · {SLIPPED_OUTCOME_TASK.title} still open</strong>
-        <small>Holding {SLIPPED_OUTCOME_TASK.unlock}</small>
+    <section className={smartStyles.scrubberStudy} aria-label="Provisional scrollable day index fixture">
+      <div className={smartStyles.scrubberCaption}>
+        <span>SCROLL DAY</span>
+        <small>{inspectedIndex === NOW_TASK_INDEX ? "NOW" : "INSPECTING"}</small>
       </div>
-      <span className={smartStyles.consequenceCaret} aria-hidden="true">⌄</span>
+      <div className={smartStyles.scrubberShell}>
+        <div
+          className={smartStyles.scrubberViewport}
+          ref={viewportRef}
+          onScroll={handleScroll}
+          onKeyDown={handleKeyDown}
+          tabIndex={0}
+          aria-label="Scroll up and down through placed tasks. The centered task is inspected; actual NOW remains 4:06 PM on the day rail."
+        >
+          <div className={smartStyles.scrubberSpacer} aria-hidden="true" />
+          {TASKS.map((task, index) => (
+            <button
+              className={smartStyles.scrubberRow}
+              data-inspected={index === inspectedIndex ? "true" : "false"}
+              type="button"
+              key={`${task.time}-${task.title}`}
+              onClick={() => settleOn(index)}
+              aria-label={`Inspect ${task.time}, ${task.family}, ${task.title}`}
+            >
+              <span>{task.time}</span>
+              <small>{task.family}</small>
+              <strong>{task.title}</strong>
+            </button>
+          ))}
+          <div className={smartStyles.scrubberSpacer} aria-hidden="true" />
+        </div>
+        <i className={smartStyles.scrubberSelection} aria-hidden="true" />
+        <i className={smartStyles.scrubberFadeTop} aria-hidden="true" />
+        <i className={smartStyles.scrubberFadeBottom} aria-hidden="true" />
+      </div>
     </section>
   );
 }
 
-function OrderedTaskRail() {
+function OrderedTaskRail({ inspectedIndex }: { inspectedIndex: number }) {
   return (
-    <div className={styles.cleanRail} aria-label="Ordered task rail fixture">
-      {TASKS.map((task) => {
-        const active = task === ACTIVE_TASK;
+    <div className={styles.cleanRail} aria-label="Ordered task rail fixture synchronized to the scrollable day index">
+      {TASKS.map((task, index) => {
+        const isNow = index === NOW_TASK_INDEX;
+        const isInspected = index === inspectedIndex;
         return (
           <article
-            className={styles.cleanNode}
-            data-active={active ? "true" : "false"}
+            className={`${styles.cleanNode} ${isInspected ? smartStyles.feedInspected : ""}`}
+            data-active={isNow ? "true" : "false"}
+            data-inspected={isInspected ? "true" : "false"}
             key={task.title}
           >
             <i className={styles.railDot} aria-hidden="true" />
             <TaskIdentity task={task} />
+            {isInspected && inspectedIndex !== NOW_TASK_INDEX
+              ? <span className={smartStyles.inspectFlag}>INSPECTING {task.time}</span>
+              : null}
             {task.unlock ? <UnlockBranch label={task.unlock} /> : null}
           </article>
         );
@@ -215,11 +296,13 @@ function OrderedTaskRail() {
 }
 
 function SmartRailDaySurface() {
+  const [inspectedIndex, setInspectedIndex] = useState(NOW_TASK_INDEX);
+
   return (
-    <section className={styles.daySurface} aria-label="Smart day rail, rolling NOW task, compact consequence strip, and ordered task rail fixture">
-      <CurrentMoveRoller />
-      <ConsequenceStrip />
-      <OrderedTaskRail />
+    <section className={styles.daySurface} aria-label="Atlas-style day summary, scrollable time index, and synchronized ordered task feed fixture">
+      <DaySummaryPanel />
+      <ScrollableDayIndex inspectedIndex={inspectedIndex} onInspect={setInspectedIndex} />
+      <OrderedTaskRail inspectedIndex={inspectedIndex} />
     </section>
   );
 }
@@ -243,18 +326,18 @@ export default function ActiveOutcomeStudies() {
       aria-labelledby="active-outcome-studies-heading"
     >
       <header className={styles.sectionHeader}>
-        <span>CLOCK + DAYBOOK STUDY 9 · SMART DAY RAIL</span>
-        <h2 id="active-outcome-studies-heading">One rail carries work progress, time, and where Atlas placed the day.</h2>
-        <p>The same horizontal rail now carries the earned chronological progress fill, the current-time marker, and faint task-placement dots. Below the NOW roller, consequential unfinished work returns to Atlas&apos;s compact carried-move grammar instead of living in a second scorecard.</p>
+        <span>CLOCK + DAYBOOK STUDY 10 · TEMPORAL SCRUBBER</span>
+        <h2 id="active-outcome-studies-heading">The roller becomes a time index. The feed remains the work.</h2>
+        <p>The Atlas-style purple day summary now owns smart progress and consequence state. Below it, the provisional roller is a vertical snap scrubber: scroll through time to inspect placed tasks while the full task feed highlights the same task. Actual NOW never moves when inspection moves.</p>
       </header>
       <div className={styles.dataNote}>
         <strong>Fixture truth boundary</strong>
-        <span>The 43% progress frontier intentionally trails the 4:06 PM current-time marker even though 6 of 11 tasks are marked done. It demonstrates the production rule that later completed work cannot erase unresolved earlier work. All task-dot positions, times, and consequence labels remain editor fixtures.</span>
+        <span>The scrubber location is intentionally provisional. Its interaction contract is the study: scroll up or down, snap to one real placed task, and synchronize inspection identity with the full feed without changing current time, Clock placement, task state, or the 43% Day Clearance Frontier. All times and tasks remain editor fixtures.</span>
       </div>
       <div className={styles.singleGallery}>
         <Study
-          label="A · Smart single rail + Atlas-style consequence row"
-          note="Purple fill means earned chronological clearance, the larger ring means NOW, and faint dots show the distribution of Clock-placed work. The compact row surfaces the highest-consequence unresolved task without duplicating the day score."
+          label="A · Atlas day summary + scrollable temporal index"
+          note="The purple card stays close to current Atlas. The roller earns its place only as a compressed time-navigation surface: it lets you inspect chronology while the regular feed remains the detailed work surface."
         >
           <SmartRailDaySurface />
         </Study>
