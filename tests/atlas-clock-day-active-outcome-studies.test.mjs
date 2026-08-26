@@ -12,13 +12,14 @@ const css = read("app/owner/clock-day-lab/active-outcome-studies.module.css");
 const smartCss = read("app/owner/clock-day-lab/smart-day-study.module.css");
 const contract = read("docs/architecture/clock-day-smart-rail-and-consequence-contract.md");
 
-test("Clock Day lab exposes the smart single-rail plus compact consequence study", () => {
+test("Clock Day lab exposes Atlas day summary plus scrollable temporal index study", () => {
   assert.match(page, /ActiveOutcomeStudies/);
-  assert.match(study, /A · Smart single rail \+ Atlas-style consequence row/);
-  assert.match(study, /One rail carries work progress, time, and where Atlas placed the day\./);
+  assert.match(study, /A · Atlas day summary \+ scrollable temporal index/);
+  assert.match(study, /The roller becomes a time index\. The feed remains the work\./);
+  assert.match(study, /DaySummaryPanel/);
   assert.match(study, /SmartDayRail/);
-  assert.match(study, /CurrentMoveRoller/);
-  assert.match(study, /ConsequenceStrip/);
+  assert.match(study, /ConsequenceRow/);
+  assert.match(study, /ScrollableDayIndex/);
   assert.match(study, /OrderedTaskRail/);
 });
 
@@ -32,6 +33,23 @@ test("study remains fixture-only and cannot touch worker state", () => {
   assert.doesNotMatch(study, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 });
 
+test("smart progress and consequence state share one current-Atlas-style purple day card", () => {
+  assert.match(study, /DaySummaryPanel/);
+  assert.match(study, /6 OF 11 FINISHED/);
+  assert.match(study, /WINDOW/);
+  assert.match(study, /00:18/);
+  assert.match(study, /ConsequenceRow/);
+  assert.match(study, /MISSED WINDOW/);
+  assert.match(study, /Holding/);
+  assert.match(smartCss, /\.daySummaryPanel/);
+  assert.match(smartCss, /background: #f3f4fb/);
+  assert.match(smartCss, /\.daySummaryDivider/);
+  assert.match(smartCss, /\.consequenceRow/);
+  assert.doesNotMatch(study, /dayInstrument|ConsequenceStrip|consequenceStrip/);
+  assert.match(contract, /rail should not live in a separate white capsule/);
+  assert.match(contract, /same pale-purple rounded day-summary card/);
+});
+
 test("one physical rail carries smart progress, NOW, and task distribution", () => {
   assert.match(study, /SMART_PROGRESS_FRONTIER = 43/);
   assert.match(study, /CURRENT_TIME_POSITION = 69/);
@@ -41,10 +59,7 @@ test("one physical rail carries smart progress, NOW, and task distribution", () 
   assert.match(study, /smartRailTaskDot/);
   assert.match(study, /smartRailNowDot/);
   assert.match(study, /smartRailNowLabel/);
-  assert.match(study, /6 \/ 11/);
   assert.match(study, /4:06 PM/);
-  assert.match(study, /WINDOW/);
-  assert.match(study, /00:18/);
   assert.match(smartCss, /\.smartRailBase,/);
   assert.match(smartCss, /\.smartRailProgress/);
   assert.match(smartCss, /\.smartRailTaskDot/);
@@ -63,61 +78,59 @@ test("smart rail contract keeps raw done count separate from chronological clear
   assert.match(contract, /An unplaced task receives no fake dot/);
 });
 
-test("NOW roller remains unboxed and uses a faint center hairline", () => {
-  assert.match(study, /CurrentMoveRoller/);
-  assert.match(study, /Unboxed rolling current scheduled move fixture/);
-  assert.match(study, /data-position="previous"/);
-  assert.match(study, /data-position="current"/);
-  assert.match(study, /data-position="next"/);
-  assert.match(study, /3:30 PM/);
-  assert.match(study, /4:06 PM/);
-  assert.match(study, /7:00 PM/);
-  assert.match(study, /POT UP/);
-  assert.match(study, /Sweet William/);
-  assert.match(css, /\.timeDeck/);
-  assert.match(css, /\.rollerSelection/);
-  assert.match(css, /rgba\(118, 110, 190, 0\.32\)/);
+test("temporal index is a real vertical snap scrubber rather than a second static roller", () => {
+  assert.match(study, /^"use client";/);
+  assert.match(study, /useState\(NOW_TASK_INDEX\)/);
+  assert.match(study, /SCRUBBER_ROW_HEIGHT = 32/);
+  assert.match(study, /onScroll={handleScroll}/);
+  assert.match(study, /ArrowUp/);
+  assert.match(study, /ArrowDown/);
+  assert.match(study, /scrollTo\(\{/);
+  assert.match(study, /SCROLL DAY/);
+  assert.match(study, /INSPECTING/);
+  assert.match(study, /actual NOW remains 4:06 PM/);
+  assert.match(smartCss, /overflow-y: auto/);
+  assert.match(smartCss, /scroll-snap-type: y mandatory/);
+  assert.match(smartCss, /scroll-snap-align: center/);
+  assert.match(smartCss, /touch-action: pan-y/);
 });
 
-test("consequence surface uses compact Atlas carried-row grammar instead of a second scorecard", () => {
+test("scrubber inspection synchronizes identity with the full task feed without moving NOW", () => {
+  assert.match(study, /const NOW_TASK_INDEX = 3/);
+  assert.match(study, /data-active={isNow \? "true" : "false"}/);
+  assert.match(study, /data-inspected={isInspected \? "true" : "false"}/);
+  assert.match(study, /feedInspected/);
+  assert.match(study, /INSPECTING {task\.time}/);
+  assert.match(smartCss, /\.feedInspected/);
+  assert.match(contract, /scrubber\.inspected_task_id == task_feed\.inspected_task_id/);
+  assert.match(contract, /Scrolling the scrubber never mutates a task, changes a Clock placement, changes NOW, or changes the Day Clearance Frontier/);
+  assert.match(contract, /inspecting 7:00 PM, not claiming that it is 7:00 PM/);
+});
+
+test("scrubber has a distinct purpose from the detailed task feed and its location stays provisional", () => {
+  assert.match(contract, /vertical roller is not a second task feed/);
+  assert.match(contract, /regular task feed remains the detailed work surface/);
+  assert.match(contract, /Past tasks remain inspectable; future tasks remain inspectable/);
+  assert.match(contract, /Unplaced work does not receive an invented scrubber position/);
+  assert.match(contract, /Passive page scrolling alone should not continually rewrite scrubber inspection state/);
+  assert.match(contract, /Scrubber placement is still provisional/);
+  assert.match(study, /scrubber location is intentionally provisional/);
+});
+
+test("consequence selector remains independent and governed", () => {
   assert.match(study, /SLIPPED_OUTCOME_TASK/);
   assert.match(study, /family: "TIDY"/);
   assert.match(study, /title: "Farmhouse"/);
   assert.match(study, /Thursday Ticketed Night · Aug 27/);
-  assert.match(study, /MISSED WINDOW/);
-  assert.match(study, /still open/);
-  assert.match(study, /Holding/);
-  assert.match(study, /consequenceStrip/);
-  assert.match(study, /consequencePill/);
-  assert.match(study, /consequenceCaret/);
-  assert.match(smartCss, /\.consequenceStrip/);
-  assert.match(smartCss, /grid-template-columns: auto minmax\(0, 1fr\) 18px/);
-  assert.match(smartCss, /background: #f7f7fb/);
-  assert.doesNotMatch(study, /scoreBody|scoreCount|scoreMove|scoreUnlock/);
-});
-
-test("consequence contract requires governed consequence truth and hides empty generic rows", () => {
   assert.match(contract, /real dependency\/unlock edge/);
   assert.match(contract, /hard date or fixed event/);
   assert.match(contract, /Never manufacture consequence importance from display prose/);
-  assert.match(contract, /If there is no unresolved task with a governed consequence, the consequence row should be absent/);
-  assert.match(contract, /NOW task/);
-  assert.match(contract, /Consequence task/);
+  assert.match(contract, /If there is no unresolved task with a governed consequence, the divider and consequence row should be absent/);
+  assert.match(contract, /Inspected task/);
   assert.match(contract, /must not collapse them into one `activeTask` variable/);
 });
 
-test("current move and slipped consequence remain different selectors", () => {
-  assert.match(study, /const ACTIVE_TASK = TASKS\[3\]/);
-  assert.match(study, /const SLIPPED_OUTCOME_TASK = TASKS\[2\]/);
-  assert.match(study, /data-active={active \? "true" : "false"}/);
-  assert.match(study, /SLIPPED_OUTCOME_TASK\.family/);
-  assert.match(study, /SLIPPED_OUTCOME_TASK\.title/);
-});
-
-test("all incomplete tasks remain fully live and ordered on the task rail", () => {
-  assert.doesNotMatch(study, /data-passed/);
-  assert.doesNotMatch(css, /cleanNode\[data-passed/);
-  assert.doesNotMatch(css, /opacity:\s*0\.58/);
+test("all incomplete tasks remain fully represented on the detailed task rail", () => {
   assert.match(css, /\.cleanRail::before/);
   assert.match(css, /\.cleanNode/);
 
