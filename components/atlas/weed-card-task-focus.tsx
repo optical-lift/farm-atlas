@@ -18,6 +18,7 @@ import {
   postAtlasFinishPartialWeedCardDay,
   postAtlasWeedCardSession,
 } from "@/lib/atlas/weed-card-client";
+import targetStyles from "./weed-card-clear-target.module.css";
 import styles from "./weed-card-task-focus.module.css";
 
 type Props = {
@@ -126,15 +127,6 @@ export default function WeedCardTaskFocus({ task, card, turnover, assignee }: Pr
   const activeCrops = card.occupancyGroups
     .flatMap((group) => group.cohorts)
     .sort((a, b) => lifecycleRank(a.lifeCycle) - lifecycleRank(b.lifeCycle) || a.displayLabel.localeCompare(b.displayLabel));
-  const remainingActiveCrops = turnover
-    ? activeCrops.filter((cohort) => cohort.cropCycleId !== turnover.cropCycleId)
-    : [];
-  const remainingActiveLabels = Array.from(new Set(remainingActiveCrops.map((cohort) => cohort.displayLabel)));
-  const activeCropLabels = Array.from(new Set(activeCrops.map((cohort) => cohort.displayLabel)));
-  const partialBedClear = Boolean(turnover && !turnover.wholeBedTurnover && remainingActiveLabels.length);
-  const bedNowLabel = clearMode
-    ? activeCropLabels.join(" + ") || selectedCrop || "Unknown crop occupancy"
-    : card.mainCropLabel || "Unknown main crop";
   const resultOptions = clearMode ? CLEAR_RESULTS : WEED_RESULTS;
 
   const [selectedResult, setSelectedResult] = useState<BedWorkResult | null>(null);
@@ -297,27 +289,9 @@ export default function WeedCardTaskFocus({ task, card, turnover, assignee }: Pr
             </div>
           ) : null}
 
-          {clearMode && selectedCrop ? (
-            <section className={styles.bedNow} data-clear-termination-target="true">
-              <span>Termination target</span>
-              <strong>{selectedCrop} is ready for termination.</strong>
-            </section>
-          ) : null}
-
-          {partialBedClear ? (
-            <section className={styles.bedNow} data-clear-active-crops-remain="true">
-              <span>Partial bed clearing</span>
-              <strong>There are still active crops remaining in this bed.</strong>
-              <div className={styles.bedFacts}>
-                <b>Keep: {remainingActiveLabels.join(" · ")}</b>
-                <b>Do not clear the whole bed</b>
-              </div>
-            </section>
-          ) : null}
-
-          <section className={styles.bedNow}>
-            <span>Bed now</span>
-            <strong>{bedNowLabel}</strong>
+          <section className={styles.bedNow} data-clear-terminate-now={clearMode ? "true" : "false"}>
+            <span>{clearMode ? "Terminate now" : "Bed now"}</span>
+            <strong>{clearMode ? selectedCrop : card.mainCropLabel || "Unknown main crop"}</strong>
           </section>
 
           {bedMaps.map((map) => (
@@ -360,11 +334,12 @@ export default function WeedCardTaskFocus({ task, card, turnover, assignee }: Pr
                   const stale = cropNeedsFieldConfirmation(cohort);
                   const truthDate = cohort.observedQuantityDate || cohort.establishmentDate;
                   const target = turnover?.cropCycleId === cohort.cropCycleId;
+                  const targetClassName = target && clearMode ? targetStyles.terminateCropRow : "";
                   return (
-                    <article className={styles.cropRow} key={cohort.cropCycleId} data-needs-confirmation={stale ? "true" : "false"} data-bed-work-target={target ? "true" : "false"}>
+                    <article className={`${styles.cropRow} ${targetClassName}`.trim()} key={cohort.cropCycleId} data-needs-confirmation={stale ? "true" : "false"} data-bed-work-target={target ? "true" : "false"}>
                       <div className={styles.cropIdentity}>
                         <strong>{cohort.displayLabel}</strong>
-                        <small>{target && clearMode ? `Clear · ${titleCase(cohort.lifeCycle)}` : titleCase(cohort.lifeCycle)}</small>
+                        <small>{target && clearMode ? "TERMINATE" : titleCase(cohort.lifeCycle)}</small>
                       </div>
                       <div className={styles.cropState}>
                         <b>{stale ? "Needs field confirmation" : cohort.stageLabel}</b>
