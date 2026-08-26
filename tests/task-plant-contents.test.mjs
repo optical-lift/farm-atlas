@@ -6,7 +6,7 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("every weed task routes to the occupancy-aware persistent Weed Card with the approved Weed presentation", () => {
+test("every weed task routes to the occupancy-aware persistent bed-work card with the approved Weed presentation", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
@@ -20,9 +20,9 @@ test("every weed task routes to the occupancy-aware persistent Weed Card with th
   assert.doesNotMatch(loader, /ConciseWeedTaskDetail/);
   assert.match(loader, /if \(failed\) return <AssignedTaskExecutionShell/);
 
-  assert.match(focus, /AtlasTaskCardFrame/);
-  assert.match(focus, /family="Weed"/);
-  assert.match(focus, /card\.occupancyGroups/);
+  assert.equal((focus.match(/<AtlasTaskCardFrame/g) || []).length, 1);
+  assert.match(focus, /const family = isClear \? "Clear" : "Weed"/);
+  assert.match(focus, /card\?\.occupancyGroups/);
   assert.match(focus, />Active Crops</);
   assert.match(focus, /cohort\.displayLabel/);
   assert.match(focus, /titleCase\(cohort\.lifeCycle\)/);
@@ -35,7 +35,7 @@ test("every weed task routes to the occupancy-aware persistent Weed Card with th
   assert.doesNotMatch(focus, /Continue the recovery|Current move|Keep the planted material|permanent edge/);
 });
 
-test("legacy object contents remain evidence while Weed Cards read canonical occupancy", () => {
+test("legacy object contents remain evidence while bed-work cards read canonical occupancy", () => {
   const legacyRoute = read("app/api/atlas/task-plant-contents/route.ts");
   const legacyMigration = read("supabase/migrations/20260729084100_task_plant_contents_v1.sql");
   const reader = read("supabase/migrations/20260729151700_crop_occupancy_reader_v1.sql");
