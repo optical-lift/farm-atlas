@@ -1,0 +1,123 @@
+.section {
+  --atlas-task-trail-x: 36px;
+  position: relative;
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 17px 28px 18px 88px;
+  border-top: 1px solid rgba(66, 65, 82, 0.11);
+  background: #fff;
+  color: #303145;
+}
+
+.section::before {
+  content: "";
+  position: absolute;
+  left: var(--atlas-task-trail-x);
+  top: -1px;
+  bottom: -1px;
+  width: 1px;
+  background: rgba(86, 89, 112, 0.28);
+}
+
+.label {
+  color: #777ca0;
+  font-size: 0.66rem;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 15px 16px;
+  border: 1px solid rgba(111, 97, 76, 0.16);
+  border-radius: 18px;
+  background: rgba(250, 248, 239, 0.76);
+}
+
+.identity {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.identity strong {
+  color: #303145;
+  font-size: 1.04rem;
+  line-height: 1.05;
+  font-weight: 950;
+}
+
+.identity address {
+  margin: 0;
+  color: #666861;
+  font-size: 0.79rem;
+  line-height: 1.35;
+  font-style: normal;
+  font-weight: 760;
+}
+
+.phone {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  align-self: center;
+}
+
+.phone span {
+  color: #7f8299;
+  font-size: 0.64rem;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+}
+
+.phone strong {
+  color: #51546d;
+  font-size: 0.82rem;
+  line-height: 1.15;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.note {
+  display: grid;
+  gap: 5px;
+  padding: 10px 12px;
+  border-left: 3px solid rgba(139, 145, 194, 0.52);
+  border-radius: 0 12px 12px 0;
+  background: rgba(239, 237, 244, 0.42);
+}
+
+.note span {
+  color: #7f8299;
+  font-size: 0.64rem;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.note p {
+  margin: 0;
+  color: #555866;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
+@media (max-width: 560px) {
+  .section {
+    --atlas-task-trail-x: 29px;
+    padding: 17px 21px 18px 81px;
+  }
+
+  .card {
+    grid-template-columns: 1fr;
+  }
+}

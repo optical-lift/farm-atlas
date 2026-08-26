@@ -1,3 +1,4 @@
+import TaskDestinationContact from "@/components/atlas/task-destination-contact";
 import type {
   TaskMoveAssembly,
   TaskMoveFact,
@@ -152,6 +153,7 @@ export default function TaskMoveSpine({ assembly }: Props) {
         .atlas-worker-move__eyebrow { margin:0 0 6px; color:#777ca0; font-size:.67rem; font-weight:920; letter-spacing:.11em; text-transform:uppercase; }
         .atlas-worker-move__title { margin:0; font-size:clamp(1.9rem,6vw,2.7rem); line-height:1.02; letter-spacing:-.035em; }
         .atlas-worker-move__due { display:block; margin-top:8px; color:#6b6d7b; font-size:.75rem; font-weight:780; }
+        .atlas-worker-move__destination { margin:20px -28px 0; }
         .atlas-worker-move__section { margin-top:20px; }
         .atlas-worker-move__label { display:block; margin-bottom:8px; color:#8589a6; font-size:.64rem; font-weight:950; letter-spacing:.11em; text-transform:uppercase; }
         .atlas-worker-move__value { display:block; font-size:.96rem; line-height:1.3; }
@@ -241,6 +243,7 @@ export default function TaskMoveSpine({ assembly }: Props) {
         .atlas-worker-move__step strong { display:block; font-size:1.02rem; line-height:1.32; }
         @media (max-width:560px) {
           .atlas-worker-move { padding:20px 21px 16px; }
+          .atlas-worker-move__destination { margin-left:-21px; margin-right:-21px; }
           .atlas-worker-move__requirement-status { font-size:.64rem; }
         }
       `}</style>
@@ -250,6 +253,12 @@ export default function TaskMoveSpine({ assembly }: Props) {
       </p>
       <h1 className="atlas-worker-move__title">{workerTitle(assembly)}</h1>
       {dueLabel ? <span className="atlas-worker-move__due">{dueLabel}</span> : null}
+
+      {assembly.destination ? (
+        <div className="atlas-worker-move__destination">
+          <TaskDestinationContact destination={assembly.destination} />
+        </div>
+      ) : null}
 
       {showObject && object ? (
         <section className="atlas-worker-move__section" aria-label={titleCase(object.objectType)}>
