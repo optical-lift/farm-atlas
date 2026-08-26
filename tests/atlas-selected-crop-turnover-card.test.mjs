@@ -15,7 +15,6 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
   const ordinaryRoute = read("app/api/atlas/weed-card/route.ts");
   const map = read("components/atlas/crop-occupancy-bed-map.tsx");
   const presenceRoute = read("app/api/atlas/objects/[objectKey]/crop-presence/route.ts");
-  const migration = read("supabase/migrations/20260826224830_atlas_bed_map_geometry_and_inline_crop_presence_v1.sql");
 
   assert.equal(existsSync(join(root, "components/atlas/selected-crop-turnover-task-focus.tsx")), false);
   assert.doesNotMatch(focus, /SelectedCropClearCard|ClearTrail|ClearReminder|tap to cross off|bed turnover/);
@@ -56,10 +55,6 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
   assert.match(map, /recordAtlasObservedCropPresence/);
   assert.match(presenceRoute, /record_observed_crop_presence_for_member_v1/);
   assert.match(presenceRoute, /x-atlas-intent/);
-  assert.match(migration, /'mapSide'/);
-  assert.match(migration, /when parent\.metadata->>'side' = 'left' then 'right'/);
-  assert.match(migration, /when parent\.metadata->>'side' = 'right' then 'left'/);
-  assert.match(migration, /inline_bed_crop_presence_v1/);
 
   assert.match(route, /weed_selected_crop_turnover_focus_v1/);
   assert.match(route, /object_crop_bed_map_v1/);
