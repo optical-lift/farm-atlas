@@ -22,24 +22,27 @@ import styles from "./weed-card-task-focus.module.css";
 
 type Props = {
   task: AtlasTaskCard;
-  card?: AtlasWeedCardContext;
+  card: AtlasWeedCardContext;
   turnover?: AtlasSelectedCropTurnoverContext;
   childTasks: AtlasTaskCard[];
   assignee: AtlasAssigneeConfig;
 };
 
-type StandardProps = Props & { card: AtlasWeedCardContext };
-type TurnoverProps = Props & { turnover: AtlasSelectedCropTurnoverContext };
 type SavingAction = "result" | "blocked" | null;
 type WeedResult = "heavy" | "mostly_clear" | "clear";
-
-type ClearTrailState = "done" | "now" | "later";
-type ClearTrailStep = { label: string; detail: string; state: ClearTrailState };
+type ClearResult = "present" | "partial" | "removed";
+type BedWorkResult = WeedResult | ClearResult;
 
 const WEED_RESULTS: Array<{ condition: WeedResult; label: string }> = [
   { condition: "heavy", label: "Still rough" },
   { condition: "mostly_clear", label: "Mostly clear" },
   { condition: "clear", label: "All clear" },
+];
+
+const CLEAR_RESULTS: Array<{ condition: ClearResult; label: string }> = [
+  { condition: "present", label: "Still there" },
+  { condition: "partial", label: "Partly removed" },
+  { condition: "removed", label: "Removed" },
 ];
 
 function todayIso() {
@@ -109,152 +112,22 @@ function displayCrop(turnover: AtlasSelectedCropTurnoverContext) {
   return `${turnover.variety} ${turnover.cropLabel}`;
 }
 
-function ClearTrail({ steps, label }: { steps: ClearTrailStep[]; label: string }) {
-  return (
-    <div className={styles.trail} aria-label={label}>
-      {steps.map((step) => (
-        <span data-state={step.state} key={`${step.label}-${step.detail}`}>
-          <b>{step.label}</b>
-          <small>{step.detail}</small>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function ClearReminder({
-  id,
-  label,
-  checked,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  checked: boolean;
-  onChange: () => void;
-}) {
-  return (
-    <div className={styles.turnoverReminderRow}>
-      <input id={id} type="checkbox" checked={checked} onChange={onChange} />
-      <label htmlFor={id}><strong>{label}</strong></label>
-    </div>
-  );
-}
-
-function SelectedCropClearCard({ task, turnover, assignee }: TurnoverProps) {
-  const crop = displayCrop(turnover);
-  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
-  const [saving, setSaving] = useState<"done" | "unfinished" | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const locations = turnover.locations.length ? turnover.locations : [turnover.collectionLabel];
-  const clearItems = [
-    ...locations.map((location) => `Remove ${crop} from ${location}`),
-    `Take ${crop} biomass to ${turnover.biomassDestination}`,
-  ];
-  const trail: ClearTrailStep[] = [
-    { label: "Harvest", detail: "finished", state: "done" },
-    { label: "Clear", detail: "today", state: "now" },
-    { label: "Compost", detail: turnover.biomassDestination, state: "later" },
-  ];
-
-  function toggleItem(index: number) {
-    const key = `clear-${index}`;
-    setCheckedItems((current) => ({ ...current, [key]: !current[key] }));
-  }
-
-  async function finish(outcome: "done" | "partial") {
-    try {
-      setSaving(outcome === "done" ? "done" : "unfinished");
-      setMessage(null);
-      const note = outcome === "done"
-        ? `${crop} removed from ${locations.join(" + ")}; biomass taken to ${turnover.biomassDestination}. Other foot-bed crops left in place.`
-        : `${crop} turnover unfinished; the crop remains active until the physical removal is completed.`;
-      await postAtlasTaskTransition({
-        taskId: task.task_id,
-        transition: outcome,
-        note,
-        laneKey: task.action_key || "clear",
-        workKey: task.action_key || "clear",
-        payload: {
-          weedManagementMode: "clear_selected_crop",
-          selectedCropCycleId: turnover.cropCycleId,
-          biomassDestination: turnover.biomassDestination,
-          wholeBedTurnover: false,
-        },
-      });
-      window.location.assign(returnTo(assignee.listPath));
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Atlas could not save the clearing result.");
-    } finally {
-      setSaving(null);
-    }
-  }
-
-  const busy = saving !== null;
-
-  return (
-    <main className={styles.shell} data-atlas-weed-card-template="task-card-editor-clear-variant">
-      <div className={styles.body}>
-        <AtlasTaskCardFrame
-          family="Clear"
-          familyDetail="bed turnover"
-          title={turnover.collectionLabel}
-          timing="After harvest · clearing due"
-          onDone={() => void finish("done")}
-          onUnfinished={() => void finish("partial")}
-          completionDisabled={busy}
-        >
-          <ClearTrail steps={trail} label={`${turnover.collectionLabel} crop-cycle clearing trail`} />
-
-          <section className={styles.bedNow}>
-            <span>Bed now</span>
-            <strong>{crop}</strong>
-            <div className={styles.bedFacts}>
-              <b>{titleCase(turnover.cycleState || "finished_harvest")}</b>
-              <b>{locations.join(" + ")}</b>
-            </div>
-          </section>
-
-          {turnover.bedMaps.map((map) => (
-            <section className={styles.bedMapSection} aria-label={`${map.objectLabel} crop map`} key={map.objectId}>
-              <header><span>Bed map</span><small>{map.objectLabel} · current crop occupancy</small></header>
-              <CropOccupancyBedMap map={map} variant="notebook" />
-            </section>
-          ))}
-
-          <section className={styles.turnoverMethod}>
-            <div className={styles.turnoverMethodKey}>tap to cross off</div>
-            <section className={styles.turnoverCategory}>
-              <header><h3>Clear</h3></header>
-              <div className={styles.turnoverCategoryRail}>
-                {clearItems.map((item, index) => (
-                  <ClearReminder
-                    id={`turnover-clear-${index}`}
-                    label={item}
-                    checked={Boolean(checkedItems[`clear-${index}`])}
-                    onChange={() => toggleItem(index)}
-                    key={item}
-                  />
-                ))}
-              </div>
-              {turnover.preserveOtherCrops ? (
-                <div className={styles.turnoverAvailability}>Selected crop only · foot-bed crops stay in place</div>
-              ) : null}
-            </section>
-          </section>
-
-          {message ? <p className={styles.turnoverMessage}>{message}</p> : null}
-        </AtlasTaskCardFrame>
-      </div>
-    </main>
-  );
-}
-
-function StandardWeedCardTaskFocus({ task, card, assignee }: StandardProps) {
+export default function WeedCardTaskFocus({ task, card, turnover, assignee }: Props) {
+  const clearMode = Boolean(turnover);
+  const selectedCrop = turnover ? displayCrop(turnover) : null;
+  const actionLabel = clearMode ? "Clear" : "Weed";
+  const actionDetail = selectedCrop || card.bedUseCategory;
+  const bedMaps = turnover?.bedMaps?.length
+    ? turnover.bedMaps
+    : card.bedMap
+      ? [card.bedMap]
+      : [];
   const activeCrops = card.occupancyGroups
     .flatMap((group) => group.cohorts)
     .sort((a, b) => lifecycleRank(a.lifeCycle) - lifecycleRank(b.lifeCycle) || a.displayLabel.localeCompare(b.displayLabel));
-  const [selectedCondition, setSelectedCondition] = useState<WeedResult | null>(null);
+  const resultOptions = clearMode ? CLEAR_RESULTS : WEED_RESULTS;
+
+  const [selectedResult, setSelectedResult] = useState<BedWorkResult | null>(null);
   const [logOpen, setLogOpen] = useState(false);
   const [note, setNote] = useState("");
   const [blockedOpen, setBlockedOpen] = useState(false);
@@ -262,7 +135,8 @@ function StandardWeedCardTaskFocus({ task, card, assignee }: StandardProps) {
   const [saving, setSaving] = useState<SavingAction>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function saveResult() {
+  async function saveWeedResult() {
+    const selectedCondition = selectedResult as WeedResult | null;
     if (!selectedCondition) {
       setMessage("Choose a result first.");
       return;
@@ -273,29 +147,62 @@ function StandardWeedCardTaskFocus({ task, card, assignee }: StandardProps) {
       setMessage("Log what you observed before saving the Weed result.");
       return;
     }
+    if (selectedCondition === "clear") {
+      await postAtlasWeedCardSession({
+        taskId: task.task_id,
+        minutes: null,
+        conditionAfter: "clear",
+        workDate: todayIso(),
+        note: observation,
+      });
+      return;
+    }
+    await postAtlasFinishPartialWeedCardDay({
+      taskId: task.task_id,
+      minutes: null,
+      conditionAfter: selectedCondition,
+      workDate: todayIso(),
+      note: observation,
+    });
+  }
+
+  async function saveClearResult() {
+    if (!turnover || !selectedResult) return;
+    const result = selectedResult as ClearResult;
+    const removed = result === "removed";
+    const stateNote = result === "partial"
+      ? `${selectedCrop} partly removed; the crop remains active until clearing is finished.`
+      : result === "present"
+        ? `${selectedCrop} is still present in ${turnover.collectionLabel}.`
+        : `${selectedCrop} removed from ${turnover.locations.join(" + ") || turnover.collectionLabel}; biomass taken to ${turnover.biomassDestination}.`;
+    await postAtlasTaskTransition({
+      taskId: task.task_id,
+      transition: removed ? "done" : "partial",
+      note: note.trim() || stateNote,
+      laneKey: "clear",
+      workKey: "clear",
+      payload: {
+        bedWorkAction: "clear",
+        selectedCropCycleId: turnover.cropCycleId,
+        biomassDestination: turnover.biomassDestination,
+        wholeBedTurnover: false,
+      },
+    });
+  }
+
+  async function saveResult() {
+    if (!selectedResult) {
+      setMessage("Choose a result first.");
+      return;
+    }
     try {
       setSaving("result");
       setMessage(null);
-      if (selectedCondition === "clear") {
-        await postAtlasWeedCardSession({
-          taskId: task.task_id,
-          minutes: null,
-          conditionAfter: "clear",
-          workDate: todayIso(),
-          note: observation,
-        });
-      } else {
-        await postAtlasFinishPartialWeedCardDay({
-          taskId: task.task_id,
-          minutes: null,
-          conditionAfter: selectedCondition,
-          workDate: todayIso(),
-          note: observation,
-        });
-      }
+      if (clearMode) await saveClearResult();
+      else await saveWeedResult();
       window.location.assign(returnTo(assignee.listPath));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Atlas could not save the bed’s current state.");
+      setMessage(error instanceof Error ? error.message : `Atlas could not save the ${actionLabel} result.`);
     } finally {
       setSaving(null);
     }
@@ -304,19 +211,35 @@ function StandardWeedCardTaskFocus({ task, card, assignee }: StandardProps) {
   async function finishBlocked() {
     const blocker = blockedNote.trim();
     if (!blocker) {
-      setMessage("Say what stopped the weeding.");
+      setMessage(`Say what stopped the ${actionLabel.toLowerCase()} work.`);
       return;
     }
     try {
       setSaving("blocked");
       setMessage(null);
-      await postAtlasFinishPartialWeedCardDay({
-        taskId: task.task_id,
-        minutes: null,
-        conditionAfter: selectedCondition || card.condition,
-        workDate: todayIso(),
-        note: `Blocked: ${blocker}`,
-      });
+      if (turnover) {
+        await postAtlasTaskTransition({
+          taskId: task.task_id,
+          transition: "partial",
+          note: `Blocked: ${blocker}`,
+          laneKey: "clear",
+          workKey: "clear",
+          payload: {
+            bedWorkAction: "clear",
+            selectedCropCycleId: turnover.cropCycleId,
+            biomassDestination: turnover.biomassDestination,
+            wholeBedTurnover: false,
+          },
+        });
+      } else {
+        await postAtlasFinishPartialWeedCardDay({
+          taskId: task.task_id,
+          minutes: null,
+          conditionAfter: (selectedResult as WeedResult | null) || card.condition,
+          workDate: todayIso(),
+          note: `Blocked: ${blocker}`,
+        });
+      }
       window.location.assign(returnTo(assignee.listPath));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Atlas could not record the blocker.");
@@ -326,12 +249,13 @@ function StandardWeedCardTaskFocus({ task, card, assignee }: StandardProps) {
   }
 
   const busy = saving !== null;
+  const completionNeedsNote = !clearMode;
   const completion = (
     <div className={styles.finish}>
       <button
         type="button"
         className={styles.saveResult}
-        disabled={busy || !selectedCondition || !note.trim()}
+        disabled={busy || !selectedResult || (completionNeedsNote && !note.trim())}
         onClick={() => void saveResult()}
       >
         {saving === "result" ? "Saving…" : "Save result"}
@@ -341,14 +265,14 @@ function StandardWeedCardTaskFocus({ task, card, assignee }: StandardProps) {
   );
 
   return (
-    <main className={styles.shell} data-atlas-weed-card-template="task-card-lab-v4-spatial-result">
+    <main className={styles.shell} data-atlas-weed-card-template="task-card-lab-v4-spatial-result" data-atlas-bed-work-action={actionLabel.toLowerCase()}>
       <div className={styles.body}>
         <AtlasTaskCardFrame
-          family="Weed"
-          familyDetail={card.bedUseCategory}
+          family={actionLabel}
+          familyDetail={actionDetail}
           title={card.objectLabel}
           subtitle={card.zoneLabel || undefined}
-          timing={`Last weeded · ${prettyDate(card.lastWeededOn) || "not recorded"}`}
+          timing={clearMode ? `Today · clear ${selectedCrop}` : `Last weeded · ${prettyDate(card.lastWeededOn) || "not recorded"}`}
           completion={completion}
         >
           {card.bedTrail.length ? (
@@ -365,15 +289,15 @@ function StandardWeedCardTaskFocus({ task, card, assignee }: StandardProps) {
 
           <section className={styles.bedNow}>
             <span>Bed now</span>
-            <strong>{card.mainCropLabel || "Unknown main crop"}</strong>
+            <strong>{clearMode ? selectedCrop : card.mainCropLabel || "Unknown main crop"}</strong>
           </section>
 
-          {card.bedMap ? (
-            <section className={styles.bedMapSection} aria-label={`${card.objectLabel} bed diagram`}>
-              <header><span>Bed map</span><small>current crop occupancy</small></header>
-              <CropOccupancyBedMap map={card.bedMap} variant="notebook" />
+          {bedMaps.map((map) => (
+            <section className={styles.bedMapSection} aria-label={`${map.objectLabel} bed diagram`} key={map.objectId}>
+              <header><span>Bed map</span><small>{bedMaps.length > 1 ? `${map.objectLabel} · current crop occupancy` : "current crop occupancy"}</small></header>
+              <CropOccupancyBedMap map={map} variant="notebook" />
             </section>
-          ) : null}
+          ))}
 
           {activeCrops.length ? (
             <section className={styles.activeCrops} aria-label={`${card.objectLabel} active crops`}>
@@ -382,11 +306,12 @@ function StandardWeedCardTaskFocus({ task, card, assignee }: StandardProps) {
                 {activeCrops.map((cohort) => {
                   const stale = cropNeedsFieldConfirmation(cohort);
                   const truthDate = cohort.observedQuantityDate || cohort.establishmentDate;
+                  const target = turnover?.cropCycleId === cohort.cropCycleId;
                   return (
-                    <article className={styles.cropRow} key={cohort.cropCycleId} data-needs-confirmation={stale ? "true" : "false"}>
+                    <article className={styles.cropRow} key={cohort.cropCycleId} data-needs-confirmation={stale ? "true" : "false"} data-bed-work-target={target ? "true" : "false"}>
                       <div className={styles.cropIdentity}>
                         <strong>{cohort.displayLabel}</strong>
-                        <small>{titleCase(cohort.lifeCycle)}</small>
+                        <small>{target && clearMode ? `Clear · ${titleCase(cohort.lifeCycle)}` : titleCase(cohort.lifeCycle)}</small>
                       </div>
                       <div className={styles.cropState}>
                         <b>{stale ? "Needs field confirmation" : cohort.stageLabel}</b>
@@ -412,9 +337,9 @@ function StandardWeedCardTaskFocus({ task, card, assignee }: StandardProps) {
 
           <section className={styles.results}>
             <header><span>How’d we do?</span></header>
-            <div className={styles.resultPills} role="group" aria-label="Weed result">
-              {WEED_RESULTS.map(({ condition, label }) => (
-                <button type="button" key={condition} data-active={selectedCondition === condition ? "true" : "false"} aria-pressed={selectedCondition === condition} disabled={busy} onClick={() => { setSelectedCondition(condition); setMessage(null); }}>
+            <div className={styles.resultPills} role="group" aria-label={`${actionLabel} result`}>
+              {resultOptions.map(({ condition, label }) => (
+                <button type="button" key={condition} data-active={selectedResult === condition ? "true" : "false"} aria-pressed={selectedResult === condition} disabled={busy} onClick={() => { setSelectedResult(condition); setMessage(null); }}>
                   {label}
                 </button>
               ))}
@@ -425,12 +350,12 @@ function StandardWeedCardTaskFocus({ task, card, assignee }: StandardProps) {
             </div>
             {logOpen ? (
               <div className={styles.logDrawer}>
-                <input className={styles.optionalNote} value={note} disabled={busy} onChange={(event) => { setNote(event.target.value); setMessage(null); }} placeholder="What did you observe?" aria-label="Weeding observation" required />
+                <input className={styles.optionalNote} value={note} disabled={busy} onChange={(event) => { setNote(event.target.value); setMessage(null); }} placeholder="What did you observe?" aria-label={`${actionLabel} observation`} required={!clearMode} />
               </div>
             ) : null}
             {blockedOpen ? (
               <div className={styles.blockedDrawer}>
-                <input value={blockedNote} disabled={busy} onChange={(event) => setBlockedNote(event.target.value)} placeholder="What stopped the work?" aria-label="Weeding blocker" />
+                <input value={blockedNote} disabled={busy} onChange={(event) => setBlockedNote(event.target.value)} placeholder="What stopped the work?" aria-label={`${actionLabel} blocker`} />
                 <button type="button" disabled={busy || !blockedNote.trim()} onClick={() => void finishBlocked()}>{saving === "blocked" ? "Saving…" : "Record blocker"}</button>
               </div>
             ) : null}
@@ -439,10 +364,4 @@ function StandardWeedCardTaskFocus({ task, card, assignee }: StandardProps) {
       </div>
     </main>
   );
-}
-
-export default function WeedCardTaskFocus(props: Props) {
-  if (props.turnover) return <SelectedCropClearCard {...props} turnover={props.turnover} />;
-  if (props.card) return <StandardWeedCardTaskFocus {...props} card={props.card} />;
-  return null;
 }
