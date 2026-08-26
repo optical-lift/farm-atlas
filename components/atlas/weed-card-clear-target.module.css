@@ -1,0 +1,14 @@
+.terminateCropRow {
+  border-color: rgba(117, 98, 145, 0.42) !important;
+  background: rgba(230, 223, 242, 0.94) !important;
+  box-shadow: inset 4px 0 0 rgba(117, 98, 145, 0.72);
+}
+
+.terminateCropRow strong {
+  color: #58486f;
+}
+
+.terminateCropRow small,
+.terminateCropRow b {
+  color: #715d8b !important;
+}
