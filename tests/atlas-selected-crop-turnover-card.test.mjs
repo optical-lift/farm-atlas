@@ -13,6 +13,9 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
   const focus = read("components/atlas/weed-card-task-focus.tsx");
   const route = read("app/api/atlas/weed-card/turnover/route.ts");
   const ordinaryRoute = read("app/api/atlas/weed-card/route.ts");
+  const map = read("components/atlas/crop-occupancy-bed-map.tsx");
+  const presenceRoute = read("app/api/atlas/objects/[objectKey]/crop-presence/route.ts");
+  const migration = read("supabase/migrations/20260826224830_atlas_bed_map_geometry_and_inline_crop_presence_v1.sql");
 
   assert.equal(existsSync(join(root, "components/atlas/selected-crop-turnover-task-focus.tsx")), false);
   assert.doesNotMatch(focus, /SelectedCropClearCard|ClearTrail|ClearReminder|tap to cross off|bed turnover/);
@@ -28,12 +31,13 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
   assert.match(focus, /clearMode \? "Terminate now" : "Bed now"/);
   assert.match(focus, /clearMode \? selectedCrop : card\.mainCropLabel/);
   assert.match(focus, /target && clearMode \? targetStyles\.terminateCropRow : ""/);
-  assert.match(focus, /target && clearMode \? "TERMINATE" : titleCase\(cohort\.lifeCycle\)/);
+  assert.match(focus, /target && clearMode \? "TERMINATE" : lifecycleLabel/);
+  assert.match(focus, /"Observed crop"/);
   assert.doesNotMatch(focus, /Termination target/);
   assert.doesNotMatch(focus, /Partial bed clearing/);
   assert.match(focus, /CropOccupancyBedMap/);
-  assert.match(focus, />Bed Components</);
-  assert.match(focus, /component\.availableForPlanting \? "Empty" : "Occupied"/);
+  assert.doesNotMatch(focus, />Bed Components</);
+  assert.doesNotMatch(focus, /data-bed-component="true"/);
   assert.match(focus, />Active Crops</);
   assert.match(focus, /MaintenanceDirectiveStrip/);
   assert.match(focus, />Recent passes</);
@@ -45,9 +49,22 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
   assert.match(focus, /Partly removed/);
   assert.match(focus, /Removed/);
 
+  assert.match(map, /compact-square-v2/);
+  assert.match(map, /\+ Add crop…/);
+  assert.match(map, /feature\.mapSide === "left"/);
+  assert.match(map, /feature\.mapSide === "right"/);
+  assert.match(map, /recordAtlasObservedCropPresence/);
+  assert.match(presenceRoute, /record_observed_crop_presence_for_member_v1/);
+  assert.match(presenceRoute, /x-atlas-intent/);
+  assert.match(migration, /'mapSide'/);
+  assert.match(migration, /when parent\.metadata->>'side' = 'left' then 'right'/);
+  assert.match(migration, /when parent\.metadata->>'side' = 'right' then 'left'/);
+  assert.match(migration, /inline_bed_crop_presence_v1/);
+
   assert.match(route, /weed_selected_crop_turnover_focus_v1/);
   assert.match(route, /object_crop_bed_map_v1/);
   assert.match(route, /bed_components_state_v1/);
+  assert.match(route, /features: mapFeatures/);
   assert.doesNotMatch(route, /const mapSources = capacitySurfaces/);
   assert.doesNotMatch(route, /capacitySurfaces\.map/);
   assert.match(route, /const locations = beds\.map/);
@@ -59,6 +76,7 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
 
   assert.match(ordinaryRoute, /bed_components_state_v1/);
   assert.match(ordinaryRoute, /componentsFromState/);
+  assert.match(ordinaryRoute, /features: mapFeatures/);
 
   for (const protectedTable of ["task_crop_cycles", "crop_cycles", "crop_placements", "growing_objects", "weed_cards", "weed_sessions", "task_objects"]) {
     assert.doesNotMatch(route, new RegExp(`from\\(\\\"${protectedTable}\\\"\\)`));
