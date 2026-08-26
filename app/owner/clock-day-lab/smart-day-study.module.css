@@ -1,0 +1,136 @@
+.smartRail {
+  position: relative;
+  min-width: 0;
+  height: 27px;
+}
+
+.smartRailBase,
+.smartRailProgress {
+  position: absolute;
+  left: 0;
+  top: 7px;
+  height: 4px;
+  border-radius: 999px;
+}
+
+.smartRailBase {
+  right: 0;
+  background: #e7e6ec;
+}
+
+.smartRailProgress {
+  z-index: 1;
+  background: #a39bd6;
+}
+
+.smartRailTaskDot {
+  position: absolute;
+  z-index: 2;
+  top: 7px;
+  width: 4px;
+  height: 4px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: rgba(84, 79, 122, 0.28);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.62);
+}
+
+.smartRailNowDot {
+  position: absolute;
+  z-index: 3;
+  top: 3px;
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%);
+  border: 2px solid #776dca;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92);
+}
+
+.smartRailNowLabel {
+  position: absolute;
+  top: 18px;
+  transform: translateX(-50%);
+  color: #736e91;
+  font-size: 7px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.consequenceStrip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 18px;
+  gap: 10px;
+  align-items: center;
+  min-height: 62px;
+  margin-top: 7px;
+  padding: 9px 11px;
+  border: 1px solid #dfdeea;
+  border-radius: 16px;
+  background: #f7f7fb;
+}
+
+.consequencePill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 0 8px;
+  border: 1px solid #d8d6e5;
+  border-radius: 999px;
+  background: #fff;
+  color: #615b87;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.consequenceCopy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.consequenceCopy strong {
+  overflow: hidden;
+  color: #303244;
+  font-size: 12px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.consequenceCopy small {
+  overflow: hidden;
+  color: #77786f;
+  font-size: 9px;
+  font-weight: 650;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.consequenceCaret {
+  color: #77786f;
+  font-size: 16px;
+  line-height: 1;
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .consequenceStrip {
+    grid-template-columns: auto minmax(0, 1fr) 14px;
+    gap: 8px;
+    padding-inline: 9px;
+  }
+
+  .consequencePill {
+    padding-inline: 7px;
+    font-size: 6.5px;
+  }
+
+  .consequenceCopy strong {
+    font-size: 11px;
+  }
+}
