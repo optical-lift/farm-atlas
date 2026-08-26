@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
@@ -19,14 +19,6 @@ type Props = {
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function prettyDate(dateIso: string | null | undefined) {
-  if (!dateIso) return "";
-  const date = new Date(`${dateIso.slice(0, 10)}T12:00:00Z`);
-  return Number.isNaN(date.getTime())
-    ? dateIso
-    : new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" }).format(date);
 }
 
 function returnDestination(fallback: string) {
@@ -85,12 +77,17 @@ export default function SiteLayoutTaskDetail({ task, assignee, initialReadiness,
     }
   }
 
-  const completion = executable ? (
-    <div className="atlas-setup-finish">
-      <div className="atlas-setup-finish-buttons">
-        <button type="button" className="primary" disabled={saving} onClick={() => void transition("done")}>{saving ? "Saving…" : "Done"}</button>
-        <button type="button" disabled={saving} onClick={() => setUnfinishedOpen((open) => !open)}>Unfinished</button>
-      </div>
+  const cardBody: ReactNode = (
+    <>
+      {tools.length ? (
+        <section className="atlas-setup-tools" aria-label="Tools">
+          <header><span>Tools</span></header>
+          <div className="atlas-setup-tool-rows">
+            {tools.map((tool) => <div className="atlas-setup-tool-row" key={tool}><strong>{tool}</strong></div>)}
+          </div>
+        </section>
+      ) : null}
+
       {unfinishedOpen ? (
         <section className="atlas-setup-unfinished">
           <strong>What happened?</strong>
@@ -100,58 +97,62 @@ export default function SiteLayoutTaskDetail({ task, assignee, initialReadiness,
           </div>
         </section>
       ) : null}
+
+      {!executable ? (
+        <section className="atlas-setup-waiting" aria-live="polite">
+          <small>Waiting</small>
+          <strong>{readinessFailed ? "This task didn’t load" : waiting?.title || "Not ready yet"}</strong>
+          <p>{readinessFailed ? "Go back to the day and open this task again." : waiting?.body || "This work is waiting on another farm condition."}</p>
+          {!readinessFailed && waiting?.detail ? <p>{waiting.detail}</p> : null}
+        </section>
+      ) : null}
+
       {message ? <p className="atlas-setup-message">{message}</p> : null}
-    </div>
-  ) : false;
+    </>
+  );
 
   return (
-    <main className="atlas-setup-shell" data-atlas-site-layout-card="true" data-atlas-setup-display="task-card-lab-v1">
+    <main className="atlas-setup-shell" data-atlas-site-layout-card="true" data-atlas-setup-display="task-card-lab-v2">
       <style>{`
         .atlas-setup-shell { min-height:100%; padding:18px 14px 120px; background:var(--atlas-app-background,#f4efe6); }
         .atlas-setup-body { width:min(100%,520px); margin:0 auto; }
-        .atlas-setup-tools { padding:20px 22px 24px; border-top:1px solid rgba(215,204,189,.62); }
-        .atlas-setup-tools > small, .atlas-setup-waiting > small {
-          display:block; color:#858bb8; font-size:10px; line-height:1; font-weight:950; letter-spacing:.11em; text-transform:uppercase;
+        .atlas-setup-tools { display:grid; border-top:1px solid rgba(215,204,189,.62); border-bottom:1px solid rgba(215,204,189,.62); }
+        .atlas-setup-tools > header { padding:14px 18px 9px; }
+        .atlas-setup-tools > header span,
+        .atlas-setup-waiting > small {
+          color:#858bb8; font-size:10px; line-height:1; font-weight:950; letter-spacing:.15em; text-transform:uppercase;
         }
-        .atlas-setup-tool-list { margin:12px 0 0; padding:0; list-style:none; display:grid; }
-        .atlas-setup-tool-list li { min-height:46px; display:flex; align-items:center; border-top:1px solid rgba(139,145,194,.16); color:#454858; font-size:15px; line-height:1.2; font-weight:820; }
-        .atlas-setup-tool-list li:first-child { border-top:0; }
-        .atlas-setup-waiting { display:grid; gap:8px; padding:20px 22px 24px; border-top:1px solid rgba(215,204,189,.62); }
+        .atlas-setup-tool-rows { display:grid; }
+        .atlas-setup-tool-row { min-height:46px; display:flex; align-items:center; padding:0 18px; border-top:1px solid rgba(223,215,202,.48); }
+        .atlas-setup-tool-row strong { color:var(--atlas-text); font-size:14px; line-height:1.15; font-weight:910; }
+        .atlas-setup-waiting { display:grid; gap:8px; padding:18px; border-bottom:1px solid rgba(215,204,189,.62); }
+        .atlas-setup-waiting > small { display:block; }
         .atlas-setup-waiting strong { color:#414352; font-size:19px; }
         .atlas-setup-waiting p { margin:0; color:#5f606a; font-size:14px; line-height:1.45; }
-        .atlas-setup-finish { display:grid; gap:10px; }
-        .atlas-setup-finish-buttons { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-        .atlas-setup-finish button { min-height:48px; border:1px solid rgba(139,145,194,.25); border-radius:15px; background:rgba(255,255,255,.82); color:#676a7d; padding:9px 10px; font:inherit; font-size:13px; font-weight:900; }
-        .atlas-setup-finish button.primary { background:rgba(214,225,177,.72); color:#515b34; }
-        .atlas-setup-unfinished { display:grid; gap:9px; padding:12px; border:1px solid rgba(207,196,179,.72); border-radius:15px; background:rgba(250,248,239,.82); }
+        .atlas-setup-unfinished { display:grid; gap:9px; margin:0 18px 14px; padding:12px; border:1px solid rgba(207,196,179,.72); border-radius:15px; background:rgba(250,248,239,.82); }
+        .atlas-setup-unfinished > strong { color:#4e504d; font-size:12px; }
         .atlas-setup-unfinished > div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
-        .atlas-setup-message { margin:0; color:#7b5549; font-size:11px; font-weight:800; }
-        @media (max-width:520px) { .atlas-setup-shell { padding-left:10px; padding-right:10px; } .atlas-setup-tools,.atlas-setup-waiting { padding-left:18px; padding-right:18px; } }
+        .atlas-setup-unfinished button { min-height:48px; border:1px solid rgba(139,145,194,.25); border-radius:15px; background:rgba(255,255,255,.82); color:#676a7d; padding:9px 10px; font:inherit; font-size:11px; line-height:1.1; font-weight:900; }
+        .atlas-setup-message { margin:0; padding:0 18px 14px; color:#7b5549; font-size:11px; font-weight:800; }
+        @media (max-width:520px) { .atlas-setup-shell { padding-left:10px; padding-right:10px; } }
       `}</style>
       <div className="atlas-setup-body">
-        <AtlasTaskCardFrame
-          family="Setup"
-          title={action}
-          subtitle={subtitle}
-          timing={task.due_date ? `Today · ${prettyDate(task.due_date)}` : undefined}
-          completion={completion}
-        >
-          {tools.length ? (
-            <section className="atlas-setup-tools" aria-label="Tools">
-              <small>Tools</small>
-              <ul className="atlas-setup-tool-list">{tools.map((tool) => <li key={tool}>{tool}</li>)}</ul>
-            </section>
-          ) : null}
-
-          {!executable ? (
-            <section className="atlas-setup-waiting" aria-live="polite">
-              <small>Waiting</small>
-              <strong>{readinessFailed ? "This task didn’t load" : waiting?.title || "Not ready yet"}</strong>
-              <p>{readinessFailed ? "Go back to the day and open this task again." : waiting?.body || "This work is waiting on another farm condition."}</p>
-              {!readinessFailed && waiting?.detail ? <p>{waiting.detail}</p> : null}
-            </section>
-          ) : null}
-        </AtlasTaskCardFrame>
+        {executable ? (
+          <AtlasTaskCardFrame
+            family="Setup"
+            title={action}
+            subtitle={subtitle}
+            onDone={() => void transition("done")}
+            onUnfinished={() => setUnfinishedOpen((open) => !open)}
+            completionDisabled={saving}
+          >
+            {cardBody}
+          </AtlasTaskCardFrame>
+        ) : (
+          <AtlasTaskCardFrame family="Setup" title={action} subtitle={subtitle} completion={false}>
+            {cardBody}
+          </AtlasTaskCardFrame>
+        )}
       </div>
     </main>
   );
