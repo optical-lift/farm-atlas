@@ -15,5 +15,10 @@ export function closeAtlasTaskDetail(fallbackPath: string) {
     return;
   }
 
+  if (typeof decision.destination !== "string") {
+    window.location.replace("/");
+    return;
+  }
+
   window.location.replace(decision.destination);
 }
