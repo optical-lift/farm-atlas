@@ -13,21 +13,21 @@ const client = read("lib/atlas/weed-card-client.ts");
 const sessionRoute = read("app/api/atlas/weed-card-session/route.ts");
 const partialRoute = read("app/api/atlas/weed-card-partial/route.ts");
 
-test("canonical weed work enters the persistent Weed Card family", () => {
+test("canonical weed work enters the persistent bed-work card", () => {
   assert.match(canonical, /function isWeedTask\(task: AtlasTaskCard\)/);
   assert.match(canonical, /task\.action_key === "weed"/);
   assert.match(canonical, /task\.task_type === "weed"/);
   assert.match(canonical, /WeedCardTaskLoader/);
   assert.match(loader, /\/api\/atlas\/weed-card\?taskId=/);
   assert.match(loader, /WeedCardTaskFocus/);
-  assert.match(loader, /if \(!turnoverMode && card\)/);
+  assert.match(loader, /if \(card\)/);
   assert.match(loader, /<WeedCardTaskFocus task=\{task\} card=\{card\}/);
 });
 
-test("production Weed Card uses bed truth with current use, history, active crops, and canonical geometry", () => {
+test("production bed-work card uses bed truth with current use, history, active crops, and canonical geometry", () => {
   assert.match(focus, /AtlasTaskCardFrame/);
-  assert.match(focus, /family="Weed"/);
-  assert.match(focus, /familyDetail=\{card\.bedUseCategory\}/);
+  assert.match(focus, /const actionLabel = clearMode \? "Clear" : "Weed"/);
+  assert.match(focus, /const actionDetail = selectedCrop \|\| card\.bedUseCategory/);
   assert.match(focus, /title=\{card\.objectLabel\}/);
   assert.match(focus, /subtitle=\{card\.zoneLabel/);
   assert.match(focus, /Last weeded ·/);
@@ -49,7 +49,7 @@ test("production Weed Card uses bed truth with current use, history, active crop
   assert.doesNotMatch(focus, /AssignedTaskExecutionShell|atlas-phone-top|atlas-phone-brand|atlas-note-plus/);
 });
 
-test("Weed Card reports canonical physical condition through one three-way Save result control", () => {
+test("Weed action reports canonical physical condition through the shared three-way Save result control", () => {
   assert.match(focus, /WEED_RESULTS/);
   assert.match(focus, /Still rough/);
   assert.match(focus, /Mostly clear/);
@@ -65,12 +65,13 @@ test("Weed Card reports canonical physical condition through one three-way Save 
   assert.match(client, /finish-partial-day|weed-card/);
 });
 
-test("Weed Card requires a written observation before Save result at UI and API boundaries", () => {
+test("Weed action still requires a written observation before Save result at UI and API boundaries", () => {
   assert.match(focus, /Log it/);
   assert.match(focus, /aria-expanded=\{logOpen\}/);
   assert.match(focus, /logOpen \? \(/);
   assert.match(focus, /Log what you observed/);
-  assert.match(focus, /disabled=\{busy \|\| !selectedCondition \|\| !note\.trim\(\)\}/);
+  assert.match(focus, /completionNeedsNote = !clearMode/);
+  assert.match(focus, /completionNeedsNote && !note\.trim\(\)/);
   assert.doesNotMatch(focus, /Note \(optional\)/);
   assert.match(sessionRoute, /weed_card_observation_required/);
   assert.match(partialRoute, /weed_card_observation_required/);
