@@ -24,7 +24,7 @@
 .itemCopy small { color: #8b8d84; font-size: 9px; line-height: 1.15; font-weight: 780; }
 .item[data-done="true"] .itemCopy strong { color: #858782; text-decoration: line-through; }
 .issueDrawer { position: relative; }
-.issueDrawer summary { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid rgba(139, 145, 194, 0.28); border-radius: 50%; color: #666b8f; background: rgba(255, 255, 255, 0.9); font-size: 20px; font-weight: 800; list-style: none; cursor: pointer; touch-action: manipulation; }
+.issueDrawer summary { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--atlas-purple-deep); border-radius: 50%; color: var(--atlas-purple-dark); background: var(--atlas-purple); font-size: 20px; font-weight: 800; list-style: none; cursor: pointer; touch-action: manipulation; }
 .issueDrawer summary::-webkit-details-marker { display: none; }
 .issueDrawer[open] { grid-column: 1 / -1; width: 100%; }
 .issuePanel { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; padding: 8px; border: 1px solid rgba(207, 196, 179, 0.72); border-radius: 12px; background: rgba(250, 248, 239, 0.78); }
