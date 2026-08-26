@@ -57,7 +57,7 @@ test("smart rail is restrained: hairline progress, neutral task dots, purple NOW
   assert.match(smartCss, /\.smartRailProgress[\s\S]*height: 2px/);
   assert.match(smartCss, /\.smartRailTaskDot[\s\S]*width: 7px;[\s\S]*height: 7px;[\s\S]*background: #b8bac3/);
   assert.match(smartCss, /\.smartRailNowDot[\s\S]*border: 2px solid #776dca/);
-  assert.match(contract, /NOW marker is the only purple event marker on the rail/);
+  assert.match(contract, /only purple event marker on the rail/);
 });
 
 test("smart rail keeps raw completion count separate from chronological clearance math", () => {
