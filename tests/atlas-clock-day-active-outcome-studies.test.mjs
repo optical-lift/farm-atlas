@@ -14,10 +14,10 @@ const contract = read("docs/architecture/clock-day-smart-rail-and-consequence-co
 const shell = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
 const globalHeaderCss = read("app/global-atlas-header.css");
 
-test("Clock Day lab exposes the one-page-scroll Clock study with an alternate Day rail", () => {
+test("Clock Day lab exposes the bounded focus-context Clock study with an alternate Day rail", () => {
   assert.match(page, /ActiveOutcomeStudies/);
-  assert.match(study, /A · Real-Atlas Clock \+ alternate Day rail/);
-  assert.match(study, /Clock owns the schedule, but the page owns the scroll\./);
+  assert.match(study, /A · Bounded Clock scrubber \+ alternate Day rail/);
+  assert.match(study, /Clock stays bounded\. Only its scrubber moves\./);
   assert.match(study, /DaySummaryPanel/);
   assert.match(study, /ViewToggle/);
   assert.match(study, /CalendarClockView/);
@@ -34,7 +34,7 @@ test("study remains fixture-only and cannot touch Worker state", () => {
   assert.doesNotMatch(study, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 });
 
-test("date header owns the compact Clock Day toggle and duplicate progress text is removed", () => {
+test("date header owns the compact Clock Day toggle and duplicate progress text stays removed", () => {
   assert.match(study, /function DayHeader\(\{ view, onChange \}/);
   assert.match(study, /<ViewToggle view={view} onChange={onChange} \/>/);
   assert.match(study, /useState<DayView>\("clock"\)/);
@@ -46,10 +46,10 @@ test("date header owns the compact Clock Day toggle and duplicate progress text 
   assert.doesNotMatch(study, /00:18/);
   assert.doesNotMatch(study, /dayCount/);
   assert.match(smartCss, /\.viewToggle/);
-  assert.match(contract, /toggle belongs in the date header where the old task-count block sat/);
+  assert.match(contract, /toggle belongs in the date header/);
 });
 
-test("smart rail is restrained: hairline progress, neutral task dots, purple NOW", () => {
+test("smart rail stays restrained: hairline progress, neutral task dots, purple NOW", () => {
   assert.match(study, /SMART_PROGRESS_FRONTIER = 43/);
   assert.match(study, /CURRENT_TIME_POSITION = 69/);
   assert.match(study, /DAY_TASK_POSITIONS = \[6, 13, 21, 29, 38, 47, 55, 64, 72, 84, 94\]/);
@@ -70,7 +70,7 @@ test("smart rail keeps raw completion count separate from chronological clearanc
   assert.match(contract, /later completion cannot erase earlier chronological debt/);
 });
 
-test("UNLOCKS is a robust branch instead of Holding or a missed-window badge", () => {
+test("UNLOCKS remains a robust branch instead of Holding or a missed-window badge", () => {
   assert.match(study, /consequenceSource/);
   assert.match(study, /STILL OPEN/);
   assert.match(study, /consequenceUnlock/);
@@ -83,36 +83,61 @@ test("UNLOCKS is a robust branch instead of Holding or a missed-window badge", (
   assert.match(contract, /full downstream task\/event name, allowed to wrap to multiple lines/);
 });
 
-test("Clock uses the document scroll instead of a nested scroll viewport", () => {
-  assert.match(study, /window\.addEventListener\("scroll", observePageScroll/);
-  assert.match(study, /getBoundingClientRect\(\)/);
-  assert.match(study, /window\.innerHeight \/ 2/);
-  assert.match(study, /scrollIntoView\(\{ behavior, block: "center" \}\)/);
-  assert.doesNotMatch(study, /onScroll=/);
-  assert.doesNotMatch(smartCss, /overflow-y:\s*auto/);
-  assert.doesNotMatch(smartCss, /scroll-snap-type/);
-  assert.match(contract, /`page_scroll_owner = document`/);
-  assert.match(contract, /must not create a nested vertical scroll viewport/);
+test("Clock screen is bounded and the scrubber starts below Return to now", () => {
+  assert.match(study, /boundedPhone/);
+  assert.match(study, /boundedDaySurface/);
+  assert.match(study, /<button type="button" disabled={inspectingNow} onClick=\{\(\) => settleOn\(NOW_TASK_INDEX\)\}>Return to now<\/button>/);
+  assert.match(study, /className={smartStyles\.clockLensViewport}/);
+  assert.match(smartCss, /\.boundedPhone[\s\S]*height: 820px[\s\S]*grid-template-rows: auto minmax\(0, 1fr\)/);
+  assert.match(smartCss, /\.boundedDaySurface\[data-view="clock"\][\s\S]*overflow: hidden/);
+  assert.match(smartCss, /\.clockView[\s\S]*grid-template-rows: auto minmax\(0, 1fr\)[\s\S]*overflow: hidden/);
+  assert.match(smartCss, /\.clockLensViewport[\s\S]*overflow: hidden[\s\S]*touch-action: none/);
+  assert.match(contract, /scrubber begins immediately below that header/);
+  assert.match(contract, /`clock_scroll_owner = bounded_scrubber`/);
 });
 
-test("inspection is neutral while purple remains reserved for factual NOW", () => {
+test("Clock scrubber captures wheel touch and keyboard inspection without page-scroll listeners", () => {
+  assert.match(study, /onWheel={handleWheel}/);
+  assert.match(study, /onTouchStart={handleTouchStart}/);
+  assert.match(study, /onTouchMove={handleTouchMove}/);
+  assert.match(study, /onKeyDown={handleKeyDown}/);
+  assert.match(study, /ArrowDown/);
+  assert.match(study, /ArrowUp/);
+  assert.match(study, /role="slider"/);
+  assert.doesNotMatch(study, /window\.addEventListener\("scroll"/);
+  assert.doesNotMatch(study, /scrollIntoView/);
+  assert.match(contract, /wheel, swipe, arrow key, or direct task tap inside the scrubber changes the inspected focus/);
+});
+
+test("focus-context lens keeps every task represented while allocating more space near inspection", () => {
+  assert.match(study, /function chronicleFocusWeight\(distance: number\)/);
+  assert.match(study, /if \(distance === 0\) return 4\.2/);
+  assert.match(study, /return 0\.78/);
+  assert.match(study, /TASKS\.map\(\(task, index\) =>/);
+  assert.match(study, /style=\{\{ flexGrow: weight \}\}/);
+  assert.match(study, /focusDistanceTier/);
+  assert.match(smartCss, /\.clockLensRow[\s\S]*flex-basis: 0[\s\S]*min-height: 0/);
+  assert.match(contract, /`z_floor > 0` guarantees distant tasks remain represented/);
+  assert.match(contract, /never by deleting the beginning or end of the scheduled day/);
+  assert.match(contract, /first and last scheduled tasks must remain visibly represented/);
+});
+
+test("inspection remains neutral while purple stays reserved for factual NOW", () => {
   assert.match(study, /data-inspected={isInspected \? "true" : "false"}/);
   assert.match(study, /data-now={isNow \? "true" : "false"}/);
   assert.match(smartCss, /\.calendarTaskBlock\[data-inspected="true"\][\s\S]*background: #fff/);
   assert.match(smartCss, /\.calendarTaskBlock\[data-now="true"\][\s\S]*border-left: 4px solid #776dca/);
   assert.match(study, /feedNow/);
   assert.match(study, /feedInspected/);
-  assert.match(contract, /merely scrolling past or inspecting another task must not turn that task purple/);
+  assert.match(contract, /merely scrubbing to or inspecting another task must not turn that task purple/);
 });
 
-test("Clock compresses dead time while preserving governed times and durations", () => {
-  assert.match(study, /elasticGapHeight/);
-  assert.match(study, /Math\.sqrt\(minutes\)/);
-  assert.match(study, /elasticTaskHeight/);
-  assert.match(study, /Math\.log1p\(minutes\)/);
-  assert.match(study, /formatMinutes\(minutes\)/);
+test("bounded lens keeps governed times authoritative instead of literal pixel-time geometry", () => {
+  assert.match(study, /minuteOfDay/);
+  assert.match(study, /durationMinutes/);
   assert.match(study, /data-placement-source={task\.placementSource}/);
-  assert.match(contract, /pixel distance in the large Clock is not itself authoritative elapsed time/);
+  assert.match(contract, /does not assign equal pixels to equal minutes/);
+  assert.match(contract, /pixel distance and row height inside the bounded lens are not authoritative elapsed time/);
   assert.match(contract, /compact smart rail remains the linear real-time overview/);
 });
 
@@ -124,12 +149,13 @@ test("Clock still owns fitting flexible work into the day", () => {
   assert.match(contract, /Clock choreography/);
 });
 
-test("yesterday and tomorrow navigation exists at both ends of the day", () => {
+test("yesterday and tomorrow navigation remains outside the scrubber at both ends of the day", () => {
   assert.match(study, /<DayNavigation position="top" \/>/);
   assert.match(study, /<DayNavigation position="bottom" \/>/);
   assert.match(study, /‹ Tue 25/);
   assert.match(study, /Thu 27 ›/);
   assert.match(contract, /both the top and bottom/);
+  assert.match(contract, /remain outside the scrubber/);
 });
 
 test("shared Atlas shell keeps + on Home and gives every other route a governed exit X", () => {
