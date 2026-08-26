@@ -49,12 +49,12 @@ test("execution facts stay visible instead of hiding useful work behind an Instr
   assert.match(shell, /TaskPrimaryResultControls/);
 });
 
-test("Weed Card presents canonical physical-bed truth and real bed geometry directly", () => {
+test("bed-work card presents canonical physical-bed truth and real bed geometry directly", () => {
   assert.match(weed, /CropOccupancyBedMap/);
-  assert.match(weed, /card\.bedMap/);
+  assert.match(weed, /card\?\.bedMap/);
   assert.match(weed, /variant="notebook"/);
-  assert.match(weed, /AtlasTaskCardFrame/);
-  assert.match(weed, /card\.bedTrail/);
+  assert.equal((weed.match(/<AtlasTaskCardFrame/g) || []).length, 1);
+  assert.match(weed, /card\?\.bedTrail/);
   assert.match(weed, />Active Crops</);
   assert.match(weed, /className=\{styles\.bedNow\}/);
 });
