@@ -22,24 +22,37 @@ test("Setup is a standalone Task Card Editor family rather than an old generic t
   assert.match(detail, /AtlasTaskCardFrame/);
   assert.match(detail, /family="Setup"/);
   assert.match(detail, /data-atlas-site-layout-card="true"/);
-  assert.match(detail, /data-atlas-setup-display="task-card-lab-v1"/);
+  assert.match(detail, /data-atlas-setup-display="task-card-lab-v2"/);
   assert.doesNotMatch(detail, /WorkerReadyAssignedTaskExecutionShell/);
   assert.doesNotMatch(detail, /TaskExecutionBrief/);
   assert.doesNotMatch(detail, /atlas-phone-top|atlas-phone-brand|atlas-note-plus/);
 });
 
-test("Setup mockup grammar puts real place and dimensions in the subtitle and tools in simple rows", () => {
+test("Setup mockup grammar puts real place and dimensions in the subtitle and tools in flat Editor rows", () => {
   assert.match(detail, /metadata\.display_subject/);
   assert.match(detail, /metadata\.display_detail/);
   assert.match(detail, /const subtitle = \[subject, detail\]/);
-  assert.match(detail, />Tools</);
-  assert.match(detail, /atlas-setup-tool-list/);
+  assert.match(detail, /<header><span>Tools<\/span><\/header>/);
+  assert.match(detail, /atlas-setup-tool-rows/);
+  assert.match(detail, /atlas-setup-tool-row/);
+  assert.match(detail, /padding:14px 18px 9px/);
+  assert.match(detail, /letter-spacing:\.15em/);
+  assert.match(detail, /min-height:46px/);
+  assert.doesNotMatch(detail, /timing=\{/);
   assert.doesNotMatch(detail, /metadata\.execution_how/);
   assert.doesNotMatch(detail, /metadata\.layout_dimensions/);
   assert.doesNotMatch(detail, />Steps</);
   assert.doesNotMatch(detail, /Bed width/);
   assert.doesNotMatch(detail, /Walkway width/);
   assert.doesNotMatch(detail, /Tools \+ materials/);
+});
+
+test("Setup uses the canonical Task Card frame finish controls instead of a Setup-only footer fork", () => {
+  assert.match(detail, /onDone=\{\(\) => void transition\("done"\)\}/);
+  assert.match(detail, /onUnfinished=\{\(\) => setUnfinishedOpen/);
+  assert.match(detail, /completionDisabled=\{saving\}/);
+  assert.doesNotMatch(detail, /atlas-setup-finish-buttons/);
+  assert.doesNotMatch(detail, /className="primary"/);
 });
 
 test("Setup tools come from the canonical action recipe instead of specimen strings embedded in the component", () => {
