@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { atlasApiError, requireAtlasApiAccess } from "@/lib/atlas/api-access";
-import type { AtlasBedMap, AtlasCropOccupancyCohort } from "@/lib/atlas/weed-card-contract";
+import type { AtlasBedComponentState, AtlasBedMap, AtlasCropOccupancyCohort } from "@/lib/atlas/weed-card-contract";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +65,12 @@ function cohortsFromGroups(value: unknown) {
   });
 }
 
+function componentsFromState(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [] as AtlasBedComponentState[];
+  const components = (value as { components?: unknown }).components;
+  return Array.isArray(components) ? components as AtlasBedComponentState[] : [];
+}
+
 export async function GET(request: Request) {
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
@@ -95,7 +101,6 @@ export async function GET(request: Request) {
   }
 
   const beds = Array.isArray(focus.beds) ? focus.beds : [];
-  const capacitySurfaces = Array.isArray(focus.capacitySurfaces) ? focus.capacitySurfaces : [];
   const selected = focus.selectedCrop ?? {};
   const cropCycleId = text(selected.cropCycleId);
   if (!cropCycleId) return atlasApiError(409, "turnover_crop_missing", "The crop to clear is not linked to this task.");
@@ -114,12 +119,10 @@ export async function GET(request: Request) {
   const doneWhen = text(metadata.execution_done_when)
     || `The ${selectedCrop} crop body is removed and its biomass is in the ${destination}.`;
 
-  // The bed-work card is owned by the physical bed being tended. A linked arch or
-  // trellis is a capacity surface used by the crop, not a replacement card subject.
-  // Active Crops still merges both scopes so Atlas can show the vine on its support.
-  const mapSources = beds.length ? beds : capacitySurfaces;
-  const mapResults = await Promise.all(mapSources.flatMap((surface) => {
-    const objectId = text(surface.objectId);
+  // A Clear action is owned by the bed being worked. Structures such as arches are
+  // components contained by that bed; they carry occupancy but never become task surfaces.
+  const mapResults = await Promise.all(beds.flatMap((bed) => {
+    const objectId = text(bed.objectId);
     if (!objectId) return [];
     return [supabase.rpc("object_crop_bed_map_v1", { p_object_id: objectId })];
   }));
@@ -128,9 +131,22 @@ export async function GET(request: Request) {
     return [result.data as AtlasBedMap];
   });
 
+  const componentResults = await Promise.all(beds.flatMap((bed) => {
+    const objectId = text(bed.objectId);
+    if (!objectId) return [];
+    return [supabase.rpc("bed_components_state_v1", { p_bed_id: objectId })];
+  }));
+  const components = componentResults.flatMap((result) => result.error ? [] : componentsFromState(result.data));
+
   const cohorts = new Map<string, AtlasCropOccupancyCohort>();
-  for (const scope of [...beds, ...capacitySurfaces]) {
-    for (const cohort of cohortsFromGroups(scope.occupancyGroups)) {
+  for (const bed of beds) {
+    for (const cohort of cohortsFromGroups(bed.occupancyGroups)) {
+      const key = cohort.cropCycleId || `${cohort.displayLabel}:${cohort.placementId || ""}`;
+      if (!cohorts.has(key)) cohorts.set(key, cohort);
+    }
+  }
+  for (const component of components) {
+    for (const cohort of cohortsFromGroups(component.occupancyGroups)) {
       const key = cohort.cropCycleId || `${cohort.displayLabel}:${cohort.placementId || ""}`;
       if (!cohorts.has(key)) cohorts.set(key, cohort);
     }
@@ -139,9 +155,9 @@ export async function GET(request: Request) {
     ? [{ groupKind: "observed", groupDate: null, groupLabel: "Current crops", cohorts: Array.from(cohorts.values()) }]
     : [];
 
-  const locations = capacitySurfaces.map((surface) => text(surface.objectLabel)).filter(Boolean);
   const firstBed = beds[0];
   const firstCardId = beds.map((bed) => text(bed.cardId)).find(Boolean);
+  const locations = beds.map((bed) => text(bed.objectLabel)).filter(Boolean);
 
   return privateJson({
     ok: true,
@@ -152,12 +168,13 @@ export async function GET(request: Request) {
       cardId: firstCardId || `bed-work:${taskId}`,
       passId: null,
       passStatus: "closed",
-      objectId: text(firstBed?.objectId) || text(mapSources[0]?.objectId),
+      objectId: text(firstBed?.objectId),
       objectKey: beds.map((bed) => text(bed.objectKey)).filter(Boolean).join("+") || collectionLabel,
       objectLabel: collectionLabel,
       zoneLabel,
       mainCropLabel: selectedCrop,
       occupancyGroups,
+      components,
       bedMap: bedMaps[0] || null,
       condition: "clear",
       targetCondition: "clear",
