@@ -50,7 +50,7 @@ const [
 
 test('Weed cannot save a result without both condition and observation on client or server', () => {
   assert.match(weedCard, /disabled=\{busy \|\| !selectedCondition \|\| !note\.trim\(\)\}/);
-  assert.match(weedCard, /Log what you observed before saving the Weed result/);
+  assert.match(weedCard, /Log what you observed before saving the \$\{family\} result/);
   assert.match(weedCard, /"Save result"/);
   assert.match(weedCard, /Log it/);
   assert.match(weedCard, /Blocked/);
@@ -103,7 +103,8 @@ test('worker bed maps use the approved square-foot mockup grammar when dimension
   assert.match(squareFootCss, /\.mapBlockActive/);
   assert.match(squareFootCss, /rgba\(214, 225, 177, 0\.34\)/);
   assert.match(squareFootCss, /border-right: 1px dashed/);
-  assert.match(weedCard, /CropOccupancyBedMap map=\{card\.bedMap\} variant="notebook"/);
+  assert.match(weedCard, /bedMaps\.map/);
+  assert.match(weedCard, /<CropOccupancyBedMap map=\{map\} variant="notebook"/);
 });
 
 test('treatment target and Saturday Farm Round membership are source-controlled', () => {
