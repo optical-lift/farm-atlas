@@ -3,15 +3,11 @@
   gap: 14px;
 }
 
-.destinationSection,
-.workSection {
+.destinationSection {
   display: grid;
   gap: 12px;
   padding: 17px 18px;
   border-top: 1px solid rgba(215, 204, 189, 0.62);
-}
-
-.workSection {
   border-bottom: 1px solid rgba(215, 204, 189, 0.62);
 }
 
@@ -28,9 +24,7 @@
 
 .contactCard {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: center;
+  gap: 13px;
   padding: 15px 16px;
   border: 1px solid rgba(111, 97, 76, 0.16);
   border-radius: 18px;
@@ -59,21 +53,23 @@
   font-weight: 760;
 }
 
-.phone {
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 9px 12px;
-  border: 1px solid rgba(139, 145, 194, 0.26);
-  border-radius: 999px;
-  background: rgba(239, 237, 244, 0.74);
+.voiceCall {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: baseline;
   color: #5d6078;
   font-size: 11px;
-  line-height: 1;
+  line-height: 1.25;
+}
+
+.voiceCall span {
+  font-weight: 820;
+}
+
+.voiceCall strong {
+  font-size: 12px;
   font-weight: 950;
-  text-decoration: none;
-  white-space: nowrap;
 }
 
 .specialNote {
@@ -94,61 +90,12 @@
   text-transform: uppercase;
 }
 
-.specialNote p,
-.primaryInstruction,
-.secondaryInstruction {
-  margin: 0;
-}
-
 .specialNote p {
+  margin: 0;
   color: #555866;
   font-size: 12px;
   line-height: 1.35;
   font-weight: 800;
-}
-
-.primaryInstruction {
-  color: var(--atlas-text);
-  font-size: 16px;
-  line-height: 1.3;
-  font-weight: 900;
-}
-
-.timeRoute {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
-}
-
-.timeRoute span {
-  display: grid;
-  gap: 3px;
-  padding: 11px 8px;
-  border: 1px solid rgba(111, 97, 76, 0.15);
-  border-radius: 14px;
-  background: rgba(246, 242, 230, 0.5);
-  text-align: center;
-}
-
-.timeRoute b {
-  color: var(--atlas-text);
-  font-size: 14px;
-  line-height: 1;
-  font-weight: 950;
-}
-
-.timeRoute small {
-  color: #777871;
-  font-size: 9px;
-  line-height: 1.15;
-  font-weight: 820;
-}
-
-.secondaryInstruction {
-  color: #666861;
-  font-size: 12px;
-  line-height: 1.4;
-  font-weight: 760;
 }
 
 .reusePanel {
@@ -203,18 +150,9 @@
 }
 
 @media (max-width: 520px) {
-  .destinationSection,
-  .workSection {
+  .destinationSection {
     padding-left: 16px;
     padding-right: 16px;
-  }
-
-  .contactCard {
-    grid-template-columns: 1fr;
-  }
-
-  .phone {
-    width: fit-content;
   }
 
   .reuseGrid {
