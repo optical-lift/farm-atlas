@@ -99,7 +99,8 @@ function isSprayTreatmentTask(task: AtlasTaskCard) {
 }
 
 function isWeedTask(task: AtlasTaskCard) {
-  return task.action_key === "weed"
+  return task.metadata?.canonical_card_family === "weed"
+    || task.action_key === "weed"
     || task.task_type === "weed"
     || task.metadata?.work_route === "weed"
     || /^weed\b/i.test(task.title.trim());
