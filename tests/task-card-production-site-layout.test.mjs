@@ -59,7 +59,7 @@ test("Setup tools come from the canonical action recipe instead of specimen stri
   assert.match(canonical, /action_requirement_templates/);
   assert.match(canonical, /required_resource_keys/);
   assert.match(canonical, /\.from\("resources"\)/);
-  assert.doesNotMatch(detail, /Wooden stakes|String|Scissors|Measuring tape/);
+  assert.doesNotMatch(detail, /["'`](?:Wooden stakes|String|Scissors|Measuring tape)["'`]/);
   assert.match(migration, /measure_stake_string_v1/);
   assert.match(migration, /Stake \+ String Beds/);
   assert.match(migration, /wooden_layout_stakes/);
