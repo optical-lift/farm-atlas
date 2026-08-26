@@ -26,7 +26,7 @@ test("Task Focus navigation normalizes the legacy top control to an X", () => {
   assert.match(boundary, /content: "×"/);
 });
 
-test("only the canonical generic assigned-task path adopts the boundary in this step", () => {
+test("canonical generic execution and Farm Round both consume Task Focus navigation without sharing execution semantics", () => {
   const workerReady = read("components/atlas/worker-ready-assigned-task-execution-shell.tsx");
   const registry = read("components/atlas/canonical-assigned-task-detail.tsx");
 
@@ -35,6 +35,6 @@ test("only the canonical generic assigned-task path adopts the boundary in this 
   assert.match(workerReady, /return <WaitingScreen/);
   assert.match(workerReady, /return <ReadinessFailureScreen/);
   assert.match(workerReady, /<TaskFocusNavigationBoundary fallbackPath=\{props\.assignee\.listPath\}>\s*<CanonicalAssignedTaskExecutionSurface \{\.\.\.props\} \/>/s);
-  assert.match(registry, /if \(isFarmRoundTask\(props\.task\)\) return <FarmRoundTaskDetail/);
+  assert.match(registry, /if \(isFarmRoundTask\(props\.task\)\) \{[\s\S]*<TaskFocusNavigationBoundary fallbackPath=\{props\.assignee\.listPath\} showCloseControl>[\s\S]*<FarmRoundTaskDetail \{\.\.\.props\} \/>[\s\S]*<\/TaskFocusNavigationBoundary>/);
   assert.match(registry, /return <WorkerReadyAssignedTaskExecutionShell/);
 });
