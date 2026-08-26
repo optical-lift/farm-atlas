@@ -180,7 +180,10 @@ export async function commitAtlasTaskTransition(input: AtlasTaskTransitionReques
   if (input.transition === "done" || input.transition === "checklist_done") {
     rememberDependencyReleaseFlash(data);
   }
-  if (input.transition === "done" || (input.transition === "blocked" && data.problemHandoff === true)) {
+  if (input.transition === "done") {
+    leaveCompletedTaskPage();
+  }
+  if (input.transition === "blocked" && data.problemHandoff === true) {
     leaveCompletedTaskPage();
   }
 
