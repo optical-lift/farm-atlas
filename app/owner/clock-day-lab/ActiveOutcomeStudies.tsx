@@ -24,6 +24,13 @@ const TASKS: TaskDatum[] = [
     amount: "30 min · Heavy",
   },
   {
+    family: "TIDY",
+    title: "Farmhouse",
+    place: "Interior",
+    amount: "20 min · Standard",
+    unlock: "Thursday Ticketed Night · Aug 27",
+  },
+  {
     family: "POT UP",
     title: "Sweet William",
     place: "Grow Room",
@@ -39,7 +46,8 @@ const TASKS: TaskDatum[] = [
   },
 ];
 
-const ACTIVE_TASK = TASKS[2];
+const ACTIVE_TASK = TASKS[3];
+const SLIPPED_OUTCOME_TASK = TASKS[2];
 
 function AppHeader() {
   return (
@@ -51,13 +59,33 @@ function AppHeader() {
   );
 }
 
+function DayInstrument() {
+  return (
+    <div className={styles.dayInstrument} aria-label="Merged day progress and current window instrument fixture">
+      <div className={styles.dayDone}><strong>6 / 11</strong><span>done</span></div>
+      <div className={styles.dayClock}>
+        <div className={styles.dayClockTrack} aria-hidden="true">
+          <i className={styles.dayClockElapsed} />
+          <b className={styles.dayClockDot} />
+        </div>
+        <small className={styles.dayClockNow}>4:06 PM</small>
+      </div>
+      <div className={styles.dayWindow}><span>WINDOW</span><strong>00:18</strong></div>
+    </div>
+  );
+}
+
 function DayHeader() {
   return (
     <section className={styles.dayHeader}>
-      <div className={styles.dayIdentity}>
-        <span>WEDNESDAY</span>
-        <strong>Aug 26</strong>
+      <div className={styles.dayHeaderTop}>
+        <div className={styles.dayIdentity}>
+          <span>WEDNESDAY</span>
+          <strong>Aug 26</strong>
+        </div>
+        <div className={styles.dayCount}><strong>11</strong><span>tasks</span><small>6 done</small></div>
       </div>
+      <DayInstrument />
     </section>
   );
 }
@@ -94,24 +122,20 @@ function UnlockBranch({ label }: { label: string }) {
   );
 }
 
-function TimeRollerDeck() {
+function CurrentMoveRoller() {
   return (
-    <div className={styles.timeDeck} aria-label="Rolling current-time viewport fixture">
-      <div className={styles.dayMeter}>
-        <span>6 / 11</span>
-        <i aria-hidden="true"><b /></i>
-      </div>
+    <div className={styles.timeDeck} aria-label="Rolling current scheduled move viewport fixture">
       <div className={styles.rollerViewport}>
         <div className={styles.rollerFadeTop} aria-hidden="true" />
         <div className={styles.rollerRow} data-position="previous">
-          <span>3:24</span><strong>MG11</strong><small>WEED</small>
+          <span>3:30 PM</span><small>WEED</small><strong>MG11</strong>
         </div>
         <div className={styles.rollerSelection} aria-hidden="true" />
         <div className={styles.rollerRow} data-position="current">
-          <span>3:42 PM</span><strong>Sweet William</strong><small>00:18</small>
+          <span>4:06 PM</span><small>POT UP</small><strong>Sweet William</strong>
         </div>
         <div className={styles.rollerRow} data-position="next">
-          <span>4:00</span><strong>BB10</strong><small>SPRAY</small>
+          <span>7:00 PM</span><small>SPRAY</small><strong>BB10 · Bermuda Pass 1</strong>
         </div>
         <div className={styles.rollerFadeBottom} aria-hidden="true" />
       </div>
@@ -121,8 +145,8 @@ function TimeRollerDeck() {
 
 function OutcomeScorecard() {
   return (
-    <section className={styles.outcomeBox} aria-label="Rolling time deck with current move and unlock scorecard fixture">
-      <TimeRollerDeck />
+    <section className={styles.outcomeBox} aria-label="Current move roller plus most consequential slipped task scorecard fixture">
+      <CurrentMoveRoller />
       <div className={styles.scoreBody}>
         <div className={styles.scoreCount}>
           <strong>11</strong>
@@ -130,9 +154,9 @@ function OutcomeScorecard() {
           <small>6 done</small>
         </div>
         <div className={styles.scoreMove}>
-          <span>POT UP</span>
-          <strong>Sweet William</strong>
-          <div className={styles.scoreUnlock}><span>UNLOCKS</span><b>Harvest Stems · May 6</b></div>
+          <span>{SLIPPED_OUTCOME_TASK.family}</span>
+          <strong>{SLIPPED_OUTCOME_TASK.title}</strong>
+          <div className={styles.scoreUnlock}><span>UNLOCKS</span><b>{SLIPPED_OUTCOME_TASK.unlock}</b></div>
         </div>
       </div>
     </section>
@@ -162,7 +186,7 @@ function OrderedTaskRail() {
 
 function RollerScorecardDaySurface() {
   return (
-    <section className={styles.daySurface} aria-label="Rolling scorecard clock and ordered task rail fixture">
+    <section className={styles.daySurface} aria-label="Merged day instrument, rolling NOW task, slipped outcome score, and ordered task rail fixture">
       <OutcomeScorecard />
       <OrderedTaskRail />
     </section>
@@ -188,18 +212,18 @@ export default function ActiveOutcomeStudies() {
       aria-labelledby="active-outcome-studies-heading"
     >
       <header className={styles.sectionHeader}>
-        <span>CLOCK + DAYBOOK STUDY 7 · ROLLING SCORECARD CLOCK</span>
-        <h2 id="active-outcome-studies-heading">Time rolls through the scorecard. Work stays on the rail.</h2>
-        <p>The separate day-progress row and separate NOW sliver collapse into one pale-purple roller deck inside the existing scorecard footprint. The white score area gets shorter; the ordered task rail begins immediately below.</p>
+        <span>CLOCK + DAYBOOK STUDY 8 · NOW VS CONSEQUENCE</span>
+        <h2 id="active-outcome-studies-heading">The clock points forward. The scorecard remembers what slipped.</h2>
+        <p>Day completion, current time, and the active work-window countdown share one compact instrument under the date. The purple roller shows the scheduled move passing through NOW. The white score below independently carries the slipped task with the most important downstream unlock.</p>
       </header>
       <div className={styles.dataNote}>
         <strong>Fixture truth boundary</strong>
-        <span>Sweet William is the real open 3-tray / 600-plant pot-up task. Its crop profile carries a May 1–June 30, 2027 harvest-watch window. “Harvest Stems · May 6,” the rolling timestamps, and the 00:18 countdown are editor fixtures, not materialized production timing.</span>
+        <span>Sweet William is the current-move design fixture. Tidy · Farmhouse → Thursday Ticketed Night · Aug 27 demonstrates the independent slipped-outcome selector. The rolling timestamps, 4:06 PM, 00:18, event date, and May 6 harvest label are editor fixtures rather than live task projections.</span>
       </div>
       <div className={styles.singleGallery}>
         <Study
-          label="A · Rolling time deck inside the scorecard"
-          note="The purple cap is a fixed viewport: earlier time drifts out above, the crisp center row is NOW, and the next work state waits below. The whole scorecard stays compact instead of stacking another clock card."
+          label="A · Forward clock + slipped consequence score"
+          note="The shallow instrument under the date answers where the day is now. The purple roller answers what should be happening now. The white score answers which already-missed move matters most."
         >
           <RollerScorecardDaySurface />
         </Study>
