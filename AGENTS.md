@@ -20,3 +20,15 @@ Implementation implications:
 - Outdoor eligibility belongs to the conveyor, Quick Wins, and recovery routing. Never interrupt indoor time with a tiny outside task merely because its duration is short.
 - Prefer stored task metadata such as `work_environment` and `heat_exposure` over text inference when those fields exist.
 - Describe completions as changes to farm state when possible, not merely checkbox completion.
+
+# Task execution truth gate
+
+> **Unknown required execution data is a blocker, not worker-facing task content.**
+
+Before creating or releasing any worker-executable task, verify every fact the worker needs to execute it safely and unambiguously. This includes, when applicable, the actual product or material, tool/resource, quantity or mixing ratio, application or handling method, destination, physical boundary, and any required safety or timing constraint.
+
+- Never approve or release a worker task containing placeholders such as `method resource not attached`, `do not infer product`, `TBD`, `unknown`, or equivalent unresolved execution language.
+- Never infer a missing product, material, resource, ratio, method, destination, or other required execution fact from task wording, a similar task, a UI mockup, or general knowledge.
+- Search canonical Atlas data first. If a required fact is still unknown, stop task creation/release and ask the Owner for that fact.
+- Preserve the unresolved work as owner-side planning or a blocked dependency if needed, but do not present it as executable worker work until the missing fact is canonically recorded.
+- Once supplied, store reusable method/resource truth in the appropriate canonical resource or requirement contract and let tasks reference it rather than duplicating or improvising instructions.
