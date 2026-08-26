@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import AssignedTaskExecutionShell from "@/components/atlas/assigned-task-execution-shell";
+import SelectedCropTurnoverTaskFocus from "@/components/atlas/selected-crop-turnover-task-focus";
 import WeedCardTaskFocus from "@/components/atlas/weed-card-task-focus";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -14,7 +15,11 @@ type Props = {
   assignee: AtlasAssigneeConfig;
 };
 
-export default function WeedCardTaskLoader({ task, childTasks, assignee }: Props) {
+function isSelectedCropTurnover(task: AtlasTaskCard) {
+  return task.metadata?.weed_management_mode === "clear_selected_crop";
+}
+
+function StandardWeedCardTaskLoader({ task, childTasks, assignee }: Props) {
   const [card, setCard] = useState<AtlasWeedCardContext | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -50,4 +55,9 @@ export default function WeedCardTaskLoader({ task, childTasks, assignee }: Props
       </section>
     </main>
   );
+}
+
+export default function WeedCardTaskLoader(props: Props) {
+  if (isSelectedCropTurnover(props.task)) return <SelectedCropTurnoverTaskFocus {...props} />;
+  return <StandardWeedCardTaskLoader {...props} />;
 }
