@@ -142,15 +142,20 @@ function completedTaskReturnPath() {
 }
 
 function leaveCompletedTaskPage() {
-  if (typeof window === "undefined") return;
-  const taskFocusPath = window.location.pathname === "/task" || window.location.pathname.startsWith("/task-focus/");
-  if (!taskFocusPath) return;
+  if (typeof window === "undefined" || window.location.pathname !== "/task") return;
   const destination = completedTaskReturnPath();
 
   // A fresh document navigation is intentional. Safari and installed PWAs may
   // restore the previous feed from the back-forward cache when history.back()
-  // is used, leaving a successfully completed or handed-off task visible and clickable.
+  // is used, leaving a successfully completed task visible and clickable.
   window.setTimeout(() => window.location.replace(destination), 0);
+}
+
+function leaveProblemHandoffTaskPage() {
+  if (typeof window === "undefined") return;
+  const taskFocusPath = window.location.pathname === "/task" || window.location.pathname.startsWith("/task-focus/");
+  if (!taskFocusPath) return;
+  window.setTimeout(() => window.location.replace(completedTaskReturnPath()), 0);
 }
 
 /**
@@ -184,7 +189,7 @@ export async function commitAtlasTaskTransition(input: AtlasTaskTransitionReques
     leaveCompletedTaskPage();
   }
   if (input.transition === "blocked" && data.problemHandoff === true) {
-    leaveCompletedTaskPage();
+    leaveProblemHandoffTaskPage();
   }
 
   return data;
