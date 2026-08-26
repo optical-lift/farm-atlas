@@ -44,26 +44,16 @@ export default function DestinationContactCardSpecimen() {
                 Springfield, MO 65803
               </address>
             </div>
-            <a className={styles.phone} href="tel:+14173807830">(417) 380-7830</a>
+            <div className={styles.voiceCall}>
+              <span>Call from Google Voice:</span>
+              <strong>(417) 380-7830</strong>
+            </div>
           </div>
 
           <div className={styles.specialNote}>
             <span>Note</span>
             <p>Text Mary from Elm’s Google Voice number before leaving.</p>
           </div>
-        </section>
-
-        <section className={styles.workSection}>
-          <div className={styles.sectionLabel}>Work</div>
-          <p className={styles.primaryInstruction}>Harvest supplemental flowers for the Aug. 27 paid event.</p>
-          <div className={styles.timeRoute} aria-label="Travel and work timing">
-            <span><b>30 min</b><small>drive there</small></span>
-            <span><b>45 min</b><small>harvest</small></span>
-            <span><b>30 min</b><small>drive back</small></span>
-          </div>
-          <p className={styles.secondaryInstruction}>
-            Give yourself about 45 minutes to harvest. Keep the visit focused on the work so the full trip stays inside the time limit.
-          </p>
         </section>
       </DominionCardFrame>
 
