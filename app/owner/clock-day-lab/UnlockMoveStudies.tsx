@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import styles from "./unlock-move-studies.module.css";
 
 const DAY_ITEMS = [
@@ -31,7 +33,7 @@ function DayRail() {
   );
 }
 
-function Frame({ label, children }: { label: string; children: React.ReactNode }) {
+function Frame({ label, children }: { label: string; children: ReactNode }) {
   return (
     <section className={styles.study}>
       <div className={styles.studyLabel}>{label}</div>
