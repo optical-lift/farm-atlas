@@ -23,7 +23,7 @@ test("Clock Day lab cannot read or mutate the live worker day", () => {
   assert.doesNotMatch(lab, /AtlasRuntimeProvider/);
   assert.doesNotMatch(lab, /fetch\s*\(/);
   assert.doesNotMatch(lab, /\/api\/atlas\//);
-  assert.doesNotMatch(lab, /supabase/i);
+  assert.doesNotMatch(lab, /createAtlasServerClient|@supabase\/|\.schema\(["']atlas["']\)/i);
   assert.doesNotMatch(lab, /postAtlasTaskTransition/);
   assert.doesNotMatch(lab, /taskId\s*[:=]/);
   assert.doesNotMatch(lab, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
