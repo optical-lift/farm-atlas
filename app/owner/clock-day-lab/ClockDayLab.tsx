@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import styles from "./clock-day-lab.module.css";
 
@@ -112,7 +112,7 @@ function TimeCard({ state }: { state: FixtureState }) {
   );
 }
 
-function PhoneFrame({ children, label }: { children: React.ReactNode; label: string }) {
+function PhoneFrame({ children, label }: { children: ReactNode; label: string }) {
   return (
     <section className={styles.concept}>
       <div className={styles.conceptLabel}>{label}</div>
