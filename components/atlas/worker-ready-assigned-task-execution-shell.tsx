@@ -5,6 +5,7 @@ import Link from "next/link";
 import AssignedTaskExecutionShell, {
   type AssignedTaskExecutionShellProps,
 } from "@/components/atlas/assigned-task-execution-shell";
+import TaskFocusNavigationBoundary from "@/components/atlas/task-focus-navigation-boundary";
 import ThinCropCycleTaskCard, { isThinCropCycleTask } from "@/components/atlas/thin-crop-cycle-task-card";
 import type { WorkerReadinessPresentation, WorkerReadinessResponse } from "@/lib/atlas/worker-readiness";
 
@@ -92,21 +93,30 @@ function ReadinessFailureScreen({ props }: { props: AssignedTaskExecutionShellPr
   );
 }
 
+function withTaskFocusNavigation(content: React.ReactNode, fallbackPath: string) {
+  return (
+    <TaskFocusNavigationBoundary fallbackPath={fallbackPath}>
+      {content}
+    </TaskFocusNavigationBoundary>
+  );
+}
+
 export default function WorkerReadyAssignedTaskExecutionShell({ initialReadiness, ...props }: Props) {
   // Owner-assigned work retains its management surface. Worker-assigned work is
   // rendered only after the server has already resolved the canonical execution warrant.
   const workerFacing = props.assignee.key !== "owner";
+  const fallbackPath = props.assignee.listPath;
 
-  if (!workerFacing) return <AssignedTaskExecutionShell {...props} />;
+  if (!workerFacing) return withTaskFocusNavigation(<AssignedTaskExecutionShell {...props} />, fallbackPath);
   if (!initialReadiness.ok || typeof initialReadiness.executable !== "boolean") {
-    return <ReadinessFailureScreen props={props} />;
+    return withTaskFocusNavigation(<ReadinessFailureScreen props={props} />, fallbackPath);
   }
   if (initialReadiness.executable !== true) {
-    return <WaitingScreen props={props} presentation={initialReadiness.presentation} />;
+    return withTaskFocusNavigation(<WaitingScreen props={props} presentation={initialReadiness.presentation} />, fallbackPath);
   }
   if (isThinCropCycleTask(props.task)) {
-    return <ThinCropCycleTaskCard task={props.task} assignee={props.assignee} />;
+    return withTaskFocusNavigation(<ThinCropCycleTaskCard task={props.task} assignee={props.assignee} />, fallbackPath);
   }
 
-  return <AssignedTaskExecutionShell {...props} />;
+  return withTaskFocusNavigation(<AssignedTaskExecutionShell {...props} />, fallbackPath);
 }
