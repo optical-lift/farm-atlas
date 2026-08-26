@@ -75,7 +75,7 @@ jobs:
       - name: Verify shared database consumer custody
         run: node --test tests/shared-db-custody-consumer.test.mjs
 
-      - name: Prove live Atlas database authority
+      - name: Prove live Atlas source custody
         run: bash scripts/verify-shared-db-atlas-authority.sh
 
   validate:
