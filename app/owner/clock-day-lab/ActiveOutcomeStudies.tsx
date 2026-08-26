@@ -58,11 +58,6 @@ function DayHeader() {
         <span>WEDNESDAY</span>
         <strong>Aug 26</strong>
       </div>
-      <div className={styles.dayCount}><strong>11</strong><span>tasks</span><small>6 done</small></div>
-      <div className={styles.dayProgress}>
-        <span>6 of 11 finished</span>
-        <i aria-hidden="true"><b /></i>
-      </div>
     </section>
   );
 }
@@ -99,40 +94,46 @@ function UnlockBranch({ label }: { label: string }) {
   );
 }
 
-function OutcomeScorecard() {
+function TimeRollerDeck() {
   return (
-    <section className={styles.outcomeBox} aria-label="Current move and unlock scorecard fixture">
-      <div className={styles.scoreCount}>
-        <strong>11</strong>
-        <span>tasks</span>
-        <small>6 done</small>
+    <div className={styles.timeDeck} aria-label="Rolling current-time viewport fixture">
+      <div className={styles.dayMeter}>
+        <span>6 / 11</span>
+        <i aria-hidden="true"><b /></i>
       </div>
-      <div className={styles.scoreMove}>
-        <span>POT UP</span>
-        <strong>Sweet William</strong>
-        <div className={styles.scoreUnlock}><span>UNLOCKS</span><b>Harvest Stems · May 6</b></div>
+      <div className={styles.rollerViewport}>
+        <div className={styles.rollerFadeTop} aria-hidden="true" />
+        <div className={styles.rollerRow} data-position="previous">
+          <span>3:24</span><strong>MG11</strong><small>WEED</small>
+        </div>
+        <div className={styles.rollerSelection} aria-hidden="true" />
+        <div className={styles.rollerRow} data-position="current">
+          <span>3:42 PM</span><strong>Sweet William</strong><small>00:18</small>
+        </div>
+        <div className={styles.rollerRow} data-position="next">
+          <span>4:00</span><strong>BB10</strong><small>SPRAY</small>
+        </div>
+        <div className={styles.rollerFadeBottom} aria-hidden="true" />
       </div>
-    </section>
+    </div>
   );
 }
 
-function NowSliver() {
+function OutcomeScorecard() {
   return (
-    <section className={styles.nowSliver} aria-label="Compact current-time instrument fixture">
-      <div className={styles.instrumentRow}>
-        <div className={styles.timeBar} aria-label="Fixture workday from 7 AM to 8 PM with current time at 3:42 PM">
-          <span>7 AM</span>
-          <div className={styles.timeTrack} aria-hidden="true">
-            <i className={styles.elapsedTime} />
-            <b className={styles.currentTimeDot} />
-          </div>
-          <span>8 PM</span>
+    <section className={styles.outcomeBox} aria-label="Rolling time deck with current move and unlock scorecard fixture">
+      <TimeRollerDeck />
+      <div className={styles.scoreBody}>
+        <div className={styles.scoreCount}>
+          <strong>11</strong>
+          <span>tasks</span>
+          <small>6 done</small>
         </div>
-        <div className={styles.windowClock}><span>WINDOW</span><strong>00:18</strong></div>
-      </div>
-      <div className={styles.nowTaskStrip}>
-        <div className={styles.nowStamp}><span>NOW</span><strong>3:42 PM</strong></div>
-        <div className={styles.nowTask}><span>POT UP</span><strong>Sweet William</strong></div>
+        <div className={styles.scoreMove}>
+          <span>POT UP</span>
+          <strong>Sweet William</strong>
+          <div className={styles.scoreUnlock}><span>UNLOCKS</span><b>Harvest Stems · May 6</b></div>
+        </div>
       </div>
     </section>
   );
@@ -159,11 +160,10 @@ function OrderedTaskRail() {
   );
 }
 
-function SciFiDaySurface() {
+function RollerScorecardDaySurface() {
   return (
-    <section className={styles.daySurface} aria-label="Outcome scorecard, NOW sliver, and ordered task rail fixture">
+    <section className={styles.daySurface} aria-label="Rolling scorecard clock and ordered task rail fixture">
       <OutcomeScorecard />
-      <NowSliver />
       <OrderedTaskRail />
     </section>
   );
@@ -188,20 +188,20 @@ export default function ActiveOutcomeStudies() {
       aria-labelledby="active-outcome-studies-heading"
     >
       <header className={styles.sectionHeader}>
-        <span>CLOCK + DAYBOOK STUDY 6 · SCI-FI NOW SLIVER</span>
-        <h2 id="active-outcome-studies-heading">The outcome is the score. The clock is an instrument.</h2>
-        <p>The familiar scorecard carries the task count, current move, and distant unlock. A compact time instrument sits directly below it, while the ordered line-and-dot feed remains fully live and readable underneath.</p>
+        <span>CLOCK + DAYBOOK STUDY 7 · ROLLING SCORECARD CLOCK</span>
+        <h2 id="active-outcome-studies-heading">Time rolls through the scorecard. Work stays on the rail.</h2>
+        <p>The separate day-progress row and separate NOW sliver collapse into one pale-purple roller deck inside the existing scorecard footprint. The white score area gets shorter; the ordered task rail begins immediately below.</p>
       </header>
       <div className={styles.dataNote}>
         <strong>Fixture truth boundary</strong>
-        <span>Sweet William is the real open 3-tray / 600-plant pot-up task. Its crop profile carries a May 1–June 30, 2027 harvest-watch window. “Harvest Stems · May 6,” 3:42 PM, and the 00:18 countdown are editor fixtures, not materialized production timing.</span>
+        <span>Sweet William is the real open 3-tray / 600-plant pot-up task. Its crop profile carries a May 1–June 30, 2027 harvest-watch window. “Harvest Stems · May 6,” the rolling timestamps, and the 00:18 countdown are editor fixtures, not materialized production timing.</span>
       </div>
       <div className={styles.singleGallery}>
         <Study
-          label="A · Scorecard + NOW sliver + ordered rail"
-          note="The clock is only a thin live instrument. It points at the current task without turning earlier incomplete work into faded history."
+          label="A · Rolling time deck inside the scorecard"
+          note="The purple cap is a fixed viewport: earlier time drifts out above, the crisp center row is NOW, and the next work state waits below. The whole scorecard stays compact instead of stacking another clock card."
         >
-          <SciFiDaySurface />
+          <RollerScorecardDaySurface />
         </Study>
       </div>
     </section>
