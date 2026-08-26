@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import styles from "./active-outcome-studies.module.css";
 
 type TaskDatum = {
@@ -76,7 +78,7 @@ function DayHeader() {
   );
 }
 
-function Phone({ children }: { children: React.ReactNode }) {
+function Phone({ children }: { children: ReactNode }) {
   return (
     <div className={styles.phone}>
       <AppHeader />
@@ -162,7 +164,7 @@ function ClockSpine() {
   );
 }
 
-function Study({ label, note, children }: { label: string; note: string; children: React.ReactNode }) {
+function Study({ label, note, children }: { label: string; note: string; children: ReactNode }) {
   return (
     <section className={styles.study}>
       <header className={styles.studyLabel}><strong>{label}</strong><span>{note}</span></header>
