@@ -15,7 +15,9 @@ test("selected-crop Clear communicates scope through the crop row instead of war
   assert.match(focus, /clearMode \? "Terminate now" : "Bed now"/);
   assert.match(focus, /clearMode \? selectedCrop : card\.mainCropLabel/);
   assert.match(focus, /target && clearMode \? targetStyles\.terminateCropRow : ""/);
-  assert.match(focus, /target && clearMode \? "TERMINATE" : titleCase\(cohort\.lifeCycle\)/);
+  assert.match(focus, /const lifecycleLabel =/);
+  assert.match(focus, /"Observed crop"/);
+  assert.match(focus, /target && clearMode \? "TERMINATE" : lifecycleLabel/);
   assert.match(focus, /data-bed-work-target=\{target \? "true" : "false"\}/);
 
   assert.doesNotMatch(focus, /Termination target/);
