@@ -114,10 +114,10 @@ export async function GET(request: Request) {
   const doneWhen = text(metadata.execution_done_when)
     || `The ${selectedCrop} crop body is removed and its biomass is in the ${destination}.`;
 
-  // The crop is physically on the arch surfaces, while the ordinary bed crops live
-  // in the beds at their feet. The exact bed-work card needs both truths at once:
-  // the maps follow the target crop surfaces, while Active Crops merges both scopes.
-  const mapSources = capacitySurfaces.length ? capacitySurfaces : beds;
+  // The bed-work card is owned by the physical bed being tended. A linked arch or
+  // trellis is a capacity surface used by the crop, not a replacement card subject.
+  // Active Crops still merges both scopes so Atlas can show the vine on its support.
+  const mapSources = beds.length ? beds : capacitySurfaces;
   const mapResults = await Promise.all(mapSources.flatMap((surface) => {
     const objectId = text(surface.objectId);
     if (!objectId) return [];
