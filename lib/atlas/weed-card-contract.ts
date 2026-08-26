@@ -51,12 +51,15 @@ export type AtlasCropOccupancyGroup = {
   cohorts: AtlasCropOccupancyCohort[];
 };
 
+export type AtlasBedMapSide = "left" | "right" | "top" | "bottom";
+
 export type AtlasBedComponentState = {
   componentId: string;
   componentKey: string;
   componentLabel: string;
   componentKind: string;
   positionLabel?: string | null;
+  mapSide?: AtlasBedMapSide | null;
   occupancyState: "occupied" | "empty" | string;
   availableForPlanting: boolean;
   occupancyGroups: AtlasCropOccupancyGroup[];
@@ -103,6 +106,15 @@ export type AtlasBedMapPlacement = {
   positionConfidence: "unknown" | "low" | "medium" | "high";
 };
 
+export type AtlasBedMapFeature = {
+  featureId: string;
+  featureKey: string;
+  featureLabel: string;
+  featureKind: string;
+  mapSide: AtlasBedMapSide | null;
+  occupancyGroups: AtlasCropOccupancyGroup[];
+};
+
 export type AtlasBedMap = {
   objectId: string;
   objectKey: string;
@@ -117,6 +129,7 @@ export type AtlasBedMap = {
   bottomEdge: AtlasMapEdge | null;
   orientationSource?: string | null;
   placements: AtlasBedMapPlacement[];
+  features?: AtlasBedMapFeature[];
 };
 
 export type AtlasSelectedCropTurnoverContext = {

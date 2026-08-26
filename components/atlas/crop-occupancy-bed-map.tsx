@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 
+import { recordAtlasObservedCropPresence } from "@/lib/atlas/bed-crop-presence-client";
 import type {
   AtlasBedMap,
+  AtlasBedMapFeature,
   AtlasBedMapPlacement,
   AtlasMapEdge,
 } from "@/lib/atlas/weed-card-contract";
@@ -33,6 +35,15 @@ function establishmentDateLabel(value: string | null | undefined) {
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function todayIso() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 function quantityLabel(placement: AtlasBedMapPlacement) {
@@ -163,12 +174,97 @@ function placementTouchesBlock(placement: AtlasBedMapPlacement, startFt: number,
   return true;
 }
 
+function featureCropLabels(feature: AtlasBedMapFeature) {
+  return Array.from(new Set(feature.occupancyGroups.flatMap((group) => group.cohorts.map((cohort) => cohort.displayLabel))));
+}
+
+function InlineCropAdder({ map, onAdded }: { map: AtlasBedMap; onAdded: (label: string) => void }) {
+  const [cropLabel, setCropLabel] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const label = cropLabel.trim();
+    if (!label || saving) return;
+    try {
+      setSaving(true);
+      setMessage(null);
+      const nonce = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const result = await recordAtlasObservedCropPresence({
+        objectKey: map.objectKey,
+        cropLabel: label,
+        observedDate: todayIso(),
+        idempotencyKey: `bed-crop:${map.objectKey}:${nonce}`,
+      });
+      onAdded(result.cropLabel);
+      setCropLabel("");
+      setMessage(`${result.cropLabel} added`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Atlas could not add this crop.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form className={square.addCrop} onSubmit={(event) => void submit(event)} data-atlas-inline-crop-entry="true">
+      <input
+        value={cropLabel}
+        disabled={saving}
+        onChange={(event) => { setCropLabel(event.target.value); setMessage(null); }}
+        placeholder="+ Add crop…"
+        aria-label={`Add crop observed in ${map.objectLabel}`}
+        maxLength={120}
+      />
+      {cropLabel.trim() ? <button type="submit" disabled={saving}>{saving ? "Adding…" : "Add"}</button> : null}
+      {message ? <small role="status">{message}</small> : null}
+    </form>
+  );
+}
+
+function CompactSquareBedMap({ map, lengthFt, widthFt }: { map: AtlasBedMap; lengthFt: number; widthFt: number }) {
+  const [addedLabels, setAddedLabels] = useState<string[]>([]);
+  const cropLabels = Array.from(new Set([...map.placements.map((placement) => placement.displayLabel), ...addedLabels]));
+  const leftFeatures = (map.features ?? []).filter((feature) => feature.mapSide === "left");
+  const rightFeatures = (map.features ?? []).filter((feature) => feature.mapSide === "right");
+  const dimensionLabel = `${Math.round(widthFt * 12)}\" × ${Math.round(lengthFt * 12)}\"`;
+
+  function renderArch(features: AtlasBedMapFeature[], side: "left" | "right") {
+    const arch = features.find((feature) => feature.featureKind === "arch");
+    if (!arch) return <span className={square.featureSpacer} aria-hidden="true" />;
+    const crops = featureCropLabels(arch);
+    const description = [arch.featureLabel, crops.length ? crops.join(", ") : null].filter(Boolean).join(": ");
+    return <div className={`${square.archFeature} ${side === "left" ? square.archLeft : square.archRight}`} aria-label={description} title={description} />;
+  }
+
+  return (
+    <section className={square.root} data-atlas-square-foot-bed-map="compact-square-v2" aria-label={`Bed map for ${map.objectLabel}, ${dimensionLabel}.`}>
+      <div className={square.compactGeometry}>
+        {renderArch(leftFeatures, "left")}
+        <div className={square.compactBedSquare}>
+          <span className={square.dimensionTag}>{dimensionLabel}</span>
+          <div className={square.compactCropList} aria-label="Crops currently recorded in this bed">
+            {cropLabels.length ? cropLabels.map((label) => <span key={label}>{label}</span>) : <em>No crop recorded</em>}
+          </div>
+          <InlineCropAdder map={map} onAdded={(label) => setAddedLabels((current) => current.includes(label) ? current : [...current, label])} />
+        </div>
+        {renderArch(rightFeatures, "right")}
+      </div>
+    </section>
+  );
+}
+
 function SquareFootBedMap({ map }: { map: AtlasBedMap }) {
   const lengthFt = map.lengthFt && map.lengthFt > 0 ? map.lengthFt : null;
   const widthFt = map.widthFt && map.widthFt > 0 ? map.widthFt : null;
   const [selectedBlock, setSelectedBlock] = useState(0);
+  const [addedLabels, setAddedLabels] = useState<string[]>([]);
 
   if (!lengthFt || !widthFt) return null;
+
+  const isCompactSquare = Math.abs(lengthFt - widthFt) <= 0.2 && Math.max(lengthFt, widthFt) <= 4.25;
+  if (isCompactSquare) return <CompactSquareBedMap map={map} lengthFt={lengthFt} widthFt={widthFt} />;
 
   const blockFt = Math.min(3, lengthFt);
   const blocks = Array.from({ length: Math.ceil(lengthFt / blockFt) }, (_, index) => {
@@ -178,21 +274,14 @@ function SquareFootBedMap({ map }: { map: AtlasBedMap }) {
   const activeIndex = Math.min(selectedBlock, Math.max(0, blocks.length - 1));
   const activeBlock = blocks[activeIndex];
   const activePlacements = map.placements.filter((placement) => placementTouchesBlock(placement, activeBlock.start, activeBlock.end, lengthFt));
-  const activeNames = Array.from(new Set(activePlacements.map((placement) => placement.displayLabel)));
+  const activeNames = Array.from(new Set([...activePlacements.map((placement) => placement.displayLabel), ...addedLabels]));
   const activeArea = Math.max(1, Math.round(widthFt * (activeBlock.end - activeBlock.start)));
   const widthCells = Math.max(1, Math.round(widthFt));
   const hasUncertainPlacement = activePlacements.some((placement) => !placementCoverageIsExact(placement, lengthFt));
 
   return (
-    <section
-      className={square.root}
-      data-atlas-square-foot-bed-map="mockup-v1"
-      aria-label={`Square-foot crop map for ${map.objectLabel}, ${numberLabel(widthFt)} feet by ${numberLabel(lengthFt)} feet.`}
-    >
-      <div
-        className={square.bedRectangle}
-        style={{ gridTemplateColumns: `repeat(${blocks.length}, minmax(0, 1fr))` }}
-      >
+    <section className={square.root} data-atlas-square-foot-bed-map="mockup-v2" aria-label={`Square-foot crop map for ${map.objectLabel}, ${numberLabel(widthFt)} feet by ${numberLabel(lengthFt)} feet.`}>
+      <div className={square.bedRectangle} style={{ gridTemplateColumns: `repeat(${blocks.length}, minmax(0, 1fr))` }}>
         {blocks.map((block, blockIndex) => {
           const placements = map.placements.filter((placement) => placementTouchesBlock(placement, block.start, block.end, lengthFt));
           const exact = placements.some((placement) => placementCoverageIsExact(placement, lengthFt));
@@ -200,36 +289,21 @@ function SquareFootBedMap({ map }: { map: AtlasBedMap }) {
           const mark = placements.length ? (exact ? "o" : "·") : "";
           const labels = Array.from(new Set(placements.map((placement) => placement.displayLabel)));
           return (
-            <button
-              type="button"
-              className={blockIndex === activeIndex ? square.mapBlockActive : square.mapBlock}
-              key={block.start}
-              onClick={() => setSelectedBlock(blockIndex)}
-              aria-label={`${numberLabel(block.start)} to ${numberLabel(block.end)} feet${labels.length ? `, ${labels.join(", ")}` : ", no mapped crop"}`}
-              style={{ gridTemplateColumns: `repeat(${widthCells}, minmax(0, 1fr))` }}
-            >
+            <button type="button" className={blockIndex === activeIndex ? square.mapBlockActive : square.mapBlock} key={block.start} onClick={() => setSelectedBlock(blockIndex)} aria-label={`${numberLabel(block.start)} to ${numberLabel(block.end)} feet${labels.length ? `, ${labels.join(", ")}` : ", no mapped crop"}`} style={{ gridTemplateColumns: `repeat(${widthCells}, minmax(0, 1fr))` }}>
               {Array.from({ length: cells }, (_, squareIndex) => <span key={squareIndex}>{mark}</span>)}
             </button>
           );
         })}
+        <div className={square.addCropWide}><InlineCropAdder map={map} onAdded={(label) => setAddedLabels((current) => current.includes(label) ? current : [...current, label])} /></div>
       </div>
 
-      <div className={square.mapScale} aria-hidden="true">
-        <span>0 ft</span>
-        <span>{numberLabel(lengthFt / 2)} ft</span>
-        <span>{numberLabel(lengthFt)} ft</span>
-      </div>
-
+      <div className={square.mapScale} aria-hidden="true"><span>0 ft</span><span>{numberLabel(lengthFt / 2)} ft</span><span>{numberLabel(lengthFt)} ft</span></div>
       <div className={square.mapDetail}>
         <span>{numberLabel(activeBlock.start)}–{numberLabel(activeBlock.end)} ft</span>
         <strong>{activeNames.length ? activeNames.join(" + ") : "No mapped crop"}</strong>
         <small>{activeArea} sq ft shown · tap another section to inspect it{hasUncertainPlacement ? " · dotted marks mean the exact position is not recorded" : ""}</small>
       </div>
-
-      <div className={square.mapLegend}>
-        <code>o</code> crop square
-        {hasUncertainPlacement ? <><code>·</code> position not precise</> : null}
-      </div>
+      <div className={square.mapLegend}><code>o</code> crop square{hasUncertainPlacement ? <><code>·</code> position not precise</> : null}</div>
     </section>
   );
 }
@@ -237,9 +311,7 @@ function SquareFootBedMap({ map }: { map: AtlasBedMap }) {
 export default function CropOccupancyBedMap({ map, variant = "default" }: Props) {
   if (!map) return null;
 
-  if (variant === "notebook" && map.lengthFt && map.widthFt) {
-    return <SquareFootBedMap map={map} />;
-  }
+  if (variant === "notebook" && map.lengthFt && map.widthFt) return <SquareFootBedMap map={map} />;
 
   const leftAnchored = map.placements.filter((placement) => placement.anchorEdge === map.leftEdge);
   const rightAnchored = map.placements.filter((placement) => placement.anchorEdge === map.rightEdge);
@@ -249,16 +321,11 @@ export default function CropOccupancyBedMap({ map, variant = "default" }: Props)
   const bodyPlacements = map.placements.filter((placement) => !anchoredIds.has(placement.placementId));
   const rowPlacements = bodyPlacements.filter(isRowPlacement);
   const loosePlacements = bodyPlacements.filter((placement) => !isRowPlacement(placement));
-  const looseGroups = loosePlacements.length <= 3
-    ? loosePlacements.map((placement) => [placement])
-    : chunks(loosePlacements, 3);
+  const looseGroups = loosePlacements.length <= 3 ? loosePlacements.map((placement) => [placement]) : chunks(loosePlacements, 3);
   const orientationDescription = `${edgeName(map.leftEdge)} is left, ${edgeName(map.rightEdge)} is right, ${edgeName(map.topEdge)} is above, and ${edgeName(map.bottomEdge)} is below`;
 
   return (
-    <section
-      className={`${styles.root} ${map.orientationKnown ? "" : styles.unknownOrientation}`.trim()}
-      aria-label={`Planting map for ${map.objectLabel}; ${orientationDescription}.`}
-    >
+    <section className={`${styles.root} ${map.orientationKnown ? "" : styles.unknownOrientation}`.trim()} aria-label={`Planting map for ${map.objectLabel}; ${orientationDescription}.`}>
       <div className={styles.bed}>
         <span className={`${styles.endDirection} ${styles.leftDirection}`} aria-hidden="true">{edgeLabel(map.leftEdge)}</span>
         <span className={`${styles.endDirection} ${styles.rightDirection}`} aria-hidden="true">{edgeLabel(map.rightEdge)}</span>
@@ -271,11 +338,7 @@ export default function CropOccupancyBedMap({ map, variant = "default" }: Props)
               const count = rowCount(placement);
               const uncertain = placement.positionConfidence === "unknown" || placement.positionConfidence === "low";
               return Array.from({ length: count }, (_, index) => (
-                <div
-                  className={`${styles.row} ${uncertain ? styles.uncertain : ""}`.trim()}
-                  key={`${placement.placementId}:${index}`}
-                  style={rowStyle(placement, map.lengthFt)}
-                >
+                <div className={`${styles.row} ${uncertain ? styles.uncertain : ""}`.trim()} key={`${placement.placementId}:${index}`} style={rowStyle(placement, map.lengthFt)}>
                   <i aria-hidden="true" />
                   {index === Math.floor(count / 2) ? <span>{placementText(placement)}</span> : <span aria-hidden="true">&nbsp;</span>}
                   <i aria-hidden="true" />
@@ -287,14 +350,8 @@ export default function CropOccupancyBedMap({ map, variant = "default" }: Props)
               const uncertain = group.length > 1 || placement.positionConfidence === "unknown" || placement.positionConfidence === "low";
               const text = group.length === 1 ? placementText(placement) : group.map(compactPlacementText).join(" · ");
               return (
-                <div
-                  className={`${styles.row} ${styles.looseRow} ${uncertain ? styles.uncertain : ""}`.trim()}
-                  key={`loose:${group.map((item) => item.placementId).join(":")}:${index}`}
-                  style={group.length === 1 ? rowStyle(placement, map.lengthFt) : undefined}
-                >
-                  <i aria-hidden="true" />
-                  <span>{text}</span>
-                  <i aria-hidden="true" />
+                <div className={`${styles.row} ${styles.looseRow} ${uncertain ? styles.uncertain : ""}`.trim()} key={`loose:${group.map((item) => item.placementId).join(":")}:${index}`} style={group.length === 1 ? rowStyle(placement, map.lengthFt) : undefined}>
+                  <i aria-hidden="true" /><span>{text}</span><i aria-hidden="true" />
                 </div>
               );
             })}

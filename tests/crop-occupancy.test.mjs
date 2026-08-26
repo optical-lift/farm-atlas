@@ -99,7 +99,7 @@ test("oriented bed-map truth renders as canonical geometry inside Weed Card Task
   assert.match(focus, /variant="notebook"/);
   assert.doesNotMatch(focus, /CropOccupancyList/);
   assert.match(route, /object_crop_bed_map_v1/);
-  assert.doesNotMatch(component, /Perennial|Date unknown|Observed/);
+  assert.doesNotMatch(component, /["'`](?:Perennial|Date unknown|Observed(?: crop)?)["'`]/);
 });
 
 test("every Weed Card may retain a map frame while Task Focus shows supported occupancy as Active Crops", () => {

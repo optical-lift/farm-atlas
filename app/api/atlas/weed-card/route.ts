@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { atlasApiError, requireAtlasApiAccess } from "@/lib/atlas/api-access";
+import type { AtlasBedComponentState, AtlasBedMap, AtlasBedMapFeature } from "@/lib/atlas/weed-card-contract";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +26,20 @@ function explicitMainCropLabel(metadata: unknown) {
 }
 
 function componentsFromState(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [] as AtlasBedComponentState[];
   const components = (value as { components?: unknown }).components;
-  return Array.isArray(components) ? components : [];
+  return Array.isArray(components) ? components as AtlasBedComponentState[] : [];
+}
+
+function mapFeatures(components: AtlasBedComponentState[]) {
+  return components.map((component): AtlasBedMapFeature => ({
+    featureId: component.componentId,
+    featureKey: component.componentKey,
+    featureLabel: component.componentLabel,
+    featureKind: component.componentKind,
+    mapSide: component.mapSide ?? null,
+    occupancyGroups: component.occupancyGroups,
+  }));
 }
 
 export async function GET(request: Request) {
@@ -48,7 +60,7 @@ export async function GET(request: Request) {
   const objectId = typeof card.objectId === "string" ? card.objectId : "";
   let bedMap: unknown = null;
   let mainCropLabel: string | null = null;
-  let components: unknown[] = [];
+  let components: AtlasBedComponentState[] = [];
 
   if (objectId) {
     const [mapResult, objectResult, componentResult] = await Promise.all([
@@ -56,9 +68,11 @@ export async function GET(request: Request) {
       supabase.from("growing_objects").select("metadata").eq("id", objectId).maybeSingle(),
       supabase.rpc("bed_components_state_v1", { p_bed_id: objectId }),
     ]);
-    if (!mapResult.error) bedMap = mapResult.data;
-    if (!objectResult.error) mainCropLabel = explicitMainCropLabel(objectResult.data?.metadata);
     if (!componentResult.error) components = componentsFromState(componentResult.data);
+    if (!mapResult.error && mapResult.data && typeof mapResult.data === "object" && !Array.isArray(mapResult.data)) {
+      bedMap = { ...(mapResult.data as AtlasBedMap), features: mapFeatures(components) };
+    }
+    if (!objectResult.error) mainCropLabel = explicitMainCropLabel(objectResult.data?.metadata);
   }
 
   return privateJson({ ok: true, card: { ...card, mainCropLabel, components, bedMap } });

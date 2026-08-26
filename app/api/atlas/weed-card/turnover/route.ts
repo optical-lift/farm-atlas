@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { atlasApiError, requireAtlasApiAccess } from "@/lib/atlas/api-access";
-import type { AtlasBedComponentState, AtlasBedMap, AtlasCropOccupancyCohort } from "@/lib/atlas/weed-card-contract";
+import type { AtlasBedComponentState, AtlasBedMap, AtlasBedMapFeature, AtlasCropOccupancyCohort } from "@/lib/atlas/weed-card-contract";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +71,17 @@ function componentsFromState(value: unknown) {
   return Array.isArray(components) ? components as AtlasBedComponentState[] : [];
 }
 
+function mapFeatures(components: AtlasBedComponentState[]) {
+  return components.map((component): AtlasBedMapFeature => ({
+    featureId: component.componentId,
+    featureKey: component.componentKey,
+    featureLabel: component.componentLabel,
+    featureKind: component.componentKind,
+    mapSide: component.mapSide ?? null,
+    occupancyGroups: component.occupancyGroups,
+  }));
+}
+
 export async function GET(request: Request) {
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
@@ -120,23 +131,18 @@ export async function GET(request: Request) {
     || `The ${selectedCrop} crop body is removed and its biomass is in the ${destination}.`;
 
   // A Clear action is owned by the bed being worked. Structures such as arches are
-  // components contained by that bed; they carry occupancy but never become task surfaces.
-  const mapResults = await Promise.all(beds.flatMap((bed) => {
-    const objectId = text(bed.objectId);
-    if (!objectId) return [];
-    return [supabase.rpc("object_crop_bed_map_v1", { p_object_id: objectId })];
-  }));
-  const bedMaps = mapResults.flatMap((result) => {
+  // components contained by that bed; the map renders them as physical geometry.
+  const objectIds = beds.map((bed) => text(bed.objectId)).filter(Boolean);
+  const [mapResults, componentResults] = await Promise.all([
+    Promise.all(objectIds.map((objectId) => supabase.rpc("object_crop_bed_map_v1", { p_object_id: objectId }))),
+    Promise.all(objectIds.map((objectId) => supabase.rpc("bed_components_state_v1", { p_bed_id: objectId }))),
+  ]);
+  const componentSets = componentResults.map((result) => result.error ? [] : componentsFromState(result.data));
+  const bedMaps = mapResults.flatMap((result, index) => {
     if (result.error || !result.data || typeof result.data !== "object" || Array.isArray(result.data)) return [];
-    return [result.data as AtlasBedMap];
+    return [{ ...(result.data as AtlasBedMap), features: mapFeatures(componentSets[index] ?? []) }];
   });
-
-  const componentResults = await Promise.all(beds.flatMap((bed) => {
-    const objectId = text(bed.objectId);
-    if (!objectId) return [];
-    return [supabase.rpc("bed_components_state_v1", { p_bed_id: objectId })];
-  }));
-  const components = componentResults.flatMap((result) => result.error ? [] : componentsFromState(result.data));
+  const components = componentSets.flat();
 
   const cohorts = new Map<string, AtlasCropOccupancyCohort>();
   for (const bed of beds) {
