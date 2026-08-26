@@ -95,7 +95,7 @@ test('worker bed maps use the approved square-foot mockup grammar when dimension
   assert.match(taskBedMap, /data-atlas-task-bed-map="square-foot-mockup-v1"/);
   assert.match(taskBedMap, /one mark = 1 sq ft/);
   assert.match(taskBedMap, /variant="notebook"/);
-  assert.match(occupancyMap, /data-atlas-square-foot-bed-map="mockup-v1"/);
+  assert.match(occupancyMap, /data-atlas-square-foot-bed-map="mockup-v2"/);
   assert.match(occupancyMap, /const blockFt = Math\.min\(3, lengthFt\)/);
   assert.match(occupancyMap, /0 ft/);
   assert.match(occupancyMap, /tap another section to inspect it/);
