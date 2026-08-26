@@ -44,56 +44,55 @@
 .smartRail {
   position: relative;
   min-width: 0;
-  height: 28px;
+  height: 30px;
 }
 
 .smartRailBase,
 .smartRailProgress {
   position: absolute;
   left: 0;
-  top: 7px;
-  height: 4px;
+  top: 10px;
+  height: 2px;
   border-radius: 999px;
 }
 
 .smartRailBase {
   right: 0;
-  background: #e2e3ec;
+  background: #dedfe8;
 }
 
 .smartRailProgress {
   z-index: 1;
-  background: #9d96ce;
+  background: #9992cb;
 }
 
 .smartRailTaskDot {
   position: absolute;
   z-index: 2;
   top: 7px;
-  width: 4px;
-  height: 4px;
+  width: 8px;
+  height: 8px;
   transform: translateX(-50%);
   border-radius: 50%;
-  background: rgba(84, 79, 122, 0.26);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.68);
+  background: rgba(98, 91, 150, 0.34);
 }
 
 .smartRailNowDot {
   position: absolute;
   z-index: 3;
-  top: 2px;
-  width: 14px;
-  height: 14px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
   transform: translateX(-50%);
   border: 2px solid #776dca;
   border-radius: 50%;
   background: #f3f4fb;
-  box-shadow: 0 0 0 2px rgba(243, 244, 251, 0.95);
+  box-shadow: 0 0 0 2px rgba(243, 244, 251, 0.96);
 }
 
 .smartRailNowLabel {
   position: absolute;
-  top: 19px;
+  top: 21px;
   transform: translateX(-50%);
   color: #736e91;
   font-size: 7px;
@@ -162,172 +161,257 @@
   text-align: center;
 }
 
-.scrubberStudy {
-  display: grid;
-  gap: 3px;
-  margin-top: 12px;
+.viewToggle {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  justify-self: end;
+  width: 132px;
+  margin-top: 11px;
+  padding: 2px;
+  border: 1px solid #e0dfe6;
+  border-radius: 999px;
+  background: #f5f5f7;
 }
 
-.scrubberCaption {
+.viewToggle button {
+  min-height: 27px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #77786f;
+  font-size: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.viewToggle button[data-active="true"] {
+  background: #eceafa;
+  color: #4f4a7d;
+  box-shadow: inset 0 0 0 1px #d8d5ee;
+}
+
+.clockView {
+  overflow: hidden;
+  margin-top: 8px;
+  border: 1px solid #e4e3e8;
+  border-radius: 17px;
+  background: #fff;
+}
+
+.clockViewHeader {
   display: flex;
-  align-items: baseline;
+  gap: 12px;
+  align-items: center;
   justify-content: space-between;
-  padding-inline: 11px;
+  min-height: 46px;
+  padding: 9px 11px 8px;
+  border-bottom: 1px solid #e8e7eb;
 }
 
-.scrubberCaption span {
-  color: #9792ad;
+.clockViewHeader > div {
+  display: grid;
+  gap: 2px;
+}
+
+.clockViewHeader span {
+  color: #8b88a1;
   font-size: 6px;
   font-weight: 800;
   letter-spacing: 0.14em;
 }
 
-.scrubberCaption small {
-  color: #7770a5;
-  font-size: 6px;
+.clockViewHeader strong {
+  color: #343447;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.clockViewHeader button {
+  padding: 5px 8px;
+  border: 1px solid #dad8e8;
+  border-radius: 999px;
+  background: #f7f6fb;
+  color: #68618e;
+  font-size: 7px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  cursor: pointer;
 }
 
-.scrubberShell {
+.calendarViewport {
   position: relative;
-  height: 96px;
-  overflow: hidden;
-}
-
-.scrubberViewport {
-  position: relative;
-  z-index: 2;
-  height: 96px;
+  height: 420px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior-y: contain;
-  scroll-snap-type: y mandatory;
+  scroll-snap-type: y proximity;
+  scroll-padding-block: 42%;
   scrollbar-width: none;
   touch-action: pan-y;
 }
 
-.scrubberViewport::-webkit-scrollbar {
+.calendarViewport::-webkit-scrollbar {
   display: none;
 }
 
-.scrubberSpacer {
-  height: 32px;
-  pointer-events: none;
-}
-
-.scrubberRow {
-  display: grid;
-  grid-template-columns: 64px 58px minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  height: 32px;
-  padding: 0 12px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  white-space: nowrap;
-  scroll-snap-align: center;
-  scroll-snap-stop: always;
-  cursor: pointer;
-  opacity: 0.2;
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.scrubberRow span {
-  color: #77729c;
-  font-size: 8px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.scrubberRow small {
-  color: #7770a5;
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-}
-
-.scrubberRow strong {
-  overflow: hidden;
-  color: #343249;
-  font-size: 10px;
-  text-overflow: ellipsis;
-}
-
-.scrubberRow[data-inspected="true"] {
-  opacity: 1;
-  transform: scale(1.01);
-}
-
-.scrubberRow[data-inspected="true"] span {
-  color: #302d47;
-  font-size: 9px;
-}
-
-.scrubberRow[data-inspected="true"] small {
-  color: #675fa7;
-}
-
-.scrubberRow[data-inspected="true"] strong {
-  color: #292c42;
-  font-size: 13px;
-}
-
-.scrubberRow:focus-visible {
+.calendarViewport:focus-visible {
   outline: 2px solid #9d96ce;
   outline-offset: -2px;
 }
 
-.scrubberSelection {
+.calendarCanvas {
+  position: relative;
+  min-width: 0;
+  background: #fff;
+}
+
+.calendarHour {
   position: absolute;
-  z-index: 1;
   left: 0;
   right: 0;
-  top: 47px;
   height: 1px;
-  background: linear-gradient(
-    to right,
-    rgba(118, 110, 190, 0),
-    rgba(118, 110, 190, 0.18) 14%,
-    rgba(118, 110, 190, 0.32) 50%,
-    rgba(118, 110, 190, 0.18) 86%,
-    rgba(118, 110, 190, 0)
-  );
   pointer-events: none;
 }
 
-.scrubberSelection::after {
+.calendarHour span {
+  position: absolute;
+  left: 8px;
+  top: -7px;
+  width: 42px;
+  color: #9a9aa0;
+  font-size: 7px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.calendarHour i {
+  position: absolute;
+  left: 58px;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: #eeeeF1;
+}
+
+.calendarNow {
+  position: absolute;
+  z-index: 8;
+  left: 8px;
+  right: 8px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.calendarNow span {
+  position: absolute;
+  left: 0;
+  top: -8px;
+  width: 45px;
+  color: #625b9a;
+  font-size: 7px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.calendarNow i {
+  position: absolute;
+  left: 52px;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: #8b83c7;
+}
+
+.calendarNow i::before {
   content: "";
   position: absolute;
-  left: 50%;
+  left: -3px;
   top: -3px;
-  width: 1px;
+  width: 7px;
   height: 7px;
-  background: rgba(118, 110, 190, 0.28);
+  border-radius: 50%;
+  background: #776dca;
 }
 
-.scrubberFadeTop,
-.scrubberFadeBottom {
+.calendarTaskBlock {
   position: absolute;
-  z-index: 3;
-  left: 0;
-  right: 0;
-  height: 26px;
-  pointer-events: none;
+  z-index: 2;
+  left: 66px;
+  right: 15px;
+  display: grid;
+  align-content: center;
+  gap: 1px;
+  min-height: 32px;
+  padding: 4px 8px;
+  overflow: hidden;
+  border: 1px solid #dddae9;
+  border-left: 3px solid #aaa3d0;
+  border-radius: 6px;
+  background: #f7f6fb;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  opacity: 0.43;
+  scroll-snap-align: center;
+  scroll-snap-stop: normal;
+  transition: left 130ms ease, right 130ms ease, opacity 130ms ease, transform 130ms ease, box-shadow 130ms ease;
 }
 
-.scrubberFadeTop {
-  top: 0;
-  background: linear-gradient(to bottom, #fff 18%, rgba(255, 255, 255, 0));
+.calendarTaskBlock > span {
+  overflow: hidden;
+  color: #7770a5;
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.scrubberFadeBottom {
-  bottom: 0;
-  background: linear-gradient(to top, #fff 18%, rgba(255, 255, 255, 0));
+.calendarTaskBlock > strong {
+  overflow: hidden;
+  color: #3a3a4c;
+  font-size: 10px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendarTaskBlock > small {
+  overflow: hidden;
+  color: #74757d;
+  font-size: 7px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendarTaskBlock[data-inspected="true"] {
+  z-index: 6;
+  left: 58px;
+  right: 8px;
+  min-height: 44px;
+  border-color: #cbc7e3;
+  border-left-color: #776dca;
+  background: #efedfb;
+  box-shadow: 0 6px 16px rgba(56, 52, 88, 0.1);
+  opacity: 1;
+  transform: scale(1.012);
+}
+
+.calendarTaskBlock[data-inspected="true"] > span {
+  color: #68609b;
+  font-size: 7px;
+}
+
+.calendarTaskBlock[data-inspected="true"] > strong {
+  color: #2d2d42;
+  font-size: 14px;
+}
+
+.calendarTaskBlock:focus-visible {
+  outline: 2px solid #8f87c8;
+  outline-offset: 1px;
 }
 
 .feedInspected {
@@ -367,9 +451,17 @@
     font-size: 11px;
   }
 
-  .scrubberRow {
-    grid-template-columns: 58px 52px minmax(0, 1fr);
-    gap: 6px;
-    padding-inline: 10px;
+  .calendarViewport {
+    height: 410px;
+  }
+
+  .calendarTaskBlock {
+    left: 62px;
+    right: 11px;
+  }
+
+  .calendarTaskBlock[data-inspected="true"] {
+    left: 55px;
+    right: 6px;
   }
 }
