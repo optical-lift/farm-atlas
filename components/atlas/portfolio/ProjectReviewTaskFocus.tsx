@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { useTaskFocusNavigation } from "@/components/atlas/task-focus-navigation-boundary";
 import type { AtlasProjectTaskFocus } from "@/lib/atlas/portfolio";
 import styles from "./ProjectReviewTaskFocus.module.css";
 
@@ -10,7 +11,6 @@ type Outcome = "on_track" | "next_move_changed" | "waiting_external" | "blocked"
 
 type Props = {
   focus: AtlasProjectTaskFocus;
-  returnTo?: string | null;
 };
 
 const choices: Array<{ value: Outcome; title: string; detail: string }> = [
@@ -34,10 +34,11 @@ function prettyDate(value: string | null | undefined) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export default function ProjectReviewTaskFocus({ focus, returnTo }: Props) {
+export default function ProjectReviewTaskFocus({ focus }: Props) {
   const task = focus.task;
   const project = focus.project;
-  const destination = returnTo || `/project/${encodeURIComponent(project.projectId)}`;
+  const navigation = useTaskFocusNavigation(`/project/${encodeURIComponent(project.projectId)}`);
+  const destination = navigation.returnPath;
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [nextMilestone, setNextMilestone] = useState(project.currentMilestone || "");
   const [nextReviewDate, setNextReviewDate] = useState(tomorrowIso(2));
@@ -79,7 +80,7 @@ export default function ProjectReviewTaskFocus({ focus, returnTo }: Props) {
       else if (outcome === "waiting_external") setMessage(`Waiting state recorded. Atlas will return this project ${prettyDate(nextReviewDate)}.`);
       else if (outcome === "blocked") setMessage(`Blocker recorded. Atlas will return this project ${prettyDate(nextReviewDate)}.`);
       else setMessage("Project completed and its review Clock paused.");
-      window.setTimeout(() => window.location.assign(destination), 1100);
+      window.setTimeout(navigation.leave, 1100);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Project review failed.");
     } finally {
