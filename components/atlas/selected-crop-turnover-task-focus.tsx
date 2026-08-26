@@ -88,7 +88,8 @@ export default function SelectedCropTurnoverTaskFocus({ task, childTasks, assign
     );
   }
 
-  const crop = displayCrop(turnover);
+  const activeTurnover = turnover;
+  const crop = displayCrop(activeTurnover);
   const busy = saving !== null;
 
   async function saveResult() {
@@ -100,7 +101,7 @@ export default function SelectedCropTurnoverTaskFocus({ task, childTasks, assign
       setSaving("result");
       setMessage(null);
       const automaticNote = selectedResult === "done"
-        ? `${crop} biomass removed to ${turnover.biomassDestination}. Other crop occupancy was left in place.`
+        ? `${crop} biomass removed to ${activeTurnover.biomassDestination}. Other crop occupancy was left in place.`
         : `${crop} was partly removed; turnover is not complete.`;
       await postAtlasTaskTransition({
         taskId: task.task_id,
@@ -110,8 +111,8 @@ export default function SelectedCropTurnoverTaskFocus({ task, childTasks, assign
         workKey: task.action_key || "clear",
         payload: {
           weedManagementMode: "clear_selected_crop",
-          selectedCropCycleId: turnover.cropCycleId,
-          biomassDestination: turnover.biomassDestination,
+          selectedCropCycleId: activeTurnover.cropCycleId,
+          biomassDestination: activeTurnover.biomassDestination,
           wholeBedTurnover: false,
         },
       });
@@ -141,7 +142,7 @@ export default function SelectedCropTurnoverTaskFocus({ task, childTasks, assign
         workKey: task.action_key || "clear",
         payload: {
           weedManagementMode: "clear_selected_crop",
-          selectedCropCycleId: turnover.cropCycleId,
+          selectedCropCycleId: activeTurnover.cropCycleId,
         },
       });
       window.location.assign(returnTo(assignee.listPath));
@@ -172,7 +173,7 @@ export default function SelectedCropTurnoverTaskFocus({ task, childTasks, assign
         <AtlasTaskCardFrame
           family="Weed"
           familyDetail="Turning over"
-          title={turnover.collectionLabel}
+          title={activeTurnover.collectionLabel}
           subtitle="Selected crop only"
           timing="Clear crop body · preserve the rest of the bed"
           completion={completion}
@@ -188,7 +189,7 @@ export default function SelectedCropTurnoverTaskFocus({ task, childTasks, assign
               <article className={styles.cropRow}>
                 <div className={styles.cropIdentity}>
                   <strong>{crop}</strong>
-                  <small>{turnover.locations.length ? turnover.locations.join(" + ") : turnover.collectionLabel}</small>
+                  <small>{activeTurnover.locations.length ? activeTurnover.locations.join(" + ") : activeTurnover.collectionLabel}</small>
                 </div>
                 <div className={styles.cropState}>
                   <b>Selected for removal</b>
@@ -200,15 +201,15 @@ export default function SelectedCropTurnoverTaskFocus({ task, childTasks, assign
 
           <section className={styles.bedNow}>
             <span>Clear / remove</span>
-            <strong>{`Remove ${crop} biomass → ${turnover.biomassDestination}`}</strong>
+            <strong>{`Remove ${crop} biomass → ${activeTurnover.biomassDestination}`}</strong>
           </section>
 
           <section className={styles.history} aria-label="Turnover method">
             <header><span>Do</span></header>
             <ol>
-              <li><strong>{turnover.executionDo}</strong></li>
-              {turnover.preserveOtherCrops ? <li><strong>Leave every other living crop in the foot beds in place.</strong></li> : null}
-              <li><strong>Done when: {turnover.doneWhen}</strong></li>
+              <li><strong>{activeTurnover.executionDo}</strong></li>
+              {activeTurnover.preserveOtherCrops ? <li><strong>Leave every other living crop in the foot beds in place.</strong></li> : null}
+              <li><strong>Done when: {activeTurnover.doneWhen}</strong></li>
             </ol>
           </section>
 
