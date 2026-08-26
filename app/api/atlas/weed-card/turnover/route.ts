@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { atlasApiError, requireAtlasApiAccess } from "@/lib/atlas/api-access";
+import type { AtlasBedMap } from "@/lib/atlas/weed-card-contract";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -108,6 +109,13 @@ export async function GET(request: Request) {
   const labelById = new Map(objectRows.map((row) => [row.id, text(row.label)]));
   const locations = objectIds.map((id) => labelById.get(id) || "").filter(Boolean);
 
+  const mapResults = await Promise.all(objectIds.map(async (objectId) => {
+    const result = await supabase.rpc("object_crop_bed_map_v1", { p_object_id: objectId });
+    if (result.error || !result.data || typeof result.data !== "object" || Array.isArray(result.data)) return null;
+    return result.data as AtlasBedMap;
+  }));
+  const bedMaps = mapResults.filter((map): map is AtlasBedMap => map !== null);
+
   const cropLabel = text(cycle.crop_label) || "Selected crop";
   const variety = text(cycle.variety) || null;
   const destination = text(metadata.biomass_destination) || "compost";
@@ -130,6 +138,7 @@ export async function GET(request: Request) {
       variety,
       cycleState: text(cycle.cycle_state) || null,
       locations,
+      bedMaps,
       biomassDestination: destination,
       executionDo,
       doneWhen,
