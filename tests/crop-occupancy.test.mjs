@@ -69,7 +69,7 @@ test("haphazard owner notes have one idempotent structured ingestion contract", 
   assert.match(ingest, /Only the farm owner may record crop occupancy/);
 });
 
-test("oriented bed-map truth renders as canonical geometry inside Weed Card Task Focus", () => {
+test("oriented bed-map truth renders as canonical geometry inside the shared bed-work Task Focus", () => {
   const migration = read("supabase/migrations/20260729163000_oriented_bed_map_v1.sql");
   const component = read("components/atlas/crop-occupancy-bed-map.tsx");
   const css = read("components/atlas/crop-occupancy-bed-map.module.css");
@@ -92,10 +92,10 @@ test("oriented bed-map truth renders as canonical geometry inside Weed Card Task
   assert.match(css, /\.endDirection\s*\{[\s\S]*position: absolute/);
   assert.match(css, /font-size: 0\.54rem/);
   assert.match(css, /border-top-style: dashed/);
-  assert.match(focus, /card\.occupancyGroups/);
+  assert.match(focus, /card\?\.occupancyGroups/);
   assert.match(focus, />Active Crops</);
   assert.match(focus, /CropOccupancyBedMap/);
-  assert.match(focus, /card\.bedMap/);
+  assert.match(focus, /card\?\.bedMap/);
   assert.match(focus, /variant="notebook"/);
   assert.doesNotMatch(focus, /CropOccupancyList/);
   assert.match(route, /object_crop_bed_map_v1/);
@@ -118,10 +118,10 @@ test("every Weed Card may retain a map frame while Task Focus shows supported oc
   assert.doesNotMatch(component, /!map\.placements\.length/);
   assert.match(component, /styles\.emptyBed/);
   assert.match(component, /edgeBandBasis/);
-  assert.match(focus, /card\.occupancyGroups/);
+  assert.match(focus, /card\?\.occupancyGroups/);
   assert.match(focus, />Active Crops</);
   assert.match(focus, /CropOccupancyBedMap/);
-  assert.doesNotMatch(focus, /CropOccupancyList|const occupancy = card\.bedMap\s*\?/);
+  assert.doesNotMatch(focus, /CropOccupancyList|const occupancy = card\?\.bedMap\s*\?/);
 });
 
 test("bed maps show establishment dates and FR4 forget-me-not is on the south endcap", () => {
