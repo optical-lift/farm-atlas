@@ -33,6 +33,7 @@ export default async function AtlasMorePage() {
     ] : []),
     ...(isFarmOwner ? [
       { label: "Rulebook + Clock", detail: "Farm rhythms, evidence and Owner controls", href: "/manage/rhythms" },
+      { label: "Clock + Day Editor", detail: "Redesign the merged worker Clock, timeline and Day Feed experience", href: "/owner/clock-day-lab" },
       { label: "Task Card Editor", detail: "Review, refine and extend Dominion card families and interaction specs", href: "/owner/task-card-lab" },
       { label: "Project Trail Editor", detail: "Design destination-led project Trails, moves, gates and arrival evidence", href: "/owner/project-trail-lab" },
     ] : []),
