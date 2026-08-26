@@ -182,7 +182,7 @@ export default function ActiveOutcomeStudies() {
       <div className={styles.singleGallery}>
         <Study
           label="A · Living countdown + clean rail"
-          note="The top scorecard owns the clock. The task feed no longer repeats Morning / Midafternoon / exact-time labels beside every node."
+          note="The top scorecard owns the clock. The task feed no longer repeats schedule-window and exact-time labels beside every node."
         >
           <CountdownRail />
         </Study>
