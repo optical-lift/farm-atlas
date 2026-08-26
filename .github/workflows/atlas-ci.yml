@@ -69,11 +69,14 @@ jobs:
       - name: Guard shared database migration custody
         run: bash scripts/check-shared-db-migration-custody.sh
 
-      - name: Verify synchronizer contract
+      - name: Verify legacy synchronizer custody contract
         run: node --test tests/atlas-source-custody.test.mjs
 
-      - name: Prove live Atlas source custody
-        run: npm run sync:atlas:source
+      - name: Verify shared database consumer custody
+        run: node --test tests/shared-db-custody-consumer.test.mjs
+
+      - name: Prove live Atlas database authority
+        run: bash scripts/verify-shared-db-atlas-authority.sh
 
   validate:
     runs-on: ubuntu-latest
