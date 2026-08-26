@@ -44,9 +44,9 @@ test("day completion, current time, and active window share one compact instrume
   assert.doesNotMatch(css, /\.dayProgress/);
 });
 
-test("purple roller represents the scheduled current move rather than the slipped score", () => {
+test("NOW roller is unboxed and uses a faint center hairline", () => {
   assert.match(study, /CurrentMoveRoller/);
-  assert.match(study, /Rolling current scheduled move viewport fixture/);
+  assert.match(study, /Unboxed rolling current scheduled move fixture/);
   assert.match(study, /data-position="previous"/);
   assert.match(study, /data-position="current"/);
   assert.match(study, /data-position="next"/);
@@ -56,8 +56,10 @@ test("purple roller represents the scheduled current move rather than the slippe
   assert.match(study, /POT UP/);
   assert.match(study, /Sweet William/);
   assert.match(css, /\.timeDeck/);
-  assert.match(css, /background: #eeecfb/);
+  assert.match(css, /background: transparent/);
   assert.match(css, /\.rollerSelection/);
+  assert.match(css, /height: 1px/);
+  assert.match(css, /rgba\(118, 110, 190, 0\.32\)/);
   assert.match(css, /rollerRow\[data-position="previous"\]/);
   assert.match(css, /rollerRow\[data-position="current"\]/);
   assert.match(css, /rollerRow\[data-position="next"\]/);
@@ -73,6 +75,8 @@ test("white scorecard independently carries the most consequential slipped task 
   assert.match(css, /\.outcomeBox/);
   assert.match(css, /\.scoreBody/);
   assert.match(css, /grid-template-columns: 27% 73%/);
+  assert.match(css, /border: 1px solid #dedde4/);
+  assert.match(css, /border-radius: 20px/);
 });
 
 test("current move and slipped consequence are different selectors", () => {
