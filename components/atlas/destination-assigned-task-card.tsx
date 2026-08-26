@@ -7,6 +7,7 @@ import type { AssignedTaskExecutionShellProps, AssignedTaskOutcome } from "@/com
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import TaskDestinationContact from "@/components/atlas/task-destination-contact";
 import { useTaskFocusNavigation } from "@/components/atlas/task-focus-navigation-boundary";
+import { taskDestinationContact } from "@/lib/atlas/task-destination-contact";
 import { atlasActionForTask } from "@/lib/atlas/task-display";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
@@ -70,12 +71,7 @@ function destinationTiming(task: AssignedTaskExecutionShellProps["task"]) {
 }
 
 export function isDestinationTask(task: AssignedTaskExecutionShellProps["task"]) {
-  return Boolean(
-    metadataText(task, "destination_name")
-    || metadataText(task, "destination_address")
-    || metadataText(task, "destination_phone")
-    || metadataText(task, "destination_note")
-  );
+  return taskDestinationContact(task) !== null;
 }
 
 export default function DestinationAssignedTaskCard({ task, assignee }: AssignedTaskExecutionShellProps) {
@@ -84,6 +80,7 @@ export default function DestinationAssignedTaskCard({ task, assignee }: Assigned
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const navigation = useTaskFocusNavigation(assignee.listPath);
+  const destination = taskDestinationContact(task);
 
   useEffect(() => {
     void fetch("/api/atlas/weather", { headers: { Accept: "application/json" }, cache: "no-store" })
@@ -145,7 +142,7 @@ export default function DestinationAssignedTaskCard({ task, assignee }: Assigned
             onUnfinished={() => setUnfinishedOpen((open) => !open)}
             completionDisabled={Boolean(saving)}
           >
-            <TaskDestinationContact task={task} />
+            <TaskDestinationContact destination={destination} />
           </AtlasTaskCardFrame>
 
           {unfinishedOpen ? (
