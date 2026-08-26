@@ -9,14 +9,16 @@ function read(path) {
 const page = read("app/owner/clock-day-lab/page.tsx");
 const study = read("app/owner/clock-day-lab/ActiveOutcomeStudies.tsx");
 const css = read("app/owner/clock-day-lab/active-outcome-studies.module.css");
+const smartCss = read("app/owner/clock-day-lab/smart-day-study.module.css");
+const contract = read("docs/architecture/clock-day-smart-rail-and-consequence-contract.md");
 
-test("Clock Day lab exposes forward clock plus slipped consequence score study", () => {
+test("Clock Day lab exposes the smart single-rail plus compact consequence study", () => {
   assert.match(page, /ActiveOutcomeStudies/);
-  assert.match(study, /A · Forward clock \+ slipped consequence score/);
-  assert.match(study, /The clock points forward\. The scorecard remembers what slipped\./);
-  assert.match(study, /DayInstrument/);
+  assert.match(study, /A · Smart single rail \+ Atlas-style consequence row/);
+  assert.match(study, /One rail carries work progress, time, and where Atlas placed the day\./);
+  assert.match(study, /SmartDayRail/);
   assert.match(study, /CurrentMoveRoller/);
-  assert.match(study, /OutcomeScorecard/);
+  assert.match(study, /ConsequenceStrip/);
   assert.match(study, /OrderedTaskRail/);
 });
 
@@ -30,21 +32,38 @@ test("study remains fixture-only and cannot touch worker state", () => {
   assert.doesNotMatch(study, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 });
 
-test("day completion, current time, and active window share one compact instrument under date", () => {
-  assert.match(study, /Merged day progress and current window instrument fixture/);
+test("one physical rail carries smart progress, NOW, and task distribution", () => {
+  assert.match(study, /SMART_PROGRESS_FRONTIER = 43/);
+  assert.match(study, /CURRENT_TIME_POSITION = 69/);
+  assert.match(study, /DAY_TASK_POSITIONS = \[6, 13, 21, 29, 38, 47, 55, 64, 72, 84, 94\]/);
+  assert.match(study, /smartRailBase/);
+  assert.match(study, /smartRailProgress/);
+  assert.match(study, /smartRailTaskDot/);
+  assert.match(study, /smartRailNowDot/);
+  assert.match(study, /smartRailNowLabel/);
   assert.match(study, /6 \/ 11/);
   assert.match(study, /4:06 PM/);
   assert.match(study, /WINDOW/);
   assert.match(study, /00:18/);
-  assert.match(css, /\.dayInstrument/);
-  assert.match(css, /grid-template-columns: auto minmax\(0, 1fr\) auto/);
-  assert.match(css, /\.dayClockTrack/);
-  assert.match(css, /\.dayClockDot/);
-  assert.doesNotMatch(study, /dayProgress/);
-  assert.doesNotMatch(css, /\.dayProgress/);
+  assert.match(smartCss, /\.smartRailBase,/);
+  assert.match(smartCss, /\.smartRailProgress/);
+  assert.match(smartCss, /\.smartRailTaskDot/);
+  assert.match(smartCss, /\.smartRailNowDot/);
+  assert.match(smartCss, /height: 4px/);
 });
 
-test("NOW roller is unboxed and uses a faint center hairline", () => {
+test("smart rail contract keeps raw done count separate from chronological clearance", () => {
+  assert.match(contract, /purple fill is not `completed task count \/ total task count`/);
+  assert.match(contract, /Day Clearance Frontier/);
+  assert.match(contract, /M\(f\) = Σ w_i/);
+  assert.match(contract, /D\(f\) = Σ/);
+  assert.match(contract, /Q\(f\) = 1 - D\(f\) \/ M\(f\)/);
+  assert.match(contract, /three morning tasks remain open, while an 8 PM task was completed early/);
+  assert.match(contract, /frontier does not simply leap to 8 PM/);
+  assert.match(contract, /An unplaced task receives no fake dot/);
+});
+
+test("NOW roller remains unboxed and uses a faint center hairline", () => {
   assert.match(study, /CurrentMoveRoller/);
   assert.match(study, /Unboxed rolling current scheduled move fixture/);
   assert.match(study, /data-position="previous"/);
@@ -56,30 +75,38 @@ test("NOW roller is unboxed and uses a faint center hairline", () => {
   assert.match(study, /POT UP/);
   assert.match(study, /Sweet William/);
   assert.match(css, /\.timeDeck/);
-  assert.match(css, /background: transparent/);
   assert.match(css, /\.rollerSelection/);
-  assert.match(css, /height: 1px/);
   assert.match(css, /rgba\(118, 110, 190, 0\.32\)/);
-  assert.match(css, /rollerRow\[data-position="previous"\]/);
-  assert.match(css, /rollerRow\[data-position="current"\]/);
-  assert.match(css, /rollerRow\[data-position="next"\]/);
 });
 
-test("white scorecard independently carries the most consequential slipped task and real downstream target shape", () => {
+test("consequence surface uses compact Atlas carried-row grammar instead of a second scorecard", () => {
   assert.match(study, /SLIPPED_OUTCOME_TASK/);
   assert.match(study, /family: "TIDY"/);
   assert.match(study, /title: "Farmhouse"/);
   assert.match(study, /Thursday Ticketed Night · Aug 27/);
-  assert.match(study, /scoreBody/);
-  assert.match(study, /scoreUnlock/);
-  assert.match(css, /\.outcomeBox/);
-  assert.match(css, /\.scoreBody/);
-  assert.match(css, /grid-template-columns: 27% 73%/);
-  assert.match(css, /border: 1px solid #dedde4/);
-  assert.match(css, /border-radius: 20px/);
+  assert.match(study, /MISSED WINDOW/);
+  assert.match(study, /still open/);
+  assert.match(study, /Holding/);
+  assert.match(study, /consequenceStrip/);
+  assert.match(study, /consequencePill/);
+  assert.match(study, /consequenceCaret/);
+  assert.match(smartCss, /\.consequenceStrip/);
+  assert.match(smartCss, /grid-template-columns: auto minmax\(0, 1fr\) 18px/);
+  assert.match(smartCss, /background: #f7f7fb/);
+  assert.doesNotMatch(study, /scoreBody|scoreCount|scoreMove|scoreUnlock/);
 });
 
-test("current move and slipped consequence are different selectors", () => {
+test("consequence contract requires governed consequence truth and hides empty generic rows", () => {
+  assert.match(contract, /real dependency\/unlock edge/);
+  assert.match(contract, /hard date or fixed event/);
+  assert.match(contract, /Never manufacture consequence importance from display prose/);
+  assert.match(contract, /If there is no unresolved task with a governed consequence, the consequence row should be absent/);
+  assert.match(contract, /NOW task/);
+  assert.match(contract, /Consequence task/);
+  assert.match(contract, /must not collapse them into one `activeTask` variable/);
+});
+
+test("current move and slipped consequence remain different selectors", () => {
   assert.match(study, /const ACTIVE_TASK = TASKS\[3\]/);
   assert.match(study, /const SLIPPED_OUTCOME_TASK = TASKS\[2\]/);
   assert.match(study, /data-active={active \? "true" : "false"}/);

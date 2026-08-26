@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import styles from "./active-outcome-studies.module.css";
+import smartStyles from "./smart-day-study.module.css";
 
 type TaskDatum = {
   family: string;
@@ -49,6 +50,12 @@ const TASKS: TaskDatum[] = [
 const ACTIVE_TASK = TASKS[3];
 const SLIPPED_OUTCOME_TASK = TASKS[2];
 
+// Fixture-only geometry for the single smart rail. Production must derive all
+// three layers independently from governed Clock placement/result truth.
+const SMART_PROGRESS_FRONTIER = 43;
+const CURRENT_TIME_POSITION = 69;
+const DAY_TASK_POSITIONS = [6, 13, 21, 29, 38, 47, 55, 64, 72, 84, 94];
+
 function AppHeader() {
   return (
     <header className={styles.appHeader}>
@@ -59,17 +66,44 @@ function AppHeader() {
   );
 }
 
+function SmartDayRail() {
+  return (
+    <div
+      className={smartStyles.smartRail}
+      aria-label="Fixture smart day rail: earned chronological progress, current time, and eleven task placements"
+    >
+      <i className={smartStyles.smartRailBase} aria-hidden="true" />
+      <i
+        className={smartStyles.smartRailProgress}
+        style={{ width: `${SMART_PROGRESS_FRONTIER}%` }}
+        aria-hidden="true"
+      />
+      {DAY_TASK_POSITIONS.map((position, index) => (
+        <i
+          className={smartStyles.smartRailTaskDot}
+          style={{ left: `${position}%` }}
+          aria-hidden="true"
+          key={`${position}-${index}`}
+        />
+      ))}
+      <b
+        className={smartStyles.smartRailNowDot}
+        style={{ left: `${CURRENT_TIME_POSITION}%` }}
+        aria-hidden="true"
+      />
+      <small
+        className={smartStyles.smartRailNowLabel}
+        style={{ left: `${CURRENT_TIME_POSITION}%` }}
+      >4:06 PM</small>
+    </div>
+  );
+}
+
 function DayInstrument() {
   return (
-    <div className={styles.dayInstrument} aria-label="Merged day progress and current window instrument fixture">
+    <div className={styles.dayInstrument} aria-label="One smart rail plus current work-window countdown fixture">
       <div className={styles.dayDone}><strong>6 / 11</strong><span>done</span></div>
-      <div className={styles.dayClock}>
-        <div className={styles.dayClockTrack} aria-hidden="true">
-          <i className={styles.dayClockElapsed} />
-          <b className={styles.dayClockDot} />
-        </div>
-        <small className={styles.dayClockNow}>4:06 PM</small>
-      </div>
+      <SmartDayRail />
       <div className={styles.dayWindow}><span>WINDOW</span><strong>00:18</strong></div>
     </div>
   );
@@ -143,22 +177,18 @@ function CurrentMoveRoller() {
   );
 }
 
-function OutcomeScorecard() {
+function ConsequenceStrip() {
   return (
-    <section className={styles.outcomeBox} aria-label="Current move roller plus most consequential slipped task scorecard fixture">
-      <CurrentMoveRoller />
-      <div className={styles.scoreBody}>
-        <div className={styles.scoreCount}>
-          <strong>11</strong>
-          <span>tasks</span>
-          <small>6 done</small>
-        </div>
-        <div className={styles.scoreMove}>
-          <span>{SLIPPED_OUTCOME_TASK.family}</span>
-          <strong>{SLIPPED_OUTCOME_TASK.title}</strong>
-          <div className={styles.scoreUnlock}><span>UNLOCKS</span><b>{SLIPPED_OUTCOME_TASK.unlock}</b></div>
-        </div>
+    <section
+      className={smartStyles.consequenceStrip}
+      aria-label="Most consequential unresolved task fixture"
+    >
+      <span className={smartStyles.consequencePill}>MISSED WINDOW</span>
+      <div className={smartStyles.consequenceCopy}>
+        <strong>{SLIPPED_OUTCOME_TASK.family} · {SLIPPED_OUTCOME_TASK.title} still open</strong>
+        <small>Holding {SLIPPED_OUTCOME_TASK.unlock}</small>
       </div>
+      <span className={smartStyles.consequenceCaret} aria-hidden="true">⌄</span>
     </section>
   );
 }
@@ -184,10 +214,11 @@ function OrderedTaskRail() {
   );
 }
 
-function RollerScorecardDaySurface() {
+function SmartRailDaySurface() {
   return (
-    <section className={styles.daySurface} aria-label="Merged day instrument, rolling NOW task, slipped outcome score, and ordered task rail fixture">
-      <OutcomeScorecard />
+    <section className={styles.daySurface} aria-label="Smart day rail, rolling NOW task, compact consequence strip, and ordered task rail fixture">
+      <CurrentMoveRoller />
+      <ConsequenceStrip />
       <OrderedTaskRail />
     </section>
   );
@@ -212,20 +243,20 @@ export default function ActiveOutcomeStudies() {
       aria-labelledby="active-outcome-studies-heading"
     >
       <header className={styles.sectionHeader}>
-        <span>CLOCK + DAYBOOK STUDY 8 · NOW VS CONSEQUENCE</span>
-        <h2 id="active-outcome-studies-heading">The clock points forward. The scorecard remembers what slipped.</h2>
-        <p>Day completion, current time, and the active work-window countdown share one compact instrument under the date. The NOW task then ticks through an unboxed hairline viewport, while the white score below independently carries the slipped task with the most important downstream unlock.</p>
+        <span>CLOCK + DAYBOOK STUDY 9 · SMART DAY RAIL</span>
+        <h2 id="active-outcome-studies-heading">One rail carries work progress, time, and where Atlas placed the day.</h2>
+        <p>The same horizontal rail now carries the earned chronological progress fill, the current-time marker, and faint task-placement dots. Below the NOW roller, consequential unfinished work returns to Atlas&apos;s compact carried-move grammar instead of living in a second scorecard.</p>
       </header>
       <div className={styles.dataNote}>
         <strong>Fixture truth boundary</strong>
-        <span>Sweet William is the current-move design fixture. Tidy · Farmhouse → Thursday Ticketed Night · Aug 27 demonstrates the independent slipped-outcome selector. The rolling timestamps, 4:06 PM, 00:18, event date, and May 6 harvest label are editor fixtures rather than live task projections.</span>
+        <span>The 43% progress frontier intentionally trails the 4:06 PM current-time marker even though 6 of 11 tasks are marked done. It demonstrates the production rule that later completed work cannot erase unresolved earlier work. All task-dot positions, times, and consequence labels remain editor fixtures.</span>
       </div>
       <div className={styles.singleGallery}>
         <Study
-          label="A · Forward clock + slipped consequence score"
-          note="The shallow instrument under the date answers where the day is now. The unboxed hairline roller answers what should be happening now. The white score answers which already-missed move matters most."
+          label="A · Smart single rail + Atlas-style consequence row"
+          note="Purple fill means earned chronological clearance, the larger ring means NOW, and faint dots show the distribution of Clock-placed work. The compact row surfaces the highest-consequence unresolved task without duplicating the day score."
         >
-          <RollerScorecardDaySurface />
+          <SmartRailDaySurface />
         </Study>
       </div>
     </section>
