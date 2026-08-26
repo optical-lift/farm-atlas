@@ -37,11 +37,15 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
   assert.match(focus, /Partly removed/);
   assert.match(focus, /Removed/);
 
-  assert.match(route, /object_crop_occupancy_v1/);
+  assert.match(route, /weed_selected_crop_turnover_focus_v1/);
   assert.match(route, /object_crop_bed_map_v1/);
+  assert.match(route, /capacitySurfaces/);
   assert.match(route, /occupancyGroups/);
   assert.match(route, /bedTrail/);
   assert.match(route, /sessions/);
   assert.match(route, /card:/);
-  assert.match(route, /role", "clears"/);
+
+  for (const protectedTable of ["task_crop_cycles", "crop_cycles", "crop_placements", "growing_objects", "weed_cards", "weed_sessions", "task_objects"]) {
+    assert.doesNotMatch(route, new RegExp(`from\\(\\\"${protectedTable}\\\"\\)`));
+  }
 });
