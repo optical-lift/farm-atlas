@@ -123,7 +123,6 @@ export default function WeedCardTaskFocus({ task, card, turnover, assignee }: Pr
     : card.bedMap
       ? [card.bedMap]
       : [];
-  const components = card.components ?? [];
   const activeCrops = card.occupancyGroups
     .flatMap((group) => group.cohorts)
     .sort((a, b) => lifecycleRank(a.lifeCycle) - lifecycleRank(b.lifeCycle) || a.displayLabel.localeCompare(b.displayLabel));
@@ -301,31 +300,6 @@ export default function WeedCardTaskFocus({ task, card, turnover, assignee }: Pr
             </section>
           ))}
 
-          {components.length ? (
-            <section className={styles.activeCrops} aria-label={`${card.objectLabel} components`}>
-              <header><span>Bed Components</span></header>
-              <div className={styles.cropRows}>
-                {components.map((component) => {
-                  const componentCrops = component.occupancyGroups
-                    .flatMap((group) => group.cohorts)
-                    .map((cohort) => cohort.displayLabel);
-                  return (
-                    <article className={styles.cropRow} key={component.componentId} data-bed-component="true">
-                      <div className={styles.cropIdentity}>
-                        <strong>{component.componentLabel}</strong>
-                        <small>{[titleCase(component.componentKind), component.positionLabel].filter(Boolean).join(" · ")}</small>
-                      </div>
-                      <div className={styles.cropState}>
-                        <b>{component.availableForPlanting ? "Empty" : "Occupied"}</b>
-                        <small>{componentCrops.length ? componentCrops.join(" · ") : "No crop on component"}</small>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-          ) : null}
-
           {activeCrops.length ? (
             <section className={styles.activeCrops} aria-label={`${card.objectLabel} active crops`}>
               <header><span>Active Crops</span></header>
@@ -335,11 +309,14 @@ export default function WeedCardTaskFocus({ task, card, turnover, assignee }: Pr
                   const truthDate = cohort.observedQuantityDate || cohort.establishmentDate;
                   const target = turnover?.cropCycleId === cohort.cropCycleId;
                   const targetClassName = target && clearMode ? targetStyles.terminateCropRow : "";
+                  const lifecycleLabel = (cohort.stage || "").toLowerCase() === "observed"
+                    ? "Observed crop"
+                    : titleCase(cohort.lifeCycle);
                   return (
                     <article className={`${styles.cropRow} ${targetClassName}`.trim()} key={cohort.cropCycleId} data-needs-confirmation={stale ? "true" : "false"} data-bed-work-target={target ? "true" : "false"}>
                       <div className={styles.cropIdentity}>
                         <strong>{cohort.displayLabel}</strong>
-                        <small>{target && clearMode ? "TERMINATE" : titleCase(cohort.lifeCycle)}</small>
+                        <small>{target && clearMode ? "TERMINATE" : lifecycleLabel}</small>
                       </div>
                       <div className={styles.cropState}>
                         <b>{stale ? "Needs field confirmation" : cohort.stageLabel}</b>
