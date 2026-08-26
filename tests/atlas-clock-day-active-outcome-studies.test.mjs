@@ -10,12 +10,12 @@ const page = read("app/owner/clock-day-lab/page.tsx");
 const study = read("app/owner/clock-day-lab/ActiveOutcomeStudies.tsx");
 const css = read("app/owner/clock-day-lab/active-outcome-studies.module.css");
 
-test("Clock Day lab exposes scorecard, NOW sliver, and ordered rail study", () => {
+test("Clock Day lab exposes rolling scorecard clock plus ordered rail study", () => {
   assert.match(page, /ActiveOutcomeStudies/);
-  assert.match(study, /A · Scorecard \+ NOW sliver \+ ordered rail/);
-  assert.match(study, /The outcome is the score\. The clock is an instrument\./);
+  assert.match(study, /A · Rolling time deck inside the scorecard/);
+  assert.match(study, /Time rolls through the scorecard\. Work stays on the rail\./);
+  assert.match(study, /TimeRollerDeck/);
   assert.match(study, /OutcomeScorecard/);
-  assert.match(study, /NowSliver/);
   assert.match(study, /OrderedTaskRail/);
 });
 
@@ -29,40 +29,54 @@ test("study remains fixture-only and cannot touch worker state", () => {
   assert.doesNotMatch(study, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 });
 
-test("outcome box preserves the compact prior scorecard grammar", () => {
-  assert.match(study, /scoreCount/);
+test("separate day progress row and separate NOW sliver are removed", () => {
+  assert.doesNotMatch(study, /dayProgress/);
+  assert.doesNotMatch(study, /NowSliver/);
+  assert.doesNotMatch(study, /nowTaskStrip/);
+  assert.doesNotMatch(css, /\.dayProgress/);
+  assert.doesNotMatch(css, /\.nowSliver/);
+  assert.doesNotMatch(css, /\.nowTaskStrip/);
+});
+
+test("purple scorecard cap owns both progress and rolling current-time viewport", () => {
+  assert.match(study, /TimeRollerDeck/);
+  assert.match(study, /dayMeter/);
+  assert.match(study, /6 \/ 11/);
+  assert.match(study, /rollerViewport/);
+  assert.match(study, /data-position="previous"/);
+  assert.match(study, /data-position="current"/);
+  assert.match(study, /data-position="next"/);
+  assert.match(study, /3:24/);
+  assert.match(study, /3:42 PM/);
+  assert.match(study, /4:00/);
+  assert.match(study, /00:18/);
+  assert.match(css, /\.timeDeck/);
+  assert.match(css, /background: #eeecfb/);
+  assert.match(css, /\.rollerViewport/);
+  assert.match(css, /overflow: hidden/);
+  assert.match(css, /\.rollerSelection/);
+  assert.match(css, /rollerRow\[data-position="previous"\]/);
+  assert.match(css, /rollerRow\[data-position="current"\]/);
+  assert.match(css, /rollerRow\[data-position="next"\]/);
+});
+
+test("scorecard stays compact while preserving count, move and distant unlock", () => {
+  assert.match(study, /scoreBody/);
   assert.match(study, /<strong>11<\/strong>/);
   assert.match(study, /<span>tasks<\/span>/);
   assert.match(study, /<small>6 done<\/small>/);
-  assert.match(study, /scoreMove/);
   assert.match(study, /POT UP/);
   assert.match(study, /Sweet William/);
   assert.match(study, /UNLOCKS/);
   assert.match(study, /Harvest Stems · May 6/);
   assert.match(css, /\.outcomeBox/);
+  assert.match(css, /height: 128px/);
+  assert.match(css, /\.scoreBody/);
   assert.match(css, /grid-template-columns: 27% 73%/);
-  assert.match(css, /\.scoreCount/);
-  assert.match(css, /border-right: 1px solid #e3e2e8/);
+  assert.match(css, /height: 79px/);
 });
 
-test("clock is a compact sliver below the outcome box", () => {
-  assert.match(study, /Compact current-time instrument fixture/);
-  assert.match(study, /WINDOW/);
-  assert.match(study, /00:18/);
-  assert.match(study, /3:42 PM/);
-  assert.match(study, /7 AM/);
-  assert.match(study, /8 PM/);
-  assert.match(study, /nowTaskStrip/);
-  assert.match(study, /<span>NOW<\/span>/);
-  assert.match(css, /\.nowSliver/);
-  assert.match(css, /\.instrumentRow/);
-  assert.match(css, /min-height: 48px/);
-  assert.match(css, /\.nowTaskStrip/);
-  assert.match(css, /\.timeTrack/);
-  assert.match(css, /\.currentTimeDot/);
-});
-
-test("all incomplete tasks remain fully live instead of fading after time passes", () => {
+test("all incomplete tasks remain fully live and ordered on the task rail", () => {
   assert.doesNotMatch(study, /data-passed/);
   assert.doesNotMatch(css, /cleanNode\[data-passed/);
   assert.doesNotMatch(css, /opacity:\s*0\.58/);
