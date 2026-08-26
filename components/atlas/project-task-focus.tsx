@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import ProjectReviewTaskFocus from "@/components/atlas/portfolio/ProjectReviewTaskFocus";
+import { useTaskFocusNavigation } from "@/components/atlas/task-focus-navigation-boundary";
 import AtlasTrail from "@/components/atlas/trail/AtlasTrail";
 import type { AtlasProjectTaskFocus } from "@/lib/atlas/portfolio";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
@@ -13,7 +14,6 @@ type Outcome = "done" | "partial" | "blocked" | "not_relevant" | "changed_plan";
 
 type Props = {
   focus: AtlasProjectTaskFocus;
-  returnTo?: string | null;
 };
 
 function prettyDate(value: string | null | undefined) {
@@ -39,13 +39,14 @@ function purchaseList(note: string | null | undefined) {
     .filter(Boolean);
 }
 
-function OrdinaryProjectTaskFocus({ focus, returnTo }: Props) {
+function OrdinaryProjectTaskFocus({ focus }: Props) {
   const [saving, setSaving] = useState<Outcome | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const task = focus.task;
   const project = focus.project;
-  const destination = returnTo || `/project/${encodeURIComponent(project.projectId)}`;
+  const navigation = useTaskFocusNavigation(`/project/${encodeURIComponent(project.projectId)}`);
+  const destination = navigation.returnPath;
   const currentNode = useMemo(() => atlasTrailCurrentNode(project.trail), [project.trail]);
   const familyLabel = focus.step?.title || currentNode?.label || titleCase(project.workstream);
   const locationLabel = project.farmName || focus.organizationName;
@@ -70,7 +71,7 @@ function OrdinaryProjectTaskFocus({ focus, returnTo }: Props) {
       });
 
       if (outcome === "done" || outcome === "not_relevant" || outcome === "changed_plan") {
-        window.location.assign(destination);
+        navigation.leave();
         return;
       }
 
@@ -217,7 +218,7 @@ function OrdinaryProjectTaskFocus({ focus, returnTo }: Props) {
 
 export default function ProjectTaskFocus(props: Props) {
   if (props.focus.task.taskType === "project_review" || props.focus.task.metadata?.task_style === "project_review") {
-    return <ProjectReviewTaskFocus {...props} />;
+    return <ProjectReviewTaskFocus focus={props.focus} />;
   }
   return <OrdinaryProjectTaskFocus {...props} />;
 }
