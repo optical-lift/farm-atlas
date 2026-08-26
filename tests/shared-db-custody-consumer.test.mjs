@@ -23,8 +23,8 @@ test('Farm Atlas consumes post-fence database authority from noel-core-db', () =
   assert.match(verifier, /atlas_rpc_drift/);
   assert.match(verifier, /canonical_blob_mismatch/);
   assert.match(verifier, /raw\.githubusercontent\.com/);
-  assert.match(contract, /Farm Atlas.*application source/i);
-  assert.match(contract, /noel-core-db.*executable database migration source/i);
+  assert.match(contract, /optical-lift\/farm-atlas` owns Atlas \*\*application source\*\*/i);
+  assert.match(contract, /optical-lift\/noel-core-db` owns \*\*executable database migration source\*\*/i);
   assert.match(contract, /frozen executable-surface anchor/i);
   assert.match(contract, /does not copy post-fence migrations back into Farm Atlas/i);
 });
