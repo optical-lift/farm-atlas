@@ -11,8 +11,13 @@ type TaskDatum = {
   place: string;
   amount: string;
   time: string;
+  minuteOfDay: number;
+  durationMinutes: number;
+  placementSource: "fixed" | "atlas-fit";
   unlock?: string;
 };
+
+type DayView = "clock" | "day";
 
 const TASKS: TaskDatum[] = [
   {
@@ -21,6 +26,9 @@ const TASKS: TaskDatum[] = [
     place: "Elm Farm",
     amount: "Farm Round",
     time: "8:00 AM",
+    minuteOfDay: 8 * 60,
+    durationMinutes: 45,
+    placementSource: "atlas-fit",
   },
   {
     family: "WEED",
@@ -28,6 +36,9 @@ const TASKS: TaskDatum[] = [
     place: "Main Garden",
     amount: "30 min · Heavy",
     time: "10:15 AM",
+    minuteOfDay: 10 * 60 + 15,
+    durationMinutes: 30,
+    placementSource: "atlas-fit",
   },
   {
     family: "TIDY",
@@ -35,6 +46,9 @@ const TASKS: TaskDatum[] = [
     place: "Interior",
     amount: "20 min · Standard",
     time: "1:30 PM",
+    minuteOfDay: 13 * 60 + 30,
+    durationMinutes: 20,
+    placementSource: "atlas-fit",
     unlock: "Thursday Ticketed Night · Aug 27",
   },
   {
@@ -43,6 +57,9 @@ const TASKS: TaskDatum[] = [
     place: "Grow Room",
     amount: "3 trays · 600 plants",
     time: "4:06 PM",
+    minuteOfDay: 16 * 60 + 6,
+    durationMinutes: 50,
+    placementSource: "atlas-fit",
     unlock: "Harvest Stems · May 6",
   },
   {
@@ -51,19 +68,40 @@ const TASKS: TaskDatum[] = [
     place: "Barn Beds",
     amount: "20 min · Pass 1 of 3",
     time: "7:00 PM",
+    minuteOfDay: 19 * 60,
+    durationMinutes: 20,
+    placementSource: "fixed",
     unlock: "Choose Overwintering Crop · Sep 15",
   },
 ];
 
 const NOW_TASK_INDEX = 3;
+const NOW_MINUTE = 16 * 60 + 6;
+const NOW_LABEL = "4:06 PM";
 const SLIPPED_OUTCOME_TASK = TASKS[2];
-const SCRUBBER_ROW_HEIGHT = 32;
 
-// Fixture-only geometry for the single smart rail. Production must derive all
-// three layers independently from governed Clock placement/result truth.
+const CALENDAR_START_MINUTE = 7 * 60;
+const CALENDAR_END_MINUTE = 20 * 60;
+const CALENDAR_PX_PER_MINUTE = 0.92;
+const CALENDAR_CANVAS_HEIGHT = (CALENDAR_END_MINUTE - CALENDAR_START_MINUTE) * CALENDAR_PX_PER_MINUTE + 72;
+const CALENDAR_HOURS = Array.from(
+  { length: (CALENDAR_END_MINUTE - CALENDAR_START_MINUTE) / 60 + 1 },
+  (_, index) => CALENDAR_START_MINUTE / 60 + index,
+);
+
+// Fixture-only geometry for the compact smart rail. The task-placement dots are
+// intentionally denser than the named specimen tasks shown in the study.
 const SMART_PROGRESS_FRONTIER = 43;
 const CURRENT_TIME_POSITION = 69;
 const DAY_TASK_POSITIONS = [6, 13, 21, 29, 38, 47, 55, 64, 72, 84, 94];
+
+function calendarY(minuteOfDay: number) {
+  return (minuteOfDay - CALENDAR_START_MINUTE) * CALENDAR_PX_PER_MINUTE;
+}
+
+function taskBlockHeight(task: TaskDatum) {
+  return Math.max(32, task.durationMinutes * CALENDAR_PX_PER_MINUTE);
+}
 
 function AppHeader() {
   return (
@@ -103,7 +141,7 @@ function SmartDayRail() {
       <small
         className={smartStyles.smartRailNowLabel}
         style={{ left: `${CURRENT_TIME_POSITION}%` }}
-      >4:06 PM</small>
+      >{NOW_LABEL}</small>
     </div>
   );
 }
@@ -159,7 +197,7 @@ function Phone({ children }: { children: ReactNode }) {
       <DayHeader />
       {children}
       <footer className={styles.nav}>
-        <span>Home</span><strong>Clock</strong><span>Manager</span><span>Harvest</span><span>More</span>
+        <span>Home</span><span>Work</span><strong>Clock</strong><span>Manager</span><span>More</span>
       </footer>
     </div>
   );
@@ -184,7 +222,16 @@ function UnlockBranch({ label }: { label: string }) {
   );
 }
 
-function ScrollableDayIndex({
+function ViewToggle({ view, onChange }: { view: DayView; onChange: (view: DayView) => void }) {
+  return (
+    <div className={smartStyles.viewToggle} role="group" aria-label="Clock or day task-feed view">
+      <button type="button" data-active={view === "clock" ? "true" : "false"} onClick={() => onChange("clock")}>Clock</button>
+      <button type="button" data-active={view === "day" ? "true" : "false"} onClick={() => onChange("day")}>Day</button>
+    </div>
+  );
+}
+
+function CalendarClockView({
   inspectedIndex,
   onInspect,
 }: {
@@ -193,29 +240,43 @@ function ScrollableDayIndex({
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    viewport.scrollTop = inspectedIndex * SCRUBBER_ROW_HEIGHT;
-  }, []); // initialize the fixture on the actual NOW task only once
-
-  function settleOn(index: number) {
+  function settleOn(index: number, behavior: ScrollBehavior = "smooth") {
     const bounded = Math.max(0, Math.min(TASKS.length - 1, index));
+    const viewport = viewportRef.current;
     onInspect(bounded);
-    viewportRef.current?.scrollTo({
-      top: bounded * SCRUBBER_ROW_HEIGHT,
-      behavior: "smooth",
+    if (!viewport) return;
+    const task = TASKS[bounded];
+    const focusY = calendarY(task.minuteOfDay) + taskBlockHeight(task) / 2;
+    viewport.scrollTo({
+      top: Math.max(0, focusY - viewport.clientHeight / 2),
+      behavior,
     });
   }
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => settleOn(NOW_TASK_INDEX, "auto"));
+    return () => window.cancelAnimationFrame(frame);
+    // This fixture deliberately opens the Clock centered on actual NOW.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleScroll() {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    const index = Math.max(
-      0,
-      Math.min(TASKS.length - 1, Math.round(viewport.scrollTop / SCRUBBER_ROW_HEIGHT)),
-    );
-    if (index !== inspectedIndex) onInspect(index);
+    const focusY = viewport.scrollTop + viewport.clientHeight / 2;
+    let closestIndex = 0;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    TASKS.forEach((task, index) => {
+      const centerY = calendarY(task.minuteOfDay) + taskBlockHeight(task) / 2;
+      const distance = Math.abs(centerY - focusY);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    if (closestIndex !== inspectedIndex) onInspect(closestIndex);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -229,41 +290,60 @@ function ScrollableDayIndex({
     }
   }
 
+  const inspectingNow = inspectedIndex === NOW_TASK_INDEX;
+
   return (
-    <section className={smartStyles.scrubberStudy} aria-label="Provisional scrollable day index fixture">
-      <div className={smartStyles.scrubberCaption}>
-        <span>SCROLL DAY</span>
-        <small>{inspectedIndex === NOW_TASK_INDEX ? "NOW" : "INSPECTING"}</small>
-      </div>
-      <div className={smartStyles.scrubberShell}>
-        <div
-          className={smartStyles.scrubberViewport}
-          ref={viewportRef}
-          onScroll={handleScroll}
-          onKeyDown={handleKeyDown}
-          tabIndex={0}
-          aria-label="Scroll up and down through placed tasks. The centered task is inspected; actual NOW remains 4:06 PM on the day rail."
-        >
-          <div className={smartStyles.scrubberSpacer} aria-hidden="true" />
-          {TASKS.map((task, index) => (
-            <button
-              className={smartStyles.scrubberRow}
-              data-inspected={index === inspectedIndex ? "true" : "false"}
-              type="button"
-              key={`${task.time}-${task.title}`}
-              onClick={() => settleOn(index)}
-              aria-label={`Inspect ${task.time}, ${task.family}, ${task.title}`}
-            >
-              <span>{task.time}</span>
-              <small>{task.family}</small>
-              <strong>{task.title}</strong>
-            </button>
+    <section className={smartStyles.clockView} aria-label="Scrollable day-timer Clock fixture">
+      <header className={smartStyles.clockViewHeader}>
+        <div><span>DAY TIMER</span><strong>{inspectingNow ? `NOW · ${NOW_LABEL}` : `INSPECTING · ${TASKS[inspectedIndex].time}`}</strong></div>
+        {!inspectingNow
+          ? <button type="button" onClick={() => settleOn(NOW_TASK_INDEX)}>Return to now</button>
+          : null}
+      </header>
+      <div
+        className={smartStyles.calendarViewport}
+        ref={viewportRef}
+        onScroll={handleScroll}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        aria-label="Scroll vertically through the scheduled day. The task nearest the center is inspected; the NOW line remains factual."
+      >
+        <div className={smartStyles.calendarCanvas} style={{ height: `${CALENDAR_CANVAS_HEIGHT}px` }}>
+          {CALENDAR_HOURS.map((hour) => (
+            <div className={smartStyles.calendarHour} style={{ top: `${calendarY(hour * 60)}px` }} key={hour}>
+              <span>{hour === 12 ? "12 PM" : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}</span>
+              <i aria-hidden="true" />
+            </div>
           ))}
-          <div className={smartStyles.scrubberSpacer} aria-hidden="true" />
+
+          <div className={smartStyles.calendarNow} style={{ top: `${calendarY(NOW_MINUTE)}px` }} aria-label={`Actual now ${NOW_LABEL}`}>
+            <span>{NOW_LABEL}</span><i aria-hidden="true" />
+          </div>
+
+          {TASKS.map((task, index) => {
+            const inspected = index === inspectedIndex;
+            return (
+              <button
+                className={smartStyles.calendarTaskBlock}
+                data-inspected={inspected ? "true" : "false"}
+                data-now={index === NOW_TASK_INDEX ? "true" : "false"}
+                data-placement-source={task.placementSource}
+                type="button"
+                style={{
+                  top: `${calendarY(task.minuteOfDay)}px`,
+                  height: `${taskBlockHeight(task)}px`,
+                }}
+                key={`${task.time}-${task.title}`}
+                onClick={() => settleOn(index)}
+                aria-label={`Inspect ${task.time}, ${task.family}, ${task.title}`}
+              >
+                <span>{task.time} · {task.family}</span>
+                <strong>{task.title}</strong>
+                {inspected ? <small>{task.place} · {task.amount}</small> : null}
+              </button>
+            );
+          })}
         </div>
-        <i className={smartStyles.scrubberSelection} aria-hidden="true" />
-        <i className={smartStyles.scrubberFadeTop} aria-hidden="true" />
-        <i className={smartStyles.scrubberFadeBottom} aria-hidden="true" />
       </div>
     </section>
   );
@@ -271,7 +351,7 @@ function ScrollableDayIndex({
 
 function OrderedTaskRail({ inspectedIndex }: { inspectedIndex: number }) {
   return (
-    <div className={styles.cleanRail} aria-label="Ordered task rail fixture synchronized to the scrollable day index">
+    <div className={styles.cleanRail} aria-label="Ordered task rail fixture synchronized to Clock inspection">
       {TASKS.map((task, index) => {
         const isNow = index === NOW_TASK_INDEX;
         const isInspected = index === inspectedIndex;
@@ -296,13 +376,16 @@ function OrderedTaskRail({ inspectedIndex }: { inspectedIndex: number }) {
 }
 
 function SmartRailDaySurface() {
+  const [view, setView] = useState<DayView>("clock");
   const [inspectedIndex, setInspectedIndex] = useState(NOW_TASK_INDEX);
 
   return (
-    <section className={styles.daySurface} aria-label="Atlas-style day summary, scrollable time index, and synchronized ordered task feed fixture">
+    <section className={styles.daySurface} aria-label="Atlas day summary with Clock-first scheduler view and secondary day task feed fixture">
       <DaySummaryPanel />
-      <ScrollableDayIndex inspectedIndex={inspectedIndex} onInspect={setInspectedIndex} />
-      <OrderedTaskRail inspectedIndex={inspectedIndex} />
+      <ViewToggle view={view} onChange={setView} />
+      {view === "clock"
+        ? <CalendarClockView inspectedIndex={inspectedIndex} onInspect={setInspectedIndex} />
+        : <OrderedTaskRail inspectedIndex={inspectedIndex} />}
     </section>
   );
 }
@@ -326,18 +409,18 @@ export default function ActiveOutcomeStudies() {
       aria-labelledby="active-outcome-studies-heading"
     >
       <header className={styles.sectionHeader}>
-        <span>CLOCK + DAYBOOK STUDY 10 · TEMPORAL SCRUBBER</span>
-        <h2 id="active-outcome-studies-heading">The roller becomes a time index. The feed remains the work.</h2>
-        <p>The Atlas-style purple day summary now owns smart progress and consequence state. Below it, the provisional roller is a vertical snap scrubber: scroll through time to inspect placed tasks while the full task feed highlights the same task. Actual NOW never moves when inspection moves.</p>
+        <span>CLOCK + DAYBOOK STUDY 11 · CLOCK-FIRST DAY TIMER</span>
+        <h2 id="active-outcome-studies-heading">Clock schedules the day. Day shows the whole work rail.</h2>
+        <p>The default view is now a deliberately plain, Google-Calendar-like day timer with the scrubber behavior built into the vertical time axis. Every executable task shown to the worker has a Clock placement, including work Atlas had to fit into the day. The Day toggle keeps the full rail as the secondary detailed list.</p>
       </header>
       <div className={styles.dataNote}>
         <strong>Fixture truth boundary</strong>
-        <span>The scrubber location is intentionally provisional. Its interaction contract is the study: scroll up or down, snap to one real placed task, and synchronize inspection identity with the full feed without changing current time, Clock placement, task state, or the 43% Day Clearance Frontier. All times and tasks remain editor fixtures.</span>
+        <span>This study is still fixture-only. It tests the product contract that Clock is allowed to place flexible work into the worker day rather than leaving it in an unplanned pocket. Production must derive and commit those placements through governed Clock choreography; this mockup does not write schedule truth.</span>
       </div>
       <div className={styles.singleGallery}>
         <Study
-          label="A · Atlas day summary + scrollable temporal index"
-          note="The purple card stays close to current Atlas. The roller earns its place only as a compressed time-navigation surface: it lets you inspect chronology while the regular feed remains the detailed work surface."
+          label="A · Clock-first calendar scrubber + Day rail toggle"
+          note="The calendar is intentionally plain for this pass: proportional time, scheduled blocks, factual NOW line, vertical scrub inspection, and a secondary Day list. Fancy watch-face distortion can come later if this geometry is clear."
         >
           <SmartRailDaySurface />
         </Study>
