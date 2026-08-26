@@ -15,7 +15,7 @@ const partialRoute = read("app/api/atlas/weed-card-partial/route.ts");
 const migration = read("supabase/migrations/20260821172800_weed_card_bed_truth_and_trail_v1.sql");
 
 test("Weed header describes the bed's present use and actual last-weeding date", () => {
-  assert.match(detail, /familyDetail=\{card\.bedUseCategory\}/);
+  assert.match(detail, /const actionDetail = selectedCrop \|\| card\.bedUseCategory/);
   assert.match(detail, /Last weeded · \$\{prettyDate\(card\.lastWeededOn\)/);
   assert.match(migration, /'lastWeededOn',v_last_weeded_on/);
   assert.match(migration, /v_state\.last_weeded_at at time zone 'America\/Chicago'/);
@@ -59,12 +59,13 @@ test("Weed result controls require condition plus a written observation before S
   assert.match(detail, /Mostly clear/);
   assert.match(detail, /All clear/);
   assert.match(detail, /Save result/);
-  assert.match(detail, /aria-pressed=\{selectedCondition === condition\}/);
-  assert.match(detail, /disabled=\{busy \|\| !selectedCondition \|\| !note\.trim\(\)\}/);
+  assert.match(detail, /aria-pressed=\{selectedResult === condition\}/);
+  assert.match(detail, /completionNeedsNote = !clearMode/);
+  assert.match(detail, /completionNeedsNote && !note\.trim\(\)/);
   assert.match(detail, /Log it/);
   assert.match(detail, /aria-expanded=\{logOpen\}/);
   assert.match(detail, /placeholder="What did you observe\?"/);
-  assert.match(detail, /aria-label="Weeding observation" required/);
+  assert.match(detail, /aria-label=\{`\$\{actionLabel\} observation`\} required=\{!clearMode\}/);
   assert.match(sessionRoute, /weed_card_observation_required/);
   assert.match(partialRoute, /weed_card_observation_required/);
   assert.match(detail, />Blocked<\/button>/);

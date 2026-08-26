@@ -7,26 +7,39 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (path) => readFileSync(join(root, path), "utf8");
 
-test("selected crop turnover is a Clear variant of the canonical Weed card renderer", () => {
+test("selected crop Clear uses the exact canonical bed-work renderer instead of a Clear variant", () => {
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
   const route = read("app/api/atlas/weed-card/turnover/route.ts");
 
   assert.equal(existsSync(join(root, "components/atlas/selected-crop-turnover-task-focus.tsx")), false);
-  assert.doesNotMatch(loader, /SelectedCropTurnoverTaskFocus/);
-  assert.match(loader, /<WeedCardTaskFocus[^>]*turnover=/);
+  assert.doesNotMatch(focus, /SelectedCropClearCard|ClearTrail|ClearReminder|tap to cross off|bed turnover/);
+  assert.match(loader, /data\.card/);
+  assert.match(loader, /<WeedCardTaskFocus[^>]*card=\{card\}[^>]*turnover=/);
 
-  assert.match(focus, /family="Clear"/);
-  assert.match(focus, /familyDetail="bed turnover"/);
-  assert.match(focus, /After harvest · clearing due/);
-  assert.match(focus, /tap to cross off/);
-  assert.match(focus, /Take \$\{crop\} biomass to \$\{turnover\.biomassDestination\}/);
-  assert.match(focus, /Selected crop only · foot-bed crops stay in place/);
-  assert.match(focus, /onDone=\{\(\) => void finish\("done"\)\}/);
-  assert.match(focus, /onUnfinished=\{\(\) => void finish\("partial"\)\}/);
-  assert.doesNotMatch(focus, /Partly removed|Removed<\/button>/);
+  assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v4-spatial-result"/);
+  assert.match(focus, /const actionLabel = clearMode \? "Clear" : "Weed"/);
+  assert.match(focus, /const actionDetail = selectedCrop \|\| card\.bedUseCategory/);
+  assert.match(focus, /title=\{card\.objectLabel\}/);
+  assert.match(focus, /card\.bedTrail/);
+  assert.match(focus, />Bed now</);
+  assert.match(focus, /CropOccupancyBedMap/);
+  assert.match(focus, />Active Crops</);
+  assert.match(focus, /MaintenanceDirectiveStrip/);
+  assert.match(focus, />Recent passes</);
+  assert.match(focus, />How’d we do\?</);
+  assert.match(focus, />Log it</);
+  assert.match(focus, />Blocked</);
+  assert.match(focus, /Save result/);
+  assert.match(focus, /Still there/);
+  assert.match(focus, /Partly removed/);
+  assert.match(focus, /Removed/);
 
+  assert.match(route, /object_crop_occupancy_v1/);
   assert.match(route, /object_crop_bed_map_v1/);
-  assert.match(route, /bedMaps/);
+  assert.match(route, /occupancyGroups/);
+  assert.match(route, /bedTrail/);
+  assert.match(route, /sessions/);
+  assert.match(route, /card:/);
   assert.match(route, /role", "clears"/);
 });

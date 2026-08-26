@@ -6,7 +6,7 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("every weed task routes to the occupancy-aware persistent Weed Card with the approved Weed presentation", () => {
+test("every weed task routes to the occupancy-aware persistent bed-work card with the approved Weed presentation", () => {
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
   const loader = read("components/atlas/weed-card-task-loader.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
@@ -15,13 +15,13 @@ test("every weed task routes to the occupancy-aware persistent Weed Card with th
   assert.match(canonical, /if \(isWeedTask\(props\.task\)\) return <WeedCardTaskLoader/);
   assert.doesNotMatch(canonical, /<ConciseWeedTaskDetail/);
 
-  assert.match(loader, /<WeedCardTaskFocus task=\{task\} card=\{card\} childTasks=\{childTasks\} assignee=\{assignee\} \/>/);
+  assert.match(loader, /<WeedCardTaskFocus task=\{task\} card=\{card\} turnover=\{turnover \|\| undefined\} childTasks=\{childTasks\} assignee=\{assignee\} \/>/);
   assert.match(loader, /childTasks=\{childTasks\}/);
   assert.doesNotMatch(loader, /ConciseWeedTaskDetail/);
   assert.match(loader, /if \(failed\) return <AssignedTaskExecutionShell/);
 
   assert.match(focus, /AtlasTaskCardFrame/);
-  assert.match(focus, /family="Weed"/);
+  assert.match(focus, /const actionLabel = clearMode \? "Clear" : "Weed"/);
   assert.match(focus, /card\.occupancyGroups/);
   assert.match(focus, />Active Crops</);
   assert.match(focus, /cohort\.displayLabel/);

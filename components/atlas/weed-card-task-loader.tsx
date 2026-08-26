@@ -47,14 +47,13 @@ export default function WeedCardTaskLoader({ task, childTasks, assignee }: Props
           card?: AtlasWeedCardContext;
           turnover?: AtlasSelectedCropTurnoverContext;
         };
-        if (!response.ok || !data.ok) throw new Error("Weed Card unavailable");
+        if (!response.ok || !data.ok || !data.card) throw new Error("Bed Work Card unavailable");
+        if (!active) return;
+        setCard(data.card);
         if (turnoverMode) {
-          if (!data.turnover) throw new Error("Turnover context unavailable");
-          if (active) setTurnover(data.turnover);
-          return;
+          if (!data.turnover) throw new Error("Clear action context unavailable");
+          setTurnover(data.turnover);
         }
-        if (!data.card) throw new Error("Weed Card unavailable");
-        if (active) setCard(data.card);
       })
       .catch(() => {
         if (active) setFailed(true);
@@ -65,11 +64,8 @@ export default function WeedCardTaskLoader({ task, childTasks, assignee }: Props
     };
   }, [task.task_id, turnoverMode]);
 
-  if (turnoverMode && turnover) {
-    return <WeedCardTaskFocus task={task} turnover={turnover} childTasks={childTasks} assignee={assignee} />;
-  }
-  if (!turnoverMode && card) {
-    return <WeedCardTaskFocus task={task} card={card} childTasks={childTasks} assignee={assignee} />;
+  if (card) {
+    return <WeedCardTaskFocus task={task} card={card} turnover={turnover || undefined} childTasks={childTasks} assignee={assignee} />;
   }
   if (failed) return <AssignedTaskExecutionShell task={task} childTasks={childTasks} assignee={assignee} />;
 
