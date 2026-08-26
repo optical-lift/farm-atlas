@@ -5,6 +5,7 @@ import Link from "next/link";
 import AssignedTaskExecutionShell, {
   type AssignedTaskExecutionShellProps,
 } from "@/components/atlas/assigned-task-execution-shell";
+import TaskFocusNavigationBoundary from "@/components/atlas/task-focus-navigation-boundary";
 import ThinCropCycleTaskCard, { isThinCropCycleTask } from "@/components/atlas/thin-crop-cycle-task-card";
 import type { WorkerReadinessPresentation, WorkerReadinessResponse } from "@/lib/atlas/worker-readiness";
 
@@ -92,7 +93,7 @@ function ReadinessFailureScreen({ props }: { props: AssignedTaskExecutionShellPr
   );
 }
 
-export default function WorkerReadyAssignedTaskExecutionShell({ initialReadiness, ...props }: Props) {
+function CanonicalAssignedTaskExecutionSurface({ initialReadiness, ...props }: Props) {
   // Owner-assigned work retains its management surface. Worker-assigned work is
   // rendered only after the server has already resolved the canonical execution warrant.
   const workerFacing = props.assignee.key !== "owner";
@@ -109,4 +110,12 @@ export default function WorkerReadyAssignedTaskExecutionShell({ initialReadiness
   }
 
   return <AssignedTaskExecutionShell {...props} />;
+}
+
+export default function WorkerReadyAssignedTaskExecutionShell(props: Props) {
+  return (
+    <TaskFocusNavigationBoundary fallbackPath={props.assignee.listPath}>
+      <CanonicalAssignedTaskExecutionSurface {...props} />
+    </TaskFocusNavigationBoundary>
+  );
 }
