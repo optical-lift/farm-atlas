@@ -20,3 +20,11 @@ Implementation implications:
 - Outdoor eligibility belongs to the conveyor, Quick Wins, and recovery routing. Never interrupt indoor time with a tiny outside task merely because its duration is short.
 - Prefer stored task metadata such as `work_environment` and `heat_exposure` over text inference when those fields exist.
 - Describe completions as changes to farm state when possible, not merely checkbox completion.
+
+## Worker task epistemic release rule
+
+A worker-facing task is an execution warrant, not an unresolved research note. Only resolved execution facts may cross into `assigned_worker` work.
+
+If any fact required to execute the task correctly is unknown — including method, material or product identity, resource or equipment, amount or dilution, safety constraint, destination, timing or work window, prerequisite, or another execution-critical condition — stop authoring/release and return that unknown to Owner custody or the canonical truth-acquisition path. Ask for the missing fact rather than guessing, substituting, or encoding uncertainty into the worker card.
+
+Never emit worker-facing placeholders such as `TBD`, `method resource not attached`, `do not infer product`, `owner must define`, or equivalent unresolved language. Do not invent a product, resource, method, dose, safety rule, place, or timing fact to make a task appear complete. The task may become worker-visible only after required truth is resolved and represented through the canonical task/resource/readiness contracts.
