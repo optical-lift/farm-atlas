@@ -10,14 +10,14 @@ const migration = read("supabase/migrations/20260804075000_weed_cards_require_ph
 const rhythmMigration = read("supabase/migrations/20260804075100_weed_rhythm_requires_physical_need.sql");
 const cleanupMigration = read("supabase/migrations/20260804075200_retire_existing_clear_weed_work.sql");
 
-test("the Weed task keeps its complete canonical action and bed name in the approved Weed card", () => {
-  assert.match(focus, /AtlasTaskCardFrame/);
-  assert.match(focus, /family="Weed"/);
-  assert.match(focus, /title=\{card\.objectLabel\}/);
-  assert.match(focus, /subtitle=\{card\.zoneLabel/);
+test("the Weed task keeps its complete canonical action and bed name in the approved shared bed-work card", () => {
+  assert.equal((focus.match(/<AtlasTaskCardFrame/g) || []).length, 1);
+  assert.match(focus, /const family = isClear \? "Clear" : "Weed"/);
+  assert.match(focus, /card\?\.objectLabel/);
+  assert.match(focus, /card\?\.zoneLabel/);
   assert.match(focus, />Active Crops</);
-  assert.match(focus, /card\.occupancyGroups/);
-  assert.match(focus, /card\.bedTrail/);
+  assert.match(focus, /card\?\.occupancyGroups/);
+  assert.match(focus, /card\?\.bedTrail/);
   assert.doesNotMatch(focus, /CropOccupancyList|AssignedTaskExecutionShell|instruction=|TaskDominionTrail/);
   assert.match(migration, /NEW\.title := 'Weed ' \|\| v_object_label/);
   assert.match(migration, /'display_title', NEW\.title/);
