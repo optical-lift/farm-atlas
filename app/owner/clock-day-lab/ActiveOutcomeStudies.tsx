@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 import styles from "./active-outcome-studies.module.css";
 
 type TaskDatum = {
@@ -8,7 +6,6 @@ type TaskDatum = {
   place: string;
   amount: string;
   window: string;
-  date: string;
   clock: string;
   unlock?: string;
 };
@@ -20,7 +17,6 @@ const TASKS: TaskDatum[] = [
     place: "Elm Farm",
     amount: "Farm Round",
     window: "Morning",
-    date: "Aug 26",
     clock: "7:00",
   },
   {
@@ -29,7 +25,6 @@ const TASKS: TaskDatum[] = [
     place: "Main Garden",
     amount: "30 min · Heavy",
     window: "Morning",
-    date: "Aug 24",
     clock: "8:30",
   },
   {
@@ -38,7 +33,6 @@ const TASKS: TaskDatum[] = [
     place: "Grow Room",
     amount: "3 trays · 600 plants",
     window: "Midafternoon",
-    date: "Aug 24",
     clock: "2:30",
     unlock: "Harvest Stems · May 6",
   },
@@ -48,7 +42,6 @@ const TASKS: TaskDatum[] = [
     place: "Barn Beds",
     amount: "20 min · Pass 1 of 3",
     window: "Evening",
-    date: "Aug 26",
     clock: "7:00",
     unlock: "Choose Overwintering Crop · Sep 15",
   },
@@ -67,23 +60,14 @@ function AppHeader() {
   );
 }
 
-function MiniToggle({ active }: { active: "timeline" | "daybook" }) {
-  return (
-    <div className={styles.miniToggle} aria-label="Fixture view toggle">
-      <span data-active={active === "timeline" ? "true" : "false"}>Timeline</span>
-      <span data-active={active === "daybook" ? "true" : "false"}>Daybook</span>
-    </div>
-  );
-}
-
-function DayHeader({ active }: { active: "timeline" | "daybook" }) {
+function DayHeader() {
   return (
     <section className={styles.dayHeader}>
       <div className={styles.dayIdentity}>
         <span>WEDNESDAY</span>
         <strong>Aug 26</strong>
       </div>
-      <MiniToggle active={active} />
+      <div className={styles.dayCount}><strong>11</strong><span>tasks</span><small>6 done</small></div>
       <div className={styles.dayProgress}>
         <span>6 of 11 finished</span>
         <i aria-hidden="true"><b /></i>
@@ -92,11 +76,11 @@ function DayHeader({ active }: { active: "timeline" | "daybook" }) {
   );
 }
 
-function Phone({ view, children }: { view: "timeline" | "daybook"; children: ReactNode }) {
+function Phone({ children }: { children: React.ReactNode }) {
   return (
-    <div className={styles.phone} data-view={view}>
+    <div className={styles.phone}>
       <AppHeader />
-      <DayHeader active={view} />
+      <DayHeader />
       {children}
       <footer className={styles.nav}>
         <span>Home</span><strong>Clock</strong><span>Manager</span><span>Harvest</span><span>More</span>
@@ -105,114 +89,84 @@ function Phone({ view, children }: { view: "timeline" | "daybook"; children: Rea
   );
 }
 
-function FocusCard({ variant = "plain" }: { variant?: "plain" | "split" | "line" }) {
+function TaskIdentity({ task }: { task: TaskDatum }) {
   return (
-    <section className={styles.focusCard} data-variant={variant}>
-      <div className={styles.dayCount}>
-        <strong>11</strong>
-        <span>tasks</span>
-        <small>6 done</small>
-      </div>
-      <div className={styles.focusTask}>
-        <span>{ACTIVE_TASK.family}</span>
-        <strong>{ACTIVE_TASK.title}</strong>
-        <div className={styles.unlockLine}><b>UNLOCKS</b><span>Harvest Stems · May 6</span></div>
-      </div>
-      <div className={styles.overdueDock}>
-        <div><b>OVERDUE · 2</b><span>showing the one that matters now</span></div>
-        <div className={styles.overdueRow}>
-          <strong>Pot up · Sweet William</strong>
-          <span>Aug 24</span>
-          <i aria-hidden="true" />
-          <b>Harvest Stems · May 6</b>
-        </div>
-        <small>+1 hidden</small>
-      </div>
-    </section>
-  );
-}
-
-function CalendarGrid({ variant }: { variant: "classic" | "slim" | "window" }) {
-  return (
-    <section className={styles.calendar} data-variant={variant} aria-label="Google Calendar style fixture">
-      <div className={styles.hourGutter}>
-        {HOURS.map((hour) => <span key={hour}>{hour}</span>)}
-      </div>
-      <div className={styles.calendarBody}>
-        {HOURS.map((hour) => <i className={styles.hourRule} key={hour} />)}
-        {variant === "window" ? <div className={styles.windowShade}>MIDAFTERNOON</div> : null}
-        <div className={styles.calendarEvent} data-kind="round" style={{ top: "6%", height: "10%" }}>
-          <b>7:00</b><strong>Farm Round</strong><span>Elm Farm</span>
-        </div>
-        <div className={styles.calendarEvent} data-kind="weed" style={{ top: "20%", height: "11%" }}>
-          <b>8:30</b><strong>MG11</strong><span>Main Garden</span>
-        </div>
-        <div className={styles.calendarEvent} data-active="true" style={{ top: "58%", height: "14%" }}>
-          <b>2:30</b><strong>Sweet William</strong><span>Pot up · 3 trays</span><small>Harvest Stems · May 6</small>
-        </div>
-        <div className={styles.calendarEvent} data-kind="spray" style={{ top: "86%", height: "10%" }}>
-          <b>7:00</b><strong>BB10</strong><span>Spray · Pass 1 of 3</span>
-        </div>
-        <div className={styles.nowRule} style={{ top: "61%" }}><span>2:34</span></div>
-      </div>
-    </section>
-  );
-}
-
-function TaskMeta({ task }: { task: TaskDatum }) {
-  return (
-    <>
-      <span className={styles.taskFamily}>{task.family}</span>
+    <div className={styles.taskIdentity}>
+      <span>{task.family}</span>
       <strong>{task.title}</strong>
       <small>{task.place} · {task.amount}</small>
-    </>
+    </div>
   );
 }
 
-function RailFeed({ variant }: { variant: "branch" | "alternating" | "lanes" }) {
+function UnlockBranch({ label }: { label: string }) {
   return (
-    <section className={styles.railFeed} data-variant={variant} aria-label="Mind map task feed fixture">
-      <header><span>MIDAFTERNOON</span><small>3 remaining</small></header>
-      <div className={styles.railBody}>
-        {TASKS.slice(1).map((task) => (
-          <article className={styles.railNode} data-active={task === ACTIVE_TASK ? "true" : "false"} key={task.title}>
-            <div className={styles.nodeTime}><strong>{task.window}</strong><span>{task.clock}</span></div>
-            <i className={styles.nodeDot} aria-hidden="true" />
-            <div className={styles.nodeTask}><TaskMeta task={task} /></div>
-            {task.unlock ? (
-              <div className={styles.nodeUnlock}>
-                <i aria-hidden="true" />
-                <span>UNLOCKS</span>
-                <strong>{task.unlock}</strong>
-              </div>
-            ) : null}
-          </article>
-        ))}
+    <div className={styles.unlockBranch}>
+      <i aria-hidden="true" />
+      <div><span>UNLOCKS</span><strong>{label}</strong></div>
+    </div>
+  );
+}
+
+function MovingNowNode() {
+  return (
+    <section className={styles.movingSurface} aria-label="Moving NOW node merged clock and task feed fixture">
+      <div className={styles.overdueLine}><strong>2 overdue</strong><span>1 connected to the current move</span></div>
+      <div className={styles.movingRail}>
+        {TASKS.map((task) => {
+          const active = task === ACTIVE_TASK;
+          return (
+            <article className={styles.movingNode} data-active={active ? "true" : "false"} key={task.title}>
+              <div className={styles.nodeWhen}><strong>{task.window}</strong><span>{task.clock}</span></div>
+              <i className={styles.railDot} aria-hidden="true" />
+              {active ? <div className={styles.nowCrossing}><span>3:06 PM</span></div> : null}
+              <TaskIdentity task={task} />
+              {task.unlock ? <UnlockBranch label={task.unlock} /> : null}
+            </article>
+          );
+        })}
       </div>
     </section>
   );
 }
 
-function StudyPair({ label, note, calendarVariant, railVariant, focusVariant }: {
-  label: string;
-  note: string;
-  calendarVariant: "classic" | "slim" | "window";
-  railVariant: "branch" | "alternating" | "lanes";
-  focusVariant: "plain" | "split" | "line";
-}) {
+function ClockSpine() {
   return (
-    <section className={styles.studyPair}>
-      <header className={styles.studyLabel}><strong>{label}</strong><span>{note}</span></header>
-      <div className={styles.viewPair}>
-        <div className={styles.viewStudy}>
-          <span>CLOCK VIEW</span>
-          <Phone view="timeline"><CalendarGrid variant={calendarVariant} /></Phone>
-        </div>
-        <div className={styles.viewStudy}>
-          <span>DAYBOOK VIEW</span>
-          <Phone view="daybook"><FocusCard variant={focusVariant} /><RailFeed variant={railVariant} /></Phone>
-        </div>
+    <section className={styles.clockSurface} aria-label="Clock spine merged clock and task feed fixture">
+      <div className={styles.clockScale}>
+        {HOURS.map((hour) => <span key={hour}>{hour}</span>)}
       </div>
+      <div className={styles.clockSpine}>
+        {HOURS.map((hour) => <i className={styles.hourTick} key={hour} />)}
+        <div className={styles.spineTask} data-kind="round" style={{ top: "4%" }}>
+          <i className={styles.railDot} aria-hidden="true" />
+          <TaskIdentity task={TASKS[0]} />
+        </div>
+        <div className={styles.spineTask} data-kind="weed" style={{ top: "17%" }}>
+          <i className={styles.railDot} aria-hidden="true" />
+          <TaskIdentity task={TASKS[1]} />
+        </div>
+        <div className={styles.spineTask} data-active="true" style={{ top: "58%" }}>
+          <i className={styles.railDot} aria-hidden="true" />
+          <TaskIdentity task={TASKS[2]} />
+          <UnlockBranch label="Harvest Stems · May 6" />
+        </div>
+        <div className={styles.spineTask} data-kind="spray" style={{ top: "87%" }}>
+          <i className={styles.railDot} aria-hidden="true" />
+          <TaskIdentity task={TASKS[3]} />
+          <UnlockBranch label="Choose Overwintering Crop · Sep 15" />
+        </div>
+        <div className={styles.spineNow} style={{ top: "61%" }}><span>3:06 PM</span></div>
+      </div>
+    </section>
+  );
+}
+
+function Study({ label, note, children }: { label: string; note: string; children: React.ReactNode }) {
+  return (
+    <section className={styles.study}>
+      <header className={styles.studyLabel}><strong>{label}</strong><span>{note}</span></header>
+      <Phone>{children}</Phone>
     </section>
   );
 }
@@ -227,36 +181,27 @@ export default function ActiveOutcomeStudies() {
       aria-labelledby="active-outcome-studies-heading"
     >
       <header className={styles.sectionHeader}>
-        <span>DAYBOOK STUDY 3 · ONE CLOCK, TWO LENSES</span>
-        <h2 id="active-outcome-studies-heading">Calendar on Clock. Causal map on Daybook.</h2>
-        <p>Three paired studies. The tiny Timeline / Daybook toggle stays subordinate to the day. Clock becomes a calendar. Daybook becomes a task-and-consequence map with one active move, a compact overdue dock, and standardized task data.</p>
+        <span>CLOCK + DAYBOOK STUDY 4 · ONE SURFACE</span>
+        <h2 id="active-outcome-studies-heading">The rail is the clock.</h2>
+        <p>Two merged-surface studies. No Timeline / Daybook toggle and no calendar cards. Tasks, time, NOW, and downstream unlocks all live on one chronological rail.</p>
       </header>
       <div className={styles.dataNote}>
         <strong>Fixture truth boundary</strong>
-        <span>Sweet William is the real open 3-tray / 600-plant pot-up task and its crop profile now carries a May 1–June 30, 2027 harvest-watch window. “Harvest Stems · May 6” is the owner-requested design fixture for testing the future-task link; Atlas does not yet materialize an exact May 6 harvest task.</span>
+        <span>Sweet William is the real open 3-tray / 600-plant pot-up task. Its crop profile carries a May 1–June 30, 2027 harvest-watch window. “Harvest Stems · May 6” remains the owner-requested design fixture date, not a materialized production harvest task.</span>
       </div>
       <div className={styles.gallery}>
-        <StudyPair
-          label="A · Calendar + branch rail"
-          note="Closest to the current Day overview: classic calendar blocks on Clock, one clean left rail with unlock branches on Daybook."
-          calendarVariant="classic"
-          railVariant="branch"
-          focusVariant="plain"
-        />
-        <StudyPair
-          label="B · Quiet schedule + alternating map"
-          note="More white space: slimmer calendar events and task nodes that alternate around a central dependency spine."
-          calendarVariant="slim"
-          railVariant="alternating"
-          focusVariant="split"
-        />
-        <StudyPair
-          label="C · Work window + dependency lanes"
-          note="The active work window is visible on Clock; Daybook separates task identity from downstream unlocks into two connected lanes."
-          calendarVariant="window"
-          railVariant="lanes"
-          focusVariant="line"
-        />
+        <Study
+          label="A · Moving NOW node"
+          note="Task-feed density with a single rail. The current-time rule crosses the rail exactly at the task Atlas says should be active."
+        >
+          <MovingNowNode />
+        </Study>
+        <Study
+          label="B · Clock spine"
+          note="A sparse real-time scale becomes the rail itself. Tasks are nodes attached to the clock instead of boxes occupying calendar blocks."
+        >
+          <ClockSpine />
+        </Study>
       </div>
     </section>
   );
