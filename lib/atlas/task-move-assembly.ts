@@ -4,6 +4,7 @@ import type {
   AtlasTaskProjectContext,
 } from "@/lib/atlas/task-cards-client";
 import { atlasTaskDisplay, type AtlasWorkRouteKey } from "@/lib/atlas/task-display";
+import { taskDestinationContact, type TaskDestinationContactData } from "@/lib/atlas/task-destination-contact";
 import { taskExecutionModel } from "@/lib/atlas/task-execution";
 import { assembleTaskMoveCore } from "./task-move-assembly-core";
 import { attachCanonicalMoveRoles } from "./task-move-role-enrichment";
@@ -104,6 +105,7 @@ export type TaskMoveAssembly = {
     displayAction: string | null;
     operationFamily: string | null;
   };
+  destination: TaskDestinationContactData | null;
   spine: {
     current: TaskMoveFact[];
     move: {
@@ -174,11 +176,13 @@ function metadataText(task: AtlasTaskCard, key: string) {
 export function assembleTaskMove(task: AtlasTaskCard): TaskMoveAssembly {
   const execution = taskExecutionModel(task);
   const display = atlasTaskDisplay(task);
+  const destination = taskDestinationContact(task);
+  const presentationPlace = destination?.headerPlace || execution.placeText || display.location || "Elm Farm";
 
   const canonicalMoveSemantics = {
     route: display.route,
     instruction: display.action || execution.doText || task.title,
-    placeLabel: execution.placeText || display.location || "Elm Farm",
+    placeLabel: presentationPlace,
     dueLabel: execution.dueLabel,
     whyNow: metadataText(task, "why_now"),
     stateEffect: metadataText(task, "state_effect"),
@@ -190,7 +194,7 @@ export function assembleTaskMove(task: AtlasTaskCard): TaskMoveAssembly {
     display,
     moveSemantics: canonicalMoveSemantics,
     moveContext: task.move_context ?? null,
-  }), task) as Omit<TaskMoveAssembly, "task" | "execution"> & {
+  }), task) as Omit<TaskMoveAssembly, "task" | "execution" | "destination"> & {
     task: Omit<TaskMoveAssembly["task"], "displayAction" | "operationFamily">;
     execution: Omit<TaskMoveAssembly["execution"], "howLabel">;
   };
@@ -202,8 +206,10 @@ export function assembleTaskMove(task: AtlasTaskCard): TaskMoveAssembly {
       displayAction: metadataText(task, "display_action") || display.action || null,
       operationFamily: metadataText(task, "display_family") || metadataText(task, "operation_family") || null,
     },
+    destination,
     execution: {
       ...baseAssembly.execution,
+      where: destination?.headerPlace || baseAssembly.execution.where,
       howLabel: metadataText(task, "execution_how_label"),
     },
   };
