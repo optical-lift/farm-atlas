@@ -287,20 +287,15 @@
 }
 
 .outcomeBox {
-  height: 150px;
-  overflow: hidden;
-  border: 1px solid #d8d5e8;
-  border-radius: 20px;
-  background: #fff;
-  box-shadow: 0 5px 16px rgba(45, 47, 68, 0.025);
+  min-height: 150px;
+  background: transparent;
 }
 
 .timeDeck {
   position: relative;
   height: 68px;
   overflow: hidden;
-  border-bottom: 1px solid #d8d4ed;
-  background: #eeecfb;
+  background: transparent;
 }
 
 .rollerViewport {
@@ -314,11 +309,26 @@
   z-index: 1;
   left: 0;
   right: 0;
-  top: 22px;
-  height: 24px;
-  border-top: 1px solid rgba(103, 94, 160, 0.22);
-  border-bottom: 1px solid rgba(103, 94, 160, 0.22);
-  background: rgba(255, 255, 255, 0.38);
+  top: 35px;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(118, 110, 190, 0),
+    rgba(118, 110, 190, 0.2) 14%,
+    rgba(118, 110, 190, 0.32) 50%,
+    rgba(118, 110, 190, 0.2) 86%,
+    rgba(118, 110, 190, 0)
+  );
+}
+
+.rollerSelection::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  width: 1px;
+  height: 7px;
+  background: rgba(118, 110, 190, 0.28);
 }
 
 .rollerRow {
@@ -355,11 +365,11 @@
 }
 
 .rollerRow[data-position="previous"] {
-  top: 4px;
+  top: 3px;
   transform: scale(0.94);
   transform-origin: center;
-  opacity: 0.28;
-  filter: blur(0.25px);
+  opacity: 0.2;
+  filter: blur(0.3px);
 }
 
 .rollerRow[data-position="current"] {
@@ -384,8 +394,8 @@
   top: 52px;
   transform: scale(0.94);
   transform-origin: center;
-  opacity: 0.25;
-  filter: blur(0.25px);
+  opacity: 0.18;
+  filter: blur(0.3px);
 }
 
 .rollerFadeTop,
@@ -394,25 +404,29 @@
   z-index: 3;
   left: 0;
   right: 0;
-  height: 14px;
+  height: 16px;
   pointer-events: none;
 }
 
 .rollerFadeTop {
   top: 0;
-  background: linear-gradient(to bottom, #eeecfb 8%, rgba(238, 236, 251, 0));
+  background: linear-gradient(to bottom, #fff 10%, rgba(255, 255, 255, 0));
 }
 
 .rollerFadeBottom {
   bottom: 0;
-  background: linear-gradient(to top, #eeecfb 8%, rgba(238, 236, 251, 0));
+  background: linear-gradient(to top, #fff 10%, rgba(255, 255, 255, 0));
 }
 
 .scoreBody {
   display: grid;
   grid-template-columns: 27% 73%;
   height: 81px;
+  overflow: hidden;
+  border: 1px solid #dedde4;
+  border-radius: 20px;
   background: #fff;
+  box-shadow: 0 5px 16px rgba(45, 47, 68, 0.025);
 }
 
 .scoreCount {
