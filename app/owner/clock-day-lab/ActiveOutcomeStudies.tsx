@@ -99,55 +99,72 @@ function UnlockBranch({ label }: { label: string }) {
   );
 }
 
-function CurrentMoveScorecard() {
+function OutcomeScorecard() {
   return (
-    <section className={styles.scorecard} aria-label="Current move scorecard fixture">
-      <div className={styles.scoreTopline}>
-        <div><span>TODAY</span><strong>11 tasks · 6 done</strong></div>
-        <div className={styles.windowClock}><span>WINDOW</span><strong>00:33</strong></div>
+    <section className={styles.outcomeBox} aria-label="Current move and unlock scorecard fixture">
+      <div className={styles.scoreCount}>
+        <strong>11</strong>
+        <span>tasks</span>
+        <small>6 done</small>
       </div>
-
-      <div className={styles.currentMove}>
-        <span>CURRENT MOVE</span>
-        <strong>Pot up Sweet William</strong>
-        <div className={styles.currentUnlock}><span>UNLOCKS</span><b>Harvest Stems · May 6</b></div>
+      <div className={styles.scoreMove}>
+        <span>POT UP</span>
+        <strong>Sweet William</strong>
+        <div className={styles.scoreUnlock}><span>UNLOCKS</span><b>Harvest Stems · May 6</b></div>
       </div>
-
-      <div className={styles.timeBar} aria-label="Fixture workday from 7 AM to 8 PM with current time at 3:27 PM">
-        <span>7 AM</span>
-        <div className={styles.timeTrack} aria-hidden="true">
-          <i className={styles.elapsedTime} />
-          <b className={styles.currentTimeDot} />
-        </div>
-        <span>8 PM</span>
-      </div>
-      <div className={styles.currentTimeLabel}>3:27 PM</div>
     </section>
   );
 }
 
-function CountdownRail() {
+function NowSliver() {
   return (
-    <section className={styles.countdownSurface} aria-label="Countdown scorecard with clean task rail fixture">
-      <CurrentMoveScorecard />
-      <div className={styles.cleanRail}>
-        {TASKS.map((task, index) => {
-          const active = task === ACTIVE_TASK;
-          const passed = index < 2;
-          return (
-            <article
-              className={styles.cleanNode}
-              data-active={active ? "true" : "false"}
-              data-passed={passed ? "true" : "false"}
-              key={task.title}
-            >
-              <i className={styles.railDot} aria-hidden="true" />
-              <TaskIdentity task={task} />
-              {task.unlock ? <UnlockBranch label={task.unlock} /> : null}
-            </article>
-          );
-        })}
+    <section className={styles.nowSliver} aria-label="Compact current-time instrument fixture">
+      <div className={styles.instrumentRow}>
+        <div className={styles.timeBar} aria-label="Fixture workday from 7 AM to 8 PM with current time at 3:42 PM">
+          <span>7 AM</span>
+          <div className={styles.timeTrack} aria-hidden="true">
+            <i className={styles.elapsedTime} />
+            <b className={styles.currentTimeDot} />
+          </div>
+          <span>8 PM</span>
+        </div>
+        <div className={styles.windowClock}><span>WINDOW</span><strong>00:18</strong></div>
       </div>
+      <div className={styles.nowTaskStrip}>
+        <div className={styles.nowStamp}><span>NOW</span><strong>3:42 PM</strong></div>
+        <div className={styles.nowTask}><span>POT UP</span><strong>Sweet William</strong></div>
+      </div>
+    </section>
+  );
+}
+
+function OrderedTaskRail() {
+  return (
+    <div className={styles.cleanRail} aria-label="Ordered task rail fixture">
+      {TASKS.map((task) => {
+        const active = task === ACTIVE_TASK;
+        return (
+          <article
+            className={styles.cleanNode}
+            data-active={active ? "true" : "false"}
+            key={task.title}
+          >
+            <i className={styles.railDot} aria-hidden="true" />
+            <TaskIdentity task={task} />
+            {task.unlock ? <UnlockBranch label={task.unlock} /> : null}
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function SciFiDaySurface() {
+  return (
+    <section className={styles.daySurface} aria-label="Outcome scorecard, NOW sliver, and ordered task rail fixture">
+      <OutcomeScorecard />
+      <NowSliver />
+      <OrderedTaskRail />
     </section>
   );
 }
@@ -171,20 +188,20 @@ export default function ActiveOutcomeStudies() {
       aria-labelledby="active-outcome-studies-heading"
     >
       <header className={styles.sectionHeader}>
-        <span>CLOCK + DAYBOOK STUDY 5 · COUNTDOWN SCORECARD</span>
-        <h2 id="active-outcome-studies-heading">Time lives at the top. Work lives on the rail.</h2>
-        <p>The schedule column is gone. One compact scorecard carries day progress, the current move, its real downstream unlock, and a living countdown. The feed below stays a clean line-and-dot causal rail.</p>
+        <span>CLOCK + DAYBOOK STUDY 6 · SCI-FI NOW SLIVER</span>
+        <h2 id="active-outcome-studies-heading">The outcome is the score. The clock is an instrument.</h2>
+        <p>The familiar scorecard carries the task count, current move, and distant unlock. A compact time instrument sits directly below it, while the ordered line-and-dot feed remains fully live and readable underneath.</p>
       </header>
       <div className={styles.dataNote}>
         <strong>Fixture truth boundary</strong>
-        <span>Sweet William is the real open 3-tray / 600-plant pot-up task. Its crop profile carries a May 1–June 30, 2027 harvest-watch window. “Harvest Stems · May 6” and the 00:33 countdown are design fixtures for the editor, not materialized production timing.</span>
+        <span>Sweet William is the real open 3-tray / 600-plant pot-up task. Its crop profile carries a May 1–June 30, 2027 harvest-watch window. “Harvest Stems · May 6,” 3:42 PM, and the 00:18 countdown are editor fixtures, not materialized production timing.</span>
       </div>
       <div className={styles.singleGallery}>
         <Study
-          label="A · Living countdown + clean rail"
-          note="The top scorecard owns the clock. The task feed no longer repeats schedule-window and exact-time labels beside every node."
+          label="A · Scorecard + NOW sliver + ordered rail"
+          note="The clock is only a thin live instrument. It points at the current task without turning earlier incomplete work into faded history."
         >
-          <CountdownRail />
+          <SciFiDaySurface />
         </Study>
       </div>
     </section>
