@@ -139,3 +139,12 @@ test("Harvest keeps task framing when detailed crop state is unavailable", () =>
   assert.match(component, /crop details unavailable/);
   assert.doesNotMatch(component, /state\?\.error \? <p/);
 });
+
+test("Irrigation route identity is structured rather than incidental water text", () => {
+  const display = read("lib/atlas/task-display.ts");
+
+  assert.match(display, /if \(value === "watering"\) return "water";/);
+  assert.match(display, /const actionRoute = normalizedRoute\(action\);\s*if \(actionRoute\) return actionRoute;/s);
+  assert.match(display, /const workRouteKey = normalizedRoute\(workRoute\);\s*if \(workRouteKey\) return workRouteKey;/s);
+  assert.doesNotMatch(display, /joined\.includes\("water"\)[^\n]*return "water"/);
+});
