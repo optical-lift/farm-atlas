@@ -40,6 +40,8 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
   assert.match(route, /weed_selected_crop_turnover_focus_v1/);
   assert.match(route, /object_crop_bed_map_v1/);
   assert.match(route, /capacitySurfaces/);
+  assert.match(route, /const mapSources = beds\.length \? beds : capacitySurfaces/);
+  assert.doesNotMatch(route, /const mapSources = capacitySurfaces\.length \? capacitySurfaces : beds/);
   assert.match(route, /occupancyGroups/);
   assert.match(route, /bedTrail/);
   assert.match(route, /sessions/);
