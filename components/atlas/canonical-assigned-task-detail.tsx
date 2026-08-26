@@ -261,7 +261,15 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
   if (isSowCardTask(props.task)) return <DirectSowTaskDetail task={props.task} assignee={props.assignee} />;
   if (isOneOffMowingCardTask(props.task)) return <OneOffMowingTaskDetail task={props.task} assignee={props.assignee} />;
-  if (isSprayTreatmentTask(props.task)) return <VegetationControlTaskDetail {...props} />;
+  if (isSprayTreatmentTask(props.task)) {
+    if (props.assignee.key !== "owner") {
+      const treatmentReadiness = await loadWorkerReadiness(props.task.task_id);
+      if (!treatmentReadiness.ok || treatmentReadiness.executable !== true) {
+        return <WorkerReadyAssignedTaskExecutionShell {...props} initialReadiness={treatmentReadiness} />;
+      }
+    }
+    return <VegetationControlTaskDetail {...props} />;
+  }
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isBuyerOutreachTask(props.task)) return <BuyerOutreachTaskDetail {...props} />;
