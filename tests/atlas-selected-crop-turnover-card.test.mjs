@@ -25,7 +25,17 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
   assert.match(focus, /const actionDetail = selectedCrop \|\| card\.bedUseCategory/);
   assert.match(focus, /title=\{card\.objectLabel\}/);
   assert.match(focus, /card\.bedTrail/);
+  assert.match(focus, /data-clear-termination-target="true"/);
+  assert.match(focus, /\{selectedCrop\} is ready for termination\./);
+  assert.match(focus, /cohort\.cropCycleId !== turnover\.cropCycleId/);
+  assert.match(focus, /!turnover\.wholeBedTurnover/);
+  assert.match(focus, /data-clear-active-crops-remain="true"/);
+  assert.match(focus, /There are still active crops remaining in this bed\./);
+  assert.match(focus, /Keep: \{remainingActiveLabels\.join\(" · "\)\}/);
+  assert.match(focus, /Do not clear the whole bed/);
+  assert.match(focus, /const bedNowLabel = clearMode/);
   assert.match(focus, />Bed now</);
+  assert.match(focus, /<strong>\{bedNowLabel\}<\/strong>/);
   assert.match(focus, /CropOccupancyBedMap/);
   assert.match(focus, />Bed Components</);
   assert.match(focus, /component\.availableForPlanting \? "Empty" : "Occupied"/);
