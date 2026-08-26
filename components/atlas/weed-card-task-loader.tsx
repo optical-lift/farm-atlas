@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 
 import AssignedTaskExecutionShell from "@/components/atlas/assigned-task-execution-shell";
-import SelectedCropTurnoverTaskFocus from "@/components/atlas/selected-crop-turnover-task-focus";
 import WeedCardTaskFocus from "@/components/atlas/weed-card-task-focus";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
-import type { AtlasWeedCardContext } from "@/lib/atlas/weed-card-contract";
+import type {
+  AtlasSelectedCropTurnoverContext,
+  AtlasWeedCardContext,
+} from "@/lib/atlas/weed-card-contract";
 
 type Props = {
   task: AtlasTaskCard;
@@ -19,19 +21,39 @@ function isSelectedCropTurnover(task: AtlasTaskCard) {
   return task.metadata?.weed_management_mode === "clear_selected_crop";
 }
 
-function StandardWeedCardTaskLoader({ task, childTasks, assignee }: Props) {
+export default function WeedCardTaskLoader({ task, childTasks, assignee }: Props) {
+  const turnoverMode = isSelectedCropTurnover(task);
   const [card, setCard] = useState<AtlasWeedCardContext | null>(null);
+  const [turnover, setTurnover] = useState<AtlasSelectedCropTurnoverContext | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
-    void fetch(`/api/atlas/weed-card?taskId=${encodeURIComponent(task.task_id)}`, {
+    const endpoint = turnoverMode
+      ? `/api/atlas/weed-card/turnover?taskId=${encodeURIComponent(task.task_id)}`
+      : `/api/atlas/weed-card?taskId=${encodeURIComponent(task.task_id)}`;
+
+    setCard(null);
+    setTurnover(null);
+    setFailed(false);
+
+    void fetch(endpoint, {
       headers: { Accept: "application/json" },
       cache: "no-store",
     })
       .then(async (response) => {
-        const data = await response.json() as { ok?: boolean; card?: AtlasWeedCardContext };
-        if (!response.ok || !data.ok || !data.card) throw new Error("Weed Card unavailable");
+        const data = await response.json() as {
+          ok?: boolean;
+          card?: AtlasWeedCardContext;
+          turnover?: AtlasSelectedCropTurnoverContext;
+        };
+        if (!response.ok || !data.ok) throw new Error("Weed Card unavailable");
+        if (turnoverMode) {
+          if (!data.turnover) throw new Error("Turnover context unavailable");
+          if (active) setTurnover(data.turnover);
+          return;
+        }
+        if (!data.card) throw new Error("Weed Card unavailable");
         if (active) setCard(data.card);
       })
       .catch(() => {
@@ -41,9 +63,14 @@ function StandardWeedCardTaskLoader({ task, childTasks, assignee }: Props) {
     return () => {
       active = false;
     };
-  }, [task.task_id]);
+  }, [task.task_id, turnoverMode]);
 
-  if (card) return <WeedCardTaskFocus task={task} card={card} childTasks={childTasks} assignee={assignee} />;
+  if (turnoverMode && turnover) {
+    return <WeedCardTaskFocus task={task} turnover={turnover} childTasks={childTasks} assignee={assignee} />;
+  }
+  if (!turnoverMode && card) {
+    return <WeedCardTaskFocus task={task} card={card} childTasks={childTasks} assignee={assignee} />;
+  }
   if (failed) return <AssignedTaskExecutionShell task={task} childTasks={childTasks} assignee={assignee} />;
 
   return (
@@ -55,9 +82,4 @@ function StandardWeedCardTaskLoader({ task, childTasks, assignee }: Props) {
       </section>
     </main>
   );
-}
-
-export default function WeedCardTaskLoader(props: Props) {
-  if (isSelectedCropTurnover(props.task)) return <SelectedCropTurnoverTaskFocus {...props} />;
-  return <StandardWeedCardTaskLoader {...props} />;
 }
