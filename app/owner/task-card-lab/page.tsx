@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import DestinationContactCardSpecimen from "./DestinationContactCardSpecimen";
 import FarmRoundCardSpecimen from "./FarmRoundCardSpecimen";
 import HarvestCardSpecimen from "./HarvestCardSpecimen";
 import MowCardSpecimen from "./MowCardSpecimen";
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
 };
 
 const families = [
+  "Destination",
   "Venue",
   "Sow",
   "Weed",
@@ -26,13 +28,14 @@ const families = [
 ] as const;
 
 function Specimen({ index }: { index: number }) {
-  if (index === 0) return <VenueCardSpecimen />;
-  if (index === 1) return <SowCardSpecimen />;
-  if (index === 2) return <WeedCardSpecimen />;
-  if (index === 3) return <MowCardSpecimen />;
-  if (index === 4) return <HarvestCardSpecimen />;
-  if (index === 5) return <TransplantCardSpecimen />;
-  if (index === 6) return <FarmRoundCardSpecimen />;
+  if (index === 0) return <DestinationContactCardSpecimen />;
+  if (index === 1) return <VenueCardSpecimen />;
+  if (index === 2) return <SowCardSpecimen />;
+  if (index === 3) return <WeedCardSpecimen />;
+  if (index === 4) return <MowCardSpecimen />;
+  if (index === 5) return <HarvestCardSpecimen />;
+  if (index === 6) return <TransplantCardSpecimen />;
+  if (index === 7) return <FarmRoundCardSpecimen />;
   return <OneOffFieldWorkCardSpecimen />;
 }
 
