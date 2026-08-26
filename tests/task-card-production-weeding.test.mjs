@@ -13,7 +13,7 @@ const client = read("lib/atlas/weed-card-client.ts");
 const sessionRoute = read("app/api/atlas/weed-card-session/route.ts");
 const partialRoute = read("app/api/atlas/weed-card-partial/route.ts");
 
-test("canonical weed work enters the persistent Weed Card family", () => {
+test("canonical weed work enters the persistent bed-work card family", () => {
   assert.match(canonical, /function isWeedTask\(task: AtlasTaskCard\)/);
   assert.match(canonical, /task\.action_key === "weed"/);
   assert.match(canonical, /task\.task_type === "weed"/);
@@ -24,33 +24,33 @@ test("canonical weed work enters the persistent Weed Card family", () => {
   assert.match(loader, /<WeedCardTaskFocus task=\{task\} card=\{card\}/);
 });
 
-test("production Weed Card uses bed truth with current use, history, active crops, and canonical geometry", () => {
-  assert.match(focus, /AtlasTaskCardFrame/);
-  assert.match(focus, /family="Weed"/);
-  assert.match(focus, /familyDetail=\{card\.bedUseCategory\}/);
-  assert.match(focus, /title=\{card\.objectLabel\}/);
-  assert.match(focus, /subtitle=\{card\.zoneLabel/);
+test("production Weed uses shared bed truth with current use, history, active crops, and canonical geometry", () => {
+  assert.equal((focus.match(/<AtlasTaskCardFrame/g) || []).length, 1);
+  assert.match(focus, /const family = isClear \? "Clear" : "Weed"/);
+  assert.match(focus, /card\?\.bedUseCategory/);
+  assert.match(focus, /card\?\.objectLabel/);
+  assert.match(focus, /card\?\.zoneLabel/);
   assert.match(focus, /Last weeded ·/);
   assert.match(focus, /data-atlas-weed-card-template="task-card-lab-v4-spatial-result"/);
   assert.match(focus, />Bed now</);
-  assert.match(focus, /card\.mainCropLabel/);
+  assert.match(focus, /card\?\.mainCropLabel/);
   assert.match(focus, /Unknown main crop/);
   assert.doesNotMatch(focus, /Last logged as/);
   assert.match(focus, />Active Crops</);
-  assert.match(focus, /card\.bedTrail/);
-  assert.match(focus, /card\.bedMap/);
+  assert.match(focus, /card\?\.bedTrail/);
+  assert.match(focus, /card\?\.bedMap/);
   assert.match(focus, /CropOccupancyBedMap/);
   assert.match(focus, /variant="notebook"/);
   assert.match(focus, />How’d we do\?</);
-  assert.match(focus, /card\.sessions/);
+  assert.match(focus, /card\?\.sessions/);
   assert.match(focus, /card\.condition/);
-  assert.doesNotMatch(focus, /card\.targetCondition|Target ·/);
+  assert.doesNotMatch(focus, /card\?\.targetCondition|Target ·/);
   assert.doesNotMatch(focus, /Field Row 13|ProCut Orange|12 ft|3 rows|Jun 10/);
   assert.doesNotMatch(focus, /AssignedTaskExecutionShell|atlas-phone-top|atlas-phone-brand|atlas-note-plus/);
 });
 
-test("Weed Card reports canonical physical condition through one three-way Save result control", () => {
-  assert.match(focus, /WEED_RESULTS/);
+test("bed-work card keeps Weed's one three-way Save result control", () => {
+  assert.match(focus, /BED_WORK_RESULTS/);
   assert.match(focus, /Still rough/);
   assert.match(focus, /Mostly clear/);
   assert.match(focus, /All clear/);
@@ -65,7 +65,7 @@ test("Weed Card reports canonical physical condition through one three-way Save 
   assert.match(client, /finish-partial-day|weed-card/);
 });
 
-test("Weed Card requires a written observation before Save result at UI and API boundaries", () => {
+test("Weed requires a written observation before Save result at UI and API boundaries", () => {
   assert.match(focus, /Log it/);
   assert.match(focus, /aria-expanded=\{logOpen\}/);
   assert.match(focus, /logOpen \? \(/);
