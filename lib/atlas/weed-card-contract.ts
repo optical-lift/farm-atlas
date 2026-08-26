@@ -51,6 +51,17 @@ export type AtlasCropOccupancyGroup = {
   cohorts: AtlasCropOccupancyCohort[];
 };
 
+export type AtlasBedComponentState = {
+  componentId: string;
+  componentKey: string;
+  componentLabel: string;
+  componentKind: string;
+  positionLabel?: string | null;
+  occupancyState: "occupied" | "empty" | string;
+  availableForPlanting: boolean;
+  occupancyGroups: AtlasCropOccupancyGroup[];
+};
+
 export type AtlasWeedBedTrailEvent = {
   taskId: string;
   eventKind: string;
@@ -137,6 +148,7 @@ export type AtlasWeedCardContext = {
   zoneLabel: string;
   mainCropLabel: string | null;
   occupancyGroups: AtlasCropOccupancyGroup[];
+  components?: AtlasBedComponentState[];
   bedMap?: AtlasBedMap | null;
   condition: AtlasWeedCondition;
   targetCondition: AtlasWeedCondition;
