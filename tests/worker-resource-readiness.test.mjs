@@ -11,6 +11,7 @@ const wrapper = read("components/atlas/worker-ready-assigned-task-execution-shel
 const execution = read("components/atlas/assigned-task-execution-shell.tsx");
 const mowingPage = read("app/task-focus/[taskId]/MowingFocusPage.tsx");
 const mowing = read("components/atlas/mowing-focus-card.tsx");
+const navigation = read("components/atlas/task-focus-navigation-boundary.tsx");
 const mowingViewModel = read("lib/atlas/mowing-card-view-model.ts");
 const taskCue = read("app/task-focus/[taskId]/TaskFocusCueDelivery.tsx");
 const globalCue = read("app/GlobalDayCueDelivery.tsx");
@@ -57,8 +58,9 @@ test("Worker readiness copy stays human while distinguishing battery recovery fr
 });
 
 test("full mowing completion pauses navigation for any after-task consequence cue", () => {
-  assert.match(mowing, /new CustomEvent\("atlas:task-completed"/);
-  assert.match(mowing, /if \(window\.dispatchEvent\(completionEvent\)\) window\.location\.assign\(returnTo\)/);
+  assert.match(mowing, /navigation\.complete\(task\.id\)/);
+  assert.match(navigation, /new CustomEvent\("atlas:task-completed"/);
+  assert.match(navigation, /if \(window\.dispatchEvent\(event\)\) leaveTaskFocus\(fallbackPath\)/);
   assert.match(taskCue, /atlas:task-completed/);
   assert.match(taskCue, /custom\.preventDefault\(\)/);
   assert.match(taskCue, /anchorKind === "after_task"/);
