@@ -10,15 +10,16 @@ const page = read("app/owner/clock-day-lab/page.tsx");
 const study = read("app/owner/clock-day-lab/ActiveOutcomeStudies.tsx");
 const css = read("app/owner/clock-day-lab/active-outcome-studies.module.css");
 
-test("Clock Day lab exposes the countdown scorecard plus clean rail study", () => {
+test("Clock Day lab exposes scorecard, NOW sliver, and ordered rail study", () => {
   assert.match(page, /ActiveOutcomeStudies/);
-  assert.match(study, /A · Living countdown \+ clean rail/);
-  assert.match(study, /Time lives at the top\. Work lives on the rail\./);
-  assert.match(study, /CurrentMoveScorecard/);
-  assert.match(study, /CountdownRail/);
+  assert.match(study, /A · Scorecard \+ NOW sliver \+ ordered rail/);
+  assert.match(study, /The outcome is the score\. The clock is an instrument\./);
+  assert.match(study, /OutcomeScorecard/);
+  assert.match(study, /NowSliver/);
+  assert.match(study, /OrderedTaskRail/);
 });
 
-test("merged study remains fixture-only and cannot touch worker state", () => {
+test("study remains fixture-only and cannot touch worker state", () => {
   assert.match(study, /data-atlas-active-outcome-studies="fixture-only"/);
   assert.match(study, /data-live-task-binding="none"/);
   assert.match(study, /data-task-transition-capability="none"/);
@@ -28,35 +29,50 @@ test("merged study remains fixture-only and cannot touch worker state", () => {
   assert.doesNotMatch(study, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
 });
 
-test("scorecard carries day progress, current move, unlock, and ambient time", () => {
-  assert.match(study, /TODAY/);
-  assert.match(study, /11 tasks · 6 done/);
-  assert.match(study, /CURRENT MOVE/);
-  assert.match(study, /Pot up Sweet William/);
+test("outcome box preserves the compact prior scorecard grammar", () => {
+  assert.match(study, /scoreCount/);
+  assert.match(study, /<strong>11<\/strong>/);
+  assert.match(study, /<span>tasks<\/span>/);
+  assert.match(study, /<small>6 done<\/small>/);
+  assert.match(study, /scoreMove/);
+  assert.match(study, /POT UP/);
+  assert.match(study, /Sweet William/);
+  assert.match(study, /UNLOCKS/);
   assert.match(study, /Harvest Stems · May 6/);
+  assert.match(css, /\.outcomeBox/);
+  assert.match(css, /grid-template-columns: 27% 73%/);
+  assert.match(css, /\.scoreCount/);
+  assert.match(css, /border-right: 1px solid #e3e2e8/);
+});
+
+test("clock is a compact sliver below the outcome box", () => {
+  assert.match(study, /Compact current-time instrument fixture/);
   assert.match(study, /WINDOW/);
-  assert.match(study, /00:33/);
+  assert.match(study, /00:18/);
+  assert.match(study, /3:42 PM/);
   assert.match(study, /7 AM/);
-  assert.match(study, /3:27 PM/);
   assert.match(study, /8 PM/);
-  assert.match(css, /\.scorecard/);
+  assert.match(study, /nowTaskStrip/);
+  assert.match(study, /<span>NOW<\/span>/);
+  assert.match(css, /\.nowSliver/);
+  assert.match(css, /\.instrumentRow/);
+  assert.match(css, /min-height: 48px/);
+  assert.match(css, /\.nowTaskStrip/);
   assert.match(css, /\.timeTrack/);
   assert.match(css, /\.currentTimeDot/);
 });
 
-test("task feed no longer repeats a separate schedule column", () => {
-  assert.doesNotMatch(study, /nodeWhen/);
-  assert.doesNotMatch(study, /Morning/);
-  assert.doesNotMatch(study, /Midafternoon/);
-  assert.doesNotMatch(study, /Evening/);
-  assert.doesNotMatch(css, /\.nodeWhen/);
+test("all incomplete tasks remain fully live instead of fading after time passes", () => {
+  assert.doesNotMatch(study, /data-passed/);
+  assert.doesNotMatch(css, /cleanNode\[data-passed/);
+  assert.doesNotMatch(css, /opacity:\s*0\.58/);
   assert.match(css, /\.cleanRail::before/);
   assert.match(css, /\.cleanNode/);
+  assert.match(study, /data-active={active \? "true" : "false"}/);
 });
 
-test("factual unlock branches and consistent task grammar remain", () => {
-  assert.match(study, /UNLOCKS/);
-  assert.match(study, /Harvest Stems · May 6/);
+test("ordered task rail keeps factual unlocks and consistent task grammar", () => {
+  assert.match(study, /Ordered task rail fixture/);
   assert.match(study, /Choose Overwintering Crop · Sep 15/);
 
   for (const token of [
@@ -78,11 +94,6 @@ test("factual unlock branches and consistent task grammar remain", () => {
 
   assert.match(study, /TaskIdentity/);
   assert.match(study, /task\.place} · {task\.amount/);
-});
-
-test("current task is emphasized by rail state rather than a nested task card", () => {
-  assert.match(study, /data-active={active \? "true" : "false"}/);
-  assert.match(css, /\.cleanNode\[data-active="true"\]/);
   assert.match(css, /\.railDot/);
   assert.match(css, /\.unlockBranch/);
   assert.doesNotMatch(css, /\.calendarEvent/);
