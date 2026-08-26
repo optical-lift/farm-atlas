@@ -47,7 +47,7 @@ function rpcError(error: RpcError) {
   if (error.code === "P0002") return atlasApiError(404, "task_not_found", "The task was not found.");
   if (error.code === "P0003") return atlasApiError(409, "owner_correction_required", error.message || "This completion has linked farm evidence and needs review before it can be corrected.");
   if (error.code === "23514") return atlasApiError(409, "task_execution_not_authorized", error.message || "This work is not executable in current farm reality.");
-  if (error.code === "22023") return atlasApiError(400, "task_transition_rejected", "The task update was rejected.");
+  if (error.code === "22023") return atlasApiError(400, "task_transition_rejected", error.message || "The task update was rejected.");
   return atlasApiError(500, "task_transition_failed", "Atlas could not update the task.");
 }
 
@@ -157,6 +157,7 @@ export async function POST(request: Request) {
   const supabase = await createAtlasServerClient();
   let data: unknown;
   let error: RpcError | null;
+  let problemHandoff = false;
 
   if (!operating && isFarmRoundMemberDone(input, authorized.access.membership.role)) {
     const response = await supabase.rpc("worker_record_farm_round_member_done_v1", {
@@ -210,6 +211,15 @@ export async function POST(request: Request) {
     });
     data = response.data;
     error = response.error;
+  } else if (rpcName === "worker_record_task_transition_v1" && input.transition === "blocked") {
+    const response = await supabase.rpc("worker_open_task_problem_handoff_v1", {
+      p_task_id: input.taskId,
+      p_issue_text: input.note || input.reason,
+      p_idempotency_key: input.idempotencyKey,
+    });
+    data = response.data;
+    error = response.error;
+    problemHandoff = !response.error;
   } else if (rpcName === "worker_record_task_transition_v1") {
     const response = await supabase.rpc("worker_record_task_transition_v1", {
       p_task_id: input.taskId,
@@ -273,6 +283,7 @@ export async function POST(request: Request) {
     ok: true,
     operatorMode: operating,
     effectiveMembershipId: operatorMembershipId,
+    problemHandoff,
     dependencyStatus,
     recoveryStatus,
     warnings: Array.isArray(result.warnings) ? result.warnings : [],

@@ -74,6 +74,7 @@ export type AtlasTaskTransitionResponse = {
   nextTaskId: string | null;
   deduplicated: boolean;
   warnings: string[];
+  problemHandoff?: boolean;
   dependencyStatus?: AtlasTaskDependencyStatus | null;
   error?: AtlasApiError;
   details?: string;
@@ -150,6 +151,13 @@ function leaveCompletedTaskPage() {
   window.setTimeout(() => window.location.replace(destination), 0);
 }
 
+function leaveProblemHandoffTaskPage() {
+  if (typeof window === "undefined") return;
+  const taskFocusPath = window.location.pathname === "/task" || window.location.pathname.startsWith("/task-focus/");
+  if (!taskFocusPath) return;
+  window.setTimeout(() => window.location.replace(completedTaskReturnPath()), 0);
+}
+
 /**
  * The transition client owns transport only. AtlasRuntime may orchestrate a
  * derived optimistic projection around this transport, but rendered checklist
@@ -179,6 +187,9 @@ export async function commitAtlasTaskTransition(input: AtlasTaskTransitionReques
   }
   if (input.transition === "done") {
     leaveCompletedTaskPage();
+  }
+  if (input.transition === "blocked" && data.problemHandoff === true) {
+    leaveProblemHandoffTaskPage();
   }
 
   return data;
