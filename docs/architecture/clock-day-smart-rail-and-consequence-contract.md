@@ -1,4 +1,4 @@
-# Clock + Day smart rail and consequence strip contract
+# Clock + Day smart rail, consequence row, and temporal scrubber contract
 
 Status: design contract for the fixture-only Owner Clock + Day Editor. This document defines the behavior that production wiring must preserve. It does not authorize the fixture to read or mutate live Worker state.
 
@@ -12,7 +12,7 @@ The compact rail under the date is one geometric timeline with three independent
 
 The layers share the same horizontal day coordinate but they are not aliases for one another. In particular, the purple fill is not `completed task count / total task count`, and the NOW dot is not the end of the purple fill.
 
-The left label may still say `6 / 11 done`; that is a literal count. The rail fill answers a different question: **how much of the scheduled day has actually been cleared in chronological terms?**
+The literal count may still say `6 of 11 finished`; that is a count. The rail fill answers a different question: **how much of the scheduled day has actually been cleared in chronological terms?**
 
 ## 2. Day coordinate
 
@@ -74,20 +74,22 @@ An unresolved task whose governed consequence explicitly blocks a hard downstrea
 
 ## 4. Visual grammar for the rail
 
-The rail should remain one compact element:
+The rail should remain one compact element inside the existing Atlas-style day summary:
 
 - pale neutral full-length base line;
 - light-purple fill from day start through `F`;
 - faint low-contrast placement dots centered on the same line;
 - one larger outlined purple NOW dot at `x(current_time)`;
 - current-time label attached to the NOW dot;
-- `6 / 11 done` at left and active-window countdown at right may remain adjacent to the rail.
+- literal finished count and active-window countdown may remain adjacent to the rail.
 
 Task dots are distribution marks, not completion badges. Their default visual treatment should remain faint and consistent whether a task is complete or open unless a later approved design explicitly adds another encoding.
 
-## 5. Consequence selector and compact Atlas row
+The rail should not live in a separate white capsule. The approved visual direction is to preserve the current Atlas Work grammar: the smart rail belongs to the same pale-purple rounded day-summary card that also contains the consequential unfinished-work row.
 
-The separate consequence surface answers:
+## 5. Consequence selector
+
+The consequence selector answers:
 
 **What unfinished work matters most because leaving it undone has a real downstream consequence?**
 
@@ -107,16 +109,19 @@ A production selector may rank candidates using structured severity, lateness, i
 
 The exact factors must be governed and testable. Never manufacture consequence importance from display prose.
 
-## 6. Consequence presentation
+## 6. Consequence presentation inside the Atlas day summary
 
-The large two-column scorecard is rejected for this purpose. The approved direction is the existing Atlas carried/overdue row grammar:
+The large two-column scorecard and a second independently boxed consequence card are both rejected for this purpose. The approved direction is the existing Atlas day-summary / carried-move grammar:
 
-- compact rounded light surface;
+- one pale-purple rounded day-summary card;
+- finished-count / smart-rail state at the top;
+- a subtle divider;
+- compact consequence row beneath the divider;
 - small state pill on the left;
 - strong primary line naming the unresolved task;
 - muted secondary line naming the consequence;
 - small disclosure caret on the right;
-- no duplicated `11 tasks / 6 done` score inside this row.
+- no duplicated task-count score inside the consequence row.
 
 The pill reflects the task's real state, for example `OVERDUE`, `MISSED WINDOW`, `BLOCKING`, or `AT RISK`; it is not a hardcoded universal label.
 
@@ -126,18 +131,67 @@ Fixture example:
 - primary: `TIDY · Farmhouse still open`
 - secondary: `Holding Thursday Ticketed Night · Aug 27`
 
-If there is no unresolved task with a governed consequence, the consequence row should be absent rather than filled with generic overdue work.
+If there is no unresolved task with a governed consequence, the divider and consequence row should be absent rather than filled with generic overdue work.
 
 ## 7. Independent selectors
 
-The Clock + Day surface has at least three independent selections:
+The Clock + Day surface has at least four independent states:
 
 - **NOW task** — what the Clock says should be happening now;
 - **Day Clearance Frontier** — how far the scheduled day is chronologically cleared;
-- **Consequence task** — the unresolved task with the most important governed downstream consequence.
+- **Consequence task** — the unresolved task with the most important governed downstream consequence;
+- **Inspected task** — the placed task the user is currently examining with the temporal scrubber.
 
 These are allowed to point at different tasks/times. Production must not collapse them into one `activeTask` variable.
 
 ## 8. Fixture-only values
 
 The Owner editor currently uses specimen values such as 4:06 PM, 00:18, a 43% clearance frontier, Sweet William, MG11, BB10, and Thursday Ticketed Night. These values are visual fixtures only. Production wiring must replace them with canonical Clock placement, result, dependency, day-shape, and consequence truth.
+
+## 9. Temporal scrubber: why it exists beside the full task feed
+
+The vertical roller is not a second task feed. Its job is **time navigation**.
+
+The regular task feed remains the detailed work surface: task identity, place, quantities, state, dependencies, and task-focus entry all belong there. The scrubber is intentionally information-poor so a person can move quickly through the chronology without reading or manipulating the full records.
+
+The scrubber must therefore behave as a temporal index:
+
+1. It contains only tasks with authoritative Clock placements.
+2. Items are ordered by authoritative placement time.
+3. The control scrolls vertically and snaps to one task at a time.
+4. The centered/snapped task becomes `inspected_task_id` presentation state.
+5. Past tasks remain inspectable; future tasks remain inspectable.
+6. Completion does not remove a placed task from the scrubber merely because it has passed.
+7. Unplaced work does not receive an invented scrubber position.
+8. Scrolling the scrubber never mutates a task, changes a Clock placement, changes NOW, or changes the Day Clearance Frontier.
+
+### NOW and inspection must remain visibly different
+
+The actual NOW marker remains factual and fixed to current time on the smart rail. When the user scrolls the scrubber from a 4:06 PM task to a 7:00 PM task, Atlas is **inspecting 7:00 PM**, not claiming that it is 7:00 PM.
+
+At initial load the scrubber may center the actual NOW task when one exists. Once the user scrolls away, the center row represents inspection rather than current time.
+
+## 10. Scrubber ↔ task-feed synchronization
+
+The scrubber earns its place only if it indexes the regular feed rather than duplicating it.
+
+Required identity rule:
+
+`scrubber.inspected_task_id == task_feed.inspected_task_id`
+
+When the user settles the scrubber on a placed task:
+
+- the matching task in the full feed must become visibly inspected/highlighted;
+- the full task record remains the authoritative detailed presentation;
+- production may bring the matching feed row into view after the scrub gesture settles, but must not steal the ongoing vertical scrub gesture or make continued scrubbing impossible;
+- if auto-positioning the full feed cannot be made stable on mobile, visible identity synchronization is mandatory and automatic feed scrolling is optional until the roller can remain usable while the feed moves.
+
+A direct explicit inspection action from the full feed may also update the scrubber to the same task. Passive page scrolling alone should not continually rewrite scrubber inspection state; that would make the two vertical surfaces fight each other.
+
+This is presentation synchronization only. It is not a scheduling or task-state mutation.
+
+## 11. Scrubber placement is still provisional
+
+The interaction contract above is approved for study; the final physical location of the scrubber is not. The Editor may move the scrubber relative to the day-summary card and regular feed without changing its semantic role.
+
+If later testing shows that the scrubber cannot provide faster chronological inspection than the full feed, or cannot synchronize without fighting normal task-feed use, it should be removed rather than retained as a decorative duplicate.
