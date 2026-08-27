@@ -188,7 +188,7 @@ export default function CropMoveTaskDetail({ task, assignee }: Props) {
           <div className={styles.movePlace}>
             <div className={styles.placeHeading}>
               <div><small>Source</small><strong>{view.sourceTitle}</strong><span>{view.sourceDetail}</span></div>
-              <InlineIssueDrawer label="Report source issue">
+              <InlineIssueDrawer triggerLabel="Report source issue">
                 {view.sourceIssues.map((issue) => <button type="button" key={issue} disabled={busy} onClick={() => void logIssue("source", issue)}>{issue}</button>)}
               </InlineIssueDrawer>
             </div>
@@ -198,7 +198,7 @@ export default function CropMoveTaskDetail({ task, assignee }: Props) {
           <div className={styles.movePlace}>
             <div className={styles.placeHeading}>
               <div><small>Destination</small><strong>{view.destinationTitle}</strong><span>{view.destinationDetail}</span></div>
-              <InlineIssueDrawer label="Report destination issue">
+              <InlineIssueDrawer triggerLabel="Report destination issue">
                 {view.destinationIssues.map((issue) => <button type="button" key={issue} disabled={busy} onClick={() => void logIssue("destination", issue)}>{issue}</button>)}
               </InlineIssueDrawer>
             </div>
