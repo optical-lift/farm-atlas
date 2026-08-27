@@ -9,7 +9,6 @@ import FlowerFulfillmentTaskLoader from "@/components/atlas/flower-fulfillment-t
 import FlowerPreparationTaskLoader from "@/components/atlas/flower-preparation-task-loader";
 import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-detail";
 import NetworkOutreachTaskDetail from "@/components/atlas/network-outreach-task-detail";
-import OneOffFieldWorkTaskDetail from "@/components/atlas/one-off-field-work-task-detail";
 import OneOffMowingTaskDetail from "@/components/atlas/one-off-mowing-task-detail";
 import PhoneOutreachTaskDetail from "@/components/atlas/phone-outreach-task-detail";
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
@@ -53,10 +52,6 @@ const VENUE_STATION_TEMPLATES = new Set([
   "community_thursday_venue_prep_v1",
   "community_thursday_venue_host_v1",
 ]);
-
-function text(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
-}
 
 function isContractorServiceTask(task: AtlasTaskCard) {
   return task.task_type === "contractor_service_status"
@@ -146,24 +141,8 @@ function isCropMoveTask(task: AtlasTaskCard) {
     || (task.task_type === "transplanting" && task.operation_class === "divide_reestablish_belowground");
 }
 
-function isVenueResetTask(task: AtlasTaskCard) {
-  if (task.operation_class !== "clean_restore") return false;
-  if (task.metadata?.task_style === "venue_reset") return true;
-  if (task.task_type === "venue_maintenance") return true;
-  if (task.task_type === "exterior_cleaning" && task.action_key === "pressure_wash") return true;
-  const place = [
-    task.zone_label,
-    task.metadata?.collection_zone,
-    task.metadata?.display_location,
-    task.metadata?.execution_place,
-  ].map(text).filter(Boolean).join(" ");
-  return /venue|farmhouse interior|lounge|library|conference|dining|studio|guest/i.test(place);
-}
-
-function isOneOffFieldWorkTask(task: AtlasTaskCard) {
-  return task.task_type === "exterior_cleaning"
-    && task.action_key === "pressure_wash"
-    && task.operation_class === "clean_restore";
+function isResetTask(task: AtlasTaskCard) {
+  return task.operation_class === "clean_restore";
 }
 
 function isVenueTask(task: AtlasTaskCard) {
@@ -277,8 +256,7 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
   if (isFarmRoundTask(props.task)) return <FarmRoundTaskDetail {...props} />;
   if (isCropMoveTask(props.task)) return <CropMoveTaskDetail {...props} />;
-  if (isVenueResetTask(props.task)) return <VenueResetTaskDetail {...props} />;
-  if (isOneOffFieldWorkTask(props.task)) return <OneOffFieldWorkTaskDetail {...props} />;
+  if (isResetTask(props.task)) return <VenueResetTaskDetail {...props} />;
   if (isVenueTask(props.task)) return <VenueTaskDetail {...props} />;
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
   if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
