@@ -24,12 +24,12 @@ test("buyer outreach preserves its canonical contact and completion writes", () 
   assert.match(source, /completion_source: "buyer_outreach_batch"/);
 });
 
-test("buyer outreach result mutations obey Task Move readiness", () => {
+test("buyer outreach result mutations obey canonical completion capability", () => {
   assert.match(source, /if \(blocked\) return;/);
-  assert.match(source, /\|\| !assembly/);
-  assert.match(source, /assembly\.readiness\.status === "blocked"/);
-  assert.match(source, /assembly\.spine\.connection === "stops_at_move"/);
+  assert.match(source, /const blocked = busy \|\| !completion\.canComplete/);
   assert.match(source, /disabled=\{blocked \|\| saving\}/);
   assert.match(source, /disabled=\{blocked \|\| closing \|\| !allContactsDone\}/);
   assert.match(source, /childTasks=\{\[\]\}/);
+  assert.doesNotMatch(source, /assembly\.readiness\.status === "blocked"/);
+  assert.doesNotMatch(source, /assembly\.spine\.connection === "stops_at_move"/);
 });
