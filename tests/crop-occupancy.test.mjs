@@ -69,9 +69,9 @@ test("haphazard owner notes have one idempotent structured ingestion contract", 
   assert.match(ingest, /Only the farm owner may record crop occupancy/);
 });
 
-test("oriented bed-map truth renders as canonical geometry inside Weed Card Task Focus", () => {
+test("oriented rectangular bed-map truth renders as canonical geometry inside Weed Card Task Focus", () => {
   const migration = read("supabase/migrations/20260729163000_oriented_bed_map_v1.sql");
-  const component = read("components/atlas/crop-occupancy-bed-map.tsx");
+  const component = read("components/atlas/crop-occupancy-bed-map-legacy.tsx");
   const css = read("components/atlas/crop-occupancy-bed-map.module.css");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
   const route = read("app/api/atlas/weed-card/route.ts");
@@ -102,9 +102,9 @@ test("oriented bed-map truth renders as canonical geometry inside Weed Card Task
   assert.doesNotMatch(component, /["'`](?:Perennial|Date unknown|Observed(?: crop)?)["'`]/);
 });
 
-test("every Weed Card may retain a map frame while Task Focus shows supported occupancy as Active Crops", () => {
+test("every Weed Card may retain a rectangular fallback map frame while Task Focus shows supported occupancy as Active Crops", () => {
   const universal = read("supabase/migrations/20260729175000_universal_weed_card_maps_v1.sql");
-  const component = read("components/atlas/crop-occupancy-bed-map.tsx");
+  const component = read("components/atlas/crop-occupancy-bed-map-legacy.tsx");
   const focus = read("components/atlas/weed-card-task-focus.tsx");
 
   assert.match(universal, /\^fr_\[0-9\]\+\$/);
@@ -124,9 +124,9 @@ test("every Weed Card may retain a map frame while Task Focus shows supported oc
   assert.doesNotMatch(focus, /CropOccupancyList|const occupancy = card\.bedMap\s*\?/);
 });
 
-test("bed maps show establishment dates and FR4 forget-me-not is on the south endcap", () => {
+test("rectangular bed maps show establishment dates and FR4 forget-me-not is on the south endcap", () => {
   const migration = read("supabase/migrations/20260729181500_bed_map_establishment_dates_and_fr4_endcap_v1.sql");
-  const component = read("components/atlas/crop-occupancy-bed-map.tsx");
+  const component = read("components/atlas/crop-occupancy-bed-map-legacy.tsx");
   const contract = read("lib/atlas/weed-card-contract.ts");
 
   assert.match(migration, /'establishmentDate',q\.establishment_date/);

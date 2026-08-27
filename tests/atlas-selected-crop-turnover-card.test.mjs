@@ -13,7 +13,8 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
   const focus = read("components/atlas/weed-card-task-focus.tsx");
   const route = read("app/api/atlas/weed-card/turnover/route.ts");
   const ordinaryRoute = read("app/api/atlas/weed-card/route.ts");
-  const map = read("components/atlas/crop-occupancy-bed-map.tsx");
+  const mapRouter = read("components/atlas/crop-occupancy-bed-map.tsx");
+  const map = read("components/atlas/crop-occupancy-bed-map-legacy.tsx");
   const presenceRoute = read("app/api/atlas/objects/[objectKey]/crop-presence/route.ts");
 
   assert.equal(existsSync(join(root, "components/atlas/selected-crop-turnover-task-focus.tsx")), false);
@@ -48,6 +49,8 @@ test("selected crop Clear uses the exact canonical bed-work renderer instead of 
   assert.match(focus, /Partly removed/);
   assert.match(focus, /Removed/);
 
+  assert.match(mapRouter, /hasGovernedReferenceGeometry/);
+  assert.match(mapRouter, /LegacyCropOccupancyBedMap/);
   assert.match(map, /compact-square-v2/);
   assert.match(map, /\+ Add crop…/);
   assert.match(map, /feature\.mapSide === "left"/);
