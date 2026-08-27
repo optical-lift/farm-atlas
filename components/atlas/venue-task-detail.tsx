@@ -27,6 +27,7 @@ type ChecklistItem = {
   checkedAt: string | null;
   crossedOut?: boolean;
   interaction?: string | null;
+  stationKey?: string | null;
   stationLocation?: string | null;
   restockLabel?: string | null;
 };
@@ -50,6 +51,17 @@ type ChecklistResponse = {
 
 type VenueStage = "tidy" | "prep" | "host" | "reset";
 
+type VenueSection = {
+  key: string;
+  label: string;
+  location: string | null;
+  items: ChecklistItem[];
+};
+
+type VenueDisplaySection = VenueSection & {
+  children: VenueSection[];
+};
+
 const TRAIL: Array<{ key: VenueStage; label: string }> = [
   { key: "tidy", label: "Tidy" },
   { key: "prep", label: "Prep" },
@@ -72,6 +84,26 @@ function requestKey(taskId: string, itemKey: string, checked: boolean) {
 
 function text(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function stationTitle(value: string) {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((part, index) => index === 0 ? `${part.charAt(0).toUpperCase()}${part.slice(1)}` : part)
+    .join(" ");
+}
+
+function stationKeyFromLabel(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+function splitStationLabel(value: string) {
+  const separator = value.indexOf("·");
+  if (separator < 0) return null;
+  const station = value.slice(0, separator).trim();
+  const label = value.slice(separator + 1).trim();
+  return station && label ? { station, label } : null;
 }
 
 function prettyDate(value: string | null | undefined) {
@@ -147,15 +179,16 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
   const eventKind = text(task.metadata?.community_event_kind);
   const eventTitle = text(task.metadata?.community_event_display_title)
     || (eventKind === "ticketed_seasonal_evening" ? "Thursdays at Elm" : "Community Thursday");
-  const eventLabel = eventKind === "ticketed_seasonal_evening" ? "Ticketed seasonal evening" : "Free community morning";
+  const eventLabel = text(task.metadata?.community_event_subtitle)
+    || (eventKind === "ticketed_seasonal_evening" ? "Ticketed seasonal evening" : "Free community morning");
   const eventTiming = text(task.metadata?.display_due_label) || (task.due_date ? `Due ${prettyDate(task.due_date)}` : undefined);
 
   const items = useMemo(
     () => (checklist?.items ?? []).filter((item) => item.crossedOut !== true).sort((a, b) => a.sortOrder - b.sortOrder),
     [checklist],
   );
-  const sections = useMemo(() => {
-    const grouped = new Map<string, { key: string; label: string; location: string | null; items: ChecklistItem[] }>();
+  const sections = useMemo<VenueSection[]>(() => {
+    const grouped = new Map<string, VenueSection>();
     for (const item of items) {
       const key = item.sectionKey || "venue";
       const label = item.sectionLabel || "Venue";
@@ -165,6 +198,40 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
     }
     return Array.from(grouped.values());
   }, [items]);
+  const displaySections = useMemo<VenueDisplaySection[]>(() => sections.map((section) => {
+    if (section.key !== "hospitality" && section.label.toLowerCase() !== "hospitality") {
+      return { ...section, children: [] };
+    }
+
+    const directItems: ChecklistItem[] = [];
+    const children = new Map<string, VenueSection>();
+
+    for (const item of section.items) {
+      const split = splitStationLabel(item.label);
+      const stationKey = item.stationKey || (split ? stationKeyFromLabel(split.station) : null);
+      if (!stationKey) {
+        directItems.push(item);
+        continue;
+      }
+
+      const childLabel = split?.station || stationTitle(stationKey);
+      let itemLabel = split?.label || item.label;
+      if (!split && itemLabel.toLowerCase() === childLabel.toLowerCase() && item.restockLabel) {
+        itemLabel = item.restockLabel;
+      }
+      const displayItem = itemLabel === item.label ? item : { ...item, label: itemLabel };
+      const existing = children.get(stationKey);
+      if (existing) existing.items.push(displayItem);
+      else children.set(stationKey, {
+        key: `${section.key}:${stationKey}`,
+        label: childLabel,
+        location: null,
+        items: [displayItem],
+      });
+    }
+
+    return { ...section, items: directItems, children: Array.from(children.values()) };
+  }), [sections]);
 
   async function toggle(item: ChecklistItem) {
     const nextChecked = !item.checked;
@@ -233,6 +300,28 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
     }
   }
 
+  function renderRailItem(item: ChecklistItem) {
+    if (item.interaction === "information") {
+      return <div className={`${rail.reminderRow} ${rail.localReminderRow} ${rail.informationRow}`} key={item.itemKey}><strong>{item.label}</strong></div>;
+    }
+    const id = `venue-${task.task_id}-${item.itemKey}`;
+    return (
+      <div className={`${rail.reminderRow} ${rail.localReminderRow}`} key={item.itemKey}>
+        <input id={id} className={rail.reminderToggle} type="checkbox" checked={item.checked} disabled={busy} onChange={() => void toggle(item)} />
+        <label className={rail.reminderCheck} data-required={item.required ? "true" : "false"} htmlFor={id}><strong>{item.label}</strong></label>
+        {item.restockLabel ? (
+          <details className={rail.restockDrawer}>
+            <summary aria-label={`Request ${item.restockLabel} restock`}><span>+</span></summary>
+            <div className={rail.restockPanel}>
+              <button type="button" disabled={busy} onClick={() => void restock(item)}>Request restock</button>
+              <small>{item.restockLabel}</small>
+            </div>
+          </details>
+        ) : null}
+      </div>
+    );
+  }
+
   const busy = Boolean(saving);
   const completion = (
     <TaskPrimaryResultControls
@@ -254,7 +343,7 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
   );
 
   return (
-    <main style={{ maxWidth: 760, margin: "0 auto", padding: "18px 14px 40px" }} data-atlas-venue-card="event-truth-v3">
+    <main style={{ maxWidth: 760, margin: "0 auto", padding: "18px 14px 40px" }} data-atlas-venue-card="event-truth-v4">
       <AtlasTaskCardFrame
         family="Venue"
         familyDetail={cycleStage}
@@ -296,7 +385,7 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
               <span><b>+</b> request restock</span>
             </div>
             <div className={rail.stations}>
-              {sections.map((section) => (
+              {displaySections.map((section) => (
                 <section className={`${rail.station} ${rail.localStation}`} key={section.key}>
                   <header className={rail.stationHeader}>
                     <div>
@@ -304,29 +393,15 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
                       {section.location ? <span>{section.location}</span> : null}
                     </div>
                   </header>
-                  <div className={rail.resourceList}>
-                    {section.items.map((item) => {
-                      if (item.interaction === "information") {
-                        return <div className={`${rail.reminderRow} ${rail.localReminderRow} ${rail.informationRow}`} key={item.itemKey}><strong>{item.label}</strong></div>;
-                      }
-                      const id = `venue-${task.task_id}-${item.itemKey}`;
-                      return (
-                        <div className={`${rail.reminderRow} ${rail.localReminderRow}`} key={item.itemKey}>
-                          <input id={id} className={rail.reminderToggle} type="checkbox" checked={item.checked} disabled={busy} onChange={() => void toggle(item)} />
-                          <label className={rail.reminderCheck} data-required={item.required ? "true" : "false"} htmlFor={id}><strong>{item.label}</strong></label>
-                          {item.restockLabel ? (
-                            <details className={rail.restockDrawer}>
-                              <summary aria-label={`Request ${item.restockLabel} restock`}><span>+</span></summary>
-                              <div className={rail.restockPanel}>
-                                <button type="button" disabled={busy} onClick={() => void restock(item)}>Request restock</button>
-                                <small>{item.restockLabel}</small>
-                              </div>
-                            </details>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {section.items.length ? <div className={rail.resourceList}>{section.items.map(renderRailItem)}</div> : null}
+                  {section.children.map((child) => (
+                    <section className={`${rail.station} ${rail.localStation}`} key={child.key} aria-label={`${section.label}: ${child.label}`}>
+                      <header className={rail.stationHeader}>
+                        <div><h3 style={{ fontSize: 16 }}>{child.label}</h3></div>
+                      </header>
+                      <div className={rail.resourceList}>{child.items.map(renderRailItem)}</div>
+                    </section>
+                  ))}
                 </section>
               ))}
             </div>
