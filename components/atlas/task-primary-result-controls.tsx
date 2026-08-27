@@ -95,8 +95,8 @@ export default function TaskPrimaryResultControls({
         <button
           type="button"
           className={doneDisabled ? "done is-readiness-warning" : "done"}
-          disabled={busy}
-          data-atlas-readiness-guard={doneDisabled ? "soft" : "clear"}
+          disabled={busy || doneDisabled}
+          data-atlas-readiness-guard={doneDisabled ? "blocked" : "clear"}
           onClick={onDone}
         >
           {doneBusy ? doneBusyLabel : doneLabel}
