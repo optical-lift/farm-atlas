@@ -8,23 +8,12 @@ function read(path) {
 
 const detail = read("components/atlas/site-layout-task-detail.tsx");
 const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
-const attemptedMaterializer = read("supabase/migrations/20260826224150_setup_known_growing_object_checklist_v1.sql");
-const corrective = read("supabase/migrations/20260826224303_revert_redundant_setup_unit_materializer_v1.sql");
+const custodyContract = read("docs/architecture/shared-db-custody-consumer-v1.md");
 
-test("repository ledger preserves and reverses the redundant Setup materializer exactly once", () => {
-  assert.match(attemptedMaterializer, /create or replace function atlas\.ensure_setup_unit_checklist_v1/);
-  assert.match(attemptedMaterializer, /from atlas\.growing_objects go/);
-  assert.match(corrective, /drop trigger if exists sync_setup_unit_checklist_v1 on atlas\.tasks/);
-  assert.match(corrective, /delete from atlas\.task_execution_checklist_items item/);
-  assert.match(corrective, /drop function if exists atlas\.ensure_setup_unit_checklist_v1\(uuid\)/);
-});
-
-test("corrective migration preserves pre-existing canonical bed checks before removing duplicate rows", () => {
-  assert.match(corrective, /canonical\.item_key = duplicate\.metadata->>'growing_object_stable_key'/);
-  assert.match(corrective, /canonical\.metadata->>'setupUnitContract' = 'known_growing_objects_v1'/);
-  assert.match(corrective, /set checked = canonical\.checked or duplicate\.checked/);
-  assert.match(corrective, /item\.metadata->>'source' = 'atlas\.growing_objects'/);
-  assert.doesNotMatch(corrective, /insert into atlas\.tasks/i);
+test("Setup checklist regression stays on the app-owned runtime contract instead of database migration source", () => {
+  assert.match(custodyContract, /optical-lift\/noel-core-db` owns \*\*executable database migration source\*\*/i);
+  assert.match(custodyContract, /does not copy post-fence migrations back into Farm Atlas/i);
+  assert.doesNotMatch(import.meta.url, /supabase\/migrations/);
 });
 
 test("Setup stays on its canonical family renderer while using the governed checklist endpoint", () => {
