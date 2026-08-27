@@ -26,23 +26,33 @@ test("Pass 5 gives ordinary assigned tasks one neutral execution shell behind re
   assert.doesNotMatch(canonical, /DominionAssignedTaskDetail/);
 });
 
-test("the shell owns canonical Task Move blockers and gating while the brief owns compact timing presentation", () => {
+test("the shell consumes one canonical completion capability instead of reinterpreting readiness", () => {
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
+  const capability = read("lib/atlas/task-completion-capability.ts");
+  const controls = read("components/atlas/task-primary-result-controls.tsx");
   const brief = read("components/atlas/task-execution-brief.tsx");
   const spine = read("components/atlas/task-move-spine.tsx");
 
   assert.match(shell, /\/api\/atlas\/task-move\?taskId=/);
-  assert.match(shell, /assembly\?\.unresolved/);
-  assert.match(shell, /<TaskExecutionBrief task=\{task\} assembly=\{assembly\} assemblyLoading=\{assemblyLoading\} \/>/);
-  assert.match(shell, /const canonicalDoneDisabled =/);
-  assert.match(shell, /task\.status === "blocked"/);
-  assert.match(shell, /blockers\.length > 0/);
-  assert.match(shell, /!assembly \|\|/);
-  assert.match(shell, /assembly\.readiness\.status === "blocked"/);
-  assert.match(shell, /assembly\.spine\.connection === "stops_at_move"/);
+  assert.match(shell, /resolveAtlasTaskCompletionCapability/);
+  assert.match(shell, /const completionCapability = resolveAtlasTaskCompletionCapability\(/);
+  assert.match(shell, /const canonicalDoneDisabled = !completionCapability\.canComplete/);
+  assert.match(shell, /outcome === "done" && !completionCapability\.canComplete/);
+  assert.match(shell, /data-atlas-completion-capability=\{completionCapability\.state\}/);
   assert.match(shell, /doneDisabled=\{canonicalDoneDisabled\}/);
   assert.match(shell, /Blocked — resolve this before this task can be completed\./);
   assert.doesNotMatch(shell, /you can still finish this task/);
+
+  assert.match(capability, /export type AtlasTaskCompletionCapabilityState = "available" \| "loading" \| "blocked"/);
+  assert.match(capability, /input\.taskStatus === "blocked"/);
+  assert.match(capability, /input\.hasOpenStatefulChildren/);
+  assert.match(capability, /input\.assembly\.unresolved\.some/);
+  assert.match(capability, /input\.assembly\.readiness\.status === "blocked"/);
+  assert.match(capability, /input\.assembly\.readiness\.executable !== true/);
+  assert.match(capability, /input\.assembly\.spine\.connection === "stops_at_move"/);
+  assert.match(capability, /input\.assemblyLoading \? "move_loading" : "move_unavailable"/);
+  assert.match(controls, /disabled=\{busy \|\| doneDisabled\}/);
+  assert.match(controls, /data-atlas-readiness-guard=\{doneDisabled \? "blocked" : "clear"\}/);
 
   assert.match(brief, /assemblyControlled = assembly !== undefined/);
   assert.match(brief, /resolvedAssembly\?\.execution\.dueLabel/);
@@ -53,17 +63,19 @@ test("the shell owns canonical Task Move blockers and gating while the brief own
   assert.doesNotMatch(shell, /data-atlas-task-timing="true"|data-atlas-task-readiness="true"/);
 });
 
-test("domain-specific behavior enters through explicit instrument slots without owning the page", () => {
+test("domain-specific behavior enters through explicit instrument slots and receives the same completion capability", () => {
   const shell = read("components/atlas/assigned-task-execution-shell.tsx");
 
   assert.match(shell, /export type AssignedTaskInstrumentContext/);
   assert.match(shell, /export type AssignedTaskMethodInstrument =/);
   assert.match(shell, /methodInstrument\?: AssignedTaskMethodInstrument/);
   assert.match(shell, /methodInstrument \? methodInstrument\(instrumentContext\)/);
-  assert.match(shell, /export type AssignedTaskResultInstrumentContext/);
+  assert.match(shell, /export type AssignedTaskResultInstrumentContext = AssignedTaskInstrumentContext &/);
+  assert.match(shell, /completion: AtlasTaskCompletionCapability/);
   assert.match(shell, /export type AssignedTaskResultInstrument =/);
   assert.match(shell, /resultInstrument\?: AssignedTaskResultInstrument/);
-  assert.match(shell, /resultInstrument \? resultInstrument\(instrumentContext\)/);
+  assert.match(shell, /completion: completionCapability/);
+  assert.match(shell, /resultInstrument \? resultInstrument\(resultInstrumentContext\)/);
   assert.match(shell, /data-atlas-primary-results="true"/);
   assert.match(shell, /DefaultResultInstrument/);
 });
