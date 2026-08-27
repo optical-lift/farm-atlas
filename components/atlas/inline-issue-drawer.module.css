@@ -1,0 +1,61 @@
+.drawer {
+  width: 100%;
+}
+
+.trigger {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(139, 145, 194, 0.24);
+  border-radius: 50%;
+  background: rgba(239, 237, 244, 0.5);
+  color: #75788f;
+  touch-action: manipulation;
+}
+
+.trigger::-webkit-details-marker {
+  display: none;
+}
+
+.trigger > span {
+  display: block;
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 760;
+  transform-origin: 50% 50%;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.drawer[open] > .trigger {
+  background: rgba(239, 237, 244, 0.76);
+}
+
+.drawer[open] > .trigger > span {
+  transform: rotate(45deg);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid rgba(117, 120, 143, 0.5);
+  outline-offset: 2px;
+}
+
+.body {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  margin: -2px 0 10px;
+  padding: 0 42px 4px 0;
+  color: #777970;
+}
