@@ -1,0 +1,177 @@
+.root {
+  display: grid;
+  gap: 9px;
+}
+
+.canvas {
+  display: grid;
+  place-items: center;
+  min-height: 188px;
+  overflow: hidden;
+  border: 1px solid rgba(94, 96, 89, 0.38);
+  border-radius: 10px;
+  background:
+    linear-gradient(rgba(133, 139, 192, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(133, 139, 192, 0.07) 1px, transparent 1px),
+    rgba(255, 255, 255, 0.82);
+  background-size: 18px 18px;
+}
+
+.canvas svg {
+  display: block;
+  width: 100%;
+  height: 210px;
+  overflow: visible;
+}
+
+.areaShape {
+  fill: rgba(214, 225, 177, 0.44);
+  stroke: rgba(81, 91, 52, 0.78);
+  stroke-width: 4;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+
+.pathShape {
+  fill: none;
+  stroke: rgba(81, 91, 52, 0.82);
+  stroke-width: 13;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.objectLabel {
+  fill: #343542;
+  font-size: 30px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.78);
+  stroke-width: 4px;
+}
+
+.northMarker text {
+  fill: #7f8179;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.shapeFacts,
+.crops {
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.shapeFacts > span,
+.crops > span {
+  color: #858bb8;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.shapeFacts strong {
+  color: var(--atlas-text, #343542);
+  font-size: 12px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.shapeFacts small,
+.crops small {
+  color: #85867f;
+  font-size: 8px;
+  line-height: 1.25;
+  font-weight: 760;
+}
+
+.cropChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.cropChips b {
+  max-width: 100%;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(214, 225, 177, 0.34);
+  color: #545b44;
+  font-size: 10px;
+  line-height: 1.15;
+  font-weight: 820;
+  overflow-wrap: anywhere;
+}
+
+.cropChips em {
+  color: #a0a19a;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 720;
+}
+
+.addCrop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  margin: 3px -3px -3px;
+  padding: 6px 7px;
+  border-top: 1px solid rgba(94, 96, 89, 0.16);
+  background: rgba(250, 249, 244, 0.72);
+}
+
+.addCrop input {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #4d504a;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.addCrop input::placeholder {
+  color: #8f9189;
+  opacity: 1;
+}
+
+.addCrop button {
+  border: 1px solid rgba(133, 139, 192, 0.28);
+  border-radius: 999px;
+  background: rgba(133, 139, 192, 0.1);
+  color: #676d9a;
+  padding: 4px 7px;
+  font: inherit;
+  font-size: 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.addCrop small {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 520px) {
+  .canvas {
+    min-height: 150px;
+  }
+
+  .canvas svg {
+    height: 168px;
+  }
+
+  .objectLabel {
+    font-size: 26px;
+  }
+}
