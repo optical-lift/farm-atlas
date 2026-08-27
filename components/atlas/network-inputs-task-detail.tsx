@@ -125,7 +125,7 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
   async function finishTask({
     task: currentTask,
     assignee: currentAssignee,
-    assembly,
+    completion,
     busy,
     returnHref,
   }: AssignedTaskResultInstrumentContext) {
@@ -133,9 +133,7 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
       busy ||
       closing ||
       Boolean(savingId) ||
-      !assembly ||
-      assembly.readiness.status === "blocked" ||
-      assembly.spine.connection === "stops_at_move";
+      !completion.canComplete;
     if (moveBlocked) return;
 
     try {
@@ -226,14 +224,8 @@ export default function NetworkInputsTaskDetail({ task, childTasks, assignee }: 
   }
 
   function resultInstrument(context: AssignedTaskResultInstrumentContext) {
-    const moveBlocked =
-      context.busy ||
-      closing ||
-      Boolean(savingId) ||
-      !context.assembly ||
-      context.assembly.readiness.status === "blocked" ||
-      context.assembly.spine.connection === "stops_at_move";
     const resultBusy = context.busy || closing || Boolean(savingId);
+    const moveBlocked = resultBusy || !context.completion.canComplete;
 
     return (
       <section data-atlas-result-instrument="network-inputs">
