@@ -41,3 +41,37 @@ export function atlasWorkerDisplayText(value: string | null | undefined) {
 export function atlasWorkerDisplayLines(values: Array<string | null | undefined>) {
   return values.map(atlasWorkerDisplayText).filter(Boolean);
 }
+
+export type AtlasWorkerResourceComponent = {
+  key: string;
+  label: string;
+};
+
+type AtlasWorkerResourceComponentInput = {
+  resource_key?: unknown;
+  resource_label?: unknown;
+};
+
+/**
+ * Worker-visible resources are closed-vocabulary components. A requirement is
+ * renderable only when it resolves to both a canonical resource key and its
+ * canonical label. Per-task notes, statuses, and other annotations are not a
+ * worker display surface and are intentionally discarded here.
+ */
+export function atlasWorkerResourceComponent(
+  value: AtlasWorkerResourceComponentInput | null | undefined,
+): AtlasWorkerResourceComponent | null {
+  const key = typeof value?.resource_key === "string" ? value.resource_key.trim() : "";
+  const label = typeof value?.resource_label === "string" ? value.resource_label.trim() : "";
+  if (!key || !label) return null;
+  return { key, label };
+}
+
+export function atlasWorkerResourceComponents(
+  values: ReadonlyArray<AtlasWorkerResourceComponentInput> | null | undefined,
+): AtlasWorkerResourceComponent[] {
+  if (!Array.isArray(values)) return [];
+  return values
+    .map((value) => atlasWorkerResourceComponent(value))
+    .filter((value): value is AtlasWorkerResourceComponent => value !== null);
+}
