@@ -18,7 +18,7 @@ type AtlasContextualAppFrameProps = {
 };
 
 function todayHref() {
-  return `/day?date=${encodeURIComponent(atlasFarmDateIso())}`;
+  return "/day";
 }
 
 function clockHref() {
