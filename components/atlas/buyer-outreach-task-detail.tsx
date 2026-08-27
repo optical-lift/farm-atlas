@@ -443,11 +443,8 @@ export default function BuyerOutreachTaskDetail({ task, childTasks, assignee }: 
           </div>
         </section>
       ) : undefined}
-      resultInstrument={({ assembly, busy, returnHref }) => {
-        const blocked = busy
-          || !assembly
-          || assembly.readiness.status === "blocked"
-          || assembly.spine.connection === "stops_at_move";
+      resultInstrument={({ completion, busy, returnHref }) => {
+        const blocked = busy || !completion.canComplete;
         return (
           <BuyerOutreachResultInstrument
             task={task}

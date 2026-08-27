@@ -59,7 +59,7 @@ function requestError(data: VisitResponse) {
 }
 
 function ContractorServiceInstrument({ context }: { context: AssignedTaskResultInstrumentContext }) {
-  const { task, assembly, busy, returnHref } = context;
+  const { task, completion, busy, returnHref } = context;
   const today = useMemo(() => todayIso(), []);
   const [differentDay, setDifferentDay] = useState(false);
   const [serviceDate, setServiceDate] = useState(today);
@@ -72,14 +72,11 @@ function ContractorServiceInstrument({ context }: { context: AssignedTaskResultI
   const question = text(task.metadata?.status_question) || `Did ${provider} come?`;
   const cadenceDays = numberValue(task.metadata?.cadence_days);
   const price = numberValue(task.metadata?.price_per_visit);
-  const moveBlocked = busy
-    || !assembly
-    || assembly.readiness.status === "blocked"
-    || assembly.spine.connection === "stops_at_move";
+  const completionBlocked = busy || !completion.canComplete;
 
   async function confirmVisit() {
     const actualDate = differentDay ? serviceDate : today;
-    if (!actualDate || saving || moveBlocked) return;
+    if (!actualDate || saving || completionBlocked) return;
     try {
       setSaving("yes");
       setMessage(null);
@@ -168,7 +165,7 @@ function ContractorServiceInstrument({ context }: { context: AssignedTaskResultI
         <button
           type="button"
           className={styles.yes}
-          disabled={moveBlocked || Boolean(saving) || (differentDay && !serviceDate)}
+          disabled={completionBlocked || Boolean(saving) || (differentDay && !serviceDate)}
           onClick={() => void confirmVisit()}
         >
           {saving === "yes" ? "Saving…" : "Yes"}

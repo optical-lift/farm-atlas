@@ -54,17 +54,18 @@ function requestError(data: DecisionResponse) {
 }
 
 function DecisionSelectorInstrument({ context }: { context: AssignedTaskResultInstrumentContext }) {
-  const { task, busy, returnHref } = context;
+  const { task, completion, busy, returnHref } = context;
   const [selected, setSelected] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const question = text(task.metadata?.decision_question) || "What should happen next?";
   const options = useMemo(() => decisionOptions(task), [task]);
-  const disabled = saving || busy;
+  const inputBusy = saving || busy;
+  const completionBlocked = !completion.canComplete;
 
   async function saveDecision() {
-    if (!selected || disabled) return;
+    if (!selected || inputBusy || completionBlocked) return;
     try {
       setSaving(true);
       setMessage(null);
@@ -103,7 +104,7 @@ function DecisionSelectorInstrument({ context }: { context: AssignedTaskResultIn
               name="atlas-task-decision"
               value={option.key}
               checked={selected === option.key}
-              disabled={disabled}
+              disabled={inputBusy}
               onChange={() => setSelected(option.key)}
             />
             <span>{option.label}</span>
@@ -114,7 +115,7 @@ function DecisionSelectorInstrument({ context }: { context: AssignedTaskResultIn
       <button
         type="button"
         className={styles.saveButton}
-        disabled={!selected || disabled}
+        disabled={!selected || inputBusy || completionBlocked}
         onClick={() => void saveDecision()}
       >
         {saving ? "Saving decision…" : "Save decision"}
