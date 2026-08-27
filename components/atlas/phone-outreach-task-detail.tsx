@@ -245,7 +245,7 @@ export default function PhoneOutreachTaskDetail({ task, childTasks, assignee }: 
   async function finishTask({
     task: currentTask,
     assignee: currentAssignee,
-    assembly,
+    completion,
     busy,
     returnHref,
   }: AssignedTaskResultInstrumentContext) {
@@ -257,9 +257,7 @@ export default function PhoneOutreachTaskDetail({ task, childTasks, assignee }: 
       busy ||
       closing ||
       Boolean(savingId) ||
-      !assembly ||
-      assembly.readiness.status === "blocked" ||
-      assembly.spine.connection === "stops_at_move";
+      !completion.canComplete;
     if (moveBlocked) return;
 
     try {
@@ -383,9 +381,7 @@ export default function PhoneOutreachTaskDetail({ task, childTasks, assignee }: 
     const moveBlocked =
       resultBusy ||
       !allContactsDone ||
-      !context.assembly ||
-      context.assembly.readiness.status === "blocked" ||
-      context.assembly.spine.connection === "stops_at_move";
+      !context.completion.canComplete;
 
     return (
       <section data-atlas-result-instrument="phone-outreach">
