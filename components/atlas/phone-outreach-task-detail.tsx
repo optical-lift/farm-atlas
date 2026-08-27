@@ -86,13 +86,20 @@ function savedSummary(task: AtlasTaskCard) {
   return summaryForDraft(initialDraft(task));
 }
 
+function submissionKey(taskId: string) {
+  const nonce = typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `phone-outreach:${taskId}:${nonce}`;
+}
+
 async function postPhoneOutreach(body: Record<string, unknown>) {
   const response = await fetch("/api/atlas/phone-outreach", {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      "x-atlas-intent": "phone-outreach-v1",
+      "x-atlas-intent": "phone-outreach-v2",
     },
     cache: "no-store",
     body: JSON.stringify(body),
@@ -137,31 +144,10 @@ export default function PhoneOutreachTaskDetail({ task, childTasks, assignee }: 
     setMessageById((current) => ({ ...current, [taskId]: "" }));
   }
 
-  async function reopenContact(contact: AtlasTaskCard, shellBusy: boolean) {
+  function openContact(contact: AtlasTaskCard, shellBusy: boolean) {
     if (shellBusy || closing || savingId) return;
-    try {
-      setSavingId(contact.task_id);
-      await postAtlasTaskTransition({
-        taskId: contact.task_id,
-        transition: "checklist_open",
-        laneKey: "checklist",
-        workKey: "reopened",
-        payload: {
-          completion_source: "phone_outreach_checklist",
-          parent_task_id: task.task_id,
-          local_intel_entity_id: text(contact.metadata?.local_intel_entity_id),
-        },
-      });
-      setDoneById((current) => ({ ...current, [contact.task_id]: false }));
-      setOpenId(contact.task_id);
-    } catch (error) {
-      setMessageById((current) => ({
-        ...current,
-        [contact.task_id]: error instanceof Error ? error.message : "Could not reopen this call.",
-      }));
-    } finally {
-      setSavingId(null);
-    }
+    setMessageById((current) => ({ ...current, [contact.task_id]: "" }));
+    setOpenId(contact.task_id);
   }
 
   async function saveContactResult(contact: AtlasTaskCard, shellBusy: boolean) {
@@ -190,37 +176,8 @@ export default function PhoneOutreachTaskDetail({ task, childTasks, assignee }: 
         contactResult: draft.contactResult,
         reachedName: draft.reachedName,
         notes: draft.notes,
+        idempotencyKey: submissionKey(contact.task_id),
       });
-
-      await postAtlasTaskTransition({
-        taskId: contact.task_id,
-        transition: "note",
-        note: summary,
-        laneKey: "network",
-        workKey: "phone_call_result",
-        payload: {
-          completion_source: "phone_outreach_result",
-          note_kind: "phone_outreach_result",
-          parent_task_id: task.task_id,
-          local_intel_entity_id: text(contact.metadata?.local_intel_entity_id),
-          contact_result: draft.contactResult,
-        },
-      });
-
-      if (!(doneById[contact.task_id] ?? currentDone(contact))) {
-        await postAtlasTaskTransition({
-          taskId: contact.task_id,
-          transition: "checklist_done",
-          laneKey: "checklist",
-          workKey: "contacted",
-          payload: {
-            completion_source: "phone_outreach_checklist",
-            parent_task_id: task.task_id,
-            local_intel_entity_id: text(contact.metadata?.local_intel_entity_id),
-            contact_result: draft.contactResult,
-          },
-        });
-      }
 
       setSavedById((current) => ({ ...current, [contact.task_id]: summary }));
       setDoneById((current) => ({ ...current, [contact.task_id]: true }));
@@ -253,11 +210,7 @@ export default function PhoneOutreachTaskDetail({ task, childTasks, assignee }: 
       setTaskMessage("Record a result for every call before closing this task.");
       return;
     }
-    const moveBlocked =
-      busy ||
-      closing ||
-      Boolean(savingId) ||
-      !completion.canComplete;
+    const moveBlocked = busy || closing || Boolean(savingId) || !completion.canComplete;
     if (moveBlocked) return;
 
     try {
@@ -315,7 +268,7 @@ export default function PhoneOutreachTaskDetail({ task, childTasks, assignee }: 
                         aria-label={done ? `Log another call with ${itemLabel(contact)}` : `Log result for ${itemLabel(contact)}`}
                         aria-pressed={done}
                         disabled={methodBusy}
-                        onClick={() => done ? void reopenContact(contact, busy) : setOpenId(contact.task_id)}
+                        onClick={() => openContact(contact, busy)}
                       >
                         {done ? "✓" : ""}
                       </button>
@@ -378,10 +331,7 @@ export default function PhoneOutreachTaskDetail({ task, childTasks, assignee }: 
 
   function resultInstrument(context: AssignedTaskResultInstrumentContext) {
     const resultBusy = context.busy || closing || Boolean(savingId);
-    const moveBlocked =
-      resultBusy ||
-      !allContactsDone ||
-      !context.completion.canComplete;
+    const moveBlocked = resultBusy || !allContactsDone || !context.completion.canComplete;
 
     return (
       <section data-atlas-result-instrument="phone-outreach">
