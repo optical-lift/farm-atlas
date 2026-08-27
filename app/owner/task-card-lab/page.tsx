@@ -4,6 +4,7 @@ import DestinationContactCardSpecimen from "./DestinationContactCardSpecimen";
 import FarmRoundCardSpecimen from "./FarmRoundCardSpecimen";
 import HarvestCardSpecimen from "./HarvestCardSpecimen";
 import HarvestDirectionCardSpecimen from "./HarvestDirectionCardSpecimen";
+import HarvestPreparationCardSpecimen from "./HarvestPreparationCardSpecimen";
 import MowCardSpecimen from "./MowCardSpecimen";
 import OneOffFieldWorkCardSpecimen from "./OneOffFieldWorkCardSpecimen";
 import { TransplantCardSpecimen } from "./RemainingDominionCardSpecimens";
@@ -34,7 +35,7 @@ function Specimen({ index }: { index: number }) {
   if (index === 2) return <SowCardSpecimen />;
   if (index === 3) return <WeedCardSpecimen />;
   if (index === 4) return <MowCardSpecimen />;
-  if (index === 5) return <><HarvestCardSpecimen /><HarvestDirectionCardSpecimen /></>;
+  if (index === 5) return <><HarvestCardSpecimen /><HarvestDirectionCardSpecimen /><HarvestPreparationCardSpecimen /></>;
   if (index === 6) return <TransplantCardSpecimen />;
   if (index === 7) return <FarmRoundCardSpecimen />;
   return <OneOffFieldWorkCardSpecimen />;
