@@ -41,7 +41,7 @@ const [
   source('components/atlas/crop-move-task-detail.tsx'),
   source('app/api/atlas/task-bed-map/route.ts'),
   source('components/atlas/task-bed-map.tsx'),
-  source('components/atlas/crop-occupancy-bed-map.tsx'),
+  source('components/atlas/crop-occupancy-bed-map-legacy.tsx'),
   source('components/atlas/square-foot-bed-map.module.css'),
   source('app/work/today/page.tsx'),
   source('app/work/today/work.module.css'),
