@@ -40,6 +40,6 @@ test("canonical purple issue task styles do not rebuild the shared drawer shell"
 
 test("the shared issue primitive owns the purple plus trigger", () => {
   const source = read("components/atlas/inline-issue-drawer.tsx");
-  assert.match(source, /<summary aria-label=\{label\}>/);
+  assert.match(source, /aria-label=\{triggerLabel\}/);
   assert.match(source, />\+<\/span>/);
 });
