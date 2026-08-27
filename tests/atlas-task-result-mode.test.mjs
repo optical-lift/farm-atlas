@@ -30,6 +30,10 @@ const executionShell = readFileSync(
   new URL("../components/atlas/assigned-task-execution-shell.tsx", import.meta.url),
   "utf8",
 );
+const completionCapability = readFileSync(
+  new URL("../lib/atlas/task-completion-capability.ts", import.meta.url),
+  "utf8",
+);
 const primaryResults = readFileSync(
   new URL("../components/atlas/task-primary-result-controls.tsx", import.meta.url),
   "utf8",
@@ -98,8 +102,11 @@ test("blocked work cannot present itself as completable", () => {
   assert.match(readinessShell, /data-atlas-worker-waiting-screen="true"/);
   assert.match(readinessShell, /initialReadiness\.executable !== true/);
   assert.match(readinessShell, /return <WaitingScreen/);
-  assert.match(executionShell, /task\.status === "blocked"/);
-  assert.match(executionShell, /blockers\.length > 0/);
+  assert.match(executionShell, /resolveAtlasTaskCompletionCapability/);
+  assert.match(executionShell, /\{blockers\.length \?/);
+  assert.match(completionCapability, /input\.taskStatus === "blocked"/);
+  assert.match(completionCapability, /input\.assembly\.unresolved\.some/);
+  assert.match(completionCapability, /input\.assembly\.readiness\.executable !== true/);
   assert.match(executionShell, /Blocked — resolve this before this task can be completed\./);
   assert.doesNotMatch(executionShell, /you can still finish this task/);
 });
