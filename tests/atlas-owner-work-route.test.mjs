@@ -12,7 +12,7 @@ const appFrame = readFileSync(
 );
 
 test("the permanent Work tab opens Living Day", () => {
-  assert.match(appFrame, /return `\/day\?date=/);
+  assert.match(appFrame, /function todayHref\(\) \{\s*return "\/day";\s*\}/);
   assert.match(appFrame, /key: "work"[\s\S]*href: workHref/);
 });
 
