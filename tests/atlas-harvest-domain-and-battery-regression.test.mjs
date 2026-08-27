@@ -15,13 +15,22 @@ test("Thursday Harvest is cut-flower-only and exhausted crops leave the card", (
   assert.match(harvestMigration, /'cropExhaustedLeavesCard',true/);
 });
 
-test("Tuesday Food Harvest owns food output without flower inventory", () => {
+test("Tuesday Food Harvest owns direct crop outcomes without flower inventory", () => {
   assert.match(harvestMigration, /metadata->'use_tags'.*\?'food'/s);
   assert.match(harvestMigration, /anna_food_harvest_tuesday_weekly/);
   assert.match(harvestMigration, /weekly_food_harvest_round_v1/);
   assert.match(harvestMigration, /'flowerInventoryEffect','none'/);
   assert.match(foodRoute, /food_picked/);
+  assert.match(foodRoute, /not_ready/);
+  assert.match(foodRoute, /crop_exhausted/);
+  assert.match(foodCard, /data-food-direct-outcomes="true"/);
+  assert.match(foodCard, /onClick=\{\(\) => void record\(row, item\.value\)\}/);
   assert.match(foodCard, /Picked/);
+  assert.match(foodCard, /Not ready/);
+  assert.match(foodCard, /Crop exhausted/);
+  assert.doesNotMatch(foodCard, /activeCycleId/);
+  assert.doesNotMatch(foodCard, /aria-expanded/);
+  assert.doesNotMatch(foodCard, /Choose an outcome/);
   assert.match(dispatcher, /WeeklyFoodHarvestTaskDetail/);
 });
 
