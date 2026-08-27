@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import InlineIssueDrawer from "@/components/atlas/inline-issue-drawer";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import TaskPrimaryResultControls from "@/components/atlas/task-primary-result-controls";
 import rail from "@/components/atlas/task-card-venue-rail.module.css";
@@ -310,13 +311,10 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
         <input id={id} className={rail.reminderToggle} type="checkbox" checked={item.checked} disabled={busy} onChange={() => void toggle(item)} />
         <label className={rail.reminderCheck} data-required={item.required ? "true" : "false"} htmlFor={id}><strong>{item.label}</strong></label>
         {item.restockLabel ? (
-          <details className={rail.restockDrawer}>
-            <summary aria-label={`Request ${item.restockLabel} restock`}><span>+</span></summary>
-            <div className={rail.restockPanel}>
-              <button type="button" disabled={busy} onClick={() => void restock(item)}>Request restock</button>
-              <small>{item.restockLabel}</small>
-            </div>
-          </details>
+          <InlineIssueDrawer triggerLabel={`Report an issue with ${item.label}`}>
+            <span className={rail.issuePrompt}>Running low?</span>
+            <button className={rail.issueAction} type="button" disabled={busy} onClick={() => void restock(item)}>Request restock</button>
+          </InlineIssueDrawer>
         ) : null}
       </div>
     );
@@ -382,7 +380,7 @@ export default function VenueTaskDetail({ task, assignee }: Props) {
           <>
             <div className={rail.rowKey}>
               <span>tap to cross off</span>
-              <span><b>+</b> request restock</span>
+              <span><b>+</b> report issue</span>
             </div>
             <div className={rail.stations}>
               {displaySections.map((section) => (
