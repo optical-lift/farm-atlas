@@ -588,3 +588,323 @@
     font-size: 13px;
   }
 }
+
+/* Study 14: silent intelligence must earn pixels rather than adding panels. */
+.daySummaryPanel {
+  gap: 7px;
+}
+
+.managerScopeLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 18px;
+}
+
+.managerScopeLine > span {
+  color: #98989e;
+  font-size: 6px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+.managerScopeLine > div {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+
+.managerScopeLine button {
+  padding: 2px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: #9a9aa0;
+  font-size: 7px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.managerScopeLine button[data-active="true"] {
+  border-bottom-color: #77757f;
+  color: #454650;
+}
+
+.consequenceUnlock small {
+  color: #868690;
+  font-size: 7px;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.clockView {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.clockLensSequence {
+  display: contents;
+}
+
+.occupiedLensRow {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 42px 12px minmax(0, 1fr);
+  gap: 4px;
+  align-items: center;
+  flex-basis: 0;
+  min-height: 10px;
+  padding-block: 1px;
+  color: #99999f;
+  opacity: 0.72;
+}
+
+.occupiedLensRow > span {
+  font-size: 5.75px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.occupiedLensRow > i {
+  justify-self: center;
+  width: 7px;
+  height: 1px;
+  background: #c9c9cf;
+}
+
+.occupiedLensRow > strong {
+  overflow: hidden;
+  padding: 2px 6px;
+  border: 1px solid #ececee;
+  border-radius: 5px;
+  background: #f8f8f9;
+  color: #74747b;
+  font-size: 6.5px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskActor {
+  display: none;
+  color: inherit;
+  font: inherit;
+  font-style: normal;
+}
+
+.calendarTaskBlock[data-focus-tier="near"] .taskActor,
+.calendarTaskBlock[data-focus-tier="focus"] .taskActor {
+  display: inline;
+}
+
+.consequenceMark {
+  color: #85838d;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.clockSignalLine {
+  display: flex;
+  min-width: 0;
+  gap: 5px;
+  align-items: center;
+  overflow: hidden;
+  color: #74747d;
+  font-size: 6px;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.clockSignalLine span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clockSignalLine span + span::before {
+  content: "·";
+  margin-right: 5px;
+  color: #b1b1b6;
+}
+
+.clockSignalLine[data-focus-tier="context"] {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  max-width: 42px;
+  transform: translateY(-50%);
+  color: #85858c;
+  font-size: 5.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendarTaskBlock[data-focus-tier="context"] > strong {
+  padding-right: 42px;
+}
+
+.clockSignalLine[data-focus-tier="near"] {
+  color: #6f6f78;
+  font-size: 6.25px;
+}
+
+.clockSignalLine[data-focus-tier="focus"] {
+  color: #5f606a;
+  font-size: 7px;
+}
+
+.focusUnlockPath {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px;
+  align-items: baseline;
+  min-width: 0;
+  margin-top: 1px;
+}
+
+.focusUnlockPath > span {
+  color: #75727f;
+  font-size: 5.75px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.focusUnlockPath > strong {
+  overflow: hidden;
+  color: #4a4b55;
+  font-size: 6.5px;
+  font-weight: 750;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendarTaskBlock[data-focus-tier="focus"] > strong {
+  font-size: 12.5px;
+}
+
+.dayTaskSignal {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #777780;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 750;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.occupiedDayRow {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 37px;
+  margin: 2px 0 1px -8px;
+  padding: 6px 9px;
+  border: 1px solid #eeeeef;
+  border-radius: 9px;
+  background: #fafafa;
+}
+
+.occupiedDayRow > span {
+  color: #8c8c92;
+  font-size: 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.occupiedDayRow > div {
+  display: grid;
+  gap: 2px;
+}
+
+.occupiedDayRow small {
+  color: #a0a0a5;
+  font-size: 5.5px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+}
+
+.occupiedDayRow strong {
+  color: #65656d;
+  font-size: 9px;
+}
+
+.closeoutMoment {
+  display: grid;
+  gap: 4px;
+  padding: 7px 9px 8px;
+  border-top: 1px solid #e8e8eb;
+  background: #fbfbfc;
+}
+
+.closeoutMoment > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.closeoutMoment > header span {
+  color: #8d8d93;
+  font-size: 5.75px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.closeoutMoment > header strong {
+  color: #65656e;
+  font-size: 7px;
+}
+
+.closeoutRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.closeoutRow > div {
+  display: grid;
+  min-width: 0;
+}
+
+.closeoutRow strong {
+  overflow: hidden;
+  color: #3f4048;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.closeoutRow small {
+  overflow: hidden;
+  color: #898990;
+  font-size: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.closeoutRow > b {
+  color: #5d5d66;
+  font-size: 6px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .occupiedLensRow {
+    grid-template-columns: 39px 11px minmax(0, 1fr);
+    gap: 3px;
+  }
+
+  .calendarTaskBlock[data-focus-tier="focus"] > strong {
+    font-size: 12px;
+  }
+
+  .focusUnlockPath > strong {
+    font-size: 6.25px;
+  }
+}
