@@ -89,7 +89,7 @@ export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Prop
                   <span className={roundStyles.itemCopy}><strong>{member.displayLabel}</strong>{member.displayDetail ? <small>{member.displayDetail}</small> : null}</span>
                 </button>
                 {member.issueOptions.length ? (
-                  <InlineIssueDrawer label={`Report an issue with ${member.displayLabel}`}>
+                  <InlineIssueDrawer triggerLabel={`Report an issue with ${member.displayLabel}`}>
                     {member.issueOptions.map((issue) => (
                       <button type="button" key={issue} disabled={busy || savingRound} onClick={() => void reportIssue(member, issue)}>{issue}</button>
                     ))}
