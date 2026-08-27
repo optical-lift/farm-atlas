@@ -44,7 +44,7 @@ test("execution facts stay visible while canonical completion policy lives outsi
   assert.doesNotMatch(shell, /Before the move/);
   assert.doesNotMatch(shell, /data-atlas-task-readiness/);
   assert.match(shell, /Blocked — resolve this before this task can be completed\./);
-  assert.match(shell, /blockers\.length > 0/);
+  assert.match(shell, /\{blockers\.length \?/);
   assert.match(shell, /resolveAtlasTaskCompletionCapability/);
   assert.match(completionCapability, /input\.taskStatus === "blocked"/);
   assert.match(completionCapability, /input\.assembly\.unresolved\.some/);
