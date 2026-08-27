@@ -28,12 +28,11 @@ test("network outreach keeps its specialized contact workflow without duplicatin
   assert.match(source, /completion_source: "network_outreach_batch"/);
 });
 
-test("network outreach completion requires every contact and Task Move readiness", () => {
+test("network outreach completion requires every contact and canonical completion capability", () => {
   assert.match(source, /if \(!allContactsDone\)/);
-  assert.match(source, /!allContactsDone \|\|/);
-  assert.match(source, /!context\.assembly \|\|/);
-  assert.match(source, /context\.assembly\.readiness\.status === "blocked"/);
-  assert.match(source, /context\.assembly\.spine\.connection === "stops_at_move"/);
+  assert.match(source, /!allContactsDone/);
+  assert.match(source, /!completion\.canComplete/);
+  assert.match(source, /!context\.completion\.canComplete/);
   assert.match(source, /disabled=\{moveBlocked\}/);
   assert.match(source, /window\.location\.assign\(returnHref\)/);
 });
