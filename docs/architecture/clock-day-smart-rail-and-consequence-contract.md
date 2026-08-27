@@ -294,3 +294,161 @@ This must be implemented once in the shared Atlas shell, not as per-page back-bu
 ## 17. Fixture-only values
 
 The Owner editor uses specimen values such as 4:06 PM, a 43% clearance frontier, Sweet William, MG11, BB10, and Thursday Ticketed Night. Atlas-fit times are fixtures demonstrating the scheduling contract. Production wiring must replace them with canonical task, Clock placement, result, dependency, day-shape, reservation, and consequence truth.
+
+## 18. Silent-intelligence admission law
+
+Clock + Day should become simpler on the surface as Atlas becomes smarter underneath.
+
+For every new piece of intelligence, ask first:
+
+**Can this make the schedule better without adding anything to the screen?**
+
+Only information the worker needs to understand, choose, or execute the next move earns pixels.
+
+Study 14 therefore gives each fixture task a hidden intelligence packet and lets one shared ranking function decide which tiny signal, if any, is visible. Task families do not get their own unbounded Clock metadata areas.
+
+Conceptually:
+
+`rich task intelligence -> rank by worker significance -> admit <= tiny visual budget -> Clock`
+
+The target is a Clock that behaves like a compiled version of the day rather than a dashboard exposing every reasoning input.
+
+## 19. Checklist completion becomes task-health truth
+
+Real checklist/child completion must project as one cross-view task-health signal rather than a Clock-specific checklist.
+
+Examples:
+
+- `5/6`
+- `3 of 5 zones`
+- `6 of 8 beds`
+
+The same child-state truth must be available to Clock, Day, Task Focus, Manager, migration logic, and choreography.
+
+Visual rule:
+
+- distant context may show only the tiny ratio;
+- near focus may show one readable progress fact;
+- focused/NOW work may show the full compact task-health phrase;
+- the checklist itself remains in the canonical Task Card / execution surface.
+
+Remaining task burden may later influence Clock placement, but Study 14 only mocks the presentation output.
+
+## 20. One task, many role projections
+
+A manager choosing `Mine` versus `Team` changes **projection scope**, not task identity.
+
+Required law:
+
+`task_id is invariant across Clock, Day, Task Focus, Manager, Mine, Team, and person-scoped projections`
+
+Hiding a team member from the manager feed must not unschedule, clone, reassign, or otherwise mutate that person's task.
+
+Study 14 demonstrates this by filtering the same fixture task objects through a manager scope control. Team actor identity is deliberately tiny and is suppressed at distant context scale.
+
+## 21. Occupied Time is not a task
+
+Clock needs a generic representation of time already committed, unavailable, or constrained without turning every reservation into task work.
+
+Examples include meetings, travel, delivery windows, appointments, service periods, room bookings, training, machine downtime, calls, inspections, and similar commitments.
+
+Required distinction:
+
+`occupied_time != task`
+
+Occupied Time participates in day geometry and may constrain choreography. It must not inherit task completion semantics, task result controls, or task identity merely because it appears in Clock.
+
+Study 14 renders occupied time as a small neutral temporal span between task rows and a neutral row in Day.
+
+## 22. Work Context generalizes route intelligence
+
+Atlas should reason about context-switching cost rather than hard-code farm routing as the only optimization.
+
+A Work Context may be physical place, customer/account, project, equipment/setup, workstation, team, role, production station, cognitive mode, security state, or other company-specific execution context.
+
+Clock may prefer sequences that reduce expensive context transitions.
+
+The default visual behavior is **no extra UI**. Better ordering is the primary output. Context only earns a tiny signal when the worker materially benefits from knowing it.
+
+## 23. Work Lifecycle / Expected State Progression
+
+Crop lifecycle is one instance of a company-agnostic lifecycle engine.
+
+Given last known state, elapsed time, governing rules, known events, and no contradictory evidence, Atlas should be able to derive an expected next state and the work implied by that state.
+
+Examples include:
+
+- lead -> contacted -> follow-up due;
+- draft -> edit -> proof -> approval;
+- installed -> inspection due -> service due;
+- invoice -> reminder due -> overdue -> escalation;
+- applicant -> interview -> decision -> onboarding;
+- planted -> growing -> harvestable -> exhausted.
+
+Clock should usually display only the work produced by lifecycle truth. If a reason materially helps the worker, one tiny cue such as `FOLLOW-UP DUE`, `EVENT TOMORROW`, or `HARVEST WINDOW` may be admitted.
+
+## 24. Operating Conditions are scheduling pressure, not a dashboard
+
+Weather is one member of a broader Operating Conditions primitive.
+
+Condition sources may include traffic, business hours, staffing, inventory arrival, machine availability, room availability, system load/uptime, market hours, daylight, temperature, customer presence, regulatory windows, production load, connectivity, and similar external or internal states.
+
+Conditions should eventually support three pressure classes:
+
+- **hard** — impossible/forbidden now;
+- **preferred** — better during this condition/window;
+- **avoid** — possible but undesirable.
+
+The default visual output is nothing. When the reason matters to execution, a tiny cue such as `BUSINESS HOURS`, `LOW WIND`, `LOW TRAFFIC`, or `CUSTOMER ON SITE` may be shown.
+
+## 25. Progressive Task Signal has a hard visual budget
+
+Clock must never become a miniature Task Card gallery.
+
+A task may have many useful facts, but Clock admits at most the smallest facts that materially change understanding of:
+
+1. progress;
+2. readiness;
+3. consequence;
+4. execution context.
+
+Study 14 uses ranked fixture signals. Context scale admits only a tiny progress/readiness cue when one exists. Near focus admits one signal. Focus admits at most two secondary signals, with a full UNLOCKS branch replacing duplicate consequence text when necessary.
+
+This is a **shared product contract**, not a per-family suggestion. Specialized task-card detail remains in Task Focus.
+
+## 26. End-of-day migration is adjudication, not rollover
+
+At the governed end of a workday, unresolved work needs a real disposition rather than an automatic midnight copy.
+
+Candidate outcomes include:
+
+- **Carry** — still required and lawfully fit into the next day;
+- **Reschedule** — belongs later for governed reasons;
+- **Expire** — opportunity no longer exists;
+- **Needs management** — Atlas cannot safely decide.
+
+Adjudication may consider task health, consequence paths, lifecycle state, conditions, resources, hard dates/windows, readiness, recurrence identity, and prior migration provenance.
+
+Study 14 exposes a compact **END-OF-DAY PREVIEW** only when the scrubber reaches the final visible task. Those closeout rows are fixture outputs, not live adjudication.
+
+Migration provenance such as `↳ Tue` should remain tiny but available so carried work does not lose history.
+
+## 27. Study 14 stress-test objective
+
+The fixture intentionally combines:
+
+- ten scheduled task identities;
+- multiple actors;
+- `Mine` and `Team` projections;
+- task-health/checklist ratios;
+- consequence paths;
+- occupied-time spans;
+- work-context outputs;
+- lifecycle cues;
+- operating-condition cues;
+- carried-work provenance;
+- end-of-day disposition outputs.
+
+The success criterion is not that every fact is visible. It is the opposite:
+
+> Atlas should be able to know all of these things while the worker still experiences a calm Clock that mostly tells them what to do next.
