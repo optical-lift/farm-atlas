@@ -61,7 +61,9 @@ test("the universal execution shell owns result anchoring and correction evidenc
   assert.match(shell, /window\.location\.hash !== "#result"/);
   assert.match(shell, /params\.get\("correction"\) === "1"/);
   assert.match(shell, /document\.getElementById\("result"\)/);
-  assert.match(shell, /id="result" className="atlas-task-result-footer"/);
+  assert.match(shell, /id="result"/);
+  assert.match(shell, /className="atlas-task-result-footer"/);
+  assert.match(shell, /data-atlas-completion-capability=\{completionCapability\.state\}/);
   assert.match(shell, /This completion has linked farm evidence\. Review the recorded result before correcting it\./);
 });
 
