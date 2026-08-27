@@ -42,6 +42,9 @@ function phoneOutreachError(error: RpcError) {
   if (error.code === "P0002") {
     return atlasApiError(404, "phone_outreach_not_found", error.message || "The phone outreach task was not found.");
   }
+  if (error.code === "23514") {
+    return atlasApiError(409, "phone_outreach_not_authorized_today", error.message || "This phone outreach task is not authorized for the worker today.");
+  }
   if (error.code === "22023") {
     return atlasApiError(400, "phone_outreach_rejected", error.message || "That phone outreach result could not be saved.");
   }
@@ -49,7 +52,7 @@ function phoneOutreachError(error: RpcError) {
 }
 
 export async function POST(request: Request) {
-  if (request.headers.get("x-atlas-intent") !== "phone-outreach-v1") {
+  if (request.headers.get("x-atlas-intent") !== "phone-outreach-v2") {
     return atlasApiError(400, "phone_outreach_intent_required", "A valid phone outreach intent is required.");
   }
 
@@ -66,6 +69,11 @@ export async function POST(request: Request) {
   const taskId = text(body.taskId);
   if (!UUID_PATTERN.test(taskId)) {
     return atlasApiError(400, "invalid_phone_outreach_request", "A valid phone outreach task is required.");
+  }
+
+  const idempotencyKey = text(body.idempotencyKey);
+  if (!idempotencyKey || idempotencyKey.length > 160) {
+    return atlasApiError(400, "phone_outreach_submission_key_required", "A valid phone-call submission key is required.");
   }
 
   const contactResult = text(body.contactResult);
@@ -92,12 +100,13 @@ export async function POST(request: Request) {
   const supabase = await createAtlasServerClient();
   const { data, error } = await supabase
     .schema("atlas")
-    .rpc("record_phone_outreach_result_v1", {
+    .rpc("record_phone_outreach_result_and_complete_v2", {
       p_task_id: taskId,
       p_contact_result: contactResult,
       p_reached_name: nullableText(body.reachedName),
       p_notes: nullableText(body.notes),
       p_effective_membership_id: membershipId,
+      p_idempotency_key: idempotencyKey,
     });
 
   if (error) return phoneOutreachError(error);
