@@ -42,6 +42,9 @@ function phoneOutreachError(error: RpcError) {
   if (error.code === "P0002") {
     return atlasApiError(404, "phone_outreach_not_found", error.message || "The phone outreach task was not found.");
   }
+  if (error.code === "23514") {
+    return atlasApiError(409, "phone_outreach_not_authorized_today", error.message || "This phone outreach task is not authorized for the worker today.");
+  }
   if (error.code === "22023") {
     return atlasApiError(400, "phone_outreach_rejected", error.message || "That phone outreach result could not be saved.");
   }
