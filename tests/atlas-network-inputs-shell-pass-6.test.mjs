@@ -27,11 +27,11 @@ test("network inputs keep their specialized child checklist without rendering a 
   assert.match(source, /input_key: text\(input\.metadata\?\.network_input_key\)/);
 });
 
-test("network inputs completion obeys Task Move readiness while unfinished remains a navigation action", () => {
-  assert.match(source, /\|\|\n      !assembly/);
-  assert.match(source, /assembly\.readiness\.status === "blocked"/);
-  assert.match(source, /assembly\.spine\.connection === "stops_at_move"/);
+test("network inputs completion obeys canonical completion capability while unfinished remains a navigation action", () => {
+  assert.match(source, /const moveBlocked = resultBusy \|\| !context\.completion\.canComplete/);
   assert.match(source, /if \(moveBlocked\) return;/);
   assert.match(source, /disabled=\{moveBlocked\}/);
   assert.match(source, /window\.location\.assign\(context\.returnHref\)/);
+  assert.doesNotMatch(source, /assembly\.readiness\.status === "blocked"/);
+  assert.doesNotMatch(source, /assembly\.spine\.connection === "stops_at_move"/);
 });
