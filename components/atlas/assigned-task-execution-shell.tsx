@@ -12,6 +12,10 @@ import { useTaskFocusNavigation } from "@/components/atlas/task-focus-navigation
 import { atlasFarmDateIso, atlasShiftFarmDate } from "@/lib/atlas/farm-day";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
+import {
+  resolveAtlasTaskCompletionCapability,
+  type AtlasTaskCompletionCapability,
+} from "@/lib/atlas/task-completion-capability";
 import type { TaskMoveAssembly } from "@/lib/atlas/task-move-assembly";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
 
@@ -27,7 +31,9 @@ export type AssignedTaskInstrumentContext = {
 };
 
 export type AssignedTaskMethodInstrument = (context: AssignedTaskInstrumentContext) => ReactNode;
-export type AssignedTaskResultInstrumentContext = AssignedTaskInstrumentContext;
+export type AssignedTaskResultInstrumentContext = AssignedTaskInstrumentContext & {
+  completion: AtlasTaskCompletionCapability;
+};
 export type AssignedTaskResultInstrument = (context: AssignedTaskResultInstrumentContext) => ReactNode;
 export type AssignedTaskResultPayload = Record<string, unknown> | ((outcome: AssignedTaskOutcome) => Record<string, unknown>);
 
@@ -201,6 +207,11 @@ export default function AssignedTaskExecutionShell({
   }
 
   async function transition(outcome: AssignedTaskOutcome, note = "") {
+    if (outcome === "done" && !completionCapability.canComplete) {
+      setMessage(completionCapability.message || "This task cannot be completed yet.");
+      return;
+    }
+
     try {
       setSaving(outcome);
       setMessage(null);
@@ -273,14 +284,18 @@ export default function AssignedTaskExecutionShell({
   const regularOrdinaryChildren = ordinaryChildren.filter((child) => !isHarvestReadinessRoundChild(child));
   const harvestReadinessRound = isHarvestReadinessRound(task);
   const openStatefulChildren = statefulChildren.some((child) => !childIsDone(child));
-  const canonicalDoneDisabled =
-    doneDisabled ||
-    task.status === "blocked" ||
-    blockers.length > 0 ||
-    openStatefulChildren ||
-    !assembly ||
-    assembly.readiness.status === "blocked" ||
-    assembly.spine.connection === "stops_at_move";
+  const completionCapability = resolveAtlasTaskCompletionCapability({
+    taskStatus: task.status,
+    assembly,
+    assemblyLoading,
+    explicitlyDisabled: doneDisabled,
+    hasOpenStatefulChildren: openStatefulChildren,
+  });
+  const canonicalDoneDisabled = !completionCapability.canComplete;
+  const resultInstrumentContext: AssignedTaskResultInstrumentContext = {
+    ...instrumentContext,
+    completion: completionCapability,
+  };
 
   return (
     <main className="atlas-phone-shell atlas-home-shell atlas-task-page-shell" data-atlas-assigned-task-execution-shell="true">
@@ -426,14 +441,19 @@ export default function AssignedTaskExecutionShell({
             {showCorrectionNote ? (
               <p className="atlas-task-correction-note">This completion has linked farm evidence. Review the recorded result before correcting it.</p>
             ) : null}
-            <footer id="result" className="atlas-task-result-footer" data-atlas-primary-results="true">
+            <footer
+              id="result"
+              className="atlas-task-result-footer"
+              data-atlas-primary-results="true"
+              data-atlas-completion-capability={completionCapability.state}
+            >
               <span className="atlas-task-finish-node" aria-hidden="true" />
               {harvestReadinessRound ? (
                 <div className="atlas-harvest-round-result" data-atlas-harvest-round-auto-completion="true">
                   <strong>This round closes itself.</strong>
                   <span>Record what you physically see for every crop above. Atlas completes this zone round after the last observation is saved and keeps any future rechecks alive for their next date.</span>
                 </div>
-              ) : resultInstrument ? resultInstrument(instrumentContext) : (
+              ) : resultInstrument ? resultInstrument(resultInstrumentContext) : (
                 <DefaultResultInstrument
                   busy={Boolean(saving)}
                   doneBusy={saving === "done"}
