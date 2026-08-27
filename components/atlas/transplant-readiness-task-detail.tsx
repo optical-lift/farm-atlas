@@ -39,9 +39,10 @@ function TransplantReadinessInstrument({ context }: { context: AssignedTaskResul
   const [saving, setSaving] = useState<"ready" | "failed" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const busy = Boolean(saving) || context.busy;
+  const completionBlocked = !context.completion.canComplete;
 
   async function save(action: "ready" | "failed") {
-    if (busy) return;
+    if (busy || completionBlocked) return;
     const parsedCount = /^\d+$/.test(count.trim()) ? Number(count) : null;
     if (action === "ready" && (!parsedCount || parsedCount < 1)) {
       setMessage("Enter how many seedlings are transplant-ready, or choose All seedlings lost.");
@@ -128,7 +129,7 @@ function TransplantReadinessInstrument({ context }: { context: AssignedTaskResul
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || completionBlocked}
           onClick={() => void save("ready")}
           style={{ border: 0, borderRadius: 12, padding: "11px 10px", background: "#e9e73b", color: "#303243", font: "inherit", fontSize: 12, fontWeight: 900 }}
         >
@@ -136,7 +137,7 @@ function TransplantReadinessInstrument({ context }: { context: AssignedTaskResul
         </button>
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || completionBlocked}
           onClick={() => void save("failed")}
           style={{ border: "1px solid rgba(116,73,73,.2)", borderRadius: 12, padding: "11px 10px", background: "rgba(250,244,241,.9)", color: "#704c49", font: "inherit", fontSize: 12, fontWeight: 900 }}
         >
