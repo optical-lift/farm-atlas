@@ -64,11 +64,9 @@ test('Weed cannot save a result without both condition and observation on client
 test('spray and clean-restore work route through reusable task families', () => {
   assert.match(router, /action_key === "spray" && task\.operation_class === "apply_treatment"/);
   assert.match(router, /return <VegetationControlTaskDetail/);
-  assert.match(router, /task\.operation_class !== "clean_restore"/);
-  assert.match(router, /exterior_cleaning/);
-  assert.match(router, /pressure_wash/);
-  assert.match(router, /lounge\|library\|conference/i);
-  assert.match(router, /return <VenueResetTaskDetail/);
+  assert.match(router, /function isResetTask\(task: AtlasTaskCard\) \{\s*return task\.operation_class === "clean_restore";\s*\}/);
+  assert.match(router, /if \(isResetTask\(props\.task\)\) return <VenueResetTaskDetail/);
+  assert.doesNotMatch(router, /OneOffFieldWorkTaskDetail/);
 });
 
 test('Venue cards use event identity and dynamic Blooms rather than hardcoded bouquet counts', () => {
