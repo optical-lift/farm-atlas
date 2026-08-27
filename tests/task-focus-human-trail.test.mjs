@@ -9,6 +9,7 @@ function read(path) {
 const spine = read("components/atlas/task-move-spine.tsx");
 const brief = read("components/atlas/task-execution-brief.tsx");
 const shell = read("components/atlas/assigned-task-execution-shell.tsx");
+const completionCapability = read("lib/atlas/task-completion-capability.ts");
 const weed = read("components/atlas/weed-card-task-focus.tsx");
 
 test("canonical Task Move data renders as compact worker branch cues instead of schema explanation", () => {
@@ -31,7 +32,7 @@ test("canonical Task Move data renders as compact worker branch cues instead of 
   assert.doesNotMatch(spine, /Check before doing/);
 });
 
-test("execution facts stay visible instead of hiding useful work behind an Instructions drawer", () => {
+test("execution facts stay visible while canonical completion policy lives outside presentation", () => {
   assert.match(brief, /function VisibleMethod/);
   assert.match(brief, /className="atlas-worker-method atlas-task-trail-section"/);
   assert.match(brief, /atlas-worker-method::before/);
@@ -43,8 +44,10 @@ test("execution facts stay visible instead of hiding useful work behind an Instr
   assert.doesNotMatch(shell, /Before the move/);
   assert.doesNotMatch(shell, /data-atlas-task-readiness/);
   assert.match(shell, /Blocked — resolve this before this task can be completed\./);
-  assert.match(shell, /task\.status === "blocked"/);
   assert.match(shell, /blockers\.length > 0/);
+  assert.match(shell, /resolveAtlasTaskCompletionCapability/);
+  assert.match(completionCapability, /input\.taskStatus === "blocked"/);
+  assert.match(completionCapability, /input\.assembly\.unresolved\.some/);
   assert.doesNotMatch(shell, /you can still finish this task/);
   assert.match(shell, /TaskPrimaryResultControls/);
 });
