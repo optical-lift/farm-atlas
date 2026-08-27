@@ -59,9 +59,7 @@ function idempotencyKey(taskId: string, cropCycleId: string, resultKind: ResultK
 
 export default function WeeklyFoodHarvestTaskDetail({ task, assignee }: Props) {
   const [state, setState] = useState<FoodHarvestState | null>(null);
-  const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
-  const [choice, setChoice] = useState<ResultKind | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   async function loadState() {
@@ -93,11 +91,10 @@ export default function WeeklyFoodHarvestTaskDetail({ task, assignee }: Props) {
     return Array.from(grouped.entries());
   }, [state?.rows]);
 
-  async function record(row: FoodHarvestRow) {
-    if (!choice) return;
-    const resultKind = choice;
+  async function record(row: FoodHarvestRow, resultKind: ResultKind) {
+    const requestKey = `${row.cropCycleId}:${resultKind}`;
     try {
-      setSaving(true);
+      setSavingKey(requestKey);
       setMessage(null);
       const response = await fetch("/api/atlas/weekly-food-harvest", {
         method: "POST",
@@ -117,13 +114,11 @@ export default function WeeklyFoodHarvestTaskDetail({ task, assignee }: Props) {
         window.location.assign(assignee.listPath || "/");
         return;
       }
-      setActiveCycleId(null);
-      setChoice(null);
       await loadState();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Food Harvest result failed.");
     } finally {
-      setSaving(false);
+      setSavingKey(null);
     }
   }
 
@@ -151,36 +146,31 @@ export default function WeeklyFoodHarvestTaskDetail({ task, assignee }: Props) {
               <section className={styles.group} key={zone}>
                 <header className={styles.groupHeader}><h3>{zone}</h3></header>
                 <div className={styles.rows}>
-                  {rows.map((row) => {
-                    const active = activeCycleId === row.cropCycleId;
-                    return (
-                      <div className={styles.row} key={row.cropCycleId} data-open={active ? "true" : "false"} data-resolved={row.resolved ? "true" : "false"}>
-                        <button className={styles.cropIdentity} type="button" disabled={row.resolved} aria-expanded={active} onClick={() => {
-                          setActiveCycleId(active ? null : row.cropCycleId);
-                          setChoice(null);
-                          setMessage(null);
-                        }}>
-                          <span className={styles.cropText}><strong>{displayCrop(row)}</strong><small>{row.objectLabel}</small></span>
-                          {row.resolved ? <span className={styles.resolvedLabel}>{choices.find((item) => item.value === row.resultKind)?.label ?? "Recorded"}</span> : null}
-                        </button>
-                        {active ? (
-                          <div className={styles.exceptionPanel}>
-                            <span>What happened?</span>
-                            <div className={styles.outcomeGrid}>
-                              {choices.map((item) => <button type="button" data-active={choice === item.value ? "true" : "false"} key={item.value} onClick={() => setChoice(item.value)}>{item.label}</button>)}
-                            </div>
-                            {message ? <p className={styles.errorInline}>{message}</p> : null}
-                            <button className={styles.record} type="button" disabled={saving || !choice} onClick={() => void record(row)}>{saving ? "Recording…" : choice ? `Record ${choices.find((item) => item.value === choice)?.label}` : "Choose an outcome"}</button>
-                          </div>
-                        ) : null}
+                  {rows.map((row) => (
+                    <div className={styles.row} key={row.cropCycleId} data-resolved={row.resolved ? "true" : "false"}>
+                      <div className={styles.cropIdentity}>
+                        <span className={styles.cropText}><strong>{displayCrop(row)}</strong><small>{row.objectLabel}</small></span>
+                        {row.resolved ? <span className={styles.resolvedLabel}>{choices.find((item) => item.value === row.resultKind)?.label ?? "Recorded"}</span> : null}
                       </div>
-                    );
-                  })}
+                      {!row.resolved ? (
+                        <div className={styles.exceptionPanel} data-food-direct-outcomes="true">
+                          <span>What happened?</span>
+                          <div className={styles.outcomeGrid}>
+                            {choices.map((item) => {
+                              const saving = savingKey === `${row.cropCycleId}:${item.value}`;
+                              return <button type="button" key={item.value} disabled={Boolean(savingKey)} onClick={() => void record(row, item.value)}>{saving ? "Recording…" : item.label}</button>;
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
                 </div>
               </section>
             ))}
           </div>
         ) : null}
+        {message ? <p className={styles.errorInline}>{message}</p> : null}
       </AtlasTaskCardFrame>
     </main>
   );
