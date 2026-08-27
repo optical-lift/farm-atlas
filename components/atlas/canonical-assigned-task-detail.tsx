@@ -11,6 +11,7 @@ import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-deta
 import NetworkOutreachTaskDetail from "@/components/atlas/network-outreach-task-detail";
 import OneOffFieldWorkTaskDetail from "@/components/atlas/one-off-field-work-task-detail";
 import OneOffMowingTaskDetail from "@/components/atlas/one-off-mowing-task-detail";
+import PhoneOutreachTaskDetail from "@/components/atlas/phone-outreach-task-detail";
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import SiteLayoutTaskDetail from "@/components/atlas/site-layout-task-detail";
@@ -114,6 +115,11 @@ function isSeedInventoryTask(task: AtlasTaskCard) {
 
 function isBuyerOutreachTask(task: AtlasTaskCard) {
   return task.metadata?.buyer_outreach_mode === "sales";
+}
+
+function isPhoneOutreachTask(task: AtlasTaskCard) {
+  return task.metadata?.task_style === "phone_outreach"
+    || task.metadata?.checklist_mode === "phone_outreach";
 }
 
 function isNetworkOutreachTask(task: AtlasTaskCard) {
@@ -266,6 +272,7 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isWeedTask(props.task)) return <WeedCardTaskLoader {...props} />;
   if (isSeedInventoryTask(props.task)) return <SeedInventoryTaskLoader {...props} />;
   if (isBuyerOutreachTask(props.task)) return <BuyerOutreachTaskDetail {...props} />;
+  if (isPhoneOutreachTask(props.task)) return <PhoneOutreachTaskDetail {...props} />;
   if (isNetworkOutreachTask(props.task)) return <NetworkOutreachTaskDetail {...props} />;
   if (isNetworkInputsTask(props.task)) return <NetworkInputsTaskDetail {...props} />;
   if (isFarmRoundTask(props.task)) return <FarmRoundTaskDetail {...props} />;
