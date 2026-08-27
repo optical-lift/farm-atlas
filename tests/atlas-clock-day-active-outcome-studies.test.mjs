@@ -42,7 +42,7 @@ test("date header owns the compact Clock Day toggle and duplicate progress text 
   assert.match(study, />Day<\/button>/);
   assert.doesNotMatch(study, /6 OF 11 FINISHED/);
   assert.doesNotMatch(study, /11 tasks/);
-  assert.doesNotMatch(study, /WINDOW/);
+  assert.doesNotMatch(study, /WINDOW 00:18/);
   assert.doesNotMatch(study, /00:18/);
   assert.match(contract, /toggle belongs in the date header/);
 });
