@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import roundStyles from "@/components/atlas/farm-round-task-detail.module.css";
+import InlineIssueDrawer from "@/components/atlas/inline-issue-drawer";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
@@ -87,7 +88,13 @@ export default function FarmRoundTaskDetail({ task, childTasks, assignee }: Prop
                   <span className={roundStyles.check} aria-hidden="true"><span /></span>
                   <span className={roundStyles.itemCopy}><strong>{member.displayLabel}</strong>{member.displayDetail ? <small>{member.displayDetail}</small> : null}</span>
                 </button>
-                {member.issueOptions.length ? <details className={roundStyles.issueDrawer}><summary aria-label={`Report an issue with ${member.displayLabel}`}>+</summary><div className={roundStyles.issuePanel}>{member.issueOptions.map((issue) => <button type="button" key={issue} disabled={busy || savingRound} onClick={() => void reportIssue(member, issue)}>{issue}</button>)}</div></details> : null}
+                {member.issueOptions.length ? (
+                  <InlineIssueDrawer label={`Report an issue with ${member.displayLabel}`}>
+                    {member.issueOptions.map((issue) => (
+                      <button type="button" key={issue} disabled={busy || savingRound} onClick={() => void reportIssue(member, issue)}>{issue}</button>
+                    ))}
+                  </InlineIssueDrawer>
+                ) : null}
               </div>;
             })}</div>
           </section>)}
