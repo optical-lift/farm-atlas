@@ -73,10 +73,10 @@ test("Venue Reset v2 is a reusable location-resource-work-ready-result card and 
   assert.match(card, /checklistCompleteBeforeClose/);
   assert.match(card, /doneDisabled=\{!requiredReady\}/);
 
-  assert.match(canonical, /function isVenueResetTask/);
+  assert.match(canonical, /function isResetTask/);
   assert.match(canonical, /operation_class === "clean_restore"/);
   assert.match(canonical, /<VenueResetTaskDetail \{\.\.\.props\} \/>/);
-  assert.ok(canonical.indexOf("if (isVenueResetTask") < canonical.indexOf("if (isExecutionChecklistTask"));
+  assert.ok(canonical.indexOf("if (isResetTask") < canonical.indexOf("if (isExecutionChecklistTask"));
 
   assert.match(data, /anna_20260811_gentle_pressure_wash_detached_garage_face/);
   assert.match(data, /small_pressure_washer/);
