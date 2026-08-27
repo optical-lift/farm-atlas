@@ -25,11 +25,11 @@ test("contractor service preserves visit and not-yet writes", () => {
   assert.match(source, /contractorServiceStatus: "not_yet"/);
 });
 
-test("contractor visit completion obeys Task Move readiness without trapping reschedule", () => {
-  assert.match(source, /\|\| !assembly/);
-  assert.match(source, /assembly\.readiness\.status === "blocked"/);
-  assert.match(source, /assembly\.spine\.connection === "stops_at_move"/);
-  assert.match(source, /if \(!actualDate \|\| saving \|\| moveBlocked\) return;/);
-  assert.match(source, /disabled=\{moveBlocked \|\| Boolean\(saving\)/);
+test("contractor visit completion obeys canonical completion capability without trapping reschedule", () => {
+  assert.match(source, /const completionBlocked = busy \|\| !completion\.canComplete/);
+  assert.match(source, /if \(!actualDate \|\| saving \|\| completionBlocked\) return;/);
+  assert.match(source, /disabled=\{completionBlocked \|\| Boolean\(saving\)/);
   assert.match(source, /if \(saving \|\| busy\) return;/);
+  assert.doesNotMatch(source, /assembly\.readiness\.status === "blocked"/);
+  assert.doesNotMatch(source, /assembly\.spine\.connection === "stops_at_move"/);
 });
