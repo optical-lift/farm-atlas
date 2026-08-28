@@ -25,12 +25,6 @@ function stringList(value: unknown) {
   return value.map(text).filter(Boolean);
 }
 
-function transplantSubject(label: string) {
-  return label
-    .replace(/^transplant\b\s*(?:[·—–:-]+\s*)?/i, "")
-    .trim();
-}
-
 function words(value: string) {
   return value
     .replaceAll("_", " ")
@@ -222,29 +216,8 @@ export function atlasDayTaskCues(task: AtlasTaskCard) {
       : "Locked · weed destination bed first");
   }
 
-  const dependentLabels = stringList(metadata.dependent_task_labels);
-  const blockingCount = numberValue(metadata.blocking_task_count) ?? dependentLabels.length;
-  if (canonicalActionKey(task) === "weed" && truthy(metadata.bed_readiness_deadline_pressure) && blockingCount > 0) {
-    const allTransplants = dependentLabels.length > 0 && dependentLabels.every((label) => /^transplant\b/i.test(label));
-    const waitingPlants = Array.from(new Set(dependentLabels.map(transplantSubject).filter(Boolean)));
-    if (allTransplants && waitingPlants.length) {
-      add(`Your plants are waiting: ${waitingPlants.join(" · ")}`);
-      add(truthy(metadata.blocking_due_now)
-        ? "This bed is holding them up · clear it so they can be planted today"
-        : "This bed is their next home · clear it before transplant day");
-    } else {
-      const noun = blockingCount === 1 ? "planting move" : "planting moves";
-      add(`Blocks ${blockingCount} ${noun}${truthy(metadata.blocking_due_now) ? " due now" : ""}`);
-    }
-  }
-
-  const scheduledAfter = numberValue(metadata.release_queue_scheduled_after_count);
-  if (canonicalActionKey(task) === "weed" && scheduledAfter && scheduledAfter > 0) {
-    add(`${scheduledAfter} ${scheduledAfter === 1 ? "weed job" : "weed jobs"} scheduled later`);
-  }
-
-  const unlocksTask = metadataString(task, "unlocks_task_label");
-  if (unlocksTask && metadataString(task, "unlocks_queue_key")) add(`Next: ${unlocksTask}`);
+  // Downstream consequence belongs to the task dependency rail, not to the
+  // compact Day-feed cue pills. Keep this surface for execution facts only.
 
   // Mowing preparation is procedural truth of mowing, not a second weekly task.
   // Keeping it as a cue on the mowing card means it travels whenever mowing moves.
