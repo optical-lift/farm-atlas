@@ -33,6 +33,6 @@ test("derived destination subtitles do not repeat a structured handoff contact",
   const card = read("components/atlas/destination-assigned-task-card.tsx");
 
   assert.match(card, /function stripStructuredHandoff/);
-  assert.match(card, /ask\\s\+for\|hand\\s\+/);
+  assert.ok(card.includes("ask\\s+for|hand\\s+"));
   assert.match(card, /destinationSubtitle\(task, destination\?\.contactName \?\? null\)/);
 });
