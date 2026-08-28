@@ -1,19 +1,27 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 
 import DominionCardFrame from "./DominionCardFrame";
 import styles from "./harvest-card-specimen.module.css";
 
 type HarvestOutcome = "nothing_ready" | "deadheaded" | "crop_exhausted";
 type IntakeSource = "Foraged" | "Purchased" | "Gifted";
-type IntakeUnit = "Stems" | "Buckets" | "Bunches";
+type IntakeUnit = "Stems" | "Buckets" | "Bundles";
 
 type HarvestCrop = {
   id: string;
   zone: string;
   bed: string;
   crop: string;
+};
+
+type ExternalIntakeLine = {
+  id: string;
+  flower: string;
+  color: string;
+  unit: IntakeUnit;
+  quantity: number;
 };
 
 const seasonPulse = [
@@ -36,7 +44,7 @@ const outcomeChoices: Array<{ value: HarvestOutcome; label: string }> = [
 ];
 
 const sourceChoices: IntakeSource[] = ["Foraged", "Purchased", "Gifted"];
-const unitChoices: IntakeUnit[] = ["Stems", "Buckets", "Bunches"];
+const unitChoices: IntakeUnit[] = ["Stems", "Buckets", "Bundles"];
 
 const intakeUi: Record<string, CSSProperties> = {
   launch: {
@@ -149,60 +157,55 @@ const intakeUi: Record<string, CSSProperties> = {
     lineHeight: 1.1,
     fontWeight: 820,
   },
-  textarea: {
-    width: "100%",
-    minWidth: 0,
-    minHeight: 58,
-    boxSizing: "border-box",
-    border: "1px solid rgba(121, 109, 89, 0.19)",
-    borderRadius: 11,
-    background: "rgba(255,255,255,.96)",
-    color: "#303243",
-    padding: "9px 10px",
-    fontSize: 16,
-    lineHeight: 1.25,
-    fontWeight: 820,
-    resize: "vertical",
+  composer: {
+    display: "grid",
+    gap: 11,
+    padding: "12px",
+    border: "1px solid rgba(223, 215, 202, 0.7)",
+    borderRadius: 15,
+    background: "rgba(255,255,255,.58)",
   },
-  commitRow: { display: "grid", gridTemplateColumns: "minmax(0,1fr) 42px", gap: 7, alignItems: "stretch" },
-  commitButton: {
-    minWidth: 42,
+  composerFields: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2,minmax(0,1fr))",
+    gap: 8,
+  },
+  addLineButton: {
+    width: "100%",
+    minHeight: 42,
     border: "1px solid rgba(111,118,158,.28)",
-    borderRadius: 11,
-    background: "rgba(239,237,244,.78)",
+    borderRadius: 13,
+    background: "rgba(239,237,244,.76)",
     color: "#565b79",
-    fontSize: 22,
+    padding: "9px 12px",
+    fontSize: 10,
+    lineHeight: 1,
+    fontWeight: 930,
+  },
+  intakeRows: {
+    display: "grid",
+    borderTop: "1px solid rgba(223,215,202,.55)",
+  },
+  intakeRow: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0,1fr) auto",
+    gap: 10,
+    alignItems: "center",
+    padding: "12px 0",
+    borderBottom: "1px solid rgba(223,215,202,.48)",
+  },
+  intakeIdentity: { minWidth: 0, display: "grid", gap: 4 },
+  intakeFlower: { color: "#303243", fontSize: 13, lineHeight: 1.12, fontWeight: 930 },
+  intakeMeta: { color: "#8f9089", fontSize: 9, lineHeight: 1.15, fontWeight: 800 },
+  removeLine: {
+    width: "fit-content",
+    border: 0,
+    background: "transparent",
+    color: "#96978f",
+    padding: 0,
+    fontSize: 8,
     lineHeight: 1,
     fontWeight: 850,
-  },
-  tokenList: { display: "flex", flexWrap: "wrap", gap: 6 },
-  token: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    minHeight: 29,
-    border: "1px solid rgba(139,145,194,.18)",
-    borderRadius: 999,
-    background: "rgba(250,248,239,.92)",
-    color: "#5f626d",
-    padding: "6px 8px 6px 10px",
-    fontSize: 9,
-    lineHeight: 1,
-    fontWeight: 880,
-  },
-  tokenRemove: {
-    display: "grid",
-    placeItems: "center",
-    width: 17,
-    height: 17,
-    border: 0,
-    borderRadius: 999,
-    background: "rgba(223,220,213,.6)",
-    color: "#777970",
-    padding: 0,
-    fontSize: 11,
-    lineHeight: 1,
-    fontWeight: 900,
   },
   counter: { display: "flex", alignItems: "center", gap: 4 },
   counterButton: {
@@ -249,6 +252,10 @@ const intakeUi: Record<string, CSSProperties> = {
 function formatBuckets(bucketHalves: number) {
   const buckets = bucketHalves / 2;
   return Number.isInteger(buckets) ? `${buckets}` : `${Math.floor(buckets)}½`.replace("0½", "½");
+}
+
+function unitLabel(unit: IntakeUnit) {
+  return unit.toLowerCase();
 }
 
 function CropRow({ crop }: { crop: HarvestCrop }) {
@@ -307,61 +314,47 @@ function IntakeCounter({ value, unit, onChange }: { value: number; unit: string;
   );
 }
 
-function TokenList({ values, onRemove }: { values: string[]; onRemove: (value: string) => void }) {
-  if (!values.length) return null;
-  return (
-    <div style={intakeUi.tokenList}>
-      {values.map((value) => (
-        <span style={intakeUi.token} key={value}>
-          {value}
-          <button type="button" style={intakeUi.tokenRemove} aria-label={`Remove ${value}`} onClick={() => onRemove(value)}>×</button>
-        </span>
-      ))}
-    </div>
-  );
-}
-
 function ExternalIntakeBuilder({ onClose }: { onClose: () => void }) {
   const [sourceType, setSourceType] = useState<IntakeSource>("Gifted");
   const [sourceLabel, setSourceLabel] = useState("Mary’s garden");
-  const [contents, setContents] = useState<string[]>(["Zinnias", "Marigolds"]);
-  const [contentDraft, setContentDraft] = useState("");
-  const [colors, setColors] = useState<string[]>(["pink", "orange", "yellow"]);
+  const [flowerDraft, setFlowerDraft] = useState("");
   const [colorDraft, setColorDraft] = useState("");
-  const [unit, setUnit] = useState<IntakeUnit>("Buckets");
-  const [quantity, setQuantity] = useState(2);
+  const [unitDraft, setUnitDraft] = useState<IntakeUnit>("Stems");
+  const [lines, setLines] = useState<ExternalIntakeLine[]>([
+    { id: "zinnia-pink", flower: "Zinnias", color: "pink", unit: "Buckets", quantity: 1 },
+    { id: "marigold-orange", flower: "Marigolds", color: "orange", unit: "Buckets", quantity: 1 },
+  ]);
   const [saved, setSaved] = useState(false);
 
-  function commitValue(draft: string, values: string[], setValues: (next: string[]) => void, clear: () => void) {
-    const value = draft.trim();
-    if (!value) return;
-    const duplicate = values.some((item) => item.localeCompare(value, undefined, { sensitivity: "accent" }) === 0);
-    if (!duplicate) setValues([...values, value]);
-    clear();
+  function addLine() {
+    const flower = flowerDraft.trim();
+    const color = colorDraft.trim();
+    if (!flower || !color) return;
+
+    setLines((current) => [
+      ...current,
+      {
+        id: `${Date.now()}-${current.length}`,
+        flower,
+        color,
+        unit: unitDraft,
+        quantity: 0,
+      },
+    ]);
+    setFlowerDraft("");
+    setColorDraft("");
   }
 
-  function handleCommitKey(event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, commit: () => void) {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    commit();
+  function changeLineQuantity(id: string, delta: number) {
+    setLines((current) => current.map((line) => line.id === id ? { ...line, quantity: Math.max(0, line.quantity + delta) } : line));
   }
 
-  const contentLabel = contents.length ? contents.join(" + ") : "contents unknown";
-  const colorLabel = colors.length ? colors.join(" + ") : null;
-
-  const sentence = useMemo(
-    () => [
-      sourceType,
-      sourceLabel.trim() || "source unknown",
-      `${quantity} ${unit.toLowerCase()}`,
-      contentLabel,
-      colorLabel,
-    ].filter(Boolean).join(" · "),
-    [sourceType, sourceLabel, quantity, unit, contentLabel, colorLabel],
-  );
-
-  const commitContent = () => commitValue(contentDraft, contents, setContents, () => setContentDraft(""));
-  const commitColor = () => commitValue(colorDraft, colors, setColors, () => setColorDraft(""));
+  const sentence = useMemo(() => {
+    const items = lines.length
+      ? lines.map((line) => `${line.flower} · ${line.color} · ${line.quantity} ${unitLabel(line.unit)}`).join("  |  ")
+      : "no crop lines yet";
+    return `${sourceType} · ${sourceLabel.trim() || "source unknown"} · ${items}`;
+  }, [sourceType, sourceLabel, lines]);
 
   return (
     <section style={intakeUi.drawer} aria-label="External flower intake builder">
@@ -390,45 +383,52 @@ function ExternalIntakeBuilder({ onClose }: { onClose: () => void }) {
             <input style={intakeUi.input} value={sourceLabel} onChange={(event) => setSourceLabel(event.target.value)} placeholder="Roadside, Mary’s garden, wholesaler…" />
           </label>
 
-          <div style={intakeUi.field}>
-            <span style={intakeUi.stepLabel}>What came in?</span>
-            <div style={intakeUi.commitRow}>
-              <input
-                style={intakeUi.input}
-                value={contentDraft}
-                onChange={(event) => setContentDraft(event.target.value)}
-                onKeyDown={(event) => handleCommitKey(event, commitContent)}
-                placeholder="Dahlia"
-                aria-label="Add flower or crop"
-              />
-              <button type="button" style={{ ...intakeUi.commitButton, opacity: contentDraft.trim() ? 1 : .38 }} disabled={!contentDraft.trim()} aria-label="Add flower or crop" onClick={commitContent}>+</button>
-            </div>
-            <TokenList values={contents} onRemove={(value) => setContents((current) => current.filter((item) => item !== value))} />
-          </div>
-
-          <div style={intakeUi.field}>
-            <span style={intakeUi.stepLabel}>Color</span>
-            <div style={intakeUi.commitRow}>
-              <textarea
-                style={intakeUi.textarea}
-                value={colorDraft}
-                onChange={(event) => setColorDraft(event.target.value)}
-                onKeyDown={(event) => handleCommitKey(event, commitColor)}
-                placeholder="pink"
-                aria-label="Add color"
-              />
-              <button type="button" style={{ ...intakeUi.commitButton, opacity: colorDraft.trim() ? 1 : .38 }} disabled={!colorDraft.trim()} aria-label="Add color" onClick={commitColor}>+</button>
-            </div>
-            <TokenList values={colors} onRemove={(value) => setColors((current) => current.filter((item) => item !== value))} />
-          </div>
-
           <div style={intakeUi.step}>
-            <span style={intakeUi.stepLabel}>Count as</span>
-            <div style={intakeUi.pills}>{unitChoices.map((choice) => <Pill active={unit === choice} key={choice} onClick={() => setUnit(choice)}>{choice}</Pill>)}</div>
-            <IntakeCounter value={quantity} unit={unit.toLowerCase()} onChange={setQuantity} />
+            <span style={intakeUi.stepLabel}>What came in?</span>
+            <div style={intakeUi.composer}>
+              <div style={intakeUi.composerFields}>
+                <label style={intakeUi.field}>
+                  <span style={intakeUi.stepLabel}>Flower</span>
+                  <input style={intakeUi.input} value={flowerDraft} onChange={(event) => setFlowerDraft(event.target.value)} placeholder="Dahlia" />
+                </label>
+                <label style={intakeUi.field}>
+                  <span style={intakeUi.stepLabel}>Color</span>
+                  <input style={intakeUi.input} value={colorDraft} onChange={(event) => setColorDraft(event.target.value)} placeholder="pink + white" />
+                </label>
+              </div>
+
+              <div style={intakeUi.step}>
+                <span style={intakeUi.stepLabel}>Count by</span>
+                <div style={intakeUi.pills}>{unitChoices.map((choice) => <Pill active={unitDraft === choice} key={choice} onClick={() => setUnitDraft(choice)}>{choice}</Pill>)}</div>
+              </div>
+
+              <button
+                type="button"
+                style={{ ...intakeUi.addLineButton, opacity: flowerDraft.trim() && colorDraft.trim() ? 1 : .38 }}
+                disabled={!flowerDraft.trim() || !colorDraft.trim()}
+                onClick={addLine}
+              >
+                + Add flower
+              </button>
+            </div>
           </div>
 
-          <button type="button" style={intakeUi.saveButton} onClick={() => setSaved(true)}>Add to harvest custody</button>
+          {lines.length ? (
+            <div style={intakeUi.intakeRows}>
+              {lines.map((line) => (
+                <div style={intakeUi.intakeRow} key={line.id}>
+                  <div style={intakeUi.intakeIdentity}>
+                    <strong style={intakeUi.intakeFlower}>{line.color} {line.flower}</strong>
+                    <small style={intakeUi.intakeMeta}>{sourceLabel.trim() || "source unknown"} · count by {unitLabel(line.unit)}</small>
+                    <button type="button" style={intakeUi.removeLine} onClick={() => setLines((current) => current.filter((candidate) => candidate.id !== line.id))}>Remove</button>
+                  </div>
+                  <IntakeCounter value={line.quantity} unit={unitLabel(line.unit)} onChange={(next) => changeLineQuantity(line.id, next - line.quantity)} />
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <button type="button" style={intakeUi.saveButton} disabled={!lines.length} onClick={() => setSaved(true)}>Add to harvest custody</button>
         </div>
       )}
     </section>
