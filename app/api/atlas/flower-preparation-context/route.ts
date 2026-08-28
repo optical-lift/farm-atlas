@@ -5,7 +5,7 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type TaskRow = {
   id: string;
@@ -32,6 +32,24 @@ type CropCycleRow = {
   id: string;
   crop_label: string | null;
   variety: string | null;
+};
+
+type DirectiveRow = {
+  id: string;
+  harvest_batch_id: string;
+  preparation_occurrence_id: string;
+  note: string | null;
+};
+
+type DirectiveLineRow = {
+  id: string;
+  line_number: number;
+  crop_profile_id: string | null;
+  product_label: string;
+  output_kind: "bundle" | "posy" | "bouquet" | "lobby_arrangement";
+  requested_quantity: number;
+  stems_per_unit: number | null;
+  note: string | null;
 };
 
 function privateJson(body: Record<string, unknown>, status = 200) {
@@ -139,6 +157,56 @@ export async function GET(request: Request) {
     };
   });
 
+  const directiveId = text(task.metadata?.flower_preparation_directive_id);
+  let directive: Record<string, unknown> | null = null;
+  if (UUID_PATTERN.test(directiveId)) {
+    const [directiveResult, lineResult] = await Promise.all([
+      supabase
+        .from("flower_preparation_directives")
+        .select("id, harvest_batch_id, preparation_occurrence_id, note")
+        .eq("id", directiveId)
+        .eq("farm_id", task.farm_id)
+        .eq("harvest_batch_id", harvestBatchId)
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("flower_preparation_directive_lines")
+        .select("id, line_number, crop_profile_id, product_label, output_kind, requested_quantity, stems_per_unit, note")
+        .eq("directive_id", directiveId)
+        .eq("farm_id", task.farm_id)
+        .order("line_number", { ascending: true }),
+    ]);
+
+    if (directiveResult.error || lineResult.error) {
+      return privateJson({ ok: false, error: "Owner preparation directions could not be loaded." }, 500);
+    }
+
+    const directiveRow = directiveResult.data as DirectiveRow | null;
+    const lines = (lineResult.data ?? []) as DirectiveLineRow[];
+    const plannedOccurrenceId = text(task.metadata?.planned_occurrence_id);
+    if (!directiveRow || !lines.length) {
+      return privateJson({ ok: false, error: "Owner preparation directions are missing." }, 500);
+    }
+    if (UUID_PATTERN.test(plannedOccurrenceId) && directiveRow.preparation_occurrence_id !== plannedOccurrenceId) {
+      return privateJson({ ok: false, error: "Owner preparation directions do not belong to this task occurrence." }, 409);
+    }
+
+    directive = {
+      id: directiveRow.id,
+      note: directiveRow.note,
+      lines: lines.map((line) => ({
+        id: line.id,
+        lineNumber: line.line_number,
+        cropProfileId: line.crop_profile_id,
+        productLabel: line.product_label,
+        outputKind: line.output_kind,
+        requestedQuantity: line.requested_quantity,
+        stemsPerUnit: line.stems_per_unit,
+        note: line.note,
+      })),
+    };
+  }
+
   return privateJson({
     ok: true,
     task: {
@@ -146,6 +214,7 @@ export async function GET(request: Request) {
       dueDate: task.due_date,
       harvestDate: batch.harvest_date,
       inputs,
+      directive,
     },
   });
 }
