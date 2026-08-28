@@ -26,8 +26,10 @@ const reusableExamples = [
 ] as const;
 
 const maryDestination = {
-  name: "Mary",
+  name: "Mary’s garden",
   address: "1908 E Farm Road 94, Springfield, MO 65803",
+  contactName: "Mary",
+  handoffInstruction: null,
   phone: "(417) 380-7830",
   phoneLabel: "Call from Google Voice:",
   note: "Text Mary from Elm’s Google Voice number before leaving.",
