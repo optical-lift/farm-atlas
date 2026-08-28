@@ -2,6 +2,7 @@ import BuyerOutreachTaskDetail from "@/components/atlas/buyer-outreach-task-deta
 import ContractorServiceTaskDetail from "@/components/atlas/contractor-service-task-detail";
 import CropMoveTaskDetail from "@/components/atlas/crop-move-task-detail";
 import DecisionSelectorTaskDetail from "@/components/atlas/decision-selector-task-detail";
+import DirectHarvestTaskDetail from "@/components/atlas/direct-harvest-task-detail";
 import DirectSowTaskDetail from "@/components/atlas/direct-sow-task-detail";
 import ExecutionChecklistTaskDetail from "@/components/atlas/execution-checklist-task-detail";
 import FarmRoundTaskDetail from "@/components/atlas/farm-round-task-detail";
@@ -22,6 +23,7 @@ import WeedCardTaskLoader from "@/components/atlas/weed-card-task-loader";
 import WeeklyFoodHarvestTaskDetail from "@/components/atlas/weekly-food-harvest-task-detail";
 import WeeklyHarvestTaskDetail from "@/components/atlas/weekly-harvest-task-detail";
 import WorkerReadyAssignedTaskExecutionShell from "@/components/atlas/worker-ready-assigned-task-execution-shell";
+import { loadDirectHarvestContext } from "@/lib/atlas/direct-harvest-context";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { normalizeWorkerReadiness, type WorkerReadinessResponse } from "@/lib/atlas/worker-readiness";
@@ -56,6 +58,12 @@ const VENUE_STATION_TEMPLATES = new Set([
 function isContractorServiceTask(task: AtlasTaskCard) {
   return task.task_type === "contractor_service_status"
     || task.metadata?.task_style === "contractor_service_status";
+}
+
+function isDirectHarvestTask(task: AtlasTaskCard) {
+  return task.task_type === "owner_decision"
+    && task.metadata?.task_style === "flower_preparation_directive_review"
+    && String(task.metadata?.flower_preparation_directive_review_version ?? "") === "1";
 }
 
 function isDecisionSelectorTask(task: AtlasTaskCard) {
@@ -244,6 +252,10 @@ async function loadSiteLayoutRecipe(task: AtlasTaskCard) {
 
 export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isContractorServiceTask(props.task)) return <ContractorServiceTaskDetail {...props} />;
+  if (isDirectHarvestTask(props.task)) {
+    const initialContext = await loadDirectHarvestContext(props.task);
+    return <DirectHarvestTaskDetail task={props.task} assignee={props.assignee} initialContext={initialContext} />;
+  }
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
   if (isSowCardTask(props.task)) return <DirectSowTaskDetail task={props.task} assignee={props.assignee} />;
   if (isOneOffMowingCardTask(props.task)) return <OneOffMowingTaskDetail task={props.task} assignee={props.assignee} />;
