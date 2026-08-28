@@ -12,13 +12,6 @@ type PrepLine = {
   requestedQuantity: number;
 };
 
-type OpenStockEntry = {
-  id: string;
-  product: string;
-  pack: string;
-  quantity: number;
-};
-
 const prepLines: PrepLine[] = [
   { id: "pink-zinnia", product: "Pink zinnias", instruction: "10-stem bunches", requestedQuantity: 3 },
   { id: "celosia", product: "Celosia", instruction: "10-stem bunches", requestedQuantity: 3 },
@@ -38,8 +31,6 @@ const harvestedProducts = [
   "Dahlia",
   "Yarrow",
 ] as const;
-
-const packOptions = ["10-stem bunch", "5-stem bunch", "Bouquet", "Posy"] as const;
 
 const trailSteps = [
   { label: "Harvested", detail: "248+ stems", state: "done" },
@@ -64,24 +55,20 @@ export default function HarvestPreparationCardSpecimen() {
     () => Object.fromEntries(prepLines.map((line) => [line.id, line.requestedQuantity])) as Record<string, number>,
     [],
   );
+  const initialRemainders = useMemo(
+    () => Object.fromEntries(harvestedProducts.map((product) => [product, 0])) as Record<string, number>,
+    [],
+  );
   const [actuals, setActuals] = useState<Record<string, number>>(initialActuals);
   const [notes, setNotes] = useState<Record<string, string>>({});
-  const [stockProduct, setStockProduct] = useState<(typeof harvestedProducts)[number]>(harvestedProducts[0]);
-  const [stockPack, setStockPack] = useState<(typeof packOptions)[number]>(packOptions[0]);
-  const [stockQuantity, setStockQuantity] = useState(0);
-  const [stockEntries, setStockEntries] = useState<OpenStockEntry[]>([]);
+  const [remainders, setRemainders] = useState<Record<string, number>>(initialRemainders);
 
   function changeActual(id: string, delta: number) {
     setActuals((current) => ({ ...current, [id]: Math.max(0, (current[id] ?? 0) + delta) }));
   }
 
-  function logOpenStock() {
-    if (stockQuantity <= 0) return;
-    setStockEntries((current) => [
-      ...current,
-      { id: `${stockProduct}-${stockPack}-${current.length + 1}`, product: stockProduct, pack: stockPack, quantity: stockQuantity },
-    ]);
-    setStockQuantity(0);
+  function changeRemainder(product: string, delta: number) {
+    setRemainders((current) => ({ ...current, [product]: Math.max(0, (current[product] ?? 0) + delta) }));
   }
 
   return (
@@ -145,55 +132,26 @@ export default function HarvestPreparationCardSpecimen() {
           </div>
         </section>
 
-        <section className={styles.openStockSection}>
+        <section className={styles.remainingSection}>
           <header>
-            <div><span>Open Stock</span><strong>Finished product not assigned to an order</strong></div>
-            <small>Sellable</small>
+            <div><span>Remaining stems</span><strong>Count by variety after pack-out</strong></div>
+            <small>Unallocated</small>
           </header>
 
-          <div className={styles.stockComposer}>
-            <div className={styles.stockSentence}>
-              <strong>{stockProduct}</strong><span>·</span><strong>{stockPack}</strong><span>·</span><strong>{stockQuantity}</strong>
-            </div>
-
-            <div className={styles.sentenceStep}>
-              <span>Flower</span>
-              <div className={styles.pillGrid}>
-                {harvestedProducts.map((product) => (
-                  <button type="button" className={stockProduct === product ? styles.pillSelected : ""} key={product} onClick={() => setStockProduct(product)}>{product}</button>
-                ))}
+          <div className={styles.remainingList}>
+            {harvestedProducts.map((product) => (
+              <div className={styles.remainingRow} key={product}>
+                <div>
+                  <strong>{product}</strong>
+                  <small>stems remaining</small>
+                </div>
+                <div className={styles.stepper} aria-label={`Remaining stems for ${product}`}>
+                  <button type="button" aria-label={`Remove one remaining ${product} stem`} disabled={(remainders[product] ?? 0) === 0} onClick={() => changeRemainder(product, -1)}>−</button>
+                  <strong>{remainders[product] ?? 0}</strong>
+                  <button type="button" aria-label={`Add one remaining ${product} stem`} onClick={() => changeRemainder(product, 1)}>+</button>
+                </div>
               </div>
-            </div>
-
-            <div className={styles.sentenceStep}>
-              <span>Pack</span>
-              <div className={styles.pillGrid}>
-                {packOptions.map((pack) => (
-                  <button type="button" className={stockPack === pack ? styles.pillSelected : ""} key={pack} onClick={() => setStockPack(pack)}>{pack}</button>
-                ))}
-              </div>
-            </div>
-
-            <div className={styles.stockCountRow}>
-              <span>Made</span>
-              <div className={styles.stepper}>
-                <button type="button" aria-label="Remove one open-stock item" disabled={stockQuantity === 0} onClick={() => setStockQuantity((current) => Math.max(0, current - 1))}>−</button>
-                <strong>{stockQuantity}</strong>
-                <button type="button" aria-label="Add one open-stock item" onClick={() => setStockQuantity((current) => current + 1)}>+</button>
-              </div>
-              <button className={styles.logStockButton} type="button" disabled={stockQuantity === 0} onClick={logOpenStock}>Log open stock</button>
-            </div>
-
-            {stockEntries.length ? (
-              <div className={styles.stockEntries}>
-                {stockEntries.map((entry) => (
-                  <div className={styles.stockEntry} key={entry.id}>
-                    <strong>{entry.quantity} × {entry.product}</strong>
-                    <small>{entry.pack}</small>
-                  </div>
-                ))}
-              </div>
-            ) : null}
+            ))}
           </div>
         </section>
       </DominionCardFrame>
