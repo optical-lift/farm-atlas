@@ -2,9 +2,30 @@
 
 import { useMemo, useState } from "react";
 
-import type { FlowerPreparationTask } from "@/app/task-focus/[taskId]/FlowerPreparationFocusPage";
+import type { FlowerPreparationTask as LegacyFlowerPreparationTask } from "@/app/task-focus/[taskId]/FlowerPreparationFocusPage";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import styles from "./flower-preparation-directive-card.module.css";
+
+export type FlowerPreparationDirectiveLine = {
+  id: string;
+  lineNumber: number;
+  cropProfileId: string | null;
+  productLabel: string;
+  outputKind: "bundle" | "posy" | "bouquet" | "lobby_arrangement";
+  requestedQuantity: number;
+  stemsPerUnit: number | null;
+  note: string | null;
+};
+
+export type FlowerPreparationDirective = {
+  id: string;
+  note: string | null;
+  lines: FlowerPreparationDirectiveLine[];
+};
+
+export type DirectiveFlowerPreparationTask = LegacyFlowerPreparationTask & {
+  directive: FlowerPreparationDirective;
+};
 
 type TransitionResponse = {
   ok?: boolean;
@@ -17,13 +38,14 @@ function errorMessage(body: TransitionResponse) {
   return "Atlas could not record the final tally.";
 }
 
-function instructionLabel(line: NonNullable<FlowerPreparationTask["directive"]>["lines"][number]) {
+function instructionLabel(line: FlowerPreparationDirectiveLine) {
   if (line.outputKind === "bundle") return `${line.stemsPerUnit ?? "—"}-stem bunches`;
-  if (line.outputKind === "lobby_arrangement") return "Arrangements";
-  return `${line.outputKind.charAt(0).toUpperCase()}${line.outputKind.slice(1)}s`;
+  if (line.outputKind === "posy") return "Posies";
+  if (line.outputKind === "bouquet") return "Bouquets";
+  return "Arrangements";
 }
 
-function harvestDetail(task: FlowerPreparationTask) {
+function harvestDetail(task: LegacyFlowerPreparationTask) {
   const total = task.inputs.reduce((sum, input) => sum + input.bucketEquivalentFloor, 0);
   const rounded = Math.round(total * 100) / 100;
   if (!rounded) return `${task.inputs.length} harvest record${task.inputs.length === 1 ? "" : "s"}`;
@@ -53,10 +75,8 @@ function NoteDrawer({ value, onChange, product, disabled }: {
   );
 }
 
-export default function FlowerPreparationDirectiveCard({ task }: { task: FlowerPreparationTask }) {
+export default function FlowerPreparationDirectiveCard({ task }: { task: DirectiveFlowerPreparationTask }) {
   const directive = task.directive;
-  if (!directive) return null;
-
   const initialActuals = useMemo(
     () => Object.fromEntries(directive.lines.map((line) => [line.id, line.requestedQuantity])) as Record<string, number>,
     [directive.lines],
