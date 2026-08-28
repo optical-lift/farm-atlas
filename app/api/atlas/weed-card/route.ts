@@ -163,7 +163,7 @@ export async function GET(request: Request) {
         .select("id,title,due_date,metadata")
         .in("id", ids);
       if (!dependentResult.error && dependentResult.data?.length) {
-        const byId = new Map(dependentResult.data.map((row) => [row.id, row]));
+        const byId = new Map(dependentResult.data.map((row) => [row.id, row] as const));
         dependencyTrail = ids.flatMap((id) => {
           const row = byId.get(id);
           if (!row) return [];
