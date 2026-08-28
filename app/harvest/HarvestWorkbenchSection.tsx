@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
+import HarvestOutboundSection from "./HarvestOutboundSection";
 import "./harvest-command-center.css";
 
 type CropOption = { cropCycleId: string; cropLabel: string; variety: string | null; objectLabel: string };
@@ -323,18 +324,17 @@ export default function HarvestWorkbenchSection() {
           </AtlasTaskCardFrame>
         </div>
 
-        <AtlasTaskCardFrame family="MOVEMENT" familyDetail="Permanent card" title="Going Out" subtitle="Flowers that have left Available but are not simply gone." timing={`${commandFarm.activeRoutes.length} route${commandFarm.activeRoutes.length === 1 ? "" : "s"} · ${farm.goingOut.length} customer handoff${farm.goingOut.length === 1 ? "" : "s"}`} completion={<span className="flower-command__completion">Sold, returned, and handed-off quantities resolve here.</span>}>
-          <div className="flower-command__body flower-command__going-out">
-            {commandFarm.activeRoutes.map((route) => <article className="flower-command__route" key={route.id}>
-              <header><div><small>WITH {route.custodianLabel.toUpperCase()}</small><h3>{route.routeLabel}</h3><p>{prettyDate(route.routeDate)} · {route.soldQuantity ? `${route.soldQuantity} sold · ` : ""}{route.activeQuantity} still out</p></div><button type="button" disabled={saving === `route-return:${route.id}`} onClick={() => void returnRoute(route)}>{saving === `route-return:${route.id}` ? "Returning…" : "Return remaining"}</button></header>
-              {route.lines.filter((line) => line.onRouteQuantity > 0).map((line) => { const draft = routeSales[line.id] ?? { quantity: "1", unitPrice: "0", customerLabel: "" }; return <div className="flower-command__route-line" key={line.id}><div><b>{line.productLabel}</b><span>{countLabel(line.onRouteQuantity, line.unit)} still with {route.custodianLabel}{line.soldQuantity ? ` · ${countLabel(line.soldQuantity, line.unit)} sold` : ""}</span></div><div className="flower-command__route-sale"><input aria-label="Sold quantity" type="number" min="0" max={line.onRouteQuantity} step={line.inventoryKind === "conditioned_bucket" ? ".25" : "1"} value={draft.quantity} onChange={(event) => setRouteSales((current) => ({ ...current, [line.id]: { ...draft, quantity: event.target.value } }))} /><label><span>$</span><input aria-label="Sold unit price" type="number" min="0" step=".01" value={draft.unitPrice} onChange={(event) => setRouteSales((current) => ({ ...current, [line.id]: { ...draft, unitPrice: event.target.value } }))} /></label><input aria-label="Buyer optional" placeholder="Buyer optional" value={draft.customerLabel} onChange={(event) => setRouteSales((current) => ({ ...current, [line.id]: { ...draft, customerLabel: event.target.value } }))} /><button type="button" disabled={saving === `route-sale:${line.id}`} onClick={() => void sellFromRoute(route, line)}>{saving === `route-sale:${line.id}` ? "Saving…" : "Sold"}</button></div></div>; })}
-            </article>)}
-
-            {farm.goingOut.map((order) => <article className="flower-command__handoff" key={order.id}><div><small>{order.fulfillmentMode === "pickup" ? "PICKUP" : "DELIVERY"}{order.fulfillmentDueDate ? ` · ${prettyDate(order.fulfillmentDueDate)}` : ""}{order.fulfillmentDueTime ? ` · ${order.fulfillmentDueTime.slice(0,5)}` : ""}</small><h3>{order.customerLabel}</h3><p>{order.lines.map((line) => `${countLabel(line.quantity, line.unit)} ${line.productLabel}`).join(" · ")}</p></div><button type="button" disabled={!order.fulfillmentTaskId || saving === `handoff:${order.id}`} onClick={() => void completeHandoff(order)}>{saving === `handoff:${order.id}` ? "Saving…" : "Handed off"}</button></article>)}
-
-            {!commandFarm.activeRoutes.length && !farm.goingOut.length ? <div className="flower-command__empty"><b>Nothing is out right now.</b><span>Routes, pickups, and deliveries appear here the moment flowers leave Available.</span></div> : null}
-          </div>
-        </AtlasTaskCardFrame>
+        <HarvestOutboundSection
+          title="Going Out"
+          orders={farm.goingOut}
+          routes={commandFarm.activeRoutes}
+          saving={saving}
+          routeSales={routeSales}
+          onRouteSaleDraftChange={(lineId, next) => setRouteSales((current) => ({ ...current, [lineId]: next }))}
+          onSellFromRoute={sellFromRoute}
+          onReturnRoute={returnRoute}
+          onCompleteHandoff={completeHandoff}
+        />
       </div> : null}
 
       {farm && commandFarm ? <section className="flower-ledger" aria-labelledby="flower-ledger-title">
