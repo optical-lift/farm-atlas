@@ -16,7 +16,7 @@ test("mixed perennial beds get a community summary instead of a fabricated prima
   assert.match(route, /function perennialCohorts/);
   assert.match(route, /function communityCategory/);
   assert.match(route, /function communitySummary/);
-  assert.match(route, /perennial plantings/);
+  assert.match(route, /labels\.length === 1 \? "planting" : "plantings"/);
   assert.match(route, /mainCropLabel: mainCropLabel \|\| communityLabel/);
   assert.doesNotMatch(route, /infer a primary crop from overlapping active cycles/);
 });
