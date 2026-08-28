@@ -1,0 +1,42 @@
+.atlas-harvest-outlook {
+  border: 1px solid rgba(88, 87, 111, 0.12);
+  border-radius: var(--atlas-radius-card);
+  background: #fffdf7;
+  overflow: hidden;
+}
+
+.atlas-harvest-outlook > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 14px;
+  color: var(--atlas-muted);
+  cursor: pointer;
+  list-style: none;
+  font-size: 10px;
+  font-weight: 800;
+}
+.atlas-harvest-outlook > summary::-webkit-details-marker { display: none; }
+.atlas-harvest-outlook > summary b {
+  margin-right: 5px;
+  color: var(--atlas-purple-dark);
+  font-size: 8px;
+  letter-spacing: 0.09em;
+}
+.atlas-harvest-outlook > summary strong {
+  color: var(--atlas-purple-dark);
+  font-size: 9px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.atlas-harvest-outlook[open] > summary {
+  border-bottom: 1px solid rgba(88, 87, 111, 0.09);
+  background: rgba(246, 242, 230, 0.45);
+}
+.atlas-harvest-outlook__body {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
