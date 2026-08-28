@@ -13,10 +13,13 @@ test("Worker Day keeps blocked planting work visible while naming the bed gate",
   assert.match(dayRoute, /Locked · weed/);
 });
 
-test("urgent weed cards expose the downstream planting pressure", () => {
+test("urgent weed cards make the waiting plants the motivation", () => {
   assert.match(dayRoute, /bed_readiness_deadline_pressure/);
-  assert.match(dayRoute, /blocking_task_count/);
-  assert.match(dayRoute, /Blocks \$\{blockingCount\}/);
+  assert.match(dayRoute, /dependent_task_labels/);
+  assert.match(dayRoute, /transplantSubject/);
+  assert.match(dayRoute, /Your plants are waiting:/);
+  assert.match(dayRoute, /This bed is holding them up/);
+  assert.match(dayRoute, /planted today/);
   assert.match(dayRoute, /blocking_due_now/);
 });
 

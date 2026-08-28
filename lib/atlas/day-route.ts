@@ -25,6 +25,12 @@ function stringList(value: unknown) {
   return value.map(text).filter(Boolean);
 }
 
+function transplantSubject(label: string) {
+  return label
+    .replace(/^transplant\b\s*(?:[·—–:-]+\s*)?/i, "")
+    .trim();
+}
+
 function words(value: string) {
   return value
     .replaceAll("_", " ")
@@ -220,8 +226,16 @@ export function atlasDayTaskCues(task: AtlasTaskCard) {
   const blockingCount = numberValue(metadata.blocking_task_count) ?? dependentLabels.length;
   if (canonicalActionKey(task) === "weed" && truthy(metadata.bed_readiness_deadline_pressure) && blockingCount > 0) {
     const allTransplants = dependentLabels.length > 0 && dependentLabels.every((label) => /^transplant\b/i.test(label));
-    const noun = allTransplants ? (blockingCount === 1 ? "transplant" : "transplants") : (blockingCount === 1 ? "planting move" : "planting moves");
-    add(`Blocks ${blockingCount} ${noun}${truthy(metadata.blocking_due_now) ? " due now" : ""}`);
+    const waitingPlants = Array.from(new Set(dependentLabels.map(transplantSubject).filter(Boolean)));
+    if (allTransplants && waitingPlants.length) {
+      add(`Your plants are waiting: ${waitingPlants.join(" · ")}`);
+      add(truthy(metadata.blocking_due_now)
+        ? "This bed is holding them up · clear it so they can be planted today"
+        : "This bed is their next home · clear it before transplant day");
+    } else {
+      const noun = blockingCount === 1 ? "planting move" : "planting moves";
+      add(`Blocks ${blockingCount} ${noun}${truthy(metadata.blocking_due_now) ? " due now" : ""}`);
+    }
   }
 
   const scheduledAfter = numberValue(metadata.release_queue_scheduled_after_count);
