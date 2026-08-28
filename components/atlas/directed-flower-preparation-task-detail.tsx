@@ -15,6 +15,16 @@ export type DirectedPreparationLine = {
   note: string | null;
 };
 
+type OutputKind = DirectedPreparationLine["outputKind"];
+
+type WorkerAddedLine = {
+  id: string;
+  productLabel: string;
+  outputKind: OutputKind;
+  actualQuantity: number;
+  stemsPerUnit: number | null;
+};
+
 export type DirectedPreparationTask = {
   id: string;
   dueDate: string | null;
@@ -24,10 +34,24 @@ export type DirectedPreparationTask = {
   returnTo?: string | null;
 };
 
-function instruction(line: DirectedPreparationLine) {
+const outputChoices: Array<{ value: OutputKind; label: string }> = [
+  { value: "bundle", label: "Bunch" },
+  { value: "posy", label: "Posy" },
+  { value: "bouquet", label: "Bouquet" },
+  { value: "lobby_arrangement", label: "Arrangement" },
+];
+
+const stemChoices = [5, 10, 15];
+
+function instruction(line: Pick<DirectedPreparationLine, "outputKind" | "stemsPerUnit">) {
   if (line.outputKind === "bundle") return `${line.stemsPerUnit ?? "?"}-stem bunches`;
   if (line.outputKind === "lobby_arrangement") return "arrangements";
   return `${line.outputKind}s`;
+}
+
+function nonce() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 export default function DirectedFlowerPreparationTaskDetail({ task }: { task: DirectedPreparationTask }) {
@@ -38,7 +62,13 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
   const [actuals, setActuals] = useState<Record<string, number>>(initialActuals);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [remainders, setRemainders] = useState<Record<string, number | null>>({});
-  const [remainingOpen, setRemainingOpen] = useState(true);
+  const [remainingOpen, setRemainingOpen] = useState(false);
+  const [extraOpen, setExtraOpen] = useState(false);
+  const [extraLines, setExtraLines] = useState<WorkerAddedLine[]>([]);
+  const [productDraft, setProductDraft] = useState("");
+  const [outputDraft, setOutputDraft] = useState<OutputKind>("bundle");
+  const [stemsDraft, setStemsDraft] = useState(5);
+  const [quantityDraft, setQuantityDraft] = useState(1);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const returnTo = task.returnTo || (task.dueDate ? `/day?date=${encodeURIComponent(task.dueDate)}` : "/");
@@ -56,6 +86,31 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
     setMessage(null);
   }
 
+  function changeExtraQuantity(id: string, delta: number) {
+    setExtraLines((current) => current.map((line) => line.id === id
+      ? { ...line, actualQuantity: Math.max(0, line.actualQuantity + delta) }
+      : line));
+    setMessage(null);
+  }
+
+  function addExtraLine() {
+    const productLabel = productDraft.trim();
+    if (!productLabel || quantityDraft < 1 || (outputDraft === "bundle" && stemsDraft < 1)) return;
+    setExtraLines((current) => [...current, {
+      id: nonce(),
+      productLabel,
+      outputKind: outputDraft,
+      actualQuantity: quantityDraft,
+      stemsPerUnit: outputDraft === "bundle" ? stemsDraft : null,
+    }]);
+    setProductDraft("");
+    setOutputDraft("bundle");
+    setStemsDraft(5);
+    setQuantityDraft(1);
+    setExtraOpen(false);
+    setMessage(null);
+  }
+
   async function submit() {
     try {
       setSaving(true);
@@ -70,6 +125,16 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
         actualQuantity: actuals[line.id] ?? 0,
         note: notes[line.id]?.trim() || null,
       }));
+      const workerAddedLines = extraLines
+        .filter((line) => line.actualQuantity > 0)
+        .map((line, index) => ({
+          lineNumber: task.directiveLines.length + index + 1,
+          productLabel: line.productLabel,
+          outputKind: line.outputKind,
+          stemsPerUnit: line.stemsPerUnit,
+          actualQuantity: line.actualQuantity,
+          source: "worker_added_actual",
+        }));
       const remainingStems = task.directiveLines.flatMap((line) => {
         const value = remainders[line.productLabel];
         return value == null ? [] : [{ productLabel: line.productLabel, quantity: value, source: "worker_count" }];
@@ -94,6 +159,7 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
             requestedOutputTruthBoundary: "owner_requested_preparation",
             actualOutputTruthBoundary: "worker_confirmed_preparation",
             lines: lineResults,
+            workerAddedLines,
             remainingStems,
           },
         }),
@@ -107,6 +173,10 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
       setSaving(false);
     }
   }
+
+  const extraSentence = productDraft.trim()
+    ? `${quantityDraft} ${instruction({ outputKind: outputDraft, stemsPerUnit: outputDraft === "bundle" ? stemsDraft : null })} · ${productDraft.trim()}`
+    : "Build the extra flower tally";
 
   return (
     <main className={styles.shell}>
@@ -154,6 +224,84 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
                 </details>
               </article>
             ))}
+
+            {extraLines.map((line) => (
+              <article className={`${styles.prepRow} ${styles.extraRow}`} key={line.id}>
+                <div className={styles.identity}>
+                  <strong>{line.productLabel}</strong>
+                  <small>{instruction(line)}</small>
+                  <em>Added to final tally</em>
+                  <button type="button" className={styles.removeExtra} disabled={saving} onClick={() => setExtraLines((current) => current.filter((candidate) => candidate.id !== line.id))}>Remove</button>
+                </div>
+                <div className={styles.target}><span>QTY</span><strong>—</strong></div>
+                <div className={styles.actual}>
+                  <span>Made</span>
+                  <div className={styles.stepper}>
+                    <button type="button" disabled={saving || line.actualQuantity === 0} onClick={() => changeExtraQuantity(line.id, -1)}>−</button>
+                    <strong>{line.actualQuantity}</strong>
+                    <button type="button" disabled={saving} onClick={() => changeExtraQuantity(line.id, 1)}>+</button>
+                  </div>
+                </div>
+              </article>
+            ))}
+
+            <div className={styles.addArea}>
+              <button type="button" className={styles.addLaunch} aria-expanded={extraOpen} disabled={saving} onClick={() => setExtraOpen((current) => !current)}>
+                Add +
+              </button>
+              {extraOpen ? (
+                <div className={styles.extraBuilder}>
+                  <div className="atlas-log-sentence">{extraSentence}</div>
+
+                  <label className={styles.extraField}>
+                    <span>Flower</span>
+                    <input value={productDraft} onChange={(event) => { setProductDraft(event.target.value); setMessage(null); }} placeholder="Flower or variety" maxLength={160} />
+                  </label>
+
+                  <div className={styles.extraStep}>
+                    <span>Pack as</span>
+                    <div className="atlas-log-chip-grid compact expanded">
+                      {outputChoices.map((choice) => (
+                        <button type="button" className={outputDraft === choice.value ? "selected" : ""} key={choice.value} onClick={() => setOutputDraft(choice.value)}>
+                          {choice.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {outputDraft === "bundle" ? (
+                    <div className={styles.extraStep}>
+                      <span>Stems per bunch</span>
+                      <div className="atlas-log-chip-grid compact expanded">
+                        {stemChoices.map((choice) => (
+                          <button type="button" className={stemsDraft === choice ? "selected" : ""} key={choice} onClick={() => setStemsDraft(choice)}>
+                            {choice} stems
+                          </button>
+                        ))}
+                      </div>
+                      <label className={styles.customStemField}>
+                        <span>Other</span>
+                        <input type="number" min={1} max={1000} inputMode="numeric" value={stemsDraft} onChange={(event) => setStemsDraft(Math.max(1, Math.min(1000, Number(event.target.value) || 1)))} />
+                      </label>
+                    </div>
+                  ) : null}
+
+                  <div className={styles.extraCountRow}>
+                    <span>How many made?</span>
+                    <div className={styles.stepper}>
+                      <button type="button" disabled={quantityDraft <= 1} onClick={() => setQuantityDraft((current) => Math.max(1, current - 1))}>−</button>
+                      <strong>{quantityDraft}</strong>
+                      <button type="button" onClick={() => setQuantityDraft((current) => Math.min(10000, current + 1))}>+</button>
+                    </div>
+                  </div>
+
+                  <div className={styles.extraActions}>
+                    <button type="button" className={styles.cancelExtra} onClick={() => setExtraOpen(false)}>Cancel</button>
+                    <button type="button" className={styles.saveExtra} disabled={!productDraft.trim()} onClick={addExtraLine}>Add to tally</button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </section>
 
@@ -161,7 +309,6 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
           <div className={styles.remainingLaunch}>
             <div className={styles.remainingHeadCopy}>
               <span className={styles.remainingKicker}>Remaining stems</span>
-              <strong>Count only where Atlas cannot calculate yet</strong>
             </div>
             <button type="button" aria-expanded={remainingOpen} onClick={() => setRemainingOpen((current) => !current)}>
               {remainingOpen ? "Hide remaining stems" : "Log remaining stems"}
