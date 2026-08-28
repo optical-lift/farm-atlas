@@ -39,17 +39,21 @@
 .noteDrawer input { width:100%; min-width:0; box-sizing:border-box; min-height:39px; border:1px solid rgba(121,109,89,.19); border-radius:11px; background:rgba(255,255,255,.94); color:var(--atlas-text); padding:8px 9px; font:inherit; font-size:16px; line-height:1.1; font-weight:850; }
 @keyframes noteReveal { from { opacity:0; transform:translateY(-3px); } to { opacity:1; transform:translateY(0); } }
 .remainingList { display:grid; border-top:1px solid rgba(223,215,202,.48); }
-.remainingRow { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:center; padding:11px 18px; border-top:1px solid rgba(223,215,202,.42); background:rgba(255,254,250,.54); }
+.remainingRow { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px; align-items:center; padding:11px 18px; border-top:1px solid rgba(223,215,202,.42); background:rgba(255,254,250,.54); }
 .remainingRow:first-child { border-top:0; }
-.remainingRow>div:first-child { min-width:0; display:grid; gap:3px; }
-.remainingRow>div:first-child strong { color:var(--atlas-text); font-size:13px; line-height:1.1; font-weight:920; }
-.remainingRow>div:first-child small { color:#94958e; font-size:9px; line-height:1.15; font-weight:760; }
+.remainingIdentity { min-width:0; display:grid; gap:3px; }
+.remainingIdentity strong { color:var(--atlas-text); font-size:13px; line-height:1.1; font-weight:920; }
+.remainingIdentity small { color:#94958e; font-size:9px; line-height:1.2; font-weight:760; }
+.remainingControl { display:grid; gap:5px; justify-items:center; }
+.remainingControl>span { color:#858bb8; font-size:8px; line-height:1; font-weight:900; letter-spacing:.06em; text-transform:uppercase; }
 .completion { display:grid; padding:17px 18px 20px; background:rgba(246,242,230,.48); }
 .completion button { min-height:52px; border:0; border-radius:17px; background:rgba(214,225,177,.76); color:#515b34; padding:11px; font:inherit; font-size:13px; line-height:1.1; font-weight:930; }
 @media (max-width:520px) {
   .prepRow { grid-template-columns:minmax(0,1fr) 42px 102px; gap:7px; padding-left:14px; padding-right:14px; }
   .identity strong { font-size:13px; }
   .instructions>header,.remainingSection>header,.remainingRow { padding-left:14px; padding-right:14px; }
+  .remainingRow { gap:8px; }
+  .remainingIdentity small { max-width:185px; }
   .stepper { grid-template-columns:24px 34px 24px; gap:3px; }
   .stepper button { width:24px; height:32px; font-size:20px; }
   .stepper strong { min-width:34px; height:32px; }
