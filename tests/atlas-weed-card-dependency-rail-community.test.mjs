@@ -4,12 +4,15 @@ import test from "node:test";
 
 const route = readFileSync(new URL("../app/api/atlas/weed-card/route.ts", import.meta.url), "utf8");
 
-test("Weed Task Focus rail prioritizes direct downstream tasks over old bed history", () => {
+test("Weed Task Focus rail shows last move, current move, and two downstream moves", () => {
   assert.match(route, /dependent_task_ids/);
   assert.match(route, /dependent_task_labels/);
+  assert.match(route, /latestTrailEvent\(card\.bedTrail\)/);
+  assert.match(route, /eventKind: `Now · \$\{currentAction\}`/);
   assert.match(route, /eventKind: `Next · \$\{action\}`/);
-  assert.match(route, /bedTrail: dependencyTrail\.length \? dependencyTrail : card\.bedTrail/);
-  assert.match(route, /work that becomes executable/);
+  assert.match(route, /\.\.\.dependencyTrail\.slice\(0, 2\)/);
+  assert.match(route, /bedTrail: workflowTrail\.length \? workflowTrail : card\.bedTrail/);
+  assert.match(route, /one completed move behind, the move in hand, and at most two moves\/unlocks ahead/);
 });
 
 test("mixed perennial beds get a community summary instead of a fabricated primary crop", () => {
