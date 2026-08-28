@@ -13,6 +13,9 @@ test("Weekly Harvest exposes the approved External Intake interaction", () => {
   assert.match(surface, /Add flowers that did not come from an Elm bed/);
   assert.match(surface, /\["Foraged", "Purchased", "Gifted"\]/);
   assert.match(surface, /\["Stems", "Buckets", "Bundles"\]/);
+  assert.match(surface, /useState<IntakeSource \| null>\(null\)/);
+  assert.match(surface, /const \[sourceLabel, setSourceLabel\] = useState\(""\)/);
+  assert.match(surface, /const \[lines, setLines\] = useState<ExternalIntakeLine\[]>\(\[\]\)/);
   assert.match(surface, /Source \/ place/);
   assert.match(surface, /What came in\?/);
   assert.match(surface, />Flower</);
