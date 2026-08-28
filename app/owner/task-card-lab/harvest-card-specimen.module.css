@@ -289,6 +289,219 @@
   background: rgba(250, 242, 237, 0.72);
 }
 
+.externalIntakeLaunch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+  background: rgba(246, 242, 230, 0.3);
+}
+
+.externalIntakeLaunch > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.externalIntakeLaunch span,
+.externalDrawerHead span,
+.intakeStep > span,
+.intakeTextField > span,
+.savedIntake > span {
+  color: #858bb8;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.externalIntakeLaunch strong,
+.externalDrawerHead strong {
+  color: #76786f;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 820;
+}
+
+.externalIntakeLaunch button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  border: 1px solid rgba(133, 139, 184, 0.26);
+  border-radius: 999px;
+  background: rgba(239, 237, 244, 0.64);
+  color: #60647c;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 920;
+}
+
+.externalDrawer {
+  display: grid;
+  border-bottom: 1px solid rgba(215, 204, 189, 0.62);
+  background: rgba(252, 250, 244, 0.96);
+}
+
+.externalDrawerHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 18px 12px;
+}
+
+.externalDrawerHead > div {
+  display: grid;
+  gap: 4px;
+}
+
+.externalDrawerHead > button,
+.savedIntake > button {
+  border: 0;
+  background: transparent;
+  color: #74788d;
+  padding: 4px 0;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.externalBuilder {
+  display: grid;
+  gap: 15px;
+  padding: 0 18px 18px;
+  border-top: 1px solid rgba(223, 215, 202, 0.48);
+}
+
+.intakeSentence {
+  margin-top: 14px;
+  padding: 11px 12px;
+  border-radius: 13px;
+  background: rgba(239, 237, 244, 0.44);
+  color: #5f6277;
+  font-size: 10px;
+  line-height: 1.4;
+  font-weight: 850;
+}
+
+.intakeStep,
+.intakeTextField {
+  display: grid;
+  gap: 8px;
+}
+
+.intakePills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.intakePills button {
+  min-height: 32px;
+  border: 1px solid rgba(139, 145, 194, 0.18);
+  border-radius: 999px;
+  background: rgba(250, 248, 239, 0.9);
+  color: #686a73;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 880;
+}
+
+.intakePills button[data-active="true"] {
+  border-color: rgba(111, 118, 158, 0.52);
+  background: rgba(232, 232, 241, 0.9);
+  color: #4f5268;
+}
+
+.intakeTextField input {
+  width: 100%;
+  min-width: 0;
+  min-height: 39px;
+  border: 1px solid rgba(121, 109, 89, 0.19);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--atlas-text);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 820;
+}
+
+.intakeCounterRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.intakeCounterRow button {
+  width: 28px;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  color: #67655e;
+  padding: 0;
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.intakeCounterRow button:disabled {
+  opacity: 0.25;
+}
+
+.intakeCounterRow strong {
+  display: grid;
+  place-items: center;
+  min-width: 38px;
+  height: 34px;
+  border: 1px solid rgba(121, 109, 89, 0.22);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--atlas-text);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.intakeCounterRow small {
+  margin-left: 5px;
+  color: #92938c;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.saveIntakeButton {
+  min-height: 46px;
+  border: 0;
+  border-radius: 15px;
+  background: rgba(214, 225, 177, 0.74);
+  color: #515b34;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 930;
+}
+
+.savedIntake {
+  display: grid;
+  gap: 7px;
+  padding: 14px 18px 18px;
+  border-top: 1px solid rgba(223, 215, 202, 0.48);
+}
+
+.savedIntake strong {
+  color: var(--atlas-text);
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 900;
+}
+
 .finish {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -354,5 +567,17 @@
   .outcomeGrid button {
     padding: 7px 5px;
     font-size: 8px;
+  }
+
+  .externalIntakeLaunch,
+  .externalDrawerHead,
+  .externalBuilder,
+  .savedIntake {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .externalIntakeLaunch {
+    align-items: flex-start;
   }
 }
