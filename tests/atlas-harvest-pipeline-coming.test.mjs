@@ -18,6 +18,7 @@ test("Harvest tab is a task-style crop-to-commerce pipeline, not a separate dash
   assert.match(pipeline, /\+ Add harvest/);
   assert.doesNotMatch(pipeline, /\+ Add task/i);
   assert.match(pipeline, /Next harvests/);
+  assert.match(pipeline, /This is not harvested inventory yet/);
   assert.match(pipeline, /Worker field note/);
   assert.match(pipeline, /Atlas · next cut after harvest/);
 });
