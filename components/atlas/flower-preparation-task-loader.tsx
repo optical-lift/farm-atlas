@@ -5,6 +5,10 @@ import { useCallback, useEffect, useState } from "react";
 import FlowerPreparationFocusPage, {
   type FlowerPreparationTask,
 } from "@/app/task-focus/[taskId]/FlowerPreparationFocusPage";
+import FlowerPreparationDirectiveCard, {
+  type DirectiveFlowerPreparationTask,
+  type FlowerPreparationDirective,
+} from "@/components/atlas/flower-preparation-directive-card";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
@@ -14,14 +18,18 @@ type Props = {
   assignee: AtlasAssigneeConfig;
 };
 
+type PreparationContext = FlowerPreparationTask & {
+  directive?: FlowerPreparationDirective | null;
+};
+
 type ContextResponse = {
   ok?: boolean;
   error?: string;
-  task?: FlowerPreparationTask;
+  task?: PreparationContext;
 };
 
 export default function FlowerPreparationTaskLoader({ task, assignee }: Props) {
-  const [context, setContext] = useState<FlowerPreparationTask | null>(null);
+  const [context, setContext] = useState<PreparationContext | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -38,6 +46,9 @@ export default function FlowerPreparationTaskLoader({ task, assignee }: Props) {
 
   useEffect(() => { void load(); }, [load]);
 
+  if (context?.directive) {
+    return <FlowerPreparationDirectiveCard task={context as DirectiveFlowerPreparationTask} />;
+  }
   if (context) return <FlowerPreparationFocusPage task={context} />;
 
   return (
