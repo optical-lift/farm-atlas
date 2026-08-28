@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties, type KeyboardEvent } from "react";
 
 import DominionCardFrame from "./DominionCardFrame";
 import styles from "./harvest-card-specimen.module.css";
@@ -152,7 +152,7 @@ const intakeUi: Record<string, CSSProperties> = {
   textarea: {
     width: "100%",
     minWidth: 0,
-    minHeight: 68,
+    minHeight: 58,
     boxSizing: "border-box",
     border: "1px solid rgba(121, 109, 89, 0.19)",
     borderRadius: 11,
@@ -163,6 +163,46 @@ const intakeUi: Record<string, CSSProperties> = {
     lineHeight: 1.25,
     fontWeight: 820,
     resize: "vertical",
+  },
+  commitRow: { display: "grid", gridTemplateColumns: "minmax(0,1fr) 42px", gap: 7, alignItems: "stretch" },
+  commitButton: {
+    minWidth: 42,
+    border: "1px solid rgba(111,118,158,.28)",
+    borderRadius: 11,
+    background: "rgba(239,237,244,.78)",
+    color: "#565b79",
+    fontSize: 22,
+    lineHeight: 1,
+    fontWeight: 850,
+  },
+  tokenList: { display: "flex", flexWrap: "wrap", gap: 6 },
+  token: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    minHeight: 29,
+    border: "1px solid rgba(139,145,194,.18)",
+    borderRadius: 999,
+    background: "rgba(250,248,239,.92)",
+    color: "#5f626d",
+    padding: "6px 8px 6px 10px",
+    fontSize: 9,
+    lineHeight: 1,
+    fontWeight: 880,
+  },
+  tokenRemove: {
+    display: "grid",
+    placeItems: "center",
+    width: 17,
+    height: 17,
+    border: 0,
+    borderRadius: 999,
+    background: "rgba(223,220,213,.6)",
+    color: "#777970",
+    padding: 0,
+    fontSize: 11,
+    lineHeight: 1,
+    fontWeight: 900,
   },
   counter: { display: "flex", alignItems: "center", gap: 4 },
   counterButton: {
@@ -267,25 +307,61 @@ function IntakeCounter({ value, unit, onChange }: { value: number; unit: string;
   );
 }
 
+function TokenList({ values, onRemove }: { values: string[]; onRemove: (value: string) => void }) {
+  if (!values.length) return null;
+  return (
+    <div style={intakeUi.tokenList}>
+      {values.map((value) => (
+        <span style={intakeUi.token} key={value}>
+          {value}
+          <button type="button" style={intakeUi.tokenRemove} aria-label={`Remove ${value}`} onClick={() => onRemove(value)}>×</button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function ExternalIntakeBuilder({ onClose }: { onClose: () => void }) {
   const [sourceType, setSourceType] = useState<IntakeSource>("Gifted");
   const [sourceLabel, setSourceLabel] = useState("Mary’s garden");
-  const [contents, setContents] = useState("Zinnias + marigolds");
-  const [colors, setColors] = useState("pink + orange + yellow");
+  const [contents, setContents] = useState<string[]>(["Zinnias", "Marigolds"]);
+  const [contentDraft, setContentDraft] = useState("");
+  const [colors, setColors] = useState<string[]>(["pink", "orange", "yellow"]);
+  const [colorDraft, setColorDraft] = useState("");
   const [unit, setUnit] = useState<IntakeUnit>("Buckets");
   const [quantity, setQuantity] = useState(2);
   const [saved, setSaved] = useState(false);
+
+  function commitValue(draft: string, values: string[], setValues: (next: string[]) => void, clear: () => void) {
+    const value = draft.trim();
+    if (!value) return;
+    const duplicate = values.some((item) => item.localeCompare(value, undefined, { sensitivity: "accent" }) === 0);
+    if (!duplicate) setValues([...values, value]);
+    clear();
+  }
+
+  function handleCommitKey(event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, commit: () => void) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    commit();
+  }
+
+  const contentLabel = contents.length ? contents.join(" + ") : "contents unknown";
+  const colorLabel = colors.length ? colors.join(" + ") : null;
 
   const sentence = useMemo(
     () => [
       sourceType,
       sourceLabel.trim() || "source unknown",
       `${quantity} ${unit.toLowerCase()}`,
-      contents.trim() || "contents unknown",
-      colors.trim() ? colors.trim() : null,
+      contentLabel,
+      colorLabel,
     ].filter(Boolean).join(" · "),
-    [sourceType, sourceLabel, quantity, unit, contents, colors],
+    [sourceType, sourceLabel, quantity, unit, contentLabel, colorLabel],
   );
+
+  const commitContent = () => commitValue(contentDraft, contents, setContents, () => setContentDraft(""));
+  const commitColor = () => commitValue(colorDraft, colors, setColors, () => setColorDraft(""));
 
   return (
     <section style={intakeUi.drawer} aria-label="External flower intake builder">
@@ -314,15 +390,37 @@ function ExternalIntakeBuilder({ onClose }: { onClose: () => void }) {
             <input style={intakeUi.input} value={sourceLabel} onChange={(event) => setSourceLabel(event.target.value)} placeholder="Roadside, Mary’s garden, wholesaler…" />
           </label>
 
-          <label style={intakeUi.field}>
+          <div style={intakeUi.field}>
             <span style={intakeUi.stepLabel}>What came in?</span>
-            <input style={intakeUi.input} value={contents} onChange={(event) => setContents(event.target.value)} placeholder="Dahlia, zinnias, mixed foliage…" />
-          </label>
+            <div style={intakeUi.commitRow}>
+              <input
+                style={intakeUi.input}
+                value={contentDraft}
+                onChange={(event) => setContentDraft(event.target.value)}
+                onKeyDown={(event) => handleCommitKey(event, commitContent)}
+                placeholder="Dahlia"
+                aria-label="Add flower or crop"
+              />
+              <button type="button" style={{ ...intakeUi.commitButton, opacity: contentDraft.trim() ? 1 : .38 }} disabled={!contentDraft.trim()} aria-label="Add flower or crop" onClick={commitContent}>+</button>
+            </div>
+            <TokenList values={contents} onRemove={(value) => setContents((current) => current.filter((item) => item !== value))} />
+          </div>
 
-          <label style={intakeUi.field}>
+          <div style={intakeUi.field}>
             <span style={intakeUi.stepLabel}>Color</span>
-            <textarea style={intakeUi.textarea} value={colors} onChange={(event) => setColors(event.target.value)} placeholder="pink + white + yellow" />
-          </label>
+            <div style={intakeUi.commitRow}>
+              <textarea
+                style={intakeUi.textarea}
+                value={colorDraft}
+                onChange={(event) => setColorDraft(event.target.value)}
+                onKeyDown={(event) => handleCommitKey(event, commitColor)}
+                placeholder="pink"
+                aria-label="Add color"
+              />
+              <button type="button" style={{ ...intakeUi.commitButton, opacity: colorDraft.trim() ? 1 : .38 }} disabled={!colorDraft.trim()} aria-label="Add color" onClick={commitColor}>+</button>
+            </div>
+            <TokenList values={colors} onRemove={(value) => setColors((current) => current.filter((item) => item !== value))} />
+          </div>
 
           <div style={intakeUi.step}>
             <span style={intakeUi.stepLabel}>Count as</span>
