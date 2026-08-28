@@ -13,6 +13,8 @@ function AddressLines({ address }: { address: string }) {
 export default function TaskDestinationContact({ destination }: { destination: TaskDestinationContactData | null | undefined }) {
   if (!destination) return null;
 
+  const handoffLabel = destination.contactName ? "Ask for" : "Handoff";
+
   return (
     <section className={styles.section} data-atlas-destination-contact="true" aria-label="Destination contact">
       <div className={styles.label}>Destination</div>
@@ -21,6 +23,13 @@ export default function TaskDestinationContact({ destination }: { destination: T
           {destination.name ? <strong>{destination.name}</strong> : null}
           {destination.address ? <address><AddressLines address={destination.address} /></address> : null}
         </div>
+        {destination.contactName || destination.handoffInstruction ? (
+          <div className={styles.handoff} data-atlas-destination-handoff="true">
+            <span>{handoffLabel}</span>
+            {destination.contactName ? <strong>{destination.contactName}</strong> : null}
+            {destination.handoffInstruction ? <p>{destination.handoffInstruction}</p> : null}
+          </div>
+        ) : null}
         {destination.phone ? (
           <div className={styles.phone}>
             <span>{destination.phoneLabel}</span>
