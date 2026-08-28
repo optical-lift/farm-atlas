@@ -6,10 +6,8 @@ import DominionCardFrame from "./DominionCardFrame";
 import styles from "./harvest-card-specimen.module.css";
 
 type HarvestOutcome = "nothing_ready" | "deadheaded" | "crop_exhausted";
-type IntakeSource = "Foraged" | "Garden" | "Purchased" | "Gifted";
+type IntakeSource = "Foraged" | "Purchased" | "Gifted";
 type IntakeUnit = "Stems" | "Buckets" | "Bunches";
-type IntakeExactness = "Exact" | "Approx" | "Unknown";
-type IntakeCondition = "FQ" | "SP" | "Mixed" | "Unknown";
 
 type HarvestCrop = {
   id: string;
@@ -37,11 +35,8 @@ const outcomeChoices: Array<{ value: HarvestOutcome; label: string }> = [
   { value: "crop_exhausted", label: "Crop exhausted" },
 ];
 
-const sourceChoices: IntakeSource[] = ["Foraged", "Garden", "Purchased", "Gifted"];
-const contentChoices = ["Zinnias", "Marigolds", "Sunflowers", "Celosia", "Foliage", "Mixed", "Unknown"] as const;
+const sourceChoices: IntakeSource[] = ["Foraged", "Purchased", "Gifted"];
 const unitChoices: IntakeUnit[] = ["Stems", "Buckets", "Bunches"];
-const exactnessChoices: IntakeExactness[] = ["Exact", "Approx", "Unknown"];
-const conditionChoices: IntakeCondition[] = ["FQ", "SP", "Mixed", "Unknown"];
 
 const intakeUi: Record<string, CSSProperties> = {
   launch: {
@@ -154,6 +149,21 @@ const intakeUi: Record<string, CSSProperties> = {
     lineHeight: 1.1,
     fontWeight: 820,
   },
+  textarea: {
+    width: "100%",
+    minWidth: 0,
+    minHeight: 68,
+    boxSizing: "border-box",
+    border: "1px solid rgba(121, 109, 89, 0.19)",
+    borderRadius: 11,
+    background: "rgba(255,255,255,.96)",
+    color: "#303243",
+    padding: "9px 10px",
+    fontSize: 16,
+    lineHeight: 1.25,
+    fontWeight: 820,
+    resize: "vertical",
+  },
   counter: { display: "flex", alignItems: "center", gap: 4 },
   counterButton: {
     width: 30,
@@ -258,30 +268,23 @@ function IntakeCounter({ value, unit, onChange }: { value: number; unit: string;
 }
 
 function ExternalIntakeBuilder({ onClose }: { onClose: () => void }) {
-  const [sourceType, setSourceType] = useState<IntakeSource>("Garden");
+  const [sourceType, setSourceType] = useState<IntakeSource>("Gifted");
   const [sourceLabel, setSourceLabel] = useState("Mary’s garden");
-  const [contents, setContents] = useState<string[]>(["Zinnias", "Marigolds"]);
+  const [contents, setContents] = useState("Zinnias + marigolds");
+  const [colors, setColors] = useState("pink + orange + yellow");
   const [unit, setUnit] = useState<IntakeUnit>("Buckets");
   const [quantity, setQuantity] = useState(2);
-  const [stemExactness, setStemExactness] = useState<IntakeExactness>("Unknown");
-  const [stemCount, setStemCount] = useState(0);
-  const [condition, setCondition] = useState<IntakeCondition>("Mixed");
   const [saved, setSaved] = useState(false);
 
-  function toggleContent(value: string) {
-    setContents((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
-  }
-
-  const contentLabel = contents.length ? contents.join(" + ") : "contents unknown";
-  const stemLabel = unit === "Stems"
-    ? `${stemExactness === "Approx" ? "~" : ""}${quantity} stems${stemExactness === "Unknown" ? " · count uncertain" : ""}`
-    : stemExactness === "Unknown"
-      ? "stem count unknown"
-      : `${stemExactness === "Approx" ? "~" : ""}${stemCount} stems`;
-
   const sentence = useMemo(
-    () => [sourceType, sourceLabel.trim() || "source unknown", `${quantity} ${unit.toLowerCase()}`, contentLabel, stemLabel, `${condition.toLowerCase()} condition`].join(" · "),
-    [sourceType, sourceLabel, quantity, unit, contentLabel, stemLabel, condition],
+    () => [
+      sourceType,
+      sourceLabel.trim() || "source unknown",
+      `${quantity} ${unit.toLowerCase()}`,
+      contents.trim() || "contents unknown",
+      colors.trim() ? colors.trim() : null,
+    ].filter(Boolean).join(" · "),
+    [sourceType, sourceLabel, quantity, unit, contents, colors],
   );
 
   return (
@@ -311,26 +314,20 @@ function ExternalIntakeBuilder({ onClose }: { onClose: () => void }) {
             <input style={intakeUi.input} value={sourceLabel} onChange={(event) => setSourceLabel(event.target.value)} placeholder="Roadside, Mary’s garden, wholesaler…" />
           </label>
 
-          <div style={intakeUi.step}>
+          <label style={intakeUi.field}>
             <span style={intakeUi.stepLabel}>What came in?</span>
-            <div style={intakeUi.pills}>{contentChoices.map((choice) => <Pill active={contents.includes(choice)} key={choice} onClick={() => toggleContent(choice)}>{choice}</Pill>)}</div>
-          </div>
+            <input style={intakeUi.input} value={contents} onChange={(event) => setContents(event.target.value)} placeholder="Dahlia, zinnias, mixed foliage…" />
+          </label>
+
+          <label style={intakeUi.field}>
+            <span style={intakeUi.stepLabel}>Color</span>
+            <textarea style={intakeUi.textarea} value={colors} onChange={(event) => setColors(event.target.value)} placeholder="pink + white + yellow" />
+          </label>
 
           <div style={intakeUi.step}>
             <span style={intakeUi.stepLabel}>Count as</span>
             <div style={intakeUi.pills}>{unitChoices.map((choice) => <Pill active={unit === choice} key={choice} onClick={() => setUnit(choice)}>{choice}</Pill>)}</div>
             <IntakeCounter value={quantity} unit={unit.toLowerCase()} onChange={setQuantity} />
-          </div>
-
-          <div style={intakeUi.step}>
-            <span style={intakeUi.stepLabel}>Stem count</span>
-            <div style={intakeUi.pills}>{exactnessChoices.map((choice) => <Pill active={stemExactness === choice} key={choice} onClick={() => setStemExactness(choice)}>{choice}</Pill>)}</div>
-            {unit !== "Stems" && stemExactness !== "Unknown" ? <IntakeCounter value={stemCount} unit="stems" onChange={setStemCount} /> : null}
-          </div>
-
-          <div style={intakeUi.step}>
-            <span style={intakeUi.stepLabel}>Condition</span>
-            <div style={intakeUi.pills}>{conditionChoices.map((choice) => <Pill active={condition === choice} key={choice} onClick={() => setCondition(choice)}>{choice}</Pill>)}</div>
           </div>
 
           <button type="button" style={intakeUi.saveButton} onClick={() => setSaved(true)}>Add to harvest custody</button>
@@ -368,8 +365,8 @@ export default function HarvestCardSpecimen() {
 
       <div style={intakeUi.launch}>
         <div style={intakeUi.launchCopy}>
-          <span style={intakeUi.kicker}>Additional flowers</span>
-          <strong style={intakeUi.launchTitle}>Foraged, gifted, garden-cut, or purchased</strong>
+          <span style={intakeUi.kicker}>External intake</span>
+          <strong style={intakeUi.launchTitle}>Add flowers that did not come from an Elm bed</strong>
         </div>
         <button type="button" style={intakeUi.launchButton} aria-expanded={externalOpen} onClick={() => setExternalOpen((current) => !current)}>
           {externalOpen ? "Close external intake" : "Log external intake"}
