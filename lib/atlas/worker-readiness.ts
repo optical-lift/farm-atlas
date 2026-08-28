@@ -36,6 +36,10 @@ function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function textList(value: unknown) {
+  return Array.isArray(value) ? value.map(text).filter(Boolean) : [];
+}
+
 function nullableText(value: unknown) {
   const result = text(value);
   return result || null;
@@ -59,6 +63,19 @@ function readinessResources(readiness: JsonObject): WorkerReadinessResource[] {
 }
 
 export function workerReadinessPresentation(readiness: JsonObject): WorkerReadinessPresentation {
+  if (readiness.bedReadinessReady === false) {
+    const bedReadiness = object(readiness.bedReadiness);
+    const blockingBeds = textList(bedReadiness?.blockingBedLabels);
+    return {
+      title: "Bed not ready",
+      body: blockingBeds.length
+        ? `Weed ${blockingBeds.join(" · ")} before transplanting.`
+        : "Weed the destination bed before transplanting.",
+      detail: "The transplant stays visible because its planting window is here. Atlas is routing the bed work first.",
+      kind: "prerequisite",
+    };
+  }
+
   if (readiness.prerequisitesReady === false) {
     return {
       title: "Not ready yet",

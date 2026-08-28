@@ -20,6 +20,11 @@ function numberValue(value: unknown) {
   return null;
 }
 
+function stringList(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.map(text).filter(Boolean);
+}
+
 function words(value: string) {
   return value
     .replaceAll("_", " ")
@@ -203,6 +208,21 @@ export function atlasDayTaskCues(task: AtlasTaskCard) {
     if (!clean || cues.some((cue) => cue.toLowerCase() === clean.toLowerCase())) return;
     cues.push(clean);
   };
+
+  const blockingBeds = stringList(metadata.bed_readiness_blocking_beds);
+  if (truthy(metadata.execution_locked) && normalized(metadata.execution_lock_kind) === "bed_weeding") {
+    add(blockingBeds.length
+      ? `Locked · weed ${blockingBeds.join(" · ")} first`
+      : "Locked · weed destination bed first");
+  }
+
+  const dependentLabels = stringList(metadata.dependent_task_labels);
+  const blockingCount = numberValue(metadata.blocking_task_count) ?? dependentLabels.length;
+  if (canonicalActionKey(task) === "weed" && truthy(metadata.bed_readiness_deadline_pressure) && blockingCount > 0) {
+    const allTransplants = dependentLabels.length > 0 && dependentLabels.every((label) => /^transplant\b/i.test(label));
+    const noun = allTransplants ? (blockingCount === 1 ? "transplant" : "transplants") : (blockingCount === 1 ? "planting move" : "planting moves");
+    add(`Blocks ${blockingCount} ${noun}${truthy(metadata.blocking_due_now) ? " due now" : ""}`);
+  }
 
   const scheduledAfter = numberValue(metadata.release_queue_scheduled_after_count);
   if (canonicalActionKey(task) === "weed" && scheduledAfter && scheduledAfter > 0) {
