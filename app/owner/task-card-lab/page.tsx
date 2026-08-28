@@ -7,6 +7,7 @@ import HarvestDirectionCardSpecimen from "./HarvestDirectionCardSpecimen";
 import HarvestPreparationCardSpecimen from "./HarvestPreparationCardSpecimen";
 import MowCardSpecimen from "./MowCardSpecimen";
 import OneOffFieldWorkCardSpecimen from "./OneOffFieldWorkCardSpecimen";
+import PickupHandoffCardSpecimen from "./PickupHandoffCardSpecimen";
 import { TransplantCardSpecimen } from "./RemainingDominionCardSpecimens";
 import SowCardSpecimen from "./SowCardSpecimen";
 import VenueCardSpecimen from "./VenueCardSpecimen";
@@ -24,6 +25,7 @@ const families = [
   "Weed",
   "Mow",
   "Harvest",
+  "Pickup / Handoff",
   "Transplant",
   "Stewardship",
   "Setup + Protect",
@@ -36,8 +38,9 @@ function Specimen({ index }: { index: number }) {
   if (index === 3) return <WeedCardSpecimen />;
   if (index === 4) return <MowCardSpecimen />;
   if (index === 5) return <><HarvestCardSpecimen /><HarvestDirectionCardSpecimen /><HarvestPreparationCardSpecimen /></>;
-  if (index === 6) return <TransplantCardSpecimen />;
-  if (index === 7) return <FarmRoundCardSpecimen />;
+  if (index === 6) return <PickupHandoffCardSpecimen />;
+  if (index === 7) return <TransplantCardSpecimen />;
+  if (index === 8) return <FarmRoundCardSpecimen />;
   return <OneOffFieldWorkCardSpecimen />;
 }
 
