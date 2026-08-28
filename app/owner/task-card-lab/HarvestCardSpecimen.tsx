@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 
 import DominionCardFrame from "./DominionCardFrame";
 import styles from "./harvest-card-specimen.module.css";
@@ -42,6 +42,159 @@ const contentChoices = ["Zinnias", "Marigolds", "Sunflowers", "Celosia", "Foliag
 const unitChoices: IntakeUnit[] = ["Stems", "Buckets", "Bunches"];
 const exactnessChoices: IntakeExactness[] = ["Exact", "Approx", "Unknown"];
 const conditionChoices: IntakeCondition[] = ["FQ", "SP", "Mixed", "Unknown"];
+
+const intakeUi: Record<string, CSSProperties> = {
+  launch: {
+    display: "grid",
+    gap: 10,
+    padding: "14px 18px 16px",
+    borderBottom: "1px solid rgba(215, 204, 189, 0.62)",
+    background: "rgba(246, 242, 230, 0.32)",
+  },
+  launchCopy: { display: "grid", gap: 4, minWidth: 0 },
+  kicker: {
+    color: "#858bb8",
+    fontSize: 9,
+    lineHeight: 1,
+    fontWeight: 950,
+    letterSpacing: "0.11em",
+    textTransform: "uppercase",
+  },
+  launchTitle: { color: "#666960", fontSize: 12, lineHeight: 1.25, fontWeight: 900 },
+  launchButton: {
+    width: "100%",
+    minHeight: 44,
+    border: "1px solid rgba(133, 139, 184, 0.28)",
+    borderRadius: 14,
+    background: "rgba(239, 237, 244, 0.76)",
+    color: "#565b79",
+    padding: "10px 13px",
+    fontSize: 11,
+    lineHeight: 1,
+    fontWeight: 930,
+    textAlign: "left",
+  },
+  drawer: {
+    display: "grid",
+    borderBottom: "1px solid rgba(215, 204, 189, 0.62)",
+    background: "rgba(252, 250, 244, 0.98)",
+  },
+  drawerHead: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    padding: "15px 18px 12px",
+  },
+  drawerHeadCopy: { display: "grid", gap: 4, minWidth: 0 },
+  drawerTitle: { color: "#666960", fontSize: 11, lineHeight: 1.25, fontWeight: 900 },
+  textButton: {
+    border: 0,
+    background: "transparent",
+    color: "#72778f",
+    padding: "2px 0",
+    fontSize: 9,
+    lineHeight: 1,
+    fontWeight: 900,
+  },
+  builder: {
+    display: "grid",
+    gap: 15,
+    padding: "14px 18px 18px",
+    borderTop: "1px solid rgba(223, 215, 202, 0.48)",
+  },
+  sentence: {
+    padding: "11px 12px",
+    borderRadius: 13,
+    background: "rgba(239, 237, 244, 0.52)",
+    color: "#565b72",
+    fontSize: 10,
+    lineHeight: 1.4,
+    fontWeight: 850,
+    overflowWrap: "anywhere",
+  },
+  step: { display: "grid", gap: 8 },
+  stepLabel: {
+    color: "#858bb8",
+    fontSize: 9,
+    lineHeight: 1,
+    fontWeight: 950,
+    letterSpacing: "0.09em",
+    textTransform: "uppercase",
+  },
+  pills: { display: "flex", flexWrap: "wrap", gap: 6 },
+  pill: {
+    minHeight: 32,
+    border: "1px solid rgba(139, 145, 194, 0.18)",
+    borderRadius: 999,
+    background: "rgba(250, 248, 239, 0.92)",
+    color: "#686a73",
+    padding: "7px 10px",
+    fontSize: 9,
+    lineHeight: 1,
+    fontWeight: 880,
+  },
+  pillActive: {
+    border: "1px solid rgba(111, 118, 158, 0.52)",
+    background: "rgba(232, 232, 241, 0.94)",
+    color: "#4f5268",
+  },
+  field: { display: "grid", gap: 7 },
+  input: {
+    width: "100%",
+    minWidth: 0,
+    minHeight: 41,
+    boxSizing: "border-box",
+    border: "1px solid rgba(121, 109, 89, 0.19)",
+    borderRadius: 11,
+    background: "rgba(255,255,255,.96)",
+    color: "#303243",
+    padding: "8px 10px",
+    fontSize: 16,
+    lineHeight: 1.1,
+    fontWeight: 820,
+  },
+  counter: { display: "flex", alignItems: "center", gap: 4 },
+  counterButton: {
+    width: 30,
+    height: 34,
+    border: 0,
+    background: "transparent",
+    color: "#67655e",
+    padding: 0,
+    fontSize: 22,
+    lineHeight: 1,
+    fontWeight: 600,
+  },
+  counterValue: {
+    display: "grid",
+    placeItems: "center",
+    minWidth: 40,
+    height: 34,
+    border: "1px solid rgba(121,109,89,.22)",
+    borderRadius: 9,
+    background: "#fff",
+    color: "#303243",
+    fontSize: 13,
+    lineHeight: 1,
+    fontWeight: 950,
+  },
+  counterUnit: { marginLeft: 5, color: "#92938c", fontSize: 9, lineHeight: 1, fontWeight: 800 },
+  saveButton: {
+    width: "100%",
+    minHeight: 46,
+    border: 0,
+    borderRadius: 15,
+    background: "rgba(214, 225, 177, 0.78)",
+    color: "#515b34",
+    padding: "10px 12px",
+    fontSize: 11,
+    lineHeight: 1,
+    fontWeight: 930,
+  },
+  saved: { display: "grid", gap: 8, padding: "14px 18px 18px", borderTop: "1px solid rgba(223,215,202,.48)" },
+  savedSentence: { color: "#303243", fontSize: 11, lineHeight: 1.4, fontWeight: 900 },
+};
 
 function formatBuckets(bucketHalves: number) {
   const buckets = bucketHalves / 2;
@@ -89,6 +242,21 @@ function CropRow({ crop }: { crop: HarvestCrop }) {
   );
 }
 
+function Pill({ active, children, onClick }: { active: boolean; children: string; onClick: () => void }) {
+  return <button type="button" style={{ ...intakeUi.pill, ...(active ? intakeUi.pillActive : {}) }} onClick={onClick}>{children}</button>;
+}
+
+function IntakeCounter({ value, unit, onChange }: { value: number; unit: string; onChange: (next: number) => void }) {
+  return (
+    <div style={intakeUi.counter}>
+      <button type="button" style={{ ...intakeUi.counterButton, opacity: value === 0 ? .25 : 1 }} disabled={value === 0} onClick={() => onChange(Math.max(0, value - 1))}>−</button>
+      <strong style={intakeUi.counterValue}>{value}</strong>
+      <button type="button" style={intakeUi.counterButton} onClick={() => onChange(value + 1)}>+</button>
+      <small style={intakeUi.counterUnit}>{unit}</small>
+    </div>
+  );
+}
+
 function ExternalIntakeBuilder({ onClose }: { onClose: () => void }) {
   const [sourceType, setSourceType] = useState<IntakeSource>("Garden");
   const [sourceLabel, setSourceLabel] = useState("Mary’s garden");
@@ -117,77 +285,55 @@ function ExternalIntakeBuilder({ onClose }: { onClose: () => void }) {
   );
 
   return (
-    <section className={styles.externalDrawer} aria-label="External flower intake builder">
-      <div className={styles.externalDrawerHead}>
-        <div><span>External intake</span><strong>Add flowers that did not come from an Elm bed</strong></div>
-        <button type="button" onClick={onClose}>Close</button>
+    <section style={intakeUi.drawer} aria-label="External flower intake builder">
+      <div style={intakeUi.drawerHead}>
+        <div style={intakeUi.drawerHeadCopy}><span style={intakeUi.kicker}>External intake</span><strong style={intakeUi.drawerTitle}>Add flowers that did not come from an Elm bed</strong></div>
+        <button type="button" style={intakeUi.textButton} onClick={onClose}>Close</button>
       </div>
 
       {saved ? (
-        <div className={styles.savedIntake}>
-          <span>Added to today’s flower custody</span>
-          <strong>{sentence}</strong>
-          <button type="button" onClick={() => setSaved(false)}>Edit</button>
+        <div style={intakeUi.saved}>
+          <span style={intakeUi.kicker}>Added to today’s flower custody</span>
+          <strong style={intakeUi.savedSentence}>{sentence}</strong>
+          <button type="button" style={intakeUi.textButton} onClick={() => setSaved(false)}>Edit</button>
         </div>
       ) : (
-        <div className={styles.externalBuilder}>
-          <div className={styles.intakeSentence}>{sentence}</div>
+        <div style={intakeUi.builder}>
+          <div style={intakeUi.sentence}>{sentence}</div>
 
-          <div className={styles.intakeStep}>
-            <span>How did these come in?</span>
-            <div className={styles.intakePills}>
-              {sourceChoices.map((choice) => <button type="button" data-active={sourceType === choice ? "true" : "false"} key={choice} onClick={() => setSourceType(choice)}>{choice}</button>)}
-            </div>
+          <div style={intakeUi.step}>
+            <span style={intakeUi.stepLabel}>How did these come in?</span>
+            <div style={intakeUi.pills}>{sourceChoices.map((choice) => <Pill active={sourceType === choice} key={choice} onClick={() => setSourceType(choice)}>{choice}</Pill>)}</div>
           </div>
 
-          <label className={styles.intakeTextField}>
-            <span>Source / place</span>
-            <input value={sourceLabel} onChange={(event) => setSourceLabel(event.target.value)} placeholder="Roadside, Mary’s garden, wholesaler…" />
+          <label style={intakeUi.field}>
+            <span style={intakeUi.stepLabel}>Source / place</span>
+            <input style={intakeUi.input} value={sourceLabel} onChange={(event) => setSourceLabel(event.target.value)} placeholder="Roadside, Mary’s garden, wholesaler…" />
           </label>
 
-          <div className={styles.intakeStep}>
-            <span>What came in?</span>
-            <div className={styles.intakePills}>
-              {contentChoices.map((choice) => <button type="button" data-active={contents.includes(choice) ? "true" : "false"} key={choice} onClick={() => toggleContent(choice)}>{choice}</button>)}
-            </div>
+          <div style={intakeUi.step}>
+            <span style={intakeUi.stepLabel}>What came in?</span>
+            <div style={intakeUi.pills}>{contentChoices.map((choice) => <Pill active={contents.includes(choice)} key={choice} onClick={() => toggleContent(choice)}>{choice}</Pill>)}</div>
           </div>
 
-          <div className={styles.intakeStep}>
-            <span>Count as</span>
-            <div className={styles.intakePills}>
-              {unitChoices.map((choice) => <button type="button" data-active={unit === choice ? "true" : "false"} key={choice} onClick={() => setUnit(choice)}>{choice}</button>)}
-            </div>
-            <div className={styles.intakeCounterRow}>
-              <button type="button" disabled={quantity === 0} onClick={() => setQuantity((current) => Math.max(0, current - 1))}>−</button>
-              <strong>{quantity}</strong>
-              <button type="button" onClick={() => setQuantity((current) => current + 1)}>+</button>
-              <small>{unit.toLowerCase()}</small>
-            </div>
+          <div style={intakeUi.step}>
+            <span style={intakeUi.stepLabel}>Count as</span>
+            <div style={intakeUi.pills}>{unitChoices.map((choice) => <Pill active={unit === choice} key={choice} onClick={() => setUnit(choice)}>{choice}</Pill>)}</div>
+            <IntakeCounter value={quantity} unit={unit.toLowerCase()} onChange={setQuantity} />
           </div>
 
-          <div className={styles.intakeStep}>
-            <span>Stem count</span>
-            <div className={styles.intakePills}>
-              {exactnessChoices.map((choice) => <button type="button" data-active={stemExactness === choice ? "true" : "false"} key={choice} onClick={() => setStemExactness(choice)}>{choice}</button>)}
-            </div>
-            {unit !== "Stems" && stemExactness !== "Unknown" ? (
-              <div className={styles.intakeCounterRow}>
-                <button type="button" disabled={stemCount === 0} onClick={() => setStemCount((current) => Math.max(0, current - 1))}>−</button>
-                <strong>{stemCount}</strong>
-                <button type="button" onClick={() => setStemCount((current) => current + 1)}>+</button>
-                <small>stems</small>
-              </div>
-            ) : null}
+          <div style={intakeUi.step}>
+            <span style={intakeUi.stepLabel}>Stem count</span>
+            <div style={intakeUi.pills}>{exactnessChoices.map((choice) => <Pill active={stemExactness === choice} key={choice} onClick={() => setStemExactness(choice)}>{choice}</Pill>)}</div>
+            {unit !== "Stems" && stemExactness !== "Unknown" ? <IntakeCounter value={stemCount} unit="stems" onChange={setStemCount} /> : null}
           </div>
 
-          <div className={styles.intakeStep}>
-            <span>Condition</span>
-            <div className={styles.intakePills}>
-              {conditionChoices.map((choice) => <button type="button" data-active={condition === choice ? "true" : "false"} key={choice} onClick={() => setCondition(choice)}>{choice}</button>)}
-            </div>
+          <div style={intakeUi.step}>
+            <span style={intakeUi.stepLabel}>Condition</span>
+            <div style={intakeUi.pills}>{conditionChoices.map((choice) => <Pill active={condition === choice} key={choice} onClick={() => setCondition(choice)}>{choice}</Pill>)}</div>
           </div>
 
-          <button type="button" className={styles.saveIntakeButton} onClick={() => setSaved(true)}>Add to harvest custody</button>
+          <button type="button" style={intakeUi.saveButton} onClick={() => setSaved(true)}>Add to harvest custody</button>
         </div>
       )}
     </section>
@@ -220,9 +366,14 @@ export default function HarvestCardSpecimen() {
         ))}
       </div>
 
-      <div className={styles.externalIntakeLaunch}>
-        <div><span>Additional flowers</span><strong>Foraged, gifted, garden-cut, or purchased</strong></div>
-        <button type="button" aria-expanded={externalOpen} onClick={() => setExternalOpen((current) => !current)}>External intake</button>
+      <div style={intakeUi.launch}>
+        <div style={intakeUi.launchCopy}>
+          <span style={intakeUi.kicker}>Additional flowers</span>
+          <strong style={intakeUi.launchTitle}>Foraged, gifted, garden-cut, or purchased</strong>
+        </div>
+        <button type="button" style={intakeUi.launchButton} aria-expanded={externalOpen} onClick={() => setExternalOpen((current) => !current)}>
+          {externalOpen ? "Close external intake" : "Log external intake"}
+        </button>
       </div>
 
       {externalOpen ? <ExternalIntakeBuilder onClose={() => setExternalOpen(false)} /> : null}
