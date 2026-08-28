@@ -10,6 +10,7 @@ import {
   AtlasSectionHeading,
   AtlasTopBar,
 } from "@/components/atlas/ui/AtlasPrimitives";
+import HarvestPipelineSection from "./HarvestPipelineSection";
 import HarvestedOutputSection from "./HarvestedOutputSection";
 import "./harvest.css";
 
@@ -303,93 +304,100 @@ export default function HarvestHorizonPage() {
 
   return (
     <AtlasAppShell className="atlas-harvest-shell" frameClassName="atlas-harvest-page">
-      <AtlasTopBar
-        title="Harvest"
-        status={data?.asOf ? `${pretty(data.asOf)}–${pretty(data.horizonEnd)}` : "Next 21 days"}
-      />
+      <AtlasTopBar title="Harvest" status="Crop → customer" />
 
       <div className="atlas-harvest-body">
-        <AtlasCard as="section" variant="cream" className="atlas-harvest-intro" ariaLabelledBy="atlas-harvest-title">
-          <AtlasSectionHeading kicker="Harvest Horizon" title="In the field" id="atlas-harvest-title" />
-          <p>Forecasts and field evidence live here. They describe what may be entering harvest, not what has physically come out of the field.</p>
-        </AtlasCard>
+        <HarvestPipelineSection />
 
-        {data ? (
-          <AtlasMetricStrip className="atlas-harvest-summary" ariaLabel="In the field totals">
-            <span><b>{totalNow}</b> now</span>
-            <span><b>{totalAhead}</b> ahead</span>
-            <span><b>{totalConfirmation}</b> check</span>
-            <span><b>{data.farms?.length ?? 0}</b> farms</span>
-          </AtlasMetricStrip>
-        ) : null}
-
-        {notice ? <output className="atlas-harvest-notice" aria-live="polite">{notice}</output> : null}
-        {error ? <div className="atlas-harvest-error">{error}<button type="button" onClick={() => void load()}>Try again</button></div> : null}
-        {loading && !data ? <div className="atlas-harvest-loading">Reading crop cycles, field evidence and harvest windows…</div> : null}
-
-        {data ? (
-          <>
-            <AtlasCard as="section" className="atlas-harvest-date-lens" ariaLabelledBy="atlas-harvest-date-title">
-              <div className="atlas-harvest-date-lens__heading">
-                <AtlasSectionHeading kicker="Date lens" title="What should be available?" id="atlas-harvest-date-title" />
-                <p>Use this for Thursday events, delivery rounds, bouquet plans or buyer conversations.</p>
-              </div>
-              <label>
-                <span>Look at</span>
-                <input type="date" min={data.asOf} max={addDays(data.asOf!, 45)} value={targetDate} onChange={(event) => setTargetDate(event.target.value)} />
-              </label>
-
-              <div className="atlas-harvest-date-lens__farms">
-                {dateLens.map(({ farm, groups }) => (
-                  <article key={farm.id}>
-                    <header><small>{pretty(targetDate, true)}</small><h3>{farm.name}</h3></header>
-                    {groups.length ? groups.map((group) => (
-                      <div key={group.outlook} data-outlook={group.outlook}>
-                        <b>{OUTLOOK_LABELS[group.outlook]}</b>
-                        <span>{group.waves.map((wave) => wave.cropLabel).join(" · ")}</span>
-                      </div>
-                    )) : <p>No crop wave is currently projected for that date.</p>}
-                  </article>
-                ))}
-              </div>
+        <details className="atlas-harvest-outlook">
+          <summary>
+            <span><b>OUTLOOK</b> 21-day crop forecast</span>
+            <strong>{data ? `${totalNow} now · ${totalAhead} ahead` : "Open"}</strong>
+          </summary>
+          <div className="atlas-harvest-outlook__body">
+            <AtlasCard as="section" variant="cream" className="atlas-harvest-intro" ariaLabelledBy="atlas-harvest-title">
+              <AtlasSectionHeading kicker="Harvest Outlook" title="In the field" id="atlas-harvest-title" />
+              <p>Forecasts and field evidence support Coming. They do not become physical inventory until flowers are actually cut.</p>
             </AtlasCard>
 
-            {(data.farms ?? []).map((farm) => (
-              <AtlasCard as="section" className="atlas-harvest-farm" key={farm.id} ariaLabelledBy={`atlas-harvest-farm-${farm.id}`}>
-                <header className="atlas-harvest-farm__header">
-                  <AtlasSectionHeading kicker="21-day outlook" title={farm.name} id={`atlas-harvest-farm-${farm.id}`} />
-                  <div className="atlas-harvest-farm__counts">
-                    <span><b>{farm.counts.cutting + farm.counts.now}</b> now</span>
-                    <span><b>{farm.counts.week1 + farm.counts.week2 + farm.counts.week3}</b> ahead</span>
+            {data ? (
+              <AtlasMetricStrip className="atlas-harvest-summary" ariaLabel="In the field totals">
+                <span><b>{totalNow}</b> now</span>
+                <span><b>{totalAhead}</b> ahead</span>
+                <span><b>{totalConfirmation}</b> check</span>
+                <span><b>{data.farms?.length ?? 0}</b> farms</span>
+              </AtlasMetricStrip>
+            ) : null}
+
+            {notice ? <output className="atlas-harvest-notice" aria-live="polite">{notice}</output> : null}
+            {error ? <div className="atlas-harvest-error">{error}<button type="button" onClick={() => void load()}>Try again</button></div> : null}
+            {loading && !data ? <div className="atlas-harvest-loading">Reading crop cycles, field evidence and harvest windows…</div> : null}
+
+            {data ? (
+              <>
+                <AtlasCard as="section" className="atlas-harvest-date-lens" ariaLabelledBy="atlas-harvest-date-title">
+                  <div className="atlas-harvest-date-lens__heading">
+                    <AtlasSectionHeading kicker="Date lens" title="What should be available?" id="atlas-harvest-date-title" />
+                    <p>Use this for delivery rounds, bouquet plans or buyer conversations.</p>
                   </div>
-                </header>
+                  <label>
+                    <span>Look at</span>
+                    <input type="date" min={data.asOf} max={addDays(data.asOf!, 45)} value={targetDate} onChange={(event) => setTargetDate(event.target.value)} />
+                  </label>
 
-                {!farm.waves.length ? <div className="atlas-harvest-empty">No crop wave currently enters the next 21 days.</div> : null}
+                  <div className="atlas-harvest-date-lens__farms">
+                    {dateLens.map(({ farm, groups }) => (
+                      <article key={farm.id}>
+                        <header><small>{pretty(targetDate, true)}</small><h3>{farm.name}</h3></header>
+                        {groups.length ? groups.map((group) => (
+                          <div key={group.outlook} data-outlook={group.outlook}>
+                            <b>{OUTLOOK_LABELS[group.outlook]}</b>
+                            <span>{group.waves.map((wave) => wave.cropLabel).join(" · ")}</span>
+                          </div>
+                        )) : <p>No crop wave is currently projected for that date.</p>}
+                      </article>
+                    ))}
+                  </div>
+                </AtlasCard>
 
-                {BUCKETS.map((bucket) => {
-                  const waves = farm.waves.filter((wave) => wave.bucket === bucket.key);
-                  if (!waves.length) return null;
-                  return (
-                    <section className="atlas-harvest-bucket" key={bucket.key}>
-                      <header><span>{bucket.label}</span><p>{bucket.detail}</p><b>{waves.length}</b></header>
-                      <div>
-                        {waves.map((wave) => (
-                          <WaveCard
-                            key={wave.id}
-                            wave={wave}
-                            observationOptions={data.observationOptions ?? []}
-                            savingCycleId={savingCycleId}
-                            onObserve={observe}
-                          />
-                        ))}
+                {(data.farms ?? []).map((farm) => (
+                  <AtlasCard as="section" className="atlas-harvest-farm" key={farm.id} ariaLabelledBy={`atlas-harvest-farm-${farm.id}`}>
+                    <header className="atlas-harvest-farm__header">
+                      <AtlasSectionHeading kicker="21-day outlook" title={farm.name} id={`atlas-harvest-farm-${farm.id}`} />
+                      <div className="atlas-harvest-farm__counts">
+                        <span><b>{farm.counts.cutting + farm.counts.now}</b> now</span>
+                        <span><b>{farm.counts.week1 + farm.counts.week2 + farm.counts.week3}</b> ahead</span>
                       </div>
-                    </section>
-                  );
-                })}
-              </AtlasCard>
-            ))}
-          </>
-        ) : null}
+                    </header>
+
+                    {!farm.waves.length ? <div className="atlas-harvest-empty">No crop wave currently enters the next 21 days.</div> : null}
+
+                    {BUCKETS.map((bucket) => {
+                      const waves = farm.waves.filter((wave) => wave.bucket === bucket.key);
+                      if (!waves.length) return null;
+                      return (
+                        <section className="atlas-harvest-bucket" key={bucket.key}>
+                          <header><span>{bucket.label}</span><p>{bucket.detail}</p><b>{waves.length}</b></header>
+                          <div>
+                            {waves.map((wave) => (
+                              <WaveCard
+                                key={wave.id}
+                                wave={wave}
+                                observationOptions={data.observationOptions ?? []}
+                                savingCycleId={savingCycleId}
+                                onObserve={observe}
+                              />
+                            ))}
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </AtlasCard>
+                ))}
+              </>
+            ) : null}
+          </div>
+        </details>
 
         <HarvestedOutputSection />
       </div>
