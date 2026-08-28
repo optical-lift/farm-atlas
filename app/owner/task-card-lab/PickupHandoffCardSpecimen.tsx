@@ -1,74 +1,75 @@
 import DominionCardFrame from "./DominionCardFrame";
 import styles from "./pickup-handoff-card-specimen.module.css";
 
+const orders = [
+  {
+    number: "0001",
+    time: "2:30 PM",
+    payment: "Unpaid",
+    items: ["2× DIY Build-Your-Own Bouquet Buckets"],
+  },
+  {
+    number: "0002",
+    time: "4:00 PM",
+    payment: "Paid",
+    items: ["2× Sunflower bundles", "1× Zinnia bundle"],
+  },
+  {
+    number: "0003",
+    time: "5:30 PM",
+    payment: "Paid",
+    items: ["1× Wrapped posy", "1× Goldenrod bundle"],
+  },
+] as const;
+
 export default function PickupHandoffCardSpecimen() {
   return (
     <DominionCardFrame
       family="Pickup / Handoff"
-      familyDetail="reserved saleable output"
-      title="Customer Pickup"
-      subtitle="Elm Farm · exact finished goods attached"
-      timing="Today · 2:30 PM"
+      familyDetail="order dock"
+      title="Pickup Dock"
+      subtitle="Today’s pickup clipboard · Elm Farm"
+      timing="Today · 3 orders"
       completion={
         <div className={styles.completion}>
-          <button type="button" className={styles.primaryCompletion}>Picked Up</button>
-          <button type="button">Not picked up</button>
+          <button type="button" className={styles.primaryCompletion}>Dock clear</button>
+          <button type="button">Pickup outstanding</button>
         </div>
       }
     >
-      <section className={styles.section}>
-        <span className={styles.sectionLabel}>Customer</span>
-        <div className={styles.customerRow}>
+      <section className={styles.dockSection}>
+        <header className={styles.dockHeader}>
           <div>
-            <strong>Customer name</strong>
-            <small>Pickup at Elm Farm</small>
+            <span className={styles.sectionLabel}>Orders</span>
+            <strong>Ready for pickup</strong>
           </div>
-          <span>2:30 PM</span>
-        </div>
-      </section>
+          <small>Clipboard</small>
+        </header>
 
-      <section className={styles.section}>
-        <div className={styles.sectionHeading}>
-          <div>
-            <span className={styles.sectionLabel}>Reserved items</span>
-            <strong>Attached from confirmed Condition + Bunch output</strong>
-          </div>
-          <span className={styles.lockedBadge}>Reserved</span>
-        </div>
+        <div className={styles.orderList}>
+          {orders.map((order) => (
+            <article className={styles.orderRow} key={order.number}>
+              <div className={styles.orderTopline}>
+                <div className={styles.orderIdentity}>
+                  <strong>#{order.number}</strong>
+                  <span>{order.time}</span>
+                </div>
+                <span className={order.payment === "Paid" ? styles.paidPill : styles.unpaidPill}>
+                  {order.payment}
+                </span>
+              </div>
 
-        <div className={styles.outputLine}>
-          <span className={styles.quantity}>2×</span>
-          <div>
-            <strong>DIY Build-Your-Own Bouquet Buckets</strong>
-            <small>Confirmed output · 2 of 2 reserved for this pickup</small>
-          </div>
+              <ul className={styles.itemList}>
+                {order.items.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </article>
+          ))}
         </div>
-
-        <div className={styles.inventoryTruth}>
-          <span><strong>2</strong> made</span>
-          <span><strong>2</strong> reserved</span>
-          <span><strong>0</strong> available</span>
-        </div>
-        <p className={styles.helper}>The worker sees the attached finished-good line, not a retyped description of “two buckets.”</p>
-      </section>
-
-      <section className={styles.section}>
-        <span className={styles.sectionLabel}>Payment</span>
-        <div className={styles.segmented} aria-label="Payment status preview">
-          <button type="button" className={styles.segmentActive}>Due</button>
-          <button type="button">Paid</button>
-          <button type="button">Complimentary</button>
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <span className={styles.sectionLabel}>Pickup notes</span>
-        <div className={styles.notes}>Add gate, vehicle, handoff, or customer-specific notes here.</div>
       </section>
 
       <aside className={styles.previewNote}>
         <strong>Mockup only</strong>
-        <span>No reservation, inventory, payment, scheduling, or Worker Day behavior is wired from this specimen.</span>
+        <span>#0001 reflects the described 2:30 pickup. #0002 and #0003 are fixture rows to show clipboard density. No reservation, inventory, payment, scheduling, or Worker Day behavior is wired.</span>
       </aside>
     </DominionCardFrame>
   );
