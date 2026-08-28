@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 
 import FlowerFulfillmentFocusPage, { type FlowerFulfillmentTask } from "@/app/task-focus/[taskId]/FlowerFulfillmentFocusPage";
+import DestinationAssignedTaskCard, { isDestinationTask } from "@/components/atlas/destination-assigned-task-card";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 
 type Props = { task: AtlasTaskCard; childTasks: AtlasTaskCard[]; assignee: AtlasAssigneeConfig };
 type ContextResponse = { ok?: boolean; error?: string; task?: FlowerFulfillmentTask };
 
-export default function FlowerFulfillmentTaskLoader({ task, assignee }: Props) {
+function FlowerFulfillmentContextLoader({ task, assignee }: Pick<Props, "task" | "assignee">) {
   const [context, setContext] = useState<FlowerFulfillmentTask | null>(null);
   const [error, setError] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -35,4 +36,11 @@ export default function FlowerFulfillmentTaskLoader({ task, assignee }: Props) {
       </div>
     </main>
   );
+}
+
+export default function FlowerFulfillmentTaskLoader({ task, childTasks, assignee }: Props) {
+  if (isDestinationTask(task)) {
+    return <DestinationAssignedTaskCard task={task} childTasks={childTasks} assignee={assignee} />;
+  }
+  return <FlowerFulfillmentContextLoader task={task} assignee={assignee} />;
 }
