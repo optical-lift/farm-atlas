@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import DominionCardFrame from "./DominionCardFrame";
 import styles from "./harvest-card-specimen.module.css";
 
 type HarvestOutcome = "nothing_ready" | "deadheaded" | "crop_exhausted";
+type IntakeSource = "Foraged" | "Garden" | "Purchased" | "Gifted";
+type IntakeUnit = "Stems" | "Buckets" | "Bunches";
+type IntakeExactness = "Exact" | "Approx" | "Unknown";
+type IntakeCondition = "FQ" | "SP" | "Mixed" | "Unknown";
 
 type HarvestCrop = {
   id: string;
@@ -32,6 +36,12 @@ const outcomeChoices: Array<{ value: HarvestOutcome; label: string }> = [
   { value: "deadheaded", label: "Deadheaded" },
   { value: "crop_exhausted", label: "Crop exhausted" },
 ];
+
+const sourceChoices: IntakeSource[] = ["Foraged", "Garden", "Purchased", "Gifted"];
+const contentChoices = ["Zinnias", "Marigolds", "Sunflowers", "Celosia", "Foliage", "Mixed", "Unknown"] as const;
+const unitChoices: IntakeUnit[] = ["Stems", "Buckets", "Bunches"];
+const exactnessChoices: IntakeExactness[] = ["Exact", "Approx", "Unknown"];
+const conditionChoices: IntakeCondition[] = ["FQ", "SP", "Mixed", "Unknown"];
 
 function formatBuckets(bucketHalves: number) {
   const buckets = bucketHalves / 2;
@@ -79,8 +89,114 @@ function CropRow({ crop }: { crop: HarvestCrop }) {
   );
 }
 
+function ExternalIntakeBuilder({ onClose }: { onClose: () => void }) {
+  const [sourceType, setSourceType] = useState<IntakeSource>("Garden");
+  const [sourceLabel, setSourceLabel] = useState("Mary’s garden");
+  const [contents, setContents] = useState<string[]>(["Zinnias", "Marigolds"]);
+  const [unit, setUnit] = useState<IntakeUnit>("Buckets");
+  const [quantity, setQuantity] = useState(2);
+  const [stemExactness, setStemExactness] = useState<IntakeExactness>("Unknown");
+  const [stemCount, setStemCount] = useState(0);
+  const [condition, setCondition] = useState<IntakeCondition>("Mixed");
+  const [saved, setSaved] = useState(false);
+
+  function toggleContent(value: string) {
+    setContents((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
+  }
+
+  const contentLabel = contents.length ? contents.join(" + ") : "contents unknown";
+  const stemLabel = unit === "Stems"
+    ? `${stemExactness === "Approx" ? "~" : ""}${quantity} stems${stemExactness === "Unknown" ? " · count uncertain" : ""}`
+    : stemExactness === "Unknown"
+      ? "stem count unknown"
+      : `${stemExactness === "Approx" ? "~" : ""}${stemCount} stems`;
+
+  const sentence = useMemo(
+    () => [sourceType, sourceLabel.trim() || "source unknown", `${quantity} ${unit.toLowerCase()}`, contentLabel, stemLabel, `${condition.toLowerCase()} condition`].join(" · "),
+    [sourceType, sourceLabel, quantity, unit, contentLabel, stemLabel, condition],
+  );
+
+  return (
+    <section className={styles.externalDrawer} aria-label="External flower intake builder">
+      <div className={styles.externalDrawerHead}>
+        <div><span>External intake</span><strong>Add flowers that did not come from an Elm bed</strong></div>
+        <button type="button" onClick={onClose}>Close</button>
+      </div>
+
+      {saved ? (
+        <div className={styles.savedIntake}>
+          <span>Added to today’s flower custody</span>
+          <strong>{sentence}</strong>
+          <button type="button" onClick={() => setSaved(false)}>Edit</button>
+        </div>
+      ) : (
+        <div className={styles.externalBuilder}>
+          <div className={styles.intakeSentence}>{sentence}</div>
+
+          <div className={styles.intakeStep}>
+            <span>How did these come in?</span>
+            <div className={styles.intakePills}>
+              {sourceChoices.map((choice) => <button type="button" data-active={sourceType === choice ? "true" : "false"} key={choice} onClick={() => setSourceType(choice)}>{choice}</button>)}
+            </div>
+          </div>
+
+          <label className={styles.intakeTextField}>
+            <span>Source / place</span>
+            <input value={sourceLabel} onChange={(event) => setSourceLabel(event.target.value)} placeholder="Roadside, Mary’s garden, wholesaler…" />
+          </label>
+
+          <div className={styles.intakeStep}>
+            <span>What came in?</span>
+            <div className={styles.intakePills}>
+              {contentChoices.map((choice) => <button type="button" data-active={contents.includes(choice) ? "true" : "false"} key={choice} onClick={() => toggleContent(choice)}>{choice}</button>)}
+            </div>
+          </div>
+
+          <div className={styles.intakeStep}>
+            <span>Count as</span>
+            <div className={styles.intakePills}>
+              {unitChoices.map((choice) => <button type="button" data-active={unit === choice ? "true" : "false"} key={choice} onClick={() => setUnit(choice)}>{choice}</button>)}
+            </div>
+            <div className={styles.intakeCounterRow}>
+              <button type="button" disabled={quantity === 0} onClick={() => setQuantity((current) => Math.max(0, current - 1))}>−</button>
+              <strong>{quantity}</strong>
+              <button type="button" onClick={() => setQuantity((current) => current + 1)}>+</button>
+              <small>{unit.toLowerCase()}</small>
+            </div>
+          </div>
+
+          <div className={styles.intakeStep}>
+            <span>Stem count</span>
+            <div className={styles.intakePills}>
+              {exactnessChoices.map((choice) => <button type="button" data-active={stemExactness === choice ? "true" : "false"} key={choice} onClick={() => setStemExactness(choice)}>{choice}</button>)}
+            </div>
+            {unit !== "Stems" && stemExactness !== "Unknown" ? (
+              <div className={styles.intakeCounterRow}>
+                <button type="button" disabled={stemCount === 0} onClick={() => setStemCount((current) => Math.max(0, current - 1))}>−</button>
+                <strong>{stemCount}</strong>
+                <button type="button" onClick={() => setStemCount((current) => current + 1)}>+</button>
+                <small>stems</small>
+              </div>
+            ) : null}
+          </div>
+
+          <div className={styles.intakeStep}>
+            <span>Condition</span>
+            <div className={styles.intakePills}>
+              {conditionChoices.map((choice) => <button type="button" data-active={condition === choice ? "true" : "false"} key={choice} onClick={() => setCondition(choice)}>{choice}</button>)}
+            </div>
+          </div>
+
+          <button type="button" className={styles.saveIntakeButton} onClick={() => setSaved(true)}>Add to harvest custody</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function HarvestCardSpecimen() {
   const zones = [...new Set(crops.map((crop) => crop.zone))];
+  const [externalOpen, setExternalOpen] = useState(false);
 
   return (
     <DominionCardFrame family="Harvest" title="Harvest Stems" subtitle={zones.join(" · ")}>
@@ -103,6 +219,13 @@ export default function HarvestCardSpecimen() {
           </section>
         ))}
       </div>
+
+      <div className={styles.externalIntakeLaunch}>
+        <div><span>Additional flowers</span><strong>Foraged, gifted, garden-cut, or purchased</strong></div>
+        <button type="button" aria-expanded={externalOpen} onClick={() => setExternalOpen((current) => !current)}>External intake</button>
+      </div>
+
+      {externalOpen ? <ExternalIntakeBuilder onClose={() => setExternalOpen(false)} /> : null}
     </DominionCardFrame>
   );
 }
