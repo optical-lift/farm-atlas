@@ -13,14 +13,12 @@ test("Worker Day keeps blocked planting work visible while naming the bed gate",
   assert.match(dayRoute, /Locked · weed/);
 });
 
-test("urgent weed cards make the waiting plants the motivation", () => {
-  assert.match(dayRoute, /bed_readiness_deadline_pressure/);
-  assert.match(dayRoute, /dependent_task_labels/);
-  assert.match(dayRoute, /transplantSubject/);
-  assert.match(dayRoute, /Your plants are waiting:/);
-  assert.match(dayRoute, /This bed is holding them up/);
-  assert.match(dayRoute, /planted today/);
-  assert.match(dayRoute, /blocking_due_now/);
+test("downstream transplant consequence stays off the Day-feed cue pills", () => {
+  assert.doesNotMatch(dayRoute, /Your plants are waiting:/);
+  assert.doesNotMatch(dayRoute, /This bed is holding them up/);
+  assert.doesNotMatch(dayRoute, /weed job.*scheduled later/);
+  assert.doesNotMatch(dayRoute, /Next: \$\{unlocksTask\}/);
+  assert.match(dayRoute, /Downstream consequence belongs to the task dependency rail/);
 });
 
 test("task focus explains why a due transplant cannot execute yet", () => {
