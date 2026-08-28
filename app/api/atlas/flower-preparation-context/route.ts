@@ -15,11 +15,7 @@ type TaskRow = {
   metadata: Record<string, unknown> | null;
 };
 
-type HarvestBatchRow = {
-  id: string;
-  harvest_date: string;
-};
-
+type HarvestBatchRow = { id: string; harvest_date: string };
 type HarvestObservationRow = {
   id: string;
   crop_cycle_id: string;
@@ -27,28 +23,25 @@ type HarvestObservationRow = {
   bucket_band: string;
   bucket_equivalent_floor: number | string;
 };
-
-type CropCycleRow = {
+type CropCycleRow = { id: string; crop_label: string | null; variety: string | null };
+type DirectiveLineRow = {
   id: string;
-  crop_label: string | null;
-  variety: string | null;
+  line_number: number;
+  product_label: string;
+  output_kind: "bundle" | "posy" | "bouquet" | "lobby_arrangement";
+  requested_quantity: number;
+  stems_per_unit: number | null;
+  note: string | null;
 };
 
 function privateJson(body: Record<string, unknown>, status = 200) {
-  return NextResponse.json(body, {
-    status,
-    headers: { "Cache-Control": "private, no-store" },
-  });
+  return NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 }
 
-function text(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
+function text(value: unknown) { return typeof value === "string" ? value.trim() : ""; }
 function meaningfulVariety(value: string | null | undefined, cropLabel: string) {
   const variety = value?.trim() || null;
-  if (!variety) return null;
-  if (variety.toLowerCase() === cropLabel.trim().toLowerCase()) return null;
+  if (!variety || variety.toLowerCase() === cropLabel.trim().toLowerCase()) return null;
   return variety;
 }
 
@@ -60,13 +53,7 @@ export async function GET(request: Request) {
   if (!UUID_PATTERN.test(taskId)) return privateJson({ ok: false, error: "A valid preparation task id is required." }, 400);
 
   const supabase = await createAtlasServerClient();
-  const taskResult = await supabase
-    .from("tasks")
-    .select("id, farm_id, due_date, task_type, metadata")
-    .eq("id", taskId)
-    .limit(1)
-    .maybeSingle();
-
+  const taskResult = await supabase.from("tasks").select("id, farm_id, due_date, task_type, metadata").eq("id", taskId).limit(1).maybeSingle();
   if (taskResult.error) return privateJson({ ok: false, error: "Preparation task could not be loaded." }, 500);
   const task = taskResult.data as TaskRow | null;
   if (!task) return privateJson({ ok: false, error: "Preparation task was not found." }, 404);
@@ -77,24 +64,17 @@ export async function GET(request: Request) {
 
   const harvestBatchId = text(task.metadata?.flower_harvest_batch_id);
   if (!UUID_PATTERN.test(harvestBatchId)) return privateJson({ ok: false, error: "Preparation task has no valid harvest batch." }, 500);
+  const directiveId = text(task.metadata?.flower_preparation_directive_id);
 
-  const [batchResult, observationResult] = await Promise.all([
-    supabase
-      .from("flower_harvest_batches")
-      .select("id, harvest_date")
-      .eq("id", harvestBatchId)
-      .eq("farm_id", task.farm_id)
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("flower_harvest_bucket_observations")
-      .select("id, crop_cycle_id, observed_date, bucket_band, bucket_equivalent_floor")
-      .eq("batch_id", harvestBatchId)
-      .eq("farm_id", task.farm_id)
-      .order("created_at", { ascending: true }),
+  const [batchResult, observationResult, directiveResult] = await Promise.all([
+    supabase.from("flower_harvest_batches").select("id, harvest_date").eq("id", harvestBatchId).eq("farm_id", task.farm_id).limit(1).maybeSingle(),
+    supabase.from("flower_harvest_bucket_observations").select("id, crop_cycle_id, observed_date, bucket_band, bucket_equivalent_floor").eq("batch_id", harvestBatchId).eq("farm_id", task.farm_id).order("created_at", { ascending: true }),
+    UUID_PATTERN.test(directiveId)
+      ? supabase.from("flower_preparation_directive_lines").select("id, line_number, product_label, output_kind, requested_quantity, stems_per_unit, note").eq("directive_id", directiveId).eq("farm_id", task.farm_id).order("line_number", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
-  if (batchResult.error || observationResult.error) {
+  if (batchResult.error || observationResult.error || directiveResult.error) {
     return privateJson({ ok: false, error: "Harvested preparation input could not be loaded." }, 500);
   }
   const batch = batchResult.data as HarvestBatchRow | null;
@@ -103,12 +83,8 @@ export async function GET(request: Request) {
   const observations = (observationResult.data ?? []) as HarvestObservationRow[];
   const observationIds = observations.map((row) => row.id);
   let consumedIds = new Set<string>();
-
   if (observationIds.length) {
-    const inputResult = await supabase
-      .from("flower_preparation_inputs")
-      .select("harvest_observation_id")
-      .in("harvest_observation_id", observationIds);
+    const inputResult = await supabase.from("flower_preparation_inputs").select("harvest_observation_id").in("harvest_observation_id", observationIds);
     if (inputResult.error) return privateJson({ ok: false, error: "Preparation lineage could not be loaded." }, 500);
     consumedIds = new Set((inputResult.data ?? []).map((row) => String(row.harvest_observation_id)));
   }
@@ -117,10 +93,7 @@ export async function GET(request: Request) {
   const cycleIds = Array.from(new Set(unprepared.map((row) => row.crop_cycle_id)));
   let cycles: CropCycleRow[] = [];
   if (cycleIds.length) {
-    const cycleResult = await supabase
-      .from("crop_cycles")
-      .select("id, crop_label, variety")
-      .in("id", cycleIds);
+    const cycleResult = await supabase.from("crop_cycles").select("id, crop_label, variety").in("id", cycleIds);
     if (cycleResult.error) return privateJson({ ok: false, error: "Preparation crop identity could not be loaded." }, 500);
     cycles = (cycleResult.data ?? []) as CropCycleRow[];
   }
@@ -139,6 +112,16 @@ export async function GET(request: Request) {
     };
   });
 
+  const directiveLines = ((directiveResult.data ?? []) as DirectiveLineRow[]).map((line) => ({
+    id: line.id,
+    lineNumber: line.line_number,
+    productLabel: line.product_label,
+    outputKind: line.output_kind,
+    requestedQuantity: line.requested_quantity,
+    stemsPerUnit: line.stems_per_unit,
+    note: line.note,
+  }));
+
   return privateJson({
     ok: true,
     task: {
@@ -146,6 +129,9 @@ export async function GET(request: Request) {
       dueDate: task.due_date,
       harvestDate: batch.harvest_date,
       inputs,
+      directiveId: UUID_PATTERN.test(directiveId) ? directiveId : null,
+      directiveLines,
+      returnTo: task.due_date ? `/day?date=${encodeURIComponent(task.due_date)}` : "/",
     },
   });
 }
