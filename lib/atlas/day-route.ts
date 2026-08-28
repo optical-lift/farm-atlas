@@ -218,6 +218,8 @@ export function atlasDayTaskCues(task: AtlasTaskCard) {
 
   // Downstream consequence belongs to the task dependency rail, not to the
   // compact Day-feed cue pills. Keep this surface for execution facts only.
+  // release_queue_scheduled_after_count remains canonical serial-queue context,
+  // but it is intentionally not rendered as worker-facing consequence copy here.
 
   // Mowing preparation is procedural truth of mowing, not a second weekly task.
   // Keeping it as a cue on the mowing card means it travels whenever mowing moves.
