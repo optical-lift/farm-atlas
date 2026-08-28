@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { AssignedTaskExecutionShellProps, AssignedTaskOutcome } from "@/components/atlas/assigned-task-execution-shell";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
@@ -89,6 +89,7 @@ export default function DestinationAssignedTaskCard({ task, assignee }: Assigned
   const [saving, setSaving] = useState<AssignedTaskOutcome | null>(null);
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const fulfillmentIdempotencyKey = useRef<string | null>(null);
   const navigation = useTaskFocusNavigation(assignee.listPath);
   const destination = taskDestinationContact(task);
 
@@ -99,10 +100,33 @@ export default function DestinationAssignedTaskCard({ task, assignee }: Assigned
       .catch(() => setWeatherLabel("weather unavailable"));
   }, []);
 
+  async function recordFlowerFulfillment(note: string) {
+    const idempotencyKey = fulfillmentIdempotencyKey.current
+      || `destination-fulfillment:${task.task_id}:${crypto.randomUUID()}`;
+    fulfillmentIdempotencyKey.current = idempotencyKey;
+    const response = await fetch("/api/atlas/flower-fulfillment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({
+        taskId: task.task_id,
+        idempotencyKey,
+        note: note.trim() || null,
+      }),
+    });
+    const payload = await response.json() as { ok?: boolean; error?: string };
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "Flower fulfillment could not be recorded.");
+  }
+
   async function transition(outcome: AssignedTaskOutcome, note = "") {
     try {
       setSaving(outcome);
       setMessage(null);
+      if (outcome === "done" && task.task_type === "flower_fulfillment") {
+        await recordFlowerFulfillment(note);
+        navigation.complete(task.task_id);
+        return;
+      }
       await postAtlasTaskTransition({
         taskId: task.task_id,
         transition: outcome,
