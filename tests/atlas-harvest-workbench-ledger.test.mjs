@@ -83,7 +83,7 @@ test("Going Out can convert route inventory to a sale or return the unsold remai
   const routeApi = read("app/api/atlas/flower-prospect-route/route.ts");
 
   assert.match(workbench, /Return remaining/);
-  assert.match(workbench, />Sold</);
+  assert.match(workbench, /"Sold"/);
   assert.match(workbench, /Handed off/);
   assert.match(routeApi, /record_flower_sale_from_prospect_for_member_v1/);
   assert.match(routeApi, /owner_operator_record_flower_sale_from_prospect_v1/);
