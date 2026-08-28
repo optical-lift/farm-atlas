@@ -31,7 +31,16 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function destinationSubtitle(task: AssignedTaskExecutionShellProps["task"]) {
+function stripStructuredHandoff(value: string, contactName: string | null) {
+  if (!contactName) return value;
+  const contact = escapeRegExp(contactName);
+  return value.replace(
+    new RegExp(`\\s+(?:and\\s+)?(?:ask\\s+for|hand\\s+(?:it|them|these|those)\\s+to|give\\s+(?:it|them|these|those)\\s+to)\\s+${contact}\\.?\\s*$`, "i"),
+    "",
+  ).trim();
+}
+
+function destinationSubtitle(task: AssignedTaskExecutionShellProps["task"], contactName: string | null) {
   const explicit = metadataText(task, "destination_summary") || metadataText(task, "task_card_subtitle");
   if (explicit) return smartText(explicit);
 
@@ -45,6 +54,7 @@ function destinationSubtitle(task: AssignedTaskExecutionShellProps["task"]) {
   if (subject) {
     value = value.replace(new RegExp(`\\s+at\\s+${escapeRegExp(subject)}`, "i"), "");
   }
+  value = stripStructuredHandoff(value, contactName);
 
   value = value.trim();
   if (!value) return undefined;
@@ -116,7 +126,7 @@ export default function DestinationAssignedTaskCard({ task, assignee }: Assigned
 
   const family = metadataText(task, "display_action") || atlasActionForTask(task) || "Task";
   const title = smartText(metadataText(task, "display_subject") || task.title);
-  const subtitle = destinationSubtitle(task);
+  const subtitle = destinationSubtitle(task, destination?.contactName ?? null);
   const timing = destinationTiming(task);
 
   return (
