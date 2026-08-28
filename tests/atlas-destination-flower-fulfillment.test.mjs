@@ -14,7 +14,7 @@ test("off-site flower fulfillment uses the destination handoff card", () => {
   assert.match(loader, /DestinationAssignedTaskCard, \{ isDestinationTask \}/);
   assert.match(loader, /if \(isDestinationTask\(task\)\) \{/);
   assert.match(loader, /return <DestinationAssignedTaskCard task=\{task\} childTasks=\{childTasks\} assignee=\{assignee\} \/>/);
-  assert.match(contact, />Ask for</);
+  assert.match(contact, /destination\.contactName \? "Ask for" : "Handoff"/);
   assert.match(contact, /destination\.contactName/);
 });
 
