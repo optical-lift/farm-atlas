@@ -10,27 +10,34 @@ type PrepLine = {
   product: string;
   instruction: string;
   requestedQuantity: number;
+  deterministicStemsPerUnit: number | null;
+};
+
+type HarvestProduct = {
+  product: string;
+  harvestedStems: number | null;
+  orderLineId?: string;
 };
 
 const prepLines: PrepLine[] = [
-  { id: "pink-zinnia", product: "Pink zinnias", instruction: "10-stem bunches", requestedQuantity: 3 },
-  { id: "celosia", product: "Celosia", instruction: "10-stem bunches", requestedQuantity: 3 },
-  { id: "lemon-basil", product: "Lemon basil", instruction: "10-stem bunches", requestedQuantity: 2 },
-  { id: "goldenrod", product: "Goldenrod", instruction: "10-stem bunches", requestedQuantity: 3 },
-  { id: "teddy-sunflower", product: "Teddy sunflower", instruction: "10-stem bunches", requestedQuantity: 3 },
+  { id: "pink-zinnia", product: "Pink zinnias", instruction: "10-stem bunches", requestedQuantity: 3, deterministicStemsPerUnit: 10 },
+  { id: "celosia", product: "Celosia", instruction: "10-stem bunches", requestedQuantity: 3, deterministicStemsPerUnit: 10 },
+  { id: "lemon-basil", product: "Lemon basil", instruction: "10-stem bunches", requestedQuantity: 2, deterministicStemsPerUnit: 10 },
+  { id: "goldenrod", product: "Goldenrod", instruction: "10-stem bunches", requestedQuantity: 3, deterministicStemsPerUnit: 10 },
+  { id: "teddy-sunflower", product: "Teddy sunflower", instruction: "10-stem bunches", requestedQuantity: 3, deterministicStemsPerUnit: 10 },
 ];
 
-const harvestedProducts = [
-  "Pink zinnias",
-  "Celosia",
-  "Lemon basil",
-  "Goldenrod",
-  "Teddy sunflower",
-  "ProCut Plum sunflower",
-  "Rudbeckia",
-  "Dahlia",
-  "Yarrow",
-] as const;
+const harvestedProducts: HarvestProduct[] = [
+  { product: "Pink zinnias", harvestedStems: null, orderLineId: "pink-zinnia" },
+  { product: "Celosia", harvestedStems: 57, orderLineId: "celosia" },
+  { product: "Lemon basil", harvestedStems: null, orderLineId: "lemon-basil" },
+  { product: "Goldenrod", harvestedStems: null, orderLineId: "goldenrod" },
+  { product: "Teddy sunflower", harvestedStems: 36, orderLineId: "teddy-sunflower" },
+  { product: "ProCut Plum sunflower", harvestedStems: 6 },
+  { product: "Rudbeckia", harvestedStems: 3 },
+  { product: "Dahlia", harvestedStems: 4 },
+  { product: "Yarrow", harvestedStems: null },
+];
 
 const trailSteps = [
   { label: "Harvested", detail: "248+ stems", state: "done" },
@@ -55,20 +62,37 @@ export default function HarvestPreparationCardSpecimen() {
     () => Object.fromEntries(prepLines.map((line) => [line.id, line.requestedQuantity])) as Record<string, number>,
     [],
   );
-  const initialRemainders = useMemo(
-    () => Object.fromEntries(harvestedProducts.map((product) => [product, 0])) as Record<string, number>,
-    [],
-  );
   const [actuals, setActuals] = useState<Record<string, number>>(initialActuals);
   const [notes, setNotes] = useState<Record<string, string>>({});
-  const [remainders, setRemainders] = useState<Record<string, number>>(initialRemainders);
+  const [remainderAdjustments, setRemainderAdjustments] = useState<Record<string, number>>({});
+  const [manualRemainders, setManualRemainders] = useState<Record<string, number | null>>({});
 
   function changeActual(id: string, delta: number) {
     setActuals((current) => ({ ...current, [id]: Math.max(0, (current[id] ?? 0) + delta) }));
   }
 
-  function changeRemainder(product: string, delta: number) {
-    setRemainders((current) => ({ ...current, [product]: Math.max(0, (current[product] ?? 0) + delta) }));
+  function expectedRemainder(item: HarvestProduct) {
+    if (item.harvestedStems == null) return null;
+    if (!item.orderLineId) return item.harvestedStems;
+    const line = prepLines.find((candidate) => candidate.id === item.orderLineId);
+    if (!line || line.deterministicStemsPerUnit == null) return null;
+    const usedStems = (actuals[line.id] ?? 0) * line.deterministicStemsPerUnit;
+    return Math.max(0, item.harvestedStems - usedStems);
+  }
+
+  function changeCalculatedRemainder(product: string, delta: number, expected: number) {
+    setRemainderAdjustments((current) => {
+      const nextValue = Math.max(0, expected + (current[product] ?? 0) + delta);
+      return { ...current, [product]: nextValue - expected };
+    });
+  }
+
+  function changeManualRemainder(product: string, delta: number) {
+    setManualRemainders((current) => {
+      const currentValue = current[product];
+      const nextValue = Math.max(0, (currentValue ?? 0) + delta);
+      return { ...current, [product]: nextValue };
+    });
   }
 
   return (
@@ -134,24 +158,48 @@ export default function HarvestPreparationCardSpecimen() {
 
         <section className={styles.remainingSection}>
           <header>
-            <div><span>Remaining stems</span><strong>Count by variety after pack-out</strong></div>
-            <small>Unallocated</small>
+            <div><span>Remaining stems</span><strong>Confirm or correct what Atlas expects</strong></div>
+            <small>Post-packout</small>
           </header>
 
           <div className={styles.remainingList}>
-            {harvestedProducts.map((product) => (
-              <div className={styles.remainingRow} key={product}>
-                <div>
-                  <strong>{product}</strong>
-                  <small>stems remaining</small>
+            {harvestedProducts.map((item) => {
+              const expected = expectedRemainder(item);
+              const adjustment = remainderAdjustments[item.product] ?? 0;
+              const displayed = expected == null ? manualRemainders[item.product] : Math.max(0, expected + adjustment);
+              const corrected = expected != null && adjustment !== 0;
+              return (
+                <div className={styles.remainingRow} key={item.product}>
+                  <div className={styles.remainingIdentity}>
+                    <strong>{item.product}</strong>
+                    {expected == null ? (
+                      <small>Count needed</small>
+                    ) : item.orderLineId ? (
+                      <small>{item.harvestedStems} harvested · Atlas subtracts packed stems</small>
+                    ) : (
+                      <small>{item.harvestedStems} harvested · no direct-stem order</small>
+                    )}
+                  </div>
+                  <div className={styles.remainingControl}>
+                    <span>{expected == null ? "Count" : corrected ? "Corrected" : "Atlas expects"}</span>
+                    <div className={styles.stepper} aria-label={`Remaining stems for ${item.product}`}>
+                      <button
+                        type="button"
+                        aria-label={`Remove one remaining ${item.product} stem`}
+                        disabled={(displayed ?? 0) === 0}
+                        onClick={() => expected == null ? changeManualRemainder(item.product, -1) : changeCalculatedRemainder(item.product, -1, expected)}
+                      >−</button>
+                      <strong>{displayed == null ? "—" : displayed}</strong>
+                      <button
+                        type="button"
+                        aria-label={`Add one remaining ${item.product} stem`}
+                        onClick={() => expected == null ? changeManualRemainder(item.product, 1) : changeCalculatedRemainder(item.product, 1, expected)}
+                      >+</button>
+                    </div>
+                  </div>
                 </div>
-                <div className={styles.stepper} aria-label={`Remaining stems for ${product}`}>
-                  <button type="button" aria-label={`Remove one remaining ${product} stem`} disabled={(remainders[product] ?? 0) === 0} onClick={() => changeRemainder(product, -1)}>−</button>
-                  <strong>{remainders[product] ?? 0}</strong>
-                  <button type="button" aria-label={`Add one remaining ${product} stem`} onClick={() => changeRemainder(product, 1)}>+</button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </DominionCardFrame>
