@@ -78,13 +78,30 @@ test("Assign Send separates customer claims from unsold route custody", () => {
   assert.match(routeApi, /p_assigned_membership_id/);
 });
 
-test("Going Out can convert route inventory to a sale or return the unsold remainder", () => {
+test("Going Out contains Pickup Dock, Deliveries, and On Route as one outbound area", () => {
   const workbench = read("app/harvest/HarvestWorkbenchSection.tsx");
+  const outbound = read("app/harvest/HarvestOutboundSection.tsx");
+
+  assert.match(workbench, /HarvestOutboundSection/);
+  assert.match(workbench, /title="Going Out"/);
+  assert.match(outbound, /Pickup Dock/);
+  assert.match(outbound, /Deliveries/);
+  assert.match(outbound, /On Route/);
+  assert.match(outbound, /data-harvest-outbound="pickup-delivery-route"/);
+  assert.match(outbound, /order\.customerLabel/);
+  assert.match(outbound, /order\.lines\.map/);
+  assert.match(outbound, /Picked up/);
+  assert.match(outbound, /Delivered/);
+  assert.match(outbound, /Open handoff task/);
+});
+
+test("Going Out can convert route inventory to a sale or return the unsold remainder", () => {
+  const outbound = read("app/harvest/HarvestOutboundSection.tsx");
   const routeApi = read("app/api/atlas/flower-prospect-route/route.ts");
 
-  assert.match(workbench, /Return remaining/);
-  assert.match(workbench, /"Sold"/);
-  assert.match(workbench, /Handed off/);
+  assert.match(outbound, /Return remaining/);
+  assert.match(outbound, /"Sold"/);
+  assert.match(outbound, /onCompleteHandoff/);
   assert.match(routeApi, /record_flower_sale_from_prospect_for_member_v1/);
   assert.match(routeApi, /owner_operator_record_flower_sale_from_prospect_v1/);
   assert.match(routeApi, /release_flower_prospect_route_for_member_v1/);
@@ -101,6 +118,15 @@ test("route custody is not silently treated as sale truth", () => {
   assert.match(commandReader, /activeRoutes/);
   assert.match(commandReader, /soldQuantity/);
   assert.match(commandReader, /returnedQuantity/);
+});
+
+test("Pickup Dock does not invent payment truth", () => {
+  const outbound = read("app/harvest/HarvestOutboundSection.tsx");
+  const ledger = read("app/api/atlas/harvest-ledger/route.ts");
+
+  assert.match(outbound, /moneyLabel\(order\.totalAmount\)/);
+  assert.doesNotMatch(outbound, /Paid|Unpaid/);
+  assert.doesNotMatch(ledger, /paymentStatus|payment_status|paid_at/);
 });
 
 test("legacy Harvest reports remain secondary to the command center", () => {
