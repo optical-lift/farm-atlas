@@ -27,6 +27,15 @@ test("flower preparation context exposes immutable directive lines", () => {
   assert.match(route, /stems_per_unit/);
 });
 
+test("flower preparation context accepts the real Condition + Bunch UUID shape", () => {
+  const route = read("app/api/atlas/flower-preparation-context/route.ts");
+  const literal = route.match(/const UUID_PATTERN = (\/\^.*?\/i);/)?.[1];
+  assert.ok(literal, "flower preparation UUID pattern must remain inspectable");
+  const pattern = Function(`return ${literal}`)();
+  assert.equal(pattern.test("9defb370-7c61-4d72-9200-cbfa2a51700d"), true);
+  assert.equal(pattern.test("9a13dbf4-6fa1-4483-aab7-42b852ca05dd"), true);
+});
+
 test("flower preparation loader preserves Task Focus route identity", () => {
   const loader = read("components/atlas/flower-preparation-task-loader.tsx");
   assert.match(loader, /window\.location\.pathname/);
