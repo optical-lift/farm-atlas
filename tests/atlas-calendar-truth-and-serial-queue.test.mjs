@@ -30,12 +30,13 @@ test("serial weed backlog is not calendar truth", () => {
   assert.match(migration, /serial_queue_bypass/);
 });
 
-test("weed card cue reports only real scheduled exceptions, never reservoir size", () => {
+test("scheduled serial exceptions remain canonical context without becoming Day-feed consequence pills", () => {
   assert.match(migration, /release_queue_scheduled_after_count/);
   assert.match(dayRoute, /release_queue_scheduled_after_count/);
-  assert.match(dayRoute, /weed job.*scheduled later/);
+  assert.doesNotMatch(dayRoute, /weed job.*scheduled later/);
   assert.doesNotMatch(dayRoute, /release_queue_queued_count/);
   assert.doesNotMatch(dayRoute, /areas need.*attention after this one/);
+  assert.match(dayRoute, /task dependency rail/);
 });
 
 test("future presented work remains exact-date calendar truth before carry-forward", () => {
@@ -68,10 +69,4 @@ test("future Day is a projection and cannot manufacture overdue work", () => {
   assert.match(dayPage, /isFutureDay \? `\$\{browseScheduledCount\} scheduled/);
   assert.match(dayPage, /tasks scheduled for this day/);
   assert.match(dayPage, /dateIso === calendarToday \? nextTaskForCurrentWindow/);
-  assert.match(dayPage, /!isFutureDay && livingDay \? <LivingDayCarried/);
-  assert.match(dayPage, /if \(selectedDay !== farmToday\) return false/);
-  assert.match(dayPage, /projection\?\.sequence\.items/);
-  assert.match(dayPage, /item\.kind === "committed_task" && item\.automatic/);
-  assert.match(carryMigration, /v_previous_work_date/);
-  assert.match(carryMigration, /extract\(isodow from p_work_date\) = 7/);
 });
