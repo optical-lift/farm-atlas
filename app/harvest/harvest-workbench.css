@@ -1,0 +1,909 @@
+.harvest-workbench {
+  display: grid;
+  gap: 28px;
+  margin: 0 auto;
+  max-width: 1500px;
+  padding: 12px 18px 48px;
+}
+
+.harvest-workbench__intro,
+.harvest-ledger__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.harvest-workbench__intro > div:first-child,
+.harvest-ledger__header > div:first-child {
+  min-width: 0;
+}
+
+.harvest-workbench__intro span,
+.harvest-ledger__header > div:first-child > span {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+  color: #7772a8;
+}
+
+.harvest-workbench__intro h1,
+.harvest-ledger__header h2 {
+  margin: 0;
+  color: #292a3d;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.8rem, 3vw, 2.65rem);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+}
+
+.harvest-workbench__intro p,
+.harvest-ledger__header p {
+  max-width: 780px;
+  margin: 8px 0 0;
+  color: #696a63;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.harvest-workbench__intro select {
+  min-width: 200px;
+}
+
+.harvest-workbench__cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 18px;
+}
+
+.harvest-workbench__notice,
+.harvest-workbench__loading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid #ddd9c9;
+  border-radius: 15px;
+  padding: 12px 15px;
+  background: #fbfaf4;
+  color: #464741;
+  font-size: 0.9rem;
+}
+
+.harvest-workbench__notice--error {
+  border-color: #d7b7b0;
+  background: #fff8f5;
+}
+
+.harvest-workbench__notice button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.harvest-workbench__task-body {
+  display: grid;
+  gap: 14px;
+  padding: 4px 2px 2px;
+}
+
+.harvest-workbench__task-body label,
+.harvest-workbench__note {
+  display: grid;
+  gap: 6px;
+}
+
+.harvest-workbench__task-body label > span,
+.harvest-workbench__note > span,
+.harvest-workbench__choice > span {
+  color: #6a6b65;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.harvest-workbench__task-body label small,
+.harvest-workbench__note small {
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #97988f;
+}
+
+.harvest-workbench__task-body input,
+.harvest-workbench__task-body select,
+.harvest-workbench__intro select {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  border: 1px solid #d8d8d0;
+  border-radius: 11px;
+  padding: 9px 11px;
+  background: #fff;
+  color: #30313f;
+  font: inherit;
+  font-size: 0.92rem;
+}
+
+.harvest-workbench__task-body input:focus,
+.harvest-workbench__task-body select:focus,
+.harvest-workbench__intro select:focus {
+  outline: 2px solid rgba(113, 108, 166, 0.22);
+  outline-offset: 1px;
+  border-color: #9893bf;
+}
+
+.harvest-workbench__primary {
+  min-width: 150px;
+  border: 1px solid #3d3e4e;
+  border-radius: 999px;
+  padding: 11px 17px;
+  background: #343545;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.harvest-workbench__primary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.harvest-workbench__harvest-row {
+  display: grid;
+  gap: 10px;
+  border-bottom: 1px solid #eceae2;
+  padding: 0 0 14px;
+}
+
+.harvest-workbench__harvest-row > small {
+  margin-top: -4px;
+  color: #898a82;
+  font-size: 0.78rem;
+}
+
+.harvest-workbench__counter {
+  display: grid;
+  grid-template-columns: 44px minmax(120px, 1fr) 44px;
+  align-items: center;
+  max-width: 320px;
+  overflow: hidden;
+  border: 1px solid #d8d8d0;
+  border-radius: 999px;
+  background: #fafaf7;
+}
+
+.harvest-workbench__counter button {
+  height: 42px;
+  border: 0;
+  background: transparent;
+  color: #373847;
+  font-size: 1.35rem;
+  cursor: pointer;
+}
+
+.harvest-workbench__counter strong {
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.harvest-workbench__choice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.harvest-workbench__choice > span {
+  width: 100%;
+}
+
+.harvest-workbench__choice button {
+  border: 1px solid #d6d6ce;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #fff;
+  color: #55564f;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.harvest-workbench__choice button[data-selected="true"] {
+  border-color: #8e89b7;
+  background: #f0eff8;
+  color: #403e65;
+}
+
+.harvest-workbench__add,
+.harvest-workbench__text-button {
+  justify-self: start;
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: #5d598c;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.harvest-workbench__text-button {
+  color: #8a6b67;
+  font-size: 0.78rem;
+}
+
+.harvest-workbench__prep-lines,
+.harvest-workbench__sale-lines {
+  display: grid;
+  gap: 8px;
+}
+
+.harvest-workbench__prep-line,
+.harvest-workbench__sale-line {
+  display: grid;
+  grid-template-columns: 28px minmax(120px, 1.15fr) minmax(110px, 0.9fr) 90px minmax(100px, 0.8fr) 30px;
+  align-items: center;
+  gap: 7px;
+}
+
+.harvest-workbench__sale-line {
+  grid-template-columns: 28px minmax(170px, 1fr) 92px 105px 30px;
+}
+
+.harvest-workbench__line-number {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #efeee8;
+  color: #6f706a;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.harvest-workbench__stems,
+.harvest-workbench__price {
+  display: flex !important;
+  align-items: center;
+  gap: 5px !important;
+}
+
+.harvest-workbench__stems input,
+.harvest-workbench__price input {
+  min-width: 0;
+}
+
+.harvest-workbench__stems > span,
+.harvest-workbench__price > span {
+  flex: 0 0 auto;
+  color: #777871 !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.harvest-workbench__remove {
+  border: 0;
+  background: transparent;
+  color: #8f8f88;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.harvest-workbench__sale-settings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.harvest-workbench__completion-copy {
+  color: #77786f;
+  font-size: 0.84rem;
+}
+
+.harvest-workbench__handoffs {
+  gap: 9px;
+}
+
+.harvest-workbench__handoff {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #e0dfd8;
+  border-radius: 13px;
+  padding: 12px 13px;
+  background: #fff;
+}
+
+.harvest-workbench__handoff small {
+  color: #7d7e76;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.harvest-workbench__handoff h3 {
+  margin: 3px 0 2px;
+  color: #313241;
+  font-size: 1rem;
+}
+
+.harvest-workbench__handoff p {
+  margin: 0;
+  color: #71726b;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.harvest-workbench__handoff button {
+  flex: 0 0 auto;
+  border: 1px solid #555665;
+  border-radius: 999px;
+  padding: 9px 13px;
+  background: #fff;
+  color: #414250;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.harvest-workbench__handoff button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.harvest-workbench__empty {
+  display: grid;
+  gap: 3px;
+  border: 1px dashed #d8d7cf;
+  border-radius: 12px;
+  padding: 14px;
+  color: #73746c;
+}
+
+.harvest-workbench__empty b {
+  color: #3b3c49;
+}
+
+.harvest-ledger {
+  overflow: hidden;
+  border: 1px solid #d9d6ca;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(58, 58, 68, 0.07);
+}
+
+.harvest-ledger__header {
+  align-items: center;
+  padding: 24px 26px 20px;
+  background: #fbfaf6;
+}
+
+.harvest-ledger__header h2 {
+  font-size: clamp(1.55rem, 2.4vw, 2.15rem);
+}
+
+.harvest-ledger__counts {
+  display: flex;
+  gap: 10px;
+}
+
+.harvest-ledger__counts > div,
+.harvest-ledger__today-summary > div {
+  display: grid;
+  min-width: 105px;
+  gap: 2px;
+  border: 1px solid #e2e0d6;
+  border-radius: 13px;
+  padding: 9px 12px;
+  background: #fff;
+}
+
+.harvest-ledger__counts strong,
+.harvest-ledger__today-summary strong {
+  color: #333443;
+  font-size: 1.25rem;
+}
+
+.harvest-ledger__counts span,
+.harvest-ledger__today-summary span {
+  color: #808178;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
+.harvest-ledger__tabs {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  border-top: 1px solid #e7e4db;
+  border-bottom: 1px solid #e7e4db;
+  padding: 0 18px;
+  background: #fff;
+}
+
+.harvest-ledger__tabs button {
+  position: relative;
+  border: 0;
+  padding: 14px 13px 12px;
+  background: transparent;
+  color: #777870;
+  font: inherit;
+  font-size: 0.73rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.harvest-ledger__tabs button[data-active="true"] {
+  color: #4b4774;
+}
+
+.harvest-ledger__tabs button[data-active="true"]::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  bottom: 0;
+  left: 10px;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+  background: #7872ae;
+}
+
+.harvest-ledger__panel {
+  padding: 18px 20px 22px;
+}
+
+.harvest-ledger__table {
+  display: grid;
+  gap: 2px;
+}
+
+.harvest-ledger__table-head,
+.harvest-ledger__product {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.6fr) repeat(4, minmax(105px, 0.75fr));
+  align-items: center;
+  gap: 12px;
+}
+
+.harvest-ledger__table-head {
+  padding: 7px 12px;
+  color: #8a8a83;
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.harvest-ledger__table-head span:not(:first-child),
+.harvest-ledger__product > span:not(:first-child),
+.harvest-ledger__product > strong {
+  text-align: right;
+}
+
+.harvest-ledger__product-wrap {
+  border-top: 1px solid #edebe4;
+}
+
+.harvest-ledger__product {
+  width: 100%;
+  border: 0;
+  padding: 13px 12px;
+  background: transparent;
+  color: #4e4f48;
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.harvest-ledger__product:hover {
+  background: #faf9f5;
+}
+
+.harvest-ledger__product > span:first-child {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+}
+
+.harvest-ledger__product b {
+  color: #313240;
+  font-size: 0.98rem;
+}
+
+.harvest-ledger__product small {
+  color: #8b8c83;
+  font-size: 0.72rem;
+}
+
+.harvest-ledger__product strong {
+  color: #39364e;
+  font-size: 0.94rem;
+}
+
+.harvest-ledger__genealogy {
+  display: grid;
+  gap: 4px;
+  margin: 0 10px 13px;
+  border: 1px solid #e3e0d6;
+  border-radius: 14px;
+  padding: 10px;
+  background: #fbfaf6;
+}
+
+.harvest-ledger__genealogy > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 3px 5px 8px;
+}
+
+.harvest-ledger__genealogy > header b {
+  color: #363745;
+  font-size: 0.85rem;
+}
+
+.harvest-ledger__genealogy > header span {
+  color: #85867d;
+  font-size: 0.74rem;
+}
+
+.harvest-ledger__today-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.harvest-ledger__today-summary > div {
+  min-width: 155px;
+  background: #fbfaf6;
+}
+
+.harvest-ledger__activity {
+  display: grid;
+  gap: 3px;
+}
+
+.harvest-ledger__activity-row {
+  display: grid;
+  grid-template-columns: 92px minmax(180px, 1fr) minmax(110px, auto) minmax(130px, auto);
+  align-items: center;
+  gap: 13px;
+  border-bottom: 1px solid #eceae3;
+  padding: 10px 7px;
+}
+
+.harvest-ledger__activity-row:last-child {
+  border-bottom: 0;
+}
+
+.harvest-ledger__activity-row time {
+  display: grid;
+  gap: 2px;
+}
+
+.harvest-ledger__activity-row time b {
+  color: #5c5d56;
+  font-size: 0.73rem;
+}
+
+.harvest-ledger__activity-row time span {
+  color: #96978e;
+  font-size: 0.7rem;
+}
+
+.harvest-ledger__activity-row > div {
+  min-width: 0;
+}
+
+.harvest-ledger__activity-row > div > small {
+  color: #7b76aa;
+  font-size: 0.67rem;
+  font-weight: 850;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.harvest-ledger__activity-row h3 {
+  margin: 2px 0 0;
+  color: #30313e;
+  font-size: 0.91rem;
+}
+
+.harvest-ledger__activity-row p {
+  overflow: hidden;
+  margin: 2px 0 0;
+  color: #7f8078;
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.harvest-ledger__activity-row > strong {
+  color: #373847;
+  text-align: right;
+  font-size: 0.86rem;
+}
+
+.harvest-ledger__source {
+  display: inline-grid;
+  justify-items: end;
+  gap: 1px;
+  color: #64655f;
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-align: right;
+}
+
+.harvest-ledger__source small {
+  color: #9a9b92;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.harvest-ledger__source[data-source="task"] {
+  color: #56517e;
+}
+
+.harvest-ledger__source[data-source="workbench"] {
+  color: #596b58;
+}
+
+.harvest-ledger__batches {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.harvest-ledger__batch {
+  border: 1px solid #e0ded4;
+  border-radius: 15px;
+  padding: 14px;
+  background: #fff;
+}
+
+.harvest-ledger__batch > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 13px;
+  margin-bottom: 10px;
+}
+
+.harvest-ledger__batch > header > div > span {
+  color: #8581b0;
+  font-size: 0.66rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+}
+
+.harvest-ledger__batch h3 {
+  margin: 3px 0 0;
+  color: #343542;
+  font-size: 0.94rem;
+}
+
+.harvest-ledger__batch > div {
+  display: grid;
+  gap: 5px;
+}
+
+.harvest-ledger__batch p {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(100px, 0.8fr) auto;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  border-top: 1px solid #efede6;
+  padding: 6px 0 0;
+}
+
+.harvest-ledger__batch p b {
+  color: #3c3d48;
+  font-size: 0.8rem;
+}
+
+.harvest-ledger__batch p span {
+  color: #888981;
+  font-size: 0.72rem;
+}
+
+.harvest-ledger__batch p strong {
+  color: #4e4f5c;
+  font-size: 0.76rem;
+  text-align: right;
+}
+
+.harvest-ledger__batch > small {
+  display: block;
+  margin-top: 9px;
+  color: #7f8078;
+  font-size: 0.72rem;
+}
+
+.harvest-ledger__empty-row {
+  border: 1px dashed #dcd9ce;
+  border-radius: 13px;
+  padding: 18px;
+  color: #808178;
+  text-align: center;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 1000px) {
+  .harvest-workbench__cards,
+  .harvest-ledger__batches {
+    grid-template-columns: 1fr;
+  }
+
+  .harvest-workbench__prep-line {
+    grid-template-columns: 28px minmax(120px, 1fr) minmax(105px, 0.9fr) 80px 30px;
+  }
+
+  .harvest-workbench__prep-line .harvest-workbench__stems {
+    grid-column: 2 / 5;
+  }
+}
+
+@media (max-width: 760px) {
+  .harvest-workbench {
+    gap: 20px;
+    padding: 8px 10px 34px;
+  }
+
+  .harvest-workbench__intro,
+  .harvest-ledger__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .harvest-workbench__intro select {
+    min-width: 0;
+  }
+
+  .harvest-workbench__prep-line,
+  .harvest-workbench__sale-line {
+    grid-template-columns: 26px 1fr 84px 30px;
+    align-items: end;
+    border-bottom: 1px solid #eceae3;
+    padding-bottom: 9px;
+  }
+
+  .harvest-workbench__prep-line > select {
+    grid-column: 2 / 3;
+  }
+
+  .harvest-workbench__prep-line > input:nth-of-type(2) {
+    grid-column: 3 / 4;
+  }
+
+  .harvest-workbench__prep-line .harvest-workbench__stems {
+    grid-column: 2 / 4;
+  }
+
+  .harvest-workbench__sale-line > select {
+    grid-column: 2 / 5;
+  }
+
+  .harvest-workbench__sale-line > input {
+    grid-column: 2 / 3;
+  }
+
+  .harvest-workbench__sale-line .harvest-workbench__price {
+    grid-column: 3 / 4;
+  }
+
+  .harvest-workbench__sale-settings {
+    grid-template-columns: 1fr;
+  }
+
+  .harvest-workbench__handoff {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .harvest-workbench__handoff button {
+    align-self: flex-start;
+  }
+
+  .harvest-ledger__header {
+    padding: 20px 17px 16px;
+  }
+
+  .harvest-ledger__counts {
+    width: 100%;
+  }
+
+  .harvest-ledger__counts > div {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .harvest-ledger__panel {
+    padding: 12px 10px 16px;
+  }
+
+  .harvest-ledger__table-head {
+    display: none;
+  }
+
+  .harvest-ledger__product {
+    grid-template-columns: 1.5fr 0.9fr;
+    gap: 7px 10px;
+    padding: 12px 7px;
+  }
+
+  .harvest-ledger__product > span:first-child {
+    grid-row: 1 / 3;
+  }
+
+  .harvest-ledger__product > span:not(:first-child),
+  .harvest-ledger__product > strong {
+    position: relative;
+    padding-top: 12px;
+    text-align: right;
+  }
+
+  .harvest-ledger__product > span:nth-child(2)::before { content: "Made today"; }
+  .harvest-ledger__product > span:nth-child(3)::before { content: "Claimed"; }
+  .harvest-ledger__product > span:nth-child(4)::before { content: "Out"; }
+  .harvest-ledger__product > strong::before { content: "Available"; }
+
+  .harvest-ledger__product > span:not(:first-child)::before,
+  .harvest-ledger__product > strong::before {
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: #9a9b92;
+    font-size: 0.58rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .harvest-ledger__activity-row {
+    grid-template-columns: 70px minmax(120px, 1fr) auto;
+    gap: 8px;
+  }
+
+  .harvest-ledger__activity-row > .harvest-ledger__source {
+    grid-column: 2 / 4;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .harvest-ledger__genealogy > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .harvest-ledger__batch p {
+    grid-template-columns: 1fr auto;
+  }
+
+  .harvest-ledger__batch p span {
+    grid-column: 1 / 2;
+  }
+
+  .harvest-ledger__batch p strong {
+    grid-column: 2 / 3;
+    grid-row: 1 / 3;
+  }
+}
