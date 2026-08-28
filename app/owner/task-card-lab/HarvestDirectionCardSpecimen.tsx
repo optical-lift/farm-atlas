@@ -33,13 +33,13 @@ const startingLines: DirectionLine[] = [
 ];
 
 const trailSteps = [
-  { label: "Harvested", detail: "Anna logged it", state: "done" },
-  { label: "Direct", detail: "Owner decides", state: "now" },
-  { label: "Prepare", detail: "hidden from Anna", state: "locked" },
-  { label: "Ready", detail: "actuals confirmed", state: "locked" },
+  { label: "Harvested", detail: "248+ stems", state: "done" },
+  { label: "Pre-sale plan", detail: "you are here", state: "now" },
+  { label: "Deliver", detail: "Katie Langenberg", state: "locked" },
 ] as const;
 
 function outputLabel(kind: OutputKind) {
+  if (kind === "bundle") return "Bunch";
   if (kind === "lobby_arrangement") return "Arrangement";
   return kind.charAt(0).toUpperCase() + kind.slice(1);
 }
@@ -57,12 +57,12 @@ function DirectionRow({ line, onChange, onRemove }: { line: DirectionLine; onCha
 
       <div className={styles.directionControls}>
         <label>
-          <span>Make</span>
+          <span>Pack as</span>
           <select value={line.outputKind} onChange={(event) => {
             const outputKind = event.target.value as OutputKind;
             onChange({ ...line, outputKind, stemsPerUnit: outputKind === "bundle" ? (line.stemsPerUnit ?? 10) : null });
           }}>
-            <option value="bundle">Bundle</option>
+            <option value="bundle">Bunch</option>
             <option value="bouquet">Bouquet</option>
             <option value="posy">Posy</option>
             <option value="lobby_arrangement">Arrangement</option>
@@ -71,13 +71,13 @@ function DirectionRow({ line, onChange, onRemove }: { line: DirectionLine; onCha
 
         {line.outputKind === "bundle" ? (
           <label>
-            <span>Stems each</span>
+            <span>Stems / bunch</span>
             <input type="number" min={1} inputMode="numeric" value={line.stemsPerUnit ?? 10} onChange={(event) => onChange({ ...line, stemsPerUnit: Math.max(1, Number(event.target.value) || 1) })} />
           </label>
         ) : null}
 
         <label>
-          <span>Want</span>
+          <span>QTY</span>
           <input type="number" min={1} inputMode="numeric" value={line.requestedQuantity} onChange={(event) => onChange({ ...line, requestedQuantity: Math.max(1, Number(event.target.value) || 1) })} />
         </label>
       </div>
@@ -85,7 +85,7 @@ function DirectionRow({ line, onChange, onRemove }: { line: DirectionLine; onCha
       <details className={styles.noteDrawer}>
         <summary>+ note</summary>
         <label>
-          <span>Instruction for this line</span>
+          <span>Instruction</span>
           <input placeholder={`Optional note for ${line.product || outputLabel(line.outputKind)}`} value={line.note} onChange={(event) => onChange({ ...line, note: event.target.value })} />
         </label>
       </details>
@@ -95,6 +95,7 @@ function DirectionRow({ line, onChange, onRemove }: { line: DirectionLine; onCha
 
 export default function HarvestDirectionCardSpecimen() {
   const [lines, setLines] = useState<DirectionLine[]>(startingLines);
+  const [destination, setDestination] = useState("katie-langenberg");
 
   function replaceLine(id: string, next: DirectionLine) {
     setLines((current) => current.map((line) => line.id === id ? next : line));
@@ -109,10 +110,10 @@ export default function HarvestDirectionCardSpecimen() {
 
   return (
     <div className={styles.specimen}>
-      <div className={styles.variantLabel}><span>Post-harvest owner decision · fixture only</span></div>
+      <div className={styles.variantLabel}><span>Post-harvest pre-sale plan · fixture only</span></div>
       <DominionCardFrame
         family="Harvest"
-        familyDetail="owner direction"
+        familyDetail="pre-sale"
         title="Direct Harvest"
         subtitle="Today’s flower harvest · Elm Farm"
         timing="Harvest complete · nothing released to Anna yet"
@@ -123,7 +124,7 @@ export default function HarvestDirectionCardSpecimen() {
           </div>
         }
       >
-        <div className={styles.trail} aria-label="Post-harvest handoff trail">
+        <div className={styles.trail} aria-label="Harvest to delivery trail">
           {trailSteps.map((step) => (
             <span className={step.state === "done" ? styles.trailDone : step.state === "now" ? styles.trailNow : styles.trailLocked} key={step.label}>
               <b>{step.label}</b><small>{step.detail}</small>
@@ -147,7 +148,7 @@ export default function HarvestDirectionCardSpecimen() {
 
         <section className={styles.directionSection}>
           <header>
-            <div><span>What should Anna make?</span><strong>Set the target. Anna will report the actual.</strong></div>
+            <div><span>Pre-sale order</span><strong>Set the pack-out target.</strong></div>
           </header>
 
           <div className={styles.directionList}>
@@ -162,6 +163,25 @@ export default function HarvestDirectionCardSpecimen() {
           </div>
 
           <button className={styles.addButton} type="button" onClick={addLine}>+ Add another</button>
+        </section>
+
+        <section className={styles.fulfillmentSection}>
+          <header>
+            <div><span>Fulfillment</span><strong>One drop-off for this pack-out</strong></div>
+          </header>
+          <label className={styles.destinationField}>
+            <span>Drop-off</span>
+            <select value={destination} onChange={(event) => setDestination(event.target.value)}>
+              <option value="katie-langenberg">Katie Langenberg · Springfield, MO</option>
+              <option value="">Select drop-off</option>
+            </select>
+          </label>
+          {destination === "katie-langenberg" ? (
+            <div className={styles.destinationTruth}>
+              <strong>Katie Langenberg</strong>
+              <small>Springfield, MO · street address not yet stored in the specimen</small>
+            </div>
+          ) : null}
         </section>
       </DominionCardFrame>
     </div>
