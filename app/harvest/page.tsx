@@ -11,6 +11,7 @@ import {
   AtlasTopBar,
 } from "@/components/atlas/ui/AtlasPrimitives";
 import HarvestPipelineSection from "./HarvestPipelineSection";
+import HarvestWorkbenchSection from "./HarvestWorkbenchSection";
 import HarvestedOutputSection from "./HarvestedOutputSection";
 import "./harvest.css";
 
@@ -304,17 +305,19 @@ export default function HarvestHorizonPage() {
 
   return (
     <AtlasAppShell className="atlas-harvest-shell" frameClassName="atlas-harvest-page">
-      <AtlasTopBar title="Harvest" status="Crop → customer" />
+      <AtlasTopBar title="Harvest" status="Work → inventory → customer" />
 
       <div className="atlas-harvest-body">
-        <HarvestPipelineSection />
+        <HarvestWorkbenchSection />
 
-        <details className="atlas-harvest-outlook">
+        <details className="atlas-harvest-outlook atlas-harvest-secondary">
           <summary>
-            <span><b>OUTLOOK</b> 21-day crop forecast</span>
+            <span><b>UPCOMING & CROP OUTLOOK</b> expectations + 21-day forecast</span>
             <strong>{data ? `${totalNow} now · ${totalAhead} ahead` : "Open"}</strong>
           </summary>
           <div className="atlas-harvest-outlook__body">
+            <HarvestPipelineSection />
+
             <AtlasCard as="section" variant="cream" className="atlas-harvest-intro" ariaLabelledBy="atlas-harvest-title">
               <AtlasSectionHeading kicker="Harvest Outlook" title="In the field" id="atlas-harvest-title" />
               <p>Forecasts and field evidence support Coming. They do not become physical inventory until flowers are actually cut.</p>
@@ -399,7 +402,15 @@ export default function HarvestHorizonPage() {
           </div>
         </details>
 
-        <HarvestedOutputSection />
+        <details className="atlas-harvest-outlook atlas-harvest-history">
+          <summary>
+            <span><b>DETAILED HISTORY & CORRECTIONS</b> audit and exception tools</span>
+            <strong>Open</strong>
+          </summary>
+          <div className="atlas-harvest-outlook__body">
+            <HarvestedOutputSection />
+          </div>
+        </details>
       </div>
     </AtlasAppShell>
   );
