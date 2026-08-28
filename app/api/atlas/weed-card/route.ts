@@ -111,6 +111,28 @@ function fallbackDependencyTrail(taskId: string, dueDate: string | null, labels:
   }));
 }
 
+function trailEvents(value: unknown) {
+  return Array.isArray(value) ? value as AtlasWeedBedTrailEvent[] : [];
+}
+
+function latestTrailEvent(value: unknown) {
+  const events = trailEvents(value);
+  if (!events.length) return null;
+
+  let latest = events[0];
+  let latestIndex = 0;
+  for (let index = 1; index < events.length; index += 1) {
+    const event = events[index];
+    const latestDate = text(latest.eventDate);
+    const eventDate = text(event.eventDate);
+    if (eventDate > latestDate || (eventDate === latestDate && index > latestIndex)) {
+      latest = event;
+      latestIndex = index;
+    }
+  }
+  return latest;
+}
+
 export async function GET(request: Request) {
   const authorized = await requireAtlasApiAccess();
   if (!authorized.ok) return authorized.response;
@@ -149,10 +171,10 @@ export async function GET(request: Request) {
     if (!objectResult.error) mainCropLabel = explicitMainCropLabel(objectResult.data?.metadata);
   }
 
-  // The old horizontal Weed rail was historical context. When this bed is an
-  // execution gate, the higher-value rail is the work that becomes executable
-  // immediately after this task closes.
+  // Keep the rail centered on the worker's actual place in the bed workflow:
+  // one completed move behind, the move in hand, and at most two moves/unlocks ahead.
   let dependencyTrail: AtlasWeedBedTrailEvent[] = [];
+  let workflowTrail: AtlasWeedBedTrailEvent[] = [];
   const taskRow = !taskResult.error ? taskResult.data : null;
   if (taskRow) {
     const ids = dependencyIds(taskRow.metadata);
@@ -184,6 +206,27 @@ export async function GET(request: Request) {
     if (!dependencyTrail.length && labels.length) {
       dependencyTrail = fallbackDependencyTrail(taskId, taskRow.due_date, labels);
     }
+
+    const lastMove = latestTrailEvent(card.bedTrail);
+    const currentAction = metadataText(taskRow.metadata, "display_action") || "Weed";
+    const currentSubject = metadataText(taskRow.metadata, "display_subject")
+      || taskRow.title.replace(/^Weed\s*[·-]?\s*/i, "").trim()
+      || null;
+    const currentMove: AtlasWeedBedTrailEvent = {
+      taskId: taskRow.id,
+      eventKind: `Now · ${currentAction}`,
+      cropCycleId: null,
+      cropLabel: currentSubject,
+      title: taskRow.title,
+      lifeCycle: null,
+      eventDate: taskRow.due_date || "",
+    };
+
+    workflowTrail = [
+      ...(lastMove ? [{ ...lastMove, eventKind: `Last · ${lastMove.eventKind}` }] : []),
+      currentMove,
+      ...dependencyTrail.slice(0, 2),
+    ];
   }
 
   return privateJson({
@@ -192,7 +235,7 @@ export async function GET(request: Request) {
       ...card,
       bedUseCategory,
       mainCropLabel: mainCropLabel || communityLabel,
-      bedTrail: dependencyTrail.length ? dependencyTrail : card.bedTrail,
+      bedTrail: workflowTrail.length ? workflowTrail : card.bedTrail,
       components,
       bedMap,
     },
