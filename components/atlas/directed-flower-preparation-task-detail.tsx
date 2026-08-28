@@ -38,6 +38,7 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
   const [actuals, setActuals] = useState<Record<string, number>>(initialActuals);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [remainders, setRemainders] = useState<Record<string, number | null>>({});
+  const [remainingOpen, setRemainingOpen] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const returnTo = task.returnTo || (task.dueDate ? `/day?date=${encodeURIComponent(task.dueDate)}` : "/");
@@ -157,25 +158,35 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
         </section>
 
         <section className={styles.remainingSection}>
-          <header><div><span>Remaining stems</span><strong>Count only where Atlas cannot calculate yet</strong></div><small>Post-packout</small></header>
-          <div className={styles.remainingList}>
-            {task.directiveLines.map((line) => {
-              const value = remainders[line.productLabel];
-              return (
-                <div className={styles.remainingRow} key={line.id}>
-                  <div className={styles.remainingIdentity}><strong>{line.productLabel}</strong><small>Count needed for this harvest</small></div>
-                  <div className={styles.remainingControl}>
-                    <span>Count</span>
-                    <div className={styles.stepper}>
-                      <button type="button" disabled={saving || (value ?? 0) === 0} onClick={() => changeRemainder(line.productLabel, -1)}>−</button>
-                      <strong>{value == null ? "—" : value}</strong>
-                      <button type="button" disabled={saving} onClick={() => changeRemainder(line.productLabel, 1)}>+</button>
+          <div className={styles.remainingLaunch}>
+            <div className={styles.remainingHeadCopy}>
+              <span className={styles.remainingKicker}>Remaining stems</span>
+              <strong>Count only where Atlas cannot calculate yet</strong>
+            </div>
+            <button type="button" aria-expanded={remainingOpen} onClick={() => setRemainingOpen((current) => !current)}>
+              {remainingOpen ? "Hide remaining stems" : "Log remaining stems"}
+            </button>
+          </div>
+          {remainingOpen ? (
+            <div className={styles.remainingList}>
+              {task.directiveLines.map((line) => {
+                const value = remainders[line.productLabel];
+                return (
+                  <div className={styles.remainingRow} key={line.id}>
+                    <div className={styles.remainingIdentity}><strong>{line.productLabel}</strong><small>Count needed for this harvest</small></div>
+                    <div className={styles.remainingControl}>
+                      <span>Count</span>
+                      <div className={styles.stepper}>
+                        <button type="button" disabled={saving || (value ?? 0) === 0} onClick={() => changeRemainder(line.productLabel, -1)}>−</button>
+                        <strong>{value == null ? "—" : value}</strong>
+                        <button type="button" disabled={saving} onClick={() => changeRemainder(line.productLabel, 1)}>+</button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : null}
         </section>
       </AtlasTaskCardFrame>
     </main>
