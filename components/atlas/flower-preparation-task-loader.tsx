@@ -11,6 +11,31 @@ type Props = { task: AtlasTaskCard; childTasks: AtlasTaskCard[]; assignee: Atlas
 type PreparationContext = FlowerPreparationTask & Partial<Pick<DirectedPreparationTask, "directiveId" | "directiveLines">>;
 type ContextResponse = { ok?: boolean; error?: string; task?: PreparationContext };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function focusedTaskId() {
+  if (typeof window === "undefined") return "";
+  const match = window.location.pathname.match(/^\/task-focus\/([^/?#]+)/i);
+  if (!match?.[1]) return "";
+  try {
+    const candidate = decodeURIComponent(match[1]).trim();
+    return UUID_PATTERN.test(candidate) ? candidate : "";
+  } catch {
+    return "";
+  }
+}
+
+function preparationTaskId(task: AtlasTaskCard) {
+  // The Task Focus route is the canonical identity of the task the worker opened.
+  // Prefer it over a re-hydrated card field so this loader cannot lose the task id
+  // between the server-rendered task card and the client-side context request.
+  const routeTaskId = focusedTaskId();
+  if (routeTaskId) return routeTaskId;
+
+  const cardTaskId = typeof task.task_id === "string" ? task.task_id.trim() : "";
+  return UUID_PATTERN.test(cardTaskId) ? cardTaskId : "";
+}
+
 export default function FlowerPreparationTaskLoader({ task, assignee }: Props) {
   const [context, setContext] = useState<PreparationContext | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -18,14 +43,16 @@ export default function FlowerPreparationTaskLoader({ task, assignee }: Props) {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const response = await fetch(`/api/atlas/flower-preparation-context?taskId=${encodeURIComponent(task.task_id)}`, { cache: "no-store" });
+      const taskId = preparationTaskId(task);
+      if (!taskId) throw new Error("This preparation task lost its focused task identity.");
+      const response = await fetch(`/api/atlas/flower-preparation-context?taskId=${encodeURIComponent(taskId)}`, { cache: "no-store" });
       const payload = await response.json() as ContextResponse;
       if (!response.ok || !payload.ok || !payload.task) throw new Error(payload.error || "Preparation context could not be loaded.");
       setContext({ ...payload.task, returnTo: assignee.listPath });
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Preparation context could not be loaded.");
     }
-  }, [assignee.listPath, task.task_id]);
+  }, [assignee.listPath, task]);
 
   useEffect(() => { void load(); }, [load]);
 
