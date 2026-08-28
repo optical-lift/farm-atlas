@@ -30,7 +30,7 @@ test("flower preparation context exposes immutable directive lines", () => {
 test("flower preparation loader preserves Task Focus route identity", () => {
   const loader = read("components/atlas/flower-preparation-task-loader.tsx");
   assert.match(loader, /window\.location\.pathname/);
-  assert.match(loader, /\^\\\/task-focus\\\//);
+  assert.ok(loader.includes("window.location.pathname.match(/^\\/task-focus\\/"));
   assert.match(loader, /const routeTaskId = focusedTaskId\(\)/);
   assert.match(loader, /if \(routeTaskId\) return routeTaskId/);
   assert.match(loader, /flower-preparation-context\?taskId=\$\{encodeURIComponent\(taskId\)\}/);
