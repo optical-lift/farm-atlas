@@ -1,11 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
-import DesignAtlas from "./DesignAtlas";
+import { AtlasAppShell, AtlasTopBar } from "@/components/atlas/ui/AtlasPrimitives";
 import DesignWorkshop from "./DesignWorkshop";
+import RealAtlasPortal from "./RealAtlasPortal";
 import styles from "./design-studio.module.css";
+import "./workshop-live-overrides.module.css";
 
 type StudioMode = "portal" | "workshop";
 
@@ -15,7 +16,7 @@ export default function DesignAtlasStudio() {
   if (mode === "portal") {
     return (
       <>
-        <DesignAtlas />
+        <RealAtlasPortal />
         <button className={styles.openWorkshop} type="button" onClick={() => setMode("workshop")}>
           <span>DESIGN ATLAS</span>
           <strong>Workshop</strong>
@@ -25,20 +26,19 @@ export default function DesignAtlasStudio() {
   }
 
   return (
-    <main className={styles.workshopRoot} data-atlas-design-studio="fixture-only">
-      <header className={styles.header}>
-        <div className={styles.brand}><span>A</span><div><strong>Atlas</strong><small>DESIGN WORKSHOP</small></div></div>
-        <div className={styles.center}><strong>Design Atlas</strong><small>Visual source of truth · fixture only</small></div>
-        <div className={styles.actions}>
-          <button type="button" onClick={() => setMode("portal")}><span>◫</span><strong>Portal</strong></button>
-          <Link href="/more" aria-label="Exit Design Atlas">×</Link>
-        </div>
-      </header>
-      <section className={styles.modeRail}>
-        <button type="button" onClick={() => setMode("portal")}><span>REAL FAKE APP</span><strong>Portal</strong><small>Pressure-test navigation and role lenses</small></button>
-        <button type="button" data-active="true"><span>DESIGN LIBRARY</span><strong>Workshop</strong><small>Keep visual studies and components together</small></button>
-      </section>
+    <AtlasAppShell
+      className={`atlas-home-shell ${styles.workshopRoot}`}
+      frameClassName={styles.workshopFrame}
+      data-atlas-design-workshop-shell="true"
+      data-live-data-binding="none"
+      data-mutation-capability="none"
+    >
+      <AtlasTopBar
+        title="Design Atlas"
+        status={<span className="atlas-weather-line">Workshop · fixture only</span>}
+        action={<button type="button" className="atlas-global-note-plus" onClick={() => setMode("portal")} aria-label="Return to fake Atlas portal">◫</button>}
+      />
       <section className={styles.content}><DesignWorkshop /></section>
-    </main>
+    </AtlasAppShell>
   );
 }

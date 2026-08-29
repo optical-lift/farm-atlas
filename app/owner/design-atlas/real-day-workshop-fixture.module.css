@@ -1,0 +1,24 @@
+.fixture { position: relative; min-width: 0; }
+.fixture :global(.atlas-task-page-body),
+.fixture :global(.atlas-task-page-section) { padding: 0; }
+.fixture :global(.atlas-day-browse) { margin: 0; }
+.fixture :global(.atlas-day-browse-head) button,
+.fixture :global(.atlas-day-view-toggle) button,
+.fixture :global(.atlas-day-adjacent-nav) button { appearance: none; border: 0; background: transparent; color: inherit; font: inherit; }
+.progress { display: grid; gap: 6px; margin-top: 10px; }
+.progress > div { display: flex; justify-content: space-between; gap: 10px; color: #696b66; font-size: 9px; font-weight: 850; }
+.progress > i { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(85,90,134,.1); }
+.progress > i > span { display: block; height: 100%; border-radius: inherit; background: var(--atlas-purple-deep); }
+.window { display: grid; gap: 7px; padding: 0 0 8px; }
+.window + .window { margin-top: 8px; padding-top: 10px; border-top: 1px solid rgba(88,87,111,.08); }
+.window > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 2px; }
+.window > header span { color: #6f7268; font-size: 9px; font-weight: 950; letter-spacing: .12em; text-transform: uppercase; }
+.window > header small { color: #98988f; font-size: 8px; font-weight: 800; }
+.overlay { position: fixed; z-index: 6200; inset: 0; display: grid; place-items: end center; padding: max(18px,env(safe-area-inset-top)) 10px 0; background: rgba(37,38,49,.42); backdrop-filter: blur(6px); }
+.sheet { width: min(100%,520px); max-height: calc(100svh - 16px); overflow: auto; border: 1px solid rgba(215,204,189,.92); border-radius: 28px 28px 0 0; background: #fbfaf4; box-shadow: 0 -18px 60px rgba(36,34,42,.24); }
+.sheet > header { position: sticky; top: 0; z-index: 5; min-height: 69px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 11px 12px 10px 14px; border-bottom: 1px solid rgba(215,204,189,.75); background: rgba(251,250,244,.97); backdrop-filter: blur(14px); }
+.sheet > header span { display: block; color: var(--atlas-purple-deep); font-size: 8px; font-weight: 950; letter-spacing: .14em; }
+.sheet > header strong { display: block; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.sheet > header small { display: block; margin-top: 2px; color: #77786f; font-size: 9px; }
+.sheet > header button { width: 42px; height: 42px; border: 0; border-radius: 16px; background: var(--atlas-lime); color: #303243; font-size: 25px; }
+.specimen { padding: 12px 10px 28px; }

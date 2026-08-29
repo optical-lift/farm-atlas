@@ -1,0 +1,39 @@
+.fixture { display: grid; gap: 14px; }
+.fixture button { font: inherit; }
+.fixture :global([class*="mode"]) button,
+.fixture :global([class*="dateNav"]) > button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+.fixture :global([class*="mode"]) button {
+  padding: 7px 10px;
+  border-radius: 9px;
+  color: #686b87;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 900;
+}
+.fixture :global([class*="mode"]) button[aria-current="page"] {
+  background: #fff;
+  color: #3f4267;
+  box-shadow: 0 1px 4px rgba(55,51,74,.08);
+}
+.fixture :global([class*="dateNav"]) > button { color: #6d7096; font-size: 18px; font-weight: 900; }
+.blockButton,
+.unplacedButton {
+  width: 100%;
+  display: block;
+  border: 0;
+  background: transparent;
+  color: #303243;
+  padding: 0;
+  text-align: left;
+}
+.blockButton small,
+.unplacedButton small { display: block; }
+.blockButton strong,
+.unplacedButton strong { display: block; }
+.blockButton span,
+.unplacedButton span { display: block; }

@@ -1,0 +1,86 @@
+:global([data-design-atlas-workshop="fixture-only"] > header) {
+  display: grid;
+  gap: 7px;
+  padding: 5px 2px 12px;
+  border: 0;
+  border-bottom: 1px solid rgba(88,87,111,.10);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:global([data-design-atlas-workshop="fixture-only"] > header > span) {
+  color: #8881b7;
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+:global([data-design-atlas-workshop="fixture-only"] > header > h1) {
+  margin: 0;
+  font-size: clamp(24px,6vw,32px);
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+:global([data-design-atlas-workshop="fixture-only"] > header > p) {
+  max-width: 62ch;
+  margin: 0;
+  color: #77786f;
+  font-size: 10px;
+  line-height: 1.45;
+  font-weight: 700;
+}
+:global([data-design-atlas-workshop="fixture-only"] > header > nav) {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  margin: 3px -12px -12px;
+  padding: 9px 12px 10px;
+  border-top: 1px solid rgba(88,87,111,.08);
+  background: rgba(251,250,244,.7);
+  scrollbar-width: none;
+}
+:global([data-design-atlas-workshop="fixture-only"] > header > nav::-webkit-scrollbar) { display:none; }
+:global([data-design-atlas-workshop="fixture-only"] > header > nav > button) {
+  flex: 0 0 auto;
+  min-width: 112px;
+  min-height: 45px;
+  display: grid;
+  gap: 1px;
+  padding: 7px 10px;
+  border: 1px solid rgba(85,90,134,.12);
+  border-radius: 12px;
+  background: #fffdf7;
+  color: #686b87;
+  text-align: left;
+  box-shadow: none;
+}
+:global([data-design-atlas-workshop="fixture-only"] > header > nav > button[data-active="true"]) {
+  border-color: rgba(85,80,139,.28);
+  background: rgba(174,179,212,.18);
+  color: #55508b;
+}
+:global([data-design-atlas-workshop="fixture-only"] > header > nav > button strong) { font-size: 9.5px; }
+:global([data-design-atlas-workshop="fixture-only"] > header > nav > button span) { color: #858691; font-size: 7px; }
+
+:global([data-design-atlas-workshop="fixture-only"] details:has(> summary > span:first-child)) {
+  border: 1px solid rgba(88,87,111,.11);
+  border-radius: 14px;
+  background: #fffdf7;
+  overflow: hidden;
+}
+:global([data-design-atlas-workshop="fixture-only"] details > summary) {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  list-style: none;
+  cursor: pointer;
+}
+:global([data-design-atlas-workshop="fixture-only"] details > summary::-webkit-details-marker) { display:none; }
+:global([data-design-atlas-workshop="fixture-only"] details > summary > span) { color:#8881b7;font-size:7px;font-weight:950;letter-spacing:.12em; }
+:global([data-design-atlas-workshop="fixture-only"] details > summary > strong) { min-width:0;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+:global([data-design-atlas-workshop="fixture-only"] details > summary > b) { color:#8d8b87;font-size:10px; }
+:global([data-design-atlas-workshop="fixture-only"] details[open] > summary > b) { transform:rotate(180deg); }
+:global([data-design-atlas-workshop="fixture-only"] details > div) { display:grid;gap:10px;padding:0 8px 8px; }
