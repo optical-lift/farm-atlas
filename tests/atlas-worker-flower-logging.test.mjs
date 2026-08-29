@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -7,22 +7,35 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (path) => readFileSync(join(root, path), "utf8");
 
-test("Worker Day exposes small flower actuals logging without exposing Owner Harvest", () => {
-  const page = read("app/work/today/page.tsx");
-  const logging = read("app/work/today/WorkerFlowerLogging.tsx");
+test("Farm Hand flower logging lives in Harvest, not Worker Day", () => {
+  const workerDay = read("app/work/today/page.tsx");
+  const harvestPage = read("app/harvest/page.tsx");
+  const farmHandHarvest = read("app/harvest/FarmHandHarvestSection.tsx");
 
-  assert.match(page, /WorkerFlowerLogging/);
-  assert.match(page, /access\.membership\.role === "farm_hand" \? <WorkerFlowerLogging \/>/);
-  assert.match(logging, /data-worker-flower-log="farm-hand-only"/);
-  assert.match(logging, /Log another harvest/);
-  assert.match(logging, /Log another prep batch/);
-  assert.match(logging, /You logged today/);
-  assert.match(logging, /If it has a task card, finish the task instead/);
-  assert.doesNotMatch(logging, /HarvestWorkbenchSection|HarvestOutboundSection|Available Now|Assign \/ Send|On Route|revenue/i);
+  assert.doesNotMatch(workerDay, /WorkerFlowerLogging|FarmHandHarvestSection|Flower logging/);
+  assert.equal(existsSync(join(root, "app/work/today/WorkerFlowerLogging.tsx")), false);
+  assert.match(harvestPage, /FarmHandHarvestSection/);
+  assert.match(harvestPage, /surfaceRole === "farm_hand"/);
+  assert.match(harvestPage, /data-harvest-surface="farm-hand"/);
+  assert.match(farmHandHarvest, /data-farm-hand-harvest="physical-work-only"/);
+  assert.match(farmHandHarvest, /Harvest Stems/);
+  assert.match(farmHandHarvest, /Condition \+ Bunch/);
+  assert.match(farmHandHarvest, /You logged today/);
+  assert.match(farmHandHarvest, /If Atlas already gave you a task for the work, finish that task card instead/);
 });
 
-test("Farm Hand flower context is worker-safe and reads only physical logging context", () => {
-  const api = read("app/api/atlas/worker-flower-log/route.ts");
+test("Farm Hand Harvest projection does not expose the Owner command center", () => {
+  const page = read("app/harvest/page.tsx");
+  const farmHandHarvest = read("app/harvest/FarmHandHarvestSection.tsx");
+
+  assert.match(page, /surfaceRole === "farm_hand"/);
+  assert.match(page, /<FarmHandHarvestSection \/>/);
+  assert.match(page, /data-harvest-surface="owner-manager"/);
+  assert.doesNotMatch(farmHandHarvest, /HarvestWorkbenchSection|HarvestOutboundSection|Available Now|Assign \/ Send|On Route|revenue|unit price|sale order/i);
+});
+
+test("Farm Hand Harvest context is Farm Hand-only and reads only physical flower context", () => {
+  const api = read("app/api/atlas/farm-hand-harvest/route.ts");
 
   assert.match(api, /allowedRoles: \["farm_hand"\]/);
   for (const canonicalTable of [
@@ -45,31 +58,24 @@ test("Farm Hand flower context is worker-safe and reads only physical logging co
 
   assert.match(api, /row\.recorded_by_membership_id === membershipId/);
   assert.match(api, /\.eq\("recorded_by_membership_id", membershipId\)/);
+  assert.equal(existsSync(join(root, "app/api/atlas/worker-flower-log/route.ts")), false);
 });
 
-test("Farm Hand quick logging reuses the canonical Harvest workbench write boundary", () => {
-  const logging = read("app/work/today/WorkerFlowerLogging.tsx");
+test("Farm Hand Harvest writes reuse canonical workbench authority with Harvest-tab provenance", () => {
+  const farmHandHarvest = read("app/harvest/FarmHandHarvestSection.tsx");
   const writer = read("app/api/atlas/harvest-workbench/route.ts");
+  const reader = read("app/api/atlas/farm-hand-harvest/route.ts");
 
-  assert.match(logging, /fetch\("\/api\/atlas\/worker-flower-log"/);
-  assert.match(logging, /fetch\("\/api\/atlas\/harvest-workbench"/);
-  assert.match(writer, /record_flower_harvest_worker_quick_log_v1/);
-  assert.match(writer, /record_flower_preparation_worker_quick_log_v1/);
+  assert.match(farmHandHarvest, /fetch\("\/api\/atlas\/farm-hand-harvest"/);
+  assert.match(farmHandHarvest, /fetch\("\/api\/atlas\/harvest-workbench"/);
+  assert.match(writer, /farmHandHarvestTab/);
+  assert.match(writer, /record_flower_harvest_farm_hand_tab_v1/);
+  assert.match(writer, /record_flower_preparation_farm_hand_tab_v1/);
+  assert.doesNotMatch(writer, /record_flower_harvest_worker_quick_log_v1|record_flower_preparation_worker_quick_log_v1/);
   assert.match(writer, /owner_operator_record_flower_harvest_workbench_v1/);
   assert.match(writer, /owner_operator_record_flower_preparation_workbench_v1/);
   assert.doesNotMatch(writer, /\.insert\(/);
-});
-
-test("quick-log provenance stays distinct from Harvest-tab provenance", () => {
-  const writer = read("app/api/atlas/harvest-workbench/route.ts");
-  const logging = read("app/work/today/WorkerFlowerLogging.tsx");
-  const reader = read("app/api/atlas/worker-flower-log/route.ts");
-  const ownerLedger = read("app/api/atlas/harvest-ledger/route.ts");
-
-  assert.match(writer, /workerQuickLog/);
-  assert.match(reader, /\? "Quick log" : "Task"/);
-  assert.match(ownerLedger, /entrySurface === "worker_day"/);
-  assert.match(ownerLedger, /return "Worker quick log"/);
-  assert.match(logging, /same flower history as task harvests/);
-  assert.match(logging, /Ready inventory/);
+  assert.match(reader, /entrySurface\"\) === \"harvest_tab\" \? \"Harvest\" : \"Task\"/);
+  assert.match(farmHandHarvest, /same flower history as scheduled Harvest tasks/);
+  assert.match(farmHandHarvest, /Ready inventory/);
 });
