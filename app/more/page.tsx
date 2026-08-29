@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
 
+import AtlasLabWorkbench from "./AtlasLabWorkbench";
+
 export const dynamic = "force-dynamic";
 
 export default async function AtlasMorePage() {
@@ -61,6 +63,8 @@ export default async function AtlasMorePage() {
 
         <div id="atlas-more-account-slot" />
         {canManage ? <div id="atlas-more-work-alongside-slot" /> : null}
+
+        {isFarmOwner ? <AtlasLabWorkbench /> : null}
 
         <nav className="atlas-more-page__list" aria-label="More Atlas destinations">
           {destinations.map((destination) => (
