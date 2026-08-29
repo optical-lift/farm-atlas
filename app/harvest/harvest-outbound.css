@@ -1,0 +1,395 @@
+.harvest-outbound {
+  display: grid;
+  gap: 0;
+}
+
+.harvest-outbound__completion {
+  display: block;
+  padding: 11px 14px;
+  font-size: 11px;
+  font-weight: 720;
+  opacity: .66;
+}
+
+.harvest-outbound__views {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(48, 43, 34, .1);
+  background: rgba(48, 43, 34, .035);
+}
+
+.harvest-outbound__views button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(48, 43, 34, .16);
+  border-radius: 10px;
+  background: rgba(255,255,255,.72);
+  padding: 8px 10px;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.harvest-outbound__views button[data-selected="true"] {
+  border-color: #28271f;
+  background: #28271f;
+  color: #fffdf8;
+}
+
+.harvest-outbound__views button span {
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(48, 43, 34, .08);
+  font-size: 9px;
+  line-height: 1;
+}
+
+.harvest-outbound__views button[data-selected="true"] span {
+  background: rgba(255,255,255,.16);
+}
+
+.harvest-outbound__dock,
+.harvest-outbound__deliveries,
+.harvest-outbound__routes {
+  display: grid;
+}
+
+.harvest-outbound__dock-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 17px 11px;
+}
+
+.harvest-outbound__dock-header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.harvest-outbound__dock-header small,
+.harvest-outbound__delivery small,
+.harvest-outbound__route small {
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  opacity: .58;
+}
+
+.harvest-outbound__dock-header strong {
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+.harvest-outbound__dock-header > span {
+  font-size: 10px;
+  font-weight: 800;
+  opacity: .58;
+}
+
+.harvest-outbound__order-list {
+  display: grid;
+  border-top: 1px solid rgba(48,43,34,.1);
+}
+
+.harvest-outbound__order {
+  display: grid;
+  gap: 7px;
+  padding: 12px 17px 13px;
+  border-bottom: 1px solid rgba(48,43,34,.1);
+  background: rgba(255,255,255,.55);
+}
+
+.harvest-outbound__order:last-child {
+  border-bottom: 0;
+}
+
+.harvest-outbound__order-topline,
+.harvest-outbound__order footer,
+.harvest-outbound__delivery header,
+.harvest-outbound__delivery footer,
+.harvest-outbound__route > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.harvest-outbound__order-identity {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.harvest-outbound__order-identity strong {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.harvest-outbound__order-identity span {
+  font-size: 11px;
+  font-weight: 760;
+  opacity: .62;
+}
+
+.harvest-outbound__amount {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(214,225,177,.55);
+  padding: 5px 8px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.harvest-outbound__order h3,
+.harvest-outbound__delivery h3,
+.harvest-outbound__route h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.15;
+}
+
+.harvest-outbound__order ul,
+.harvest-outbound__delivery ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.harvest-outbound__order li,
+.harvest-outbound__delivery li {
+  position: relative;
+  padding-left: 12px;
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 760;
+  opacity: .76;
+}
+
+.harvest-outbound__order li::before,
+.harvest-outbound__delivery li::before {
+  content: "";
+  position: absolute;
+  top: .56em;
+  left: 1px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(133,139,184,.58);
+}
+
+.harvest-outbound__order footer,
+.harvest-outbound__delivery footer {
+  margin-top: 2px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(48,43,34,.08);
+}
+
+.harvest-outbound a {
+  color: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  text-underline-offset: 2px;
+}
+
+.harvest-outbound__needs-task {
+  font-size: 10px;
+  font-weight: 780;
+  opacity: .52;
+}
+
+.harvest-outbound__primary,
+.harvest-outbound__route button,
+.harvest-outbound__route-sale > button {
+  flex: 0 0 auto;
+  border: 1px solid rgba(48,43,34,.2);
+  border-radius: 9px;
+  background: #28271f;
+  padding: 8px 10px;
+  color: #fffdf8;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.harvest-outbound__primary:disabled,
+.harvest-outbound button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+.harvest-outbound__delivery {
+  display: grid;
+  gap: 9px;
+  padding: 13px 17px;
+  border-bottom: 1px solid rgba(48,43,34,.1);
+  background: rgba(255,255,255,.5);
+}
+
+.harvest-outbound__delivery:last-child {
+  border-bottom: 0;
+}
+
+.harvest-outbound__delivery header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.harvest-outbound__delivery header > span,
+.harvest-outbound__delivery footer > span {
+  font-size: 10px;
+  font-weight: 780;
+  opacity: .6;
+}
+
+.harvest-outbound__delivery footer > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.harvest-outbound__route {
+  border-bottom: 1px solid rgba(48,43,34,.1);
+  background: rgba(255,255,255,.52);
+}
+
+.harvest-outbound__route:last-child {
+  border-bottom: 0;
+}
+
+.harvest-outbound__route > header {
+  padding: 12px 14px;
+}
+
+.harvest-outbound__route > header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.harvest-outbound__route p {
+  margin: 0;
+  font-size: 11px;
+  opacity: .64;
+}
+
+.harvest-outbound__route > header > button {
+  background: #fff;
+  color: inherit;
+}
+
+.harvest-outbound__route-line {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(280px, 1.45fr);
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid rgba(48,43,34,.09);
+  padding: 10px 14px;
+}
+
+.harvest-outbound__route-line > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.harvest-outbound__route-line b {
+  font-size: 13px;
+}
+
+.harvest-outbound__route-line span {
+  font-size: 11px;
+  opacity: .65;
+}
+
+.harvest-outbound__route-sale {
+  display: grid;
+  grid-template-columns: 64px 86px minmax(95px, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.harvest-outbound__route-sale input {
+  min-width: 0;
+  border: 1px solid rgba(48,43,34,.2);
+  border-radius: 9px;
+  background: #fff;
+  padding: 7px 8px;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+}
+
+.harvest-outbound__route-sale label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.harvest-outbound__route-sale label input {
+  width: 100%;
+}
+
+.harvest-outbound__route-sale label span {
+  font-size: 12px;
+}
+
+.harvest-outbound__empty {
+  display: grid;
+  gap: 3px;
+  margin: 14px;
+  border: 1px dashed rgba(48,43,34,.18);
+  border-radius: 11px;
+  padding: 14px;
+  font-size: 11px;
+}
+
+.harvest-outbound__empty span,
+.harvest-outbound__all-clear {
+  opacity: .64;
+}
+
+.harvest-outbound__all-clear {
+  margin: 0;
+  border-top: 1px solid rgba(48,43,34,.08);
+  padding: 10px 14px 13px;
+  font-size: 10px;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .harvest-outbound__views {
+    grid-template-columns: 1fr;
+  }
+
+  .harvest-outbound__route-line {
+    grid-template-columns: 1fr;
+  }
+
+  .harvest-outbound__route-sale {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .harvest-outbound__order footer,
+  .harvest-outbound__delivery footer,
+  .harvest-outbound__delivery header,
+  .harvest-outbound__route > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

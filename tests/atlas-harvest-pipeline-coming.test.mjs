@@ -7,13 +7,13 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (path) => readFileSync(join(root, path), "utf8");
 
-test("Harvest tab is a task-style crop-to-commerce pipeline, not a separate dashboard", () => {
+test("Harvest preserves the task-style crop-to-commerce outlook under the command center", () => {
   const page = read("app/harvest/page.tsx");
   const pipeline = read("app/harvest/HarvestPipelineSection.tsx");
 
   assert.match(page, /HarvestPipelineSection/);
-  assert.match(page, /Crop → customer/);
-  assert.match(page, /atlas-harvest-outlook/);
+  assert.match(page, /Work → inventory → customer/);
+  assert.match(page, /UPCOMING & CROP OUTLOOK/);
   assert.match(pipeline, /\["COMING", "CUT", "PREP", "READY", "CLAIMED", "OUT"\]/);
   assert.match(pipeline, /\+ Add harvest/);
   assert.doesNotMatch(pipeline, /\+ Add task/i);
