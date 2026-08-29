@@ -1,0 +1,267 @@
+:global(body:has([data-atlas-real-portal="true"]) .atlas-global-header),
+:global(body:has([data-atlas-real-portal="true"]) .atlas-owner-operator),
+:global(body:has([data-atlas-real-portal="true"]) > .atlas-context-footer) {
+  display: none !important;
+}
+
+:global([data-atlas-real-portal="true"] > .atlas-context-footer) {
+  display: block !important;
+}
+
+:global(body:has([data-atlas-real-portal="true"])) {
+  padding-bottom: calc(var(--atlas-context-footer-height) + env(safe-area-inset-bottom) + 12px);
+}
+
+.root {
+  min-height: 100svh;
+  padding-bottom: 72px;
+}
+
+.frame {
+  position: relative;
+  min-height: calc(100svh - 24px);
+  padding-bottom: 24px;
+  overflow: visible;
+}
+
+.body {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px 20px;
+}
+
+.body :global(.atlas-task-page-body) {
+  padding: 0;
+}
+
+.body :global(.atlas-task-page-section) {
+  padding: 0;
+}
+
+.designLens {
+  position: relative;
+  z-index: 18;
+  border: 1px solid rgba(85, 90, 134, 0.14);
+  border-radius: 15px;
+  background: rgba(246, 242, 230, 0.8);
+  color: var(--atlas-text);
+  box-shadow: 0 4px 14px rgba(47, 48, 66, 0.035);
+}
+
+.designLens > summary {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.designLens > summary::-webkit-details-marker { display: none; }
+.designLens > summary span,
+.designLens label > span {
+  color: var(--atlas-purple-deep);
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.designLens > summary strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.designLens > summary b { color: #85808f; font-size: 11px; }
+.designLens[open] > summary b { transform: rotate(180deg); }
+.designLens > div { display: grid; gap: 10px; padding: 0 11px 11px; border-top: 1px solid rgba(85,90,134,.08); }
+.designLens p { margin: 9px 0 0; color: #767870; font-size: 10px; line-height: 1.4; font-weight: 700; }
+.designLens label { display: grid; gap: 5px; }
+.designLens label > div { display: flex; gap: 5px; flex-wrap: wrap; }
+.designLens label button {
+  min-height: 31px;
+  border: 1px solid rgba(85,90,134,.14);
+  border-radius: 999px;
+  background: #fffdf7;
+  color: #6d6e68;
+  padding: 0 10px;
+  font-size: 10px;
+  font-weight: 850;
+}
+.designLens label button[data-active="true"] { border-color: rgba(85,80,139,.35); background: rgba(174,179,212,.28); color: #55508b; }
+
+/* Reuse live Home module classes even though the fixture uses buttons instead of links. */
+.body :global(button) { font-family: inherit; }
+.body :global(.atlas-card) button { color: inherit; }
+
+.body :global(.atlas-day-browse) { margin: 0; }
+.body :global(.atlas-day-browse-head) button,
+.body :global(.atlas-day-view-toggle) button,
+.body :global(.atlas-day-adjacent-nav) button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.dayProgress {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+.dayProgress > div { display: flex; justify-content: space-between; gap: 12px; color: #696b66; font-size: 9px; font-weight: 850; }
+.dayProgress > i { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(85,90,134,.1); }
+.dayProgress > i > span { display: block; height: 100%; border-radius: inherit; background: var(--atlas-purple-deep); }
+
+.windowGroup {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0 0 8px;
+}
+.windowGroup + .windowGroup { margin-top: 8px; padding-top: 10px; border-top: 1px solid rgba(88,87,111,.08); }
+.windowGroup > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 2px; }
+.windowGroup > header span { color: #6f7268; font-size: 9px; font-weight: 950; letter-spacing: .12em; text-transform: uppercase; }
+.windowGroup > header small { color: #98988f; font-size: 8px; font-weight: 800; }
+
+.stack { display: grid; gap: 12px; }
+.simpleCard { padding: 14px; }
+.simpleCard > header { display: flex; align-items: end; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.simpleCard > header span,
+.routeIntro > span { color: var(--atlas-purple-deep); font-size: 8px; font-weight: 950; letter-spacing: .17em; text-transform: uppercase; }
+.simpleCard > header h2 { margin: 3px 0 0; font-size: 19px; line-height: 1; letter-spacing: -.03em; }
+.routeIntro { padding: 3px 2px 1px; }
+.routeIntro h1 { margin: 5px 0 0; font-size: 28px; line-height: 1; letter-spacing: -.045em; }
+.routeIntro p { margin: 8px 0 0; color: #77786f; font-size: 11px; line-height: 1.45; font-weight: 700; }
+
+.metricGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.metricGrid article { min-width: 0; min-height: 86px; display: grid; align-content: center; gap: 2px; border: 1px solid rgba(88,87,111,.1); border-radius: 14px; background: #fffdf7; padding: 10px; }
+.metricGrid span { color: #85867f; font-size: 8px; font-weight: 900; text-transform: uppercase; }
+.metricGrid strong { font-size: 23px; line-height: 1; letter-spacing: -.05em; }
+.metricGrid small { color: #77786f; font-size: 9px; font-weight: 700; }
+
+.rowList,
+.routeList { display: grid; gap: 7px; }
+.rowList > button,
+.routeList > button,
+:global([data-atlas-real-portal="true"] .atlas-more-page__list > button) {
+  width: 100%;
+  min-width: 0;
+  min-height: 65px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(88,87,111,.11);
+  border-radius: 14px;
+  background: #fffdf7;
+  color: inherit;
+  padding: 10px 12px;
+  text-align: left;
+}
+.rowList > button > span { min-width: 42px; color: #8881b7; font-size: 8px; font-weight: 950; text-transform: uppercase; }
+.rowList > button > strong { font-size: 12px; line-height: 1.25; }
+.rowList > button > small { grid-column: 2; margin-top: -6px; color: #77786f; font-size: 9px; font-weight: 700; }
+.rowList > button > b { grid-column: 3; grid-row: 1 / span 2; color: #aaa69e; }
+.routeList > button { grid-template-columns: minmax(0,1fr) auto; }
+.routeList > button strong,
+:global([data-atlas-real-portal="true"] .atlas-more-page__list > button strong) { display: block; font-size: 12px; }
+.routeList > button span,
+:global([data-atlas-real-portal="true"] .atlas-more-page__list > button span) { display: block; margin-top: 3px; color: #77786f; font-size: 9px; font-weight: 700; }
+.routeList > button b,
+:global([data-atlas-real-portal="true"] .atlas-more-page__list > button b) { color: #aaa69e; }
+
+/* Exact fixed dock geometry comes from contextual-app-shell.css. */
+:global([data-atlas-real-portal="true"] .atlas-context-footer__item) {
+  border: 0;
+  background: transparent;
+  appearance: none;
+}
+
+:global([data-atlas-real-portal="true"] .atlas-topbar) { display: grid !important; }
+:global([data-atlas-real-portal="true"] .atlas-topbar .atlas-topbar-brand) { pointer-events: none; }
+:global([data-atlas-real-portal="true"] .atlas-global-note-plus) { font-size: 13px; letter-spacing: .02em; }
+
+.logFab {
+  position: fixed;
+  z-index: 925;
+  right: max(18px, calc((100vw - min(100vw, 430px)) / 2 + 18px));
+  bottom: calc(var(--atlas-context-footer-height) + env(safe-area-inset-bottom) + 15px);
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #c8ca82;
+  border-radius: 20px;
+  background: var(--atlas-lime);
+  color: #303243;
+  font-size: 28px;
+  font-weight: 900;
+  box-shadow: 0 12px 30px rgba(54,45,32,.16);
+}
+
+.taskOverlay {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  display: grid;
+  place-items: end center;
+  padding: max(18px, env(safe-area-inset-top)) 10px 0;
+  background: rgba(37, 38, 49, .42);
+  backdrop-filter: blur(6px);
+}
+.taskSheet {
+  width: min(100%, 520px);
+  max-height: calc(100svh - 16px);
+  overflow: auto;
+  border: 1px solid rgba(215,204,189,.92);
+  border-radius: 28px 28px 0 0;
+  background: #fbfaf4;
+  box-shadow: 0 -18px 60px rgba(36,34,42,.24);
+}
+.taskSheet > header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  min-height: 69px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px 10px 14px;
+  border-bottom: 1px solid rgba(215,204,189,.75);
+  background: rgba(251,250,244,.97);
+  backdrop-filter: blur(14px);
+}
+.taskSheet > header > div { min-width: 0; }
+.taskSheet > header span { display: block; color: var(--atlas-purple-deep); font-size: 8px; font-weight: 950; letter-spacing: .14em; }
+.taskSheet > header strong { display: block; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.taskSheet > header small { display: block; margin-top: 2px; color: #77786f; font-size: 9px; }
+.taskSheet > header button { width: 42px; height: 42px; border: 0; border-radius: 16px; background: var(--atlas-lime); color: #303243; font-size: 25px; font-weight: 500; }
+.taskSpecimen { padding: 12px 10px 28px; }
+
+/* Home CSS module uses links in production. Fixture buttons inherit that exact layout here. */
+.body :global([class*="days"] > button),
+.body :global([class*="timeRoutes"] > button),
+.body :global([class*="heroMoveBody"]),
+.body :global([class*="heroAction"]),
+.body :global([class*="lensHeader"] > button),
+.body :global([class*="lensList"] > button) {
+  appearance: none;
+  border: 0;
+  font: inherit;
+  text-align: inherit;
+}
+.body :global([class*="days"] > button) { color: inherit; background: transparent; }
+.body :global([class*="timeRoutes"] > button) { color: inherit; background: transparent; text-decoration: none; }
+.body :global([class*="heroMoveBody"]) { width: 100%; background: transparent; color: inherit; }
+.body :global([class*="heroAction"]) { background: transparent; }
+.body :global([class*="lensHeader"] > button) { min-width: 30px; min-height: 30px; border-radius: 999px; background: rgba(174,179,212,.22); color: #55508b; font-weight: 900; }
+.body :global([class*="lensList"] > button) { width: 100%; background: transparent; color: inherit; }
+
+@media (max-width: 520px) {
+  .root { padding: 0 0 68px; }
+  .frame { min-height: 100svh; border-radius: 0 !important; border-right: 0 !important; border-left: 0 !important; }
+  .body { padding: 10px 12px 18px; }
+  .metricGrid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .taskSheet { width: 100%; }
+}
