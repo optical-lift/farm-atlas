@@ -43,8 +43,8 @@ test("Farm Hand flower context is worker-safe and reads only physical logging co
     "total_amount",
   ]) assert.doesNotMatch(api, new RegExp(ownerCommercialTruth));
 
-  assert.match(api, /recorded_by_membership_id === membershipId/);
-  assert.match(api, /recorded_by_membership_id", membershipId/);
+  assert.match(api, /row\.recorded_by_membership_id === membershipId/);
+  assert.match(api, /\.eq\("recorded_by_membership_id", membershipId\)/);
 });
 
 test("Farm Hand quick logging reuses the canonical Harvest workbench write boundary", () => {
