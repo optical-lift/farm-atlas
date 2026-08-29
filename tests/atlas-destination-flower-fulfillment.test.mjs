@@ -18,14 +18,19 @@ test("off-site flower fulfillment uses the destination handoff card", () => {
   assert.match(contact, /destination\.contactName/);
 });
 
-test("Done on a destination flower fulfillment records fulfillment before leaving the task", () => {
+test("Done on a destination flower fulfillment resolves current task identity before recording handoff", () => {
   const card = read("components/atlas/destination-assigned-task-card.tsx");
-  const api = read("app/api/atlas/flower-fulfillment/route.ts");
+  const taskCardsApi = read("app/api/atlas/task-cards/route.ts");
+  const fulfillmentApi = read("app/api/atlas/flower-fulfillment/route.ts");
 
-  assert.match(card, /outcome === "done" && task\.task_type === "flower_fulfillment"/);
+  assert.match(card, /const liveTask = await resolveLiveTask\(\)/);
+  assert.match(card, /outcome === "done" && liveTask\.task_type === "flower_fulfillment"/);
   assert.match(card, /fetch\("\/api\/atlas\/flower-fulfillment"/);
+  assert.match(card, /taskId: liveTask\.task_id/);
   assert.match(card, /idempotencyKey/);
-  assert.match(card, /await recordFlowerFulfillment\(note\);\s*navigation\.complete\(task\.task_id\);\s*return;/);
-  assert.match(api, /record_flower_fulfillment_for_member_v1/);
-  assert.match(api, /owner_operator_record_flower_fulfillment_v1/);
+  assert.match(card, /await recordFlowerFulfillment\(liveTask, note\);\s*navigation\.complete\(liveTask\.task_id\);\s*return;/);
+  assert.match(taskCardsApi, /metadata\.superseded_by_task_id/);
+  assert.match(taskCardsApi, /canonicalTaskId/);
+  assert.match(fulfillmentApi, /record_flower_fulfillment_for_member_v1/);
+  assert.match(fulfillmentApi, /owner_operator_record_flower_fulfillment_v1/);
 });
