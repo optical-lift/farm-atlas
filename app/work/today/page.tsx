@@ -5,8 +5,10 @@ import WorkerDayModeCheckIn from "@/components/atlas/work/WorkerDayModeCheckIn";
 import { buildAdaptiveDayPlan, type AdaptiveDayTask } from "@/lib/atlas/adaptive-day-overview";
 import { getWorkerDayRoutingState } from "@/lib/atlas-data/worker-day-routing";
 import { getWorkerHand } from "@/lib/atlas-data/worker-hand";
+import { getWorkerOperationalRouteStopsForFarm, type WorkerOperationalRouteStop } from "@/lib/atlas-data/worker-operational-routes";
 import { readWorkerWeekProjection } from "@/lib/atlas-data/worker-week-projection";
 import { requireAtlasRole } from "@/lib/atlas/role-access";
+import WorkerRouteStopActions from "./WorkerRouteStopActions";
 import WorkerTaskActions from "./WorkerTaskActions";
 import styles from "./work.module.css";
 
@@ -25,6 +27,13 @@ function prettyDate(dateIso: string | null) {
   const date = new Date(`${dateIso}T12:00:00`);
   if (Number.isNaN(date.getTime())) return dateIso;
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function prettyWindow(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Chicago" });
 }
 
 function validDateIso(value: string | undefined) {
@@ -71,6 +80,39 @@ function AdaptiveSection({ title, tasks, emphasis = false }: { title: string; ta
   );
 }
 
+function WorkerRouteSection({ stops, canAct }: { stops: WorkerOperationalRouteStop[]; canAct: boolean }) {
+  if (!stops.length) return null;
+  return (
+    <section className={styles.section} data-worker-operational-routes="assigned-only">
+      <div className={styles.sectionHeader}><h2>Stops for you</h2><span>{stops.length}</span></div>
+      <div className={styles.list}>
+        {stops.map((stop) => {
+          const start = prettyWindow(stop.serviceWindowStart);
+          const end = prettyWindow(stop.serviceWindowEnd);
+          const window = start && end && start !== end ? `${start}–${end}` : start ?? end;
+          return (
+            <article className={styles.task} key={stop.stopId} data-route-stop-kind={stop.stopKind}>
+              <div className={styles.taskTop}>
+                <h3>{stop.destinationLabel}</h3>
+                <span className={styles.date}>{window ?? prettyDate(stop.routeDate)}</span>
+              </div>
+              {stop.addressText ? <p className={styles.location}>{stop.addressText}</p> : null}
+              {stop.contactName ? <p className={styles.progress} style={{ fontWeight: 800 }}>Ask for {stop.contactName}</p> : null}
+              {stop.obligations.length ? (
+                <div>
+                  {stop.obligations.map((obligation) => <p className={styles.progress} key={obligation.bindingId}>{obligation.description}</p>)}
+                </div>
+              ) : null}
+              {stop.workerInstruction ? <p className={styles.instruction}>{stop.workerInstruction}</p> : null}
+              {canAct ? <WorkerRouteStopActions stopId={stop.stopId} stopKind={stop.stopKind} /> : null}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageProps) {
   const access = await requireAtlasRole(["owner", "manager", "farm_hand"]);
   const params = await searchParams;
@@ -79,11 +121,14 @@ export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageP
 
   const today = centralTodayIso();
   const requestedDate = inspectMode ? (validDateIso(params.date) ?? today) : today;
-  const [hand, routingState] = await Promise.all([
+  const [hand, routingState, routeStops] = await Promise.all([
     getWorkerHand(access, null, requestedDate),
     access.membership.role === "farm_hand" ? getWorkerDayRoutingState(access).catch(() => null) : Promise.resolve(null),
+    access.membership.role === "farm_hand" ? getWorkerOperationalRouteStopsForFarm(access.membership.farmId, requestedDate).catch(() => []) : Promise.resolve([]),
   ]);
   const allTasks = [...hand.lanes.blocked, ...hand.lanes.overdue, ...hand.lanes.today, ...hand.lanes.undated];
+  const taskIds = new Set(allTasks.flatMap((task) => task.taskId ? [task.taskId] : []));
+  const routeOnlyStops = routeStops.filter((stop) => !stop.executionTaskId || !taskIds.has(stop.executionTaskId));
   const plan = buildAdaptiveDayPlan(allTasks, routingState);
   const futureInspection = inspectMode && requestedDate > today;
   const projection = futureInspection && hand.worker
@@ -153,6 +198,8 @@ export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageP
                   <article><strong>{plan.waiting.length}</strong><span>waiting</span></article>
                 </section>
 
+                <WorkerRouteSection stops={routeOnlyStops} canAct={hand.canAct} />
+
                 {hand.counts.total ? (
                   <>
                     <AdaptiveSection title="Now" tasks={plan.now} emphasis />
@@ -160,9 +207,9 @@ export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageP
                     <AdaptiveSection title="Later" tasks={plan.later} />
                     <AdaptiveSection title="Waiting" tasks={plan.waiting} />
                   </>
-                ) : (
-                  <section className={styles.emptyState}><h2>No work is ready</h2><p>There are no assigned or farm-shared tasks due for this worker today.</p></section>
-                )}
+                ) : !routeOnlyStops.length ? (
+                  <section className={styles.emptyState}><h2>No work is ready</h2><p>There are no assigned tasks or route stops for this worker today.</p></section>
+                ) : null}
               </>
             )}
           </>
