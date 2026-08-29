@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import DayFixedTimes from "@/components/atlas/reservations/DayFixedTimes";
 import { useAtlasWorkerDayProjection } from "@/components/atlas/runtime/AtlasRuntimeProvider";
 import { atlasNormalizeFarmDate } from "@/lib/atlas/farm-day";
+import WorkerActivityDayLayer from "./WorkerActivityDayLayer";
 
 function taskIdFromSummary(summary: HTMLElement) {
   const entry = summary.closest<HTMLElement>(".atlas-day-task-entry[id^='day-task-']");
@@ -33,18 +34,32 @@ export default function DaySurface({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
   const dateIso = atlasNormalizeFarmDate(searchParams.get("date"));
   const { projection, runtimeScopeKey } = useAtlasWorkerDayProjection(dateIso);
+  const [activityHost, setActivityHost] = useState<HTMLElement | null>(null);
   const [fixedTimesHost, setFixedTimesHost] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     const header = document.querySelector<HTMLElement>(".atlas-day-command-header");
-    if (!header?.parentElement) { setFixedTimesHost(null); return; }
-    const host = document.createElement("div");
-    host.dataset.atlasDayFixedTimesHost = "true";
-    header.insertAdjacentElement("afterend", host);
-    setFixedTimesHost(host);
-    return () => {
+    if (!header?.parentElement) {
+      setActivityHost(null);
       setFixedTimesHost(null);
-      host.remove();
+      return;
+    }
+
+    const activity = document.createElement("div");
+    activity.dataset.atlasWorkerActivityHost = "true";
+    header.insertAdjacentElement("afterend", activity);
+
+    const fixed = document.createElement("div");
+    fixed.dataset.atlasDayFixedTimesHost = "true";
+    activity.insertAdjacentElement("afterend", fixed);
+
+    setActivityHost(activity);
+    setFixedTimesHost(fixed);
+    return () => {
+      setActivityHost(null);
+      setFixedTimesHost(null);
+      activity.remove();
+      fixed.remove();
     };
   }, [dateIso]);
 
@@ -80,6 +95,15 @@ export default function DaySurface({ children }: { children: ReactNode }) {
       style={{ display: "contents" }}
     >
       {children}
+      {activityHost ? createPortal(
+        <WorkerActivityDayLayer
+          dateIso={dateIso}
+          farmId={projection?.identity.farmId ?? null}
+          membershipId={projection?.identity.membershipId ?? null}
+          selfView={projection?.identity.lens === "worker_self"}
+        />,
+        activityHost,
+      ) : null}
       {fixedTimesHost ? createPortal(<DayFixedTimes dateIso={dateIso} />, fixedTimesHost) : null}
     </div>
   );

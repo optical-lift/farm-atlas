@@ -8,6 +8,7 @@ import { FieldLogDrawer, type AtlasFieldLogSeed } from "@/components/atlas/field
 import { AtlasTopBar } from "@/components/atlas/ui/AtlasPrimitives";
 import { atlasFarmDateIso } from "@/lib/atlas/farm-day";
 import type { AtlasFarmRole } from "@/lib/atlas/session";
+import { ATLAS_OPEN_WORK_LOG_EVENT } from "@/lib/atlas/worker-activity-events";
 import { fetchAtlasZoneRegistry, type AtlasRegistryZone } from "@/lib/atlas/zone-registry-client";
 
 type DockIconKey = "home" | "work" | "clock" | "manager" | "harvest" | "more";
@@ -152,6 +153,8 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
   const canManage = effectiveFarmRole === "owner" || effectiveFarmRole === "manager";
   const canDocument = Boolean(effectiveFarmRole);
   const requestedReturnTo = searchParams.get("returnTo");
+  const selectedDay = searchParams.get("date");
+  const isLiveDayOverview = pathname === "/day" && (!selectedDay || selectedDay === atlasFarmDateIso());
   const exitHref = useMemo(() => {
     const safeReturnTo = safeInternalReturnTo(requestedReturnTo);
     if (pathname.startsWith("/task")) return safeReturnTo ?? workHref;
@@ -225,6 +228,10 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
     setLogSeed({ workKey: "note", zoneKeys: [], objectKeys: [] });
   }
 
+  function openWorkerActivityLog() {
+    window.dispatchEvent(new Event(ATLAS_OPEN_WORK_LOG_EVENT));
+  }
+
   const items: Array<{ key: DockIconKey; label: string; href: string }> = principalProjection
     ? [
         { key: "home", label: "Home", href: "/principal" },
@@ -240,11 +247,13 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
         { key: "more", label: "More", href: "/more" },
       ];
 
-  const headerAction = active === "home"
-    ? canDocument
-      ? <button type="button" className="atlas-global-note-plus" aria-label="Document work" onClick={() => void openFieldLog()}>+</button>
-      : null
-    : <Link href={exitHref} className="atlas-global-note-plus atlas-global-exit" aria-label={`Exit ${routeLabel(active)}`}>×</Link>;
+  const headerAction = isLiveDayOverview && canDocument
+    ? <button type="button" className="atlas-global-note-plus" aria-label="Log work" onClick={openWorkerActivityLog}>+</button>
+    : active === "home"
+      ? canDocument
+        ? <button type="button" className="atlas-global-note-plus" aria-label="Document work" onClick={() => void openFieldLog()}>+</button>
+        : null
+      : <Link href={exitHref} className="atlas-global-note-plus atlas-global-exit" aria-label={`Exit ${routeLabel(active)}`}>×</Link>;
 
   // Legacy route marker retained for contract search: "/#work-board".
   return (
