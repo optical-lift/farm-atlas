@@ -12,6 +12,7 @@ import NetworkInputsTaskDetail from "@/components/atlas/network-inputs-task-deta
 import NetworkOutreachTaskDetail from "@/components/atlas/network-outreach-task-detail";
 import OneOffMowingTaskDetail from "@/components/atlas/one-off-mowing-task-detail";
 import PhoneOutreachTaskDetail from "@/components/atlas/phone-outreach-task-detail";
+import ProductionHardeningTaskDetail from "@/components/atlas/production-hardening-task-detail";
 import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import SiteLayoutTaskDetail from "@/components/atlas/site-layout-task-detail";
@@ -166,6 +167,14 @@ function isExecutionChecklistTask(task: AtlasTaskCard) {
     && task.metadata.execution_checklist_template_key.length > 0;
 }
 
+function isProductionHardeningTask(task: AtlasTaskCard) {
+  return task.task_type === "hardening_off"
+    && task.action_key === "hardening_off"
+    && task.metadata?.continuity_contract === "seedling_care_to_hardening_to_transplant_v1"
+    && typeof task.metadata?.production_lot_id === "string"
+    && typeof task.metadata?.production_tray_batch_id === "string";
+}
+
 function isTransplantReadinessTask(task: AtlasTaskCard) {
   return task.task_type === "transplant_readiness"
     || task.metadata?.task_style === "transplant_readiness"
@@ -272,6 +281,7 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isVenueTask(props.task)) return <VenueTaskDetail {...props} />;
   if (isExecutionChecklistTask(props.task)) return <ExecutionChecklistTaskDetail {...props} />;
   if (isProjectPullTask(props.task)) return <ProjectPullTaskDetail {...props} />;
+  if (isProductionHardeningTask(props.task)) return <ProductionHardeningTaskDetail {...props} />;
   if (isTransplantReadinessTask(props.task)) return <TransplantReadinessTaskDetail {...props} />;
   if (isFlowerPreparationTask(props.task)) return <FlowerPreparationTaskLoader {...props} />;
   if (isFlowerFulfillmentTask(props.task)) return <FlowerFulfillmentTaskLoader {...props} />;
