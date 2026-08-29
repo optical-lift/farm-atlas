@@ -6,6 +6,7 @@ import { AtlasAppShell, AtlasTopBar } from "@/components/atlas/ui/AtlasPrimitive
 import DesignWorkshop from "./DesignWorkshop";
 import RealAtlasPortal from "./RealAtlasPortal";
 import styles from "./design-studio.module.css";
+import "./workshop-live-overrides.module.css";
 
 type StudioMode = "portal" | "workshop";
 
