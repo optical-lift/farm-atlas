@@ -18,27 +18,39 @@ test("transplant readiness uses the universal assigned-task shell", () => {
   assert.doesNotMatch(detail, /<main\b/);
 });
 
-test("the transplant instrument owns only the crop-result interaction", () => {
+test("the transplant instrument records production biology without breaking legacy readiness", () => {
   const detail = read("components/atlas/transplant-readiness-task-detail.tsx");
 
   assert.match(detail, /\/api\/atlas\/transplant-readiness/);
-  assert.match(detail, /action: "ready" \| "failed"/);
+  assert.match(detail, /type ReadinessAction = "ready" \| "not_ready" \| "failed"/);
+  assert.match(detail, /isProductionReadiness/);
+  assert.match(detail, /production_lot_id/);
+  assert.match(detail, /production_tray_batch_id/);
   assert.match(detail, /readyCount: action === "failed" \? 0 : parsedCount/);
+  assert.match(detail, /trayCount: productionReadiness/);
+  assert.match(detail, /nextCheckDate: productionReadiness && action === "not_ready"/);
+  assert.match(detail, /Not ready yet/);
+  assert.match(detail, /Ready to plant/);
+  assert.match(detail, /All seedlings lost/);
   assert.match(detail, /transplant_ready_seedlings/);
   assert.match(detail, /transplant_readiness_status/);
-  assert.match(detail, /Save ready count/);
-  assert.match(detail, /All seedlings lost/);
   assert.match(detail, /window\.location\.assign\(context\.returnHref\)/);
   assert.doesNotMatch(detail, /TaskExecutionBrief|TaskPrimaryResultControls|postAtlasTaskTransition/);
 });
 
-test("transplant readiness keeps its authenticated server result path", () => {
+test("transplant readiness keeps production and legacy authenticated server paths distinct", () => {
   const route = read("app/api/atlas/transplant-readiness/route.ts");
 
   assert.match(route, /requireAtlasApiAccess/);
   assert.match(route, /requestOrigin !== request\.nextUrl\.origin/);
+  assert.match(route, /ACTIONS = new Set\(\["ready", "not_ready", "failed"\]\)/);
+  assert.match(route, /production_lot_tasks/);
+  assert.match(route, /link_role", "transplant_readiness"/);
+  assert.match(route, /worker_record_production_readiness_v1/);
+  assert.match(route, /owner_record_production_readiness_v1/);
+  assert.match(route, /owner_operator_record_production_readiness_v1/);
   assert.match(route, /worker_record_transplant_readiness_v1/);
   assert.match(route, /owner_operator_record_transplant_readiness_v1/);
-  assert.match(route, /ACTIONS = new Set\(\["ready", "failed"\]\)/);
+  assert.match(route, /This older readiness card does not support a recheck result/);
   assert.doesNotMatch(route, /SUPABASE_SERVICE_ROLE_KEY|createClient\([^)]*service/i);
 });
