@@ -1,5 +1,5 @@
-import DesignAtlas from "./DesignAtlas";
+import DesignAtlasStudio from "./DesignAtlasStudio";
 
 export default function DesignAtlasPage() {
-  return <DesignAtlas />;
+  return <DesignAtlasStudio />;
 }
