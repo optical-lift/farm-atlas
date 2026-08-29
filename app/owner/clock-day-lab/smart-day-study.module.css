@@ -1,910 +1,450 @@
-.daySummaryPanel {
+.executionStudyGrid {
   display: grid;
-  gap: 10px;
-  padding: 12px 13px 13px;
-  border: 1px solid #e5e5eb;
-  border-radius: 18px;
-  background: #fbfbfd;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
 }
 
-.smartRail {
+.executionPhone {
+  min-height: 820px;
+  height: 820px;
+}
+
+.executionSurface {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+  height: 100%;
+  padding: 13px 14px 72px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.dateHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 2px;
+}
+
+.dateHeader > div {
+  display: flex;
+  gap: 7px;
+  align-items: baseline;
+}
+
+.dateHeader span,
+.dateHeader > small {
+  color: #7b7691;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+.dateHeader strong {
+  color: #292c40;
+  font-size: 21px;
+  letter-spacing: -0.025em;
+}
+
+.dateHeader > small {
+  color: #9b9ba0;
+}
+
+.dayRailPanel {
+  display: grid;
+  gap: 5px;
+  padding: 9px 10px 12px;
+  border: 1px solid #e7e7eb;
+  border-radius: 13px;
+  background: #fbfbfc;
+}
+
+.dayRailHeader {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.dayRailHeader span {
+  color: #9b9ba1;
+  font-size: 6.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dayRailHeader span:last-child {
+  text-align: right;
+}
+
+.dayRailHeader strong {
+  color: #96969d;
+  font-size: 6px;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+}
+
+.dayRail {
   position: relative;
+  height: 30px;
   min-width: 0;
-  height: 28px;
 }
 
-.smartRailBase,
-.smartRailProgress {
+.dayRailBase {
   position: absolute;
   left: 0;
-  top: 9px;
-  border-radius: 999px;
-}
-
-.smartRailBase {
   right: 0;
+  top: 10px;
   height: 1px;
-  background: #d9dae1;
+  border-radius: 999px;
+  background: #d8d9de;
 }
 
-.smartRailProgress {
+.occupiedSpan {
+  position: absolute;
   z-index: 1;
-  height: 2px;
-  background: #aaa6c4;
+  top: 6px;
+  min-width: 5px;
+  height: 9px;
+  border: 1px solid #c9c9ce;
+  border-radius: 3px;
+  background: #e9e9ec;
+  transform-origin: left center;
 }
 
-.smartRailTaskDot {
+.railTaskDot {
   position: absolute;
   z-index: 2;
-  top: 6px;
+  top: 7px;
   width: 7px;
   height: 7px;
   transform: translateX(-50%);
+  border: 1.5px solid #fbfbfc;
   border-radius: 50%;
-  background: #b8bac3;
-  box-shadow: 0 0 0 1.5px #fbfbfd;
+  background: #aeb0b8;
+  box-shadow: 0 0 0 1px #aeb0b8;
 }
 
-.smartRailNowDot {
+.railNowDot {
   position: absolute;
-  z-index: 3;
-  top: 2px;
-  width: 15px;
-  height: 15px;
+  z-index: 4;
+  top: 3px;
+  width: 14px;
+  height: 14px;
   transform: translateX(-50%);
   border: 2px solid #776dca;
   border-radius: 50%;
-  background: #fbfbfd;
-  box-shadow: 0 0 0 2px rgba(251, 251, 253, 0.98);
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(251, 251, 252, 0.95);
 }
 
-.smartRailNowLabel {
+.railNowLabel {
   position: absolute;
-  top: 19px;
+  z-index: 4;
+  top: 21px;
   transform: translateX(-50%);
-  color: #6e688f;
-  font-size: 7px;
+  color: #665f94;
+  font-size: 6.5px;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.daySummaryDivider {
-  height: 1px;
-  background: #e3e3e9;
-}
-
-.consequenceRow {
+.executionNeighborhood {
   display: grid;
-  gap: 8px;
-  min-width: 0;
-  padding-top: 2px;
-}
-
-.consequenceSource {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-  min-width: 0;
-}
-
-.consequenceSource span {
-  flex: 0 0 auto;
-  color: #8c8c92;
-  font-size: 6.5px;
-  font-weight: 800;
-  letter-spacing: 0.11em;
-}
-
-.consequenceSource strong {
-  color: #343441;
-  font-size: 11px;
-  line-height: 1.2;
-}
-
-.consequenceUnlock {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  gap: 7px;
-  align-items: start;
-  min-width: 0;
-  padding-left: 8px;
-}
-
-.consequenceUnlock > i {
-  position: relative;
-  height: 24px;
-  border-left: 1px solid #c7c5d6;
-}
-
-.consequenceUnlock > i::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 15px;
-  width: 24px;
-  border-top: 1px solid #c7c5d6;
-}
-
-.consequenceUnlock > div {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.consequenceUnlock span {
-  color: #6c6696;
-  font-size: 7px;
-  font-weight: 900;
-  letter-spacing: 0.13em;
-}
-
-.consequenceUnlock strong {
-  color: #30313d;
-  font-size: 12px;
-  line-height: 1.25;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.viewToggle {
-  display: inline-grid;
-  grid-template-columns: 1fr 1fr;
-  width: 104px;
-  padding: 2px;
-  border: 1px solid #dfdfe4;
-  border-radius: 999px;
-  background: #f7f7f8;
-}
-
-.viewToggle button {
-  min-height: 25px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: #77786f;
-  font-size: 7.5px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.viewToggle button[data-active="true"] {
-  background: #fff;
-  color: #48465e;
-  box-shadow: inset 0 0 0 1px #dad9e0, 0 1px 2px rgba(40, 38, 48, 0.04);
-}
-
-.dayNavigation {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 2px;
-}
-
-.dayNavigation[data-position="top"] {
-  margin-bottom: 2px;
-}
-
-.dayNavigation[data-position="bottom"] {
-  margin-top: 6px;
-  padding-bottom: 4px;
-}
-
-.dayNavigation button {
-  border: 0;
-  background: transparent;
-  color: #5e5c68;
-  font: inherit;
-  font-size: 8px;
-  font-weight: 750;
-  cursor: pointer;
-}
-
-.dayNavigation button:first-child {
-  justify-self: start;
-}
-
-.dayNavigation button:last-child {
-  justify-self: end;
-}
-
-.dayNavigation span {
-  color: #a0a0a4;
-  font-size: 6px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-}
-
-.boundedPhone {
-  height: 820px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 9px;
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-}
-
-.boundedDaySurface {
-  min-height: 0;
-}
-
-.boundedDaySurface[data-view="clock"] {
-  display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
-  overflow: hidden;
-}
-
-.boundedDaySurface[data-view="day"] {
-  height: 100%;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  scrollbar-width: none;
-}
-
-.boundedDaySurface[data-view="day"]::-webkit-scrollbar {
-  display: none;
-}
-
-.clockView {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  min-height: 0;
-  margin-top: 8px;
   overflow: hidden;
   border: 1px solid #e8e8ec;
   border-radius: 15px;
   background: #fff;
 }
 
-.clockViewHeader {
-  position: relative;
-  z-index: 4;
+.executionHeader {
   display: flex;
-  gap: 12px;
-  align-items: center;
+  align-items: end;
   justify-content: space-between;
-  min-height: 45px;
-  padding: 8px 10px;
+  gap: 10px;
+  padding: 10px 11px 9px;
   border-bottom: 1px solid #ededf0;
-  background: rgba(255, 255, 255, 0.985);
 }
 
-.clockViewHeader > div {
+.executionHeader > div {
   display: grid;
   gap: 2px;
-  min-width: 0;
 }
 
-.clockViewHeader span {
+.executionHeader span {
   color: #929198;
-  font-size: 6px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-}
-
-.clockViewHeader strong {
-  overflow: hidden;
-  color: #34343f;
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.clockViewHeader button {
-  flex: 0 0 auto;
-  padding: 5px 8px;
-  border: 1px solid #dddce4;
-  border-radius: 999px;
-  background: #fff;
-  color: #676278;
-  font-size: 7px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.clockViewHeader button:disabled {
-  color: #aaa9af;
-  background: #f8f8f9;
-  cursor: default;
-  opacity: 0.72;
-}
-
-.clockLensViewport {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-height: 0;
-  height: 100%;
-  padding: 8px 7px 9px 4px;
-  overflow: hidden;
-  overscroll-behavior: contain;
-  touch-action: none;
-  user-select: none;
-  background: linear-gradient(to right, #fcfcfd 0, #fff 22%, #fff 100%);
-}
-
-.clockLensViewport:focus-visible {
-  outline: 2px solid #a49ed2;
-  outline-offset: -2px;
-}
-
-.clockLensSpine {
-  position: absolute;
-  z-index: 0;
-  left: 49px;
-  top: 10px;
-  bottom: 10px;
-  width: 1px;
-  background: #e2e2e7;
-  pointer-events: none;
-}
-
-.clockLensRow {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: 42px 12px minmax(0, 1fr);
-  gap: 4px;
-  align-items: stretch;
-  flex-basis: 0;
-  min-height: 0;
-  opacity: 0.55;
-  transition: flex-grow 150ms ease, opacity 150ms ease;
-}
-
-.clockLensRow[data-focus-tier="near"] {
-  opacity: 0.76;
-}
-
-.clockLensRow[data-focus-tier="focus"] {
-  z-index: 3;
-  opacity: 1;
-}
-
-.clockLensRow[data-now="true"] {
-  opacity: 1;
-}
-
-.clockLensTime {
-  align-self: center;
-  color: #9b9aa1;
-  font-size: 6.25px;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.clockLensRow[data-focus-tier="near"] .clockLensTime,
-.clockLensRow[data-focus-tier="focus"] .clockLensTime {
-  color: #777780;
-  font-size: 6.75px;
-}
-
-.clockLensRow[data-now="true"] .clockLensTime {
-  color: #625b9a;
-  font-weight: 900;
-}
-
-.clockLensDot {
-  position: relative;
-  z-index: 2;
-  align-self: center;
-  justify-self: center;
-  width: 5px;
-  height: 5px;
-  border: 1px solid #c7c7cc;
-  border-radius: 50%;
-  background: #fff;
-}
-
-.clockLensRow[data-focus-tier="near"] .clockLensDot {
-  width: 6px;
-  height: 6px;
-  border-color: #aaa9b0;
-}
-
-.clockLensRow[data-focus-tier="focus"] .clockLensDot {
-  width: 8px;
-  height: 8px;
-  border: 2px solid #97969f;
-}
-
-.clockLensRow[data-now="true"] .clockLensDot {
-  width: 9px;
-  height: 9px;
-  border: 2px solid #776dca;
-  background: #f4f2fb;
-}
-
-.calendarTaskBlock {
-  display: grid;
-  align-content: center;
-  gap: 1px;
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  padding: 2px 8px;
-  overflow: hidden;
-  border: 1px solid transparent;
-  border-left: 2px solid #dedee3;
-  border-radius: 7px;
-  background: #fff;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transform-origin: left center;
-  transition: box-shadow 130ms ease, border-color 130ms ease, background 130ms ease;
-}
-
-.calendarTaskBlock > span {
-  overflow: hidden;
-  color: #9b9ba1;
-  font-size: 5.75px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  line-height: 1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.calendarTaskBlock > strong {
-  overflow: hidden;
-  color: #5e5e66;
-  font-size: 8px;
-  line-height: 1.05;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.calendarTaskBlock > small {
-  display: none;
-  overflow: hidden;
-  color: #7a7a81;
-  font-size: 7px;
-  line-height: 1.15;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.calendarTaskBlock[data-focus-tier="near"] {
-  border-color: #e6e6e9;
-  border-left-color: #c2c2c8;
-}
-
-.calendarTaskBlock[data-focus-tier="near"] > span {
-  color: #85858d;
-  font-size: 6.25px;
-}
-
-.calendarTaskBlock[data-focus-tier="near"] > strong {
-  color: #474750;
-  font-size: 10px;
-}
-
-.calendarTaskBlock[data-inspected="true"] {
-  border-color: #d0d0d7;
-  border-left-color: #96959f;
-  background: #fff;
-  box-shadow: 0 6px 14px rgba(42, 42, 50, 0.07);
-}
-
-.calendarTaskBlock[data-focus-tier="focus"] {
-  gap: 2px;
-  padding: 6px 10px;
-}
-
-.calendarTaskBlock[data-focus-tier="focus"] > span {
-  color: #696971;
-  font-size: 7px;
-}
-
-.calendarTaskBlock[data-focus-tier="focus"] > strong {
-  color: #2f3038;
-  font-size: 14px;
-}
-
-.calendarTaskBlock[data-focus-tier="focus"] > small {
-  display: block;
-}
-
-.calendarTaskBlock[data-now="true"] {
-  border-color: #d3cfee;
-  border-left: 4px solid #776dca;
-  background: #f4f2fb;
-  box-shadow: 0 5px 13px rgba(76, 67, 137, 0.07);
-}
-
-.calendarTaskBlock[data-now="true"] > span {
-  color: #6b639e;
-}
-
-.calendarTaskBlock[data-now="true"] > strong {
-  color: #34314d;
-}
-
-.calendarTaskBlock:focus-visible {
-  outline: 2px solid #8f87c8;
-  outline-offset: -1px;
-}
-
-.feedInspected {
-  border-radius: 10px;
-  background: linear-gradient(to right, rgba(245, 245, 247, 0.96), rgba(255, 255, 255, 0));
-  box-shadow: inset 2px 0 0 #b7b6bd;
-}
-
-.feedNow {
-  border-radius: 10px;
-  background: linear-gradient(to right, rgba(242, 239, 251, 0.98), rgba(255, 255, 255, 0));
-  box-shadow: inset 3px 0 0 #776dca;
-}
-
-.inspectFlag {
-  justify-self: start;
-  margin-top: 7px;
-  padding: 3px 6px;
-  border-radius: 999px;
-  background: #f2f2f4;
-  color: #777780;
-  font-size: 6px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-@media (max-width: 520px) {
-  .daySummaryPanel {
-    padding-inline: 11px;
-  }
-
-  .viewToggle {
-    width: 98px;
-  }
-
-  .consequenceSource {
-    display: grid;
-    gap: 3px;
-  }
-
-  .boundedPhone {
-    height: 790px;
-  }
-
-  .clockLensViewport {
-    padding-inline: 2px 5px;
-  }
-
-  .clockLensRow {
-    grid-template-columns: 39px 11px minmax(0, 1fr);
-    gap: 3px;
-  }
-
-  .clockLensSpine {
-    left: 45px;
-  }
-
-  .calendarTaskBlock[data-focus-tier="focus"] > strong {
-    font-size: 13px;
-  }
-}
-
-/* Study 14: silent intelligence must earn pixels rather than adding panels. */
-.daySummaryPanel {
-  gap: 7px;
-}
-
-.managerScopeLine {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 18px;
-}
-
-.managerScopeLine > span {
-  color: #98989e;
   font-size: 6px;
   font-weight: 850;
   letter-spacing: 0.12em;
 }
 
-.managerScopeLine > div {
-  display: flex;
-  gap: 9px;
-  align-items: center;
-}
-
-.managerScopeLine button {
-  padding: 2px 0;
-  border: 0;
-  border-bottom: 1px solid transparent;
-  background: transparent;
-  color: #9a9aa0;
-  font-size: 7px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.managerScopeLine button[data-active="true"] {
-  border-bottom-color: #77757f;
-  color: #454650;
-}
-
-.consequenceUnlock small {
-  color: #868690;
-  font-size: 7px;
-  line-height: 1.25;
-  white-space: normal;
-}
-
-.clockView {
-  grid-template-rows: auto minmax(0, 1fr) auto;
-}
-
-.clockLensSequence {
-  display: contents;
-}
-
-.occupiedLensRow {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: 42px 12px minmax(0, 1fr);
-  gap: 4px;
-  align-items: center;
-  flex-basis: 0;
-  min-height: 10px;
-  padding-block: 1px;
-  color: #99999f;
-  opacity: 0.72;
-}
-
-.occupiedLensRow > span {
-  font-size: 5.75px;
+.executionHeader strong {
+  color: #34343f;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
-  text-align: right;
-  white-space: nowrap;
 }
 
-.occupiedLensRow > i {
-  justify-self: center;
-  width: 7px;
-  height: 1px;
-  background: #c9c9cf;
-}
-
-.occupiedLensRow > strong {
-  overflow: hidden;
-  padding: 2px 6px;
-  border: 1px solid #ececee;
-  border-radius: 5px;
-  background: #f8f8f9;
-  color: #74747b;
-  font-size: 6.5px;
-  font-weight: 750;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.taskActor {
-  display: none;
-  color: inherit;
-  font: inherit;
-  font-style: normal;
-}
-
-.calendarTaskBlock[data-focus-tier="near"] .taskActor,
-.calendarTaskBlock[data-focus-tier="focus"] .taskActor {
-  display: inline;
-}
-
-.consequenceMark {
-  color: #85838d;
-  font-size: 8px;
-  font-weight: 900;
-}
-
-.clockSignalLine {
-  display: flex;
-  min-width: 0;
-  gap: 5px;
-  align-items: center;
-  overflow: hidden;
-  color: #74747d;
+.executionHeader > small {
+  color: #aaa9ae;
   font-size: 6px;
-  font-weight: 800;
-  line-height: 1.1;
   white-space: nowrap;
 }
 
-.clockSignalLine span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.clockSignalLine span + span::before {
-  content: "·";
-  margin-right: 5px;
-  color: #b1b1b6;
-}
-
-.clockSignalLine[data-focus-tier="context"] {
-  position: absolute;
-  right: 5px;
-  top: 50%;
-  max-width: 42px;
-  transform: translateY(-50%);
-  color: #85858c;
-  font-size: 5.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-.calendarTaskBlock[data-focus-tier="context"] > strong {
-  padding-right: 42px;
-}
-
-.clockSignalLine[data-focus-tier="near"] {
-  color: #6f6f78;
-  font-size: 6.25px;
-}
-
-.clockSignalLine[data-focus-tier="focus"] {
-  color: #5f606a;
-  font-size: 7px;
-}
-
-.focusUnlockPath {
+.executionStack {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 5px;
-  align-items: baseline;
+  align-content: start;
+  gap: 7px;
+  min-height: 0;
+  padding: 2px 9px;
+}
+
+.executionMove {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
   min-width: 0;
-  margin-top: 1px;
+  padding: 7px 9px;
+  border: 1px solid #ececef;
+  border-left: 3px solid #d7d7dc;
+  border-radius: 10px;
+  background: #fff;
 }
 
-.focusUnlockPath > span {
-  color: #75727f;
-  font-size: 5.75px;
+.executionMove[data-role="last"] {
+  min-height: 55px;
+  opacity: 0.62;
+}
+
+.executionMove[data-role="now"] {
+  min-height: 112px;
+  padding-block: 12px;
+  border-color: #d7d3ec;
+  border-left: 4px solid #776dca;
+  background: #f8f7fc;
+  box-shadow: 0 5px 13px rgba(76, 67, 137, 0.055);
+  opacity: 1;
+}
+
+.executionMove[data-role="next"] {
+  min-height: 82px;
+  border-left-color: #a9a9b1;
+}
+
+.executionMove[data-role="then"] {
+  min-height: 62px;
+  opacity: 0.78;
+}
+
+.moveRole {
+  display: grid;
+  gap: 2px;
+  align-self: stretch;
+  align-content: center;
+}
+
+.moveRole span {
+  color: #99999f;
+  font-size: 6px;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.13em;
 }
 
-.focusUnlockPath > strong {
+.moveRole small {
+  color: #a3a3a8;
+  font-size: 6px;
+}
+
+.executionMove[data-role="now"] .moveRole span {
+  color: #6b639e;
+}
+
+.moveIdentity {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.moveIdentity > span {
+  color: #8c8c93;
+  font-size: 6.25px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+}
+
+.moveIdentity > strong {
   overflow: hidden;
-  color: #4a4b55;
-  font-size: 6.5px;
-  font-weight: 750;
-  line-height: 1.15;
+  color: #3f4048;
+  font-size: 11px;
+  line-height: 1.12;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.calendarTaskBlock[data-focus-tier="focus"] > strong {
-  font-size: 12.5px;
-}
-
-.dayTaskSignal {
-  margin-top: 3px;
+.moveIdentity > small {
   overflow: hidden;
-  color: #777780;
+  color: #898990;
   font-size: 7px;
-  font-style: normal;
-  font-weight: 750;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.occupiedDayRow {
-  display: grid;
-  grid-template-columns: 70px minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
-  min-height: 37px;
-  margin: 2px 0 1px -8px;
-  padding: 6px 9px;
-  border: 1px solid #eeeeef;
-  border-radius: 9px;
-  background: #fafafa;
+.executionMove[data-role="now"] .moveIdentity > span {
+  color: #6b639e;
 }
 
-.occupiedDayRow > span {
-  color: #8c8c92;
-  font-size: 7px;
+.executionMove[data-role="now"] .moveIdentity > strong {
+  color: #302e43;
+  font-size: 15px;
+  white-space: normal;
+}
+
+.executionMove[data-role="now"] .moveIdentity > small {
+  color: #66646f;
+  font-size: 8px;
+  white-space: normal;
+}
+
+.executionMove[data-role="next"] .moveIdentity > strong {
+  color: #34353e;
+  font-size: 13px;
+}
+
+.executionMove time {
+  align-self: center;
+  color: #85858c;
+  font-size: 6.5px;
+  font-weight: 750;
   font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
 }
 
-.occupiedDayRow > div {
+.executionMove[data-role="now"] time {
+  color: #625b91;
+  font-size: 7px;
+  font-weight: 850;
+}
+
+.hardEdge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 58px;
+  margin: 0 9px 9px;
+  padding: 9px 10px;
+  border: 1px solid #dedee2;
+  border-radius: 10px;
+  background: #f7f7f8;
+}
+
+.hardEdge > div {
   display: grid;
   gap: 2px;
 }
 
-.occupiedDayRow small {
-  color: #a0a0a5;
-  font-size: 5.5px;
-  font-weight: 850;
-  letter-spacing: 0.1em;
-}
-
-.occupiedDayRow strong {
-  color: #65656d;
-  font-size: 9px;
-}
-
-.closeoutMoment {
-  display: grid;
-  gap: 4px;
-  padding: 7px 9px 8px;
-  border-top: 1px solid #e8e8eb;
-  background: #fbfbfc;
-}
-
-.closeoutMoment > header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-
-.closeoutMoment > header span {
-  color: #8d8d93;
-  font-size: 5.75px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-}
-
-.closeoutMoment > header strong {
-  color: #65656e;
-  font-size: 7px;
-}
-
-.closeoutRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-}
-
-.closeoutRow > div {
-  display: grid;
-  min-width: 0;
-}
-
-.closeoutRow strong {
-  overflow: hidden;
-  color: #3f4048;
-  font-size: 8px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.closeoutRow small {
-  overflow: hidden;
+.hardEdge span {
   color: #898990;
   font-size: 6px;
-  text-overflow: ellipsis;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.hardEdge strong {
+  color: #383941;
+  font-size: 11px;
+}
+
+.hardEdge time {
+  color: #55565e;
+  font-size: 8px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.closeoutRow > b {
-  color: #5d5d66;
+.temporalConflict {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px 10px;
+  border: 1px solid #ded9c6;
+  border-left: 4px solid #b7aa72;
+  border-radius: 10px;
+  background: #fffdf6;
+}
+
+.temporalConflict > span {
+  color: #83794f;
   font-size: 6px;
   font-weight: 900;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
+  letter-spacing: 0.13em;
+}
+
+.temporalConflict > strong {
+  color: #3f3b2d;
+  font-size: 13px;
+}
+
+.temporalConflict p {
+  margin: 0;
+  color: #706b58;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.temporalConflict > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 3px;
+}
+
+.temporalConflict button {
+  padding: 4px 7px;
+  border: 1px solid #d9d2b8;
+  border-radius: 999px;
+  background: #fff;
+  color: #6f6643;
+  font-size: 6px;
+  font-weight: 850;
+}
+
+.temporalConflict button:disabled {
+  opacity: 1;
+}
+
+@media (max-width: 980px) {
+  .executionStudyGrid {
+    grid-template-columns: 1fr;
+    max-width: 560px;
+  }
 }
 
 @media (max-width: 520px) {
-  .occupiedLensRow {
-    grid-template-columns: 39px 11px minmax(0, 1fr);
-    gap: 3px;
+  .executionPhone {
+    min-height: 790px;
+    height: 790px;
   }
 
-  .calendarTaskBlock[data-focus-tier="focus"] > strong {
-    font-size: 12px;
+  .executionSurface {
+    padding-inline: 12px;
   }
 
-  .focusUnlockPath > strong {
-    font-size: 6.25px;
+  .executionMove {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .executionMove time {
+    grid-column: 2;
+    justify-self: start;
+    text-align: left;
   }
 }
