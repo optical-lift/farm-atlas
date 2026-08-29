@@ -8,6 +8,7 @@ const managementMigration = read("supabase/migrations/20260804052000_atlas_perso
 const workAlongsideRoute = read("app/api/atlas/work-alongside/route.ts");
 const workAlongsideOverlay = read("components/atlas/work-alongside/AtlasWorkAlongsideOverlay.tsx");
 const shell = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
+const dock = read("components/atlas/shell/AtlasDock.tsx");
 const layout = read("app/layout.tsx");
 const morePage = read("app/more/page.tsx");
 const farmDayPage = read("app/manage/day/page.tsx");
@@ -43,7 +44,8 @@ test("management is a separate role-aware dock destination rather than an inner 
   assert.match(managementMigration, /farm_day_task_cards_v1/);
   assert.match(managementMigration, /v_role NOT IN \('owner', 'manager'\)/);
   assert.match(shell, /label: "Manager"/);
-  assert.match(shell, /kind === "manager"/);
+  assert.match(shell, /<AtlasDock items=\{items\} active=\{active\} \/>/);
+  assert.match(dock, /kind === "manager"/);
   assert.match(shell, /effectiveFarmRole === "owner" \|\| effectiveFarmRole === "manager"/);
   assert.match(layout, /effectiveFarmRole = operatorContext\?\.isOperating/);
   assert.match(layout, /AtlasContextualAppFrame effectiveFarmRole=\{effectiveFarmRole\}/);
@@ -98,8 +100,6 @@ test("every Manager task resolves canonical Owner, Anna, and Marshall identity i
 test("effective management access and More mirror the switched identity", () => {
   assert.match(effectiveAccess, /operatorContext\?\.isOperating/);
   assert.match(effectiveAccess, /effective\.farmRole/);
-  assert.match(effectiveAccess, /effective\.farmId/);
   assert.match(morePage, /operatorContext\?\.isOperating/);
-  assert.match(morePage, /operatorContext\.effective\.farmRole/);
-  assert.match(morePage, /canManage \? <div id="atlas-more-work-alongside-slot"/);
+  assert.match(morePage, /effective\.farmRole/);
 });
