@@ -4,8 +4,6 @@ import { redirect } from "next/navigation";
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
 
-import AtlasLabWorkbench from "./AtlasLabWorkbench";
-
 export const dynamic = "force-dynamic";
 
 export default async function AtlasMorePage() {
@@ -24,6 +22,9 @@ export default async function AtlasMorePage() {
   const canManage = effectiveRole === "owner" || effectiveRole === "manager";
   const isFarmOwner = effectiveRole === "owner";
   const destinations = [
+    ...(isFarmOwner ? [
+      { label: "Design Atlas", detail: "Open the complete fake future portal and pressure-test the global shell across roles", href: "/owner/design-atlas" },
+    ] : []),
     { label: "Zone Registry", detail: "Beds, rooms, gardens and every canonical farm place", href: "/zones" },
     { label: "Projects", detail: "Builds, venue work and multi-step initiatives", href: "/projects" },
     { label: "Production", detail: "Crop cycles and production state", href: "/production" },
@@ -63,8 +64,6 @@ export default async function AtlasMorePage() {
 
         <div id="atlas-more-account-slot" />
         {canManage ? <div id="atlas-more-work-alongside-slot" /> : null}
-
-        {isFarmOwner ? <AtlasLabWorkbench /> : null}
 
         <nav className="atlas-more-page__list" aria-label="More Atlas destinations">
           {destinations.map((destination) => (
