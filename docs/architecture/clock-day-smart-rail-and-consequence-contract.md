@@ -1,454 +1,357 @@
-# Clock + Day smart rail, unlock consequence, and Clock-first scheduler contract
+# Clock + Day execution-neighborhood contract
 
-Status: design contract for the Owner Clock + Day Editor and the production behavior it is intended to preserve. The editor remains fixture-only until a separate production hookup is approved.
+Status: current design contract for the Owner Clock + Day Editor. Study 15 supersedes the prior bounded all-task scrubber as the preferred Clock direction. The editor remains fixture-only until a separate production hookup is approved.
 
-## 1. One smart rail, three truths
+## 1. Jurisdiction
 
-The compact rail is one geometric timeline with three independent layers:
+Atlas surfaces should not all explain the same work.
 
-1. **Day Clearance Frontier** — the earned chronological progress fill.
-2. **Current time** — the larger outlined NOW marker.
-3. **Clock placement distribution** — one faint filled dot for every task Clock has placed into the day.
+- **Day / Work** owns the complete current service day.
+- **Clock** owns temporal custody: what the worker just finished, what is in hand now, what Atlas intends to hand over next, and the next hard temporal edge.
+- **Task Focus** owns execution detail and result capture.
+- **Domain rails / task-family views** own downstream meaning, lifecycle context, dependency chains, inventory movement, and other domain-specific explanation.
+- **Atlas intelligence** owns the reasoning that decides what becomes the next lawful move.
 
-The fill is not `completed task count / total task count`, and the NOW marker is not the end of the fill.
+Clock therefore does not need to reproduce Day, Task Focus, or the domain rails.
 
-The approved surface does **not** repeat `6 of 11 finished`, `11 tasks · 6 done`, or an internal window countdown beside this rail. The rail must carry the progress concept without duplicating raw counts around it.
+Core law:
 
-### Dot geometry
+> **Clock should be smart by exercising intelligence, not by displaying all of Atlas's intelligence.**
 
-The progress rail is deliberately a hairline. Ordinary task-placement dots are visibly larger than the rail and sit over it as events. They are neutral/faint. The NOW marker is larger still and is the only purple event marker on the rail.
+## 2. Execution Neighborhood
 
-## 2. Shared linear day coordinate for the compact rail
+Clock's primary projection is the **Execution Neighborhood**.
 
-Given the governed Clock day span `[day_start, day_end]`, normalize any timestamp `t` as:
+Conceptually:
+
+```text
+Living Day + current reality + Clock choreography
+                    |
+                    v
+          Execution Neighborhood
+             LAST
+             NOW
+             NEXT
+             THEN
+             NEXT HARD EDGE
+```
+
+The projection is intentionally small. It is not a complete task feed.
+
+Typical visual priority:
+
+- **LAST** — subdued receipt of the move that just closed.
+- **NOW** — largest and clearest move because it owns the worker's hands.
+- **NEXT** — strong enough to let the worker anticipate the next handoff.
+- **THEN** — small context for one further move when it is useful and lawful.
+- **NEXT HARD EDGE** — the nearest immovable or strongly constrained temporal commitment Atlas must respect.
+
+The exact number of future moves may vary. Clock should not invent THEN when the remaining sequence is unresolved.
+
+## 3. The full day survives as one thin linear rail
+
+Clock still needs orientation across the whole day, but the entire day does not need to remain legible as detailed task cards.
+
+The thin full-day rail is the only Clock surface required to represent the complete temporal span.
+
+The rail may show:
+
+- the governed day start and end;
+- one faint neutral marker for each placed task;
+- neutral solid spans for Occupied Time / reservations;
+- the factual current-time marker.
+
+The rail remains linear in real elapsed time.
+
+Given governed day span `[day_start, day_end]`:
 
 `x(t) = clamp((t - day_start) / (day_end - day_start), 0, 1)`
 
-Production rules:
+Task marks use their presented Clock placement. Occupied spans use their governed start/end. NOW uses the current service-day time.
 
-- `day_start` and `day_end` come from governed Clock/day-shape truth.
-- NOW is `x(current_time)` in the service-day timezone.
-- A task dot is `x(clock_placement_start)` for the placement Clock is actually presenting.
-- Nearby task dots may visually cluster, but source times stay exact.
-- Clock view, Day view, and the smart rail all use the same scheduled task identities.
+## 4. Purple means factual NOW only
 
-The compact rail remains **linear in real time** even though the large Clock view uses focus + context compression.
+Purple keeps one narrow meaning:
 
-## 3. Smart progress: weighted chronological clearance frontier
+- the factual NOW marker on the day rail is purple;
+- a task that is actually in hand NOW may use restrained purple treatment;
+- NEXT, THEN, importance, consequence, lateness, inspection, or management attention must not borrow purple.
 
-A later task completed early must not make Atlas claim the day is cleared through that later time while earlier scheduled work remains unresolved.
+If there is no lawful task to put in hand because Clock has reached a temporal conflict, the rail still has a factual purple NOW marker. Clock must not fabricate a purple task merely to fill the NOW slot.
 
-For each placed task `i`:
+## 5. Day owns completeness
 
-- `x_i` = normalized placement position.
-- `c_i` = `1` when canonically completed, otherwise `0`.
-- `w_i` = governed expected-work weight. Prefer expected minutes/capacity when known; otherwise use a neutral unit weight rather than inventing minutes.
+Study 15 intentionally removes the previous requirement that the first and last detailed task cards remain visible inside the bounded Clock body.
 
-For candidate frontier `f`:
+That requirement belonged to an earlier attempt to make Clock both the complete day and the immediate execution lens.
 
-`M(f) = Σ w_i` for every `i` where `x_i <= f`.
+New rule:
 
-Unresolved prefix debt:
+> **Day proves membership. Clock proves position.**
 
-`D(f) = Σ [w_i * (1 + λ * (f - x_i)^γ)]`
+If a worker or manager wants every admitted item in the service day, they use Day / Work. Clock may show only the immediate temporal neighborhood while the thin rail preserves whole-day orientation.
 
-for unfinished tasks where `x_i <= f`.
+## 6. Clock is not a scrubber by default
 
-Prefix clearance:
+The previous focus-context scrubber required users to move an inspection lens over every task in the day. Study 15 no longer treats that as Clock's primary job.
 
-`Q(f) = 1 - D(f) / M(f)`
+Clock does not need a `Return to now` control when the main view itself is anchored to NOW.
 
-The Day Clearance Frontier is:
+Clock does not need wheel/touch/keyboard task scrubbing to expose distant work. Distant work belongs to Day.
 
-`F = max { f | Q(f) >= τ }`
+A task shown in Clock may eventually open its canonical Task Focus when tapped, but that is navigation to the task's execution surface, not Clock inspection state.
 
-Candidate points come from the day start and real task placements.
+## 7. Silent progression
 
-If three morning tasks remain open while an 8 PM task was completed early, those morning tasks remain in `D(8 PM)`. The later completion cannot erase earlier chronological debt.
+Normal completion should make Clock feel almost mechanical in the best sense.
 
-A structured hard blocker may impose a stricter ceiling. Blocker logic must come from governed dependency truth, never display prose.
+When NOW completes:
 
-## 4. Day-summary visual direction
+1. canonical result truth closes or advances the task;
+2. Atlas recompiles the remaining lawful choreography;
+3. the old NOW may become LAST;
+4. the next lawful move becomes NOW;
+5. NEXT and THEN are recalculated from current reality;
+6. the hard edge remains governed by its own temporal truth.
 
-The approved summary should feel closer to ordinary Atlas than to a prototype dashboard:
+This is not a blind array shift. Atlas may change the next sequence if readiness, duration, reservations, resources, lifecycle, or other governed inputs changed.
 
-- mostly white / very lightly neutral surface;
-- restrained Atlas-purple accents rather than a large lavender field;
-- thin smart rail with neutral task dots and a purple NOW marker;
-- a subtle divider;
-- one robust unlock consequence beneath it.
+## 8. Silent reflow
 
-The summary does not show a second progress count or `WINDOW 00:18`.
-
-## 5. Consequence selector
-
-The selector answers:
-
-**What unfinished work matters most because leaving it undone has a real downstream consequence?**
-
-It is independent from NOW and independent from inspection focus.
-
-Eligible evidence includes:
-
-- dependency/unlock edges;
-- hard dates or fixed events;
-- readiness/release gates;
-- resource/session cascades;
-- other explicit structured consequence relationships.
-
-A possible ranking family is:
-
-`score_i = severity_i * imminence_i * (1 + lateness_i) * (1 + log(1 + downstream_weight_i))`
-
-Exact factors must be governed and testable.
-
-## 6. UNLOCKS is the presentation grammar
-
-The product vocabulary is **UNLOCKS**, not `Holding`.
-
-The consequence surface should show:
-
-1. the unresolved source task clearly and without truncation where practical;
-2. an explicit branch/connector;
-3. a prominent `UNLOCKS` label;
-4. the full downstream task/event name, allowed to wrap to multiple lines;
-5. additional governed unlock targets as branches when they exist.
-
-The fixture example is:
-
-- source: `TIDY · Farmhouse` / `Still open`;
-- relationship: `UNLOCKS`;
-- target: `Thursday Ticketed Night · Aug 27`.
-
-`MISSED WINDOW` is not the primary consequence badge and is removed from this study. If a future compact fact occupies that visual role, it must explain the consequence itself, such as `EVENT TOMORROW`, `2 UNLOCKS`, or `BLOCKS 1 EVENT`, and must be derived from structured truth.
-
-If no unfinished task has a governed consequence, the consequence area is absent.
-
-## 7. Clock and Day are two views of one scheduled day
-
-- **Clock** is the default orientation/scheduler view.
-- **Day** is the alternate detailed rail/list view.
-
-The toggle belongs in the date header where the old task-count block sat. It must not consume a separate horizontal row below the summary.
-
-Conceptually:
-
-`governed task truth + day shape + constraints -> Clock choreography -> { Clock view, Day view, smart rail }`
-
-Clock and Day never maintain separate task order truth.
-
-## 8. Clock owns fitting flexible work
-
-A task does not need to originate with an exact clock time to receive one in Clock.
-
-Task/source truth says what must be done and carries hard dates, windows, duration, dependencies, resources, route/location, and other constraints. Clock choreography says where Atlas has fitted that executable work into this particular day.
-
-Clock fitting should consider, as governed inputs become available:
-
-- fixed starts and reservations;
-- allowed/preferred windows;
-- expected duration/capacity;
-- dependencies/unlocks;
-- equipment/resource recovery;
-- route/place efficiency;
-- worker day shape and occupied life time;
-- existing placements;
-- lateness and consequence severity.
-
-There is no worker-facing flexible/unplanned pocket. If admitted work cannot be lawfully fitted, that is a **planning conflict** for governed resolution.
-
-## 9. Clock is a bounded instrument
-
-Clock does not borrow the page/document scroll and it does not become a long Google-Calendar column.
-
-The phone/app shell keeps its normal stable chrome. Inside the Clock surface:
-
-1. the Clock header and `Return to now` control form the stable top edge;
-2. the **scrubber begins immediately below that header**;
-3. only gestures inside that scrubber change temporal inspection;
-4. the scrubber itself has a bounded height and never makes the entire Atlas page move merely to inspect another task;
-5. first and last scheduled tasks remain represented inside the bounded scrubber at the same time.
-
-Required conceptual ownership:
-
-`screen = stable Atlas chrome + stable day context + bounded Clock scrubber`
-
-`clock_scroll_owner = bounded_scrubber`
-
-A wheel, swipe, arrow key, or direct task tap inside the scrubber changes the inspected focus. It does not mutate task truth.
-
-This is intentionally a focus + context instrument rather than a conventional overflow list.
-
-## 10. Purple means factual NOW
-
-Purple has a narrow meaning in Clock:
-
-- the task Clock says is actually NOW may use the purple task treatment;
-- the factual NOW marker is purple;
-- merely scrubbing to or inspecting another task must not turn that task purple.
-
-A non-NOW inspected task may become larger, darker, sharper, or receive neutral emphasis, but it remains neutral.
-
-The same rule applies in the alternate Day rail: inspection emphasis is neutral; actual NOW may remain purple.
-
-## 11. Focus + context zoom geometry
-
-The large Clock must preserve the whole scheduled-day context while giving more resolution to the region under inspection.
-
-Every scheduled task receives a positive visual allocation. A simple admissible family is:
-
-`z_i = z_floor + A / (1 + α * |i - f|^p)`
-
-where:
-
-- `i` is the task's chronological index;
-- `f` is the current inspected/focus index;
-- `z_floor > 0` guarantees distant tasks remain represented;
-- `A`, `α`, and `p` tune the lens shape.
-
-Normalize the allocations into the available scrubber height:
-
-`h_i = H_available * z_i / Σ z_j`
-
-The important law is not the exact equation. It is this:
-
-**focus may gain space only by compressing context, never by deleting the beginning or end of the scheduled day.**
-
-Initial focus is the factual NOW task when one exists. When the user scrubs away, the inspection lens moves; factual NOW remains independently marked in purple wherever it sits.
-
-### Detail tiers
-
-Focus + context also controls information density:
-
-- **focus** — full task identity plus useful place/amount detail;
-- **near** — time, family, and strong task title;
-- **context** — compact time/title representation sufficient to preserve identity and chronology.
-
-This follows the same zoom discipline used by Chronicle: the object remains part of the instrument while the amount of label/detail changes with visual scale. Do not use zoom as permission to fabricate or discard task truth.
-
-For very dense days, context rows may become tiny marks/short labels, but the first and last scheduled tasks must remain visibly represented and reachable by the scrubber.
-
-## 12. Time geometry remains truthful without literal empty space
-
-The bounded lens does not assign equal pixels to equal minutes. A two-hour empty gap therefore does not consume two hours' worth of screen height.
-
-Actual Clock times remain explicit text. Chronological order is invariant. Governed duration remains task truth even when a context row is visually compressed.
-
-Important consequence: **pixel distance and row height inside the bounded lens are not authoritative elapsed time.** Printed Clock times and governed placements are authoritative. The compact smart rail remains the linear real-time overview.
-
-If Atlas later needs gap magnitude inside the lens, it may show a small factual gap label rather than expanding dead space.
-
-## 13. Scrubber / inspection behavior
-
-At initial open:
-
-- inspected focus = NOW task when one exists;
-- the NOW task is purple and receives focus-scale detail;
-- every earlier and later task remains represented inside the scrubber, including first and last.
-
-When the user scrubs away:
-
-- the inspection focus moves one chronological region at a time;
-- the focused task enlarges/sharpens neutrally unless it is also NOW;
-- neighboring tasks receive intermediate scale;
-- distant tasks compress but stay visible;
-- NOW remains factual and purple wherever it actually sits;
-- `Return to now` resets the focus lens to NOW without changing schedule state.
-
-Thus `inspected_task_id` and `now_task_id` remain independent.
-
-Scroll/swipe handling must be captured by the scrubber itself so the surrounding Clock screen does not drift during temporal inspection.
-
-## 14. Clock ↔ Day inspection identity
-
-Required identity rule:
-
-`clock.inspected_task_id == day_feed.inspected_task_id`
-
-If the user inspects a task in Clock and switches to Day, the same task remains identifiable. The styling may differ because Clock and Day have different jobs.
-
-## 15. Adjacent-day navigation
-
-Yesterday and tomorrow navigation must exist at **both the top and bottom** of the day surface.
-
-In the bounded Clock composition these controls should remain outside the scrubber. Moving the scrubber focus never changes service date.
-
-Navigation changes the selected farm/service date only; it must not manufacture carryover or rewrite task dates.
-
-## 16. Global exit/back rule
-
-Every ordinary Atlas page except Home should expose a deterministic global exit control in the same header action position currently used by the yellow document `+`.
-
-Approved shell behavior:
-
-- Home keeps the yellow document `+` when the member may document work;
-- non-Home routes show a yellow `×` exit control;
-- Task Focus honors its existing safe `returnTo` destination when available;
-- top-level operational destinations exit to Home;
-- More subpages exit to More;
-- the More root exits to Home;
-- the control uses a governed parent destination rather than blindly depending on browser-history order.
-
-This must be implemented once in the shared Atlas shell, not as per-page back-button hacks.
-
-## 17. Fixture-only values
-
-The Owner editor uses specimen values such as 4:06 PM, a 43% clearance frontier, Sweet William, MG11, BB10, and Thursday Ticketed Night. Atlas-fit times are fixtures demonstrating the scheduling contract. Production wiring must replace them with canonical task, Clock placement, result, dependency, day-shape, reservation, and consequence truth.
-
-## 18. Silent-intelligence admission law
-
-Clock + Day should become simpler on the surface as Atlas becomes smarter underneath.
-
-For every new piece of intelligence, ask first:
-
-**Can this make the schedule better without adding anything to the screen?**
-
-Only information the worker needs to understand, choose, or execute the next move earns pixels.
-
-Study 14 therefore gives each fixture task a hidden intelligence packet and lets one shared ranking function decide which tiny signal, if any, is visible. Task families do not get their own unbounded Clock metadata areas.
-
-Conceptually:
-
-`rich task intelligence -> rank by worker significance -> admit <= tiny visual budget -> Clock`
-
-The target is a Clock that behaves like a compiled version of the day rather than a dashboard exposing every reasoning input.
-
-## 19. Checklist completion becomes task-health truth
-
-Real checklist/child completion must project as one cross-view task-health signal rather than a Clock-specific checklist.
+When reality changes but Atlas can still lawfully reconcile the day, Clock should usually **change the plan without displaying the scheduling proof**.
 
 Examples:
 
-- `5/6`
-- `3 of 5 zones`
-- `6 of 8 beds`
+- the current task runs long;
+- a task finishes early;
+- a movable task becomes blocked;
+- a prerequisite clears;
+- a reservation appears;
+- travel takes longer than expected;
+- resource readiness changes.
 
-The same child-state truth must be available to Clock, Day, Task Focus, Manager, migration logic, and choreography.
+If Atlas can still fit the remaining work:
 
-Visual rule:
+> **The schedule just gets better.**
 
-- distant context may show only the tiny ratio;
-- near focus may show one readable progress fact;
-- focused/NOW work may show the full compact task-health phrase;
-- the checklist itself remains in the canonical Task Card / execution surface.
+Study 15's reflow specimen demonstrates a task finishing 25 minutes late. Delivery and weeding move later while the fixed 4:30 pickup remains intact. Clock does not add an explanation badge for route cost, dependency pressure, or lifecycle reasoning.
 
-Remaining task burden may later influence Clock placement, but Study 14 only mocks the presentation output.
+## 9. Temporal conflict is where Clock earns explanation
 
-## 20. One task, many role projections
+Clock should speak when the problem is specifically temporal and can no longer be resolved silently.
 
-A manager choosing `Mine` versus `Team` changes **projection scope**, not task identity.
+Example:
+
+```text
+DAY CONFLICT
+MG7 needs 45 min.
+22 min remain before Pickup at Elm · 4:30 PM.
+```
+
+This belongs to Clock because the conflict is about custody of time.
+
+A temporal conflict may expose governed dispositions such as:
+
+- move after the hard edge;
+- choose another lawful placement;
+- needs manager.
+
+Clock must not invent an impossible placement simply to keep every task assigned a time.
 
 Required law:
 
-`task_id is invariant across Clock, Day, Task Focus, Manager, Mine, Team, and person-scoped projections`
+> **Unfittable admitted work is a planning conflict, not worker-owned ambiguity.**
 
-Hiding a team member from the manager feed must not unschedule, clone, reassign, or otherwise mutate that person's task.
+## 10. What Clock should not explain
 
-Study 14 demonstrates this by filtering the same fixture task objects through a manager scope control. Team actor identity is deliberately tiny and is suppressed at distant context scale.
+Clock should not become the display home for every reason a task matters.
 
-## 21. Occupied Time is not a task
+Examples that normally belong elsewhere:
 
-Clock needs a generic representation of time already committed, unavailable, or constrained without turning every reservation into task work.
+- detailed dependency or UNLOCKS chains;
+- crop or business lifecycle explanation;
+- inventory custody;
+- multi-step Task Card checklists;
+- detailed readiness diagnostics;
+- route history;
+- migration history;
+- full team workload;
+- domain-specific pressure audits.
 
-Examples include meetings, travel, delivery windows, appointments, service periods, room bookings, training, machine downtime, calls, inspections, and similar commitments.
+Atlas may use any of those truths to choose or reorder the Execution Neighborhood. The worker sees the consequence primarily as **what became NEXT**.
 
-Required distinction:
+## 11. Procedural facts versus downstream meaning
+
+This contract aligns with the broader Worker Day rule that compact worker surfaces should keep execution cues procedural rather than dumping downstream consequence metadata into every card.
+
+Clock may show a small detail needed to execute or identify a move, such as:
+
+- destination;
+- concise amount;
+- governed time range;
+- a short result receipt on LAST.
+
+Downstream meaning remains in the canonical task/domain surface unless Clock needs it to explain a temporal conflict.
+
+## 12. Occupied Time and hard edges
+
+Occupied Time is not a task.
 
 `occupied_time != task`
 
-Occupied Time participates in day geometry and may constrain choreography. It must not inherit task completion semantics, task result controls, or task identity merely because it appears in Clock.
+Meetings, pickups, deliveries, appointments, travel windows, room bookings, service periods, machine downtime, and similar commitments may occupy rail geometry without inheriting task completion semantics.
 
-Study 14 renders occupied time as a small neutral temporal span between task rows and a neutral row in Day.
+The Execution Neighborhood promotes only the **nearest operationally important hard edge** into a readable card.
 
-## 22. Work Context generalizes route intelligence
+A hard edge may be:
 
-Atlas should reason about context-switching cost rather than hard-code farm routing as the only optimization.
+- fixed Occupied Time;
+- a fixed-start task;
+- a governed reservation;
+- another temporal commitment Clock is not allowed to casually move through.
 
-A Work Context may be physical place, customer/account, project, equipment/setup, workstation, team, role, production station, cognitive mode, security state, or other company-specific execution context.
+## 13. Task identity remains canonical
 
-Clock may prefer sequences that reduce expensive context transitions.
+Clock is a projection of canonical task identity, not an alternate task system.
 
-The default visual behavior is **no extra UI**. Better ordering is the primary output. Context only earns a tiny signal when the worker materially benefits from knowing it.
+Required law:
 
-## 23. Work Lifecycle / Expected State Progression
+`clock.task_id == day.task_id == task_focus.task_id`
 
-Crop lifecycle is one instance of a company-agnostic lifecycle engine.
+If a task is superseded, Clock follows the canonical replacement rather than preserving a stale local identity.
 
-Given last known state, elapsed time, governing rules, known events, and no contradictory evidence, Atlas should be able to derive an expected next state and the work implied by that state.
+Changing Clock choreography changes the placement/projection of the canonical task; it must not create a duplicate Clock task.
+
+## 14. Clock owns choreography
+
+Task/source truth says what work is and carries constraints such as:
+
+- hard dates;
+- windows;
+- expected duration;
+- readiness;
+- dependencies;
+- resources;
+- place/context;
+- actor;
+- lifecycle;
+- result state.
+
+Clock choreography answers:
+
+> **Where does executable work fit in this person's actual day now?**
+
+A flexible task does not need to originate with an exact time. Once Atlas admits it into the worker's day, Clock is responsible for a lawful placement or an explicit planning conflict.
+
+There is no worker-facing flexible/unplanned pocket whose real meaning is "you figure out when to do this."
+
+## 15. Intelligence is primarily an ordering input
+
+Atlas may use increasingly sophisticated intelligence without adding more Clock UI.
 
 Examples include:
 
-- lead -> contacted -> follow-up due;
-- draft -> edit -> proof -> approval;
-- installed -> inspection due -> service due;
-- invoice -> reminder due -> overdue -> escalation;
-- applicant -> interview -> decision -> onboarding;
-- planted -> growing -> harvestable -> exhausted.
+- Occupied Time;
+- readiness;
+- resource recovery;
+- context-switch cost;
+- expected state progression / lifecycle;
+- operating conditions;
+- dependency pressure;
+- consequence severity;
+- route efficiency;
+- remaining task burden;
+- current service-day capacity.
 
-Clock should usually display only the work produced by lifecycle truth. If a reason materially helps the worker, one tiny cue such as `FOLLOW-UP DUE`, `EVENT TOMORROW`, or `HARVEST WINDOW` may be admitted.
+For each new source of intelligence, ask first:
 
-## 24. Operating Conditions are scheduling pressure, not a dashboard
+> **Can this make the next move better without adding anything to Clock?**
 
-Weather is one member of a broader Operating Conditions primitive.
+If yes, keep it behind the scenes.
 
-Condition sources may include traffic, business hours, staffing, inventory arrival, machine availability, room availability, system load/uptime, market hours, daylight, temperature, customer presence, regulatory windows, production load, connectivity, and similar external or internal states.
+## 16. Manager Clock should be person-centered, not a blended Team Clock
 
-Conditions should eventually support three pressure classes:
+Study 15 removes the previous `Mine | Team` blended Clock experiment.
 
-- **hard** — impossible/forbidden now;
-- **preferred** — better during this condition/window;
-- **avoid** — possible but undesirable.
+The more useful manager question is:
 
-The default visual output is nothing. When the reason matters to execution, a tiny cue such as `BUSINESS HOURS`, `LOW WIND`, `LOW TRAFFIC`, or `CUSTOMER ON SITE` may be shown.
+> **What is each person's work currently doing?**
 
-## 25. Progressive Task Signal has a hard visual budget
+A future Manager Clock may therefore use a person lens such as Anna / Marshall / Me, where selecting a person shows that person's Execution Neighborhood.
 
-Clock must never become a miniature Task Card gallery.
+Complete multi-person workload remains a Manager/Day concern.
 
-A task may have many useful facts, but Clock admits at most the smallest facts that materially change understanding of:
+This keeps one person's temporal sequence coherent instead of interleaving several workers into one pseudo-day.
 
-1. progress;
-2. readiness;
-3. consequence;
-4. execution context.
+## 17. Bounded screen contract
 
-Study 14 uses ranked fixture signals. Context scale admits only a tiny progress/readiness cue when one exists. Near focus admits one signal. Focus admits at most two secondary signals, with a full UNLOCKS branch replacing duplicate consequence text when necessary.
+Clock remains a bounded Atlas surface.
 
-This is a **shared product contract**, not a per-family suggestion. Specialized task-card detail remains in Task Focus.
+The stable app/header/footer chrome does not drift merely because work advances. Inside the Clock area:
 
-## 26. End-of-day migration is adjudication, not rollover
+- the date context is stable;
+- the full-day rail is stable;
+- the Execution Neighborhood is bounded;
+- the immediate cards may update when canonical reality or choreography changes.
 
-At the governed end of a workday, unresolved work needs a real disposition rather than an automatic midnight copy.
+Clock no longer needs an internal all-task scroll owner because it no longer attempts to render the whole Day feed.
 
-Candidate outcomes include:
+## 18. Three required Study 15 states
 
-- **Carry** — still required and lawfully fit into the next day;
-- **Reschedule** — belongs later for governed reasons;
-- **Expire** — opportunity no longer exists;
-- **Needs management** — Atlas cannot safely decide.
+The fixture must demonstrate three distinct behaviors.
 
-Adjudication may consider task health, consequence paths, lifecycle state, conditions, resources, hard dates/windows, readiness, recurrence identity, and prior migration provenance.
+### A. Normal progression
 
-Study 14 exposes a compact **END-OF-DAY PREVIEW** only when the scrubber reaches the final visible task. Those closeout rows are fixture outputs, not live adjudication.
+- one subdued LAST move;
+- one dominant factual NOW move;
+- NEXT;
+- THEN;
+- a fixed hard edge;
+- full-day rail orientation.
 
-Migration provenance such as `↳ Tue` should remain tiny but available so carried work does not lose history.
+### B. Silent reflow
 
-## 27. Study 14 stress-test objective
+- the same canonical task identities appear in a changed choreography;
+- a task overrun causes movable work to refit;
+- the hard edge remains fixed;
+- no scheduling-explanation dashboard appears.
 
-The fixture intentionally combines:
+### C. Temporal conflict
 
-- ten scheduled task identities;
-- multiple actors;
-- `Mine` and `Team` projections;
-- task-health/checklist ratios;
-- consequence paths;
-- occupied-time spans;
-- work-context outputs;
-- lifecycle cues;
-- operating-condition cues;
-- carried-work provenance;
-- end-of-day disposition outputs.
+- the current time is factual even if no lawful task fits NOW;
+- an unfitted task is shown as needing placement rather than being assigned an impossible time;
+- the hard edge remains fixed;
+- Clock exposes the temporal conflict and governed disposition choices.
 
-The success criterion is not that every fact is visible. It is the opposite:
+## 19. Fixture-only boundary
 
-> Atlas should be able to know all of these things while the worker still experiences a calm Clock that mostly tells them what to do next.
+Study 15 uses specimen task IDs and times only.
+
+The Owner editor must not:
+
+- fetch live Worker state;
+- call Atlas task-transition APIs;
+- mutate tasks;
+- change production choreography;
+- write completion/results;
+- pretend fixture placement is canonical production truth.
+
+A future production hookup should consume the existing Living Day / Clock authority rather than port this fixture data model into production.
+
+## 20. Promotion gate
+
+Do not promote the Study 15 renderer into Worker Clock until it can consume current canonical projections while preserving these laws:
+
+- one canonical task identity;
+- Day owns completeness;
+- Clock owns temporal position;
+- Task Focus owns execution;
+- hard reservations remain authoritative;
+- NOW remains factual;
+- movable work may silently reflow;
+- impossible placement becomes a planning conflict;
+- hidden Atlas intelligence improves ordering before it earns pixels.
+
+The desired worker experience is:
+
+> "Atlas knew what I had just finished, what I was doing, what came next, and what fixed thing the day was heading toward. When reality changed, it refit the day. It only interrupted me when time genuinely stopped fitting."
