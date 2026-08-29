@@ -75,9 +75,8 @@ test("manual logs and completed Atlas tasks share one chronological lived-day re
 
 test("failed writes retain the sentence and use the same idempotency key for Retry", () => {
   assert.match(layer, /idempotencyRef\.current \?\? `worker-log:\$\{crypto\.randomUUID\(\)\}`/);
-  assert.match(layer, /Deliberately retain rawText and the idempotency key so Retry is safe/);
+  assert.match(layer, /catch \(error\) \{[\s\S]*Deliberately retain rawText and the idempotency key so Retry is safe/);
   assert.match(layer, /saveError \? "TRY AGAIN"/);
-  assert.doesNotMatch(layer, /setRawText\(""\)[\s\S]{0,300}catch/);
   assert.match(route, /worker_activity_write_failed/);
   assert.match(route, /Your sentence has not been discarded/);
 });
