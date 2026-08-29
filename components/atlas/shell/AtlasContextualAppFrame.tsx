@@ -137,7 +137,7 @@ function DockIcon({ kind }: { kind: DockIconKey }) {
   );
 }
 
-const HIDDEN_PATHS = ["/login", "/auth", "/offline"];
+const HIDDEN_PATHS = ["/login", "/auth", "/offline", "/local"];
 const DAY_TASK_ID = /^day-task-([0-9a-f-]{36})$/i;
 
 export default function AtlasContextualAppFrame({ effectiveFarmRole = null, activeFarmName = null }: AtlasContextualAppFrameProps) {
