@@ -3,8 +3,8 @@
 import { useState } from "react";
 
 import { AtlasAppShell, AtlasTopBar } from "@/components/atlas/ui/AtlasPrimitives";
+import CanonicalAtlasPortal from "./CanonicalAtlasPortal";
 import DesignWorkshop from "./DesignWorkshop";
-import RealAtlasPortal from "./RealAtlasPortal";
 import styles from "./design-studio.module.css";
 import "./workshop-live-overrides.module.css";
 
@@ -16,7 +16,7 @@ export default function DesignAtlasStudio() {
   if (mode === "portal") {
     return (
       <>
-        <RealAtlasPortal />
+        <CanonicalAtlasPortal />
         <button className={styles.openWorkshop} type="button" onClick={() => setMode("workshop")}>
           <span>DESIGN ATLAS</span>
           <strong>Workshop</strong>
