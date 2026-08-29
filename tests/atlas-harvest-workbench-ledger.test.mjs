@@ -1,3 +1,4 @@
+// Harvest command-center release contract: keep the permanent cards and outbound truth on one canonical flower ledger.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
