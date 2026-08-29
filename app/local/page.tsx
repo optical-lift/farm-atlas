@@ -38,6 +38,12 @@ const DATE_HEADING = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
+const SHORT_DATE = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Chicago",
+  month: "short",
+  day: "numeric",
+});
+
 const TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Chicago",
   hour: "numeric",
@@ -91,9 +97,17 @@ function viewRange(view: ViewKey, today: string) {
 function timeLabel(event: CalendarEvent) {
   if (event.time_precision === "date_only") return "Time TBA";
   if (event.time_precision === "conditional") return "Conditional timing";
-  const start = TIME_FORMAT.format(new Date(event.starts_at));
+
+  const startDate = new Date(event.starts_at);
+  const start = TIME_FORMAT.format(startDate);
   if (!event.ends_at) return start;
-  return `${start}–${TIME_FORMAT.format(new Date(event.ends_at))}`;
+
+  const endDate = new Date(event.ends_at);
+  if (localDateKey(startDate) !== localDateKey(endDate)) {
+    return `${SHORT_DATE.format(startDate)}–${SHORT_DATE.format(endDate)}`;
+  }
+
+  return `${start}–${TIME_FORMAT.format(endDate)}`;
 }
 
 function costLabel(event: CalendarEvent) {
@@ -168,38 +182,13 @@ export default async function ElmLocalPage({ searchParams }: { searchParams: Sea
         <div className="elm-local-hero__topline">
           <div>
             <p className="elm-local-kicker">Elm Local</p>
-            <p className="elm-local-place">Marshfield, Missouri</p>
+            <p className="elm-local-place">Marshfield + surrounding communities</p>
           </div>
           <a className="elm-local-submit-link" href="#submit-event">+ Submit an Event</a>
         </div>
-        <h1>What’s happening around Marshfield?</h1>
-        <p className="elm-local-intro">One place for Elm gatherings and the things happening around town.</p>
+        <h1>What’s happening around here?</h1>
+        <p className="elm-local-intro">A community calendar for Marshfield and the towns around it.</p>
       </header>
-
-      <section className="elm-local-rhythm" aria-labelledby="elm-rhythm-title">
-        <div className="elm-local-section-heading">
-          <p className="elm-local-kicker">Weekly at Elm</p>
-          <h2 id="elm-rhythm-title">Elm has a rhythm.</h2>
-        </div>
-        <div className="elm-local-rhythm-grid">
-          <article>
-            <span>Mon–Wed</span>
-            <strong>Book Elm</strong>
-            <p>18 booking times across the week for small gatherings, sessions, meetings and visits.</p>
-          </article>
-          <article>
-            <span>Thursday</span>
-            <strong>Community Day</strong>
-            <p>Free community mornings and seasonal evening workshops.</p>
-          </article>
-          <article>
-            <span>Fri–Sat</span>
-            <strong>Celebrate here</strong>
-            <p>Protected for premium private events and bigger Elm experiences.</p>
-          </article>
-        </div>
-        <p className="elm-local-rhythm-note"><strong>Farm rhythm:</strong> harvest Monday + Thursday mornings · Arise Tuesday + Friday at 6 a.m.</p>
-      </section>
 
       <section className="elm-local-calendar" id="calendar" aria-labelledby="calendar-title">
         <div className="elm-local-section-heading elm-local-calendar-heading">
@@ -207,7 +196,7 @@ export default async function ElmLocalPage({ searchParams }: { searchParams: Sea
             <p className="elm-local-kicker">Community Calendar</p>
             <h2 id="calendar-title">Find something to do.</h2>
           </div>
-          <p>Elm events and verified community happenings live together here.</p>
+          <p>Verified community happenings from around the region, with public Elm events included when they belong.</p>
         </div>
 
         <nav className="elm-local-filter-row" aria-label="Calendar range">
@@ -271,7 +260,7 @@ export default async function ElmLocalPage({ searchParams }: { searchParams: Sea
       <section className="elm-local-submit" id="submit-event" aria-labelledby="submit-event-title">
         <div className="elm-local-section-heading">
           <p className="elm-local-kicker">Add to the calendar</p>
-          <h2 id="submit-event-title">Tell Elm what’s happening.</h2>
+          <h2 id="submit-event-title">Tell Elm Local what’s happening.</h2>
           <p>Submissions are reviewed before they appear. Sending the form does not automatically publish an event.</p>
         </div>
         <form action="/api/local/submit-event" method="post" className="elm-local-form">
@@ -281,7 +270,7 @@ export default async function ElmLocalPage({ searchParams }: { searchParams: Sea
             <label><span>Time</span><input name="eventTime" placeholder="6:30–8 p.m. or all day" maxLength={80} /></label>
             <label><span>Host / organization *</span><input name="hostName" required maxLength={180} /></label>
             <label><span>Venue / place *</span><input name="venueName" required maxLength={180} /></label>
-            <label><span>City</span><input name="city" defaultValue="Marshfield" maxLength={100} /></label>
+            <label><span>City</span><input name="city" placeholder="Marshfield, Strafford, Nixa…" maxLength={100} /></label>
             <label className="wide"><span>Address</span><input name="address" maxLength={240} /></label>
             <label className="wide"><span>Event or registration link</span><input name="publicUrl" type="url" placeholder="https://" maxLength={1000} /></label>
             <label className="wide"><span>Anything people should know</span><textarea name="description" rows={4} maxLength={2000} /></label>
