@@ -216,6 +216,37 @@ export type AtlasPrincipalOffice = {
   housePosition?: AtlasHousePosition | null;
 };
 
+export type AtlasPrincipalCapabilityHoldItem = {
+  taskId: string;
+  title: string;
+  taskType: string | null;
+  actionKey: string | null;
+  status: string;
+  dueDate: string | null;
+  farmId: string;
+  portfolioUnitId: string;
+  portfolioUnitName: string;
+  portfolioHorizon: string | null;
+  assignedMembershipId: string | null;
+  assignedWorkerKey: string | null;
+  assignedRole: string | null;
+  readinessKey: string | null;
+  readinessLabel: string | null;
+  blocker: string | null;
+  holdDimensions: string[];
+  heldSince: string | null;
+  lastChangedAt: string | null;
+  originalDueDate: string | null;
+};
+
+export type AtlasPrincipalCapabilityHolds = {
+  contractVersion?: string;
+  state: string;
+  count: number;
+  items: AtlasPrincipalCapabilityHoldItem[];
+  truthBoundary?: Record<string, unknown>;
+};
+
 export type AtlasPrincipalSelfContext = {
   contractVersion?: string;
   state: string;
@@ -234,6 +265,7 @@ export type AtlasPrincipalSelfContext = {
   principalClock?: AtlasPrincipalClock | null;
   principalOffice?: AtlasPrincipalOffice | null;
   capacityToday?: AtlasPrincipalCapacityState | null;
+  capabilityHolds?: AtlasPrincipalCapabilityHolds | null;
 };
 
 export async function readAtlasPrincipalSelfContext(): Promise<AtlasPrincipalSelfContext> {
