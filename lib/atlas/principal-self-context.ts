@@ -223,7 +223,6 @@ export type AtlasPrincipalCapabilityHoldItem = {
   actionKey: string | null;
   status: string;
   dueDate: string | null;
-  farmId: string;
   portfolioUnitId: string;
   portfolioUnitName: string;
   portfolioHorizon: string | null;
