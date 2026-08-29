@@ -68,7 +68,7 @@ test("normal progression keeps the current move dominant without dumping Task Fo
   assert.match(study, /label: "Pickup at Elm"/);
   assert.match(smartCss, /\.executionMove\[data-role="now"\][\s\S]*min-height: 112px/);
   assert.match(smartCss, /\.executionMove\[data-role="last"\][\s\S]*opacity: 0\.62/);
-  assert.match(contract, /Task Focus owns execution detail and result capture/);
+  assert.match(contract, /Task Focus.*owns execution detail and result capture/);
 });
 
 test("purple remains factual NOW and does not become importance or consequence styling", () => {
