@@ -63,9 +63,10 @@ test("Farm Hand quick logging reuses the canonical Harvest workbench write bound
 test("quick-log provenance stays distinct from Harvest-tab provenance", () => {
   const writer = read("app/api/atlas/harvest-workbench/route.ts");
   const logging = read("app/work/today/WorkerFlowerLogging.tsx");
+  const reader = read("app/api/atlas/worker-flower-log/route.ts");
 
   assert.match(writer, /workerQuickLog/);
-  assert.match(logging, /Quick log/);
+  assert.match(reader, /\? "Quick log" : "Task"/);
   assert.match(logging, /same flower history as task harvests/);
   assert.match(logging, /Ready inventory/);
 });
