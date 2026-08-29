@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
   const operatorContext = await readAtlasOwnerOperatorContext();
   const operatorMembershipId = effectiveOperatorMembershipId(operatorContext);
   if (operatorContext?.isOperating && !operatorMembershipId) return privateJson({ ok: false, error: "The selected account has no Harvest write scope." }, 403);
+  const workerQuickLog = authorized.access.membership.role === "farm_hand" && !operatorContext?.isOperating;
   const supabase = await createAtlasServerClient();
 
   if (action === "harvest") {
@@ -57,11 +58,13 @@ export async function POST(request: NextRequest) {
     if (normalizedRows.some((row) => !UUID_PATTERN.test(row.cropCycleId) || !Number.isInteger(row.bucketHalves) || row.bucketHalves < 1 || row.bucketHalves > 40 || !["yes", "no", "unsure"].includes(row.moreAvailability))) {
       return privateJson({ ok: false, error: "Each Harvest row needs a crop, half-bucket amount, and whether more remains." }, 400);
     }
-    const result = operatorMembershipId
-      ? await supabase.rpc("owner_operator_record_flower_harvest_workbench_v1", { p_effective_membership_id: operatorMembershipId, p_farm_id: farmId, p_rows: normalizedRows, p_note: note, p_idempotency_key: idempotencyKey })
-      : await supabase.rpc("record_flower_harvest_workbench_for_member_v1", { p_farm_id: farmId, p_rows: normalizedRows, p_note: note, p_idempotency_key: idempotencyKey });
+    const result = workerQuickLog
+      ? await supabase.rpc("record_flower_harvest_worker_quick_log_v1", { p_farm_id: farmId, p_rows: normalizedRows, p_note: note, p_idempotency_key: idempotencyKey })
+      : operatorMembershipId
+        ? await supabase.rpc("owner_operator_record_flower_harvest_workbench_v1", { p_effective_membership_id: operatorMembershipId, p_farm_id: farmId, p_rows: normalizedRows, p_note: note, p_idempotency_key: idempotencyKey })
+        : await supabase.rpc("record_flower_harvest_workbench_for_member_v1", { p_farm_id: farmId, p_rows: normalizedRows, p_note: note, p_idempotency_key: idempotencyKey });
     if (result.error) return rpcFailure(result.error as RpcError);
-    return privateJson({ ...(result.data as Record<string, unknown>), ok: true, operatorMode: operatorContext?.isOperating ?? false, effectiveMembershipId: operatorMembershipId });
+    return privateJson({ ...(result.data as Record<string, unknown>), ok: true, operatorMode: operatorContext?.isOperating ?? false, workerQuickLog, effectiveMembershipId: operatorMembershipId });
   }
 
   if (action === "prepare") {
@@ -82,11 +85,13 @@ export async function POST(request: NextRequest) {
     if (normalizedOutputs.some((output) => !output.kind || !output.productLabel || !Number.isFinite(output.quantity) || output.quantity <= 0 || ((output.kind === "bundle" || output.kind === "bunch") && (!Number.isInteger(output.stemsPerUnit) || Number(output.stemsPerUnit) < 1)))) {
       return privateJson({ ok: false, error: "Each finished line needs its flower, pack type, quantity, and stems per bunch when applicable." }, 400);
     }
-    const result = operatorMembershipId
-      ? await supabase.rpc("owner_operator_record_flower_preparation_workbench_v1", { p_effective_membership_id: operatorMembershipId, p_farm_id: farmId, p_harvest_batch_id: harvestBatchId, p_outputs: normalizedOutputs, p_note: note, p_idempotency_key: idempotencyKey })
-      : await supabase.rpc("record_flower_preparation_workbench_for_member_v1", { p_farm_id: farmId, p_harvest_batch_id: harvestBatchId, p_outputs: normalizedOutputs, p_note: note, p_idempotency_key: idempotencyKey });
+    const result = workerQuickLog
+      ? await supabase.rpc("record_flower_preparation_worker_quick_log_v1", { p_farm_id: farmId, p_harvest_batch_id: harvestBatchId, p_outputs: normalizedOutputs, p_note: note, p_idempotency_key: idempotencyKey })
+      : operatorMembershipId
+        ? await supabase.rpc("owner_operator_record_flower_preparation_workbench_v1", { p_effective_membership_id: operatorMembershipId, p_farm_id: farmId, p_harvest_batch_id: harvestBatchId, p_outputs: normalizedOutputs, p_note: note, p_idempotency_key: idempotencyKey })
+        : await supabase.rpc("record_flower_preparation_workbench_for_member_v1", { p_farm_id: farmId, p_harvest_batch_id: harvestBatchId, p_outputs: normalizedOutputs, p_note: note, p_idempotency_key: idempotencyKey });
     if (result.error) return rpcFailure(result.error as RpcError);
-    return privateJson({ ...(result.data as Record<string, unknown>), ok: true, operatorMode: operatorContext?.isOperating ?? false, effectiveMembershipId: operatorMembershipId });
+    return privateJson({ ...(result.data as Record<string, unknown>), ok: true, operatorMode: operatorContext?.isOperating ?? false, workerQuickLog, effectiveMembershipId: operatorMembershipId });
   }
 
   return privateJson({ ok: false, error: "Choose Harvest Stems or Condition + Bunch." }, 400);
