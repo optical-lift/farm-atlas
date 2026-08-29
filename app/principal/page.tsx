@@ -5,6 +5,7 @@ import {
   readAtlasPrincipalSelfContext,
   type AtlasHousePosition,
   type AtlasPrincipalAttentionItem,
+  type AtlasPrincipalCapabilityHolds,
   type AtlasPrincipalCapacityState,
   type AtlasPrincipalClockCandidate,
   type AtlasPrincipalGreatGameScore,
@@ -56,6 +57,12 @@ const rowStyle = {
 
 function prettyState(value: string | null | undefined) {
   return (value || "unknown").replaceAll("_", " ");
+}
+
+function personLabel(value: string | null | undefined) {
+  const clean = (value || "").replaceAll("_", " ").trim();
+  if (!clean) return "Unassigned";
+  return clean.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function minutesLabel(value: number | null | undefined) {
@@ -138,6 +145,43 @@ function PortfolioCard({ units }: { units: AtlasPrincipalPortfolioUnit[] }) {
           </div>
         )) : <p style={{ margin: "10px 0 0" }}>No portfolio units are currently authored.</p>}
       </div>
+    </section>
+  );
+}
+
+function CapabilityHoldsCard({ holds }: { holds: AtlasPrincipalCapabilityHolds | null | undefined }) {
+  const items = holds?.items ?? [];
+
+  return (
+    <section style={cardStyle} aria-label="Waiting for capability">
+      <span style={eyebrowStyle}>Waiting for capability</span>
+      <h2 style={{ margin: 0, fontSize: 22 }}>Held outside Worker Day</h2>
+      <p style={{ margin: "7px 0 0", lineHeight: 1.5, opacity: .72 }}>
+        These obligations still exist, but Atlas will not put them on someone&apos;s day until the people, capability, tools, materials, travel or location, time, or information they need becomes available.
+      </p>
+      {items.length ? (
+        <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+          {items.map((item) => {
+            const dimensions = (item.holdDimensions ?? []).map((dimension) => prettyState(dimension));
+            return (
+              <div key={item.taskId} style={rowStyle}>
+                <strong>{item.portfolioHorizon ? `${item.portfolioHorizon} · ` : ""}{item.portfolioUnitName} · {item.title}</strong>
+                <span style={{ display: "block", marginTop: 4, opacity: .68 }}>
+                  Assigned to {personLabel(item.assignedWorkerKey || item.assignedRole)} · original due {dateLabel(item.originalDueDate || item.dueDate)}
+                </span>
+                {item.blocker ? <span style={{ display: "block", marginTop: 6, lineHeight: 1.45 }}>{item.blocker}</span> : null}
+                {dimensions.length ? (
+                  <span style={{ display: "block", marginTop: 6, fontSize: 12, opacity: .58 }}>
+                    Waiting on {dimensions.join(" · ")}
+                  </span>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p style={{ margin: "10px 0 0", lineHeight: 1.55 }}>No obligations are currently waiting for capability.</p>
+      )}
     </section>
   );
 }
@@ -381,6 +425,7 @@ export default async function AtlasPrincipalPage() {
         </div>
 
         <PortfolioCard units={context.portfolioUnits ?? []} />
+        <CapabilityHoldsCard holds={context.capabilityHolds} />
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
           <OwnerObligationsCard candidates={context.clockCandidates ?? []} />
