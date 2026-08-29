@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
+import HarvestedOutputSection, { type HarvestedResponse } from "@/app/harvest/HarvestedOutputSection";
 import AtlasDock, { type AtlasDockIconKey, type AtlasDockItem } from "@/components/atlas/shell/AtlasDock";
 import AtlasMoreDestinationList, { type AtlasMoreDestination } from "@/components/atlas/shell/AtlasMoreDestinationList";
 import { AtlasAppShell, AtlasCard, AtlasTopBar } from "@/components/atlas/ui/AtlasPrimitives";
-import HarvestCardSpecimen from "../task-card-lab/HarvestCardSpecimen";
 import DesignAtlasCanonicalHome, { type DesignAtlasHomePersona } from "./DesignAtlasCanonicalHome";
 import RealClockFixture from "./RealClockFixture";
 import RealDayWorkshopFixture from "./RealDayWorkshopFixture";
@@ -26,6 +26,24 @@ const SCOPE_LABELS: Record<ScopeKey, string> = {
   principal: "Principal",
   feast: "Feast Guild",
   elm: "Elm Farm",
+};
+
+const HARVEST_FIXTURE: HarvestedResponse = {
+  ok: true,
+  rangeStart: "2026-08-23",
+  asOf: "2026-08-29",
+  rangeDays: 7,
+  farms: [{
+    id: "fixture-elm",
+    key: "elm-farm",
+    name: "Elm Farm",
+    totals: { bucketEquivalentFloor: 5.5, lowerBound: true, observationCount: 3 },
+    entries: [
+      { id: "fixture-harvest-1", cropCycleId: "fixture-sunflower", cropLabel: "Sunflower", variety: "ProCut Orange", observedDate: "2026-08-29", bucketEquivalentFloor: 3, lowerBound: false, moreAvailable: true, observationCount: 1, note: "Field Row 13 · morning cut" },
+      { id: "fixture-harvest-2", cropCycleId: "fixture-zinnia", cropLabel: "Zinnia", variety: "Benary's Giant", observedDate: "2026-08-28", bucketEquivalentFloor: 1.5, lowerBound: true, moreAvailable: true, observationCount: 1, note: "Main Garden · at least this much recorded" },
+      { id: "fixture-harvest-3", cropCycleId: "fixture-basil", cropLabel: "Lemon basil", variety: null, observedDate: "2026-08-27", bucketEquivalentFloor: 1, lowerBound: false, moreAvailable: false, observationCount: 1, note: "Cut reported complete" },
+    ],
+  }],
 };
 
 function dockItems(persona: PersonaKey): AtlasDockItem[] {
@@ -68,7 +86,7 @@ function DesignLens({ persona, scope, onPersona, onScope }: {
   );
 }
 
-function FixtureCard({ kicker, title, children }: { kicker: string; title: string; children: React.ReactNode }) {
+function FixtureCard({ kicker, title, children }: { kicker: string; title: string; children: ReactNode }) {
   return (
     <AtlasCard as="section" className={styles.fixtureCard}>
       <header><span>{kicker}</span><h2>{title}</h2></header>
@@ -150,9 +168,9 @@ function ManagerSurface() {
 
 function HarvestSurface() {
   return (
-    <div className={styles.stack}>
-      <section className="atlas-more-page__intro"><span>HARVEST</span><h1>Flower command center</h1><p>The opened card below is the existing Task Card Editor Harvest specimen rather than a redrawn harvest card.</p></section>
-      <div className={styles.specimen}><HarvestCardSpecimen /></div>
+    <div className={styles.stack} data-atlas-harvest-fixture="canonical-read-only">
+      <section className="atlas-more-page__intro"><span>HARVEST</span><h1>Flower command center</h1><p>This is now a real Harvest destination component with fake physical-output truth. The mutation-heavy Workbench stays quarantined until it has its own fixture mode.</p></section>
+      <HarvestedOutputSection fixtureOnly fixtureData={HARVEST_FIXTURE} />
     </div>
   );
 }
