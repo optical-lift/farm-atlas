@@ -8,6 +8,7 @@ import { getWorkerHand } from "@/lib/atlas-data/worker-hand";
 import { getWorkerOperationalRouteStopsForFarm, type WorkerOperationalRouteStop } from "@/lib/atlas-data/worker-operational-routes";
 import { readWorkerWeekProjection } from "@/lib/atlas-data/worker-week-projection";
 import { requireAtlasRole } from "@/lib/atlas/role-access";
+import WorkerFlowerLogging from "./WorkerFlowerLogging";
 import WorkerRouteStopActions from "./WorkerRouteStopActions";
 import WorkerTaskActions from "./WorkerTaskActions";
 import styles from "./work.module.css";
@@ -198,6 +199,7 @@ export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageP
                   <article><strong>{plan.waiting.length}</strong><span>waiting</span></article>
                 </section>
 
+                {access.membership.role === "farm_hand" ? <WorkerFlowerLogging /> : null}
                 <WorkerRouteSection stops={routeOnlyStops} canAct={hand.canAct} />
 
                 {hand.counts.total ? (
