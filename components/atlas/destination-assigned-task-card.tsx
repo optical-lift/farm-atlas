@@ -7,6 +7,7 @@ import type { AssignedTaskExecutionShellProps, AssignedTaskOutcome } from "@/com
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import TaskDestinationContact from "@/components/atlas/task-destination-contact";
 import { useTaskFocusNavigation } from "@/components/atlas/task-focus-navigation-boundary";
+import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import { taskDestinationContact } from "@/lib/atlas/task-destination-contact";
 import { atlasActionForTask } from "@/lib/atlas/task-display";
 import { postAtlasTaskTransition } from "@/lib/atlas/task-transition-client";
@@ -84,12 +85,25 @@ export function isDestinationTask(task: AssignedTaskExecutionShellProps["task"])
   return taskDestinationContact(task) !== null;
 }
 
+type CanonicalTaskLookupResponse = {
+  ok?: boolean;
+  error?: string;
+  canonicalTaskId?: string | null;
+  resolvedFromTaskId?: string | null;
+  taskCards?: AtlasTaskCard[];
+};
+
+type FulfillmentIdempotency = {
+  taskId: string;
+  key: string;
+};
+
 export default function DestinationAssignedTaskCard({ task, assignee }: AssignedTaskExecutionShellProps) {
   const [weatherLabel, setWeatherLabel] = useState("live weather loading…");
   const [saving, setSaving] = useState<AssignedTaskOutcome | null>(null);
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const fulfillmentIdempotencyKey = useRef<string | null>(null);
+  const fulfillmentIdempotency = useRef<FulfillmentIdempotency | null>(null);
   const navigation = useTaskFocusNavigation(assignee.listPath);
   const destination = taskDestinationContact(task);
 
@@ -100,16 +114,32 @@ export default function DestinationAssignedTaskCard({ task, assignee }: Assigned
       .catch(() => setWeatherLabel("weather unavailable"));
   }, []);
 
-  async function recordFlowerFulfillment(note: string) {
-    const idempotencyKey = fulfillmentIdempotencyKey.current
-      || `destination-fulfillment:${task.task_id}:${crypto.randomUUID()}`;
-    fulfillmentIdempotencyKey.current = idempotencyKey;
+  async function resolveLiveTask() {
+    const response = await fetch(`/api/atlas/task-cards?taskId=${encodeURIComponent(task.task_id)}`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    const payload = await response.json() as CanonicalTaskLookupResponse;
+    const liveTask = payload.taskCards?.[0];
+    if (!response.ok || !payload.ok || !liveTask) {
+      throw new Error(payload.error || "This delivery changed. Go back to today’s work and open it again.");
+    }
+    return liveTask;
+  }
+
+  async function recordFlowerFulfillment(liveTask: AtlasTaskCard, note: string) {
+    const existing = fulfillmentIdempotency.current;
+    const idempotencyKey = existing?.taskId === liveTask.task_id
+      ? existing.key
+      : `destination-fulfillment:${liveTask.task_id}:${crypto.randomUUID()}`;
+    fulfillmentIdempotency.current = { taskId: liveTask.task_id, key: idempotencyKey };
+
     const response = await fetch("/api/atlas/flower-fulfillment", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       cache: "no-store",
       body: JSON.stringify({
-        taskId: task.task_id,
+        taskId: liveTask.task_id,
         idempotencyKey,
         note: note.trim() || null,
       }),
@@ -122,24 +152,27 @@ export default function DestinationAssignedTaskCard({ task, assignee }: Assigned
     try {
       setSaving(outcome);
       setMessage(null);
-      if (outcome === "done" && task.task_type === "flower_fulfillment") {
-        await recordFlowerFulfillment(note);
-        navigation.complete(task.task_id);
+      const liveTask = await resolveLiveTask();
+
+      if (outcome === "done" && liveTask.task_type === "flower_fulfillment") {
+        await recordFlowerFulfillment(liveTask, note);
+        navigation.complete(liveTask.task_id);
         return;
       }
+
       await postAtlasTaskTransition({
-        taskId: task.task_id,
+        taskId: liveTask.task_id,
         transition: outcome,
         note,
         reason: note,
-        laneKey: task.action_key || undefined,
-        workKey: task.action_key || undefined,
+        laneKey: liveTask.action_key || undefined,
+        workKey: liveTask.action_key || undefined,
         payload: {
-          workClass: task.work_class,
+          workClass: liveTask.work_class,
           assigneeKey: assignee.key,
         },
       });
-      if (outcome === "done") navigation.complete(task.task_id);
+      if (outcome === "done") navigation.complete(liveTask.task_id);
       else navigation.leave();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Task update failed.");
