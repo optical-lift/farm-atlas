@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import DesignAtlas from "./DesignAtlas";
 import DesignWorkshop from "./DesignWorkshop";
+import RealAtlasPortal from "./RealAtlasPortal";
 import styles from "./design-studio.module.css";
 
 type StudioMode = "portal" | "workshop";
@@ -15,7 +15,7 @@ export default function DesignAtlasStudio() {
   if (mode === "portal") {
     return (
       <>
-        <DesignAtlas />
+        <RealAtlasPortal />
         <button className={styles.openWorkshop} type="button" onClick={() => setMode("workshop")}>
           <span>DESIGN ATLAS</span>
           <strong>Workshop</strong>
