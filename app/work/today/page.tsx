@@ -199,7 +199,6 @@ export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageP
                   <article><strong>{plan.waiting.length}</strong><span>waiting</span></article>
                 </section>
 
-                {access.membership.role === "farm_hand" ? <WorkerFlowerLogging /> : null}
                 <WorkerRouteSection stops={routeOnlyStops} canAct={hand.canAct} />
 
                 {hand.counts.total ? (
@@ -212,6 +211,8 @@ export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageP
                 ) : !routeOnlyStops.length ? (
                   <section className={styles.emptyState}><h2>No work is ready</h2><p>There are no assigned tasks or route stops for this worker today.</p></section>
                 ) : null}
+
+                {access.membership.role === "farm_hand" ? <WorkerFlowerLogging /> : null}
               </>
             )}
           </>
