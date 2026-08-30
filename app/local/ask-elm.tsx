@@ -50,6 +50,8 @@ const PROMPTS = [
   "Who’s accepting new dental patients?",
 ];
 
+const CONVERSATIONAL_MATCH_LIMIT = 4;
+
 function MatchCard({ match }: { match: AskMatch }) {
   const primaryHref = match.href || match.externalUrl;
   const external = !match.href && Boolean(match.externalUrl);
@@ -77,12 +79,53 @@ function MatchCard({ match }: { match: AskMatch }) {
   );
 }
 
+function conversationalMatches(response: AskResponse) {
+  const matches = response.matches ?? [];
+  if (!response.intent?.requiresFreshCurrentState) return matches.slice(0, CONVERSATIONAL_MATCH_LIMIT);
+
+  return matches
+    .filter((match) => match.currentState === "current" || match.kind === "event" || match.kind === "series")
+    .slice(0, CONVERSATIONAL_MATCH_LIMIT);
+}
+
+function naturalList(names: string[]) {
+  if (!names.length) return "";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
+}
+
 function answerCopy(response: AskResponse) {
-  if (response.needsClarification || response.intent?.requiresFreshCurrentState) return response.answer;
-  const count = response.matches?.length ?? 0;
-  if (!count) return response.answer;
-  if (response.intent?.questionKind === "events") return `${count} ${count === 1 ? "thing" : "things"} to know about.`;
-  return `${count} local ${count === 1 ? "option" : "options"}.`;
+  if (response.needsClarification) return response.answer;
+
+  const allMatches = response.matches ?? [];
+  const visible = conversationalMatches(response);
+  if (!visible.length) return response.answer;
+
+  const [first, ...alternatives] = visible;
+  const hiddenCount = Math.max(0, allMatches.length - visible.length);
+  const isEventAnswer = response.intent?.questionKind === "events";
+
+  let copy: string;
+  if (isEventAnswer) {
+    copy = `${first.title} is the first one I’d look at.`;
+    if (alternatives.length) {
+      copy += ` ${naturalList(alternatives.map((match) => match.title))} ${alternatives.length === 1 ? "also fits" : "also fit"}.`;
+    }
+  } else if (first.city?.toLowerCase() === "marshfield") {
+    copy = `${first.title} is right in Marshfield, so I’d start there.`;
+    if (alternatives.length) {
+      copy += ` ${naturalList(alternatives.map((match) => match.title))} ${alternatives.length === 1 ? "is another nearby option" : "are other nearby options"}.`;
+    }
+  } else {
+    copy = `${first.title} is the first place I’d try.`;
+    if (alternatives.length) {
+      copy += ` ${naturalList(alternatives.map((match) => match.title))} ${alternatives.length === 1 ? "is another option" : "are other options nearby"}.`;
+    }
+  }
+
+  if (hiddenCount > 0) copy += ` I found ${hiddenCount} more if you want ${hiddenCount === 1 ? "it" : "them"}.`;
+  return copy;
 }
 
 export default function AskElm() {
@@ -123,6 +166,8 @@ export default function AskElm() {
     void ask(question);
   }
 
+  const visibleMatches = response?.ok ? conversationalMatches(response) : [];
+
   return (
     <div className="elm-local-ask" aria-live="polite">
       <form className="elm-local-ask-form" onSubmit={submit}>
@@ -153,9 +198,9 @@ export default function AskElm() {
           {response.ok ? (
             <>
               <p className="elm-local-ask-answer__copy">{answerCopy(response)}</p>
-              {response.matches?.length ? (
+              {visibleMatches.length ? (
                 <div className="elm-local-ask-match-grid">
-                  {response.matches.map((match) => <MatchCard key={match.id} match={match} />)}
+                  {visibleMatches.map((match) => <MatchCard key={match.id} match={match} />)}
                 </div>
               ) : null}
               {response.calendarHref ? (
