@@ -77,6 +77,14 @@ function MatchCard({ match }: { match: AskMatch }) {
   );
 }
 
+function answerCopy(response: AskResponse) {
+  if (response.needsClarification || response.intent?.requiresFreshCurrentState) return response.answer;
+  const count = response.matches?.length ?? 0;
+  if (!count) return response.answer;
+  if (response.intent?.questionKind === "events") return `${count} ${count === 1 ? "thing" : "things"} to know about.`;
+  return `${count} local ${count === 1 ? "option" : "options"}.`;
+}
+
 export default function AskElm() {
   const [question, setQuestion] = useState("");
   const [response, setResponse] = useState<AskResponse | null>(null);
@@ -144,7 +152,7 @@ export default function AskElm() {
         <section className={`elm-local-ask-answer${response.ok ? "" : " is-error"}`}>
           {response.ok ? (
             <>
-              <p className="elm-local-ask-answer__copy">{response.answer}</p>
+              <p className="elm-local-ask-answer__copy">{answerCopy(response)}</p>
               {response.matches?.length ? (
                 <div className="elm-local-ask-match-grid">
                   {response.matches.map((match) => <MatchCard key={match.id} match={match} />)}
