@@ -16,7 +16,7 @@ import styles from "./canonical-atlas-portal.module.css";
 
 type PersonaKey = "principal" | "anna" | "katie" | "marshall";
 type ScopeKey = "principal" | "feast" | "elm";
-type TabKey = AtlasDockIconKey;
+type TabKey = AtlasDockIconKey | "training" | "buyer";
 
 const PERSONAS: Array<{ key: PersonaKey; label: string; role: string; scope: ScopeKey }> = [
   { key: "principal", label: "Principal", role: "Owner / coordination", scope: "principal" },
@@ -29,7 +29,13 @@ const HARVEST_FIXTURE: HarvestedResponse = { ok: true, rangeStart: "2026-08-23",
 
 function dockItems(persona: PersonaKey): AtlasDockItem[] {
   if (persona === "principal") return [{ key: "home", label: "Home", href: "/principal" }, { key: "work", label: "Farm Ops", href: "/overview/week" }, { key: "more", label: "More", href: "/more" }];
-  if (persona === "katie") return [{ key: "home", label: "Home", href: "/owner/design-atlas" }, { key: "clock", label: "Clock", href: "/owner/design-atlas" }, { key: "training", label: "Training", href: "/owner/design-atlas" }, { key: "buyer", label: "Buyer Dock", href: "/owner/design-atlas" }, { key: "more", label: "Me", href: "/owner/design-atlas" }];
+  if (persona === "katie") return [
+    { key: "home", label: "Home", href: "/owner/design-atlas#katie-home" },
+    { key: "clock", label: "Clock", href: "/owner/design-atlas#katie-clock" },
+    { key: "work", label: "Training", href: "/owner/design-atlas#katie-training" },
+    { key: "harvest", label: "Buyer Dock", href: "/owner/design-atlas#katie-buyer" },
+    { key: "more", label: "Me", href: "/owner/design-atlas#katie-me" },
+  ];
   return [{ key: "home", label: "Home", href: "/" }, { key: "work", label: "Work", href: "/day" }, { key: "clock", label: "Clock", href: "/clock" }, { key: "harvest", label: "Harvest", href: "/harvest" }, { key: "more", label: "More", href: "/more" }];
 }
 
@@ -55,8 +61,23 @@ function ShellSurface({ persona, scope, tab }: { persona: PersonaKey; scope: Sco
   return <AtlasAppShell className={`atlas-home-shell ${styles.shell}`} frameClassName={styles.frame} data-atlas-design-surface={tab}><AtlasTopBar title={SCOPE_LABELS[scope]} status={<span className="atlas-weather-line">{persona === "anna" ? "Future Clock · fixture" : role}</span>} /><div className={styles.body}>{tab === "work" ? persona === "anna" || persona === "marshall" ? <RealDayWorkshopFixture /> : <CommercialWork /> : null}{tab === "clock" ? <FutureClockFixture /> : null}{tab === "harvest" ? <HarvestSurface /> : null}{tab === "more" ? <MoreSurface persona={persona} /> : null}</div></AtlasAppShell>;
 }
 
+function katieTabForDockItem(item: AtlasDockItem): TabKey {
+  if (item.label === "Training") return "training";
+  if (item.label === "Buyer Dock") return "buyer";
+  return item.key;
+}
+
+function dockActiveKey(tab: TabKey): AtlasDockIconKey {
+  if (tab === "training") return "work";
+  if (tab === "buyer") return "harvest";
+  return tab;
+}
+
 export default function CanonicalAtlasPortal() {
-  const [persona, setPersona] = useState<PersonaKey>("anna"); const [scope, setScope] = useState<ScopeKey>("elm"); const [tab, setTab] = useState<TabKey>("home"); const items = useMemo(() => dockItems(persona), [persona]);
+  const [persona, setPersona] = useState<PersonaKey>("anna");
+  const [scope, setScope] = useState<ScopeKey>("elm");
+  const [tab, setTab] = useState<TabKey>("home");
+  const items = useMemo(() => dockItems(persona), [persona]);
   function choosePersona(value: PersonaKey) { const next = PERSONAS.find((item) => item.key === value) ?? PERSONAS[1]; setPersona(value); setScope(next.scope); setTab(value === "katie" ? "clock" : "home"); }
-  return <div className={styles.root} data-atlas-real-portal="true" data-atlas-design-custody="canonical-components-and-governed-future" data-live-data-binding="none" data-mutation-capability="none"><DesignLens persona={persona} scope={scope} onPersona={choosePersona} onScope={setScope} />{persona === "katie" ? <KatieSurface tab={tab} /> : tab === "home" ? persona === "principal" ? <DesignAtlasPrincipal /> : persona === "anna" || persona === "marshall" ? <DesignAtlasCanonicalHome persona={persona} /> : <AtlasAppShell className={`atlas-home-shell ${styles.shell}`} frameClassName={styles.frame}><AtlasTopBar title="Feast Guild" status={<span className="atlas-weather-line">Commercial / Buyer Desk</span>} /><div className={styles.body}><CommercialHome /></div></AtlasAppShell> : <ShellSurface persona={persona} scope={scope} tab={tab} />}<AtlasDock items={items} active={tab} onNavigate={(item) => setTab(item.key)} ariaLabel="Design Atlas canonical destinations" /></div>;
+  return <div className={styles.root} data-atlas-real-portal="true" data-atlas-design-custody="canonical-components-and-governed-future" data-live-data-binding="none" data-mutation-capability="none"><DesignLens persona={persona} scope={scope} onPersona={choosePersona} onScope={setScope} />{persona === "katie" ? <KatieSurface tab={tab} /> : tab === "home" ? persona === "principal" ? <DesignAtlasPrincipal /> : persona === "anna" || persona === "marshall" ? <DesignAtlasCanonicalHome persona={persona} /> : <AtlasAppShell className={`atlas-home-shell ${styles.shell}`} frameClassName={styles.frame}><AtlasTopBar title="Feast Guild" status={<span className="atlas-weather-line">Commercial / Buyer Desk</span>} /><div className={styles.body}><CommercialHome /></div></AtlasAppShell> : <ShellSurface persona={persona} scope={scope} tab={tab} />}<AtlasDock items={items} active={dockActiveKey(tab)} onNavigate={(item) => setTab(persona === "katie" ? katieTabForDockItem(item) : item.key)} ariaLabel="Design Atlas canonical destinations" /></div>;
 }
