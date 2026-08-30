@@ -295,20 +295,39 @@
   text-align: right;
 }
 
-/* Ask is the primary public entry mode. Keep the existing date shortcuts immediately below it,
-   but remove the older duplicate title/search treatment from the discovery page. */
-.elm-local-ask-home + .elm-local-page .elm-local-hero__topline,
-.elm-local-ask-home + .elm-local-page .elm-local-hero__copy,
-.elm-local-ask-home + .elm-local-page .elm-local-search {
-  display: none;
+.elm-local-front-door {
+  display: flex;
+  min-height: 100svh;
+  flex-direction: column;
 }
 
-.elm-local-ask-home + .elm-local-page .elm-local-hero {
-  padding-top: 4px;
+.elm-local-front-door .elm-local-ask-home {
+  flex: 1 0 auto;
 }
 
-.elm-local-ask-home + .elm-local-page .elm-local-intent-row {
-  margin-top: 0;
+.elm-local-front-door__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(88, 100, 78, 0.14);
+}
+
+.elm-local-front-door__links a {
+  color: #59664f;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.elm-local-front-door__footer {
+  width: min(100% - 36px, 1080px);
+  margin: 0 auto;
+  padding: 20px 0 26px;
+  color: #777c72;
+  font-size: 11px;
 }
 
 @media (max-width: 700px) {
@@ -362,5 +381,9 @@
     display: block;
     margin-top: 8px;
     text-align: left;
+  }
+
+  .elm-local-front-door__footer {
+    width: min(100% - 22px, 1080px);
   }
 }
