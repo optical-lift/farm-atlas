@@ -29,7 +29,7 @@ type TaskFamily = { key: TaskKey; family: string };
 const TABS: Array<{ key: WorkshopTab; label: string; detail: string }> = [
   { key: "day", label: "Pretend Day", detail: "Live Day skin · fake task truth" },
   { key: "tasks", label: "Task Templates", detail: "The existing Task Card Editor specimens" },
-  { key: "clock", label: "Clock", detail: "Chosen future direction + current production" },
+  { key: "clock", label: "Clock + Day", detail: "Study 15 chosen direction + production reference" },
   { key: "language", label: "Visual Language", detail: "Shared Atlas ingredients and states" },
 ];
 
@@ -70,9 +70,9 @@ function ClockStudies() {
   return (
     <div className={styles.clockStudies}>
       <section className={styles.sectionLead}>
-        <span>CHOSEN FUTURE CLOCK · DROPBOX GOVERNED</span>
-        <h2>Clock is the compiled version of the day.</h2>
-        <p>The lead specimen now reflects the approved future Clock direction: one dominant NOW, one NEXT, protected occupied time, tiny ranked task signals, consequence emphasis, fixed-life geometry, and deliberate end-of-day disposition. It is fixture-only and does not claim those behaviors are implemented.</p>
+        <span>CHOSEN CLOCK + DAY · STUDY 15</span>
+        <h2>Day owns the whole day. Clock owns the worker’s hands.</h2>
+        <p>The lead specimen now uses the Clock + Day editor direction we had already converged on: the complete service day stays present as a thin rail, while Clock expands only LAST / NOW / NEXT / THEN and the next hard edge. Reality reflows silently until Atlas genuinely needs a human decision.</p>
       </section>
       <div className={styles.studyBlock}><FutureClockFixture /></div>
       <details className={styles.archiveStudies}>
@@ -80,7 +80,7 @@ function ClockStudies() {
         <div><div className={styles.studyBlock}><RealClockFixture /></div></div>
       </details>
       <details className={styles.archiveStudies}>
-        <summary><span>EARLIER DESIGN STUDIES</span><strong>Open Clock + Day archaeology</strong><b aria-hidden="true">⌄</b></summary>
+        <summary><span>EDITOR STRESS TESTS</span><strong>Open normal, reflow, conflict and earlier Clock + Day studies</strong><b aria-hidden="true">⌄</b></summary>
         <div><div className={styles.studyBlock}><ActiveOutcomeStudies /></div><div className={styles.studyBlock}><UnlockMoveStudies /></div><div className={styles.studyBlock}><ClockDayLab /></div></div>
       </details>
     </div>

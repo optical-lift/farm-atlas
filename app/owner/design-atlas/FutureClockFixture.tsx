@@ -1,135 +1,213 @@
 "use client";
 
-import { AtlasCard } from "@/components/atlas/ui/AtlasPrimitives";
+import smartStyles from "../clock-day-lab/smart-day-study.module.css";
 import styles from "./future-clock-fixture.module.css";
 
-type ClockBlock = {
-  time: string;
-  end?: string;
-  kind: "work" | "occupied" | "transition";
-  title: string;
-  context?: string;
-  signal?: string;
-  consequence?: string;
-  state?: "now" | "next" | "later";
+type MoveRole = "last" | "now" | "next" | "then";
+
+type RailTask = {
+  id: string;
+  label: string;
+  minute: number;
 };
 
-const BLOCKS: ClockBlock[] = [
-  { time: "6:30", end: "6:50", kind: "occupied", title: "Coffee + porch", context: "Protected start of day" },
-  { time: "6:50", end: "7:05", kind: "work", title: "Chicken chore", context: "Barn path", signal: "ROUTINE" },
-  { time: "7:10", end: "8:00", kind: "work", title: "Harvest ProCut Orange", context: "Field Rows", signal: "3/5 rows", consequence: "UNLOCKS Friday florist route", state: "now" },
-  { time: "8:00", end: "8:10", kind: "transition", title: "Buckets → Flower Room", context: "Context change" },
-  { time: "8:10", end: "8:40", kind: "work", title: "Weed Field Row 13", context: "Field Rows", signal: "COOL WINDOW", state: "next" },
-  { time: "9:00", end: "9:15", kind: "occupied", title: "Egg + water", context: "Protected food anchor" },
-  { time: "9:20", end: "10:05", kind: "work", title: "Transplant cabbage into MG7", context: "Main Garden", signal: "READ FIRST", consequence: "UNLOCKS fall cabbage cycle" },
-  { time: "10:15", end: "10:45", kind: "work", title: "Sow ProCut White Lite", context: "Barn Beds", signal: "WINDOW CLOSES TODAY" },
-  { time: "12:00", end: "12:35", kind: "occupied", title: "Lunch", context: "Reserved capacity · not a task" },
-  { time: "1:15", end: "1:45", kind: "work", title: "Call woodchip suppliers", context: "Farm admin", signal: "4/7 calls" },
-  { time: "2:00", end: "2:35", kind: "work", title: "Reset Farmhouse", context: "Venue", signal: "2/4 rooms", consequence: "UNLOCKS Thursday workshop" },
-  { time: "3:00", end: "3:45", kind: "occupied", title: "Springfield delivery", context: "Fixed commitment + travel" },
-  { time: "4:10", end: "4:30", kind: "work", title: "Grow Room round", context: "Propagation", signal: "CHANGED — READ AGAIN" },
+type OccupiedSpan = {
+  id: string;
+  label: string;
+  startMinute: number;
+  endMinute: number;
+  timeLabel: string;
+};
+
+type Move = {
+  id: string;
+  role: MoveRole;
+  family: string;
+  title: string;
+  detail: string;
+  timeLabel: string;
+};
+
+const DAY_START_MINUTE = 8 * 60;
+const DAY_END_MINUTE = 20 * 60;
+const NOW_MINUTE = 13 * 60 + 34;
+const NOW_LABEL = "1:34 PM";
+
+const OCCUPIED: OccupiedSpan[] = [
+  {
+    id: "supplier-window",
+    label: "Supplier delivery window",
+    startMinute: 9 * 60 + 40,
+    endMinute: 10 * 60,
+    timeLabel: "9:40–10:00 AM",
+  },
+  {
+    id: "pickup-at-elm",
+    label: "Pickup at Elm",
+    startMinute: 16 * 60 + 30,
+    endMinute: 17 * 60,
+    timeLabel: "4:30–5:00 PM",
+  },
 ];
 
-function timeLabel(block: ClockBlock) {
-  return block.end ? `${block.time}–${block.end}` : block.time;
+const RAIL_TASKS: RailTask[] = [
+  { id: "farm-round", label: "Farm Round", minute: 8 * 60 },
+  { id: "weekly-harvest", label: "Harvest Weekly Stems", minute: 11 * 60 + 30 },
+  { id: "condition-bunch", label: "Condition + bunch flowers", minute: 13 * 60 + 10 },
+  { id: "little-clay-delivery", label: "Deliver 5 posies", minute: 14 * 60 + 15 },
+  { id: "weed-mg7", label: "Weed MG7", minute: 15 * 60 },
+  { id: "water-planters", label: "Water outdoor planters", minute: 17 * 60 + 10 },
+  { id: "spray-bb10", label: "Spray BB10", minute: 19 * 60 },
+];
+
+const MOVES: Move[] = [
+  {
+    id: "weekly-harvest",
+    role: "last",
+    family: "HARVEST",
+    title: "Harvest Weekly Stems",
+    detail: "Field + Barn Beds",
+    timeLabel: "Done · 12:58 PM",
+  },
+  {
+    id: "condition-bunch",
+    role: "now",
+    family: "FLOWER PREP",
+    title: "Condition + bunch flowers",
+    detail: "Zinnias · celosia · lemon basil · sunflowers",
+    timeLabel: "1:10–2:00 PM",
+  },
+  {
+    id: "little-clay-delivery",
+    role: "next",
+    family: "DELIVERY",
+    title: "Deliver 5 posies",
+    detail: "Little Clay House",
+    timeLabel: "2:15–2:40 PM",
+  },
+  {
+    id: "weed-mg7",
+    role: "then",
+    family: "WEED",
+    title: "MG7",
+    detail: "Main Garden",
+    timeLabel: "3:00–3:45 PM",
+  },
+];
+
+const HARD_EDGE = OCCUPIED[1];
+
+function railPosition(minute: number) {
+  const raw = (minute - DAY_START_MINUTE) / (DAY_END_MINUTE - DAY_START_MINUTE);
+  return Math.max(0, Math.min(1, raw)) * 100;
+}
+
+function railWidth(startMinute: number, endMinute: number) {
+  return Math.max(0, railPosition(endMinute) - railPosition(startMinute));
+}
+
+function FullDayRail() {
+  return (
+    <section className={smartStyles.dayRailPanel} aria-label={`Full-day time rail fixture, now ${NOW_LABEL}`}>
+      <header className={smartStyles.dayRailHeader}>
+        <span>8 AM</span>
+        <strong>FULL DAY</strong>
+        <span>8 PM</span>
+      </header>
+      <div className={smartStyles.dayRail}>
+        <i className={smartStyles.dayRailBase} aria-hidden="true" />
+        {OCCUPIED.map((span) => (
+          <i
+            className={smartStyles.occupiedSpan}
+            style={{ left: `${railPosition(span.startMinute)}%`, width: `${railWidth(span.startMinute, span.endMinute)}%` }}
+            title={`${span.label} · ${span.timeLabel}`}
+            aria-hidden="true"
+            key={span.id}
+          />
+        ))}
+        {RAIL_TASKS.map((task) => (
+          <i
+            className={smartStyles.railTaskDot}
+            style={{ left: `${railPosition(task.minute)}%` }}
+            title={task.label}
+            aria-hidden="true"
+            key={task.id}
+          />
+        ))}
+        <b className={smartStyles.railNowDot} style={{ left: `${railPosition(NOW_MINUTE)}%` }} aria-hidden="true" />
+        <small className={smartStyles.railNowLabel} style={{ left: `${railPosition(NOW_MINUTE)}%` }}>{NOW_LABEL}</small>
+      </div>
+    </section>
+  );
+}
+
+function MoveCard({ move }: { move: Move }) {
+  return (
+    <article className={smartStyles.executionMove} data-role={move.role} data-task-id={move.id}>
+      <div className={smartStyles.moveRole}><span>{move.role.toUpperCase()}</span></div>
+      <div className={smartStyles.moveIdentity}>
+        <span>{move.family}</span>
+        <strong>{move.title}</strong>
+        <small>{move.detail}</small>
+      </div>
+      <time>{move.timeLabel}</time>
+    </article>
+  );
 }
 
 export default function FutureClockFixture() {
-  const now = BLOCKS.find((block) => block.state === "now")!;
-  const next = BLOCKS.find((block) => block.state === "next")!;
-
   return (
     <section
       className={styles.clock}
-      data-atlas-future-clock="dropbox-governed-v1"
+      data-atlas-future-clock="clock-study-15"
+      data-clock-day-source="execution-neighborhood"
       data-live-data-binding="none"
       data-mutation-capability="none"
     >
-      <header className={styles.header}>
-        <div>
-          <span>FUTURE FARM CLOCK · APPROVED DIRECTION</span>
-          <h2>Saturday, Aug 29</h2>
-          <p>Compiled day · 7:36 AM</p>
-        </div>
-        <div className={styles.dayBoundary}><small>WORKDAY</small><strong>6:50–4:30</strong></div>
-      </header>
+      <section className={smartStyles.executionSurface} aria-label="Chosen future Clock execution neighborhood fixture">
+        <header className={smartStyles.dateHeader}>
+          <div><span>FRIDAY</span><strong>Aug 28</strong></div>
+          <small>CLOCK</small>
+        </header>
 
-      <div className={styles.focusGrid}>
-        <AtlasCard variant="purple" className={styles.nowCard}>
-          <span className={styles.eyebrow}>NOW</span>
-          <small>{timeLabel(now)}</small>
-          <h3>{now.title}</h3>
-          <p>{now.context} · {now.signal}</p>
-          {now.consequence ? <div className={styles.unlock}><b>UNLOCKS</b><span>{now.consequence.replace("UNLOCKS ", "")}</span></div> : null}
-          <button type="button">Open work</button>
-        </AtlasCard>
+        <FullDayRail />
 
-        <AtlasCard className={styles.nextCard}>
-          <span className={styles.eyebrow}>NEXT</span>
-          <small>{timeLabel(next)}</small>
-          <h3>{next.title}</h3>
-          <p>{next.context} · {next.signal}</p>
-        </AtlasCard>
-      </div>
-
-      <div className={styles.ruleLine}>
-        <span><b>NOW</b> gets ownership of attention.</span>
-        <span><b>NEXT</b> prevents surprise.</span>
-        <span><b>Everything else</b> stays quiet.</span>
-      </div>
-
-      <div className={styles.timeline} aria-label="Future Clock compiled day">
-        <div className={styles.nowLine}><span>7:36</span><i /></div>
-        {BLOCKS.map((block) => (
-          <article
-            key={`${block.time}-${block.title}`}
-            className={styles.block}
-            data-kind={block.kind}
-            data-state={block.state ?? "later"}
-          >
-            <time>{timeLabel(block)}</time>
+        <section className={smartStyles.executionNeighborhood} data-scenario="normal">
+          <header className={smartStyles.executionHeader}>
             <div>
-              <strong>{block.title}</strong>
-              <span>{block.context}</span>
+              <span>EXECUTION NEIGHBORHOOD</span>
+              <strong>NOW · {NOW_LABEL}</strong>
             </div>
-            {block.signal ? <em>{block.signal}</em> : null}
-            {block.consequence && block.state !== "now" ? <small>↳ {block.consequence}</small> : null}
-          </article>
-        ))}
-      </div>
+            <small>Day owns everything else</small>
+          </header>
 
-      <div className={styles.behaviorGrid}>
-        <AtlasCard className={styles.behaviorCard}>
-          <span>OCCUPIED TIME</span>
-          <h3>Capacity without fake tasks</h3>
-          <p>Meals, appointments, travel, family anchors and other real commitments occupy the geometry without becoming farm-task completions.</p>
-        </AtlasCard>
-        <AtlasCard className={styles.behaviorCard}>
-          <span>PROGRESSIVE SIGNAL</span>
-          <h3>Two facts, maximum</h3>
-          <p>Progress, readiness, consequence or execution context earns pixels only when it materially changes understanding of the move.</p>
-        </AtlasCard>
-        <AtlasCard className={styles.behaviorCard}>
-          <span>REALITY REFLOW</span>
-          <h3>Record reality once</h3>
-          <p>When work runs long, a dependency changes, or a fixed commitment moves, Atlas rechoreographs the remaining lawful day instead of asking the worker to rebuild it.</p>
-        </AtlasCard>
-      </div>
+          <div className={smartStyles.executionStack}>
+            {MOVES.map((move) => <MoveCard move={move} key={`${move.role}-${move.id}`} />)}
+          </div>
 
-      <details className={styles.endDay}>
-        <summary><span>END-OF-DAY RECONCILIATION</span><strong>Unresolved work does not disappear</strong><b aria-hidden="true">⌄</b></summary>
+          <section className={smartStyles.hardEdge} aria-label={`Next hard edge, ${HARD_EDGE.label}, ${HARD_EDGE.timeLabel}`}>
+            <div>
+              <span>NEXT HARD EDGE</span>
+              <strong>{HARD_EDGE.label}</strong>
+            </div>
+            <time>{HARD_EDGE.timeLabel}</time>
+          </section>
+        </section>
+      </section>
+
+      <details className={styles.behaviorContract}>
+        <summary>
+          <span>FUTURE BEHAVIOR CONTRACT</span>
+          <strong>What this quiet surface is allowed to do</strong>
+          <b aria-hidden="true">⌄</b>
+        </summary>
         <div>
-          <article><b>CARRY</b><span>Still required and lawfully fits next day.</span></article>
-          <article><b>RESCHEDULE</b><span>Belongs later because of timing, dependency, resource or lifecycle truth.</span></article>
-          <article><b>EXPIRE</b><span>The real opportunity no longer exists.</span></article>
-          <article><b>NEEDS MANAGEMENT</b><span>Atlas cannot safely choose the disposition.</span></article>
+          <article><b>DAY OWNS THE WHOLE DAY</b><span>The thin rail preserves the complete service day, including occupied human time and fixed commitments.</span></article>
+          <article><b>CLOCK OWNS THE HANDS</b><span>LAST / NOW / NEXT / THEN is the worker&apos;s immediate temporal neighborhood, not another task board.</span></article>
+          <article><b>REALITY REFLOWS QUIETLY</b><span>If work runs long, Atlas re-fits movable work around fixed truth before adding explanation to the screen.</span></article>
+          <article><b>CONFLICT EARNS UI</b><span>Clock speaks when time custody cannot be resolved silently. Unresolved work is carried, rescheduled, expired, or sent to management rather than disappearing.</span></article>
         </div>
       </details>
-
-      <footer className={styles.footer}>
-        <b>Design boundary</b>
-        <span>This is a future-build specimen, not a claim that these behaviors are implemented. It is governed by the Dropbox Clock handoff, Weekly Farm Contract, and Silent Intelligence direction.</span>
-      </footer>
     </section>
   );
 }
