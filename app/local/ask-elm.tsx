@@ -98,7 +98,7 @@ export default function AskElm() {
     const id = ++requestId.current;
 
     try {
-      const result = await fetch("/api/local/ask", {
+      const result = await fetch("/api/local/ask-v2", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -154,7 +154,7 @@ export default function AskElm() {
                   <p className="elm-local-kicker">Elm says</p>
                   {response.question ? <span>{response.question}</span> : null}
                 </div>
-                {response.aiAvailable === false ? <small>Basic matching mode</small> : null}
+                {response.aiAvailable === false ? <small>Direct database matching</small> : null}
               </div>
               <p className="elm-local-ask-answer__copy">{response.answer}</p>
               {response.matches?.length ? (
