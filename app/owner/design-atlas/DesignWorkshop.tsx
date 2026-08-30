@@ -29,7 +29,7 @@ type TaskFamily = { key: TaskKey; family: string };
 const TABS: Array<{ key: WorkshopTab; label: string; detail: string }> = [
   { key: "day", label: "Pretend Day", detail: "Live Day skin · fake task truth" },
   { key: "tasks", label: "Task Templates", detail: "The existing Task Card Editor specimens" },
-  { key: "clock", label: "Clock + Day", detail: "Study 15 chosen direction + production reference" },
+  { key: "clock", label: "Clock + Day", detail: "Shared Study 15 surface + legacy reference" },
   { key: "language", label: "Visual Language", detail: "Shared Atlas ingredients and states" },
 ];
 
@@ -70,13 +70,13 @@ function ClockStudies() {
   return (
     <div className={styles.clockStudies}>
       <section className={styles.sectionLead}>
-        <span>CHOSEN CLOCK + DAY · STUDY 15</span>
+        <span>SHARED WORKER CLOCK · STUDY 15</span>
         <h2>Day owns the whole day. Clock owns the worker’s hands.</h2>
-        <p>The lead specimen now uses the Clock + Day editor direction we had already converged on: the complete service day stays present as a thin rail, while Clock expands only LAST / NOW / NEXT / THEN and the next hard edge. Reality reflows silently until Atlas genuinely needs a human decision.</p>
+        <p>The lead specimen now mounts the same reusable Worker Clock presentation used by the live worker route: the complete service day stays present as a thin rail, while Clock expands only LAST / NOW / NEXT / THEN and the next hard edge. Reality reflows silently until Atlas genuinely needs a human decision.</p>
       </section>
       <div className={styles.studyBlock}><FutureClockFixture /></div>
       <details className={styles.archiveStudies}>
-        <summary><span>CURRENT PRODUCTION CLOCK</span><strong>Open the component Atlas ships today</strong><b aria-hidden="true">⌄</b></summary>
+        <summary><span>LEGACY CLOCK REFERENCE</span><strong>Open the pre-Study-15 timeline implementation</strong><b aria-hidden="true">⌄</b></summary>
         <div><div className={styles.studyBlock}><RealClockFixture /></div></div>
       </details>
       <details className={styles.archiveStudies}>
