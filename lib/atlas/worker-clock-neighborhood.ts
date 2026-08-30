@@ -110,14 +110,23 @@ export function buildWorkerClockNeighborhood(input: {
     && range.startMinute <= nowMinute
     && range.endMinute > nowMinute) ?? null;
 
+  const overdueRanges = nowMinute === null ? [] : ranges
+    .filter((range) => open(range.item) && range.startMinute < nowMinute && range.item.id !== active?.item.id)
+    .sort((left, right) => right.startMinute - left.startMinute || right.item.sequenceOrder - left.item.sequenceOrder);
+  const overdueNow = active ? null : overdueRanges[0] ?? null;
+  const current = active ?? overdueNow;
+
   const completedRanges = ranges
     .filter((range) => finished(range.item) && (nowMinute === null || range.endMinute <= nowMinute))
     .sort((left, right) => right.endMinute - left.endMinute || right.startMinute - left.startMinute);
   const last = completedRanges[0] ?? null;
 
   const excluded = new Set<string>();
-  if (active) excluded.add(active.item.id);
+  if (current) excluded.add(current.item.id);
   if (last) excluded.add(last.item.id);
+
+  const carriedRanges = overdueRanges.filter((range) => !excluded.has(range.item.id));
+  for (const range of carriedRanges) excluded.add(range.item.id);
 
   const futureRanges = ranges.filter((range) => open(range.item)
     && !excluded.has(range.item.id)
@@ -128,18 +137,19 @@ export function buildWorkerClockNeighborhood(input: {
     .filter((item) => open(item) && !excluded.has(item.id) && !item.plannedStartAt)
     .sort((left, right) => left.sequenceOrder - right.sequenceOrder);
 
-  const queue: Array<{ range?: AtlasClockTaskRange; item: AtlasCommittedClockItem }> = [
+  const queue: Array<{ range?: AtlasClockTaskRange; item: AtlasCommittedClockItem; carried?: boolean }> = [
+    ...carriedRanges.map((range) => ({ range, item: range.item, carried: true })),
     ...futureRanges.map((range) => ({ range, item: range.item })),
     ...untimed.map((item) => ({ item })),
   ];
 
   const moves: WorkerClockMove[] = [];
   if (last) moves.push(moveFromRange(last, "last", `Done · ${workerClockMinuteLabel(last.endMinute)}`));
-  if (active) moves.push(moveFromRange(active, "now"));
+  if (current) moves.push(moveFromRange(current, "now", overdueNow ? `Overdue · planned ${workerClockRangeLabel(current.startMinute, current.endMinute)}` : undefined));
   const next = queue[0];
   const then = queue[1];
-  if (next) moves.push(next.range ? moveFromRange(next.range, "next") : moveFromUntimed(next.item, "next"));
-  if (then) moves.push(then.range ? moveFromRange(then.range, "then") : moveFromUntimed(then.item, "then"));
+  if (next) moves.push(next.range ? moveFromRange(next.range, "next", next.carried ? `Carry · planned ${workerClockRangeLabel(next.range.startMinute, next.range.endMinute)}` : undefined) : moveFromUntimed(next.item, "next"));
+  if (then) moves.push(then.range ? moveFromRange(then.range, "then", then.carried ? `Carry · planned ${workerClockRangeLabel(then.range.startMinute, then.range.endMinute)}` : undefined) : moveFromUntimed(then.item, "then"));
 
   const nextReservation = reservations.find((reservation) => nowMinute === null || reservation.startMinute > nowMinute) ?? null;
   const hardEdge = nextReservation ? {
