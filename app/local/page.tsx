@@ -28,7 +28,6 @@ export default async function ElmLocalPage(props: DiscoveryProps) {
         <div className="elm-local-ask-home__copy">
           <p className="elm-local-kicker">Ask Elm</p>
           <h1>What are you looking for?</h1>
-          <p>What’s here. What’s happening. What’s available.</p>
         </div>
 
         <AskElm />
