@@ -1,8 +1,8 @@
 /* Atlas PWA shell. Canonical farm truth remains server-authoritative. */
 // This byte change refreshes the installed offline document and any open stale client.
 // Bump this version whenever the offline document or global app chrome changes.
-// v11 pauses Atlas push presentation while Bell is intentionally offline.
-const ATLAS_PWA_VERSION = "atlas-pwa-shell-v11";
+// v12 refreshes installed clients after the person-owned Atlas entry-point change.
+const ATLAS_PWA_VERSION = "atlas-pwa-shell-v12";
 const SHELL_CACHE = `${ATLAS_PWA_VERSION}:shell`;
 const STATIC_CACHE = `${ATLAS_PWA_VERSION}:static`;
 const PRIVATE_CACHE_SUFFIXES = [":pages", ":prepared-data"];
