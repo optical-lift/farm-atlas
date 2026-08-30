@@ -60,6 +60,9 @@ type PersonAtlasChassisProps = {
   pageKicker?: string;
   pageTitle?: string;
   pageIntro?: string;
+  dateLabelOverride?: string;
+  nowMinuteOverride?: number;
+  nowLabelOverride?: string;
   sections: PersonAtlasSection[];
   timeMarks?: PersonAtlasTimeMark[];
   reservedSpans?: PersonAtlasReservedSpan[];
@@ -106,6 +109,9 @@ export default function PersonAtlasChassis({
   pageKicker = "TODAY",
   pageTitle = "Today",
   pageIntro,
+  dateLabelOverride,
+  nowMinuteOverride,
+  nowLabelOverride,
   sections,
   timeMarks = [],
   reservedSpans = [],
@@ -120,20 +126,24 @@ export default function PersonAtlasChassis({
   const [inspectedMark, setInspectedMark] = useState<PersonAtlasTimeMark | null>(null);
 
   useEffect(() => {
+    if (typeof nowMinuteOverride === "number" && nowLabelOverride) return;
     const update = () => setNow(new Date());
     update();
     const timer = window.setInterval(update, 30_000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [nowLabelOverride, nowMinuteOverride]);
 
-  const nowMinute = now ? now.getHours() * 60 + now.getMinutes() : 12 * 60;
+  const liveNowMinute = now ? now.getHours() * 60 + now.getMinutes() : 12 * 60;
+  const nowMinute = typeof nowMinuteOverride === "number" ? nowMinuteOverride : liveNowMinute;
   const nowPosition = positionForMinute(nowMinute);
-  const nowLabel = now
+  const liveNowLabel = now
     ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(now)
     : "Now";
-  const dateLabel = now
+  const nowLabel = nowLabelOverride ?? liveNowLabel;
+  const liveDateLabel = now
     ? new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(now)
     : "Today";
+  const dateLabel = dateLabelOverride ?? liveDateLabel;
 
   const currentLine = useMemo(
     () => sections.flatMap((section) => section.lines).find((line) => line.state === "now") ?? null,
