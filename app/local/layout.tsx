@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./local.css";
+import "./detail.css";
 
 export const metadata: Metadata = {
   title: "Elm Local · What’s happening around Marshfield?",
