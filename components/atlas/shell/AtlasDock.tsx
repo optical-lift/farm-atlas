@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { MouseEventHandler } from "react";
 
-export type AtlasDockIconKey = "home" | "work" | "clock" | "manager" | "harvest" | "more";
+export type AtlasDockIconKey = "home" | "work" | "clock" | "manager" | "harvest" | "training" | "buyer" | "more";
 
 export type AtlasDockItem = {
   key: AtlasDockIconKey;
@@ -72,6 +72,26 @@ export function AtlasDockIcon({ kind }: { kind: AtlasDockIconKey }) {
         <path d="m8.75 15.25 7.6-10.25" />
         <path d="m15.25 15.25-7.6-10.25" />
         <path d="m9.2 8.05 5.7 3.95" />
+      </svg>
+    );
+  }
+
+  if (kind === "training") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <path d="M4 8.25h3M17 8.25h3M7 6v12M17 6v12" />
+        <path d="M7 12h10" />
+        <path d="M3 10v4M21 10v4" />
+      </svg>
+    );
+  }
+
+  if (kind === "buyer") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <path d="M4.5 8.25h15v10.5h-15z" />
+        <path d="M8.25 8.25V5.5h7.5v2.75M4.5 12h15" />
+        <path d="M10 12v2h4v-2" />
       </svg>
     );
   }
