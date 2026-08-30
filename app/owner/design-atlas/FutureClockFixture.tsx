@@ -1,14 +1,20 @@
 "use client";
 
-import smartStyles from "../clock-day-lab/smart-day-study.module.css";
+import WorkerClockSurface from "@/components/atlas/clock/worker-clock-surface";
+import type {
+  WorkerClockMove,
+  WorkerClockRailTask,
+  WorkerClockReservation,
+} from "@/components/atlas/clock/worker-clock-surface";
 import styles from "./future-clock-fixture.module.css";
 
 type WorkerPersona = "anna" | "marshall";
-type MoveRole = "last" | "now" | "next" | "then";
-type RailTask = { id: string; label: string; minute: number };
-type OccupiedSpan = { id: string; label: string; startMinute: number; endMinute: number; timeLabel: string };
-type Move = { id: string; role: MoveRole; family: string; title: string; detail: string; timeLabel: string };
-type ClockScenario = { occupied: OccupiedSpan[]; railTasks: RailTask[]; moves: Move[]; hardEdgeId: string };
+type ClockScenario = {
+  reservations: WorkerClockReservation[];
+  railTasks: WorkerClockRailTask[];
+  moves: WorkerClockMove[];
+  hardEdgeId: string;
+};
 
 const DAY_START_MINUTE = 8 * 60;
 const DAY_END_MINUTE = 20 * 60;
@@ -17,9 +23,9 @@ const NOW_LABEL = "1:34 PM";
 
 const SCENARIOS: Record<WorkerPersona, ClockScenario> = {
   anna: {
-    occupied: [
-      { id: "supplier-window", label: "Supplier delivery window", startMinute: 9 * 60 + 40, endMinute: 10 * 60, timeLabel: "9:40–10:00 AM" },
-      { id: "pickup-at-elm", label: "Pickup at Elm", startMinute: 16 * 60 + 30, endMinute: 17 * 60, timeLabel: "4:30–5:00 PM" },
+    reservations: [
+      { id: "supplier-window", label: "Supplier delivery window", kind: "span", startMinute: 9 * 60 + 40, endMinute: 10 * 60, timeLabel: "9:40–10:00 AM" },
+      { id: "pickup-at-elm", label: "Pickup at Elm", kind: "span", startMinute: 16 * 60 + 30, endMinute: 17 * 60, timeLabel: "4:30–5:00 PM" },
     ],
     railTasks: [
       { id: "farm-round", label: "Farm Round", minute: 8 * 60 },
@@ -39,9 +45,9 @@ const SCENARIOS: Record<WorkerPersona, ClockScenario> = {
     hardEdgeId: "pickup-at-elm",
   },
   marshall: {
-    occupied: [
-      { id: "hardware-window", label: "Hardware pickup window", startMinute: 11 * 60 + 45, endMinute: 12 * 60 + 15, timeLabel: "11:45 AM–12:15 PM" },
-      { id: "electrician", label: "Meet electrician", startMinute: 16 * 60 + 30, endMinute: 17 * 60, timeLabel: "4:30–5:00 PM" },
+    reservations: [
+      { id: "hardware-window", label: "Hardware pickup window", kind: "span", startMinute: 11 * 60 + 45, endMinute: 12 * 60 + 15, timeLabel: "11:45 AM–12:15 PM" },
+      { id: "electrician", label: "Meet electrician", kind: "span", startMinute: 16 * 60 + 30, endMinute: 17 * 60, timeLabel: "4:30–5:00 PM" },
     ],
     railTasks: [
       { id: "property-round", label: "Property round", minute: 8 * 60 },
@@ -62,51 +68,11 @@ const SCENARIOS: Record<WorkerPersona, ClockScenario> = {
   },
 };
 
-function railPosition(minute: number) {
-  const raw = (minute - DAY_START_MINUTE) / (DAY_END_MINUTE - DAY_START_MINUTE);
-  return Math.max(0, Math.min(1, raw)) * 100;
-}
-
-function railWidth(startMinute: number, endMinute: number) {
-  return Math.max(0, railPosition(endMinute) - railPosition(startMinute));
-}
-
-function FullDayRail({ scenario }: { scenario: ClockScenario }) {
-  return (
-    <section className={smartStyles.dayRailPanel} aria-label={`Full-day time rail fixture, now ${NOW_LABEL}`}>
-      <header className={smartStyles.dayRailHeader}><span>8 AM</span><strong>FULL DAY</strong><span>8 PM</span></header>
-      <div className={smartStyles.dayRail}>
-        <i className={smartStyles.dayRailBase} aria-hidden="true" />
-        {scenario.occupied.map((span) => (
-          <i
-            className={smartStyles.occupiedSpan}
-            style={{ left: `${railPosition(span.startMinute)}%`, width: `${railWidth(span.startMinute, span.endMinute)}%` }}
-            title={`${span.label} · ${span.timeLabel}`}
-            aria-hidden="true"
-            key={span.id}
-          />
-        ))}
-        {scenario.railTasks.map((task) => <i className={smartStyles.railTaskDot} style={{ left: `${railPosition(task.minute)}%` }} title={task.label} aria-hidden="true" key={task.id} />)}
-        <b className={smartStyles.railNowDot} style={{ left: `${railPosition(NOW_MINUTE)}%` }} aria-hidden="true" />
-        <small className={smartStyles.railNowLabel} style={{ left: `${railPosition(NOW_MINUTE)}%` }}>{NOW_LABEL}</small>
-      </div>
-    </section>
-  );
-}
-
-function MoveCard({ move }: { move: Move }) {
-  return (
-    <article className={smartStyles.executionMove} data-role={move.role} data-task-id={move.id}>
-      <div className={smartStyles.moveRole}><span>{move.role.toUpperCase()}</span></div>
-      <div className={smartStyles.moveIdentity}><span>{move.family}</span><strong>{move.title}</strong><small>{move.detail}</small></div>
-      <time>{move.timeLabel}</time>
-    </article>
-  );
-}
-
 export default function FutureClockFixture({ persona = "anna" }: { persona?: WorkerPersona }) {
   const scenario = SCENARIOS[persona];
-  const hardEdge = scenario.occupied.find((item) => item.id === scenario.hardEdgeId) ?? scenario.occupied[scenario.occupied.length - 1];
+  const hardEdgeReservation = scenario.reservations.find((item) => item.id === scenario.hardEdgeId) ?? scenario.reservations[scenario.reservations.length - 1];
+  const hardEdge = hardEdgeReservation ? { id: hardEdgeReservation.id, label: hardEdgeReservation.label, timeLabel: hardEdgeReservation.timeLabel } : null;
+
   return (
     <section
       className={styles.clock}
@@ -116,19 +82,19 @@ export default function FutureClockFixture({ persona = "anna" }: { persona?: Wor
       data-live-data-binding="none"
       data-mutation-capability="none"
     >
-      <section className={smartStyles.executionSurface} aria-label="Chosen future Clock execution neighborhood fixture">
-        <header className={smartStyles.dateHeader}><div><span>SATURDAY</span><strong>Aug 29</strong></div><small>CLOCK</small></header>
-        <FullDayRail scenario={scenario} />
-        <section className={smartStyles.executionNeighborhood} data-scenario="normal">
-          <header className={smartStyles.executionHeader}><div><span>EXECUTION NEIGHBORHOOD</span><strong>NOW · {NOW_LABEL}</strong></div><small>Day owns everything else</small></header>
-          <div className={smartStyles.executionStack}>{scenario.moves.map((move) => <MoveCard move={move} key={`${move.role}-${move.id}`} />)}</div>
-          {hardEdge ? (
-            <section className={smartStyles.hardEdge} aria-label={`Next hard edge, ${hardEdge.label}, ${hardEdge.timeLabel}`}>
-              <div><span>NEXT HARD EDGE</span><strong>{hardEdge.label}</strong></div><time>{hardEdge.timeLabel}</time>
-            </section>
-          ) : null}
-        </section>
-      </section>
+      <WorkerClockSurface
+        weekdayLabel="SATURDAY"
+        dateLabel="Aug 29"
+        dayStartMinute={DAY_START_MINUTE}
+        dayEndMinute={DAY_END_MINUTE}
+        nowMinute={NOW_MINUTE}
+        nowLabel={NOW_LABEL}
+        reservations={scenario.reservations}
+        railTasks={scenario.railTasks}
+        moves={scenario.moves}
+        hardEdge={hardEdge}
+        ariaLabel="Chosen future Clock execution neighborhood fixture"
+      />
 
       <details className={styles.behaviorContract}>
         <summary><span>FUTURE BEHAVIOR CONTRACT</span><strong>Study 15 appearance + current execution rules</strong><b aria-hidden="true">⌄</b></summary>
