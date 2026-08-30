@@ -10,9 +10,9 @@ const worker = read("public/sw.js");
 const offline = read("app/offline/page.tsx");
 const frame = read("components/atlas/shell/AtlasContextualAppFrame.tsx");
 
-test("Bell-pause and client-version changes invalidate the previously cached offline shell", () => {
-  assert.match(worker, /atlas-pwa-shell-v11/);
-  assert.match(worker, /pauses Atlas push presentation while Bell is intentionally offline/);
+test("person-owned entry and client-version changes invalidate the previously cached offline shell", () => {
+  assert.match(worker, /atlas-pwa-shell-v12/);
+  assert.match(worker, /refreshes installed clients after the person-owned Atlas entry-point change/);
   assert.match(worker, /Bump this version whenever the offline document or global app chrome changes/);
   assert.match(worker, /cache: "reload"/);
   assert.match(worker, /reloadOpenAtlasClients/);

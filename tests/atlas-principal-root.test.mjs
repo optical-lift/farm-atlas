@@ -8,17 +8,17 @@ const principalSurface = await readFile(new URL("../components/atlas/principal/P
 const principalUi = `${principalPage}\n${principalSurface}`;
 const principalReader = await readFile(new URL("../lib/atlas/principal-self-context.ts", import.meta.url), "utf8");
 
-test("Principal sessions leave the farm-root home before a farm is selected", () => {
+test("organization-owner sessions leave the farm-root home for the person-owned Atlas before a farm is selected", () => {
   assert.match(home, /principalOrganizationMembership\?\.role === "owner"/);
   assert.match(home, /!operatorContext\?\.isOperating/);
-  assert.match(home, /redirect\("\/principal"\)/);
+  assert.match(home, /redirect\("\/owner"\)/);
 
-  const principalRedirect = home.indexOf('redirect("/principal")');
+  const personAtlasRedirect = home.indexOf('redirect("/owner")');
   const selectedFarm = home.indexOf("const selectedFarmKey");
   const farmHomeRead = home.indexOf("readAtlasOperatorUniversalHome(viewer");
-  assert.ok(principalRedirect >= 0);
-  assert.ok(selectedFarm > principalRedirect);
-  assert.ok(farmHomeRead > principalRedirect);
+  assert.ok(personAtlasRedirect >= 0);
+  assert.ok(selectedFarm > personAtlasRedirect);
+  assert.ok(farmHomeRead > personAtlasRedirect);
 });
 
 test("explicit Farm Hand operating mode remains on Worker execution home", () => {

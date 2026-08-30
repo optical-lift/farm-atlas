@@ -11,7 +11,7 @@ test("Bell pause removes the global Bell surface and suppresses push presentatio
   const worker = read("public/sw.js");
 
   assert.doesNotMatch(globals, /AtlasBellCover/);
-  assert.match(worker, /atlas-pwa-shell-v11/);
+  assert.match(worker, /atlas-pwa-shell-v12/);
   assert.match(worker, /Bell is intentionally paused/);
   assert.match(worker, /self\.addEventListener\("push"/);
   assert.match(worker, /event\.waitUntil\(setAtlasBadge\(0\)\)/);

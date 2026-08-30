@@ -55,7 +55,7 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
 
   const principalOrganizationMembership = organizationMembershipForViewer(viewer);
   if (principalOrganizationMembership?.role === "owner" && !operatorContext?.isOperating) {
-    redirect("/principal");
+    redirect("/owner");
   }
 
   const selectedFarmKey = firstParam(params.farm);

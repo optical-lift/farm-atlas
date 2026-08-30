@@ -96,7 +96,7 @@ test("the dispatcher uses custom server authentication and never accepts caller-
 });
 
 test("the paused worker suppresses new push presentation while preserving old notification click routing", () => {
-  assert.match(serviceWorker, /atlas-pwa-shell-v11/);
+  assert.match(serviceWorker, /atlas-pwa-shell-v12/);
   assert.match(serviceWorker, /event\.waitUntil\(setAtlasBadge\(0\)\)/);
   assert.doesNotMatch(serviceWorker, /registration\.showNotification/);
   assert.match(serviceWorker, /const deepLink = data\.deepLink \|\| "\/bell"/);
