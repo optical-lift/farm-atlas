@@ -183,6 +183,9 @@ export default function BridgeAtlasFixture({ onOpenWorkshop }: BridgeAtlasFixtur
       identityDetail="Reference person · household + own business + linked institution"
       pageKicker="THURSDAY"
       pageTitle="Today"
+      dateLabelOverride="Thursday, September 3"
+      nowMinuteOverride={10 * 60 + 18}
+      nowLabelOverride="10:18 AM"
       pageIntro="One finite day. Private life stays private; institutional responsibility still arrives with real authority and real time constraints."
       sections={SECTIONS}
       timeMarks={TIME_MARKS}
