@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import AtlasMoreDestinationList from "@/components/atlas/shell/AtlasMoreDestinationList";
 import { readAtlasOwnerOperatorContext } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
 
@@ -65,17 +66,7 @@ export default async function AtlasMorePage() {
         <div id="atlas-more-account-slot" />
         {canManage ? <div id="atlas-more-work-alongside-slot" /> : null}
 
-        <nav className="atlas-more-page__list" aria-label="More Atlas destinations">
-          {destinations.map((destination) => (
-            <Link key={destination.href} href={destination.href}>
-              <div>
-                <strong>{destination.label}</strong>
-                <span>{destination.detail}</span>
-              </div>
-              <b aria-hidden="true">›</b>
-            </Link>
-          ))}
-        </nav>
+        <AtlasMoreDestinationList destinations={destinations} />
 
         <form className="atlas-more-page__logout" action="/api/atlas/auth/logout" method="post">
           <button type="submit">Log out</button>

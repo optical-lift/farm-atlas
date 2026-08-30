@@ -33,7 +33,7 @@ type HarvestedFarm = {
   };
 };
 
-type HarvestedResponse = {
+export type HarvestedResponse = {
   ok?: boolean;
   error?: string;
   asOf?: string;
@@ -56,12 +56,13 @@ function formatBucketFloor(value: number, lowerBound: boolean) {
   return `${lowerBound ? "≥" : ""}${amount} ${noun}`;
 }
 
-export default function HarvestedOutputSection() {
-  const [data, setData] = useState<HarvestedResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function HarvestedOutputSection({ fixtureOnly = false, fixtureData = null }: { fixtureOnly?: boolean; fixtureData?: HarvestedResponse | null } = {}) {
+  const [data, setData] = useState<HarvestedResponse | null>(fixtureOnly ? fixtureData : null);
+  const [loading, setLoading] = useState(!fixtureOnly);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    if (fixtureOnly) return;
     try {
       setLoading(true);
       setError(null);
@@ -74,9 +75,9 @@ export default function HarvestedOutputSection() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fixtureOnly]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (!fixtureOnly) void load(); }, [fixtureOnly, load]);
 
   const farmsWithOutput = (data?.farms ?? []).filter((farm) => farm.entries.length);
   const totalEntries = farmsWithOutput.reduce((sum, farm) => sum + farm.entries.length, 0);
@@ -136,9 +137,7 @@ export default function HarvestedOutputSection() {
         ) : null}
       </AtlasCard>
 
-      <FlowerPostharvestSection />
-      <FlowerCommercialSection />
-      <HarvestCommercialScoreSection />
+      {fixtureOnly ? null : <><FlowerPostharvestSection /><FlowerCommercialSection /><HarvestCommercialScoreSection /></>}
     </>
   );
 }

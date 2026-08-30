@@ -21,6 +21,8 @@ function migrationCorpus() {
 
 const migrations = migrationCorpus();
 const principalPage = read("app/principal/page.tsx");
+const principalSurface = read("components/atlas/principal/PrincipalSurface.tsx");
+const principalUi = `${principalPage}\n${principalSurface}`;
 const principalContext = read("lib/atlas/principal-self-context.ts");
 const capacityResolutionPage = read("app/principal/resolve/farm-capacity/page.tsx");
 const capacityResolutionClient = read("app/principal/resolve/farm-capacity/WorkerDayShapeResolutionClient.tsx");
@@ -36,11 +38,16 @@ const ownerWeekRetirement = read("supabase/migrations/20260817123000_owner_week_
  * household, portfolio thesis, money balances, or Farm Hand availability. They
  * freeze the distinction between Principal truth and farm execution while live
  * acceptance probes continue to validate the database behavior itself.
+ *
+ * Principal presentation is deliberately shared between the authenticated route
+ * and Design Atlas. Acceptance language therefore belongs to the route + shared
+ * presentation contract, not to route-local JSX.
  */
 
 test("Acceptance 1: Principal enters through whole-field context, not a selected farm", () => {
   assert.match(principalContext, /principal_self_context_api_v1/);
-  assert.match(principalPage, /Whole-field responsibility across household, portfolio, money, attention, authority, and protected future/i);
+  assert.match(principalPage, /<PrincipalSurface context=\{context\}/);
+  assert.match(principalUi, /Whole-field responsibility across household, portfolio, money, attention, authority, and protected future/i);
   assert.doesNotMatch(principalPage, /getOwnerDashboard|owner_week_projection/);
   assert.match(migrations, /create table(?: if not exists)? atlas\.portfolio_units/i);
 });
@@ -48,7 +55,7 @@ test("Acceptance 1: Principal enters through whole-field context, not a selected
 test("Acceptance 2: a future H3 portfolio option does not require a linked farm", () => {
   assert.match(migrations, /linked_farm_id uuid/i);
   assert.match(migrations, /horizon[\s\S]{0,220}'H1'[\s\S]{0,220}'H2'[\s\S]{0,220}'H3'/i);
-  assert.match(principalPage, /No farm required/);
+  assert.match(principalUi, /No farm required/);
 });
 
 test("Acceptance 3: household rhythms constrain Principal capacity without becoming farm tasks", () => {
@@ -56,7 +63,7 @@ test("Acceptance 3: household rhythms constrain Principal capacity without becom
   assert.match(migrations, /blocks_capacity/i);
   assert.match(migrations, /principal_capacity_day_state_v1/i);
   assert.match(migrations, /household_rhythm_tick_v1|advance_household_rhythm/i);
-  assert.match(principalPage, /Household rhythms constrain business capacity/i);
+  assert.match(principalUi, /Household rhythms constrain business capacity/i);
   assert.doesNotMatch(capacityResolutionPage, /insert into atlas\.tasks|create.*task/i);
 });
 
@@ -87,6 +94,7 @@ test("Acceptance 6: Principal Clock ordering changes with timing state, not stat
   assert.match(migrations, /order by[\s\S]{0,500}derived_timing_tier[\s\S]{0,300}floor_class/i);
   assert.match(migrations, /A fixed commitment is in progress\./i);
   assert.match(migrations, /Its must-begin boundary has been reached\./i);
+  assert.match(principalUi, /Principal Clock/);
 });
 
 test("Acceptance 7: H2/H3 attention debt can earn protected Principal floor", () => {
@@ -95,7 +103,7 @@ test("Acceptance 7: H2/H3 attention debt can earn protected Principal floor", ()
   assert.match(migrations, /attention_debt_v1/i);
   assert.match(migrations, /attention_state\s*=\s*'needs_attention'/i);
   assert.match(migrations, /'attention_debt'::text AS source_type/i);
-  assert.match(principalPage, /H1 current engines remain visible without consuming H2 emerging engines or H3 future options/i);
+  assert.match(principalUi, /H1 current engines remain visible without consuming H2 emerging engines or H3 future options/i);
 });
 
 test("Acceptance 8: House Position fails open to uncertainty, never fake zero financial truth", () => {
@@ -105,7 +113,7 @@ test("Acceptance 8: House Position fails open to uncertainty, never fake zero fi
   assert.match(migrations, /coverage/i);
   assert.match(migrations, /includedAccounts|included_accounts/i);
   assert.match(migrations, /includedEntities|included_entities/i);
-  assert.match(principalPage, /Financial source required\. Atlas is not substituting zero balances for unknown data\./i);
+  assert.match(principalUi, /Financial source required\. Atlas is not substituting zero balances for unknown data\./i);
 });
 
 test("Acceptance 9: Worker Week is canonical and Owner Week compatibility is retired", () => {
