@@ -253,7 +253,8 @@ function chooseFallback(question: string, records: EvidenceRecord[], dashboard: 
     ].slice(0, MAX_EVIDENCE);
     answer = `Atlas currently shows ${dashboard.counts.thisWeek} owner task${dashboard.counts.thisWeek === 1 ? "" : "s"} due later this week, with ${dashboard.upcomingDeadlines.length} upcoming deadline${dashboard.upcomingDeadlines.length === 1 ? "" : "s"} surfaced across the farm.`;
   } else {
-    candidates = [records[0], ...records.filter((record) => record.kind === "owner_overdue" || record.kind === "blocker").slice(0, 5)].filter(Boolean);
+    candidates = [records[0], ...records.filter((record) => record.kind === "owner_overdue" || record.kind === "blocker").slice(0, 5)]
+      .filter((record): record is EvidenceRecord => Boolean(record));
     answer = `The Owner projection currently shows ${dashboard.counts.overdue} overdue, ${dashboard.counts.today} due today, ${dashboard.counts.thisWeek} due this week, and ${dashboard.farmBlockers.length} surfaced farm blocker${dashboard.farmBlockers.length === 1 ? "" : "s"}.`;
   }
 
