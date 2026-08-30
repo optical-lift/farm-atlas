@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { AtlasAppShell, AtlasTopBar } from "@/components/atlas/ui/AtlasPrimitives";
-import CanonicalAtlasPortal from "./CanonicalAtlasPortal";
+import BridgeAtlasFixture from "./BridgeAtlasFixture";
 import DesignWorkshop from "./DesignWorkshop";
 import styles from "./design-studio.module.css";
 import "./workshop-live-overrides.module.css";
@@ -14,15 +14,7 @@ export default function DesignAtlasStudio() {
   const [mode, setMode] = useState<StudioMode>("portal");
 
   if (mode === "portal") {
-    return (
-      <>
-        <CanonicalAtlasPortal />
-        <button className={styles.openWorkshop} type="button" onClick={() => setMode("workshop")}>
-          <span>DESIGN ATLAS</span>
-          <strong>Workshop</strong>
-        </button>
-      </>
-    );
+    return <BridgeAtlasFixture onOpenWorkshop={() => setMode("workshop")} />;
   }
 
   return (
@@ -35,8 +27,8 @@ export default function DesignAtlasStudio() {
     >
       <AtlasTopBar
         title="Design Atlas"
-        status={<span className="atlas-weather-line">Workshop · fixture only</span>}
-        action={<button type="button" className="atlas-global-note-plus" onClick={() => setMode("portal")} aria-label="Return to fake Atlas portal">◫</button>}
+        status={<span className="atlas-weather-line">Archive workshop · fixture only</span>}
+        action={<button type="button" className="atlas-global-note-plus" onClick={() => setMode("portal")} aria-label="Return to bridge-person Atlas">←</button>}
       />
       <section className={styles.content}><DesignWorkshop /></section>
     </AtlasAppShell>
