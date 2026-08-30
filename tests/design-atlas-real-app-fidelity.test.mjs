@@ -8,6 +8,7 @@ const principalFixture = await readFile(new URL("../app/owner/design-atlas/Desig
 const managerFixture = await readFile(new URL("../app/owner/design-atlas/DesignAtlasManagerDay.tsx", import.meta.url), "utf8");
 const workshop = await readFile(new URL("../app/owner/design-atlas/DesignWorkshop.tsx", import.meta.url), "utf8");
 const clockFixture = await readFile(new URL("../app/owner/design-atlas/RealClockFixture.tsx", import.meta.url), "utf8");
+const futureClock = await readFile(new URL("../app/owner/design-atlas/FutureClockFixture.tsx", import.meta.url), "utf8");
 const dayFixture = await readFile(new URL("../app/owner/design-atlas/RealDayWorkshopFixture.tsx", import.meta.url), "utf8");
 const dock = await readFile(new URL("../components/atlas/shell/AtlasDock.tsx", import.meta.url), "utf8");
 const moreList = await readFile(new URL("../components/atlas/shell/AtlasMoreDestinationList.tsx", import.meta.url), "utf8");
@@ -52,7 +53,7 @@ test("Design Atlas fake worker day uses the live Day visual contract until the r
   for (const marker of ["atlas-day-command-header", "atlas-day-task-entry", "atlas-day-task-node", "atlas-day-task-card", "atlas-day-route-current", "atlas-day-route-next", "atlas-day-adjacent-nav"]) assert.ok(dayFixture.includes(marker), `workshop Day should preserve ${marker}`);
 });
 
-test("Design Atlas Clock specimen mounts production Clock components instead of redrawing them", () => {
+test("current Clock reference mounts production components instead of redrawing them", () => {
   assert.match(clockFixture, /ClockHeaderV2/);
   assert.match(clockFixture, /ClockTimelineV2/);
   assert.match(clockFixture, /ClockUnplacedV2/);
@@ -62,14 +63,35 @@ test("Design Atlas Clock specimen mounts production Clock components instead of 
   assert.match(clockFixture, /data-mutation-capability="none"/);
 });
 
+test("Design Atlas preserves the governed future Farm Clock separately from shipped Clock", () => {
+  assert.match(portal, /<FutureClockFixture/);
+  assert.match(workshop, /<FutureClockFixture/);
+  assert.match(workshop, /CURRENT PRODUCTION CLOCK/);
+  assert.match(futureClock, /data-atlas-future-clock="dropbox-governed-v1"/);
+  assert.match(futureClock, />NOW</);
+  assert.match(futureClock, />NEXT</);
+  assert.match(futureClock, /Occupied Time|OCCUPIED TIME/);
+  assert.match(futureClock, /READ FIRST/);
+  assert.match(futureClock, /CHANGED — READ AGAIN/);
+  assert.match(futureClock, /UNLOCKS/);
+  assert.match(futureClock, /CARRY/);
+  assert.match(futureClock, /RESCHEDULE/);
+  assert.match(futureClock, /EXPIRE/);
+  assert.match(futureClock, /NEEDS MANAGEMENT/);
+  assert.match(futureClock, /data-live-data-binding="none"/);
+  assert.match(futureClock, /data-mutation-capability="none"/);
+});
+
 test("Design Atlas Harvest uses a canonical destination component, not a Harvest task-card substitute", () => {
   assert.match(portal, /<HarvestedOutputSection fixtureOnly fixtureData=\{HARVEST_FIXTURE\}/);
   assert.match(harvest, /data-atlas-harvested|atlas-harvested/);
   assert.doesNotMatch(portal, /HarvestCardSpecimen/);
 });
 
-test("Workshop presents live-skinned Day and canonical Clock before archived studies", () => {
+test("Workshop presents governed future Clock, current production Clock, and earlier studies in that order", () => {
   assert.match(workshop, /RealDayWorkshopFixture/);
-  assert.match(workshop, /RealClockFixture/);
-  assert.match(workshop, /EARLIER DESIGN STUDIES/);
+  const futureIndex = workshop.indexOf("<FutureClockFixture");
+  const currentIndex = workshop.indexOf("<RealClockFixture");
+  const archiveIndex = workshop.indexOf("EARLIER DESIGN STUDIES");
+  assert.ok(futureIndex >= 0 && currentIndex > futureIndex && archiveIndex > currentIndex);
 });
