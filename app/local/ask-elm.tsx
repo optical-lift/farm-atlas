@@ -79,13 +79,15 @@ function MatchCard({ match }: { match: AskMatch }) {
   );
 }
 
-function conversationalMatches(response: AskResponse) {
+function answerMatches(response: AskResponse) {
   const matches = response.matches ?? [];
-  if (!response.intent?.requiresFreshCurrentState) return matches.slice(0, CONVERSATIONAL_MATCH_LIMIT);
+  if (!response.intent?.requiresFreshCurrentState) return matches;
 
-  return matches
-    .filter((match) => match.currentState === "current" || match.kind === "event" || match.kind === "series")
-    .slice(0, CONVERSATIONAL_MATCH_LIMIT);
+  return matches.filter((match) => match.currentState === "current" || match.kind === "event" || match.kind === "series");
+}
+
+function conversationalMatches(response: AskResponse) {
+  return answerMatches(response).slice(0, CONVERSATIONAL_MATCH_LIMIT);
 }
 
 function naturalList(names: string[]) {
@@ -98,12 +100,12 @@ function naturalList(names: string[]) {
 function answerCopy(response: AskResponse) {
   if (response.needsClarification) return response.answer;
 
-  const allMatches = response.matches ?? [];
-  const visible = conversationalMatches(response);
+  const eligible = answerMatches(response);
+  const visible = eligible.slice(0, CONVERSATIONAL_MATCH_LIMIT);
   if (!visible.length) return response.answer;
 
   const [first, ...alternatives] = visible;
-  const hiddenCount = Math.max(0, allMatches.length - visible.length);
+  const hiddenCount = Math.max(0, eligible.length - visible.length);
   const isEventAnswer = response.intent?.questionKind === "events";
 
   let copy: string;
