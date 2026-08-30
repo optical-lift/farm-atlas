@@ -1,26 +1,21 @@
 "use client";
 
+import { workerClockMinuteLabel } from "@/lib/atlas/worker-clock-neighborhood";
+import type {
+  WorkerClockHardEdge,
+  WorkerClockMove,
+  WorkerClockRailTask,
+  WorkerClockReservation,
+} from "@/lib/atlas/worker-clock-neighborhood";
 import styles from "./worker-clock-surface.module.css";
 
-export type WorkerClockMoveRole = "last" | "now" | "next" | "then";
-export type WorkerClockRailTask = { id: string; label: string; minute: number };
-export type WorkerClockReservation = {
-  id: string;
-  label: string;
-  kind: "point" | "span";
-  startMinute: number;
-  endMinute: number;
-  timeLabel: string;
-};
-export type WorkerClockMove = {
-  id: string;
-  role: WorkerClockMoveRole;
-  family: string;
-  title: string;
-  detail: string;
-  timeLabel: string;
-};
-export type WorkerClockHardEdge = { id: string; label: string; timeLabel: string };
+export type {
+  WorkerClockHardEdge,
+  WorkerClockMove,
+  WorkerClockMoveRole,
+  WorkerClockRailTask,
+  WorkerClockReservation,
+} from "@/lib/atlas/worker-clock-neighborhood";
 
 export type WorkerClockSurfaceProps = {
   weekdayLabel: string;
@@ -46,15 +41,6 @@ function railWidth(startMinute: number, endMinute: number, dayStartMinute: numbe
   return Math.max(0, clampPosition(endMinute, dayStartMinute, dayEndMinute) - clampPosition(startMinute, dayStartMinute, dayEndMinute));
 }
 
-function minuteLabel(minute: number) {
-  const normalized = ((Math.round(minute) % 1440) + 1440) % 1440;
-  const hour24 = Math.floor(normalized / 60);
-  const minutePart = normalized % 60;
-  const period = hour24 >= 12 ? "PM" : "AM";
-  const hour = hour24 % 12 || 12;
-  return minutePart ? `${hour}:${String(minutePart).padStart(2, "0")} ${period}` : `${hour} ${period}`;
-}
-
 function FullDayRail({
   dayStartMinute,
   dayEndMinute,
@@ -66,9 +52,9 @@ function FullDayRail({
   return (
     <section className={styles.dayRailPanel} aria-label={`Full-day time rail${nowLabel ? `, now ${nowLabel}` : ""}`}>
       <header className={styles.dayRailHeader}>
-        <span>{minuteLabel(dayStartMinute)}</span>
+        <span>{workerClockMinuteLabel(dayStartMinute)}</span>
         <strong>FULL DAY</strong>
-        <span>{minuteLabel(dayEndMinute)}</span>
+        <span>{workerClockMinuteLabel(dayEndMinute)}</span>
       </header>
       <div className={styles.dayRail}>
         <i className={styles.dayRailBase} aria-hidden="true" />
