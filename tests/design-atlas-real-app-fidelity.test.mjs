@@ -16,6 +16,8 @@ const moreList = await readFile(new URL("../components/atlas/shell/AtlasMoreDest
 const home = await readFile(new URL("../components/atlas/home/AtlasUniversalHomeV2.tsx", import.meta.url), "utf8");
 const principal = await readFile(new URL("../components/atlas/principal/PrincipalSurface.tsx", import.meta.url), "utf8");
 const manager = await readFile(new URL("../components/atlas/manage/ManagerDaySurface.tsx", import.meta.url), "utf8");
+const workerClock = await readFile(new URL("../components/atlas/clock/worker-clock-surface.tsx", import.meta.url), "utf8");
+const clockOrchestrator = await readFile(new URL("../components/atlas/clock/clock-orchestrator.tsx", import.meta.url), "utf8");
 const harvest = await readFile(new URL("../app/harvest/HarvestedOutputSection.tsx", import.meta.url), "utf8");
 
 test("Design Atlas mounts shared shell, canonical Home/Principal surfaces, and role-aware assembly", () => {
@@ -61,7 +63,7 @@ test("Design Atlas fake worker Day keeps one visual contract while changing work
   for (const marker of ["atlas-day-command-header", "atlas-day-task-entry", "atlas-day-task-node", "atlas-day-task-card", "atlas-day-route-current", "atlas-day-route-next", "atlas-day-adjacent-nav"]) assert.ok(dayFixture.includes(marker), `workshop Day should preserve ${marker}`);
 });
 
-test("current Clock reference mounts production components instead of redrawing them", () => {
+test("legacy Clock reference still mounts the old production components without pretending to be current", () => {
   assert.match(clockFixture, /ClockHeaderV2/);
   assert.match(clockFixture, /ClockTimelineV2/);
   assert.match(clockFixture, /ClockUnplacedV2/);
@@ -69,22 +71,31 @@ test("current Clock reference mounts production components instead of redrawing 
   assert.match(clockFixture, /canManage=\{false\}/);
   assert.match(clockFixture, /data-live-data-binding="none"/);
   assert.match(clockFixture, /data-mutation-capability="none"/);
+  assert.match(workshop, /LEGACY CLOCK REFERENCE/);
+  assert.doesNotMatch(workshop, /CURRENT PRODUCTION CLOCK/);
 });
 
-test("Design Atlas preserves Study 15 separately from shipped Clock and applies it to worker lenses", () => {
+test("Design Atlas and live worker Clock consume the same Study 15 presentation", () => {
   assert.match(portal, /<FutureClockFixture persona=\{persona\}/);
   assert.match(workshop, /<FutureClockFixture/);
-  assert.match(workshop, /CURRENT PRODUCTION CLOCK/);
+  assert.match(workshop, /SHARED WORKER CLOCK · STUDY 15/);
+  assert.match(futureClock, /WorkerClockSurface/);
+  assert.doesNotMatch(futureClock, /clock-day-lab\/smart-day-study\.module\.css/);
   assert.match(futureClock, /data-atlas-future-clock="clock-study-15"/);
   assert.match(futureClock, /data-clock-day-source="execution-neighborhood"/);
   assert.match(futureClock, /data-atlas-clock-persona=\{persona\}/);
   assert.match(futureClock, /SCENARIOS: Record<WorkerPersona, ClockScenario>/);
-  assert.match(futureClock, /clock-day-lab\/smart-day-study\.module\.css/);
   assert.match(futureClock, /role: "last"/);
   assert.match(futureClock, /role: "now"/);
   assert.match(futureClock, /role: "next"/);
   assert.match(futureClock, /role: "then"/);
-  assert.match(futureClock, /NEXT HARD EDGE/);
+  assert.match(workerClock, /data-atlas-worker-clock-surface="study-15-v1"/);
+  assert.match(workerClock, /NEXT HARD EDGE/);
+  assert.match(clockOrchestrator, /buildWorkerClockNeighborhood/);
+  assert.match(clockOrchestrator, /<WorkerClockSurface/);
+  assert.match(clockOrchestrator, /canManage \? <>/);
+  assert.match(clockOrchestrator, /<ClockPlanningTimeline/);
+  assert.match(clockOrchestrator, /<ClockDayShapeControl/);
   assert.match(futureClock, /DAY OWNS THE WHOLE DAY/);
   assert.match(futureClock, /CLOCK OWNS THE HANDS/);
   assert.match(futureClock, /REALITY REFLOWS QUIETLY/);
@@ -116,10 +127,10 @@ test("Principal receives flower operating exceptions instead of worker harvest c
   assert.match(roleSurfaces, /Next Thursday supply is still field-evidence only/);
 });
 
-test("Workshop presents governed future Clock, current production Clock, and earlier studies in that order", () => {
+test("Workshop presents shared Worker Clock, legacy reference, and earlier studies in that order", () => {
   assert.match(workshop, /RealDayWorkshopFixture/);
-  const futureIndex = workshop.indexOf("<FutureClockFixture");
-  const currentIndex = workshop.indexOf("CURRENT PRODUCTION CLOCK");
+  const sharedIndex = workshop.indexOf("<FutureClockFixture");
+  const legacyIndex = workshop.indexOf("LEGACY CLOCK REFERENCE");
   const archiveIndex = workshop.indexOf("EDITOR STRESS TESTS");
-  assert.ok(futureIndex >= 0 && currentIndex > futureIndex && archiveIndex > currentIndex);
+  assert.ok(sharedIndex >= 0 && legacyIndex > sharedIndex && archiveIndex > legacyIndex);
 });
