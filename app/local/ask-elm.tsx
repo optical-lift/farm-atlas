@@ -28,7 +28,6 @@ type AskMatch = {
   phone: string | null;
   city: string | null;
   category: string | null;
-  sourceChecked: string | null;
 };
 
 type AskResponse = {
@@ -38,7 +37,6 @@ type AskResponse = {
   intent?: AskIntent;
   matches?: AskMatch[];
   calendarHref?: string | null;
-  aiAvailable?: boolean;
   needsClarification?: boolean;
   error?: string;
 };
@@ -60,21 +58,28 @@ function matchLabel(match: AskMatch) {
 function MatchCard({ match }: { match: AskMatch }) {
   const primaryHref = match.href || match.externalUrl;
   const external = !match.href && Boolean(match.externalUrl);
+
   return (
     <article className="elm-local-ask-match">
       <div className="elm-local-ask-match__topline">
         <span>{matchLabel(match)}</span>
-        {match.currentState === "current" ? <strong>Current</strong> : null}
         {match.currentState === "stale" ? <strong className="is-muted">Needs refresh</strong> : null}
       </div>
-      <h3>{primaryHref ? <a href={primaryHref} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined}>{match.title}</a> : match.title}</h3>
+      <h3>
+        {primaryHref ? (
+          <a href={primaryHref} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined}>
+            {match.title}
+          </a>
+        ) : match.title}
+      </h3>
       {match.subtitle ? <p className="elm-local-ask-match__where">{match.subtitle}</p> : null}
       {match.status ? <p className="elm-local-ask-match__status">{match.status}</p> : null}
       {!match.status && match.summary ? <p>{match.summary}</p> : null}
-      <div className="elm-local-ask-match__meta">
-        {match.category ? <span>{match.category}</span> : null}
-        {match.sourceChecked ? <span>{match.sourceChecked}</span> : null}
-      </div>
+      {match.category ? (
+        <div className="elm-local-ask-match__meta">
+          <span>{match.category}</span>
+        </div>
+      ) : null}
       <div className="elm-local-ask-match__actions">
         {match.href ? <a href={match.href}>Details →</a> : null}
         {!match.href && match.externalUrl ? <a href={match.externalUrl} target="_blank" rel="noreferrer">Official site ↗</a> : null}
@@ -154,7 +159,6 @@ export default function AskElm() {
                   <p className="elm-local-kicker">Elm says</p>
                   {response.question ? <span>{response.question}</span> : null}
                 </div>
-                {response.aiAvailable === false ? <small>Direct database matching</small> : null}
               </div>
               <p className="elm-local-ask-answer__copy">{response.answer}</p>
               {response.matches?.length ? (
@@ -162,10 +166,11 @@ export default function AskElm() {
                   {response.matches.map((match) => <MatchCard key={match.id} match={match} />)}
                 </div>
               ) : null}
-              <div className="elm-local-ask-answer__footer">
-                {response.calendarHref ? <a href={response.calendarHref}>Show this on the calendar →</a> : <span>Ask another question to keep narrowing it down.</span>}
-                <small>Elm answers from governed local records. If current information isn’t verified, it should say so.</small>
-              </div>
+              {response.calendarHref ? (
+                <div className="elm-local-ask-answer__footer">
+                  <a href={response.calendarHref}>Show this on the calendar →</a>
+                </div>
+              ) : null}
             </>
           ) : (
             <p className="elm-local-ask-answer__copy">{response.error}</p>
