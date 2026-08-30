@@ -50,42 +50,28 @@ const PROMPTS = [
   "Who’s accepting new dental patients?",
 ];
 
-function matchLabel(match: AskMatch) {
-  if (match.kind === "event") return "Event";
-  if (match.kind === "series") return "Recurring series";
-  if (match.kind === "offering") return "Local offering";
-  return "Local place";
-}
-
 function MatchCard({ match }: { match: AskMatch }) {
   const primaryHref = match.href || match.externalUrl;
   const external = !match.href && Boolean(match.externalUrl);
 
   return (
     <article className="elm-local-ask-match">
-      <div className="elm-local-ask-match__topline">
-        <span>{matchLabel(match)}</span>
-        {match.currentState === "stale" ? <strong className="is-muted">Needs refresh</strong> : null}
+      <div className="elm-local-ask-match__title-row">
+        <h3>
+          {primaryHref ? (
+            <a href={primaryHref} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined}>
+              {match.title}
+            </a>
+          ) : match.title}
+        </h3>
+        {match.currentState === "stale" ? <span className="elm-local-ask-match__refresh">Needs refresh</span> : null}
       </div>
-      <h3>
-        {primaryHref ? (
-          <a href={primaryHref} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined}>
-            {match.title}
-          </a>
-        ) : match.title}
-      </h3>
       {match.subtitle ? <p className="elm-local-ask-match__where">{match.subtitle}</p> : null}
-      {match.status ? <p className="elm-local-ask-match__status">{match.status}</p> : null}
-      {!match.status && match.summary ? <p>{match.summary}</p> : null}
-      {match.category ? (
-        <div className="elm-local-ask-match__meta">
-          <span>{match.category}</span>
-        </div>
-      ) : null}
+      {match.summary ? <p className="elm-local-ask-match__summary">{match.summary}</p> : null}
       <div className="elm-local-ask-match__actions">
         {match.href ? <a href={match.href}>Details →</a> : null}
-        {!match.href && match.externalUrl ? <a href={match.externalUrl} target="_blank" rel="noreferrer">Official site ↗</a> : null}
-        {match.phone ? <a href={`tel:${match.phone.replace(/[^0-9+]/g, "")}`}>Call {match.phone}</a> : null}
+        {!match.href && match.externalUrl ? <a href={match.externalUrl} target="_blank" rel="noreferrer">Website ↗</a> : null}
+        {match.phone ? <a href={`tel:${match.phone.replace(/[^0-9+]/g, "")}`}>{match.phone}</a> : null}
       </div>
     </article>
   );
@@ -118,7 +104,7 @@ export default function AskElm() {
       setResponse(payload.ok ? payload : { ok: false, error: payload.error || "Elm couldn’t answer that just now." });
     } catch {
       if (id !== requestId.current) return;
-      setResponse({ ok: false, error: "Elm couldn’t reach the local answer layer just now. Try again." });
+      setResponse({ ok: false, error: "Elm couldn’t answer that just now. Try again." });
     } finally {
       if (id === requestId.current) setLoading(false);
     }
@@ -136,32 +122,28 @@ export default function AskElm() {
           <span className="sr-only">Ask Elm a local question</span>
           <textarea
             name="question"
-            rows={2}
+            rows={1}
             maxLength={600}
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
-            placeholder="Ask about what’s happening, what’s available, or where to find something nearby…"
+            placeholder="Ask Elm anything local…"
           />
         </label>
         <button type="submit" disabled={loading || !question.trim()}>{loading ? "Looking…" : "Ask Elm"}</button>
       </form>
 
-      <div className="elm-local-ask-prompts" aria-label="Example questions">
-        {PROMPTS.map((prompt) => (
-          <button key={prompt} type="button" onClick={() => void ask(prompt)} disabled={loading}>{prompt}</button>
-        ))}
-      </div>
+      {!response ? (
+        <div className="elm-local-ask-prompts" aria-label="Example questions">
+          {PROMPTS.map((prompt) => (
+            <button key={prompt} type="button" onClick={() => void ask(prompt)} disabled={loading}>{prompt}</button>
+          ))}
+        </div>
+      ) : null}
 
       {response ? (
         <section className={`elm-local-ask-answer${response.ok ? "" : " is-error"}`}>
           {response.ok ? (
             <>
-              <div className="elm-local-ask-answer__heading">
-                <div>
-                  <p className="elm-local-kicker">Elm says</p>
-                  {response.question ? <span>{response.question}</span> : null}
-                </div>
-              </div>
               <p className="elm-local-ask-answer__copy">{response.answer}</p>
               {response.matches?.length ? (
                 <div className="elm-local-ask-match-grid">
@@ -170,7 +152,7 @@ export default function AskElm() {
               ) : null}
               {response.calendarHref ? (
                 <div className="elm-local-ask-answer__footer">
-                  <a href={response.calendarHref}>Show this on the calendar →</a>
+                  <a href={response.calendarHref}>View on calendar →</a>
                 </div>
               ) : null}
             </>
