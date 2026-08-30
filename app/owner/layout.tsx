@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { requireAtlasRole } from "@/lib/atlas/role-access";
+import "./ask-atlas.css";
 
 export const dynamic = "force-dynamic";
 

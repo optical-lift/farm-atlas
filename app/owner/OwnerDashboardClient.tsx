@@ -6,6 +6,7 @@ import type {
   OwnerAction,
   OwnerDashboardProjection,
 } from "@/lib/atlas-data/owner-dashboard";
+import AskAtlasOwner from "./AskAtlasOwner";
 
 type OwnerSectionProps = {
   title: string;
@@ -152,6 +153,8 @@ export default function OwnerDashboardClient({ dashboard, finishProject, weekPro
             <div><strong>Owner Work</strong><span>{prettyDate(dashboard.generatedForDate)}–{prettyDate(dashboard.weekEndDate)}</span></div>
             <p>{counts.overdue} overdue · {counts.today} due today · {counts.open} open total</p>
           </section>
+
+          <AskAtlasOwner />
 
           {weekProjection ? <AnnaWeekProjection projection={weekProjection} /> : null}
           {finishProject ? <FinishProjectStewardship project={finishProject} /> : null}
