@@ -57,8 +57,7 @@ export default async function ElmLocalPage(props: DiscoveryProps) {
   const searchParams = await props.searchParams;
   const browseMode = Object.keys(searchParams).some((key) => BROWSE_KEYS.has(key));
 
-  // Keep the existing deep discovery surface available when someone explicitly
-  // asks to browse it, while the public front page stays Ask-first and editorial.
+  // Keep the deeper discovery surface available when someone explicitly asks to browse it.
   if (browseMode) return <DiscoveryPage {...props} />;
 
   const today = localDateKey(new Date());
@@ -68,25 +67,35 @@ export default async function ElmLocalPage(props: DiscoveryProps) {
 
   return (
     <main className="elm-local-page elm-local-front-door">
+      <div className="elm-local-announcement">
+        <span>ELM LOCAL — ASK WHAT’S HAPPENING AROUND HERE</span>
+      </div>
+
       <section className="elm-local-ask-home" id="ask-elm">
         <header className="elm-local-masthead">
-          <p className="elm-local-masthead__name">Elm Local</p>
+          <a className="elm-local-masthead__name" href="/local" aria-label="Elm Local home">elm local</a>
           <p className="elm-local-masthead__place">Marshfield + surrounding communities</p>
         </header>
 
+        <nav className="elm-local-site-nav" aria-label="Elm Local navigation">
+          <a className="is-active" href="#ask-elm">Ask Elm</a>
+          <a href="#town-calendar">Town Calendar</a>
+          <a href="/local?view=next7#submit-event">Submit an Event</a>
+          <a href="https://www.elmfarm.co">Elm Farm</a>
+        </nav>
+
         <section className="elm-local-ask-lead" aria-labelledby="ask-elm-title">
-          <p className="elm-local-kicker">Ask Elm</p>
           <h1 id="ask-elm-title">What are you looking for?</h1>
           <AskElm />
         </section>
 
-        <section className="elm-local-town-calendar" aria-labelledby="town-calendar-title">
+        <section className="elm-local-town-calendar" id="town-calendar" aria-labelledby="town-calendar-title">
           <div className="elm-local-town-calendar__heading">
             <div>
-              <p className="elm-local-kicker">Around town</p>
+              <p className="elm-local-calendar-eyebrow">Around Town</p>
               <h2 id="town-calendar-title">Town Calendar</h2>
             </div>
-            <a href="/local?view=next7#calendar">Full calendar →</a>
+            <a href="/local?view=next7#calendar">Full Calendar</a>
           </div>
 
           {error ? (
@@ -108,13 +117,13 @@ export default async function ElmLocalPage(props: DiscoveryProps) {
         </section>
 
         <nav className="elm-local-front-door__links" aria-label="More from Elm Local">
-          <a href="/local?view=next7#calendar">Browse local events</a>
-          <a href="/local?view=next7#submit-event">Submit an event</a>
+          <a href="/local?view=next7#calendar">Browse Local Events</a>
+          <a href="/local?view=next7#submit-event">Submit an Event</a>
         </nav>
       </section>
 
       <footer className="elm-local-front-door__footer">
-        Maintained by Elm Farm for the local community.
+        ELM LOCAL · ELM FARM CO · MARSHFIELD, MO 65706
       </footer>
     </main>
   );
