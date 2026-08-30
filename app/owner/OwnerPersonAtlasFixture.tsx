@@ -1,0 +1,158 @@
+"use client";
+
+import PersonAtlasChassis, {
+  type PersonAtlasReservedSpan,
+  type PersonAtlasSection,
+  type PersonAtlasTimeMark,
+  type PersonAtlasUtilityGroup,
+} from "./PersonAtlasChassis";
+
+const SECTIONS: PersonAtlasSection[] = [
+  {
+    label: "NOW",
+    lines: [
+      {
+        id: "review-shell",
+        sentence: "Review the first person-owned Atlas shell",
+        state: "now",
+        worksheet: {
+          kicker: "ATLAS DESIGN",
+          facts: [
+            { label: "Jurisdiction", value: "Personal Atlas / product design" },
+            { label: "Why now", value: "The old Owner portal has been replaced by a fixture-only chassis." },
+            { label: "Authority", value: "Private design work; no farm mutation attached" },
+            { label: "Next proof", value: "Use Design Atlas to test a non-Elm bridge person." },
+          ],
+          note: "This page is intentionally fake. The point is to prove the person-owned container before reconnecting production intelligence.",
+        },
+      },
+    ],
+  },
+  {
+    label: "TODAY",
+    lines: [
+      {
+        id: "feast-calendar",
+        sentence: "Set September’s Feast Guild booking shape",
+        state: "open",
+        worksheet: {
+          kicker: "FEAST GUILD",
+          facts: [
+            { label: "Jurisdiction", value: "Feast Guild" },
+            { label: "Responsibility", value: "Principal" },
+            { label: "Time truth", value: "Belongs today in this fixture" },
+            { label: "Private context", value: "Atlas may schedule around private life without disclosing it to Feast Guild." },
+          ],
+        },
+      },
+      {
+        id: "groceries",
+        sentence: "Pick up groceries before dinner",
+        state: "open",
+        worksheet: {
+          kicker: "HOUSEHOLD",
+          facts: [
+            { label: "Jurisdiction", value: "Private household" },
+            { label: "Visibility", value: "Private" },
+            { label: "Time effect", value: "Consumes personal capacity before evening" },
+            { label: "Employer disclosure", value: "None" },
+          ],
+        },
+      },
+    ],
+  },
+  {
+    label: "EVENING",
+    lines: [
+      {
+        id: "write-now",
+        sentence: "Protect 45 minutes for Write Now chapter work",
+        state: "open",
+        worksheet: {
+          kicker: "WRITE NOW PUBLISHING HOUSE",
+          facts: [
+            { label: "Jurisdiction", value: "Write Now Publishing House" },
+            { label: "Responsibility", value: "Protected future / Principal work" },
+            { label: "Reserved time", value: "45 minutes" },
+            { label: "Scheduling law", value: "Louder work should not casually consume protected future value." },
+          ],
+        },
+      },
+    ],
+  },
+  {
+    label: "WAITING",
+    lines: [
+      {
+        id: "production-wiring",
+        sentence: "Keep live Atlas intelligence out until the new boundaries are proven",
+        state: "waiting",
+        worksheet: {
+          kicker: "BUILD BOUNDARY",
+          facts: [
+            { label: "State", value: "Deliberately held" },
+            { label: "Reason", value: "Fixture-first build" },
+            { label: "Blocked on", value: "Person / institution / privacy contract" },
+          ],
+        },
+      },
+    ],
+  },
+];
+
+const TIME_MARKS: PersonAtlasTimeMark[] = [
+  { id: "planning", minute: 9 * 60 + 30, label: "Feast Guild planning", kind: "move" },
+  { id: "groceries", minute: 17 * 60 + 15, label: "Groceries", kind: "move" },
+  { id: "dinner", minute: 18 * 60 + 30, label: "Family dinner", kind: "hard" },
+  { id: "writing", minute: 20 * 60, label: "Write Now protected block", kind: "protected" },
+];
+
+const RESERVED: PersonAtlasReservedSpan[] = [
+  { id: "family", startMinute: 18 * 60 + 15, endMinute: 19 * 60 + 30, label: "Private family time" },
+];
+
+const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
+  {
+    label: "DESIGN",
+    items: [
+      {
+        label: "Design Atlas",
+        detail: "Enter the non-Elm bridge-person fixture and pressure-test the new chassis.",
+        href: "/owner/design-atlas",
+      },
+    ],
+  },
+  {
+    label: "WORLDS · FIXTURE",
+    items: [
+      { label: "Household", detail: "Private life and family rhythms" },
+      { label: "Feast Guild", detail: "Linked institution · Principal responsibility" },
+      { label: "Write Now Publishing House", detail: "Owned institution" },
+      { label: "Optical Lift", detail: "Owned institution" },
+    ],
+  },
+  {
+    label: "BUILD STATUS",
+    items: [
+      { label: "No live intelligence connected", detail: "This shell deliberately reads no Owner dashboard, farm tasks, Principal state, or Clock data." },
+    ],
+  },
+];
+
+export default function OwnerPersonAtlasFixture() {
+  return (
+    <PersonAtlasChassis
+      identity="MY ATLAS"
+      identityDetail="One person · several lawful worlds"
+      pageKicker="TODAY"
+      pageTitle="Today"
+      pageIntro="The page belongs to the person. Institutions may make governed claims on it; none of them own the whole day."
+      sections={SECTIONS}
+      timeMarks={TIME_MARKS}
+      reservedSpans={RESERVED}
+      nextHardEdge="next fixed · family 6:30"
+      utilityGroups={UTILITY_GROUPS}
+      footer={<>Fixture truth only. Nothing on this page reads or writes live Atlas operations.</>}
+    />
+  );
+}
