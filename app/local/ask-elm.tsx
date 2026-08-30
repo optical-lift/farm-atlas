@@ -41,6 +41,8 @@ type AskResponse = {
   error?: string;
 };
 
+// Product invariant: Ask Elm answers remain grounded in governed local records.
+// That provenance belongs in implementation custody, not as technical chrome on the public conversation.
 const PROMPTS = [
   "What’s happening this weekend?",
   "Anything free for kids Saturday?",
