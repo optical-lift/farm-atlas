@@ -43,51 +43,13 @@ type AskResponse = {
 
 // Product invariant: Ask Elm answers remain grounded in governed local records.
 // That provenance belongs in implementation custody, not as technical chrome on the public conversation.
-const PROMPTS = [
-  "What’s happening this weekend?",
-  "Anything free for kids Saturday?",
-  "Where can I buy local honey?",
-  "Who’s accepting new dental patients?",
-];
-
-const CONVERSATIONAL_MATCH_LIMIT = 4;
-
-function MatchCard({ match }: { match: AskMatch }) {
-  const primaryHref = match.href || match.externalUrl;
-  const external = !match.href && Boolean(match.externalUrl);
-
-  return (
-    <article className="elm-local-ask-match">
-      <div className="elm-local-ask-match__title-row">
-        <h3>
-          {primaryHref ? (
-            <a href={primaryHref} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined}>
-              {match.title}
-            </a>
-          ) : match.title}
-        </h3>
-        {match.currentState === "stale" ? <span className="elm-local-ask-match__refresh">Needs refresh</span> : null}
-      </div>
-      {match.subtitle ? <p className="elm-local-ask-match__where">{match.subtitle}</p> : null}
-      {match.summary ? <p className="elm-local-ask-match__summary">{match.summary}</p> : null}
-      <div className="elm-local-ask-match__actions">
-        {match.href ? <a href={match.href}>Details →</a> : null}
-        {!match.href && match.externalUrl ? <a href={match.externalUrl} target="_blank" rel="noreferrer">Website ↗</a> : null}
-        {match.phone ? <a href={`tel:${match.phone.replace(/[^0-9+]/g, "")}`}>{match.phone}</a> : null}
-      </div>
-    </article>
-  );
-}
+const ANSWER_MENTION_LIMIT = 3;
 
 function answerMatches(response: AskResponse) {
   const matches = response.matches ?? [];
   if (!response.intent?.requiresFreshCurrentState) return matches;
 
   return matches.filter((match) => match.currentState === "current" || match.kind === "event" || match.kind === "series");
-}
-
-function conversationalMatches(response: AskResponse) {
-  return answerMatches(response).slice(0, CONVERSATIONAL_MATCH_LIMIT);
 }
 
 function naturalList(names: string[]) {
@@ -101,11 +63,11 @@ function answerCopy(response: AskResponse) {
   if (response.needsClarification) return response.answer;
 
   const eligible = answerMatches(response);
-  const visible = eligible.slice(0, CONVERSATIONAL_MATCH_LIMIT);
-  if (!visible.length) return response.answer;
+  const mentioned = eligible.slice(0, ANSWER_MENTION_LIMIT);
+  if (!mentioned.length) return response.answer;
 
-  const [first, ...alternatives] = visible;
-  const hiddenCount = Math.max(0, eligible.length - visible.length);
+  const [first, ...alternatives] = mentioned;
+  const hiddenCount = Math.max(0, eligible.length - mentioned.length);
   const isEventAnswer = response.intent?.questionKind === "events";
 
   let copy: string;
@@ -130,11 +92,31 @@ function answerCopy(response: AskResponse) {
   return copy;
 }
 
+function PrimaryDetail({ match }: { match: AskMatch }) {
+  const primaryHref = match.href || match.externalUrl;
+  const external = !match.href && Boolean(match.externalUrl);
+
+  return (
+    <div className="elm-local-ask-primary">
+      <strong>{match.title}</strong>
+      <div className="elm-local-ask-primary__actions">
+        {match.phone ? <a href={`tel:${match.phone.replace(/[^0-9+]/g, "")}`}>{match.phone}</a> : null}
+        {primaryHref ? (
+          <a href={primaryHref} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined}>
+            {match.href ? "Details" : "Website"} →
+          </a>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default function AskElm() {
   const [question, setQuestion] = useState("");
   const [response, setResponse] = useState<AskResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const requestId = useRef(0);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   async function ask(value: string) {
     const clean = value.trim();
@@ -168,48 +150,47 @@ export default function AskElm() {
     void ask(question);
   }
 
-  const visibleMatches = response?.ok ? conversationalMatches(response) : [];
+  function changeQuestion() {
+    setResponse(null);
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.select();
+    });
+  }
+
+  const primaryMatch = response?.ok ? answerMatches(response)[0] ?? null : null;
 
   return (
-    <div className="elm-local-ask" aria-live="polite">
-      <form className="elm-local-ask-form" onSubmit={submit}>
-        <label>
-          <span className="sr-only">Ask Elm a local question</span>
-          <textarea
-            name="question"
-            rows={1}
-            maxLength={600}
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            placeholder="Ask Elm anything local…"
-          />
-        </label>
-        <button type="submit" disabled={loading || !question.trim()}>{loading ? "Looking…" : "Ask Elm"}</button>
-      </form>
-
+    <div className={`elm-local-ask${response ? " has-response" : ""}`} aria-live="polite">
       {!response ? (
-        <div className="elm-local-ask-prompts" aria-label="Example questions">
-          {PROMPTS.map((prompt) => (
-            <button key={prompt} type="button" onClick={() => void ask(prompt)} disabled={loading}>{prompt}</button>
-          ))}
+        <form className="elm-local-ask-form" onSubmit={submit}>
+          <label>
+            <span className="sr-only">Ask Elm a local question</span>
+            <textarea
+              ref={textareaRef}
+              name="question"
+              rows={1}
+              maxLength={600}
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              placeholder="Ask Elm anything local…"
+            />
+          </label>
+          <button type="submit" disabled={loading || !question.trim()}>{loading ? "Looking…" : "Ask Elm"}</button>
+        </form>
+      ) : (
+        <div className="elm-local-ask-query">
+          <span>{question}</span>
+          <button type="button" onClick={changeQuestion}>Change</button>
         </div>
-      ) : null}
+      )}
 
       {response ? (
         <section className={`elm-local-ask-answer${response.ok ? "" : " is-error"}`}>
           {response.ok ? (
             <>
               <p className="elm-local-ask-answer__copy">{answerCopy(response)}</p>
-              {visibleMatches.length ? (
-                <div className="elm-local-ask-match-grid">
-                  {visibleMatches.map((match) => <MatchCard key={match.id} match={match} />)}
-                </div>
-              ) : null}
-              {response.calendarHref ? (
-                <div className="elm-local-ask-answer__footer">
-                  <a href={response.calendarHref}>View on calendar →</a>
-                </div>
-              ) : null}
+              {primaryMatch ? <PrimaryDetail match={primaryMatch} /> : null}
             </>
           ) : (
             <p className="elm-local-ask-answer__copy">{response.error}</p>
