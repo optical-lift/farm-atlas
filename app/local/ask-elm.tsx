@@ -214,19 +214,22 @@ export default function AskElm() {
     setLoading(true);
     setShowAll(false);
     const id = ++requestId.current;
+    const retrievalQuestion = broadFlowerQuestion(clean) ? `${clean} — include flower farms` : clean;
 
     try {
       const result = await fetch("/api/local/ask-v2", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question: clean,
+          question: retrievalQuestion,
           previousIntent: response?.intent ?? null,
         }),
       });
       const payload = await result.json() as AskResponse;
       if (id !== requestId.current) return;
-      setResponse(payload.ok ? payload : { ok: false, question: clean, error: payload.error || "Elm couldn’t answer that just now." });
+      setResponse(payload.ok
+        ? { ...payload, question: clean }
+        : { ok: false, question: clean, error: payload.error || "Elm couldn’t answer that just now." });
       setDraft("");
     } catch {
       if (id !== requestId.current) return;
