@@ -10,6 +10,7 @@
   background: #fff;
   color: var(--elm-ink);
   font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+  -webkit-text-size-adjust: 100%;
 }
 
 .elm-local-front-door * {
@@ -100,43 +101,50 @@
   text-align: left;
 }
 
-.elm-local-ask-form {
+.elm-local-ask-form,
+.elm-local-ask-followup {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   border: 1px solid #bfc0bc;
   background: #fff;
 }
 
-.elm-local-ask-form label {
+.elm-local-ask-form label,
+.elm-local-ask-followup label {
   min-width: 0;
 }
 
-.elm-local-ask-form textarea {
+.elm-local-ask-form input,
+.elm-local-ask-followup input {
   display: block;
   width: 100%;
+  min-width: 0;
   min-height: 60px;
-  max-height: 140px;
-  resize: vertical;
   border: 0;
+  border-radius: 0;
   background: transparent;
   color: var(--elm-ink);
-  padding: 18px 20px 16px;
+  padding: 17px 20px 15px;
   outline: none;
+  appearance: none;
   font: inherit;
-  font-size: 15px;
-  letter-spacing: 0.02em;
-  line-height: 1.45;
+  font-size: 16px;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
 }
 
-.elm-local-ask-form textarea::placeholder {
+.elm-local-ask-form input::placeholder,
+.elm-local-ask-followup input::placeholder {
   color: #777a74;
 }
 
-.elm-local-ask-form textarea:focus {
+.elm-local-ask-form input:focus,
+.elm-local-ask-followup input:focus {
   box-shadow: inset 0 0 0 1px #767a73;
 }
 
-.elm-local-ask-form button {
+.elm-local-ask-form button,
+.elm-local-ask-followup button {
   min-width: 132px;
   border: 0;
   border-left: 1px solid #bfc0bc;
@@ -150,13 +158,16 @@
   letter-spacing: 0.2em;
   text-transform: uppercase;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
-.elm-local-ask-form button:hover:not(:disabled) {
+.elm-local-ask-form button:hover:not(:disabled),
+.elm-local-ask-followup button:hover:not(:disabled) {
   background: var(--elm-sage-deep);
 }
 
-.elm-local-ask-form button:disabled {
+.elm-local-ask-form button:disabled,
+.elm-local-ask-followup button:disabled {
   cursor: default;
   opacity: 0.5;
 }
@@ -164,84 +175,55 @@
 .elm-local-ask.has-response {
   width: min(100%, 820px);
   margin-inline: auto;
-  padding: 18px 22px 22px;
+  padding: 18px 22px 20px;
   background: var(--elm-surface);
 }
 
 .elm-local-ask-query {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding-bottom: 13px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #d8dad5;
 }
 
 .elm-local-ask-query span {
+  display: block;
   min-width: 0;
   overflow: hidden;
-  color: #555851;
+  color: #656861;
   font-size: 12px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.elm-local-ask-query button {
-  flex: 0 0 auto;
-  border: 0;
-  background: transparent;
-  color: #555851;
-  padding: 2px 0;
-  font: inherit;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.elm-local-ask-query button:hover {
-  color: #111;
-}
-
 .elm-local-ask-answer {
-  padding-top: 18px;
+  padding-top: 14px;
 }
 
 .elm-local-ask-answer.is-error {
   color: #703b34;
 }
 
-.elm-local-ask-answer__copy {
-  margin: 0;
-  font-family: Baskerville, "Times New Roman", serif;
-  font-size: clamp(20px, 2.2vw, 25px);
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  line-height: 1.42;
-}
-
 .elm-local-ask-primary {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  margin-top: 17px;
-  padding-top: 14px;
-  border-top: 1px solid #d8dad5;
+  gap: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d8dad5;
 }
 
 .elm-local-ask-primary strong {
+  min-width: 0;
   font-family: Baskerville, "Times New Roman", serif;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 400;
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
 .elm-local-ask-primary__actions {
   display: flex;
   flex: 0 0 auto;
+  align-items: center;
   gap: 14px;
 }
 
@@ -253,6 +235,89 @@
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
   text-transform: uppercase;
+}
+
+.elm-local-ask-primary__actions .elm-local-ask-primary__phone {
+  font-size: 13px;
+  letter-spacing: 0.035em;
+  text-decoration: none;
+}
+
+.elm-local-ask-answer__copy {
+  margin: 16px 0 0;
+  font-family: Baskerville, "Times New Roman", serif;
+  font-size: clamp(20px, 2.2vw, 25px);
+  font-weight: 400;
+  letter-spacing: 0.008em;
+  line-height: 1.38;
+}
+
+.elm-local-ask-more-button {
+  margin: 14px 0 0;
+  border: 0;
+  border-bottom: 1px solid #858980;
+  background: transparent;
+  color: #343732;
+  padding: 0 0 2px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.elm-local-ask-more {
+  margin-top: 14px;
+  border-top: 1px solid #d8dad5;
+}
+
+.elm-local-ask-more-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e0e2dd;
+}
+
+.elm-local-ask-more-row strong {
+  font-family: Baskerville, "Times New Roman", serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+.elm-local-ask-more-row > div {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 12px;
+}
+
+.elm-local-ask-more-row a {
+  color: #343732;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.elm-local-ask-followup {
+  margin-top: 18px;
+  border-color: #c9ccc6;
+}
+
+.elm-local-ask-followup input {
+  min-height: 48px;
+  padding: 12px 14px 11px;
+}
+
+.elm-local-ask-followup button {
+  min-width: 64px;
+  border-left-color: #c9ccc6;
+  padding-inline: 14px;
+  letter-spacing: 0.12em;
 }
 
 .elm-local-town-calendar {
@@ -390,7 +455,7 @@
   }
 
   .elm-local-ask-lead:has(.elm-local-ask.has-response) {
-    padding: 18px 0 24px;
+    padding: 14px 0 20px;
   }
 
   .elm-local-ask-lead > h1 {
@@ -398,25 +463,29 @@
     font-size: 34px;
   }
 
-  .elm-local-ask-form textarea {
+  .elm-local-ask-form input,
+  .elm-local-ask-followup input {
+    font-size: 16px;
+  }
+
+  .elm-local-ask-form input {
     min-height: 54px;
-    padding: 15px 14px 13px;
-    font-size: 14px;
+    padding: 14px 14px 12px;
   }
 
   .elm-local-ask-form button {
-    min-width: 96px;
-    padding-inline: 12px;
+    min-width: 88px;
+    padding-inline: 11px;
     font-size: 8px;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.12em;
   }
 
   .elm-local-ask.has-response {
-    padding: 14px 16px 16px;
+    padding: 12px 14px 14px;
   }
 
   .elm-local-ask-query {
-    padding-bottom: 10px;
+    padding-bottom: 9px;
   }
 
   .elm-local-ask-query span {
@@ -424,26 +493,68 @@
   }
 
   .elm-local-ask-answer {
-    padding-top: 13px;
-  }
-
-  .elm-local-ask-answer__copy {
-    font-size: 20px;
-    line-height: 1.36;
+    padding-top: 10px;
   }
 
   .elm-local-ask-primary {
-    display: block;
-    margin-top: 13px;
-    padding-top: 11px;
+    align-items: baseline;
+    gap: 10px;
+    padding-bottom: 10px;
   }
 
   .elm-local-ask-primary strong {
-    font-size: 15px;
+    font-size: 17px;
   }
 
   .elm-local-ask-primary__actions {
-    margin-top: 6px;
+    gap: 9px;
+  }
+
+  .elm-local-ask-primary__actions .elm-local-ask-primary__phone {
+    font-size: 12px;
+  }
+
+  .elm-local-ask-primary__actions a:not(.elm-local-ask-primary__phone) {
+    font-size: 8px;
+  }
+
+  .elm-local-ask-answer__copy {
+    margin-top: 12px;
+    font-size: 19px;
+    line-height: 1.32;
+  }
+
+  .elm-local-ask-more-button {
+    margin-top: 11px;
+    font-size: 9px;
+  }
+
+  .elm-local-ask-more-row {
+    display: block;
+    padding: 10px 0;
+  }
+
+  .elm-local-ask-more-row strong {
+    font-size: 15px;
+  }
+
+  .elm-local-ask-more-row > div {
+    margin-top: 5px;
+  }
+
+  .elm-local-ask-followup {
+    margin-top: 14px;
+  }
+
+  .elm-local-ask-followup input {
+    min-height: 46px;
+    padding: 10px 12px 9px;
+  }
+
+  .elm-local-ask-followup button {
+    min-width: 56px;
+    padding-inline: 10px;
+    font-size: 9px;
   }
 
   .elm-local-town-calendar__inner {
