@@ -78,6 +78,7 @@ test("one Atlas start screen asks where onboarding begins only after the sales C
   assert.match(atlasStart, /href="\/start\/personal"/);
   assert.match(atlasStart, /href="\/start\/organization"/);
   assert.match(atlasStart, /not a choice between two different Atlas products/i);
+  assert.match(proxy, /pathname === "\/start"/);
 });
 
 test("Organization Atlas is explicitly pre-membership", () => {
