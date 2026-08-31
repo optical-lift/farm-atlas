@@ -20,10 +20,12 @@ export default function HarvestInputSpreadPage() {
       detail="Barn Beds 3–5 · ½-bucket counts"
       rows={HARVEST_ROWS}
       totalUnit="buckets"
+      totalUnitSingular="bucket"
+      minimumTotal={0.5}
       followUp={{
         label: "more still out there?",
         options: REMAINS_OPTIONS,
-        initialValue: "yes",
+        required: true,
       }}
     />
   );
