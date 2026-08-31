@@ -144,8 +144,9 @@ export default function PersonAtlasInputSpread({
             {rows.map((row) => {
               const step = row.step && row.step > 0 ? row.step : 1;
               const storedValue = values[row.id];
-              const hasStoredValue = typeof storedValue === "number" && Number.isFinite(storedValue);
-              const value = hasStoredValue ? storedValue : 0;
+              const numericValue = typeof storedValue === "number" && Number.isFinite(storedValue) ? storedValue : null;
+              const hasStoredValue = numericValue !== null;
+              const value = numericValue ?? 0;
               return (
                 <div className={styles.inputRow} key={row.id}>
                   <label htmlFor={`atlas-input-${row.id}`}>{row.label}</label>
@@ -201,7 +202,7 @@ export default function PersonAtlasInputSpread({
                       </button>
                     ))}
                   </div>
-                )}
+                ) : null}
               </div>
             );
           })}
