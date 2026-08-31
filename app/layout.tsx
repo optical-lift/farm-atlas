@@ -10,6 +10,7 @@ import { getAtlasSession } from "@/lib/atlas/session";
 import OwnerOperatorMode from "./OwnerOperatorMode";
 import "./globals.css";
 import "./atlas-primitives.css";
+import "./design-atlas-handwriting.css";
 import "./atlas-trail.css";
 import "./home.css";
 import "./zones.css";
