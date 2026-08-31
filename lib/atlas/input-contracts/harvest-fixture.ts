@@ -131,7 +131,7 @@ export function adjudicateHarvestFixtureResult(event: AtlasInputResultEvent): Ha
   const moreAvailability = event.values.moreAvailability;
   const base = {
     recordKind: "harvest" as const,
-    grade,
+    grade: grade as HarvestFixtureGrade,
     observedQuantity,
     targetQuantity,
     createsHarvestInventory: true as const,
