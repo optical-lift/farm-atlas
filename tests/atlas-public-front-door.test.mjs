@@ -3,6 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 
 const welcome = fs.readFileSync(new URL("../app/welcome/page.tsx", import.meta.url), "utf8");
+const welcomeStyles = fs.readFileSync(new URL("../app/welcome/sales-page.module.css", import.meta.url), "utf8");
 const organizationStart = fs.readFileSync(new URL("../app/start/organization/page.tsx", import.meta.url), "utf8");
 const organizationClient = fs.readFileSync(
   new URL("../app/onboarding/organization/OrganizationOnboardingClient.tsx", import.meta.url),
@@ -43,6 +44,15 @@ test("public Atlas front door names supported official-API integration targets w
   }
   assert.match(welcome, /Keep the specialist software/);
   assert.match(welcome, /official APIs/);
+});
+
+test("sales specimen uses the Atlas notebook hand only for human-written tasks and stays on white paper", () => {
+  assert.doesNotMatch(welcome, /Nothing_You_Could_Do/);
+  assert.match(welcome, /check whether Thursday deliveries still fit/);
+  assert.match(welcome, /review fall purchasing before Friday/);
+  assert.match(welcomeStyles, /var\(--atlas-font-handwriting\)/);
+  assert.match(welcomeStyles, /body:has\(\[data-atlas-sales-page="true"\]\)/);
+  assert.match(welcomeStyles, /background: #fff !important/);
 });
 
 test("Organization Atlas is explicitly pre-membership", () => {

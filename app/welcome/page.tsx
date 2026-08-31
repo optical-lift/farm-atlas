@@ -1,13 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Nothing_You_Could_Do, Source_Sans_3 } from "next/font/google";
 
 import styles from "./sales-page.module.css";
 
 export const dynamic = "force-dynamic";
-
-const sourceSans = Source_Sans_3({ subsets: ["latin"], variable: "--atlas-system-font" });
-const humanHand = Nothing_You_Could_Do({ weight: "400", subsets: ["latin"], variable: "--atlas-human-font" });
 
 export const metadata: Metadata = {
   title: "Atlas — put the company back together",
@@ -30,7 +26,7 @@ const compatibleSystems = [
 
 export default function AtlasWelcomePage() {
   return (
-    <main className={`${styles.page} ${sourceSans.variable} ${humanHand.variable}`}>
+    <main className={styles.page} data-atlas-sales-page="true">
       <div className={styles.shell}>
         <nav className={styles.brandBar} aria-label="Atlas">
           <Link className={styles.brand} href="/welcome">ATLAS</Link>
@@ -42,11 +38,9 @@ export default function AtlasWelcomePage() {
 
         <section className={styles.hero}>
           <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>The connective intelligence for a real company</p>
+            <p className={styles.eyebrow}>Connective intelligence for a real company</p>
             <h1>Atlas puts it back together.</h1>
-            <p className={styles.heroLead}>
-              <strong>Your company is already in there. It just lives in pieces.</strong>
-            </p>
+            <p className={styles.heroLead}>Your company is already in there. It just lives in pieces.</p>
             <p className={styles.heroThesis}>
               Finance. Customers. Inventory. People. Projects. Messages. Plans. Atlas connects the pieces
               and carries what changes to the people who need to know.
@@ -57,74 +51,57 @@ export default function AtlasWelcomePage() {
             </div>
           </div>
 
-          <div className={styles.heroInstrument} aria-label="Conceptual Atlas company model">
-            <div className={styles.instrumentHalo} />
-            <div className={styles.sourceRail} aria-hidden="true">
-              <span>FINANCE</span>
-              <span>CRM</span>
-              <span>INVENTORY</span>
-              <span>MESSAGES</span>
-              <span>FILES</span>
-            </div>
-            <div className={styles.notebook}>
-              <div className={styles.notebookHeader}>
+          <div className={styles.heroInstrument} aria-label="A company Atlas shown as a working notebook">
+            <article className={styles.notebook}>
+              <header className={styles.notebookHeader}>
                 <span>COMPANY / LIVE MODEL</span>
                 <span>08.31.26</span>
-              </div>
+              </header>
               <div className={styles.notebookRule} />
-              <p className={styles.handLine}>Two decisions require you.</p>
-              <div className={styles.bulletLine}>
-                <span>●</span>
+
+              <div className={styles.taskLine}>
+                <span aria-hidden="true">•</span>
                 <div>
-                  <strong>Protect Thursday delivery capacity.</strong>
-                  <small>Sales commitments now exceed the current route window.</small>
+                  <strong>check whether Thursday deliveries still fit</strong>
+                  <small>sales commitments · route capacity</small>
                 </div>
               </div>
-              <div className={styles.bulletLine}>
-                <span>○</span>
+              <div className={styles.taskLine}>
+                <span aria-hidden="true">○</span>
                 <div>
-                  <strong>Approve fall purchasing.</strong>
-                  <small>Cash plan remains inside the protected operating floor.</small>
+                  <strong>review fall purchasing before Friday</strong>
+                  <small>cash · purchasing</small>
                 </div>
               </div>
+
               <div className={styles.askStrip}>
                 <span>ASK ATLAS</span>
                 <p>What changed while I was gone?</p>
               </div>
-            </div>
-            <div className={styles.outputRail} aria-hidden="true">
-              <span>OWNER</span>
-              <span>MANAGER</span>
-              <span>SALES</span>
-              <span>WORKER</span>
-            </div>
+            </article>
           </div>
         </section>
 
         <section className={styles.compatibility} aria-label="Compatible systems">
-          <p className={styles.eyebrow}>Works with the systems your company already uses</p>
+          <p className={styles.compatibilityLabel}>Works with the systems your company already uses</p>
           <div className={styles.integrationList}>
             {compatibleSystems.map((system) => <span key={system}>{system}</span>)}
           </div>
-          <p className={styles.compatibilityNote}>
-            Keep the specialist software. Atlas connects what each system knows through official APIs.
-          </p>
+          <p className={styles.compatibilityNote}>Keep the specialist software. Atlas connects what each system knows through official APIs.</p>
         </section>
 
         <section className={`${styles.section} ${styles.connectionSection}`}>
           <div className={styles.connectionCopy}>
             <p className={styles.eyebrow}>The connective layer</p>
             <h2>Your software already knows the company in pieces.</h2>
-            <strong>
-              Atlas makes that connective intelligence part of the company instead of leaving it in somebody&apos;s head.
-            </strong>
+            <strong>Atlas makes that connective intelligence part of the company instead of leaving it in somebody&apos;s head.</strong>
             <p>
               Atlas is designed to receive those signals from the systems already carrying the company,
               reconcile them into governed truth, and bring the consequence to the person who needs it.
             </p>
           </div>
 
-          <div className={`${styles.continuityVisual} ${styles.compactContinuity}`} aria-label="Conceptual Atlas continuity flow">
+          <div className={styles.continuityVisual} aria-label="Signals becoming company truth through Atlas">
             <div className={styles.signalColumn}>
               <div className={styles.signalBubble}><span>MESSAGE</span><p>I finished the north beds and moved the trays.</p></div>
               <div className={styles.signalBubble}><span>EMAIL</span><p>Can we move Thursday&apos;s delivery to 11?</p></div>
@@ -138,8 +115,8 @@ export default function AtlasWelcomePage() {
             </div>
             <div className={styles.resultNote}>
               <span>NOW TRUE</span>
-              <p className={styles.handLineSmall}>Thursday still fits. North beds are complete.</p>
-              <small>The plan can move without another round of re-entry.</small>
+              <strong>Thursday still fits.</strong>
+              <p>North beds are complete. The plan can move without another round of re-entry.</p>
             </div>
           </div>
         </section>
