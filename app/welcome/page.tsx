@@ -10,28 +10,22 @@ const sourceSans = Source_Sans_3({ subsets: ["latin"], variable: "--atlas-system
 const humanHand = Nothing_You_Could_Do({ weight: "400", subsets: ["latin"], variable: "--atlas-human-font" });
 
 export const metadata: Metadata = {
-  title: "Atlas — the company, put back together",
+  title: "Atlas — put the company back together",
   description:
-    "Atlas connects the systems that know pieces of a company and turns them into one living operating model for the people responsible for it.",
+    "Atlas connects the systems that already know pieces of a company and carries what changes to the people who need to know.",
 };
 
-const companySystems = [
-  "Finance",
-  "Customers",
-  "Inventory",
-  "Payroll",
-  "Projects",
-  "Training",
-  "Messages",
-  "Files",
-  "Forecasts",
-];
-
-const humanViews = [
-  ["Owner", "Two decisions require you."],
-  ["Manager", "Thursday needs coverage."],
-  ["Sales", "Call Acme today."],
-  ["Worker", "Pack order 1842."],
+const compatibleSystems = [
+  "Google Workspace",
+  "Microsoft 365",
+  "QuickBooks",
+  "Slack",
+  "Shopify",
+  "Stripe",
+  "Salesforce",
+  "HubSpot",
+  "Square",
+  "Dropbox",
 ];
 
 export default function AtlasWelcomePage() {
@@ -48,20 +42,18 @@ export default function AtlasWelcomePage() {
 
         <section className={styles.hero}>
           <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>A living operating system for a real company</p>
-            <h1>The company already exists. Atlas puts it back together.</h1>
+            <p className={styles.eyebrow}>The connective intelligence for a real company</p>
+            <h1>Atlas puts it back together.</h1>
             <p className={styles.heroLead}>
-              Finance knows the money. CRM knows the customers. Inventory knows the stock. Email knows the
-              conversations. Payroll knows the people. Your team is still carrying the whole company in
-              their heads.
+              <strong>Your company is already in there. It just lives in pieces.</strong>
             </p>
             <p className={styles.heroThesis}>
-              Atlas connects those fragments into one living model of the organization—and gives each
-              person the part of that reality they actually need.
+              Finance. Customers. Inventory. People. Projects. Messages. Plans. Atlas connects the pieces
+              and carries what changes to the people who need to know.
             </p>
             <div className={styles.heroActions}>
               <Link className={styles.primaryAction} href="/start/organization">Start Organization Atlas</Link>
-              <Link className={styles.textAction} href="#personal">Personal Atlas →</Link>
+              <Link className={styles.textAction} href="#start">Personal Atlas →</Link>
             </div>
           </div>
 
@@ -109,103 +101,37 @@ export default function AtlasWelcomePage() {
           </div>
         </section>
 
-        <section className={styles.statementBand}>
-          <p>De-fragmenting the broken pieces.</p>
-          <p>Unifying thought and action.</p>
-          <p>Showing up when people forget to.</p>
-        </section>
-
-        <section className={styles.section}>
-          <div className={styles.sectionIntro}>
-            <p className={styles.eyebrow}>The problem is not missing software</p>
-            <h2>Your company is already in there. It just lives in pieces.</h2>
+        <section className={styles.compatibility} aria-label="Compatible systems">
+          <p className={styles.eyebrow}>Works with the systems your company already uses</p>
+          <div className={styles.integrationList}>
+            {compatibleSystems.map((system) => <span key={system}>{system}</span>)}
           </div>
-          <div className={styles.fractureGrid}>
-            <div className={styles.systemList}>
-              {companySystems.map((system) => (
-                <div className={styles.systemRow} key={system}>
-                  <span className={styles.openMark}>○</span>
-                  <span>{system}</span>
-                </div>
-              ))}
-            </div>
-            <div className={styles.fractureCopy}>
-              <p>
-                Growing companies accumulate excellent specialist systems. Each one can be authoritative
-                inside its own boundary and still leave the organization fragmented as a whole.
-              </p>
-              <p>
-                The gaps are usually filled by people: remembering what the software did not connect,
-                translating between departments, carrying context into meetings, noticing that one number
-                somewhere changes what another person should do next.
-              </p>
-              <strong>Atlas makes that connective intelligence part of the company instead of leaving it in somebody&apos;s head.</strong>
-            </div>
-          </div>
-        </section>
-
-        <section className={`${styles.section} ${styles.modelSection}`}>
-          <div className={styles.sectionIntro}>
-            <p className={styles.eyebrow}>One company. Many lawful views.</p>
-            <h2>Atlas holds the whole. People receive what has earned their attention.</h2>
-          </div>
-
-          <div className={styles.modelDiagram}>
-            <div className={styles.modelSources}>
-              {companySystems.slice(0, 7).map((system) => <span key={system}>{system}</span>)}
-            </div>
-            <div className={styles.atlasCore}>
-              <span className={styles.coreLabel}>ATLAS</span>
-              <strong>Company state · live</strong>
-              <div className={styles.coreRows}>
-                <span><b>Revenue</b><em>projected</em></span>
-                <span><b>Cash</b><em>protected</em></span>
-                <span><b>Inventory</b><em>constrained</em></span>
-                <span><b>Sales</b><em>committed</em></span>
-                <span><b>People</b><em>in motion</em></span>
-              </div>
-            </div>
-            <div className={styles.humanOutputs}>
-              {humanViews.map(([role, line], index) => (
-                <div className={styles.humanOutput} key={role}>
-                  <span>{role}</span>
-                  <p className={index === 0 ? styles.handLineSmall : undefined}>{line}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <p className={styles.modelFootnote}>
-            The point is not to give everyone a larger dashboard. The point is to let the company reason at
-            company scale and communicate at human scale.
+          <p className={styles.compatibilityNote}>
+            Keep the specialist software. Atlas connects what each system knows through official APIs.
           </p>
         </section>
 
-        <section className={`${styles.section} ${styles.ambientSection}`}>
-          <div className={styles.ambientCopy}>
-            <p className={styles.eyebrow}>Atlas happens around the work</p>
-            <h2>You should not have to stop living in order to update your software.</h2>
-            <p>
-              A promise appears in a text. A customer changes an order by email. A worker finishes something
-              in the field. A meeting changes the plan. A file contains the policy nobody remembers to check.
-            </p>
+        <section className={`${styles.section} ${styles.connectionSection}`}>
+          <div className={styles.connectionCopy}>
+            <p className={styles.eyebrow}>The connective layer</p>
+            <h2>Your software already knows the company in pieces.</h2>
+            <strong>
+              Atlas makes that connective intelligence part of the company instead of leaving it in somebody&apos;s head.
+            </strong>
             <p>
               Atlas is designed to receive those signals from the systems already carrying the company,
               reconcile them into governed truth, and bring the consequence to the person who needs it.
             </p>
-            <p className={styles.ambientThesis}>
-              Atlas does not ask people to become more like software. It makes software better at supporting people.
-            </p>
           </div>
 
-          <div className={styles.continuityVisual} aria-label="Conceptual Atlas continuity flow">
+          <div className={`${styles.continuityVisual} ${styles.compactContinuity}`} aria-label="Conceptual Atlas continuity flow">
             <div className={styles.signalColumn}>
               <div className={styles.signalBubble}><span>MESSAGE</span><p>I finished the north beds and moved the trays.</p></div>
               <div className={styles.signalBubble}><span>EMAIL</span><p>Can we move Thursday&apos;s delivery to 11?</p></div>
               <div className={styles.signalBubble}><span>CALENDAR</span><p>Route window · 10:30–12:00</p></div>
             </div>
             <div className={styles.continuityCore}>
-              <span>ATLAS CONTINUITY</span>
+              <span>ATLAS</span>
               <i />
               <strong>reconcile</strong>
               <i />
@@ -213,38 +139,24 @@ export default function AtlasWelcomePage() {
             <div className={styles.resultNote}>
               <span>NOW TRUE</span>
               <p className={styles.handLineSmall}>Thursday still fits. North beds are complete.</p>
-              <small>Downstream work and the route plan can move without another round of re-entry.</small>
+              <small>The plan can move without another round of re-entry.</small>
             </div>
           </div>
         </section>
 
-        <section className={`${styles.section} ${styles.definitionSection}`}>
-          <p className={styles.eyebrow}>The product</p>
-          <h2>Atlas is the intelligence layer between reality and the people responsible for it.</h2>
-          <div className={styles.definitionGrid}>
-            <div><span>01</span><strong>Remember</strong><p>Keep promises, evidence, history, obligations, and operating knowledge from falling through the cracks.</p></div>
-            <div><span>02</span><strong>Understand</strong><p>Connect money, inventory, customers, people, work, time, projections, and source evidence without flattening their custody.</p></div>
-            <div><span>03</span><strong>Compose</strong><p>Turn company-scale truth into the right decision, warning, task, training move, conversation, or protected future for each person.</p></div>
-            <div><span>04</span><strong>Continue</strong><p>Carry reality forward as it changes so the organization does not have to reconstruct itself every morning.</p></div>
-          </div>
-        </section>
-
-        <section className={`${styles.section} ${styles.entrySection}`} id="personal">
+        <section className={`${styles.section} ${styles.entrySection}`} id="start">
           <div className={styles.sectionIntro}>
-            <p className={styles.eyebrow}>Start with the thing Atlas is being asked to hold</p>
-            <h2>What is getting an Atlas?</h2>
+            <p className={styles.eyebrow}>Ready to map out your Atlas?</p>
+            <h2>Start where you are.</h2>
           </div>
 
           <div className={styles.entryChoices}>
             <Link className={styles.entryChoice} href="/start/personal">
               <div>
                 <span className={styles.choiceNumber}>01</span>
-                <p className={styles.eyebrow}>For one person</p>
+                <p className={styles.eyebrow}>For a person</p>
                 <h3>Personal Atlas</h3>
-                <p>
-                  One human life across work, home, health, projects, relationships, time, and the
-                  organizations connected to it—without reducing the person to any one role.
-                </p>
+                <p>One human life across work, home, health, projects, relationships, time, and organizations.</p>
               </div>
               <strong>Begin Personal Atlas →</strong>
             </Link>
@@ -254,23 +166,10 @@ export default function AtlasWelcomePage() {
                 <span className={styles.choiceNumber}>02</span>
                 <p className={styles.eyebrow}>For a company or group</p>
                 <h3>Organization Atlas</h3>
-                <p>
-                  An independent company, nonprofit, farm, practice, or team with its own identity,
-                  sources, operating memory, intelligence, and custody—even before its people join Atlas.
-                </p>
+                <p>An independent organization with its own sources, operating memory, intelligence, and custody.</p>
               </div>
               <strong>Begin Organization Atlas →</strong>
             </Link>
-          </div>
-        </section>
-
-        <section className={styles.closing}>
-          <p className={styles.eyebrow}>Atlas</p>
-          <h2>Make the company whole enough to think with its people.</h2>
-          <p>Then let the people remain whole enough to be more than the company.</p>
-          <div className={styles.heroActions}>
-            <Link className={styles.primaryAction} href="/start/organization">Start Organization Atlas</Link>
-            <Link className={styles.textAction} href="/login">Sign in →</Link>
           </div>
         </section>
       </div>
