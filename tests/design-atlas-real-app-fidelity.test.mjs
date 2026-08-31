@@ -80,7 +80,7 @@ test("Design Atlas preserves the governed future Farm Clock separately from ship
   assert.match(futureClock, /CLOCK OWNS THE HANDS/);
   assert.match(futureClock, /REALITY REFLOWS QUIETLY/);
   assert.match(futureClock, /CONFLICT EARNS UI/);
-  assert.match(futureClock, /carried, rescheduled, expired, held, or sent to management/);
+  assert.match(futureClock, /carried, rescheduled, expired, or sent to management/);
   assert.match(futureClock, /data-live-data-binding="none"/);
   assert.match(futureClock, /data-mutation-capability="none"/);
 });
