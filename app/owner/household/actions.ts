@@ -60,3 +60,26 @@ export async function recordHouseholdCondition(formData: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath("/owner/household");
 }
+
+export async function recordHouseholdCareResult(formData: FormData) {
+  const spaceId = String(formData.get("spaceId") ?? "");
+  const resultKind = String(formData.get("resultKind") ?? "");
+  const conditionAfter = String(formData.get("conditionAfter") ?? "");
+  const minutesRaw = String(formData.get("minutes") ?? "").trim();
+  if (!spaceId || !resultKind || !conditionAfter) return;
+  const minutes = minutesRaw === "" ? null : Math.max(0, Number.parseInt(minutesRaw, 10) || 0);
+  const supabase = await createAtlasServerClient();
+  const { error } = await supabase.rpc("principal_record_household_care_result_api_v1", {
+    p_payload: {
+      spaceId,
+      resultKind,
+      conditionAfter,
+      minutes,
+      minutesKnown: minutes !== null,
+      sourceKey: `owner-household-result:${spaceId}:${Date.now()}`,
+      metadata: { surface: "owner_household" },
+    },
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/owner/household");
+}
