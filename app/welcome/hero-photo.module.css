@@ -1,3 +1,24 @@
+.heroLayout {
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr) !important;
+  gap: clamp(28px, 4vw, 52px) !important;
+}
+
+.heroCopyWide {
+  max-width: 720px !important;
+}
+
+.heroCopyWide h1 {
+  max-width: 680px !important;
+}
+
+.heroCopyWide h1 + p {
+  max-width: 650px !important;
+}
+
+.heroCopyWide h1 + p + p {
+  max-width: 680px !important;
+}
+
 .heroJournal {
   position: relative;
   width: min(100%, 430px);
@@ -153,6 +174,14 @@
 }
 
 @media (max-width: 900px) {
+  .heroLayout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .heroCopyWide {
+    max-width: 650px !important;
+  }
+
   .heroJournal {
     width: min(520px, 100%);
   }
