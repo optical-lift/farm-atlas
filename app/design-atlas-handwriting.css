@@ -1,0 +1,44 @@
+/* Design Atlas handwriting primitive.
+   This is intentionally opt-in: it gives mockups a human notebook voice
+   without changing Atlas's default interface typography. */
+@font-face {
+  font-family: "Atlas Notebook Hand";
+  src: url("/fonts/AtlasNotebookHand-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  --atlas-font-handwriting: "Atlas Notebook Hand", "Segoe Print", "Bradley Hand", cursive;
+}
+
+.atlas-handwriting,
+.atlas-handwritten {
+  font-family: var(--atlas-font-handwriting);
+  font-style: normal;
+  font-weight: 400;
+  font-synthesis: none;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.atlas-handwriting-title {
+  font-family: var(--atlas-font-handwriting);
+  font-style: normal;
+  font-weight: 400;
+  font-synthesis: none;
+  letter-spacing: -0.015em;
+  line-height: 1.02;
+  text-transform: none;
+}
+
+.atlas-handwriting-note {
+  font-family: var(--atlas-font-handwriting);
+  font-style: normal;
+  font-weight: 400;
+  font-synthesis: none;
+  letter-spacing: 0;
+  line-height: 1.18;
+  text-transform: none;
+}
