@@ -109,6 +109,24 @@ test("Design Atlas splits Anna Harvest from Katie Buyer Desk without inventing l
   assert.doesNotMatch(roleSurfaces, /fetch\(/);
 });
 
+test("Buyer Desk can open a fixture-only counterparty profile that joins company memory, supply, price, and movement", () => {
+  assert.match(roleSurfaces, /useState<BuyerFixture \| null>/);
+  assert.match(roleSurfaces, /data-atlas-counterparty-profile="future-canonical-v1"/);
+  assert.match(roleSurfaces, /Mama Jean's · East/);
+  assert.match(roleSurfaces, /Marshall already contacted the East location/);
+  assert.match(roleSurfaces, /Assigned to Katie/);
+  assert.match(roleSurfaces, /Current wholesale offer/);
+  assert.match(roleSurfaces, /\$4/);
+  assert.match(roleSurfaces, /Suggested retail \$7–8/);
+  assert.match(roleSurfaces, /What Katie can sell/);
+  assert.match(roleSurfaces, /Moving pieces/);
+  assert.match(roleSurfaces, /Relationship history/);
+  assert.match(roleSurfaces, /Across Atlas/);
+  assert.match(roleSurfaces, /Inventory is visible here, not owned here/);
+  assert.match(roleSurfaces, /No order, reservation, fulfillment, or payment is implied/);
+  assert.doesNotMatch(roleSurfaces, /fetch\(/);
+});
+
 test("Principal receives flower operating exceptions instead of worker harvest controls", () => {
   assert.match(portal, /PrincipalFlowerOpsSummary/);
   assert.match(roleSurfaces, /Production → commercial/);
