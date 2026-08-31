@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import styles from "./person-life.module.css";
 
@@ -49,8 +49,6 @@ type LifeStateResponse = {
   conditions?: ConditionRow[];
 };
 
-type CaptureMode = "goal" | "condition_observation";
-
 function humanize(value: string) {
   return value.replaceAll("_", " ");
 }
@@ -67,19 +65,9 @@ function goalState(definition: LifeDefinition) {
   return definition.status === "active" ? "defined" : definition.status;
 }
 
-function sourceKey(prefix: string) {
-  const id = typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  return `${prefix}:${id}`;
-}
-
 export default function PersonLifeCaptureClient({ personName }: { personName: string }) {
-  const [mode, setMode] = useState<CaptureMode>("goal");
   const [state, setState] = useState<LifeStateResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const response = await fetch("/api/atlas/person-life", { cache: "no-store" });
@@ -102,63 +90,6 @@ export default function PersonLifeCaptureClient({ personName }: { personName: st
   );
   const conditions = state?.conditions ?? [];
 
-  async function submitGoal(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const text = String(form.get("goal") ?? "").trim();
-    if (!text) return;
-
-    setSaving(true);
-    setMessage(null);
-    const response = await fetch("/api/atlas/person-life", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "goal", sourceKey: sourceKey("person-goal"), text }),
-    });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload?.ok) {
-      setMessage(payload?.error ?? "Atlas could not record that goal.");
-      setSaving(false);
-      return;
-    }
-    event.currentTarget.reset();
-    setMessage("Recorded as your goal. No plan, rhythm, or task was inferred.");
-    setSaving(false);
-    await refresh();
-  }
-
-  async function submitCondition(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const bodyRegion = String(form.get("bodyRegion") ?? "").trim();
-    const observation = String(form.get("observation") ?? "").trim();
-    if (!bodyRegion || !observation) return;
-
-    setSaving(true);
-    setMessage(null);
-    const response = await fetch("/api/atlas/person-life", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "condition_observation",
-        sourceKey: sourceKey("person-condition"),
-        bodyRegion,
-        observation,
-        observedAt: new Date().toISOString(),
-      }),
-    });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload?.ok) {
-      setMessage(payload?.error ?? "Atlas could not record that observation.");
-      setSaving(false);
-      return;
-    }
-    event.currentTarget.reset();
-    setMessage("Recorded as an observation. Cause, diagnosis, and action remain unestablished.");
-    setSaving(false);
-    await refresh();
-  }
-
   return (
     <main className={styles.root}>
       <section className={styles.page}>
@@ -175,33 +106,28 @@ export default function PersonLifeCaptureClient({ personName }: { personName: st
             <header className={styles.pageHeader}>
               <span>CAPTURE</span>
               <h1>What changed?</h1>
-              <p>Tell Atlas only what you know. It will not fill in the missing parts.</p>
+              <p>Tell Atlas only what you know. Each entry opens the same governed input instrument used elsewhere in Atlas.</p>
             </header>
 
-            <div className={styles.modeTabs} role="tablist" aria-label="Capture type">
-              <button type="button" data-active={mode === "goal"} onClick={() => setMode("goal")}>Goal</button>
-              <button type="button" data-active={mode === "condition_observation"} onClick={() => setMode("condition_observation")}>Body observation</button>
-            </div>
+            <nav className={styles.captureActions} aria-label="Personal Atlas capture instruments">
+              <Link href="/owner/input/person-goal">
+                <span>Goal</span>
+                <strong>What do you want to make true?</strong>
+                <small>Records your chosen end. No training plan, rhythm, task, or Clock placement is inferred.</small>
+                <b aria-hidden="true">›</b>
+              </Link>
+              <Link href="/owner/input/body-observation">
+                <span>Body observation</span>
+                <strong>What did you notice?</strong>
+                <small>Records your first-party observation. Cause, diagnosis, consequence, and treatment remain unestablished.</small>
+                <b aria-hidden="true">›</b>
+              </Link>
+            </nav>
 
-            {mode === "goal" ? (
-              <form className={styles.form} onSubmit={submitGoal}>
-                <label htmlFor="person-life-goal">What do you want to make true?</label>
-                <textarea id="person-life-goal" name="goal" rows={4} placeholder="I want to run a 5K." required />
-                <small>Atlas records the end you named. It does not invent the training plan.</small>
-                <button type="submit" disabled={saving}>{saving ? "recording…" : "record goal"}</button>
-              </form>
-            ) : (
-              <form className={styles.form} onSubmit={submitCondition}>
-                <label htmlFor="person-life-region">Where did you notice it?</label>
-                <input id="person-life-region" name="bodyRegion" placeholder="left hip" required />
-                <label htmlFor="person-life-observation">What did you notice?</label>
-                <textarea id="person-life-observation" name="observation" rows={4} placeholder="felt tight afterward" required />
-                <small>Atlas records your observation. It does not infer cause, diagnosis, or treatment.</small>
-                <button type="submit" disabled={saving}>{saving ? "recording…" : "record observation"}</button>
-              </form>
-            )}
-
-            {message ? <p className={styles.message}>{message}</p> : null}
+            <aside className={styles.captureBoundary}>
+              <strong>Capture is evidence, not instruction.</strong>
+              <span>Atlas may preserve what you report without silently turning it into something you should do.</span>
+            </aside>
           </section>
 
           <section className={styles.statePage} aria-busy={loading}>
