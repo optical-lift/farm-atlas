@@ -1,5 +1,5 @@
-import KatieBuyerProfileFixture from "../KatieBuyerProfileFixture";
+import KatieBuyerNotebookFixture from "../KatieBuyerNotebookFixture";
 
 export default function KatieBuyerProfilePage() {
-  return <KatieBuyerProfileFixture />;
+  return <KatieBuyerNotebookFixture />;
 }
