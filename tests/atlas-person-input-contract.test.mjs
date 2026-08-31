@@ -28,9 +28,31 @@ test("Atlas input intelligence is source-contracted instead of a generic form bu
   assert.match(ownerShim, /components\/atlas\/input\/AtlasInputRenderer/);
 });
 
-test("Harvest preserves half-bucket field truth and explicit remaining-availability truth", () => {
+test("Atlas input contracts can conditionally expose claims without leaking hidden values", () => {
+  const contract = read("lib/atlas/input-contract.ts");
+  const renderer = read("components/atlas/input/AtlasInputRenderer.tsx");
+
+  assert.match(contract, /export type AtlasInputCondition/);
+  assert.match(contract, /visibleWhen\?: AtlasInputCondition/);
+  assert.match(contract, /when\?: AtlasInputCondition/);
+  assert.match(contract, /atlasInputConditionMatches/);
+  assert.match(contract, /activeAtlasInputFields/);
+  assert.match(contract, /activeValues = Object\.fromEntries/);
+  assert.match(renderer, /activeAtlasInputFields\(contract, values\)/);
+  assert.match(renderer, /activeFields\.map/);
+});
+
+test("Harvest preserves half-bucket truth while separating grade from non-harvest outcomes", () => {
   const harvest = read("lib/atlas/input-contracts/harvest-fixture.ts");
 
+  assert.match(harvest, /id: \"recordKind\"/);
+  assert.match(harvest, /value: \"harvest\"/);
+  assert.match(harvest, /value: \"deadheaded\"/);
+  assert.match(harvest, /value: \"crop_loss\"/);
+  assert.match(harvest, /id: \"grade\"/);
+  assert.match(harvest, /value: \"florist_grade\"/);
+  assert.match(harvest, /value: \"event_grade\"/);
+  assert.match(harvest, /visibleWhen: HARVEST_CONDITION/);
   for (const bed of ["bb3", "bb4", "bb5"]) assert.match(harvest, new RegExp(`id: \"${bed}\"`));
   assert.match(harvest, /unit: \"bucket_equivalent\"/);
   assert.match(harvest, /step: 0\.5/);
@@ -39,11 +61,11 @@ test("Harvest preserves half-bucket field truth and explicit remaining-availabil
   assert.match(harvest, /value: \"yes\"/);
   assert.match(harvest, /value: \"unsure\"/);
   assert.match(harvest, /value: \"no\"/);
-  assert.match(harvest, /kind: \"required_field\"/);
   assert.match(harvest, /targetQuantity: 6/);
+  assert.doesNotMatch(harvest, /marketable|seconds|discarded/);
 });
 
-test("Harvest result adjudication remains source logic after the generic input event", () => {
+test("Harvest result adjudication refuses to manufacture harvest inventory from deadheading or crop loss", () => {
   const harvest = read("lib/atlas/input-contracts/harvest-fixture.ts");
 
   assert.match(harvest, /adjudicateHarvestFixtureResult/);
@@ -51,6 +73,9 @@ test("Harvest result adjudication remains source logic after the generic input e
   assert.match(harvest, /state: \"remaining\"/);
   assert.match(harvest, /state: \"availability_uncertain\"/);
   assert.match(harvest, /state: \"closed_short\"/);
+  assert.match(harvest, /state: \"non_harvest_observation\"/);
+  assert.match(harvest, /createsHarvestInventory: false/);
+  assert.match(harvest, /createsHarvestInventory: true as const/);
   assert.match(harvest, /remainingQuantity = Math\.max\(0, targetQuantity - observedQuantity\)/);
 });
 
@@ -116,10 +141,13 @@ test("flower orders prove one input contract can capture a buyer and several ord
   assert.match(order, /id: \"buyer\"/);
   assert.match(order, /value: \"ruth\"/);
   assert.match(order, /value: \"lindas\"/);
-  assert.match(order, /id: \"sunflowerBunches\"/);
+  assert.match(order, /id: \"sunflowerBundles\"/);
+  assert.match(order, /label: \"Sunflower bundles\"/);
+  assert.match(order, /item: \"sunflower_bundle\"/);
+  assert.doesNotMatch(order, /sunflowerBunches|sunflower_bunch|Sunflower bunches/);
   assert.match(order, /id: \"samples\"/);
   assert.match(order, /kind: \"minimum_quantity_total\"/);
-  assert.match(order, /fieldIds: \[\"sunflowerBunches\", \"samples\"\]/);
+  assert.match(order, /fieldIds: \[\"sunflowerBundles\", \"samples\"\]/);
 });
 
 test("recording an order creates fulfillment demand without fabricating inventory movement or payment", () => {

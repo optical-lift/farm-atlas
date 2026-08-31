@@ -4,10 +4,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import {
-  choiceFields,
+  activeAtlasInputFields,
   createAtlasInputResultEvent,
   initialAtlasInputValues,
-  quantityFields,
   quantityTotal,
   validateAtlasInput,
   type AtlasInputContract,
@@ -67,14 +66,17 @@ export default function AtlasInputRenderer({
   recordLabel = "record",
   submission,
 }: AtlasInputRendererProps) {
-  const rows = useMemo(() => quantityFields(contract), [contract]);
-  const choices = useMemo(() => choiceFields(contract), [contract]);
   const [values, setValues] = useState<AtlasInputValues>(() => initialAtlasInputValues(contract));
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [recordedEvent, setRecordedEvent] = useState<AtlasInputResultEvent | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const activeFields = useMemo(() => activeAtlasInputFields(contract, values), [contract, values]);
+  const rows = useMemo(
+    () => activeFields.filter((field): field is AtlasQuantityInputField => field.primitive === "quantity"),
+    [activeFields],
+  );
   const total = useMemo(() => quantityTotal(contract, values), [contract, values]);
   const validation = useMemo(() => validateAtlasInput(contract, values), [contract, values]);
   const totalStep = rows.length && rows.every((row) => (row.step ?? 1) === (rows[0].step ?? 1))
@@ -191,30 +193,62 @@ export default function AtlasInputRenderer({
           </header>
 
           <div className={styles.rows}>
-            {rows.map((row) => {
-              const step = row.step && row.step > 0 ? row.step : 1;
-              const storedValue = values[row.id];
-              const numericValue = typeof storedValue === "number" && Number.isFinite(storedValue) ? storedValue : null;
-              const hasStoredValue = numericValue !== null;
-              const value = numericValue ?? 0;
+            {activeFields.map((field) => {
+              if (field.primitive === "quantity") {
+                const row = field;
+                const step = row.step && row.step > 0 ? row.step : 1;
+                const storedValue = values[row.id];
+                const numericValue = typeof storedValue === "number" && Number.isFinite(storedValue) ? storedValue : null;
+                const hasStoredValue = numericValue !== null;
+                const value = numericValue ?? 0;
+                return (
+                  <div className={styles.inputRow} key={row.id}>
+                    <label htmlFor={`atlas-input-${row.id}`}>{row.label}</label>
+                    {recorded ? (
+                      <strong className={styles.recordedValue}>{hasStoredValue ? formatValue(value, step) : "not recorded"}</strong>
+                    ) : (
+                      <div className={styles.stepper}>
+                        <button type="button" disabled={submitting} onClick={() => changeValue(row, -1)} aria-label={`Subtract ${step} from ${row.label}`}>−</button>
+                        <input
+                          id={`atlas-input-${row.id}`}
+                          inputMode={row.wholeNumber || step >= 1 ? "numeric" : "decimal"}
+                          value={drafts[row.id] ?? (hasStoredValue ? String(value) : "")}
+                          onChange={(event) => typeValue(row, event.target.value)}
+                          onBlur={() => settleTypedValue(row)}
+                          disabled={submitting}
+                          aria-label={`${row.label} quantity`}
+                        />
+                        <button type="button" disabled={submitting} onClick={() => changeValue(row, 1)} aria-label={`Add ${step} to ${row.label}`}>+</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              const choice = field;
+              const selectedValue = typeof values[choice.id] === "string" ? values[choice.id] as string : "";
+              const selectedChoice = choice.options.find((option) => option.value === selectedValue) ?? null;
               return (
-                <div className={styles.inputRow} key={row.id}>
-                  <label htmlFor={`atlas-input-${row.id}`}>{row.label}</label>
+                <div className={styles.followUp} key={choice.id}>
+                  <span>{choice.label}</span>
                   {recorded ? (
-                    <strong className={styles.recordedValue}>{hasStoredValue ? formatValue(value, step) : "not recorded"}</strong>
+                    <strong>{selectedChoice?.label ?? "not recorded"}</strong>
                   ) : (
-                    <div className={styles.stepper}>
-                      <button type="button" disabled={submitting} onClick={() => changeValue(row, -1)} aria-label={`Subtract ${step} from ${row.label}`}>−</button>
-                      <input
-                        id={`atlas-input-${row.id}`}
-                        inputMode={row.wholeNumber || step >= 1 ? "numeric" : "decimal"}
-                        value={drafts[row.id] ?? (hasStoredValue ? String(value) : "")}
-                        onChange={(event) => typeValue(row, event.target.value)}
-                        onBlur={() => settleTypedValue(row)}
-                        disabled={submitting}
-                        aria-label={`${row.label} quantity`}
-                      />
-                      <button type="button" disabled={submitting} onClick={() => changeValue(row, 1)} aria-label={`Add ${step} to ${row.label}`}>+</button>
+                    <div className={styles.followUpOptions}>
+                      {choice.options.map((option) => (
+                        <button
+                          type="button"
+                          key={option.value}
+                          disabled={submitting}
+                          data-selected={selectedValue === option.value ? "true" : "false"}
+                          onClick={() => {
+                            clearRecordedState();
+                            setValues((current) => ({ ...current, [choice.id]: option.value }));
+                          }}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -228,36 +262,6 @@ export default function AtlasInputRenderer({
               <strong>{formatValue(total, totalStep)} <small>{totalUnitLabel}</small></strong>
             </div>
           ) : null}
-
-          {choices.map((choice) => {
-            const selectedValue = typeof values[choice.id] === "string" ? values[choice.id] as string : "";
-            const selectedChoice = choice.options.find((option) => option.value === selectedValue) ?? null;
-            return (
-              <div className={styles.followUp} key={choice.id}>
-                <span>{choice.label}</span>
-                {recorded ? (
-                  <strong>{selectedChoice?.label ?? "not recorded"}</strong>
-                ) : (
-                  <div className={styles.followUpOptions}>
-                    {choice.options.map((option) => (
-                      <button
-                        type="button"
-                        key={option.value}
-                        disabled={submitting}
-                        data-selected={selectedValue === option.value ? "true" : "false"}
-                        onClick={() => {
-                          clearRecordedState();
-                          setValues((current) => ({ ...current, [choice.id]: option.value }));
-                        }}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
 
           {submitError ? <p className={styles.submitError} role="alert">{submitError}</p> : null}
 

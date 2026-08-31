@@ -1,5 +1,10 @@
 export type AtlasInputPrimitive = "quantity" | "choice";
 
+export type AtlasInputCondition = {
+  fieldId: string;
+  equals: string | number;
+};
+
 export type AtlasInputSourceRef = {
   domain: string;
   jurisdiction: string;
@@ -7,7 +12,11 @@ export type AtlasInputSourceRef = {
   claimRef?: string;
 };
 
-export type AtlasQuantityInputField = {
+type AtlasConditionalInputField = {
+  visibleWhen?: AtlasInputCondition;
+};
+
+export type AtlasQuantityInputField = AtlasConditionalInputField & {
   primitive: "quantity";
   id: string;
   label: string;
@@ -22,7 +31,7 @@ export type AtlasQuantityInputField = {
   inputMode?: "normal" | "blind_measurement";
 };
 
-export type AtlasChoiceInputField = {
+export type AtlasChoiceInputField = AtlasConditionalInputField & {
   primitive: "choice";
   id: string;
   label: string;
@@ -38,11 +47,13 @@ export type AtlasInputRule =
       fieldIds: string[];
       minimum: number;
       message: string;
+      when?: AtlasInputCondition;
     }
   | {
       kind: "required_field";
       fieldId: string;
       message: string;
+      when?: AtlasInputCondition;
     };
 
 export type AtlasInputContract = {
@@ -80,6 +91,15 @@ export type AtlasInputResultEvent = {
   sourceContext: Record<string, string | number | boolean | null>;
 };
 
+export function atlasInputConditionMatches(condition: AtlasInputCondition | undefined, values: AtlasInputValues) {
+  if (!condition) return true;
+  return values[condition.fieldId] === condition.equals;
+}
+
+export function atlasInputFieldIsVisible(field: AtlasInputField, values: AtlasInputValues) {
+  return atlasInputConditionMatches(field.visibleWhen, values);
+}
+
 export function initialAtlasInputValues(contract: AtlasInputContract): AtlasInputValues {
   return Object.fromEntries(contract.fields.map((field) => [
     field.id,
@@ -99,9 +119,14 @@ export function choiceFields(contract: AtlasInputContract) {
   return contract.fields.filter((field): field is AtlasChoiceInputField => field.primitive === "choice");
 }
 
+export function activeAtlasInputFields(contract: AtlasInputContract, values: AtlasInputValues) {
+  return contract.fields.filter((field) => atlasInputFieldIsVisible(field, values));
+}
+
 export function quantityTotal(contract: AtlasInputContract, values: AtlasInputValues, fieldIds?: string[]) {
   const ids = fieldIds ? new Set(fieldIds) : null;
   return quantityFields(contract)
+    .filter((field) => atlasInputFieldIsVisible(field, values))
     .filter((field) => !ids || ids.has(field.id))
     .reduce((sum, field) => {
       const value = values[field.id];
@@ -113,12 +138,17 @@ export function validateAtlasInput(contract: AtlasInputContract, values: AtlasIn
   const issues: AtlasInputValidation["issues"] = [];
 
   for (const rule of contract.rules) {
+    if (!atlasInputConditionMatches(rule.when, values)) continue;
+
     if (rule.kind === "minimum_quantity_total") {
       if (quantityTotal(contract, values, rule.fieldIds) < rule.minimum) {
         issues.push({ rule: rule.kind, message: rule.message });
       }
       continue;
     }
+
+    const field = contract.fields.find((candidate) => candidate.id === rule.fieldId);
+    if (field && !atlasInputFieldIsVisible(field, values)) continue;
 
     const value = values[rule.fieldId];
     const present = typeof value === "number"
@@ -142,8 +172,10 @@ export function createAtlasInputResultEvent(
     throw new Error(`Atlas input result is incomplete: ${validation.issues.map((issue) => issue.message).join(" ")}`);
   }
 
-  const quantity = quantityFields(contract);
+  const activeFields = activeAtlasInputFields(contract, values);
+  const quantity = activeFields.filter((field): field is AtlasQuantityInputField => field.primitive === "quantity");
   const units = new Set(quantity.map((field) => field.unit));
+  const activeValues = Object.fromEntries(activeFields.map((field) => [field.id, values[field.id] ?? null]));
 
   return {
     eventType: contract.resultEventType,
@@ -151,7 +183,7 @@ export function createAtlasInputResultEvent(
     source: contract.source,
     persistence: contract.persistence,
     recordedAt: recordedAt.toISOString(),
-    values: { ...values },
+    values: activeValues,
     aggregates: {
       quantityTotal: quantityTotal(contract, values),
       quantityUnit: units.size === 1 ? quantity[0]?.unit ?? null : null,
