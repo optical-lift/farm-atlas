@@ -1,4 +1,4 @@
-export type AtlasInputPrimitive = "quantity" | "choice";
+export type AtlasInputPrimitive = "quantity" | "choice" | "text";
 
 export type AtlasInputCondition = {
   fieldId: string;
@@ -39,7 +39,17 @@ export type AtlasChoiceInputField = AtlasConditionalInputField & {
   initialValue?: string;
 };
 
-export type AtlasInputField = AtlasQuantityInputField | AtlasChoiceInputField;
+export type AtlasTextInputField = AtlasConditionalInputField & {
+  primitive: "text";
+  id: string;
+  label: string;
+  placeholder?: string;
+  initialValue?: string;
+  multiline?: boolean;
+  rows?: number;
+};
+
+export type AtlasInputField = AtlasQuantityInputField | AtlasChoiceInputField | AtlasTextInputField;
 
 export type AtlasInputRule =
   | {
@@ -117,6 +127,10 @@ export function quantityFields(contract: AtlasInputContract) {
 
 export function choiceFields(contract: AtlasInputContract) {
   return contract.fields.filter((field): field is AtlasChoiceInputField => field.primitive === "choice");
+}
+
+export function textFields(contract: AtlasInputContract) {
+  return contract.fields.filter((field): field is AtlasTextInputField => field.primitive === "text");
 }
 
 export function activeAtlasInputFields(contract: AtlasInputContract, values: AtlasInputValues) {

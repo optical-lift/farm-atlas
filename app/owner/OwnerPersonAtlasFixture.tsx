@@ -21,9 +21,9 @@ const SECTIONS: PersonAtlasSection[] = [
             { label: "Jurisdiction", value: "Personal Atlas / product design" },
             { label: "Why now", value: "The old Owner portal has been replaced by a fixture-only chassis." },
             { label: "Authority", value: "Private design work; no farm mutation attached" },
-            { label: "Next proof", value: "Use Design Atlas to test a non-Elm bridge person." },
+            { label: "Next proof", value: "Use the live Personal Atlas spread to test Goal + observation capture." },
           ],
-          note: "This page is intentionally fake. The point is to prove the person-owned container before reconnecting production intelligence.",
+          note: "The Today page remains a design fixture, but person-owned Goal and condition persistence now have a live isolated spread behind the index.",
         },
       },
     ],
@@ -95,14 +95,14 @@ const SECTIONS: PersonAtlasSection[] = [
     lines: [
       {
         id: "production-wiring",
-        sentence: "Keep live Atlas intelligence out until the new boundaries are proven",
+        sentence: "Keep person-owned state off the Clock until placement authority is proven",
         state: "waiting",
         worksheet: {
           kicker: "BUILD BOUNDARY",
           facts: [
             { label: "State", value: "Deliberately held" },
-            { label: "Reason", value: "Fixture-first build" },
-            { label: "Blocked on", value: "Person / institution / privacy contract" },
+            { label: "Reason", value: "Goal and observation truth are live; Clock arbitration is not yet connected" },
+            { label: "Blocked on", value: "ClockCandidate lifecycle + unified human arbitration proof" },
           ],
         },
       },
@@ -126,6 +126,11 @@ const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
   {
     label: "COLLECTIONS",
     items: [
+      {
+        label: "Personal Atlas",
+        detail: "Live private Goals · observations · established consequences",
+        href: "/owner/life",
+      },
       {
         label: "Household",
         detail: "Private home system · state · rules · history",
@@ -168,7 +173,7 @@ const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
   {
     label: "BUILD STATUS",
     items: [
-      { label: "Today remains fixture-only", detail: "The Daily Log still reads no live Owner dashboard, farm tasks, Principal state, or Clock data. Ask Atlas is isolated as a read-only design test." },
+      { label: "Today remains fixture-only", detail: "Personal Goals and first-party condition observations now use live production persistence through an isolated Personal Atlas spread. Today, time arbitration, and the rest of the Owner notebook remain fixture-only until they earn their contracts." },
     ],
   },
 ];

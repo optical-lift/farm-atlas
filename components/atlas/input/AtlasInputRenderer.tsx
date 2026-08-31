@@ -20,6 +20,8 @@ import styles from "./atlas-input-renderer.module.css";
 export type AtlasInputSubmission = {
   endpoint: string;
   body?: Record<string, string | number | boolean | null>;
+  valueMap?: Record<string, string>;
+  sourceKeyPrefix?: string;
 };
 
 export type AtlasInputRendererProps = {
@@ -59,6 +61,13 @@ function formatValue(value: number, step = 1) {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(value);
 }
 
+function createSubmissionKey(prefix: string) {
+  const id = typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}:${id}`;
+}
+
 export default function AtlasInputRenderer({
   contract,
   returnHref = "/owner",
@@ -69,6 +78,7 @@ export default function AtlasInputRenderer({
   const [values, setValues] = useState<AtlasInputValues>(() => initialAtlasInputValues(contract));
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [recordedEvent, setRecordedEvent] = useState<AtlasInputResultEvent | null>(null);
+  const [submissionKey, setSubmissionKey] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -89,6 +99,7 @@ export default function AtlasInputRenderer({
 
   const clearRecordedState = () => {
     setRecordedEvent(null);
+    setSubmissionKey(null);
     setSubmitError(null);
   };
 
@@ -142,6 +153,18 @@ export default function AtlasInputRenderer({
     setSubmitError(null);
 
     if (submission) {
+      const nextSubmissionKey = submission.sourceKeyPrefix
+        ? submissionKey ?? createSubmissionKey(submission.sourceKeyPrefix)
+        : null;
+      if (nextSubmissionKey && !submissionKey) setSubmissionKey(nextSubmissionKey);
+
+      const mappedValues = Object.fromEntries(
+        Object.entries(submission.valueMap ?? {}).map(([requestField, inputField]) => [
+          requestField,
+          event.values[inputField] ?? null,
+        ]),
+      );
+
       setSubmitting(true);
       try {
         const response = await fetch(submission.endpoint, {
@@ -149,8 +172,11 @@ export default function AtlasInputRenderer({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...(submission.body ?? {}),
+            ...(nextSubmissionKey ? { sourceKey: nextSubmissionKey } : {}),
+            ...mappedValues,
             contractId: event.contractId,
             values: event.values,
+            recordedAt: event.recordedAt,
           }),
         });
         const payload = await response.json().catch(() => ({})) as SubmissionResponse;
@@ -225,6 +251,42 @@ export default function AtlasInputRenderer({
                 );
               }
 
+              if (field.primitive === "text") {
+                const textValue = typeof values[field.id] === "string" ? values[field.id] as string : "";
+                return (
+                  <div className={styles.textRow} key={field.id}>
+                    <label htmlFor={`atlas-input-${field.id}`}>{field.label}</label>
+                    {recorded ? (
+                      <strong className={styles.recordedText}>{textValue || "not recorded"}</strong>
+                    ) : field.multiline ? (
+                      <textarea
+                        id={`atlas-input-${field.id}`}
+                        rows={field.rows ?? 4}
+                        placeholder={field.placeholder}
+                        value={textValue}
+                        disabled={submitting}
+                        onChange={(event) => {
+                          clearRecordedState();
+                          setValues((current) => ({ ...current, [field.id]: event.target.value }));
+                        }}
+                      />
+                    ) : (
+                      <input
+                        id={`atlas-input-${field.id}`}
+                        type="text"
+                        placeholder={field.placeholder}
+                        value={textValue}
+                        disabled={submitting}
+                        onChange={(event) => {
+                          clearRecordedState();
+                          setValues((current) => ({ ...current, [field.id]: event.target.value }));
+                        }}
+                      />
+                    )}
+                  </div>
+                );
+              }
+
               const choice = field;
               const selectedValue = typeof values[choice.id] === "string" ? values[choice.id] as string : "";
               const selectedChoice = choice.options.find((option) => option.value === selectedValue) ?? null;
@@ -269,7 +331,7 @@ export default function AtlasInputRenderer({
             {recorded ? (
               <>
                 {recordedEvent?.persistence === "fixture_only" ? (
-                  <button type="button" className={styles.secondaryAction} onClick={() => setRecordedEvent(null)}>edit</button>
+                  <button type="button" className={styles.secondaryAction} onClick={clearRecordedState}>edit</button>
                 ) : null}
                 <Link href={returnHref} className={styles.recordedMark}>
                   {recordedEvent?.persistence === "fixture_only" ? "recorded in fixture" : "recorded"} · back to {returnLabel}
