@@ -1,4 +1,4 @@
-import PersonAtlasInputSpread from "@/app/owner/PersonAtlasInputSpread";
+import AtlasInputRenderer from "@/components/atlas/input/AtlasInputRenderer";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
 import type { AtlasTaskCard } from "@/lib/atlas/task-cards-client";
 import {
@@ -18,7 +18,7 @@ export default function TruthObservationTaskDetail({
   const contract = createCanonicalWorkerTruthObservationContract(task);
 
   return (
-    <PersonAtlasInputSpread
+    <AtlasInputRenderer
       contract={contract}
       returnHref={assignee.listPath}
       returnLabel="work"
