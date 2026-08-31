@@ -3,6 +3,13 @@ export type PersonLifeNotebookSubject = { domain?: string; kind?: string; id?: s
 export type PersonLifeNotebookSpec = {
   id: string;
   sourcePrefix: string;
+  sourceKeys: {
+    requirement: string;
+    rhythm: string;
+    policy: string;
+    evidence: string;
+    condition: string;
+  };
   goalMatch: { patterns: string[]; flags?: string };
   empty: { title: string; body: string };
   heading: { eyebrow: string; intro: string };
