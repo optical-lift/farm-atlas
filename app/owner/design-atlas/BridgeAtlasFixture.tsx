@@ -164,6 +164,11 @@ export default function BridgeAtlasFixture({ onOpenWorkshop }: BridgeAtlasFixtur
       label: "DESIGN ATLAS",
       items: [
         {
+          label: "Open Katie’s flower-order proof",
+          detail: "Test a transaction that creates fulfillment without inventing inventory or payment truth.",
+          href: "/owner/design-atlas/katie-order",
+        },
+        {
           label: "Open the workshop",
           detail: "Old Clock, Day and task specimens remain available as design archaeology.",
           onSelect: onOpenWorkshop,
