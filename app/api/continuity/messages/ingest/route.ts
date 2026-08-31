@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
+import { shadowInterpretCommunicationEvents } from "@/lib/atlas/continuity/shadow-interpretation";
 import { createAtlasAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -78,5 +79,17 @@ export async function POST(request: Request) {
     return json({ ok: false, error: "Communication custody failed." }, 500);
   }
 
-  return json({ ok: true, receipt: data });
+  // Custody is complete before interpretation starts. A model outage or shadow
+  // persistence failure must never make a successfully preserved message look
+  // uncustodied to the Mac relay; pending evidence will be retried on overlap.
+  let shadow: unknown = null;
+  try {
+    shadow = await shadowInterpretCommunicationEvents(request, tokenHash, events);
+  } catch (shadowError) {
+    console.error("Messages shadow interpretation unavailable", {
+      error: shadowError instanceof Error ? shadowError.message.slice(0, 160) : "unknown",
+    });
+  }
+
+  return json({ ok: true, receipt: data, shadow });
 }
