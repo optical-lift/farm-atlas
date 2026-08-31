@@ -150,7 +150,7 @@ export type CommunicationShadowResult = {
 
 export async function shadowInterpretCommunicationEvents(
   request: Request,
-  relayTokenHash: string,
+  connectedSourceIdInput: string,
   relayEvents: unknown[],
 ): Promise<CommunicationShadowResult> {
   const inputs = relayEvents as RelayEventInput[];
@@ -163,29 +163,26 @@ export async function shadowInterpretCommunicationEvents(
     .filter(Boolean))];
   if (!refs.length) return { status: "skipped", candidates: 0, claims: 0, unresolvedIdentities: 0 };
 
+  const connectedSourceId = safeText(connectedSourceIdInput, 100);
+  if (!connectedSourceId) throw new Error("Communication shadow custody receipt did not identify a connected source.");
+
   const admin = createAtlasAdminClient();
-  const credential = await admin
-    .from("communication_relay_credentials")
-    .select("principal_id,connected_source_id")
-    .eq("token_hash", relayTokenHash)
-    .eq("status", "active")
-    .maybeSingle();
-  if (credential.error) throw new Error(`Communication shadow credential lookup failed: ${credential.error.code}`);
-  if (!credential.data) throw new Error("Communication shadow credential was not found after successful custody.");
+  const eventResult = await admin
+    .from("communication_events")
+    .select("id,principal_id,connected_source_id,thread_id,source_event_ref,occurred_at,direction,speaker_is_self,body,body_state,canonical_event")
+    .eq("connected_source_id", connectedSourceId)
+    .in("source_event_ref", refs)
+    .order("occurred_at", { ascending: true });
+  if (eventResult.error) throw new Error(`Communication shadow event lookup failed: ${eventResult.error.code}`);
 
-  const principalId = credential.data.principal_id as string;
-  const connectedSourceId = credential.data.connected_source_id as string;
+  const allEvents = (eventResult.data ?? []) as CommunicationEventRow[];
+  if (!allEvents.length) return { status: "processed", candidates: 0, claims: 0, unresolvedIdentities: 0 };
+  const principalIds = [...new Set(allEvents.map((event) => event.principal_id).filter(Boolean))];
+  if (principalIds.length !== 1) throw new Error("Communication shadow source events do not resolve to exactly one Principal.");
+  const principalId = principalIds[0];
 
-  const [principal, eventResult, evidenceResult, identityResult] = await Promise.all([
+  const [principal, evidenceResult, identityResult] = await Promise.all([
     admin.from("principals").select("user_id").eq("id", principalId).eq("status", "active").maybeSingle(),
-    admin
-      .from("communication_events")
-      .select("id,principal_id,connected_source_id,thread_id,source_event_ref,occurred_at,direction,speaker_is_self,body,body_state,canonical_event")
-      .eq("principal_id", principalId)
-      .eq("connected_source_id", connectedSourceId)
-      .in("source_event_ref", refs)
-      .eq("body_state", "exact_text")
-      .order("occurred_at", { ascending: true }),
     admin
       .from("evidence_records")
       .select("id,source_key,metadata")
@@ -202,14 +199,13 @@ export async function shadowInterpretCommunicationEvents(
   ]);
 
   if (principal.error) throw new Error(`Communication shadow Principal lookup failed: ${principal.error.code}`);
-  if (eventResult.error) throw new Error(`Communication shadow event lookup failed: ${eventResult.error.code}`);
   if (evidenceResult.error) throw new Error(`Communication shadow evidence lookup failed: ${evidenceResult.error.code}`);
 
-  // The identity-link migration may deploy slightly after the app code. Missing
-  // identity custody must reduce attribution quality, never break message custody.
+  // Missing identity custody reduces attribution quality; it never breaks source
+  // custody or causes Atlas to guess who a source identifier represents.
   const links = identityResult.error ? [] : (identityResult.data ?? []) as IdentityLinkRow[];
   const existingEvidence = new Map((evidenceResult.data ?? []).map((row) => [row.source_key as string, row]));
-  const events = (eventResult.data ?? []) as CommunicationEventRow[];
+  const events = allEvents.filter((event) => event.body_state === "exact_text");
 
   const candidates = events.filter((event) => {
     if (!event.body?.trim()) return false;

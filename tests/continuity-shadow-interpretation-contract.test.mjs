@@ -21,16 +21,18 @@ test("live Communication shadow interpretation is bounded, proposed, and evidenc
   assert.match(shadow, /communicationShadowStatus: "pending"/);
   assert.match(shadow, /"processed"/);
   assert.match(shadow, /"abstained"/);
+  assert.doesNotMatch(shadow, /communication_relay_credentials/);
   assert.doesNotMatch(shadow, /Nathan|Marshall|Katie|Anna|Elm Farm/i);
 });
 
 test("message custody completes before shadow interpretation and model failure does not fail custody", () => {
   const ingest = read("app/api/continuity/messages/ingest/route.ts");
   const custodyIndex = ingest.indexOf("ingest_communication_events_relay_api_v1");
-  const shadowIndex = ingest.indexOf("shadowInterpretCommunicationEvents(request, tokenHash, events)");
+  const shadowIndex = ingest.indexOf("shadowInterpretCommunicationEvents(request, connectedSourceId, events)");
 
   assert.ok(custodyIndex >= 0);
   assert.ok(shadowIndex > custodyIndex);
+  assert.match(ingest, /connectedSourceId/);
   assert.match(ingest, /try \{\s*shadow = await shadowInterpretCommunicationEvents/);
   assert.match(ingest, /catch \(shadowError\)/);
   assert.match(ingest, /return json\(\{ ok: true, receipt: data, shadow \}\)/);
