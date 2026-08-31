@@ -38,10 +38,9 @@ test("run occurrence uses the accepted Rhythm opportunity and canonical Evidence
 });
 
 test("knee observation can only alter presentation through an already-authorized consequence", async () => {
-  const [route, core, catalog] = await Promise.all([
+  const [route, core] = await Promise.all([
     read("app/api/atlas/person-life/route.ts"),
     read("lib/atlas/person-life-training-core.js"),
-    read("lib/atlas/person-life-notebook-catalog.js"),
   ]);
 
   assert.match(route, /record_person_condition_observation_api_v1/);
@@ -49,7 +48,7 @@ test("knee observation can only alter presentation through an already-authorized
   assert.match(route, /evaluate_person_consequence_from_evidence_api_v1/);
   assert.match(route, /apply_person_consequence_to_next_rhythm_opportunity_api_v1/);
   assert.match(core, /presentationOverlay/);
-  assert.match(catalog, /Recovery-paced 5K run/);
+  assert.match(core, /Recovery-paced 5K run/);
   assert.doesNotMatch(core, /taskGenerationAuthority:\s*true/);
   assert.doesNotMatch(core, /clockPlacementAuthority:\s*true/);
 });
