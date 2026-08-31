@@ -46,18 +46,15 @@ export default function AtlasWelcomePage() {
             <h1>Atlas puts it back together.</h1>
             <p className={styles.heroLead}>Your life is already in there. It just lives in pieces.</p>
             <p className={styles.heroThesis}>
-              Work. Home. Money. People. Projects. Messages. Plans. Organizations. Atlas connects what
-              is happening across the places you belong and carries what changes into the day you
-              actually have to live.
+              Work. Home. Money. People. Projects. Messages. Plans. Organizations. Atlas connects the
+              systems carrying those pieces and understands what a change in one means for the rest of your day.
             </p>
-            <div className={styles.heroActions}>
-              <Link className={styles.primaryAction} href="/start">Start Atlas</Link>
-            </div>
+            <Link className={styles.primaryAction} href="/start">Start Atlas</Link>
           </div>
 
           <figure
             className={`${styles.heroInstrument} ${journalStyles.heroJournal}`}
-            aria-label="A real open notebook showing one working parent's future log, monthly log, and daily log"
+            aria-label="An open notebook showing the future, monthly, and daily logs of one working parent"
           >
             <div className={journalStyles.photoStage}>
               <img
@@ -80,10 +77,11 @@ export default function AtlasWelcomePage() {
                   </div>
                   <div className={journalStyles.logBlock}>
                     <strong>SEPTEMBER</strong>
-                    <p>1 T · review notes</p>
-                    <p>2 W · groceries</p>
+                    <p>1 T · review notes / lunches</p>
+                    <p>2 W · groceries / forms</p>
                     <p>3 T · team 10:30 / dentist 2:30</p>
-                    <p>4 F · school forms</p>
+                    <p>4 F · school forms / call Mom</p>
+                    <p>5 S · laundry / soccer 9</p>
                   </div>
                 </section>
 
@@ -103,98 +101,90 @@ export default function AtlasWelcomePage() {
               </div>
             </div>
             <figcaption className={journalStyles.credit}>
-              Physical notebook photograph with a working-parent rapid-log example.
+              One working parent&apos;s future log, monthly log, and daily log.
             </figcaption>
           </figure>
         </section>
 
-        <section className={styles.compatibility} aria-label="Compatible systems">
-          <p className={styles.compatibilityLabel}>Works with the systems already carrying your life and work</p>
-          <div className={styles.integrationList}>
-            {compatibleSystems.map((system) => <span key={system}>{system}</span>)}
-          </div>
-          <p className={styles.compatibilityNote}>
-            Keep the tools that already do their jobs. Atlas connects what each one knows through official APIs.
-          </p>
-        </section>
-
-        <section className={`${styles.section} ${styles.connectionSection}`}>
-          <div className={styles.connectionCopy}>
-            <p className={styles.eyebrow}>The connective layer</p>
-            <h2>The parts of your life know things about each other. They just can&apos;t see each other.</h2>
-            <strong>
-              Atlas maps the circles you belong to and understands what a change in one of them means for the others.
-            </strong>
+        <section className={`${styles.section} ${styles.storySection}`}>
+          <div className={styles.storyIntro}>
+            <p className={styles.eyebrow}>One ordinary Thursday</p>
+            <h2>Her day is already mapped. Then one thing changes.</h2>
             <p>
-              Your employer has goals. Your household has needs. Your calendar has limits. Your relationships create
-              responsibilities. Atlas connects those realities around the person who has to live them.
+              The notebook says what she planned. Work, appointments, and school each know one part of the day.
+              Atlas sees what the change means across all of them.
             </p>
           </div>
 
-          <div className={styles.continuityVisual} aria-label="One working parent's connected day">
-            <div className={styles.signalColumn}>
-              <div className={styles.signalBubble}>
-                <span>WORK CALENDAR</span>
-                <p>Team meeting moved to 11:30.</p>
-              </div>
-              <div className={styles.signalBubble}>
-                <span>PERSONAL CALENDAR</span>
-                <p>Dentist · 2:30.</p>
-              </div>
-              <div className={styles.signalBubble}>
-                <span>SCHOOL</span>
-                <p>Pickup · 3:15.</p>
-              </div>
+          <div className={styles.dayStory} aria-label="A working parent's Thursday before and after a work calendar change">
+            <div className={styles.storyColumn}>
+              <span>THE MORNING PLAN</span>
+              <strong>10:30 team meeting</strong>
+              <p>2:30 dentist</p>
+              <p>3:15 school pickup</p>
+              <p>Groceries on the way home</p>
             </div>
-            <div className={styles.continuityCore}>
+            <div className={`${styles.storyColumn} ${styles.changeColumn}`}>
+              <span>WORK CHANGES</span>
+              <strong>Meeting moved to 11:30.</strong>
+              <p>Nothing else moved.</p>
+            </div>
+            <div className={`${styles.storyColumn} ${styles.atlasColumn}`}>
               <span>ATLAS</span>
-              <i />
-              <strong>connect</strong>
-              <i />
-            </div>
-            <div className={styles.resultNote}>
-              <span>YOUR DAY CHANGED</span>
               <strong>The meeting still fits.</strong>
-              <p>Leave work by 2:05. You can make the dentist and school pickup without moving either.</p>
-              <small>› groceries → tomorrow</small>
+              <p>Leave work by 2:05. Keep the dentist and school pickup.</p>
+              <p className={styles.handwritten}>› groceries → Friday</p>
             </div>
           </div>
         </section>
 
         <section className={`${styles.section} ${styles.mapSection}`}>
           <div className={styles.mapCopy}>
-            <p className={styles.eyebrow}>Your map</p>
-            <h2>Your Atlas starts with you. Then it maps outward.</h2>
+            <p className={styles.eyebrow}>Your Atlas</p>
+            <h2>You are the center. Your circles are the map.</h2>
             <p>
-              Your Atlas is the map of what you are responsible for. Workplaces, businesses, households,
-              teams, projects, and relationships are circles within that map. Some of those circles can also
-              have shared Atlases of their own. Atlas connects your place in each one to the day you actually
-              have to live.
+              Your Atlas is personalized to the life you are responsible for. Work, household, people,
+              business, projects, and organizations can each be mapped around you.
+            </p>
+            <p>
+              An organization can also have its own shared Atlas. Yours understands where that organization&apos;s
+              goals meet your role, your time, and everything else you carry.
             </p>
           </div>
 
-          <div className={styles.circleMap} aria-label="A person connected to overlapping circles of responsibility">
-            <span className={`${styles.circle} ${styles.workCircle}`}>WORK</span>
-            <span className={`${styles.circle} ${styles.homeCircle}`}>HOUSEHOLD</span>
-            <span className={`${styles.circle} ${styles.peopleCircle}`}>PEOPLE</span>
-            <span className={`${styles.circle} ${styles.projectCircle}`}>PROJECTS</span>
-            <span className={`${styles.circle} ${styles.orgCircle}`}>ORGANIZATIONS</span>
-            <strong>YOU</strong>
+          <div className={styles.circleField} aria-label="The circles Atlas can map around one person">
+            <strong className={styles.youCard}>YOU</strong>
+            <span>WORK</span>
+            <span>HOUSEHOLD</span>
+            <span>PEOPLE</span>
+            <span>BUSINESS</span>
+            <span>PROJECTS</span>
+            <span>ORGANIZATIONS</span>
           </div>
         </section>
 
-        <section className={`${styles.section} ${styles.closingSection}`} id="start">
+        <section className={styles.compatibility} aria-label="Compatible systems">
+          <div>
+            <p className={styles.eyebrow}>Connect what already knows your life</p>
+            <p className={styles.compatibilityCopy}>
+              Keep the tools that already do their jobs. Atlas connects what each one knows.
+            </p>
+          </div>
+          <div className={styles.integrationList}>
+            {compatibleSystems.map((system) => <span key={system}>{system}</span>)}
+          </div>
+        </section>
+
+        <section className={styles.closingSection} id="start">
           <div className={styles.closingCopy}>
-            <p className={styles.eyebrow}>One life. Many circles. One Atlas.</p>
+            <p className={styles.closingEyebrow}>One life. Many circles. One Atlas.</p>
             <h2>Bring the pieces together.</h2>
             <p>
-              Atlas gives you connective intelligence across the work, people, organizations,
-              responsibilities, systems, and goals that make up your real life.
+              Create your account, choose where Atlas should begin, and start mapping the responsibilities,
+              people, systems, and organizations that shape your day.
             </p>
-            <Link className={styles.primaryAction} href="/start">Start Atlas</Link>
-            <small>
-              Start with yourself or bring an organization with you. Atlas will guide the setup after you create your account.
-            </small>
+            <Link className={styles.closingAction} href="/start">Start Atlas</Link>
+            <small>Start with yourself or bring an organization with you. Atlas will guide the setup.</small>
           </div>
         </section>
       </div>
