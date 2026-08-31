@@ -22,7 +22,7 @@ test("public Atlas front door begins with Personal versus Organization Atlas", (
 
 test("Organization Atlas is explicitly pre-membership", () => {
   assert.match(organizationStart, /does not make you an owner, employee, or member/i);
-  assert.match(organizationClient, /has not made you an owner, employee, or member/i);
+  assert.match(organizationClient, /has not\s+made you an owner, employee, or member/i);
   assert.doesNotMatch(organizationApi, /establish_organization_self_api_v1/);
   assert.match(organizationApi, /begin_organization_onboarding_self_api_v1/);
 });
