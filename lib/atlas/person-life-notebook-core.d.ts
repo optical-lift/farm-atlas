@@ -34,6 +34,7 @@ export type PersonLifeNotebookSpec = {
   evidence: {
     claimType: string;
     metricPath: string[];
+    requestValueKey: string;
     targetValue: number;
     unit: string;
     progressHeading: string;
@@ -96,4 +97,4 @@ export type PersonLifeNotebookModel = {
 export function matchesPersonLifeNotebookGoal(definition: any, spec: PersonLifeNotebookSpec): boolean;
 export function notebookPolicyMatchesGoal(definition: any, goalDefinitionId: string, spec: PersonLifeNotebookSpec): boolean;
 export function projectPersonLifeNotebook(spec: PersonLifeNotebookSpec, state: Record<string, unknown>): PersonLifeNotebookModel;
-export function selectPersonLifeNotebook(specs: PersonLifeNotebookSpec[], state: Record<string, unknown>): { spec: PersonLifeNotebookSpec; model: PersonLifeNotebookModel } | null;
+export function selectPersonLifeNotebook(specs: readonly PersonLifeNotebookSpec[], state: Record<string, unknown>): { spec: PersonLifeNotebookSpec; model: PersonLifeNotebookModel } | null;
