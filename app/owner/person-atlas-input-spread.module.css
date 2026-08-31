@@ -171,6 +171,13 @@
   text-align: center;
 }
 
+.stepper button:disabled,
+.stepper input:disabled,
+.followUpOptions button:disabled {
+  cursor: default;
+  opacity: .48;
+}
+
 .recordedValue {
   min-width: 42px;
   padding-right: 34px;
@@ -255,6 +262,14 @@
   left: 0;
   height: 1px;
   background: var(--ink);
+}
+
+.submitError {
+  margin: 12px 0 0;
+  color: #6f3131;
+  font-size: 8px;
+  font-weight: 650;
+  line-height: 1.35;
 }
 
 .actions {
