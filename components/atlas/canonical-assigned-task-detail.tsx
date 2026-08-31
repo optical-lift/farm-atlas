@@ -17,6 +17,7 @@ import ProjectPullTaskDetail from "@/components/atlas/project-pull-task-detail";
 import SeedInventoryTaskLoader from "@/components/atlas/seed-inventory-task-loader";
 import SiteLayoutTaskDetail from "@/components/atlas/site-layout-task-detail";
 import TransplantReadinessTaskDetail from "@/components/atlas/transplant-readiness-task-detail";
+import TruthObservationTaskDetail, { isCanonicalWorkerTruthObservationTask } from "@/components/atlas/truth-observation-task-detail";
 import VegetationControlTaskDetail from "@/components/atlas/vegetation-control-task-detail";
 import VenueResetTaskDetail from "@/components/atlas/venue-reset-task-detail";
 import VenueTaskDetail from "@/components/atlas/venue-task-detail";
@@ -264,6 +265,9 @@ export default async function CanonicalAssignedTaskDetail(props: Props) {
   if (isDirectHarvestTask(props.task)) {
     const initialContext = await loadDirectHarvestContext(props.task);
     return <DirectHarvestTaskDetail task={props.task} assignee={props.assignee} initialContext={initialContext} />;
+  }
+  if (isCanonicalWorkerTruthObservationTask(props.task)) {
+    return <TruthObservationTaskDetail task={props.task} assignee={props.assignee} />;
   }
   if (isDecisionSelectorTask(props.task)) return <DecisionSelectorTaskDetail {...props} />;
   if (isSowCardTask(props.task)) return <DirectSowTaskDetail task={props.task} assignee={props.assignee} />;
