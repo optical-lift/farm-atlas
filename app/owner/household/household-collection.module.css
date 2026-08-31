@@ -1,0 +1,253 @@
+:global(body:has([data-atlas-household-collection="true"]) .atlas-global-header),
+:global(body:has([data-atlas-household-collection="true"]) .atlas-owner-operator),
+:global(body:has([data-atlas-household-collection="true"]) .atlas-context-footer) {
+  display: none !important;
+}
+
+:global(html:has([data-atlas-household-collection="true"])),
+:global(body:has([data-atlas-household-collection="true"])) {
+  margin: 0;
+  padding: 0 !important;
+  background: #fff !important;
+  color: #171717;
+  overflow: hidden;
+}
+
+.root {
+  --ink: #171717;
+  --soft: #747474;
+  --faint: #9a9a9a;
+  --rule: rgba(23, 23, 23, .14);
+  --dot: rgba(23, 23, 23, .065);
+  height: 100svh;
+  overflow: hidden;
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font-atlas-structural), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.page {
+  width: min(100%, 780px);
+  height: 100svh;
+  margin: 0 auto;
+  padding: max(13px, env(safe-area-inset-top)) 18px max(10px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) 38px;
+  overflow: hidden;
+  background-color: #fff;
+  background-image: radial-gradient(circle, var(--dot) .62px, transparent .7px);
+  background-size: 15px 15px;
+  background-position: 7.5px 7.5px;
+}
+
+.topChrome {
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+}
+
+.topChrome > div {
+  display: grid;
+  gap: 1px;
+}
+
+.topChrome span,
+.indexLink {
+  color: var(--faint);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: lowercase;
+}
+
+.topChrome strong {
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.back,
+.indexLink {
+  color: var(--soft);
+  text-decoration: none;
+}
+
+.back {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.indexLink {
+  padding-top: 2px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.collectionPage {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 4px 0 16px;
+}
+
+.collectionPage::-webkit-scrollbar {
+  display: none;
+}
+
+.collectionHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 8px;
+  margin-bottom: 17px;
+  border-bottom: 1px solid rgba(23, 23, 23, .2);
+}
+
+.collectionHeader > div {
+  display: grid;
+  gap: 2px;
+}
+
+.collectionHeader span {
+  color: var(--faint);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.collectionHeader h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 640;
+  line-height: 1;
+  letter-spacing: -.025em;
+}
+
+.collectionHeader small {
+  color: var(--soft);
+  font-size: 8px;
+  font-weight: 650;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sections {
+  display: grid;
+  gap: 18px;
+}
+
+.section {
+  display: grid;
+  gap: 5px;
+}
+
+.section h2 {
+  margin: 0;
+  color: var(--soft);
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.rows {
+  display: grid;
+  gap: 2px;
+}
+
+.row {
+  min-height: 30px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 4px;
+  align-items: start;
+  padding: 2px 0;
+}
+
+.row > b {
+  color: var(--soft);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.row > div {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.row strong {
+  font-family: var(--font-atlas-hand), "Bradley Hand", "Segoe Print", cursive;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.18;
+}
+
+.row span {
+  color: var(--faint);
+  font-size: 7.5px;
+  font-weight: 560;
+  line-height: 1.2;
+}
+
+.row[data-tone="active"] > b,
+.row[data-tone="active"] span {
+  color: var(--ink);
+}
+
+.row[data-tone="done"] {
+  opacity: .45;
+}
+
+.pageNav {
+  min-height: 37px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto 34px;
+  align-items: center;
+  gap: 4px;
+  border-top: 1px solid var(--rule);
+  color: var(--soft);
+}
+
+.pageNav button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 19px;
+}
+
+.pageNav button:disabled {
+  opacity: .18;
+}
+
+.thread {
+  justify-self: start;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.pageNav strong {
+  font-size: 7px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 700px) {
+  .page {
+    padding-inline: 28px;
+  }
+
+  .row strong {
+    font-size: 14px;
+  }
+}
