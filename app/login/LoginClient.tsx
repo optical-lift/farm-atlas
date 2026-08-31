@@ -6,7 +6,13 @@ import Link from "next/link";
 import { atlasPostLoginPath } from "@/lib/atlas/auth-core.js";
 import styles from "./login.module.css";
 
-export default function LoginClient({ signupEnabled }: { signupEnabled: boolean }) {
+export default function LoginClient({
+  signupEnabled,
+  nextPath,
+}: {
+  signupEnabled: boolean;
+  nextPath?: string | null;
+}) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -32,7 +38,7 @@ export default function LoginClient({ signupEnabled }: { signupEnabled: boolean 
       return;
     }
 
-    window.location.replace(atlasPostLoginPath());
+    window.location.replace(nextPath ?? atlasPostLoginPath());
   }
 
   return (

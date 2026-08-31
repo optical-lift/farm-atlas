@@ -20,8 +20,15 @@ function copySessionCookies(source: NextResponse, target: NextResponse) {
   return target;
 }
 
+function isSafeInternalPath(value: string | null) {
+  return Boolean(value && value.startsWith("/") && !value.startsWith("//"));
+}
+
 function isPublicPath(pathname: string) {
   return (
+    pathname === "/" ||
+    pathname === "/welcome" ||
+    pathname.startsWith("/start/") ||
     pathname === "/login" ||
     pathname === "/join" ||
     pathname === "/auth/confirm" ||
@@ -53,6 +60,7 @@ function needsAtlasFarmMembership(pathname: string) {
   return (
     pathname.startsWith("/api/atlas/") &&
     !pathname.startsWith("/api/atlas/auth/") &&
+    !pathname.startsWith("/api/atlas/organizations/") &&
     !needsAtlasPortfolioMembership(pathname)
   );
 }
@@ -89,6 +97,15 @@ export async function updateAtlasSession(request: NextRequest) {
   const authenticated = Boolean(userId);
   const { pathname } = request.nextUrl;
 
+  // The root URL is the Atlas product front door for visitors. Existing authenticated
+  // users keep the current application Home at `/`, so no Elm/Feast Guild behavior is moved.
+  if (!authenticated && pathname === "/") {
+    const destination = request.nextUrl.clone();
+    destination.pathname = "/welcome";
+    destination.search = "";
+    return copySessionCookies(response, NextResponse.rewrite(destination));
+  }
+
   if (!authenticated && !isPublicPath(pathname) && !isExternallyAuthenticatedPath(pathname)) {
     if (pathname.startsWith("/api/")) {
       return copySessionCookies(
@@ -110,8 +127,9 @@ export async function updateAtlasSession(request: NextRequest) {
   }
 
   if (authenticated && pathname === "/login") {
+    const requestedNext = request.nextUrl.searchParams.get("next");
     const atlasHomeUrl = request.nextUrl.clone();
-    atlasHomeUrl.pathname = atlasPostLoginPath();
+    atlasHomeUrl.pathname = isSafeInternalPath(requestedNext) ? requestedNext! : atlasPostLoginPath();
     atlasHomeUrl.search = "";
     return copySessionCookies(response, NextResponse.redirect(atlasHomeUrl));
   }
