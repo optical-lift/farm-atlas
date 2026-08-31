@@ -76,7 +76,9 @@ export default function AtlasContextualAppFrame({ effectiveFarmRole = null, acti
   const workHref = useMemo(todayHref, []);
   const currentClockHref = useMemo(clockHref, []);
   const farmManagerHref = useMemo(managerHref, []);
-  const hidden = pathname === "/local"
+  const rewrittenPublicRoot = pathname === "/" && !effectiveFarmRole && !activeFarmName;
+  const hidden = rewrittenPublicRoot
+    || pathname === "/local"
     || pathname.startsWith("/local/")
     || HIDDEN_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   const canManage = effectiveFarmRole === "owner" || effectiveFarmRole === "manager";
