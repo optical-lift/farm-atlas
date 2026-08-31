@@ -41,7 +41,8 @@ test("Harvest amount and non-harvest outcomes are mutually exclusive", () => {
   assert.match(weekly, /setException\(null\)/);
   assert.match(weekly, /setBucketHalves\(0\)/);
   assert.match(weekly, /const resultKind: "harvest_amount" \| HarvestException \| null = bucketHalves > 0 \? "harvest_amount" : exception/);
-  assert.match(route, /resultKind !== "harvest_amount"/);
+  assert.match(route, /if \(resultKind === "harvest_amount"\)/);
+  assert.match(route, /Not ready, Deadheaded, and Crop loss do not take a harvest amount/);
   assert.match(route, /Only usable harvested flowers receive a harvest grade/);
   assert.match(migrationV2, /result_kind='harvest_amount' and bucket_halves is not null and bucket_halves>=1/);
   assert.match(migrationV2, /result_kind in \('not_ready','deadheaded','crop_exhausted'\) and bucket_halves is null/);
