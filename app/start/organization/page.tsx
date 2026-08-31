@@ -1,10 +1,22 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
+import { getAtlasSession } from "@/lib/atlas/session";
 import styles from "../../welcome/front-door.module.css";
 
 export const dynamic = "force-dynamic";
 
-export default function OrganizationAtlasStartPage() {
+export const metadata: Metadata = {
+  title: "Organization Atlas",
+  description: "Start Atlas for an independent organization before assigning human memberships.",
+};
+
+export default async function OrganizationAtlasStartPage() {
+  const session = await getAtlasSession();
+  const existingAtlasHref = session
+    ? "/onboarding/organization"
+    : "/login?next=%2Fonboarding%2Forganization";
+
   return (
     <main className={styles.page}>
       <section className={styles.detail}>
@@ -20,11 +32,11 @@ export default function OrganizationAtlasStartPage() {
           <div className={styles.path}>
             <h2>I already use Atlas personally</h2>
             <p>
-              Sign in with your existing human account and carry this setup from there. Atlas will not
-              create a second Personal Atlas or automatically add you to the organization&apos;s membership graph.
+              Use your existing human account to carry this setup. Atlas will not create a second
+              Personal Atlas or automatically add you to the organization&apos;s membership graph.
             </p>
-            <Link className={styles.primary} href="/login?next=%2Fonboarding%2Forganization">
-              Sign in and continue
+            <Link className={styles.primary} href={existingAtlasHref}>
+              {session ? "Continue organization setup" : "Sign in and continue"}
             </Link>
           </div>
 
