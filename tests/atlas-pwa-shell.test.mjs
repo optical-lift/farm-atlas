@@ -49,7 +49,8 @@ test("Build 9 ships a stable standalone Atlas manifest and icon set", () => {
   assert.match(manifest, /start_url: "\/"/);
   assert.match(manifest, /scope: "\/"/);
   assert.match(manifest, /display: "standalone"/);
-  assert.match(manifest, /theme_color: "#f7f4e9"/);
+  assert.match(manifest, /background_color: "#ffffff"/);
+  assert.match(manifest, /theme_color: "#ffffff"/);
   assert.match(manifest, /192x192/);
   assert.match(manifest, /512x512/);
   assert.match(manifest, /purpose: "maskable"/);

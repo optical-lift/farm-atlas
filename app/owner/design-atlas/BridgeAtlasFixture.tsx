@@ -1,11 +1,11 @@
 "use client";
 
-import PersonAtlasChassis, {
+import PersonAtlasNotebookV2, {
   type PersonAtlasReservedSpan,
   type PersonAtlasSection,
   type PersonAtlasTimeMark,
   type PersonAtlasUtilityGroup,
-} from "../PersonAtlasChassis";
+} from "../PersonAtlasNotebookV2";
 
 type BridgeAtlasFixtureProps = {
   onOpenWorkshop: () => void;
@@ -178,22 +178,19 @@ export default function BridgeAtlasFixture({ onOpenWorkshop }: BridgeAtlasFixtur
   ];
 
   return (
-    <PersonAtlasChassis
-      identity="MARA'S ATLAS"
-      identityDetail="Reference person · household + own business + linked institution"
-      pageKicker="THURSDAY"
+    <PersonAtlasNotebookV2
+      identity="Mara"
+      greeting="hello"
+      pageKicker="Thursday"
       pageTitle="Today"
       dateLabelOverride="Thursday, September 3"
       nowMinuteOverride={10 * 60 + 18}
       nowLabelOverride="10:18 AM"
-      pageIntro="One finite day. Private life stays private; institutional responsibility still arrives with real authority and real time constraints."
       sections={SECTIONS}
       timeMarks={TIME_MARKS}
       reservedSpans={RESERVED}
       nextHardEdge="next hard edge · Feast Guild 10:30"
       utilityGroups={utilityGroups}
-      footer={<>Synthetic reference person. No Elm farm data and no live mutation capability.</>}
-      fixtureLabel="DESIGN ATLAS · BRIDGE FIXTURE"
     />
   );
 }

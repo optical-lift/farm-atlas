@@ -1,0 +1,631 @@
+:global(body:has([data-atlas-person-notebook-v2="true"]) .atlas-global-header),
+:global(body:has([data-atlas-person-notebook-v2="true"]) .atlas-owner-operator),
+:global(body:has([data-atlas-person-notebook-v2="true"]) .atlas-context-footer) {
+  display: none !important;
+}
+
+:global(html:has([data-atlas-person-notebook-v2="true"])),
+:global(body:has([data-atlas-person-notebook-v2="true"])) {
+  margin: 0;
+  padding: 0 !important;
+  background: #fff !important;
+  color: #171717;
+  overflow: hidden;
+}
+
+.root {
+  --ink: #171717;
+  --soft: #737373;
+  --faint: #9a9a9a;
+  --rule: rgba(23, 23, 23, .13);
+  --dot: rgba(23, 23, 23, .07);
+  height: 100svh;
+  overflow: hidden;
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font-atlas-structural), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.page {
+  width: min(100%, 780px);
+  height: 100svh;
+  margin: 0 auto;
+  padding: max(7px, env(safe-area-inset-top)) 12px max(7px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) 34px;
+  overflow: hidden;
+  background-color: #fff;
+}
+
+.dotPage {
+  background-image: radial-gradient(circle, var(--dot) .62px, transparent .7px);
+  background-size: 15px 15px;
+  background-position: 7.5px 7.5px;
+}
+
+.topChrome {
+  min-height: 37px;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 1px 0 4px;
+}
+
+.greetingBlock {
+  min-width: 0;
+  display: grid;
+  gap: 0;
+}
+
+.greetingBlock span {
+  color: var(--faint);
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: .08em;
+  text-transform: lowercase;
+  line-height: 1.1;
+}
+
+.greetingBlock strong {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 690;
+  letter-spacing: -.01em;
+  line-height: 1.15;
+}
+
+.moreButton,
+.backButton,
+.pageNav button,
+.indexRow,
+.taskLine {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.moreButton,
+.backButton {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.moreButton {
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  margin: -2px -3px 0 0;
+  color: #929292;
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.backButton {
+  width: 29px;
+  height: 29px;
+  margin: -2px 0 0 -2px;
+  color: var(--soft);
+  font-size: 18px;
+  text-align: left;
+}
+
+.notebookBody {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 7px;
+  overflow: hidden;
+}
+
+.dayPage {
+  min-width: 0;
+  min-height: 0;
+  padding: 0 0 4px;
+  overflow: hidden;
+}
+
+.dayHeader {
+  margin: 1px 0 10px;
+}
+
+.dayHeader > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dayHeader h1 {
+  margin: 0;
+  font-family: var(--font-atlas-hand), "Bradley Hand", "Segoe Print", cursive;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.dayHeader span {
+  color: var(--soft);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.dayHeader i {
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin-top: 5px;
+  background: rgba(23, 23, 23, .18);
+}
+
+.nowBlock {
+  margin: 0 0 11px;
+}
+
+.nowRule {
+  min-height: 15px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.nowRule > span {
+  color: var(--ink);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.nowRule > small {
+  justify-self: end;
+  color: var(--faint);
+  font-size: 7px;
+  font-weight: 600;
+  text-align: right;
+  line-height: 1.15;
+}
+
+.taskLine {
+  width: 100%;
+  min-height: 20px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 2px;
+  align-items: baseline;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 1px 0;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.taskLine > span {
+  color: var(--soft);
+  font-family: var(--font-atlas-structural), system-ui, sans-serif;
+  font-size: 9px;
+  font-weight: 780;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.taskLine strong {
+  max-width: none;
+  font-family: var(--font-atlas-hand), "Bradley Hand", "Segoe Print", cursive;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.18;
+}
+
+.currentTask strong {
+  font-size: 13.5px;
+}
+
+.taskLine[data-state="done"] {
+  opacity: .42;
+}
+
+.taskLine[data-state="done"] strong {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.taskLine[data-state="waiting"] strong {
+  color: #565656;
+}
+
+.sections {
+  display: grid;
+  gap: 9px;
+}
+
+.section {
+  display: grid;
+  gap: 2px;
+}
+
+.section h2 {
+  margin: 0;
+  color: var(--soft);
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.lineList {
+  display: grid;
+  gap: 0;
+}
+
+.timeMargin {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 11px minmax(0, 1fr);
+  gap: 2px;
+  padding-top: 1px;
+}
+
+.timeCaption {
+  color: var(--faint);
+  font-size: 6.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.timeTrack {
+  position: relative;
+  min-height: 0;
+}
+
+.timeBase {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 54%;
+  width: 1px;
+  background: var(--rule);
+  transform: translateX(-50%);
+}
+
+.hourTick,
+.timeMark,
+.nowMarker,
+.inspectLabel,
+.reservedSpan {
+  position: absolute;
+  top: var(--atlas-time-position);
+}
+
+.hourTick {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.hourTick > i {
+  position: absolute;
+  left: 54%;
+  width: 6px;
+  height: 1px;
+  background: rgba(23, 23, 23, .18);
+  transform: translateX(-50%);
+}
+
+.hourTick > small {
+  position: absolute;
+  right: calc(46% + 6px);
+  top: -5px;
+  color: #a0a0a0;
+  font-size: 5.5px;
+  font-style: normal;
+  line-height: .9;
+  white-space: pre-line;
+  text-align: right;
+}
+
+.reservedSpan {
+  left: calc(54% - 2px);
+  width: 4px;
+  height: var(--atlas-time-size);
+  min-height: 5px;
+  border-radius: 999px;
+  background: rgba(23, 23, 23, .12);
+}
+
+.timeMark {
+  left: 54%;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  margin: -10px 0 0 -10px;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.timeMark > i {
+  width: 4px;
+  height: 4px;
+  border: 1px solid rgba(23, 23, 23, .48);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.timeMark[data-kind="hard"] > i {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--ink);
+}
+
+.timeMark[data-kind="protected"] > i {
+  border-style: double;
+}
+
+.timeMark[data-inspected="true"] > i {
+  box-shadow: 0 0 0 3px rgba(23, 23, 23, .07);
+}
+
+.nowMarker {
+  left: 54%;
+  z-index: 3;
+  width: 1px;
+  height: 1px;
+}
+
+.nowMarker > i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid #fff;
+  border-radius: 999px;
+  background: var(--ink);
+  box-shadow: 0 0 0 1px rgba(23, 23, 23, .17);
+  transform: translate(-50%, -50%);
+}
+
+.inspectLabel {
+  z-index: 4;
+  right: 31px;
+  width: 118px;
+  display: grid;
+  gap: 0;
+  padding: 5px 6px;
+  border: 1px solid rgba(23, 23, 23, .11);
+  background: rgba(255, 255, 255, .97);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.inspectLabel small {
+  color: var(--faint);
+  font-size: 5.5px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.inspectLabel strong {
+  font-size: 8px;
+}
+
+.inspectLabel em {
+  color: var(--soft);
+  font-size: 7px;
+  font-style: normal;
+  line-height: 1.15;
+}
+
+.pageNav {
+  min-height: 31px;
+  display: grid;
+  grid-template-columns: 32px 1fr auto 32px;
+  align-items: center;
+  gap: 4px;
+  border-top: 1px solid var(--rule);
+  color: var(--soft);
+}
+
+.pageNav button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.pageNav button:first-child,
+.pageNav button:last-child {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.pageNav button:nth-child(2),
+.pageNav strong {
+  justify-self: start;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.pageNav span {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pageNav button:disabled {
+  opacity: .2;
+  cursor: default;
+}
+
+.worksheet,
+.indexPage {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 3px 0 10px;
+  scrollbar-width: none;
+}
+
+.worksheet::-webkit-scrollbar,
+.indexPage::-webkit-scrollbar {
+  display: none;
+}
+
+.worksheet h1 {
+  max-width: 36ch;
+  margin: 0 0 17px;
+  font-family: var(--font-atlas-hand), "Bradley Hand", "Segoe Print", cursive;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.16;
+}
+
+.worksheet dl {
+  margin: 0;
+  border-top: 1px solid var(--rule);
+}
+
+.worksheet dl > div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 11px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.worksheet dt {
+  color: var(--soft);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.worksheet dd {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 550;
+  line-height: 1.35;
+}
+
+.worksheet p {
+  max-width: 54ch;
+  margin: 15px 0 0;
+  color: var(--soft);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.indexPage {
+  padding-top: 0;
+}
+
+.indexGroup {
+  margin: 0 0 15px;
+}
+
+.indexGroup h2 {
+  margin: 0 0 4px;
+  color: var(--soft);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.indexGroup > div {
+  border-top: 1px solid var(--rule);
+}
+
+.indexRow {
+  width: 100%;
+  min-height: 45px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 9px;
+  appearance: none;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  padding: 7px 0;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  font: inherit;
+}
+
+.indexRow strong {
+  font-size: 10px;
+}
+
+.indexRow span {
+  grid-column: 1;
+  color: var(--soft);
+  font-size: 7.5px;
+  line-height: 1.25;
+}
+
+.indexRow b {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--faint);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.indexRow:disabled {
+  opacity: .52;
+  cursor: default;
+}
+
+@media (min-width: 700px) {
+  .page {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .notebookBody {
+    grid-template-columns: minmax(0, 1fr) 54px;
+    gap: 12px;
+  }
+
+  .taskLine strong {
+    font-size: 13px;
+  }
+
+  .currentTask strong {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root * {
+    scroll-behavior: auto !important;
+  }
+}
