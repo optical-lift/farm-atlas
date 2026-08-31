@@ -128,6 +128,55 @@
   line-height: 1.2;
 }
 
+.textRow {
+  display: grid;
+  gap: 7px;
+  padding: 10px 0 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.textRow label {
+  color: var(--faint);
+  font-size: 7px;
+  font-weight: 750;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.textRow input,
+.textRow textarea {
+  width: 100%;
+  box-sizing: border-box;
+  appearance: none;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  resize: none;
+  background: rgba(255, 255, 255, .78);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 580;
+  line-height: 1.45;
+}
+
+.textRow input::placeholder,
+.textRow textarea::placeholder {
+  color: var(--faint);
+}
+
+.textRow input:disabled,
+.textRow textarea:disabled {
+  opacity: .55;
+}
+
+.recordedText {
+  white-space: pre-wrap;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
 .stepper {
   display: grid;
   grid-template-columns: 34px 42px 34px;
