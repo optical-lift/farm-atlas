@@ -37,8 +37,8 @@ export default function AtlasWelcomePage() {
           </div>
         </nav>
 
-        <section className={styles.hero}>
-          <div className={styles.heroCopy}>
+        <section className={`${styles.hero} ${journalStyles.heroLayout}`}>
+          <div className={`${styles.heroCopy} ${journalStyles.heroCopyWide}`}>
             <p className={styles.eyebrow}>Connective intelligence for a real company</p>
             <h1>Atlas puts it back together.</h1>
             <p className={styles.heroLead}>Your company is already in there. It just lives in pieces.</p>
