@@ -79,12 +79,14 @@ export async function POST(request: Request) {
     return json({ ok: false, error: "Communication custody failed." }, 500);
   }
 
-  // Custody is complete before interpretation starts. A model outage or shadow
-  // persistence failure must never make a successfully preserved message look
-  // uncustodied to the Mac relay; pending evidence will be retried on overlap.
+  // Custody is complete before interpretation starts. The receipt already binds
+  // this accepted batch to one connected source, so the shadow layer must not
+  // widen its permissions by reading the private relay-credential table again.
+  const receipt = data && typeof data === "object" ? data as Record<string, unknown> : {};
+  const connectedSourceId = typeof receipt.connectedSourceId === "string" ? receipt.connectedSourceId : "";
   let shadow: unknown = null;
   try {
-    shadow = await shadowInterpretCommunicationEvents(request, tokenHash, events);
+    shadow = await shadowInterpretCommunicationEvents(request, connectedSourceId, events);
   } catch (shadowError) {
     console.error("Messages shadow interpretation unavailable", {
       error: shadowError instanceof Error ? shadowError.message.slice(0, 160) : "unknown",
