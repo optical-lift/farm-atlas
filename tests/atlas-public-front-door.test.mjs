@@ -4,7 +4,8 @@ import test from "node:test";
 
 const welcome = fs.readFileSync(new URL("../app/welcome/page.tsx", import.meta.url), "utf8");
 const welcomeStyles = fs.readFileSync(new URL("../app/welcome/sales-page.module.css", import.meta.url), "utf8");
-const welcomeHeroJournalStyles = fs.readFileSync(new URL("../app/welcome/hero-photo.module.css", import.meta.url), "utf8");
+const welcomeHeroPhotoStyles = fs.readFileSync(new URL("../app/welcome/hero-photo.module.css", import.meta.url), "utf8");
+const atlasStart = fs.readFileSync(new URL("../app/start/page.tsx", import.meta.url), "utf8");
 const organizationStart = fs.readFileSync(new URL("../app/start/organization/page.tsx", import.meta.url), "utf8");
 const organizationClient = fs.readFileSync(
   new URL("../app/onboarding/organization/OrganizationOnboardingClient.tsx", import.meta.url),
@@ -20,12 +21,15 @@ const contextualFrame = fs.readFileSync(
 );
 const proxy = fs.readFileSync(new URL("../lib/supabase/proxy.ts", import.meta.url), "utf8");
 
-test("public Atlas front door states the product and offers Personal versus Organization Atlas", () => {
+test("public Atlas front door presents one connected-life product and one start path", () => {
+  assert.match(welcome, /Connective intelligence for real life/);
   assert.match(welcome, /Atlas puts it back together\./);
-  assert.match(welcome, /Your company is already in there\. It just lives in pieces\./);
-  assert.match(welcome, /Ready to map out your Atlas\?/);
-  assert.match(welcome, /Personal Atlas/);
-  assert.match(welcome, /Organization Atlas/);
+  assert.match(welcome, /Your life is already in there\. It just lives in pieces\./);
+  assert.match(welcome, /One life\. Many circles\. One Atlas\./);
+  assert.match(welcome, /href="\/start"/);
+  assert.doesNotMatch(welcome, /Start Organization Atlas/);
+  assert.doesNotMatch(welcome, /Begin Personal Atlas/);
+  assert.doesNotMatch(welcome, /Begin Organization Atlas/);
 });
 
 test("public Atlas front door names supported official-API integration targets without replacing specialist systems", () => {
@@ -43,22 +47,37 @@ test("public Atlas front door names supported official-API integration targets w
   ]) {
     assert.match(welcome, new RegExp(system.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
-  assert.match(welcome, /Keep the specialist software/);
+  assert.match(welcome, /Keep the tools that already do their jobs/);
   assert.match(welcome, /official APIs/);
 });
 
-test("sales hero uses a restrained Ryder Carroll-style rapid-log journal on the white Atlas surface", () => {
-  assert.doesNotMatch(welcome, /images\.unsplash\.com/);
+test("sales hero uses a real isolated notebook photo with one coherent working-parent rapid-log example", () => {
+  assert.match(welcome, /images\.pexels\.com\/photos\/17219305/);
   assert.match(welcome, /FUTURE LOG/);
-  assert.match(welcome, /DAILY LOG/);
-  assert.match(welcome, /• task/);
-  assert.match(welcome, /○ event/);
-  assert.match(welcome, /– note/);
-  assert.match(welcomeHeroJournalStyles, /grid-template-columns: minmax\(0, 2fr\) minmax\(300px, 1fr\)/);
-  assert.match(welcomeHeroJournalStyles, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(welcomeHeroJournalStyles, /background-color: #fff/);
+  assert.match(welcome, /SEPTEMBER/);
+  assert.match(welcome, /DAILY LOG · THU 3/);
+  assert.match(welcome, /dentist · 2:30/);
+  assert.match(welcome, /school pickup · 3:15/);
+  assert.match(welcome, /groceries → Fri/);
+  assert.match(welcome, /Team meeting moved to 11:30/);
+  assert.match(welcome, /Leave work by 2:05/);
+  assert.match(welcomeHeroPhotoStyles, /grid-template-columns: minmax\(0, 2fr\) minmax\(300px, 1fr\)/);
+  assert.match(welcomeHeroPhotoStyles, /mix-blend-mode: multiply/);
+  assert.match(welcomeHeroPhotoStyles, /rotate\(-3\.25deg\)/);
+  assert.match(welcomeStyles, /min-height: 410px/);
+  assert.match(welcomeStyles, /padding: 18px 0 28px/);
   assert.match(welcomeStyles, /body:has\(\[data-atlas-sales-page="true"\]\)/);
   assert.match(welcomeStyles, /background: #fff !important/);
+});
+
+test("one Atlas start screen asks where onboarding begins only after the sales CTA", () => {
+  assert.match(atlasStart, /What are you bringing into Atlas first\?/);
+  assert.match(atlasStart, /Atlas is personalized around the person using it/);
+  assert.match(atlasStart, />Myself</);
+  assert.match(atlasStart, />An organization</);
+  assert.match(atlasStart, /href="\/start\/personal"/);
+  assert.match(atlasStart, /href="\/start\/organization"/);
+  assert.match(atlasStart, /not a choice between two different Atlas products/i);
 });
 
 test("Organization Atlas is explicitly pre-membership", () => {
