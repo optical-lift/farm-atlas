@@ -164,6 +164,11 @@ export default function BridgeAtlasFixture({ onOpenWorkshop }: BridgeAtlasFixtur
       label: "DESIGN ATLAS",
       items: [
         {
+          label: "Open plant-count proof",
+          detail: "Test the standard count instrument, including an explicit zero observation.",
+          href: "/owner/design-atlas/plant-count",
+        },
+        {
           label: "Open Katie’s flower-order proof",
           detail: "Test a transaction that creates fulfillment without inventing inventory or payment truth.",
           href: "/owner/design-atlas/katie-order",
