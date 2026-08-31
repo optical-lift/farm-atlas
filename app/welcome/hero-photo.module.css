@@ -1,35 +1,164 @@
-.heroPhoto {
+.heroLayout {
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr) !important;
+  gap: clamp(28px, 4vw, 52px) !important;
+}
+
+.heroCopyWide {
+  max-width: 720px !important;
+}
+
+.heroCopyWide h1 {
+  max-width: 680px !important;
+}
+
+.heroCopyWide h1 + p {
+  max-width: 650px !important;
+}
+
+.heroCopyWide h1 + p + p {
+  max-width: 680px !important;
+}
+
+.heroJournal {
   position: relative;
-  width: min(100%, 560px);
+  width: min(100%, 430px);
   margin: 0;
 }
 
-.photoFrame {
+.book {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
-  overflow: hidden;
-  border: 1px solid rgba(23, 23, 23, 0.14);
-  background: #fff;
-  box-shadow: 0 16px 36px rgba(23, 23, 23, 0.08);
-  transform: rotate(-0.45deg);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  aspect-ratio: 1.52 / 1;
+  transform: rotate(-0.55deg);
+  filter: drop-shadow(0 14px 17px rgba(23, 23, 23, 0.075));
 }
 
-.photoFrame::after {
+.book::after {
   content: "";
   position: absolute;
-  inset: 10px;
-  border: 1px solid rgba(123, 192, 185, 0.18);
-  pointer-events: none;
+  top: 7px;
+  bottom: 7px;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(23, 23, 23, 0.14) 8%,
+    rgba(23, 23, 23, 0.22) 50%,
+    rgba(23, 23, 23, 0.14) 92%,
+    transparent
+  );
+  box-shadow: 2px 0 5px rgba(23, 23, 23, 0.045), -2px 0 5px rgba(23, 23, 23, 0.035);
+  z-index: 4;
 }
 
-.photo {
+.journalPage {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  padding: clamp(17px, 2.25vw, 24px) clamp(12px, 1.7vw, 18px) 21px;
+  border: 1px solid rgba(23, 23, 23, 0.13);
+  background-color: #fff;
+  background-image: radial-gradient(circle, rgba(23, 23, 23, 0.11) 0.52px, transparent 0.62px);
+  background-size: 11px 11px;
+  background-position: 5.5px 5.5px;
+  color: #202020;
+}
+
+.leftPage {
+  border-radius: 9px 2px 2px 10px;
+  border-right-color: rgba(23, 23, 23, 0.08);
+  box-shadow: inset -8px 0 15px rgba(23, 23, 23, 0.022);
+  transform: perspective(900px) rotateY(1.25deg);
+  transform-origin: right center;
+}
+
+.rightPage {
+  border-radius: 2px 9px 10px 2px;
+  border-left-color: rgba(23, 23, 23, 0.08);
+  box-shadow: inset 8px 0 15px rgba(23, 23, 23, 0.022);
+  transform: perspective(900px) rotateY(-1.25deg);
+  transform-origin: left center;
+}
+
+.pageHeader {
+  min-height: 19px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(23, 23, 23, 0.33);
+  font-size: clamp(6px, 0.63vw, 7.5px);
+  font-weight: 820;
+  letter-spacing: 0.13em;
+}
+
+.monthBlock {
+  padding-top: clamp(10px, 1.25vw, 14px);
+}
+
+.monthBlock strong {
   display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center center;
-  filter: saturate(0.48) contrast(0.96) brightness(1.04);
+  margin-bottom: 5px;
+  font-family: var(--atlas-font-handwriting), "Segoe Print", "Bradley Hand", sans-serif;
+  font-size: clamp(9px, 0.9vw, 11px);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+}
+
+.monthBlock p,
+.rapidLog p {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 2px;
+  margin: 0 0 clamp(5px, 0.65vw, 8px);
+  font-family: var(--atlas-font-handwriting), "Segoe Print", "Bradley Hand", sans-serif;
+  font-size: clamp(8px, 0.82vw, 10.5px);
+  font-weight: 450;
+  line-height: 1.28;
+}
+
+.monthBlock p > span,
+.rapidLog p > span {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 8px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.rapidLog {
+  padding-top: clamp(14px, 1.65vw, 19px);
+}
+
+.rapidLog p {
+  margin-bottom: clamp(8px, 0.95vw, 11px);
+}
+
+.key {
+  position: absolute;
+  right: clamp(12px, 1.7vw, 18px);
+  bottom: 20px;
+  left: clamp(12px, 1.7vw, 18px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 7px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(23, 23, 23, 0.22);
+  color: #676767;
+  font-size: clamp(5.5px, 0.52vw, 6.5px);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.pageNumber {
+  position: absolute;
+  bottom: 7px;
+  left: 50%;
+  color: #8c8c8c;
+  font-size: 5.5px;
+  transform: translateX(-50%);
 }
 
 .credit {
@@ -45,13 +174,25 @@
 }
 
 @media (max-width: 900px) {
-  .heroPhoto {
-    width: min(650px, 100%);
+  .heroLayout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .heroCopyWide {
+    max-width: 650px !important;
+  }
+
+  .heroJournal {
+    width: min(520px, 100%);
   }
 }
 
 @media (max-width: 640px) {
-  .photoFrame {
+  .book {
     transform: none;
+  }
+
+  .journalPage {
+    padding-top: 17px;
   }
 }

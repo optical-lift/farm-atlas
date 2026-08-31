@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import photoStyles from "./hero-photo.module.css";
+import journalStyles from "./hero-photo.module.css";
 import styles from "./sales-page.module.css";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +25,6 @@ const compatibleSystems = [
   "Dropbox",
 ];
 
-const bulletJournalPhoto =
-  "https://images.unsplash.com/photo-1711030239034-d7dbf7f2794d?auto=format&fit=crop&w=1600&q=82";
-
 export default function AtlasWelcomePage() {
   return (
     <main className={styles.page} data-atlas-sales-page="true">
@@ -40,8 +37,8 @@ export default function AtlasWelcomePage() {
           </div>
         </nav>
 
-        <section className={styles.hero}>
-          <div className={styles.heroCopy}>
+        <section className={`${styles.hero} ${journalStyles.heroLayout}`}>
+          <div className={`${styles.heroCopy} ${journalStyles.heroCopyWide}`}>
             <p className={styles.eyebrow}>Connective intelligence for a real company</p>
             <h1>Atlas puts it back together.</h1>
             <p className={styles.heroLead}>Your company is already in there. It just lives in pieces.</p>
@@ -55,16 +52,58 @@ export default function AtlasWelcomePage() {
             </div>
           </div>
 
-          <figure className={`${styles.heroInstrument} ${photoStyles.heroPhoto}`}>
-            <div className={photoStyles.photoFrame}>
-              <img
-                className={photoStyles.photo}
-                src={bulletJournalPhoto}
-                alt="An open, handwritten bullet journal with planning marks and pens on the page"
-                loading="eager"
-              />
+          <figure
+            className={`${styles.heroInstrument} ${journalStyles.heroJournal}`}
+            aria-label="A minimalist Bullet Journal Method-style company notebook"
+          >
+            <div className={journalStyles.book}>
+              <section className={`${journalStyles.journalPage} ${journalStyles.leftPage}`}>
+                <header className={journalStyles.pageHeader}>
+                  <span>FUTURE LOG</span>
+                  <span>08–10</span>
+                </header>
+                <div className={journalStyles.monthBlock}>
+                  <strong>AUGUST</strong>
+                  <p><span>•</span> Thursday delivery window</p>
+                  <p><span>○</span> Team check-in · 10:30</p>
+                </div>
+                <div className={journalStyles.monthBlock}>
+                  <strong>SEPTEMBER</strong>
+                  <p><span>•</span> Fall purchasing review</p>
+                  <p><span>•</span> Protect planning block</p>
+                </div>
+                <div className={journalStyles.monthBlock}>
+                  <strong>OCTOBER</strong>
+                  <p><span>–</span> Production window ahead</p>
+                </div>
+                <span className={journalStyles.pageNumber}>18</span>
+              </section>
+
+              <section className={`${journalStyles.journalPage} ${journalStyles.rightPage}`}>
+                <header className={journalStyles.pageHeader}>
+                  <span>DAILY LOG</span>
+                  <span>31 SUN</span>
+                </header>
+                <div className={journalStyles.rapidLog}>
+                  <p><span>×</span> North beds complete</p>
+                  <p><span>•</span> Check Thursday route capacity</p>
+                  <p><span>○</span> Delivery moved to 11</p>
+                  <p><span>–</span> Thursday still fits</p>
+                  <p><span>›</span> Review fall purchasing</p>
+                </div>
+                <div className={journalStyles.key}>
+                  <span>• task</span>
+                  <span>○ event</span>
+                  <span>– note</span>
+                  <span>× complete</span>
+                  <span>› migrate</span>
+                </div>
+                <span className={journalStyles.pageNumber}>19</span>
+              </section>
             </div>
-            <figcaption className={photoStyles.credit}>Physical bullet journal photograph · Unsplash</figcaption>
+            <figcaption className={journalStyles.credit}>
+              A restrained rapid-logging journal inspired by the Ryder Carroll Bullet Journal Method.
+            </figcaption>
           </figure>
         </section>
 
