@@ -8,24 +8,25 @@ export const dynamic = "force-dynamic";
 
 export default async function OrganizationOnboardingPage() {
   const session = await getAtlasSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/login?next=%2Fonboarding%2Forganization");
 
   return (
     <main className={styles.page}>
       <section className={styles.sheet} aria-labelledby="organization-onboarding-title">
         <header className={styles.header}>
-          <p className={styles.eyebrow}>Add an organization</p>
-          <h1 id="organization-onboarding-title">What independent organization are you authorized to establish?</h1>
+          <p className={styles.eyebrow}>Organization Atlas</p>
+          <h1 id="organization-onboarding-title">What organization are you setting up Atlas for?</h1>
           <p>
-            The organization will have its own identity and custody in Atlas. You will be related to it
-            as a human member; it will not live inside your personal account.
+            Start the organization first. You are the human carrying setup, but Atlas will not infer that
+            you own it, work for it, or belong to it. Those relationships are separate facts and can be
+            added later when they are actually known.
           </p>
         </header>
 
         <OrganizationOnboardingClient />
 
         <footer className={styles.footer}>
-          <span>Acting as</span>
+          <span>Setup carried by</span>
           <strong>{session.displayName}</strong>
           {session.organizationMemberships.length ? (
             <span>{session.organizationMemberships.length} existing organization relationship(s) remain unchanged.</span>
