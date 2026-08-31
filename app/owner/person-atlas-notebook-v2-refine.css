@@ -1,0 +1,56 @@
+/* Deliberate correction after the first compact notebook pass:
+   keep the cramped Bullet Journal language, but restore a little writing-room
+   and keep page furniture in Atlas's structural typeface. */
+
+[data-atlas-person-notebook-v2="true"] > section {
+  padding-left: 17px !important;
+  padding-right: 17px !important;
+  padding-top: max(12px, env(safe-area-inset-top)) !important;
+  padding-bottom: max(9px, env(safe-area-inset-bottom)) !important;
+}
+
+[data-atlas-person-notebook-v2="true"] > section > header {
+  min-height: 42px !important;
+}
+
+[data-atlas-person-notebook-v2="true"] > section > div {
+  gap: 9px !important;
+}
+
+[data-atlas-person-notebook-v2="true"] > section > div > article {
+  padding-right: 2px !important;
+}
+
+[data-atlas-person-notebook-v2="true"] > section > div > article > header {
+  margin-top: 4px !important;
+  margin-bottom: 15px !important;
+}
+
+[data-atlas-person-notebook-v2="true"] > section > div > article > header h1 {
+  font-family: var(--font-atlas-structural), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 20px !important;
+  font-weight: 650 !important;
+  line-height: 1 !important;
+  letter-spacing: -.025em !important;
+}
+
+[data-atlas-person-notebook-v2="true"] > section > div > article > div {
+  gap: 12px !important;
+}
+
+[data-atlas-person-notebook-v2="true"] > section > div > article section {
+  gap: 4px !important;
+}
+
+[data-atlas-person-notebook-v2="true"] > section > div > article button {
+  min-height: 22px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+@media (min-width: 700px) {
+  [data-atlas-person-notebook-v2="true"] > section {
+    padding-left: 26px !important;
+    padding-right: 26px !important;
+  }
+}
