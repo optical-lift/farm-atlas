@@ -26,13 +26,18 @@ test("canonical stand-count tasks are recognized from governed task metadata", (
   assert.match(contract, /unit: \"plants\"/);
 });
 
-test("canonical truth observations use the same universal input spread as Design Atlas", () => {
+test("canonical truth observations use the shared Atlas input renderer boundary", () => {
   const detail = read("components/atlas/truth-observation-task-detail.tsx");
+  const renderer = read("components/atlas/input/AtlasInputRenderer.tsx");
+  const ownerShim = read("app/owner/PersonAtlasInputSpread.tsx");
   const canonical = read("components/atlas/canonical-assigned-task-detail.tsx");
 
-  assert.match(detail, /PersonAtlasInputSpread/);
+  assert.match(detail, /AtlasInputRenderer/);
   assert.match(detail, /createCanonicalWorkerTruthObservationContract/);
   assert.match(detail, /truth-observation-result/);
+  assert.match(renderer, /contract: AtlasInputContract/);
+  assert.match(renderer, /data-atlas-input-renderer=\"spread-v1\"/);
+  assert.match(ownerShim, /components\/atlas\/input\/AtlasInputRenderer/);
   assert.match(canonical, /isCanonicalWorkerTruthObservationTask/);
   assert.match(canonical, /TruthObservationTaskDetail/);
 });
