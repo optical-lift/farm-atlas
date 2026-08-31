@@ -26,7 +26,7 @@ const SECTIONS: PersonAtlasSection[] = [
         sentence: "Count living plants · ProCut Plum",
         state: "open",
         worksheet: {
-          kicker: "CROP CYCLE · BERRY WALK BED 3",
+          kicker: "CROP CYCLE · Berry Walk Bed 3",
           facts: [
             { label: "Input", value: "Whole-number living plant count" },
             { label: "Zero", value: "A valid observation when explicitly recorded" },
