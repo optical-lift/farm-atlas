@@ -202,7 +202,7 @@ export default function PersonAtlasInputSpread({
                       </button>
                     ))}
                   </div>
-                ) : null}
+                )}
               </div>
             );
           })}
