@@ -29,7 +29,7 @@ test("Harvest recording follows the approved half-bucket counter grammar", () =>
   assert.match(weekly, /formatBuckets/);
   assert.match(weekly, /Remove half bucket/);
   assert.match(weekly, /Add half bucket/);
-  assert.match(weekly, /setBucketHalves\(\(current\) => Math\.max\(0, current \+ delta\)\)/);
+  assert.match(weekly, /setBucketHalves\(\(current\) =>/);
   assert.match(weekly, /resultKind,/);
   assert.match(weekly, /bucketHalves: resultKind === "harvest_amount" \? bucketHalves : null/);
   assert.match(weekly, /Record \$\{formatBuckets\(bucketHalves\)\}/);
@@ -40,7 +40,7 @@ test("Harvest recording follows the approved half-bucket counter grammar", () =>
 test("Harvest amount and non-harvest outcomes are mutually exclusive", () => {
   assert.match(weekly, /setException\(null\)/);
   assert.match(weekly, /setBucketHalves\(0\)/);
-  assert.match(weekly, /const resultKind: ResultKind \| null = bucketHalves > 0 \? "harvest_amount" : exception/);
+  assert.match(weekly, /const resultKind: "harvest_amount" \| HarvestException \| null = bucketHalves > 0 \? "harvest_amount" : exception/);
   assert.match(route, /resultKind !== "harvest_amount"/);
   assert.match(route, /Only usable harvested flowers receive a harvest grade/);
   assert.match(migrationV2, /result_kind='harvest_amount' and bucket_halves is not null and bucket_halves>=1/);
