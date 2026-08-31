@@ -18,10 +18,31 @@ const contextualFrame = fs.readFileSync(
 );
 const proxy = fs.readFileSync(new URL("../lib/supabase/proxy.ts", import.meta.url), "utf8");
 
-test("public Atlas front door begins with Personal versus Organization Atlas", () => {
+test("public Atlas front door states the product and offers Personal versus Organization Atlas", () => {
+  assert.match(welcome, /Atlas puts it back together\./);
+  assert.match(welcome, /Your company is already in there\. It just lives in pieces\./);
+  assert.match(welcome, /Ready to map out your Atlas\?/);
   assert.match(welcome, /Personal Atlas/);
   assert.match(welcome, /Organization Atlas/);
-  assert.match(welcome, /What is getting an Atlas\?/);
+});
+
+test("public Atlas front door names supported official-API integration targets without replacing specialist systems", () => {
+  for (const system of [
+    "Google Workspace",
+    "Microsoft 365",
+    "QuickBooks",
+    "Slack",
+    "Shopify",
+    "Stripe",
+    "Salesforce",
+    "HubSpot",
+    "Square",
+    "Dropbox",
+  ]) {
+    assert.match(welcome, new RegExp(system.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(welcome, /Keep the specialist software/);
+  assert.match(welcome, /official APIs/);
 });
 
 test("Organization Atlas is explicitly pre-membership", () => {
