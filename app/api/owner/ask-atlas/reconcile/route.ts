@@ -166,12 +166,13 @@ async function buildEvidence(access: AtlasRoleAccess) {
     });
   });
 
-  if (dashboard.farm.id) {
+  const farmId = dashboard.farm.id;
+  if (farmId) {
     const projections = await Promise.all(
       dashboard.workerExecution.slice(0, 8).map(async (worker) => ({
         worker,
         projection: await readStoredWorkerWeekProjection(
-          dashboard.farm.id,
+          farmId,
           worker.membershipId,
           dashboard.generatedForDate,
           7,
