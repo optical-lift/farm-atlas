@@ -23,6 +23,7 @@ function copySessionCookies(source: NextResponse, target: NextResponse) {
 function isPublicPath(pathname: string) {
   return (
     pathname === "/login" ||
+    pathname === "/join" ||
     pathname === "/auth/confirm" ||
     pathname === "/auth/error" ||
     pathname === "/manifest.webmanifest" ||
