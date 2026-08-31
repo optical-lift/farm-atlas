@@ -1,3 +1,7 @@
+import {
+  createAtlasAuthorityHandoff,
+  type AtlasAuthorityHandoff,
+} from "@/lib/atlas/authority-handoff";
 import type { AtlasInputContract, AtlasInputResultEvent } from "@/lib/atlas/input-contract";
 
 export const SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT: AtlasInputContract = {
@@ -82,10 +86,24 @@ export type FlowerOrderFixtureAdjudication = {
   inventoryClaimRequired: true;
   inventoryCommitted: false;
   paymentStatus: "not_recorded";
+  handoff: AtlasAuthorityHandoff;
+};
+
+const BUYER_LABELS: Record<FlowerOrderFixtureBuyer, string> = {
+  ruth: "Ruth’s Flowers",
+  lindas: "Linda’s Flowers",
 };
 
 function nonnegativeQuantity(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0;
+}
+
+function sourceContextText(event: AtlasInputResultEvent, key: string) {
+  const value = event.sourceContext[key];
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`Flower-order result is missing source authority context: ${key}`);
+  }
+  return value.trim();
 }
 
 export function adjudicateFlowerOrderFixtureResult(
@@ -110,15 +128,58 @@ export function adjudicateFlowerOrderFixtureResult(
     throw new Error("Flower-order result contains no ordered items.");
   }
 
+  const totalItems = lineItems.reduce((sum, item) => sum + item.quantity, 0);
+  const inventoryAuthority = sourceContextText(event, "inventoryAuthority");
+  const paymentAuthority = sourceContextText(event, "paymentAuthority");
+  const fulfillmentJurisdiction = sourceContextText(event, "seat");
+
+  const handoff = createAtlasAuthorityHandoff(event, {
+    authorityClaims: [
+      {
+        id: "inventory-availability",
+        kind: "inventory_availability",
+        authority: inventoryAuthority,
+        state: "required",
+        payload: {
+          buyer,
+          lineItems,
+          totalItems,
+        },
+      },
+      {
+        id: "payment-status",
+        kind: "payment_status",
+        authority: paymentAuthority,
+        state: "not_recorded",
+        payload: {
+          buyer,
+        },
+      },
+    ],
+    institutionalWork: [
+      {
+        ledger: "company_work",
+        state: "open",
+        organizationRef: event.source.jurisdiction,
+        title: `Fulfill ${BUYER_LABELS[buyer]} flower order`,
+        instructions: `Prepare ${totalItems} ordered ${totalItems === 1 ? "item" : "items"} for Springfield distribution. Inventory availability remains with its own authority.`,
+        operationClass: "order_fulfillment",
+        jurisdictionKey: fulfillmentJurisdiction,
+        dependsOnAuthorityClaimIds: ["inventory-availability"],
+      },
+    ],
+  });
+
   return {
     state: "order_recorded",
     todayClaimSatisfied: true,
     buyer,
     lineItems,
-    totalItems: lineItems.reduce((sum, item) => sum + item.quantity, 0),
+    totalItems,
     fulfillmentRequired: true,
     inventoryClaimRequired: true,
     inventoryCommitted: false,
     paymentStatus: "not_recorded",
+    handoff,
   };
 }

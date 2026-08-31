@@ -134,6 +134,31 @@ test("recording an order creates fulfillment demand without fabricating inventor
   assert.doesNotMatch(order, /inventoryCommitted: true/);
 });
 
+test("order consequences cross authorities through a generic handoff instead of hidden sales mutations", () => {
+  const handoff = read("lib/atlas/authority-handoff.ts");
+  const order = read("lib/atlas/input-contracts/flower-order-fixture.ts");
+  const spread = read("app/owner/PersonAtlasInputSpread.tsx");
+
+  assert.match(handoff, /AtlasAuthorityClaimState = \"required\" \| \"not_recorded\"/);
+  assert.match(handoff, /ledger: \"company_work\"/);
+  assert.match(handoff, /createAtlasAuthorityHandoff/);
+  assert.match(handoff, /does not resolve the claim, mutate the target ledger/);
+  assert.doesNotMatch(handoff, /Ruth|Linda|sunflower|Stripe|sellable_inventory/i);
+
+  assert.match(order, /createAtlasAuthorityHandoff\(event/);
+  assert.match(order, /kind: \"inventory_availability\"/);
+  assert.match(order, /authority: inventoryAuthority/);
+  assert.match(order, /state: \"required\"/);
+  assert.match(order, /kind: \"payment_status\"/);
+  assert.match(order, /authority: paymentAuthority/);
+  assert.match(order, /state: \"not_recorded\"/);
+  assert.match(order, /ledger: \"company_work\"/);
+  assert.match(order, /state: \"open\"/);
+  assert.match(order, /operationClass: \"order_fulfillment\"/);
+  assert.match(order, /dependsOnAuthorityClaimIds: \[\"inventory-availability\"\]/);
+  assert.doesNotMatch(spread, /authority-handoff|inventory_availability|payment_status|company_work/);
+});
+
 test("Katie's one-line flower-order thought opens the generic source-contracted instrument", () => {
   const katie = read("app/owner/design-atlas/KatieOrderFixture.tsx");
   const route = read("app/owner/input/flower-order/page.tsx");
