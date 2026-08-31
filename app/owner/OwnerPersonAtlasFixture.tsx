@@ -165,7 +165,7 @@ const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
 
 const SOURCE_LINKS: Record<string, string> = {
   "harvest-white-lite": "/owner/input/harvest",
-  "household-zone": "/owner/household?focus=zone",
+  "household-zone": "/owner/input/household-zone",
 };
 
 type OwnerPersonAtlasFixtureProps = {
