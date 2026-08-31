@@ -26,5 +26,9 @@ test("the offline fallback uses current Atlas navigation language without advert
 });
 
 test("the global dock stays absent from the dedicated offline fallback", () => {
-  assert.match(frame, /const HIDDEN_PATHS = \["\/login", "\/auth", "\/offline"\]/);
+  assert.match(frame, /const HIDDEN_PATHS = \[/);
+  assert.match(frame, /"\/login"/);
+  assert.match(frame, /"\/auth"/);
+  assert.match(frame, /"\/offline"/);
+  assert.match(frame, /if \(hidden\) return null/);
 });
