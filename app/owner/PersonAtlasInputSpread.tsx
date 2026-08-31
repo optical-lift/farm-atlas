@@ -18,11 +18,22 @@ import {
 
 import styles from "./person-atlas-input-spread.module.css";
 
+type AtlasInputSubmission = {
+  endpoint: string;
+  body?: Record<string, string | number | boolean | null>;
+};
+
 type PersonAtlasInputSpreadProps = {
   contract: AtlasInputContract;
   returnHref?: string;
   returnLabel?: string;
   recordLabel?: string;
+  submission?: AtlasInputSubmission;
+};
+
+type SubmissionResponse = {
+  ok?: boolean;
+  error?: string;
 };
 
 function stepPrecision(step: number) {
@@ -54,12 +65,15 @@ export default function PersonAtlasInputSpread({
   returnHref = "/owner",
   returnLabel = "today",
   recordLabel = "record",
+  submission,
 }: PersonAtlasInputSpreadProps) {
   const rows = useMemo(() => quantityFields(contract), [contract]);
   const choices = useMemo(() => choiceFields(contract), [contract]);
   const [values, setValues] = useState<AtlasInputValues>(() => initialAtlasInputValues(contract));
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [recordedEvent, setRecordedEvent] = useState<AtlasInputResultEvent | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const total = useMemo(() => quantityTotal(contract, values), [contract, values]);
   const validation = useMemo(() => validateAtlasInput(contract, values), [contract, values]);
@@ -71,8 +85,13 @@ export default function PersonAtlasInputSpread({
   const totalUnitLabel = total === 1 && totalUnitSingular ? totalUnitSingular : totalUnit;
   const recorded = Boolean(recordedEvent);
 
-  const changeValue = (row: AtlasQuantityInputField, direction: -1 | 1) => {
+  const clearRecordedState = () => {
     setRecordedEvent(null);
+    setSubmitError(null);
+  };
+
+  const changeValue = (row: AtlasQuantityInputField, direction: -1 | 1) => {
+    clearRecordedState();
     setDrafts((current) => {
       const next = { ...current };
       delete next[row.id];
@@ -87,11 +106,13 @@ export default function PersonAtlasInputSpread({
   };
 
   const typeValue = (row: AtlasQuantityInputField, rawValue: string) => {
-    const cleaned = rawValue.replace(",", ".").replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
-    setRecordedEvent(null);
+    const cleaned = row.wholeNumber
+      ? rawValue.replace(/[^0-9]/g, "")
+      : rawValue.replace(",", ".").replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+    clearRecordedState();
     setDrafts((current) => ({ ...current, [row.id]: cleaned }));
 
-    const parsed = Number.parseFloat(cleaned);
+    const parsed = row.wholeNumber ? Number.parseInt(cleaned, 10) : Number.parseFloat(cleaned);
     if (!Number.isFinite(parsed)) return;
     setValues((current) => ({ ...current, [row.id]: Math.max(row.minimum ?? 0, parsed) }));
   };
@@ -113,9 +134,36 @@ export default function PersonAtlasInputSpread({
     });
   };
 
-  const record = () => {
-    if (!validation.ok) return;
-    setRecordedEvent(createAtlasInputResultEvent(contract, values));
+  const record = async () => {
+    if (!validation.ok || submitting) return;
+    const event = createAtlasInputResultEvent(contract, values);
+    setSubmitError(null);
+
+    if (submission) {
+      setSubmitting(true);
+      try {
+        const response = await fetch(submission.endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...(submission.body ?? {}),
+            contractId: event.contractId,
+            values: event.values,
+          }),
+        });
+        const payload = await response.json().catch(() => ({})) as SubmissionResponse;
+        if (!response.ok || payload.ok === false) {
+          throw new Error(payload.error || "Atlas could not record this input.");
+        }
+      } catch (error) {
+        setSubmitError(error instanceof Error ? error.message : "Atlas could not record this input.");
+        return;
+      } finally {
+        setSubmitting(false);
+      }
+    }
+
+    setRecordedEvent(event);
   };
 
   return (
@@ -125,6 +173,7 @@ export default function PersonAtlasInputSpread({
       data-atlas-input-spread="true"
       data-atlas-input-contract={contract.id}
       data-atlas-result-event-type={contract.resultEventType}
+      data-atlas-input-persistence={contract.persistence}
     >
       <section className={`${styles.page} ${styles.dotPage}`} aria-label={`${contract.kind} input spread`}>
         <header className={styles.topChrome}>
@@ -154,16 +203,17 @@ export default function PersonAtlasInputSpread({
                     <strong className={styles.recordedValue}>{hasStoredValue ? formatValue(value, step) : "not recorded"}</strong>
                   ) : (
                     <div className={styles.stepper}>
-                      <button type="button" onClick={() => changeValue(row, -1)} aria-label={`Subtract ${step} from ${row.label}`}>−</button>
+                      <button type="button" disabled={submitting} onClick={() => changeValue(row, -1)} aria-label={`Subtract ${step} from ${row.label}`}>−</button>
                       <input
                         id={`atlas-input-${row.id}`}
-                        inputMode={step < 1 ? "decimal" : "numeric"}
+                        inputMode={row.wholeNumber || step >= 1 ? "numeric" : "decimal"}
                         value={drafts[row.id] ?? (hasStoredValue ? String(value) : "")}
                         onChange={(event) => typeValue(row, event.target.value)}
                         onBlur={() => settleTypedValue(row)}
+                        disabled={submitting}
                         aria-label={`${row.label} quantity`}
                       />
-                      <button type="button" onClick={() => changeValue(row, 1)} aria-label={`Add ${step} to ${row.label}`}>+</button>
+                      <button type="button" disabled={submitting} onClick={() => changeValue(row, 1)} aria-label={`Add ${step} to ${row.label}`}>+</button>
                     </div>
                   )}
                 </div>
@@ -192,9 +242,10 @@ export default function PersonAtlasInputSpread({
                       <button
                         type="button"
                         key={option.value}
+                        disabled={submitting}
                         data-selected={selectedValue === option.value ? "true" : "false"}
                         onClick={() => {
-                          setRecordedEvent(null);
+                          clearRecordedState();
                           setValues((current) => ({ ...current, [choice.id]: option.value }));
                         }}
                       >
@@ -207,16 +258,20 @@ export default function PersonAtlasInputSpread({
             );
           })}
 
+          {submitError ? <p className={styles.submitError} role="alert">{submitError}</p> : null}
+
           <div className={styles.actions}>
             {recorded ? (
               <>
-                <button type="button" className={styles.secondaryAction} onClick={() => setRecordedEvent(null)}>edit</button>
+                {recordedEvent?.persistence === "fixture_only" ? (
+                  <button type="button" className={styles.secondaryAction} onClick={() => setRecordedEvent(null)}>edit</button>
+                ) : null}
                 <Link href={returnHref} className={styles.recordedMark}>
                   {recordedEvent?.persistence === "fixture_only" ? "recorded in fixture" : "recorded"} · back to {returnLabel}
                 </Link>
               </>
             ) : (
-              <button type="button" className={styles.recordAction} disabled={!validation.ok} onClick={record}>{recordLabel}</button>
+              <button type="button" className={styles.recordAction} disabled={!validation.ok || submitting} onClick={() => void record()}>{submitting ? "recording…" : recordLabel}</button>
             )}
           </div>
         </article>
