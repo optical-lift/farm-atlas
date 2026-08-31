@@ -27,8 +27,8 @@ export const SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT: AtlasInputContract = {
     },
     {
       primitive: "quantity",
-      id: "sunflowerBunches",
-      label: "Sunflower bunches",
+      id: "sunflowerBundles",
+      label: "Sunflower bundles",
       unit: "sale_unit",
       displayUnit: "items",
       displayUnitSingular: "item",
@@ -54,7 +54,7 @@ export const SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT: AtlasInputContract = {
     },
     {
       kind: "minimum_quantity_total",
-      fieldIds: ["sunflowerBunches", "samples"],
+      fieldIds: ["sunflowerBundles", "samples"],
       minimum: 1,
       message: "Record at least one ordered item.",
     },
@@ -72,7 +72,7 @@ export const SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT: AtlasInputContract = {
 
 export type FlowerOrderFixtureBuyer = "ruth" | "lindas";
 export type FlowerOrderFixtureLineItem = {
-  item: "sunflower_bunch" | "sample";
+  item: "sunflower_bundle" | "sample";
   quantity: number;
 };
 
@@ -118,10 +118,10 @@ export function adjudicateFlowerOrderFixtureResult(
     throw new Error("Flower-order result is missing a confirmed fixture buyer.");
   }
 
-  const bunches = nonnegativeQuantity(event.values.sunflowerBunches);
+  const bundles = nonnegativeQuantity(event.values.sunflowerBundles);
   const samples = nonnegativeQuantity(event.values.samples);
   const lineItems: FlowerOrderFixtureLineItem[] = [];
-  if (bunches > 0) lineItems.push({ item: "sunflower_bunch", quantity: bunches });
+  if (bundles > 0) lineItems.push({ item: "sunflower_bundle", quantity: bundles });
   if (samples > 0) lineItems.push({ item: "sample", quantity: samples });
 
   if (!lineItems.length) {
