@@ -98,8 +98,11 @@ export default function PersonAtlasInputSpread({
 
   const settleTypedValue = (row: AtlasQuantityInputField) => {
     const step = row.step && row.step > 0 ? row.step : 1;
+    const draftValue = drafts[row.id];
     setValues((current) => {
-      const currentValue = typeof current[row.id] === "number" ? current[row.id] as number : 0;
+      const storedValue = current[row.id];
+      if (row.startUnset && storedValue === null && (!draftValue || !draftValue.trim())) return current;
+      const currentValue = typeof storedValue === "number" ? storedValue : 0;
       const next = normalizeValue(Math.max(row.minimum ?? 0, currentValue), step);
       return { ...current, [row.id]: next };
     });
@@ -141,19 +144,21 @@ export default function PersonAtlasInputSpread({
             {rows.map((row) => {
               const step = row.step && row.step > 0 ? row.step : 1;
               const storedValue = values[row.id];
-              const value = typeof storedValue === "number" ? storedValue : 0;
+              const numericValue = typeof storedValue === "number" && Number.isFinite(storedValue) ? storedValue : null;
+              const hasStoredValue = numericValue !== null;
+              const value = numericValue ?? 0;
               return (
                 <div className={styles.inputRow} key={row.id}>
                   <label htmlFor={`atlas-input-${row.id}`}>{row.label}</label>
                   {recorded ? (
-                    <strong className={styles.recordedValue}>{formatValue(value, step)}</strong>
+                    <strong className={styles.recordedValue}>{hasStoredValue ? formatValue(value, step) : "not recorded"}</strong>
                   ) : (
                     <div className={styles.stepper}>
                       <button type="button" onClick={() => changeValue(row, -1)} aria-label={`Subtract ${step} from ${row.label}`}>−</button>
                       <input
                         id={`atlas-input-${row.id}`}
                         inputMode={step < 1 ? "decimal" : "numeric"}
-                        value={drafts[row.id] ?? String(value)}
+                        value={drafts[row.id] ?? (hasStoredValue ? String(value) : "")}
                         onChange={(event) => typeValue(row, event.target.value)}
                         onBlur={() => settleTypedValue(row)}
                         aria-label={`${row.label} quantity`}
@@ -166,7 +171,7 @@ export default function PersonAtlasInputSpread({
             })}
           </div>
 
-          {rows.length ? (
+          {rows.length > 1 ? (
             <div className={styles.totalRow}>
               <span>total</span>
               <strong>{formatValue(total, totalStep)} <small>{totalUnitLabel}</small></strong>
