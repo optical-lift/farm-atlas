@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import HarvestedOutputSection, { type HarvestedResponse } from "@/app/harvest/HarvestedOutputSection";
 import AtlasMoreDestinationList from "@/components/atlas/shell/AtlasMoreDestinationList";
@@ -25,6 +25,44 @@ const HARVEST_FIXTURE: HarvestedResponse = {
   }],
 };
 
+type BuyerKey = "mama-jeans-east" | "zimmermans" | "ruths";
+
+type BuyerFixture = {
+  key: BuyerKey;
+  name: string;
+  location: string;
+  state: string;
+  detail: string;
+  next: string;
+};
+
+const BUYERS: BuyerFixture[] = [
+  {
+    key: "mama-jeans-east",
+    name: "Mama Jean's · East",
+    location: "Springfield",
+    state: "Prospect",
+    detail: "Marshall contacted East location · Katie follow-up",
+    next: "Follow up",
+  },
+  {
+    key: "zimmermans",
+    name: "Zimmerman's",
+    location: "Springfield",
+    state: "Warm",
+    detail: "Kendall is taking the 5-stem offer to the owner",
+    next: "Await owner",
+  },
+  {
+    key: "ruths",
+    name: "Ruth's Flowers",
+    location: "Springfield",
+    state: "Waiting",
+    detail: "Sue said she would call back Monday",
+    next: "Wait",
+  },
+];
+
 function Custody({ state, children }: { state: "canonical" | "future"; children: ReactNode }) {
   return (
     <div className={styles.custody} data-surface-custody={state}>
@@ -36,6 +74,170 @@ function Custody({ state, children }: { state: "canonical" | "future"; children:
 
 function InventoryLine({ title, detail, quantity }: { title: string; detail: string; quantity: string }) {
   return <article className={styles.inventoryLine}><div><strong>{title}</strong><span>{detail}</span></div><b>{quantity}</b></article>;
+}
+
+function BuyerRow({ buyer, onOpen }: { buyer: BuyerFixture; onOpen: (buyer: BuyerFixture) => void }) {
+  return (
+    <button type="button" className={styles.buyerRow} onClick={() => onOpen(buyer)}>
+      <div>
+        <strong>{buyer.name}</strong>
+        <span>{buyer.detail}</span>
+      </div>
+      <span className={styles.buyerRowState}>{buyer.state}</span>
+      <b aria-hidden="true">›</b>
+    </button>
+  );
+}
+
+function RelationshipEvent({
+  date,
+  actor,
+  channel,
+  children,
+}: {
+  date: string;
+  actor: string;
+  channel: string;
+  children: ReactNode;
+}) {
+  return (
+    <article className={styles.relationshipEvent}>
+      <div className={styles.relationshipEventMeta}>
+        <span>{date}</span>
+        <b>{actor}</b>
+        <em>{channel}</em>
+      </div>
+      <p>{children}</p>
+    </article>
+  );
+}
+
+function BuyerProfileSurface({ buyer, onBack }: { buyer: BuyerFixture; onBack: () => void }) {
+  const isMamaJeans = buyer.key === "mama-jeans-east";
+  const isZimmermans = buyer.key === "zimmermans";
+
+  return (
+    <div className={styles.stack} data-atlas-counterparty-profile="future-canonical-v1">
+      <button type="button" className={styles.profileBack} onClick={onBack}>‹ Buyer Desk</button>
+
+      <section className={styles.profileHeader}>
+        <span>BUYER PROFILE</span>
+        <h1>{buyer.name}</h1>
+        <p>{buyer.location} · {buyer.state} relationship</p>
+        <div className={styles.profileTags}>
+          <span>Buyer</span>
+          <span>Springfield distribution</span>
+          <span>Assigned to Katie</span>
+        </div>
+      </section>
+
+      <Custody state="future">Fixture-only profile. It assembles company relationship memory, governed inventory, pricing, and open movement without creating the underlying architecture yet.</Custody>
+
+      <AtlasMetricStrip ariaLabel="Buyer profile fixture summary">
+        <span><b>{buyer.state}</b> relationship</span>
+        <span><b>Katie</b> current owner</span>
+        <span><b>Aug 31</b> last touch</span>
+      </AtlasMetricStrip>
+
+      <AtlasCard as="section" className={styles.roleCard} ariaLabelledBy="buyer-now-title">
+        <AtlasSectionHeading kicker="Current thread" title={buyer.next} id="buyer-now-title" count="Open" />
+        {isMamaJeans ? (
+          <div className={styles.threadLead}>
+            <AtlasStateBadge state="attention">NEEDS OUTCOME</AtlasStateBadge>
+            <div>
+              <strong>Marshall already contacted the East location.</strong>
+              <span>The contact outcome, buyer name, and interest level are not captured yet. Katie should inherit the contact fact without Atlas inventing the missing result.</span>
+            </div>
+          </div>
+        ) : isZimmermans ? (
+          <div className={styles.threadLead}>
+            <AtlasStateBadge state="review">WAITING</AtlasStateBadge>
+            <div>
+              <strong>Kendall is taking the offer to the owner.</strong>
+              <span>Do not turn this into a new sales task until the agreed waiting state has had time to resolve.</span>
+            </div>
+          </div>
+        ) : (
+          <div className={styles.threadLead}>
+            <AtlasStateBadge state="review">WAITING</AtlasStateBadge>
+            <div>
+              <strong>Sue said she would call back Monday.</strong>
+              <span>The relationship is waiting on the buyer, not on Katie. Atlas should surface the thread for awareness without mislabeling it as overdue work.</span>
+            </div>
+          </div>
+        )}
+        <div className={styles.threadFacts}>
+          <span><b>Responsible</b> Katie</span>
+          <span><b>Waiting on</b> {isMamaJeans ? "Katie follow-up" : "Buyer"}</span>
+          <span><b>Inventory claim</b> None</span>
+        </div>
+      </AtlasCard>
+
+      <AtlasCard as="section" className={styles.roleCard} ariaLabelledBy="buyer-offer-title">
+        <AtlasSectionHeading kicker="Offer + capacity" title="What Katie can sell" id="buyer-offer-title" count="27 Ready" />
+        <div className={styles.offerBand}>
+          <div>
+            <span>Current wholesale offer</span>
+            <strong>5-stem bouquet</strong>
+          </div>
+          <b>$4</b>
+          <em>Suggested retail $7–8</em>
+        </div>
+        <InventoryLine title="ProCut Orange sunflower" detail="5-stem bunches · unclaimed Ready inventory" quantity="9" />
+        <InventoryLine title="Benary's Giant zinnia" detail="bunches · unclaimed Ready inventory" quantity="12" />
+        <InventoryLine title="Mixed posies" detail="prepared this morning · unclaimed Ready inventory" quantity="6" />
+        <p className={styles.authorityNote}>Inventory is visible here, not owned here. Nothing is reserved until a buyer actually requests it and the commercial claim is recorded.</p>
+      </AtlasCard>
+
+      <AtlasCard as="section" className={styles.roleCard} ariaLabelledBy="buyer-moving-title">
+        <AtlasSectionHeading kicker="Moving pieces" title="What is still unresolved" id="buyer-moving-title" count="3" />
+        <div className={styles.movingList}>
+          <article>
+            <AtlasStateBadge state={isMamaJeans ? "attention" : "review"}>{isMamaJeans ? "GAP" : "STATE"}</AtlasStateBadge>
+            <div><strong>{isMamaJeans ? "Prior call needs a disposition" : "Buyer response is still pending"}</strong><span>{isMamaJeans ? "The company knows a call happened, but not what happened in it." : "The thread should preserve who owes the next movement."}</span></div>
+          </article>
+          <article>
+            <AtlasStateBadge state="ready">OFFER</AtlasStateBadge>
+            <div><strong>$4 / 5-stem bouquet</strong><span>Current Springfield wholesale offer · suggested resale $7–8.</span></div>
+          </article>
+          <article>
+            <AtlasStateBadge state="ready">SUPPLY</AtlasStateBadge>
+            <div><strong>27 Ready units remain unclaimed</strong><span>Discussable now; future field supply remains non-guaranteed until it becomes Ready.</span></div>
+          </article>
+        </div>
+      </AtlasCard>
+
+      <AtlasCard as="section" className={styles.roleCard} ariaLabelledBy="buyer-memory-title">
+        <AtlasSectionHeading kicker="Company memory" title="Relationship history" id="buyer-memory-title" count="Across Atlas" />
+        <div className={styles.relationshipTimeline}>
+          {isMamaJeans ? (
+            <>
+              <RelationshipEvent date="Aug 31" actor="Marshall" channel="Phone">Called Mama Jean's East location. No disposition is recorded in this fixture.</RelationshipEvent>
+              <RelationshipEvent date="Aug 31" actor="Principal" channel="Assignment">Springfield follow-up moved to Katie so the relationship can continue without requiring Marshall's account or memory.</RelationshipEvent>
+            </>
+          ) : isZimmermans ? (
+            <>
+              <RelationshipEvent date="Aug 30" actor="Marshall" channel="Phone">Spoke with Kendall, the manager. Offered 5-stem bouquets at $4 wholesale for resale around $7–8.</RelationshipEvent>
+              <RelationshipEvent date="Aug 30" actor="Kendall" channel="Outcome">Said he would talk to the owner.</RelationshipEvent>
+            </>
+          ) : (
+            <RelationshipEvent date="Aug 30" actor="Marshall" channel="Phone">Sue was not around. Store said Sue would call back Monday.</RelationshipEvent>
+          )}
+        </div>
+        <p className={styles.authorityNote}>No order, reservation, fulfillment, or payment is implied by relationship history.</p>
+      </AtlasCard>
+
+      <AtlasCard as="section" className={styles.roleCard} ariaLabelledBy="buyer-contact-title">
+        <AtlasSectionHeading kicker="Identity" title="Buyer details" id="buyer-contact-title" />
+        <div className={styles.identityGrid}>
+          <span><b>Business</b>{buyer.name}</span>
+          <span><b>Market</b>Springfield</span>
+          <span><b>Contact</b>{isZimmermans ? "Kendall · manager" : isMamaJeans ? "Not captured" : "Sue"}</span>
+          <span><b>Relationship owner</b>Katie</span>
+        </div>
+      </AtlasCard>
+    </div>
+  );
 }
 
 export function AnnaHarvestSurface() {
@@ -93,16 +295,16 @@ export function KatieCommercialHome() {
       <AtlasMetricStrip ariaLabel="Buyer Desk fixture summary">
         <span><b>27</b> Ready units</span>
         <span><b>3</b> commitments</span>
-        <span><b>2</b> follow-ups</span>
+        <span><b>3</b> buyer threads</span>
       </AtlasMetricStrip>
       <AtlasCard as="section" className={styles.roleCard} ariaLabelledBy="buyer-pressure-title">
         <AtlasSectionHeading kicker="Buyer pressure" title="What needs movement" id="buyer-pressure-title" count="3" />
         <AtlasMoreDestinationList
           ariaLabel="Commercial fixture pressure"
           destinations={[
-            { label: "Ruth's Flowers", detail: "Warm relationship · sample follow-up today", href: "/owner/design-atlas" },
-            { label: "House of Flowers", detail: "Confirm 3-bunch Friday order", href: "/owner/design-atlas" },
-            { label: "Friday route", detail: "3 stops · 6 bunches still in route custody", href: "/owner/design-atlas" },
+            { label: "Mama Jean's · East", detail: "Marshall contacted · Katie follow-up needs outcome", href: "/owner/design-atlas" },
+            { label: "Zimmerman's", detail: "Kendall taking offer to owner · waiting", href: "/owner/design-atlas" },
+            { label: "Ruth's Flowers", detail: "Sue said she would call back Monday · waiting on buyer", href: "/owner/design-atlas" },
           ]}
           onNavigate={() => undefined}
         />
@@ -112,6 +314,12 @@ export function KatieCommercialHome() {
 }
 
 export function KatieBuyerDeskSurface() {
+  const [selectedBuyer, setSelectedBuyer] = useState<BuyerFixture | null>(null);
+
+  if (selectedBuyer) {
+    return <BuyerProfileSurface buyer={selectedBuyer} onBack={() => setSelectedBuyer(null)} />;
+  }
+
   return (
     <div className={styles.stack} data-atlas-buyer-desk="future-canonical-v1">
       <section className="atlas-more-page__intro">
@@ -129,16 +337,10 @@ export function KatieBuyerDeskSurface() {
       </AtlasCard>
 
       <AtlasCard as="section" className={styles.roleCard} ariaLabelledBy="buyers-title">
-        <AtlasSectionHeading kicker="Relationships" title="Buyers" id="buyers-title" count="3 active" />
-        <AtlasMoreDestinationList
-          ariaLabel="Buyer relationship fixture"
-          destinations={[
-            { label: "Ruth's Flowers", detail: "Warm · last contact this week · follow up today", href: "/owner/design-atlas" },
-            { label: "House of Flowers", detail: "Order pending · 3 sunflower bunches", href: "/owner/design-atlas" },
-            { label: "Little Clay House", detail: "Standing delivery relationship · next handoff scheduled", href: "/owner/design-atlas" },
-          ]}
-          onNavigate={() => undefined}
-        />
+        <AtlasSectionHeading kicker="Relationships" title="Buyers" id="buyers-title" count={`${BUYERS.length} active`} />
+        <div className={styles.buyerList}>
+          {BUYERS.map((buyer) => <BuyerRow buyer={buyer} onOpen={setSelectedBuyer} key={buyer.key} />)}
+        </div>
       </AtlasCard>
 
       <AtlasCard as="section" className={styles.roleCard} ariaLabelledBy="commitments-title">
