@@ -46,7 +46,12 @@ test("weekly Harvest rows come from canonical crop-cycle truth rather than hardc
   assert.match(harvest, /row\.zoneLabel/);
   assert.match(harvest, /row\.objectLabel/);
   assert.match(harvest, /row\.cropLabel/);
-  assert.match(harvestRoute, /weekly_harvest_task_state_for_member_v1/);
+  assert.match(harvestRoute, /weekly_harvest_task_state_for_member_v2/);
+  assert.match(harvestRoute, /record_weekly_harvest_row_for_member_v3/);
+  assert.match(harvestRoute, /florist_grade/);
+  assert.match(harvestRoute, /event_grade/);
+  assert.match(harvestRoute, /crop_loss/);
+  assert.doesNotMatch(harvestRoute, /record_weekly_harvest_row_for_member_v2/);
   assert.match(harvestMigration, /weekly_harvest_candidate_cycles_v1/);
   assert.match(harvestMigration, /crop_rows_derived_from_domain_truth/);
   assert.doesNotMatch(harvest, /childTasks\.map|parent_task_id/);

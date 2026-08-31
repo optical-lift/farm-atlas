@@ -287,6 +287,31 @@ export default function AtlasInputRenderer({
                 );
               }
 
+              if (field.primitive === "date") {
+                const dateValue = typeof values[field.id] === "string" ? values[field.id] as string : "";
+                return (
+                  <div className={styles.textRow} key={field.id}>
+                    <label htmlFor={`atlas-input-${field.id}`}>{field.label}</label>
+                    {recorded ? (
+                      <strong className={styles.recordedText}>{dateValue || "not recorded"}</strong>
+                    ) : (
+                      <input
+                        id={`atlas-input-${field.id}`}
+                        type="date"
+                        min={field.minimum}
+                        max={field.maximum}
+                        value={dateValue}
+                        disabled={submitting}
+                        onChange={(event) => {
+                          clearRecordedState();
+                          setValues((current) => ({ ...current, [field.id]: event.target.value }));
+                        }}
+                      />
+                    )}
+                  </div>
+                );
+              }
+
               const choice = field;
               const selectedValue = typeof values[choice.id] === "string" ? values[choice.id] as string : "";
               const selectedChoice = choice.options.find((option) => option.value === selectedValue) ?? null;
