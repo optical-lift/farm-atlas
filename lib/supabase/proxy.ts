@@ -60,6 +60,7 @@ function needsAtlasFarmMembership(pathname: string) {
   return (
     pathname.startsWith("/api/atlas/") &&
     !pathname.startsWith("/api/atlas/auth/") &&
+    !pathname.startsWith("/api/atlas/organizations/") &&
     !needsAtlasPortfolioMembership(pathname)
   );
 }
