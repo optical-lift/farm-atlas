@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const portal = await readFile(new URL("../app/owner/design-atlas/CanonicalAtlasPortal.tsx", import.meta.url), "utf8");
+const buyerProfile = await readFile(new URL("../app/owner/design-atlas/KatieBuyerProfileFixture.tsx", import.meta.url), "utf8");
 const homeFixture = await readFile(new URL("../app/owner/design-atlas/DesignAtlasCanonicalHome.tsx", import.meta.url), "utf8");
 const principalFixture = await readFile(new URL("../app/owner/design-atlas/DesignAtlasPrincipal.tsx", import.meta.url), "utf8");
 const managerFixture = await readFile(new URL("../app/owner/design-atlas/DesignAtlasManagerDay.tsx", import.meta.url), "utf8");
@@ -79,7 +80,7 @@ test("Design Atlas preserves the governed future Farm Clock separately from ship
   assert.match(futureClock, /CLOCK OWNS THE HANDS/);
   assert.match(futureClock, /REALITY REFLOWS QUIETLY/);
   assert.match(futureClock, /CONFLICT EARNS UI/);
-  assert.match(futureClock, /carried, rescheduled, expired, or sent to management/);
+  assert.match(futureClock, /carried, rescheduled, expired, held, or sent to management/);
   assert.match(futureClock, /data-live-data-binding="none"/);
   assert.match(futureClock, /data-mutation-capability="none"/);
 });
@@ -88,6 +89,27 @@ test("Design Atlas Harvest uses a canonical destination component, not a Harvest
   assert.match(portal, /<HarvestedOutputSection fixtureOnly fixtureData=\{HARVEST_FIXTURE\}/);
   assert.match(harvest, /data-atlas-harvested|atlas-harvested/);
   assert.doesNotMatch(portal, /HarvestCardSpecimen/);
+});
+
+test("Katie Buyer Dock mounts a fixture-only reusable buyer profile specimen", () => {
+  assert.match(portal, /KatieBuyerProfileFixture/);
+  assert.match(portal, /katieTab === "buyer"/);
+  assert.match(buyerProfile, /data-atlas-counterparty-profile="future-canonical-v1"/);
+  assert.match(buyerProfile, /Mama Jean's · East/);
+  assert.match(buyerProfile, /Marshall/);
+  assert.match(buyerProfile, /Assigned to Katie/);
+  assert.match(buyerProfile, /Current wholesale offer/);
+  assert.match(buyerProfile, /\$4/);
+  assert.match(buyerProfile, /Suggested retail \$7–8/);
+  assert.match(buyerProfile, /What Katie can sell/);
+  assert.match(buyerProfile, /MOVING PIECES/);
+  assert.match(buyerProfile, /Relationship history/);
+  assert.match(buyerProfile, /Across Atlas/);
+  assert.match(buyerProfile, /Inventory is visible here, not owned here/);
+  assert.match(buyerProfile, /No order, reservation, fulfillment, or payment is implied/);
+  assert.match(buyerProfile, /data-live-data-binding="none"/);
+  assert.match(buyerProfile, /data-mutation-capability="none"/);
+  assert.doesNotMatch(buyerProfile, /fetch\(/);
 });
 
 test("Workshop presents governed future Clock, current production Clock, and earlier studies in that order", () => {
