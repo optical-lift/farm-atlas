@@ -17,6 +17,7 @@ export type AtlasQuantityInputField = {
   step?: number;
   minimum?: number;
   initialValue?: number;
+  startUnset?: boolean;
   inputMode?: "normal" | "blind_measurement";
 };
 
@@ -81,7 +82,11 @@ export type AtlasInputResultEvent = {
 export function initialAtlasInputValues(contract: AtlasInputContract): AtlasInputValues {
   return Object.fromEntries(contract.fields.map((field) => [
     field.id,
-    field.primitive === "quantity" ? field.initialValue ?? 0 : field.initialValue ?? "",
+    field.primitive === "quantity"
+      ? field.startUnset
+        ? null
+        : field.initialValue ?? 0
+      : field.initialValue ?? "",
   ]));
 }
 
