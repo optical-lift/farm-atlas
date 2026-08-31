@@ -27,7 +27,7 @@ test("the notebook uses compact rapid-log marks and a vertical quiet menu", () =
   assert.match(notebook, /return "×"/);
   assert.match(notebook, /return ">"/);
   assert.match(notebook, /return "•"/);
-  assert.match(notebook, />\* •<\/span>/);
+  assert.match(notebook, /current \? "\* •" : symbolForLine\(line\)/);
   assert.match(notebook, />⋮<\/button>/);
   assert.match(styles, /\.moreButton[\s\S]*color: #929292/);
   assert.match(styles, /\.taskLine strong[\s\S]*font-size: 12\.5px/);
