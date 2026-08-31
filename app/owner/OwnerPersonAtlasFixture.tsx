@@ -46,6 +46,11 @@ const SECTIONS: PersonAtlasSection[] = [
         },
       },
       {
+        id: "household-zone",
+        sentence: "Spend 15 minutes in the living room zone",
+        state: "open",
+      },
+      {
         id: "groceries",
         sentence: "Pick up groceries before dinner",
         state: "open",
@@ -102,6 +107,7 @@ const SECTIONS: PersonAtlasSection[] = [
 
 const TIME_MARKS: PersonAtlasTimeMark[] = [
   { id: "planning", minute: 9 * 60 + 30, label: "Feast Guild planning", kind: "move" },
+  { id: "zone", minute: 16 * 60 + 30, label: "15-minute household zone pass", kind: "move" },
   { id: "groceries", minute: 17 * 60 + 15, label: "Groceries", kind: "move" },
   { id: "dinner", minute: 18 * 60 + 30, label: "Family dinner", kind: "hard" },
   { id: "writing", minute: 20 * 60, label: "Write Now protected block", kind: "protected" },
@@ -117,7 +123,7 @@ const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
     items: [
       {
         label: "Household",
-        detail: "Private home rhythms · routines · zones",
+        detail: "Private home system · state · rules · history",
         href: "/owner/household",
       },
       {
@@ -152,6 +158,10 @@ const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
   },
 ];
 
+const SOURCE_LINKS: Record<string, string> = {
+  "household-zone": "/owner/household?focus=zone",
+};
+
 type OwnerPersonAtlasFixtureProps = {
   personName: string;
 };
@@ -167,6 +177,7 @@ export default function OwnerPersonAtlasFixture({ personName }: OwnerPersonAtlas
       reservedSpans={RESERVED}
       nextHardEdge="next fixed · family 6:30"
       utilityGroups={UTILITY_GROUPS}
+      sourceLinks={SOURCE_LINKS}
     />
   );
 }
