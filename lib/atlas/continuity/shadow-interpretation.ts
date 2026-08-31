@@ -33,28 +33,39 @@ type OwnerAttention = (typeof OWNER_ATTENTION)[number];
 
 type RelayEventInput = {
   captureMode?: string;
-  source?: { eventRef?: string | null };
+  source?: {
+    kind?: string | null;
+    accountRef?: string | null;
+    eventRef?: string | null;
+    threadRef?: string | null;
+  };
+  direction?: "incoming" | "outgoing" | "unknown" | string;
+  speaker?: {
+    isSelf?: boolean;
+    address?: string | null;
+  };
+  occurredAt?: string | null;
+  body?: string | null;
+  bodyState?: string;
+  sourcePayload?: {
+    participantAddresses?: string | string[] | null;
+  };
 };
 
-type CommunicationEventRow = {
-  id: string;
-  principal_id: string;
-  connected_source_id: string;
-  thread_id: string | null;
-  source_event_ref: string;
-  occurred_at: string | null;
+type CanonicalShadowEvent = {
+  sourceEventRef: string;
+  sourceThreadRef: string | null;
+  occurredAt: string | null;
   direction: "incoming" | "outgoing" | "unknown";
-  speaker_is_self: boolean;
-  body: string | null;
-  body_state: string;
-  canonical_event: {
-    sourcePayload?: { participantAddresses?: string | null };
-  } | null;
+  speakerIsSelf: boolean;
+  speakerAddress: string | null;
+  body: string;
+  bodyState: "exact_text";
+  participantAddresses: string[];
 };
 
 type IdentityLinkRow = {
   id: string;
-  thread_id: string | null;
   source_identity_key: string;
   target_domain: string;
   target_kind: string;
@@ -124,17 +135,54 @@ function safeText(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
 
-function participantKeys(row: CommunicationEventRow) {
-  const raw = row.canonical_event?.sourcePayload?.participantAddresses;
+function participantAddresses(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => safeText(entry, 500)).filter(Boolean);
+  }
+  const raw = safeText(value, 4000);
   if (!raw) return [];
-  return raw.split(",").map((value) => value.trim()).filter(Boolean);
+  return raw.split(",").map((entry) => entry.trim()).filter(Boolean);
 }
 
-function linkForEvent(row: CommunicationEventRow, links: IdentityLinkRow[]) {
-  const thread = row.thread_id ? links.find((link) => link.thread_id === row.thread_id) : null;
-  if (thread) return thread;
-  const participants = new Set(participantKeys(row));
-  return links.find((link) => participants.has(link.source_identity_key)) ?? null;
+function normalizeRelayEvent(input: RelayEventInput): CanonicalShadowEvent | null {
+  if (input.captureMode !== "live_capture") return null;
+  if (input.bodyState !== "exact_text" || typeof input.body !== "string" || !input.body.trim()) return null;
+
+  const sourceEventRef = safeText(input.source?.eventRef, 500);
+  if (!sourceEventRef) return null;
+  const direction = input.direction === "incoming" || input.direction === "outgoing" || input.direction === "unknown"
+    ? input.direction
+    : "unknown";
+
+  return {
+    sourceEventRef,
+    sourceThreadRef: safeText(input.source?.threadRef, 500) || null,
+    occurredAt: safeText(input.occurredAt, 100) || null,
+    direction,
+    speakerIsSelf: input.speaker?.isSelf === true,
+    speakerAddress: safeText(input.speaker?.address, 500) || null,
+    body: input.body,
+    bodyState: "exact_text",
+    participantAddresses: participantAddresses(input.sourcePayload?.participantAddresses),
+  };
+}
+
+function identityKeys(event: CanonicalShadowEvent) {
+  return new Set([
+    event.speakerAddress,
+    ...event.participantAddresses,
+  ].filter((value): value is string => Boolean(value)));
+}
+
+function linkForEvent(event: CanonicalShadowEvent, links: IdentityLinkRow[]) {
+  const keys = identityKeys(event);
+  if (!keys.size) return null;
+  const matches = links.filter((link) => keys.has(link.source_identity_key));
+  if (!matches.length) return null;
+
+  const targetKeys = new Set(matches.map((link) => `${link.target_domain}:${link.target_kind}:${link.target_id}`));
+  if (targetKeys.size !== 1) return null;
+  return matches[0];
 }
 
 function claimSortKey(claim: ModelClaim) {
@@ -158,58 +206,73 @@ export async function shadowInterpretCommunicationEvents(
     return { status: "skipped", candidates: 0, claims: 0, unresolvedIdentities: 0 };
   }
 
-  const refs = [...new Set(inputs
-    .map((event) => safeText(event?.source?.eventRef, 500))
-    .filter(Boolean))];
-  if (!refs.length) return { status: "skipped", candidates: 0, claims: 0, unresolvedIdentities: 0 };
-
   const connectedSourceId = safeText(connectedSourceIdInput, 100);
   if (!connectedSourceId) throw new Error("Communication shadow custody receipt did not identify a connected source.");
 
-  const admin = createAtlasAdminClient();
-  const eventResult = await admin
-    .from("communication_events")
-    .select("id,principal_id,connected_source_id,thread_id,source_event_ref,occurred_at,direction,speaker_is_self,body,body_state,canonical_event")
-    .eq("connected_source_id", connectedSourceId)
-    .in("source_event_ref", refs)
-    .order("occurred_at", { ascending: true });
-  if (eventResult.error) throw new Error(`Communication shadow event lookup failed: ${eventResult.error.code}`);
-
-  const allEvents = (eventResult.data ?? []) as CommunicationEventRow[];
+  const normalizedByRef = new Map<string, CanonicalShadowEvent>();
+  for (const input of inputs) {
+    const normalized = normalizeRelayEvent(input);
+    if (normalized) normalizedByRef.set(normalized.sourceEventRef, normalized);
+  }
+  const allEvents = [...normalizedByRef.values()].sort((a, b) => (a.occurredAt ?? "").localeCompare(b.occurredAt ?? ""));
   if (!allEvents.length) return { status: "processed", candidates: 0, claims: 0, unresolvedIdentities: 0 };
-  const principalIds = [...new Set(allEvents.map((event) => event.principal_id).filter(Boolean))];
-  if (principalIds.length !== 1) throw new Error("Communication shadow source events do not resolve to exactly one Principal.");
-  const principalId = principalIds[0];
+  const refs = allEvents.map((event) => event.sourceEventRef);
 
-  const [principal, evidenceResult, identityResult] = await Promise.all([
-    admin.from("principals").select("user_id").eq("id", principalId).eq("status", "active").maybeSingle(),
+  const admin = createAtlasAdminClient();
+  const sourceResult = await admin
+    .from("connected_sources")
+    .select("custodian_user_id,provider_key,provider_account_key,authorization_state")
+    .eq("id", connectedSourceId)
+    .eq("authorization_state", "connected")
+    .maybeSingle();
+  if (sourceResult.error) throw new Error(`Communication shadow source lookup failed: ${sourceResult.error.code}`);
+  if (!sourceResult.data?.custodian_user_id) throw new Error("Communication shadow connected source has no active human custodian.");
+
+  const sourceKind = safeText(sourceResult.data.provider_key, 120);
+  const sourceAccountRef = safeText(sourceResult.data.provider_account_key, 500);
+  const sourceMismatch = inputs.some((event) => (
+    safeText(event?.source?.kind, 120) !== sourceKind
+    || safeText(event?.source?.accountRef, 500) !== sourceAccountRef
+  ));
+  if (sourceMismatch) throw new Error("Communication shadow payload no longer matches the custodied connected source.");
+
+  const principalResult = await admin
+    .from("principals")
+    .select("id,user_id")
+    .eq("user_id", sourceResult.data.custodian_user_id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (principalResult.error) throw new Error(`Communication shadow Principal lookup failed: ${principalResult.error.code}`);
+  if (!principalResult.data?.id) throw new Error("Communication shadow connected source does not resolve to an active Principal.");
+
+  const principalId = principalResult.data.id as string;
+  const ownerUserId = principalResult.data.user_id as string;
+
+  const [evidenceResult, identityResult] = await Promise.all([
     admin
       .from("evidence_records")
       .select("id,source_key,metadata")
       .eq("scope_kind", "principal")
       .eq("scope_id", principalId)
-      .eq("source_kind", "apple_messages")
+      .eq("source_kind", sourceKind)
       .in("source_key", refs),
     admin
       .from("communication_identity_links")
-      .select("id,thread_id,source_identity_key,target_domain,target_kind,target_id,target_label,relation_basis,confidence")
+      .select("id,source_identity_key,target_domain,target_kind,target_id,target_label,relation_basis,confidence")
       .eq("principal_id", principalId)
       .eq("connected_source_id", connectedSourceId)
       .eq("relation_status", "active"),
   ]);
 
-  if (principal.error) throw new Error(`Communication shadow Principal lookup failed: ${principal.error.code}`);
   if (evidenceResult.error) throw new Error(`Communication shadow evidence lookup failed: ${evidenceResult.error.code}`);
 
   // Missing identity custody reduces attribution quality; it never breaks source
   // custody or causes Atlas to guess who a source identifier represents.
   const links = identityResult.error ? [] : (identityResult.data ?? []) as IdentityLinkRow[];
   const existingEvidence = new Map((evidenceResult.data ?? []).map((row) => [row.source_key as string, row]));
-  const events = allEvents.filter((event) => event.body_state === "exact_text");
 
-  const candidates = events.filter((event) => {
-    if (!event.body?.trim()) return false;
-    const existing = existingEvidence.get(event.source_event_ref);
+  const candidates = allEvents.filter((event) => {
+    const existing = existingEvidence.get(event.sourceEventRef);
     const metadata = (existing?.metadata ?? {}) as Record<string, unknown>;
     const status = metadata.communicationShadowStatus;
     return status !== "processed" && status !== "abstained";
@@ -217,9 +280,8 @@ export async function shadowInterpretCommunicationEvents(
 
   if (!candidates.length) return { status: "processed", candidates: 0, claims: 0, unresolvedIdentities: 0 };
 
-  const identityByEvent = new Map(candidates.map((event) => [event.id, linkForEvent(event, links)]));
+  const identityByEvent = new Map(candidates.map((event) => [event.sourceEventRef, linkForEvent(event, links)]));
   const unresolvedIdentities = [...identityByEvent.values()].filter((value) => !value).length;
-  const ownerUserId = principal.data?.user_id as string | undefined;
 
   const membershipIds = [...new Set([...identityByEvent.values()]
     .filter((link): link is IdentityLinkRow => Boolean(link && link.target_kind === "farm_membership"))
@@ -235,9 +297,9 @@ export async function shadowInterpretCommunicationEvents(
   }
 
   const evidenceRows = candidates.map((event) => {
-    const link = identityByEvent.get(event.id) ?? null;
-    const actorUserId = event.speaker_is_self
-      ? ownerUserId ?? null
+    const link = identityByEvent.get(event.sourceEventRef) ?? null;
+    const actorUserId = event.speakerIsSelf
+      ? ownerUserId
       : link?.target_kind === "farm_membership"
         ? membershipUsers.get(link.target_id) ?? null
         : null;
@@ -246,16 +308,17 @@ export async function shadowInterpretCommunicationEvents(
       scope_id: principalId,
       subject_domain: "communication",
       subject_kind: "message",
-      subject_id: event.id,
+      subject_id: event.sourceEventRef,
       evidence_kind: "communication_event",
-      source_kind: "apple_messages",
-      source_key: event.source_event_ref,
+      source_kind: sourceKind,
+      source_key: event.sourceEventRef,
       actor_user_id: actorUserId,
       value: {
         body: event.body,
-        bodyState: event.body_state,
+        bodyState: event.bodyState,
         direction: event.direction,
-        communicationEventId: event.id,
+        sourceEventRef: event.sourceEventRef,
+        sourceThreadRef: event.sourceThreadRef,
         counterpartyLabel: link?.target_label ?? null,
         counterpartyTarget: link ? {
           domain: link.target_domain,
@@ -264,10 +327,12 @@ export async function shadowInterpretCommunicationEvents(
         } : null,
       },
       confidence: 1,
-      observed_at: event.occurred_at,
+      observed_at: event.occurredAt,
       learned_at: new Date().toISOString(),
       provenance: {
-        communicationEventId: event.id,
+        connectedSourceId,
+        sourceEventRef: event.sourceEventRef,
+        sourceThreadRef: event.sourceThreadRef,
         identityLinkId: link?.id ?? null,
         identityBasis: link?.relation_basis ?? null,
         identityConfidence: link?.confidence ?? null,
@@ -288,15 +353,15 @@ export async function shadowInterpretCommunicationEvents(
   const evidenceBySourceKey = new Map((evidenceUpsert.data ?? []).map((row) => [row.source_key as string, row.id as string]));
 
   const modelMessages = candidates.map((event) => {
-    const link = identityByEvent.get(event.id) ?? null;
+    const link = identityByEvent.get(event.sourceEventRef) ?? null;
     const counterparty = link?.target_label ?? "Unresolved Messages contact";
     return {
-      messageId: event.id,
+      messageId: event.sourceEventRef,
       direction: event.direction,
-      occurredAt: event.occurred_at,
+      occurredAt: event.occurredAt,
       body: safeText(event.body, MAX_BODY_LENGTH),
-      reporter: event.speaker_is_self ? "Atlas owner" : counterparty,
-      recipient: event.speaker_is_self ? counterparty : "Atlas owner",
+      reporter: event.speakerIsSelf ? "Atlas owner" : counterparty,
+      recipient: event.speakerIsSelf ? counterparty : "Atlas owner",
       counterparty,
       identityResolved: Boolean(link),
     };
@@ -312,7 +377,7 @@ export async function shadowInterpretCommunicationEvents(
     JSON.stringify({ messages: modelMessages }),
   );
 
-  const validMessageIds = new Set(candidates.map((event) => event.id));
+  const validMessageIds = new Set(candidates.map((event) => event.sourceEventRef));
   const cleaned = interpreted.claims
     .filter((claim) => validMessageIds.has(claim.messageId))
     .map((claim) => ({
@@ -335,9 +400,9 @@ export async function shadowInterpretCommunicationEvents(
   }
 
   const claimRows = cleaned.map((claim) => {
-    const event = candidates.find((candidate) => candidate.id === claim.messageId)!;
-    const link = identityByEvent.get(event.id) ?? null;
-    const evidenceId = evidenceBySourceKey.get(event.source_event_ref)!;
+    const event = candidates.find((candidate) => candidate.sourceEventRef === claim.messageId)!;
+    const link = identityByEvent.get(event.sourceEventRef) ?? null;
+    const evidenceId = evidenceBySourceKey.get(event.sourceEventRef)!;
     const localIndex = (claimsByMessage.get(claim.messageId) ?? []).indexOf(claim) + 1;
     return {
       scope_kind: "principal",
@@ -347,20 +412,20 @@ export async function shadowInterpretCommunicationEvents(
       // until a later domain-specific authority membrane adopts it.
       subject_domain: "communication",
       subject_kind: "message",
-      subject_id: event.id,
+      subject_id: event.sourceEventRef,
       claim_type: claim.claimType,
       lifecycle_state: "proposed",
       authority_kind: "communication_shadow_interpretation",
       source_kind: "communication_interpretation_shadow",
-      source_key: `communication:${event.id}:claim:${localIndex}`,
+      source_key: `communication:${event.sourceEventRef}:claim:${localIndex}`,
       value: {
         summary: claim.summary,
         note: claim.note,
         ownerAttention: claim.ownerAttention,
         direction: event.direction,
-        reporterLabel: event.speaker_is_self ? "Atlas owner" : link?.target_label ?? "Unresolved Messages contact",
-        recipientLabel: event.speaker_is_self ? link?.target_label ?? "Unresolved Messages contact" : "Atlas owner",
-        communicationEventId: event.id,
+        reporterLabel: event.speakerIsSelf ? "Atlas owner" : link?.target_label ?? "Unresolved Messages contact",
+        recipientLabel: event.speakerIsSelf ? link?.target_label ?? "Unresolved Messages contact" : "Atlas owner",
+        sourceEventRef: event.sourceEventRef,
         reportedSubject: {
           domain: claim.subjectDomain,
           kind: claim.subjectKind,
@@ -371,7 +436,7 @@ export async function shadowInterpretCommunicationEvents(
       },
       confidence: claim.confidence,
       primary_evidence_id: evidenceId,
-      valid_from: event.occurred_at,
+      valid_from: event.occurredAt,
       metadata: {
         identityLinkId: link?.id ?? null,
         sourceAuthority: "reporting_only",
@@ -403,9 +468,9 @@ export async function shadowInterpretCommunicationEvents(
   }
 
   for (const event of candidates) {
-    const evidenceId = evidenceBySourceKey.get(event.source_event_ref);
+    const evidenceId = evidenceBySourceKey.get(event.sourceEventRef);
     if (!evidenceId) continue;
-    const eventClaims = claimsByMessage.get(event.id) ?? [];
+    const eventClaims = claimsByMessage.get(event.sourceEventRef) ?? [];
     const status = eventClaims.length ? "processed" : "abstained";
     const update = await admin
       .from("evidence_records")
