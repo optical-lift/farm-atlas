@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Nothing_You_Could_Do, Source_Sans_3 } from "next/font/google";
 
-import styles from "./front-door.module.css";
+import styles from "./sales-page.module.css";
 
 export const dynamic = "force-dynamic";
 
