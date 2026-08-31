@@ -4,6 +4,7 @@ import { Nothing_You_Could_Do, Source_Sans_3 } from "next/font/google";
 
 import { getAtlasSession } from "@/lib/atlas/session";
 import "./ask-atlas.css";
+import "./person-atlas-notebook-v2-refine.css";
 
 export const dynamic = "force-dynamic";
 
