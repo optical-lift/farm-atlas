@@ -21,6 +21,9 @@ test("live Communication shadow interpretation is bounded, proposed, and evidenc
   assert.match(shadow, /communicationShadowStatus: "pending"/);
   assert.match(shadow, /"processed"/);
   assert.match(shadow, /"abstained"/);
+  assert.match(shadow, /from\("connected_sources"\)/);
+  assert.match(shadow, /sourceEventRef/);
+  assert.doesNotMatch(shadow, /from\("communication_events"\)/);
   assert.doesNotMatch(shadow, /communication_relay_credentials/);
   assert.doesNotMatch(shadow, /Nathan|Marshall|Katie|Anna|Elm Farm/i);
 });
