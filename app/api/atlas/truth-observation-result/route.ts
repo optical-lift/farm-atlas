@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
     .from("tasks")
     .select("id, task_type, metadata")
     .eq("id", taskId)
+    .eq("farm_id", authorized.access.membership.farmId)
     .limit(1)
     .maybeSingle();
 
