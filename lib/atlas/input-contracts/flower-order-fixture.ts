@@ -1,0 +1,124 @@
+import type { AtlasInputContract, AtlasInputResultEvent } from "@/lib/atlas/input-contract";
+
+export const SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT: AtlasInputContract = {
+  id: "fixture.feast-guild.springfield.flower-order.v1",
+  kind: "flower order",
+  title: "Springfield flower order",
+  detail: "record what the buyer actually ordered",
+  source: {
+    domain: "buyer-distribution",
+    jurisdiction: "institution:feast-guild",
+    objectRef: "fixture:feast-guild:springfield-distribution:buyer-desk",
+    claimRef: "record-flower-order",
+  },
+  fields: [
+    {
+      primitive: "choice",
+      id: "buyer",
+      label: "buyer",
+      options: [
+        { value: "ruth", label: "Ruth’s Flowers" },
+        { value: "lindas", label: "Linda’s Flowers" },
+      ],
+    },
+    {
+      primitive: "quantity",
+      id: "sunflowerBunches",
+      label: "Sunflower bunches",
+      unit: "sale_unit",
+      displayUnit: "items",
+      displayUnitSingular: "item",
+      step: 1,
+      minimum: 0,
+    },
+    {
+      primitive: "quantity",
+      id: "samples",
+      label: "Samples",
+      unit: "sale_unit",
+      displayUnit: "items",
+      displayUnitSingular: "item",
+      step: 1,
+      minimum: 0,
+    },
+  ],
+  rules: [
+    {
+      kind: "required_field",
+      fieldId: "buyer",
+      message: "Choose the buyer who placed the order.",
+    },
+    {
+      kind: "minimum_quantity_total",
+      fieldIds: ["sunflowerBunches", "samples"],
+      minimum: 1,
+      message: "Record at least one ordered item.",
+    },
+  ],
+  resultEventType: "atlas.feast_guild.flower_order.result.fixture.v1",
+  persistence: "fixture_only",
+  sourceContext: {
+    surface: "buyer_desk",
+    responsibilityGrammar: "flow",
+    seat: "springfield_distribution",
+    inventoryAuthority: "sellable_inventory_source",
+    paymentAuthority: "external_stripe",
+  },
+};
+
+export type FlowerOrderFixtureBuyer = "ruth" | "lindas";
+export type FlowerOrderFixtureLineItem = {
+  item: "sunflower_bunch" | "sample";
+  quantity: number;
+};
+
+export type FlowerOrderFixtureAdjudication = {
+  state: "order_recorded";
+  todayClaimSatisfied: true;
+  buyer: FlowerOrderFixtureBuyer;
+  lineItems: FlowerOrderFixtureLineItem[];
+  totalItems: number;
+  fulfillmentRequired: true;
+  inventoryClaimRequired: true;
+  inventoryCommitted: false;
+  paymentStatus: "not_recorded";
+};
+
+function nonnegativeQuantity(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0;
+}
+
+export function adjudicateFlowerOrderFixtureResult(
+  event: AtlasInputResultEvent,
+): FlowerOrderFixtureAdjudication {
+  if (event.eventType !== SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT.resultEventType) {
+    throw new Error("Flower-order adjudication received the wrong Atlas result event.");
+  }
+
+  const buyer = event.values.buyer;
+  if (buyer !== "ruth" && buyer !== "lindas") {
+    throw new Error("Flower-order result is missing a confirmed fixture buyer.");
+  }
+
+  const bunches = nonnegativeQuantity(event.values.sunflowerBunches);
+  const samples = nonnegativeQuantity(event.values.samples);
+  const lineItems: FlowerOrderFixtureLineItem[] = [];
+  if (bunches > 0) lineItems.push({ item: "sunflower_bunch", quantity: bunches });
+  if (samples > 0) lineItems.push({ item: "sample", quantity: samples });
+
+  if (!lineItems.length) {
+    throw new Error("Flower-order result contains no ordered items.");
+  }
+
+  return {
+    state: "order_recorded",
+    todayClaimSatisfied: true,
+    buyer,
+    lineItems,
+    totalItems: lineItems.reduce((sum, item) => sum + item.quantity, 0),
+    fulfillmentRequired: true,
+    inventoryClaimRequired: true,
+    inventoryCommitted: false,
+    paymentStatus: "not_recorded",
+  };
+}
