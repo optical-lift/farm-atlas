@@ -62,7 +62,10 @@ function safeInternalReturnTo(value: string | null) {
   return value;
 }
 
-const HIDDEN_PATHS = ["/login", "/auth", "/offline"];
+// These routes happen before a person has entered an operational Atlas context. They
+// must not inherit a farm/company toolbar merely because the setup human already has
+// another Atlas relationship. In particular, Organization Atlas setup is not Elm work.
+const HIDDEN_PATHS = ["/login", "/auth", "/offline", "/welcome", "/start", "/join", "/onboarding"];
 const DAY_TASK_ID = /^day-task-([0-9a-f-]{36})$/i;
 
 export default function AtlasContextualAppFrame({ effectiveFarmRole = null, activeFarmName = null }: AtlasContextualAppFrameProps) {
