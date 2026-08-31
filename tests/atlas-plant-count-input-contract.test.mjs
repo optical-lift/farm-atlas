@@ -12,16 +12,16 @@ function read(path) {
 
 test("quantity observations can begin unknown without turning unknown into zero", () => {
   const contract = read("lib/atlas/input-contract.ts");
-  const spread = read("app/owner/PersonAtlasInputSpread.tsx");
+  const renderer = read("components/atlas/input/AtlasInputRenderer.tsx");
 
   assert.match(contract, /startUnset\?: boolean/);
   assert.match(contract, /wholeNumber\?: boolean/);
   assert.match(contract, /field\.startUnset/);
   assert.match(contract, /\? null/);
-  assert.match(spread, /row\.startUnset && storedValue === null/);
-  assert.match(spread, /hasStoredValue \? String\(value\) : \"\"/);
-  assert.match(spread, /row\.wholeNumber/);
-  assert.match(spread, /rows\.length > 1/);
+  assert.match(renderer, /row\.startUnset && storedValue === null/);
+  assert.match(renderer, /hasStoredValue \? String\(value\) : \"\"/);
+  assert.match(renderer, /row\.wholeNumber/);
+  assert.match(renderer, /rows\.length > 1/);
 });
 
 test("living-plant counts use one reusable whole-number input contract and accept explicit zero", () => {
@@ -78,15 +78,15 @@ test("observation and measurement tasks are not executable without an input cont
   assert.match(readiness, /requires an input contract before the task is executable/);
 });
 
-test("plant-count design proof remains fixture-only even though the same renderer can submit canonical contracts", () => {
+test("plant-count design proof remains fixture-only even though the shared renderer can submit canonical contracts", () => {
   const plantCount = read("lib/atlas/input-contracts/plant-count-fixture.ts");
-  const spread = read("app/owner/PersonAtlasInputSpread.tsx");
+  const renderer = read("components/atlas/input/AtlasInputRenderer.tsx");
 
   assert.match(plantCount, /persistence: \"fixture_only\"/);
   assert.match(plantCount, /canonicalCropCycleMutation: false/);
   assert.doesNotMatch(plantCount, /supabase|rpc\(|insert\(|update\(/i);
-  assert.doesNotMatch(spread, /California Giant|ProCut Plum|Cosmos|celosia|crop-cycle/i);
-  assert.match(spread, /submission\?: AtlasInputSubmission/);
-  assert.match(spread, /fetch\(submission\.endpoint/);
-  assert.match(spread, /data-atlas-input-persistence/);
+  assert.doesNotMatch(renderer, /California Giant|ProCut Plum|Cosmos|celosia|crop-cycle/i);
+  assert.match(renderer, /submission\?: AtlasInputSubmission/);
+  assert.match(renderer, /fetch\(submission\.endpoint/);
+  assert.match(renderer, /data-atlas-input-persistence/);
 });
