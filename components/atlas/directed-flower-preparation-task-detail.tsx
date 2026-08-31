@@ -3,6 +3,10 @@
 import { useMemo, useState } from "react";
 
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
+import {
+  FLOWER_BUNDLE_STEM_COUNTS,
+  isCanonicalFlowerBundleStemCount,
+} from "@/lib/atlas/flower-vocabulary";
 import styles from "./directed-flower-preparation-task-detail.module.css";
 
 export type DirectedPreparationLine = {
@@ -35,16 +39,16 @@ export type DirectedPreparationTask = {
 };
 
 const outputChoices: Array<{ value: OutputKind; label: string }> = [
-  { value: "bundle", label: "Bunch" },
+  { value: "bundle", label: "Bundle" },
   { value: "posy", label: "Posy" },
   { value: "bouquet", label: "Bouquet" },
   { value: "lobby_arrangement", label: "Arrangement" },
 ];
 
-const stemChoices = [5, 10, 15];
+const stemChoices = [...FLOWER_BUNDLE_STEM_COUNTS];
 
 function instruction(line: Pick<DirectedPreparationLine, "outputKind" | "stemsPerUnit">) {
-  if (line.outputKind === "bundle") return `${line.stemsPerUnit ?? "?"}-stem bunches`;
+  if (line.outputKind === "bundle") return `${line.stemsPerUnit ?? "?"}-stem bundles`;
   if (line.outputKind === "lobby_arrangement") return "arrangements";
   return `${line.outputKind}s`;
 }
@@ -67,7 +71,7 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
   const [extraLines, setExtraLines] = useState<WorkerAddedLine[]>([]);
   const [productDraft, setProductDraft] = useState("");
   const [outputDraft, setOutputDraft] = useState<OutputKind>("bundle");
-  const [stemsDraft, setStemsDraft] = useState(5);
+  const [stemsDraft, setStemsDraft] = useState<number>(5);
   const [quantityDraft, setQuantityDraft] = useState(1);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -95,7 +99,7 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
 
   function addExtraLine() {
     const productLabel = productDraft.trim();
-    if (!productLabel || quantityDraft < 1 || (outputDraft === "bundle" && stemsDraft < 1)) return;
+    if (!productLabel || quantityDraft < 1 || (outputDraft === "bundle" && !isCanonicalFlowerBundleStemCount(stemsDraft))) return;
     setExtraLines((current) => [...current, {
       id: nonce(),
       productLabel,
@@ -183,7 +187,7 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
       <AtlasTaskCardFrame
         family="Harvest"
         familyDetail="sellable"
-        title="Condition + Bunch"
+        title="Condition + Bundle"
         subtitle="Today’s pre-sale flowers · Elm Farm"
         timing="Condition + bundle for pre-sales"
         completion={
@@ -195,7 +199,7 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
       >
         <div className={styles.trail} aria-label="Harvest to delivery trail">
           <span className={styles.trailDone}><b>Harvested</b><small>complete</small></span>
-          <span className={styles.trailNow}><b>Condition + bunch</b><small>you are here</small></span>
+          <span className={styles.trailNow}><b>Condition + bundle</b><small>you are here</small></span>
           <span className={styles.trailLocked}><b>Deliver</b><small>next task</small></span>
         </div>
 
@@ -271,7 +275,7 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
 
                   {outputDraft === "bundle" ? (
                     <div className={styles.extraStep}>
-                      <span>Stems per bunch</span>
+                      <span>Stems per bundle</span>
                       <div className="atlas-log-chip-grid compact expanded">
                         {stemChoices.map((choice) => (
                           <button type="button" className={stemsDraft === choice ? "selected" : ""} key={choice} onClick={() => setStemsDraft(choice)}>
@@ -279,10 +283,6 @@ export default function DirectedFlowerPreparationTaskDetail({ task }: { task: Di
                           </button>
                         ))}
                       </div>
-                      <label className={styles.customStemField}>
-                        <span>Other</span>
-                        <input type="number" min={1} max={1000} inputMode="numeric" value={stemsDraft} onChange={(event) => setStemsDraft(Math.max(1, Math.min(1000, Number(event.target.value) || 1)))} />
-                      </label>
                     </div>
                   ) : null}
 
