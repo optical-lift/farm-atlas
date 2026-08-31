@@ -72,7 +72,6 @@ test("a verified human with no farm or organization context enters onboarding in
   assert.equal(session.userId, "fixture-new-human");
   assert.equal(session.activeFarmId, null);
   assert.equal(session.activeOrganizationId, null);
-  assert.equal(session.onboardingState, "new");
   assert.equal(state.status, "onboarding");
   assert.equal(state.authenticated, true);
   assert.equal(state.activeMembership, null);
@@ -91,7 +90,6 @@ test("organization membership alone is enough to be an active Atlas human", () =
       display_name: "Organization Human",
       default_farm_id: null,
       default_organization_id: "fixture-org-camp",
-      onboarding_state: "ready",
       active: true,
     },
     memberships: [],
@@ -115,7 +113,6 @@ test("organization membership alone is enough to be an active Atlas human", () =
 
   assert.equal(session.activeFarmId, null);
   assert.equal(session.activeOrganizationId, "fixture-org-camp");
-  assert.equal(session.onboardingState, "ready");
   assert.equal(state.status, "active");
   assert.equal(state.activeMembership, null);
   assert.equal(state.activeOrganizationMembership.role, "owner");
@@ -129,7 +126,6 @@ test("preferred organization is selected only when the human actually has an act
       display_name: "Multi Org Human",
       default_farm_id: null,
       default_organization_id: "fixture-org-second",
-      onboarding_state: "ready",
       active: true,
     },
     memberships: [],
