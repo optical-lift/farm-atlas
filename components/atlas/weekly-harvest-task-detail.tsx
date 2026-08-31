@@ -13,7 +13,8 @@ type Props = {
   assignee: AtlasAssigneeConfig;
 };
 
-type HarvestException = "not_ready" | "deadheaded" | "crop_exhausted";
+type HarvestGrade = "florist_grade" | "event_grade";
+type HarvestException = "not_ready" | "deadheaded" | "crop_loss";
 type ResultKind = "harvest_amount" | HarvestException;
 type IntakeSource = "Foraged" | "Purchased" | "Gifted";
 type IntakeUnit = "Stems" | "Buckets" | "Bundles";
@@ -30,6 +31,7 @@ type HarvestRow = {
   availabilityStatus?: string | null;
   resolved: boolean;
   resultKind?: ResultKind | null;
+  harvestGrade?: HarvestGrade | null;
   bucketHalves?: number | null;
 };
 
@@ -70,10 +72,15 @@ type ExternalIntakeResponse = {
   lines?: SavedExternalLine[];
 };
 
+const grades: Array<{ value: HarvestGrade; label: string }> = [
+  { value: "florist_grade", label: "Florist grade" },
+  { value: "event_grade", label: "Event grade" },
+];
+
 const exceptions: Array<{ value: HarvestException; label: string }> = [
   { value: "not_ready", label: "Not ready" },
   { value: "deadheaded", label: "Deadheaded" },
-  { value: "crop_exhausted", label: "Crop exhausted" },
+  { value: "crop_loss", label: "Crop loss" },
 ];
 
 const intakeSources: IntakeSource[] = ["Foraged", "Purchased", "Gifted"];
@@ -98,8 +105,16 @@ function formatBuckets(bucketHalves: number) {
   return `${Math.floor(buckets)}½`.replace("0½", "½");
 }
 
+function gradeLabel(value: HarvestGrade | null | undefined) {
+  return grades.find((grade) => grade.value === value)?.label ?? null;
+}
+
 function resolvedLabel(row: HarvestRow) {
-  if (row.resultKind === "harvest_amount" && row.bucketHalves) return `${formatBuckets(row.bucketHalves)} bucket${row.bucketHalves === 2 ? "" : "s"}`;
+  if (row.resultKind === "harvest_amount" && row.bucketHalves) {
+    const amount = `${formatBuckets(row.bucketHalves)} bucket${row.bucketHalves === 2 ? "" : "s"}`;
+    const grade = gradeLabel(row.harvestGrade);
+    return grade ? `${amount} · ${grade}` : amount;
+  }
   return exceptions.find((choice) => choice.value === row.resultKind)?.label ?? "Recorded";
 }
 
@@ -107,7 +122,7 @@ function idempotencyKey(taskId: string, cropCycleId: string, resultKind: ResultK
   const nonce = typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  return `weekly-harvest:v2:${taskId}:${cropCycleId}:${resultKind}:${nonce}`;
+  return `weekly-harvest:v3:${taskId}:${cropCycleId}:${resultKind}:${nonce}`;
 }
 
 function externalIntakeKey(taskId: string) {
@@ -352,6 +367,7 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
   const [state, setState] = useState<HarvestState | null>(null);
   const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
   const [bucketHalves, setBucketHalves] = useState(0);
+  const [harvestGrade, setHarvestGrade] = useState<HarvestGrade | null>(null);
   const [exception, setException] = useState<HarvestException | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -391,20 +407,21 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
     const next = activeCycleId === row.cropCycleId ? null : row.cropCycleId;
     setActiveCycleId(next);
     setBucketHalves(0);
+    setHarvestGrade(null);
     setException(null);
     setMessage(null);
   }
 
   function changeBucketCount(row: HarvestRow, delta: number) {
     if (row.resolved || saving) return;
+    const nextHalves = activeCycleId === row.cropCycleId
+      ? Math.max(0, bucketHalves + delta)
+      : Math.max(0, delta);
+    setActiveCycleId(row.cropCycleId);
+    setBucketHalves(nextHalves);
+    if (nextHalves === 0) setHarvestGrade(null);
     setException(null);
     setMessage(null);
-    if (activeCycleId !== row.cropCycleId) {
-      setActiveCycleId(row.cropCycleId);
-      setBucketHalves(Math.max(0, delta));
-      return;
-    }
-    setBucketHalves((current) => Math.max(0, current + delta));
   }
 
   function chooseException(row: HarvestRow, next: HarvestException) {
@@ -412,12 +429,14 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
     if (activeCycleId !== row.cropCycleId) setActiveCycleId(row.cropCycleId);
     setException(next);
     setBucketHalves(0);
+    setHarvestGrade(null);
     setMessage(null);
   }
 
   async function record(row: HarvestRow) {
     const resultKind: ResultKind | null = bucketHalves > 0 ? "harvest_amount" : exception;
     if (!resultKind) return;
+    if (resultKind === "harvest_amount" && !harvestGrade) return;
 
     try {
       setSaving(true);
@@ -431,6 +450,7 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
           taskId: task.task_id,
           cropCycleId: row.cropCycleId,
           resultKind,
+          harvestGrade: resultKind === "harvest_amount" ? harvestGrade : null,
           bucketHalves: resultKind === "harvest_amount" ? bucketHalves : null,
           idempotencyKey: idempotencyKey(task.task_id, row.cropCycleId, resultKind),
         }),
@@ -445,6 +465,7 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
 
       setActiveCycleId(null);
       setBucketHalves(0);
+      setHarvestGrade(null);
       setException(null);
       await loadState();
     } catch (error) {
@@ -496,9 +517,12 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
                   {rows.map((row) => {
                     const active = activeCycleId === row.cropCycleId;
                     const visibleHalves = row.resolved && row.resultKind === "harvest_amount" ? row.bucketHalves ?? 0 : active ? bucketHalves : 0;
-                    const canRecord = active && (bucketHalves > 0 || Boolean(exception));
+                    const canRecord = active && ((bucketHalves > 0 && Boolean(harvestGrade)) || Boolean(exception));
+                    const selectedGradeLabel = gradeLabel(harvestGrade);
                     const recordLabel = bucketHalves > 0
-                      ? `Record ${formatBuckets(bucketHalves)} bucket${bucketHalves === 2 ? "" : "s"}`
+                      ? selectedGradeLabel
+                        ? `Record ${formatBuckets(bucketHalves)} bucket${bucketHalves === 2 ? "" : "s"} · ${selectedGradeLabel}`
+                        : "Choose harvest grade"
                       : exception
                         ? `Record ${exceptions.find((choice) => choice.value === exception)?.label ?? "result"}`
                         : "Choose an amount or outcome";
@@ -538,7 +562,22 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
 
                         {active ? (
                           <div className={styles.exceptionPanel} id={`harvest-outcomes-${row.cropCycleId}`}>
-                            <span>What happened?</span>
+                            {bucketHalves > 0 ? (
+                              <>
+                                <span>Harvest grade</span>
+                                <div className={styles.outcomeGrid}>
+                                  {grades.map((grade) => (
+                                    <button
+                                      type="button"
+                                      data-active={harvestGrade === grade.value ? "true" : "false"}
+                                      key={grade.value}
+                                      onClick={() => { setHarvestGrade(grade.value); setException(null); setMessage(null); }}
+                                    >{grade.label}</button>
+                                  ))}
+                                </div>
+                              </>
+                            ) : null}
+                            <span>{bucketHalves > 0 ? "Or record a non-harvest outcome" : "What happened?"}</span>
                             <div className={styles.outcomeGrid}>
                               {exceptions.map((choice) => (
                                 <button
