@@ -15,7 +15,7 @@ const notebookRefine = read("app/owner/person-atlas-notebook-v2-refine.css");
 
 test("Household emits today's work into the one person Daily Log", () => {
   assert.match(ownerFixture, /Spend 15 minutes in the living room zone/);
-  assert.match(ownerFixture, /"household-zone": "\/owner\/household\?focus=zone"/);
+  assert.match(ownerFixture, /"household-zone": "\/owner\/input\/household-zone"/);
   assert.match(ownerFixture, /sourceLinks=\{SOURCE_LINKS\}/);
   assert.match(notebook, /sourceLinks\?: Record<string, string>/);
   assert.match(notebook, /Open its source/);
