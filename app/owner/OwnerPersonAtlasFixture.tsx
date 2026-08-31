@@ -173,7 +173,7 @@ const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
   {
     label: "BUILD STATUS",
     items: [
-      { label: "Person truth is connected", detail: "Personal Goals and first-party condition observations now use live production persistence. Today, time arbitration, and the rest of the Owner notebook remain fixture-only until they earn their contracts." },
+      { label: "Today remains fixture-only", detail: "Personal Goals and first-party condition observations now use live production persistence through an isolated Personal Atlas spread. Today, time arbitration, and the rest of the Owner notebook remain fixture-only until they earn their contracts." },
     ],
   },
 ];
