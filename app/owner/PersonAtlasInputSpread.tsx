@@ -21,6 +21,7 @@ export type PersonAtlasInputFollowUp = {
   label: string;
   options: PersonAtlasInputChoice[];
   initialValue?: string;
+  required?: boolean;
 };
 
 type PersonAtlasInputSpreadProps = {
@@ -29,6 +30,8 @@ type PersonAtlasInputSpreadProps = {
   detail?: string;
   rows: PersonAtlasInputRow[];
   totalUnit: string;
+  totalUnitSingular?: string;
+  minimumTotal?: number;
   followUp?: PersonAtlasInputFollowUp;
   returnHref?: string;
   returnLabel?: string;
@@ -71,6 +74,8 @@ export default function PersonAtlasInputSpread({
   detail,
   rows,
   totalUnit,
+  totalUnitSingular,
+  minimumTotal = 0,
   followUp,
   returnHref = "/owner",
   returnLabel = "today",
@@ -90,6 +95,8 @@ export default function PersonAtlasInputSpread({
     ? rows[0].step ?? 1
     : 1;
   const selectedFollowUp = followUp?.options.find((option) => option.value === followUpValue) ?? null;
+  const totalUnitLabel = total === 1 && totalUnitSingular ? totalUnitSingular : totalUnit;
+  const recordReady = total >= minimumTotal && (!followUp?.required || Boolean(followUpValue));
 
   const changeValue = (row: PersonAtlasInputRow, direction: -1 | 1) => {
     setRecorded(false);
@@ -174,7 +181,7 @@ export default function PersonAtlasInputSpread({
 
           <div className={styles.totalRow}>
             <span>total</span>
-            <strong>{formatValue(total, totalStep)} <small>{totalUnit}</small></strong>
+            <strong>{formatValue(total, totalStep)} <small>{totalUnitLabel}</small></strong>
           </div>
 
           {followUp ? (
@@ -209,7 +216,7 @@ export default function PersonAtlasInputSpread({
                 <Link href={returnHref} className={styles.recordedMark}>recorded · back to {returnLabel}</Link>
               </>
             ) : (
-              <button type="button" className={styles.recordAction} onClick={() => setRecorded(true)}>{recordLabel}</button>
+              <button type="button" className={styles.recordAction} disabled={!recordReady} onClick={() => setRecorded(true)}>{recordLabel}</button>
             )}
           </div>
         </article>

@@ -284,6 +284,12 @@
   text-align: right;
 }
 
+.recordAction:disabled {
+  border-bottom-color: var(--rule);
+  color: var(--faint);
+  cursor: default;
+}
+
 .secondaryAction {
   padding: 8px 0 4px;
   color: var(--soft);
