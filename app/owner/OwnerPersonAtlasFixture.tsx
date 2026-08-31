@@ -46,6 +46,11 @@ const SECTIONS: PersonAtlasSection[] = [
         },
       },
       {
+        id: "harvest-white-lite",
+        sentence: "Harvest White Lite from BB3–5",
+        state: "open",
+      },
+      {
         id: "household-zone",
         sentence: "Spend 15 minutes in the living room zone",
         state: "open",
@@ -159,6 +164,7 @@ const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
 ];
 
 const SOURCE_LINKS: Record<string, string> = {
+  "harvest-white-lite": "/owner/input/harvest",
   "household-zone": "/owner/household?focus=zone",
 };
 
