@@ -88,3 +88,18 @@
   color: #8a2c38;
   font-size: 0.9rem;
 }
+
+.joinLink {
+  display: block;
+  width: fit-content;
+  margin: 22px auto 0;
+  color: #715682;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.joinLink:hover,
+.joinLink:focus-visible {
+  text-decoration: underline;
+}
