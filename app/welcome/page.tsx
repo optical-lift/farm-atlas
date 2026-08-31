@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import styles from "./front-door.module.css";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Atlas",
+  description: "Choose Personal Atlas or Organization Atlas and begin from the right custody root.",
+};
 
 export default function AtlasWelcomePage() {
   return (
