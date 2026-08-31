@@ -132,7 +132,7 @@ test("live Household Care remains the source while Today summons its dedicated r
   assert.match(actions, /principal_record_household_care_result_api_v1/);
 });
 
-test("flower orders prove one input contract can capture a buyer and several ordered line quantities", () => {
+test("flower demand captures buyer, requested date, handoff, physical form, and bundle size", () => {
   const order = read("lib/atlas/input-contracts/flower-order-fixture.ts");
 
   assert.match(order, /domain: \"buyer-distribution\"/);
@@ -141,30 +141,39 @@ test("flower orders prove one input contract can capture a buyer and several ord
   assert.match(order, /id: \"buyer\"/);
   assert.match(order, /value: \"ruth\"/);
   assert.match(order, /value: \"lindas\"/);
+  assert.match(order, /id: \"requestedForDate\"/);
+  assert.match(order, /id: \"fulfillmentMode\"/);
   assert.match(order, /id: \"sunflowerBundles\"/);
   assert.match(order, /label: \"Sunflower bundles\"/);
+  assert.match(order, /id: \"sunflowerBundleSize\"/);
+  assert.match(order, /value: \"5\"/);
+  assert.match(order, /value: \"10\"/);
+  assert.match(order, /value: \"20\"/);
   assert.match(order, /item: \"sunflower_bundle\"/);
   assert.doesNotMatch(order, /sunflowerBunches|sunflower_bunch|Sunflower bunches/);
   assert.match(order, /id: \"samples\"/);
+  assert.match(order, /id: \"sampleForm\"/);
   assert.match(order, /kind: \"minimum_quantity_total\"/);
   assert.match(order, /fieldIds: \[\"sunflowerBundles\", \"samples\"\]/);
 });
 
-test("recording an order creates fulfillment demand without fabricating inventory movement or payment", () => {
+test("recording the buyer request creates independent demand and nothing downstream", () => {
   const order = read("lib/atlas/input-contracts/flower-order-fixture.ts");
 
   assert.match(order, /adjudicateFlowerOrderFixtureResult/);
-  assert.match(order, /state: \"order_recorded\"/);
+  assert.match(order, /state: \"demand_recorded\"/);
+  assert.match(order, /persistence: \"canonical\"/);
+  assert.match(order, /truthBoundary: \"independent_demand\"/);
   assert.match(order, /todayClaimSatisfied: true/);
-  assert.match(order, /fulfillmentRequired: true/);
-  assert.match(order, /inventoryClaimRequired: true/);
   assert.match(order, /inventoryCommitted: false/);
+  assert.match(order, /saleRecorded: false/);
+  assert.match(order, /workerTimeScheduled: false/);
   assert.match(order, /paymentStatus: \"not_recorded\"/);
-  assert.doesNotMatch(order, /paymentStatus: \"paid\"/);
-  assert.doesNotMatch(order, /inventoryCommitted: true/);
+  assert.doesNotMatch(order, /state: \"order_recorded\"/);
+  assert.doesNotMatch(order, /inventoryCommitted: true|saleRecorded: true|workerTimeScheduled: true|paymentStatus: \"paid\"/);
 });
 
-test("order consequences cross authorities through a generic handoff instead of hidden sales mutations", () => {
+test("Flower Demand no longer manufactures a generic Company Work fulfillment handoff", () => {
   const handoff = read("lib/atlas/authority-handoff.ts");
   const order = read("lib/atlas/input-contracts/flower-order-fixture.ts");
   const renderer = read("components/atlas/input/AtlasInputRenderer.tsx");
@@ -175,21 +184,14 @@ test("order consequences cross authorities through a generic handoff instead of 
   assert.match(handoff, /does not resolve the claim, mutate the target ledger/);
   assert.doesNotMatch(handoff, /Ruth|Linda|sunflower|Stripe|sellable_inventory/i);
 
-  assert.match(order, /createAtlasAuthorityHandoff\(event/);
-  assert.match(order, /kind: \"inventory_availability\"/);
-  assert.match(order, /authority: inventoryAuthority/);
-  assert.match(order, /state: \"required\"/);
-  assert.match(order, /kind: \"payment_status\"/);
-  assert.match(order, /authority: paymentAuthority/);
-  assert.match(order, /state: \"not_recorded\"/);
-  assert.match(order, /ledger: \"company_work\"/);
-  assert.match(order, /state: \"open\"/);
-  assert.match(order, /operationClass: \"order_fulfillment\"/);
-  assert.match(order, /dependsOnAuthorityClaimIds: \[\"inventory-availability\"\]/);
+  assert.doesNotMatch(order, /createAtlasAuthorityHandoff\(event/);
+  assert.doesNotMatch(order, /ledger: \"company_work\"/);
+  assert.doesNotMatch(order, /operationClass: \"order_fulfillment\"/);
+  assert.doesNotMatch(order, /fulfillmentRequired: true|inventoryClaimRequired: true/);
   assert.doesNotMatch(renderer, /authority-handoff|inventory_availability|payment_status|company_work/);
 });
 
-test("Katie's one-line flower-order thought opens the generic source-contracted instrument", () => {
+test("Katie's one-line flower-order thought opens the generic source-contracted canonical demand instrument", () => {
   const katie = read("app/owner/design-atlas/KatieOrderFixture.tsx");
   const route = read("app/owner/input/flower-order/page.tsx");
   const bridge = read("app/owner/design-atlas/BridgeAtlasFixture.tsx");
@@ -200,6 +202,8 @@ test("Katie's one-line flower-order thought opens the generic source-contracted 
   assert.match(route, /SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT/);
   assert.match(route, /contract=\{SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT\}/);
   assert.match(route, /returnHref=\"\/owner\/design-atlas\/katie-order\"/);
+  assert.match(route, /endpoint: \"\/api\/atlas\/flower-demand\"/);
+  assert.match(route, /recordLabel=\"record request\"/);
   assert.match(bridge, /href: \"\/owner\/design-atlas\/katie-order\"/);
   assert.doesNotMatch(renderer, /Ruth|Linda|sunflower|flower order|Stripe/i);
 });
