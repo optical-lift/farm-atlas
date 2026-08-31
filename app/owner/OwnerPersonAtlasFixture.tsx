@@ -1,11 +1,11 @@
 "use client";
 
-import PersonAtlasChassis, {
+import PersonAtlasNotebookV2, {
   type PersonAtlasReservedSpan,
   type PersonAtlasSection,
   type PersonAtlasTimeMark,
   type PersonAtlasUtilityGroup,
-} from "./PersonAtlasChassis";
+} from "./PersonAtlasNotebookV2";
 
 const SECTIONS: PersonAtlasSection[] = [
   {
@@ -139,20 +139,21 @@ const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
   },
 ];
 
-export default function OwnerPersonAtlasFixture() {
+type OwnerPersonAtlasFixtureProps = {
+  personName: string;
+};
+
+export default function OwnerPersonAtlasFixture({ personName }: OwnerPersonAtlasFixtureProps) {
   return (
-    <PersonAtlasChassis
-      identity="MY ATLAS"
-      identityDetail="One person · several lawful worlds"
-      pageKicker="TODAY"
+    <PersonAtlasNotebookV2
+      identity={personName}
+      greeting="hello"
       pageTitle="Today"
-      pageIntro="The page belongs to the person. Institutions may make governed claims on it; none of them own the whole day."
       sections={SECTIONS}
       timeMarks={TIME_MARKS}
       reservedSpans={RESERVED}
       nextHardEdge="next fixed · family 6:30"
       utilityGroups={UTILITY_GROUPS}
-      footer={<>Fixture truth only. Nothing on this page reads or writes live Atlas operations.</>}
     />
   );
 }
