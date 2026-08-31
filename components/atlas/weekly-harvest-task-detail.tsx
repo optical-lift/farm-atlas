@@ -13,8 +13,10 @@ type Props = {
   assignee: AtlasAssigneeConfig;
 };
 
-type HarvestException = "not_ready" | "deadheaded" | "crop_exhausted";
-type ResultKind = "harvest_amount" | HarvestException;
+type HarvestGrade = "florist_grade" | "event_grade";
+type HarvestException = "not_ready" | "deadheaded" | "crop_loss";
+type HistoricalHarvestException = "crop_exhausted";
+type ResultKind = "harvest_amount" | HarvestException | HistoricalHarvestException;
 type IntakeSource = "Foraged" | "Purchased" | "Gifted";
 type IntakeUnit = "Stems" | "Buckets" | "Bundles";
 
@@ -30,6 +32,7 @@ type HarvestRow = {
   availabilityStatus?: string | null;
   resolved: boolean;
   resultKind?: ResultKind | null;
+  harvestGrade?: HarvestGrade | null;
   bucketHalves?: number | null;
 };
 
@@ -73,7 +76,12 @@ type ExternalIntakeResponse = {
 const exceptions: Array<{ value: HarvestException; label: string }> = [
   { value: "not_ready", label: "Not ready" },
   { value: "deadheaded", label: "Deadheaded" },
-  { value: "crop_exhausted", label: "Crop exhausted" },
+  { value: "crop_loss", label: "Crop loss" },
+];
+
+const grades: Array<{ value: HarvestGrade; label: string }> = [
+  { value: "florist_grade", label: "Florist grade" },
+  { value: "event_grade", label: "Event grade" },
 ];
 
 const intakeSources: IntakeSource[] = ["Foraged", "Purchased", "Gifted"];
@@ -98,16 +106,29 @@ function formatBuckets(bucketHalves: number) {
   return `${Math.floor(buckets)}½`.replace("0½", "½");
 }
 
+function gradeLabel(grade: HarvestGrade | null | undefined) {
+  return grades.find((choice) => choice.value === grade)?.label ?? null;
+}
+
+function outcomeLabel(kind: ResultKind | null | undefined) {
+  if (kind === "crop_exhausted") return "Crop exhausted (legacy)";
+  return exceptions.find((choice) => choice.value === kind)?.label ?? "Recorded";
+}
+
 function resolvedLabel(row: HarvestRow) {
-  if (row.resultKind === "harvest_amount" && row.bucketHalves) return `${formatBuckets(row.bucketHalves)} bucket${row.bucketHalves === 2 ? "" : "s"}`;
-  return exceptions.find((choice) => choice.value === row.resultKind)?.label ?? "Recorded";
+  if (row.resultKind === "harvest_amount" && row.bucketHalves) {
+    const amount = `${formatBuckets(row.bucketHalves)} bucket${row.bucketHalves === 2 ? "" : "s"}`;
+    const grade = gradeLabel(row.harvestGrade);
+    return grade ? `${amount} · ${grade}` : amount;
+  }
+  return outcomeLabel(row.resultKind);
 }
 
 function idempotencyKey(taskId: string, cropCycleId: string, resultKind: ResultKind) {
   const nonce = typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  return `weekly-harvest:v2:${taskId}:${cropCycleId}:${resultKind}:${nonce}`;
+  return `weekly-harvest:v3:${taskId}:${cropCycleId}:${resultKind}:${nonce}`;
 }
 
 function externalIntakeKey(taskId: string) {
@@ -146,11 +167,9 @@ function ExternalIntakeBuilder({ taskId, onClose }: { taskId: string; onClose: (
     const flower = flowerDraft.trim();
     const color = colorDraft.trim();
     if (!flower || !color) return;
-
     const nonce = typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `${Date.now()}-${lines.length}`;
-
     setLines((current) => [...current, { id: nonce, flower, color, unit: unitDraft, quantity: 0 }]);
     setFlowerDraft("");
     setColorDraft("");
@@ -174,16 +193,10 @@ function ExternalIntakeBuilder({ taskId, onClose }: { taskId: string; onClose: (
     retryRef.current = null;
   }
 
-  const canSave = Boolean(
-    sourceType
-    && sourceLabel.trim()
-    && lines.length
-    && lines.every((line) => line.quantity > 0),
-  );
+  const canSave = Boolean(sourceType && sourceLabel.trim() && lines.length && lines.every((line) => line.quantity > 0));
 
   async function saveIntake() {
     if (!sourceType || !canSave) return;
-
     const requestLines = lines.map((line) => ({
       flowerLabel: line.flower.trim(),
       colorLabel: line.color.trim(),
@@ -216,7 +229,6 @@ function ExternalIntakeBuilder({ taskId, onClose }: { taskId: string; onClose: (
       });
       const body = await response.json() as ExternalIntakeResponse;
       if (!response.ok || !body.ok) throw new Error(body.error || "External flower intake failed.");
-
       setSaved(body);
       retryRef.current = null;
     } catch (error) {
@@ -255,25 +267,14 @@ function ExternalIntakeBuilder({ taskId, onClose }: { taskId: string; onClose: (
             <span className={styles.intakeStepLabel}>How did these come in?</span>
             <div className={styles.intakePills}>
               {intakeSources.map((choice) => (
-                <button
-                  type="button"
-                  className={styles.intakePill}
-                  data-active={sourceType === choice ? "true" : "false"}
-                  key={choice}
-                  onClick={() => { setSourceType(choice); setMessage(null); }}
-                >{choice}</button>
+                <button type="button" className={styles.intakePill} data-active={sourceType === choice ? "true" : "false"} key={choice} onClick={() => { setSourceType(choice); setMessage(null); }}>{choice}</button>
               ))}
             </div>
           </div>
 
           <label className={styles.intakeField}>
             <span className={styles.intakeStepLabel}>Source / place</span>
-            <input
-              value={sourceLabel}
-              onChange={(event) => { setSourceLabel(event.target.value); setMessage(null); }}
-              placeholder="Roadside, Mary’s garden, wholesaler…"
-              maxLength={200}
-            />
+            <input value={sourceLabel} onChange={(event) => { setSourceLabel(event.target.value); setMessage(null); }} placeholder="Roadside, Mary’s garden, wholesaler…" maxLength={200} />
           </label>
 
           <div className={styles.intakeStep}>
@@ -294,23 +295,12 @@ function ExternalIntakeBuilder({ taskId, onClose }: { taskId: string; onClose: (
                 <span className={styles.intakeStepLabel}>Count by</span>
                 <div className={styles.intakePills}>
                   {intakeUnits.map((choice) => (
-                    <button
-                      type="button"
-                      className={styles.intakePill}
-                      data-active={unitDraft === choice ? "true" : "false"}
-                      key={choice}
-                      onClick={() => setUnitDraft(choice)}
-                    >{choice}</button>
+                    <button type="button" className={styles.intakePill} data-active={unitDraft === choice ? "true" : "false"} key={choice} onClick={() => setUnitDraft(choice)}>{choice}</button>
                   ))}
                 </div>
               </div>
 
-              <button
-                type="button"
-                className={styles.intakeAddFlower}
-                disabled={!flowerDraft.trim() || !colorDraft.trim() || saving}
-                onClick={addLine}
-              >+ Add flower</button>
+              <button type="button" className={styles.intakeAddFlower} disabled={!flowerDraft.trim() || !colorDraft.trim() || saving} onClick={addLine}>+ Add flower</button>
             </div>
           </div>
 
@@ -321,12 +311,7 @@ function ExternalIntakeBuilder({ taskId, onClose }: { taskId: string; onClose: (
                   <div className={styles.intakeIdentity}>
                     <strong>{line.color} {line.flower}</strong>
                     <small>count by {line.unit.toLowerCase()}</small>
-                    <button
-                      type="button"
-                      className={styles.intakeRemove}
-                      disabled={saving}
-                      onClick={() => setLines((current) => current.filter((candidate) => candidate.id !== line.id))}
-                    >Remove</button>
+                    <button type="button" className={styles.intakeRemove} disabled={saving} onClick={() => setLines((current) => current.filter((candidate) => candidate.id !== line.id))}>Remove</button>
                   </div>
                   <div className={styles.intakeCounter} aria-label={`${line.color} ${line.flower} quantity`}>
                     <button type="button" disabled={saving || line.quantity === 0} onClick={() => changeLineQuantity(line.id, -1)}>−</button>
@@ -339,9 +324,7 @@ function ExternalIntakeBuilder({ taskId, onClose }: { taskId: string; onClose: (
           ) : null}
 
           {message ? <p className={styles.errorInline}>{message}</p> : null}
-          <button type="button" className={styles.intakeSave} disabled={saving || !canSave} onClick={() => void saveIntake()}>
-            {saving ? "Adding…" : "Add to harvest custody"}
-          </button>
+          <button type="button" className={styles.intakeSave} disabled={saving || !canSave} onClick={() => void saveIntake()}>{saving ? "Adding…" : "Add to harvest custody"}</button>
         </div>
       )}
     </section>
@@ -352,6 +335,7 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
   const [state, setState] = useState<HarvestState | null>(null);
   const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
   const [bucketHalves, setBucketHalves] = useState(0);
+  const [harvestGrade, setHarvestGrade] = useState<HarvestGrade | null>(null);
   const [exception, setException] = useState<HarvestException | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -386,13 +370,18 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
     return Array.from(grouped.entries());
   }, [state?.rows]);
 
+  function resetDraft() {
+    setBucketHalves(0);
+    setHarvestGrade(null);
+    setException(null);
+    setMessage(null);
+  }
+
   function openRow(row: HarvestRow) {
     if (row.resolved) return;
     const next = activeCycleId === row.cropCycleId ? null : row.cropCycleId;
     setActiveCycleId(next);
-    setBucketHalves(0);
-    setException(null);
-    setMessage(null);
+    resetDraft();
   }
 
   function changeBucketCount(row: HarvestRow, delta: number) {
@@ -401,10 +390,16 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
     setMessage(null);
     if (activeCycleId !== row.cropCycleId) {
       setActiveCycleId(row.cropCycleId);
-      setBucketHalves(Math.max(0, delta));
+      const next = Math.max(0, delta);
+      setBucketHalves(next);
+      if (next === 0) setHarvestGrade(null);
       return;
     }
-    setBucketHalves((current) => Math.max(0, current + delta));
+    setBucketHalves((current) => {
+      const next = Math.max(0, current + delta);
+      if (next === 0) setHarvestGrade(null);
+      return next;
+    });
   }
 
   function chooseException(row: HarvestRow, next: HarvestException) {
@@ -412,12 +407,13 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
     if (activeCycleId !== row.cropCycleId) setActiveCycleId(row.cropCycleId);
     setException(next);
     setBucketHalves(0);
+    setHarvestGrade(null);
     setMessage(null);
   }
 
   async function record(row: HarvestRow) {
-    const resultKind: ResultKind | null = bucketHalves > 0 ? "harvest_amount" : exception;
-    if (!resultKind) return;
+    const resultKind: "harvest_amount" | HarvestException | null = bucketHalves > 0 ? "harvest_amount" : exception;
+    if (!resultKind || (resultKind === "harvest_amount" && !harvestGrade)) return;
 
     try {
       setSaving(true);
@@ -431,6 +427,7 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
           taskId: task.task_id,
           cropCycleId: row.cropCycleId,
           resultKind,
+          harvestGrade: resultKind === "harvest_amount" ? harvestGrade : null,
           bucketHalves: resultKind === "harvest_amount" ? bucketHalves : null,
           idempotencyKey: idempotencyKey(task.task_id, row.cropCycleId, resultKind),
         }),
@@ -444,8 +441,7 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
       }
 
       setActiveCycleId(null);
-      setBucketHalves(0);
-      setException(null);
+      resetDraft();
       await loadState();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Harvest result failed.");
@@ -464,15 +460,8 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
       : `${resolved} / ${total} recorded · ½ bucket increments`;
 
   return (
-    <main className={styles.shell} data-atlas-harvest-card="weekly">
-      <AtlasTaskCardFrame
-        family="Harvest"
-        familyDetail="Thursday"
-        title="Harvest Stems"
-        subtitle="Elm Farm"
-        timing={timing}
-        completion={false}
-      >
+    <main className={styles.shell} data-atlas-harvest-card="weekly" data-atlas-harvest-contract="v3">
+      <AtlasTaskCardFrame family="Harvest" familyDetail="Thursday" title="Harvest Stems" subtitle="Elm Farm" timing={timing} completion={false}>
         <div className={styles.summary}>
           <strong>Ready to harvest</strong>
           <span>{detailStatus}</span>
@@ -496,23 +485,18 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
                   {rows.map((row) => {
                     const active = activeCycleId === row.cropCycleId;
                     const visibleHalves = row.resolved && row.resultKind === "harvest_amount" ? row.bucketHalves ?? 0 : active ? bucketHalves : 0;
-                    const canRecord = active && (bucketHalves > 0 || Boolean(exception));
+                    const canRecord = active && ((bucketHalves > 0 && Boolean(harvestGrade)) || Boolean(exception));
                     const recordLabel = bucketHalves > 0
-                      ? `Record ${formatBuckets(bucketHalves)} bucket${bucketHalves === 2 ? "" : "s"}`
+                      ? harvestGrade
+                        ? `Record ${formatBuckets(bucketHalves)} bucket${bucketHalves === 2 ? "" : "s"} · ${gradeLabel(harvestGrade)}`
+                        : "Choose harvest grade"
                       : exception
-                        ? `Record ${exceptions.find((choice) => choice.value === exception)?.label ?? "result"}`
+                        ? `Record ${outcomeLabel(exception)}`
                         : "Choose an amount or outcome";
 
                     return (
                       <div className={styles.row} key={row.cropCycleId} data-open={active ? "true" : "false"} data-resolved={row.resolved ? "true" : "false"}>
-                        <button
-                          className={styles.cropIdentity}
-                          type="button"
-                          onClick={() => openRow(row)}
-                          disabled={row.resolved}
-                          aria-expanded={active}
-                          aria-controls={`harvest-outcomes-${row.cropCycleId}`}
-                        >
+                        <button className={styles.cropIdentity} type="button" onClick={() => openRow(row)} disabled={row.resolved} aria-expanded={active} aria-controls={`harvest-outcomes-${row.cropCycleId}`}>
                           <span className={styles.cropText}>
                             <strong>{displayCrop(row)}</strong>
                             <small>{row.objectLabel}</small>
@@ -521,38 +505,31 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
                         </button>
 
                         <div className={styles.bucketCounter} aria-label={`${displayCrop(row)} bucket count`}>
-                          <button
-                            type="button"
-                            aria-label={`Remove half bucket from ${displayCrop(row)}`}
-                            disabled={row.resolved || saving || !active || bucketHalves === 0}
-                            onClick={() => changeBucketCount(row, -1)}
-                          >−</button>
+                          <button type="button" aria-label={`Remove half bucket from ${displayCrop(row)}`} disabled={row.resolved || saving || !active || bucketHalves === 0} onClick={() => changeBucketCount(row, -1)}>−</button>
                           <strong>{formatBuckets(visibleHalves)}</strong>
-                          <button
-                            type="button"
-                            aria-label={`Add half bucket to ${displayCrop(row)}`}
-                            disabled={row.resolved || saving}
-                            onClick={() => changeBucketCount(row, 1)}
-                          >+</button>
+                          <button type="button" aria-label={`Add half bucket to ${displayCrop(row)}`} disabled={row.resolved || saving} onClick={() => changeBucketCount(row, 1)}>+</button>
                         </div>
 
                         {active ? (
                           <div className={styles.exceptionPanel} id={`harvest-outcomes-${row.cropCycleId}`}>
-                            <span>What happened?</span>
+                            {bucketHalves > 0 ? (
+                              <>
+                                <span>Harvest grade</span>
+                                <div className={styles.outcomeGrid}>
+                                  {grades.map((choice) => (
+                                    <button type="button" data-active={harvestGrade === choice.value ? "true" : "false"} key={choice.value} onClick={() => { setHarvestGrade(choice.value); setException(null); setMessage(null); }}>{choice.label}</button>
+                                  ))}
+                                </div>
+                              </>
+                            ) : null}
+                            <span>Or record a non-harvest outcome</span>
                             <div className={styles.outcomeGrid}>
                               {exceptions.map((choice) => (
-                                <button
-                                  type="button"
-                                  data-active={exception === choice.value ? "true" : "false"}
-                                  key={choice.value}
-                                  onClick={() => chooseException(row, choice.value)}
-                                >{choice.label}</button>
+                                <button type="button" data-active={exception === choice.value ? "true" : "false"} key={choice.value} onClick={() => chooseException(row, choice.value)}>{choice.label}</button>
                               ))}
                             </div>
                             {message ? <p className={styles.errorInline}>{message}</p> : null}
-                            <button className={styles.record} type="button" disabled={saving || !canRecord} onClick={() => void record(row)}>
-                              {saving ? "Recording…" : recordLabel}
-                            </button>
+                            <button className={styles.record} type="button" disabled={saving || !canRecord} onClick={() => void record(row)}>{saving ? "Recording…" : recordLabel}</button>
                           </div>
                         ) : null}
                       </div>
@@ -570,9 +547,7 @@ export default function WeeklyHarvestTaskDetail({ task, assignee }: Props) {
               <span className={styles.intakeKicker}>External intake</span>
               <strong>Add flowers that did not come from an Elm bed</strong>
             </div>
-            <button type="button" aria-expanded={externalOpen} onClick={() => setExternalOpen((current) => !current)}>
-              {externalOpen ? "Close external intake" : "Log external intake"}
-            </button>
+            <button type="button" aria-expanded={externalOpen} onClick={() => setExternalOpen((current) => !current)}>{externalOpen ? "Close external intake" : "Log external intake"}</button>
           </div>
         ) : null}
 

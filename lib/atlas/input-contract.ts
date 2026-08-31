@@ -1,9 +1,17 @@
-export type AtlasInputPrimitive = "quantity" | "choice" | "text";
+export type AtlasInputPrimitive = "quantity" | "choice" | "text" | "date";
 
-export type AtlasInputCondition = {
-  fieldId: string;
-  equals: string | number;
-};
+export type AtlasInputCondition =
+  | {
+      fieldId: string;
+      equals: string | number;
+    }
+  | {
+      fieldId: string;
+      greaterThan: number;
+    }
+  | {
+      all: AtlasInputCondition[];
+    };
 
 export type AtlasInputSourceRef = {
   domain: string;
@@ -49,7 +57,16 @@ export type AtlasTextInputField = AtlasConditionalInputField & {
   rows?: number;
 };
 
-export type AtlasInputField = AtlasQuantityInputField | AtlasChoiceInputField | AtlasTextInputField;
+export type AtlasDateInputField = AtlasConditionalInputField & {
+  primitive: "date";
+  id: string;
+  label: string;
+  initialValue?: string;
+  minimum?: string;
+  maximum?: string;
+};
+
+export type AtlasInputField = AtlasQuantityInputField | AtlasChoiceInputField | AtlasTextInputField | AtlasDateInputField;
 
 export type AtlasInputRule =
   | {
@@ -101,9 +118,15 @@ export type AtlasInputResultEvent = {
   sourceContext: Record<string, string | number | boolean | null>;
 };
 
-export function atlasInputConditionMatches(condition: AtlasInputCondition | undefined, values: AtlasInputValues) {
+export function atlasInputConditionMatches(
+  condition: AtlasInputCondition | undefined,
+  values: AtlasInputValues,
+): boolean {
   if (!condition) return true;
-  return values[condition.fieldId] === condition.equals;
+  if ("all" in condition) return condition.all.every((part) => atlasInputConditionMatches(part, values));
+  const value = values[condition.fieldId];
+  if ("equals" in condition) return value === condition.equals;
+  return typeof value === "number" && Number.isFinite(value) && value > condition.greaterThan;
 }
 
 export function atlasInputFieldIsVisible(field: AtlasInputField, values: AtlasInputValues) {
@@ -131,6 +154,10 @@ export function choiceFields(contract: AtlasInputContract) {
 
 export function textFields(contract: AtlasInputContract) {
   return contract.fields.filter((field): field is AtlasTextInputField => field.primitive === "text");
+}
+
+export function dateFields(contract: AtlasInputContract) {
+  return contract.fields.filter((field): field is AtlasDateInputField => field.primitive === "date");
 }
 
 export function activeAtlasInputFields(contract: AtlasInputContract, values: AtlasInputValues) {
