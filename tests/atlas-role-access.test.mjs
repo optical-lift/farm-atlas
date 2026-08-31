@@ -36,7 +36,7 @@ test("Farm-Hand membership opens worker actions and returns to shared Atlas from
   });
 });
 
-test("anonymous and membership-less sessions receive neutral redirects", () => {
+test("anonymous and onboarding sessions receive neutral redirects", () => {
   assert.deepEqual(resolveRoleAccess(null, ["owner"]), {
     status: "anonymous",
     membership: null,
@@ -50,14 +50,16 @@ test("anonymous and membership-less sessions receive neutral redirects", () => {
         email: "verified@example.invalid",
         displayName: "Verified User",
         activeFarmId: null,
+        activeOrganizationId: null,
         memberships: [],
+        organizationMemberships: [],
       },
       ["owner"],
     ),
     {
-      status: "no_membership",
+      status: "onboarding",
       membership: null,
-      redirectTo: "/",
+      redirectTo: "/onboarding",
     },
   );
 });
