@@ -37,6 +37,10 @@ function isPublicPath(pathname: string) {
   );
 }
 
+function isExternallyAuthenticatedPath(pathname: string) {
+  return pathname === "/api/continuity/messages/ingest";
+}
+
 function needsAtlasPortfolioMembership(pathname: string) {
   return (
     pathname.startsWith("/api/atlas/projects/") ||
@@ -85,7 +89,7 @@ export async function updateAtlasSession(request: NextRequest) {
   const authenticated = Boolean(userId);
   const { pathname } = request.nextUrl;
 
-  if (!authenticated && !isPublicPath(pathname)) {
+  if (!authenticated && !isPublicPath(pathname) && !isExternallyAuthenticatedPath(pathname)) {
     if (pathname.startsWith("/api/")) {
       return copySessionCookies(
         response,
