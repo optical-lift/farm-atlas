@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import styles from "@/components/atlas/crop-move-task-detail.module.css";
+import InlineIssueDrawer from "@/components/atlas/inline-issue-drawer";
 import TaskBedMap from "@/components/atlas/task-bed-map";
 import AtlasTaskCardFrame from "@/components/atlas/task-card-frame";
 import type { AtlasAssigneeConfig } from "@/lib/atlas/task-assignment";
@@ -185,12 +186,22 @@ export default function CropMoveTaskDetail({ task, assignee }: Props) {
         </div>
         <section className={styles.moveSection}>
           <div className={styles.movePlace}>
-            <div className={styles.placeHeading}><div><small>Source</small><strong>{view.sourceTitle}</strong><span>{view.sourceDetail}</span></div><details className={styles.issueDrawer}><summary aria-label="Report source issue">+</summary><div className={styles.issuePanel}>{view.sourceIssues.map((issue) => <button type="button" key={issue} disabled={busy} onClick={() => void logIssue("source", issue)}>{issue}</button>)}</div></details></div>
+            <div className={styles.placeHeading}>
+              <div><small>Source</small><strong>{view.sourceTitle}</strong><span>{view.sourceDetail}</span></div>
+              <InlineIssueDrawer triggerLabel="Report source issue">
+                {view.sourceIssues.map((issue) => <button type="button" key={issue} disabled={busy} onClick={() => void logIssue("source", issue)}>{issue}</button>)}
+              </InlineIssueDrawer>
+            </div>
             {view.sourceFacts.length ? <div className={styles.placeFacts}>{view.sourceFacts.map((fact) => <div key={fact.label}><small>{fact.label}</small><strong>{fact.value}</strong></div>)}</div> : null}
           </div>
           <div className={styles.moveLine} aria-hidden="true">→</div>
           <div className={styles.movePlace}>
-            <div className={styles.placeHeading}><div><small>Destination</small><strong>{view.destinationTitle}</strong><span>{view.destinationDetail}</span></div><details className={styles.issueDrawer}><summary aria-label="Report destination issue">+</summary><div className={styles.issuePanel}>{view.destinationIssues.map((issue) => <button type="button" key={issue} disabled={busy} onClick={() => void logIssue("destination", issue)}>{issue}</button>)}</div></details></div>
+            <div className={styles.placeHeading}>
+              <div><small>Destination</small><strong>{view.destinationTitle}</strong><span>{view.destinationDetail}</span></div>
+              <InlineIssueDrawer triggerLabel="Report destination issue">
+                {view.destinationIssues.map((issue) => <button type="button" key={issue} disabled={busy} onClick={() => void logIssue("destination", issue)}>{issue}</button>)}
+              </InlineIssueDrawer>
+            </div>
             {view.destinationFacts.length ? <div className={styles.placeFacts}>{view.destinationFacts.map((fact) => <div key={fact.label}><small>{fact.label}</small><strong>{fact.value}</strong></div>)}</div> : null}
           </div>
         </section>
