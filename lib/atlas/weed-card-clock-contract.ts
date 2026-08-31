@@ -33,7 +33,9 @@ export type AtlasWeedCardClock = {
     inheritanceLayer: "subject_override";
     active: boolean;
   };
-  physicalCondition: AtlasCarePhysicalCondition;
+  physicalCondition: AtlasCarePhysicalCondition & {
+    inferredFromClock: false;
+  };
   explanation?: {
     governedBy: "owner_authored_rule";
     basis: "latest_qualifying_satisfaction_plus_existing_weed_card_interval";
