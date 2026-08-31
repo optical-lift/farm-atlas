@@ -45,5 +45,6 @@ test("product entry and onboarding do not inherit operational farm chrome", () =
   assert.match(contextualFrame, /"\/start"/);
   assert.match(contextualFrame, /"\/join"/);
   assert.match(contextualFrame, /"\/onboarding"/);
+  assert.match(contextualFrame, /rewrittenPublicRoot = pathname === "\/" && !effectiveFarmRole && !activeFarmName/);
   assert.match(contextualFrame, /if \(hidden\) return null/);
 });
