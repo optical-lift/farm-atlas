@@ -114,10 +114,26 @@ test("flower orders prove one input contract can capture a buyer and several ord
   assert.match(order, /id: \"buyer\"/);
   assert.match(order, /value: \"ruth\"/);
   assert.match(order, /value: \"lindas\"/);
-  assert.match(order, /id: \"sunflowerBunches\"/);
+  assert.match(order, /id: \"sunflowerBundles\"/);
+  assert.match(order, /label: \"Sunflower bundles\"/);
   assert.match(order, /id: \"samples\"/);
   assert.match(order, /kind: \"minimum_quantity_total\"/);
-  assert.match(order, /fieldIds: \[\"sunflowerBunches\", \"samples\"\]/);
+  assert.match(order, /fieldIds: \[\"sunflowerBundles\", \"samples\"\]/);
+  assert.doesNotMatch(order, /bunch/i);
+});
+
+test("canonical flower vocabulary separates harvest truth from prepared form", () => {
+  const vocabulary = read("lib/atlas/flower-vocabulary.ts");
+
+  assert.match(vocabulary, /FLOWER_HARVEST_GRADES = \[\"florist_grade\", \"event_grade\"\]/);
+  assert.match(vocabulary, /FLOWER_NON_HARVEST_DISPOSITIONS = \[\"deadheaded\", \"crop_loss\"\]/);
+  assert.match(vocabulary, /FLOWER_SELLABLE_FORMS = \[\"stem\", \"bundle\", \"posy\", \"bouquet\", \"arrangement\"\]/);
+  assert.match(vocabulary, /FLOWER_BUNDLE_STEM_COUNTS = \[5, 10, 20\]/);
+  assert.match(vocabulary, /preparation: \"stripped_and_rubber_banded\"/);
+  assert.match(vocabulary, /wrapping: \"paper\"/);
+  assert.match(vocabulary, /flowerFeedPlacement: \"inside_rubber_band\"/);
+  assert.match(vocabulary, /container: \"vase_or_jar\"/);
+  assert.doesNotMatch(vocabulary, /bunch/i);
 });
 
 test("recording an order creates fulfillment demand without fabricating inventory movement or payment", () => {
