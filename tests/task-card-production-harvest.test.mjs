@@ -37,23 +37,36 @@ test("Harvest recording follows the approved half-bucket counter grammar", () =>
   assert.match(migrationV2, /'bucketIncrement',0\.5/);
 });
 
-test("Harvest amount and exceptions are mutually exclusive", () => {
+test("Harvest amount and non-harvest outcomes are mutually exclusive", () => {
   assert.match(weekly, /setException\(null\)/);
   assert.match(weekly, /setBucketHalves\(0\)/);
   assert.match(weekly, /const resultKind: ResultKind \| null = bucketHalves > 0 \? "harvest_amount" : exception/);
+  assert.match(route, /resultKind !== "harvest_amount"/);
+  assert.match(route, /Only usable harvested flowers receive a harvest grade/);
   assert.match(migrationV2, /result_kind='harvest_amount' and bucket_halves is not null and bucket_halves>=1/);
   assert.match(migrationV2, /result_kind in \('not_ready','deadheaded','crop_exhausted'\) and bucket_halves is null/);
 });
 
-test("the only selectable non-amount Harvest outcomes are Not ready, Deadheaded, and Crop exhausted", () => {
-  for (const outcome of ["not_ready", "deadheaded", "crop_exhausted"]) {
+test("current selectable non-amount Harvest outcomes are Not ready, Deadheaded, and Crop loss", () => {
+  for (const outcome of ["not_ready", "deadheaded", "crop_loss"]) {
     assert.match(weekly, new RegExp(outcome));
     assert.match(route, new RegExp(outcome));
-    assert.match(migrationV2, new RegExp(outcome));
   }
+  assert.match(weekly, /Crop exhausted \(legacy\)/);
+  assert.doesNotMatch(route, /"crop_exhausted"/);
+  assert.match(migrationV2, /crop_exhausted/);
   assert.doesNotMatch(weekly, /value:\s*"harvested"|value:\s*"beginning"|value:\s*"declining"|value:\s*"finished"|value:\s*"problem_or_uncertain"/);
   assert.doesNotMatch(weekly, /More remains|Harvest finished|Problem \/ uncertain/);
   assert.doesNotMatch(route, /"beginning"|"harvested"|"declining"|"finished"|"problem_or_uncertain"/);
+});
+
+test("usable flower Harvest requires an explicit canonical grade", () => {
+  assert.match(weekly, /type HarvestGrade = "florist_grade" \| "event_grade"/);
+  assert.match(weekly, /Florist grade/);
+  assert.match(weekly, /Event grade/);
+  assert.match(route, /HARVEST_GRADES = new Set\(\["florist_grade", "event_grade"\]\)/);
+  assert.match(route, /p_harvest_grade/);
+  assert.match(route, /Usable flower harvest requires Florist grade or Event grade/);
 });
 
 test("weekly Harvest groups by canonical zone and exposes the real bed under each crop", () => {
@@ -64,11 +77,16 @@ test("weekly Harvest groups by canonical zone and exposes the real bed under eac
   assert.match(migrationV2, /'objectLabel',u\.object_label/);
 });
 
-test("weekly Harvest API writes only through the v2 result membrane", () => {
-  assert.match(route, /weekly-harvest-round-v2/);
-  assert.match(route, /owner_operator_record_weekly_harvest_row_v2/);
-  assert.match(route, /record_weekly_harvest_row_for_member_v2/);
+test("weekly Harvest API reads v2 state and writes only through the v3 result membrane", () => {
+  assert.match(route, /weekly-harvest-round-v3/);
+  assert.match(route, /owner_operator_weekly_harvest_task_state_v2/);
+  assert.match(route, /weekly_harvest_task_state_for_member_v2/);
+  assert.match(route, /owner_operator_record_weekly_harvest_row_v3/);
+  assert.match(route, /record_weekly_harvest_row_for_member_v3/);
   assert.match(route, /p_bucket_halves/);
+  assert.match(route, /p_harvest_grade/);
+  assert.doesNotMatch(route, /owner_operator_record_weekly_harvest_row_v2/);
+  assert.doesNotMatch(route, /record_weekly_harvest_row_for_member_v2/);
   assert.doesNotMatch(route, /p_bucket_band|p_more_availability/);
   assert.match(migrationV2, /revoke execute on function atlas\.record_weekly_harvest_row_for_member_v1/);
   assert.match(migrationV2, /grant execute on function atlas\.record_weekly_harvest_row_for_member_v2/);
