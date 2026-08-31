@@ -86,7 +86,7 @@ test("a FlyLady zone pass satisfies Today's claim even when the room still needs
   assert.doesNotMatch(household, /todayClaimSatisfied: condition === \"all_clear\"/);
 });
 
-test("Today summons the Household input instrument while the Household collection remains source state", () => {
+test("Today summons the Household input instrument while Household remains the live source", () => {
   const fixture = read("app/owner/OwnerPersonAtlasFixture.tsx");
   const page = read("app/owner/input/household-zone/page.tsx");
   const source = read("app/owner/household/HouseholdCollectionFixture.tsx");
@@ -95,7 +95,8 @@ test("Today summons the Household input instrument while the Household collectio
   assert.match(fixture, /\"household-zone\": \"\/owner\/input\/household-zone\"/);
   assert.match(page, /HOUSEHOLD_LIVING_ROOM_ZONE_INPUT_CONTRACT/);
   assert.match(page, /contract=\{HOUSEHOLD_LIVING_ROOM_ZONE_INPUT_CONTRACT\}/);
-  assert.match(source, /rules that can emit work/);
-  assert.match(source, /recent evidence/);
+  assert.match(source, /HouseholdCareSnapshot/);
+  assert.match(source, /currentAttention/);
+  assert.match(source, /how the home is holding/);
   assert.doesNotMatch(source, /\/owner\/input\/household-zone/);
 });
