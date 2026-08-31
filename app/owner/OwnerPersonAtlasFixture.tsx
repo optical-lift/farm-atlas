@@ -113,6 +113,28 @@ const RESERVED: PersonAtlasReservedSpan[] = [
 
 const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
   {
+    label: "COLLECTIONS",
+    items: [
+      {
+        label: "Household",
+        detail: "Private home rhythms · routines · zones",
+        href: "/owner/household",
+      },
+      {
+        label: "Feast Guild",
+        detail: "Linked institution · Principal responsibility",
+      },
+      {
+        label: "Write Now Publishing House",
+        detail: "Owned institution",
+      },
+      {
+        label: "Optical Lift",
+        detail: "Owned institution",
+      },
+    ],
+  },
+  {
     label: "DESIGN",
     items: [
       {
@@ -120,15 +142,6 @@ const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
         detail: "Enter the non-Elm bridge-person fixture and pressure-test the new chassis.",
         href: "/owner/design-atlas",
       },
-    ],
-  },
-  {
-    label: "WORLDS · FIXTURE",
-    items: [
-      { label: "Household", detail: "Private life and family rhythms" },
-      { label: "Feast Guild", detail: "Linked institution · Principal responsibility" },
-      { label: "Write Now Publishing House", detail: "Owned institution" },
-      { label: "Optical Lift", detail: "Owned institution" },
     ],
   },
   {
