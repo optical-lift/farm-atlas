@@ -36,6 +36,7 @@ type PersonAtlasNotebookV2Props = {
   reservedSpans?: PersonAtlasReservedSpan[];
   nextHardEdge?: string;
   utilityGroups?: PersonAtlasUtilityGroup[];
+  sourceLinks?: Record<string, string>;
 };
 
 const DAY_START_MINUTE = 7 * 60;
@@ -132,6 +133,7 @@ export default function PersonAtlasNotebookV2({
   reservedSpans = [],
   nextHardEdge,
   utilityGroups = [],
+  sourceLinks = {},
 }: PersonAtlasNotebookV2Props) {
   const [now, setNow] = useState<Date | null>(null);
   const [utilityOpen, setUtilityOpen] = useState(false);
@@ -171,6 +173,44 @@ export default function PersonAtlasNotebookV2({
   useEffect(() => {
     if (pageIndex !== safePageIndex) setPageIndex(safePageIndex);
   }, [pageIndex, safePageIndex]);
+
+  const lineContents = (line: PersonAtlasLine, current = false) => (
+    <>
+      <span aria-hidden="true">{current ? "* •" : symbolForLine(line)}</span>
+      <strong>{line.sentence}</strong>
+    </>
+  );
+
+  const renderLine = (line: PersonAtlasLine, current = false) => {
+    const sourceHref = sourceLinks[line.id];
+    const className = current ? `${styles.taskLine} ${styles.currentTask}` : styles.taskLine;
+
+    if (sourceHref) {
+      return (
+        <Link
+          className={className}
+          data-state={line.state}
+          href={sourceHref}
+          key={line.id}
+          aria-label={`${line.sentence}. Open its source.`}
+        >
+          {lineContents(line, current)}
+        </Link>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        className={className}
+        data-state={line.state}
+        key={line.id}
+        onClick={() => setSelectedLine(line)}
+      >
+        {lineContents(line, current)}
+      </button>
+    );
+  };
 
   if (selectedLine) {
     return (
@@ -295,10 +335,7 @@ export default function PersonAtlasNotebookV2({
                   <span>* now · {nowLabel}</span>
                   {nextHardEdge ? <small>{nextHardEdge}</small> : null}
                 </div>
-                <button type="button" className={`${styles.taskLine} ${styles.currentTask}`} onClick={() => setSelectedLine(currentLine)}>
-                  <span aria-hidden="true">* •</span>
-                  <strong>{currentLine.sentence}</strong>
-                </button>
+                {renderLine(currentLine, true)}
               </section>
             ) : null}
 
@@ -307,18 +344,7 @@ export default function PersonAtlasNotebookV2({
                 <section className={styles.section} key={`${safePageIndex}:${section.label}:${sectionIndex}`}>
                   <h2>{section.label}</h2>
                   <div className={styles.lineList}>
-                    {section.lines.map((line) => (
-                      <button
-                        type="button"
-                        className={styles.taskLine}
-                        data-state={line.state}
-                        key={line.id}
-                        onClick={() => setSelectedLine(line)}
-                      >
-                        <span aria-hidden="true">{symbolForLine(line)}</span>
-                        <strong>{line.sentence}</strong>
-                      </button>
-                    ))}
+                    {section.lines.map((line) => renderLine(line))}
                   </div>
                 </section>
               ))}
