@@ -146,6 +146,16 @@ const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
     ],
   },
   {
+    label: "READ ATLAS",
+    items: [
+      {
+        label: "Ask Atlas",
+        detail: "Read-only reality reconciliation · compare a field update with Atlas records",
+        href: "/owner/ask-atlas",
+      },
+    ],
+  },
+  {
     label: "DESIGN",
     items: [
       {
@@ -158,7 +168,7 @@ const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
   {
     label: "BUILD STATUS",
     items: [
-      { label: "No live intelligence connected", detail: "This shell deliberately reads no Owner dashboard, farm tasks, Principal state, or Clock data." },
+      { label: "Today remains fixture-only", detail: "The Daily Log still reads no live Owner dashboard, farm tasks, Principal state, or Clock data. Ask Atlas is isolated as a read-only design test." },
     ],
   },
 ];
