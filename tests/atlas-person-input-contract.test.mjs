@@ -104,3 +104,47 @@ test("live Household Care remains the source while Today summons its dedicated r
   assert.match(actions, /principal_record_household_care_observation_api_v1/);
   assert.match(actions, /principal_record_household_care_result_api_v1/);
 });
+
+test("flower orders prove one input contract can capture a buyer and several ordered line quantities", () => {
+  const order = read("lib/atlas/input-contracts/flower-order-fixture.ts");
+
+  assert.match(order, /domain: \"buyer-distribution\"/);
+  assert.match(order, /jurisdiction: \"institution:feast-guild\"/);
+  assert.match(order, /responsibilityGrammar: \"flow\"/);
+  assert.match(order, /id: \"buyer\"/);
+  assert.match(order, /value: \"ruth\"/);
+  assert.match(order, /value: \"lindas\"/);
+  assert.match(order, /id: \"sunflowerBunches\"/);
+  assert.match(order, /id: \"samples\"/);
+  assert.match(order, /kind: \"minimum_quantity_total\"/);
+  assert.match(order, /fieldIds: \[\"sunflowerBunches\", \"samples\"\]/);
+});
+
+test("recording an order creates fulfillment demand without fabricating inventory movement or payment", () => {
+  const order = read("lib/atlas/input-contracts/flower-order-fixture.ts");
+
+  assert.match(order, /adjudicateFlowerOrderFixtureResult/);
+  assert.match(order, /state: \"order_recorded\"/);
+  assert.match(order, /todayClaimSatisfied: true/);
+  assert.match(order, /fulfillmentRequired: true/);
+  assert.match(order, /inventoryClaimRequired: true/);
+  assert.match(order, /inventoryCommitted: false/);
+  assert.match(order, /paymentStatus: \"not_recorded\"/);
+  assert.doesNotMatch(order, /paymentStatus: \"paid\"/);
+  assert.doesNotMatch(order, /inventoryCommitted: true/);
+});
+
+test("Katie's one-line flower-order thought opens the generic source-contracted instrument", () => {
+  const katie = read("app/owner/design-atlas/KatieOrderFixture.tsx");
+  const route = read("app/owner/input/flower-order/page.tsx");
+  const bridge = read("app/owner/design-atlas/BridgeAtlasFixture.tsx");
+  const spread = read("app/owner/PersonAtlasInputSpread.tsx");
+
+  assert.match(katie, /sentence: \"Record the next Springfield flower order\"/);
+  assert.match(katie, /\"record-flower-order\": \"\/owner\/input\/flower-order\"/);
+  assert.match(route, /SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT/);
+  assert.match(route, /contract=\{SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT\}/);
+  assert.match(route, /returnHref=\"\/owner\/design-atlas\/katie-order\"/);
+  assert.match(bridge, /href: \"\/owner\/design-atlas\/katie-order\"/);
+  assert.doesNotMatch(spread, /Ruth|Linda|sunflower|flower order|Stripe/i);
+});
