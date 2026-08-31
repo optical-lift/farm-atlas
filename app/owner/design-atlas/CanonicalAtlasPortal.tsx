@@ -10,6 +10,7 @@ import DesignAtlasCanonicalHome from "./DesignAtlasCanonicalHome";
 import DesignAtlasManagerDay from "./DesignAtlasManagerDay";
 import DesignAtlasPrincipal from "./DesignAtlasPrincipal";
 import FutureClockFixture from "./FutureClockFixture";
+import KatieBuyerProfileFixture from "./KatieBuyerProfileFixture";
 import KatiePortalFixture, { type KatieFixtureTab } from "./KatiePortalFixture";
 import RealDayWorkshopFixture from "./RealDayWorkshopFixture";
 import styles from "./canonical-atlas-portal.module.css";
@@ -51,7 +52,7 @@ function MoreSurface({ persona }: { persona: PersonaKey }) { const destinations:
 
 function KatieSurface({ tab }: { tab: TabKey }) {
   const katieTab: KatieFixtureTab = tab === "home" || tab === "clock" || tab === "training" || tab === "buyer" || tab === "more" ? tab : "clock";
-  return <AtlasAppShell className={`atlas-home-shell ${styles.shell}`} frameClassName={styles.frame} data-atlas-design-surface={`katie-${katieTab}`} data-live-data-binding="none" data-mutation-capability="fixture-local-only"><AtlasTopBar title="Katie" status={<span className="atlas-weather-line">Personal + Elm · fixture</span>} /><div className={styles.body}><KatiePortalFixture tab={katieTab} /></div></AtlasAppShell>;
+  return <AtlasAppShell className={`atlas-home-shell ${styles.shell}`} frameClassName={styles.frame} data-atlas-design-surface={`katie-${katieTab}`} data-live-data-binding="none" data-mutation-capability="fixture-local-only"><AtlasTopBar title="Katie" status={<span className="atlas-weather-line">Personal + Elm · fixture</span>} /><div className={styles.body}>{katieTab === "buyer" ? <KatieBuyerProfileFixture /> : <KatiePortalFixture tab={katieTab} />}</div></AtlasAppShell>;
 }
 
 function ShellSurface({ persona, scope, tab }: { persona: PersonaKey; scope: ScopeKey; tab: TabKey }) {
