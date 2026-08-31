@@ -1,3 +1,4 @@
+import type { AtlasCarePhysicalCondition } from "./care-contract";
 import type { AtlasRhythmClockState } from "./rhythm-clock-contract";
 
 export type AtlasWeedCardClockRule = {
@@ -32,13 +33,7 @@ export type AtlasWeedCardClock = {
     inheritanceLayer: "subject_override";
     active: boolean;
   };
-  physicalCondition: {
-    known: boolean;
-    value: string | null;
-    reportedAt: string | null;
-    source?: string | null;
-    inferredFromClock: false;
-  };
+  physicalCondition: AtlasCarePhysicalCondition;
   explanation?: {
     governedBy: "owner_authored_rule";
     basis: "latest_qualifying_satisfaction_plus_existing_weed_card_interval";
