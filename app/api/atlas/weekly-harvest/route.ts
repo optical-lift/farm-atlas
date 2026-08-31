@@ -10,13 +10,15 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const RESULTS = new Set(["harvest_amount", "not_ready", "deadheaded", "crop_exhausted"]);
+const RESULTS = new Set(["harvest_amount", "not_ready", "deadheaded", "crop_loss"]);
+const HARVEST_GRADES = new Set(["florist_grade", "event_grade"]);
 
 type RpcError = { code?: string; message?: string };
 type Body = {
   taskId?: unknown;
   cropCycleId?: unknown;
   resultKind?: unknown;
+  harvestGrade?: unknown;
   bucketHalves?: unknown;
   idempotencyKey?: unknown;
 };
@@ -36,7 +38,7 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Write-Path": "weekly-harvest-round-v2",
+      "X-Atlas-Write-Path": "weekly-harvest-round-v3",
     },
   });
 }
@@ -69,11 +71,11 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createAtlasServerClient();
   const response = operatorMembershipId
-    ? await supabase.rpc("owner_operator_weekly_harvest_task_state_v1", {
+    ? await supabase.rpc("owner_operator_weekly_harvest_task_state_v2", {
         p_effective_membership_id: operatorMembershipId,
         p_task_id: taskId,
       })
-    : await supabase.rpc("weekly_harvest_task_state_for_member_v1", {
+    : await supabase.rpc("weekly_harvest_task_state_for_member_v2", {
         p_farm_id: authorized.access.membership.farmId,
         p_task_id: taskId,
       });
@@ -107,6 +109,7 @@ export async function POST(request: NextRequest) {
   const taskId = clean(body.taskId);
   const cropCycleId = clean(body.cropCycleId);
   const resultKind = clean(body.resultKind);
+  const harvestGrade = clean(body.harvestGrade);
   const bucketHalves = integerOrNull(body.bucketHalves);
   const idempotencyKey = clean(body.idempotencyKey);
 
@@ -114,13 +117,19 @@ export async function POST(request: NextRequest) {
     return privateJson({ ok: false, error: "A valid Harvest card and crop are required." }, 400);
   }
   if (!RESULTS.has(resultKind)) {
-    return privateJson({ ok: false, error: "Record an amount, Not ready, Deadheaded, or Crop exhausted." }, 400);
+    return privateJson({ ok: false, error: "Record an amount, Not ready, Deadheaded, or Crop loss." }, 400);
   }
   if (resultKind === "harvest_amount" && (!bucketHalves || bucketHalves < 1)) {
     return privateJson({ ok: false, error: "Harvest amount must be at least one half bucket." }, 400);
   }
+  if (resultKind === "harvest_amount" && !HARVEST_GRADES.has(harvestGrade)) {
+    return privateJson({ ok: false, error: "Usable flower harvest requires Florist grade or Event grade." }, 400);
+  }
   if (resultKind !== "harvest_amount" && bucketHalves !== null) {
-    return privateJson({ ok: false, error: "Not ready, Deadheaded, and Crop exhausted do not take a harvest amount." }, 400);
+    return privateJson({ ok: false, error: "Not ready, Deadheaded, and Crop loss do not take a harvest amount." }, 400);
+  }
+  if (resultKind !== "harvest_amount" && harvestGrade) {
+    return privateJson({ ok: false, error: "Only usable harvested flowers receive a harvest grade." }, 400);
   }
   if (!idempotencyKey || idempotencyKey.length > 160) {
     return privateJson({ ok: false, error: "A valid idempotency key is required." }, 400);
@@ -131,15 +140,16 @@ export async function POST(request: NextRequest) {
     p_task_id: taskId,
     p_crop_cycle_id: cropCycleId,
     p_result_kind: resultKind,
+    p_harvest_grade: resultKind === "harvest_amount" ? harvestGrade : null,
     p_bucket_halves: resultKind === "harvest_amount" ? bucketHalves : null,
     p_idempotency_key: idempotencyKey,
   };
   const response = operatorMembershipId
-    ? await supabase.rpc("owner_operator_record_weekly_harvest_row_v2", {
+    ? await supabase.rpc("owner_operator_record_weekly_harvest_row_v3", {
         p_effective_membership_id: operatorMembershipId,
         ...args,
       })
-    : await supabase.rpc("record_weekly_harvest_row_for_member_v2", {
+    : await supabase.rpc("record_weekly_harvest_row_for_member_v3", {
         p_farm_id: authorized.access.membership.farmId,
         ...args,
       });
