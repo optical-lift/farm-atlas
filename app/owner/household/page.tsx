@@ -1,5 +1,6 @@
 import type { Viewport } from "next";
 
+import { readPrincipalHouseholdCare } from "@/lib/atlas/household-care";
 import { getAtlasSession } from "@/lib/atlas/session";
 import HouseholdCollectionFixture from "./HouseholdCollectionFixture";
 
@@ -14,6 +15,14 @@ export const viewport: Viewport = {
 };
 
 export default async function HouseholdCollectionPage() {
-  const session = await getAtlasSession();
-  return <HouseholdCollectionFixture personName={session?.displayName?.trim() || "Atlas"} />;
+  const [session, snapshot] = await Promise.all([
+    getAtlasSession(),
+    readPrincipalHouseholdCare(),
+  ]);
+  return (
+    <HouseholdCollectionFixture
+      personName={session?.displayName?.trim() || "Atlas"}
+      snapshot={snapshot}
+    />
+  );
 }
