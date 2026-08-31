@@ -21,144 +21,126 @@
 
 .heroJournal {
   position: relative;
-  width: min(100%, 430px);
+  width: min(100%, 440px);
   margin: 0;
 }
 
-.book {
+.photoStage {
   position: relative;
   width: 100%;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  aspect-ratio: 1.52 / 1;
-  transform: rotate(-0.55deg);
-  filter: drop-shadow(0 14px 17px rgba(23, 23, 23, 0.075));
+  aspect-ratio: 1.45 / 1;
+  transform: rotate(-3.25deg);
+  filter: drop-shadow(0 18px 18px rgba(23, 23, 23, 0.12));
 }
 
-.book::after {
+.photoStage::after {
   content: "";
   position: absolute;
-  top: 7px;
-  bottom: 7px;
-  left: 50%;
-  width: 1px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(23, 23, 23, 0.14) 8%,
-    rgba(23, 23, 23, 0.22) 50%,
-    rgba(23, 23, 23, 0.14) 92%,
-    transparent
-  );
-  box-shadow: 2px 0 5px rgba(23, 23, 23, 0.045), -2px 0 5px rgba(23, 23, 23, 0.035);
-  z-index: 4;
+  left: 12%;
+  right: 10%;
+  bottom: 3%;
+  height: 7%;
+  border-radius: 50%;
+  background: rgba(23, 23, 23, 0.08);
+  filter: blur(12px);
+  z-index: -1;
 }
 
-.journalPage {
-  position: relative;
+.photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  mix-blend-mode: multiply;
+  filter: brightness(1.05) contrast(0.96) saturate(0.72);
+}
+
+.journalInk {
+  position: absolute;
+  top: 14.5%;
+  right: 11.5%;
+  bottom: 13%;
+  left: 11.5%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8.5%;
+  color: rgba(26, 26, 26, 0.9);
+  font-family: var(--atlas-font-handwriting), "Segoe Print", "Bradley Hand", cursive;
+  font-synthesis: none;
+  pointer-events: none;
+  transform: perspective(1000px) rotateX(0.8deg);
+}
+
+.leftInkPage,
+.rightInkPage {
   min-width: 0;
   overflow: hidden;
-  padding: clamp(17px, 2.25vw, 24px) clamp(12px, 1.7vw, 18px) 21px;
-  border: 1px solid rgba(23, 23, 23, 0.13);
-  background-color: #fff;
-  background-image: radial-gradient(circle, rgba(23, 23, 23, 0.11) 0.52px, transparent 0.62px);
-  background-size: 11px 11px;
-  background-position: 5.5px 5.5px;
-  color: #202020;
 }
 
-.leftPage {
-  border-radius: 9px 2px 2px 10px;
-  border-right-color: rgba(23, 23, 23, 0.08);
-  box-shadow: inset -8px 0 15px rgba(23, 23, 23, 0.022);
-  transform: perspective(900px) rotateY(1.25deg);
-  transform-origin: right center;
+.leftInkPage {
+  padding: 2.5% 1% 0 5%;
+  transform: rotate(-0.8deg) skewY(0.25deg);
 }
 
-.rightPage {
-  border-radius: 2px 9px 10px 2px;
-  border-left-color: rgba(23, 23, 23, 0.08);
-  box-shadow: inset 8px 0 15px rgba(23, 23, 23, 0.022);
-  transform: perspective(900px) rotateY(-1.25deg);
-  transform-origin: left center;
+.rightInkPage {
+  padding: 2.5% 5% 0 1%;
+  transform: rotate(0.65deg) skewY(-0.2deg);
 }
 
-.pageHeader {
-  min-height: 19px;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding-bottom: 7px;
-  border-bottom: 1px solid rgba(23, 23, 23, 0.33);
-  font-size: clamp(6px, 0.63vw, 7.5px);
-  font-weight: 820;
-  letter-spacing: 0.13em;
+.logBlock {
+  margin-bottom: 8%;
 }
 
-.monthBlock {
-  padding-top: clamp(10px, 1.25vw, 14px);
-}
-
-.monthBlock strong {
+.logBlock strong,
+.logBlock span {
   display: block;
-  margin-bottom: 5px;
-  font-family: var(--atlas-font-handwriting), "Segoe Print", "Bradley Hand", sans-serif;
-  font-size: clamp(9px, 0.9vw, 11px);
-  font-weight: 650;
-  letter-spacing: 0.06em;
 }
 
-.monthBlock p,
-.rapidLog p {
-  display: grid;
-  grid-template-columns: 14px minmax(0, 1fr);
-  gap: 2px;
-  margin: 0 0 clamp(5px, 0.65vw, 8px);
-  font-family: var(--atlas-font-handwriting), "Segoe Print", "Bradley Hand", sans-serif;
-  font-size: clamp(8px, 0.82vw, 10.5px);
-  font-weight: 450;
-  line-height: 1.28;
-}
-
-.monthBlock p > span,
-.rapidLog p > span {
+.logBlock strong {
+  margin-bottom: 4px;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 8px;
+  font-size: clamp(5.4px, 0.48vw, 6.7px);
   font-weight: 800;
-  text-align: center;
+  letter-spacing: 0.08em;
 }
 
-.rapidLog {
-  padding-top: clamp(14px, 1.65vw, 19px);
+.logBlock span {
+  margin: 5px 0 2px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: clamp(4.8px, 0.42vw, 5.9px);
+  font-weight: 760;
+  letter-spacing: 0.07em;
 }
 
-.rapidLog p {
-  margin-bottom: clamp(8px, 0.95vw, 11px);
+.logBlock p {
+  margin: 0 0 2px;
+  font-size: clamp(5.6px, 0.51vw, 7px);
+  font-weight: 430;
+  line-height: 1.24;
+  white-space: normal;
 }
 
-.key {
-  position: absolute;
-  right: clamp(12px, 1.7vw, 18px);
-  bottom: 20px;
-  left: clamp(12px, 1.7vw, 18px);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px 7px;
-  padding-top: 7px;
-  border-top: 1px solid rgba(23, 23, 23, 0.22);
-  color: #676767;
-  font-size: clamp(5.5px, 0.52vw, 6.5px);
-  font-weight: 650;
-  letter-spacing: 0.02em;
+.dailyLog p {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr);
+  gap: 1px;
+  margin-bottom: 3px;
 }
 
-.pageNumber {
-  position: absolute;
-  bottom: 7px;
-  left: 50%;
-  color: #8c8c8c;
-  font-size: 5.5px;
-  transform: translateX(-50%);
+.dailyLog b {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: clamp(5px, 0.45vw, 6px);
+  font-weight: 800;
+}
+
+.dailyLog p:nth-child(5),
+.dailyLog p:nth-child(8) {
+  transform: rotate(-0.55deg);
+}
+
+.dailyLog p:nth-child(6) {
+  transform: rotate(0.4deg);
 }
 
 .credit {
@@ -188,11 +170,12 @@
 }
 
 @media (max-width: 640px) {
-  .book {
-    transform: none;
+  .photoStage {
+    transform: rotate(-1.4deg);
   }
 
-  .journalPage {
-    padding-top: 17px;
+  .journalInk {
+    top: 14%;
+    bottom: 12.5%;
   }
 }
