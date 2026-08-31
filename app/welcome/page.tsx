@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import photoStyles from "./hero-photo.module.css";
 import styles from "./sales-page.module.css";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,9 @@ const compatibleSystems = [
   "Square",
   "Dropbox",
 ];
+
+const bulletJournalPhoto =
+  "https://images.unsplash.com/photo-1711030239034-d7dbf7f2794d?auto=format&fit=crop&w=1600&q=82";
 
 export default function AtlasWelcomePage() {
   return (
@@ -51,35 +55,17 @@ export default function AtlasWelcomePage() {
             </div>
           </div>
 
-          <div className={styles.heroInstrument} aria-label="A company Atlas shown as a working notebook">
-            <article className={styles.notebook}>
-              <header className={styles.notebookHeader}>
-                <span>COMPANY / LIVE MODEL</span>
-                <span>08.31.26</span>
-              </header>
-              <div className={styles.notebookRule} />
-
-              <div className={styles.taskLine}>
-                <span aria-hidden="true">•</span>
-                <div>
-                  <strong>check whether Thursday deliveries still fit</strong>
-                  <small>sales commitments · route capacity</small>
-                </div>
-              </div>
-              <div className={styles.taskLine}>
-                <span aria-hidden="true">○</span>
-                <div>
-                  <strong>review fall purchasing before Friday</strong>
-                  <small>cash · purchasing</small>
-                </div>
-              </div>
-
-              <div className={styles.askStrip}>
-                <span>ASK ATLAS</span>
-                <p>What changed while I was gone?</p>
-              </div>
-            </article>
-          </div>
+          <figure className={`${styles.heroInstrument} ${photoStyles.heroPhoto}`}>
+            <div className={photoStyles.photoFrame}>
+              <img
+                className={photoStyles.photo}
+                src={bulletJournalPhoto}
+                alt="An open, handwritten bullet journal with planning marks and pens on the page"
+                loading="eager"
+              />
+            </div>
+            <figcaption className={photoStyles.credit}>Physical bullet journal photograph · Unsplash</figcaption>
+          </figure>
         </section>
 
         <section className={styles.compatibility} aria-label="Compatible systems">
