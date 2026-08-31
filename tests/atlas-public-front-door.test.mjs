@@ -12,6 +12,10 @@ const organizationApi = fs.readFileSync(
   new URL("../app/api/atlas/organizations/onboarding/route.ts", import.meta.url),
   "utf8",
 );
+const contextualFrame = fs.readFileSync(
+  new URL("../components/atlas/shell/AtlasContextualAppFrame.tsx", import.meta.url),
+  "utf8",
+);
 const proxy = fs.readFileSync(new URL("../lib/supabase/proxy.ts", import.meta.url), "utf8");
 
 test("public Atlas front door begins with Personal versus Organization Atlas", () => {
@@ -34,4 +38,12 @@ test("organization onboarding does not require an Elm farm membership", () => {
 test("signed-out root is rewritten to the public Atlas front door", () => {
   assert.match(proxy, /!authenticated && pathname === "\/"/);
   assert.match(proxy, /destination\.pathname = "\/welcome"/);
+});
+
+test("product entry and onboarding do not inherit operational farm chrome", () => {
+  assert.match(contextualFrame, /"\/welcome"/);
+  assert.match(contextualFrame, /"\/start"/);
+  assert.match(contextualFrame, /"\/join"/);
+  assert.match(contextualFrame, /"\/onboarding"/);
+  assert.match(contextualFrame, /if \(hidden\) return null/);
 });
