@@ -157,7 +157,6 @@ export default function KatieBuyerNotebookFixture() {
       dateLabelOverride="Springfield · prospect"
       sections={SECTIONS}
       utilityGroups={UTILITY_GROUPS}
-      showTimeMargin={false}
     />
   );
 }
