@@ -27,8 +27,9 @@ test("Atlas Care forbids the clock from inventing physical condition", () => {
   const weedClock = read("lib/atlas/weed-card-clock-contract.ts");
 
   assert.match(care, /inferredFromClock: false/);
-  assert.match(care, /may never manufacture physical condition/);
+  assert.match(care, /never manufacture physical condition/);
   assert.match(weedClock, /AtlasCarePhysicalCondition/);
+  assert.match(weedClock, /inferredFromClock: false/);
   assert.match(weedClock, /physicalConditionAuthority: "observation_only"/);
 });
 
