@@ -118,7 +118,10 @@ export type AtlasInputResultEvent = {
   sourceContext: Record<string, string | number | boolean | null>;
 };
 
-export function atlasInputConditionMatches(condition: AtlasInputCondition | undefined, values: AtlasInputValues) {
+export function atlasInputConditionMatches(
+  condition: AtlasInputCondition | undefined,
+  values: AtlasInputValues,
+): boolean {
   if (!condition) return true;
   if ("all" in condition) return condition.all.every((part) => atlasInputConditionMatches(part, values));
   const value = values[condition.fieldId];
