@@ -63,3 +63,39 @@ test("Today summons the Harvest instrument instead of requiring a second task li
   assert.match(page, /HARVEST_WHITE_LITE_INPUT_CONTRACT/);
   assert.match(page, /contract=\{HARVEST_WHITE_LITE_INPUT_CONTRACT\}/);
 });
+
+test("Household proves the same input contract can capture condition without quantities", () => {
+  const household = read("lib/atlas/input-contracts/household-zone-fixture.ts");
+
+  assert.match(household, /domain: \"household\"/);
+  assert.match(household, /jurisdiction: \"person-private\"/);
+  assert.match(household, /primitive: \"choice\"/);
+  assert.match(household, /id: \"zoneCondition\"/);
+  assert.match(household, /value: \"still_rough\"/);
+  assert.match(household, /value: \"mostly_clear\"/);
+  assert.match(household, /value: \"all_clear\"/);
+  assert.doesNotMatch(household, /primitive: \"quantity\"/);
+});
+
+test("a FlyLady zone pass satisfies Today's claim even when the room still needs future attention", () => {
+  const household = read("lib/atlas/input-contracts/household-zone-fixture.ts");
+
+  assert.match(household, /adjudicateHouseholdZoneFixtureResult/);
+  assert.match(household, /todayClaimSatisfied: true/);
+  assert.match(household, /futureZoneAttention: condition !== \"all_clear\"/);
+  assert.doesNotMatch(household, /todayClaimSatisfied: condition === \"all_clear\"/);
+});
+
+test("Today summons the Household input instrument while the Household collection remains source state", () => {
+  const fixture = read("app/owner/OwnerPersonAtlasFixture.tsx");
+  const page = read("app/owner/input/household-zone/page.tsx");
+  const source = read("app/owner/household/HouseholdCollectionFixture.tsx");
+
+  assert.match(fixture, /id: \"household-zone\"/);
+  assert.match(fixture, /\"household-zone\": \"\/owner\/input\/household-zone\"/);
+  assert.match(page, /HOUSEHOLD_LIVING_ROOM_ZONE_INPUT_CONTRACT/);
+  assert.match(page, /contract=\{HOUSEHOLD_LIVING_ROOM_ZONE_INPUT_CONTRACT\}/);
+  assert.match(source, /rules that can emit work/);
+  assert.match(source, /recent evidence/);
+  assert.doesNotMatch(source, /\/owner\/input\/household-zone/);
+});
