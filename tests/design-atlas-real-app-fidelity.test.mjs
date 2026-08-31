@@ -91,22 +91,29 @@ test("Design Atlas Harvest uses a canonical destination component, not a Harvest
   assert.doesNotMatch(portal, /HarvestCardSpecimen/);
 });
 
-test("Katie Buyer Dock mounts a fixture-only reusable buyer profile specimen", () => {
+test("Katie Buyer Dock mounts an identity-first invoice-style customer profile specimen", () => {
   assert.match(portal, /KatieBuyerProfileFixture/);
   assert.match(portal, /katieTab === "buyer"/);
-  assert.match(buyerProfile, /data-atlas-counterparty-profile="future-canonical-v1"/);
-  assert.match(buyerProfile, /Mama Jean's · East/);
-  assert.match(buyerProfile, /Marshall/);
-  assert.match(buyerProfile, /Assigned to Katie/);
+  assert.match(buyerProfile, /data-atlas-counterparty-profile="future-canonical-v2"/);
+  assert.match(buyerProfile, /CUSTOMER \/ BUYER PROFILE/);
+  assert.match(buyerProfile, /MaMa Jean's Natural Market · East Sunshine/);
+  assert.match(buyerProfile, /3530 East Sunshine Street/);
+  assert.match(buyerProfile, /\(417\) 429-1800/);
+  assert.match(buyerProfile, /BUSINESS RECORD/);
+  assert.match(buyerProfile, /Who this customer is/);
+  assert.match(buyerProfile, /CONTACT PEOPLE/);
+  assert.match(buyerProfile, /Buyer contact not identified/);
+  assert.match(buyerProfile, /BILLING \+ SALES/);
+  assert.match(buyerProfile, /Invoice-account details/);
+  assert.match(buyerProfile, /Payment terms/);
+  assert.match(buyerProfile, /Tax \/ resale status/);
+  assert.match(buyerProfile, /Customer since/);
+  assert.match(buyerProfile, /Relationship owner/);
+  assert.match(buyerProfile, /Last contact/);
+  assert.match(buyerProfile, /COMMERCIAL CONTEXT/);
   assert.match(buyerProfile, /Current wholesale offer/);
-  assert.match(buyerProfile, /\$4/);
-  assert.match(buyerProfile, /Suggested retail \$7–8/);
-  assert.match(buyerProfile, /What Katie can sell/);
-  assert.match(buyerProfile, /MOVING PIECES/);
-  assert.match(buyerProfile, /Relationship history/);
+  assert.match(buyerProfile, /COMPANY MEMORY/);
   assert.match(buyerProfile, /Across Atlas/);
-  assert.match(buyerProfile, /Inventory is visible here, not owned here/);
-  assert.match(buyerProfile, /No order, reservation, fulfillment, or payment is implied/);
   assert.match(buyerProfile, /data-live-data-binding="none"/);
   assert.match(buyerProfile, /data-mutation-capability="none"/);
   assert.doesNotMatch(buyerProfile, /fetch\(/);
