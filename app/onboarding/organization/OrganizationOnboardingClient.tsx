@@ -12,6 +12,11 @@ type OrganizationResult = {
     stable_key?: string;
     onboarding_state?: string;
   };
+  setupActor?: {
+    kind?: string;
+    active?: boolean;
+    membership_created?: boolean;
+  };
 };
 
 export default function OrganizationOnboardingClient() {
@@ -29,7 +34,7 @@ export default function OrganizationOnboardingClient() {
     setError(null);
 
     try {
-      const response = await fetch("/api/atlas/organizations/establish", {
+      const response = await fetch("/api/atlas/organizations/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
@@ -37,14 +42,14 @@ export default function OrganizationOnboardingClient() {
       const payload = await response.json();
 
       if (!response.ok || !payload?.ok) {
-        setError(payload?.error ?? "Atlas could not establish that organization.");
+        setError(payload?.error ?? "Atlas could not begin setup for that organization.");
         return;
       }
 
       setCreated(payload.result as OrganizationResult);
       router.refresh();
     } catch {
-      setError("Atlas could not establish that organization.");
+      setError("Atlas could not begin setup for that organization.");
     } finally {
       setSaving(false);
     }
@@ -53,11 +58,11 @@ export default function OrganizationOnboardingClient() {
   if (created?.organization?.id) {
     return (
       <section className={styles.success} aria-live="polite">
-        <p className={styles.step}>Organization established</p>
+        <p className={styles.step}>Organization Atlas started</p>
         <h2>{created.organization.name ?? "Organization"}</h2>
         <p>
-          It now exists as its own Atlas organization. Your authority is a relationship to it; no farm
-          was created and no existing organization data was imported.
+          The organization now exists independently in Atlas. You are carrying setup, but Atlas has not
+          made you an owner, employee, or member and has not created a farm or imported another organization&apos;s data.
         </p>
         <a className={styles.primaryLink} href={`/onboarding/organization/${created.organization.id}`}>
           Continue to sources
@@ -81,12 +86,12 @@ export default function OrganizationOnboardingClient() {
         required
       />
       <p className={styles.help}>
-        Atlas will create an independent organization and record your authority to establish it. This
-        does not create a farm or move anything out of another organization.
+        Atlas will create the organization as its own custody root and record only that you are carrying
+        setup. Membership, ownership, employment, and other human relationships come later when they are known.
       </p>
       {error ? <p className={styles.error}>{error}</p> : null}
       <button type="submit" disabled={saving}>
-        {saving ? "Establishing…" : "Establish organization"}
+        {saving ? "Starting…" : "Start Organization Atlas"}
       </button>
     </form>
   );
