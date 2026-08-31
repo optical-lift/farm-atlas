@@ -1,19 +1,15 @@
-import {
-  createAtlasAuthorityHandoff,
-  type AtlasAuthorityHandoff,
-} from "@/lib/atlas/authority-handoff";
 import type { AtlasInputContract, AtlasInputResultEvent } from "@/lib/atlas/input-contract";
 
 export const SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT: AtlasInputContract = {
-  id: "fixture.feast-guild.springfield.flower-order.v2",
+  id: "feast-guild.springfield.flower-demand.v3",
   kind: "flower order",
   title: "Springfield flower order",
-  detail: "record what the buyer actually ordered",
+  detail: "record what the buyer actually requested",
   source: {
     domain: "buyer-distribution",
     jurisdiction: "institution:feast-guild",
-    objectRef: "fixture:feast-guild:springfield-distribution:buyer-desk",
-    claimRef: "record-flower-order",
+    objectRef: "feast-guild:springfield-distribution:buyer-desk",
+    claimRef: "record-flower-demand",
   },
   fields: [
     {
@@ -26,24 +22,81 @@ export const SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT: AtlasInputContract = {
       ],
     },
     {
+      primitive: "date",
+      id: "requestedForDate",
+      label: "needed on",
+    },
+    {
+      primitive: "choice",
+      id: "fulfillmentMode",
+      label: "handoff",
+      options: [
+        { value: "pickup", label: "Pickup" },
+        { value: "delivery", label: "Delivery" },
+        { value: "immediate_handoff", label: "Immediate handoff" },
+      ],
+    },
+    {
       primitive: "quantity",
       id: "sunflowerBundles",
       label: "Sunflower bundles",
       unit: "sale_unit",
-      displayUnit: "items",
-      displayUnitSingular: "item",
+      displayUnit: "bundles",
+      displayUnitSingular: "bundle",
       step: 1,
       minimum: 0,
+      wholeNumber: true,
+    },
+    {
+      primitive: "choice",
+      id: "sunflowerBundleSize",
+      label: "stems per sunflower bundle",
+      visibleWhen: { fieldId: "sunflowerBundles", greaterThan: 0 },
+      options: [
+        { value: "5", label: "5 stems" },
+        { value: "10", label: "10 stems" },
+        { value: "20", label: "20 stems" },
+      ],
     },
     {
       primitive: "quantity",
       id: "samples",
       label: "Samples",
       unit: "sale_unit",
-      displayUnit: "items",
-      displayUnitSingular: "item",
+      displayUnit: "samples",
+      displayUnitSingular: "sample",
       step: 1,
       minimum: 0,
+      wholeNumber: true,
+    },
+    {
+      primitive: "choice",
+      id: "sampleForm",
+      label: "sample form",
+      visibleWhen: { fieldId: "samples", greaterThan: 0 },
+      options: [
+        { value: "stem", label: "Stem" },
+        { value: "bundle", label: "Bundle" },
+        { value: "posy", label: "Posy" },
+        { value: "bouquet", label: "Bouquet" },
+        { value: "arrangement", label: "Arrangement" },
+      ],
+    },
+    {
+      primitive: "choice",
+      id: "sampleBundleSize",
+      label: "stems per sample bundle",
+      visibleWhen: {
+        all: [
+          { fieldId: "samples", greaterThan: 0 },
+          { fieldId: "sampleForm", equals: "bundle" },
+        ],
+      },
+      options: [
+        { value: "5", label: "5 stems" },
+        { value: "10", label: "10 stems" },
+        { value: "20", label: "20 stems" },
+      ],
     },
   ],
   rules: [
@@ -53,20 +106,55 @@ export const SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT: AtlasInputContract = {
       message: "Choose the buyer who placed the order.",
     },
     {
+      kind: "required_field",
+      fieldId: "requestedForDate",
+      message: "Record when the buyer needs the flowers.",
+    },
+    {
+      kind: "required_field",
+      fieldId: "fulfillmentMode",
+      message: "Choose how the buyer expects to receive the flowers.",
+    },
+    {
       kind: "minimum_quantity_total",
       fieldIds: ["sunflowerBundles", "samples"],
       minimum: 1,
-      message: "Record at least one ordered item.",
+      message: "Record at least one requested item.",
+    },
+    {
+      kind: "required_field",
+      fieldId: "sunflowerBundleSize",
+      when: { fieldId: "sunflowerBundles", greaterThan: 0 },
+      message: "Choose whether each sunflower bundle contains 5, 10, or 20 stems.",
+    },
+    {
+      kind: "required_field",
+      fieldId: "sampleForm",
+      when: { fieldId: "samples", greaterThan: 0 },
+      message: "Record the physical form of the samples.",
+    },
+    {
+      kind: "required_field",
+      fieldId: "sampleBundleSize",
+      when: {
+        all: [
+          { fieldId: "samples", greaterThan: 0 },
+          { fieldId: "sampleForm", equals: "bundle" },
+        ],
+      },
+      message: "Choose whether each sample bundle contains 5, 10, or 20 stems.",
     },
   ],
-  resultEventType: "atlas.feast_guild.flower_order.result.fixture.v2",
-  persistence: "fixture_only",
+  resultEventType: "atlas.flower_demand.result.v1",
+  persistence: "canonical",
   sourceContext: {
     surface: "buyer_desk",
     responsibilityGrammar: "flow",
     seat: "springfield_distribution",
-    inventoryAuthority: "sellable_inventory_source",
-    paymentAuthority: "external_stripe",
+    truthBoundary: "independent_demand",
+    supplyClaimed: false,
+    workerTimeScheduled: false,
+    paymentStatus: "not_recorded",
   },
 };
 
@@ -74,112 +162,74 @@ export type FlowerOrderFixtureBuyer = "ruth" | "lindas";
 export type FlowerOrderFixtureLineItem = {
   item: "sunflower_bundle" | "sample";
   quantity: number;
+  inventoryKind: "bundle" | "stem" | "posy" | "bouquet" | "arrangement";
+  stemsPerUnit?: 5 | 10 | 20;
 };
 
 export type FlowerOrderFixtureAdjudication = {
-  state: "order_recorded";
+  state: "demand_recorded";
   todayClaimSatisfied: true;
   buyer: FlowerOrderFixtureBuyer;
   lineItems: FlowerOrderFixtureLineItem[];
   totalItems: number;
-  fulfillmentRequired: true;
-  inventoryClaimRequired: true;
   inventoryCommitted: false;
+  saleRecorded: false;
+  workerTimeScheduled: false;
   paymentStatus: "not_recorded";
-  handoff: AtlasAuthorityHandoff;
 };
 
-const BUYER_LABELS: Record<FlowerOrderFixtureBuyer, string> = {
-  ruth: "Ruth’s Flowers",
-  lindas: "Linda’s Flowers",
-};
-
-function nonnegativeQuantity(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0;
+function nonnegativeWholeQuantity(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 }
 
-function sourceContextText(event: AtlasInputResultEvent, key: string) {
-  const value = event.sourceContext[key];
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`Flower-order result is missing source authority context: ${key}`);
-  }
-  return value.trim();
+function bundleSize(value: unknown): 5 | 10 | 20 | undefined {
+  if (value === "5") return 5;
+  if (value === "10") return 10;
+  if (value === "20") return 20;
+  return undefined;
 }
 
-export function adjudicateFlowerOrderFixtureResult(
-  event: AtlasInputResultEvent,
-): FlowerOrderFixtureAdjudication {
+export function adjudicateFlowerOrderFixtureResult(event: AtlasInputResultEvent): FlowerOrderFixtureAdjudication {
   if (event.eventType !== SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT.resultEventType) {
-    throw new Error("Flower-order adjudication received the wrong Atlas result event.");
+    throw new Error("Flower-demand adjudication received the wrong Atlas result event.");
   }
 
   const buyer = event.values.buyer;
   if (buyer !== "ruth" && buyer !== "lindas") {
-    throw new Error("Flower-order result is missing a confirmed fixture buyer.");
+    throw new Error("Flower-demand result is missing a confirmed buyer.");
   }
 
-  const bundles = nonnegativeQuantity(event.values.sunflowerBundles);
-  const samples = nonnegativeQuantity(event.values.samples);
+  const bundles = nonnegativeWholeQuantity(event.values.sunflowerBundles);
+  const samples = nonnegativeWholeQuantity(event.values.samples);
   const lineItems: FlowerOrderFixtureLineItem[] = [];
-  if (bundles > 0) lineItems.push({ item: "sunflower_bundle", quantity: bundles });
-  if (samples > 0) lineItems.push({ item: "sample", quantity: samples });
 
-  if (!lineItems.length) {
-    throw new Error("Flower-order result contains no ordered items.");
+  if (bundles > 0) {
+    const stemsPerUnit = bundleSize(event.values.sunflowerBundleSize);
+    if (!stemsPerUnit) throw new Error("Sunflower bundle demand is missing its bundle size.");
+    lineItems.push({ item: "sunflower_bundle", quantity: bundles, inventoryKind: "bundle", stemsPerUnit });
   }
 
-  const totalItems = lineItems.reduce((sum, item) => sum + item.quantity, 0);
-  const inventoryAuthority = sourceContextText(event, "inventoryAuthority");
-  const paymentAuthority = sourceContextText(event, "paymentAuthority");
-  const fulfillmentJurisdiction = sourceContextText(event, "seat");
+  if (samples > 0) {
+    const sampleForm = event.values.sampleForm;
+    if (sampleForm !== "stem" && sampleForm !== "bundle" && sampleForm !== "posy" && sampleForm !== "bouquet" && sampleForm !== "arrangement") {
+      throw new Error("Sample demand is missing its physical form.");
+    }
+    const stemsPerUnit = sampleForm === "bundle" ? bundleSize(event.values.sampleBundleSize) : undefined;
+    if (sampleForm === "bundle" && !stemsPerUnit) throw new Error("Sample bundle demand is missing its bundle size.");
+    lineItems.push({ item: "sample", quantity: samples, inventoryKind: sampleForm, ...(stemsPerUnit ? { stemsPerUnit } : {}) });
+  }
 
-  const handoff = createAtlasAuthorityHandoff(event, {
-    authorityClaims: [
-      {
-        id: "inventory-availability",
-        kind: "inventory_availability",
-        authority: inventoryAuthority,
-        state: "required",
-        payload: {
-          buyer,
-          lineItems,
-          totalItems,
-        },
-      },
-      {
-        id: "payment-status",
-        kind: "payment_status",
-        authority: paymentAuthority,
-        state: "not_recorded",
-        payload: {
-          buyer,
-        },
-      },
-    ],
-    institutionalWork: [
-      {
-        ledger: "company_work",
-        state: "open",
-        organizationRef: event.source.jurisdiction,
-        title: `Fulfill ${BUYER_LABELS[buyer]} flower order`,
-        instructions: `Prepare ${totalItems} ordered ${totalItems === 1 ? "item" : "items"} for Springfield distribution. Inventory availability remains with its own authority.`,
-        operationClass: "order_fulfillment",
-        jurisdictionKey: fulfillmentJurisdiction,
-        dependsOnAuthorityClaimIds: ["inventory-availability"],
-      },
-    ],
-  });
+  if (!lineItems.length) throw new Error("Flower-demand result contains no requested items.");
 
   return {
-    state: "order_recorded",
+    state: "demand_recorded",
     todayClaimSatisfied: true,
     buyer,
     lineItems,
-    totalItems,
-    fulfillmentRequired: true,
-    inventoryClaimRequired: true,
+    totalItems: lineItems.reduce((sum, item) => sum + item.quantity, 0),
     inventoryCommitted: false,
+    saleRecorded: false,
+    workerTimeScheduled: false,
     paymentStatus: "not_recorded",
-    handoff,
   };
 }
