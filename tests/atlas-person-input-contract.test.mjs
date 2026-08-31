@@ -86,16 +86,22 @@ test("a FlyLady zone pass satisfies Today's claim even when the room still needs
   assert.doesNotMatch(household, /todayClaimSatisfied: condition === \"all_clear\"/);
 });
 
-test("Today summons the Household input instrument while the Household collection remains source state", () => {
+test("Household collection is now the live Care source and onboarding surface", () => {
   const fixture = read("app/owner/OwnerPersonAtlasFixture.tsx");
-  const page = read("app/owner/input/household-zone/page.tsx");
+  const page = read("app/owner/household/page.tsx");
   const source = read("app/owner/household/HouseholdCollectionFixture.tsx");
+  const actions = read("app/owner/household/actions.ts");
 
   assert.match(fixture, /id: \"household-zone\"/);
-  assert.match(fixture, /\"household-zone\": \"\/owner\/input\/household-zone\"/);
-  assert.match(page, /HOUSEHOLD_LIVING_ROOM_ZONE_INPUT_CONTRACT/);
-  assert.match(page, /contract=\{HOUSEHOLD_LIVING_ROOM_ZONE_INPUT_CONTRACT\}/);
-  assert.match(source, /rules that can emit work/);
-  assert.match(source, /recent evidence/);
-  assert.doesNotMatch(source, /\/owner\/input\/household-zone/);
+  assert.match(fixture, /\"household-zone\": \"\/owner\/household\?focus=zone\"/);
+  assert.match(page, /readPrincipalHouseholdCare/);
+  assert.match(source, /Teach Atlas your home/);
+  assert.match(source, /how the home is holding/);
+  assert.match(source, /no chore is created by the clock/);
+  assert.match(actions, /principal_upsert_dwelling_api_v1/);
+  assert.match(actions, /principal_upsert_household_space_api_v1/);
+  assert.match(actions, /principal_record_household_care_observation_api_v1/);
+  assert.match(actions, /principal_record_household_care_result_api_v1/);
+  assert.doesNotMatch(source, /recent evidence/);
+  assert.doesNotMatch(source, /logged complete/);
 });
