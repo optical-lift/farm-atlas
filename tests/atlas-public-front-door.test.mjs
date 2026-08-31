@@ -32,7 +32,7 @@ test("public Atlas front door presents one connected-life product and one start 
   assert.doesNotMatch(welcome, /Begin Organization Atlas/);
 });
 
-test("public Atlas front door names supported official-API integration targets without replacing specialist systems", () => {
+test("public Atlas front door keeps specialist systems visible without turning them into the hero", () => {
   for (const system of [
     "Google Workspace",
     "Microsoft 365",
@@ -47,11 +47,11 @@ test("public Atlas front door names supported official-API integration targets w
   ]) {
     assert.match(welcome, new RegExp(system.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+  assert.match(welcome, /Connect what already knows your life/);
   assert.match(welcome, /Keep the tools that already do their jobs/);
-  assert.match(welcome, /official APIs/);
 });
 
-test("sales hero uses a real isolated notebook photo with one coherent working-parent rapid-log example", () => {
+test("sales hero uses a real notebook photo with a coherent working-parent rapid-log example", () => {
   assert.match(welcome, /images\.pexels\.com\/photos\/17219305/);
   assert.match(welcome, /FUTURE LOG/);
   assert.match(welcome, /SEPTEMBER/);
@@ -59,15 +59,33 @@ test("sales hero uses a real isolated notebook photo with one coherent working-p
   assert.match(welcome, /dentist · 2:30/);
   assert.match(welcome, /school pickup · 3:15/);
   assert.match(welcome, /groceries → Fri/);
-  assert.match(welcome, /Team meeting moved to 11:30/);
+  assert.match(welcome, /Meeting moved to 11:30/);
   assert.match(welcome, /Leave work by 2:05/);
-  assert.match(welcomeHeroPhotoStyles, /grid-template-columns: minmax\(0, 2fr\) minmax\(300px, 1fr\)/);
-  assert.match(welcomeHeroPhotoStyles, /mix-blend-mode: multiply/);
-  assert.match(welcomeHeroPhotoStyles, /rotate\(-3\.25deg\)/);
-  assert.match(welcomeStyles, /min-height: 410px/);
-  assert.match(welcomeStyles, /padding: 18px 0 28px/);
+  assert.match(welcomeHeroPhotoStyles, /grid-template-columns: minmax\(0, 1\.72fr\) minmax\(360px, 1fr\)/);
+  assert.match(welcomeHeroPhotoStyles, /mask-image: radial-gradient/);
+  assert.match(welcomeHeroPhotoStyles, /rotate\(-4deg\)/);
+  assert.match(welcomeStyles, /padding: 62px 0 74px/);
+  assert.doesNotMatch(welcomeStyles, /min-height: 410px/);
   assert.match(welcomeStyles, /body:has\(\[data-atlas-sales-page="true"\]\)/);
   assert.match(welcomeStyles, /background: #fff !important/);
+});
+
+test("sales page tells the working-parent example as one before-change-consequence story", () => {
+  assert.match(welcome, /One ordinary Thursday/);
+  assert.match(welcome, /Her day is already mapped\. Then one thing changes\./);
+  assert.match(welcome, /THE MORNING PLAN/);
+  assert.match(welcome, /WORK CHANGES/);
+  assert.match(welcome, /The meeting still fits\./);
+  assert.match(welcome, /groceries → Friday/);
+});
+
+test("sales page maps outward from one person instead of splitting Atlas into two products", () => {
+  assert.match(welcome, /You are the center\. Your circles are the map\./);
+  assert.match(welcome, /personalized to the life you are responsible for/);
+  assert.match(welcome, /organization can also have its own shared Atlas/);
+  assert.match(welcome, />YOU</);
+  assert.match(welcome, />HOUSEHOLD</);
+  assert.match(welcome, />ORGANIZATIONS</);
 });
 
 test("one Atlas start screen asks where onboarding begins only after the sales CTA", () => {
