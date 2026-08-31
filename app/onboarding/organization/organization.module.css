@@ -1,0 +1,136 @@
+.page {
+  min-height: 100vh;
+  padding: 48px 20px;
+  background: #f4f0e7;
+  color: #24231f;
+}
+
+.sheet {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 48px;
+  background: #fffdf8;
+  border: 1px solid rgba(36, 35, 31, 0.14);
+  border-radius: 18px;
+  box-shadow: 0 18px 60px rgba(36, 35, 31, 0.08);
+}
+
+.header {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 36px;
+}
+
+.header h1,
+.success h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  line-height: 1.08;
+}
+
+.header h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+}
+
+.header p,
+.success p,
+.help,
+.footer {
+  line-height: 1.55;
+}
+
+.eyebrow,
+.step {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+  padding: 28px 0;
+  border-top: 1px solid rgba(36, 35, 31, 0.12);
+  border-bottom: 1px solid rgba(36, 35, 31, 0.12);
+}
+
+.form label {
+  font-weight: 700;
+}
+
+.form input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid rgba(36, 35, 31, 0.28);
+  border-radius: 10px;
+  background: white;
+  color: inherit;
+  font: inherit;
+}
+
+.form button,
+.primaryLink {
+  width: fit-content;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #24231f;
+  color: #fffdf8;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.form button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.help {
+  margin: 0;
+  color: rgba(36, 35, 31, 0.68);
+}
+
+.error {
+  margin: 0;
+  font-weight: 700;
+}
+
+.success {
+  display: grid;
+  gap: 14px;
+  padding: 28px 0;
+  border-top: 1px solid rgba(36, 35, 31, 0.12);
+  border-bottom: 1px solid rgba(36, 35, 31, 0.12);
+}
+
+.success h2 {
+  font-size: 2rem;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 28px;
+  color: rgba(36, 35, 31, 0.62);
+}
+
+.footer strong {
+  color: #24231f;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 20px 12px;
+  }
+
+  .sheet {
+    padding: 28px 22px;
+  }
+}
