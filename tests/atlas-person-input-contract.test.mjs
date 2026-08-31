@@ -12,7 +12,8 @@ function read(path) {
 
 test("Atlas input intelligence is source-contracted instead of a generic form builder", () => {
   const contract = read("lib/atlas/input-contract.ts");
-  const spread = read("app/owner/PersonAtlasInputSpread.tsx");
+  const renderer = read("components/atlas/input/AtlasInputRenderer.tsx");
+  const ownerShim = read("app/owner/PersonAtlasInputSpread.tsx");
 
   assert.match(contract, /AtlasInputContract/);
   assert.match(contract, /source: AtlasInputSourceRef/);
@@ -20,10 +21,11 @@ test("Atlas input intelligence is source-contracted instead of a generic form bu
   assert.match(contract, /validateAtlasInput/);
   assert.match(contract, /createAtlasInputResultEvent/);
   assert.match(contract, /persistence: \"fixture_only\" \| \"canonical\"/);
-  assert.match(spread, /contract: AtlasInputContract/);
-  assert.match(spread, /validateAtlasInput\(contract, values\)/);
-  assert.match(spread, /createAtlasInputResultEvent\(contract, values\)/);
-  assert.doesNotMatch(spread, /minimumTotal\?:|followUp\?:/);
+  assert.match(renderer, /contract: AtlasInputContract/);
+  assert.match(renderer, /validateAtlasInput\(contract, values\)/);
+  assert.match(renderer, /createAtlasInputResultEvent\(contract, values\)/);
+  assert.doesNotMatch(renderer, /minimumTotal\?:|followUp\?:/);
+  assert.match(ownerShim, /components\/atlas\/input\/AtlasInputRenderer/);
 });
 
 test("Harvest preserves half-bucket field truth and explicit remaining-availability truth", () => {
@@ -137,7 +139,7 @@ test("recording an order creates fulfillment demand without fabricating inventor
 test("order consequences cross authorities through a generic handoff instead of hidden sales mutations", () => {
   const handoff = read("lib/atlas/authority-handoff.ts");
   const order = read("lib/atlas/input-contracts/flower-order-fixture.ts");
-  const spread = read("app/owner/PersonAtlasInputSpread.tsx");
+  const renderer = read("components/atlas/input/AtlasInputRenderer.tsx");
 
   assert.match(handoff, /AtlasAuthorityClaimState = \"required\" \| \"not_recorded\"/);
   assert.match(handoff, /ledger: \"company_work\"/);
@@ -156,14 +158,14 @@ test("order consequences cross authorities through a generic handoff instead of 
   assert.match(order, /state: \"open\"/);
   assert.match(order, /operationClass: \"order_fulfillment\"/);
   assert.match(order, /dependsOnAuthorityClaimIds: \[\"inventory-availability\"\]/);
-  assert.doesNotMatch(spread, /authority-handoff|inventory_availability|payment_status|company_work/);
+  assert.doesNotMatch(renderer, /authority-handoff|inventory_availability|payment_status|company_work/);
 });
 
 test("Katie's one-line flower-order thought opens the generic source-contracted instrument", () => {
   const katie = read("app/owner/design-atlas/KatieOrderFixture.tsx");
   const route = read("app/owner/input/flower-order/page.tsx");
   const bridge = read("app/owner/design-atlas/BridgeAtlasFixture.tsx");
-  const spread = read("app/owner/PersonAtlasInputSpread.tsx");
+  const renderer = read("components/atlas/input/AtlasInputRenderer.tsx");
 
   assert.match(katie, /sentence: \"Record the next Springfield flower order\"/);
   assert.match(katie, /\"record-flower-order\": \"\/owner\/input\/flower-order\"/);
@@ -171,5 +173,5 @@ test("Katie's one-line flower-order thought opens the generic source-contracted 
   assert.match(route, /contract=\{SPRINGFIELD_FLOWER_ORDER_INPUT_CONTRACT\}/);
   assert.match(route, /returnHref=\"\/owner\/design-atlas\/katie-order\"/);
   assert.match(bridge, /href: \"\/owner\/design-atlas\/katie-order\"/);
-  assert.doesNotMatch(spread, /Ruth|Linda|sunflower|flower order|Stripe/i);
+  assert.doesNotMatch(renderer, /Ruth|Linda|sunflower|flower order|Stripe/i);
 });
