@@ -64,9 +64,8 @@ function sourceFromEvent(event: AtlasInputResultEvent): AtlasAuthorityHandoffSou
 }
 
 /**
- * A handoff records what another authority must resolve. It does not resolve the
- * claim, mutate the target ledger, or promote source evidence into a truth that
- * belongs to a different authority.
+ * A handoff records what another authority must resolve. It does not resolve the claim, mutate the target ledger,
+ * or promote source evidence into a truth that belongs to a different authority.
  */
 export function createAtlasAuthorityHandoff(
   event: AtlasInputResultEvent,
