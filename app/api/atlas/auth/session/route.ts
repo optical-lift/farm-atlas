@@ -16,15 +16,15 @@ export async function GET() {
     );
   }
 
-  if (state.status === "no_membership") {
+  if (state.status === "onboarding") {
     return NextResponse.json(
       {
-        ok: false,
+        ok: true,
         authenticated: true,
-        accessStatus: "no_membership",
+        accessStatus: "onboarding",
         session,
       },
-      { status: 403, headers: { "Cache-Control": "private, no-store" } },
+      { headers: { "Cache-Control": "private, no-store" } },
     );
   }
 
@@ -33,7 +33,7 @@ export async function GET() {
       ok: true,
       authenticated: true,
       accessStatus: "active",
-      activeRole: state.activeMembership.role,
+      activeRole: state.activeMembership?.role ?? state.activeOrganizationMembership?.role ?? null,
       session,
     },
     { headers: { "Cache-Control": "private, no-store" } },
