@@ -18,6 +18,7 @@ export type AtlasQuantityInputField = {
   minimum?: number;
   initialValue?: number;
   startUnset?: boolean;
+  wholeNumber?: boolean;
   inputMode?: "normal" | "blind_measurement";
 };
 
