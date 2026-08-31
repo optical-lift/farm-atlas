@@ -15,10 +15,12 @@ test("quantity observations can begin unknown without turning unknown into zero"
   const spread = read("app/owner/PersonAtlasInputSpread.tsx");
 
   assert.match(contract, /startUnset\?: boolean/);
+  assert.match(contract, /wholeNumber\?: boolean/);
   assert.match(contract, /field\.startUnset/);
   assert.match(contract, /\? null/);
   assert.match(spread, /row\.startUnset && storedValue === null/);
   assert.match(spread, /hasStoredValue \? String\(value\) : \"\"/);
+  assert.match(spread, /row\.wholeNumber/);
   assert.match(spread, /rows\.length > 1/);
 });
 
@@ -27,10 +29,11 @@ test("living-plant counts use one reusable whole-number input contract and accep
 
   assert.match(plantCount, /primitive: \"quantity\"/);
   assert.match(plantCount, /id: \"livingPlants\"/);
-  assert.match(plantCount, /unit: \"plant\"/);
+  assert.match(plantCount, /unit: \"plants\"/);
   assert.match(plantCount, /step: 1/);
   assert.match(plantCount, /minimum: 0/);
   assert.match(plantCount, /startUnset: true/);
+  assert.match(plantCount, /wholeNumber: true/);
   assert.match(plantCount, /kind: \"required_field\"/);
   assert.match(plantCount, /including 0/);
   assert.match(plantCount, /Number\.isInteger\(livingPlants\)/);
@@ -75,7 +78,7 @@ test("observation and measurement tasks are not executable without an input cont
   assert.match(readiness, /requires an input contract before the task is executable/);
 });
 
-test("plant-count proof remains fixture-only and does not mutate canonical crop-cycle truth", () => {
+test("plant-count design proof remains fixture-only even though the same renderer can submit canonical contracts", () => {
   const plantCount = read("lib/atlas/input-contracts/plant-count-fixture.ts");
   const spread = read("app/owner/PersonAtlasInputSpread.tsx");
 
@@ -83,4 +86,7 @@ test("plant-count proof remains fixture-only and does not mutate canonical crop-
   assert.match(plantCount, /canonicalCropCycleMutation: false/);
   assert.doesNotMatch(plantCount, /supabase|rpc\(|insert\(|update\(/i);
   assert.doesNotMatch(spread, /California Giant|ProCut Plum|Cosmos|celosia|crop-cycle/i);
+  assert.match(spread, /submission\?: AtlasInputSubmission/);
+  assert.match(spread, /fetch\(submission\.endpoint/);
+  assert.match(spread, /data-atlas-input-persistence/);
 });
