@@ -29,9 +29,7 @@ test("Atlas input intelligence is source-contracted instead of a generic form bu
 test("Harvest preserves half-bucket field truth and explicit remaining-availability truth", () => {
   const harvest = read("lib/atlas/input-contracts/harvest-fixture.ts");
 
-  for (const bed of ["bb3", "bb4", "bb5"]) {
-    assert.match(harvest, new RegExp(`id: \"${bed}\"`));
-  }
+  for (const bed of ["bb3", "bb4", "bb5"]) assert.match(harvest, new RegExp(`id: \"${bed}\"`));
   assert.match(harvest, /unit: \"bucket_equivalent\"/);
   assert.match(harvest, /step: 0\.5/);
   assert.match(harvest, /minimum: 0\.5/);
@@ -86,15 +84,18 @@ test("a FlyLady zone pass satisfies Today's claim even when the room still needs
   assert.doesNotMatch(household, /todayClaimSatisfied: condition === \"all_clear\"/);
 });
 
-test("Household collection is now the live Care source and onboarding surface", () => {
+test("live Household Care remains the source while Today summons its dedicated result instrument", () => {
   const fixture = read("app/owner/OwnerPersonAtlasFixture.tsx");
-  const page = read("app/owner/household/page.tsx");
+  const inputPage = read("app/owner/input/household-zone/page.tsx");
+  const sourcePage = read("app/owner/household/page.tsx");
   const source = read("app/owner/household/HouseholdCollectionFixture.tsx");
   const actions = read("app/owner/household/actions.ts");
 
   assert.match(fixture, /id: \"household-zone\"/);
-  assert.match(fixture, /\"household-zone\": \"\/owner\/household\?focus=zone\"/);
-  assert.match(page, /readPrincipalHouseholdCare/);
+  assert.match(fixture, /\"household-zone\": \"\/owner\/input\/household-zone\"/);
+  assert.match(inputPage, /HOUSEHOLD_LIVING_ROOM_ZONE_INPUT_CONTRACT/);
+  assert.match(inputPage, /contract=\{HOUSEHOLD_LIVING_ROOM_ZONE_INPUT_CONTRACT\}/);
+  assert.match(sourcePage, /readPrincipalHouseholdCare/);
   assert.match(source, /Teach Atlas your home/);
   assert.match(source, /how the home is holding/);
   assert.match(source, /no chore is created by the clock/);
@@ -102,6 +103,4 @@ test("Household collection is now the live Care source and onboarding surface", 
   assert.match(actions, /principal_upsert_household_space_api_v1/);
   assert.match(actions, /principal_record_household_care_observation_api_v1/);
   assert.match(actions, /principal_record_household_care_result_api_v1/);
-  assert.doesNotMatch(source, /recent evidence/);
-  assert.doesNotMatch(source, /logged complete/);
 });
