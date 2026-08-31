@@ -30,7 +30,7 @@
   width: min(100%, 780px);
   height: 100svh;
   margin: 0 auto;
-  padding: max(7px, env(safe-area-inset-top)) 12px max(7px, env(safe-area-inset-bottom));
+  padding: max(10px, env(safe-area-inset-top)) 16px max(7px, env(safe-area-inset-bottom));
   box-sizing: border-box;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) 34px;
@@ -45,12 +45,12 @@
 }
 
 .topChrome {
-  min-height: 37px;
+  min-height: 40px;
   display: flex;
   align-items: start;
   justify-content: space-between;
   gap: 10px;
-  padding: 1px 0 4px;
+  padding: 1px 0 5px;
 }
 
 .greetingBlock {
@@ -118,19 +118,19 @@
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 44px;
-  gap: 7px;
+  gap: 9px;
   overflow: hidden;
 }
 
 .dayPage {
   min-width: 0;
   min-height: 0;
-  padding: 0 0 4px;
+  padding: 0 0 5px;
   overflow: hidden;
 }
 
 .dayHeader {
-  margin: 1px 0 10px;
+  margin: 2px 0 12px;
 }
 
 .dayHeader > div {
@@ -142,11 +142,11 @@
 
 .dayHeader h1 {
   margin: 0;
-  font-family: var(--font-atlas-hand), "Bradley Hand", "Segoe Print", cursive;
-  font-size: 18px;
-  font-weight: 400;
+  font-family: var(--font-atlas-structural), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 720;
   line-height: 1;
-  letter-spacing: 0;
+  letter-spacing: -.015em;
 }
 
 .dayHeader span {
@@ -163,12 +163,12 @@
   display: block;
   width: 100%;
   height: 1px;
-  margin-top: 5px;
+  margin-top: 6px;
   background: rgba(23, 23, 23, .18);
 }
 
 .nowBlock {
-  margin: 0 0 11px;
+  margin: 0 0 13px;
 }
 
 .nowRule {
@@ -177,7 +177,7 @@
   grid-template-columns: auto 1fr;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .nowRule > span {
@@ -199,7 +199,7 @@
 
 .taskLine {
   width: 100%;
-  min-height: 20px;
+  min-height: 22px;
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr);
   gap: 2px;
@@ -207,7 +207,7 @@
   appearance: none;
   border: 0;
   background: transparent;
-  padding: 1px 0;
+  padding: 2px 0;
   color: var(--ink);
   cursor: pointer;
   text-align: left;
@@ -249,12 +249,12 @@
 
 .sections {
   display: grid;
-  gap: 9px;
+  gap: 11px;
 }
 
 .section {
   display: grid;
-  gap: 2px;
+  gap: 3px;
 }
 
 .section h2 {
@@ -606,8 +606,8 @@
 
 @media (min-width: 700px) {
   .page {
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: 22px;
+    padding-right: 22px;
   }
 
   .notebookBody {
