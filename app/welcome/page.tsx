@@ -33,9 +33,8 @@ export default function AtlasWelcomePage() {
           </p>
           <p className={styles.explanation}>
             Your Atlas is personalized around the life you are responsible for. Work, household, people,
-            business, projects, and organizations can all be mapped around you. An organization can have its
-            own shared Atlas; yours understands where its goals meet your role, your time, and everything else
-            you carry.
+            business, projects, and organizations can all be mapped around you. Atlas can hold the business you
+            run alongside everything else you’re responsible for.
           </p>
           <p className={styles.explanation}>
             Atlas tells you what needs your attention next and gives your team a clear picture of what’s moving forward.
