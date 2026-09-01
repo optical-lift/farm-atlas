@@ -1,7 +1,7 @@
 import type { Viewport } from "next";
 
 import { getAtlasSession } from "@/lib/atlas/session";
-import OwnerPortalBrandMockup from "./OwnerPortalBrandMockup";
+import OwnerPersonAtlasFixture from "./OwnerPersonAtlasFixture";
 
 export const dynamic = "force-dynamic";
 
@@ -15,5 +15,5 @@ export const viewport: Viewport = {
 
 export default async function AtlasOwnerPage() {
   const session = await getAtlasSession();
-  return <OwnerPortalBrandMockup personName={session?.displayName?.trim() || "Atlas"} />;
+  return <OwnerPersonAtlasFixture personName={session?.displayName?.trim() || "Atlas"} />;
 }
