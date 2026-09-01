@@ -5,6 +5,7 @@ import { useMemo, useState, type FormEvent } from "react";
 
 import OwnerPersonAtlasFixture from "./OwnerPersonAtlasFixture";
 import styles from "./owner-notebook-spread.module.css";
+import officeStyles from "./owner-office-shell.module.css";
 
 type OwnerNotebookSpreadProps = {
   personName: string;
@@ -56,14 +57,21 @@ const TOOL_TABS: Array<{ key: ToolKey; label: string; title: string }> = [
   { key: "find", label: "Find", title: "Page Finder" },
   { key: "context", label: "Context", title: "Context Lens" },
   { key: "inbox", label: "Inbox", title: "Unprocessed" },
-  { key: "people", label: "People", title: "People Nearby" },
+  { key: "people", label: "People", title: "People" },
   { key: "clock", label: "Clock", title: "Day Shape" },
   { key: "memory", label: "Memory", title: "Atlas Memory" },
   { key: "waiting", label: "Waiting", title: "Waiting / Delegated" },
-  { key: "commands", label: "Commands", title: "Command Strip" },
+  { key: "commands", label: "Commands", title: "Commands" },
 ];
 
-const CONTEXTS = ["All", "Personal", "Household", "Feast Guild", "Elm", "Write Now"];
+const CONTEXTS = [
+  { label: "All", code: "ALL" },
+  { label: "Personal", code: "P" },
+  { label: "Household", code: "H" },
+  { label: "Feast Guild", code: "FG" },
+  { label: "Elm", code: "E" },
+  { label: "Write Now", code: "WN" },
+];
 
 export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadProps) {
   const [activeTool, setActiveTool] = useState<ToolKey | null>(null);
@@ -73,6 +81,7 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
   const [context, setContext] = useState("All");
 
   const activeDefinition = TOOL_TABS.find((tool) => tool.key === activeTool) ?? null;
+  const activeContext = CONTEXTS.find((item) => item.label === context) ?? CONTEXTS[0];
   const allIndexItems = useMemo(() => INDEX_GROUPS.flatMap((group) => group.items), []);
   const finderResults = useMemo(() => {
     const query = finderQuery.trim().toLowerCase();
@@ -94,7 +103,7 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
     if (activeTool === "capture") {
       return (
         <>
-          <p className={styles.toolEyebrow}>GET IT OUT OF YOUR HEAD</p>
+          <p className={styles.toolEyebrow}>CAPTURE</p>
           <h2>{activeDefinition.title}</h2>
           <form className={styles.captureForm} onSubmit={submitCapture}>
             <textarea
@@ -105,7 +114,7 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
             />
             <button type="submit" disabled={!captureDraft.trim()}>Add to inbox</button>
           </form>
-          <p className={styles.toolNote}>This prototype keeps captures in this browser session only.</p>
+          <p className={styles.toolNote}>Session-only in this design prototype.</p>
         </>
       );
     }
@@ -113,12 +122,12 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
     if (activeTool === "ask") {
       return (
         <>
-          <p className={styles.toolEyebrow}>READ ACROSS THE NOTEBOOK</p>
+          <p className={styles.toolEyebrow}>ASK</p>
           <h2>{activeDefinition.title}</h2>
           <div className={styles.promptList}>
             <span>What needs my attention next?</span>
             <span>What am I waiting on?</span>
-            <span>What can move without breaking anything?</span>
+            <span>What can move?</span>
           </div>
           <Link className={styles.primaryToolLink} href="/owner/ask-atlas">Open Ask Atlas</Link>
         </>
@@ -128,7 +137,7 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
     if (activeTool === "find") {
       return (
         <>
-          <p className={styles.toolEyebrow}>THUMB INDEX</p>
+          <p className={styles.toolEyebrow}>INDEX</p>
           <h2>{activeDefinition.title}</h2>
           <input
             className={styles.finderInput}
@@ -155,21 +164,20 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
     if (activeTool === "context") {
       return (
         <>
-          <p className={styles.toolEyebrow}>WHAT ATLAS IS LOOKING THROUGH</p>
+          <p className={styles.toolEyebrow}>CONTEXT</p>
           <h2>{activeDefinition.title}</h2>
           <div className={styles.contextList}>
             {CONTEXTS.map((item) => (
               <button
                 type="button"
-                data-selected={context === item}
-                onClick={() => setContext(item)}
-                key={item}
+                data-selected={context === item.label}
+                onClick={() => setContext(item.label)}
+                key={item.label}
               >
-                <span>{item}</span><i aria-hidden="true">{context === item ? "•" : ""}</i>
+                <span>{item.label}</span><i aria-hidden="true">{context === item.label ? "•" : ""}</i>
               </button>
             ))}
           </div>
-          <p className={styles.toolNote}>The notebook stays the same object; this changes the lens used to read it.</p>
         </>
       );
     }
@@ -177,14 +185,14 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
     if (activeTool === "inbox") {
       return (
         <>
-          <p className={styles.toolEyebrow}>NOT YET PLACED</p>
+          <p className={styles.toolEyebrow}>UNPLACED</p>
           <h2>{activeDefinition.title}</h2>
           {capturedItems.length ? (
             <div className={styles.inboxList}>
               {capturedItems.map((item, index) => <p key={`${item}:${index}`}>• {item}</p>)}
             </div>
           ) : (
-            <p className={styles.emptyPanel}>Nothing is waiting to be processed in this prototype.</p>
+            <p className={styles.emptyPanel}>Nothing waiting.</p>
           )}
         </>
       );
@@ -193,14 +201,13 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
     if (activeTool === "people") {
       return (
         <>
-          <p className={styles.toolEyebrow}>RELATIONSHIPS OVER TIME</p>
+          <p className={styles.toolEyebrow}>PEOPLE</p>
           <h2>{activeDefinition.title}</h2>
           <dl className={styles.statList}>
-            <div><dt>Replies waiting</dt><dd>0</dd></div>
-            <div><dt>Promised follow-ups</dt><dd>0</dd></div>
-            <div><dt>Upcoming dates</dt><dd>0</dd></div>
+            <div><dt>Replies</dt><dd>0</dd></div>
+            <div><dt>Follow-ups</dt><dd>0</dd></div>
+            <div><dt>Dates</dt><dd>0</dd></div>
           </dl>
-          <p className={styles.toolNote}>People stay quiet here until Atlas has an actual relationship obligation to surface.</p>
         </>
       );
     }
@@ -208,14 +215,13 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
     if (activeTool === "clock") {
       return (
         <>
-          <p className={styles.toolEyebrow}>TODAY’S HARD EDGES</p>
+          <p className={styles.toolEyebrow}>TODAY</p>
           <h2>{activeDefinition.title}</h2>
           <div className={styles.clockList}>
             <div><time>5:15</time><span>Groceries</span></div>
             <div><time>6:30</time><span>Family · fixed</span></div>
             <div><time>8:00</time><span>Write Now · protected</span></div>
           </div>
-          <p className={styles.toolNote}>The full chronology can stay here while Today shows only what changes your next move.</p>
         </>
       );
     }
@@ -223,13 +229,13 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
     if (activeTool === "memory") {
       return (
         <>
-          <p className={styles.toolEyebrow}>WHAT ATLAS KNOWS ABOUT THIS PAGE</p>
+          <p className={styles.toolEyebrow}>MEMORY</p>
           <h2>{activeDefinition.title}</h2>
           <dl className={styles.memoryList}>
             <div><dt>Page</dt><dd>Today · 01</dd></div>
             <div><dt>Open lines</dt><dd>5</dd></div>
-            <div><dt>Connected worlds</dt><dd>Personal · Household · Feast Guild · Elm · Write Now</dd></div>
-            <div><dt>Next hard edge</dt><dd>Family · 6:30 PM</dd></div>
+            <div><dt>Worlds</dt><dd>5 connected</dd></div>
+            <div><dt>Next fixed</dt><dd>6:30 PM</dd></div>
           </dl>
         </>
       );
@@ -238,27 +244,26 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
     if (activeTool === "waiting") {
       return (
         <>
-          <p className={styles.toolEyebrow}>REMEMBERED, NOT IN YOUR HAND</p>
+          <p className={styles.toolEyebrow}>WAITING</p>
           <h2>{activeDefinition.title}</h2>
           <div className={styles.waitingCard}>
             <span>HELD</span>
             <p>Keep person-owned state off the Clock until placement authority is proven.</p>
           </div>
-          <p className={styles.toolNote}>Waiting work can leave the active page without disappearing from Atlas.</p>
         </>
       );
     }
 
     return (
       <>
-        <p className={styles.toolEyebrow}>NOTEBOOK CONTROLS</p>
+        <p className={styles.toolEyebrow}>TOOLS</p>
         <h2>{activeDefinition.title}</h2>
         <div className={styles.commandList}>
           <button type="button" onClick={() => setActiveTool("capture")}>Capture</button>
           <button type="button" onClick={() => setActiveTool("find")}>Find a page</button>
           <Link href="/owner/ask-atlas">Ask Atlas</Link>
-          <Link href="/owner/life">Open Life</Link>
-          <Link href="/owner/household">Open Household</Link>
+          <Link href="/owner/life">Life</Link>
+          <Link href="/owner/household">Household</Link>
           <Link href="/owner/design-atlas">Design Atlas</Link>
         </div>
       </>
@@ -266,9 +271,14 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
   }
 
   return (
-    <div className={styles.workspace} data-atlas-owner-tool-tabs="true">
-      <div className={styles.spread} data-atlas-open-notebook="true">
-        <div className={styles.leftPage}>
+    <div
+      className={`${styles.workspace} ${officeStyles.workspace}`}
+      data-atlas-owner-tool-tabs="true"
+      data-atlas-context-rail="true"
+      data-context={context}
+    >
+      <div className={`${styles.spread} ${officeStyles.spread}`} data-atlas-open-notebook="true">
+        <div className={`${styles.leftPage} ${officeStyles.leftPage}`}>
           <OwnerPersonAtlasFixture personName={personName} />
           <footer className={styles.leftFolio} aria-label="Today page 01, active">
             <span>01</span>
@@ -276,7 +286,7 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
           </footer>
         </div>
 
-        <aside className={`${styles.facingPage} ${styles.dotPage}`} aria-label="Atlas index facing page">
+        <aside className={`${styles.facingPage} ${styles.dotPage} ${officeStyles.facingPage}`} aria-label="Atlas index facing page">
           <div className={styles.indexBody}>
             <header className={styles.indexHeader}>
               <h1>Index</h1>
@@ -320,16 +330,16 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
         </aside>
       </div>
 
-      <div className={styles.toolDock} data-open={Boolean(activeTool)}>
-        <aside className={styles.toolPanel} aria-label={activeDefinition?.title ?? "Atlas tools"}>
-          <div className={styles.toolPanelInner}>{renderToolPanel()}</div>
+      <div className={`${styles.toolDock} ${officeStyles.toolDock}`} data-open={Boolean(activeTool)}>
+        <aside className={`${styles.toolPanel} ${officeStyles.toolPanel}`} aria-label={activeDefinition?.title ?? "Atlas tools"}>
+          <div className={`${styles.toolPanelInner} ${officeStyles.toolPanelInner}`}>{renderToolPanel()}</div>
         </aside>
 
-        <nav className={styles.toolTabs} aria-label="Atlas notebook tools">
+        <nav className={`${styles.toolTabs} ${officeStyles.toolTabs}`} aria-label="Atlas notebook tools">
           {TOOL_TABS.map((tool) => (
             <button
               type="button"
-              className={styles.toolTab}
+              className={`${styles.toolTab} ${officeStyles.toolTab}`}
               data-active={activeTool === tool.key}
               aria-expanded={activeTool === tool.key}
               onClick={() => setActiveTool((current) => current === tool.key ? null : tool.key)}
@@ -340,6 +350,25 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
           ))}
         </nav>
       </div>
+
+      <aside className={officeStyles.contextRail} aria-label="Atlas context rail">
+        <Link className={officeStyles.atlasMark} href="/owner" aria-label="Atlas notebook">A</Link>
+        <nav className={officeStyles.contextMarks} aria-label="Atlas contexts">
+          {CONTEXTS.map((item) => (
+            <button
+              type="button"
+              className={officeStyles.contextMark}
+              data-active={context === item.label}
+              aria-label={item.label}
+              title={item.label}
+              onClick={() => setContext(item.label)}
+              key={item.label}
+            />
+          ))}
+        </nav>
+        <div className={officeStyles.contextCode} aria-live="polite">{activeContext.code}</div>
+        <button className={officeStyles.accountMark} type="button" aria-label={`${personName} account`}>L</button>
+      </aside>
     </div>
   );
 }
