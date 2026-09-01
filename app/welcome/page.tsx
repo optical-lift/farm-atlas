@@ -37,6 +37,9 @@ export default function AtlasWelcomePage() {
             own shared Atlas; yours understands where its goals meet your role, your time, and everything else
             you carry.
           </p>
+          <p className={styles.explanation}>
+            Atlas tells you what needs your attention next and gives your team a clear picture of what’s moving forward.
+          </p>
           <p className={styles.tagline}>One life. Many circles. One Atlas.</p>
           <Link className={styles.primaryAction} href="/start">Start Atlas</Link>
         </section>
