@@ -55,10 +55,11 @@ test("knee observation can only alter presentation through an already-authorized
   assert.doesNotMatch(core, /clockPlacementAuthority:\s*true/);
 });
 
-test("catalog-driven notebook exposes provenance while retaining generic governed capture instruments", async () => {
-  const [client, catalog] = await Promise.all([
+test("catalog-driven notebook reuses Atlas input primitives without goal-specific evidence UI", async () => {
+  const [client, catalog, inputContract] = await Promise.all([
     read("app/owner/life/PersonLifeCaptureClient.tsx"),
     read("lib/atlas/person-life-notebook-catalog.js"),
+    read("lib/atlas/input-contract.ts"),
   ]);
 
   assert.match(client, /href="\/owner\/input\/person-goal"/);
@@ -68,5 +69,16 @@ test("catalog-driven notebook exposes provenance while retaining generic governe
   assert.match(client, /spec\.evidence\.provenanceLabel/);
   assert.match(client, /Consequence/);
   assert.match(client, /Rhythm opportunities are not Tasks/);
+  assert.match(client, /atlasInputValueFromDraft/);
+  assert.match(client, /spec\.evidence\.inputField/);
+  assert.match(client, /inputField\.primitive === "quantity"/);
+  assert.match(client, /\[inputField\.id\]: evidenceValue/);
+  assert.doesNotMatch(client, /Number\(draft\.value\)/);
+  assert.doesNotMatch(client, /requestValueKey/);
+  assert.doesNotMatch(client, /reading_12_books/);
+  assert.doesNotMatch(client, /book_completed/);
   assert.match(catalog, /PERSON_LIFE_NOTEBOOK_CATALOG/);
+  assert.match(catalog, /primitive: "quantity"/);
+  assert.match(inputContract, /AtlasInlineValueInputField/);
+  assert.match(inputContract, /function atlasInputValueFromDraft/);
 });
