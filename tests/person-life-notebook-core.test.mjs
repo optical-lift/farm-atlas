@@ -195,7 +195,7 @@ test("generic notebook projector preserves 5K max-value Evidence progress", () =
   assert.equal(model.rhythmAccepted, true);
   assert.equal(model.policyAccepted, true);
   assert.equal(model.progressValue, 4);
-  assert.equal(model.bestMetric, 4);
+  assert.equal("bestMetric" in model, false);
   assert.equal(model.progressPercent, 80);
   assert.equal(model.satisfiedCount, 1);
   assert.equal(model.opportunities.length, 1);
@@ -303,7 +303,7 @@ test("foreign reading shape accumulates governed completion Evidence through the
   assert.equal(selected?.model.policyAccepted, true);
   assert.equal(selected?.model.evidenceClaims.length, 3);
   assert.equal(selected?.model.progressValue, 3);
-  assert.equal(selected?.model.bestMetric, 3);
+  assert.equal("bestMetric" in selected.model, false);
   assert.equal(selected?.model.progressPercent, 25);
   assert.equal(selected?.model.satisfiedCount, 1);
   assert.equal(selected?.model.matchingCondition.condition_state, "interrupted");
