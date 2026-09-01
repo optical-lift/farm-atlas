@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { verifyStripeOAuthState } from "@/lib/atlas/financial/stripe-core.js";
+import { verifyStripeOAuthState } from "@/lib/atlas/financial/stripe-security-core.js";
 import {
   exchangeStripeOAuthCode,
   putStripeSourceSecret,
