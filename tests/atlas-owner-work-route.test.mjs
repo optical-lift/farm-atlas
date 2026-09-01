@@ -10,10 +10,15 @@ const appFrame = readFileSync(
   new URL("../components/atlas/shell/AtlasContextualAppFrame.tsx", import.meta.url),
   "utf8",
 );
+const personAtlasPage = readFileSync(
+  new URL("../app/atlas/page.tsx", import.meta.url),
+  "utf8",
+);
 
-test("the permanent Work tab opens Living Day", () => {
-  assert.match(appFrame, /function todayHref\(\) \{\s*return "\/day";\s*\}/);
+test("the permanent Work tab opens the person-owned Atlas surface", () => {
+  assert.match(appFrame, /function todayHref\(\) \{\s*return "\/atlas";\s*\}/);
   assert.match(appFrame, /key: "work"[\s\S]*href: workHref/);
+  assert.match(personAtlasPage, /label: "Released work"[\s\S]*href: "\/day"/);
 });
 
 test("management restored onto the legacy worker hand returns to Living Day", () => {
