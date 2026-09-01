@@ -122,6 +122,10 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   if (ATLAS_PRODUCT_RESET) {
+    // Keep the reset surface request-bound without initializing any of the retired
+    // Atlas product runtime. This also prevents unreachable legacy pages from being
+    // statically prerendered during the reset build.
+    await getAtlasSession();
     return (
       <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
         <body className="min-h-full flex flex-col">{children}</body>
