@@ -10,6 +10,8 @@ import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+const ATLAS_PRODUCT_RESET = true;
+
 type AcceptanceResult = {
   membershipId?: unknown;
   farmId?: unknown;
@@ -19,6 +21,13 @@ type AcceptanceResult = {
 };
 
 export async function POST(request: Request) {
+  if (ATLAS_PRODUCT_RESET) {
+    return NextResponse.json(
+      { ok: false, error: "Atlas membership activation is paused during the product reset." },
+      { status: 410, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
+
   const session = await getAtlasSession();
   if (!session) {
     return NextResponse.json(
