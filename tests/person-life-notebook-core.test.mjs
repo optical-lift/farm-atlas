@@ -100,6 +100,7 @@ const READING_NOTEBOOK = {
     },
     targetValue: 12,
     unit: "books",
+    progressFractionDigits: 0,
     progressHeading: "READING PROGRESS",
     emptyMetricLabel: "no completed books yet",
     timeInputLabel: "when you finished it",
@@ -200,6 +201,7 @@ test("generic notebook projector preserves 5K max-value Evidence progress", () =
   assert.equal(model.policyAccepted, true);
   assert.equal(FIVE_K_PERSON_LIFE_NOTEBOOK.evidence.inputField.primitive, "quantity");
   assert.equal(FIVE_K_PERSON_LIFE_NOTEBOOK.evidence.inputField.id, "distanceKm");
+  assert.equal(FIVE_K_PERSON_LIFE_NOTEBOOK.evidence.progressFractionDigits, 2);
   assert.equal(model.progressValue, 4);
   assert.equal("bestMetric" in model, false);
   assert.equal(model.progressPercent, 80);
@@ -305,6 +307,7 @@ test("foreign reading shape accumulates governed completion Evidence through the
   assert.equal(selected?.spec.id, "reading_12_books");
   assert.equal(selected?.spec.evidence.inputField.primitive, "text");
   assert.equal(selected?.spec.evidence.inputField.id, "bookId");
+  assert.equal(selected?.spec.evidence.progressFractionDigits, 0);
   assert.equal(selected?.model.goal.definitionId, readingGoal.definitionId);
   assert.equal(selected?.model.requirementAccepted, true);
   assert.equal(selected?.model.rhythmAccepted, true);
