@@ -3,7 +3,7 @@ import "server-only";
 import { assembleWorkerDaySequence, type AtlasDaySequence } from "@/lib/atlas/day-sequence";
 import { readWorkerDayChoreographyForTarget } from "@/lib/atlas/day-choreography-server";
 import { buildPersonAtlasProjection } from "@/lib/atlas/person-atlas-projection-core.js";
-import type { AtlasRoleAccess } from "@/lib/atlas/role-access";
+import type { AtlasSession } from "@/lib/atlas/session";
 import { readWorkerSelfDayBundleForTarget } from "@/lib/atlas/worker-self-day-plan-server";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
@@ -68,13 +68,24 @@ function isOptionalPersonAuthorityMissing(error: RpcError | null) {
   return Boolean(error && ["PGRST202", "42883", "42P01"].includes(error.code ?? ""));
 }
 
-async function readWorkerSelfSequence(access: AtlasRoleAccess, forDate: string): Promise<AtlasDaySequence | null> {
-  if (access.membership.role !== "farm_hand") return null;
+function activeFarmHandMembership(session: AtlasSession) {
+  if (session.activeFarmId) {
+    const active = session.memberships.find((membership) => membership.farmId === session.activeFarmId);
+    if (active?.role === "farm_hand") return active;
+    return null;
+  }
+  const workers = session.memberships.filter((membership) => membership.role === "farm_hand");
+  return workers.length === 1 ? workers[0] : null;
+}
+
+async function readWorkerSelfSequence(session: AtlasSession, forDate: string): Promise<AtlasDaySequence | null> {
+  const membership = activeFarmHandMembership(session);
+  if (!membership) return null;
 
   const target = {
-    farmId: access.membership.farmId,
-    membershipId: access.membership.membershipId,
-    displayName: access.session.displayName || "Farm Hand",
+    farmId: membership.farmId,
+    membershipId: membership.membershipId,
+    displayName: session.displayName || "Farm Hand",
     source: "worker_self" as const,
   };
 
@@ -102,13 +113,13 @@ async function readWorkerSelfSequence(access: AtlasRoleAccess, forDate: string):
   }
 }
 
-export async function readPersonAtlasProjection(access: AtlasRoleAccess, forDate: string) {
+export async function readPersonAtlasProjection(session: AtlasSession, forDate: string) {
   const supabase = await createAtlasServerClient();
   const [companyRead, claimRead, rhythmRead, daySequence] = await Promise.all([
     supabase.rpc("company_work_self_responsibilities_api_v1"),
     supabase.rpc("person_claim_evidence_state_api_v1"),
     supabase.rpc("person_rhythm_opportunities_self_api_v1", { p_limit: 60 }),
-    readWorkerSelfSequence(access, forDate),
+    readWorkerSelfSequence(session, forDate),
   ]);
 
   if (companyRead.error) {
