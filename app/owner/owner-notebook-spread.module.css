@@ -11,6 +11,7 @@
   min-width: 0;
 }
 
+.leftFolio,
 .facingPage {
   display: none;
 }
@@ -28,10 +29,11 @@
     box-sizing: border-box;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: clamp(28px, 4vw, 54px);
+    gap: clamp(34px, 4.5vw, 58px);
   }
 
   .leftPage {
+    position: relative;
     min-width: 0;
   }
 
@@ -39,12 +41,48 @@
     width: 100%;
   }
 
+  .leftPage > main > section {
+    grid-template-rows: minmax(0, 1fr) !important;
+    padding-top: clamp(30px, 5vh, 52px) !important;
+    padding-bottom: clamp(38px, 5vh, 54px) !important;
+  }
+
+  .leftPage > main > section > header:first-child,
+  .leftPage > main > section > nav:last-child {
+    display: none !important;
+  }
+
+  .leftFolio {
+    position: absolute;
+    left: 50%;
+    bottom: max(13px, env(safe-area-inset-bottom));
+    z-index: 4;
+    display: grid;
+    justify-items: center;
+    gap: 1px;
+    color: var(--soft);
+    font-family: var(--font-atlas-structural), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    line-height: 1;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  .leftFolio i {
+    color: var(--ink);
+    font-size: 8px;
+    font-style: normal;
+    line-height: .8;
+  }
+
   .facingPage {
     min-width: 0;
     height: 100svh;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) 34px;
-    padding: max(10px, env(safe-area-inset-top)) 22px max(7px, env(safe-area-inset-bottom));
+    grid-template-rows: minmax(0, 1fr) auto;
+    padding: 0 22px max(13px, env(safe-area-inset-bottom));
     box-sizing: border-box;
     overflow: hidden;
     background-color: #fff;
@@ -58,40 +96,12 @@
     background-position: 7.5px 7.5px;
   }
 
-  .facingTop {
-    min-height: 40px;
-    display: flex;
-    align-items: start;
-    justify-content: space-between;
-    padding: 1px 0 5px;
-  }
-
-  .facingTop > div {
-    display: grid;
-    gap: 0;
-  }
-
-  .facingTop span {
-    color: var(--faint);
-    font-size: 8px;
-    font-weight: 650;
-    letter-spacing: .08em;
-    text-transform: lowercase;
-    line-height: 1.1;
-  }
-
-  .facingTop strong {
-    color: var(--ink);
-    font-size: 12px;
-    font-weight: 690;
-    letter-spacing: -.01em;
-    line-height: 1.15;
-  }
-
   .indexBody {
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
+    padding-top: clamp(30px, 5vh, 52px);
+    padding-bottom: 24px;
     scrollbar-width: none;
   }
 
@@ -100,11 +110,10 @@
   }
 
   .indexHeader {
-    margin: 2px 0 15px;
+    margin: 2px 0 20px;
   }
 
-  .indexHeader > h1 {
-    display: inline;
+  .indexHeader h1 {
     margin: 0;
     font-size: 15px;
     font-weight: 720;
@@ -112,18 +121,9 @@
     letter-spacing: -.015em;
   }
 
-  .indexHeader > span {
-    float: right;
-    color: var(--soft);
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-  }
-
-  .indexHeader > i {
+  .indexHeader::after {
+    content: "";
     display: block;
-    clear: both;
     width: 100%;
     height: 1px;
     margin-top: 7px;
@@ -131,11 +131,11 @@
   }
 
   .indexGroup {
-    margin: 0 0 17px;
+    margin: 0 0 18px;
   }
 
   .indexGroup h2 {
-    margin: 0 0 4px;
+    margin: 0 0 6px;
     color: var(--soft);
     font-size: 7.5px;
     font-weight: 800;
@@ -145,18 +145,18 @@
   }
 
   .indexGroup > div {
-    border-top: 1px solid var(--rule);
+    display: grid;
+    gap: 2px;
   }
 
   .indexRow {
     width: 100%;
-    min-height: 37px;
+    min-height: 31px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 10px;
-    padding: 6px 0;
-    border-bottom: 1px solid var(--rule);
+    grid-template-columns: auto minmax(18px, 1fr) auto;
+    align-items: baseline;
+    gap: 7px;
+    padding: 4px 0;
     box-sizing: border-box;
     color: inherit;
     text-decoration: none;
@@ -169,31 +169,38 @@
     line-height: 1.15;
   }
 
+  .indexRow i {
+    min-width: 18px;
+    height: .72em;
+    border-bottom: 1px dotted rgba(23, 23, 23, .22);
+  }
+
   .indexRow span {
-    color: var(--faint);
-    font-size: 12px;
-    font-weight: 400;
+    color: var(--soft);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    font-variant-numeric: tabular-nums;
   }
 
   .indexRow[data-muted="true"] {
     color: #565656;
   }
 
+  .indexRow[data-muted="true"] i,
   .indexRow[data-muted="true"] span {
-    color: #b0b0b0;
+    opacity: .58;
   }
 
-  .facingFooter {
-    min-height: 31px;
+  .facingFolio {
+    justify-self: center;
     display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 4px;
-    border-top: 1px solid var(--rule);
+    justify-items: center;
+    min-height: 15px;
     color: var(--soft);
     font-size: 7px;
-    font-weight: 750;
-    letter-spacing: .08em;
-    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: .06em;
+    line-height: 1;
   }
 }
