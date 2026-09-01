@@ -6,6 +6,8 @@ const proxy = readFileSync(new URL("../lib/supabase/proxy.ts", import.meta.url),
 const resetPage = readFileSync(new URL("../app/reset/page.tsx", import.meta.url), "utf8");
 const resetSurface = readFileSync(new URL("../app/AtlasProductReset.tsx", import.meta.url), "utf8");
 const appFrame = readFileSync(new URL("../components/atlas/shell/AtlasContextualAppFrame.tsx", import.meta.url), "utf8");
+const rootLayout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
+const loginClient = readFileSync(new URL("../app/login/LoginClient.tsx", import.meta.url), "utf8");
 
 test("the reset decommissions the legacy page tree without deleting backend authority", () => {
   assert.match(proxy, /const ATLAS_PRODUCT_RESET = true/);
@@ -28,4 +30,18 @@ test("inactive Atlas profiles are denied even when an auth token still exists", 
 
 test("the legacy global navigation shell does not mount on the reset surface", () => {
   assert.match(appFrame, /HIDDEN_PATHS = \[[^\]]*"\/reset"/);
+});
+
+test("the root runtime does not initialize the old Atlas tree during reset", () => {
+  assert.match(rootLayout, /const ATLAS_PRODUCT_RESET = true/);
+  assert.match(rootLayout, /if \(ATLAS_PRODUCT_RESET\) \{[\s\S]*<body className="min-h-full flex flex-col">\{children\}<\/body>/);
+  assert.match(rootLayout, /title: "Atlas"/);
+  assert.doesNotMatch(rootLayout, /title: "Atlas · Feast Guild"/);
+});
+
+test("the login front door does not advertise the decommissioned product tree", () => {
+  assert.match(loginClient, /Atlas is being rebuilt from first principles\./);
+  assert.doesNotMatch(loginClient, /href="\/welcome"/);
+  assert.doesNotMatch(loginClient, /href="\/start"/);
+  assert.doesNotMatch(loginClient, /Create your Atlas/);
 });
