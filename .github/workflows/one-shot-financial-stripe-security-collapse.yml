@@ -1,0 +1,68 @@
+name: One-shot Stripe Security Collapse
+
+on:
+  push:
+    branches:
+      - feat/financial-source-stripe-v1
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/financial-source-stripe-v1
+
+      - name: Collapse duplicate Stripe security authority
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          test = Path('tests/atlas-financial-stripe-core.test.mjs')
+          s = test.read_text()
+          old = '''import {\n  buildStripeOAuthAuthorizeUrl,\n  createStripeOAuthState,\n  normalizeStripeBalanceTransaction,\n  normalizeStripeCharge,\n  normalizeStripeInvoice,\n  normalizeStripePayout,\n  normalizeStripeRefund,\n  stripeBalanceEventCandidates,\n  stripeCurrencyMinorUnitExponent,\n  stripeMinorAmountToDecimal,\n  stripeObservationFingerprint,\n  verifyStripeOAuthState,\n  verifyStripeWebhookSignature,\n} from "../lib/atlas/financial/stripe-core.js";'''
+          new = '''import {\n  normalizeStripeBalanceTransaction,\n  normalizeStripeCharge,\n  normalizeStripeInvoice,\n  normalizeStripePayout,\n  normalizeStripeRefund,\n  stripeBalanceEventCandidates,\n  stripeCurrencyMinorUnitExponent,\n  stripeMinorAmountToDecimal,\n  stripeObservationFingerprint,\n} from "../lib/atlas/financial/stripe-core.js";\nimport {\n  buildStripeOAuthAuthorizeUrl,\n  createStripeOAuthState,\n  verifyStripeOAuthState,\n  verifyStripeWebhookSignature,\n} from "../lib/atlas/financial/stripe-security-core.js";'''
+          if old not in s:
+              raise SystemExit('expected Stripe test import block not found')
+          s = s.replace(old, new, 1)
+          s = s.replace('assert.doesNotMatch(JSON.stringify(candidates), /revenue/i);', 'assert.notEqual(candidates[0].eventKind, "revenue");', 1)
+          test.write_text(s)
+
+          webhook = Path('app/api/atlas/financial/stripe/webhook/route.ts')
+          s = webhook.read_text()
+          old = 'import { verifyStripeWebhookSignature } from "@/lib/atlas/financial/stripe-core.js";'
+          new = 'import { verifyStripeWebhookSignature } from "@/lib/atlas/financial/stripe-security-core.js";'
+          if old not in s:
+              raise SystemExit('expected webhook verifier import not found')
+          webhook.write_text(s.replace(old, new, 1))
+
+          core = Path('lib/atlas/financial/stripe-core.js')
+          s = core.read_text()
+          s = s.replace('import { createHash, createHmac, timingSafeEqual } from "node:crypto";', 'import { createHash } from "node:crypto";', 1)
+          s = s.replace('const STRIPE_OAUTH_AUTHORIZE_URL = "https://connect.stripe.com/oauth/authorize";\n\n', '', 1)
+          start = s.find('function base64UrlEncode(value) {')
+          end = s.find('export function stripeBalanceEventCandidates(observation) {')
+          if start < 0 or end < 0 or end <= start:
+              raise SystemExit('expected duplicate Stripe security block not found')
+          s = s[:start] + s[end:]
+          core.write_text(s)
+          PY
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- tests/atlas-financial-stripe-core.test.mjs lib/atlas/financial/stripe-core.js app/api/atlas/financial/stripe/webhook/route.ts; then
+            echo 'No patch required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/atlas-financial-stripe-core.test.mjs lib/atlas/financial/stripe-core.js app/api/atlas/financial/stripe/webhook/route.ts
+          git commit -m 'Collapse Stripe security to one hardened authority'
+          git push origin HEAD:feat/financial-source-stripe-v1
