@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
-import { buildStripeOAuthAuthorizeUrl, createStripeOAuthState } from "@/lib/atlas/financial/stripe-core.js";
+import { buildStripeOAuthAuthorizeUrl, createStripeOAuthState } from "@/lib/atlas/financial/stripe-security-core.js";
 import { stripeFinancialSourceConfig } from "@/lib/atlas/financial/stripe-server";
 import { getAtlasSession, membershipForOrganization } from "@/lib/atlas/session";
 
