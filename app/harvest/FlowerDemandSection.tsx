@@ -198,7 +198,7 @@ export default function FlowerDemandSection() {
   }
 
   async function convert(order: DemandOrder) {
-    await runAction("convert", order.id, { demandOrderId: order.id, taxAmount: 0, tipAmount: 0 }, `Sale recorded for ${order.customerLabel}. Existing fulfillment machinery now owns the handoff.`);
+    await runAction("convert", order.id, { demandOrderId: order.id, taxAmount: 0, tipAmount: 0 }, `Sale committed for ${order.customerLabel}. Fulfillment and payment remain separate downstream truth.`);
   }
 
   async function cancel(order: DemandOrder) {
@@ -279,7 +279,7 @@ export default function FlowerDemandSection() {
                   <span data-ready={order.allPriced}>2. {order.allPriced ? "Priced" : "Pricing needed"}</span>
                   <span data-ready={order.allCovered}>3. {order.allCovered ? "Inventory reserved" : "Inventory short"}</span>
                 </div>
-                {order.lifecycleState === "covered" && order.effectiveDemandStrength === "committed" && order.allPriced && !order.sale ? <button type="button" className={styles.primaryButton} disabled={saving === `convert:${order.id}`} onClick={() => void convert(order)}>{saving === `convert:${order.id}` ? "Recording Sale…" : "Convert to Sale"}</button> : null}
+                {order.lifecycleState === "covered" && order.effectiveDemandStrength === "committed" && order.allPriced && !order.sale ? <button type="button" className={styles.primaryButton} disabled={saving === `convert:${order.id}`} onClick={() => void convert(order)}>{saving === `convert:${order.id}` ? "Committing Sale…" : "Commit to Sale"}</button> : null}
                 {order.sale ? <span className={styles.saleBadge}>Sale #{order.sale.saleOrderId.slice(0, 4).toUpperCase()} recorded</span> : null}
               </footer>
             </article>
