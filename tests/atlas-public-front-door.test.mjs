@@ -5,6 +5,7 @@ import test from "node:test";
 const welcome = fs.readFileSync(new URL("../app/welcome/page.tsx", import.meta.url), "utf8");
 const welcomeStyles = fs.readFileSync(new URL("../app/welcome/sales-page.module.css", import.meta.url), "utf8");
 const atlasStart = fs.readFileSync(new URL("../app/start/page.tsx", import.meta.url), "utf8");
+const personalStart = fs.readFileSync(new URL("../app/start/personal/page.tsx", import.meta.url), "utf8");
 const organizationStart = fs.readFileSync(new URL("../app/start/organization/page.tsx", import.meta.url), "utf8");
 const organizationClient = fs.readFileSync(
   new URL("../app/onboarding/organization/OrganizationOnboardingClient.tsx", import.meta.url),
@@ -55,6 +56,19 @@ test("one Atlas start screen asks where onboarding begins only after the sales C
   assert.match(atlasStart, /data-atlas-sales-page="true"/);
   assert.match(welcomeStyles, /\.startChoices/);
   assert.match(proxy, /pathname === "\/start"/);
+});
+
+test("personal and organization start pages share the sales-page visual system", () => {
+  for (const startPage of [personalStart, organizationStart]) {
+    assert.match(startPage, /welcome\/sales-page\.module\.css/);
+    assert.doesNotMatch(startPage, /front-door\.module\.css/);
+    assert.match(startPage, /data-atlas-sales-page="true"/);
+    assert.match(startPage, /styles\.brandBar/);
+    assert.match(startPage, /styles\.startContent/);
+    assert.match(startPage, /styles\.startChoices/);
+  }
+  assert.match(welcomeStyles, /\.startDisabled/);
+  assert.match(welcomeStyles, /\.startNote a/);
 });
 
 test("Organization Atlas is explicitly pre-membership", () => {

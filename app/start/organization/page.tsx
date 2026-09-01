@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getAtlasSession } from "@/lib/atlas/session";
-import styles from "../../welcome/front-door.module.css";
+import styles from "../../welcome/sales-page.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -18,43 +18,54 @@ export default async function OrganizationAtlasStartPage() {
     : "/login?next=%2Fonboarding%2Forganization";
 
   return (
-    <main className={styles.page}>
-      <section className={styles.detail}>
-        <p className={styles.eyebrow}>Organization Atlas</p>
-        <h1>Start with the organization.</h1>
-        <p>
-          You are the person carrying setup. That does not make you an owner, employee, or member in
-          Atlas. The organization gets its own identity and custody first; people can be related to it
-          later when those relationships are actually known.
-        </p>
+    <main className={styles.page} data-atlas-sales-page="true">
+      <div className={styles.shell}>
+        <nav className={styles.brandBar} aria-label="Atlas">
+          <Link className={styles.brand} href="/welcome">ATLAS</Link>
+          <div className={styles.brandActions}>
+            <Link href="/login">Sign in</Link>
+          </div>
+        </nav>
 
-        <div className={styles.paths}>
-          <div className={styles.path}>
-            <h2>I already use Atlas personally</h2>
-            <p>
-              Use your existing human account to carry this setup. Atlas will not create a second
-              Personal Atlas or automatically add you to the organization&apos;s membership graph.
+        <section className={styles.startContent}>
+          <div className={styles.startIntro}>
+            <p className={styles.eyebrow}>Organization Atlas</p>
+            <h1>Start with the organization.</h1>
+            <p className={styles.startLead}>
+              You are the person carrying setup. That does not make you an owner, employee, or member in
+              Atlas. The organization gets its own identity and custody first; people can be related to it
+              later when those relationships are actually known.
             </p>
-            <Link className={styles.primary} href={existingAtlasHref}>
-              {session ? "Continue organization setup" : "Sign in and continue"}
-            </Link>
           </div>
 
-          <div className={styles.path}>
-            <h2>I don&apos;t have a Personal Atlas</h2>
-            <p>
-              In the paid product, organization checkout begins here. The company can become an Atlas
-              customer before any owner or employee creates a Personal Atlas. Payment is not live yet,
-              so this path is intentionally not collecting billing details today.
-            </p>
-            <span className={styles.muted}>Organization checkout will connect here later.</span>
-          </div>
-        </div>
+          <div className={styles.startChoices}>
+            <div className={styles.startChoice}>
+              <p className={styles.choiceLabel}>I already use Atlas personally</p>
+              <p>
+                Use your existing human account to carry this setup. Atlas will not create a second
+                Personal Atlas or automatically add you to the organization&apos;s membership graph.
+              </p>
+              <Link className={styles.startPrimary} href={existingAtlasHref}>
+                {session ? "Continue organization setup" : "Sign in and continue"}
+              </Link>
+            </div>
 
-        <p className={styles.muted}>
-          Setting up Atlas just for yourself? <Link className={styles.inlineLink} href="/start/personal">Start a Personal Atlas.</Link>
-        </p>
-      </section>
+            <div className={styles.startChoice}>
+              <p className={styles.choiceLabel}>I don&apos;t have a Personal Atlas</p>
+              <p>
+                In the paid product, organization checkout begins here. The company can become an Atlas
+                customer before any owner or employee creates a Personal Atlas. Payment is not live yet,
+                so this path is intentionally not collecting billing details today.
+              </p>
+              <span className={styles.startDisabled}>Organization checkout will connect here later.</span>
+            </div>
+          </div>
+
+          <p className={styles.startNote}>
+            Setting up Atlas just for yourself? <Link href="/start/personal">Start a Personal Atlas.</Link>
+          </p>
+        </section>
+      </div>
     </main>
   );
 }
