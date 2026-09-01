@@ -1,5 +1,7 @@
 export type PersonLifeNotebookSubject = { domain?: string; kind?: string; id?: string };
 
+export type PersonLifeNotebookProgressReducer = "max_value" | "count_claims";
+
 export type PersonLifeNotebookSpec = {
   id: string;
   sourcePrefix: string;
@@ -40,7 +42,8 @@ export type PersonLifeNotebookSpec = {
   };
   evidence: {
     claimType: string;
-    metricPath: string[];
+    progressReducer: PersonLifeNotebookProgressReducer;
+    metricPath?: string[];
     requestValueKey: string;
     targetValue: number;
     unit: string;
@@ -95,6 +98,7 @@ export type PersonLifeNotebookModel = {
   rhythmAccepted: boolean;
   opportunities: any[];
   evidenceClaims: any[];
+  progressValue: number;
   bestMetric: number;
   progressPercent: number;
   satisfiedCount: number;
