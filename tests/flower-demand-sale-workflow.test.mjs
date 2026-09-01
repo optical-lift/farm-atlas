@@ -1,3 +1,4 @@
+// Refreshes PR CI against the current main merge ref before production merge.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
