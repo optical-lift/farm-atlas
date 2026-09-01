@@ -21,6 +21,11 @@ test("live Communication shadow interpretation is bounded, proposed, and evidenc
   assert.match(shadow, /communicationShadowStatus: "pending"/);
   assert.match(shadow, /"processed"/);
   assert.match(shadow, /"abstained"/);
+  assert.match(shadow, /"deferred_provider"/);
+  assert.match(shadow, /PROVIDER_RETRY_MINUTES = 15/);
+  assert.match(shadow, /deterministicClaimsForEvent/);
+  assert.match(shadow, /software_defect_report/);
+  assert.match(shadow, /Deterministic extraction from explicit software-failure language/);
   assert.match(shadow, /from\("connected_sources"\)/);
   assert.match(shadow, /sourceEventRef/);
   assert.doesNotMatch(shadow, /from\("communication_events"\)/);
@@ -28,13 +33,18 @@ test("live Communication shadow interpretation is bounded, proposed, and evidenc
   assert.doesNotMatch(shadow, /Nathan|Marshall|Katie|Anna|Elm Farm/i);
 });
 
-test("message custody completes before shadow interpretation and model failure does not fail custody", () => {
+test("provider failure defers open interpretation instead of inventing abstention or failing custody", () => {
+  const shadow = read("lib/atlas/continuity/shadow-interpretation.ts");
   const ingest = read("app/api/continuity/messages/ingest/route.ts");
   const custodyIndex = ingest.indexOf("ingest_communication_events_relay_api_v1");
   const shadowIndex = ingest.indexOf("shadowInterpretCommunicationEvents(request, connectedSourceId, events)");
 
   assert.ok(custodyIndex >= 0);
   assert.ok(shadowIndex > custodyIndex);
+  assert.match(shadow, /providerDeferred = true/);
+  assert.match(shadow, /communicationShadowStatus: status/);
+  assert.match(shadow, /nextInterpretationRetryAt: retryAt/);
+  assert.match(shadow, /interpretationProviderStatus: providerDeferred \? "unavailable" : "available"/);
   assert.match(ingest, /connectedSourceId/);
   assert.match(ingest, /try \{\s*shadow = await shadowInterpretCommunicationEvents/);
   assert.match(ingest, /catch \(shadowError\)/);
