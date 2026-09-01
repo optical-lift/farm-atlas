@@ -21,6 +21,11 @@ export default async function AtlasAuthErrorPage({ searchParams }: AtlasAuthErro
           <p className={styles.eyebrow}>Atlas</p>
           <h1 id="atlas-auth-error-title">This account is currently decommissioned.</h1>
           <p>The authentication identity has been preserved, but Atlas access is turned off during the product reset.</p>
+          <div>
+            <Link href="/welcome">View Atlas</Link>
+            <span aria-hidden="true"> · </span>
+            <Link href="/login">Sign in with another account</Link>
+          </div>
         </section>
       </main>
     );
