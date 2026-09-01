@@ -1,0 +1,213 @@
+.workspace {
+  width: 100%;
+  height: 100svh;
+}
+
+.contextRail {
+  display: none;
+}
+
+@media (min-width: 760px) and (min-height: 600px) {
+  .workspace {
+    --office-rail: 44px;
+    --office-tabs: 72px;
+    --office-ground: #f1f1ee;
+    --office-ink: #171717;
+    position: relative;
+    overflow: hidden;
+    background: var(--office-ground) !important;
+  }
+
+  .spread {
+    left: clamp(8px, 1.6vw, 24px) !important;
+    width: calc(100vw - var(--office-rail) - var(--office-tabs) - clamp(24px, 4vw, 54px)) !important;
+    max-width: 1180px;
+    border-left: 1px solid rgba(23, 23, 23, .08);
+    border-right: 1px solid rgba(23, 23, 23, .12);
+    background: #fff !important;
+  }
+
+  .leftPage,
+  .facingPage {
+    background-color: #fff;
+  }
+
+  .toolDock {
+    top: 0 !important;
+    right: var(--office-rail) !important;
+    bottom: 0 !important;
+    left: auto !important;
+    width: auto !important;
+    height: 100svh !important;
+    display: flex !important;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: flex-end;
+  }
+
+  .toolPanel {
+    order: 1;
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 0 !important;
+    height: calc(100svh - 32px) !important;
+    margin-top: 16px !important;
+    overflow: hidden;
+    border: 1px solid transparent !important;
+    border-right: 0 !important;
+    background: rgba(255, 255, 255, .99) !important;
+    transition: width 180ms ease, border-color 180ms ease !important;
+  }
+
+  .toolDock[data-open="true"] .toolPanel {
+    width: min(300px, 34vw) !important;
+    border-color: rgba(23, 23, 23, .2) !important;
+  }
+
+  .toolPanelInner {
+    width: min(300px, 34vw) !important;
+    padding: 20px 18px !important;
+  }
+
+  .toolTabs {
+    order: 2;
+    width: var(--office-tabs) !important;
+    padding-top: clamp(54px, 8vh, 78px) !important;
+    justify-items: end;
+  }
+
+  .toolTab {
+    justify-self: end;
+    border-left: 1px solid rgba(23, 23, 23, .25) !important;
+    border-right: 0 !important;
+    border-radius: 2px 0 0 2px !important;
+    text-align: left;
+  }
+
+  .toolTab[data-active="true"] {
+    width: 84px !important;
+    border-color: var(--office-ink) !important;
+    background: var(--office-ink) !important;
+    color: #fff !important;
+  }
+
+  .contextRail {
+    position: absolute;
+    z-index: 20;
+    inset: 0 0 0 auto;
+    width: var(--office-rail);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    justify-items: center;
+    box-sizing: border-box;
+    border-left: 1px solid #171717;
+    background: #171717;
+    color: #fff;
+    font-family: var(--font-atlas-structural), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .atlasMark {
+    width: 100%;
+    min-height: 54px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 820;
+    letter-spacing: .08em;
+    text-decoration: none;
+  }
+
+  .contextMarks {
+    align-self: center;
+    display: grid;
+    justify-items: center;
+    gap: 15px;
+  }
+
+  .contextMark {
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    appearance: none;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .contextMark::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, .58);
+    border-radius: 50%;
+    background: transparent;
+    transition: width 120ms ease, height 120ms ease, background-color 120ms ease, border-color 120ms ease;
+  }
+
+  .contextMark[data-active="true"]::before {
+    width: 8px;
+    height: 8px;
+    border-color: #fff;
+    background: #fff;
+  }
+
+  .contextCode {
+    min-width: 24px;
+    min-height: 24px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 12px;
+    border-top: 1px solid rgba(255, 255, 255, .22);
+    padding-top: 10px;
+    color: rgba(255, 255, 255, .76);
+    font-size: 6.5px;
+    font-weight: 800;
+    letter-spacing: .08em;
+  }
+
+  .accountMark {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 13px;
+    padding: 0;
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, .5);
+    border-radius: 50%;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-size: 8px;
+    font-weight: 760;
+  }
+}
+
+@media (min-width: 1200px) and (min-height: 600px) {
+  .spread {
+    width: min(calc(100vw - 390px), 1180px) !important;
+  }
+
+  .toolDock[data-open="true"] .toolPanel {
+    width: 300px !important;
+  }
+
+  .toolPanelInner {
+    width: 300px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolPanel,
+  .toolTab,
+  .contextMark::before {
+    transition: none !important;
+  }
+}
