@@ -1,0 +1,53 @@
+.workspace { display: grid; gap: 14px; }
+.farmPicker { display: grid; gap: 6px; max-width: 320px; }
+.farmPicker span, .controls label > span { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .62; }
+.farmPicker select, .controls input, .controls select { min-height: 38px; border: 1px solid rgba(32, 43, 33, .22); border-radius: 8px; background: rgba(255,255,255,.8); padding: 8px 10px; color: inherit; }
+.notice { display: block; padding: 10px 12px; border-radius: 8px; background: rgba(245, 240, 220, .9); font-size: 13px; }
+.empty { display: grid; gap: 3px; padding: 18px; border: 1px dashed rgba(32,43,33,.22); border-radius: 12px; }
+.empty span { opacity: .68; }
+.orders { display: grid; gap: 14px; }
+.order { border: 1px solid rgba(32,43,33,.18); border-radius: 14px; overflow: hidden; background: rgba(255,255,255,.58); }
+.orderHeader { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; padding: 16px; border-bottom: 1px solid rgba(32,43,33,.12); }
+.orderHeader small { display: block; font-size: 10px; font-weight: 900; letter-spacing: .1em; opacity: .56; }
+.orderHeader h3 { margin: 3px 0 2px; font-size: 20px; }
+.orderHeader p { margin: 0; font-size: 13px; opacity: .7; text-transform: capitalize; }
+.headerActions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.order button { border: 1px solid rgba(32,43,33,.25); border-radius: 8px; background: rgba(255,255,255,.9); padding: 8px 11px; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.order button:disabled { cursor: default; opacity: .45; }
+.quietButton { background: transparent !important; }
+.lines { display: grid; }
+.line { display: grid; gap: 12px; padding: 15px 16px; border-bottom: 1px solid rgba(32,43,33,.1); }
+.line:last-child { border-bottom: 0; }
+.lineSummary { display: flex; gap: 16px; justify-content: space-between; align-items: start; }
+.lineSummary > div:first-child { display: grid; gap: 2px; }
+.lineSummary > div:first-child span { font-size: 13px; opacity: .7; }
+.lineFacts { display: flex; gap: 14px; flex-wrap: wrap; justify-content: flex-end; }
+.lineFacts span { display: grid; gap: 1px; min-width: 88px; font-size: 11px; opacity: .7; }
+.lineFacts b { font-size: 13px; opacity: 1; }
+.controls { display: grid; grid-template-columns: minmax(160px, .7fr) minmax(280px, 1.4fr); gap: 12px; }
+.controls label { display: grid; gap: 5px; }
+.inlineControl, .reserveControl { display: flex; gap: 6px; align-items: stretch; }
+.inlineControl input { min-width: 0; width: 100%; }
+.reserveControl select { min-width: 0; flex: 1 1 auto; }
+.reserveControl input { width: 82px; }
+.allocations { display: grid; gap: 6px; }
+.allocations > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 9px; border-radius: 8px; background: rgba(72,90,67,.07); font-size: 12px; }
+.orderFooter { display: flex; gap: 16px; justify-content: space-between; align-items: center; padding: 13px 16px; background: rgba(242,239,228,.68); }
+.orderFooter > div { display: flex; flex-wrap: wrap; gap: 7px; }
+.orderFooter > div span { padding: 5px 8px; border-radius: 999px; background: rgba(95,73,50,.09); font-size: 11px; font-weight: 700; }
+.orderFooter > div span[data-ready="true"] { background: rgba(68,97,65,.14); }
+.primaryButton { background: #27362a !important; color: white; border-color: #27362a !important; }
+.saleBadge { font-size: 12px; font-weight: 800; }
+.history { border-top: 1px solid rgba(32,43,33,.16); padding-top: 10px; }
+.history summary { cursor: pointer; font-size: 12px; font-weight: 800; }
+.history summary span { opacity: .55; }
+.history > div { display: grid; gap: 6px; margin-top: 8px; }
+.history article { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 8px; background: rgba(32,43,33,.05); font-size: 12px; }
+.history article span { opacity: .65; }
+@media (max-width: 780px) {
+  .orderHeader, .lineSummary, .orderFooter { flex-direction: column; align-items: stretch; }
+  .headerActions, .lineFacts { justify-content: flex-start; }
+  .controls { grid-template-columns: 1fr; }
+  .reserveControl { flex-wrap: wrap; }
+  .reserveControl select { flex-basis: 100%; }
+}
