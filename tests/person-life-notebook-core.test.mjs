@@ -92,12 +92,16 @@ const READING_NOTEBOOK = {
   evidence: {
     claimType: "book_completed",
     progressReducer: "count_claims",
-    requestValueKey: "bookId",
+    inputField: {
+      primitive: "text",
+      id: "bookId",
+      label: "book",
+      placeholder: "title or book identifier",
+    },
     targetValue: 12,
     unit: "books",
     progressHeading: "READING PROGRESS",
     emptyMetricLabel: "no completed books yet",
-    inputLabel: "book",
     timeInputLabel: "when you finished it",
     logLabel: "Log completed book",
     invalidDraftMessage: "Choose a completed book and time.",
@@ -194,6 +198,8 @@ test("generic notebook projector preserves 5K max-value Evidence progress", () =
   assert.equal(model.requirementAccepted, true);
   assert.equal(model.rhythmAccepted, true);
   assert.equal(model.policyAccepted, true);
+  assert.equal(FIVE_K_PERSON_LIFE_NOTEBOOK.evidence.inputField.primitive, "quantity");
+  assert.equal(FIVE_K_PERSON_LIFE_NOTEBOOK.evidence.inputField.id, "distanceKm");
   assert.equal(model.progressValue, 4);
   assert.equal("bestMetric" in model, false);
   assert.equal(model.progressPercent, 80);
@@ -297,6 +303,8 @@ test("foreign reading shape accumulates governed completion Evidence through the
 
   const selected = selectPersonLifeNotebook([FIVE_K_PERSON_LIFE_NOTEBOOK, READING_NOTEBOOK], state);
   assert.equal(selected?.spec.id, "reading_12_books");
+  assert.equal(selected?.spec.evidence.inputField.primitive, "text");
+  assert.equal(selected?.spec.evidence.inputField.id, "bookId");
   assert.equal(selected?.model.goal.definitionId, readingGoal.definitionId);
   assert.equal(selected?.model.requirementAccepted, true);
   assert.equal(selected?.model.rhythmAccepted, true);
