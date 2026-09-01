@@ -210,6 +210,7 @@ export default function OwnerPersonAtlasFixture({ personName, principalDecisions
       `/owner/decision/${encodeURIComponent(decision.candidateKey)}`,
     ]),
   );
+  const SOURCE_LINKS: Record<string, string> = { ...BASE_SOURCE_LINKS, ...decisionSourceLinks };
 
   const utilityGroups: PersonAtlasUtilityGroup[] = [
     ...BASE_UTILITY_GROUPS,
@@ -234,7 +235,7 @@ export default function OwnerPersonAtlasFixture({ personName, principalDecisions
       reservedSpans={RESERVED}
       nextHardEdge="next fixed · family 6:30"
       utilityGroups={utilityGroups}
-      sourceLinks={{ ...BASE_SOURCE_LINKS, ...decisionSourceLinks }}
+      sourceLinks={SOURCE_LINKS}
     />
   );
 }
