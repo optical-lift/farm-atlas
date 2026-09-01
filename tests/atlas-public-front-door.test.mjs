@@ -7,6 +7,8 @@ const welcomeStyles = fs.readFileSync(new URL("../app/welcome/sales-page.module.
 const atlasStart = fs.readFileSync(new URL("../app/start/page.tsx", import.meta.url), "utf8");
 const personalStart = fs.readFileSync(new URL("../app/start/personal/page.tsx", import.meta.url), "utf8");
 const organizationStart = fs.readFileSync(new URL("../app/start/organization/page.tsx", import.meta.url), "utf8");
+const loginClient = fs.readFileSync(new URL("../app/login/LoginClient.tsx", import.meta.url), "utf8");
+const loginStyles = fs.readFileSync(new URL("../app/login/login.module.css", import.meta.url), "utf8");
 const organizationClient = fs.readFileSync(
   new URL("../app/onboarding/organization/OrganizationOnboardingClient.tsx", import.meta.url),
   "utf8",
@@ -69,6 +71,20 @@ test("personal and organization start pages share the sales-page visual system",
   }
   assert.match(welcomeStyles, /\.startDisabled/);
   assert.match(welcomeStyles, /\.startNote a/);
+});
+
+test("login uses the same restrained public Atlas branding", () => {
+  assert.match(loginClient, /data-atlas-login-page="true"/);
+  assert.match(loginClient, /styles\.brandBar/);
+  assert.match(loginClient, /styles\.brand/);
+  assert.match(loginClient, /href="\/welcome"/);
+  assert.match(loginClient, /href="\/start"/);
+  assert.match(loginStyles, /background: #fff !important/);
+  assert.match(loginStyles, /width: min\(1120px, 100%\)/);
+  assert.match(loginStyles, /letter-spacing: 0\.32em/);
+  assert.match(loginStyles, /border-radius: 0/);
+  assert.doesNotMatch(loginStyles, /radial-gradient/);
+  assert.doesNotMatch(loginStyles, /#553267|#715682|#40234f/);
 });
 
 test("Organization Atlas is explicitly pre-membership", () => {
