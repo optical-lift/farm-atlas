@@ -113,19 +113,28 @@ async function readWorkerSelfSequence(session: AtlasSession, forDate: string): P
   }
 }
 
-export async function readPersonAtlasProjection(session: AtlasSession, forDate: string) {
+export async function readSelfCompanyResponsibilities(): Promise<CompanyResponsibilityRow[]> {
   const supabase = await createAtlasServerClient();
-  const [companyRead, claimRead, rhythmRead, daySequence] = await Promise.all([
-    supabase.rpc("company_work_self_responsibilities_api_v1"),
-    supabase.rpc("person_claim_evidence_state_api_v1"),
-    supabase.rpc("person_rhythm_opportunities_self_api_v1", { p_limit: 60 }),
-    readWorkerSelfSequence(session, forDate),
-  ]);
+  const companyRead = await supabase.rpc("company_work_self_responsibilities_api_v1");
 
   if (companyRead.error) {
     console.error("Atlas Company Work self-responsibility read failed:", companyRead.error);
     throw new Error("Atlas could not read your company responsibilities.");
   }
+
+  return Array.isArray(companyRead.data)
+    ? companyRead.data as CompanyResponsibilityRow[]
+    : [];
+}
+
+export async function readPersonAtlasProjection(session: AtlasSession, forDate: string) {
+  const supabase = await createAtlasServerClient();
+  const [companyResponsibilities, claimRead, rhythmRead, daySequence] = await Promise.all([
+    readSelfCompanyResponsibilities(),
+    supabase.rpc("person_claim_evidence_state_api_v1"),
+    supabase.rpc("person_rhythm_opportunities_self_api_v1", { p_limit: 60 }),
+    readWorkerSelfSequence(session, forDate),
+  ]);
 
   let currentClaims: PersonClaim[] = [];
   if (claimRead.error) {
@@ -146,10 +155,6 @@ export async function readPersonAtlasProjection(session: AtlasSession, forDate: 
     const envelope = object(rhythmRead.data) as RhythmEnvelope;
     rhythmOpportunities = Array.isArray(envelope.opportunities) ? envelope.opportunities : [];
   }
-
-  const companyResponsibilities = Array.isArray(companyRead.data)
-    ? companyRead.data as CompanyResponsibilityRow[]
-    : [];
 
   return buildPersonAtlasProjection({
     forDate,
