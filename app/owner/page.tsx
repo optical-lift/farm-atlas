@@ -1,5 +1,6 @@
 import type { Viewport } from "next";
 
+import { readOwnerPrincipalDecisionProjection } from "@/lib/atlas/owner-principal-decisions";
 import { getAtlasSession } from "@/lib/atlas/session";
 import OwnerNotebookSpread from "./OwnerNotebookSpread";
 
@@ -14,6 +15,15 @@ export const viewport: Viewport = {
 };
 
 export default async function AtlasOwnerPage() {
-  const session = await getAtlasSession();
-  return <OwnerNotebookSpread personName={session?.displayName?.trim() || "Atlas"} />;
+  const [session, principalDecisions] = await Promise.all([
+    getAtlasSession(),
+    readOwnerPrincipalDecisionProjection(),
+  ]);
+
+  return (
+    <OwnerNotebookSpread
+      personName={session?.displayName?.trim() || "Atlas"}
+      principalDecisions={principalDecisions}
+    />
+  );
 }
