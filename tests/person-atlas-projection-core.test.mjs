@@ -37,6 +37,7 @@ test("future Company Work remains visible even when it is not admitted to today"
   assert.equal(projection.truthBoundary.companyResponsibilityNeverCapacityFiltered, true);
   assert.equal(lines(projection).some((line) => line.sentence === "Transplant fall onions"), true);
   assert.equal(projection.sections.find((section) => section.label === "COMPANY")?.lines.length, 1);
+  assert.equal(projection.sourceLinks[`company:${future.work_item_id}`], `/atlas/company/${future.work_item_id}`);
 });
 
 test("waiting and needs-resolution Company Work stays visible in WAITING", () => {
@@ -50,6 +51,7 @@ test("waiting and needs-resolution Company Work stays visible in WAITING", () =>
   const waiting = projection.sections.find((section) => section.label === "WAITING");
   assert.deepEqual(waiting?.lines.map((line) => line.sentence), ["Transplant cabbage", "Transplant chard"]);
   assert.equal(projection.counts.waitingCompany, 2);
+  assert.equal(projection.sourceLinks[`company:${blocked.work_item_id}`], `/atlas/company/${blocked.work_item_id}`);
 });
 
 test("Worker Day can mark one Company responsibility now without hiding the rest", () => {
@@ -69,7 +71,8 @@ test("Worker Day can mark one Company responsibility now without hiding the rest
   const projected = lines(projection);
   assert.equal(projected.find((line) => line.sentence === "Count White Lite")?.state, "now");
   assert.equal(projected.some((line) => line.sentence === "Transplant kale"), true);
-  assert.equal(projection.sourceLinks[`company:${current.work_item_id}`], "/day");
+  assert.equal(projection.sourceLinks[`company:${current.work_item_id}`], `/atlas/company/${current.work_item_id}`);
+  assert.equal(projection.sourceLinks[`company:${future.work_item_id}`], `/atlas/company/${future.work_item_id}`);
 });
 
 test("private reminders and rhythms coexist without impersonating Company Work", () => {
