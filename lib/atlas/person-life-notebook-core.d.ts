@@ -49,6 +49,7 @@ export type PersonLifeNotebookSpec = {
     inputField: AtlasInlineValueInputField;
     targetValue: number;
     unit: string;
+    progressFractionDigits: number;
     progressHeading: string;
     emptyMetricLabel: string;
     timeInputLabel: string;
