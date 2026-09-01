@@ -219,11 +219,25 @@
   border: 1px solid rgba(23, 23, 23, 0.24);
 }
 
+.startDisabled {
+  max-width: 370px;
+  margin-top: auto;
+  color: #686d6a;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 .startNote {
   margin: 18px 0 0;
   color: #686d6a;
   font-size: 11px;
   line-height: 1.55;
+}
+
+.startNote a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 @media (max-width: 640px) {
