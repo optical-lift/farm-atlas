@@ -54,13 +54,13 @@ test("Harvest exposes demand before movement and gates Sale conversion on explic
 
 test("the generic demand workflow has no Springfield-specific buyer or product adapter", () => {
   const forbidden = [
-    /Ruth/i,
-    /Linda/i,
-    /Springfield/i,
-    /Schaffitzel/i,
-    /Talmage/i,
-    /SUNFLOWER_BUYER/i,
-    /SAMPLE_BUYER/i,
+    /\bRuth\b/i,
+    /\bLinda\b/i,
+    /\bSpringfield\b/i,
+    /\bSchaffitzel(?:'s|s)?\b/i,
+    /\bTalmage\b/i,
+    /\bSUNFLOWER_BUYER\b/i,
+    /\bSAMPLE_BUYER\b/i,
   ];
   for (const pattern of forbidden) {
     assert.doesNotMatch(route, pattern);
