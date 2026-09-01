@@ -14,11 +14,17 @@ const personAtlasPage = readFileSync(
   new URL("../app/atlas/page.tsx", import.meta.url),
   "utf8",
 );
+const overview = readFileSync(
+  new URL("../app/atlas/AtlasResponsibilityOverview.tsx", import.meta.url),
+  "utf8",
+);
 
-test("the permanent Work tab opens the person-owned Atlas surface", () => {
+test("the permanent Work tab opens the person-owned Atlas responsibility overview", () => {
   assert.match(appFrame, /function todayHref\(\) \{\s*return "\/atlas";\s*\}/);
   assert.match(appFrame, /key: "work"[\s\S]*href: workHref/);
-  assert.match(personAtlasPage, /label: "Released work"[\s\S]*href: "\/day"/);
+  assert.match(personAtlasPage, /AtlasResponsibilityOverview/);
+  assert.match(overview, /href="\/day"/);
+  assert.match(overview, /href="\/atlas\/today"/);
 });
 
 test("management restored onto the legacy worker hand returns to Living Day", () => {
