@@ -29,6 +29,13 @@ function stateLabel(line: Line, sectionLabel: string) {
   return "Assigned";
 }
 
+function stateClass(line: Line) {
+  if (line.state === "now") return styles.state_now;
+  if (line.state === "waiting") return styles.state_waiting;
+  if (line.state === "done") return styles.state_done;
+  return "";
+}
+
 function secondary(line: Line) {
   return fact(line, "Next target")
     ?? fact(line, "When")
@@ -39,6 +46,7 @@ function secondary(line: Line) {
 }
 
 function OverviewRow({ line, sectionLabel, href }: { line: Line; sectionLabel: string; href?: string }) {
+  const rowSecondary = secondary(line);
   const body = (
     <>
       <span className={styles.rowMarker} aria-hidden="true" />
@@ -46,10 +54,10 @@ function OverviewRow({ line, sectionLabel, href }: { line: Line; sectionLabel: s
         <span className={styles.rowTitle}>{line.sentence}</span>
         <span className={styles.rowMeta}>
           <span>{line.worksheet?.kicker ?? sectionLabel}</span>
-          {secondary(line) ? <span>{secondary(line)}</span> : null}
+          {rowSecondary ? <span>{rowSecondary}</span> : null}
         </span>
       </span>
-      <span className={`${styles.state} ${styles[`state_${line.state}`]}`}>{stateLabel(line, sectionLabel)}</span>
+      <span className={`${styles.state} ${stateClass(line)}`}>{stateLabel(line, sectionLabel)}</span>
       {href ? <span className={styles.chevron} aria-hidden="true">›</span> : null}
     </>
   );
