@@ -13,6 +13,10 @@ export default async function PersonAtlasTodayPage() {
 
   const forDate = atlasFarmDateIso();
   const projection = await readPersonAtlasProjection(session, forDate);
+  const todaySourceLinks = { ...projection.sourceLinks };
+  for (const line of projection.sections.flatMap((section) => section.lines)) {
+    if (line.state === "now") todaySourceLinks[line.id] = "/day";
+  }
 
   return (
     <PersonAtlasNotebookV2
@@ -22,7 +26,7 @@ export default async function PersonAtlasTodayPage() {
       pageTitle="Today"
       dateLabelOverride={atlasFarmDateLabel(forDate, { weekday: "short", month: "short", day: "numeric" })}
       sections={projection.sections}
-      sourceLinks={projection.sourceLinks}
+      sourceLinks={todaySourceLinks}
       utilityGroups={[
         {
           label: "YOUR ATLAS",
