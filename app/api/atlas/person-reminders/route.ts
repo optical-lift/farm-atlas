@@ -39,6 +39,14 @@ function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function isReminderClaim(claim: PersonClaim, reminderId: string) {
+  return claim.claimType === "personal_reminder"
+    && claim.subject?.domain === "personal"
+    && claim.subject?.kind === "reminder"
+    && claim.subject?.id === reminderId
+    && !["superseded", "expired", "rejected"].includes(claim.lifecycleState ?? "");
+}
+
 function rpcFailure(error: RpcError) {
   if (error.code === "42501") return privateJson({ ok: false, error: "Sign in required." }, 401);
   if (error.code === "22023" || error.code === "23514") {
@@ -97,14 +105,13 @@ export async function POST(request: Request) {
     const envelope = data && typeof data === "object" && !Array.isArray(data)
       ? data as { currentClaims?: PersonClaim[] }
       : {};
-    const current = (envelope.currentClaims ?? []).find((claim) => (
-      claim.claimType === "personal_reminder"
-      && claim.subject?.domain === "personal"
-      && claim.subject?.kind === "reminder"
-      && claim.subject?.id === reminderId
-      && !["superseded", "expired", "rejected"].includes(claim.lifecycleState ?? "")
-      && !["done", "completed", "dismissed"].includes(text(claim.value?.state))
-    ));
+    const reminderClaims = (envelope.currentClaims ?? []).filter((claim) => isReminderClaim(claim, reminderId));
+    const alreadyDone = reminderClaims.find((claim) => ["done", "completed", "dismissed"].includes(text(claim.value?.state)));
+    if (alreadyDone) {
+      return privateJson({ ok: true, action, reminderId, replayed: true });
+    }
+
+    const current = reminderClaims.find((claim) => !["done", "completed", "dismissed"].includes(text(claim.value?.state)));
     if (!current?.claimId || !current.value) {
       return privateJson({ ok: false, error: "That open private reminder was not found." }, 404);
     }
