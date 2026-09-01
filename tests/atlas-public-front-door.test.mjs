@@ -24,6 +24,7 @@ test("public Atlas front door is one simple connected-life screen", () => {
   assert.match(welcome, /Connective intelligence for real life/);
   assert.match(welcome, /Atlas puts it back together\./);
   assert.match(welcome, /Your life is already in there\. It just lives in pieces\./);
+  assert.match(welcome, /Atlas tells you what needs your attention next and gives your team a clear picture of what’s moving forward\./);
   assert.match(welcome, /One life\. Many circles\. One Atlas\./);
   assert.match(welcome, /personalized around the life you are responsible for/);
   assert.match(welcome, /organization can have its\s+own shared Atlas/);
