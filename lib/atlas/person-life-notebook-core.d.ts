@@ -99,7 +99,6 @@ export type PersonLifeNotebookModel = {
   opportunities: any[];
   evidenceClaims: any[];
   progressValue: number;
-  bestMetric: number;
   progressPercent: number;
   satisfiedCount: number;
   matchingCondition: any | null;
