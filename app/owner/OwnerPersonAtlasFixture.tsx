@@ -1,5 +1,6 @@
 "use client";
 
+import type { OwnerPrincipalDecisionProjection } from "@/lib/atlas/owner-principal-decisions";
 import PersonAtlasNotebookV2, {
   type PersonAtlasReservedSpan,
   type PersonAtlasSection,
@@ -7,7 +8,7 @@ import PersonAtlasNotebookV2, {
   type PersonAtlasUtilityGroup,
 } from "./PersonAtlasNotebookV2";
 
-const SECTIONS: PersonAtlasSection[] = [
+const FIXTURE_SECTIONS: PersonAtlasSection[] = [
   {
     label: "NOW",
     lines: [
@@ -23,7 +24,7 @@ const SECTIONS: PersonAtlasSection[] = [
             { label: "Authority", value: "Private design work; no farm mutation attached" },
             { label: "Next proof", value: "Use the live Personal Atlas spread to test Goal + observation capture." },
           ],
-          note: "The Today page remains a design fixture, but person-owned Goal and condition persistence now have a live isolated spread behind the index.",
+          note: "The Today planning lines remain a design fixture. Production-backed Principal decisions now enter separately through the governed decision membrane and do not become NOW merely by existing.",
         },
       },
     ],
@@ -122,7 +123,7 @@ const RESERVED: PersonAtlasReservedSpan[] = [
   { id: "family", startMinute: 18 * 60 + 15, endMinute: 19 * 60 + 30, label: "Private family time" },
 ];
 
-const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
+const BASE_UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
   {
     label: "COLLECTIONS",
     items: [
@@ -170,34 +171,70 @@ const UTILITY_GROUPS: PersonAtlasUtilityGroup[] = [
       },
     ],
   },
-  {
-    label: "BUILD STATUS",
-    items: [
-      { label: "Today remains fixture-only", detail: "Personal Goals and first-party condition observations now use live production persistence through an isolated Personal Atlas spread. Today, time arbitration, and the rest of the Owner notebook remain fixture-only until they earn their contracts." },
-    ],
-  },
 ];
 
-const SOURCE_LINKS: Record<string, string> = {
+const BASE_SOURCE_LINKS: Record<string, string> = {
   "harvest-white-lite": "/owner/input/harvest",
   "household-zone": "/owner/input/household-zone",
 };
 
 type OwnerPersonAtlasFixtureProps = {
   personName: string;
+  principalDecisions: OwnerPrincipalDecisionProjection;
 };
 
-export default function OwnerPersonAtlasFixture({ personName }: OwnerPersonAtlasFixtureProps) {
+export default function OwnerPersonAtlasFixture({ personName, principalDecisions }: OwnerPersonAtlasFixtureProps) {
+  const decisionLines: PersonAtlasSection["lines"] = principalDecisions.items.map((decision) => ({
+    id: `principal-decision:${decision.candidateKey}`,
+    sentence: decision.title,
+    state: "open",
+    worksheet: {
+      kicker: `${decision.portfolioUnitName} · PRINCIPAL DECISION`,
+      facts: [
+        { label: "Why it reached you", value: decision.reasonForFloor ?? "Explicit Principal admission exists for this source." },
+        { label: "Consequence", value: decision.consequence ?? "Not specified by the source." },
+        { label: "Authority", value: decision.authorityBasis ?? "Principal authority established by the decision membrane." },
+        { label: "Time truth", value: "Decision candidate only · this feed does not claim Clock placement." },
+      ],
+      note: "Open the governed source sheet to see the canonical decision boundary and any application-owned command.",
+    },
+  }));
+
+  const sections: PersonAtlasSection[] = decisionLines.length
+    ? [FIXTURE_SECTIONS[0], { label: "DECISIONS", lines: decisionLines }, ...FIXTURE_SECTIONS.slice(1)]
+    : FIXTURE_SECTIONS;
+
+  const decisionSourceLinks = Object.fromEntries(
+    principalDecisions.items.map((decision) => [
+      `principal-decision:${decision.candidateKey}`,
+      `/owner/decision/${encodeURIComponent(decision.candidateKey)}`,
+    ]),
+  );
+  const SOURCE_LINKS: Record<string, string> = { ...BASE_SOURCE_LINKS, ...decisionSourceLinks };
+
+  const utilityGroups: PersonAtlasUtilityGroup[] = [
+    ...BASE_UTILITY_GROUPS,
+    {
+      label: "BUILD STATUS",
+      items: [
+        {
+          label: "Today is hybrid: fixture planning + live Principal decisions",
+          detail: `Principal decision membrane: ${principalDecisions.coverageState ?? principalDecisions.state} · ${principalDecisions.items.length} admitted now · partial coverage only · no Clock arbitration. Personal Goals and first-party condition observations remain live through the isolated Personal Atlas spread.`,
+        },
+      ],
+    },
+  ];
+
   return (
     <PersonAtlasNotebookV2
       identity={personName}
       greeting="hello"
       pageTitle="Today"
-      sections={SECTIONS}
+      sections={sections}
       timeMarks={TIME_MARKS}
       reservedSpans={RESERVED}
       nextHardEdge="next fixed · family 6:30"
-      utilityGroups={UTILITY_GROUPS}
+      utilityGroups={utilityGroups}
       sourceLinks={SOURCE_LINKS}
     />
   );

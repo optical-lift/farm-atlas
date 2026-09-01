@@ -1,5 +1,7 @@
 import type { Viewport } from "next";
 
+import type { OwnerPrincipalDecisionProjection } from "@/lib/atlas/owner-principal-decisions";
+import { readOwnerPrincipalDecisionProjection } from "@/lib/atlas/owner-principal-decisions";
 import { getAtlasSession } from "@/lib/atlas/session";
 import OwnerNotebookSpread from "./OwnerNotebookSpread";
 
@@ -13,7 +15,24 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
+const NO_SESSION_DECISIONS: OwnerPrincipalDecisionProjection = {
+  state: "principal_required",
+  coverageState: "principal_required",
+  coverageMode: "no_session",
+  completeFieldClaim: false,
+  items: [],
+};
+
 export default async function AtlasOwnerPage() {
   const session = await getAtlasSession();
-  return <OwnerNotebookSpread personName={session?.displayName?.trim() || "Atlas"} />;
+  const principalDecisions = session
+    ? await readOwnerPrincipalDecisionProjection()
+    : NO_SESSION_DECISIONS;
+
+  return (
+    <OwnerNotebookSpread
+      personName={session?.displayName?.trim() || "Atlas"}
+      principalDecisions={principalDecisions}
+    />
+  );
 }

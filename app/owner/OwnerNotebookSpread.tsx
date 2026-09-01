@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
 
+import type { OwnerPrincipalDecisionProjection } from "@/lib/atlas/owner-principal-decisions";
 import OwnerPersonAtlasFixture from "./OwnerPersonAtlasFixture";
 import styles from "./owner-notebook-spread.module.css";
 
 type OwnerNotebookSpreadProps = {
   personName: string;
+  principalDecisions: OwnerPrincipalDecisionProjection;
 };
 
 type ToolKey =
@@ -65,7 +67,7 @@ const TOOL_TABS: Array<{ key: ToolKey; label: string; title: string }> = [
 
 const CONTEXTS = ["All", "Personal", "Household", "Feast Guild", "Elm", "Write Now"];
 
-export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadProps) {
+export default function OwnerNotebookSpread({ personName, principalDecisions }: OwnerNotebookSpreadProps) {
   const [activeTool, setActiveTool] = useState<ToolKey | null>(null);
   const [captureDraft, setCaptureDraft] = useState("");
   const [capturedItems, setCapturedItems] = useState<string[]>([]);
@@ -269,7 +271,7 @@ export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadP
     <div className={styles.workspace} data-atlas-owner-tool-tabs="true">
       <div className={styles.spread} data-atlas-open-notebook="true">
         <div className={styles.leftPage}>
-          <OwnerPersonAtlasFixture personName={personName} />
+          <OwnerPersonAtlasFixture personName={personName} principalDecisions={principalDecisions} />
           <footer className={styles.leftFolio} aria-label="Today page 01, active">
             <span>01</span>
             <i aria-hidden="true">•</i>

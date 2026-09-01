@@ -45,14 +45,15 @@ test("Ask Atlas reconciliation is read-only even when it detects stale or missin
   assert.doesNotMatch(route, /createServerSupabaseClient|SUPABASE_SERVICE_ROLE_KEY/);
 });
 
-test("the new Owner notebook exposes reconciliation without reconnecting live Today", () => {
+test("the Owner notebook exposes reconciliation without giving Ask Atlas authority over live Today", () => {
   const fixture = read("app/owner/OwnerPersonAtlasFixture.tsx");
   const page = read("app/owner/ask-atlas/page.tsx");
   const client = read("app/owner/AskAtlasOwner.tsx");
 
   assert.match(fixture, /label: "Ask Atlas"/);
   assert.match(fixture, /href: "\/owner\/ask-atlas"/);
-  assert.match(fixture, /Today remains fixture-only/);
+  assert.match(fixture, /Today is hybrid: fixture planning \+ live Principal decisions/);
+  assert.match(fixture, /partial coverage only · no Clock arbitration/);
   assert.match(page, /<AskAtlasOwner/);
   assert.match(client, /\/api\/owner\/ask-atlas\/reconcile/);
   assert.match(client, /No records changed\./);
