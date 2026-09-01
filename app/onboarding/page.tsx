@@ -6,6 +6,8 @@ import styles from "./onboarding.module.css";
 
 export const dynamic = "force-dynamic";
 
+const ATLAS_PRODUCT_RESET = true;
+
 const sourceFamilies = [
   {
     name: "Google",
@@ -26,7 +28,7 @@ export default async function AtlasOnboardingPage() {
   const state = classifyAtlasSession(session);
 
   if (state.status === "anonymous") redirect("/login");
-  if (state.status === "active") redirect("/");
+  if (state.status === "active" && !ATLAS_PRODUCT_RESET) redirect("/");
   if (!session) redirect("/login");
 
   return (

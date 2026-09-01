@@ -47,6 +47,22 @@ function isPublicPath(pathname: string) {
   );
 }
 
+function isResetPublicPage(pathname: string) {
+  return (
+    pathname === "/welcome" ||
+    pathname === "/start" ||
+    pathname.startsWith("/start/") ||
+    pathname === "/login" ||
+    pathname === "/join" ||
+    pathname === "/auth/confirm" ||
+    pathname === "/auth/error"
+  );
+}
+
+function isResetOnboardingPath(pathname: string) {
+  return pathname === "/onboarding" || pathname.startsWith("/onboarding/");
+}
+
 function isExternallyAuthenticatedPath(pathname: string) {
   return pathname === "/api/continuity/messages/ingest";
 }
@@ -84,6 +100,13 @@ function resetRootUrl(request: NextRequest) {
   rootUrl.pathname = "/";
   rootUrl.search = "";
   return rootUrl;
+}
+
+function resetWelcomeUrl(request: NextRequest) {
+  const welcomeUrl = request.nextUrl.clone();
+  welcomeUrl.pathname = "/welcome";
+  welcomeUrl.search = "";
+  return welcomeUrl;
 }
 
 function resetErrorUrl(request: NextRequest) {
@@ -130,6 +153,14 @@ export async function updateAtlasSession(request: NextRequest) {
       .maybeSingle();
 
     if (profileError || profile?.active !== true) {
+      // Decommissioning removes Atlas product access, not the public front door.
+      // A stale signed-in session must still be able to read the sales/start/login
+      // surfaces and replace its credentials with a different Atlas account.
+      if (pathname === "/") {
+        return copySessionCookies(response, NextResponse.rewrite(resetWelcomeUrl(request)));
+      }
+      if (isPublicPath(pathname)) return response;
+
       if (pathname.startsWith("/api/")) {
         return copySessionCookies(
           response,
@@ -139,31 +170,36 @@ export async function updateAtlasSession(request: NextRequest) {
           ),
         );
       }
-      if (pathname === "/auth/error") return response;
       return copySessionCookies(response, NextResponse.redirect(resetErrorUrl(request)));
     }
   }
 
   if (ATLAS_PRODUCT_RESET && !pathname.startsWith("/api/")) {
-    if (!authenticated) {
-      if (pathname === "/login" || pathname === "/auth/confirm" || pathname === "/auth/error") {
-        return response;
-      }
-      return copySessionCookies(response, NextResponse.redirect(resetLoginUrl(request)));
-    }
-
-    if (pathname === "/login") {
-      return copySessionCookies(response, NextResponse.redirect(resetRootUrl(request)));
-    }
-
     if (pathname === "/") {
+      if (!authenticated) {
+        return copySessionCookies(response, NextResponse.rewrite(resetWelcomeUrl(request)));
+      }
+
       const destination = request.nextUrl.clone();
       destination.pathname = "/reset";
       destination.search = "";
       return copySessionCookies(response, NextResponse.rewrite(destination));
     }
 
-    if (pathname !== "/reset" && pathname !== "/auth/confirm" && pathname !== "/auth/error") {
+    // Public presentation stays public during the reset, even when the browser
+    // already holds an authenticated session. This lets people see the sales
+    // funnel and lets a decommissioned session switch accounts at /login.
+    if (isResetPublicPage(pathname)) return response;
+
+    // The retained active account still needs to exercise the new onboarding
+    // path while the legacy Atlas product tree remains decommissioned.
+    if (authenticated && isResetOnboardingPath(pathname)) return response;
+
+    if (!authenticated) {
+      return copySessionCookies(response, NextResponse.redirect(resetLoginUrl(request)));
+    }
+
+    if (pathname !== "/reset") {
       return copySessionCookies(response, NextResponse.redirect(resetRootUrl(request)));
     }
   }
