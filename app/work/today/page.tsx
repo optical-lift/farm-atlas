@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import WorkerDayModeCheckIn from "@/components/atlas/work/WorkerDayModeCheckIn";
 import { buildAdaptiveDayPlan, type AdaptiveDayTask } from "@/lib/atlas/adaptive-day-overview";
+import { getMyCompanyWorkResponsibilities } from "@/lib/atlas-data/company-work-self";
 import { getWorkerDayRoutingState } from "@/lib/atlas-data/worker-day-routing";
 import { getWorkerHand } from "@/lib/atlas-data/worker-hand";
 import { readWorkerWeekProjection } from "@/lib/atlas-data/worker-week-projection";
@@ -79,9 +80,10 @@ export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageP
 
   const today = centralTodayIso();
   const requestedDate = inspectMode ? (validDateIso(params.date) ?? today) : today;
-  const [hand, routingState] = await Promise.all([
+  const [hand, routingState, responsibilities] = await Promise.all([
     getWorkerHand(access, null, requestedDate),
     access.membership.role === "farm_hand" ? getWorkerDayRoutingState(access).catch(() => null) : Promise.resolve(null),
+    access.membership.role === "farm_hand" ? getMyCompanyWorkResponsibilities() : Promise.resolve([]),
   ]);
   const allTasks = [...hand.lanes.blocked, ...hand.lanes.overdue, ...hand.lanes.today, ...hand.lanes.undated];
   const plan = buildAdaptiveDayPlan(allTasks, routingState);
@@ -90,6 +92,7 @@ export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageP
     ? await readWorkerWeekProjection(access.membership.farmId, hand.worker.membershipId, requestedDate, 1).catch(() => null)
     : null;
   const projectedItems = projection?.days[0]?.items ?? [];
+  const focusedResponsibilityCount = responsibilities.filter((item) => Boolean(item.attentionLeaseId)).length;
 
   return (
     <main className={styles.page}>
@@ -100,7 +103,10 @@ export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageP
             <h1 id="worker-title">{hand.worker?.displayName ?? "Farm work"}</h1>
             <p className={styles.identity}>{futureInspection ? "Owner preview of the work Atlas expects for this day." : "Atlas is holding the order. Work the list from the top."}</p>
           </div>
-          <Link className={styles.back} href="/">Home</Link>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+            {access.membership.role === "farm_hand" ? <Link className={styles.back} href="/work/all">All work · {responsibilities.length}</Link> : null}
+            <Link className={styles.back} href="/">Home</Link>
+          </div>
         </header>
 
         {!hand.worker ? (
@@ -140,8 +146,8 @@ export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageP
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
                   <div>
-                    <strong style={{ display: "block" }}>Today's plan can change as the day changes.</strong>
-                    <span style={{ opacity: .68 }}>Weather, timing, farm needs, and what you tell Atlas can reorder it.</span>
+                    <strong style={{ display: "block" }}>Atlas is holding your focus.</strong>
+                    <span style={{ opacity: .68 }}>{responsibilities.length} open responsibilities stay in <Link href="/work/all">All work</Link> even when they are not in today&apos;s hand. {focusedResponsibilityCount ? `${focusedResponsibilityCount} are in your hand now.` : "Nothing is currently in your hand."}</span>
                   </div>
                   <WorkerDayModeCheckIn state={routingState} canAct={hand.canAct} />
                 </div>
@@ -161,7 +167,10 @@ export default async function WorkerTodayPage({ searchParams }: WorkerTodayPageP
                     <AdaptiveSection title="Waiting" tasks={plan.waiting} />
                   </>
                 ) : (
-                  <section className={styles.emptyState}><h2>No work is ready</h2><p>There are no assigned or farm-shared tasks due for this worker today.</p></section>
+                  <section className={styles.emptyState}>
+                    <h2>Nothing is in your hand right now</h2>
+                    <p>Your unfinished responsibilities are still in <Link href="/work/all">All work</Link>. Atlas has not made them disappear.</p>
+                  </section>
                 )}
               </>
             )}
