@@ -50,6 +50,10 @@ test("one Atlas start screen asks where onboarding begins only after the sales C
   assert.match(atlasStart, /href="\/start\/personal"/);
   assert.match(atlasStart, /href="\/start\/organization"/);
   assert.match(atlasStart, /not a choice between two different Atlas products/i);
+  assert.match(atlasStart, /welcome\/sales-page\.module\.css/);
+  assert.doesNotMatch(atlasStart, /front-door\.module\.css/);
+  assert.match(atlasStart, /data-atlas-sales-page="true"/);
+  assert.match(welcomeStyles, /\.startChoices/);
   assert.match(proxy, /pathname === "\/start"/);
 });
 
