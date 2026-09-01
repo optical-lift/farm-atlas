@@ -9,6 +9,7 @@ const appFrame = readFileSync(new URL("../components/atlas/shell/AtlasContextual
 const rootLayout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
 const loginClient = readFileSync(new URL("../app/login/LoginClient.tsx", import.meta.url), "utf8");
 const onboardingPage = readFileSync(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8");
+const authErrorPage = readFileSync(new URL("../app/auth/error/page.tsx", import.meta.url), "utf8");
 
 test("the reset decommissions the legacy page tree without deleting backend authority", () => {
   assert.match(proxy, /const ATLAS_PRODUCT_RESET = true/);
@@ -29,6 +30,11 @@ test("inactive Atlas profiles lose product access but keep the public entry surf
   assert.match(proxy, /if \(pathname === "\/"\) \{[\s\S]*NextResponse\.rewrite\(resetWelcomeUrl\(request\)\)/);
   assert.match(proxy, /if \(isPublicPath\(pathname\)\) return response/);
   assert.match(proxy, /Atlas access is decommissioned for this account/);
+});
+
+test("a decommissioned account error is not a dead end", () => {
+  assert.match(authErrorPage, /href="\/welcome"[^>]*>View Atlas</);
+  assert.match(authErrorPage, /href="\/login"[^>]*>Sign in with another account</);
 });
 
 test("sales, start, and login remain readable during the product reset", () => {
