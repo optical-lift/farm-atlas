@@ -73,12 +73,14 @@ test("personal and organization start pages share the sales-page visual system",
   assert.match(welcomeStyles, /\.startNote a/);
 });
 
-test("login uses the same restrained public Atlas branding", () => {
+test("login is a neutral reset front door instead of another product branch", () => {
   assert.match(loginClient, /data-atlas-login-page="true"/);
   assert.match(loginClient, /styles\.brandBar/);
   assert.match(loginClient, /styles\.brand/);
-  assert.match(loginClient, /href="\/welcome"/);
-  assert.match(loginClient, /href="\/start"/);
+  assert.match(loginClient, /Atlas is being rebuilt from first principles\./);
+  assert.doesNotMatch(loginClient, /href="\/welcome"/);
+  assert.doesNotMatch(loginClient, /href="\/start"/);
+  assert.doesNotMatch(loginClient, /Create your Atlas/);
   assert.match(loginStyles, /background: #fff !important/);
   assert.match(loginStyles, /width: min\(1120px, 100%\)/);
   assert.match(loginStyles, /letter-spacing: 0\.32em/);

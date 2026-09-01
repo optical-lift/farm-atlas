@@ -86,10 +86,11 @@ import "./day-node-clean.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const ATLAS_PRODUCT_RESET = true;
 
 export const metadata: Metadata = {
-  title: "Atlas · Feast Guild",
-  description: "Feast Guild farm portfolio, projects, and field operations",
+  title: "Atlas",
+  description: "Atlas",
   applicationName: "Atlas",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -120,6 +121,18 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  if (ATLAS_PRODUCT_RESET) {
+    // Keep the reset surface request-bound without initializing any of the retired
+    // Atlas product runtime. This also prevents unreachable legacy pages from being
+    // statically prerendered during the reset build.
+    await getAtlasSession();
+    return (
+      <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+        <body className="min-h-full flex flex-col">{children}</body>
+      </html>
+    );
+  }
+
   const [operatorContext, session] = await Promise.all([
     readAtlasOwnerOperatorContext(),
     getAtlasSession(),

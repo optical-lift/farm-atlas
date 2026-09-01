@@ -1,13 +1,12 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import Link from "next/link";
 
 import { atlasPostLoginPath } from "@/lib/atlas/auth-core.js";
 import styles from "./login.module.css";
 
 export default function LoginClient({
-  signupEnabled,
+  signupEnabled: _signupEnabled,
   nextPath,
 }: {
   signupEnabled: boolean;
@@ -44,17 +43,14 @@ export default function LoginClient({
   return (
     <main className={styles.page} data-atlas-login-page="true">
       <div className={styles.shell}>
-        <nav className={styles.brandBar} aria-label="Atlas">
-          <Link className={styles.brand} href="/welcome">ATLAS</Link>
-          <div className={styles.brandActions}>
-            <Link className={styles.brandCta} href="/start">Start Atlas</Link>
-          </div>
-        </nav>
+        <div className={styles.brandBar} aria-label="Atlas">
+          <span className={styles.brand}>ATLAS</span>
+        </div>
 
         <section className={styles.loginContent} aria-labelledby="atlas-login-title">
-          <p className={styles.eyebrow}>Your Atlas</p>
-          <h1 id="atlas-login-title">Atlas</h1>
-          <p className={styles.intro}>Sign in to open your Atlas.</p>
+          <p className={styles.eyebrow}>Atlas</p>
+          <h1 id="atlas-login-title">Sign in</h1>
+          <p className={styles.intro}>Atlas is being rebuilt from first principles.</p>
 
           <form onSubmit={submit} className={styles.form}>
             <label>
@@ -67,15 +63,9 @@ export default function LoginClient({
             </label>
             {error ? <p className={styles.error} role="alert">{error}</p> : null}
             <button type="submit" disabled={loading}>
-              {loading ? "Opening Atlas…" : "Sign in"}
+              {loading ? "Opening…" : "Sign in"}
             </button>
           </form>
-
-          {signupEnabled ? (
-            <p className={styles.joinPrompt}>
-              New to Atlas? <Link className={styles.joinLink} href="/join">Create your Atlas</Link>
-            </p>
-          ) : null}
         </section>
       </div>
     </main>
