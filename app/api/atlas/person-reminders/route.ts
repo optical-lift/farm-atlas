@@ -78,11 +78,12 @@ export async function POST(request: Request) {
 
   if (action === "create") {
     const reminderId = randomUUID();
+    const dueDate = text(body.dueDate);
     const built = buildPersonalReminderCapture({
       reminderId,
-      label: body.label,
-      note: body.note,
-      dueDate: body.dueDate,
+      label: text(body.label),
+      note: text(body.note),
+      dueDate: dueDate || null,
       recordedAt: new Date().toISOString(),
     });
     if (!built.ok || !built.value) {
