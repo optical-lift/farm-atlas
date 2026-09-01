@@ -6,6 +6,8 @@ import { atlasPostLoginPath } from "@/lib/atlas/auth-core.js";
 import { legacyTaskRedirectCore } from "@/lib/atlas/task-routing-core.js";
 import { getAtlasSupabaseConfig } from "@/lib/supabase/config";
 
+const ATLAS_PRODUCT_RESET = true;
+
 const LEGACY_MUTATION_REWRITES = new Map([
   ["POST /api/atlas/closeout", "/api/atlas/closeout-save"],
   ["POST /api/atlas/germination-check", "/api/atlas/germination-check-save"],
@@ -70,6 +72,28 @@ function legacyMutationDestination(request: NextRequest) {
   return LEGACY_MUTATION_REWRITES.get(`${request.method.toUpperCase()} ${request.nextUrl.pathname}`) ?? null;
 }
 
+function resetLoginUrl(request: NextRequest) {
+  const loginUrl = request.nextUrl.clone();
+  loginUrl.pathname = "/login";
+  loginUrl.search = "";
+  return loginUrl;
+}
+
+function resetRootUrl(request: NextRequest) {
+  const rootUrl = request.nextUrl.clone();
+  rootUrl.pathname = "/";
+  rootUrl.search = "";
+  return rootUrl;
+}
+
+function resetErrorUrl(request: NextRequest) {
+  const errorUrl = request.nextUrl.clone();
+  errorUrl.pathname = "/auth/error";
+  errorUrl.search = "";
+  errorUrl.searchParams.set("reason", "access_decommissioned");
+  return errorUrl;
+}
+
 export async function updateAtlasSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   const { url, publishableKey } = getAtlasSupabaseConfig();
@@ -97,6 +121,52 @@ export async function updateAtlasSession(request: NextRequest) {
   const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
   const authenticated = Boolean(userId);
   const { pathname } = request.nextUrl;
+
+  if (authenticated && userId) {
+    const { data: profile, error: profileError } = await supabase
+      .from("user_profiles")
+      .select("active")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (profileError || profile?.active !== true) {
+      if (pathname.startsWith("/api/")) {
+        return copySessionCookies(
+          response,
+          NextResponse.json(
+            { ok: false, error: "Atlas access is decommissioned for this account." },
+            { status: 403, headers: { "Cache-Control": "private, no-store" } },
+          ),
+        );
+      }
+      if (pathname === "/auth/error") return response;
+      return copySessionCookies(response, NextResponse.redirect(resetErrorUrl(request)));
+    }
+  }
+
+  if (ATLAS_PRODUCT_RESET && !pathname.startsWith("/api/")) {
+    if (!authenticated) {
+      if (pathname === "/login" || pathname === "/auth/confirm" || pathname === "/auth/error") {
+        return response;
+      }
+      return copySessionCookies(response, NextResponse.redirect(resetLoginUrl(request)));
+    }
+
+    if (pathname === "/login") {
+      return copySessionCookies(response, NextResponse.redirect(resetRootUrl(request)));
+    }
+
+    if (pathname === "/") {
+      const destination = request.nextUrl.clone();
+      destination.pathname = "/reset";
+      destination.search = "";
+      return copySessionCookies(response, NextResponse.rewrite(destination));
+    }
+
+    if (pathname !== "/reset" && pathname !== "/auth/confirm" && pathname !== "/auth/error") {
+      return copySessionCookies(response, NextResponse.redirect(resetRootUrl(request)));
+    }
+  }
 
   // The root URL is the Atlas product front door for visitors. Existing authenticated
   // users keep the current application Home at `/`, so no Elm/Feast Guild behavior is moved.
