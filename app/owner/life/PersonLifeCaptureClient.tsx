@@ -387,7 +387,7 @@ export default function PersonLifeCaptureClient({ personName }: { personName: st
                 <div className={styles.progressTopline}>
                   <span>{spec.evidence.progressHeading}</span>
                   <strong>{model.progressValue
-                    ? `${model.progressValue.toFixed(2)} ${spec.evidence.unit}`
+                    ? `${model.progressValue.toFixed(spec.evidence.progressFractionDigits)} ${spec.evidence.unit}`
                     : spec.evidence.emptyMetricLabel}</strong>
                 </div>
                 <div
