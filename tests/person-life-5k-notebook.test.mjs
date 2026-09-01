@@ -73,12 +73,15 @@ test("catalog-driven notebook reuses Atlas input primitives without goal-specifi
   assert.match(client, /spec\.evidence\.inputField/);
   assert.match(client, /inputField\.primitive === "quantity"/);
   assert.match(client, /\[inputField\.id\]: evidenceValue/);
+  assert.match(client, /toFixed\(spec\.evidence\.progressFractionDigits\)/);
+  assert.doesNotMatch(client, /toFixed\(2\)/);
   assert.doesNotMatch(client, /Number\(draft\.value\)/);
   assert.doesNotMatch(client, /requestValueKey/);
   assert.doesNotMatch(client, /reading_12_books/);
   assert.doesNotMatch(client, /book_completed/);
   assert.match(catalog, /PERSON_LIFE_NOTEBOOK_CATALOG/);
   assert.match(catalog, /primitive: "quantity"/);
+  assert.match(catalog, /progressFractionDigits: 2/);
   assert.match(inputContract, /AtlasInlineValueInputField/);
   assert.match(inputContract, /function atlasInputValueFromDraft/);
 });
