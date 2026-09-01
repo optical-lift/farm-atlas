@@ -17,7 +17,7 @@ type AtlasContextualAppFrameProps = {
 };
 
 function todayHref() {
-  return "/day";
+  return "/atlas";
 }
 
 function clockHref() {
@@ -37,7 +37,8 @@ function routeGroup(pathname: string) {
   if (pathname.startsWith("/clock")) return "clock";
   if (pathname.startsWith("/manage/day")) return "manager";
   if (
-    pathname.startsWith("/day")
+    pathname.startsWith("/atlas")
+    || pathname.startsWith("/day")
     || pathname.startsWith("/overview")
     || pathname.startsWith("/work")
     || pathname.startsWith("/task")
