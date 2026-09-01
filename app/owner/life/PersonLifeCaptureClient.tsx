@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { atlasInputValueFromDraft } from "@/lib/atlas/input-contract";
 import { selectCatalogPersonLifeNotebook } from "@/lib/atlas/person-life-notebook-catalog.js";
 import styles from "./person-life.module.css";
 
@@ -255,9 +256,10 @@ export default function PersonLifeCaptureClient({ personName }: { personName: st
   const recordEvidence = async (opportunity: RhythmOpportunity) => {
     if (!spec || !activeGoal) return;
     const draft = evidenceDrafts[opportunity.opportunityId] ?? { value: "", observedAt: "" };
-    const metric = Number(draft.value);
+    const inputField = spec.evidence.inputField;
+    const evidenceValue = atlasInputValueFromDraft(inputField, draft.value);
     const observedAt = toIso(draft.observedAt);
-    if (!Number.isFinite(metric) || metric <= 0 || !observedAt) {
+    if (evidenceValue === null || !observedAt) {
       setError(spec.evidence.invalidDraftMessage);
       return;
     }
@@ -266,7 +268,7 @@ export default function PersonLifeCaptureClient({ personName }: { personName: st
       sourceKey: `${spec.sourcePrefix}:${activeGoal.definitionId}:${spec.sourceKeys.evidence}:${opportunity.opportunityId}:${observedAt}`,
       goalDefinitionId: activeGoal.definitionId,
       opportunityId: opportunity.opportunityId,
-      [spec.evidence.requestValueKey]: metric,
+      [inputField.id]: evidenceValue,
       observedAt,
     }, spec.evidence.recordedFeedback);
     if (ok) {
@@ -411,6 +413,7 @@ export default function PersonLifeCaptureClient({ personName }: { personName: st
                     : spec.rhythm.fallbackPresentationLabel;
                   const guidance = typeof presentation.guidance === "string" ? presentation.guidance : "";
                   const draft = evidenceDrafts[opportunity.opportunityId] ?? { value: "", observedAt: "" };
+                  const inputField = spec.evidence.inputField;
                   const isSatisfied = opportunity.projectionState === "satisfied";
                   const isWorking = working === `evidence:${opportunity.opportunityId}`;
                   return (
@@ -431,12 +434,15 @@ export default function PersonLifeCaptureClient({ personName }: { personName: st
                       {!isSatisfied && opportunity.projectionState === "projected" ? (
                         <div className={styles.runLog}>
                           <label>
-                            <span>{spec.evidence.inputLabel}</span>
+                            <span>{inputField.label}</span>
                             <input
-                              type="number"
-                              min="0.01"
-                              step="0.01"
-                              inputMode="decimal"
+                              type={inputField.primitive === "quantity" ? "number" : "text"}
+                              min={inputField.primitive === "quantity" ? inputField.minimum : undefined}
+                              step={inputField.primitive === "quantity" ? inputField.step : undefined}
+                              inputMode={inputField.primitive === "quantity"
+                                ? inputField.wholeNumber || (inputField.step ?? 1) >= 1 ? "numeric" : "decimal"
+                                : undefined}
+                              placeholder={inputField.primitive === "text" ? inputField.placeholder : undefined}
                               value={draft.value}
                               onChange={(event) => setEvidenceDrafts((current) => ({
                                 ...current,
@@ -517,7 +523,6 @@ export default function PersonLifeCaptureClient({ personName }: { personName: st
                 </article>
               )) : <p className={styles.quiet}>No personal goals recorded here yet.</p>}
             </section>
-
             <section className={styles.stateGroup}>
               <h3>Body observations</h3>
               {conditions.length ? conditions.map((condition) => (
