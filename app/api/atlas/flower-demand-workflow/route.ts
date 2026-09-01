@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
 const DEMAND_CANCEL_REASONS = new Set(["customer_cancelled", "seller_cancelled", "entry_correction", "other"]);
 const ALLOCATION_RELEASE_REASONS = new Set(["manual_release", "entry_correction", "other"]);
+const PRICE_REASONS = new Set(["price_set", "price_revised", "entry_correction", "other"]);
 
 type Body = Record<string, unknown>;
 type RpcError = { code?: string; message?: string };
@@ -25,8 +26,9 @@ type LineRow = {
   target_unit_price: number | string | null; currency: string; created_at: string;
 };
 type CoverageRow = {
-  demand_order_id: string; demand_line_id: string; demanded_quantity: number | string; reserved_quantity: number | string;
-  sold_quantity: number | string; fulfilled_quantity: number | string; short_quantity: number | string; coverage_state: string;
+  demand_order_id: string; demand_line_id: string; demand_strength: string; demanded_quantity: number | string;
+  target_unit_price: number | string | null; reserved_quantity: number | string; sold_quantity: number | string;
+  fulfilled_quantity: number | string; short_quantity: number | string; coverage_state: string;
   target_demand_value: number | string | null;
 };
 type AllocationRow = {
@@ -75,7 +77,7 @@ export async function GET() {
     supabase.from("farms").select("id, stable_key, name").in("id", farmIds),
     supabase.from("flower_demand_orders").select("id, farm_id, buyer_relationship_id, customer_label, demand_strength, sales_channel, requested_for_date, fulfillment_mode, fulfillment_due_time, note, created_at").in("farm_id", farmIds).order("requested_for_date", { ascending: true }),
     supabase.from("flower_demand_order_lines").select("id, farm_id, demand_order_id, inventory_kind, crop_profile_id, product_label, quantity, unit, stems_per_unit, target_unit_price, currency, created_at").in("farm_id", farmIds),
-    supabase.from("flower_demand_coverage_v1").select("demand_order_id, demand_line_id, demanded_quantity, reserved_quantity, sold_quantity, fulfilled_quantity, short_quantity, coverage_state, target_demand_value").in("farm_id", farmIds),
+    supabase.from("flower_demand_coverage_v1").select("demand_order_id, demand_line_id, demand_strength, demanded_quantity, target_unit_price, reserved_quantity, sold_quantity, fulfilled_quantity, short_quantity, coverage_state, target_demand_value").in("farm_id", farmIds),
     supabase.from("flower_demand_allocation_position_v1").select("allocation_id, farm_id, demand_line_id, demand_order_id, ready_lot_id, quantity, allocation_state, release_reason, sale_order_line_id, created_at").in("farm_id", farmIds),
     supabase.from("flower_ready_inventory_position_v1").select("id, farm_id, inventory_kind, unit, quantity_exactness, ready_date, birth_quantity, active_claimed_quantity, fulfilled_quantity, disposed_quantity, available_quantity, crop_profile_id, product_label").in("farm_id", farmIds),
     supabase.from("flower_ready_inventory_identity_v1").select("id, crop_profile_id, crop_label, variety, product_label, metadata").in("farm_id", farmIds),
@@ -139,11 +141,11 @@ export async function GET() {
     const farmOrders = orders.filter((row) => row.farm_id === farm.id).map((order) => {
       const commitment = commitmentByOrder.get(order.id) ?? null;
       const cancellation = cancellationByOrder.get(order.id) ?? null;
-      const effectiveDemandStrength = order.demand_strength === "committed" || commitment ? "committed" : "requested";
       const activeSaleLink = (linksByOrder.get(order.id) ?? []).find((link) => !saleCancellations.has(link.sale_order_id)) ?? null;
       const fulfillment = activeSaleLink ? fulfillmentBySale.get(activeSaleLink.sale_order_id) ?? null : null;
       const orderLines = (linesByOrder.get(order.id) ?? []).map((line) => {
         const position = coverageByLine.get(line.id);
+        const effectivePrice = position?.target_unit_price ?? line.target_unit_price;
         return {
           id: line.id,
           inventoryKind: line.inventory_kind,
@@ -152,14 +154,15 @@ export async function GET() {
           quantity: Number(line.quantity),
           unit: line.unit,
           stemsPerUnit: line.stems_per_unit,
-          targetUnitPrice: line.target_unit_price === null ? null : Number(line.target_unit_price),
+          recordedTargetUnitPrice: line.target_unit_price === null ? null : Number(line.target_unit_price),
+          targetUnitPrice: effectivePrice === null || effectivePrice === undefined ? null : Number(effectivePrice),
           currency: line.currency,
           demandedQuantity: Number(position?.demanded_quantity ?? line.quantity),
           reservedQuantity: Number(position?.reserved_quantity ?? 0),
           soldQuantity: Number(position?.sold_quantity ?? 0),
           fulfilledQuantity: Number(position?.fulfilled_quantity ?? 0),
           shortQuantity: Number(position?.short_quantity ?? line.quantity),
-          coverageState: position?.coverage_state ?? "short",
+          coverageState: position?.coverage_state ?? "uncovered",
           allocations: (allocationsByLine.get(line.id) ?? []).map((allocation) => ({
             id: allocation.allocation_id,
             readyLotId: allocation.ready_lot_id,
@@ -171,6 +174,8 @@ export async function GET() {
           })),
         };
       });
+      const projectedStrength = orderLines.find((line) => coverageByLine.get(line.id)) ? coverageByLine.get(orderLines[0]?.id ?? "")?.demand_strength : null;
+      const effectiveDemandStrength = projectedStrength === "committed" || order.demand_strength === "committed" || commitment ? "committed" : "requested";
       const allCovered = orderLines.length > 0 && orderLines.every((line) => line.coverageState === "covered");
       const anyReserved = orderLines.some((line) => line.reservedQuantity > 0);
       const allPriced = orderLines.length > 0 && orderLines.every((line) => line.targetUnitPrice !== null);
@@ -233,6 +238,14 @@ export async function POST(request: NextRequest) {
     response = operatorMembershipId
       ? await supabase.rpc("owner_operator_commit_flower_demand_order_v1", { p_effective_membership_id: operatorMembershipId, p_demand_order_id: demandOrderId, p_note: note, p_idempotency_key: idempotencyKey })
       : await supabase.rpc("commit_flower_demand_order_for_member_v1", { p_farm_id: farmId, p_demand_order_id: demandOrderId, p_note: note, p_idempotency_key: idempotencyKey });
+  } else if (action === "price") {
+    const demandLineId = clean(body.demandLineId);
+    const unitPrice = numeric(body.unitPrice);
+    const reasonKind = clean(body.reasonKind) || "price_set";
+    if (!UUID_PATTERN.test(demandLineId) || !Number.isFinite(unitPrice) || unitPrice < 0 || !PRICE_REASONS.has(reasonKind)) return privateJson({ ok: false, error: "Pricing needs a demand line, non-negative unit price, and valid reason." }, 400);
+    response = operatorMembershipId
+      ? await supabase.rpc("owner_operator_record_flower_demand_line_price_v1", { p_effective_membership_id: operatorMembershipId, p_demand_line_id: demandLineId, p_unit_price: unitPrice, p_reason_kind: reasonKind, p_note: note, p_idempotency_key: idempotencyKey })
+      : await supabase.rpc("record_flower_demand_line_price_for_member_v1", { p_farm_id: farmId, p_demand_line_id: demandLineId, p_unit_price: unitPrice, p_reason_kind: reasonKind, p_note: note, p_idempotency_key: idempotencyKey });
   } else if (action === "allocate") {
     const demandLineId = clean(body.demandLineId);
     const readyLotId = clean(body.readyLotId);
