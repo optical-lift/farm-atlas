@@ -27,7 +27,7 @@ test("public Atlas front door is one simple connected-life screen", () => {
   assert.match(welcome, /Atlas tells you what needs your attention next and gives your team a clear picture of what’s moving forward\./);
   assert.match(welcome, /One life\. Many circles\. One Atlas\./);
   assert.match(welcome, /personalized around the life you are responsible for/);
-  assert.match(welcome, /organization can have its\s+own shared Atlas/);
+  assert.match(welcome, /Atlas can hold the business you\s+run alongside everything else you’re responsible for\./);
   assert.match(welcome, /href="\/start"/);
   assert.equal((welcome.match(/<section/g) ?? []).length, 1);
   assert.doesNotMatch(welcome, /images\.pexels\.com/);
