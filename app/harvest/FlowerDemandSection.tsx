@@ -134,6 +134,7 @@ export default function FlowerDemandSection() {
   useEffect(() => { void load(); }, [load]);
 
   const farm = data?.farms?.find((item) => item.id === farmId) ?? data?.farms?.[0] ?? null;
+  const readyLots = farm?.readyLots ?? [];
   const openOrders = useMemo(() => (farm?.orders ?? []).filter((order) => !["fulfilled", "cancelled"].includes(order.lifecycleState)), [farm]);
   const closedOrders = useMemo(() => (farm?.orders ?? []).filter((order) => ["fulfilled", "cancelled"].includes(order.lifecycleState)), [farm]);
 
@@ -185,7 +186,7 @@ export default function FlowerDemandSection() {
   }
 
   async function reserve(line: DemandLine) {
-    const matchingLots = (farm?.readyLots ?? []).filter((lot) => lotMatches(line, lot));
+    const matchingLots = readyLots.filter((lot) => lotMatches(line, lot));
     const draft = allocationDrafts[line.id] ?? { readyLotId: matchingLots[0]?.id ?? "", quantity: String(Math.min(line.shortQuantity, matchingLots[0]?.availableQuantity ?? 0) || 1) };
     const quantity = Number(draft.quantity);
     if (!draft.readyLotId || !Number.isFinite(quantity) || quantity <= 0) { setMessage("Choose matching Ready inventory and a positive reservation quantity."); return; }
@@ -237,7 +238,7 @@ export default function FlowerDemandSection() {
 
               <div className={styles.lines}>
                 {order.lines.map((line) => {
-                  const matchingLots = (farm.readyLots ?? []).filter((lot) => lotMatches(line, lot));
+                  const matchingLots = readyLots.filter((lot) => lotMatches(line, lot));
                   const draft = allocationDrafts[line.id] ?? { readyLotId: matchingLots[0]?.id ?? "", quantity: String(Math.min(line.shortQuantity, matchingLots[0]?.availableQuantity ?? 0) || 1) };
                   const activeAllocations = line.allocations.filter((allocation) => allocation.state === "active");
                   return (
@@ -264,7 +265,7 @@ export default function FlowerDemandSection() {
                       </div> : null}
 
                       {activeAllocations.length ? <div className={styles.allocations}>{activeAllocations.map((allocation) => {
-                        const lot = farm.readyLots.find((candidate) => candidate.id === allocation.readyLotId);
+                        const lot = readyLots.find((candidate) => candidate.id === allocation.readyLotId);
                         return <div key={allocation.id}><span>{quantityLabel(allocation.quantity, line.unit, line.stemsPerUnit)} reserved{lot ? ` from ${lot.productLabel}` : ""}</span><button type="button" className={styles.quietButton} disabled={saving === `release:${allocation.id}`} onClick={() => void release(allocation, line)}>{saving === `release:${allocation.id}` ? "Releasing…" : "Release"}</button></div>;
                       })}</div> : null}
                     </section>
