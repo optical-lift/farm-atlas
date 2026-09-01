@@ -67,6 +67,7 @@ export type AtlasDateInputField = AtlasConditionalInputField & {
 };
 
 export type AtlasInputField = AtlasQuantityInputField | AtlasChoiceInputField | AtlasTextInputField | AtlasDateInputField;
+export type AtlasInlineValueInputField = AtlasQuantityInputField | AtlasTextInputField;
 
 export type AtlasInputRule =
   | {
@@ -117,6 +118,19 @@ export type AtlasInputResultEvent = {
   };
   sourceContext: Record<string, string | number | boolean | null>;
 };
+
+export function atlasInputValueFromDraft(field: AtlasInlineValueInputField, rawValue: string): AtlasInputValue {
+  const raw = typeof rawValue === "string" ? rawValue.trim() : "";
+  if (!raw) return null;
+
+  if (field.primitive === "text") return raw;
+
+  const parsed = Number(raw.replace(",", "."));
+  if (!Number.isFinite(parsed)) return null;
+  if (field.wholeNumber && !Number.isInteger(parsed)) return null;
+  if (parsed < (field.minimum ?? 0)) return null;
+  return parsed;
+}
 
 export function atlasInputConditionMatches(
   condition: AtlasInputCondition | undefined,
