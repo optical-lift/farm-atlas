@@ -31,7 +31,9 @@
 
 .brand,
 .brandActions a,
-.primaryAction {
+.primaryAction,
+.startPrimary,
+.startSecondary {
   color: inherit;
   text-decoration: none;
 }
@@ -130,6 +132,100 @@
   font-weight: 780;
 }
 
+.startContent {
+  flex: 1;
+  width: min(880px, 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(46px, 7vh, 76px) 0 clamp(54px, 8vh, 84px);
+}
+
+.startIntro {
+  max-width: 760px;
+}
+
+.startIntro h1 {
+  margin: 13px 0 0;
+  max-width: 760px;
+  font-size: clamp(2.9rem, 5.7vw, 4.6rem);
+  font-weight: 590;
+  line-height: 0.99;
+  letter-spacing: -0.05em;
+}
+
+.startLead {
+  max-width: 720px;
+  margin: 22px 0 0;
+  color: #4f5552;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.startChoices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 34px;
+  border-top: 1px solid rgba(23, 23, 23, 0.14);
+  border-bottom: 1px solid rgba(23, 23, 23, 0.14);
+}
+
+.startChoice {
+  display: flex;
+  min-height: 220px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 24px 26px 26px 0;
+}
+
+.startChoice + .startChoice {
+  padding-left: 26px;
+  border-left: 1px solid rgba(23, 23, 23, 0.14);
+}
+
+.choiceLabel {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+}
+
+.startChoice > p:not(.choiceLabel) {
+  max-width: 370px;
+  margin: 12px 0 0;
+  color: #4f5552;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.startPrimary,
+.startSecondary {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  padding: 0 16px;
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.startPrimary {
+  background: #171717;
+  color: #fff;
+}
+
+.startSecondary {
+  border: 1px solid rgba(23, 23, 23, 0.24);
+}
+
+.startNote {
+  margin: 18px 0 0;
+  color: #686d6a;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 @media (max-width: 640px) {
   .page {
     padding: 0 18px;
@@ -162,5 +258,35 @@
 
   .explanation {
     font-size: 12.5px;
+  }
+
+  .startContent {
+    justify-content: flex-start;
+    padding: 42px 0 52px;
+  }
+
+  .startIntro h1 {
+    font-size: clamp(2.65rem, 12vw, 3.55rem);
+  }
+
+  .startLead {
+    margin-top: 18px;
+    font-size: 13px;
+  }
+
+  .startChoices {
+    grid-template-columns: 1fr;
+    margin-top: 28px;
+  }
+
+  .startChoice {
+    min-height: 190px;
+    padding: 22px 0 24px;
+  }
+
+  .startChoice + .startChoice {
+    padding-left: 0;
+    border-top: 1px solid rgba(23, 23, 23, 0.14);
+    border-left: 0;
   }
 }
