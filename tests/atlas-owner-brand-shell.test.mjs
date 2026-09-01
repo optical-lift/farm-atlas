@@ -7,6 +7,7 @@ const ownerFixture = fs.readFileSync(new URL("../app/owner/OwnerPersonAtlasFixtu
 const ownerNotebook = fs.readFileSync(new URL("../app/owner/PersonAtlasNotebookV2.tsx", import.meta.url), "utf8");
 const ownerSpread = fs.readFileSync(new URL("../app/owner/OwnerNotebookSpread.tsx", import.meta.url), "utf8");
 const ownerSpreadStyles = fs.readFileSync(new URL("../app/owner/owner-notebook-spread.module.css", import.meta.url), "utf8");
+const ownerOfficeStyles = fs.readFileSync(new URL("../app/owner/owner-office-shell.module.css", import.meta.url), "utf8");
 const ownerMockup = fs.readFileSync(new URL("../app/owner/OwnerPortalBrandMockup.tsx", import.meta.url), "utf8");
 
 test("owner root remains the quiet notebook task page rather than a dashboard", () => {
@@ -51,6 +52,20 @@ test("tablet and desktop expose ten notebook-edge tools with one black active ta
   assert.match(ownerSpreadStyles, /\.toolTab \{[\s\S]*background: #fff;/);
   assert.match(ownerSpreadStyles, /\.toolTab\[data-active="true"\] \{[\s\S]*background: #171717;[\s\S]*color: #fff;/);
   assert.match(ownerSpreadStyles, /transition: width 180ms ease/);
+});
+
+test("professional shell keeps visible language sparse and opens tools inward from a context rail", () => {
+  assert.match(ownerSpread, /data-atlas-context-rail="true"/);
+  assert.match(ownerSpread, /aria-label="Atlas context rail"/);
+  assert.match(ownerSpread, /className=\{officeStyles\.contextMark\}/);
+  assert.match(ownerSpread, /activeContext\.code/);
+  assert.match(ownerOfficeStyles, /\.contextRail \{[\s\S]*background: #171717/);
+  assert.match(ownerOfficeStyles, /\.toolDock \{[\s\S]*right: var\(--office-rail\) !important/);
+  assert.match(ownerOfficeStyles, /flex-direction: row/);
+  assert.match(ownerOfficeStyles, /\.toolPanel \{[\s\S]*width: 0 !important/);
+  assert.match(ownerOfficeStyles, /\.toolDock\[data-open="true"\] \.toolPanel \{[\s\S]*width: min\(300px, 34vw\) !important/);
+  assert.match(ownerOfficeStyles, /\.toolTab \{[\s\S]*border-right: 0 !important/);
+  assert.match(ownerOfficeStyles, /\.toolTab\[data-active="true"\] \{[\s\S]*width: 84px !important/);
 });
 
 test("the richer owner mockup remains latent and read-only rather than becoming the root", () => {
