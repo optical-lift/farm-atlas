@@ -21,6 +21,8 @@ test("5K notebook keeps measurement, rhythm, and response policy as separate gov
   assert.match(catalog, /03 · response policy/);
   assert.match(catalog, /The observation never invents this rule/);
   assert.match(client, /selectCatalogPersonLifeNotebook/);
+  assert.match(client, /model\.progressValue/);
+  assert.doesNotMatch(client, /bestMetric/);
   assert.doesNotMatch(client, /const FIVE_K_REQUIREMENT_KEY/);
   assert.doesNotMatch(client, /function isFiveKGoal/);
 });
