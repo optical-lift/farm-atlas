@@ -1,105 +1,199 @@
-.page {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background:
-    radial-gradient(circle at top left, rgba(111, 75, 137, 0.14), transparent 36%),
-    linear-gradient(180deg, #f7f3f8 0%, #eee8f1 100%);
+:global(html:has([data-atlas-login-page="true"])),
+:global(body:has([data-atlas-login-page="true"])) {
+  min-height: 100%;
+  margin: 0;
+  background: #fff !important;
 }
 
-.card {
-  width: min(100%, 420px);
-  border: 1px solid rgba(74, 43, 99, 0.14);
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.92);
-  padding: 34px;
-  box-shadow: 0 24px 60px rgba(61, 37, 75, 0.12);
+.page {
+  min-height: 100svh;
+  padding: 0 28px;
+  background: #fff;
+  color: #171717;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.shell {
+  width: min(1120px, 100%);
+  min-height: 100svh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.brandBar {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(23, 23, 23, 0.12);
+}
+
+.brand,
+.brandActions a,
+.joinLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand {
+  font-size: 11px;
+  font-weight: 820;
+  letter-spacing: 0.32em;
+}
+
+.brandActions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.brandCta {
+  padding: 8px 11px;
+  border: 1px solid rgba(23, 23, 23, 0.22);
+}
+
+.loginContent {
+  flex: 1;
+  width: min(520px, 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(48px, 8vh, 88px) 0 clamp(56px, 9vh, 96px);
 }
 
 .eyebrow {
-  margin: 0 0 8px;
-  color: #715682;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  margin: 0;
+  color: #686d6a;
+  font-size: 10px;
+  font-weight: 820;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
 }
 
-.card h1 {
-  margin: 0;
-  color: #40234f;
-  font-size: clamp(2.3rem, 9vw, 3.6rem);
-  line-height: 0.95;
+.loginContent h1 {
+  margin: 13px 0 0;
+  font-size: clamp(3rem, 6vw, 4.8rem);
+  font-weight: 590;
+  line-height: 0.98;
+  letter-spacing: -0.05em;
 }
 
 .intro {
-  margin: 14px 0 28px;
-  color: #665d69;
+  margin: 20px 0 0;
+  color: #4f5552;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .form {
   display: grid;
   gap: 18px;
+  margin-top: 34px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(23, 23, 23, 0.14);
 }
 
 .form label {
   display: grid;
-  gap: 7px;
-  color: #493e4d;
-  font-size: 0.9rem;
-  font-weight: 650;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 720;
 }
 
 .form input {
   width: 100%;
-  min-height: 48px;
-  border: 1px solid #cfc4d3;
-  border-radius: 14px;
+  min-height: 46px;
+  box-sizing: border-box;
+  border: 1px solid rgba(23, 23, 23, 0.24);
+  border-radius: 0;
   background: #fff;
-  padding: 0 14px;
-  color: #2d2630;
+  padding: 0 13px;
+  color: #171717;
   font: inherit;
 }
 
 .form input:focus {
-  border-color: #76558a;
-  outline: 3px solid rgba(118, 85, 138, 0.14);
+  border-color: #171717;
+  outline: 1px solid #171717;
+  outline-offset: 0;
 }
 
 .form button {
-  min-height: 50px;
+  min-height: 44px;
+  width: fit-content;
+  min-width: 96px;
   border: 0;
-  border-radius: 16px;
-  background: #553267;
+  border-radius: 0;
+  background: #171717;
   color: #fff;
+  padding: 0 18px;
   font: inherit;
-  font-weight: 750;
+  font-size: 12px;
+  font-weight: 780;
   cursor: pointer;
 }
 
 .form button:disabled {
   cursor: wait;
-  opacity: 0.7;
+  opacity: 0.58;
 }
 
 .error {
-  margin: -4px 0 0;
+  margin: -2px 0 0;
   color: #8a2c38;
-  font-size: 0.9rem;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.joinPrompt {
+  margin: 22px 0 0;
+  color: #686d6a;
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .joinLink {
-  display: block;
-  width: fit-content;
-  margin: 22px auto 0;
-  color: #715682;
-  font-size: 0.9rem;
-  font-weight: 700;
-  text-decoration: none;
+  color: #171717;
+  font-weight: 760;
+  border-bottom: 1px solid rgba(23, 23, 23, 0.35);
 }
 
 .joinLink:hover,
 .joinLink:focus-visible {
-  text-decoration: underline;
+  border-bottom-color: #171717;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 0 18px;
+  }
+
+  .brandBar {
+    min-height: 58px;
+  }
+
+  .brandActions {
+    gap: 12px;
+    font-size: 11px;
+  }
+
+  .brandCta {
+    padding: 7px 9px;
+  }
+
+  .loginContent {
+    justify-content: flex-start;
+    padding: 42px 0 52px;
+  }
+
+  .loginContent h1 {
+    font-size: clamp(2.75rem, 13vw, 3.7rem);
+  }
+
+  .form {
+    margin-top: 28px;
+  }
 }
