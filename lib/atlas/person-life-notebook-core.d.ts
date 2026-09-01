@@ -1,3 +1,5 @@
+import type { AtlasInlineValueInputField } from "./input-contract";
+
 export type PersonLifeNotebookSubject = { domain?: string; kind?: string; id?: string };
 
 export type PersonLifeNotebookProgressReducer = "max_value" | "count_claims";
@@ -44,12 +46,11 @@ export type PersonLifeNotebookSpec = {
     claimType: string;
     progressReducer: PersonLifeNotebookProgressReducer;
     metricPath?: string[];
-    requestValueKey: string;
+    inputField: AtlasInlineValueInputField;
     targetValue: number;
     unit: string;
     progressHeading: string;
     emptyMetricLabel: string;
-    inputLabel: string;
     timeInputLabel: string;
     logLabel: string;
     invalidDraftMessage: string;
