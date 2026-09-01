@@ -55,6 +55,7 @@ export default function OwnerPrincipalDecisionAction({ candidateKey, farmId, dem
         ? "This demand was already committed to the same canonical Sale. Atlas reused it instead of creating another Sale."
         : "Sale committed. Fulfillment and payment remain separate downstream truth.");
       idempotencyKey.current = null;
+      router.push("/owner");
       router.refresh();
     } catch (cause) {
       setError(true);
