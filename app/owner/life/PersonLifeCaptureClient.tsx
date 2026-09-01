@@ -217,7 +217,6 @@ export default function PersonLifeCaptureClient({ personName }: { personName: st
       acceptedAt: new Date().toISOString(),
     }, spec.requirement.acceptedFeedback);
   };
-
   const acceptRhythm = async () => {
     if (!spec || !activeGoal) return;
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || spec.rhythm.defaults.fallbackTimezone;
@@ -385,8 +384,8 @@ export default function PersonLifeCaptureClient({ personName }: { personName: st
               <section className={styles.progressCard}>
                 <div className={styles.progressTopline}>
                   <span>{spec.evidence.progressHeading}</span>
-                  <strong>{model.bestMetric
-                    ? `${model.bestMetric.toFixed(2)} ${spec.evidence.unit}`
+                  <strong>{model.progressValue
+                    ? `${model.progressValue.toFixed(2)} ${spec.evidence.unit}`
                     : spec.evidence.emptyMetricLabel}</strong>
                 </div>
                 <div
