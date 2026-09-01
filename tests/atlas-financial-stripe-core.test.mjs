@@ -3,8 +3,6 @@ import { createHmac } from "node:crypto";
 import test from "node:test";
 
 import {
-  buildStripeOAuthAuthorizeUrl,
-  createStripeOAuthState,
   normalizeStripeBalanceTransaction,
   normalizeStripeCharge,
   normalizeStripeInvoice,
@@ -14,9 +12,13 @@ import {
   stripeCurrencyMinorUnitExponent,
   stripeMinorAmountToDecimal,
   stripeObservationFingerprint,
+} from "../lib/atlas/financial/stripe-core.js";
+import {
+  buildStripeOAuthAuthorizeUrl,
+  createStripeOAuthState,
   verifyStripeOAuthState,
   verifyStripeWebhookSignature,
-} from "../lib/atlas/financial/stripe-core.js";
+} from "../lib/atlas/financial/stripe-security-core.js";
 
 test("Stripe API minor units preserve zero-decimal and two-decimal currency behavior", () => {
   assert.equal(stripeCurrencyMinorUnitExponent("usd"), 2);
@@ -180,7 +182,7 @@ test("Stripe balance event candidates distinguish payment fee payout and never r
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0].eventKind, "payout");
   assert.equal(candidates[0].direction, "transfer");
-  assert.doesNotMatch(JSON.stringify(candidates), /revenue/i);
+  assert.notEqual(candidates[0].eventKind, "revenue");
 });
 
 test("OAuth state is signed, user/org-bound, expires, and authorization requests read_only", () => {

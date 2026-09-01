@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { verifyStripeWebhookSignature } from "@/lib/atlas/financial/stripe-core.js";
+import { verifyStripeWebhookSignature } from "@/lib/atlas/financial/stripe-security-core.js";
 import {
   ingestStripeFinancialObject,
   readStripeSourceAccessToken,
