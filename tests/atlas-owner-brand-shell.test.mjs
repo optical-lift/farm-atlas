@@ -22,10 +22,10 @@ test("tablet and desktop read as two notebook pages while phone stays single-pag
   assert.match(ownerSpread, /data-atlas-open-notebook="true"/);
   assert.match(ownerSpread, /Atlas index facing page/);
   assert.match(ownerSpread, />Index</);
-  assert.match(ownerSpreadStyles, /\.facingPage \{\s*display: none;/s);
+  assert.match(ownerSpreadStyles, /\.facingPage,\s*\.toolDock \{\s*display: none;/s);
   assert.match(ownerSpreadStyles, /@media \(min-width: 760px\) and \(min-height: 600px\)/);
   assert.match(ownerSpreadStyles, /grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\)/);
-  assert.match(ownerSpreadStyles, /gap: clamp\(34px, 4\.5vw, 58px\)/);
+  assert.match(ownerSpreadStyles, /gap: clamp\(30px, 4vw, 54px\)/);
   assert.doesNotMatch(ownerSpreadStyles, /box-shadow|page-curl|leather/i);
 });
 
@@ -40,6 +40,17 @@ test("desktop removes web chrome and uses topic, folio, and index grammar", () =
   assert.match(ownerSpread, /page: "11"/);
   assert.match(ownerSpreadStyles, /header:first-child,\s*\.leftPage > main > section > nav:last-child \{\s*display: none !important;/s);
   assert.match(ownerSpreadStyles, /border-bottom: 1px dotted/);
+});
+
+test("tablet and desktop expose ten notebook-edge tools with one black active tab", () => {
+  for (const label of ["Capture", "Ask", "Find", "Context", "Inbox", "People", "Clock", "Memory", "Waiting", "Commands"]) {
+    assert.match(ownerSpread, new RegExp(`label: "${label}"`));
+  }
+  assert.match(ownerSpread, /data-atlas-owner-tool-tabs="true"/);
+  assert.match(ownerSpread, /current === tool\.key \? null : tool\.key/);
+  assert.match(ownerSpreadStyles, /\.toolTab \{[\s\S]*background: #fff;/);
+  assert.match(ownerSpreadStyles, /\.toolTab\[data-active="true"\] \{[\s\S]*background: #171717;[\s\S]*color: #fff;/);
+  assert.match(ownerSpreadStyles, /transition: width 180ms ease/);
 });
 
 test("the richer owner mockup remains latent and read-only rather than becoming the root", () => {
