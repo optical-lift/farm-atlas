@@ -1,10 +1,12 @@
 import Link from "next/link";
 
+import type { OwnerPrincipalDecisionProjection } from "@/lib/atlas/owner-principal-decisions";
 import OwnerPersonAtlasFixture from "./OwnerPersonAtlasFixture";
 import styles from "./owner-notebook-spread.module.css";
 
 type OwnerNotebookSpreadProps = {
   personName: string;
+  principalDecisions: OwnerPrincipalDecisionProjection;
 };
 
 const INDEX_GROUPS = [
@@ -35,11 +37,11 @@ const INDEX_GROUPS = [
   },
 ];
 
-export default function OwnerNotebookSpread({ personName }: OwnerNotebookSpreadProps) {
+export default function OwnerNotebookSpread({ personName, principalDecisions }: OwnerNotebookSpreadProps) {
   return (
     <div className={styles.spread} data-atlas-open-notebook="true">
       <div className={styles.leftPage}>
-        <OwnerPersonAtlasFixture personName={personName} />
+        <OwnerPersonAtlasFixture personName={personName} principalDecisions={principalDecisions} />
         <footer className={styles.leftFolio} aria-label="Today page 01, active">
           <span>01</span>
           <i aria-hidden="true">•</i>
