@@ -8,6 +8,7 @@ const resetSurface = readFileSync(new URL("../app/AtlasProductReset.tsx", import
 const appFrame = readFileSync(new URL("../components/atlas/shell/AtlasContextualAppFrame.tsx", import.meta.url), "utf8");
 const rootLayout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
 const loginClient = readFileSync(new URL("../app/login/LoginClient.tsx", import.meta.url), "utf8");
+const onboardingPage = readFileSync(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8");
 
 test("the reset decommissions the legacy page tree without deleting backend authority", () => {
   assert.match(proxy, /const ATLAS_PRODUCT_RESET = true/);
@@ -17,15 +18,33 @@ test("the reset decommissions the legacy page tree without deleting backend auth
   assert.match(resetSurface, /data and system history remain preserved/i);
 });
 
-test("only the retained owner identity may render the reset front door", () => {
+test("only the retained owner identity may render the reset product surface", () => {
   assert.match(resetPage, /session\.email\?\.toLowerCase\(\) !== "lexprjct@gmail\.com"/);
   assert.match(resetPage, /access_decommissioned/);
 });
 
-test("inactive Atlas profiles are denied even when an auth token still exists", () => {
+test("inactive Atlas profiles lose product access but keep the public entry surfaces", () => {
   assert.match(proxy, /from\("user_profiles"\)[\s\S]*select\("active"\)/);
   assert.match(proxy, /profile\?\.active !== true/);
+  assert.match(proxy, /if \(pathname === "\/"\) \{[\s\S]*NextResponse\.rewrite\(resetWelcomeUrl\(request\)\)/);
+  assert.match(proxy, /if \(isPublicPath\(pathname\)\) return response/);
   assert.match(proxy, /Atlas access is decommissioned for this account/);
+});
+
+test("sales, start, and login remain readable during the product reset", () => {
+  assert.match(proxy, /function isResetPublicPage/);
+  assert.match(proxy, /pathname === "\/welcome"/);
+  assert.match(proxy, /pathname === "\/start"/);
+  assert.match(proxy, /pathname === "\/login"/);
+  assert.match(proxy, /if \(isResetPublicPage\(pathname\)\) return response/);
+  assert.match(proxy, /if \(!authenticated\) \{[\s\S]*NextResponse\.rewrite\(resetWelcomeUrl\(request\)\)/);
+});
+
+test("the retained active account can exercise onboarding during reset", () => {
+  assert.match(proxy, /function isResetOnboardingPath/);
+  assert.match(proxy, /authenticated && isResetOnboardingPath\(pathname\)/);
+  assert.match(onboardingPage, /const ATLAS_PRODUCT_RESET = true/);
+  assert.match(onboardingPage, /state\.status === "active" && !ATLAS_PRODUCT_RESET/);
 });
 
 test("the legacy global navigation shell does not mount on the reset surface", () => {
