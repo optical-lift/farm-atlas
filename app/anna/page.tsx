@@ -1,3 +1,7 @@
+import { Source_Sans_3 } from "next/font/google";
+
+const sourceSans = Source_Sans_3({ subsets: ["latin"] });
+
 const taskTextStyle = {
   fontSize: 16,
   lineHeight: 1.45,
@@ -12,12 +16,12 @@ const detailTextStyle = {
 export default function AnnaPage() {
   return (
     <main
+      className={sourceSans.className}
       style={{
         minHeight: "100vh",
         width: "100%",
         background: "#fff",
         color: "#111",
-        fontFamily: "var(--font-geist-sans), sans-serif",
       }}
     >
       <div
@@ -32,6 +36,7 @@ export default function AnnaPage() {
             Wednesday, September 2, 2026
           </h1>
           <div style={{ display: "grid", gap: 12 }}>
+            <div style={taskTextStyle}>Weed MG1</div>
             <div style={taskTextStyle}>Put EB mulch on MG front perennial strip</div>
             <div style={taskTextStyle}>Harden off · Chantilly series mixed trays · Overwinter 2026</div>
             <div style={taskTextStyle}>Harden off · First Lady Mixed Colors · Overwinter 2026</div>
@@ -60,6 +65,7 @@ export default function AnnaPage() {
             Thursday, September 3, 2026
           </h2>
           <div style={{ display: "grid", gap: 12 }}>
+            <div style={taskTextStyle}>Weed MG4</div>
             <div style={taskTextStyle}>Harvest Stems</div>
             <div>
               <div style={taskTextStyle}>Host Community Thursday</div>
@@ -71,7 +77,6 @@ export default function AnnaPage() {
             </div>
             <div style={taskTextStyle}>Pot up · Tetra feverfew</div>
             <div style={taskTextStyle}>Bundle stems for orders</div>
-            <div style={taskTextStyle}>Weed MG4</div>
           </div>
         </section>
 
@@ -80,9 +85,9 @@ export default function AnnaPage() {
             Friday, September 4, 2026
           </h2>
           <div style={{ display: "grid", gap: 12 }}>
+            <div style={taskTextStyle}>Weed Berry Walk Crescent Moon</div>
             <div style={taskTextStyle}>Pot up · oregano</div>
             <div style={taskTextStyle}>Put EB mulch around mailbox</div>
-            <div style={taskTextStyle}>Weed Oasis Iris Grove</div>
           </div>
         </section>
       </div>
