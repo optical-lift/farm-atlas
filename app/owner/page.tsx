@@ -2,7 +2,7 @@ import type { Viewport } from "next";
 import { Source_Sans_3 } from "next/font/google";
 
 import { getAtlasSession } from "@/lib/atlas/session";
-import OwnerNotebookSpread from "./OwnerNotebookSpread";
+import OwnerPortalBrandMockup from "./OwnerPortalBrandMockup";
 
 export const dynamic = "force-dynamic";
 
@@ -16,14 +16,14 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   colorScheme: "light",
-  themeColor: "#f7f3e9",
+  themeColor: "#ffffff",
 };
 
 export default async function AtlasOwnerPage() {
   const session = await getAtlasSession();
   return (
     <div className={atlasStructural.variable}>
-      <OwnerNotebookSpread personName={session?.displayName?.trim() || "Atlas"} />
+      <OwnerPortalBrandMockup personName={session?.displayName?.trim() || "Atlas"} />
     </div>
   );
 }
