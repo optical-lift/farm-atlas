@@ -110,6 +110,14 @@ export default function AnnaPage() {
             </h2>
             <div style={{ display: "grid", gap: 12 }}>
               <div style={taskTextStyle}>Weed and then spray remaining BW crescent moon</div>
+              <div>
+                <div style={taskTextStyle}>Joanna Walsh - farm pickup</div>
+                <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
+                  <li>15 ageratum + 15 goldenrod unbundled</li>
+                  <li>put any harvested buckets alongside her order on the porch and if she chooses to buy any, let me know so I can add it to her invoice</li>
+                  <li>transfer the stems to her bucket</li>
+                </ul>
+              </div>
               <div style={taskTextStyle}>Pot up · oregano</div>
               <div style={taskTextStyle}>Put EB mulch around mailbox</div>
               <div style={taskTextStyle}>Edge FR garden beds</div>
