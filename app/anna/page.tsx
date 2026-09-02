@@ -78,6 +78,8 @@ export default function AnnaPage() {
 
               <div style={taskTextStyle}>Pot up · Sweet William</div>
               <div style={taskTextStyle}>Harvest goldenrod and Russian Olive tree branches</div>
+              <div style={taskTextStyle}>Sweep porches</div>
+              <div style={taskTextStyle}>Take trash to street</div>
             </div>
           </section>
 
@@ -111,6 +113,21 @@ export default function AnnaPage() {
               <div style={taskTextStyle}>Pot up · oregano</div>
               <div style={taskTextStyle}>Put EB mulch around mailbox</div>
               <div style={taskTextStyle}>Edge FR garden beds</div>
+              <div style={taskTextStyle}>Stain upper cabinets in the kitchen</div>
+            </div>
+          </section>
+
+          <section style={{ marginTop: 40 }}>
+            <h2 style={{ fontSize: 22, lineHeight: 1.25, fontWeight: 600, margin: "0 0 18px", overflowWrap: "anywhere" }}>
+              Saturday, September 5, 2026
+            </h2>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div>
+                <div style={taskTextStyle}>Network 45 min · 3M Marketplace Fall Fest</div>
+                <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
+                  <li>Prepare 5 posies before you leave</li>
+                </ul>
+              </div>
             </div>
           </section>
         </div>
