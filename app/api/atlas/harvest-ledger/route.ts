@@ -111,6 +111,8 @@ function actorLabel(membershipId: string | null | undefined, memberships: Map<st
 function sourceLabel(task: TaskRow | undefined, metadata: Json | null | undefined) {
   const directSource = metadataText(metadata, "source");
   const tabSource = metadataText(metadata, "workbenchSource");
+  const entrySurface = metadataText(metadata, "entrySurface");
+  if (tabSource === "worker_day" || entrySurface === "worker_day") return "Worker quick log";
   if (tabSource === "harvest_tab" || directSource.includes("workbench")) return "Harvest tab";
   if (task) return `Task · ${task.title}`;
   return directSource ? "Recorded work" : "Atlas";

@@ -10,6 +10,7 @@ import {
   AtlasSectionHeading,
   AtlasTopBar,
 } from "@/components/atlas/ui/AtlasPrimitives";
+import FarmHandHarvestSection from "./FarmHandHarvestSection";
 import HarvestPipelineSection from "./HarvestPipelineSection";
 import HarvestWorkbenchSection from "./HarvestWorkbenchSection";
 import HarvestedOutputSection from "./HarvestedOutputSection";
@@ -18,6 +19,7 @@ import "./harvest.css";
 type EvidenceState = "calculated" | "seen" | "confirmed";
 type Bucket = "cutting" | "now" | "week1" | "week2" | "week3";
 type DateOutlook = "confirmed" | "likely" | "possible" | "too_early" | "past_window";
+type HarvestSurfaceRole = "owner" | "manager" | "farm_hand";
 
 type Cycle = {
   cropCycleId: string;
@@ -91,6 +93,12 @@ type HorizonResponse = {
   horizonDays?: number;
   farms?: Farm[];
   observationOptions?: ObservationOption[];
+};
+
+type HarvestAccessResponse = {
+  ok?: boolean;
+  role?: HarvestSurfaceRole;
+  error?: string;
 };
 
 const BUCKETS: Array<{ key: Bucket; label: string; detail: string }> = [
@@ -233,12 +241,30 @@ function WaveCard({
 }
 
 export default function HarvestHorizonPage() {
+  const [surfaceRole, setSurfaceRole] = useState<HarvestSurfaceRole | null>(null);
+  const [accessLoading, setAccessLoading] = useState(true);
+  const [accessError, setAccessError] = useState<string | null>(null);
   const [data, setData] = useState<HorizonResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingCycleId, setSavingCycleId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [targetDate, setTargetDate] = useState(() => nextThursday(localIso()));
+
+  const loadAccess = useCallback(async () => {
+    try {
+      setAccessLoading(true);
+      setAccessError(null);
+      const response = await fetch("/api/atlas/harvest-access", { cache: "no-store" });
+      const payload = await response.json() as HarvestAccessResponse;
+      if (!response.ok || !payload.ok || !payload.role) throw new Error(payload.error || "Harvest access could not be loaded.");
+      setSurfaceRole(payload.role);
+    } catch (loadError) {
+      setAccessError(loadError instanceof Error ? loadError.message : "Harvest access could not be loaded.");
+    } finally {
+      setAccessLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -256,7 +282,10 @@ export default function HarvestHorizonPage() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void loadAccess(); }, [loadAccess]);
+  useEffect(() => {
+    if (surfaceRole && surfaceRole !== "farm_hand") void load();
+  }, [load, surfaceRole]);
 
   async function observe(wave: Wave, cycle: Cycle, observationKey: string) {
     if (!cycle.objectKey || savingCycleId) return;
@@ -303,11 +332,40 @@ export default function HarvestHorizonPage() {
   const totalAhead = (data?.farms ?? []).reduce((sum, farm) => sum + farm.counts.week1 + farm.counts.week2 + farm.counts.week3, 0);
   const totalConfirmation = (data?.farms ?? []).reduce((sum, farm) => sum + farm.counts.needsConfirmation, 0);
 
+  if (accessLoading) {
+    return (
+      <AtlasAppShell className="atlas-harvest-shell" frameClassName="atlas-harvest-page">
+        <AtlasTopBar title="Harvest" status="Opening your Harvest workspace" />
+        <div className="atlas-harvest-body"><div className="atlas-harvest-loading">Opening Harvest…</div></div>
+      </AtlasAppShell>
+    );
+  }
+
+  if (accessError || !surfaceRole) {
+    return (
+      <AtlasAppShell className="atlas-harvest-shell" frameClassName="atlas-harvest-page">
+        <AtlasTopBar title="Harvest" status="Harvest access" />
+        <div className="atlas-harvest-body"><div className="atlas-harvest-error">{accessError || "Harvest access could not be resolved."}<button type="button" onClick={() => void loadAccess()}>Try again</button></div></div>
+      </AtlasAppShell>
+    );
+  }
+
+  if (surfaceRole === "farm_hand") {
+    return (
+      <AtlasAppShell className="atlas-harvest-shell" frameClassName="atlas-harvest-page">
+        <AtlasTopBar title="Harvest" status="Cut → condition → record" />
+        <div className="atlas-harvest-body" data-harvest-surface="farm-hand">
+          <FarmHandHarvestSection />
+        </div>
+      </AtlasAppShell>
+    );
+  }
+
   return (
     <AtlasAppShell className="atlas-harvest-shell" frameClassName="atlas-harvest-page">
       <AtlasTopBar title="Harvest" status="Work → inventory → customer" />
 
-      <div className="atlas-harvest-body">
+      <div className="atlas-harvest-body" data-harvest-surface="owner-manager">
         <HarvestWorkbenchSection />
 
         <details className="atlas-harvest-outlook atlas-harvest-secondary">
