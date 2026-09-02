@@ -118,6 +118,14 @@ export default function AnnaPage() {
                   <li>transfer the stems to her bucket</li>
                 </ul>
               </div>
+              <div>
+                <div style={taskTextStyle}>Pick up hair</div>
+                <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
+                  <li>Harvey&apos;s Barber Shop</li>
+                  <li>Jagged Edge Salon Featuring B&apos;s Esthetics</li>
+                </ul>
+              </div>
+              <div style={taskTextStyle}>String fishing line in FR11-14 - take it down where harvests are finished and reuse posts</div>
               <div style={taskTextStyle}>Pot up · oregano</div>
               <div style={taskTextStyle}>Put EB mulch around mailbox</div>
               <div style={taskTextStyle}>Edge FR garden beds</div>
