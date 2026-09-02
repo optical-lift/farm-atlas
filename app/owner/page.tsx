@@ -16,7 +16,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   colorScheme: "light",
-  themeColor: "#f7f3e9",
+  themeColor: "#ffffff",
 };
 
 export default async function AtlasOwnerPage() {
