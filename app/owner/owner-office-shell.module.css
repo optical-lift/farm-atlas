@@ -1,35 +1,99 @@
 .workspace {
   width: 100%;
   height: 100svh;
+  --atlas-paper: #fbf8f1;
+  --atlas-paper-deep: #f4efe4;
+  --atlas-stone: #e8e2d7;
+  --atlas-ink: #151819;
+  --atlas-muted: #77736b;
+  --atlas-rule: rgba(21, 24, 25, .13);
+  --atlas-brass: #aa8b54;
+  background: var(--atlas-paper);
 }
 
 .contextRail {
   display: none;
 }
 
+/* The notebook remains the product surface. Branding is carried by proportion,
+   light, structure, and the orientation edge rather than by decorative chrome. */
+.workspace :global([data-atlas-person-notebook-v2="true"]) {
+  --ink: var(--atlas-ink) !important;
+  --soft: var(--atlas-muted) !important;
+  --faint: #9a958b !important;
+  --rule: var(--atlas-rule) !important;
+  --dot: rgba(21, 24, 25, .055) !important;
+  background: var(--atlas-paper) !important;
+}
+
+.workspace :global([data-atlas-person-notebook-v2="true"]) > section {
+  background-color: var(--atlas-paper) !important;
+  background-image:
+    linear-gradient(rgba(21, 24, 25, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21, 24, 25, .026) 1px, transparent 1px) !important;
+  background-size: 24px 24px !important;
+  background-position: -1px -1px !important;
+}
+
 @media (min-width: 760px) and (min-height: 600px) {
   .workspace {
-    --office-rail: 44px;
+    --office-rail: 46px;
     --office-tabs: 72px;
-    --office-ground: #f1f1ee;
-    --office-ink: #171717;
+    --office-ground: var(--atlas-stone);
+    --office-ink: var(--atlas-ink);
     position: relative;
     overflow: hidden;
-    background: var(--office-ground) !important;
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, .2), transparent 18%, transparent 82%, rgba(21, 24, 25, .035)),
+      var(--office-ground) !important;
   }
 
   .spread {
-    left: clamp(8px, 1.6vw, 24px) !important;
-    width: calc(100vw - var(--office-rail) - var(--office-tabs) - clamp(24px, 4vw, 54px)) !important;
+    left: clamp(12px, 1.8vw, 28px) !important;
+    width: calc(100vw - var(--office-rail) - var(--office-tabs) - clamp(30px, 4.4vw, 60px)) !important;
     max-width: 1180px;
-    border-left: 1px solid rgba(23, 23, 23, .08);
-    border-right: 1px solid rgba(23, 23, 23, .12);
-    background: #fff !important;
+    border-left: 1px solid rgba(21, 24, 25, .08);
+    border-right: 1px solid rgba(21, 24, 25, .14);
+    background: var(--atlas-paper) !important;
+    box-shadow:
+      0 22px 54px rgba(21, 24, 25, .055),
+      0 2px 0 rgba(255, 255, 255, .72) inset;
+  }
+
+  .spread::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 42px;
+    transform: translateX(-50%);
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(21, 24, 25, .018) 36%,
+      rgba(21, 24, 25, .055) 49%,
+      rgba(255, 255, 255, .46) 52%,
+      rgba(21, 24, 25, .018) 66%,
+      transparent
+    );
   }
 
   .leftPage,
   .facingPage {
-    background-color: #fff;
+    position: relative;
+    z-index: 2;
+    background-color: var(--atlas-paper) !important;
+  }
+
+  .facingPage {
+    background-image:
+      linear-gradient(rgba(21, 24, 25, .035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(21, 24, 25, .026) 1px, transparent 1px) !important;
+    background-size: 24px 24px !important;
+    background-position: -1px -1px !important;
   }
 
   .toolDock {
@@ -57,13 +121,15 @@
     overflow: hidden;
     border: 1px solid transparent !important;
     border-right: 0 !important;
-    background: rgba(255, 255, 255, .99) !important;
-    transition: width 180ms ease, border-color 180ms ease !important;
+    background: rgba(251, 248, 241, .985) !important;
+    box-shadow: -18px 0 38px transparent;
+    transition: width 180ms ease, border-color 180ms ease, box-shadow 180ms ease !important;
   }
 
   .toolDock[data-open="true"] .toolPanel {
     width: min(300px, 34vw) !important;
-    border-color: rgba(23, 23, 23, .2) !important;
+    border-color: rgba(21, 24, 25, .19) !important;
+    box-shadow: -18px 0 38px rgba(21, 24, 25, .045);
   }
 
   .toolPanelInner {
@@ -80,17 +146,31 @@
 
   .toolTab {
     justify-self: end;
-    border-left: 1px solid rgba(23, 23, 23, .25) !important;
+    border-left: 1px solid rgba(21, 24, 25, .22) !important;
     border-right: 0 !important;
-    border-radius: 2px 0 0 2px !important;
+    border-radius: 0 !important;
+    background: rgba(251, 248, 241, .92) !important;
+    color: var(--atlas-ink) !important;
     text-align: left;
+  }
+
+  .toolTab::before {
+    content: "";
+    width: 5px;
+    height: 1px;
+    margin-right: 7px;
+    background: rgba(21, 24, 25, .28);
   }
 
   .toolTab[data-active="true"] {
     width: 84px !important;
     border-color: var(--office-ink) !important;
     background: var(--office-ink) !important;
-    color: #fff !important;
+    color: var(--atlas-paper) !important;
+  }
+
+  .toolTab[data-active="true"]::before {
+    background: var(--atlas-brass);
   }
 
   .contextRail {
@@ -102,60 +182,97 @@
     grid-template-rows: auto minmax(0, 1fr) auto auto;
     justify-items: center;
     box-sizing: border-box;
-    border-left: 1px solid #171717;
-    background: #171717;
-    color: #fff;
+    border-left: 1px solid #0d1011;
+    background: #111516;
+    color: var(--atlas-paper);
     font-family: var(--font-atlas-structural), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
 
+  /* Provisional orientation mark. It is deliberately treated as a map reference,
+     not a badge. Geometry will be replaced when the final Atlas mark is chosen. */
   .atlasMark {
+    position: relative;
     width: 100%;
-    min-height: 54px;
+    min-height: 62px;
     display: grid;
     place-items: center;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 820;
-    letter-spacing: .08em;
+    overflow: hidden;
+    color: rgba(251, 248, 241, .92);
+    font-size: 0;
     text-decoration: none;
+  }
+
+  .atlasMark::before {
+    content: "";
+    width: 20px;
+    height: 20px;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    background:
+      linear-gradient(currentColor, currentColor) center / 1px 30px no-repeat,
+      linear-gradient(90deg, currentColor, currentColor) center / 30px 1px no-repeat;
+    opacity: .9;
+  }
+
+  .atlasMark::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 31px;
+    width: 4px;
+    height: 4px;
+    box-sizing: border-box;
+    border: 1px solid var(--atlas-brass);
+    border-radius: 50%;
+    background: #111516;
+    transform: translate(-50%, -50%);
   }
 
   .contextMarks {
     align-self: center;
     display: grid;
     justify-items: center;
-    gap: 15px;
+    gap: 17px;
   }
 
   .contextMark {
-    width: 22px;
-    height: 22px;
+    position: relative;
+    width: 24px;
+    height: 24px;
     display: grid;
     place-items: center;
     padding: 0;
     appearance: none;
     border: 0;
-    border-radius: 50%;
+    border-radius: 0;
     background: transparent;
     cursor: pointer;
   }
 
   .contextMark::before {
     content: "";
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
     box-sizing: border-box;
-    border: 1px solid rgba(255, 255, 255, .58);
+    border: 1px solid rgba(251, 248, 241, .5);
     border-radius: 50%;
     background: transparent;
     transition: width 120ms ease, height 120ms ease, background-color 120ms ease, border-color 120ms ease;
   }
 
   .contextMark[data-active="true"]::before {
-    width: 8px;
-    height: 8px;
-    border-color: #fff;
-    background: #fff;
+    width: 9px;
+    height: 9px;
+    border-color: var(--atlas-brass);
+    background: transparent;
+  }
+
+  .contextMark[data-active="true"]::after {
+    content: "";
+    position: absolute;
+    width: 1px;
+    height: 18px;
+    background: rgba(251, 248, 241, .4);
   }
 
   .contextCode {
@@ -164,9 +281,9 @@
     display: grid;
     place-items: center;
     margin-bottom: 12px;
-    border-top: 1px solid rgba(255, 255, 255, .22);
+    border-top: 1px solid rgba(251, 248, 241, .19);
     padding-top: 10px;
-    color: rgba(255, 255, 255, .76);
+    color: rgba(251, 248, 241, .66);
     font-size: 6.5px;
     font-weight: 800;
     letter-spacing: .08em;
@@ -180,10 +297,10 @@
     margin-bottom: 13px;
     padding: 0;
     appearance: none;
-    border: 1px solid rgba(255, 255, 255, .5);
+    border: 1px solid rgba(251, 248, 241, .42);
     border-radius: 50%;
     background: transparent;
-    color: #fff;
+    color: var(--atlas-paper);
     font: inherit;
     font-size: 8px;
     font-weight: 760;
