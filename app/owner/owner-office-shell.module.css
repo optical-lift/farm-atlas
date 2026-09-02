@@ -183,7 +183,7 @@
     justify-items: center;
     box-sizing: border-box;
     border-left: 1px solid #0d1011;
-    background: #171717;
+    background: #111516;
     color: var(--atlas-paper);
     font-family: var(--font-atlas-structural), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
@@ -224,7 +224,7 @@
     box-sizing: border-box;
     border: 1px solid var(--atlas-brass);
     border-radius: 50%;
-    background: #171717;
+    background: #111516;
     transform: translate(-50%, -50%);
   }
 
