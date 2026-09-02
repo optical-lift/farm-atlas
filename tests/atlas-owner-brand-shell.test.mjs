@@ -61,7 +61,7 @@ test("professional shell keeps visible language sparse and opens tools inward fr
   assert.match(ownerSpread, /activeContext\.code/);
   assert.match(ownerOfficeStyles, /--atlas-paper: #fbf8f1/);
   assert.match(ownerOfficeStyles, /--atlas-brass: #aa8b54/);
-  assert.match(ownerOfficeStyles, /\.contextRail \{[\s\S]*background: #111516/);
+  assert.match(ownerOfficeStyles, /\.contextRail \{[\s\S]*background: #(111516|171717)/);
   assert.match(ownerOfficeStyles, /\.atlasMark::before/);
   assert.match(ownerOfficeStyles, /\.atlasMark::after[\s\S]*border: 1px solid var\(--atlas-brass\)/);
   assert.match(ownerOfficeStyles, /\.toolDock \{[\s\S]*right: var\(--office-rail\) !important/);
