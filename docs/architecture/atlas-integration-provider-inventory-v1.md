@@ -12,12 +12,13 @@ The portable integration foundation lives on `atlas/integration-foundation` in `
 - **registered, not connected** — Atlas knows the provider/capability but no authorized live provider account is currently connected.
 - **not yet verified** — no live Atlas connection has been established or verified during this inventory pass.
 - **portable adapter ready** — provider-specific code has been brought under the provider-neutral integration contract on this branch.
+- **authorization foundation ready** — the provider family has a portable authorization/scoping contract, but no claim is made that a live external account is authorized.
 
 ## Verified providers
 
 ### Apple Messages
 
-**Status:** operational; portable adapter ready.
+**Status:** operational; portable adapter ready; live custody authority verified.
 
 Verified live state:
 
@@ -29,23 +30,24 @@ Verified live state:
 - capability: communication
 - a provider connection event records the local relay as connected
 - the existing macOS exporter/relay preserves a durable source event reference, content SHA-256, occurrence time, Atlas capture time, and evidence-only authority
+- live database custody is owned by `atlas.ingest_communication_events_relay_api_v1`
 
 Branch work:
 
 - `lib/atlas/integrations/providers/apple-messages.ts` wraps the existing communication event in the common integration envelope without changing its authority.
-- the adapter reuses the existing event reference and content hash for replay/idempotency semantics.
-- the relay remains evidence-only and cannot claim a governing Atlas state change.
-- compatibility tests live in `tests/apple-messages-integration-adapter.test.mjs`.
+- `appleMessagesEnvelopeToEvidence()` normalizes the event into source-attributed communication evidence.
+- `processLegacyAppleMessagesEvent()` routes it through evidence custody with no domain adapter.
+- `lib/atlas/integrations/runtime/communication-relay.ts` maps a one-event legacy relay receipt into the portable custody receipt without importing database/hosting code.
+- the compatibility mapper requires a resolved communication event ID for admitted/replayed evidence and maps source-content conflicts without fabricating custody.
 
 Next gate:
 
-- connect the operating relay to the portable adapter at the ingestion boundary rather than rewriting the relay itself;
-- expose connection/sync health through the common health contract;
-- preserve the communication ledger as the domain authority.
+- expose `atlas.communication_source_health_self_api_v1` through the common sync-health contract;
+- preserve the existing communication ledger/RPC as the custody authority rather than replacing it.
 
 ### Gmail
 
-**Status:** registered, not connected.
+**Status:** registered, not connected; Google authorization foundation ready; read-scope policy ready.
 
 Verified live state:
 
@@ -53,12 +55,17 @@ Verified live state:
 - the latest verified connection state is `not_connected`.
 - no live Gmail credentials or authorized mailbox are assumed by this inventory.
 
+Branch work:
+
+- `lib/atlas/integrations/providers/google/oauth.ts` provides the shared Google web-server authorization contract with offline access, incremental authorization, callback-state validation, HTTPS redirect validation, and opaque secret handles.
+- `lib/atlas/integrations/providers/google/gmail.ts` defines two explicit read profiles: `gmail.metadata` for metadata-only capture and `gmail.readonly` when message bodies/settings evidence is actually required.
+- no send, modify, compose, settings-write, delete, or broad mail scope is requested by the foundation.
+
 Next gate:
 
-- establish a Google OAuth application/credential custody path and callback contract;
-- decide the exact Gmail scopes Atlas needs before requesting authorization;
-- implement provider adapter + webhook/change-notification or sync strategy against the common integration contract;
-- only then create/authorize the connected source.
+- create the real Google OAuth client and place client/connection secrets in the runtime secret facility, not Atlas source records;
+- implement Gmail source identity, initial hydration, history cursor/change notification, periodic reconciliation, and sync health against the common integration contract;
+- authorize a connected source only after the real OAuth callback succeeds.
 
 Do not build Gmail UI as if a mailbox is already connected.
 
@@ -66,14 +73,19 @@ Do not build Gmail UI as if a mailbox is already connected.
 
 ### Google Calendar
 
-**Status:** not yet verified.
+**Status:** not yet verified; Google authorization foundation ready; read-scope policy ready.
 
 No live Google Calendar connected-source record or operating Atlas adapter was verified in this pass.
 
-Likely next gate:
+Branch work:
 
-- share Google identity/OAuth infrastructure where appropriate with Gmail, but preserve Calendar as its own capability and source semantics;
-- define calendar event identity, recurrence/update handling, cancellation, provider occurrence/update timestamps, initial hydration, push/change notification, and periodic reconciliation before UI work.
+- Calendar shares the provider-family OAuth foundation but remains a separate capability.
+- `lib/atlas/integrations/providers/google/calendar.ts` requests only `calendar.calendarlist.readonly` plus `calendar.events.readonly` for initial read integration.
+
+Next gate:
+
+- define calendar event identity, recurrence/update handling, cancellation, provider occurrence/update timestamps, initial hydration, change notification, and periodic reconciliation;
+- authorize Calendar incrementally rather than silently broadening a Gmail grant.
 
 ### Dropbox
 
@@ -107,6 +119,8 @@ The live Atlas database already contains important pieces of the integration spi
 - `atlas.evidence_records` for source-attributed evidence;
 - `atlas.claim_records` and claim/evidence links for governed interpretation;
 - communication capture/ledger structures that demonstrate source-first, evidence-only ingestion;
+- `atlas.ingest_communication_events_relay_api_v1` for live communication relay custody;
+- `atlas.communication_source_health_self_api_v1` for current-user communication-source health;
 - provider registration/connection-event structures under `local_intel` for communications.
 
 The branch adds the portable application contract around those existing authorities rather than introducing a second generic truth store.
@@ -137,9 +151,9 @@ Use provider push/change notifications when reliable and supported, but keep pul
 
 ## Recommended build order from this inventory
 
-1. **Finish the Apple Messages compatibility connection** because the provider already operates and can prove the common contract against real data.
-2. **Build Google OAuth custody once, then Gmail first** because Gmail is already explicitly registered but not connected.
-3. **Add Google Calendar on the same Google authorization foundation** while keeping calendar semantics separate from mail semantics.
+1. **Expose Apple Messages health through the common contract**; custody compatibility is now proved against the live RPC.
+2. **Implement Gmail ingestion/sync on the shared Google OAuth foundation**; the live mailbox remains unconnected until real authorization succeeds.
+3. **Implement Google Calendar sync on the same provider-family authorization foundation** while preserving independent capability/scopes.
 4. **Add Dropbox** once the exact file-custody use case is selected.
 5. **Add Otter.ai** with transcript-as-evidence and interpretation downstream.
 6. Add other providers only after their real Atlas use case establishes the needed contract extension.
