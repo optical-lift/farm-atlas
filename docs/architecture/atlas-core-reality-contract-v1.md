@@ -8,19 +8,17 @@
 
 > **Atlas owns the organization's operational reality. Integrations observe, enrich, communicate with, or act upon that reality. They do not become the reality model themselves.**
 
-Atlas must remain intelligible and operational if any optional integration is disconnected. An integration may contribute evidence or perform an authorized action, but it may not own the canonical identity of an Atlas person, organization, place, relationship, commitment, event, or work object.
+Atlas must remain intelligible and operational if any optional integration is disconnected. An integration may contribute evidence or perform an authorized action, but it may not own the reconciliation of identity, relationship, commitment, event, or work state in Atlas Core.
 
 ## Universal Atlas Core
 
 Every Atlas organization receives the same small set of primitives regardless of industry.
 
 - **Organization / account** — whose world Atlas is stewarding.
-- **Party** — a canonical participant in that world.
-- **Person** — a human party.
-- **Organization entity** — a business, church, nonprofit, vendor, customer, institution, or other organized party.
-- **Place** — a physical or operational location.
-- **Relationship** — how two parties currently relate.
-- **Contact point** — email, phone, address, website, or other reachable endpoint.
+- **Identity subject** — a thin durable anchor used to reconcile source records that concern the same real-world subject.
+- **Party / Person / Organization entity / Place projections** — current usable identity views derived from reconciled identity evidence.
+- **Relationship** — how reconciled subjects currently relate.
+- **Contact claim** — source-attributed evidence about email, phone, address, website, or another reachable endpoint.
 - **Observation** — source-attributed evidence received by Atlas.
 - **Event** — a reconciled occurrence in the world.
 - **Projection** — Atlas's current derived understanding from applicable events and observations.
@@ -29,7 +27,7 @@ Every Atlas organization receives the same small set of primitives regardless of
 - **Route / round** — ordered physical movement through a set of places or relationships for a purpose.
 - **Provenance** — why Atlas believes, presents, or acts on any fact.
 
-Domain systems may specialize these primitives. They may not replace them with a second canonical identity or history system.
+Domain systems may specialize these primitives. They may not replace them with a second identity or history system.
 
 ## Evidence, event, projection
 
@@ -66,7 +64,7 @@ No source, interface, assistant, integration, or domain module may be required t
 Incoming reality must enter through an Atlas-owned receive contract that can accept a source-attributed observation and then allow Atlas to:
 
 1. preserve the observation;
-2. resolve the subject and other identities;
+2. resolve or queue identity assertions about the subjects involved;
 3. classify source authority;
 4. reconcile the observation with existing events and governing state;
 5. invoke appropriate domain contracts when required;
@@ -75,11 +73,18 @@ Incoming reality must enter through an Atlas-owned receive contract that can acc
 
 The sender reports what it observed. **Atlas decides where that observation belongs.**
 
-## Canonical identity belongs to Atlas
+## Identity reconciliation belongs to Atlas
 
-Atlas must own canonical identities for people, organizations, and places.
+Atlas Core owns the process that determines which source records concern the same real-world person, organization, or place.
 
-External systems attach through external identity links such as:
+Atlas must not solve this by copying a provider row into a privileged canonical directory and then treating that copied row as reality. Instead:
+
+1. preserve source identity evidence;
+2. bind source records to thin tenant-scoped identity subjects when justified;
+3. retain ambiguous, contradictory, rejected, and superseded identity assertions;
+4. expose ordinary Party/Person/Organization/Place projections from the reconciled evidence.
+
+External systems may contribute identifiers such as:
 
 - Gmail address or message participant;
 - Stripe customer ID;
@@ -88,9 +93,9 @@ External systems attach through external identity links such as:
 - calendar attendee identity;
 - imported contact ID.
 
-An external identifier may help resolve a party. It may never be the primary identity on which Atlas Core depends.
+Those identifiers are source evidence. They may help resolve a subject; they are never the ontology Atlas Core depends on.
 
-Disconnecting an integration must not delete the Atlas party, relationship, events, commitments, route history, or operational history that remain valid in Atlas.
+Disconnecting an integration must not delete the reconciled Atlas subject, relationships, events, commitments, route history, or operational history that remain valid in Atlas.
 
 ## Integration authority classes
 
@@ -118,7 +123,7 @@ Examples: email sent, payment request created, route stop completed in an extern
 
 `This external system has explicitly been designated to govern this specific field or state.`
 
-Examples may include a payment processor's settlement state for its own payment transaction. Authority is narrow and field-specific; it does not make the provider authoritative over the entire Atlas relationship.
+Examples may include a payment processor's settlement state for its own payment transaction. Authority is narrow and field-specific; it does not make the provider authoritative over the entire Atlas relationship or identity.
 
 ## Product layers
 
@@ -126,7 +131,7 @@ Atlas product architecture has three distinct layers.
 
 ### Atlas Core
 
-Universal identity, relationships, reality history, provenance, work, commitments, time, and routes.
+Universal identity reconciliation, relationships, reality history, provenance, work, commitments, time, and routes.
 
 ### Atlas domain systems
 
@@ -157,13 +162,14 @@ A feature must be classified into one of these layers before new schema or appli
 
 ## Universal relationship read guarantee
 
-For every canonical party or relationship, Atlas must be able to answer one question without table-specific archaeology:
+For every reconciled subject or relationship, Atlas must be able to answer one question without table-specific archaeology:
 
 > **What is going on with this person or organization?**
 
 The canonical read surface must be able to return, when applicable:
 
-- identity and aliases;
+- current identity projection and aliases;
+- unresolved identity warnings where relevant;
 - current relationship state;
 - known people and roles;
 - chronological event timeline;
@@ -205,7 +211,7 @@ When a user tells an Atlas-connected assistant new operational reality, the assi
 
 ## Integration independence rule
 
-> **An integration may enrich Atlas's world but may never own an Atlas entity's identity. Disconnecting an integration must not erase the organization's valid history or relationships.**
+> **An integration may enrich Atlas's world but may never own Atlas identity reconciliation. Disconnecting an integration must not erase the organization's valid history or relationships.**
 
 ## Intake independence rule
 
@@ -215,7 +221,9 @@ When a user tells an Atlas-connected assistant new operational reality, the assi
 
 Existing Elm Farm data that violates these boundaries is migration evidence, not a reason to preserve the violation.
 
-Current reconstruction tables, embedded JSON history, domain-specific identity rows, and `local_intel` identity dependencies must be migrated into this model with provenance retained and destructive rewriting avoided.
+Current reconstruction tables, embedded JSON history, domain-specific identity rows, and `local_intel` identity dependencies must be progressively bound into the reconciliation model with provenance retained and destructive rewriting avoided.
+
+Do not bulk-copy every legacy or integration row into a new canonical directory merely to make migration appear complete.
 
 ## Non-goals
 
