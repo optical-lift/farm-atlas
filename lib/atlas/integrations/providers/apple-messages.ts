@@ -1,8 +1,14 @@
+import type { IntegrationEvidenceAdapter } from "../adapter";
 import {
   assertSourceEnvelope,
   type ConnectedSourceDescriptor,
+  type IntegrationEvidenceDraft,
   type IntegrationSourceEnvelope,
 } from "../contract";
+import {
+  processIntegrationEnvelope,
+  type IntegrationEvidenceCustody,
+} from "../pipeline";
 
 export interface LegacyAppleMessagesEvent {
   schemaVersion: "atlas_communication_event_v1";
@@ -56,14 +62,7 @@ export function assertLegacyAppleMessagesEvent(event: LegacyAppleMessagesEvent):
   }
 }
 
-/**
- * Compatibility bridge for the already-operational macOS Messages relay.
- *
- * This does not replace the communication ledger or reinterpret its events.
- * It wraps the existing evidence-only event in the provider-neutral integration
- * envelope so Apple Messages and future providers can share custody,
- * idempotency, sync-health, and portability rules.
- */
+/** Compatibility bridge for the already-operational macOS Messages relay. */
 export function appleMessagesEventToEnvelope(
   event: LegacyAppleMessagesEvent,
   source: ConnectedSourceDescriptor,
@@ -111,4 +110,72 @@ export function appleMessagesEventToEnvelope(
 
   assertSourceEnvelope(envelope);
   return envelope;
+}
+
+function custodyScope(source: ConnectedSourceDescriptor["custody"]): {
+  scopeKind: "human" | "organization";
+  scopeId: string;
+} {
+  return source.kind === "human"
+    ? { scopeKind: "human", scopeId: source.userId }
+    : { scopeKind: "organization", scopeId: source.organizationId };
+}
+
+export function appleMessagesEnvelopeToEvidence(
+  envelope: IntegrationSourceEnvelope<LegacyAppleMessagesEvent>,
+): readonly IntegrationEvidenceDraft<LegacyAppleMessagesEvent>[] {
+  assertSourceEnvelope(envelope);
+  if (envelope.providerKey !== "apple_messages" || envelope.authority !== "evidence_only") {
+    throw new Error("Apple Messages evidence normalization requires an evidence-only Apple envelope.");
+  }
+
+  const scope = custodyScope(envelope.custody);
+  return [{
+    ...scope,
+    subjectDomain: "communication",
+    subjectKind: "source_event",
+    subjectId: envelope.sourceEventRef,
+    evidenceKind: "communication_event",
+    sourceKind: "connected_source",
+    sourceKey: envelope.connectedSourceId,
+    value: envelope.payload,
+    observedAt: envelope.time.observedAt ?? null,
+    learnedAt: envelope.time.receivedAt,
+    effectiveFrom: envelope.time.effectiveFrom ?? null,
+    effectiveUntil: envelope.time.effectiveUntil ?? null,
+    provenance: {
+      providerKey: envelope.providerKey,
+      connectedSourceId: envelope.connectedSourceId,
+      providerAccountKey: envelope.providerAccountKey,
+      sourceEventRef: envelope.sourceEventRef,
+      sourceContentSha256: envelope.sourceContentSha256,
+      idempotencyKey: envelope.idempotencyKey,
+      transport: envelope.transport,
+    },
+    metadata: envelope.metadata,
+  }];
+}
+
+export const appleMessagesEvidenceAdapter: IntegrationEvidenceAdapter<LegacyAppleMessagesEvent> = {
+  domain: "communication",
+  async toEvidence(envelope) {
+    return appleMessagesEnvelopeToEvidence(envelope);
+  },
+};
+
+/**
+ * End-to-end portable path for a legacy relay event. Apple Messages supplies no
+ * domain adapter because its capture authority stops at source evidence custody.
+ */
+export async function processLegacyAppleMessagesEvent(
+  event: LegacyAppleMessagesEvent,
+  source: ConnectedSourceDescriptor,
+  custody: IntegrationEvidenceCustody<LegacyAppleMessagesEvent>,
+) {
+  const envelope = appleMessagesEventToEnvelope(event, source);
+  return processIntegrationEnvelope({
+    envelope,
+    evidenceAdapter: appleMessagesEvidenceAdapter,
+    custody,
+  });
 }
