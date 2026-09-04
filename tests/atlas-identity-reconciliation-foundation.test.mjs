@@ -5,8 +5,10 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const migrationPath =
+const foundationMigration =
   "supabase/migrations/20260904202000_atlas_core_identity_reconciliation_foundation_v1.sql";
+const contractsMigration =
+  "supabase/migrations/20260904204000_atlas_core_identity_reconciliation_contracts_v1.sql";
 
 function read(path) {
   return readFileSync(join(root, path), "utf8");
@@ -36,7 +38,7 @@ test("#788 uses identity subjects rather than a canonical Party directory", () =
 });
 
 test("the identity foundation keeps source evidence separate from subjects", () => {
-  const sql = read(migrationPath);
+  const sql = read(foundationMigration);
   const subjects = tableBlock(sql, "identity_subjects");
 
   assert.match(sql, /create table if not exists atlas\.identity_source_records/i);
@@ -55,7 +57,7 @@ test("the identity foundation keeps source evidence separate from subjects", () 
 });
 
 test("identity evidence and adjudication are append-only while Party stays a projection", () => {
-  const sql = read(migrationPath);
+  const sql = read(foundationMigration);
 
   for (const trigger of [
     "identity_source_records_append_only",
@@ -75,7 +77,7 @@ test("identity evidence and adjudication are append-only while Party stays a pro
 });
 
 test("identity matching preserves ambiguity, non-match, correction, and tenant scope", () => {
-  const sql = read(migrationPath);
+  const sql = read(foundationMigration);
 
   assert.match(sql, /assertion_kind in \('supports','probable','non_match'\)/i);
   assert.match(sql, /assertion_kind in \('equivalent','probably_equivalent','distinct'\)/i);
@@ -88,7 +90,7 @@ test("identity matching preserves ambiguity, non-match, correction, and tenant s
 });
 
 test("authenticated callers can read governed identity evidence but cannot mutate it directly", () => {
-  const sql = read(migrationPath);
+  const sql = read(foundationMigration);
 
   for (const table of [
     "identity_subjects",
@@ -126,4 +128,34 @@ test("Smart Contacts is provider evidence, not Atlas identity authority", () => 
   assert.match(boundary, /Similarity is evidence, not proof/i);
   assert.match(boundary, /no new Atlas Core foreign keys target `local_intel`/i);
   assert.doesNotMatch(boundary, /Atlas owns its own party IDs/i);
+});
+
+test("Core identity review has a true unresolved outcome rather than treating rejection as uncertainty", () => {
+  const sql = read(contractsMigration);
+
+  assert.match(sql, /jsonb_build_array\('same','different','not_enough_evidence'\)/i);
+  assert.match(sql, /jsonb_build_array\('split','keep_together','not_enough_evidence'\)/i);
+  assert.match(sql, /jsonb_build_array\('accept','reject','not_enough_evidence'\)/i);
+  assert.match(sql, /v_decision='not_enough_evidence'/i);
+  assert.match(sql, /v_decision_kind := 'defer_unresolved'/i);
+  assert.match(sql, /v_resolves_review := false/i);
+  assert.match(sql, /reviewState'.*case when v_resolves_review then 'resolved' else 'open'/is);
+  assert.match(sql, /'non_match'/i);
+  assert.match(sql, /'distinct'/i);
+});
+
+test("Core identity review and provenance contracts are Atlas-owned and governed", () => {
+  const sql = read(contractsMigration);
+
+  assert.doesNotMatch(sql, /local_intel/i);
+  assert.match(sql, /create or replace function atlas\.require_identity_steward_v1/i);
+  assert.match(sql, /v_membership\.role not in \('owner','consultant'\)/i);
+  assert.match(sql, /create or replace function atlas\.identity_party_projection_v1/i);
+  assert.match(sql, /create or replace function atlas\.identity_subject_provenance_v1/i);
+  assert.match(sql, /create or replace function atlas\.identity_review_queue_v1/i);
+  assert.match(sql, /create or replace function atlas\.identity_adjudicate_review_v1/i);
+  assert.match(sql, /canonicalPartyRowCreated',false/i);
+  assert.match(sql, /insert into atlas\.authenticated_rpc_registry/i);
+  assert.match(sql, /'dependsOnLocalIntel',false/i);
+  assert.match(sql, /'notEnoughEvidenceRemainsOpen',true/i);
 });
