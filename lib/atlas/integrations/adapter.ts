@@ -1,7 +1,7 @@
 import type {
   ConnectedSourceDescriptor,
+  IntegrationDomainPromotionResult,
   IntegrationEvidenceDraft,
-  IntegrationIngestResult,
   IntegrationSecretHandle,
   IntegrationSourceEnvelope,
   IntegrationSyncCheckpoint,
@@ -74,25 +74,30 @@ export interface IntegrationProviderAdapter<TPayload = unknown> {
   health(source: ConnectedSourceDescriptor): Promise<IntegrationSyncHealth>;
 }
 
+/** Converts one source envelope into source-attributed evidence drafts only. */
+export interface IntegrationEvidenceAdapter<TPayload = unknown> {
+  readonly domain: string;
+  toEvidence(envelope: IntegrationSourceEnvelope<TPayload>): Promise<readonly IntegrationEvidenceDraft[]>;
+}
+
 /**
- * Domain-specific promotion boundary.
+ * Explicit canonical-promotion boundary.
  *
- * Provider capture is not allowed to mutate canonical domain state directly.
- * A domain adapter first emits source-attributed evidence. Any canonical write
- * must name the existing Atlas authority boundary that authorized it.
+ * This interface does not admit evidence. The integration pipeline owns custody
+ * ordering and may invoke promote() only after first-time evidence admission.
+ * Every returned write must name the domain authorityBoundary that permitted it.
  */
 export interface IntegrationDomainAdapter<TPayload = unknown> {
   readonly domain: string;
-
-  toEvidence(envelope: IntegrationSourceEnvelope<TPayload>): Promise<readonly IntegrationEvidenceDraft[]>;
-
-  ingest(
+  promote(
     envelope: IntegrationSourceEnvelope<TPayload>,
     evidence: readonly IntegrationEvidenceDraft[],
-  ): Promise<IntegrationIngestResult>;
+    admittedEvidenceIds: readonly string[],
+  ): Promise<IntegrationDomainPromotionResult>;
 }
 
 export interface IntegrationRuntime<TPayload = unknown> {
   provider: IntegrationProviderAdapter<TPayload>;
-  domains: readonly IntegrationDomainAdapter<TPayload>[];
+  evidenceAdapters: readonly IntegrationEvidenceAdapter<TPayload>[];
+  domainAdapters: readonly IntegrationDomainAdapter<TPayload>[];
 }
