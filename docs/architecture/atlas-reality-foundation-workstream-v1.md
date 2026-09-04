@@ -7,6 +7,7 @@ This document does not replace the Atlas Whole-System Finish Build v1. `docs/arc
 ## Governing specifications
 
 - `docs/architecture/atlas-core-reality-contract-v1.md`
+- `docs/architecture/atlas-core-identity-reconciliation-v1.md`
 - `docs/architecture/atlas-receive-reconciliation-v1.md`
 - `docs/architecture/smart-contacts-elm-local-boundary-v1.md`
 - `docs/architecture/elm-farm-reality-recovery-plan-v1.md`
@@ -17,17 +18,17 @@ This document does not replace the Atlas Whole-System Finish Build v1. `docs/arc
 
 ## Intended outcome
 
-Atlas can receive authorized observations, preserve provenance, resolve identity, reconcile events and corrections, invoke the correct domain contract, and expose one trustworthy relationship history without requiring callers to know internal tables. Elm Local is separated from Atlas Core and offered through the optional Smart Contacts integration.
+Atlas can receive authorized observations, preserve provenance, reconcile source identities around durable subjects, reconcile events and corrections, invoke the correct domain contract, and expose one trustworthy relationship history without requiring callers to know internal tables. Elm Local is separated from Atlas Core and offered through the optional Smart Contacts integration.
 
 ## Ordered work
 
 1. **#787 — Census current reality paths — COMPLETE.** `atlas-current-reality-path-census-v1.md` classifies the current identity, communication, commerce, outreach, route, projection, and integration paths and freezes migration dispositions/direct-write posture.
-2. **#788 — Atlas-owned canonical identity.** Establish canonical parties, people, organizations, places, aliases, contact points, and external identity links.
-3. **#789 — Atlas Receive v1.** Build the common evidence-intake and reconciliation spine.
-4. **#790 — Canonical relationship timeline.** Build current-position, timeline, open-loop, and provenance read models.
+2. **#788 — Evidence-first identity reconciliation.** Establish tenant-scoped identity subjects, source-record references, identity assertions/claims, review/adjudication, correction semantics, and Party/Person/Organization/Place read projections. Do not build a privileged canonical Party directory.
+3. **#789 — Atlas Receive v1.** Build the common evidence-intake and reconciliation spine that feeds identity/event/domain reconciliation.
+4. **#790 — Canonical relationship timeline.** Build current-position, timeline, open-loop, and provenance read models over reconciled subjects/relationships.
 5. **#791 — Smart Contacts extraction.** Put Elm Local behind an integration adapter and remove Core identity dependence on it.
 6. **#792 — Universal Rounds.** Evolve the existing operational-route foundation into durable field-round memory.
-7. **#793 — Elm Farm reality backfill.** Migrate scattered buyer/outreach history with original provenance retained.
+7. **#793 — Elm Farm reality backfill.** Progressively bind scattered buyer/outreach/source history into the reconciliation model with original provenance retained; do not bulk-copy legacy rows into a new canonical directory.
 8. **#794 — Assistant write cutover.** Make ordinary assistant-origin memory use Atlas Receive/domain contracts instead of direct schema routing.
 
 Later items may be designed in parallel, but implementation cutover must respect these dependencies.
@@ -36,7 +37,7 @@ Later items may be designed in parallel, but implementation cutover must respect
 
 ### Identity
 
-Flowerama/Recinna, House of Flowers current-buyer uncertainty, Rose Among Thorns owner vs purchasing authority, and Smart Contacts discovery merged into existing Atlas identity.
+Flowerama/Recinna, House of Flowers current-buyer uncertainty, Rose Among Thorns owner vs purchasing authority, same-name explicit non-match, mistaken-merge correction, and Smart Contacts discovery reconciled against existing Atlas evidence.
 
 ### Events and corrections
 
@@ -55,15 +56,16 @@ Katie's Springfield florist round, a water-filtration technician route, and a mi
 This workstream is complete when:
 
 1. normal incoming observations have one Atlas-owned intake contract;
-2. canonical people, organizations, and places belong to Atlas Core;
-3. integrations attach through external identities and declared authority;
-4. evidence, reconciled events, and projections are structurally distinct;
-5. one canonical relationship timeline/current-position read contract exists;
-6. Smart Contacts / Elm Local is optional and removable;
-7. Rounds preserve planned intent and actual encounter history;
-8. representative Elm Farm history is migrated with provenance and correction semantics intact;
-9. ordinary assistant writes no longer select internal storage destinations;
-10. legacy reconstruction/write paths are retired only after parity is demonstrated.
+2. source identities can reconcile to durable tenant-scoped subjects without making any source row canonical authority;
+3. Party/Person/Organization/Place are usable projections over reconciled identity evidence;
+4. integrations attach as provider/source evidence with declared authority;
+5. evidence, reconciled events, and projections are structurally distinct;
+6. one canonical relationship timeline/current-position read contract exists;
+7. Smart Contacts / Elm Local is optional and removable;
+8. Rounds preserve planned intent and actual encounter history;
+9. representative Elm Farm history is progressively bound with provenance and correction semantics intact;
+10. ordinary assistant writes no longer select internal storage destinations;
+11. legacy reconstruction/write paths are retired only after parity is demonstrated.
 
 ## Governance
 
