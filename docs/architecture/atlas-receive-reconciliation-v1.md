@@ -2,13 +2,15 @@
 
 **Status:** Proposed implementation contract
 
-**Depends on:** `atlas-core-reality-contract-v1.md`
+**Depends on:**
+- `atlas-core-reality-contract-v1.md`
+- `atlas-core-identity-reconciliation-v1.md`
 
 ## Problem
 
 Atlas currently contains several strong domain-specific write contracts, but there is no universal intake spine. New facts can arrive through chat, worker UI, Messages, email, Stripe, imports, route reports, or domain workflows and end up represented differently depending on which code path or assistant handled them.
 
-This contract defines the common receive layer that sits ahead of domain reconciliation.
+This contract defines the common receive layer that sits ahead of identity, event, and domain reconciliation.
 
 ## Receive envelope
 
@@ -43,6 +45,8 @@ The sender may provide identity hints without resolving Atlas identity itself:
 - relationship hint
 - domain object hint
 
+The receive contract must permit incomplete or ambiguous identity. Ambiguity becomes evidence for identity reconciliation, not a reason to discard the observation or invent a canonical row.
+
 ### Observation semantics
 
 - `observation_kind`
@@ -53,27 +57,30 @@ The sender may provide identity hints without resolving Atlas identity itself:
 - freeform note / body evidence
 - domain hint, if the source already knows the domain
 
-The receive contract must permit incomplete or ambiguous identity. Ambiguity becomes work for identity resolution, not a reason to discard evidence.
-
 ## Pipeline
 
 ### 1. Admit
 
 Validate custody, schema version, provenance, size, idempotency, and source permissions. Preserve the source-attributed observation before attempting to promote it to governing state.
 
-### 2. Resolve identity
+### 2. Reconcile identity
 
-Attempt to map subject hints to canonical Atlas parties, places, relationships, route stops, or domain objects.
+Convert identity hints and source/provider identities into source-record references and identity assertions.
+
+Attempt to determine which thin Atlas identity subject, if any, the source record concerns.
 
 Resolution outcomes:
 
 - `resolved`
 - `probable_match`
 - `ambiguous`
-- `new_candidate`
+- `new_subject_candidate`
+- `non_match`
 - `unresolved`
 
-Ambiguous or consequential merges go to a review queue. Atlas must not fabricate identity merely to make the pipeline complete.
+Consequential or ambiguous equivalence decisions go to identity review. Atlas must not fabricate identity merely to make the pipeline complete.
+
+Party/Person/Organization/Place are downstream projections over reconciled identity evidence, not objects the caller must create before reporting reality.
 
 ### 3. Determine authority
 
@@ -84,7 +91,7 @@ Classify the observation as one of:
 - action result;
 - narrow authoritative source.
 
-Authority is scoped. A provider may govern one state without governing the whole relationship.
+Authority is scoped. A provider may govern one state without governing the whole relationship or identity.
 
 ### 4. Reconcile occurrence
 
@@ -100,6 +107,8 @@ Determine whether the observation represents:
 - information that affects a projection but does not establish an event.
 
 Reconciliation must be idempotent and preserve the evidence graph.
+
+Identity reconciliation and event reconciliation are related but distinct. Atlas may know that two source records concern the same Flowerama subject without concluding that two email observations are the same real-world email event, and vice versa.
 
 ### 5. Invoke domain adapter
 
@@ -119,7 +128,8 @@ The receive layer does not duplicate the domain ledger. It links the observation
 
 Update or invalidate the relevant read projections:
 
-- entity / relationship timeline;
+- Party/Person/Organization/Place identity projections;
+- subject / relationship timeline;
 - current relationship position;
 - buyer / donor / service profile;
 - open loops;
@@ -135,7 +145,7 @@ Atlas must prefer explicit correction and supersession over destructive mutation
 
 The current Flower Commerce correction behavior is the model: an incorrect sale may remain preserved as a historical assertion while a cancellation/correction record causes it to cease governing current commercial truth.
 
-The receive layer must support the same grammar outside commerce.
+The same principle applies to identity.
 
 Example:
 
@@ -145,16 +155,20 @@ Example:
 4. The relationship projection must no longer present Donovan as current buyer.
 5. The unresolved buyer identity becomes an open loop.
 
+If two source records were previously joined and later evidence shows they concern different subjects, Atlas records an identity correction/split adjudication instead of deleting the mistaken history.
+
 ## Assistant contract
 
-An Atlas-connected assistant must never need to know that a fact belongs in `buyer_contact_events`, a JSON metadata field, a relationship reconstruction row, or a sales table.
+An Atlas-connected assistant must never need to know that a fact belongs in `buyer_contact_events`, a JSON metadata field, a relationship reconstruction row, an identity graph table, or a sales table.
 
 Normal assistant flow:
 
 1. interpret the user's statement into a receive envelope;
 2. submit it to Atlas;
 3. inspect the receive result;
-4. report whether Atlas resolved, reconciled, queued, or rejected it.
+4. report whether Atlas preserved, resolved, reconciled, queued, or rejected it.
+
+The assistant supplies identity hints and source attribution; it does not manufacture identity equivalence.
 
 Direct SQL remains available only for architecture development, migration, diagnosis, and controlled repair.
 
@@ -164,11 +178,15 @@ The receive contract is incomplete without a canonical read path.
 
 Required read surfaces:
 
-### Party / relationship current position
+### Identity projection
+
+Returns the current usable Party/Person/Organization/Place representation of a reconciled identity subject, together with identity confidence/warnings where relevant.
+
+### Subject / relationship current position
 
 Returns the current governing relationship state and its supporting provenance.
 
-### Party / relationship timeline
+### Subject / relationship timeline
 
 Returns a chronological union of relevant reconciled events and linked source observations without requiring the caller to know domain tables.
 
@@ -178,7 +196,7 @@ Returns unresolved commitments, follow-ups, identity questions, promised actions
 
 ### Source drill-down
 
-Allows the user to inspect why Atlas believes a presented fact.
+Allows the user to inspect why Atlas believes a presented fact or identity association.
 
 ## Initial acceptance fixtures
 
@@ -191,7 +209,9 @@ The first implementation must pass these Elm Farm fixtures because they exercise
 - college class visit interest;
 - later Elm Farm email follow-up;
 - email source may initially be user-reported and later corroborated by actual mailbox evidence;
-- no duplicate event when corroborating source arrives.
+- legacy buyer record, route stop, communication participant, and Smart Contacts candidate can resolve to the same Flowerama subject when justified;
+- Recinna remains a distinct person subject when evidence supports that distinction;
+- no duplicate real-world event when corroborating source arrives.
 
 ### Schaffitzel's corrected sale
 
@@ -210,8 +230,8 @@ The first implementation must pass these Elm Farm fixtures because they exercise
 
 ### House of Flowers
 
-- old buyer identity becomes invalid;
-- current buyer unresolved;
+- business subject may be resolved while current buyer identity remains unknown;
+- old buyer identity becomes invalid as current relationship truth without erasing historical evidence;
 - route objective is `identify current buyer`;
 - new identity observation should resolve the open loop when confirmed.
 
@@ -238,8 +258,9 @@ The first implementation must pass these Elm Farm fixtures because they exercise
 - append evidence before promotion;
 - idempotency at the receive boundary;
 - no silent destructive overwrite of source evidence;
-- canonical Atlas identity before stable cross-domain projection;
+- identity reconciliation before stable cross-domain projection when identity matters to the consequence;
 - unresolved identity may not be guessed;
+- source records remain source records rather than being bulk-copied into canonical authority;
 - domain ledgers remain authoritative for their own event semantics;
 - integrations must not mutate projections directly;
 - read models must expose provenance.
@@ -249,9 +270,9 @@ The first implementation must pass these Elm Farm fixtures because they exercise
 Atlas Receive v1 is viable when a caller can submit the same factual observation through two different source channels and Atlas can:
 
 1. preserve both source observations;
-2. resolve them to the same Atlas party/relationship when justified;
+2. reconcile their source identities to the same Atlas subject when justified;
 3. reconcile them to one real-world event when justified;
 4. avoid duplicate operational consequences;
 5. expose the event in one canonical timeline;
-6. update the current projection correctly;
+6. update identity and relationship projections correctly;
 7. show the provenance chain on request.
