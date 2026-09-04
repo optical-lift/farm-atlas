@@ -11,13 +11,17 @@ This document does not replace the Atlas Whole-System Finish Build v1. `docs/arc
 - `docs/architecture/smart-contacts-elm-local-boundary-v1.md`
 - `docs/architecture/elm-farm-reality-recovery-plan-v1.md`
 
+## Repository-owned current-state evidence
+
+- `docs/architecture/atlas-current-reality-path-census-v1.md` — completed #787 census of current identity, relationship, communication, flower commerce, outreach, route, projection, integration, API/write, and cross-schema paths. This is the migration baseline for #788 onward; later discoveries must be added to the census rather than handled ad hoc.
+
 ## Intended outcome
 
 Atlas can receive authorized observations, preserve provenance, resolve identity, reconcile events and corrections, invoke the correct domain contract, and expose one trustworthy relationship history without requiring callers to know internal tables. Elm Local is separated from Atlas Core and offered through the optional Smart Contacts integration.
 
 ## Ordered work
 
-1. **#787 — Census current reality paths.** Inventory and classify existing identity, communication, commerce, outreach, route, projection, and integration paths.
+1. **#787 — Census current reality paths — COMPLETE.** `atlas-current-reality-path-census-v1.md` classifies the current identity, communication, commerce, outreach, route, projection, and integration paths and freezes migration dispositions/direct-write posture.
 2. **#788 — Atlas-owned canonical identity.** Establish canonical parties, people, organizations, places, aliases, contact points, and external identity links.
 3. **#789 — Atlas Receive v1.** Build the common evidence-intake and reconciliation spine.
 4. **#790 — Canonical relationship timeline.** Build current-position, timeline, open-loop, and provenance read models.
