@@ -17,15 +17,20 @@ test('Farm Atlas consumes post-fence database authority from noel-core-db', () =
   assert.match(verifier, /authority_repo="optical-lift\/noel-core-db"/);
   assert.match(verifier, /custody\/production-baseline-v1\.json/);
   assert.match(verifier, /shared_db_custody_release_packet_v1/);
-  assert.match(verifier, /source_custody_release_packet_v1/);
   assert.match(verifier, /productRepositoriesMayOwnNewCanonicalMigrations/);
   assert.match(verifier, /farm_atlas_frozen_surface_anchor_differs_from_noel_core_db/);
-  assert.match(verifier, /atlas_rpc_drift/);
+  assert.match(verifier, /name\.startswith\("atlas_"\)/);
   assert.match(verifier, /canonical_blob_mismatch/);
   assert.match(verifier, /raw\.githubusercontent\.com/);
+  assert.doesNotMatch(verifier, /Accept-Profile: atlas/);
+  assert.doesNotMatch(verifier, /atlas_rpc_drift/);
+  assert.doesNotMatch(verifier, /"\$ATLAS_SOURCE_CUSTODY_API_URL"\s*>\s*"\$atlas_packet"/);
+
   assert.match(contract, /optical-lift\/farm-atlas` owns Atlas \*\*application source\*\*/i);
   assert.match(contract, /optical-lift\/noel-core-db` owns \*\*executable database migration source\*\*/i);
   assert.match(contract, /frozen executable-surface anchor/i);
+  assert.match(contract, /public shared-database custody packet/i);
+  assert.match(contract, /legacy Atlas-specific packet became internal\/service-only/i);
   assert.match(contract, /does not copy post-fence migrations back into Farm Atlas/i);
 });
 
