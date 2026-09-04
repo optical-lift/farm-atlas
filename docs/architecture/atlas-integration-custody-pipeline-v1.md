@@ -38,7 +38,7 @@ provider capture / relay
 
 ## Apple Messages proof path
 
-`lib/atlas/integrations/providers/apple-messages.ts` now provides all three portable steps needed around the existing relay event:
+`lib/atlas/integrations/providers/apple-messages.ts` now provides the portable steps around the existing relay event:
 
 - `appleMessagesEventToEnvelope()` wraps the existing `atlas_communication_event_v1` event without reinterpreting it.
 - `appleMessagesEnvelopeToEvidence()` creates one communication `source_event` evidence draft under the connected source's explicit human or organization custody.
@@ -46,15 +46,48 @@ provider capture / relay
 
 Therefore Apple Messages can be replayed through the new integration foundation while preserving its existing rule: capture appends source-attributed evidence and cannot claim a governing state change.
 
+## Verified live communication custody authority
+
+The shared production database already owns the communication custody write boundary as `atlas.ingest_communication_events_relay_api_v1`.
+
+That function was inspected read-only during this build. It already:
+
+- validates the paired relay credential and connected source;
+- requires the event source kind/account to match that source;
+- requires `atlas_communication_event_v1` with `evidence_only`, `append_source_attributed_evidence_only`, and `governingStateChanged=false`;
+- admits first-seen events into `atlas.communication_events`;
+- recognizes same-event replay without duplicating custody;
+- records source-state enrichment separately when the content hash is unchanged but custody-observed source state differs;
+- records a conflict when the same source event reference arrives with a different source content hash;
+- updates source sync metadata;
+- returns `atlas_communication_ingest_receipt_v1` with supplied/admitted/already-in-custody/conflict counts and `governingStateChanged=false`.
+
+The existing RPC is batch-oriented and returns aggregate counts rather than per-event evidence IDs. The integration foundation therefore does not pretend its aggregate receipt is already identical to `IntegrationEvidenceCustodyReceipt`.
+
+## Legacy receipt compatibility
+
+`lib/atlas/integrations/runtime/communication-relay.ts` provides a narrow compatibility mapper for runtimes that submit exactly one legacy communication event at a time.
+
+The mapper:
+
+- requires `supplied=1`;
+- requires exactly one of admitted / already-in-custody / conflict;
+- verifies connected source, provider key, and provider account against the portable envelope;
+- rejects any receipt claiming a governing-state change;
+- requires the runtime to resolve the `atlas.communication_events.id` for admitted or replayed evidence;
+- maps conflicts without fabricating an admitted evidence ID.
+
+It imports no database client, HTTP framework, or hosting runtime. The concrete HTTP/RPC caller remains a deployment concern outside the portable provider boundary.
+
 ## Runtime seam intentionally left open
 
-The current `farm-atlas` repository contains the local Messages exporter/relay, but the relay's remote ingest endpoint is not implemented here under its existing manifest/admission contract. This branch therefore does not invent a duplicate HTTP route or database writer.
+The current `farm-atlas` repository contains the local Messages exporter/relay. The live database owns the RPC above, but the HTTP wrapper that accepts the relay bearer token, hashes/verifies it, invokes the RPC, and resolves individual event identity is not implemented in this repository under the relay's existing contract.
 
-The runtime that owns evidence persistence only needs to implement `IntegrationEvidenceCustody.admit()`. That implementation can bind the portable pipeline to the governed Atlas evidence ledger without leaking database or hosting details back into provider adapters.
+This branch therefore does not invent a duplicate route. A runtime that owns that wrapper can implement `IntegrationEvidenceCustody.admit()` using the existing RPC plus event-id resolution, then pass its receipt through the compatibility mapper.
 
 ## Database custody
 
-No DDL is introduced here. Any new shared-database table, function, trigger, RLS policy, or migration required by a future custody implementation remains under the post-fence migration authority of `optical-lift/noel-core-db`.
+No DDL is introduced here. The existing communication RPC is sufficient for the compatibility path. Any future shared-database table, function, trigger, RLS policy, or migration remains under the post-fence migration authority of `optical-lift/noel-core-db`.
 
 ## Acceptance checks added
 
@@ -65,4 +98,6 @@ Static tests now require that:
 - evidence-only authority short-circuits promotion;
 - evidence and domain adapters are separate interfaces;
 - the portable pipeline imports no Next.js, React, Vercel, or database runtime dependency;
-- Apple Messages normalizes into evidence and invokes the pipeline without supplying a domain adapter.
+- Apple Messages normalizes into evidence and invokes the pipeline without supplying a domain adapter;
+- the legacy relay mapper is one-event-only, source-identity-preserving, and runtime-independent;
+- admitted/replayed legacy communication receipts cannot pass without a resolved evidence ID.
