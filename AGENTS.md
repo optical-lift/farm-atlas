@@ -21,6 +21,44 @@ Implementation implications:
 - Prefer stored task metadata such as `work_environment` and `heat_exposure` over text inference when those fields exist.
 - Describe completions as changes to farm state when possible, not merely checkbox completion.
 
+# Atlas reality intake constitutional rule
+
+> **No source, interface, assistant, integration, or domain module may be required to understand Atlas's internal storage topology in order to report reality. Sources report observations through contracts. Atlas alone resolves identity, reconciles governing state, and determines operational consequences.**
+
+The governing architecture is documented in:
+
+- `docs/architecture/atlas-core-reality-contract-v1.md`
+- `docs/architecture/atlas-core-identity-reconciliation-v1.md`
+- `docs/architecture/atlas-receive-reconciliation-v1.md`
+- `docs/architecture/smart-contacts-elm-local-boundary-v1.md`
+- `docs/architecture/elm-farm-reality-recovery-plan-v1.md`
+
+Implementation implications:
+- Distinguish **evidence**, **event**, and **projection**. Do not use a projection row as the historical ledger.
+- Preserve incoming evidence with provenance before promoting it into governing state.
+- Prefer explicit correction, cancellation, supersession, and conflict records over destructive history rewrites.
+- Identity reconciliation for people, organizations, and places belongs to Atlas Core.
+- The durable identity anchor is a thin tenant-scoped subject UUID; names, contact coordinates, provider IDs, classifications, and similar properties remain source-attributed claims until reconciled.
+- `Party`, `Person`, `Organization`, and `Place` are application/read projections over reconciled identity evidence, not privileged canonical directory rows.
+- Similar names, emails, phones, addresses, or provider matches are evidence; they do not independently prove identity.
+- Preserve explicit non-match decisions and mistaken-merge corrections so Atlas does not repeatedly recreate bad identity assumptions.
+- Domain systems may specialize Atlas Core subjects/events; they may not create a parallel identity/history authority.
+- Ordinary UI and assistant writes must use Atlas-owned receive or domain contracts. Raw table mutation is for controlled migration, diagnosis, and architecture work only.
+- A caller should be able to retrieve `what is going on with this person/organization?` through canonical identity/relationship projections without knowing domain table names.
+- Unresolved identity must remain unresolved or enter review. Never guess merely to complete a write.
+
+# Atlas integration identity boundary
+
+> **An integration may enrich Atlas's world but may never own Atlas identity reconciliation. Disconnecting an integration must not erase the organization's valid history or relationships.**
+
+Implementation implications:
+- External systems contribute provider-owned source records and identity claims/assertions; they do not become Atlas canonical identity rows.
+- Do not introduce new Atlas Core foreign keys that make operational identity depend on an optional integration.
+- Treat Smart Contacts / Elm Local as an optional intelligence integration, not an Atlas Core identity store.
+- Integration contributions must declare whether they are evidence-only, enrichment, action results, or narrowly authoritative for a specific external state.
+- Smart Contacts candidates may reconcile to existing Atlas subjects, become new-subject candidates, remain ambiguous, or be explicitly rejected/non-matched.
+- Atlas must remain operational when an optional integration is disconnected or unavailable.
+
 ## Worker task epistemic release rule
 
 A worker-facing task is an execution warrant, not an unresolved research note. Only resolved execution facts may cross into `assigned_worker` work.

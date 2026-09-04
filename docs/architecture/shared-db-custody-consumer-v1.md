@@ -32,12 +32,13 @@ The verifier proves all of the following before an application change may releas
 
 1. the authoritative `noel-core-db` baseline still names `optical-lift/noel-core-db` as the sole post-fence executable migration authority;
 2. Farm Atlas's frozen surface snapshot still exactly matches the handoff anchor recorded by that authority repository;
-3. the live shared-database custody packet still has the exact inherited prefix recorded by `noel-core-db`;
-4. the live Atlas custody packet reports zero authenticated RPC-registry drift;
-5. every Atlas-management migration after the shared-database fence appears in the live shared migration ledger; and
-6. every such post-fence Atlas migration has byte-exact canonical source on `noel-core-db` `main`.
+3. the live **public shared-database custody packet** still has the exact inherited prefix recorded by `noel-core-db`;
+4. every post-fence migration whose canonical name is Atlas-owned (`atlas_*`) appears in that live shared migration ledger; and
+5. every such production Atlas migration has byte-exact canonical source on `noel-core-db` `main`.
 
-The Farm Atlas application release therefore follows the database authority rather than maintaining a competing current-surface snapshot.
+The verifier does **not** call `atlas.source_custody_release_packet_v1()`. That legacy Atlas-specific packet became internal/service-only during the September 2026 security hardening. Current whole-project drift/security governance belongs to `noel-core-db`; Farm Atlas verifies the database authority and exact Atlas migration custody as a consuming application.
+
+The Farm Atlas application release therefore follows the database authority rather than maintaining a competing current-surface snapshot or reopening an internal database RPC merely for CI.
 
 ## What the verifier deliberately does not do
 
@@ -49,10 +50,12 @@ It does not waive migration provenance.
 
 It does not treat Write Now or Noel-only migrations as Farm Atlas source obligations merely because they share the same physical Supabase project.
 
+It does not require anonymous/authenticated access to an Atlas-internal custody RPC.
+
 It does not mutate production.
 
 ## Ongoing database governance
 
-Whole-project migration custody belongs in `noel-core-db` CI. Farm Atlas verifies the Atlas-relevant slice as a consumer so an application release cannot silently depend on uncustodied Atlas database changes.
+Whole-project migration custody, authenticated RPC-registry drift, security-surface drift, production-shaped migration validation, and production release belong in `noel-core-db` CI. Farm Atlas verifies the Atlas-relevant migration slice as a consumer so an application release cannot silently depend on uncustodied Atlas database changes.
 
-If production Atlas changes outside the governed migration path, the database-authority repository is responsible for detecting and reconciling that database drift. Farm Atlas must not repair such drift by reasserting application-repository migration authority.
+If production Atlas changes outside the governed migration path, the database-authority repository is responsible for detecting and reconciling that database drift. Farm Atlas must not repair such drift by reasserting application-repository migration authority or reopening hardened database surfaces.

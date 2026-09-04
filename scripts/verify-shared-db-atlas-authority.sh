@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# After the shared noel-core database cutover, farm-atlas is a consuming
-# application repository. Canonical post-fence database migrations belong to
-# optical-lift/noel-core-db. This verifier keeps the application release gate
-# strong without pretending the frozen farm-atlas surface snapshot is still the
-# current database authority.
+# Farm Atlas is a consuming application repository after the shared noel-core
+# database custody cutover. Canonical post-fence database migrations belong to
+# optical-lift/noel-core-db. This verifier consumes only the public shared-db
+# custody packet; the legacy Atlas-specific source-custody RPC is intentionally
+# internal/service-only after the September 2026 security hardening.
 
 fence_version="20260825203448"
 authority_repo="optical-lift/noel-core-db"
@@ -25,9 +25,8 @@ done
 
 baseline="$(mktemp)"
 shared_packet="$(mktemp)"
-atlas_packet="$(mktemp)"
 manifest="$(mktemp)"
-trap 'rm -f "$baseline" "$shared_packet" "$atlas_packet" "$manifest"' EXIT
+trap 'rm -f "$baseline" "$shared_packet" "$manifest"' EXIT
 
 curl --fail --silent --show-error --location \
   "${authority_raw_base}/custody/production-baseline-v1.json" \
@@ -44,22 +43,12 @@ curl --fail --silent --show-error \
   "$shared_url" \
   > "$shared_packet"
 
-curl --fail --silent --show-error \
-  --request POST \
-  --header "apikey: ${ATLAS_SUPABASE_PUBLISHABLE_KEY}" \
-  --header "Content-Type: application/json" \
-  --header "Accept-Profile: atlas" \
-  --header "Content-Profile: atlas" \
-  --data '{}' \
-  "$ATLAS_SOURCE_CUSTODY_API_URL" \
-  > "$atlas_packet"
-
-python3 - "$baseline" "$shared_packet" "$atlas_packet" "$manifest" "$fence_version" "$authority_repo" "$expected_project_ref" <<'PY'
+python3 - "$baseline" "$shared_packet" "$manifest" "$fence_version" "$authority_repo" "$expected_project_ref" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-baseline_path, shared_path, atlas_path, manifest_path, fence_version, authority_repo, expected_project_ref = sys.argv[1:]
+baseline_path, shared_path, manifest_path, fence_version, authority_repo, expected_project_ref = sys.argv[1:]
 
 
 def load(path, label):
@@ -77,9 +66,6 @@ def fail(message):
 
 baseline = load(baseline_path, "baseline")
 shared = load(shared_path, "shared_packet")
-atlas = load(atlas_path, "atlas_packet")
-if isinstance(atlas, list) and len(atlas) == 1:
-    atlas = atlas[0]
 
 cutover = baseline.get("cutover") or {}
 anchor = baseline.get("atlasAnchor") or {}
@@ -99,8 +85,8 @@ if cutover.get("productRepositoriesMayOwnNewCanonicalMigrations") is not False:
 if anchor.get("repository") != "optical-lift/farm-atlas":
     fail(f"atlas_anchor_repository={anchor.get('repository')!r}")
 
-# The local farm-atlas surface file is now a frozen handoff anchor only. It must
-# remain byte-semantically equivalent to the anchor recorded by noel-core-db.
+# Farm Atlas keeps only the frozen handoff snapshot. Legitimate post-fence
+# database evolution happens in noel-core-db and does not advance this file.
 local_surface = load("docs/architecture/atlas-source-custody-surface-v1.json", "local_surface")
 local_families = local_surface.get("families") or []
 anchor_families = anchor.get("families") or []
@@ -124,36 +110,20 @@ for key, expected in {
     if shared_fence.get(key) != expected:
         fail(f"shared_fence_{key}={shared_fence.get(key)!r}_expected={expected!r}")
 
-if not isinstance(atlas, dict) or atlas.get("contractVersion") != 2:
-    fail("atlas_release_packet_contract")
-if int(atlas.get("rpcDriftCount", -1)) != 0:
-    fail(f"atlas_rpc_drift={atlas.get('rpcDriftCount')!r}")
-
-provenance = atlas.get("migrationProvenance") or {}
-atlas_manifest = provenance.get("manifest") or []
-if not isinstance(atlas_manifest, list):
-    fail("atlas_migration_manifest_missing")
-
-shared_post = shared.get("postFence") or []
-shared_by_version = {str(row.get("version") or ""): row for row in shared_post}
+# Post-fence Atlas ownership is encoded by the canonical atlas_ migration-name
+# prefix in noel-core-db. Verify every production Atlas migration against that
+# repository's exact Git blob rather than calling the now-internal Atlas packet.
 rows = []
-for row in atlas_manifest:
+for row in shared.get("postFence") or []:
     version = str(row.get("version") or "")
-    if version <= fence_version:
-        continue
     name = str(row.get("name") or "")
-    blob = str(row.get("expectedBlobSha") or "")
+    blob = str(row.get("gitBlobSha1") or "")
+    if version <= fence_version or not name.startswith("atlas_"):
+        continue
     if not version.isdigit() or len(version) != 14:
         fail(f"atlas_post_fence_version={version!r}")
-    if not name or not blob or len(blob) != 40:
-        fail(f"atlas_post_fence_manifest_row={row!r}")
-    shared_row = shared_by_version.get(version)
-    if not shared_row:
-        fail(f"atlas_migration_missing_from_shared_ledger={version}_{name}")
-    if str(shared_row.get("name") or "") != name:
-        fail(f"atlas_shared_name_mismatch={version}_{name}")
-    if str(shared_row.get("gitBlobSha1") or "") != blob:
-        fail(f"atlas_shared_blob_mismatch={version}_{name}")
+    if not blob or len(blob) != 40:
+        fail(f"atlas_post_fence_blob={version}_{name}_{blob!r}")
     rows.append((version, name, blob))
 
 if not rows:
@@ -165,13 +135,10 @@ if len({version for version, _, _ in rows}) != len(rows):
 
 Path(manifest_path).write_text("".join(f"{version}\t{name}\t{blob}\n" for version, name, blob in rows))
 
-surface = atlas.get("surface") or {}
-families = surface.get("families") or []
-live_count = sum(int(row.get("artifactCount", 0)) for row in families)
 print(
     "SHARED_DB_ATLAS_CUSTODY_PACKET_OK "
     f"authority={authority_repo} frozen_anchor={anchor.get('mainSha')} "
-    f"post_fence_atlas_migrations={len(rows)} live_artifacts={live_count} rpc_drift=0"
+    f"post_fence_atlas_migrations={len(rows)}"
 )
 PY
 
@@ -192,4 +159,4 @@ while IFS=$'\t' read -r version name expected_blob; do
   fi
 done < "$manifest"
 
-echo "SHARED_DB_ATLAS_CUSTODY_OK authority=${authority_repo}@${authority_ref} post_fence_atlas_source=exact rpc_drift=0"
+echo "SHARED_DB_ATLAS_CUSTODY_OK authority=${authority_repo}@${authority_ref} post_fence_atlas_source=exact shared_packet=public"
