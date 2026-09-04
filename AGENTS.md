@@ -4,6 +4,30 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+# Atlas governance hierarchy
+
+Before making foundational changes to identity, authority, custody, communication, synchronization, persistence, infrastructure, device assumptions, world-model semantics, or Principal arbitration, read `docs/governance/README.md` and the governing documents it points to.
+
+Authority order:
+
+1. observed reality;
+2. `docs/governance/constitution.md`;
+3. `docs/governance/continuity-horizon.md`;
+4. governing premises;
+5. canon;
+6. ADRs;
+7. implementation.
+
+A lower layer may not silently redefine a higher one.
+
+For substantial foundational work, explicitly answer:
+
+> **Which constitutional invariants does this touch, and which future capabilities does it constrain?**
+
+If a change establishes or reverses a durable architectural choice, record an ADR using `docs/governance/decisions/ADR-TEMPLATE.md`.
+
+Do not encode a provider, current UI, cloud host, phone number, email address, authentication record, or device as a deeper Atlas identity merely because it is convenient for the present implementation.
+
 # Atlas constitutional product rule
 
 > **Atlas does not ask the worker to manage work. Atlas quietly manages the work so the worker can steward the world in front of them.**
