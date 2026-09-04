@@ -225,6 +225,21 @@ begin
 end;
 $function$;
 
+create or replace function atlas.block_identity_subject_delete_v1()
+returns trigger
+language plpgsql
+set search_path = pg_catalog, atlas
+as $function$
+begin
+  raise exception 'Atlas identity subjects are retired or corrected; they are not deleted.' using errcode='55000';
+end;
+$function$;
+
+drop trigger if exists identity_subjects_no_delete on atlas.identity_subjects;
+create trigger identity_subjects_no_delete
+before delete on atlas.identity_subjects
+for each row execute function atlas.block_identity_subject_delete_v1();
+
 drop trigger if exists identity_source_records_append_only on atlas.identity_source_records;
 create trigger identity_source_records_append_only
 before update or delete on atlas.identity_source_records
@@ -292,38 +307,86 @@ create trigger identity_reconciliation_reviews_touch
 before update on atlas.identity_reconciliation_reviews
 for each row execute function atlas.identity_review_touch_v1();
 
--- Cross-row tenant guards. Foreign keys alone cannot prove organization_id alignment.
+-- Cross-row tenant guard. Uses to_jsonb(NEW) so one trigger function can safely
+-- validate optional foreign-key columns across several identity evidence tables.
 create or replace function atlas.identity_tenant_guard_v1()
 returns trigger
 language plpgsql
 set search_path = pg_catalog, atlas
 as $function$
+declare
+  v_new jsonb := to_jsonb(new);
+  v_subject_id uuid;
+  v_related_subject_id uuid;
+  v_source_record_id uuid;
+  v_claim_id uuid;
+  v_review_id uuid;
+  v_supersedes_adjudication_id uuid;
 begin
-  if new.subject_id is not null and not exists (
-    select 1 from atlas.identity_subjects s where s.id=new.subject_id and s.organization_id=new.organization_id
-  ) then
-    raise exception 'Identity subject is outside organization scope.' using errcode='23514';
+  if nullif(v_new->>'subject_id','') is not null then
+    v_subject_id := (v_new->>'subject_id')::uuid;
+    if not exists (
+      select 1 from atlas.identity_subjects s
+      where s.id=v_subject_id and s.organization_id=new.organization_id
+    ) then
+      raise exception 'Identity subject is outside organization scope.' using errcode='23514';
+    end if;
   end if;
-  if new.related_subject_id is not null and not exists (
-    select 1 from atlas.identity_subjects s where s.id=new.related_subject_id and s.organization_id=new.organization_id
-  ) then
-    raise exception 'Related identity subject is outside organization scope.' using errcode='23514';
+
+  if nullif(v_new->>'related_subject_id','') is not null then
+    v_related_subject_id := (v_new->>'related_subject_id')::uuid;
+    if not exists (
+      select 1 from atlas.identity_subjects s
+      where s.id=v_related_subject_id and s.organization_id=new.organization_id
+    ) then
+      raise exception 'Related identity subject is outside organization scope.' using errcode='23514';
+    end if;
   end if;
-  if new.source_record_id is not null and not exists (
-    select 1 from atlas.identity_source_records r where r.id=new.source_record_id and r.organization_id=new.organization_id
-  ) then
-    raise exception 'Identity source record is outside organization scope.' using errcode='23514';
+
+  if nullif(v_new->>'source_record_id','') is not null then
+    v_source_record_id := (v_new->>'source_record_id')::uuid;
+    if not exists (
+      select 1 from atlas.identity_source_records r
+      where r.id=v_source_record_id and r.organization_id=new.organization_id
+    ) then
+      raise exception 'Identity source record is outside organization scope.' using errcode='23514';
+    end if;
   end if;
-  if new.claim_id is not null and not exists (
-    select 1 from atlas.identity_claims c where c.id=new.claim_id and c.organization_id=new.organization_id
-  ) then
-    raise exception 'Identity claim is outside organization scope.' using errcode='23514';
+
+  if nullif(v_new->>'claim_id','') is not null then
+    v_claim_id := (v_new->>'claim_id')::uuid;
+    if not exists (
+      select 1 from atlas.identity_claims c
+      where c.id=v_claim_id and c.organization_id=new.organization_id
+    ) then
+      raise exception 'Identity claim is outside organization scope.' using errcode='23514';
+    end if;
   end if;
+
+  if nullif(v_new->>'review_id','') is not null then
+    v_review_id := (v_new->>'review_id')::uuid;
+    if not exists (
+      select 1 from atlas.identity_reconciliation_reviews r
+      where r.id=v_review_id and r.organization_id=new.organization_id
+    ) then
+      raise exception 'Identity review is outside organization scope.' using errcode='23514';
+    end if;
+  end if;
+
+  if nullif(v_new->>'supersedes_adjudication_id','') is not null then
+    v_supersedes_adjudication_id := (v_new->>'supersedes_adjudication_id')::uuid;
+    if not exists (
+      select 1 from atlas.identity_reconciliation_adjudications a
+      where a.id=v_supersedes_adjudication_id and a.organization_id=new.organization_id
+    ) then
+      raise exception 'Superseded identity adjudication is outside organization scope.' using errcode='23514';
+    end if;
+  end if;
+
   return new;
 end;
 $function$;
 
--- Tables whose columns match the generic tenant guard.
 drop trigger if exists identity_claims_tenant_guard on atlas.identity_claims;
 create trigger identity_claims_tenant_guard
 before insert on atlas.identity_claims
@@ -339,22 +402,37 @@ create trigger identity_reconciliation_adjudications_tenant_guard
 before insert on atlas.identity_reconciliation_adjudications
 for each row execute function atlas.identity_tenant_guard_v1();
 
--- Pair/review guards use their own column names.
 create or replace function atlas.identity_pair_tenant_guard_v1()
 returns trigger
 language plpgsql
 set search_path = pg_catalog, atlas
 as $function$
+declare
+  v_swap uuid;
 begin
-  if not exists (select 1 from atlas.identity_subjects s where s.id=new.left_subject_id and s.organization_id=new.organization_id)
-     or not exists (select 1 from atlas.identity_subjects s where s.id=new.right_subject_id and s.organization_id=new.organization_id) then
+  if new.left_subject_id::text > new.right_subject_id::text then
+    v_swap := new.left_subject_id;
+    new.left_subject_id := new.right_subject_id;
+    new.right_subject_id := v_swap;
+  end if;
+
+  if not exists (
+    select 1 from atlas.identity_subjects s
+    where s.id=new.left_subject_id and s.organization_id=new.organization_id
+  ) or not exists (
+    select 1 from atlas.identity_subjects s
+    where s.id=new.right_subject_id and s.organization_id=new.organization_id
+  ) then
     raise exception 'Identity subject pair is outside organization scope.' using errcode='23514';
   end if;
+
   if new.source_record_id is not null and not exists (
-    select 1 from atlas.identity_source_records r where r.id=new.source_record_id and r.organization_id=new.organization_id
+    select 1 from atlas.identity_source_records r
+    where r.id=new.source_record_id and r.organization_id=new.organization_id
   ) then
     raise exception 'Identity pair source record is outside organization scope.' using errcode='23514';
   end if;
+
   return new;
 end;
 $function$;
@@ -371,17 +449,33 @@ set search_path = pg_catalog, atlas
 as $function$
 begin
   if new.source_record_id is not null and not exists (
-    select 1 from atlas.identity_source_records r where r.id=new.source_record_id and r.organization_id=new.organization_id
-  ) then raise exception 'Identity review source record is outside organization scope.' using errcode='23514'; end if;
+    select 1 from atlas.identity_source_records r
+    where r.id=new.source_record_id and r.organization_id=new.organization_id
+  ) then
+    raise exception 'Identity review source record is outside organization scope.' using errcode='23514';
+  end if;
+
   if new.left_subject_id is not null and not exists (
-    select 1 from atlas.identity_subjects s where s.id=new.left_subject_id and s.organization_id=new.organization_id
-  ) then raise exception 'Identity review left subject is outside organization scope.' using errcode='23514'; end if;
+    select 1 from atlas.identity_subjects s
+    where s.id=new.left_subject_id and s.organization_id=new.organization_id
+  ) then
+    raise exception 'Identity review left subject is outside organization scope.' using errcode='23514';
+  end if;
+
   if new.right_subject_id is not null and not exists (
-    select 1 from atlas.identity_subjects s where s.id=new.right_subject_id and s.organization_id=new.organization_id
-  ) then raise exception 'Identity review right subject is outside organization scope.' using errcode='23514'; end if;
+    select 1 from atlas.identity_subjects s
+    where s.id=new.right_subject_id and s.organization_id=new.organization_id
+  ) then
+    raise exception 'Identity review right subject is outside organization scope.' using errcode='23514';
+  end if;
+
   if new.claim_id is not null and not exists (
-    select 1 from atlas.identity_claims c where c.id=new.claim_id and c.organization_id=new.organization_id
-  ) then raise exception 'Identity review claim is outside organization scope.' using errcode='23514'; end if;
+    select 1 from atlas.identity_claims c
+    where c.id=new.claim_id and c.organization_id=new.organization_id
+  ) then
+    raise exception 'Identity review claim is outside organization scope.' using errcode='23514';
+  end if;
+
   return new;
 end;
 $function$;
@@ -391,7 +485,7 @@ create trigger identity_reconciliation_reviews_tenant_guard
 before insert or update on atlas.identity_reconciliation_reviews
 for each row execute function atlas.identity_review_tenant_guard_v1();
 
--- Read projection. Party is a projection, not the underlying ontology.
+-- Party is a projection, not the underlying ontology.
 create or replace view atlas.v_identity_parties_v1
 with (security_invoker = true)
 as
@@ -449,6 +543,7 @@ revoke all on table atlas.identity_subject_pair_assertions from public, anon, au
 revoke all on table atlas.identity_reconciliation_reviews from public, anon, authenticated;
 revoke all on table atlas.identity_reconciliation_adjudications from public, anon, authenticated;
 revoke all on table atlas.identity_subject_projections from public, anon, authenticated;
+revoke all on table atlas.v_identity_parties_v1 from public, anon, authenticated;
 
 grant select on table atlas.identity_subjects to authenticated;
 grant select on table atlas.identity_source_records to authenticated;
@@ -458,6 +553,7 @@ grant select on table atlas.identity_subject_pair_assertions to authenticated;
 grant select on table atlas.identity_reconciliation_reviews to authenticated;
 grant select on table atlas.identity_reconciliation_adjudications to authenticated;
 grant select on table atlas.identity_subject_projections to authenticated;
+grant select on table atlas.v_identity_parties_v1 to authenticated;
 
 grant all on table atlas.identity_subjects to service_role;
 grant all on table atlas.identity_source_records to service_role;
@@ -467,8 +563,10 @@ grant all on table atlas.identity_subject_pair_assertions to service_role;
 grant all on table atlas.identity_reconciliation_reviews to service_role;
 grant all on table atlas.identity_reconciliation_adjudications to service_role;
 grant all on table atlas.identity_subject_projections to service_role;
+grant select on table atlas.v_identity_parties_v1 to service_role;
 
 revoke all on function atlas.block_identity_evidence_mutation_v1() from public, anon, authenticated;
+revoke all on function atlas.block_identity_subject_delete_v1() from public, anon, authenticated;
 revoke all on function atlas.identity_projection_guard_v1() from public, anon, authenticated;
 revoke all on function atlas.identity_review_touch_v1() from public, anon, authenticated;
 revoke all on function atlas.identity_tenant_guard_v1() from public, anon, authenticated;
@@ -476,6 +574,7 @@ revoke all on function atlas.identity_pair_tenant_guard_v1() from public, anon, 
 revoke all on function atlas.identity_review_tenant_guard_v1() from public, anon, authenticated;
 
 grant execute on function atlas.block_identity_evidence_mutation_v1() to service_role;
+grant execute on function atlas.block_identity_subject_delete_v1() to service_role;
 grant execute on function atlas.identity_projection_guard_v1() to service_role;
 grant execute on function atlas.identity_review_touch_v1() to service_role;
 grant execute on function atlas.identity_tenant_guard_v1() to service_role;
