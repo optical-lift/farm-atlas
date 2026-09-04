@@ -33,6 +33,18 @@ export type IntegrationCapability =
   | "location"
   | "custom";
 
+export type IntegrationCustodyDisposition =
+  | "admitted"
+  | "already_in_custody"
+  | "conflict"
+  | "rejected";
+
+export type IntegrationDomainPromotionState =
+  | "not_attempted"
+  | "not_authorized"
+  | "awaiting_domain_adapter"
+  | "promoted";
+
 export interface ConnectedSourceDescriptor {
   sourceId: string;
   providerKey: IntegrationProviderKey;
@@ -133,6 +145,32 @@ export interface IntegrationEvidenceDraft<TValue = unknown> {
   metadata?: Readonly<Record<string, unknown>>;
 }
 
+/** Result returned by the evidence store after the idempotency boundary. */
+export interface IntegrationEvidenceCustodyReceipt {
+  connectedSourceId: string;
+  sourceEventRef: string;
+  idempotencyKey: string;
+  disposition: IntegrationCustodyDisposition;
+  evidenceIds: readonly string[];
+  reason?: string | null;
+}
+
+/**
+ * Result of an explicit domain promotion. Domain promotion happens only after
+ * evidence has been admitted for the first time and only when the envelope
+ * requires a domain adapter.
+ */
+export interface IntegrationDomainPromotionResult {
+  connectedSourceId: string;
+  sourceEventRef: string;
+  idempotencyKey: string;
+  domainWrites: readonly {
+    domain: string;
+    recordId: string;
+    authorityBoundary: string;
+  }[];
+}
+
 export interface IntegrationSyncCheckpoint {
   connectedSourceId: string;
   providerKey: IntegrationProviderKey;
@@ -165,8 +203,9 @@ export interface IntegrationIngestResult {
   connectedSourceId: string;
   sourceEventRef: string;
   idempotencyKey: string;
-  disposition: "admitted" | "already_in_custody" | "conflict" | "rejected";
+  disposition: IntegrationCustodyDisposition;
   evidenceIds: readonly string[];
+  domainPromotion: IntegrationDomainPromotionState;
   domainWrites: readonly {
     domain: string;
     recordId: string;
