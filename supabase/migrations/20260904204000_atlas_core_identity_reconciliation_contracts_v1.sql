@@ -18,6 +18,7 @@ alter table atlas.identity_reconciliation_adjudications
     'reject_claim',
     'split_correction',
     'reject_split_correction',
+    'defer_unresolved',
     'supersede_prior',
     'other'
   ));
@@ -255,7 +256,12 @@ begin
     'priority',r.priority,
     'candidateData',r.candidate_data,
     'openedBy',r.opened_by,
-    'createdAt',r.created_at
+    'createdAt',r.created_at,
+    'reviewChoices',case
+      when r.review_kind in ('source_binding','subject_equivalence') then jsonb_build_array('same','different','not_enough_evidence')
+      when r.review_kind='split_correction' then jsonb_build_array('split','keep_together','not_enough_evidence')
+      else jsonb_build_array('accept','reject','not_enough_evidence')
+    end
   ) order by
     case r.priority when 'urgent' then 1 when 'high' then 2 when 'normal' then 3 else 4 end,
     r.created_at,
@@ -298,12 +304,13 @@ declare
   v_assertion_id uuid;
   v_adjudication_id uuid;
   v_evidence jsonb;
+  v_resolves_review boolean := true;
 begin
   if v_user_id is null then
     raise exception 'Authenticated user required.' using errcode='42501';
   end if;
-  if v_decision not in ('approved','rejected') then
-    raise exception 'Decision must be approved or rejected.' using errcode='22023';
+  if v_decision not in ('same','different','not_enough_evidence','split','keep_together','accept','reject') then
+    raise exception 'Unsupported identity review decision.' using errcode='22023';
   end if;
   if v_basis is null then
     raise exception 'A reviewer basis is required.' using errcode='22023';
@@ -327,6 +334,17 @@ begin
     raise exception 'Identity review item is no longer pending.' using errcode='22023';
   end if;
 
+  if v_review.review_kind in ('source_binding','subject_equivalence')
+     and v_decision not in ('same','different','not_enough_evidence') then
+    raise exception 'Choose Same, Different, or Not enough evidence for this identity review.' using errcode='22023';
+  elsif v_review.review_kind='split_correction'
+     and v_decision not in ('split','keep_together','not_enough_evidence') then
+    raise exception 'Choose Split, Keep together, or Not enough evidence for this correction review.' using errcode='22023';
+  elsif v_review.review_kind not in ('source_binding','subject_equivalence','split_correction')
+     and v_decision not in ('accept','reject','not_enough_evidence') then
+    raise exception 'Choose Accept, Reject, or Not enough evidence for this review.' using errcode='22023';
+  end if;
+
   select coalesce(nullif(btrim(up.display_name),''),v_user_id::text)
   into v_reviewer_label
   from atlas.user_profiles up
@@ -342,7 +360,11 @@ begin
     'candidateData',v_review.candidate_data
   );
 
-  if v_review.review_kind='source_binding' then
+  if v_decision='not_enough_evidence' then
+    v_decision_kind := 'defer_unresolved';
+    v_resolves_review := false;
+
+  elsif v_review.review_kind='source_binding' then
     if v_review.source_record_id is null or v_review.left_subject_id is null then
       raise exception 'Source-binding review is missing source/subject evidence.' using errcode='23514';
     end if;
@@ -353,14 +375,14 @@ begin
       v_review.organization_id,
       v_review.source_record_id,
       v_review.left_subject_id,
-      case when v_decision='approved' then 'supports' else 'non_match' end,
+      case when v_decision='same' then 'supports' else 'non_match' end,
       1,
       v_basis,
       'identity-review:'||v_review.id::text||':'||v_decision,
       v_user_id
     ) returning id into v_assertion_id;
 
-    v_decision_kind := case when v_decision='approved' then 'accept_source_binding' else 'reject_source_binding' end;
+    v_decision_kind := case when v_decision='same' then 'accept_source_binding' else 'reject_source_binding' end;
 
   elsif v_review.review_kind='subject_equivalence' then
     if v_review.left_subject_id is null or v_review.right_subject_id is null then
@@ -373,27 +395,27 @@ begin
       v_review.organization_id,
       v_review.left_subject_id,
       v_review.right_subject_id,
-      case when v_decision='approved' then 'equivalent' else 'distinct' end,
+      case when v_decision='same' then 'equivalent' else 'distinct' end,
       1,
       v_basis,
       'identity-review:'||v_review.id::text||':'||v_decision,
       v_user_id
     ) returning id into v_assertion_id;
 
-    v_decision_kind := case when v_decision='approved' then 'subjects_equivalent' else 'subjects_distinct' end;
+    v_decision_kind := case when v_decision='same' then 'subjects_equivalent' else 'subjects_distinct' end;
 
   elsif v_review.review_kind in ('classification','claim_conflict') then
     if v_review.claim_id is null then
       raise exception 'Claim review is missing claim evidence.' using errcode='23514';
     end if;
-    v_decision_kind := case when v_decision='approved' then 'accept_claim' else 'reject_claim' end;
+    v_decision_kind := case when v_decision='accept' then 'accept_claim' else 'reject_claim' end;
 
   elsif v_review.review_kind='split_correction' then
     if v_review.left_subject_id is null or v_review.right_subject_id is null then
       raise exception 'Split-correction review is missing subject evidence.' using errcode='23514';
     end if;
 
-    if v_decision='approved' then
+    if v_decision='split' then
       insert into atlas.identity_subject_pair_assertions(
         organization_id,left_subject_id,right_subject_id,assertion_kind,confidence,basis,idempotency_key,created_by_user_id
       ) values (
@@ -412,7 +434,7 @@ begin
     end if;
 
   else
-    v_decision_kind := 'other';
+    v_decision_kind := case when v_decision='accept' then 'accept_claim' else 'reject_claim' end;
   end if;
 
   insert into atlas.identity_reconciliation_adjudications(
@@ -435,19 +457,22 @@ begin
     v_review.left_subject_id,
     v_review.right_subject_id,
     v_review.claim_id,
-    v_evidence,
+    v_evidence || jsonb_build_object('decision',v_decision,'resolvedReview',v_resolves_review),
     v_basis,
     v_user_id,
     v_reviewer_label
   ) returning id into v_adjudication_id;
 
-  update atlas.identity_reconciliation_reviews
-  set status='resolved',
-      resolution_summary=case
-        when v_decision='approved' then 'Approved: '||v_basis
-        else 'Rejected: '||v_basis
-      end
-  where id=v_review.id;
+  if v_resolves_review then
+    update atlas.identity_reconciliation_reviews
+    set status='resolved',
+        resolution_summary=v_decision||': '||v_basis
+    where id=v_review.id;
+  else
+    update atlas.identity_reconciliation_reviews
+    set resolution_summary='Still unresolved: '||v_basis
+    where id=v_review.id;
+  end if;
 
   return jsonb_build_object(
     'contractVersion','identity_adjudicate_review_v1',
@@ -456,6 +481,7 @@ begin
     'reviewerMembershipId',v_membership_id,
     'decision',v_decision,
     'decisionKind',v_decision_kind,
+    'reviewState',case when v_resolves_review then 'resolved' else 'open' end,
     'assertionId',v_assertion_id,
     'adjudicationId',v_adjudication_id,
     'canonicalPartyRowCreated',false
@@ -507,6 +533,7 @@ insert into atlas.authenticated_rpc_registry(
     'contractVersion','identity_review_queue_v1',
     'purpose','Read unresolved Core identity reconciliation work for one Atlas organization.',
     'authorizationBoundary','Requires Owner or Consultant identity-steward authority.',
+    'threeWayReview',true,
     'dependsOnLocalIntel',false
   )
 ),
@@ -517,6 +544,7 @@ insert into atlas.authenticated_rpc_registry(
     'contractVersion','identity_adjudicate_review_v1',
     'purpose','Record one governed identity decision and its append-only assertion/adjudication consequence.',
     'authorizationBoundary','Requires Owner or Consultant identity-steward authority and re-reads a pending Core review item.',
+    'notEnoughEvidenceRemainsOpen',true,
     'canonicalPartyRowCreated',false,
     'dependsOnLocalIntel',false
   )
