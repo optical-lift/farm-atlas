@@ -5,6 +5,7 @@ import {
   hashAnnaPilotToken,
 } from "@/lib/anna-worker-day-pilot";
 import { createAtlasAdminClient } from "@/lib/supabase/admin";
+import { getAnnaWorkerDelivery } from "@/lib/worker-delivery";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,38 @@ export async function POST(request: Request) {
 
   if (body.effectiveAt && Number.isNaN(Date.parse(body.effectiveAt))) {
     return noStoreJson({ ok: false, code: "invalid_effective_at" }, 400);
+  }
+
+  if (body.action === "report_unscheduled") {
+    const reportedTitle = body.reportedTitle?.trim() ?? "";
+    if (!reportedTitle || reportedTitle.length > 240) {
+      return noStoreJson({ ok: false, code: "invalid_reported_title" }, 400);
+    }
+  } else {
+    if (!body.projectionId) {
+      return noStoreJson({ ok: false, code: "projection_required" }, 400);
+    }
+
+    const delivery = await getAnnaWorkerDelivery();
+    const item = delivery.items.find((candidate) => candidate.id === body.projectionId);
+
+    if (!item) {
+      return noStoreJson({ ok: false, code: "projection_not_delivered_today" }, 403);
+    }
+
+    if (
+      item.completed &&
+      (body.action === "start" ||
+        body.action === "stop" ||
+        body.action === "switch_finish" ||
+        body.action === "switch_stop")
+    ) {
+      return noStoreJson({ ok: false, code: "completed_projection_not_attention_eligible" }, 409);
+    }
+
+    if (item.institutionallyCompleted && (body.action === "done" || body.action === "reopen")) {
+      return noStoreJson({ ok: false, code: "institutional_completion_is_authoritative" }, 409);
+    }
   }
 
   const supabase = createAtlasAdminClient();
