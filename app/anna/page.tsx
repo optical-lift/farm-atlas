@@ -65,9 +65,19 @@ export default function AnnaPage() {
               Tuesday, September 8, 2026
             </h2>
             <div style={{ display: "grid", gap: 12 }}>
-              <div style={taskTextStyle}>Weed MG8</div>
               <div style={taskTextStyle}>Measure + stake/string U-Pick Beds 1–4</div>
               <div style={taskTextStyle}>Edge garden beds with weed whacker</div>
+              <div>
+                <div style={taskTextStyle}>Plant fall transplants — cluster by bed</div>
+                <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
+                  <li>MG1 — Fall cabbage mix + 3 Rainbow Swiss chard</li>
+                  <li>MG2 — Fall onion mix + Lacinato kale + 3 Rainbow Swiss chard</li>
+                  <li>MG4 — Fall cabbage mix</li>
+                  <li>MG7 — Fall onion mix + Lacinato kale + 3 Rainbow Swiss chard</li>
+                  <li>MG8 — Fall cabbage mix</li>
+                  <li>MG10 — Fall onion mix + Lacinato kale</li>
+                </ul>
+              </div>
             </div>
           </section>
 
@@ -76,7 +86,6 @@ export default function AnnaPage() {
               Wednesday, September 9, 2026
             </h2>
             <div style={{ display: "grid", gap: 12 }}>
-              <div style={taskTextStyle}>Weed MG10</div>
               <div style={taskTextStyle}>Measure + stake/string U-Pick Beds 5–8</div>
               <div>
                 <div style={taskTextStyle}>Prep paid Thursday evening at Elm</div>
@@ -90,6 +99,7 @@ export default function AnnaPage() {
                   <li>Harvest and condition flowers for the Thursday evening flower bar</li>
                 </ul>
               </div>
+              <div style={taskTextStyle}>After final harvest, move mulch from EB beds to BB</div>
             </div>
           </section>
 
@@ -125,7 +135,7 @@ export default function AnnaPage() {
               Friday, September 11, 2026
             </h2>
             <div style={{ display: "grid", gap: 12 }}>
-              <div style={taskTextStyle}>Weed MG5</div>
+              <div style={taskTextStyle}>Weed EB10</div>
               <div style={taskTextStyle}>Measure + stake/string U-Pick Beds 9–12</div>
               <div>
                 <div style={taskTextStyle}>Pick up hair</div>
