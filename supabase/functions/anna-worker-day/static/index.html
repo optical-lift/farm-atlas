@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://zirqkouammpwxlqfbsvf.supabase.co; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <title>Worker Day</title>
 <style>
 html,body{margin:0;background:#fff;color:#111;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{width:min(680px,calc(100% - 32px));margin:auto;padding:28px 0 calc(48px + env(safe-area-inset-bottom))}h1{font-size:22px;line-height:1.25;margin:0 0 18px;font-weight:600}.list{display:grid;gap:12px}.task{display:grid;grid-template-columns:22px minmax(0,1fr) 28px;gap:7px;align-items:start;font-size:16px;line-height:1.45}.task ul{font-size:13px;line-height:1.45;color:#4a4a4a;margin:5px 0 0;padding-left:20px}button{appearance:none;border:0;background:transparent;color:inherit;font:inherit;padding:0}.done{text-align:left;line-height:1.45}.rail{height:24px;position:relative}.rail:after{content:"";position:absolute;right:0;top:1px;height:19px;border-left:1px solid #aaa}.rail.active:after{border-left:2px solid #111}button:not(:disabled){cursor:pointer}.add{margin-top:24px;color:#555;font-size:14px}.error{font-size:13px;margin-top:12px}.empty{font-size:15px;color:#555}.modal{position:fixed;inset:0;background:rgba(255,255,255,.96);display:none;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}.box{width:min(420px,100%);border:1px solid #ccc;padding:20px;background:#fff}.box p{margin-top:0}.box button{display:block;margin:14px 0 0;text-align:left}.when{display:none;margin-top:14px}.when input{font:inherit}
@@ -17,73 +17,49 @@ html,body{margin:0;background:#fff;color:#111;font-family:-apple-system,BlinkMac
 <button id="add" class="add" hidden>+ Add something I did</button>
 <div id="err" class="error"></div>
 </main>
-<div id="modal" class="modal">
-  <div class="box">
-    <p><strong id="activeTitle"></strong> is still being worked on.</p>
-    <button id="finishPrev">I finished it</button>
-    <button id="stopPrev">I stopped working on it</button>
-    <button id="cancelSwitch">Never mind — I’m still working on it</button>
-    <div id="when" class="when">
-      <div>When?</div>
-      <button id="stopNow">Now</button>
-      <input id="stopTime" type="time">
-    </div>
-  </div>
-</div>
+<div id="modal" class="modal"><div class="box">
+<p><strong id="activeTitle"></strong> is still being worked on.</p>
+<button id="finishPrev">I finished it</button>
+<button id="stopPrev">I stopped working on it</button>
+<button id="cancelSwitch">Never mind — I’m still working on it</button>
+<div id="when" class="when"><div>When?</div><button id="stopNow">Now</button><input id="stopTime" type="time"></div>
+</div></div>
 <script>
-const API='/functions/v1/anna-worker-day';
+const API='https://zirqkouammpwxlqfbsvf.supabase.co/functions/v1/anna-worker-day';
 const day=document.getElementById('day'),list=document.getElementById('list'),add=document.getElementById('add'),err=document.getElementById('err'),modal=document.getElementById('modal'),whenBox=document.getElementById('when');
-let state=null,conflict=null,busy=false;
+let state=null,conflict=null,busy=false,sessionToken=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const now=()=>new Date().toISOString();
 function atTime(v){const [h,m]=v.split(':').map(Number),d=new Date();d.setHours(h,m,0,0);return d.toISOString()}
+function fragment(){const raw=location.hash.slice(1),i=raw.indexOf('=');return i<0?{}:{kind:decodeURIComponent(raw.slice(0,i)),token:decodeURIComponent(raw.slice(i+1))}}
+function authHeaders(extra={}){return sessionToken?{...extra,authorization:'Bearer '+sessionToken}:extra}
+async function redeem(bootstrap){
+  const r=await fetch(API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'redeem',bootstrap})});
+  const j=await r.json();if(!r.ok||!j.ok||!j.sessionToken)throw new Error(j.code||'redeem_failed');
+  sessionToken=j.sessionToken;
+  history.replaceState(null,'',location.pathname+location.search+'#session='+encodeURIComponent(sessionToken));
+}
 async function load(){
   try{
-    const r=await fetch(API,{credentials:'same-origin',cache:'no-store'});
-    const j=await r.json();
-    if(!r.ok||!j.ok)throw new Error(j.code||'load_failed');
-    state=j;render();
+    const r=await fetch(API,{headers:authHeaders(),cache:'no-store'}),j=await r.json();
+    if(!r.ok||!j.ok)throw new Error(j.code||'load_failed');state=j;render();
   }catch(e){err.textContent='Worker Day is unavailable.'}
 }
 function render(){
   day.textContent=state.label;add.hidden=!state.canEdit;
-  const rows=[
-    ...state.items.map(item=>'<div class="task" data-id="'+esc(item.id)+'"><button class="done" '+(state.canEdit&&!item.institutionallyCompleted?'':'disabled')+'>'+(item.completed?'●':'○')+'</button><div><div>'+esc(item.title)+'</div>'+(item.details?.length?'<ul>'+item.details.map(d=>'<li>'+esc(d)+'</li>').join('')+'</ul>':'')+'</div><button class="rail '+(item.active?'active':'')+'" '+(state.canEdit&&!item.completed?'':'disabled')+'></button></div>'),
-    ...state.extras.map(x=>'<div class="task"><span>●</span><div>'+esc(x.title)+'</div><span></span></div>')
-  ];
+  const rows=[...state.items.map(item=>'<div class="task" data-id="'+esc(item.id)+'"><button class="done" '+(state.canEdit&&!item.institutionallyCompleted?'':'disabled')+'>'+(item.completed?'●':'○')+'</button><div><div>'+esc(item.title)+'</div>'+(item.details?.length?'<ul>'+item.details.map(d=>'<li>'+esc(d)+'</li>').join('')+'</ul>':'')+'</div><button class="rail '+(item.active?'active':'')+'" '+(state.canEdit&&!item.completed?'':'disabled')+'></button></div>'),...state.extras.map(x=>'<div class="task"><span>●</span><div>'+esc(x.title)+'</div><span></span></div>')];
   list.innerHTML=rows.length?rows.join(''):'<div class="empty">Nothing scheduled today.</div>';
-  list.querySelectorAll('.task[data-id]').forEach(el=>{
-    const id=el.dataset.id,item=state.items.find(x=>x.id===id),done=el.querySelector('.done'),rail=el.querySelector('.rail');
-    done?.addEventListener('click',()=>act({action:item.reportedCompleted?'reopen':'done',projectionId:id,effectiveAt:now()}));
-    rail?.addEventListener('click',()=>act({action:item.active?'stop':'start',projectionId:id,effectiveAt:now()}));
-  });
+  list.querySelectorAll('.task[data-id]').forEach(el=>{const id=el.dataset.id,item=state.items.find(x=>x.id===id),done=el.querySelector('.done'),rail=el.querySelector('.rail');done?.addEventListener('click',()=>act({action:item.reportedCompleted?'reopen':'done',projectionId:id,effectiveAt:now()}));rail?.addEventListener('click',()=>act({action:item.active?'stop':'start',projectionId:id,effectiveAt:now()}))});
 }
-async function post(body){
-  const r=await fetch(API,{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  const j=await r.json();
-  if(r.status===409&&j.code==='attention_conflict')return j;
-  if(!r.ok||!j.ok)throw new Error(j.code||'save_failed');
-  return j;
-}
-async function act(body){
-  if(busy)return;busy=true;err.textContent='';
-  try{
-    const result=await post(body);
-    if(result.code==='attention_conflict'){
-      conflict={target:body.projectionId};
-      document.getElementById('activeTitle').textContent=result.activeTitle||'Previous task';
-      modal.style.display='flex';whenBox.style.display='none';
-    }else await load();
-  }catch(e){err.textContent='That change did not save. Try again.'}
-  finally{busy=false}
-}
+async function post(body){const r=await fetch(API,{method:'POST',headers:authHeaders({'content-type':'application/json'}),body:JSON.stringify(body)}),j=await r.json();if(r.status===409&&j.code==='attention_conflict')return j;if(!r.ok||!j.ok)throw new Error(j.code||'save_failed');return j}
+async function act(body){if(busy)return;busy=true;err.textContent='';try{const result=await post(body);if(result.code==='attention_conflict'){conflict={target:body.projectionId};document.getElementById('activeTitle').textContent=result.activeTitle||'Previous task';modal.style.display='flex';whenBox.style.display='none'}else await load()}catch(e){err.textContent='That change did not save. Try again.'}finally{busy=false}}
 add.onclick=()=>{const title=prompt('What did you do?')?.trim();if(title)act({action:'report_unscheduled',reportedTitle:title,effectiveAt:now()})};
 document.getElementById('finishPrev').onclick=()=>act({action:'switch_finish',projectionId:conflict.target,effectiveAt:now()});
 document.getElementById('stopPrev').onclick=()=>{whenBox.style.display='block';document.getElementById('stopTime').value=new Date().toTimeString().slice(0,5)};
 document.getElementById('stopNow').onclick=()=>act({action:'switch_stop',projectionId:conflict.target,effectiveAt:now()});
 document.getElementById('stopTime').onchange=e=>act({action:'switch_stop',projectionId:conflict.target,effectiveAt:atTime(e.target.value)});
 document.getElementById('cancelSwitch').onclick=()=>{conflict=null;modal.style.display='none';whenBox.style.display='none'};
-load();
+(async()=>{const f=fragment();try{if(f.kind==='edit'&&f.token)await redeem(f.token);else if(f.kind==='session'&&f.token)sessionToken=f.token;await load()}catch(e){err.textContent='This private Worker Day link is invalid or expired.';await load()}})();
 </script>
 </body>
 </html>
