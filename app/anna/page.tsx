@@ -25,6 +25,11 @@ const atlasTaskLinks = {
   },
   "2026-09-07-fishing-line-fr11-14": { mode: "schedule-native", refs: "" },
   "2026-09-07-mulch-mailbox": { mode: "exact", refs: "task:43cbc150-f04a-41ed-8596-719356791c2e" },
+  "2026-09-07-move-eb2-to-bb1": {
+    mode: "composite",
+    refs: "task:b4a0b77c-973f-4c03-83df-0706d2a218ce;occurrence:7c776134-ae59-4c19-82dc-b56a1eb85a4b;object:481fd159-c243-48d2-b8b2-207c096edc16;weed_card:d556761a-a3c6-4782-9390-694a5fb06482;object:c3fa1249-d97c-41b6-8726-9c0bd41c3ce7",
+    effect: "complete_eb2_clear_relocate;record_bb1_prep_after_bermuda_removal",
+  },
   "2026-09-07-wipe-upper-cabinets": { mode: "schedule-native", refs: "" },
   "2026-09-07-deliver-diy-springfield": { mode: "schedule-native", refs: "" },
 
@@ -45,10 +50,10 @@ const atlasTaskLinks = {
   "2026-09-09-pot-shasta": { mode: "exact", refs: "occurrence:0ff2aaee-3369-415f-a941-faa3756450e7" },
   "2026-09-09-pot-foxglove": { mode: "exact", refs: "occurrence:af608649-9ccb-48f3-b4f0-c728922482a3" },
   "2026-09-09-event-prep": { mode: "exact", refs: "occurrence:a3c215cd-4c90-4a89-933f-38d125629b99" },
-  "2026-09-09-move-eb-mulch-to-bb": {
-    mode: "dynamic-composite",
-    refs: "task:b4a0b77c-973f-4c03-83df-0706d2a218ce;occurrence:7c776134-ae59-4c19-82dc-b56a1eb85a4b;task:12037ab2-9535-4cad-a125-9782d53187eb;occurrence:256c25b1-e129-44e2-becf-168610f8bfd5;task:1ca6ce96-9665-4dc8-ba86-f6fce2e74252;occurrence:06bd1e11-5acd-48e2-bc3c-565312b9729c;task:140c5140-18dc-4c56-bbbc-f8168c3b290a;occurrence:e185e975-1611-49f7-84aa-1b8c2b24e03b;task:1ea33f2f-4f8b-4e7e-9451-59d7593b9f66;occurrence:21bdc27c-4b17-47dc-9839-e0ed1aab15e0;weed_card:d556761a-a3c6-4782-9390-694a5fb06482;weed_card:61da73c3-561e-4d3a-8875-a73cdd5ffa80;weed_card:fe6d71ee-3814-4808-9bd2-6d54d3cde1bf;weed_card:40d7c81a-1259-41ed-a79e-a4cd25f473e4;weed_card:5d50addf-599a-4f5a-8521-c390b2ee589c;weed_card:91a4336a-ee81-4e8d-af9f-c1888afd3f18;weed_card:57ccac86-e3e6-4c4b-b8fc-8a45afacf424;object:c3fa1249-d97c-41b6-8726-9c0bd41c3ce7;object:bf6312f5-b737-4637-a554-6891a6426a71;object:229c3051-1011-45ad-a22b-9a17b71a3508;object:16500431-df60-40fc-a4bf-b1b1d6adb788;object:a756cfe8-81f0-40db-92db-90c998b78fe7;object:e29d46cd-1e93-456a-9201-2054f972c671;object:994dd22b-9a02-4236-aeca-a3968be4030d",
-    effect: "source_eb_beds:complete_clear_relocate_only_when_that_bed_is_clear_and_planting_ready;destination_bb_beds:record_bed_prep_for_actual_mulched_beds_after_bermuda_removal",
+  "2026-09-09-move-eb3-to-bb2": {
+    mode: "composite",
+    refs: "task:12037ab2-9535-4cad-a125-9782d53187eb;occurrence:256c25b1-e129-44e2-becf-168610f8bfd5;object:e8aa903d-60e3-4ad6-a256-0d0b6fb93085;weed_card:61da73c3-561e-4d3a-8875-a73cdd5ffa80;object:bf6312f5-b737-4637-a554-6891a6426a71",
+    effect: "complete_eb3_clear_relocate;record_bb2_prep_after_bermuda_removal",
   },
 
   "2026-09-10-harvest-stems": { mode: "exact", refs: "occurrence:f160c5cb-8dfa-498c-8fd6-11fdbce36fa0" },
@@ -64,6 +69,11 @@ const atlasTaskLinks = {
     mode: "exact",
     refs: "weed_card:ae84df9f-c0a9-4974-8541-9aa173983af3",
     effect: "record_weeding_session;set_weed_card_toward_clear",
+  },
+  "2026-09-11-move-eb4-to-bb3": {
+    mode: "composite",
+    refs: "task:1ca6ce96-9665-4dc8-ba86-f6fce2e74252;occurrence:06bd1e11-5acd-48e2-bc3c-565312b9729c;object:ca56199d-4664-48ed-90a1-6c39c731909e;weed_card:fe6d71ee-3814-4808-9bd2-6d54d3cde1bf;object:229c3051-1011-45ad-a22b-9a17b71a3508",
+    effect: "complete_eb4_clear_relocate;record_bb3_prep_after_bermuda_removal",
   },
   "2026-09-11-deliver-bundles-springfield": { mode: "schedule-native", refs: "" },
   "2026-09-11-upick-5-6": { mode: "partial", refs: "task:9f4db991-c830-46d4-a314-521664e0ee38" },
@@ -128,6 +138,7 @@ export default function AnnaPage() {
               <div {...atlasAttrs("2026-09-07-weed-spray-bw-crescent")} style={taskTextStyle}>Weed and then spray remaining BW Crescent Moon</div>
               <div {...atlasAttrs("2026-09-07-fishing-line-fr11-14")} style={taskTextStyle}>String fishing line in FR11–14</div>
               <div {...atlasAttrs("2026-09-07-mulch-mailbox")} style={taskTextStyle}>Put EB mulch around mailbox</div>
+              <div {...atlasAttrs("2026-09-07-move-eb2-to-bb1")} style={taskTextStyle}>Move mulch from <strong>EB2 to BB1</strong> (pull any Bermuda first)</div>
               <div {...atlasAttrs("2026-09-07-wipe-upper-cabinets")} style={taskTextStyle}>Wipe down upper cabinets in the kitchen</div>
               <div {...atlasAttrs("2026-09-07-deliver-diy-springfield")} style={taskTextStyle}>Deliver DIY buckets and all harvest to Springfield at 5pm (arrival time)</div>
             </div>
@@ -190,7 +201,7 @@ export default function AnnaPage() {
                   <li>Make cold brew + lemonade</li>
                 </ul>
               </div>
-              <div {...atlasAttrs("2026-09-09-move-eb-mulch-to-bb")} style={taskTextStyle}><strong>Move mulch from EB beds to BB beds that are done producing (pull any burmuda first)</strong></div>
+              <div {...atlasAttrs("2026-09-09-move-eb3-to-bb2")} style={taskTextStyle}><strong>Move mulch from EB3 to BB2 (pull any Bermuda first)</strong></div>
             </div>
           </section>
 
@@ -221,6 +232,7 @@ export default function AnnaPage() {
             </h2>
             <div style={{ display: "grid", gap: 12 }}>
               <div {...atlasAttrs("2026-09-11-weed-eb10")} style={taskTextStyle}><strong>Weed EB10</strong></div>
+              <div {...atlasAttrs("2026-09-11-move-eb4-to-bb3")} style={taskTextStyle}><strong>Move mulch from EB4 to BB3 (pull any Bermuda first)</strong></div>
               <div {...atlasAttrs("2026-09-11-deliver-bundles-springfield")} style={taskTextStyle}>Deliver Thursday&apos;s bundles to Springfield by 10am (arrival)</div>
               <div {...atlasAttrs("2026-09-11-upick-5-6")} style={taskTextStyle}>Measure + stake/string <strong>U-Pick Beds 5 + 6</strong></div>
               <div {...atlasAttrs("2026-09-11-pot-echinacea")} style={taskTextStyle}>Pot up echinacea purple + white → plant in MG nursery Sept. 25</div>
