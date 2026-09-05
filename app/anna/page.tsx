@@ -18,7 +18,11 @@ const detailTextStyle = {
 const atlasTaskLinks = {
   "2026-09-07-harvest-diy-buckets": { mode: "schedule-native", refs: "" },
   "2026-09-07-spray-bb10-walkways": { mode: "composite", refs: "task:1405c7a2-270f-494a-8e1c-59884a8b4fc9;task:53590d76-5e63-4c3a-9c58-724639f81067" },
-  "2026-09-07-weed-spray-bw-crescent": { mode: "schedule-native", refs: "" },
+  "2026-09-07-weed-spray-bw-crescent": {
+    mode: "exact",
+    refs: "weed_card:d7ba91f7-6323-45e6-bddc-27522a5fb20b",
+    effect: "record_weeding_session_and_spray;set_weed_card_toward_clear",
+  },
   "2026-09-07-fishing-line-fr11-14": { mode: "schedule-native", refs: "" },
   "2026-09-07-mulch-mailbox": { mode: "exact", refs: "task:43cbc150-f04a-41ed-8596-719356791c2e" },
   "2026-09-07-wipe-upper-cabinets": { mode: "schedule-native", refs: "" },
@@ -27,7 +31,11 @@ const atlasTaskLinks = {
   "2026-09-08-upick-1-2": { mode: "partial", refs: "task:d6bdf176-5ccd-493a-a983-007df422de2b" },
   "2026-09-08-edge-garden-beds": { mode: "schedule-native", refs: "" },
   "2026-09-08-mulch-mg-front": { mode: "exact", refs: "task:18e31ded-5d9f-475c-bf5b-b07b14045569" },
-  "2026-09-08-fall-bed-photos": { mode: "schedule-native", refs: "" },
+  "2026-09-08-fall-bed-photos": {
+    mode: "evidence",
+    refs: "task:2535630b-56ff-4626-aa7e-edc9fd40c5dc;task:81ce142a-d233-4d54-9074-073f823bf166;object:b342eca8-0d17-4bd3-8ccb-6544d58a852c;object:bc14b63e-60bc-47c8-96b5-4d5567518078;object:e6560fd6-2583-48f9-930d-a4d61462228c;object:59973635-c66b-4d8a-8600-bbb9d59fe4c0;object:c3fa1249-d97c-41b6-8726-9c0bd41c3ce7;object:bf6312f5-b737-4637-a554-6891a6426a71;object:229c3051-1011-45ad-a22b-9a17b71a3508;object:16500431-df60-40fc-a4bf-b1b1d6adb788;object:a756cfe8-81f0-40db-92db-90c998b78fe7;object:e29d46cd-1e93-456a-9201-2054f972c671;object:994dd22b-9a02-4236-aeca-a3968be4030d",
+    effect: "attach_photos_as_bed_truth_evidence;feed_existing_truth_acquisition_tasks;do_not_auto_close_count_without_supported_count",
+  },
   "2026-09-08-fall-transplants": { mode: "composite", refs: "task:56fab382-c937-4be1-acc4-c657051a523d;task:6cecda4e-8f55-4ba0-9473-21b03927aaf1;task:44d16fe4-a492-4db6-bf10-576eeaa9736b;task:581eacf6-17ef-480b-ba52-0f68374621e4;crop_cycle:fb93e23e-1f15-4e5e-824f-2773ded728a7;crop_cycle:66339d52-43ff-4d2b-b120-ed6146e8f655" },
   "2026-09-08-stain-upper-cabinets": { mode: "schedule-native", refs: "" },
 
@@ -37,19 +45,35 @@ const atlasTaskLinks = {
   "2026-09-09-pot-shasta": { mode: "exact", refs: "occurrence:0ff2aaee-3369-415f-a941-faa3756450e7" },
   "2026-09-09-pot-foxglove": { mode: "exact", refs: "occurrence:af608649-9ccb-48f3-b4f0-c728922482a3" },
   "2026-09-09-event-prep": { mode: "exact", refs: "occurrence:a3c215cd-4c90-4a89-933f-38d125629b99" },
-  "2026-09-09-move-eb-mulch-to-bb": { mode: "schedule-native", refs: "" },
+  "2026-09-09-move-eb-mulch-to-bb": {
+    mode: "dynamic-composite",
+    refs: "task:b4a0b77c-973f-4c03-83df-0706d2a218ce;occurrence:7c776134-ae59-4c19-82dc-b56a1eb85a4b;task:12037ab2-9535-4cad-a125-9782d53187eb;occurrence:256c25b1-e129-44e2-becf-168610f8bfd5;task:1ca6ce96-9665-4dc8-ba86-f6fce2e74252;occurrence:06bd1e11-5acd-48e2-bc3c-565312b9729c;task:140c5140-18dc-4c56-bbbc-f8168c3b290a;occurrence:e185e975-1611-49f7-84aa-1b8c2b24e03b;task:1ea33f2f-4f8b-4e7e-9451-59d7593b9f66;occurrence:21bdc27c-4b17-47dc-9839-e0ed1aab15e0;weed_card:d556761a-a3c6-4782-9390-694a5fb06482;weed_card:61da73c3-561e-4d3a-8875-a73cdd5ffa80;weed_card:fe6d71ee-3814-4808-9bd2-6d54d3cde1bf;weed_card:40d7c81a-1259-41ed-a79e-a4cd25f473e4;weed_card:5d50addf-599a-4f5a-8521-c390b2ee589c;weed_card:91a4336a-ee81-4e8d-af9f-c1888afd3f18;weed_card:57ccac86-e3e6-4c4b-b8fc-8a45afacf424;object:c3fa1249-d97c-41b6-8726-9c0bd41c3ce7;object:bf6312f5-b737-4637-a554-6891a6426a71;object:229c3051-1011-45ad-a22b-9a17b71a3508;object:16500431-df60-40fc-a4bf-b1b1d6adb788;object:a756cfe8-81f0-40db-92db-90c998b78fe7;object:e29d46cd-1e93-456a-9201-2054f972c671;object:994dd22b-9a02-4236-aeca-a3968be4030d",
+    effect: "source_eb_beds:complete_clear_relocate_only_when_that_bed_is_clear_and_planting_ready;destination_bb_beds:record_bed_prep_for_actual_mulched_beds_after_bermuda_removal",
+  },
 
   "2026-09-10-harvest-stems": { mode: "exact", refs: "occurrence:f160c5cb-8dfa-498c-8fd6-11fdbce36fa0" },
-  "2026-09-10-bundle-harvest": { mode: "schedule-native", refs: "" },
+  "2026-09-10-bundle-harvest": {
+    mode: "dependency",
+    refs: "occurrence:f160c5cb-8dfa-498c-8fd6-11fdbce36fa0;canonical_task:b351a27e-aa85-4503-a47a-80634e8cb5b4;canonical_occurrence:4681259f-fb58-4c37-9d1d-6bb7247bf448",
+    effect: "materialize_or_complete_postharvest_bundle_for_sep10_harvest",
+  },
   "2026-09-10-pot-salvia": { mode: "exact", refs: "occurrence:da49b391-30a2-4983-a171-08e13acc724d" },
   "2026-09-10-event-host": { mode: "exact", refs: "occurrence:7cbd418d-fab3-4bb6-9a5f-97deab18ae6d" },
 
-  "2026-09-11-weed-eb10": { mode: "schedule-native", refs: "" },
+  "2026-09-11-weed-eb10": {
+    mode: "exact",
+    refs: "weed_card:ae84df9f-c0a9-4974-8541-9aa173983af3",
+    effect: "record_weeding_session;set_weed_card_toward_clear",
+  },
   "2026-09-11-deliver-bundles-springfield": { mode: "schedule-native", refs: "" },
   "2026-09-11-upick-5-6": { mode: "partial", refs: "task:9f4db991-c830-46d4-a314-521664e0ee38" },
   "2026-09-11-pot-echinacea": { mode: "exact", refs: "occurrence:0ef83d10-fdde-4412-b319-ad3f9fea8549" },
   "2026-09-11-pot-yarrow": { mode: "exact", refs: "occurrence:3d3d8c51-efc5-4b4f-bf51-e45a2409611e" },
-  "2026-09-11-pick-up-hair": { mode: "partial", refs: "task:ca4a7675-e468-4bfd-be85-058a32dbf8df" },
+  "2026-09-11-pick-up-hair": {
+    mode: "exact",
+    refs: "source_task:c1805ebc-fd66-4339-9d64-5839c9cfe6b1;campaign:e8906630-2b0f-4bed-b2f4-e370dafde452;campaign_contact:f4b3f889-fc76-4b2c-943e-9e12176253b6;campaign_contact:ae01c6e5-f105-4bbb-9a9d-2021304d18b9",
+    effect: "record_input_route_pickup_for_both_confirmed_sources;do_not_touch_florist_route",
+  },
   "2026-09-11-paint-purple-doors": { mode: "exact", refs: "task:c52997f0-855c-4e2a-81ff-62dec9284e4d" },
 } as const;
 
@@ -59,6 +83,7 @@ function atlasAttrs(key: keyof typeof atlasTaskLinks) {
     "data-anna-task-key": key,
     "data-atlas-link-mode": link.mode,
     "data-atlas-refs": link.refs,
+    "data-atlas-effect": "effect" in link ? link.effect : "",
   };
 }
 
