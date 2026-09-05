@@ -8,9 +8,7 @@ const SERVICE_KEY = LEGACY_SERVICE_ROLE ?? SECRET_KEYS.default;
 
 const FARM_ID = "6a503d9f-4008-4ddb-b3f0-cc6ab825dc9f";
 const DELIVERY_MEMBERSHIP_ID = "23e98e5e-16ca-40d8-872c-c77e06baa167";
-const STATIC_URL = `${SUPABASE_URL}/storage/v1/object/public/anna-worker-day/index.html`;
-const COOKIE = "anna_worker_day_pilot";
-const COOKIE_PATH = "/functions/v1/anna-worker-day";
+const STATIC_ORIGIN = "https://raw.githack.com";
 const ELM_TIME_ZONE = "America/Chicago";
 const MAX_BODY_BYTES = 4096;
 const MAX_TITLE_LENGTH = 240;
@@ -22,18 +20,22 @@ const db = createClient(SUPABASE_URL, SERVICE_KEY, {
   db: { schema: "atlas" },
 });
 
-const headers = {
+const responseHeaders = {
   "Cache-Control": "no-store",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "no-referrer",
   "X-Frame-Options": "DENY",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "Access-Control-Allow-Origin": STATIC_ORIGIN,
+  "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Vary": "Origin",
 };
 
 function json(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...headers, "Content-Type": "application/json; charset=utf-8" },
+    headers: { ...responseHeaders, "Content-Type": "application/json; charset=utf-8" },
   });
 }
 
@@ -63,17 +65,15 @@ function formatElmDay(date: string) {
   }).format(new Date(Date.UTC(year, month - 1, day, 12)));
 }
 
-function sessionCookie(request: Request) {
-  for (const part of (request.headers.get("cookie") ?? "").split(";")) {
-    const [key, ...value] = part.trim().split("=");
-    if (key === COOKIE) return decodeURIComponent(value.join("="));
-  }
-  return null;
+function bearerToken(request: Request) {
+  const authorization = request.headers.get("authorization") ?? "";
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() || null;
 }
 
 async function editSession(request: Request) {
-  const token = sessionCookie(request);
-  if (!token) return null;
+  const token = bearerToken(request);
+  if (!token || token.length > 256) return null;
   const { data, error } = await db.rpc("worker_delivery_pilot_session_status_v1", {
     p_session_token_hash: await sha256(token),
   });
@@ -82,7 +82,7 @@ async function editSession(request: Request) {
 }
 
 async function workerDay(today = elmDate()) {
-  const { data: projectionRows, error: projectionError } = await db
+  const projectionResult = await db
     .from("worker_week_projection")
     .select("id,planned_date,original_planned_date,title,plan_order,rollover_policy,delivery_key,delivery_payload")
     .eq("farm_id", FARM_ID)
@@ -90,9 +90,9 @@ async function workerDay(today = elmDate()) {
     .lte("planned_date", today)
     .order("planned_date", { ascending: true })
     .order("plan_order", { ascending: true });
-  if (projectionError) throw projectionError;
+  if (projectionResult.error) throw projectionResult.error;
 
-  const eligible = (projectionRows ?? []).filter((row: any) =>
+  const eligible = (projectionResult.data ?? []).filter((row: any) =>
     row.planned_date === today || (row.planned_date < today && row.rollover_policy === "carry")
   );
   const projectionIds = eligible.map((row: any) => row.id);
@@ -173,30 +173,14 @@ async function workerDay(today = elmDate()) {
 
 Deno.serve(async (request: Request) => {
   try {
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: responseHeaders });
+    }
+
     const requestUrl = new URL(request.url);
-
-    if (request.method === "GET" && requestUrl.searchParams.has("edit")) {
-      const bootstrap = requestUrl.searchParams.get("edit") ?? "";
-      if (bootstrap.length < 32 || bootstrap.length > 256) {
-        return new Response("This edit link is invalid or expired.", { status: 403, headers });
-      }
-
-      const sessionToken = crypto.randomUUID() + crypto.randomUUID();
-      const { data, error } = await db.rpc("redeem_worker_delivery_pilot_capability_v1", {
-        p_bootstrap_token_hash: await sha256(bootstrap),
-        p_session_token_hash: await sha256(sessionToken),
-      });
-      if (error || !data?.ok || data.membershipId !== DELIVERY_MEMBERSHIP_ID) {
-        return new Response("This edit link is invalid or expired.", { status: 403, headers });
-      }
-
-      const responseHeaders = new Headers(headers);
-      responseHeaders.set("Location", STATIC_URL);
-      responseHeaders.append(
-        "Set-Cookie",
-        `${COOKIE}=${encodeURIComponent(sessionToken)}; Path=${COOKIE_PATH}; HttpOnly; Secure; SameSite=Strict; Max-Age=1209600`,
-      );
-      return new Response(null, { status: 303, headers: responseHeaders });
+    const origin = request.headers.get("origin");
+    if (origin && origin !== STATIC_ORIGIN && origin !== requestUrl.origin) {
+      return json({ ok: false, code: "origin_mismatch" }, 403);
     }
 
     const session = await editSession(request);
@@ -207,12 +191,8 @@ Deno.serve(async (request: Request) => {
     }
 
     if (request.method !== "POST") {
-      return new Response("Method not allowed", { status: 405, headers });
+      return new Response("Method not allowed", { status: 405, headers: responseHeaders });
     }
-    if (!session) return json({ ok: false, code: "unauthorized" }, 401);
-
-    const origin = request.headers.get("origin");
-    if (origin && origin !== requestUrl.origin) return json({ ok: false, code: "origin_mismatch" }, 403);
     if (!(request.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json")) {
       return json({ ok: false, code: "invalid_content_type" }, 415);
     }
@@ -228,6 +208,24 @@ Deno.serve(async (request: Request) => {
     } catch {
       return json({ ok: false, code: "invalid_json" }, 400);
     }
+
+    if (body.action === "redeem") {
+      const bootstrap = String(body.bootstrap ?? "");
+      if (bootstrap.length < 32 || bootstrap.length > 256) {
+        return json({ ok: false, code: "invalid_or_expired_capability" }, 403);
+      }
+      const sessionToken = crypto.randomUUID() + crypto.randomUUID();
+      const { data, error } = await db.rpc("redeem_worker_delivery_pilot_capability_v1", {
+        p_bootstrap_token_hash: await sha256(bootstrap),
+        p_session_token_hash: await sha256(sessionToken),
+      });
+      if (error || !data?.ok || data.membershipId !== DELIVERY_MEMBERSHIP_ID) {
+        return json({ ok: false, code: "invalid_or_expired_capability" }, 403);
+      }
+      return json({ ok: true, sessionToken, expiresAt: data.expiresAt });
+    }
+
+    if (!session) return json({ ok: false, code: "unauthorized" }, 401);
 
     const allowed = new Set(["start", "stop", "done", "reopen", "switch_finish", "switch_stop", "report_unscheduled"]);
     if (!allowed.has(body.action)) return json({ ok: false, code: "unsupported_action" }, 400);
