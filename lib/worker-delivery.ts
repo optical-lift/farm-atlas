@@ -164,7 +164,7 @@ export async function getAnnaWorkerDelivery(now = new Date()) {
   const { data: pilotEventData, error: pilotEventError } = await supabase
     .from("worker_delivery_pilot_events")
     .select("id,event_seq,projection_id,event_kind,effective_at,reported_title")
-    .eq("membership_id", ANNA_FARM_MEMBERSHIP_ID)
+    .eq("delivery_membership_id", ANNA_FARM_MEMBERSHIP_ID)
     .order("event_seq", { ascending: true });
 
   if (pilotEventError) {
@@ -187,7 +187,7 @@ export async function getAnnaWorkerDelivery(now = new Date()) {
   const { data: activeData, error: activeError } = await supabase
     .from("worker_delivery_pilot_active_attention")
     .select("projection_id")
-    .eq("membership_id", ANNA_FARM_MEMBERSHIP_ID)
+    .eq("delivery_membership_id", ANNA_FARM_MEMBERSHIP_ID)
     .maybeSingle();
 
   if (activeError) {
