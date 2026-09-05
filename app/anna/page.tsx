@@ -48,14 +48,26 @@ export default function AnnaPage() {
         >
           <section>
             <h1 style={{ fontSize: 22, lineHeight: 1.25, fontWeight: 600, margin: "0 0 18px", overflowWrap: "anywhere" }}>
-              Tuesday, September 8, 2026
+              Monday, September 7, 2026
             </h1>
             <div style={{ display: "grid", gap: 12 }}>
+              <div style={taskTextStyle}>Spray BB10 and BB walkways</div>
+              <div style={taskTextStyle}>Put EB mulch on MG front perennial strip</div>
               <div style={taskTextStyle}>Weed and then spray remaining BW crescent moon</div>
+              <div style={taskTextStyle}>String fishing line in FR11–14 — take it down where harvests are finished and reuse posts</div>
+              <div style={taskTextStyle}>Put EB mulch around mailbox</div>
+              <div style={taskTextStyle}>Stain upper cabinets in the kitchen</div>
+            </div>
+          </section>
+
+          <section style={{ marginTop: 40 }}>
+            <h2 style={{ fontSize: 22, lineHeight: 1.25, fontWeight: 600, margin: "0 0 18px", overflowWrap: "anywhere" }}>
+              Tuesday, September 8, 2026
+            </h2>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div style={taskTextStyle}>Weed MG8</div>
               <div style={taskTextStyle}>Measure + stake/string U-Pick Beds 1–4</div>
               <div style={taskTextStyle}>Edge garden beds with weed whacker</div>
-              <div style={taskTextStyle}>String fishing line in FR11–14 — take it down where harvests are finished and reuse posts</div>
-              <div style={taskTextStyle}>Spray BB10 and BB walkways</div>
             </div>
           </section>
 
@@ -64,7 +76,7 @@ export default function AnnaPage() {
               Wednesday, September 9, 2026
             </h2>
             <div style={{ display: "grid", gap: 12 }}>
-              <div style={taskTextStyle}>Weed MG8</div>
+              <div style={taskTextStyle}>Weed MG10</div>
               <div style={taskTextStyle}>Measure + stake/string U-Pick Beds 5–8</div>
               <div>
                 <div style={taskTextStyle}>Prep paid Thursday evening at Elm</div>
@@ -78,8 +90,6 @@ export default function AnnaPage() {
                   <li>Harvest and condition flowers for the Thursday evening flower bar</li>
                 </ul>
               </div>
-              <div style={taskTextStyle}>Put EB mulch on MG front perennial strip</div>
-              <div style={taskTextStyle}>Stain upper cabinets in the kitchen</div>
             </div>
           </section>
 
@@ -88,7 +98,7 @@ export default function AnnaPage() {
               Thursday, September 10, 2026
             </h2>
             <div style={{ display: "grid", gap: 12 }}>
-              <div style={taskTextStyle}>Weed MG10</div>
+              <div style={taskTextStyle}>Weed Berry Walk Spiral Path</div>
               <div>
                 <div style={taskTextStyle}>Florist route — Thursday morning</div>
                 <div style={{ ...detailTextStyle, marginTop: 5 }}>
@@ -115,7 +125,7 @@ export default function AnnaPage() {
               Friday, September 11, 2026
             </h2>
             <div style={{ display: "grid", gap: 12 }}>
-              <div style={taskTextStyle}>Weed Berry Walk Spiral Path</div>
+              <div style={taskTextStyle}>Weed MG5</div>
               <div style={taskTextStyle}>Measure + stake/string U-Pick Beds 9–12</div>
               <div>
                 <div style={taskTextStyle}>Pick up hair</div>
@@ -125,7 +135,6 @@ export default function AnnaPage() {
                 </ul>
               </div>
               <div style={taskTextStyle}>Paint 2 exterior house doors purple — coat 1</div>
-              <div style={taskTextStyle}>Put EB mulch around mailbox</div>
             </div>
           </section>
         </div>
