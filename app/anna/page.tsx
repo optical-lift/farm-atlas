@@ -48,76 +48,75 @@ export default function AnnaPage() {
         >
           <section>
             <h1 style={{ fontSize: 22, lineHeight: 1.25, fontWeight: 600, margin: "0 0 18px", overflowWrap: "anywhere" }}>
-              Wednesday, September 2, 2026
+              Tuesday, September 8, 2026
             </h1>
             <div style={{ display: "grid", gap: 12 }}>
-              <div style={taskTextStyle}>Weed MG1</div>
-              <div style={taskTextStyle}>Put EB mulch on MG front perennial strip</div>
-
-              <div>
-                <div style={taskTextStyle}>Harden off</div>
-                <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
-                  <li>Chantilly series mixed trays</li>
-                  <li>First Lady Mixed Colors</li>
-                  <li>Potomac Berry Blend F1</li>
-                  <li>Rocket Mix F1</li>
-                </ul>
-              </div>
-
-              <div>
-                <div style={taskTextStyle}>Call Marshfield salons &amp; groomers for hair</div>
-                <div style={{ ...detailTextStyle, marginTop: 5, paddingLeft: 16 }}>
-                  <div>Harvey&apos;s Barber Shop — 417-468-6700</div>
-                  <div>House of Mongrels Pet Grooming LLC — 417-233-1138</div>
-                  <div>Jagged Edge Salon Featuring B&apos;s Esthetics — 417-859-0041</div>
-                  <div style={{ marginTop: 5 }}>
-                    Hi, this is Anna with Elm Farm. We use human and pet hair in the gardens as a deer deterrent. Would you be willing to save clean cut hair for us to pick up instead of throwing it away?
-                  </div>
-                </div>
-              </div>
-
-              <div style={taskTextStyle}>Pot up · Sweet William</div>
-              <div style={taskTextStyle}>Harvest goldenrod and Russian Olive tree branches</div>
-              <div style={taskTextStyle}>Sweep porches</div>
-              <div style={taskTextStyle}>Take trash to street</div>
-            </div>
-          </section>
-
-          <section style={{ marginTop: 40 }}>
-            <h2 style={{ fontSize: 22, lineHeight: 1.25, fontWeight: 600, margin: "0 0 18px", overflowWrap: "anywhere" }}>
-              Thursday, September 3, 2026
-            </h2>
-            <div style={{ display: "grid", gap: 12 }}>
-              <div style={taskTextStyle}>Weed MG4</div>
-              <div style={taskTextStyle}>Harvest Stems</div>
-              <div>
-                <div style={taskTextStyle}>Host Community Thursday</div>
-                <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
-                  <li>Turn on the ice maker</li>
-                  <li>Turn on the OPEN sign</li>
-                  <li>Open the yellow door</li>
-                </ul>
-              </div>
-              <div style={taskTextStyle}>Pot up · Tetra feverfew</div>
-              <div style={taskTextStyle}>Bundle stems for orders</div>
+              <div style={taskTextStyle}>Weed and then spray remaining BW crescent moon</div>
+              <div style={taskTextStyle}>Measure + stake/string U-Pick Beds 1–4</div>
+              <div style={taskTextStyle}>Edge garden beds with weed whacker</div>
+              <div style={taskTextStyle}>String fishing line in FR11–14 — take it down where harvests are finished and reuse posts</div>
               <div style={taskTextStyle}>Spray BB10 and BB walkways</div>
             </div>
           </section>
 
           <section style={{ marginTop: 40 }}>
             <h2 style={{ fontSize: 22, lineHeight: 1.25, fontWeight: 600, margin: "0 0 18px", overflowWrap: "anywhere" }}>
-              Friday, September 4, 2026
+              Wednesday, September 9, 2026
             </h2>
             <div style={{ display: "grid", gap: 12 }}>
-              <div style={taskTextStyle}>Weed and then spray remaining BW crescent moon</div>
+              <div style={taskTextStyle}>Weed MG8</div>
+              <div style={taskTextStyle}>Measure + stake/string U-Pick Beds 5–8</div>
               <div>
-                <div style={taskTextStyle}>Joanna Walsh - farm pickup</div>
+                <div style={taskTextStyle}>Prep paid Thursday evening at Elm</div>
                 <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
-                  <li>15 ageratum + 15 goldenrod unbundled</li>
-                  <li>put any harvested buckets alongside her order on the porch and if she chooses to buy any, let me know so I can add it to her invoice</li>
-                  <li>transfer the stems to her bucket</li>
+                  <li>Tidy guest spaces: entry, kitchen, conference room, library</li>
+                  <li>Make cold brew</li>
+                  <li>Check coffee bar supplies: milk, flavored syrup, paper cups</li>
+                  <li>Check water dispenser + clear cups</li>
+                  <li>Set 3 tables + chairs</li>
+                  <li>Set seed-saving + jar arrangement at each table</li>
+                  <li>Harvest and condition flowers for the Thursday evening flower bar</li>
                 </ul>
               </div>
+              <div style={taskTextStyle}>Put EB mulch on MG front perennial strip</div>
+              <div style={taskTextStyle}>Stain upper cabinets in the kitchen</div>
+            </div>
+          </section>
+
+          <section style={{ marginTop: 40 }}>
+            <h2 style={{ fontSize: 22, lineHeight: 1.25, fontWeight: 600, margin: "0 0 18px", overflowWrap: "anywhere" }}>
+              Thursday, September 10, 2026
+            </h2>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div style={taskTextStyle}>Weed MG10</div>
+              <div>
+                <div style={taskTextStyle}>Florist route — Thursday morning</div>
+                <div style={{ ...detailTextStyle, marginTop: 5 }}>
+                  Start and end at Elm. Take the flower inventory and prices supplied at departure and report the result of every stop.
+                </div>
+              </div>
+              <div>
+                <div style={taskTextStyle}>Finish paid Thursday evening prep + host</div>
+                <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
+                  <li>Finish flower-bar setup and condition any last stems</li>
+                  <li>Fill water dispenser</li>
+                  <li>Set coffee bar + pastry/snack</li>
+                  <li>Turn on the ice maker</li>
+                  <li>Turn on the OPEN sign</li>
+                  <li>Open the yellow door</li>
+                  <li>Host the paid ticketed Thursday evening</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section style={{ marginTop: 40 }}>
+            <h2 style={{ fontSize: 22, lineHeight: 1.25, fontWeight: 600, margin: "0 0 18px", overflowWrap: "anywhere" }}>
+              Friday, September 11, 2026
+            </h2>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div style={taskTextStyle}>Weed Berry Walk Spiral Path</div>
+              <div style={taskTextStyle}>Measure + stake/string U-Pick Beds 9–12</div>
               <div>
                 <div style={taskTextStyle}>Pick up hair</div>
                 <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
@@ -125,25 +124,8 @@ export default function AnnaPage() {
                   <li>Jagged Edge Salon Featuring B&apos;s Esthetics</li>
                 </ul>
               </div>
-              <div style={taskTextStyle}>String fishing line in FR11-14 - take it down where harvests are finished and reuse posts</div>
-              <div style={taskTextStyle}>Pot up · oregano</div>
+              <div style={taskTextStyle}>Paint 2 exterior house doors purple — coat 1</div>
               <div style={taskTextStyle}>Put EB mulch around mailbox</div>
-              <div style={taskTextStyle}>Edge FR garden beds</div>
-              <div style={taskTextStyle}>Stain upper cabinets in the kitchen</div>
-            </div>
-          </section>
-
-          <section style={{ marginTop: 40 }}>
-            <h2 style={{ fontSize: 22, lineHeight: 1.25, fontWeight: 600, margin: "0 0 18px", overflowWrap: "anywhere" }}>
-              Saturday, September 5, 2026
-            </h2>
-            <div style={{ display: "grid", gap: 12 }}>
-              <div>
-                <div style={taskTextStyle}>Network 45 min · 3M Marketplace Fall Fest</div>
-                <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
-                  <li>Prepare 5 posies before you leave</li>
-                </ul>
-              </div>
             </div>
           </section>
         </div>
