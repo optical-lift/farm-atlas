@@ -92,6 +92,7 @@ export default function AnnaPage() {
               <div style={taskTextStyle}>Weed <strong>Berry Walk Spiral planting pockets (beside walkway)</strong></div>
               <div style={taskTextStyle}>Spray Berry Walk Spiral Path if it&apos;s regrowing.</div>
               <div style={taskTextStyle}>Measure + stake/string <strong>U-Pick Beds 3 + 4</strong></div>
+              <div style={taskTextStyle}>Pot up Shasta Daisy</div>
               <div>
                 <div style={taskTextStyle}><strong>Prep Thursday evening at Elm</strong></div>
                 <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
@@ -131,6 +132,7 @@ export default function AnnaPage() {
               <div style={taskTextStyle}><strong>Weed EB10</strong></div>
               <div style={taskTextStyle}>Deliver Thursday&apos;s bundles to Springfield by 10am (arrival)</div>
               <div style={taskTextStyle}>Measure + stake/string <strong>U-Pick Beds 5 + 6</strong></div>
+              <div style={taskTextStyle}>Pot up echinacea purple + white</div>
               <div>
                 <div style={taskTextStyle}><strong>Pick up hair</strong></div>
                 <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
