@@ -92,7 +92,8 @@ export default function AnnaPage() {
               <div style={taskTextStyle}>Weed <strong>Berry Walk Spiral planting pockets (beside walkway)</strong></div>
               <div style={taskTextStyle}>Spray Berry Walk Spiral Path if it&apos;s regrowing.</div>
               <div style={taskTextStyle}>Measure + stake/string <strong>U-Pick Beds 3 + 4</strong></div>
-              <div style={taskTextStyle}>Pot up Shasta Daisy</div>
+              <div style={taskTextStyle}>Pot up Shasta Daisy → plant in MG nursery Sept. 22</div>
+              <div style={taskTextStyle}>Pot up Sutton’s Apricot foxglove → plant in MG nursery Sept. 24</div>
               <div>
                 <div style={taskTextStyle}><strong>Prep Thursday evening at Elm</strong></div>
                 <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
@@ -111,6 +112,7 @@ export default function AnnaPage() {
             <div style={{ display: "grid", gap: 12 }}>
               <div style={taskTextStyle}>Harvest stems (harvest the goldenrod, hyacinth, olive branches, basil, sunflowers, etc like normal for bundling but leave the zinnias and celosia for the event and have the attendees harvest it all themselves along with the other fillers across the property)</div>
               <div style={taskTextStyle}>Bundle everything you harvested; they&apos;re going to harvest everything they use for the event themselves (which is why you&apos;re leaving a little in the field that we don&apos;t have much of like zinnias).</div>
+              <div style={taskTextStyle}>Pot up Violet salvia → plant in MG nursery Sept. 24</div>
               <div>
                 <div style={taskTextStyle}><strong>Thursday evening prep + host</strong></div>
                 <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
@@ -132,7 +134,8 @@ export default function AnnaPage() {
               <div style={taskTextStyle}><strong>Weed EB10</strong></div>
               <div style={taskTextStyle}>Deliver Thursday&apos;s bundles to Springfield by 10am (arrival)</div>
               <div style={taskTextStyle}>Measure + stake/string <strong>U-Pick Beds 5 + 6</strong></div>
-              <div style={taskTextStyle}>Pot up echinacea purple + white</div>
+              <div style={taskTextStyle}>Pot up echinacea purple + white → plant in MG nursery Sept. 25</div>
+              <div style={taskTextStyle}>Pot up golden yarrow → plant in MG nursery Sept. 25</div>
               <div>
                 <div style={taskTextStyle}><strong>Pick up hair</strong></div>
                 <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
