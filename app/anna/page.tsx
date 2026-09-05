@@ -70,6 +70,23 @@ export default function AnnaPage() {
               <div style={taskTextStyle}>Edge garden beds with weed whacker</div>
               <div style={taskTextStyle}>Put EB mulch on MG front perennial strip</div>
               <div>
+                <div style={taskTextStyle}><strong>Upload bed photos for fall planting</strong></div>
+                <div style={{ ...detailTextStyle, marginTop: 5 }}>Upload a clear photo of each bed to iCloud and add a note with which bed it is (swipe up to find note).</div>
+                <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
+                  <li>BW1</li>
+                  <li>BW2</li>
+                  <li>BW3</li>
+                  <li>BW4</li>
+                  <li>BB1</li>
+                  <li>BB2</li>
+                  <li>BB3</li>
+                  <li>BB4</li>
+                  <li>BB5</li>
+                  <li>BB6</li>
+                  <li>BB7</li>
+                </ul>
+              </div>
+              <div>
                 <div style={taskTextStyle}><strong>Plant fall transplants:</strong></div>
                 <ul style={{ ...detailTextStyle, margin: "5px 0 0", paddingLeft: 28 }}>
                   <li>MG1: Cabbage + 3 Rainbow Swiss chard + 3 little clumps of thyme</li>
