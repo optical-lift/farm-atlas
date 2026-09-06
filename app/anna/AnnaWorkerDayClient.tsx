@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import NotebookMarkedText from "@/app/anna/NotebookMarkedText";
 
 type WorkerDayItem = {
   id: string;
@@ -75,8 +77,14 @@ export default function AnnaWorkerDayClient({
   const [extraOpen, setExtraOpen] = useState(false);
   const [extraTitle, setExtraTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notebookMode, setNotebookMode] = useState(false);
 
   const allVisible = useMemo(() => items.length + extras.length, [items, extras]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setNotebookMode(params.get("notebook") === "1");
+  }, []);
 
   async function requestPilot(payload: Record<string, unknown>) {
     setBusy(true);
@@ -179,125 +187,267 @@ export default function AnnaWorkerDayClient({
 
   return (
     <>
-      <div style={{ display: "grid", gap: 12 }}>
-        {items.map((item) => (
+      <div
+        style={
+          notebookMode
+            ? {
+                position: "relative",
+                padding: "4px 10px 16px 11px",
+                margin: "0 -11px",
+                backgroundImage: "radial-gradient(#d7d7d2 0.65px, transparent 0.65px)",
+                backgroundSize: "16px 16px",
+              }
+            : undefined
+        }
+      >
+        {notebookMode ? (
           <div
-            key={item.key}
-            data-anna-task-key={item.key}
-            data-worker-projection-id={item.id}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              alignItems: "baseline",
+              marginBottom: 12,
+              paddingBottom: 6,
+              borderBottom: "1px solid #2b2b2b",
+              fontSize: 11,
+              color: "#666",
+              letterSpacing: "0.04em",
+            }}
           >
+            <span>notebook interaction study</span>
+            <span style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic" }}>
+              tap the words
+            </span>
+          </div>
+        ) : null}
+
+        <div style={{ display: "grid", gap: notebookMode ? 10 : 12 }}>
+          {items.map((item) => (
             <div
+              key={item.key}
+              data-anna-task-key={item.key}
+              data-worker-projection-id={item.id}
+              style={
+                notebookMode
+                  ? {
+                      paddingBottom: 3,
+                      borderBottom: "1px solid rgba(20,20,20,0.10)",
+                    }
+                  : undefined
+              }
+            >
+              <div
+                style={{
+                  ...taskTextStyle,
+                  display: "grid",
+                  gridTemplateColumns: "22px minmax(0, 1fr) 28px",
+                  columnGap: 7,
+                  alignItems: "start",
+                }}
+              >
+                {canEdit && !item.institutionallyCompleted ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    aria-label={item.completed ? `Reopen ${item.title}` : `Mark ${item.title} done`}
+                    onClick={() => void handleCompletion(item)}
+                    style={{
+                      appearance: "none",
+                      border: 0,
+                      background: "transparent",
+                      padding: 0,
+                      margin: 0,
+                      color: "inherit",
+                      font: "inherit",
+                      lineHeight: 1.45,
+                      cursor: busy ? "default" : "pointer",
+                      textAlign: "left",
+                      width: 22,
+                      height: 24,
+                      display: "grid",
+                      placeItems: "start",
+                    }}
+                  >
+                    {notebookMode ? (
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          display: "block",
+                          width: 14,
+                          height: 14,
+                          marginTop: 4,
+                          marginLeft: 1,
+                          boxSizing: "border-box",
+                          border: "1.4px solid #111",
+                          borderRadius: "48% 52% 47% 53%",
+                          background: item.completed ? "#111" : "transparent",
+                          transform: "rotate(-1deg)",
+                        }}
+                      />
+                    ) : item.completed ? (
+                      "●"
+                    ) : (
+                      "○"
+                    )}
+                  </button>
+                ) : (
+                  <span aria-hidden="true" style={{ lineHeight: 1.45 }}>
+                    {notebookMode ? (
+                      <span
+                        style={{
+                          display: "block",
+                          width: 14,
+                          height: 14,
+                          marginTop: 4,
+                          marginLeft: 1,
+                          boxSizing: "border-box",
+                          border: "1.4px solid #111",
+                          borderRadius: "48% 52% 47% 53%",
+                          background: item.completed ? "#111" : "transparent",
+                          transform: "rotate(-1deg)",
+                        }}
+                      />
+                    ) : item.completed ? (
+                      "●"
+                    ) : (
+                      "○"
+                    )}
+                  </span>
+                )}
+
+                {notebookMode ? (
+                  <NotebookMarkedText targetKey={`task:${item.id}`}>{item.title}</NotebookMarkedText>
+                ) : (
+                  <span>{item.title}</span>
+                )}
+
+                {canEdit && !item.completed ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    aria-label={item.active ? `Stop working on ${item.title}` : `Work on ${item.title}`}
+                    onClick={() => void handleAttention(item)}
+                    style={{
+                      appearance: "none",
+                      border: 0,
+                      background: "transparent",
+                      padding: "1px 0 0",
+                      margin: 0,
+                      width: 28,
+                      height: 24,
+                      cursor: busy ? "default" : "pointer",
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        display: "block",
+                        height: 19,
+                        borderLeft: item.active ? "2px solid #111" : "1px solid #a6a6a6",
+                        transform: notebookMode ? "rotate(0.7deg)" : undefined,
+                      }}
+                    />
+                  </button>
+                ) : (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      justifySelf: "end",
+                      marginTop: 1,
+                      height: 19,
+                      borderLeft: item.active ? "2px solid #111" : "1px solid #d2d2d2",
+                      transform: notebookMode ? "rotate(0.7deg)" : undefined,
+                    }}
+                  />
+                )}
+              </div>
+
+              {item.details.length > 0 ? (
+                <ul
+                  style={{
+                    ...detailTextStyle,
+                    margin: "5px 35px 0 29px",
+                    paddingLeft: 20,
+                    fontFamily: notebookMode ? "Georgia, 'Times New Roman', serif" : undefined,
+                    fontStyle: notebookMode ? "italic" : undefined,
+                  }}
+                >
+                  {item.details.map((detail, index) => (
+                    <li key={`${item.key}-detail-${index}`}>{detail}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ))}
+
+          {extras.map((extra) => (
+            <div
+              key={extra.key}
               style={{
                 ...taskTextStyle,
                 display: "grid",
                 gridTemplateColumns: "22px minmax(0, 1fr) 28px",
                 columnGap: 7,
                 alignItems: "start",
+                ...(notebookMode
+                  ? {
+                      paddingBottom: 3,
+                      borderBottom: "1px solid rgba(20,20,20,0.10)",
+                    }
+                  : {}),
               }}
             >
-              {canEdit && !item.institutionallyCompleted ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  aria-label={item.completed ? `Reopen ${item.title}` : `Mark ${item.title} done`}
-                  onClick={() => void handleCompletion(item)}
-                  style={{
-                    appearance: "none",
-                    border: 0,
-                    background: "transparent",
-                    padding: 0,
-                    margin: 0,
-                    color: "inherit",
-                    font: "inherit",
-                    lineHeight: 1.45,
-                    cursor: busy ? "default" : "pointer",
-                    textAlign: "left",
-                  }}
-                >
-                  {item.completed ? "●" : "○"}
-                </button>
-              ) : (
-                <span aria-hidden="true" style={{ lineHeight: 1.45 }}>
-                  {item.completed ? "●" : "○"}
-                </span>
-              )}
-
-              <span>{item.title}</span>
-
-              {canEdit && !item.completed ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  aria-label={item.active ? `Stop working on ${item.title}` : `Work on ${item.title}`}
-                  onClick={() => void handleAttention(item)}
-                  style={{
-                    appearance: "none",
-                    border: 0,
-                    background: "transparent",
-                    padding: "1px 0 0",
-                    margin: 0,
-                    width: 28,
-                    height: 24,
-                    cursor: busy ? "default" : "pointer",
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    alignItems: "flex-start",
-                  }}
-                >
+              <span aria-hidden="true">
+                {notebookMode ? (
                   <span
-                    aria-hidden="true"
                     style={{
                       display: "block",
-                      height: 19,
-                      borderLeft: item.active ? "2px solid #111" : "1px solid #a6a6a6",
+                      width: 14,
+                      height: 14,
+                      marginTop: 4,
+                      marginLeft: 1,
+                      borderRadius: "48% 52% 47% 53%",
+                      background: "#111",
+                      transform: "rotate(-1deg)",
                     }}
                   />
-                </button>
+                ) : (
+                  "●"
+                )}
+              </span>
+              {notebookMode ? (
+                <NotebookMarkedText targetKey={`extra:${extra.id}`}>{extra.title}</NotebookMarkedText>
               ) : (
-                <span
-                  aria-hidden="true"
-                  style={{
-                    justifySelf: "end",
-                    marginTop: 1,
-                    height: 19,
-                    borderLeft: item.active ? "2px solid #111" : "1px solid #d2d2d2",
-                  }}
-                />
+                <span>{extra.title}</span>
               )}
+              <span aria-hidden="true" />
             </div>
+          ))}
+        </div>
 
-            {item.details.length > 0 ? (
-              <ul
-                style={{
-                  ...detailTextStyle,
-                  margin: "5px 35px 0 29px",
-                  paddingLeft: 20,
-                }}
-              >
-                {item.details.map((detail, index) => (
-                  <li key={`${item.key}-detail-${index}`}>{detail}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        ))}
-
-        {extras.map((extra) => (
+        {notebookMode ? (
           <div
-            key={extra.key}
             style={{
-              ...taskTextStyle,
-              display: "grid",
-              gridTemplateColumns: "22px minmax(0, 1fr) 28px",
-              columnGap: 7,
-              alignItems: "start",
+              marginTop: 18,
+              paddingTop: 8,
+              borderTop: "1px solid #333",
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+              fontSize: 11,
+              lineHeight: 1.4,
+              color: "#686868",
             }}
           >
-            <span aria-hidden="true">●</span>
-            <span>{extra.title}</span>
-            <span aria-hidden="true" />
+            <span>○ changes work reality</span>
+            <span>circle · underline · bracket · color · ☆ are only your notebook marks</span>
           </div>
-        ))}
+        ) : null}
       </div>
 
       {canEdit ? (
