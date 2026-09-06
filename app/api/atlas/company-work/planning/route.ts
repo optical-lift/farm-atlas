@@ -30,14 +30,14 @@ function privateJson(body: Record<string, unknown>, status = 200) {
     status,
     headers: {
       "Cache-Control": "private, max-age=0, must-revalidate",
-      "X-Atlas-Read-Path": "company-work-weekly-planning-v1",
+      "X-Atlas-Read-Path": "company-work-management-planning-v1",
     },
   });
 }
 
 function rpcFailure(error: RpcError) {
   if (error.code === "42501") {
-    return privateJson({ ok: false, error: "Organization-owner authority is required." }, 403);
+    return privateJson({ ok: false, error: error.message ?? "Company Work scheduling authority is required." }, 403);
   }
   if (error.code === "22023" || error.code === "23514") {
     return privateJson({ ok: false, error: error.message ?? "The plan is not lawful." }, 409);
@@ -46,8 +46,8 @@ function rpcFailure(error: RpcError) {
     return privateJson(
       {
         ok: false,
-        error: "The Company Work planning contract is not live in this database yet.",
-        code: "company_work_planning_not_live",
+        error: "The Company Work management-planning contract is not live in this database yet.",
+        code: "company_work_management_planning_not_live",
       },
       503,
     );
@@ -74,17 +74,10 @@ async function authorizedOrganization(organizationId: string | null) {
     };
   }
 
-  // The live planning RPCs are intentionally owner-authorized today. Keep this
-  // application boundary aligned with the database rather than widening it here.
-  if (membership.role !== "owner") {
-    return {
-      response: privateJson(
-        { ok: false, error: "Company Work weekly planning currently requires organization-owner access." },
-        403,
-      ),
-    };
-  }
-
+  // The database is the authority for the B-boundary: organization owners may
+  // schedule organization-wide; farm managers may schedule only Work whose
+  // execution path resolves to a farm they actively manage. Responsibility is
+  // still owner-only and is intentionally not exposed by this route.
   return { session, membership, organizationId: resolvedOrganizationId };
 }
 
@@ -107,9 +100,9 @@ export async function GET(request: Request) {
   const weekEnd = [end.getFullYear(), `${end.getMonth() + 1}`.padStart(2, "0"), `${end.getDate()}`.padStart(2, "0")].join("-");
 
   const supabase = await createAtlasServerClient();
-  // Read the whole open queue. Windowing the RPC would hide unassigned Work with
-  // no source-owned date, which is exactly the Work management still needs to see.
-  const { data, error } = await supabase.rpc("organization_owner_company_work_planning_queue_api_v2", {
+  // Read the whole authorized queue. Windowing would hide unassigned Work with
+  // no source-owned date, which management still needs to see as owner action.
+  const { data, error } = await supabase.rpc("organization_management_company_work_planning_queue_api_v1", {
     p_organization_id: access.organizationId,
     p_window_start: null,
     p_window_end: null,
@@ -152,7 +145,7 @@ export async function POST(request: Request) {
     if (!body.weekStart || !Array.isArray(body.plans) || body.plans.length === 0) {
       return privateJson({ ok: false, error: "A week start and at least one plan are required." }, 400);
     }
-    const { data, error } = await supabase.rpc("organization_owner_plan_company_work_week_api_v1", {
+    const { data, error } = await supabase.rpc("organization_management_plan_company_work_week_api_v1", {
       p_organization_id: access.organizationId,
       p_week_start: body.weekStart,
       p_plans: body.plans,
@@ -165,7 +158,7 @@ export async function POST(request: Request) {
     if (!body.workItemId) {
       return privateJson({ ok: false, error: "workItemId is required." }, 400);
     }
-    const { data, error } = await supabase.rpc("organization_owner_clear_company_work_plan_api_v1", {
+    const { data, error } = await supabase.rpc("organization_management_clear_company_work_plan_api_v1", {
       p_work_item_id: body.workItemId,
       p_reason: body.reason ?? null,
     });
