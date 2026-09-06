@@ -19,12 +19,16 @@ function chicagoDateKey() {
 
 export default async function CompanyWorkWeekPage() {
   const session = await getAtlasSession();
-  const membership = session?.organizationMemberships.find((entry) => entry.role === "owner") ?? null;
+  const membership = session
+    ? session.organizationMemberships.find(
+        (entry) => entry.organizationId === session.activeOrganizationId,
+      ) ?? session.organizationMemberships[0] ?? null
+    : null;
 
   if (!session || !membership) {
     return (
       <main style={{ padding: 40, fontFamily: '"Source Sans 3", system-ui, sans-serif' }}>
-        <p>Organization-owner access is required for Company Work weekly planning.</p>
+        <p>An active organization membership is required for Company Work weekly planning.</p>
       </main>
     );
   }
