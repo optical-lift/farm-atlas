@@ -75,7 +75,7 @@ function WorkCard({
 
       <div className={styles.meta}>
         {item.operation_class ? <span>{item.operation_class.replaceAll("_", " ")}</span> : null}
-        <span>{item.responsibility_state === "assigned" ? "responsibility set" : "responsibility required"}</span>
+        <span>{item.responsibility_state === "assigned" ? "responsibility set" : "owner responsibility required"}</span>
         {deadline ? <span>edge {deadline}</span> : null}
         {item.open_conflicts > 0 ? <span>{item.open_conflicts} open conflict{item.open_conflicts === 1 ? "" : "s"}</span> : null}
       </div>
@@ -94,7 +94,7 @@ function WorkCard({
       ) : null}
 
       {item.responsibility_state === "unassigned" ? (
-        <p className={styles.boundaryNote}>Responsibility must exist before this Work can be put on a Worker Day.</p>
+        <p className={styles.boundaryNote}>The organization owner must establish Responsibility before management can put this Work on a Worker Day.</p>
       ) : (
         <div className={styles.actions}>
           <label>
@@ -269,7 +269,7 @@ export default function CompanyWorkWeeklyPlanner({ organization, initialWeekStar
         <div>
           <span className={styles.kicker}>COMPANY WORK · WEEK</span>
           <h1>{organization.name ?? "Organization"}</h1>
-          <p>Responsibility says who owns the Work. This page says which day management intends it to be executed.</p>
+          <p>The organization owner establishes who holds Responsibility. Management decides when already-assigned Work should be executed.</p>
         </div>
         <nav className={styles.weekNav} aria-label="Week navigation">
           <button type="button" onClick={() => moveWeek(-1)} aria-label="Previous week">←</button>
@@ -279,7 +279,8 @@ export default function CompanyWorkWeeklyPlanner({ organization, initialWeekStar
       </header>
 
       <section className={styles.truthStrip} aria-label="Planning contract">
-        <span>Responsibility ≠ plan date</span>
+        <span>owner sets Responsibility</span>
+        <span>management sets plan date</span>
         <span>plan date ≠ Worker Day exposure</span>
         <span>placement ≠ execution authority</span>
       </section>
@@ -306,7 +307,7 @@ export default function CompanyWorkWeeklyPlanner({ organization, initialWeekStar
               </div>
               <strong>{managementPool.length}</strong>
             </header>
-            <p className={styles.poolIntro}>Unassigned Work stays here until Responsibility exists. Assigned Work can then be placed into the week.</p>
+            <p className={styles.poolIntro}>Unassigned Work waits on the owner for Responsibility. Once assigned, management can place it into the week.</p>
             <div className={styles.poolList}>
               {managementPool.map((item) => (
                 <WorkCard
@@ -377,7 +378,7 @@ export default function CompanyWorkWeeklyPlanner({ organization, initialWeekStar
       ) : null}
 
       <footer className={styles.footer}>
-        <p><strong>Clearing or changing a plan does not clear Responsibility.</strong> A rollover may change Worker Day exposure without rewriting the manager’s original planned date.</p>
+        <p><strong>Management can change the week without changing who owns the Work.</strong> Only the organization owner establishes Responsibility; rollover may change Worker Day exposure without rewriting the manager’s original planned date.</p>
       </footer>
     </main>
   );
