@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { WorkerSessionContext } from "@/lib/worker-session";
 import { createAtlasAdminClient } from "@/lib/supabase/admin";
 
 export const ELM_FARM_ID = "6a503d9f-4008-4ddb-b3f0-cc6ab825dc9f";
@@ -102,7 +103,10 @@ export function formatElmDay(dateString: string) {
   }).format(localNoonUtc);
 }
 
-export async function getAnnaWorkerDelivery(now = new Date()) {
+async function loadWorkerDelivery(
+  deliveryMembershipId: string,
+  now = new Date(),
+) {
   const today = chicagoDateString(now);
   const supabase = createAtlasAdminClient();
 
@@ -111,14 +115,13 @@ export async function getAnnaWorkerDelivery(now = new Date()) {
     .select(
       "id,planned_date,original_planned_date,title,plan_order,plan_state,rollover_policy,delivery_key,delivery_payload",
     )
-    .eq("farm_id", ELM_FARM_ID)
-    .eq("membership_id", ANNA_FARM_MEMBERSHIP_ID)
+    .eq("membership_id", deliveryMembershipId)
     .lte("planned_date", today)
     .order("planned_date", { ascending: true })
     .order("plan_order", { ascending: true });
 
   if (projectionError) {
-    throw new Error(`Could not load Anna worker projection: ${projectionError.message}`);
+    throw new Error(`Could not load worker projection: ${projectionError.message}`);
   }
 
   const projections = (projectionData ?? []) as ProjectionRow[];
@@ -164,11 +167,11 @@ export async function getAnnaWorkerDelivery(now = new Date()) {
   const { data: pilotEventData, error: pilotEventError } = await supabase
     .from("worker_delivery_pilot_events")
     .select("id,event_seq,projection_id,event_kind,effective_at,reported_title")
-    .eq("delivery_membership_id", ANNA_FARM_MEMBERSHIP_ID)
+    .eq("delivery_membership_id", deliveryMembershipId)
     .order("event_seq", { ascending: true });
 
   if (pilotEventError) {
-    throw new Error(`Could not load Anna Worker Day pilot events: ${pilotEventError.message}`);
+    throw new Error(`Could not load Worker Day pilot events: ${pilotEventError.message}`);
   }
 
   const pilotEvents = (pilotEventData ?? []) as PilotEventRow[];
@@ -187,11 +190,11 @@ export async function getAnnaWorkerDelivery(now = new Date()) {
   const { data: activeData, error: activeError } = await supabase
     .from("worker_delivery_pilot_active_attention")
     .select("projection_id")
-    .eq("delivery_membership_id", ANNA_FARM_MEMBERSHIP_ID)
+    .eq("delivery_membership_id", deliveryMembershipId)
     .maybeSingle();
 
   if (activeError) {
-    throw new Error(`Could not load Anna active Worker Day attention: ${activeError.message}`);
+    throw new Error(`Could not load active Worker Day attention: ${activeError.message}`);
   }
 
   const activeProjectionId =
@@ -210,8 +213,7 @@ export async function getAnnaWorkerDelivery(now = new Date()) {
     const noLongerDeliverable =
       required.length > 0 &&
       requiredStates.every((state) => state === "cancelled" || state === "superseded");
-    const reportedCompleted =
-      completionStateByProjection.get(row.id) === "done_reported";
+    const reportedCompleted = completionStateByProjection.get(row.id) === "done_reported";
     const completed = institutionallyCompleted || reportedCompleted;
 
     if (row.planned_date < today && (completed || noLongerDeliverable)) {
@@ -263,4 +265,17 @@ export async function getAnnaWorkerDelivery(now = new Date()) {
   });
 
   return { date: today, items, extras };
+}
+
+export async function getWorkerDelivery(
+  workerContext: WorkerSessionContext,
+  now = new Date(),
+) {
+  return loadWorkerDelivery(workerContext.deliveryMembershipId, now);
+}
+
+// Compatibility adapter for the temporary public /anna route. The real
+// Work Pass path reads through getWorkerDelivery(workerContext).
+export async function getAnnaWorkerDelivery(now = new Date()) {
+  return loadWorkerDelivery(ANNA_FARM_MEMBERSHIP_ID, now);
 }
