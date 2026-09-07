@@ -128,6 +128,26 @@
   padding-top: 1px;
 }
 
+.taskOpenButton {
+  appearance: none;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  margin: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+  padding-left: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.taskOpenButton:focus-visible {
+  outline: 1px solid rgba(24, 23, 19, .38);
+  outline-offset: 3px;
+}
+
 .taskTitle {
   display: block;
   font-size: 16px;
@@ -332,6 +352,51 @@
   color: var(--employee-muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.taskDrawer {
+  display: grid;
+  gap: var(--employee-space-5);
+}
+
+.taskDrawerTitle {
+  max-width: 28rem;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -.015em;
+}
+
+.taskDrawerDetails {
+  display: grid;
+  gap: var(--employee-space-1);
+  color: var(--employee-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.taskDrawerSources {
+  display: grid;
+  gap: var(--employee-space-5);
+  padding-top: var(--employee-space-1);
+}
+
+.taskDrawerSource {
+  display: grid;
+  gap: var(--employee-space-1);
+}
+
+.taskDrawerSourceTitle {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.taskDrawerSourceInstructions {
+  max-width: 34rem;
+  color: #555149;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .pocketActions {
