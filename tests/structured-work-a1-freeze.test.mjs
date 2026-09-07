@@ -26,12 +26,12 @@ test("A1 quarantines the only inventoried prose-first application writers", () =
   assert.match(inventory, /No new application-level operational writer may establish work meaning through prose alone/);
 });
 
-test("A1 provides one new structured-work entry boundary and rejects prose-only semantics", () => {
+test("A1 keeps one new structured-work entry boundary and rejects prose-only semantics", () => {
   const boundary = read("lib/atlas/structured-work-authoring.ts");
 
   assert.match(boundary, /beginStructuredWorkAuthoring/);
-  assert.match(boundary, /assertStructuredSemanticPayload/);
-  assert.match(boundary, /single approved entry boundary/i);
+  assert.match(boundary, /validateWorkGrammarV1/);
+  assert.match(boundary, /Single approved application entry boundary/i);
 
   assert.throws(
     () => assertStructuredSemanticPayload({ semanticComponents: [] }),
