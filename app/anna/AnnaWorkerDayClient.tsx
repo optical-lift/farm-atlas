@@ -5,6 +5,16 @@ import { useMemo, useState } from "react";
 
 import styles from "./employee-surface.module.css";
 
+type WorkerDaySourceWork = {
+  id: string;
+  role: "required" | "context" | "evidence";
+  title: string;
+  instructions: string | null;
+  workState: "open" | "completed" | "cancelled" | "superseded";
+  sourceObjectType: string | null;
+  sourceObjectId: string | null;
+};
+
 type WorkerDayItem = {
   id: string;
   key: string;
@@ -14,6 +24,7 @@ type WorkerDayItem = {
   institutionallyCompleted: boolean;
   reportedCompleted: boolean;
   active: boolean;
+  sourceWork: WorkerDaySourceWork[];
 };
 
 type WorkerDayExtra = {
@@ -94,6 +105,14 @@ export default function AnnaWorkerDayClient({
   const [error, setError] = useState<string | null>(null);
 
   const allVisible = useMemo(() => items.length + extras.length, [items, extras]);
+
+  function openTaskDrawer(item: WorkerDayItem) {
+    window.dispatchEvent(
+      new CustomEvent("atlas:employee-task-open", {
+        detail: item,
+      }),
+    );
+  }
 
   async function requestPilot(payload: Record<string, unknown>) {
     setBusy(true);
@@ -221,16 +240,21 @@ export default function AnnaWorkerDayClient({
                 </span>
               )}
 
-              <div className={styles.taskCopy}>
+              <button
+                type="button"
+                onClick={() => openTaskDrawer(item)}
+                className={`${styles.taskCopy} ${styles.taskOpenButton}`}
+                aria-label={`Open ${item.title}`}
+              >
                 <span className={styles.taskTitle}>{item.title}</span>
                 {item.details.length > 0 ? (
-                  <div className={styles.taskDetails}>
+                  <span className={styles.taskDetails}>
                     {item.details.map((detail, index) => (
                       <span key={`${item.key}-detail-${index}`}>{detail}</span>
                     ))}
-                  </div>
+                  </span>
                 ) : null}
-              </div>
+              </button>
 
               {canEdit && !item.completed ? (
                 <button
