@@ -5,7 +5,11 @@ import {
   hashAnnaPilotToken,
 } from "@/lib/anna-worker-day-pilot";
 import { createAtlasAdminClient } from "@/lib/supabase/admin";
-import { getAnnaWorkerDelivery } from "@/lib/worker-delivery";
+import {
+  getAnnaWorkerDelivery,
+  getWorkerDelivery,
+} from "@/lib/worker-delivery";
+import { getCurrentWorkerSessionContext } from "@/lib/worker-session";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +93,10 @@ export async function POST(request: Request) {
       return noStoreJson({ ok: false, code: "projection_required" }, 400);
     }
 
-    const delivery = await getAnnaWorkerDelivery();
+    const workerContext = await getCurrentWorkerSessionContext();
+    const delivery = workerContext
+      ? await getWorkerDelivery(workerContext)
+      : await getAnnaWorkerDelivery();
     const item = delivery.items.find((candidate) => candidate.id === body.projectionId);
 
     if (!item) {
