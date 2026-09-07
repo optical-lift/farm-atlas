@@ -10,22 +10,10 @@ export type EmployerPocketItem = {
   detail: string;
 };
 
-type WorkerDaySourceWork = {
-  id: string;
-  role: "required" | "context" | "evidence";
-  title: string;
-  instructions: string | null;
-  workState: "open" | "completed" | "cancelled" | "superseded";
-  sourceObjectType: string | null;
-  sourceObjectId: string | null;
-};
-
 type WorkerDayDrawerItem = {
   id: string;
   title: string;
-  details: string[];
   completed: boolean;
-  sourceWork: WorkerDaySourceWork[];
 };
 
 export default function EmployerPocket({ items }: { items: EmployerPocketItem[] }) {
@@ -79,29 +67,6 @@ export default function EmployerPocket({ items }: { items: EmployerPocketItem[] 
           {selectedTask ? (
             <div className={styles.taskDrawer}>
               <div className={styles.taskDrawerTitle}>{selectedTask.title}</div>
-
-              {selectedTask.details.length > 0 ? (
-                <div className={styles.taskDrawerDetails}>
-                  {selectedTask.details.map((detail, index) => (
-                    <div key={`${selectedTask.id}-detail-${index}`}>{detail}</div>
-                  ))}
-                </div>
-              ) : null}
-
-              {selectedTask.sourceWork.length > 0 ? (
-                <div className={styles.taskDrawerSources}>
-                  {selectedTask.sourceWork.map((source) => (
-                    <article key={source.id} className={styles.taskDrawerSource}>
-                      {selectedTask.sourceWork.length > 1 ? (
-                        <div className={styles.taskDrawerSourceTitle}>{source.title}</div>
-                      ) : null}
-                      {source.instructions ? (
-                        <div className={styles.taskDrawerSourceInstructions}>{source.instructions}</div>
-                      ) : null}
-                    </article>
-                  ))}
-                </div>
-              ) : null}
             </div>
           ) : (
             <>
