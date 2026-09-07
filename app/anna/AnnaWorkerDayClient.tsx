@@ -5,26 +5,14 @@ import { useMemo, useState } from "react";
 
 import styles from "./employee-surface.module.css";
 
-type WorkerDaySourceWork = {
-  id: string;
-  role: "required" | "context" | "evidence";
-  title: string;
-  instructions: string | null;
-  workState: "open" | "completed" | "cancelled" | "superseded";
-  sourceObjectType: string | null;
-  sourceObjectId: string | null;
-};
-
 type WorkerDayItem = {
   id: string;
   key: string;
   title: string;
-  details: string[];
   completed: boolean;
   institutionallyCompleted: boolean;
   reportedCompleted: boolean;
   active: boolean;
-  sourceWork: WorkerDaySourceWork[];
 };
 
 type WorkerDayExtra = {
@@ -109,7 +97,11 @@ export default function AnnaWorkerDayClient({
   function openTaskDrawer(item: WorkerDayItem) {
     window.dispatchEvent(
       new CustomEvent("atlas:employee-task-open", {
-        detail: item,
+        detail: {
+          id: item.id,
+          title: item.title,
+          completed: item.completed,
+        },
       }),
     );
   }
@@ -247,13 +239,6 @@ export default function AnnaWorkerDayClient({
                 aria-label={`Open ${item.title}`}
               >
                 <span className={styles.taskTitle}>{item.title}</span>
-                {item.details.length > 0 ? (
-                  <span className={styles.taskDetails}>
-                    {item.details.map((detail, index) => (
-                      <span key={`${item.key}-detail-${index}`}>{detail}</span>
-                    ))}
-                  </span>
-                ) : null}
               </button>
 
               {canEdit && !item.completed ? (
