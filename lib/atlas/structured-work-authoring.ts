@@ -1,23 +1,26 @@
 import "server-only";
 
-import { assertStructuredSemanticPayload } from "@/lib/atlas/structured-work-authoring-core.js";
+import {
+  type WorkGrammarV1Package,
+  validateWorkGrammarV1,
+} from "@/lib/atlas/work-grammar-v1";
 
 /**
- * Release A1's single approved entry boundary for NEW structured-work code.
+ * Single approved application entry boundary for NEW structured-work code.
  *
- * A2 will replace the deliberately generic component type with the governed
- * ten-box Work Grammar. This function does not write canonical work yet; it
- * prevents new code from treating prose as the semantics while that writer is
- * being built.
+ * This still does not write canonical work. Release A6 will add the governed
+ * persistence service after database mapping and missing canonical support are
+ * settled. Source prose may accompany the package as evidence, but the work's
+ * operational meaning must validate inside Work Grammar V1 first.
  */
 export type StructuredWorkAuthoringSeed = {
-  semanticComponents: readonly Record<string, unknown>[];
+  grammar: WorkGrammarV1Package;
   sourceProse?: string | null;
 };
 
 export function beginStructuredWorkAuthoring(
   seed: StructuredWorkAuthoringSeed,
 ): StructuredWorkAuthoringSeed {
-  assertStructuredSemanticPayload(seed);
+  validateWorkGrammarV1(seed.grammar);
   return seed;
 }
