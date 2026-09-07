@@ -5,6 +5,7 @@ import {
   readAtlasOwnerOperatorContext,
 } from "@/lib/atlas/operator-context";
 import { getAtlasSession } from "@/lib/atlas/session";
+import { assertLegacyProseWorkWriterRegistered } from "@/lib/atlas/structured-work-authoring-guard";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,8 @@ function optionalDate(value: unknown) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  assertLegacyProseWorkWriterRegistered("project-task-v1");
+
   const session = await getAtlasSession();
   if (!session) return privateJson({ ok: false, error: "Sign in required." }, 401);
   if (!session.organizationMemberships.length) {
