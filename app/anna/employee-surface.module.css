@@ -60,27 +60,6 @@
   margin-bottom: var(--employee-space-6);
 }
 
-.identity {
-  display: flex;
-  align-items: center;
-  gap: var(--employee-space-2);
-  min-height: 16px;
-}
-
-.identityName {
-  font-family: var(--employee-serif), "EB Garamond", Georgia, serif;
-  font-size: 20px;
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: -.01em;
-}
-
-.orientationMark {
-  width: 14px;
-  height: 14px;
-  opacity: .58;
-}
-
 .date {
   margin: 0;
   font-size: 25px;
@@ -355,6 +334,36 @@
   line-height: 1.45;
 }
 
+.pocketActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--employee-space-2);
+  margin-top: var(--employee-space-8);
+  padding-top: var(--employee-space-4);
+  border-top: 1px solid var(--employee-rule);
+}
+
+.pocketActionButton {
+  appearance: none;
+  min-height: 32px;
+  border: 1px solid rgba(24, 23, 19, .2);
+  border-radius: 0;
+  background: transparent;
+  padding: 6px 8px;
+  color: #67635b;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+  text-align: center;
+}
+
+.pocketActionButton:hover,
+.pocketActionButton:focus-visible {
+  border-color: rgba(24, 23, 19, .4);
+  color: var(--employee-ink);
+}
+
 .dialogScrim {
   position: fixed;
   inset: 0;
@@ -404,7 +413,7 @@
   }
 
   .page {
-    padding-top: var(--employee-space-7, 28px);
+    padding-top: 28px;
   }
 
   .header {
