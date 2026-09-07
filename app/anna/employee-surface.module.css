@@ -1,0 +1,428 @@
+/*
+  ATLAS EMPLOYEE SURFACE GEOMETRY
+  ===============================
+
+  Visual contract only. This file does not define worker identity, authority,
+  Worker Day semantics, employer-message semantics, or employee data models.
+
+  It inherits the public Atlas design law:
+    - U = 4px
+    - one paper family
+    - Source Sans for institutional work
+    - EB Garamond for identity/orientation
+    - hierarchy through type and geometry rather than cards
+    - stable objects move; pages do not visibly reflow to simulate motion
+
+  Employee Today is a field notebook issued by the institution, not a dashboard.
+*/
+
+.surface {
+  --employee-u: 4px;
+  --employee-space-1: 4px;
+  --employee-space-2: 8px;
+  --employee-space-3: 12px;
+  --employee-space-4: 16px;
+  --employee-space-5: 20px;
+  --employee-space-6: 24px;
+  --employee-space-8: 32px;
+  --employee-paper: #f4f1ea;
+  --employee-page: #fffdf8;
+  --employee-ink: #181713;
+  --employee-muted: #74716a;
+  --employee-brass: #b79a62;
+  --employee-dot: rgba(23, 22, 18, 0.055);
+  --employee-rule: rgba(23, 22, 18, 0.13);
+  --employee-motion: cubic-bezier(.22, .61, .36, 1);
+  --employee-max-width: 680px;
+  --employee-gutter: 20px;
+
+  min-height: 100dvh;
+  width: 100%;
+  color: var(--employee-ink);
+  background: var(--employee-paper);
+}
+
+.page {
+  position: relative;
+  width: min(var(--employee-max-width), 100%);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: var(--employee-space-8) var(--employee-gutter) calc(112px + env(safe-area-inset-bottom));
+  background-color: var(--employee-page);
+  background-image: radial-gradient(circle, var(--employee-dot) .62px, transparent .72px);
+  background-size: 15px 15px;
+  background-position: 7.5px 7.5px;
+}
+
+.header {
+  display: grid;
+  gap: var(--employee-space-6);
+  margin-bottom: var(--employee-space-6);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--employee-space-2);
+  min-height: 16px;
+}
+
+.identityName {
+  font-family: var(--employee-serif), "EB Garamond", Georgia, serif;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -.01em;
+}
+
+.orientationMark {
+  width: 14px;
+  height: 14px;
+  opacity: .58;
+}
+
+.date {
+  margin: 0;
+  font-size: 25px;
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -.025em;
+}
+
+.taskList {
+  display: grid;
+  gap: 0;
+}
+
+.task {
+  padding: 10px 0;
+}
+
+.taskMain {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 20px;
+  gap: 8px;
+  align-items: start;
+}
+
+.taskMarkButton,
+.taskMarkStatic,
+.attentionButton {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.taskMarkButton {
+  width: 24px;
+  height: 28px;
+  display: grid;
+  place-items: center start;
+  cursor: pointer;
+}
+
+.taskMarkStatic {
+  width: 24px;
+  height: 28px;
+  display: grid;
+  place-items: center start;
+}
+
+.taskMark {
+  width: 18px;
+  height: 18px;
+  overflow: visible;
+  transform: translateY(2px);
+}
+
+.taskMark path,
+.taskMark circle {
+  vector-effect: non-scaling-stroke;
+}
+
+.taskCopy {
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.taskTitle {
+  display: block;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: -.006em;
+  overflow-wrap: anywhere;
+}
+
+.completed .taskTitle,
+.completed .taskDetails {
+  opacity: .48;
+}
+
+.taskDetails {
+  display: grid;
+  gap: var(--employee-space-1);
+  margin-top: var(--employee-space-1);
+  color: #59564f;
+  font-size: 13px;
+  line-height: 1.48;
+}
+
+.attentionButton {
+  width: 20px;
+  height: 28px;
+  display: grid;
+  place-items: center end;
+  cursor: pointer;
+}
+
+.attentionMark {
+  width: 2px;
+  height: 20px;
+  background: var(--employee-brass);
+}
+
+.extra {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 10px 0;
+}
+
+.extraTitle {
+  padding-top: 1px;
+  font-size: 16px;
+  line-height: 1.4;
+  opacity: .56;
+}
+
+.addArea {
+  margin-top: var(--employee-space-6);
+  padding-top: var(--employee-space-4);
+  border-top: 1px solid var(--employee-rule);
+}
+
+.textButton {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  color: var(--employee-muted);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  text-align: left;
+}
+
+.extraComposer {
+  display: grid;
+  gap: var(--employee-space-2);
+}
+
+.lineInput {
+  width: 100%;
+  padding: 7px 2px 8px;
+  border: 0;
+  border-bottom: 1px solid rgba(24, 23, 19, .32);
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--employee-ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.composerActions {
+  display: flex;
+  gap: var(--employee-space-4);
+}
+
+.error {
+  margin-top: var(--employee-space-4);
+  color: var(--employee-muted);
+  font-size: 13px;
+}
+
+.pocketViewport {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: 0;
+  width: min(var(--employee-max-width), 100%);
+  height: min(58dvh, 500px);
+  transform: translate(-50%, calc(100% - 56px));
+  transition: transform 420ms var(--employee-motion);
+  pointer-events: none;
+}
+
+.pocketViewportOpen {
+  transform: translate(-50%, 0);
+}
+
+.pocketSheet {
+  width: 100%;
+  height: 100%;
+  background: var(--employee-paper);
+  border-top: 1px solid rgba(24, 23, 19, .22);
+  box-shadow: 0 -8px 24px rgba(24, 23, 19, .035);
+  pointer-events: auto;
+  display: grid;
+  grid-template-rows: 56px minmax(0, 1fr);
+}
+
+.pocketToggle {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 100%;
+  min-height: 56px;
+  padding: 7px var(--employee-gutter) 9px;
+  color: var(--employee-ink);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.pocketHandle {
+  display: block;
+  width: 24px;
+  height: 1px;
+  margin: 0 auto 8px;
+  background: rgba(24, 23, 19, .36);
+}
+
+.pocketHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--employee-space-4);
+}
+
+.pocketLabel {
+  color: #5d5a53;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.pocketCount {
+  color: var(--employee-muted);
+  font-size: 11px;
+}
+
+.pocketBody {
+  overflow: auto;
+  padding: var(--employee-space-5) var(--employee-gutter) calc(var(--employee-space-8) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--employee-rule);
+}
+
+.pocketRows {
+  display: grid;
+  gap: var(--employee-space-6);
+}
+
+.pocketRow {
+  display: grid;
+  gap: var(--employee-space-1);
+}
+
+.pocketRowLabel {
+  color: #5d5a53;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.pocketRowTitle {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.pocketRowDetail {
+  color: var(--employee-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.dialogScrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--employee-space-5);
+  background: rgba(244, 241, 234, .88);
+}
+
+.dialog {
+  width: min(360px, 100%);
+  padding: var(--employee-space-5);
+  background: var(--employee-page);
+  border: 1px solid var(--employee-rule);
+  box-shadow: 0 12px 40px rgba(24, 23, 19, .07);
+}
+
+.dialogCopy {
+  margin-bottom: var(--employee-space-4);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.dialogChoices {
+  display: grid;
+  gap: var(--employee-space-2);
+}
+
+.choiceButton {
+  appearance: none;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 5px 0;
+  color: var(--employee-ink);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.4;
+  cursor: pointer;
+  text-align: left;
+}
+
+@media (max-width: 720px) {
+  .surface {
+    background: var(--employee-page);
+  }
+
+  .page {
+    padding-top: var(--employee-space-7, 28px);
+  }
+
+  .header {
+    gap: var(--employee-space-5);
+    margin-bottom: var(--employee-space-5);
+  }
+
+  .date {
+    font-size: 24px;
+  }
+
+  .pocketViewport {
+    height: min(62dvh, 500px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pocketViewport {
+    transition: none;
+  }
+}
