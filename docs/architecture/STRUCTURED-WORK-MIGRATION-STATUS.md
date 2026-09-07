@@ -7,8 +7,8 @@ This file is the compact cross-pass status ledger. The governing architecture re
 ## Current position
 
 - Release: **A — Semantic Foundation**
-- Completed through: **A1 — Freeze new prose-only operational semantics**
-- Next authorized step: **A2 — Define Work Grammar V1 contracts and governed vocabularies**
+- Completed through: **A2 — Define Work Grammar V1 contracts and governed vocabularies**
+- Next authorized step: **A3 — Map existing database rails to the grammar**
 - Canonical schema changes made so far: **none**
 
 ## A1 — complete
@@ -19,34 +19,63 @@ A1 established the following boundaries:
    - `manual-task-v1` → `app/api/atlas/manual-task/route.ts` → `create_manual_task_v1`
    - `project-task-v1` → `app/api/atlas/projects/[projectId]/tasks/route.ts` → `owner_operator_create_project_task_v1` / `create_project_task_v1`
 2. New structured-work code has one reserved application entry boundary: `beginStructuredWorkAuthoring` in `lib/atlas/structured-work-authoring.ts`.
-3. Until A2 supplies the governed ten-box types, that boundary rejects authoring inputs that contain only prose/display/instruction fields and requires at least one non-prose semantic component.
-4. The Worker Day employee payload has been reduced to the default exposure floor. It no longer fetches or serializes `work_items.instructions`, source-work prose, or projection detail prose. The task drawer receives only task identity needed for the interaction (`id`, rendered title, completion state).
-5. `tests/structured-work-a1-freeze.test.mjs` enforces the quarantine, prose-only rejection, and employee title-only boundary.
+3. The Worker Day employee payload has been reduced to the default exposure floor. It no longer fetches or serializes `work_items.instructions`, source-work prose, or projection detail prose. The task drawer receives only task identity needed for the interaction (`id`, rendered title, completion state).
+4. `tests/structured-work-a1-freeze.test.mjs` enforces the quarantine, prose-only rejection, and employee title-only boundary.
 
-## A1 commits
+### A1 production
 
-- `d349975da8066a1f88fe9fa12abac93a41a6821d` — register legacy prose work writers
-- `7d7088583eb90a23dada90215f413e6d66a2b17d` — quarantine manual task writer
-- `b56d954b05d8b6ba0cb226c4342fddf275b18bdb` — quarantine project task writer
-- `005fe2ab7daf2acc9ec4de76db3a68c625c4d7f5` — inventory compatibility writers
-- `285c6581d10cd8ea37e1b3d00393a1b2811e8927` — remove canonical prose from Worker Day delivery
-- `9c49ead95f172d6e3ee6e24855b954b42c5cbd7d` — reduce employee drawer event payload
-- `3556cfc5f335e490d68c856e9702ce22ba9d6425` — render task drawer title-only
-- `69c124585d131baa596e16633eee78ef0e12ce1f` — add A1 semantic authoring gate
-- `74ac2f1e5f6f583e448266e981cb403e506bc40b` — establish the single new-work entry boundary
-- `64dc3ba2793b1eccff34a04f3306eee34e048bd1` — prove A1 invariants in tests
+A1 safety behavior was released through deployment `dpl_Fe2JrsUrexquZeHsYWYUEeWcN65o`, which reached READY and serves `atlas.elmfarm.co`. Vercel validation reported 2,330 tests passed and 0 failed, and the production build completed. The Vercel release gate was restored to `deploymentEnabled: false` afterward.
 
-## Validation
+## A2 — complete
 
-For A1 head `64dc3ba2793b1eccff34a04f3306eee34e048bd1`:
+A2 established the ten-box Work Grammar as application contracts without changing the canonical database schema.
+
+Implemented:
+
+1. `lib/atlas/work-grammar-v1-core.js` — runtime governed vocabulary and validator.
+2. `lib/atlas/work-grammar-v1.ts` — TypeScript contracts for:
+   - Work Act
+   - Referent
+   - Claim
+   - Relation
+   - Specification
+   - Temporal Contract
+   - Constraint
+   - Requirement / Gate
+   - Composition
+   - Result Contract
+3. `lib/atlas/structured-work-authoring.ts` — the single new-work application boundary is now bound to `WorkGrammarV1Package` validation.
+4. The validator rejects prose/presentation escape hatches such as `title`, `instructions`, `note`, `detail`, `display_*`, `execution_*`, and scripts inside canonical semantic packages.
+5. Domain `operation` remains an open governed semantic key rather than turning the 173 legacy task types into a new fixed ontology.
+6. Referents require canonical identity pairs (`kind`, `id`) rather than copied display nouns.
+7. Claim modality is independent from adjudication state.
+8. Constraint, Requirement, and Gate are distinct contracts.
+9. Composition is distinct from durable Work identity.
+10. Result Contract describes typed evidence/effects rather than assuming generic `Done`.
+
+### A2 commits
+
+- `9a4989b90985e4668d19063ec03606429dad865a` — Work Grammar V1 runtime validator and vocabularies
+- `e71070a80ea744931ad4ae4bf792234e54dd18d3` — Work Grammar V1 TypeScript contracts
+- `f5fbf5934fca2595118a4bbc2ec8cef06d375644` — bind structured authoring boundary to Work Grammar V1
+- `db3bd70426d4783235ebd0f154ec58034c48e963` — retain A1 invariants through A2 boundary
+- `f8ea5b1c83f4d6edbe6fddbcc36040e25331e262` — A2 grammar distinction tests
+
+### A2 validation
+
+For A2 head `f8ea5b1c83f4d6edbe6fddbcc36040e25331e262`:
 
 - architecture job: passed
 - full test suite: passed
 - Next.js production build: passed
-- live source-custody job: failed at `Prove live Atlas source custody`
+- live source-custody job: failed at the same pre-existing `Prove live Atlas source custody` step documented before A1
 
-The source-custody failure is a pre-existing baseline condition, not introduced by A1. The governing-plan commit `6057970930579cbc248d501030022bee2833a2b1` had the same live source-custody failure while its tests/build passed. Do not silently treat that external/live custody failure as repaired by this migration.
+A2 changes no production-facing behavior and therefore was not separately released to production. The safety behavior that mattered immediately was already released in A1.
 
-## A2 entry condition
+## Known unrelated CI baseline
 
-Proceed to A2 without schema changes in `farm-atlas`. A2 defines the server-side ten-box Work Grammar contracts and governed universal vocabulary. If real production examples cannot fit those contracts without prose carrying operational semantics, stop under the migration plan's grammar-failure rule rather than adding ad hoc boxes during implementation.
+The live source-custody job is failing at `Prove live Atlas source custody`. This failure predates the Structured Work implementation: the governing-plan commit `6057970930579cbc248d501030022bee2833a2b1` had the same failure while its application tests/build passed. Do not attribute that live external custody issue to A1/A2 and do not silently mark it repaired.
+
+## A3 entry condition
+
+A3 is inspection and mapping only. It may inspect production schema and data, but it must make **no DDL and no canonical data mutation**. Every existing structured-work rail must receive one declared semantic responsibility, overlaps must be documented, and missing canonical capabilities must be isolated for A4/A5 rather than solved by creating a parallel task store.
