@@ -2,15 +2,23 @@ import { Source_Sans_3 } from "next/font/google";
 
 import AnnaWorkerDayClient from "@/app/anna/AnnaWorkerDayClient";
 import { getAnnaPilotEditState } from "@/lib/anna-worker-day-pilot";
-import { formatElmDay, getAnnaWorkerDelivery } from "@/lib/worker-delivery";
+import {
+  formatElmDay,
+  getAnnaWorkerDelivery,
+  getWorkerDelivery,
+} from "@/lib/worker-delivery";
+import { getCurrentWorkerSessionContext } from "@/lib/worker-session";
 
 export const dynamic = "force-dynamic";
 
 const sourceSans = Source_Sans_3({ subsets: ["latin"] });
 
 export default async function AnnaPage() {
+  const workerContext = await getCurrentWorkerSessionContext();
   const [delivery, pilot] = await Promise.all([
-    getAnnaWorkerDelivery(),
+    workerContext
+      ? getWorkerDelivery(workerContext)
+      : getAnnaWorkerDelivery(),
     getAnnaPilotEditState(),
   ]);
 
