@@ -15,7 +15,7 @@ export default function EmployerPocket({ items }: { items: EmployerPocketItem[] 
 
   return (
     <div className={`${styles.pocketViewport}${open ? ` ${styles.pocketViewportOpen}` : ""}`}>
-      <section className={styles.pocketSheet} aria-label="From Elm">
+      <section className={styles.pocketSheet} aria-label="This week at Elm">
         <button
           type="button"
           aria-expanded={open}
@@ -25,7 +25,7 @@ export default function EmployerPocket({ items }: { items: EmployerPocketItem[] 
         >
           <span className={styles.pocketHandle} aria-hidden="true" />
           <span className={styles.pocketHeading}>
-            <span className={styles.pocketLabel}>From Elm</span>
+            <span className={styles.pocketLabel}>This Week</span>
             <span className={styles.pocketCount}>{items.length}</span>
           </span>
         </button>
@@ -39,6 +39,15 @@ export default function EmployerPocket({ items }: { items: EmployerPocketItem[] 
                 <div className={styles.pocketRowDetail}>{item.detail}</div>
               </article>
             ))}
+          </div>
+
+          <div className={styles.pocketActions} aria-label="Worker reporting preview">
+            <button type="button" className={styles.pocketActionButton}>
+              Log a problem
+            </button>
+            <button type="button" className={styles.pocketActionButton}>
+              Log a completed task
+            </button>
           </div>
         </div>
       </section>
