@@ -34,7 +34,11 @@ type ProjectionSourceRow = {
 
 type WorkItemRow = {
   id: string;
+  title: string;
+  instructions: string | null;
   work_state: "open" | "completed" | "cancelled" | "superseded";
+  source_object_type: string | null;
+  source_object_id: string | null;
 };
 
 type PilotEventRow = {
@@ -51,6 +55,16 @@ type PilotEventRow = {
   reported_title: string | null;
 };
 
+export type WorkerDeliverySourceWork = {
+  id: string;
+  role: "required" | "context" | "evidence";
+  title: string;
+  instructions: string | null;
+  workState: "open" | "completed" | "cancelled" | "superseded";
+  sourceObjectType: string | null;
+  sourceObjectId: string | null;
+};
+
 export type WorkerDeliveryItem = {
   id: string;
   key: string;
@@ -63,6 +77,7 @@ export type WorkerDeliveryItem = {
   plannedDate: string;
   originalPlannedDate: string;
   carried: boolean;
+  sourceWork: WorkerDeliverySourceWork[];
 };
 
 export type WorkerReportedExtra = {
@@ -147,12 +162,12 @@ async function loadWorkerDelivery(
   }
 
   const workItemIds = [...new Set(sources.map((row) => row.work_item_id))];
-  const workStateById = new Map<string, WorkItemRow["work_state"]>();
+  const workItemById = new Map<string, WorkItemRow>();
 
   if (workItemIds.length > 0) {
     const { data: workData, error: workError } = await supabase
       .from("work_items")
-      .select("id,work_state")
+      .select("id,title,instructions,work_state,source_object_type,source_object_id")
       .in("id", workItemIds);
 
     if (workError) {
@@ -160,7 +175,7 @@ async function loadWorkerDelivery(
     }
 
     for (const workItem of (workData ?? []) as WorkItemRow[]) {
-      workStateById.set(workItem.id, workItem.work_state);
+      workItemById.set(workItem.id, workItem);
     }
   }
 
@@ -206,7 +221,9 @@ async function loadWorkerDelivery(
     const rowSources = sources.filter((source) => source.projection_id === row.id);
     const required = rowSources.filter((source) => source.source_role === "required");
 
-    const requiredStates = required.map((source) => workStateById.get(source.work_item_id));
+    const requiredStates = required.map(
+      (source) => workItemById.get(source.work_item_id)?.work_state,
+    );
     const institutionallyCompleted =
       required.length > 0 &&
       requiredStates.every((state) => state === "completed");
@@ -223,6 +240,23 @@ async function loadWorkerDelivery(
     if (row.planned_date === today && noLongerDeliverable) {
       return [];
     }
+
+    const sourceWork = rowSources.flatMap<WorkerDeliverySourceWork>((source) => {
+      const workItem = workItemById.get(source.work_item_id);
+      if (!workItem) return [];
+
+      return [
+        {
+          id: workItem.id,
+          role: source.source_role,
+          title: workItem.title,
+          instructions: workItem.instructions,
+          workState: workItem.work_state,
+          sourceObjectType: workItem.source_object_type,
+          sourceObjectId: workItem.source_object_id,
+        },
+      ];
+    });
 
     return [
       {
@@ -241,6 +275,7 @@ async function loadWorkerDelivery(
         plannedDate: row.planned_date,
         originalPlannedDate: row.original_planned_date ?? row.planned_date,
         carried: row.planned_date < today,
+        sourceWork,
       },
     ];
   });
