@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import styles from "./employee-surface.module.css";
+
 type WorkerDayItem = {
   id: string;
   key: string;
@@ -34,19 +36,6 @@ type PilotResponse = {
   activeTitle?: string;
 };
 
-const taskTextStyle = {
-  fontSize: 16,
-  lineHeight: 1.45,
-  overflowWrap: "anywhere",
-} as const;
-
-const detailTextStyle = {
-  fontSize: 13,
-  lineHeight: 1.45,
-  color: "#4a4a4a",
-  overflowWrap: "anywhere",
-} as const;
-
 function currentTimeValue() {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -57,6 +46,34 @@ function todayAtTime(value: string) {
   const when = new Date();
   when.setHours(hours, minutes, 0, 0);
   return when.toISOString();
+}
+
+function TaskMark({ completed }: { completed: boolean }) {
+  return (
+    <svg className={styles.taskMark} viewBox="0 0 22 22" aria-hidden="true">
+      {completed ? (
+        <>
+          <circle cx="11" cy="11" r="7.25" fill="#181713" opacity="0.78" />
+          <path
+            d="M5.5 11.1c1.8-3.6 7.4-6.8 10.9-2.4 2.3 2.9.3 7.1-3 8.2-4.2 1.4-8.8-1.8-7.9-5.8Z"
+            fill="none"
+            stroke="#181713"
+            strokeWidth="0.8"
+            opacity="0.32"
+          />
+        </>
+      ) : (
+        <path
+          d="M5.3 11.3c.2-4.1 3.1-7.2 6.8-7.1 3.9.1 6.7 3.3 6.3 7.1-.4 3.8-3.4 6.7-7.2 6.5-3.9-.2-6.1-3.1-5.9-6.5Z"
+          fill="none"
+          stroke="#181713"
+          strokeWidth="1.05"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+    </svg>
+  );
 }
 
 export default function AnnaWorkerDayClient({
@@ -179,50 +196,41 @@ export default function AnnaWorkerDayClient({
 
   return (
     <>
-      <div style={{ display: "grid", gap: 12 }}>
+      <div className={styles.taskList}>
         {items.map((item) => (
           <div
             key={item.key}
             data-anna-task-key={item.key}
             data-worker-projection-id={item.id}
+            className={`${styles.task}${item.completed ? ` ${styles.completed}` : ""}`}
           >
-            <div
-              style={{
-                ...taskTextStyle,
-                display: "grid",
-                gridTemplateColumns: "22px minmax(0, 1fr) 28px",
-                columnGap: 7,
-                alignItems: "start",
-              }}
-            >
+            <div className={styles.taskMain}>
               {canEdit && !item.institutionallyCompleted ? (
                 <button
                   type="button"
                   disabled={busy}
                   aria-label={item.completed ? `Reopen ${item.title}` : `Mark ${item.title} done`}
                   onClick={() => void handleCompletion(item)}
-                  style={{
-                    appearance: "none",
-                    border: 0,
-                    background: "transparent",
-                    padding: 0,
-                    margin: 0,
-                    color: "inherit",
-                    font: "inherit",
-                    lineHeight: 1.45,
-                    cursor: busy ? "default" : "pointer",
-                    textAlign: "left",
-                  }}
+                  className={styles.taskMarkButton}
                 >
-                  {item.completed ? "●" : "○"}
+                  <TaskMark completed={item.completed} />
                 </button>
               ) : (
-                <span aria-hidden="true" style={{ lineHeight: 1.45 }}>
-                  {item.completed ? "●" : "○"}
+                <span className={styles.taskMarkStatic}>
+                  <TaskMark completed={item.completed} />
                 </span>
               )}
 
-              <span>{item.title}</span>
+              <div className={styles.taskCopy}>
+                <span className={styles.taskTitle}>{item.title}</span>
+                {item.details.length > 0 ? (
+                  <div className={styles.taskDetails}>
+                    {item.details.map((detail, index) => (
+                      <span key={`${item.key}-detail-${index}`}>{detail}</span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
 
               {canEdit && !item.completed ? (
                 <button
@@ -230,80 +238,33 @@ export default function AnnaWorkerDayClient({
                   disabled={busy}
                   aria-label={item.active ? `Stop working on ${item.title}` : `Work on ${item.title}`}
                   onClick={() => void handleAttention(item)}
-                  style={{
-                    appearance: "none",
-                    border: 0,
-                    background: "transparent",
-                    padding: "1px 0 0",
-                    margin: 0,
-                    width: 28,
-                    height: 24,
-                    cursor: busy ? "default" : "pointer",
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    alignItems: "flex-start",
-                  }}
+                  className={styles.attentionButton}
                 >
-                  <span
-                    aria-hidden="true"
-                    style={{
-                      display: "block",
-                      height: 19,
-                      borderLeft: item.active ? "2px solid #111" : "1px solid #a6a6a6",
-                    }}
-                  />
+                  {item.active ? <span className={styles.attentionMark} aria-hidden="true" /> : null}
                 </button>
+              ) : item.active ? (
+                <span className={styles.attentionMark} aria-hidden="true" />
               ) : (
-                <span
-                  aria-hidden="true"
-                  style={{
-                    justifySelf: "end",
-                    marginTop: 1,
-                    height: 19,
-                    borderLeft: item.active ? "2px solid #111" : "1px solid #d2d2d2",
-                  }}
-                />
+                <span aria-hidden="true" />
               )}
             </div>
-
-            {item.details.length > 0 ? (
-              <ul
-                style={{
-                  ...detailTextStyle,
-                  margin: "5px 35px 0 29px",
-                  paddingLeft: 20,
-                }}
-              >
-                {item.details.map((detail, index) => (
-                  <li key={`${item.key}-detail-${index}`}>{detail}</li>
-                ))}
-              </ul>
-            ) : null}
           </div>
         ))}
 
         {extras.map((extra) => (
-          <div
-            key={extra.key}
-            style={{
-              ...taskTextStyle,
-              display: "grid",
-              gridTemplateColumns: "22px minmax(0, 1fr) 28px",
-              columnGap: 7,
-              alignItems: "start",
-            }}
-          >
-            <span aria-hidden="true">●</span>
-            <span>{extra.title}</span>
-            <span aria-hidden="true" />
+          <div key={extra.key} className={styles.extra}>
+            <span className={styles.taskMarkStatic}>
+              <TaskMark completed />
+            </span>
+            <span className={styles.extraTitle}>{extra.title}</span>
           </div>
         ))}
       </div>
 
       {canEdit ? (
-        <div style={{ marginTop: allVisible > 0 ? 24 : 0 }}>
+        <div className={styles.addArea} style={{ marginTop: allVisible > 0 ? undefined : 0 }}>
           {extraOpen ? (
-            <div style={{ display: "grid", gap: 8 }}>
+            <div className={styles.extraComposer}>
               <input
                 autoFocus
                 value={extraTitle}
@@ -316,24 +277,14 @@ export default function AnnaWorkerDayClient({
                 }}
                 placeholder="What did you do?"
                 aria-label="Something I did"
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  border: "1px solid #c9c9c9",
-                  borderRadius: 0,
-                  background: "#fff",
-                  color: "#111",
-                  font: "inherit",
-                  fontSize: 16,
-                  padding: "8px 9px",
-                }}
+                className={styles.lineInput}
               />
-              <div style={{ display: "flex", gap: 14, fontSize: 14 }}>
+              <div className={styles.composerActions}>
                 <button
                   type="button"
                   disabled={busy || !extraTitle.trim()}
                   onClick={() => void addExtra()}
-                  style={textButtonStyle}
+                  className={styles.textButton}
                 >
                   Add
                 </button>
@@ -344,7 +295,7 @@ export default function AnnaWorkerDayClient({
                     setExtraOpen(false);
                     setExtraTitle("");
                   }}
-                  style={textButtonStyle}
+                  className={styles.textButton}
                 >
                   Cancel
                 </button>
@@ -355,11 +306,7 @@ export default function AnnaWorkerDayClient({
               type="button"
               disabled={busy}
               onClick={() => setExtraOpen(true)}
-              style={{
-                ...textButtonStyle,
-                fontSize: 14,
-                color: "#555",
-              }}
+              className={styles.textButton}
             >
               + Add something I did
             </button>
@@ -368,7 +315,7 @@ export default function AnnaWorkerDayClient({
       ) : null}
 
       {error ? (
-        <div role="status" style={{ marginTop: 16, fontSize: 13, color: "#555" }}>
+        <div role="status" className={styles.error}>
           {error}
         </div>
       ) : null}
@@ -378,36 +325,20 @@ export default function AnnaWorkerDayClient({
           role="dialog"
           aria-modal="true"
           aria-label="Previous work is still active"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 50,
-            display: "grid",
-            placeItems: "center",
-            padding: 20,
-            background: "rgba(255,255,255,0.72)",
-          }}
+          className={styles.dialogScrim}
         >
-          <div
-            style={{
-              width: "min(360px, 100%)",
-              boxSizing: "border-box",
-              border: "1px solid #bdbdbd",
-              background: "#fff",
-              padding: 18,
-            }}
-          >
+          <div className={styles.dialog}>
             {!conflict.choosingStopTime ? (
               <>
-                <div style={{ fontSize: 15, lineHeight: 1.45, marginBottom: 16 }}>
+                <div className={styles.dialogCopy}>
                   <strong>{conflict.activeTitle}</strong> is still being worked on.
                 </div>
-                <div style={{ display: "grid", gap: 10 }}>
+                <div className={styles.dialogChoices}>
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => void resolveConflict("switch_finish")}
-                    style={choiceButtonStyle}
+                    className={styles.choiceButton}
                   >
                     I finished it
                   </button>
@@ -419,7 +350,7 @@ export default function AnnaWorkerDayClient({
                         current ? { ...current, choosingStopTime: true } : current,
                       )
                     }
-                    style={choiceButtonStyle}
+                    className={styles.choiceButton}
                   >
                     I stopped working on it
                   </button>
@@ -427,7 +358,7 @@ export default function AnnaWorkerDayClient({
                     type="button"
                     disabled={busy}
                     onClick={() => setConflict(null)}
-                    style={choiceButtonStyle}
+                    className={styles.choiceButton}
                   >
                     Never mind — I’m still working on it
                   </button>
@@ -435,15 +366,13 @@ export default function AnnaWorkerDayClient({
               </>
             ) : (
               <>
-                <div style={{ fontSize: 15, lineHeight: 1.45, marginBottom: 14 }}>
-                  When?
-                </div>
-                <div style={{ display: "grid", gap: 10 }}>
+                <div className={styles.dialogCopy}>When?</div>
+                <div className={styles.dialogChoices}>
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => void resolveConflict("switch_stop")}
-                    style={choiceButtonStyle}
+                    className={styles.choiceButton}
                   >
                     Now
                   </button>
@@ -452,25 +381,13 @@ export default function AnnaWorkerDayClient({
                     value={stopTime}
                     onChange={(event) => setStopTime(event.target.value)}
                     aria-label="Time I stopped"
-                    style={{
-                      width: "100%",
-                      boxSizing: "border-box",
-                      border: "1px solid #c9c9c9",
-                      borderRadius: 0,
-                      background: "#fff",
-                      color: "#111",
-                      font: "inherit",
-                      fontSize: 16,
-                      padding: "8px 9px",
-                    }}
+                    className={styles.lineInput}
                   />
                   <button
                     type="button"
                     disabled={busy || !stopTime}
-                    onClick={() =>
-                      void resolveConflict("switch_stop", todayAtTime(stopTime))
-                    }
-                    style={choiceButtonStyle}
+                    onClick={() => void resolveConflict("switch_stop", todayAtTime(stopTime))}
+                    className={styles.choiceButton}
                   >
                     Use this time
                   </button>
@@ -482,7 +399,7 @@ export default function AnnaWorkerDayClient({
                         current ? { ...current, choosingStopTime: false } : current,
                       )
                     }
-                    style={choiceButtonStyle}
+                    className={styles.choiceButton}
                   >
                     Back
                   </button>
@@ -495,23 +412,3 @@ export default function AnnaWorkerDayClient({
     </>
   );
 }
-
-const textButtonStyle = {
-  appearance: "none",
-  border: 0,
-  background: "transparent",
-  padding: 0,
-  margin: 0,
-  font: "inherit",
-  color: "inherit",
-  cursor: "pointer",
-  textAlign: "left",
-} as const;
-
-const choiceButtonStyle = {
-  ...textButtonStyle,
-  width: "100%",
-  fontSize: 15,
-  lineHeight: 1.4,
-  padding: "5px 0",
-} as const;
