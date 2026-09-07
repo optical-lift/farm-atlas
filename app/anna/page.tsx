@@ -1,6 +1,8 @@
-import { Source_Sans_3 } from "next/font/google";
+import { EB_Garamond, Source_Sans_3 } from "next/font/google";
 
 import AnnaWorkerDayClient from "@/app/anna/AnnaWorkerDayClient";
+import EmployerPocket from "@/app/anna/EmployerPocket";
+import styles from "@/app/anna/employee-surface.module.css";
 import { getAnnaPilotEditState } from "@/lib/anna-worker-day-pilot";
 import {
   formatElmDay,
@@ -12,6 +14,7 @@ import { getCurrentWorkerSessionContext } from "@/lib/worker-session";
 export const dynamic = "force-dynamic";
 
 const sourceSans = Source_Sans_3({ subsets: ["latin"] });
+const ebGaramond = EB_Garamond({ subsets: ["latin"] });
 
 const employerPocketItems = [
   {
@@ -42,166 +45,45 @@ export default async function AnnaPage() {
     <>
       <style>{`
         html, body {
-          background: #fff !important;
-          min-height: 100%;
-        }
-        body {
           margin: 0;
-        }
-        .elm-pocket {
-          position: fixed;
-          z-index: 40;
-          left: 50%;
-          bottom: 0;
-          transform: translateX(-50%);
-          width: min(680px, 100%);
-          max-height: 58px;
-          overflow: hidden;
-          box-sizing: border-box;
-          background: #faf9f6;
-          border: 1px solid #ded9d0;
-          border-bottom: 0;
-          border-radius: 16px 16px 0 0;
-          box-shadow: 0 -5px 18px rgba(24, 22, 19, 0.045);
-          transition: max-height 180ms ease, box-shadow 180ms ease;
-        }
-        .elm-pocket[open] {
-          max-height: min(68dvh, 560px);
-          overflow: auto;
-          box-shadow: 0 -14px 38px rgba(24, 22, 19, 0.08);
-        }
-        .elm-pocket summary {
-          list-style: none;
-          min-height: 58px;
-          box-sizing: border-box;
-          padding: 8px 18px 11px;
-          cursor: pointer;
-          user-select: none;
-        }
-        .elm-pocket summary::-webkit-details-marker {
-          display: none;
-        }
-        .elm-pocket-handle {
-          display: block;
-          width: 36px;
-          height: 2px;
-          margin: 0 auto 8px;
-          background: #bdb7ae;
-          border-radius: 999px;
-        }
-        .elm-pocket-heading {
-          display: flex;
-          align-items: baseline;
-          justify-content: space-between;
-          gap: 16px;
-        }
-        .elm-pocket-body {
-          border-top: 1px solid #e5e1da;
-          padding: 6px 18px calc(26px + env(safe-area-inset-bottom));
-        }
-        .elm-pocket-row {
-          padding: 18px 0 17px;
-          border-bottom: 1px solid #e5e1da;
-        }
-        .elm-pocket-row:last-child {
-          border-bottom: 0;
-        }
-        .elm-pocket-label {
-          margin-bottom: 5px;
-          font-size: 10px;
-          line-height: 1.2;
-          font-weight: 600;
-          letter-spacing: 0.09em;
-          text-transform: uppercase;
-          color: #777168;
-        }
-        .elm-pocket-title {
-          font-size: 15px;
-          line-height: 1.35;
-          color: #171614;
-        }
-        .elm-pocket-detail {
-          margin-top: 4px;
-          font-size: 13px;
-          line-height: 1.4;
-          color: #666159;
+          min-height: 100%;
+          background: #f4f1ea !important;
         }
       `}</style>
 
       <main
-        className={sourceSans.className}
-        style={{
-          minHeight: "100dvh",
-          width: "100%",
-          background: "#fff",
-          color: "#111",
-        }}
+        className={`${styles.surface} ${sourceSans.className}`}
+        style={{ "--employee-serif": ebGaramond.style.fontFamily } as React.CSSProperties}
       >
-        <div
-          style={{
-            width: "min(680px, calc(100% - 32px))",
-            maxWidth: "100%",
-            margin: "0 auto",
-            padding: "28px 0 calc(96px + env(safe-area-inset-bottom))",
-            boxSizing: "border-box",
-          }}
-        >
-          <section>
-            <div
-              style={{
-                marginBottom: 5,
-                fontSize: 12,
-                lineHeight: 1.2,
-                fontWeight: 600,
-                letterSpacing: "0.02em",
-                color: "#6f6f6f",
-              }}
-            >
-              Elm
+        <div className={styles.page}>
+          <header className={styles.header}>
+            <div className={styles.identity}>
+              <span className={styles.identityName}>Elm</span>
+              <svg className={styles.orientationMark} viewBox="0 0 500 500" aria-hidden="true">
+                <g fill="currentColor">
+                  <path d="M112.5,222.3l-4.5-.8c-1.5-.3-2.5-1.7-2.2-3.2,13.6-68.8,73.8-118.4,144.3-118.4s67.3,11.9,93.5,33.6c25.2,20.8,42.8,49.5,49.9,81.2s-.6,2.9-2.1,3.2l-4.5.9c-1.4.3-2.9-.6-3.2-2.1-6.6-29.4-23.1-56.2-46.5-75.5-24.5-20.2-55.4-31.3-87.2-31.3-65.6,0-121.7,46.2-134.4,110.2s-1.7,2.4-3.1,2.2Z" />
+                  <path d="M176.2,374.2c-35.5-20.6-60.6-54.9-69.6-94.7-.3-1.5.7-3.1,2.2-3.4l4.2-.9c1.5-.3,3,.7,3.4,2.2,8.4,37,31.8,68.9,64.7,88.1,1.3.8,1.8,2.5,1.1,3.9l-2.1,3.8c-.8,1.4-2.5,1.9-3.9,1.1Z" />
+                  <path d="M319.4,373.8l-2.4-4.4c-.7-1.2-.2-2.7,1-3.4,33.6-19.2,57.4-51.4,65.8-89,.3-1.3,1.6-2.2,3-1.9l4.9,1c1.4.3,2.3,1.6,2,3-9,40.4-34.6,75.1-70.7,95.7-1.2.7-2.8.2-3.4-1Z" />
+                  <rect x="245" y="281.7" width="10" height="158.7" rx="2.7" ry="2.7" />
+                  <rect x="245" y="59.6" width="10" height="152.7" rx="2.9" ry="2.9" />
+                  <rect x="283" y="242" width="133.6" height="10" rx="2.9" ry="2.9" />
+                  <rect x="83.4" y="242" width="131.8" height="10" rx="2.6" ry="2.6" />
+                  <path d="M250,290.4l-43.4-43.4,43.4-43.4,43.4,43.4-43.4,43.4ZM220.7,247l29.3,29.3,29.3-29.3-29.3-29.3-29.3,29.3Z" />
+                </g>
+              </svg>
             </div>
-            <h1
-              style={{
-                fontSize: 22,
-                lineHeight: 1.25,
-                fontWeight: 600,
-                margin: "0 0 18px",
-                overflowWrap: "anywhere",
-              }}
-            >
-              {formatElmDay(delivery.date)}
-            </h1>
 
-            <AnnaWorkerDayClient
-              items={delivery.items}
-              extras={delivery.extras}
-              canEdit={pilot.canEdit}
-            />
-          </section>
+            <h1 className={styles.date}>{formatElmDay(delivery.date)}</h1>
+          </header>
+
+          <AnnaWorkerDayClient
+            items={delivery.items}
+            extras={delivery.extras}
+            canEdit={pilot.canEdit}
+          />
         </div>
 
-        <details className="elm-pocket">
-          <summary aria-label="Open items from Elm">
-            <span className="elm-pocket-handle" aria-hidden="true" />
-            <span className="elm-pocket-heading">
-              <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: "0.01em" }}>
-                From Elm
-              </span>
-              <span style={{ fontSize: 12, color: "#777168" }}>
-                {employerPocketItems.length}
-              </span>
-            </span>
-          </summary>
-
-          <div className="elm-pocket-body">
-            {employerPocketItems.map((item) => (
-              <div className="elm-pocket-row" key={`${item.label}-${item.title}`}>
-                <div className="elm-pocket-label">{item.label}</div>
-                <div className="elm-pocket-title">{item.title}</div>
-                <div className="elm-pocket-detail">{item.detail}</div>
-              </div>
-            ))}
-          </div>
-        </details>
+        <EmployerPocket items={employerPocketItems} />
       </main>
     </>
   );
