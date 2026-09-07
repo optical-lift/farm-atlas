@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+import { assertStructuredSemanticPayload } from "../lib/atlas/structured-work-authoring-core.js";
+
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("A1 quarantines the only inventoried prose-first application writers", () => {
@@ -22,6 +24,36 @@ test("A1 quarantines the only inventoried prose-first application writers", () =
   assert.match(inventory, /create_project_task_v1/);
   assert.match(inventory, /compatibility debt/i);
   assert.match(inventory, /No new application-level operational writer may establish work meaning through prose alone/);
+});
+
+test("A1 provides one new structured-work entry boundary and rejects prose-only semantics", () => {
+  const boundary = read("lib/atlas/structured-work-authoring.ts");
+
+  assert.match(boundary, /beginStructuredWorkAuthoring/);
+  assert.match(boundary, /assertStructuredSemanticPayload/);
+  assert.match(boundary, /single approved entry boundary/i);
+
+  assert.throws(
+    () => assertStructuredSemanticPayload({ semanticComponents: [] }),
+    /Prose alone cannot establish operational work semantics/,
+  );
+
+  assert.throws(
+    () =>
+      assertStructuredSemanticPayload({
+        semanticComponents: [
+          { title: "Spray BB10", instructions: "Owner ground truth goes here" },
+        ],
+      }),
+    /Prose alone cannot establish operational work semantics/,
+  );
+
+  assert.doesNotThrow(() =>
+    assertStructuredSemanticPayload({
+      semanticComponents: [{ operation: "spray", targetRef: "bb10" }],
+      sourceProse: "Original human sentence may remain evidence.",
+    }),
+  );
 });
 
 test("A1 enforces title-only employee task exposure until disclosure architecture exists", () => {
