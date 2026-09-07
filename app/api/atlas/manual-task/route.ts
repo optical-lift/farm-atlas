@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { atlasApiError, readAtlasJsonBody, requireAtlasApiAccess } from "@/lib/atlas/api-access";
+import { assertLegacyProseWorkWriterRegistered } from "@/lib/atlas/structured-work-authoring-guard";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +63,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  assertLegacyProseWorkWriterRegistered("manual-task-v1");
+
   if (request.headers.get("x-atlas-intent") !== "manual-task-authoring-v1") {
     return atlasApiError(400, "manual_task_intent_required", "A valid manual-task authoring intent is required.");
   }
