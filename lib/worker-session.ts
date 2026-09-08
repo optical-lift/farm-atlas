@@ -16,6 +16,10 @@ export type WorkerSessionContext = {
   organizationMembershipId: string;
   deliveryMembershipId: string;
   organizationId: string;
+  organizationUnitId?: string;
+  positionId?: string;
+  positionKey?: string;
+  positionTitle?: string;
   institutionalPersonId?: string;
   employeeSeatId?: string;
   scope: string;
@@ -31,14 +35,26 @@ type WorkerSessionStatus = {
   code?: string;
 };
 
-type EmployeeSeatContextStatus = {
-  ok?: boolean;
+type EmployeeAppointment = {
+  credentialId?: string;
+  employeeSeatId?: string;
   organizationId?: string;
   organizationMembershipId?: string;
   identitySubjectId?: string;
-  employeeSeatId?: string;
-  credentialId?: string;
-  code?: string;
+  appointmentId?: string;
+  appointmentKind?: string;
+  positionId?: string;
+  positionKey?: string;
+  displayTitle?: string;
+  organizationUnitId?: string;
+  organizationUnitKey?: string;
+  organizationUnitName?: string;
+  organizationUnitKind?: string;
+};
+
+type EmployeeAppointmentsStatus = {
+  ok?: boolean;
+  items?: EmployeeAppointment[];
 };
 
 type OrganizationMembershipRow = {
@@ -53,6 +69,7 @@ type FarmMembershipRow = {
 type FarmRow = {
   id: string;
   organization_id: string;
+  organization_unit_id: string | null;
 };
 
 export async function getWorkerSessionToken() {
@@ -142,85 +159,109 @@ async function resolveAuthenticatedEmployeeSeatContext(): Promise<WorkerSessionC
   }
 
   const supabase = createAtlasAdminClient();
-  const { data: seatContext, error: seatContextError } = await supabase.rpc(
-    "organization_employee_context_by_auth_user_v1",
+  const { data: appointmentContext, error: appointmentError } = await supabase.rpc(
+    "organization_employee_appointments_by_auth_user_v1",
     {
       p_auth_user_id: user.id,
       p_organization_id: null,
     },
   );
 
-  if (seatContextError) {
-    console.error("Employee seat context read failed:", seatContextError);
+  if (appointmentError) {
+    console.error("Employee appointment context read failed:", appointmentError);
     return null;
   }
 
-  const status = (seatContext ?? {}) as EmployeeSeatContextStatus;
+  const appointmentStatus = (appointmentContext ?? {}) as EmployeeAppointmentsStatus;
+  const appointments = Array.isArray(appointmentStatus.items)
+    ? appointmentStatus.items
+    : [];
+
+  if (appointmentStatus.ok !== true || appointments.length === 0) {
+    return null;
+  }
+
+  const primaryAppointments = appointments.filter(
+    (appointment) => appointment.appointmentKind === "primary",
+  );
+  const selectedAppointments = primaryAppointments.length > 0
+    ? primaryAppointments
+    : appointments;
+
+  // Today still delivers one operating-unit lane at a time. Institutional
+  // placement is authoritative; never infer a unit from a domain membership.
+  if (selectedAppointments.length !== 1) {
+    if (selectedAppointments.length > 1) {
+      console.error(
+        "Employee has multiple active institutional appointments; Worker Day refuses to guess a primary unit.",
+      );
+    }
+    return null;
+  }
+
+  const appointment = selectedAppointments[0];
   if (
-    status.ok !== true ||
-    !status.organizationId ||
-    !status.organizationMembershipId ||
-    !status.identitySubjectId ||
-    !status.employeeSeatId
+    !appointment.organizationId ||
+    !appointment.organizationMembershipId ||
+    !appointment.identitySubjectId ||
+    !appointment.employeeSeatId ||
+    !appointment.organizationUnitId ||
+    !appointment.positionId
   ) {
+    return null;
+  }
+
+  // Compatibility adapter only: current Worker Day delivery still keys from
+  // a farm membership. The appointment chooses the organization unit first,
+  // then Atlas finds a domain delivery membership bound to that same unit.
+  const { data: farms, error: farmError } = await supabase
+    .from("farms")
+    .select("id,organization_id,organization_unit_id")
+    .eq("organization_id", appointment.organizationId)
+    .eq("organization_unit_id", appointment.organizationUnitId);
+
+  if (farmError) {
+    console.error("Employee delivery adapter unit read failed:", farmError);
+    return null;
+  }
+
+  const unitFarmIds = ((farms ?? []) as FarmRow[]).map((farm) => farm.id);
+  if (unitFarmIds.length === 0) {
     return null;
   }
 
   const { data: farmMemberships, error: farmMembershipError } = await supabase
     .from("farm_memberships")
     .select("id,farm_id")
-    .eq("identity_subject_id", status.identitySubjectId)
-    .eq("active", true);
+    .eq("identity_subject_id", appointment.identitySubjectId)
+    .eq("active", true)
+    .in("farm_id", unitFarmIds);
 
   if (farmMembershipError) {
-    console.error("Employee operating membership read failed:", farmMembershipError);
+    console.error("Employee delivery membership read failed:", farmMembershipError);
     return null;
   }
 
-  const membershipRows = (farmMemberships ?? []) as FarmMembershipRow[];
-  if (membershipRows.length === 0) {
-    return null;
-  }
-
-  const { data: farms, error: farmError } = await supabase
-    .from("farms")
-    .select("id,organization_id")
-    .in(
-      "id",
-      membershipRows.map((membership) => membership.farm_id),
-    )
-    .eq("organization_id", status.organizationId);
-
-  if (farmError) {
-    console.error("Employee operating-unit organization read failed:", farmError);
-    return null;
-  }
-
-  const organizationFarmIds = new Set(
-    ((farms ?? []) as FarmRow[]).map((farm) => farm.id),
-  );
-  const deliveryMemberships = membershipRows.filter((membership) =>
-    organizationFarmIds.has(membership.farm_id),
-  );
-
-  // Worker Day currently delivers through one operating-unit membership.
-  // Do not choose arbitrarily if an employee later belongs to multiple units;
-  // the generic /today projection will need to aggregate those memberships.
+  const deliveryMemberships = (farmMemberships ?? []) as FarmMembershipRow[];
   if (deliveryMemberships.length !== 1) {
     if (deliveryMemberships.length > 1) {
       console.error(
-        "Employee seat has multiple active operating memberships; Worker Day refuses to guess.",
+        "Institutional appointment maps to multiple legacy delivery memberships; Worker Day refuses to guess.",
       );
     }
     return null;
   }
 
   return {
-    organizationMembershipId: status.organizationMembershipId,
+    organizationMembershipId: appointment.organizationMembershipId,
     deliveryMembershipId: deliveryMemberships[0].id,
-    organizationId: status.organizationId,
-    institutionalPersonId: status.identitySubjectId,
-    employeeSeatId: status.employeeSeatId,
+    organizationId: appointment.organizationId,
+    organizationUnitId: appointment.organizationUnitId,
+    positionId: appointment.positionId,
+    positionKey: appointment.positionKey,
+    positionTitle: appointment.displayTitle,
+    institutionalPersonId: appointment.identitySubjectId,
+    employeeSeatId: appointment.employeeSeatId,
     scope: EMPLOYEE_SEAT_SCOPE,
     expiresAt: new Date(session.expires_at * 1000).toISOString(),
   };
