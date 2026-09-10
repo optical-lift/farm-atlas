@@ -157,6 +157,15 @@
   overflow-wrap: anywhere;
 }
 
+.taskStatus {
+  display: block;
+  margin-top: 2px;
+  color: var(--employee-muted);
+  font-size: 11px;
+  line-height: 1.35;
+  letter-spacing: .01em;
+}
+
 .completed .taskTitle,
 .completed .taskDetails {
   opacity: .48;
