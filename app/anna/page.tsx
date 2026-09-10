@@ -5,11 +5,7 @@ import EmployerPocket from "@/app/anna/EmployerPocket";
 import styles from "@/app/anna/employee-surface.module.css";
 import EmployeeBrandHeader from "@/components/employee/EmployeeBrandHeader";
 import { getAnnaPilotEditState } from "@/lib/anna-worker-day-pilot";
-import {
-  formatElmDay,
-  getAnnaWorkerDelivery,
-  getWorkerDelivery,
-} from "@/lib/worker-delivery";
+import { formatElmDay, getWorkerDelivery } from "@/lib/worker-delivery";
 import { getCurrentWorkerSessionContext } from "@/lib/worker-session";
 
 export const dynamic = "force-dynamic";
@@ -17,28 +13,36 @@ export const dynamic = "force-dynamic";
 const sourceSans = Source_Sans_3({ subsets: ["latin"] });
 const ebGaramond = EB_Garamond({ subsets: ["latin"] });
 
-const employerPocketItems = [
-  {
-    label: "Monday",
-    title: "Harvest and Springfield delivery",
-    detail: "2 DIY buckets and today’s harvested stems · arrive by 5 p.m.",
-  },
-  {
-    label: "Thursday morning",
-    title: "Florist route",
-    detail: "Weekly Springfield florist deliveries.",
-  },
-  {
-    label: "Thursday evening",
-    title: "Thursdays at Elm",
-    detail: "Flower harvest and bouquet workshop · 6:30–8:30 p.m.",
-  },
-];
-
 export default async function AnnaPage() {
   const workerContext = await getCurrentWorkerSessionContext();
+
+  if (!workerContext) {
+    return (
+      <>
+        <style>{`
+          html, body {
+            margin: 0;
+            min-height: 100%;
+            background: #f4f1ea !important;
+          }
+        `}</style>
+        <main
+          className={`${styles.surface} ${sourceSans.className}`}
+          style={{ "--employee-serif": ebGaramond.style.fontFamily } as React.CSSProperties}
+        >
+          <div className={styles.page}>
+            <header className={styles.header}>
+              <EmployeeBrandHeader organizationName="Atlas" />
+            </header>
+            <p>Sign in to Atlas to see your work.</p>
+          </div>
+        </main>
+      </>
+    );
+  }
+
   const [delivery, pilot] = await Promise.all([
-    workerContext ? getWorkerDelivery(workerContext) : getAnnaWorkerDelivery(),
+    getWorkerDelivery(workerContext),
     getAnnaPilotEditState(),
   ]);
 
@@ -69,7 +73,7 @@ export default async function AnnaPage() {
           />
         </div>
 
-        <EmployerPocket items={employerPocketItems} />
+        <EmployerPocket items={[]} />
       </main>
     </>
   );
