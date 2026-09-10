@@ -14,6 +14,7 @@ type WorkerDayItem = {
   reportedCompleted: boolean;
   active: boolean;
   resultContractKey: string | null;
+  acceptanceMode: string | null;
 };
 
 type WorkerDayExtra = {
@@ -406,6 +407,9 @@ export default function AnnaWorkerDayClient({
                 aria-label={`Open ${item.title}`}
               >
                 <span className={styles.taskTitle}>{item.title}</span>
+                {item.reportedCompleted && !item.institutionallyCompleted && item.acceptanceMode === "manager_acceptance" ? (
+                  <span className={styles.taskStatus}>reported · awaiting review</span>
+                ) : null}
               </button>
 
               {canEdit && !item.completed ? (
