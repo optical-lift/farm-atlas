@@ -5,11 +5,15 @@ import {
   hashAnnaPilotToken,
 } from "@/lib/anna-worker-day-pilot";
 import { createAtlasAdminClient } from "@/lib/supabase/admin";
+import { createAtlasServerClient } from "@/lib/supabase/server";
 import {
   getAnnaWorkerDelivery,
   getWorkerDelivery,
 } from "@/lib/worker-delivery";
-import { getCurrentWorkerSessionContext } from "@/lib/worker-session";
+import {
+  EMPLOYEE_SEAT_SCOPE,
+  getCurrentWorkerSessionContext,
+} from "@/lib/worker-session";
 
 export const dynamic = "force-dynamic";
 
@@ -47,8 +51,14 @@ export async function POST(request: Request) {
     return noStoreJson({ ok: false, code: "origin_mismatch" }, 403);
   }
 
-  const rawSessionToken = await getAnnaPilotSessionToken();
-  if (!rawSessionToken) {
+  const workerContext = await getCurrentWorkerSessionContext();
+  const employeeContext =
+    workerContext?.scope === EMPLOYEE_SEAT_SCOPE ? workerContext : null;
+  const rawSessionToken = employeeContext
+    ? null
+    : await getAnnaPilotSessionToken();
+
+  if (!employeeContext && !rawSessionToken) {
     return noStoreJson({ ok: false, code: "unauthorized" }, 401);
   }
 
@@ -93,7 +103,6 @@ export async function POST(request: Request) {
       return noStoreJson({ ok: false, code: "projection_required" }, 400);
     }
 
-    const workerContext = await getCurrentWorkerSessionContext();
     const delivery = workerContext
       ? await getWorkerDelivery(workerContext)
       : await getAnnaWorkerDelivery();
@@ -118,21 +127,42 @@ export async function POST(request: Request) {
     }
   }
 
-  const supabase = createAtlasAdminClient();
-  const { data, error } = await supabase.rpc(
-    "worker_delivery_pilot_transition_v1",
-    {
-      p_session_token_hash: hashAnnaPilotToken(rawSessionToken),
-      p_action: body.action,
-      p_projection_id: body.projectionId ?? null,
-      p_effective_at: body.effectiveAt ?? null,
-      p_reported_title: body.reportedTitle?.trim() || null,
-    },
-  );
+  let data: unknown;
+  let error: { message?: string } | null = null;
+
+  if (employeeContext) {
+    const supabase = await createAtlasServerClient();
+    const result = await supabase.rpc(
+      "worker_delivery_employee_transition_self_api_v1",
+      {
+        p_delivery_membership_id: employeeContext.deliveryMembershipId,
+        p_action: body.action,
+        p_projection_id: body.projectionId ?? null,
+        p_effective_at: body.effectiveAt ?? null,
+        p_reported_title: body.reportedTitle?.trim() || null,
+      },
+    );
+    data = result.data;
+    error = result.error;
+  } else {
+    const supabase = createAtlasAdminClient();
+    const result = await supabase.rpc(
+      "worker_delivery_pilot_transition_v1",
+      {
+        p_session_token_hash: hashAnnaPilotToken(rawSessionToken as string),
+        p_action: body.action,
+        p_projection_id: body.projectionId ?? null,
+        p_effective_at: body.effectiveAt ?? null,
+        p_reported_title: body.reportedTitle?.trim() || null,
+      },
+    );
+    data = result.data;
+    error = result.error;
+  }
 
   if (error) {
-    console.error("Anna Worker Day pilot transition failed:", error);
-    return noStoreJson({ ok: false, code: "pilot_transition_failed" }, 500);
+    console.error("Worker Day transition failed:", error);
+    return noStoreJson({ ok: false, code: "worker_transition_failed" }, 500);
   }
 
   const result = (data ?? {}) as PilotTransitionResult;
@@ -144,7 +174,7 @@ export async function POST(request: Request) {
     return noStoreJson(result as Record<string, unknown>, 409);
   }
 
-  if (result.code === "unauthorized") {
+  if (result.code === "unauthorized" || result.code === "employee_access_required") {
     return noStoreJson(result as Record<string, unknown>, 401);
   }
 
