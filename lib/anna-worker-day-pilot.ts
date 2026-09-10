@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { ANNA_FARM_MEMBERSHIP_ID } from "@/lib/worker-delivery";
 import { createAtlasAdminClient } from "@/lib/supabase/admin";
 import {
+  EMPLOYEE_SEAT_SCOPE,
   getCurrentWorkerSessionContext,
   WORKER_DAY_PILOT_SCOPE,
 } from "@/lib/worker-session";
@@ -34,7 +35,8 @@ export async function getAnnaPilotEditState() {
   if (workerContext) {
     return {
       canEdit:
-        workerContext.scope === WORKER_DAY_PILOT_SCOPE &&
+        (workerContext.scope === WORKER_DAY_PILOT_SCOPE ||
+          workerContext.scope === EMPLOYEE_SEAT_SCOPE) &&
         workerContext.deliveryMembershipId === ANNA_FARM_MEMBERSHIP_ID,
     };
   }
