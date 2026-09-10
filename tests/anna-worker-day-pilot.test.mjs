@@ -18,6 +18,9 @@ test("Anna Worker Day stays a delivery interaction membrane", () => {
 
   assert.match(delivery, /done_reported/);
   assert.match(delivery, /institutionallyCompleted/);
+  assert.match(delivery, /reportedCompleted/);
+  assert.match(delivery, /work_result_contract_policies/);
+  assert.match(delivery, /acceptance_mode/);
   assert.match(delivery, /delivery_membership_id/);
   assert.match(delivery, /rollover_policy === "carry"/);
   assert.match(delivery, /workerContext\.deliveryMembershipId/);
@@ -50,4 +53,16 @@ test("Anna phone surface has quiet completion, attention, correction, unknown-wo
   assert.match(page, /Sign in to Atlas to see your work/);
   assert.doesNotMatch(page, /getAnnaWorkerDelivery/);
   assert.doesNotMatch(page, /Monday, Sept\. 7|Tuesday, Sept\. 8|Friday, Sept\. 11/);
+});
+
+test("Worker Day distinguishes a worker report from institutional completion when review is required", () => {
+  const client = read("app/anna/AnnaWorkerDayClient.tsx");
+  const delivery = read("lib/worker-delivery.ts");
+
+  assert.match(client, /reported · awaiting review/);
+  assert.match(client, /item\.reportedCompleted && !item\.institutionallyCompleted/);
+  assert.match(client, /item\.acceptanceMode === "manager_acceptance"/);
+  assert.match(delivery, /acceptanceModeByContract/);
+  assert.match(delivery, /acceptanceMode/);
+  assert.match(delivery, /institutionallyCompleted \|\| reportedCompleted/);
 });
