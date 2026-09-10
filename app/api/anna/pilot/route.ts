@@ -24,7 +24,9 @@ type PilotAction =
   | "reopen"
   | "switch_finish"
   | "switch_stop"
-  | "report_unscheduled";
+  | "report_unscheduled"
+  | "pot_up_contract"
+  | "complete_pot_up";
 
 type PilotTransitionResult = {
   ok?: boolean;
@@ -32,6 +34,7 @@ type PilotTransitionResult = {
   status?: string;
   activeProjectionId?: string;
   activeTitle?: string;
+  [key: string]: unknown;
 };
 
 function noStoreJson(body: Record<string, unknown>, status = 200) {
@@ -67,6 +70,9 @@ export async function POST(request: Request) {
     projectionId?: string | null;
     effectiveAt?: string | null;
     reportedTitle?: string | null;
+    outputs?: unknown;
+    idempotencyKey?: string | null;
+    note?: string | null;
   };
 
   try {
@@ -83,6 +89,8 @@ export async function POST(request: Request) {
     "switch_finish",
     "switch_stop",
     "report_unscheduled",
+    "pot_up_contract",
+    "complete_pot_up",
   ]);
 
   if (!body.action || !allowed.has(body.action)) {
@@ -122,9 +130,74 @@ export async function POST(request: Request) {
       return noStoreJson({ ok: false, code: "completed_projection_not_attention_eligible" }, 409);
     }
 
-    if (item.institutionallyCompleted && (body.action === "done" || body.action === "reopen")) {
+    if (
+      item.institutionallyCompleted &&
+      (body.action === "done" ||
+        body.action === "reopen" ||
+        body.action === "complete_pot_up")
+    ) {
       return noStoreJson({ ok: false, code: "institutional_completion_is_authoritative" }, 409);
     }
+
+    if (
+      (body.action === "pot_up_contract" || body.action === "complete_pot_up") &&
+      item.resultContractKey !== "production_pot_up_v1"
+    ) {
+      return noStoreJson({ ok: false, code: "pot_up_contract_not_available" }, 409);
+    }
+  }
+
+  if (body.action === "pot_up_contract" || body.action === "complete_pot_up") {
+    if (!employeeContext) {
+      return noStoreJson({ ok: false, code: "employee_access_required" }, 401);
+    }
+
+    const supabase = await createAtlasServerClient();
+
+    if (body.action === "pot_up_contract") {
+      const result = await supabase.rpc(
+        "worker_production_pot_up_contract_self_api_v1",
+        {
+          p_delivery_membership_id: employeeContext.deliveryMembershipId,
+          p_projection_id: body.projectionId,
+        },
+      );
+
+      if (result.error) {
+        console.error("Pot-up contract read failed:", result.error);
+        return noStoreJson({ ok: false, code: "pot_up_contract_failed" }, 500);
+      }
+
+      return noStoreJson((result.data ?? { ok: false }) as Record<string, unknown>);
+    }
+
+    if (!Array.isArray(body.outputs) || body.outputs.length === 0) {
+      return noStoreJson({ ok: false, code: "pot_up_outputs_required" }, 400);
+    }
+
+    const idempotencyKey = body.idempotencyKey?.trim() || null;
+    if (idempotencyKey && idempotencyKey.length > 160) {
+      return noStoreJson({ ok: false, code: "invalid_idempotency_key" }, 400);
+    }
+
+    const result = await supabase.rpc(
+      "worker_record_production_pot_up_self_api_v1",
+      {
+        p_delivery_membership_id: employeeContext.deliveryMembershipId,
+        p_projection_id: body.projectionId,
+        p_outputs: body.outputs,
+        p_care_date: null,
+        p_note: body.note?.trim() || null,
+        p_idempotency_key: idempotencyKey,
+      },
+    );
+
+    if (result.error) {
+      console.error("Structured pot-up completion failed:", result.error);
+      return noStoreJson({ ok: false, code: "pot_up_completion_failed" }, 500);
+    }
+
+    return noStoreJson((result.data ?? { ok: false }) as Record<string, unknown>);
   }
 
   let data: unknown;
