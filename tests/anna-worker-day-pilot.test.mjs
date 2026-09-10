@@ -66,3 +66,12 @@ test("Worker Day distinguishes a worker report from institutional completion whe
   assert.match(delivery, /acceptanceMode/);
   assert.match(delivery, /institutionallyCompleted \|\| reportedCompleted/);
 });
+
+test("domain-governed pot-up work keeps its structured completion path instead of ordinary Done", () => {
+  const client = read("app/anna/AnnaWorkerDayClient.tsx");
+
+  assert.match(client, /item\.resultContractKey === "production_pot_up_v1"/);
+  assert.match(client, /openPotUpCompletion\(item\)/);
+  assert.match(client, /action: "complete_pot_up"/);
+  assert.match(client, /Save and finish/);
+});
