@@ -34,6 +34,7 @@ type ProjectionSourceRow = {
 type WorkItemRow = {
   id: string;
   work_state: "open" | "completed" | "cancelled" | "superseded";
+  result_contract_key: string | null;
 };
 
 type PilotEventRow = {
@@ -61,6 +62,7 @@ export type WorkerDeliveryItem = {
   plannedDate: string;
   originalPlannedDate: string;
   carried: boolean;
+  resultContractKey: string | null;
 };
 
 export type WorkerReportedExtra = {
@@ -150,7 +152,7 @@ async function loadWorkerDelivery(
   if (workItemIds.length > 0) {
     const { data: workData, error: workError } = await supabase
       .from("work_items")
-      .select("id,work_state")
+      .select("id,work_state,result_contract_key")
       .in("id", workItemIds);
 
     if (workError) {
@@ -204,9 +206,8 @@ async function loadWorkerDelivery(
     const rowSources = sources.filter((source) => source.projection_id === row.id);
     const required = rowSources.filter((source) => source.source_role === "required");
 
-    const requiredStates = required.map(
-      (source) => workItemById.get(source.work_item_id)?.work_state,
-    );
+    const requiredWork = required.map((source) => workItemById.get(source.work_item_id));
+    const requiredStates = requiredWork.map((workItem) => workItem?.work_state);
     const institutionallyCompleted =
       required.length > 0 &&
       requiredStates.every((state) => state === "completed");
@@ -215,6 +216,8 @@ async function loadWorkerDelivery(
       requiredStates.every((state) => state === "cancelled" || state === "superseded");
     const reportedCompleted = completionStateByProjection.get(row.id) === "done_reported";
     const completed = institutionallyCompleted || reportedCompleted;
+    const resultContractKey =
+      required.length === 1 ? requiredWork[0]?.result_contract_key ?? null : null;
 
     if (row.planned_date < today && (completed || noLongerDeliverable)) {
       return [];
@@ -236,6 +239,7 @@ async function loadWorkerDelivery(
         plannedDate: row.planned_date,
         originalPlannedDate: row.original_planned_date ?? row.planned_date,
         carried: row.planned_date < today,
+        resultContractKey,
       },
     ];
   });
