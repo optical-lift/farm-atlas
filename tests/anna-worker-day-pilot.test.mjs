@@ -4,10 +4,11 @@ import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("Anna Worker Day pilot stays a delivery interaction membrane", () => {
+test("Anna Worker Day stays a delivery interaction membrane", () => {
   const api = read("app/api/anna/pilot/route.ts");
   const delivery = read("lib/worker-delivery.ts");
 
+  assert.match(api, /worker_delivery_employee_transition_self_api_v1/);
   assert.match(api, /worker_delivery_pilot_transition_v1/);
   assert.match(api, /getCurrentWorkerSessionContext/);
   assert.match(api, /getWorkerDelivery\(workerContext\)/);
@@ -22,7 +23,7 @@ test("Anna Worker Day pilot stays a delivery interaction membrane", () => {
   assert.match(delivery, /workerContext\.deliveryMembershipId/);
 });
 
-test("Anna edit access uses one-time redemption and an HttpOnly strict cookie", () => {
+test("legacy Anna edit access still uses one-time redemption and an HttpOnly strict cookie", () => {
   const editRoute = read("app/anna/edit/route.ts");
   const helper = read("lib/anna-worker-day-pilot.ts");
 
@@ -33,7 +34,7 @@ test("Anna edit access uses one-time redemption and an HttpOnly strict cookie", 
   assert.match(helper, /sha256/);
 });
 
-test("Anna phone surface has quiet completion, attention, correction, and unknown-work capture", () => {
+test("Anna phone surface has quiet completion, attention, correction, unknown-work capture, and no public work fallback", () => {
   const client = read("app/anna/AnnaWorkerDayClient.tsx");
   const page = read("app/anna/page.tsx");
 
@@ -46,6 +47,7 @@ test("Anna phone surface has quiet completion, attention, correction, and unknow
 
   assert.match(page, /getCurrentWorkerSessionContext/);
   assert.match(page, /getWorkerDelivery\(workerContext\)/);
-  assert.match(page, /getAnnaWorkerDelivery/);
+  assert.match(page, /Sign in to Atlas to see your work/);
+  assert.doesNotMatch(page, /getAnnaWorkerDelivery/);
   assert.doesNotMatch(page, /Monday, Sept\. 7|Tuesday, Sept\. 8|Friday, Sept\. 11/);
 });
