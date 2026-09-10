@@ -21,6 +21,10 @@ test("Worker Day distinguishes ordinary Done from governed pot-up output capture
     api,
     /if \(!employeeContext\)[\s\S]*employee_access_required[\s\S]*worker_record_production_pot_up_self_api_v1/,
   );
+  assert.match(
+    api,
+    /if \(body\.action === "pot_up_contract" \|\| body\.action === "complete_pot_up"\)[\s\S]*return noStoreJson\(\(result\.data[\s\S]*let data: unknown/,
+  );
 
   assert.match(client, /production_pot_up_v1/);
   assert.match(client, /physicalTrays/);
