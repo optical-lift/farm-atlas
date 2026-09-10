@@ -37,6 +37,11 @@ type WorkItemRow = {
   result_contract_key: string | null;
 };
 
+type ResultPolicyRow = {
+  contract_key: string;
+  acceptance_mode: string;
+};
+
 type PilotEventRow = {
   id: string;
   event_seq: number;
@@ -63,6 +68,7 @@ export type WorkerDeliveryItem = {
   originalPlannedDate: string;
   carried: boolean;
   resultContractKey: string | null;
+  acceptanceMode: string | null;
 };
 
 export type WorkerReportedExtra = {
@@ -164,6 +170,31 @@ async function loadWorkerDelivery(
     }
   }
 
+  const resultContractKeys = [
+    ...new Set(
+      [...workItemById.values()]
+        .map((workItem) => workItem.result_contract_key)
+        .filter((key): key is string => Boolean(key)),
+    ),
+  ];
+  const acceptanceModeByContract = new Map<string, string>();
+
+  if (resultContractKeys.length > 0) {
+    const { data: policyData, error: policyError } = await supabase
+      .from("work_result_contract_policies")
+      .select("contract_key,acceptance_mode")
+      .in("contract_key", resultContractKeys)
+      .eq("active", true);
+
+    if (policyError) {
+      throw new Error(`Could not load worker result policy: ${policyError.message}`);
+    }
+
+    for (const policy of (policyData ?? []) as ResultPolicyRow[]) {
+      acceptanceModeByContract.set(policy.contract_key, policy.acceptance_mode);
+    }
+  }
+
   const { data: pilotEventData, error: pilotEventError } = await supabase
     .from("worker_delivery_pilot_events")
     .select("id,event_seq,projection_id,event_kind,effective_at,reported_title")
@@ -218,6 +249,9 @@ async function loadWorkerDelivery(
     const completed = institutionallyCompleted || reportedCompleted;
     const resultContractKey =
       required.length === 1 ? requiredWork[0]?.result_contract_key ?? null : null;
+    const acceptanceMode = resultContractKey
+      ? acceptanceModeByContract.get(resultContractKey) ?? null
+      : null;
 
     if (row.planned_date < today && (completed || noLongerDeliverable)) {
       return [];
@@ -240,6 +274,7 @@ async function loadWorkerDelivery(
         originalPlannedDate: row.original_planned_date ?? row.planned_date,
         carried: row.planned_date < today,
         resultContractKey,
+        acceptanceMode,
       },
     ];
   });
