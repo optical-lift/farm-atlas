@@ -164,14 +164,19 @@ export default function BridgeAtlasFixture({ onOpenWorkshop }: BridgeAtlasFixtur
       label: "DESIGN ATLAS",
       items: [
         {
+          label: "Open Katie’s buyer profile",
+          detail: "Inspect the customer/account record itself: business identity, people, billing fields, relationship history, pricing and available supply.",
+          href: "/owner/design-atlas/katie-buyer",
+        },
+        {
+          label: "Open Katie’s order-entry proof",
+          detail: "Test the separate transaction instrument that records a buyer order without inventing inventory or payment truth.",
+          href: "/owner/design-atlas/katie-order",
+        },
+        {
           label: "Open plant-count proof",
           detail: "Test the standard count instrument, including an explicit zero observation.",
           href: "/owner/design-atlas/plant-count",
-        },
-        {
-          label: "Open Katie’s flower-order proof",
-          detail: "Test a transaction that creates fulfillment without inventing inventory or payment truth.",
-          href: "/owner/design-atlas/katie-order",
         },
         {
           label: "Open the workshop",
