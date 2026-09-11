@@ -21,14 +21,16 @@ const SECTIONS: PersonAtlasSection[] = [
     lines: [
       {
         id: "order-boundary",
-        sentence: "Let the order create fulfillment without pretending the flowers moved",
+        sentence: "Record the buyer request without pretending commitment, stock, or fulfillment already exists",
         state: "waiting",
         worksheet: {
           kicker: "FEAST GUILD · SPRINGFIELD DISTRIBUTION",
           facts: [
             { label: "Responsibility", value: "Flow" },
-            { label: "Order result", value: "Creates a fulfillment obligation" },
-            { label: "Inventory", value: "Must be claimed by the inventory authority; this fixture does not move stock" },
+            { label: "Demand result", value: "Creates requested demand only" },
+            { label: "Commitment", value: "Requires explicit Owner or Manager acceptance" },
+            { label: "Inventory", value: "Requires separate reservation authority; this fixture does not claim stock" },
+            { label: "Sale / fulfillment", value: "Not recorded until their own authorities say so" },
             { label: "Payment", value: "Not recorded unless the payment authority says so" },
           ],
         },
