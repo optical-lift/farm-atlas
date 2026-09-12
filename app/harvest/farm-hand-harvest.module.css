@@ -1,0 +1,74 @@
+.flowerLog {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(77, 91, 67, 0.17);
+  border-radius: 20px;
+  background: rgba(250, 250, 246, 0.96);
+  padding: 16px;
+  box-shadow: 0 12px 28px rgba(51, 58, 43, 0.06);
+}
+
+.flowerLogHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.flowerLogHeader h2 { margin: 0; color: #394230; font-size: 1.05rem; }
+.flowerLogHeader p { margin: 5px 0 0; color: #697061; font-size: 0.84rem; line-height: 1.45; }
+.flowerLogHeader > span { color: #737a6a; font-size: 0.76rem; font-weight: 760; }
+
+.flowerQuickActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.flowerQuickCard { min-width: 0; border: 1px solid rgba(77, 91, 67, 0.16); border-radius: 14px; background: #f3f5ee; overflow: hidden; }
+.flowerQuickCard summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 14px; color: #3e4935; cursor: pointer; list-style: none; font-size: 0.9rem; font-weight: 820; }
+.flowerQuickCard summary::-webkit-details-marker { display: none; }
+.flowerQuickCard summary::after { content: "+"; margin-left: auto; color: #6e7963; font-size: 1.1rem; }
+.flowerQuickCard[open] summary::after { content: "−"; }
+.flowerQuickCard summary small { color: #7b8274; font-size: 0.7rem; font-weight: 650; }
+.flowerQuickCard[open] { grid-column: 1 / -1; background: #f8f9f4; }
+
+.flowerForm { display: grid; gap: 12px; border-top: 1px solid rgba(77, 91, 67, 0.13); padding: 14px; }
+.flowerForm label { display: grid; gap: 6px; color: #55604c; font-size: 0.78rem; font-weight: 760; }
+.flowerForm label > span small { color: #858b7e; font-weight: 560; }
+.flowerForm input, .flowerForm select { min-width: 0; width: 100%; border: 1px solid #cbd0c4; border-radius: 10px; background: white; padding: 9px 10px; color: #333a2d; font: inherit; font-size: 0.86rem; }
+
+.flowerHarvestRow { display: grid; gap: 9px; border-bottom: 1px solid rgba(77, 91, 67, 0.1); padding-bottom: 12px; }
+.flowerCounter { display: grid; grid-template-columns: 40px minmax(100px, 1fr) 40px; align-items: center; gap: 7px; }
+.flowerCounter button, .flowerChoice button { min-height: 38px; border: 1px solid #cbd0c4; border-radius: 10px; background: white; color: #44503b; font: inherit; font-weight: 760; cursor: pointer; }
+.flowerCounter strong { text-align: center; color: #3d4934; font-size: 0.92rem; }
+.flowerChoice { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)); align-items: center; gap: 6px; }
+.flowerChoice > span { color: #626b59; font-size: 0.75rem; font-weight: 720; }
+.flowerChoice button { min-height: 34px; border-radius: 999px; padding: 5px 8px; font-size: 0.76rem; }
+.flowerChoice button[data-selected="true"] { border-color: #657259; background: #dfe6d7; color: #34402c; }
+
+.flowerTextButton, .flowerAddButton, .flowerRetry { width: fit-content; border: 0; background: transparent; padding: 2px 0; color: #5a6b4c; font: inherit; font-size: 0.78rem; font-weight: 800; cursor: pointer; }
+.flowerAddButton { padding: 5px 0; }
+.flowerPrimary { min-height: 42px; border: 0; border-radius: 11px; background: #526047; padding: 9px 13px; color: white; font: inherit; font-size: 0.86rem; font-weight: 830; cursor: pointer; }
+.flowerPrimary:disabled { cursor: wait; opacity: 0.58; }
+
+.flowerPrepRow { display: grid; grid-template-columns: 24px minmax(120px, 1.4fr) minmax(92px, 1fr) 72px minmax(86px, .8fr) 28px; align-items: center; gap: 7px; }
+.flowerPrepRow > strong { color: #738069; font-size: 0.74rem; }
+.flowerStems { position: relative; display: block !important; }
+.flowerStems input { padding-right: 42px; }
+.flowerStems small { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); color: #858c7d; font-size: 0.65rem; pointer-events: none; }
+.flowerRemoveButton { min-height: 34px; border: 0; background: transparent; color: #8c665e; font-size: 1.05rem; cursor: pointer; }
+
+.flowerMessage { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; border-radius: 11px; background: #edf2e7; padding: 9px 11px; color: #4c5b40; font-size: 0.8rem; line-height: 1.4; }
+.flowerMessage button { border: 0; background: transparent; color: inherit; font-size: 1rem; cursor: pointer; }
+.error { margin: 0; border-radius: 11px; background: #f7ece9; padding: 10px 12px; color: #844f44; font-size: 0.82rem; }
+
+.flowerLoggedToday { display: grid; gap: 8px; border-top: 1px solid rgba(77, 91, 67, 0.12); padding-top: 12px; }
+.flowerLoggedTitle { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.flowerLoggedTitle h3 { margin: 0; color: #46513c; font-size: 0.9rem; }
+.flowerLoggedTitle span { color: #7a8272; font-size: 0.75rem; font-weight: 760; }
+.flowerLoggedList { display: grid; gap: 6px; }
+.flowerLoggedList article { display: grid; gap: 4px; border-radius: 10px; background: #f3f5ee; padding: 9px 10px; }
+.flowerLoggedList article > div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.flowerLoggedList strong { color: #48543f; font-size: 0.8rem; }
+.flowerLoggedList span, .flowerLoggedList small { color: #858b7e; font-size: 0.7rem; }
+.flowerLoggedList p, .flowerEmpty { margin: 0; color: #697061; font-size: 0.78rem; line-height: 1.4; }
+
+@media (max-width: 580px) {
+  .flowerQuickActions { grid-template-columns: 1fr; }
+  .flowerQuickCard[open] { grid-column: auto; }
+  .flowerChoice { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .flowerChoice > span { grid-column: 1 / -1; }
+  .flowerPrepRow { grid-template-columns: 22px minmax(0, 1fr) 70px; }
+  .flowerPrepRow > select, .flowerPrepRow > .flowerStems { grid-column: 2 / -1; }
+  .flowerPrepRow > .flowerRemoveButton { grid-column: 3; grid-row: 1; }
+}
