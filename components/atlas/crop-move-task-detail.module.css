@@ -11,8 +11,8 @@
 .trailNow b { color: var(--atlas-text); font-weight: 950; }
 .moveSection { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; border-bottom: 1px solid rgba(215, 204, 189, 0.58); }
 .movePlace { min-width: 0; display: grid; align-content: start; gap: 10px; padding: 17px 18px 18px; }
-.placeHeading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 10px; }
-.placeHeading > div { min-width: 0; display: grid; gap: 5px; }
+.placeHeading { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 0; }
+.placeHeading > div { min-width: 0; display: grid; gap: 5px; padding-right: 42px; }
 .movePlace small,.placeFacts small { color: #8b8d84; font-size: 8px; line-height: 1; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
 .movePlace strong { color: var(--atlas-text); font-size: 16px; line-height: 1.1; font-weight: 930; }
 .placeHeading > div > span { color: #7f8179; font-size: 9px; line-height: 1.25; font-weight: 780; }
@@ -20,13 +20,6 @@
 .placeFacts > div { display: grid; gap: 4px; padding: 10px 8px 0 0; }
 .placeFacts strong { font-size: 12px; line-height: 1.1; }
 .moveLine { display: grid; place-items: center; color: #9a9b94; font-size: 18px; padding: 0 2px; }
-.issueDrawer { min-width: 30px; }
-.issueDrawer > summary { list-style: none; cursor: pointer; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid rgba(139, 145, 194, 0.22); border-radius: 50%; background: rgba(239, 237, 244, 0.62); color: #858bb8; font-size: 18px; line-height: 1; font-weight: 700; }
-.issueDrawer > summary::-webkit-details-marker { display: none; }
-.issueDrawer[open] { grid-column: 1 / -1; width: 100%; }
-.issueDrawer[open] > summary { margin-left: auto; }
-.issuePanel { width: 100%; box-sizing: border-box; display: grid; gap: 7px; margin-top: 10px; border-top: 1px solid rgba(215, 204, 189, 0.58); padding-top: 10px; }
-.issuePanel button { min-height: 35px; border: 1px solid rgba(139, 145, 194, 0.2); border-radius: 999px; background: rgba(250, 248, 239, 0.92); color: #646676; padding: 8px 10px; font: inherit; font-size: 9px; line-height: 1.1; font-weight: 870; }
 .checklist { display: grid; gap: 8px; padding: 16px 18px; border-bottom: 1px solid rgba(215, 204, 189, 0.58); }
 .checklist > header { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
 .checklist > header span { color: #858bb8; font-size: 9px; font-weight: 950; letter-spacing: .12em; text-transform: uppercase; }
