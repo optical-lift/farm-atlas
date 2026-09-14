@@ -70,8 +70,12 @@ export default async function AnnaPage() {
     delivery,
     workerContext,
   );
+  const journalIssuer =
+    journal.institution.operatingUnitName ?? journal.institution.organizationName;
   const identityMeta = [
-    journal.institution.operatingUnitName,
+    journal.institution.operatingUnitName
+      ? journal.institution.organizationName
+      : null,
     journal.institution.positionTitle,
   ].filter((value): value is string => Boolean(value));
 
@@ -91,7 +95,7 @@ export default async function AnnaPage() {
       >
         <div className={journalStyles.page}>
           <header className={journalStyles.header}>
-            <EmployeeBrandHeader organizationName={journal.institution.organizationName} />
+            <EmployeeBrandHeader organizationName={journalIssuer} />
             <div className={journalStyles.identityBlock}>
               <p className={journalStyles.journalLabel}>Work Journal</p>
               <h1 className={journalStyles.date}>{journal.dateLabel}</h1>
