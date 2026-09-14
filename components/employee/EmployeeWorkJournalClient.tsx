@@ -14,7 +14,6 @@ type EmployeeWorkJournalClientProps = {
   busy: boolean;
   error?: string | null;
   onToggleComplete: (entry: EmployeeWorkJournalEntry) => void | Promise<void>;
-  onToggleAttention: (entry: EmployeeWorkJournalEntry) => void | Promise<void>;
   onAddReportedWork: (title: string) => void | Promise<void>;
 };
 
@@ -33,7 +32,6 @@ function displayTime(localTime: string | null) {
 function stateLabel(entry: EmployeeWorkJournalEntry) {
   if (entry.state === "complete") return "Done";
   if (entry.state === "reported_complete") return "Reported · awaiting review";
-  if (entry.state === "active") return "In progress";
   if (entry.carried) return `Carried from ${entry.originalPlannedDate}`;
   return null;
 }
@@ -69,7 +67,6 @@ export default function EmployeeWorkJournalClient({
   busy,
   error,
   onToggleComplete,
-  onToggleAttention,
   onAddReportedWork,
 }: EmployeeWorkJournalClientProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -139,21 +136,7 @@ export default function EmployeeWorkJournalClient({
                 {label ? <span className={styles.entryMeta}>{label}</span> : null}
               </button>
 
-              {canEdit && !complete ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  className={styles.attentionButton}
-                  aria-label={entry.state === "active" ? `Stop working on ${entry.displayTitle}` : `Start ${entry.displayTitle}`}
-                  onClick={() => void onToggleAttention(entry)}
-                >
-                  {entry.state === "active" ? <span className={styles.attentionMark} aria-hidden="true" /> : null}
-                </button>
-              ) : entry.state === "active" ? (
-                <span className={styles.attentionMark} aria-hidden="true" />
-              ) : (
-                <span aria-hidden="true" />
-              )}
+              <span aria-hidden="true" />
             </article>
           );
         })}
@@ -266,16 +249,6 @@ export default function EmployeeWorkJournalClient({
                   >
                     {selectedEntry.state === "reported_complete" ? "Reopen" : "Done"}
                   </button>
-                  {selectedEntry.state !== "reported_complete" ? (
-                    <button
-                      type="button"
-                      className={styles.drawerAction}
-                      disabled={busy}
-                      onClick={() => void onToggleAttention(selectedEntry)}
-                    >
-                      {selectedEntry.state === "active" ? "Stop" : "Start"}
-                    </button>
-                  ) : null}
                 </div>
               ) : null}
             </>
