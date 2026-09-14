@@ -80,6 +80,7 @@ export default function EmployeeWorkJournalClient({
     () => journal.entries.find((entry) => entry.id === selectedId) ?? null,
     [journal.entries, selectedId],
   );
+  const selectedExtraGuidance = selectedEntry?.guidance.slice(2) ?? [];
 
   async function addReportedWork() {
     const title = reportedTitle.trim();
@@ -91,11 +92,11 @@ export default function EmployeeWorkJournalClient({
 
   return (
     <>
-      <div className={styles.shape} aria-label="Shape of the day">
+      <div className={styles.shape} aria-label="Today’s work summary">
         {journal.shape.summaryLine}
       </div>
 
-      <section className={styles.entries} aria-label="Work Journal entries">
+      <section className={styles.entries} aria-label="Today’s work">
         {journal.entries.map((entry) => {
           const complete = entry.state === "complete" || entry.state === "reported_complete";
           const label = stateLabel(entry);
@@ -104,7 +105,7 @@ export default function EmployeeWorkJournalClient({
           return (
             <article
               key={entry.key}
-              className={`${styles.entry}${complete ? ` ${styles.entryComplete}` : ""}`}
+              className={`${styles.entry}${complete ? ` ${styles.entryComplete}` : ""}${time ? ` ${styles.entryTimed}` : ""}`}
               data-work-journal-entry-id={entry.id}
             >
               {canEdit && !entry.completion.institutionallyComplete ? (
@@ -112,7 +113,7 @@ export default function EmployeeWorkJournalClient({
                   type="button"
                   disabled={busy}
                   className={styles.markButton}
-                  aria-label={complete ? `Reopen ${entry.title}` : `Mark ${entry.title} done`}
+                  aria-label={complete ? `Reopen ${entry.displayTitle}` : `Mark ${entry.displayTitle} done`}
                   onClick={() => void onToggleComplete(entry)}
                 >
                   <JournalMark entry={entry} />
@@ -126,11 +127,11 @@ export default function EmployeeWorkJournalClient({
               <button
                 type="button"
                 className={styles.entryButton}
-                aria-label={`Open journal entry ${entry.title}`}
+                aria-label={`Open work details for ${entry.displayTitle}`}
                 onClick={() => setSelectedId(entry.id)}
               >
                 <span className={styles.entryHeading}>
-                  <span className={styles.entryTitle}>{entry.title}</span>
+                  <span className={styles.entryTitle}>{entry.displayTitle}</span>
                   {time ? <span className={styles.entryTime}>{time}</span> : null}
                 </span>
 
@@ -150,7 +151,7 @@ export default function EmployeeWorkJournalClient({
                   type="button"
                   disabled={busy}
                   className={styles.attentionButton}
-                  aria-label={entry.state === "active" ? `Stop working on ${entry.title}` : `Work on ${entry.title}`}
+                  aria-label={entry.state === "active" ? `Stop working on ${entry.displayTitle}` : `Start ${entry.displayTitle}`}
                   onClick={() => void onToggleAttention(entry)}
                 >
                   {entry.state === "active" ? <span className={styles.attentionMark} aria-hidden="true" /> : null}
@@ -166,8 +167,8 @@ export default function EmployeeWorkJournalClient({
       </section>
 
       {journal.reportedEntries.length ? (
-        <section className={styles.reportedSection} aria-label="Recorded today">
-          <div className={styles.reportedLabel}>Recorded today</div>
+        <section className={styles.reportedSection} aria-label="Added today">
+          <div className={styles.reportedLabel}>Added today</div>
           {journal.reportedEntries.map((entry) => (
             <div className={styles.reportedEntry} key={entry.key}>
               {entry.title}
@@ -232,35 +233,35 @@ export default function EmployeeWorkJournalClient({
       {error ? <div className={styles.error}>{error}</div> : null}
 
       <div className={`${styles.drawerViewport}${selectedEntry ? ` ${styles.drawerOpen}` : ""}`}>
-        <section className={styles.drawer} aria-label={selectedEntry?.title ?? "Journal entry"}>
+        <section className={styles.drawer} aria-label={selectedEntry?.displayTitle ?? "Work details"}>
           <button
             type="button"
             className={styles.entryButton}
             onClick={() => setSelectedId(null)}
-            aria-label="Close journal entry"
+            aria-label="Close work details"
           >
             <span className={styles.drawerHandle} aria-hidden="true" />
           </button>
 
           {selectedEntry ? (
             <>
-              <div className={styles.drawerLabel}>Journal entry</div>
-              <div className={styles.drawerTitle}>{selectedEntry.title}</div>
+              <div className={styles.drawerTitle}>{selectedEntry.displayTitle}</div>
 
-              {selectedEntry.guidance.length ? (
+              {selectedExtraGuidance.length ? (
                 <div className={styles.drawerDetails}>
-                  {selectedEntry.guidance.map((line) => (
+                  {selectedExtraGuidance.map((line) => (
                     <div key={line}>{line}</div>
                   ))}
                 </div>
               ) : null}
 
-              <div className={styles.drawerMeta}>
-                {displayTime(selectedEntry.timeLabel)
-                  ? `${displayTime(selectedEntry.timeLabel)} · `
-                  : ""}
-                {stateLabel(selectedEntry) ?? "Assigned today"}
-              </div>
+              {displayTime(selectedEntry.timeLabel) || stateLabel(selectedEntry) ? (
+                <div className={styles.drawerMeta}>
+                  {[displayTime(selectedEntry.timeLabel), stateLabel(selectedEntry)]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </div>
+              ) : null}
 
               {canEdit && !selectedEntry.completion.institutionallyComplete ? (
                 <div className={styles.drawerActions}>
@@ -279,7 +280,7 @@ export default function EmployeeWorkJournalClient({
                       disabled={busy}
                       onClick={() => void onToggleAttention(selectedEntry)}
                     >
-                      {selectedEntry.state === "active" ? "Stop working" : "Work on this"}
+                      {selectedEntry.state === "active" ? "Stop" : "Start"}
                     </button>
                   ) : null}
                 </div>
