@@ -44,7 +44,7 @@ test("Anna work-pass access is one-time, preview-safe, and provisions the curren
   assert.match(helper, /sha256/);
 });
 
-test("Anna phone surface has quiet completion, attention, correction, unknown-work capture, and no public work fallback", () => {
+test("Anna phone surface has quiet completion, attention, correction, unknown-work capture, and only authorized supervisor fallback", () => {
   const client = read("app/anna/AnnaWorkerDayClient.tsx");
   const page = read("app/anna/page.tsx");
 
@@ -57,8 +57,12 @@ test("Anna phone surface has quiet completion, attention, correction, unknown-wo
 
   assert.match(page, /getCurrentWorkerSessionContext/);
   assert.match(page, /getWorkerDelivery\(workerContext\)/);
+  assert.match(page, /getAtlasSession/);
+  assert.match(page, /membershipForFarm\(session, ELM_FARM_ID\)/);
+  assert.match(page, /canSeeWholeFarm\(farmMembership\.role\)/);
+  assert.match(page, /supervisorCanView/);
+  assert.match(page, /getAnnaWorkerDelivery/);
   assert.match(page, /Sign in to Atlas to see your work/);
-  assert.doesNotMatch(page, /getAnnaWorkerDelivery/);
   assert.doesNotMatch(page, /Monday, Sept\. 7|Tuesday, Sept\. 8|Friday, Sept\. 11/);
 });
 
