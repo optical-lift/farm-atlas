@@ -21,7 +21,6 @@ type WorkerDayTaskGuide = {
   title: string;
   completed: boolean;
   details: string[];
-  instructions: string[];
 };
 
 export default function EmployerPocket({
@@ -89,17 +88,6 @@ export default function EmployerPocket({
                 <div className={styles.taskDrawerDetails}>
                   {selectedTaskGuide.details.map((detail) => (
                     <div key={detail}>{detail}</div>
-                  ))}
-                </div>
-              ) : null}
-
-              {selectedTaskGuide?.instructions.length ? (
-                <div className={styles.taskDrawerSources}>
-                  {selectedTaskGuide.instructions.map((instruction) => (
-                    <div key={instruction} className={styles.taskDrawerSource}>
-                      <div className={styles.taskDrawerSourceTitle}>Instructions</div>
-                      <div className={styles.taskDrawerSourceInstructions}>{instruction}</div>
-                    </div>
                   ))}
                 </div>
               ) : null}
