@@ -80,7 +80,6 @@ export default function EmployeeWorkJournalClient({
     () => journal.entries.find((entry) => entry.id === selectedId) ?? null,
     [journal.entries, selectedId],
   );
-  const selectedExtraGuidance = selectedEntry?.guidance.slice(2) ?? [];
 
   async function addReportedWork() {
     const title = reportedTitle.trim();
@@ -101,7 +100,7 @@ export default function EmployeeWorkJournalClient({
           const complete = entry.state === "complete" || entry.state === "reported_complete";
           const label = stateLabel(entry);
           const time = displayTime(entry.timeLabel);
-          const opensDrawer = canEdit || entry.guidance.length > 2;
+          const opensDrawer = canEdit || entry.guidance.length > 0;
 
           return (
             <article
@@ -136,14 +135,6 @@ export default function EmployeeWorkJournalClient({
                   <span className={styles.entryTitle}>{entry.displayTitle}</span>
                   {time ? <span className={styles.entryTime}>{time}</span> : null}
                 </span>
-
-                {entry.guidance.length ? (
-                  <span className={styles.entryGuidance}>
-                    {entry.guidance.slice(0, 2).map((line) => (
-                      <span key={line}>{line}</span>
-                    ))}
-                  </span>
-                ) : null}
 
                 {label ? <span className={styles.entryMeta}>{label}</span> : null}
               </button>
@@ -249,9 +240,9 @@ export default function EmployeeWorkJournalClient({
             <>
               <div className={styles.drawerTitle}>{selectedEntry.displayTitle}</div>
 
-              {selectedExtraGuidance.length ? (
+              {selectedEntry.guidance.length ? (
                 <div className={styles.drawerDetails}>
-                  {selectedExtraGuidance.map((line) => (
+                  {selectedEntry.guidance.map((line) => (
                     <div key={line}>{line}</div>
                   ))}
                 </div>
