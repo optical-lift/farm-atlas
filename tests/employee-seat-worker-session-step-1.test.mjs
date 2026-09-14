@@ -23,19 +23,23 @@ test("employee worker session resolves institutional access before delivery", ()
   assert.match(annaPilot, /WORKER_DAY_PILOT_SCOPE/);
 });
 
-test("Anna Worker Day has no public delivery fallback and employee edits use the seat-bound command", () => {
+test("Anna Worker Day has no public delivery fallback, allows authorized supervisor read, and employee edits use the seat-bound command", () => {
   const annaPage = read("app/anna/page.tsx");
   const delivery = read("lib/worker-delivery.ts");
   const api = read("app/api/anna/pilot/route.ts");
 
   assert.match(annaPage, /getCurrentWorkerSessionContext/);
+  assert.match(annaPage, /getAtlasSession/);
+  assert.match(annaPage, /membershipForFarm\(session, ELM_FARM_ID\)/);
+  assert.match(annaPage, /canSeeWholeFarm\(farmMembership\.role\)/);
+  assert.match(annaPage, /if \(!workerContext && !supervisorCanView\)/);
+  assert.match(annaPage, /getAnnaWorkerDelivery/);
   assert.match(annaPage, /Sign in to Atlas to see your work/);
-  assert.doesNotMatch(annaPage, /getAnnaWorkerDelivery/);
   assert.match(annaPage, /<EmployerPocket items=\{\[\]\} \/>/);
   assert.match(annaPage, /AnnaWorkerDayClient/);
 
-  // The legacy compatibility loader may still exist for a validated Work Pass,
-  // but it is no longer reachable from the unauthenticated page render.
+  // The compatibility loader is reachable only after either a worker session
+  // or an authenticated owner/manager authorization check.
   assert.match(delivery, /getAnnaWorkerDelivery/);
 
   assert.match(api, /EMPLOYEE_SEAT_SCOPE/);
