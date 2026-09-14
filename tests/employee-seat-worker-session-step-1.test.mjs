@@ -23,9 +23,13 @@ test("employee worker session resolves institutional access before delivery", ()
   assert.match(annaPilot, /WORKER_DAY_PILOT_SCOPE/);
 });
 
-test("Anna Worker Day has no public delivery fallback, allows authorized supervisor read, and employee edits use the seat-bound command", () => {
+test("Anna compatibility route renders through the institution-generic Work Journal contract", () => {
   const annaPage = read("app/anna/page.tsx");
   const delivery = read("lib/worker-delivery.ts");
+  const journal = read("lib/employee-work-journal.ts");
+  const journalServer = read("lib/employee-work-journal-server.ts");
+  const journalClient = read("components/employee/EmployeeWorkJournalClient.tsx");
+  const controller = read("app/anna/AnnaWorkJournalController.tsx");
   const api = read("app/api/anna/pilot/route.ts");
 
   assert.match(annaPage, /getCurrentWorkerSessionContext/);
@@ -34,13 +38,31 @@ test("Anna Worker Day has no public delivery fallback, allows authorized supervi
   assert.match(annaPage, /canSeeWholeFarm\(farmMembership\.role\)/);
   assert.match(annaPage, /if \(!workerContext && !supervisorCanView\)/);
   assert.match(annaPage, /getAnnaWorkerDelivery/);
+  assert.match(annaPage, /buildEmployeeWorkJournalFromDelivery/);
+  assert.match(annaPage, /organizationName=\{journal\.institution\.organizationName\}/);
+  assert.match(annaPage, /Work Journal/);
+  assert.match(annaPage, /AnnaWorkJournalController/);
   assert.match(annaPage, /Sign in to Atlas to see your work/);
-  assert.match(annaPage, /<EmployerPocket items=\{\[\]\} taskItems=\{delivery\.items\} \/>/);
-  assert.match(annaPage, /AnnaWorkerDayClient/);
 
-  // The compatibility loader is reachable only after either a worker session
-  // or an authenticated owner/manager authorization check.
+  assert.match(journal, /kind: "employee_work_journal_day"/);
+  assert.match(journal, /EmployeeWorkJournalInstitution/);
+  assert.match(journal, /summaryLine/);
+  assert.doesNotMatch(journal, /Elm Farm|Anna|farmId|farm_id/);
+
+  assert.match(journalServer, /organizations/);
+  assert.match(journalServer, /organization_units/);
+  assert.match(journalServer, /organization_positions/);
+  assert.match(journalServer, /buildEmployeeWorkJournalFromDelivery/);
+  assert.doesNotMatch(journalServer, /ELM_FARM_ID|ANNA_FARM_MEMBERSHIP_ID/);
+
+  assert.match(journalClient, /Work Journal entries/);
+  assert.match(journalClient, /Shape of the day/);
+  assert.doesNotMatch(journalClient, /Elm Farm|Anna|farm_id|farmId/);
+
+  // The compatibility route/controller may know the legacy lane and command
+  // endpoint, but the reusable journal contract and UI may not.
   assert.match(delivery, /getAnnaWorkerDelivery/);
+  assert.match(controller, /\/api\/anna\/pilot/);
 
   assert.match(api, /EMPLOYEE_SEAT_SCOPE/);
   assert.match(api, /worker_delivery_employee_transition_self_api_v1/);
