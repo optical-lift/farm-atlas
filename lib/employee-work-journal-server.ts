@@ -1,7 +1,13 @@
 import "server-only";
 
-import type { EmployeeWorkJournalInstitution } from "@/lib/employee-work-journal";
+import {
+  buildEmployeeWorkJournalDay,
+  type EmployeeWorkJournalDay,
+  type EmployeeWorkJournalInstitution,
+} from "@/lib/employee-work-journal";
 import { createAtlasAdminClient } from "@/lib/supabase/admin";
+import type { WorkerDelivery } from "@/lib/worker-delivery";
+import type { WorkerSessionContext } from "@/lib/worker-session";
 
 export type EmployeeWorkJournalInstitutionRef = {
   organizationId: string;
@@ -94,4 +100,26 @@ export async function resolveEmployeeWorkJournalInstitution(
     positionId: position?.id ?? ref.positionId,
     positionTitle: position?.display_title ?? ref.positionTitle,
   };
+}
+
+export async function buildEmployeeWorkJournalFromDelivery(
+  delivery: WorkerDelivery,
+  workerContext?: WorkerSessionContext | null,
+): Promise<EmployeeWorkJournalDay> {
+  const institution = await resolveEmployeeWorkJournalInstitution({
+    organizationId: delivery.institutionRef.organizationId,
+    organizationUnitId:
+      workerContext?.organizationUnitId ?? delivery.institutionRef.organizationUnitId,
+    employeeSeatId: workerContext?.employeeSeatId,
+    positionId: workerContext?.positionId,
+    positionTitle: workerContext?.positionTitle,
+  });
+
+  return buildEmployeeWorkJournalDay({
+    date: delivery.date,
+    timeZone: delivery.timeZone,
+    institution,
+    items: delivery.items,
+    reported: delivery.extras,
+  });
 }
