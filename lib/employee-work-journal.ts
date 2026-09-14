@@ -195,7 +195,7 @@ export function buildEmployeeWorkJournalDay(
       key: item.key,
       title: item.title,
       displayTitle: stripDuplicateTime(item.title, timeLabel),
-      guidance: [...new Set(item.details ?? [])],
+      guidance: [...new Set((item.details ?? []).map((line) => line.trim()).filter(Boolean))],
       state: journalEntryState(item),
       plannedDate: item.plannedDate,
       originalPlannedDate: item.originalPlannedDate,
