@@ -56,23 +56,29 @@ test("A1 keeps one new structured-work entry boundary and rejects prose-only sem
   );
 });
 
-test("A1 enforces title-only employee task exposure until disclosure architecture exists", () => {
+test("A1 exposes only explicit Worker Day delivery guidance, never canonical work prose", () => {
   const delivery = read("lib/worker-delivery.ts");
   const client = read("app/anna/AnnaWorkerDayClient.tsx");
   const drawer = read("app/anna/EmployerPocket.tsx");
+  const page = read("app/anna/page.tsx");
+  const disclosure = read("docs/architecture/worker-day-guidance-disclosure.md");
 
   assert.doesNotMatch(delivery, /work_items[\s\S]{0,300}instructions/);
   assert.doesNotMatch(delivery, /instructions:/);
   assert.doesNotMatch(delivery, /sourceWork/);
-  assert.doesNotMatch(delivery, /details:/);
+  assert.match(delivery, /deliveryDetails/);
+  assert.match(delivery, /details: deliveryDetails\(row\.delivery_payload\)/);
 
   assert.doesNotMatch(client, /instructions/);
   assert.doesNotMatch(client, /sourceWork/);
-  assert.doesNotMatch(client, /item\.details/);
   assert.match(client, /detail:\s*\{[\s\S]*id: item\.id,[\s\S]*title: item\.title,[\s\S]*completed: item\.completed/);
 
   assert.doesNotMatch(drawer, /instructions/);
   assert.doesNotMatch(drawer, /sourceWork/);
-  assert.doesNotMatch(drawer, /selectedTask\.details/);
-  assert.match(drawer, /selectedTask\.title/);
+  assert.match(drawer, /selectedTaskGuide\?\.details/);
+  assert.match(page, /taskItems=\{delivery\.items\}/);
+
+  assert.match(disclosure, /delivery_payload\.details/);
+  assert.match(disclosure, /must not establish operational meaning/i);
+  assert.match(disclosure, /work_items\.instructions/);
 });
