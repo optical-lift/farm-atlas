@@ -157,67 +157,6 @@ function stripDuplicateTime(title: string, localTime: string | null) {
   return cleaned || title;
 }
 
-const GUIDANCE_FILLER_TOKENS = new Set([
-  "a",
-  "an",
-  "and",
-  "after",
-  "at",
-  "before",
-  "by",
-  "during",
-  "for",
-  "friday",
-  "in",
-  "later",
-  "monday",
-  "next",
-  "of",
-  "on",
-  "or",
-  "round",
-  "saturday",
-  "sunday",
-  "task",
-  "then",
-  "the",
-  "this",
-  "thursday",
-  "today",
-  "tomorrow",
-  "tuesday",
-  "wednesday",
-  "while",
-  "with",
-  "work",
-]);
-
-function contentTokens(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .filter((token) => token.length > 1 && !GUIDANCE_FILLER_TOKENS.has(token));
-}
-
-function guidanceAddsInformation(title: string, line: string) {
-  const trimmed = line.trim();
-  if (!trimmed) return false;
-
-  const titleTokens = new Set(contentTokens(title));
-  const detailTokens = contentTokens(trimmed);
-  if (detailTokens.length === 0) return false;
-
-  return detailTokens.some((token) => !titleTokens.has(token));
-}
-
-function informativeGuidance(title: string, details: string[] | undefined) {
-  return [...new Set((details ?? []).map((line) => line.trim()).filter(Boolean))].filter(
-    (line) => guidanceAddsInformation(title, line),
-  );
-}
-
 function isExecutionComplete(entry: EmployeeWorkJournalEntry) {
   return entry.state === "complete" || entry.state === "reported_complete";
 }
@@ -251,13 +190,12 @@ export function buildEmployeeWorkJournalDay(
 ): EmployeeWorkJournalDay {
   const entries: EmployeeWorkJournalEntry[] = input.items.map((item) => {
     const timeLabel = item.timeLabel ?? null;
-    const displayTitle = stripDuplicateTime(item.title, timeLabel);
     return {
       id: item.id,
       key: item.key,
       title: item.title,
-      displayTitle,
-      guidance: informativeGuidance(displayTitle, item.details),
+      displayTitle: stripDuplicateTime(item.title, timeLabel),
+      guidance: [...new Set((item.details ?? []).map((line) => line.trim()).filter(Boolean))],
       state: journalEntryState(item),
       plannedDate: item.plannedDate,
       originalPlannedDate: item.originalPlannedDate,
