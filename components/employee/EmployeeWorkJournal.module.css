@@ -111,6 +111,18 @@
 }
 
 .markButton,
+.attentionButton,
+.entryButton,
+.textButton,
+.drawerAction,
+.choiceButton {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.markButton,
 .markStatic {
   position: relative;
   z-index: 1;
@@ -355,12 +367,13 @@
 }
 
 .drawerAction {
+  min-height: 44px;
   margin: 0;
-  padding: 6px 11px;
+  padding: 10px 14px;
   border: 1px solid rgba(24, 23, 19, .28);
   border-radius: 2px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .drawerAction:first-child {
