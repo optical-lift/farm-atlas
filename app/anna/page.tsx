@@ -5,7 +5,18 @@ import EmployerPocket from "@/app/anna/EmployerPocket";
 import styles from "@/app/anna/employee-surface.module.css";
 import EmployeeBrandHeader from "@/components/employee/EmployeeBrandHeader";
 import { getAnnaPilotEditState } from "@/lib/anna-worker-day-pilot";
-import { formatElmDay, getWorkerDelivery } from "@/lib/worker-delivery";
+import {
+  canSeeWholeFarm,
+  getAtlasSession,
+  membershipForFarm,
+} from "@/lib/atlas/session";
+import {
+  ANNA_FARM_MEMBERSHIP_ID,
+  ELM_FARM_ID,
+  formatElmDay,
+  getAnnaWorkerDelivery,
+  getWorkerDelivery,
+} from "@/lib/worker-delivery";
 import { getCurrentWorkerSessionContext } from "@/lib/worker-session";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +27,16 @@ const ebGaramond = EB_Garamond({ subsets: ["latin"] });
 export default async function AnnaPage() {
   const workerContext = await getCurrentWorkerSessionContext();
 
+  let supervisorCanView = false;
   if (!workerContext) {
+    const session = await getAtlasSession();
+    const farmMembership = session ? membershipForFarm(session, ELM_FARM_ID) : null;
+    supervisorCanView = Boolean(
+      farmMembership && canSeeWholeFarm(farmMembership.role),
+    );
+  }
+
+  if (!workerContext && !supervisorCanView) {
     return (
       <>
         <style>{`
@@ -41,10 +61,12 @@ export default async function AnnaPage() {
     );
   }
 
-  const [delivery, pilot] = await Promise.all([
-    getWorkerDelivery(workerContext),
-    getAnnaPilotEditState(),
-  ]);
+  const [delivery, pilot] = workerContext
+    ? await Promise.all([
+        getWorkerDelivery(workerContext),
+        getAnnaPilotEditState(),
+      ])
+    : [await getAnnaWorkerDelivery(), { canEdit: false }];
 
   return (
     <>
