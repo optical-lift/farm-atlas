@@ -16,7 +16,21 @@ type WorkerDayDrawerItem = {
   completed: boolean;
 };
 
-export default function EmployerPocket({ items }: { items: EmployerPocketItem[] }) {
+type WorkerDayTaskGuide = {
+  id: string;
+  title: string;
+  completed: boolean;
+  details: string[];
+  instructions: string[];
+};
+
+export default function EmployerPocket({
+  items,
+  taskItems = [],
+}: {
+  items: EmployerPocketItem[];
+  taskItems?: WorkerDayTaskGuide[];
+}) {
   const [open, setOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<WorkerDayDrawerItem | null>(null);
 
@@ -32,6 +46,9 @@ export default function EmployerPocket({ items }: { items: EmployerPocketItem[] 
     return () => window.removeEventListener("atlas:employee-task-open", handleTaskOpen);
   }, []);
 
+  const selectedTaskGuide = selectedTask
+    ? taskItems.find((item) => item.id === selectedTask.id) ?? null
+    : null;
   const drawerLabel = selectedTask ? "Task" : "This Week";
 
   function toggleDrawer() {
@@ -67,6 +84,25 @@ export default function EmployerPocket({ items }: { items: EmployerPocketItem[] 
           {selectedTask ? (
             <div className={styles.taskDrawer}>
               <div className={styles.taskDrawerTitle}>{selectedTask.title}</div>
+
+              {selectedTaskGuide?.details.length ? (
+                <div className={styles.taskDrawerDetails}>
+                  {selectedTaskGuide.details.map((detail) => (
+                    <div key={detail}>{detail}</div>
+                  ))}
+                </div>
+              ) : null}
+
+              {selectedTaskGuide?.instructions.length ? (
+                <div className={styles.taskDrawerSources}>
+                  {selectedTaskGuide.instructions.map((instruction) => (
+                    <div key={instruction} className={styles.taskDrawerSource}>
+                      <div className={styles.taskDrawerSourceTitle}>Instructions</div>
+                      <div className={styles.taskDrawerSourceInstructions}>{instruction}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : (
             <>
