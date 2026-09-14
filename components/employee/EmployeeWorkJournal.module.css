@@ -1,0 +1,396 @@
+.surface {
+  --journal-paper: #f4f1ea;
+  --journal-page: #fffdf8;
+  --journal-ink: #181713;
+  --journal-muted: #6f6b63;
+  --journal-rule: rgba(24, 23, 19, .13);
+  --journal-brass: #b79a62;
+  --journal-margin: rgba(169, 94, 75, .22);
+  min-height: 100dvh;
+  width: 100%;
+  color: var(--journal-ink);
+  background: var(--journal-paper);
+}
+
+.page {
+  width: min(720px, 100%);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 30px 20px calc(104px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  background-color: var(--journal-page);
+  background-image: radial-gradient(circle, rgba(23, 22, 18, .045) .58px, transparent .68px);
+  background-size: 15px 15px;
+  background-position: 7.5px 7.5px;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.identityBlock {
+  margin-top: 22px;
+  padding-left: 32px;
+}
+
+.journalLabel {
+  margin: 0 0 3px;
+  color: var(--journal-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.date {
+  margin: 0;
+  font-family: var(--employee-serif), Georgia, serif;
+  font-size: 29px;
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -.025em;
+}
+
+.identityMeta {
+  margin: 7px 0 0;
+  color: var(--journal-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.shape {
+  margin: 0 0 16px 32px;
+  padding: 9px 0 11px;
+  border-top: 1px solid var(--journal-rule);
+  border-bottom: 1px solid var(--journal-rule);
+  color: #555149;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.entries {
+  position: relative;
+}
+
+.entries::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 22px;
+  width: 1px;
+  background: var(--journal-margin);
+}
+
+.entry {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 18px;
+  gap: 8px;
+  align-items: start;
+  padding: 11px 0 12px;
+}
+
+.markButton,
+.markStatic,
+.attentionButton,
+.entryButton,
+.textButton,
+.drawerAction,
+.choiceButton {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.markButton,
+.markStatic {
+  position: relative;
+  z-index: 1;
+  width: 24px;
+  min-height: 28px;
+  padding: 0;
+  display: grid;
+  place-items: start center;
+  background: var(--journal-page);
+}
+
+.markButton {
+  cursor: pointer;
+}
+
+.mark {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.entryButton {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.entryHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.entryTitle {
+  font-size: 16px;
+  line-height: 1.38;
+  letter-spacing: -.006em;
+}
+
+.entryTime {
+  flex: 0 0 auto;
+  color: var(--journal-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.entryGuidance {
+  display: grid;
+  gap: 2px;
+  margin-top: 3px;
+  color: #5b574f;
+  font-size: 13px;
+  line-height: 1.42;
+}
+
+.entryMeta {
+  margin-top: 3px;
+  color: var(--journal-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.entryComplete .entryTitle,
+.entryComplete .entryGuidance,
+.entryComplete .entryMeta,
+.entryComplete .entryTime {
+  opacity: .48;
+}
+
+.attentionButton {
+  width: 18px;
+  min-height: 28px;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  place-items: center end;
+  cursor: pointer;
+}
+
+.attentionMark {
+  display: block;
+  width: 2px;
+  height: 20px;
+  background: var(--journal-brass);
+}
+
+.reportedSection {
+  margin: 24px 0 0 32px;
+  padding-top: 14px;
+  border-top: 1px solid var(--journal-rule);
+}
+
+.reportedLabel {
+  margin-bottom: 8px;
+  color: var(--journal-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.reportedEntry {
+  padding: 5px 0;
+  color: #5d5951;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.addArea {
+  margin: 24px 0 0 32px;
+  padding-top: 14px;
+  border-top: 1px solid var(--journal-rule);
+}
+
+.textButton {
+  margin: 0;
+  padding: 0;
+  color: var(--journal-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.composer {
+  display: grid;
+  gap: 8px;
+}
+
+.lineInput {
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  border-bottom: 1px solid rgba(24, 23, 19, .3);
+  border-radius: 0;
+  outline: 0;
+  padding: 7px 2px 8px;
+  background: transparent;
+  color: var(--journal-ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.composerActions {
+  display: flex;
+  gap: 16px;
+}
+
+.error {
+  margin: 16px 0 0 32px;
+  color: var(--journal-muted);
+  font-size: 13px;
+}
+
+.drawerViewport {
+  position: fixed;
+  z-index: 45;
+  left: 50%;
+  bottom: 0;
+  width: min(720px, 100%);
+  transform: translate(-50%, 100%);
+  transition: transform 300ms cubic-bezier(.22, .61, .36, 1);
+  pointer-events: none;
+}
+
+.drawerOpen {
+  transform: translate(-50%, 0);
+}
+
+.drawer {
+  max-height: min(56dvh, 430px);
+  overflow: auto;
+  padding: 8px 20px calc(22px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(24, 23, 19, .2);
+  background: var(--journal-paper);
+  box-shadow: 0 -10px 30px rgba(24, 23, 19, .055);
+  pointer-events: auto;
+}
+
+.drawerHandle {
+  display: block;
+  width: 26px;
+  height: 1px;
+  margin: 0 auto 14px;
+  background: rgba(24, 23, 19, .35);
+}
+
+.drawerLabel {
+  color: var(--journal-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.drawerTitle {
+  margin-top: 4px;
+  font-family: var(--employee-serif), Georgia, serif;
+  font-size: 22px;
+  line-height: 1.18;
+}
+
+.drawerDetails {
+  display: grid;
+  gap: 5px;
+  margin-top: 13px;
+  color: #514d46;
+  font-size: 14px;
+  line-height: 1.48;
+}
+
+.drawerMeta {
+  margin-top: 12px;
+  color: var(--journal-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.drawerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--journal-rule);
+}
+
+.drawerAction {
+  margin: 0;
+  padding: 4px 0;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.dialogScrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(244, 241, 234, .9);
+}
+
+.dialog {
+  width: min(370px, 100%);
+  box-sizing: border-box;
+  padding: 20px;
+  border: 1px solid var(--journal-rule);
+  background: var(--journal-page);
+  box-shadow: 0 12px 40px rgba(24, 23, 19, .07);
+}
+
+.dialogCopy {
+  margin-bottom: 16px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.dialogChoices {
+  display: grid;
+  gap: 8px;
+}
+
+.choiceButton {
+  width: 100%;
+  padding: 5px 0;
+  cursor: pointer;
+  text-align: left;
+  font-size: 15px;
+}
+
+@media (max-width: 720px) {
+  .surface {
+    background: var(--journal-page);
+  }
+
+  .page {
+    padding-top: 27px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawerViewport {
+    transition: none;
+  }
+}

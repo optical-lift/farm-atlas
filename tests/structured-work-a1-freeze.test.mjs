@@ -56,10 +56,10 @@ test("A1 keeps one new structured-work entry boundary and rejects prose-only sem
   );
 });
 
-test("A1 exposes only explicit Worker Day delivery guidance, never canonical work prose", () => {
+test("A1 exposes only explicit Worker Day delivery guidance through the generic Work Journal", () => {
   const delivery = read("lib/worker-delivery.ts");
-  const client = read("app/anna/AnnaWorkerDayClient.tsx");
-  const drawer = read("app/anna/EmployerPocket.tsx");
+  const journal = read("lib/employee-work-journal.ts");
+  const client = read("components/employee/EmployeeWorkJournalClient.tsx");
   const page = read("app/anna/page.tsx");
   const disclosure = read("docs/architecture/worker-day-guidance-disclosure.md");
 
@@ -69,14 +69,15 @@ test("A1 exposes only explicit Worker Day delivery guidance, never canonical wor
   assert.match(delivery, /deliveryDetails/);
   assert.match(delivery, /details: deliveryDetails\(row\.delivery_payload\)/);
 
-  assert.doesNotMatch(client, /instructions/);
-  assert.doesNotMatch(client, /sourceWork/);
-  assert.match(client, /detail:\s*\{[\s\S]*id: item\.id,[\s\S]*title: item\.title,[\s\S]*completed: item\.completed/);
+  assert.doesNotMatch(journal, /work_items\.instructions/);
+  assert.doesNotMatch(journal, /sourceWork/);
+  assert.match(journal, /guidance: \[\.\.\.new Set\(item\.details \?\? \[\]\)\]/);
 
-  assert.doesNotMatch(drawer, /instructions/);
-  assert.doesNotMatch(drawer, /sourceWork/);
-  assert.match(drawer, /selectedTaskGuide\?\.details/);
-  assert.match(page, /taskItems=\{delivery\.items\}/);
+  assert.doesNotMatch(client, /work_items\.instructions/);
+  assert.doesNotMatch(client, /sourceWork/);
+  assert.match(client, /entry\.guidance/);
+  assert.match(page, /buildEmployeeWorkJournalFromDelivery/);
+  assert.match(page, /AnnaWorkJournalController/);
 
   assert.match(disclosure, /delivery_payload\.details/);
   assert.match(disclosure, /must not establish operational meaning/i);
