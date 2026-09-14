@@ -35,7 +35,7 @@ test("Anna Worker Day has no public delivery fallback, allows authorized supervi
   assert.match(annaPage, /if \(!workerContext && !supervisorCanView\)/);
   assert.match(annaPage, /getAnnaWorkerDelivery/);
   assert.match(annaPage, /Sign in to Atlas to see your work/);
-  assert.match(annaPage, /<EmployerPocket items=\{\[\]\} \/>/);
+  assert.match(annaPage, /<EmployerPocket items=\{\[\]\} taskItems=\{delivery\.items\} \/>/);
   assert.match(annaPage, /AnnaWorkerDayClient/);
 
   // The compatibility loader is reachable only after either a worker session
