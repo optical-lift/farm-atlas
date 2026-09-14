@@ -71,11 +71,12 @@ test("A1 exposes only explicit Worker Day delivery guidance through the generic 
 
   assert.doesNotMatch(journal, /work_items\.instructions/);
   assert.doesNotMatch(journal, /sourceWork/);
-  assert.match(journal, /guidance: \[\.\.\.new Set\(item\.details \?\? \[\]\)\]/);
+  assert.match(journal, /guidance: \[\.\.\.new Set\(\(item\.details \?\? \[\]\)/);
 
   assert.doesNotMatch(client, /work_items\.instructions/);
   assert.doesNotMatch(client, /sourceWork/);
-  assert.match(client, /entry\.guidance/);
+  assert.match(client, /selectedEntry\.guidance/);
+  assert.doesNotMatch(client, /entry\.guidance\.slice\(0, 2\)/);
   assert.match(page, /buildEmployeeWorkJournalFromDelivery/);
   assert.match(page, /AnnaWorkJournalController/);
 
