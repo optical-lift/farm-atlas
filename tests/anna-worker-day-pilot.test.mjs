@@ -26,14 +26,21 @@ test("Anna Worker Day stays a delivery interaction membrane", () => {
   assert.match(delivery, /workerContext\.deliveryMembershipId/);
 });
 
-test("legacy Anna edit access still uses one-time redemption and an HttpOnly strict cookie", () => {
+test("Anna work-pass access is one-time, preview-safe, and provisions the current Worker Day session", () => {
   const editRoute = read("app/anna/edit/route.ts");
+  const workPass = read("lib/worker-work-pass.ts");
   const helper = read("lib/anna-worker-day-pilot.ts");
 
-  assert.match(editRoute, /redeem_worker_delivery_pilot_capability_v1/);
-  assert.match(editRoute, /NextResponse\.redirect\(cleanUrl, 303\)/);
+  assert.match(workPass, /redeem_worker_delivery_pilot_capability_v1/);
+  assert.match(editRoute, /redeemElmWorkPass/);
+  assert.match(editRoute, /export async function GET/);
+  assert.match(editRoute, /export async function POST/);
+  assert.match(editRoute, /method="post"/);
+  assert.match(editRoute, /ELM_WORK_SESSION_COOKIE/);
+  assert.match(editRoute, /ANNA_WORKER_DAY_PILOT_COOKIE/);
   assert.match(editRoute, /httpOnly: true/);
   assert.match(editRoute, /sameSite: "strict"/);
+  assert.match(editRoute, /Cache-Control/);
   assert.match(helper, /sha256/);
 });
 
