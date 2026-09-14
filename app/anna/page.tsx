@@ -71,9 +71,11 @@ export default async function AnnaPage() {
     workerContext,
   );
   const journalIssuer =
-    journal.institution.operatingUnitName ?? journal.institution.organizationName;
+    journal.institution.operatingUnitName ??
+    journal.institution.organizationName ??
+    "Atlas";
   const identityMeta = [
-    journal.institution.operatingUnitName
+    journal.institution.operatingUnitName && journal.institution.organizationName
       ? journal.institution.organizationName
       : null,
     journal.institution.positionTitle,
