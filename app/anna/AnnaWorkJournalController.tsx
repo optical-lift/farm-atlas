@@ -10,12 +10,6 @@ import type {
   EmployeeWorkJournalEntry,
 } from "@/lib/employee-work-journal";
 
-type ConflictState = {
-  targetProjectionId: string;
-  activeTitle: string;
-  choosingStopTime: boolean;
-};
-
 type PotUpOutputContract = {
   cropCycleId: string;
   cropLabel: string;
@@ -48,24 +42,10 @@ type PilotResponse = {
   ok?: boolean;
   code?: string;
   status?: string;
-  activeProjectionId?: string;
-  activeTitle?: string;
   instruction?: string;
   outputs?: PotUpOutputContract[];
   [key: string]: unknown;
 };
-
-function currentTimeValue() {
-  const now = new Date();
-  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-}
-
-function todayAtTime(value: string) {
-  const [hours, minutes] = value.split(":").map(Number);
-  const when = new Date();
-  when.setHours(hours, minutes, 0, 0);
-  return when.toISOString();
-}
 
 function newIdempotencyKey() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -84,8 +64,6 @@ export default function AnnaWorkJournalController({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [conflict, setConflict] = useState<ConflictState | null>(null);
-  const [stopTime, setStopTime] = useState(currentTimeValue);
   const [potUp, setPotUp] = useState<PotUpDialogState | null>(null);
 
   async function requestPilot(payload: Record<string, unknown>) {
@@ -101,10 +79,6 @@ export default function AnnaWorkJournalController({
       });
 
       const result = (await response.json()) as PilotResponse;
-      if (response.status === 409 && result.code === "attention_conflict") {
-        return result;
-      }
-
       if (!response.ok || result.ok !== true) {
         throw new Error(result.code ?? "pilot_request_failed");
       }
@@ -117,18 +91,7 @@ export default function AnnaWorkJournalController({
 
   async function finishMutation(payload: Record<string, unknown>) {
     try {
-      const result = await requestPilot(payload);
-      if (result?.code === "attention_conflict") {
-        setConflict({
-          targetProjectionId: String(payload.projectionId),
-          activeTitle: result.activeTitle ?? "Previous work",
-          choosingStopTime: false,
-        });
-        setStopTime(currentTimeValue());
-        return;
-      }
-
-      setConflict(null);
+      await requestPilot(payload);
       router.refresh();
     } catch (requestError) {
       console.error(requestError);
@@ -180,16 +143,6 @@ export default function AnnaWorkJournalController({
 
     await finishMutation({
       action: entry.state === "reported_complete" ? "reopen" : "done",
-      projectionId: entry.id,
-      effectiveAt: new Date().toISOString(),
-    });
-  }
-
-  async function handleAttention(entry: EmployeeWorkJournalEntry) {
-    if (!canEdit || busy || entry.state === "complete" || entry.state === "reported_complete") return;
-
-    await finishMutation({
-      action: entry.state === "active" ? "stop" : "start",
       projectionId: entry.id,
       effectiveAt: new Date().toISOString(),
     });
@@ -296,18 +249,6 @@ export default function AnnaWorkJournalController({
     }
   }
 
-  async function resolveConflict(
-    action: "switch_finish" | "switch_stop",
-    effectiveAt?: string,
-  ) {
-    if (!conflict) return;
-    await finishMutation({
-      action,
-      projectionId: conflict.targetProjectionId,
-      effectiveAt: effectiveAt ?? new Date().toISOString(),
-    });
-  }
-
   return (
     <>
       <EmployeeWorkJournalClient
@@ -316,7 +257,6 @@ export default function AnnaWorkJournalController({
         busy={busy}
         error={error}
         onToggleComplete={handleCompletion}
-        onToggleAttention={handleAttention}
         onAddReportedWork={addReportedWork}
       />
 
@@ -383,76 +323,6 @@ export default function AnnaWorkJournalController({
                 Cancel
               </button>
             </div>
-          </div>
-        </div>
-      ) : null}
-
-      {conflict ? (
-        <div role="dialog" aria-modal="true" className={journalStyles.dialogScrim}>
-          <div className={journalStyles.dialog}>
-            {!conflict.choosingStopTime ? (
-              <>
-                <div className={journalStyles.dialogCopy}>
-                  <strong>{conflict.activeTitle}</strong> is still being worked on.
-                </div>
-                <div className={journalStyles.dialogChoices}>
-                  <button type="button" disabled={busy} onClick={() => void resolveConflict("switch_finish")} className={journalStyles.choiceButton}>
-                    I finished it
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() =>
-                      setConflict((current) =>
-                        current ? { ...current, choosingStopTime: true } : current,
-                      )
-                    }
-                    className={journalStyles.choiceButton}
-                  >
-                    I stopped working on it
-                  </button>
-                  <button type="button" disabled={busy} onClick={() => setConflict(null)} className={journalStyles.choiceButton}>
-                    Never mind — I’m still working on it
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className={journalStyles.dialogCopy}>When?</div>
-                <div className={journalStyles.dialogChoices}>
-                  <button type="button" disabled={busy} onClick={() => void resolveConflict("switch_stop")} className={journalStyles.choiceButton}>
-                    Now
-                  </button>
-                  <input
-                    type="time"
-                    value={stopTime}
-                    onChange={(event) => setStopTime(event.target.value)}
-                    className={journalStyles.lineInput}
-                    aria-label="Time I stopped"
-                  />
-                  <button
-                    type="button"
-                    disabled={busy || !stopTime}
-                    onClick={() => void resolveConflict("switch_stop", todayAtTime(stopTime))}
-                    className={journalStyles.choiceButton}
-                  >
-                    Use this time
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() =>
-                      setConflict((current) =>
-                        current ? { ...current, choosingStopTime: false } : current,
-                      )
-                    }
-                    className={journalStyles.choiceButton}
-                  >
-                    Back
-                  </button>
-                </div>
-              </>
-            )}
           </div>
         </div>
       ) : null}
