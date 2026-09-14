@@ -101,6 +101,7 @@ export default function EmployeeWorkJournalClient({
           const complete = entry.state === "complete" || entry.state === "reported_complete";
           const label = stateLabel(entry);
           const time = displayTime(entry.timeLabel);
+          const opensDrawer = canEdit || entry.guidance.length > 2;
 
           return (
             <article
@@ -127,7 +128,8 @@ export default function EmployeeWorkJournalClient({
               <button
                 type="button"
                 className={styles.entryButton}
-                aria-label={`Open work details for ${entry.displayTitle}`}
+                disabled={!opensDrawer}
+                aria-label={opensDrawer ? `Open work details for ${entry.displayTitle}` : undefined}
                 onClick={() => setSelectedId(entry.id)}
               >
                 <span className={styles.entryHeading}>
