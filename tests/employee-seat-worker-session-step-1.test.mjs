@@ -40,7 +40,8 @@ test("Anna compatibility route renders through the institution-generic Work Jour
   assert.match(annaPage, /getAnnaWorkerDelivery/);
   assert.match(annaPage, /buildEmployeeWorkJournalFromDelivery/);
   assert.match(annaPage, /journalIssuer/);
-  assert.match(annaPage, /operatingUnitName \?\? journal\.institution\.organizationName/);
+  assert.match(annaPage, /operatingUnitName/);
+  assert.match(annaPage, /organizationName/);
   assert.match(annaPage, /organizationName=\{journalIssuer\}/);
   assert.match(annaPage, /Work Journal/);
   assert.match(annaPage, /AnnaWorkJournalController/);
@@ -51,10 +52,11 @@ test("Anna compatibility route renders through the institution-generic Work Jour
   assert.match(journal, /summaryLine/);
   assert.doesNotMatch(journal, /Elm Farm|Anna|farmId|farm_id/);
 
-  assert.match(journalServer, /organizations/);
-  assert.match(journalServer, /organization_units/);
-  assert.match(journalServer, /organization_positions/);
+  assert.match(journalServer, /from\("farms"\)/);
   assert.match(journalServer, /buildEmployeeWorkJournalFromDelivery/);
+  assert.doesNotMatch(journalServer, /from\("organizations"\)/);
+  assert.doesNotMatch(journalServer, /from\("organization_units"\)/);
+  assert.doesNotMatch(journalServer, /from\("organization_positions"\)/);
   assert.doesNotMatch(journalServer, /ELM_FARM_ID|ANNA_FARM_MEMBERSHIP_ID/);
 
   assert.match(journalClient, /Work Journal entries/);
