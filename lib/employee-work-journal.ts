@@ -6,7 +6,7 @@ export type EmployeeWorkJournalEntryState =
 
 export type EmployeeWorkJournalInstitution = {
   organizationId: string;
-  organizationName: string;
+  organizationName?: string;
   operatingUnitId?: string;
   operatingUnitName?: string;
   employeeSeatId?: string;
