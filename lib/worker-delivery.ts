@@ -11,6 +11,7 @@ type DeliveryPayload = {
   sourceRefs?: string[];
   effect?: string;
   details?: string[];
+  time?: string;
   [key: string]: unknown;
 };
 
@@ -57,6 +58,20 @@ type PilotEventRow = {
   reported_title: string | null;
 };
 
+type FarmMembershipRow = {
+  farm_id: string;
+};
+
+type FarmInstitutionRow = {
+  organization_id: string;
+  organization_unit_id: string | null;
+};
+
+export type WorkerDeliveryInstitutionRef = {
+  organizationId: string;
+  organizationUnitId?: string;
+};
+
 export type WorkerDeliveryItem = {
   id: string;
   key: string;
@@ -71,6 +86,7 @@ export type WorkerDeliveryItem = {
   carried: boolean;
   resultContractKey: string | null;
   acceptanceMode: string | null;
+  timeLabel: string | null;
 };
 
 export type WorkerReportedExtra = {
@@ -78,6 +94,14 @@ export type WorkerReportedExtra = {
   key: string;
   title: string;
   effectiveAt: string;
+};
+
+export type WorkerDelivery = {
+  date: string;
+  timeZone: string;
+  institutionRef: WorkerDeliveryInstitutionRef;
+  items: WorkerDeliveryItem[];
+  extras: WorkerReportedExtra[];
 };
 
 export function chicagoDateString(now = new Date()) {
@@ -120,10 +144,73 @@ function deliveryDetails(payload: DeliveryPayload | null) {
   )];
 }
 
+function deliveryTimeLabel(payload: DeliveryPayload | null) {
+  const value = payload?.time;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(trimmed) ? trimmed : null;
+}
+
+async function resolveDeliveryInstitutionRef(
+  deliveryMembershipId: string,
+  known?: Partial<WorkerDeliveryInstitutionRef>,
+): Promise<WorkerDeliveryInstitutionRef> {
+  if (known?.organizationId && known.organizationUnitId) {
+    return {
+      organizationId: known.organizationId,
+      organizationUnitId: known.organizationUnitId,
+    };
+  }
+
+  const supabase = createAtlasAdminClient();
+  const { data: membershipData, error: membershipError } = await supabase
+    .from("farm_memberships")
+    .select("farm_id")
+    .eq("id", deliveryMembershipId)
+    .maybeSingle();
+
+  if (membershipError) {
+    throw new Error(
+      `Could not resolve Worker Day delivery institution membership: ${membershipError.message}`,
+    );
+  }
+
+  const membership = membershipData as FarmMembershipRow | null;
+  if (!membership?.farm_id) {
+    throw new Error("Worker Day delivery membership has no operating-unit adapter.");
+  }
+
+  const { data: farmData, error: farmError } = await supabase
+    .from("farms")
+    .select("organization_id,organization_unit_id")
+    .eq("id", membership.farm_id)
+    .maybeSingle();
+
+  if (farmError) {
+    throw new Error(
+      `Could not resolve Worker Day delivery institution: ${farmError.message}`,
+    );
+  }
+
+  const farm = farmData as FarmInstitutionRow | null;
+  const organizationId = known?.organizationId ?? farm?.organization_id;
+  const organizationUnitId = known?.organizationUnitId ?? farm?.organization_unit_id ?? undefined;
+
+  if (!organizationId) {
+    throw new Error("Worker Day delivery has no governing organization.");
+  }
+
+  return {
+    organizationId,
+    organizationUnitId,
+  };
+}
+
 async function loadWorkerDelivery(
   deliveryMembershipId: string,
+  institutionRef: WorkerDeliveryInstitutionRef,
   now = new Date(),
-) {
+): Promise<WorkerDelivery> {
   const today = chicagoDateString(now);
   const supabase = createAtlasAdminClient();
 
@@ -287,6 +374,7 @@ async function loadWorkerDelivery(
         carried: row.planned_date < today,
         resultContractKey,
         acceptanceMode,
+        timeLabel: deliveryTimeLabel(row.delivery_payload),
       },
     ];
   });
@@ -310,18 +398,33 @@ async function loadWorkerDelivery(
     ];
   });
 
-  return { date: today, items, extras };
+  return {
+    date: today,
+    timeZone: ELM_TIME_ZONE,
+    institutionRef,
+    items,
+    extras,
+  };
 }
 
 export async function getWorkerDelivery(
   workerContext: WorkerSessionContext,
   now = new Date(),
 ) {
-  return loadWorkerDelivery(workerContext.deliveryMembershipId, now);
+  const institutionRef = await resolveDeliveryInstitutionRef(
+    workerContext.deliveryMembershipId,
+    {
+      organizationId: workerContext.organizationId,
+      organizationUnitId: workerContext.organizationUnitId,
+    },
+  );
+
+  return loadWorkerDelivery(workerContext.deliveryMembershipId, institutionRef, now);
 }
 
-// Compatibility adapter for the temporary public /anna route. The real
-// Work Pass path reads through getWorkerDelivery(workerContext).
+// Compatibility adapter for the temporary /anna route. The journal surface is
+// institution-generic; this adapter only locates the legacy farm delivery lane.
 export async function getAnnaWorkerDelivery(now = new Date()) {
-  return loadWorkerDelivery(ANNA_FARM_MEMBERSHIP_ID, now);
+  const institutionRef = await resolveDeliveryInstitutionRef(ANNA_FARM_MEMBERSHIP_ID);
+  return loadWorkerDelivery(ANNA_FARM_MEMBERSHIP_ID, institutionRef, now);
 }
