@@ -39,7 +39,9 @@ test("Anna compatibility route renders through the institution-generic Work Jour
   assert.match(annaPage, /if \(!workerContext && !supervisorCanView\)/);
   assert.match(annaPage, /getAnnaWorkerDelivery/);
   assert.match(annaPage, /buildEmployeeWorkJournalFromDelivery/);
-  assert.match(annaPage, /organizationName=\{journal\.institution\.organizationName\}/);
+  assert.match(annaPage, /journalIssuer/);
+  assert.match(annaPage, /operatingUnitName \?\? journal\.institution\.organizationName/);
+  assert.match(annaPage, /organizationName=\{journalIssuer\}/);
   assert.match(annaPage, /Work Journal/);
   assert.match(annaPage, /AnnaWorkJournalController/);
   assert.match(annaPage, /Sign in to Atlas to see your work/);
