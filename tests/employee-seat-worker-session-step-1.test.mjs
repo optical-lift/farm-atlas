@@ -23,7 +23,7 @@ test("employee worker session resolves institutional access before delivery", ()
   assert.match(annaPilot, /WORKER_DAY_PILOT_SCOPE/);
 });
 
-test("Anna compatibility route renders through the institution-generic Work Journal contract", () => {
+test("Anna compatibility route renders through the institution-generic employee work contract", () => {
   const annaPage = read("app/anna/page.tsx");
   const delivery = read("lib/worker-delivery.ts");
   const journal = read("lib/employee-work-journal.ts");
@@ -43,13 +43,16 @@ test("Anna compatibility route renders through the institution-generic Work Jour
   assert.match(annaPage, /operatingUnitName/);
   assert.match(annaPage, /organizationName/);
   assert.match(annaPage, /organizationName=\{journalIssuer\}/);
-  assert.match(annaPage, /Work Journal/);
+  assert.doesNotMatch(annaPage, />Work Journal</);
   assert.match(annaPage, /AnnaWorkJournalController/);
   assert.match(annaPage, /Sign in to Atlas to see your work/);
 
   assert.match(journal, /kind: "employee_work_journal_day"/);
   assert.match(journal, /EmployeeWorkJournalInstitution/);
+  assert.match(journal, /displayTitle/);
+  assert.match(journal, /stripDuplicateTime/);
   assert.match(journal, /summaryLine/);
+  assert.match(journal, /nextTimed/);
   assert.doesNotMatch(journal, /Elm Farm|Anna|farmId|farm_id/);
 
   assert.match(journalServer, /from\("farms"\)/);
@@ -59,12 +62,16 @@ test("Anna compatibility route renders through the institution-generic Work Jour
   assert.doesNotMatch(journalServer, /from\("organization_positions"\)/);
   assert.doesNotMatch(journalServer, /ELM_FARM_ID|ANNA_FARM_MEMBERSHIP_ID/);
 
-  assert.match(journalClient, /Work Journal entries/);
-  assert.match(journalClient, /Shape of the day/);
+  assert.match(journalClient, /Today’s work summary/);
+  assert.match(journalClient, /Today’s work/);
+  assert.match(journalClient, /Open work details/);
+  assert.match(journalClient, /selectedExtraGuidance/);
+  assert.doesNotMatch(journalClient, /Journal entry/);
+  assert.doesNotMatch(journalClient, /Assigned today/);
   assert.doesNotMatch(journalClient, /Elm Farm|Anna|farm_id|farmId/);
 
   // The compatibility route/controller may know the legacy lane and command
-  // endpoint, but the reusable journal contract and UI may not.
+  // endpoint, but the reusable employee work contract and UI may not.
   assert.match(delivery, /getAnnaWorkerDelivery/);
   assert.match(controller, /\/api\/anna\/pilot/);
 
