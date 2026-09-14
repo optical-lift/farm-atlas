@@ -34,8 +34,6 @@ type ProjectionSourceRow = {
 
 type WorkItemRow = {
   id: string;
-  title: string;
-  instructions: string | null;
   work_state: "open" | "completed" | "cancelled" | "superseded";
   result_contract_key: string | null;
 };
@@ -64,7 +62,6 @@ export type WorkerDeliveryItem = {
   key: string;
   title: string;
   details: string[];
-  instructions: string[];
   completed: boolean;
   institutionallyCompleted: boolean;
   reportedCompleted: boolean;
@@ -114,9 +111,10 @@ export function formatElmDay(dateString: string) {
   }).format(localNoonUtc);
 }
 
-function cleanGuidance(values: unknown[]) {
+function deliveryDetails(payload: DeliveryPayload | null) {
+  if (!Array.isArray(payload?.details)) return [];
   return [...new Set(
-    values.flatMap((value) =>
+    payload.details.flatMap((value) =>
       typeof value === "string" && value.trim().length > 0 ? [value.trim()] : [],
     ),
   )];
@@ -171,7 +169,7 @@ async function loadWorkerDelivery(
   if (workItemIds.length > 0) {
     const { data: workData, error: workError } = await supabase
       .from("work_items")
-      .select("id,title,instructions,work_state,result_contract_key")
+      .select("id,work_state,result_contract_key")
       .in("id", workItemIds);
 
     if (workError) {
@@ -265,14 +263,6 @@ async function loadWorkerDelivery(
     const acceptanceMode = resultContractKey
       ? acceptanceModeByContract.get(resultContractKey) ?? null
       : null;
-    const details = cleanGuidance(
-      Array.isArray(row.delivery_payload?.details)
-        ? row.delivery_payload.details
-        : [],
-    );
-    const instructions = cleanGuidance(
-      requiredWork.map((workItem) => workItem?.instructions ?? null),
-    );
 
     if (row.planned_date < today && (completed || noLongerDeliverable)) {
       return [];
@@ -287,8 +277,7 @@ async function loadWorkerDelivery(
         id: row.id,
         key: row.delivery_key ?? row.id,
         title: row.title,
-        details,
-        instructions,
+        details: deliveryDetails(row.delivery_payload),
         completed,
         institutionallyCompleted,
         reportedCompleted,
