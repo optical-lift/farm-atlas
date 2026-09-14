@@ -55,7 +55,7 @@ export type EmployeeWorkJournalEntry = {
     acceptanceMode: string | null;
   };
   source: {
-    kind: "worker_day_delivery";
+    kind: "institutional_work_delivery";
     id: string;
   };
 };
@@ -66,7 +66,7 @@ export type EmployeeWorkJournalReportedEntry = {
   title: string;
   effectiveAt: string;
   source: {
-    kind: "worker_report";
+    kind: "employee_report";
     id: string;
   };
 };
@@ -152,7 +152,7 @@ export function buildEmployeeWorkJournalDay(
       acceptanceMode: item.acceptanceMode,
     },
     source: {
-      kind: "worker_day_delivery",
+      kind: "institutional_work_delivery",
       id: item.id,
     },
   }));
@@ -164,7 +164,7 @@ export function buildEmployeeWorkJournalDay(
       title: item.title,
       effectiveAt: item.effectiveAt,
       source: {
-        kind: "worker_report",
+        kind: "employee_report",
         id: item.id,
       },
     }),
