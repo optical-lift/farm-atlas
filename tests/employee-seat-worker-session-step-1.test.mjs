@@ -51,6 +51,9 @@ test("Anna compatibility route renders through the institution-generic employee 
   assert.match(journal, /EmployeeWorkJournalInstitution/);
   assert.match(journal, /displayTitle/);
   assert.match(journal, /stripDuplicateTime/);
+  assert.match(journal, /informativeGuidance/);
+  assert.match(journal, /guidanceAddsInformation/);
+  assert.match(journal, /GUIDANCE_FILLER_TOKENS/);
   assert.match(journal, /summaryLine/);
   assert.match(journal, /nextTimed/);
   assert.doesNotMatch(journal, /Elm Farm|Anna|farmId|farm_id/);
@@ -66,6 +69,8 @@ test("Anna compatibility route renders through the institution-generic employee 
   assert.match(journalClient, /Today’s work/);
   assert.match(journalClient, /Open work details/);
   assert.match(journalClient, /selectedExtraGuidance/);
+  assert.match(journalClient, /opensDrawer = canEdit \|\| entry\.guidance\.length > 2/);
+  assert.match(journalClient, /disabled=\{!opensDrawer\}/);
   assert.doesNotMatch(journalClient, /Journal entry/);
   assert.doesNotMatch(journalClient, /Assigned today/);
   assert.doesNotMatch(journalClient, /Elm Farm|Anna|farm_id|farmId/);
