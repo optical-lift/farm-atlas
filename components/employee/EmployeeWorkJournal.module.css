@@ -140,6 +140,10 @@
   cursor: pointer;
 }
 
+.entryButton:disabled {
+  cursor: default;
+}
+
 .entryButton:focus-visible,
 .markButton:focus-visible,
 .attentionButton:focus-visible,
