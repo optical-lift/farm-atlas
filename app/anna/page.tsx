@@ -99,7 +99,6 @@ export default async function AnnaPage() {
           <header className={journalStyles.header}>
             <EmployeeBrandHeader organizationName={journalIssuer} />
             <div className={journalStyles.identityBlock}>
-              <p className={journalStyles.journalLabel}>Work Journal</p>
               <h1 className={journalStyles.date}>{journal.dateLabel}</h1>
               {identityMeta.length ? (
                 <p className={journalStyles.identityMeta}>{identityMeta.join(" · ")}</p>

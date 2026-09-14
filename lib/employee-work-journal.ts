@@ -42,6 +42,7 @@ export type EmployeeWorkJournalEntry = {
   id: string;
   key: string;
   title: string;
+  displayTitle: string;
   guidance: string[];
   state: EmployeeWorkJournalEntryState;
   plannedDate: string;
@@ -122,40 +123,96 @@ function formatJournalDate(dateString: string, timeZone: string) {
   }).format(localNoonUtc);
 }
 
-function buildSummaryLine(shape: Omit<EmployeeWorkJournalDayShape, "summaryLine">) {
-  const remaining = `${shape.remainingAssigned} ${shape.remainingAssigned === 1 ? "entry" : "entries"} remaining`;
-  const timed = shape.timedCommitments
-    ? `${shape.timedCommitments} timed ${shape.timedCommitments === 1 ? "commitment" : "commitments"}`
-    : null;
-  const active = shape.activeAssigned ? `${shape.activeAssigned} in progress` : null;
+function formatLocalTime(localTime: string) {
+  const [hour, minute] = localTime.split(":").map(Number);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return localTime;
+  const date = new Date(Date.UTC(2000, 0, 1, hour, minute));
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
 
-  return [remaining, timed, active].filter(Boolean).join(" · ");
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function stripDuplicateTime(title: string, localTime: string | null) {
+  if (!localTime) return title;
+
+  const [hour24, minute] = localTime.split(":").map(Number);
+  if (!Number.isInteger(hour24) || !Number.isInteger(minute)) return title;
+
+  const hour12 = hour24 % 12 || 12;
+  const meridiem = hour24 < 12 ? "a(?:\\.?m\\.?)?" : "p(?:\\.?m\\.?)?";
+  const minutePattern = minute === 0 ? "(?::00)?" : `:${String(minute).padStart(2, "0")}`;
+  const timePattern = `${escapeRegExp(String(hour12))}${minutePattern}\\s*${meridiem}`;
+  const trailingTime = new RegExp(
+    `(?:\\s*(?:-|–|—|·|@)\\s*|\\s+at\\s+)${timePattern}\\s*$`,
+    "i",
+  );
+
+  const cleaned = title.replace(trailingTime, "").trim();
+  return cleaned || title;
+}
+
+function isExecutionComplete(entry: EmployeeWorkJournalEntry) {
+  return entry.state === "complete" || entry.state === "reported_complete";
+}
+
+function buildSummaryLine(
+  shape: Omit<EmployeeWorkJournalDayShape, "summaryLine">,
+  entries: EmployeeWorkJournalEntry[],
+) {
+  if (shape.remainingAssigned === 0) {
+    return "Scheduled work complete";
+  }
+
+  const remaining = `${shape.remainingAssigned} remaining`;
+  const active = entries.find((entry) => entry.state === "active");
+  const nextTimed = entries
+    .filter((entry) => !isExecutionComplete(entry) && Boolean(entry.timeLabel))
+    .sort((left, right) => (left.timeLabel ?? "").localeCompare(right.timeLabel ?? ""))[0];
+
+  const cues: string[] = [];
+  if (active) cues.push(`${active.displayTitle} in progress`);
+  cues.push(remaining);
+  if (nextTimed?.timeLabel) {
+    cues.push(`${nextTimed.displayTitle} at ${formatLocalTime(nextTimed.timeLabel)}`);
+  }
+
+  return cues.join(" · ");
 }
 
 export function buildEmployeeWorkJournalDay(
   input: BuildEmployeeWorkJournalDayInput,
 ): EmployeeWorkJournalDay {
-  const entries: EmployeeWorkJournalEntry[] = input.items.map((item) => ({
-    id: item.id,
-    key: item.key,
-    title: item.title,
-    guidance: [...new Set(item.details ?? [])],
-    state: journalEntryState(item),
-    plannedDate: item.plannedDate,
-    originalPlannedDate: item.originalPlannedDate,
-    carried: item.carried,
-    timeLabel: item.timeLabel ?? null,
-    completion: {
-      institutionallyComplete: item.institutionallyCompleted,
-      workerReportedComplete: item.reportedCompleted,
-      resultContractKey: item.resultContractKey,
-      acceptanceMode: item.acceptanceMode,
-    },
-    source: {
-      kind: "institutional_work_delivery",
+  const entries: EmployeeWorkJournalEntry[] = input.items.map((item) => {
+    const timeLabel = item.timeLabel ?? null;
+    return {
       id: item.id,
-    },
-  }));
+      key: item.key,
+      title: item.title,
+      displayTitle: stripDuplicateTime(item.title, timeLabel),
+      guidance: [...new Set(item.details ?? [])],
+      state: journalEntryState(item),
+      plannedDate: item.plannedDate,
+      originalPlannedDate: item.originalPlannedDate,
+      carried: item.carried,
+      timeLabel,
+      completion: {
+        institutionallyComplete: item.institutionallyCompleted,
+        workerReportedComplete: item.reportedCompleted,
+        resultContractKey: item.resultContractKey,
+        acceptanceMode: item.acceptanceMode,
+      },
+      source: {
+        kind: "institutional_work_delivery" as const,
+        id: item.id,
+      },
+    };
+  });
 
   const reportedEntries: EmployeeWorkJournalReportedEntry[] = (input.reported ?? []).map(
     (item) => ({
@@ -169,9 +226,6 @@ export function buildEmployeeWorkJournalDay(
       },
     }),
   );
-
-  const isExecutionComplete = (entry: EmployeeWorkJournalEntry) =>
-    entry.state === "complete" || entry.state === "reported_complete";
 
   const shapeBase = {
     totalAssigned: entries.length,
@@ -193,7 +247,7 @@ export function buildEmployeeWorkJournalDay(
     reportedEntries,
     shape: {
       ...shapeBase,
-      summaryLine: buildSummaryLine(shapeBase),
+      summaryLine: buildSummaryLine(shapeBase, entries),
     },
   };
 }
