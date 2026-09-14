@@ -37,6 +37,13 @@ type PilotTransitionResult = {
   [key: string]: unknown;
 };
 
+const EMPLOYEE_SEAT_TIMING_ACTIONS = new Set<PilotAction>([
+  "start",
+  "stop",
+  "switch_finish",
+  "switch_stop",
+]);
+
 function noStoreJson(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, {
     status,
@@ -95,6 +102,10 @@ export async function POST(request: Request) {
 
   if (!body.action || !allowed.has(body.action)) {
     return noStoreJson({ ok: false, code: "unsupported_action" }, 400);
+  }
+
+  if (employeeContext && EMPLOYEE_SEAT_TIMING_ACTIONS.has(body.action)) {
+    return noStoreJson({ ok: false, code: "atlas_timing_required" }, 403);
   }
 
   if (body.effectiveAt && Number.isNaN(Date.parse(body.effectiveAt))) {
