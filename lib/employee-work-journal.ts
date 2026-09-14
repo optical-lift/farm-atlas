@@ -170,10 +170,13 @@ export function buildEmployeeWorkJournalDay(
     }),
   );
 
+  const isExecutionComplete = (entry: EmployeeWorkJournalEntry) =>
+    entry.state === "complete" || entry.state === "reported_complete";
+
   const shapeBase = {
     totalAssigned: entries.length,
-    completedAssigned: entries.filter((entry) => entry.state === "complete").length,
-    remainingAssigned: entries.filter((entry) => entry.state !== "complete").length,
+    completedAssigned: entries.filter(isExecutionComplete).length,
+    remainingAssigned: entries.filter((entry) => !isExecutionComplete(entry)).length,
     activeAssigned: entries.filter((entry) => entry.state === "active").length,
     carriedAssigned: entries.filter((entry) => entry.carried).length,
     timedCommitments: entries.filter((entry) => Boolean(entry.timeLabel)).length,
