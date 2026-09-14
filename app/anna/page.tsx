@@ -1,19 +1,17 @@
 import { EB_Garamond, Source_Sans_3 } from "next/font/google";
 
-import AnnaWorkerDayClient from "@/app/anna/AnnaWorkerDayClient";
-import EmployerPocket from "@/app/anna/EmployerPocket";
-import styles from "@/app/anna/employee-surface.module.css";
+import AnnaWorkJournalController from "@/app/anna/AnnaWorkJournalController";
 import EmployeeBrandHeader from "@/components/employee/EmployeeBrandHeader";
+import journalStyles from "@/components/employee/EmployeeWorkJournal.module.css";
 import { getAnnaPilotEditState } from "@/lib/anna-worker-day-pilot";
 import {
   canSeeWholeFarm,
   getAtlasSession,
   membershipForFarm,
 } from "@/lib/atlas/session";
+import { buildEmployeeWorkJournalFromDelivery } from "@/lib/employee-work-journal-server";
 import {
-  ANNA_FARM_MEMBERSHIP_ID,
   ELM_FARM_ID,
-  formatElmDay,
   getAnnaWorkerDelivery,
   getWorkerDelivery,
 } from "@/lib/worker-delivery";
@@ -47,11 +45,11 @@ export default async function AnnaPage() {
           }
         `}</style>
         <main
-          className={`${styles.surface} ${sourceSans.className}`}
+          className={`${journalStyles.surface} ${sourceSans.className}`}
           style={{ "--employee-serif": ebGaramond.style.fontFamily } as React.CSSProperties}
         >
-          <div className={styles.page}>
-            <header className={styles.header}>
+          <div className={journalStyles.page}>
+            <header className={journalStyles.header}>
               <EmployeeBrandHeader organizationName="Atlas" />
             </header>
             <p>Sign in to Atlas to see your work.</p>
@@ -68,6 +66,15 @@ export default async function AnnaPage() {
       ])
     : [await getAnnaWorkerDelivery(), { canEdit: false }];
 
+  const journal = await buildEmployeeWorkJournalFromDelivery(
+    delivery,
+    workerContext,
+  );
+  const identityMeta = [
+    journal.institution.operatingUnitName,
+    journal.institution.positionTitle,
+  ].filter((value): value is string => Boolean(value));
+
   return (
     <>
       <style>{`
@@ -79,23 +86,23 @@ export default async function AnnaPage() {
       `}</style>
 
       <main
-        className={`${styles.surface} ${sourceSans.className}`}
+        className={`${journalStyles.surface} ${sourceSans.className}`}
         style={{ "--employee-serif": ebGaramond.style.fontFamily } as React.CSSProperties}
       >
-        <div className={styles.page}>
-          <header className={styles.header}>
-            <EmployeeBrandHeader organizationName="Elm" />
-            <h1 className={styles.date}>{formatElmDay(delivery.date)}</h1>
+        <div className={journalStyles.page}>
+          <header className={journalStyles.header}>
+            <EmployeeBrandHeader organizationName={journal.institution.organizationName} />
+            <div className={journalStyles.identityBlock}>
+              <p className={journalStyles.journalLabel}>Work Journal</p>
+              <h1 className={journalStyles.date}>{journal.dateLabel}</h1>
+              {identityMeta.length ? (
+                <p className={journalStyles.identityMeta}>{identityMeta.join(" · ")}</p>
+              ) : null}
+            </div>
           </header>
 
-          <AnnaWorkerDayClient
-            items={delivery.items}
-            extras={delivery.extras}
-            canEdit={pilot.canEdit}
-          />
+          <AnnaWorkJournalController journal={journal} canEdit={pilot.canEdit} />
         </div>
-
-        <EmployerPocket items={[]} taskItems={delivery.items} />
       </main>
     </>
   );
