@@ -11,94 +11,61 @@ import type { WorkerSessionContext } from "@/lib/worker-session";
 
 export type EmployeeWorkJournalInstitutionRef = {
   organizationId: string;
+  organizationName?: string;
   organizationUnitId?: string;
+  operatingUnitName?: string;
   employeeSeatId?: string;
   positionId?: string;
   positionTitle?: string;
 };
 
-type OrganizationRow = {
-  id: string;
+type DeliveryAdapterRow = {
+  organization_id: string;
+  organization_unit_id: string | null;
   name: string;
-};
-
-type OrganizationUnitRow = {
-  id: string;
-  name: string;
-};
-
-type OrganizationPositionRow = {
-  id: string;
-  display_title: string;
 };
 
 export async function resolveEmployeeWorkJournalInstitution(
   ref: EmployeeWorkJournalInstitutionRef,
 ): Promise<EmployeeWorkJournalInstitution> {
-  const supabase = createAtlasAdminClient();
-
-  const organizationPromise = supabase
-    .from("organizations")
-    .select("id,name")
-    .eq("id", ref.organizationId)
-    .maybeSingle();
-
-  const unitPromise = ref.organizationUnitId
-    ? supabase
-        .from("organization_units")
-        .select("id,name")
-        .eq("id", ref.organizationUnitId)
-        .maybeSingle()
-    : Promise.resolve({ data: null, error: null });
-
-  const positionPromise = ref.positionId
-    ? supabase
-        .from("organization_positions")
-        .select("id,display_title")
-        .eq("id", ref.positionId)
-        .maybeSingle()
-    : Promise.resolve({ data: null, error: null });
-
-  const [organizationResult, unitResult, positionResult] = await Promise.all([
-    organizationPromise,
-    unitPromise,
-    positionPromise,
-  ]);
-
-  if (organizationResult.error) {
-    throw new Error(
-      `Could not resolve Work Journal organization: ${organizationResult.error.message}`,
-    );
+  if (!ref.organizationId) {
+    throw new Error("Employee Work Journal requires a governing organization identity.");
   }
 
-  const organization = organizationResult.data as OrganizationRow | null;
-  if (!organization?.id || !organization.name) {
-    throw new Error("Employee Work Journal requires a real organization identity.");
-  }
+  // The journal is a presentation contract, not a new authority seam. Do not
+  // reach around institutional table grants merely to decorate the page. The
+  // current Worker Day adapter may disclose its own operating-unit label from
+  // the already-authorized legacy delivery carrier; future delivery adapters
+  // can provide their own display metadata directly.
+  let operatingUnitName = ref.operatingUnitName;
 
-  if (unitResult.error) {
-    throw new Error(
-      `Could not resolve Work Journal operating unit: ${unitResult.error.message}`,
-    );
-  }
+  if (!operatingUnitName && ref.organizationUnitId) {
+    const supabase = createAtlasAdminClient();
+    const { data, error } = await supabase
+      .from("farms")
+      .select("organization_id,organization_unit_id,name")
+      .eq("organization_id", ref.organizationId)
+      .eq("organization_unit_id", ref.organizationUnitId)
+      .maybeSingle();
 
-  if (positionResult.error) {
-    throw new Error(
-      `Could not resolve Work Journal position: ${positionResult.error.message}`,
-    );
-  }
+    if (error) {
+      throw new Error(
+        `Could not resolve Work Journal delivery adapter label: ${error.message}`,
+      );
+    }
 
-  const unit = unitResult.data as OrganizationUnitRow | null;
-  const position = positionResult.data as OrganizationPositionRow | null;
+    const adapter = data as DeliveryAdapterRow | null;
+    operatingUnitName = adapter?.name ?? undefined;
+  }
 
   return {
-    organizationId: organization.id,
-    organizationName: organization.name,
-    operatingUnitId: unit?.id ?? ref.organizationUnitId,
-    operatingUnitName: unit?.name,
+    organizationId: ref.organizationId,
+    organizationName: ref.organizationName,
+    operatingUnitId: ref.organizationUnitId,
+    operatingUnitName,
     employeeSeatId: ref.employeeSeatId,
-    positionId: position?.id ?? ref.positionId,
-    positionTitle: position?.display_title ?? ref.positionTitle,
+    positionId: ref.positionId,
+    positionTitle: ref.positionTitle,
   };
 }
 
