@@ -95,7 +95,7 @@ export default async function AnnaPage() {
           />
         </div>
 
-        <EmployerPocket items={[]} />
+        <EmployerPocket items={[]} taskItems={delivery.items} />
       </main>
     </>
   );
