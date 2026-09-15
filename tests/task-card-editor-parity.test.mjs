@@ -64,8 +64,9 @@ test("Crop Move owns the Editor lifecycle and Source-to-Destination grammar with
   assert.match(cropMove, /styles\.moveSection/);
   assert.match(cropMove, /Report source issue/);
   assert.match(cropMove, /Report destination issue/);
+  assert.match(cropMove, /InlineIssueDrawer/);
   assert.match(cropMoveCss, /\.moveSection/);
-  assert.match(cropMoveCss, /\.issueDrawer/);
+  assert.doesNotMatch(cropMoveCss, /\.issueDrawer/);
 });
 
 test("Thin ProCut Horizon keeps thinning truth while using the Sow visual family", () => {
