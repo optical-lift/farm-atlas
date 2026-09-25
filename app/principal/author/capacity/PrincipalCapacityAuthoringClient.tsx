@@ -59,7 +59,7 @@ async function save(kind: SaveKind, input: Record<string, unknown>) {
   const body = await response.json().catch(() => null) as { ok?: boolean; error?: string | { message?: string } } | null;
   if (!response.ok || !body?.ok) {
     const message = typeof body?.error === "string" ? body.error : body?.error?.message;
-    throw new Error(message || "Atlas could not save this Principal capacity record.");
+    throw new Error(message || "Atlas could not save this personal capacity record.");
   }
 }
 
@@ -90,7 +90,7 @@ export default function PrincipalCapacityAuthoringClient({
     const form = event.currentTarget;
     const data = new FormData(form);
     const selectedWeekdays = data.getAll("weekdays").map((value) => Number(value));
-    setState({ kind: "capacity_policy", status: "saving", message: "Saving Principal capacity policy…" });
+    setState({ kind: "capacity_policy", status: "saving", message: "Saving personal capacity policy…" });
     try {
       await save("capacity_policy", {
         stableKey: optionalText(data, "stableKey"),
@@ -103,7 +103,7 @@ export default function PrincipalCapacityAuthoringClient({
         effectiveFrom: text(data, "effectiveFrom"),
         effectiveThrough: optionalText(data, "effectiveThrough"),
       });
-      setState({ kind: "capacity_policy", status: "saved", message: "Capacity policy saved. Atlas can now distinguish available Principal time from an empty calendar." });
+      setState({ kind: "capacity_policy", status: "saved", message: "Capacity policy saved. Atlas can now distinguish your available time from an empty calendar." });
       router.refresh();
     } catch (error) {
       setState({ kind: "capacity_policy", status: "error", message: error instanceof Error ? error.message : "Capacity policy could not be saved." });
@@ -141,7 +141,7 @@ export default function PrincipalCapacityAuthoringClient({
   return (
     <div style={{ display: "grid", gap: 18 }}>
       <form onSubmit={submitPolicy} style={panelStyle}>
-        <span style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".13em", textTransform: "uppercase", opacity: .58 }}>Principal Capacity</span>
+        <span style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".13em", textTransform: "uppercase", opacity: .58 }}>Personal Capacity</span>
         <h2 style={{ margin: "6px 0 0", fontSize: 24 }}>{currentPolicy ? "Edit the day Atlas is allowed to allocate" : "Define the day Atlas is allowed to allocate"}</h2>
         <p style={{ margin: "8px 0 16px", lineHeight: 1.55, opacity: .72 }}>
           This is not a productivity target. It is the outer boundary of available Principal time before household blocks, fixed commitments, and protected rhythms subtract from it. Times are interpreted in {householdTimezone}.
@@ -225,8 +225,8 @@ export default function PrincipalCapacityAuthoringClient({
             <label style={fieldStyle}><span style={labelStyle}>Interruptibility *</span><select name="interruptibility" required defaultValue="low_interruptibility" style={inputStyle}><option value="interruptible">Interruptible</option><option value="low_interruptibility">Low interruptibility</option><option value="should_not_interrupt">Should not interrupt</option></select></label>
           </div>
           <label style={fieldStyle}><span style={labelStyle}>Consequence if this disappears *</span><textarea name="consequence" required style={textareaStyle} placeholder="What human, household, readiness, or future condition deteriorates when this rhythm is repeatedly displaced?" /></label>
-          <label style={fieldStyle}><span style={labelStyle}>Why it may earn the Principal floor *</span><textarea name="reasonForFloor" required style={textareaStyle} placeholder="Why is this protected household reality allowed to compete with portfolio work?" /></label>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 800 }}><input name="blocksCapacity" type="checkbox" defaultChecked /> This window consumes Principal capacity</label>
+          <label style={fieldStyle}><span style={labelStyle}>Why it may earn a protected floor *</span><textarea name="reasonForFloor" required style={textareaStyle} placeholder="Why is this protected household reality allowed to compete with portfolio work?" /></label>
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 800 }}><input name="blocksCapacity" type="checkbox" defaultChecked /> This window consumes personal capacity</label>
         </div>
         <button type="submit" disabled={state.status === "saving" && state.kind === "household_rhythm"} style={{ marginTop: 16, minHeight: 44, border: 0, borderRadius: 12, padding: "10px 16px", background: "#24251f", color: "#f8f4e8", fontWeight: 900 }}>Save Household Rhythm</button>
         <Result state={state} kind="household_rhythm" />

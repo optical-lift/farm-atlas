@@ -58,15 +58,19 @@ function localDateTime(value: string | null) {
   return value;
 }
 
-async function requirePrincipalOwner() {
+async function requirePersonalAtlas() {
   const session = await getAtlasSession();
   if (!session) {
     return { ok: false as const, response: atlasApiError(401, "sign_in_required", "Sign in required.") };
   }
-  if (!session.organizationMemberships.some((membership) => membership.role === "owner")) {
+  if (!session.personEntityId || !session.personalAtlasId || session.realityState !== "ready") {
     return {
       ok: false as const,
-      response: atlasApiError(403, "principal_owner_required", "Principal owner access is required."),
+      response: atlasApiError(
+        403,
+        "personal_atlas_required",
+        "An active Reality Person and Personal Atlas are required.",
+      ),
     };
   }
   return { ok: true as const };
@@ -171,7 +175,6 @@ function normalizeHouseholdRhythm(input: Record<string, unknown>) {
     protectionLevel,
     floorClass,
     interruptibility,
-    principalRequired: true,
     consequence,
     reasonForFloor,
     active: true,
@@ -184,7 +187,7 @@ function normalizeHouseholdRhythm(input: Record<string, unknown>) {
 }
 
 export async function POST(request: Request) {
-  const authorized = await requirePrincipalOwner();
+  const authorized = await requirePersonalAtlas();
   if (!authorized.ok) return authorized.response;
 
   let body: Record<string, unknown>;
@@ -206,8 +209,8 @@ export async function POST(request: Request) {
       ? normalizeCapacityPolicy(input as Record<string, unknown>)
       : normalizeHouseholdRhythm(input as Record<string, unknown>);
     const rpc = kind === "capacity_policy"
-      ? "principal_set_capacity_policy_api_v1"
-      : "principal_upsert_household_rhythm_local_api_v1";
+      ? "personal_set_capacity_policy_self_api_v1"
+      : "personal_upsert_household_rhythm_local_self_api_v1";
     const { data, error } = await supabase.rpc(rpc, { p_input: normalized });
     if (error) throw error;
 
@@ -216,19 +219,19 @@ export async function POST(request: Request) {
       {
         headers: {
           "Cache-Control": "private, no-store",
-          "X-Atlas-Write-Path": "principal-capacity-authoring-v1",
+          "X-Atlas-Write-Path": "personal-atlas-capacity-authoring-v1",
         },
       },
     );
   } catch (error) {
     const rpcError = error as RpcError;
     if (rpcError.code === "42501") {
-      return atlasApiError(403, "principal_context_required", "An active Principal household is required.");
+      return atlasApiError(403, "personal_atlas_required", rpcError.message || "An active Reality Person and Personal Atlas are required.");
     }
     if (rpcError.code === "22023" || rpcError.code === "23514" || error instanceof Error) {
-      return atlasApiError(400, "principal_capacity_authoring_rejected", error instanceof Error ? error.message : rpcError.message ?? "Principal capacity authoring was rejected.");
+      return atlasApiError(400, "personal_capacity_authoring_rejected", error instanceof Error ? error.message : rpcError.message ?? "Principal capacity authoring was rejected.");
     }
-    console.error("Atlas Principal capacity authoring failed:", error);
-    return atlasApiError(500, "principal_capacity_authoring_failed", "Atlas could not save this Principal capacity record.");
+    console.error("Atlas Personal Atlas capacity authoring failed:", error);
+    return atlasApiError(500, "personal_capacity_authoring_failed", "Atlas could not save this personal capacity record.");
   }
 }

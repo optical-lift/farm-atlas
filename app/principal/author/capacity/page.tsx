@@ -27,7 +27,7 @@ const cardStyle = {
 export default async function AtlasPrincipalCapacityAuthorPage() {
   const session = await getAtlasSession();
   if (!session) redirect("/login");
-  if (!session.organizationMemberships.some((membership) => membership.role === "owner")) redirect("/");
+  if (!session.personEntityId || !session.personalAtlasId) redirect("/onboarding");
 
   const [context, capacityPolicies] = await Promise.all([
     readAtlasPrincipalSelfContext(),
@@ -43,10 +43,10 @@ export default async function AtlasPrincipalCapacityAuthorPage() {
     <main style={shellStyle}>
       <div style={pageStyle}>
         <header style={{ ...cardStyle, background: "#24251f", color: "#f8f4e8" }}>
-          <span style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".13em", textTransform: "uppercase", opacity: .7 }}>Atlas · Household &amp; Principal Capacity</span>
+          <span style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".13em", textTransform: "uppercase", opacity: .7 }}>Atlas · Household &amp; Personal Capacity</span>
           <h1 style={{ margin: "6px 0 0", fontSize: "clamp(30px, 6vw, 48px)", lineHeight: 1 }}>Make available time a real constraint</h1>
           <p style={{ margin: "10px 0 0", maxWidth: 760, lineHeight: 1.55, opacity: .8 }}>
-            Atlas should never read an empty calendar as infinite capacity. Define the Principal day, then let household and human reality subtract from that boundary before portfolio work is allowed to fill it.
+            Atlas should never read an empty calendar as infinite capacity. Define your available day, then let household and human reality subtract from that boundary before portfolio work is allowed to fill it.
           </p>
           <nav style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 16 }}>
             <Link href="/principal" style={{ color: "inherit", fontWeight: 800 }}>← Principal</Link>
@@ -58,7 +58,7 @@ export default async function AtlasPrincipalCapacityAuthorPage() {
         <section style={cardStyle}>
           <strong>Household is not farm work</strong>
           <p style={{ margin: "7px 0 0", lineHeight: 1.55, opacity: .74 }}>
-            The governing model treats meals, family needs, cleaning rhythms, home maintenance, and household commitments as a protected Principal domain. They constrain business capacity without becoming farm tasks. Daily maintenance, weekly recurring care, and the five-zone rotation are encoded as household rhythms, not delegated operating work.
+            The governing model treats meals, family needs, cleaning rhythms, home maintenance, and household commitments as a protected personal domain. They constrain business capacity without becoming farm tasks. Daily maintenance, weekly recurring care, and the five-zone rotation are encoded as household rhythms, not delegated operating work.
           </p>
         </section>
 

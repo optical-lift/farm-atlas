@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function AtlasPrincipalPage() {
   const session = await getAtlasSession();
   if (!session) redirect("/login");
-  if (!session.organizationMemberships.some((membership) => membership.role === "owner")) redirect("/");
+  if (!session.personEntityId || !session.personalAtlasId) redirect("/onboarding");
   const context = await readAtlasPrincipalSelfContext();
   return <PrincipalSurface context={context} />;
 }

@@ -27,13 +27,63 @@ export type AtlasSessionOrganizationMembership = {
   permissions: Record<string, unknown>;
 };
 
+export type AtlasSessionResponsibility = {
+  relationId: string;
+  responsibilityKey: string;
+  title: string | null;
+  jurisdiction:
+    | {
+        kind: "entity";
+        entityId: string;
+        entityStableKey: string | null;
+        entityKind: string | null;
+        entityDisplayName: string | null;
+      }
+    | {
+        kind: "domain";
+        domain: string;
+      };
+  permittedOperations: string[];
+  scope: Record<string, unknown>;
+  beganAt: string | null;
+};
+
+export type AtlasSessionLedgerSeat = {
+  seatId: string;
+  seatState: string;
+  beganAt: string | null;
+  ledgerId: string;
+  ledgerStableKey: string | null;
+  ledgerName: string | null;
+  ledgerState: string | null;
+  subjectEntity: {
+    id: string;
+    stableKey: string | null;
+    kind: string | null;
+    displayName: string | null;
+    identityState: string | null;
+  } | null;
+  legacyOperationalOrganizationId: string | null;
+};
+
 export type AtlasSession = {
   userId: string;
   email: string | null;
   displayName: string;
+  realityState: string;
+  personEntityId: string | null;
+  personalAtlasId: string | null;
+  activeLedgerId: string | null;
+  ledgerSeats: AtlasSessionLedgerSeat[];
+  responsibilities: AtlasSessionResponsibility[];
+  compatibilityOrganizationIds: string[];
   activeFarmId: string | null;
   activeOrganizationId: string | null;
   memberships: AtlasSessionMembership[];
+  /**
+   * Legacy-only compatibility shape. Canonical session activation and Ledger
+   * access never depend on this collection.
+   */
   organizationMemberships: AtlasSessionOrganizationMembership[];
 };
 
@@ -100,23 +150,43 @@ export type AtlasOrganizationMembershipRow = {
     | null;
 };
 
+type AtlasRealityPersonPayload = {
+  id?: string | null;
+  stableKey?: string | null;
+  kind?: string | null;
+  displayName?: string | null;
+  identityState?: string | null;
+} | null;
+
+type AtlasPersonalAtlasPayload = {
+  id?: string | null;
+  personEntityId?: string | null;
+  state?: string | null;
+  native?: boolean | null;
+} | null;
+
+type AtlasRealitySessionPayload = {
+  state?: string | null;
+  user?: {
+    id?: string | null;
+    email?: string | null;
+    user_metadata?: Record<string, unknown> | null;
+  } | null;
+  person?: AtlasRealityPersonPayload;
+  personalAtlas?: AtlasPersonalAtlasPayload;
+  ledgerSeats?: unknown[] | null;
+  responsibilities?: unknown[] | null;
+  profile?: AtlasProfileRow;
+  memberships?: AtlasMembershipRow[] | null;
+  compatibilityOrganizationIds?: unknown[] | null;
+};
+
 export type AtlasSessionContext = {
   user: User;
   profile: AtlasProfileRow;
   membershipRows: AtlasMembershipRow[];
   organizationMembershipRows: AtlasOrganizationMembershipRow[];
   session: AtlasSession;
-};
-
-type AtlasFastSessionPayload = {
-  user?: {
-    id?: string | null;
-    email?: string | null;
-    user_metadata?: Record<string, unknown> | null;
-  } | null;
-  profile?: AtlasProfileRow;
-  memberships?: AtlasMembershipRow[] | null;
-  organizationMemberships?: AtlasOrganizationMembershipRow[] | null;
 };
 
 function nowMs() {
@@ -131,6 +201,24 @@ async function measured<T>(read: () => PromiseLike<T>) {
   const startedAt = nowMs();
   const value = await read();
   return { value, ms: elapsedMs(startedAt) };
+}
+
+function normalizeRealityPayload(
+  payload: AtlasRealitySessionPayload,
+  user: User | AtlasRealitySessionPayload["user"],
+) {
+  return normalizeAtlasSession({
+    user,
+    profile: payload.profile ?? null,
+    memberships: payload.memberships ?? [],
+    organizationMemberships: [],
+    state: payload.state ?? null,
+    person: payload.person ?? null,
+    personalAtlas: payload.personalAtlas ?? null,
+    ledgerSeats: payload.ledgerSeats ?? [],
+    responsibilities: payload.responsibilities ?? [],
+    compatibilityOrganizationIds: payload.compatibilityOrganizationIds ?? [],
+  }) as AtlasSession | null;
 }
 
 export async function getAtlasSessionContext(timing?: AtlasSessionTiming): Promise<AtlasSessionContext | null> {
@@ -149,62 +237,28 @@ export async function getAtlasSessionContext(timing?: AtlasSessionTiming): Promi
 
     if (userError || !user) return null;
 
-    const [profileRead, membershipRead, organizationMembershipRead] = await Promise.all([
-      measured(() => supabase
-        .from("user_profiles")
-        .select("user_id, display_name, default_farm_id, active")
-        .eq("user_id", user.id)
-        .maybeSingle()),
-      measured(() => supabase
-        .from("farm_memberships")
-        .select(
-          "id, farm_id, role, worker_key, active, permissions, farm:farms(id, stable_key, name, status)",
-        )
-        .eq("user_id", user.id)
-        .eq("active", true)),
-      measured(() => supabase
-        .from("organization_memberships")
-        .select(
-          "id, organization_id, role, active, permissions, organization:organizations(id, stable_key, name, status)",
-        )
-        .eq("user_id", user.id)
-        .eq("active", true)),
-    ]);
+    const contextRead = await measured(() => supabase.rpc("current_session_context_api_v2"));
     if (timing) {
-      timing.profileMs = profileRead.ms;
-      timing.farmMembershipsMs = membershipRead.ms;
-      timing.organizationMembershipsMs = organizationMembershipRead.ms;
+      timing.sessionContextRpcMs = contextRead.ms;
+      timing.profileMs = 0;
+      timing.farmMembershipsMs = 0;
+      timing.organizationMembershipsMs = 0;
     }
+    const { data, error } = contextRead.value;
+    if (error) throw new Error("Atlas Reality session context read failed.");
+    if (!data || typeof data !== "object" || Array.isArray(data)) return null;
 
-    const { data: profile, error: profileError } = profileRead.value;
-    const { data: memberships, error: membershipError } = membershipRead.value;
-    const { data: organizationMemberships, error: organizationMembershipError } = organizationMembershipRead.value;
-
-    if (profileError) throw new Error("Atlas profile read failed.");
-    if (membershipError) throw new Error("Atlas farm membership read failed.");
-    if (organizationMembershipError) throw new Error("Atlas organization membership read failed.");
-    if (profile?.active === false) return null;
-
-    const membershipRows = (memberships ?? []) as unknown as AtlasMembershipRow[];
-    const organizationMembershipRows = (
-      organizationMemberships ?? []
-    ) as unknown as AtlasOrganizationMembershipRow[];
+    const payload = data as unknown as AtlasRealitySessionPayload;
     const normalizeStartedAt = nowMs();
-    const session = normalizeAtlasSession({
-      user,
-      profile,
-      memberships: membershipRows,
-      organizationMemberships: organizationMembershipRows,
-    }) as AtlasSession | null;
+    const session = normalizeRealityPayload(payload, user);
     if (timing) timing.normalizeMs = elapsedMs(normalizeStartedAt);
-
     if (!session) return null;
 
     return {
       user,
-      profile: (profile ?? null) as AtlasProfileRow,
-      membershipRows,
-      organizationMembershipRows,
+      profile: (payload.profile ?? null) as AtlasProfileRow,
+      membershipRows: (payload.memberships ?? []) as AtlasMembershipRow[],
+      organizationMembershipRows: [],
       session,
     };
   } finally {
@@ -219,27 +273,21 @@ export async function getAtlasSessionFast(timing?: AtlasSessionTiming): Promise<
     if (timing) timing.clientMs = clientRead.ms;
     const supabase = clientRead.value;
 
-    const contextRead = await measured(() => supabase.rpc("current_session_context_api_v1"));
-    if (timing) timing.sessionContextRpcMs = contextRead.ms;
+    const contextRead = await measured(() => supabase.rpc("current_session_context_api_v2"));
+    if (timing) {
+      timing.sessionContextRpcMs = contextRead.ms;
+      timing.authUserMs = 0;
+      timing.profileMs = 0;
+      timing.farmMembershipsMs = 0;
+      timing.organizationMembershipsMs = 0;
+    }
     const { data, error } = contextRead.value;
-    if (error) throw new Error("Atlas session context read failed.");
+    if (error) throw new Error("Atlas Reality session context read failed.");
     if (!data || typeof data !== "object" || Array.isArray(data)) return null;
 
-    const payload = data as unknown as AtlasFastSessionPayload;
-    const profile = (payload.profile ?? null) as AtlasProfileRow;
-    if (profile?.active === false) return null;
-
-    const membershipRows = (payload.memberships ?? []) as AtlasMembershipRow[];
-    const organizationMembershipRows = (
-      payload.organizationMemberships ?? []
-    ) as AtlasOrganizationMembershipRow[];
+    const payload = data as unknown as AtlasRealitySessionPayload;
     const normalizeStartedAt = nowMs();
-    const session = normalizeAtlasSession({
-      user: payload.user ?? null,
-      profile,
-      memberships: membershipRows,
-      organizationMemberships: organizationMembershipRows,
-    }) as AtlasSession | null;
+    const session = normalizeRealityPayload(payload, payload.user ?? null);
     if (timing) timing.normalizeMs = elapsedMs(normalizeStartedAt);
     return session;
   } finally {
@@ -248,7 +296,19 @@ export async function getAtlasSessionFast(timing?: AtlasSessionTiming): Promise<
 }
 
 export async function getAtlasSession(timing?: AtlasSessionTiming): Promise<AtlasSession | null> {
-  return (await getAtlasSessionContext(timing))?.session ?? null;
+  return getAtlasSessionFast(timing);
+}
+
+export function atlasSessionHasResponsibility(
+  session: AtlasSession,
+  responsibilityKey: string,
+  operationKey: string,
+) {
+  return session.responsibilities.some(
+    (responsibility) =>
+      responsibility.responsibilityKey === responsibilityKey
+      && responsibility.permittedOperations.includes(operationKey),
+  );
 }
 
 export function membershipForFarm(session: AtlasSession, farmId: string) {

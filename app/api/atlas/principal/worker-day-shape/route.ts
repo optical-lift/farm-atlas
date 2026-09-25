@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { atlasApiError, readAtlasJsonBody } from "@/lib/atlas/api-access";
-import { getAtlasSession } from "@/lib/atlas/session";
+import { atlasSessionHasResponsibility, getAtlasSession } from "@/lib/atlas/session";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -44,22 +44,30 @@ function weekdays(value: unknown) {
   return normalized;
 }
 
-async function requirePrincipalOwner() {
+async function requireWorkerCapacityResponsibility() {
   const session = await getAtlasSession();
   if (!session) {
     return { ok: false as const, response: atlasApiError(401, "sign_in_required", "Sign in required.") };
   }
-  if (!session.organizationMemberships.some((membership) => membership.role === "owner")) {
+  if (!atlasSessionHasResponsibility(
+    session,
+    "institutional_worker_capacity_truth",
+    "worker_day_shape.author",
+  )) {
     return {
       ok: false as const,
-      response: atlasApiError(403, "principal_owner_required", "Principal owner access is required."),
+      response: atlasApiError(
+        403,
+        "worker_capacity_responsibility_required",
+        "Institutional worker-capacity responsibility is required.",
+      ),
     };
   }
   return { ok: true as const };
 }
 
 export async function POST(request: Request) {
-  const authorized = await requirePrincipalOwner();
+  const authorized = await requireWorkerCapacityResponsibility();
   if (!authorized.ok) return authorized.response;
 
   let body: Record<string, unknown>;
@@ -95,7 +103,7 @@ export async function POST(request: Request) {
 
   try {
     const supabase = await createAtlasServerClient();
-    const { data, error } = await supabase.rpc("owner_set_worker_day_shape_api_v1", {
+    const { data, error } = await supabase.rpc("institutional_worker_day_shape_set_self_api_v1", {
       p_farm_id: farmId,
       p_membership_id: membershipId,
       p_weekdays: selectedWeekdays,
@@ -111,14 +119,14 @@ export async function POST(request: Request) {
       {
         headers: {
           "Cache-Control": "private, no-store",
-          "X-Atlas-Write-Path": "principal-worker-day-shape-v1",
+          "X-Atlas-Write-Path": "principal-worker-day-shape-reality-responsibility-v1",
         },
       },
     );
   } catch (error) {
     const rpcError = error as RpcError;
     if (rpcError.code === "42501") {
-      return atlasApiError(403, "farm_owner_required", "Farm Owner access to this Farm Hand is required.");
+      return atlasApiError(403, "worker_capacity_responsibility_required", rpcError.message || "Institutional worker-capacity responsibility is required.");
     }
     if (rpcError.code === "22023" || error instanceof Error) {
       return atlasApiError(400, "worker_day_shape_rejected", error instanceof Error ? error.message : rpcError.message ?? "Worker Day Shape was rejected.");

@@ -21,8 +21,8 @@ type CapacityPoliciesSelfResponse = {
 
 export async function readAtlasPrincipalCapacityPolicies(): Promise<AtlasPrincipalCapacityPolicy[]> {
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("principal_capacity_policies_self_api_v1");
-  if (error) throw new Error(`Atlas Principal capacity policy read failed: ${error.message}`);
+  const { data, error } = await supabase.rpc("personal_capacity_policies_self_api_v1");
+  if (error) throw new Error(`Atlas Personal Atlas capacity policy read failed: ${error.message}`);
 
   const payload = data as CapacityPoliciesSelfResponse | null;
   return Array.isArray(payload?.policies) ? payload.policies : [];

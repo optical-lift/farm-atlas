@@ -23,9 +23,12 @@ const titleMigration = readFileSync(
   "utf8",
 );
 
-test("Principal Farm Hand capacity resolution stays on the authenticated owner contract", () => {
-  assert.match(route, /principal_owner_required/);
-  assert.match(route, /owner_set_worker_day_shape_api_v1/);
+test("Farm Hand capacity resolution uses explicit Reality responsibility instead of owner role", () => {
+  assert.match(route, /institutional_worker_capacity_truth/);
+  assert.match(route, /worker_day_shape\.author/);
+  assert.match(route, /institutional_worker_day_shape_set_self_api_v1/);
+  assert.doesNotMatch(route, /principal_owner_required/);
+  assert.doesNotMatch(route, /owner_set_worker_day_shape_api_v1/);
   assert.doesNotMatch(route, /SUPABASE_SERVICE_ROLE_KEY|atlasSupabase/);
   assert.match(route, /worker_day_shape_reason_required/);
 });

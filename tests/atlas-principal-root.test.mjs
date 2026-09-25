@@ -8,8 +8,9 @@ const principalSurface = await readFile(new URL("../components/atlas/principal/P
 const principalUi = `${principalPage}\n${principalSurface}`;
 const principalReader = await readFile(new URL("../lib/atlas/principal-self-context.ts", import.meta.url), "utf8");
 
-test("organization-owner sessions leave the farm-root home for the person-owned Atlas before a farm is selected", () => {
-  assert.match(home, /principalOrganizationMembership\?\.role === "owner"/);
+test("Reality-rooted farm-owner compatibility leaves the farm-root home for the person-owned Atlas before a farm is selected", () => {
+  assert.match(home, /principalFarmMembership/);
+  assert.match(home, /session\.personalAtlasId/);
   assert.match(home, /!operatorContext\?\.isOperating/);
   assert.match(home, /redirect\("\/owner"\)/);
 

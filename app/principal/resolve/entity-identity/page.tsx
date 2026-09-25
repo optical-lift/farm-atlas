@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { readAtlasEntityIdentityReviewQueue } from "@/lib/atlas/entity-identity-review";
-import { getAtlasSession } from "@/lib/atlas/session";
+import { atlasSessionHasResponsibility, getAtlasSession } from "@/lib/atlas/session";
 
 import EntityIdentityReviewClient from "./EntityIdentityReviewClient";
 
@@ -26,7 +26,9 @@ const cardStyle = {
 export default async function PrincipalEntityIdentityReviewPage() {
   const session = await getAtlasSession();
   if (!session) redirect("/login");
-  if (!session.organizationMemberships.some((membership) => membership.role === "owner")) redirect("/");
+  if (!atlasSessionHasResponsibility(session, "reality_identity_adjudication", "identity_review.read")) {
+    redirect("/principal");
+  }
 
   const packet = await readAtlasEntityIdentityReviewQueue();
 
@@ -54,7 +56,7 @@ export default async function PrincipalEntityIdentityReviewPage() {
             <span style={{ fontSize: 12, fontWeight: 800, opacity: .58 }}>Contract {packet.contractVersion}</span>
           </div>
           <p style={{ margin: "7px 0 0", lineHeight: 1.55, opacity: .74 }}>
-            The reviewer is derived from the signed-in Principal session. The browser cannot supply reviewer provenance or substitute a different recommended target. Merge approval remains fenced by complete hard-veto evidence and always remains separate from merge execution.
+            The reviewer is derived from the signed-in Reality Person and the exact identity-adjudication responsibility. The browser cannot supply reviewer provenance or substitute a different recommended target. Merge approval remains fenced by complete hard-veto evidence and always remains separate from merge execution.
           </p>
         </section>
 

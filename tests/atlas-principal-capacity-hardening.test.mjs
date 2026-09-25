@@ -23,7 +23,7 @@ test("Principal capacity RPC enforces the day envelope, not only browser/API val
 
 test("authored Principal capacity is read through the governed self RPC", () => {
   assert.match(reader, /createAtlasServerClient/);
-  assert.match(reader, /principal_capacity_policies_self_api_v1/);
+  assert.match(reader, /personal_capacity_policies_self_api_v1/);
   assert.doesNotMatch(reader, /atlasSupabase|SERVICE_ROLE|service_role/);
   assert.doesNotMatch(reader, /\.from\("principal_capacity_policies"\)/);
   assert.match(page, /readAtlasPrincipalCapacityPolicies/);
@@ -49,4 +49,17 @@ test("first-time capacity authoring still has no inferred weekdays, hours, or mi
   assert.doesNotMatch(client, /name="defaultDiscretionaryMinutes"[^\n]*defaultValue=\{?\d+/);
   assert.doesNotMatch(client, /name="maximumPlannedMinutes"[^\n]*defaultValue=\{?\d+/);
   assert.match(client, /This is not a productivity target/);
+});
+
+
+test("active capacity authoring is rooted in Reality Person plus Personal Atlas", () => {
+  assert.match(route, /requirePersonalAtlas/);
+  assert.match(route, /session\.personEntityId/);
+  assert.match(route, /session\.personalAtlasId/);
+  assert.doesNotMatch(route, /organizationMemberships\.some/);
+  assert.doesNotMatch(route, /principal_owner_required/);
+  assert.match(route, /personal_set_capacity_policy_self_api_v1/);
+  assert.match(route, /personal_upsert_household_rhythm_local_self_api_v1/);
+  assert.doesNotMatch(route, /principal_set_capacity_policy_api_v1/);
+  assert.doesNotMatch(route, /principal_upsert_household_rhythm_local_api_v1/);
 });

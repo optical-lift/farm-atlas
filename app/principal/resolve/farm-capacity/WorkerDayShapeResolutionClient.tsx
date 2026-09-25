@@ -129,7 +129,7 @@ export default function WorkerDayShapeResolutionClient({ target }: { target: Far
       <h2 style={{ margin: "6px 0 0", fontSize: 24 }}>Missing Farm Hand capacity truth</h2>
       <p style={{ margin: "9px 0 0", lineHeight: 1.5 }}><strong>Threshold crossed:</strong> {target.threshold}</p>
       <p style={{ margin: "6px 0 0", lineHeight: 1.5 }}><strong>Why it matters:</strong> {target.consequence}</p>
-      <p style={{ margin: "6px 0 0", lineHeight: 1.5 }}><strong>Ownership:</strong> {target.ownerDecision}</p>
+      <p style={{ margin: "6px 0 0", lineHeight: 1.5 }}><strong>Required intervention:</strong> {target.ownerDecision}</p>
 
       <form onSubmit={submit} style={{ display: "grid", gap: 14, marginTop: 18 }}>
         <fieldset style={{ border: 0, padding: 0, margin: 0 }}>

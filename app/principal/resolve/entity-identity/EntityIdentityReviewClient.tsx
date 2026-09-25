@@ -82,7 +82,7 @@ export default function EntityIdentityReviewClient({ packet }: Props) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-atlas-intent": "entity-identity-review-v1",
+          "x-atlas-intent": "entity-identity-review-v2",
         },
         body: JSON.stringify({
           reviewKind: item.review_kind,

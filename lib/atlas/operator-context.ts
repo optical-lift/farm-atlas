@@ -125,8 +125,9 @@ export async function resolveAtlasOwnerOperatorContextForSession(
   session: AtlasSession,
   requestedAccountId?: string | null,
 ): Promise<AtlasOwnerOperatorContext | null> {
-  const canOperate = Boolean(session.memberships.some((membership) => membership.role === "owner")
-    || session.organizationMemberships.some((membership) => membership.role === "owner"));
+  // Transitional farm-operation compatibility only. Organization membership is
+  // no longer allowed to activate the signed-in person or enlarge root access.
+  const canOperate = session.memberships.some((membership) => membership.role === "owner");
   if (!canOperate) return null;
 
   let candidate: string | null;

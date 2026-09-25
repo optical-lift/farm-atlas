@@ -2,7 +2,7 @@ import {
   atlasApiError,
   readAtlasJsonBody,
 } from "@/lib/atlas/api-access";
-import { getAtlasSession } from "@/lib/atlas/session";
+import { atlasSessionHasResponsibility, getAtlasSession } from "@/lib/atlas/session";
 import { createAtlasServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -21,19 +21,19 @@ function validUuid(value: unknown): value is string {
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-function ownerSession(session: Awaited<ReturnType<typeof getAtlasSession>>) {
-  return Boolean(session?.organizationMemberships.some((membership) => membership.role === "owner"));
-}
-
 export async function POST(request: Request) {
-  if (request.headers.get("x-atlas-intent") !== "entity-identity-review-v1") {
+  if (request.headers.get("x-atlas-intent") !== "entity-identity-review-v2") {
     return atlasApiError(400, "entity_identity_review_intent_required", "A valid identity review intent is required.");
   }
 
   const session = await getAtlasSession();
   if (!session) return atlasApiError(401, "sign_in_required", "Sign in required.");
-  if (!ownerSession(session)) {
-    return atlasApiError(403, "principal_owner_required", "Principal owner access is required for identity adjudication.");
+  if (!atlasSessionHasResponsibility(session, "reality_identity_adjudication", "identity_review.adjudicate")) {
+    return atlasApiError(
+      403,
+      "identity_adjudication_responsibility_required",
+      "Reality identity-adjudication responsibility is required.",
+    );
   }
 
   let body: RequestBody;
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("entity_identity_adjudicate_api_v1", {
+  const { data, error } = await supabase.rpc("entity_identity_adjudicate_api_v2", {
     p_input: {
       reviewKind: body.reviewKind,
       reviewId: body.reviewId,

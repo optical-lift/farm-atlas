@@ -3,12 +3,43 @@ import test from "node:test";
 
 import { normalizeAtlasSession } from "../lib/atlas/session-core.js";
 
-const user = {
-  id: "user-1",
-  email: "lex@example.com",
-  user_metadata: {},
+const user = { id: "user-1", email: "lex@example.com", user_metadata: {} };
+const reality = {
+  state: "ready",
+  person: { id: "person-lex", stableKey: "lex", kind: "person", displayName: "Lex", identityState: "canonical" },
+  personalAtlas: { id: "atlas-lex", personEntityId: "person-lex", state: "active", native: true },
+  ledgerSeats: [
+    {
+      seatId: "seat-flower",
+      seatState: "active",
+      beganAt: "2026-09-25T00:00:00Z",
+      ledgerId: "ledger-flower",
+      ledgerStableKey: "elm-farm:flower",
+      ledgerName: "Elm Farm Flower Ledger",
+      ledgerState: "active",
+      subjectEntity: { id: "entity-elm", stableKey: "elm-farm", kind: "business", displayName: "Elm Farm", identityState: "canonical" },
+      legacyOperationalCompatibility: { organizationId: "legacy-elm-org" },
+    },
+  ],
+  responsibilities: [
+    {
+      relationId: "responsibility-capacity",
+      responsibilityKey: "institutional_worker_capacity_truth",
+      title: "Establish worker capacity truth",
+      jurisdiction: {
+        kind: "entity",
+        entityId: "entity-elm",
+        entityStableKey: "elm-farm",
+        entityKind: "business",
+        entityDisplayName: "Elm Farm",
+      },
+      permittedOperations: ["worker_day_shape.author", "worker_day_shape.read_exception"],
+      scope: { farmIds: ["farm-elm"] },
+      beganAt: "2026-09-25T00:00:00Z",
+    },
+  ],
+  compatibilityOrganizationIds: ["legacy-elm-org"],
 };
-
 const ownerMembership = {
   id: "membership-owner",
   farm_id: "farm-elm",
@@ -16,151 +47,72 @@ const ownerMembership = {
   worker_key: "lex",
   active: true,
   permissions: { all_farm_data: true },
-  farm: {
-    id: "farm-elm",
-    stable_key: "elm_farm",
-    name: "Elm Farm",
-    status: "active",
-  },
+  farm: { id: "farm-elm", stable_key: "elm_farm", name: "Elm Farm", status: "active" },
 };
 
-const organizationMembership = {
-  id: "organization-membership-owner",
-  organization_id: "organization-feast-guild",
-  role: "owner",
-  active: true,
-  permissions: { portfolio_scope: "all" },
-  organization: {
-    id: "organization-feast-guild",
-    stable_key: "feast_guild",
-    name: "Feast Guild",
-    status: "active",
-  },
-};
-
-test("normalizes one authoritative Atlas session shape", () => {
+test("normalizes Reality identity, Personal Atlas, Ledger seats, and farm execution separately", () => {
   const session = normalizeAtlasSession({
     user,
-    profile: {
-      display_name: "Lex",
-      default_farm_id: "farm-elm",
-      active: true,
-    },
+    ...reality,
+    profile: { display_name: "Legacy display", default_farm_id: "farm-elm", active: true },
     memberships: [ownerMembership],
-  });
-
-  assert.deepEqual(session, {
-    userId: "user-1",
-    email: "lex@example.com",
-    displayName: "Lex",
-    activeFarmId: "farm-elm",
-    activeOrganizationId: null,
-    memberships: [
-      {
-        membershipId: "membership-owner",
-        farmId: "farm-elm",
-        farmKey: "elm_farm",
-        farmName: "Elm Farm",
-        farmStatus: "active",
-        role: "owner",
-        workerKey: "lex",
-        permissions: { all_farm_data: true },
-      },
-    ],
     organizationMemberships: [],
   });
-});
 
-test("accepts Supabase relation rows returned as arrays", () => {
-  const session = normalizeAtlasSession({
-    user,
-    profile: null,
-    memberships: [
-      {
-        ...ownerMembership,
-        farm: [ownerMembership.farm],
-      },
-    ],
-  });
-
-  assert.equal(session.memberships[0].farmName, "Elm Farm");
-  assert.equal(session.displayName, "lex@example.com");
-});
-
-test("filters inactive memberships and falls back to a valid active farm", () => {
-  const session = normalizeAtlasSession({
-    user,
-    profile: { display_name: "Lex", default_farm_id: "inactive-farm" },
-    memberships: [
-      {
-        ...ownerMembership,
-        id: "inactive-membership",
-        farm_id: "inactive-farm",
-        active: false,
-      },
-      ownerMembership,
-    ],
-  });
-
+  assert.equal(session.personEntityId, "person-lex");
+  assert.equal(session.personalAtlasId, "atlas-lex");
+  assert.equal(session.displayName, "Lex");
+  assert.equal(session.activeLedgerId, "ledger-flower");
+  assert.equal(session.ledgerSeats[0].subjectEntity.id, "entity-elm");
   assert.equal(session.activeFarmId, "farm-elm");
-  assert.equal(session.memberships.length, 1);
+  assert.equal(session.responsibilities[0].responsibilityKey, "institutional_worker_capacity_truth");
+  assert.deepEqual(session.responsibilities[0].permittedOperations, [
+    "worker_day_shape.author",
+    "worker_day_shape.read_exception",
+  ]);
+  assert.equal(session.activeOrganizationId, "legacy-elm-org");
+  assert.deepEqual(session.organizationMemberships, []);
 });
 
-test("orders owner, manager, and farm-hand memberships consistently", () => {
+test("an authenticated user without a Reality Person remains an onboarding session", () => {
   const session = normalizeAtlasSession({
     user,
+    state: "person_binding_required",
     profile: null,
-    memberships: [
-      {
-        ...ownerMembership,
-        id: "hand",
-        role: "farm_hand",
-        farm_id: "farm-hand",
-        farm: { ...ownerMembership.farm, id: "farm-hand", name: "Hand Farm" },
-      },
-      {
-        ...ownerMembership,
-        id: "manager",
-        role: "manager",
-        farm_id: "farm-manager",
-        farm: { ...ownerMembership.farm, id: "farm-manager", name: "Manager Farm" },
-      },
-      ownerMembership,
-    ],
+    memberships: [],
+    organizationMemberships: [],
+    person: null,
+    personalAtlas: null,
+    ledgerSeats: [],
+    compatibilityOrganizationIds: [],
   });
 
-  assert.deepEqual(
-    session.memberships.map((membership) => membership.role),
-    ["owner", "manager", "farm_hand"],
-  );
+  assert.equal(session.realityState, "person_binding_required");
+  assert.equal(session.personEntityId, null);
+  assert.equal(session.personalAtlasId, null);
 });
 
-test("an organization-only contributor receives a Feast Guild session without a fake farm", () => {
+test("legacy organization membership cannot manufacture canonical Reality identity", () => {
   const session = normalizeAtlasSession({
-    user: { ...user, email: "consultant@example.com" },
-    profile: { display_name: "Consultant", default_farm_id: null, active: true },
+    user,
+    state: "person_binding_required",
+    profile: null,
     memberships: [],
-    organizationMemberships: [
-      {
-        ...organizationMembership,
-        role: "consultant",
-        organization: [organizationMembership.organization],
-      },
-    ],
+    organizationMemberships: [{
+      id: "legacy-membership",
+      organization_id: "legacy-org",
+      role: "owner",
+      active: true,
+      permissions: {},
+      organization: { id: "legacy-org", stable_key: "legacy", name: "Legacy", status: "active" },
+    }],
+    person: null,
+    personalAtlas: null,
+    ledgerSeats: [],
+    compatibilityOrganizationIds: [],
   });
 
-  assert.equal(session.activeFarmId, null);
-  assert.equal(session.memberships.length, 0);
-  assert.equal(session.activeOrganizationId, "organization-feast-guild");
-  assert.deepEqual(session.organizationMemberships, [
-    {
-      membershipId: "organization-membership-owner",
-      organizationId: "organization-feast-guild",
-      organizationKey: "feast_guild",
-      organizationName: "Feast Guild",
-      organizationStatus: "active",
-      role: "consultant",
-      permissions: { portfolio_scope: "all" },
-    },
-  ]);
+  assert.equal(session.realityState, "person_binding_required");
+  assert.equal(session.organizationMemberships.length, 1);
+  assert.equal(session.personEntityId, null);
 });

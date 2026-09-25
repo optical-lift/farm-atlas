@@ -8,16 +8,17 @@ const session = read("lib/atlas/session.ts");
 const sequence = read("lib/atlas/worker-day-sequence-server.ts");
 const route = read("app/api/atlas/worker-day-sequence/route.ts");
 
-test("Atlas session timing separates user validation from concurrent identity reads", () => {
+test("Atlas session timing separates user validation from the Reality-rooted session projection", () => {
   for (const field of ["clientMs", "authUserMs", "profileMs", "farmMembershipsMs", "organizationMembershipsMs", "normalizeMs", "totalMs"]) {
     assert.match(session, new RegExp(`${field}: number`));
   }
   assert.match(session, /measured\(\(\) => createAtlasServerClient\(\)\)/);
   assert.match(session, /measured\(\(\) => supabase\.auth\.getUser\(\)\)/);
-  assert.match(session, /Promise\.all\(\[/);
-  assert.match(session, /user_profiles/);
-  assert.match(session, /farm_memberships/);
-  assert.match(session, /organization_memberships/);
+  assert.match(session, /current_session_context_api_v2/);
+  assert.match(session, /sessionContextRpcMs/);
+  assert.doesNotMatch(session, /from\("user_profiles"\)/);
+  assert.doesNotMatch(session, /from\("farm_memberships"\)/);
+  assert.doesNotMatch(session, /from\("organization_memberships"\)/);
 });
 
 test("session timing is opt-in and does not change ordinary Atlas session callers", () => {

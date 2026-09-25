@@ -70,7 +70,7 @@ function lines(formData: FormData, key: string) {
     .filter(Boolean);
 }
 
-async function savePrincipalRecord(kind: OfficeKind, input: Record<string, unknown>) {
+async function savePortfolioProjection(kind: OfficeKind, input: Record<string, unknown>) {
   const response = await fetch("/api/atlas/principal/authoring", {
     method: "POST",
     credentials: "same-origin",
@@ -85,7 +85,7 @@ async function savePrincipalRecord(kind: OfficeKind, input: Record<string, unkno
 
   if (!response.ok || !body?.ok) {
     const message = typeof body?.error === "string" ? body.error : body?.error?.message;
-    throw new Error(message || "Atlas could not save this Principal Office record.");
+    throw new Error(message || "Atlas could not save this Portfolio Office projection.");
   }
 }
 
@@ -114,7 +114,7 @@ function SaveButton({ state, kind, children }: { state: SaveState; kind: OfficeK
 function UnitSelect({ units, required = false, name = "portfolioUnitStableKey" }: { units: AtlasPrincipalPortfolioUnit[]; required?: boolean; name?: string }) {
   return (
     <select name={name} required={required} defaultValue="" style={inputStyle}>
-      <option value="">{required ? "Choose a portfolio unit" : "Whole Principal field / none"}</option>
+      <option value="">{required ? "Choose a portfolio unit" : "Whole portfolio / none"}</option>
       {units.map((unit) => (
         <option key={unit.id} value={unit.stableKey}>{unit.horizon ? `${unit.horizon} · ` : ""}{unit.name}</option>
       ))}
@@ -135,7 +135,7 @@ export default function PrincipalOfficeAuthoringClient({
   async function submit(kind: OfficeKind, input: Record<string, unknown>, form: HTMLFormElement, success: string) {
     setState({ kind, status: "saving", message: "Saving…" });
     try {
-      await savePrincipalRecord(kind, input);
+      await savePortfolioProjection(kind, input);
       form.reset();
       setState({ kind, status: "saved", message: success });
       router.refresh();
@@ -222,7 +222,7 @@ export default function PrincipalOfficeAuthoringClient({
       <form onSubmit={submitAttention} style={panelStyle}>
         <span style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".13em", textTransform: "uppercase", opacity: .58 }}>Attention Capital</span>
         <h2 style={{ margin: "6px 0 0", fontSize: 24 }}>Protect a quiet responsibility</h2>
-        <p style={{ margin: "8px 0 16px", lineHeight: 1.5, opacity: .72 }}>Attention debt is institutional memory, not a guilt score. State the cadence and the consequence so H1 noise cannot erase H2, H3, household, or other quiet domains.</p>
+        <p style={{ margin: "8px 0 16px", lineHeight: 1.5, opacity: .72 }}>Attention debt is Personal Atlas planning memory, not a guilt score. State the cadence and consequence so H1 noise cannot erase H2, H3, household, or other quiet domains.</p>
         <div style={{ display: "grid", gap: 13 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
             <label style={fieldStyle}><span style={labelStyle}>Subject type *</span><select name="subjectType" required defaultValue="" style={inputStyle}><option value="" disabled>Choose type</option><option value="portfolio_unit">Portfolio unit</option><option value="household">Household</option><option value="function">Function</option><option value="domain">Domain</option><option value="other">Other</option></select></label>
@@ -232,11 +232,11 @@ export default function PrincipalOfficeAuthoringClient({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 }}>
             <label style={fieldStyle}><span style={labelStyle}>Review cadence (days) *</span><input name="cadenceDays" type="number" min="1" step="1" required style={inputStyle} /></label>
             <label style={fieldStyle}><span style={labelStyle}>First due *</span><input name="firstDueAt" type="datetime-local" required style={inputStyle} /></label>
-            <label style={fieldStyle}><span style={labelStyle}>Protected Principal minutes *</span><input name="protectedOwnerMinutes" type="number" min="1" step="1" required style={inputStyle} /></label>
+            <label style={fieldStyle}><span style={labelStyle}>Protected personal minutes *</span><input name="protectedOwnerMinutes" type="number" min="1" step="1" required style={inputStyle} /></label>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
             <label style={fieldStyle}><span style={labelStyle}>Protection *</span><select name="protectionLevel" required defaultValue="" style={inputStyle}><option value="" disabled>Choose protection</option><option value="critical">Critical</option><option value="protected">Protected</option><option value="standard">Standard</option><option value="optional">Optional</option></select></label>
-            <label style={fieldStyle}><span style={labelStyle}>Floor class *</span><select name="floorClass" required defaultValue="" style={inputStyle}><option value="" disabled>Choose class</option><option value="1">1 · Human / fixed-time</option><option value="2">2 · Closing window</option><option value="3">3 · Protected rhythm / strategy</option><option value="4">4 · Owner decision</option><option value="5">5 · Planned value creation</option><option value="6">6 · Delegated exception</option><option value="7">7 · Backlog / optional</option></select></label>
+            <label style={fieldStyle}><span style={labelStyle}>Floor class *</span><select name="floorClass" required defaultValue="" style={inputStyle}><option value="" disabled>Choose class</option><option value="1">1 · Human / fixed-time</option><option value="2">2 · Closing window</option><option value="3">3 · Protected rhythm / strategy</option><option value="4">4 · Governance decision</option><option value="5">5 · Planned value creation</option><option value="6">6 · Delegated exception</option><option value="7">7 · Backlog / optional</option></select></label>
             <label style={fieldStyle}><span style={labelStyle}>Interruptibility</span><select name="interruptibility" defaultValue="low_interruptibility" style={inputStyle}><option value="interruptible">Interruptible</option><option value="low_interruptibility">Low interruptibility</option><option value="should_not_interrupt">Should not interrupt</option></select></label>
           </div>
           <label style={fieldStyle}><span style={labelStyle}>Consequence if neglected *</span><textarea name="consequence" required style={textareaStyle} /></label>
@@ -249,7 +249,7 @@ export default function PrincipalOfficeAuthoringClient({
       <form onSubmit={submitFunction} style={panelStyle}>
         <span style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".13em", textTransform: "uppercase", opacity: .58 }}>Teams / Functions</span>
         <h2 style={{ margin: "6px 0 0", fontSize: 24 }}>Name a durable function</h2>
-        <p style={{ margin: "8px 0 16px", lineHeight: 1.5, opacity: .72 }}>The function survives a staffing change. State what the institution needs this function to carry; accountable people can change later.</p>
+        <p style={{ margin: "8px 0 16px", lineHeight: 1.5, opacity: .72 }}>Model the durable function you are governing. This Personal Atlas record can survive a staffing change, but it does not become canonical institutional Reality until separately promoted.</p>
         <div style={{ display: "grid", gap: 13 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
             <label style={fieldStyle}><span style={labelStyle}>Function name *</span><input name="name" required style={inputStyle} placeholder="Farm Operations" /></label>
@@ -268,7 +268,7 @@ export default function PrincipalOfficeAuthoringClient({
       <form onSubmit={submitScorecard} style={panelStyle}>
         <span style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".13em", textTransform: "uppercase", opacity: .58 }}>Great Game</span>
         <h2 style={{ margin: "6px 0 0", fontSize: 24 }}>Define an operational scoreboard</h2>
-        <p style={{ margin: "8px 0 16px", lineHeight: 1.5, opacity: .72 }}>One Critical Number should tell the Principal more than a pile of underlying tasks. Scope the scorecard to a durable function or portfolio unit.</p>
+        <p style={{ margin: "8px 0 16px", lineHeight: 1.5, opacity: .72 }}>One Critical Number should tell your Portfolio Office more than a pile of underlying tasks. Scope the scorecard to a modeled function or portfolio unit.</p>
         <div style={{ display: "grid", gap: 13 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
             <label style={fieldStyle}><span style={labelStyle}>Scorecard name *</span><input name="name" required style={inputStyle} /></label>

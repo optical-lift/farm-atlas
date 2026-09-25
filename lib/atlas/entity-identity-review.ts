@@ -28,17 +28,18 @@ export type EntityIdentityReviewItem = {
 };
 
 export type EntityIdentityReviewPacket = {
-  contractVersion: "entity_identity_review_v1";
+  contractVersion: "entity_identity_review_v2";
   state: "clear" | "review_required";
   pendingCount: number;
   reviewerUserId: string;
-  principalId: string;
+  reviewerPersonEntityId: string;
   items: EntityIdentityReviewItem[];
   truthBoundary: {
     humanAdjudicationRequired: boolean;
     rawMutationExposed: boolean;
     approvalIsCanonicalMergeExecution: boolean;
     canonicalMergeExecutionAvailableHere: boolean;
+    authoritySource: "reality_responsibility_relation";
   };
 };
 
@@ -48,10 +49,10 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 export async function readAtlasEntityIdentityReviewQueue(): Promise<EntityIdentityReviewPacket> {
   const supabase = await createAtlasServerClient();
-  const { data, error } = await supabase.rpc("entity_identity_review_queue_api_v1");
+  const { data, error } = await supabase.rpc("entity_identity_review_queue_api_v2");
 
   if (error) throw new Error("Atlas could not read the identity review queue.");
-  if (!isObject(data) || data.contractVersion !== "entity_identity_review_v1" || !Array.isArray(data.items)) {
+  if (!isObject(data) || data.contractVersion !== "entity_identity_review_v2" || !Array.isArray(data.items)) {
     throw new Error("Atlas received an invalid identity review contract.");
   }
 

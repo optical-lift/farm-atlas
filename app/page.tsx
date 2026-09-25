@@ -53,8 +53,11 @@ export default async function AtlasHomePage({ searchParams }: AtlasHomePageProps
     resolveAtlasOwnerOperatorContextForSession(session),
   ]);
 
-  const principalOrganizationMembership = organizationMembershipForViewer(viewer);
-  if (principalOrganizationMembership?.role === "owner" && !operatorContext?.isOperating) {
+  // Transitional projection choice only: farm ownership remains an operational
+  // compatibility signal until Reality has an explicit institutional authority
+  // relation. It is not part of session identity or Ledger access.
+  const principalFarmMembership = viewer.farmMemberships.find((membership) => membership.role === "owner") ?? null;
+  if (session.personalAtlasId && principalFarmMembership && !operatorContext?.isOperating) {
     redirect("/owner");
   }
 

@@ -73,7 +73,7 @@ function lines(formData: FormData, key: string) {
     .filter(Boolean);
 }
 
-async function savePrincipalRecord(kind: "owner_obligation" | "portfolio_thesis", input: Record<string, unknown>) {
+async function savePortfolioProjection(kind: "owner_obligation" | "portfolio_thesis", input: Record<string, unknown>) {
   const response = await fetch("/api/atlas/principal/authoring", {
     method: "POST",
     credentials: "same-origin",
@@ -88,7 +88,7 @@ async function savePrincipalRecord(kind: "owner_obligation" | "portfolio_thesis"
 
   if (!response.ok || !body?.ok) {
     const message = typeof body?.error === "string" ? body.error : body?.error?.message;
-    throw new Error(message || "Atlas could not save this Principal record.");
+    throw new Error(message || "Atlas could not save this Portfolio Office projection.");
   }
 }
 
@@ -110,10 +110,10 @@ export default function PrincipalAuthoringClient({ units }: { units: AtlasPrinci
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
-    setSaveState({ kind: "owner_obligation", status: "saving", message: "Saving Owner Obligation…" });
+    setSaveState({ kind: "owner_obligation", status: "saving", message: "Saving governance obligation…" });
 
     try {
-      await savePrincipalRecord("owner_obligation", {
+      await savePortfolioProjection("owner_obligation", {
         title: text(formData, "title"),
         domain: text(formData, "domain"),
         portfolioUnitStableKey: optionalText(formData, "portfolioUnitStableKey"),
@@ -131,10 +131,10 @@ export default function PrincipalAuthoringClient({ units }: { units: AtlasPrinci
         mustFinishBy: isoValue(formData, "mustFinishBy"),
       });
       form.reset();
-      setSaveState({ kind: "owner_obligation", status: "saved", message: "Owner Obligation saved. Atlas can now carry it into Principal Clock arbitration." });
+      setSaveState({ kind: "owner_obligation", status: "saved", message: "Governance obligation saved to your Personal Atlas projection. Atlas can now carry it into your clock arbitration." });
       router.refresh();
     } catch (error) {
-      setSaveState({ kind: "owner_obligation", status: "error", message: error instanceof Error ? error.message : "Owner Obligation could not be saved." });
+      setSaveState({ kind: "owner_obligation", status: "error", message: error instanceof Error ? error.message : "Governance Obligation could not be saved." });
     }
   }
 
@@ -145,7 +145,7 @@ export default function PrincipalAuthoringClient({ units }: { units: AtlasPrinci
     setSaveState({ kind: "portfolio_thesis", status: "saving", message: "Saving portfolio thesis…" });
 
     try {
-      await savePrincipalRecord("portfolio_thesis", {
+      await savePortfolioProjection("portfolio_thesis", {
         portfolioUnitStableKey: text(formData, "portfolioUnitStableKey"),
         thesisStatement: text(formData, "thesisStatement"),
         valueCreationLogic: optionalText(formData, "valueCreationLogic"),
@@ -167,10 +167,10 @@ export default function PrincipalAuthoringClient({ units }: { units: AtlasPrinci
   return (
     <div style={{ display: "grid", gap: 18 }}>
       <form onSubmit={submitOwnerObligation} style={panelStyle}>
-        <span style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".13em", textTransform: "uppercase", opacity: .58 }}>Owner Obligation</span>
-        <h2 style={{ margin: "6px 0 0", fontSize: 24 }}>Give Atlas something only ownership can carry</h2>
+        <span style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".13em", textTransform: "uppercase", opacity: .58 }}>Governance Obligation</span>
+        <h2 style={{ margin: "6px 0 0", fontSize: 24 }}>Give Atlas a responsibility you intend to carry</h2>
         <p style={{ margin: "8px 0 16px", lineHeight: 1.5, opacity: .72 }}>
-          This is strategic ownership work, not a delegated task. Atlas needs enough truth to know when it becomes relevant and why it is allowed to compete for Principal time.
+          This is a personal governance projection, not a delegated task or an institutional authority grant. Atlas needs enough truth to know when it becomes relevant and why it may compete for your time.
         </p>
 
         <div style={{ display: "grid", gap: 13 }}>
@@ -194,7 +194,7 @@ export default function PrincipalAuthoringClient({ units }: { units: AtlasPrinci
             <label style={fieldStyle}>
               <span style={labelStyle}>Portfolio unit</span>
               <select name="portfolioUnitStableKey" defaultValue="" style={inputStyle}>
-                <option value="">Whole Principal field / none</option>
+                <option value="">Whole portfolio / none</option>
                 {units.map((unit) => <option key={unit.id} value={unit.stableKey}>{unit.horizon ? `${unit.horizon} · ` : ""}{unit.name}</option>)}
               </select>
             </label>
@@ -216,13 +216,13 @@ export default function PrincipalAuthoringClient({ units }: { units: AtlasPrinci
               </select>
             </label>
             <label style={fieldStyle}>
-              <span style={labelStyle}>Expected Principal minutes *</span>
+              <span style={labelStyle}>Expected personal minutes *</span>
               <input name="expectedMinutes" type="number" min="1" step="1" required style={inputStyle} />
             </label>
             <label style={fieldStyle}>
-              <span style={labelStyle}>Owner capability *</span>
+              <span style={labelStyle}>Required capability *</span>
               <select name="ownerCapability" required defaultValue="" style={inputStyle}>
-                <option value="" disabled>What only ownership must do</option>
+                <option value="" disabled>What kind of work is required</option>
                 <option value="think">Think</option>
                 <option value="decide">Decide</option>
                 <option value="approve">Approve</option>
@@ -253,7 +253,7 @@ export default function PrincipalAuthoringClient({ units }: { units: AtlasPrinci
                 <option value="1">1 · Human / safety / fixed-time reality</option>
                 <option value="2">2 · Closing or irreversible window</option>
                 <option value="3">3 · Protected rhythm / strategy</option>
-                <option value="4">4 · Owner decision</option>
+                <option value="4">4 · Governance decision</option>
                 <option value="5">5 · Planned value creation</option>
                 <option value="6">6 · Delegated operational exception</option>
                 <option value="7">7 · Backlog / optional</option>
@@ -275,7 +275,7 @@ export default function PrincipalAuthoringClient({ units }: { units: AtlasPrinci
           </label>
           <label style={fieldStyle}>
             <span style={labelStyle}>Reason it may earn the floor *</span>
-            <textarea name="reasonForFloor" required style={textareaStyle} placeholder="Why should Atlas permit this to speak to the Principal instead of leaving it contained?" />
+            <textarea name="reasonForFloor" required style={textareaStyle} placeholder="Why should Atlas permit this to speak to your Personal Atlas clock instead of leaving it contained?" />
           </label>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
@@ -295,7 +295,7 @@ export default function PrincipalAuthoringClient({ units }: { units: AtlasPrinci
         </div>
 
         <button type="submit" disabled={saveState.status === "saving"} style={{ marginTop: 16, minHeight: 44, border: 0, borderRadius: 12, padding: "10px 16px", background: "#24251f", color: "#f8f4e8", fontWeight: 900 }}>
-          Save Owner Obligation
+          Save Governance Obligation
         </button>
         <ResultBanner state={saveState} kind="owner_obligation" />
       </form>

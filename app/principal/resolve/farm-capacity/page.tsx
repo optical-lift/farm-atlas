@@ -5,7 +5,7 @@ import {
   readAtlasPrincipalSelfContext,
   type AtlasPrincipalClockFloor,
 } from "@/lib/atlas/principal-self-context";
-import { getAtlasSession } from "@/lib/atlas/session";
+import { atlasSessionHasResponsibility, getAtlasSession } from "@/lib/atlas/session";
 
 import WorkerDayShapeResolutionClient, {
   type FarmCapacityExceptionTarget,
@@ -73,7 +73,13 @@ function capacityTargets(
 export default async function PrincipalFarmCapacityResolutionPage() {
   const session = await getAtlasSession();
   if (!session) redirect("/login");
-  if (!session.organizationMemberships.some((membership) => membership.role === "owner")) redirect("/");
+  if (!atlasSessionHasResponsibility(
+    session,
+    "institutional_worker_capacity_truth",
+    "worker_day_shape.read_exception",
+  )) {
+    redirect("/principal");
+  }
 
   const context = await readAtlasPrincipalSelfContext();
   if (context.state !== "ready" || !context.principal) redirect("/principal");
@@ -90,7 +96,7 @@ export default async function PrincipalFarmCapacityResolutionPage() {
           <span style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: ".13em", textTransform: "uppercase", opacity: .7 }}>Atlas · Principal Exception Resolution</span>
           <h1 style={{ margin: "6px 0 0", fontSize: "clamp(30px,6vw,48px)", lineHeight: 1 }}>Resolve Farm Hand capacity truth</h1>
           <p style={{ margin: "10px 0 0", maxWidth: 780, lineHeight: 1.55, opacity: .82 }}>
-            This workspace exists only when Farm Clock has earned a Principal exception. It does not turn unfinished farm work into Owner work. It records the human availability boundary Farm Clock needs before it can distinguish a feasible week from a real capacity breach.
+            This workspace exists only when Farm Clock has earned a Principal exception. It does not turn unfinished farm work into broader institutional authority. It records the human availability boundary Farm Clock needs before it can distinguish a feasible week from a real capacity breach.
           </p>
           <nav style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 16 }}>
             <Link href="/principal" style={{ color: "inherit", fontWeight: 800 }}>← Principal</Link>
@@ -109,7 +115,7 @@ export default async function PrincipalFarmCapacityResolutionPage() {
           <WorkerDayShapeResolutionClient key={target.sourceId} target={target} />
         )) : (
           <section style={cardStyle}>
-            <h2 style={{ margin: 0, fontSize: 24 }}>No Farm Clock capacity exception needs ownership</h2>
+            <h2 style={{ margin: 0, fontSize: 24 }}>No Farm Clock capacity exception needs governed intervention</h2>
             <p style={{ margin: "8px 0 0", lineHeight: 1.55 }}>
               There is no open weekly Farm Hand capacity exception in Principal Clock. Ordinary delegated work remains contained in Farm Clock.
             </p>
