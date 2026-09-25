@@ -209,7 +209,7 @@ Elm Farm Site is a parent resource. Event Center and Grounds are sibling resourc
 
 ### Recovered farm-atlas spatial model
 
-The legacy `farm-atlas` Venue model was recovered into the universal resource kernel rather than replaced with an Elm-specific booking schema.
+The legacy `farm-atlas` Venue model was recovered into the universal resource kernel and then simplified to represent the things that are operationally meaningful to book.
 
 Current hierarchy:
 
@@ -218,10 +218,7 @@ Current hierarchy:
     - Entry — non-reservable venue space
     - Lounge — reservable room
     - Library — reservable room
-    - Kitchen — reservable room
-      - Coffee Bar — non-reservable hospitality station on the Kitchen island
-    - Dining Room — reservable room
-      - Water — non-reservable hospitality station
+    - Coffee Bar — reservable station
     - Conference Room — reservable room; physical name **Living Room**; alias **Meeting Room**
     - Bathroom — reservable room
     - Studio — reservable room
@@ -231,20 +228,23 @@ Current hierarchy:
   - Detached Garage / The Trading Post — separate reservable building
   - Grounds
 
-The Kitchen, Dining Room, and Conference Room/Living Room are physically connected in one open floorplan. That fact is preserved through `openPlanGroup = farmhouse_main_open_plan` and adjacency metadata.
+**Kitchen and Dining Room are not booking resources.** They remain ordinary physical context around the Coffee Bar, but Atlas does not reserve them independently. The Coffee Bar itself is the canonical rentable resource for that area and is a direct child of Event Center.
 
-**Open-plan adjacency does not currently imply a booking conflict between sibling rooms.** Conflict semantics remain hierarchical until an explicit cross-resource conflict rule is established. This avoids silently turning physical adjacency into a business rule.
+**Water is not a resource.** The temporary Water station concept was removed from the universal resource kernel.
+
+Conference Room, Living Room, and Meeting Room remain one physical resource. Aliases do not create duplicate resources.
 
 Legacy identity is preserved through source-table/object IDs, stable keys, source commits, and cutover metadata.
 
-Two old maintenance/component records were explicitly excluded by the owner and are not canonical resources:
+The following old records are explicitly excluded from the universal resource kernel:
 
+- `venue_kitchen` — retained only as hidden legacy provenance; canonical booking successor is `coffee_bar`
 - `lounge_floor`
 - `venue_library_addition_exterior`
 
-They remain hidden historical records in the legacy registry rather than being deleted.
+They remain hidden historical records in the legacy registry rather than active resources.
 
-Coffee Bar remains a station rather than a room. Later `farm-atlas` Venue work had described it as a hospitality station in the Dining-room area; owner clarification established its precise physical placement on the Kitchen island, adjacent to Dining Room.
+Coffee Bar remains a `station` resource because that describes what it is physically; it is nevertheless `reservable = true` and uses exclusive booking semantics.
 
 ### Oct. 6 proof
 
@@ -310,6 +310,7 @@ This proves the architecture is not limited to rooms or physical venue spaces.
 - `20260925220713_atlas_universal_ledger_occurrence_calendar_binding_v1`
 - `20260925221900_elm_venue_legacy_space_resource_cutover_v1`
 - `20260925222335_elm_venue_resource_hierarchy_reconciliation_v2`
+- `20260925222903_elm_venue_coffee_bar_resource_simplification_v3`
 
 ## Important non-goals / compatibility boundaries
 
@@ -321,6 +322,7 @@ This proves the architecture is not limited to rooms or physical venue spaces.
 - Do not force every calendar occurrence to have a customer or commercial transaction.
 - Do not force a physical space to become a Reality Entity kind; V1 resources are Reality-owned resources beneath canonical Entities.
 - Do not create separate resources for aliases of the same physical space. Conference Room, Living Room, and Meeting Room are one resource at Elm.
+- Do not promote surrounding physical context into booking resources when the actual rentable unit is narrower. At Elm, Coffee Bar is the rentable resource; Kitchen and Dining Room are not.
 
 ## Next implementation layer
 
