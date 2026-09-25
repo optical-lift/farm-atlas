@@ -207,6 +207,45 @@ Resources established:
 
 Elm Farm Site is a parent resource. Event Center and Grounds are sibling resources.
 
+### Recovered farm-atlas spatial model
+
+The legacy `farm-atlas` Venue model was recovered into the universal resource kernel rather than replaced with an Elm-specific booking schema.
+
+Current hierarchy:
+
+- Elm Farm Site
+  - Event Center
+    - Entry — non-reservable venue space
+    - Lounge — reservable room
+    - Library — reservable room
+    - Kitchen — reservable room
+      - Coffee Bar — non-reservable hospitality station on the Kitchen island
+    - Dining Room — reservable room
+      - Water — non-reservable hospitality station
+    - Conference Room — reservable room; physical name **Living Room**; alias **Meeting Room**
+    - Bathroom — reservable room
+    - Studio — reservable room
+    - Front Porch — reservable/shared exterior zone
+    - Back Porch — reservable/shared exterior zone
+    - Concrete Entrance Porch — reservable/shared exterior zone
+  - Detached Garage / The Trading Post — separate reservable building
+  - Grounds
+
+The Kitchen, Dining Room, and Conference Room/Living Room are physically connected in one open floorplan. That fact is preserved through `openPlanGroup = farmhouse_main_open_plan` and adjacency metadata.
+
+**Open-plan adjacency does not currently imply a booking conflict between sibling rooms.** Conflict semantics remain hierarchical until an explicit cross-resource conflict rule is established. This avoids silently turning physical adjacency into a business rule.
+
+Legacy identity is preserved through source-table/object IDs, stable keys, source commits, and cutover metadata.
+
+Two old maintenance/component records were explicitly excluded by the owner and are not canonical resources:
+
+- `lounge_floor`
+- `venue_library_addition_exterior`
+
+They remain hidden historical records in the legacy registry rather than being deleted.
+
+Coffee Bar remains a station rather than a room. Later `farm-atlas` Venue work had described it as a hospitality station in the Dining-room area; owner clarification established its precise physical placement on the Kitchen island, adjacent to Dining Room.
+
 ### Oct. 6 proof
 
 John Gray private rental:
@@ -267,10 +306,10 @@ This proves the architecture is not limited to rooms or physical venue spaces.
 - `20260925215931_atlas_universal_booking_resource_calendar_v1`
 - `20260925220232_atlas_universal_booking_calendar_access_v1`
 - `20260925220342_atlas_universal_booking_calendar_fk_indexes_v1`
-- `atlas_universal_booking_calendar_write_membrane_v1`
-- `atlas_universal_ledger_occurrence_calendar_binding_v1`
-
-The final two migration versions should be read from Supabase migration history when repository migration files are reconciled.
+- `20260925220559_atlas_universal_booking_calendar_write_membrane_v1`
+- `20260925220713_atlas_universal_ledger_occurrence_calendar_binding_v1`
+- `20260925221900_elm_venue_legacy_space_resource_cutover_v1`
+- `20260925222335_elm_venue_resource_hierarchy_reconciliation_v2`
 
 ## Important non-goals / compatibility boundaries
 
@@ -281,6 +320,7 @@ The final two migration versions should be read from Supabase migration history 
 - Do not infer room/zone occupancy from title text when the resource is unknown.
 - Do not force every calendar occurrence to have a customer or commercial transaction.
 - Do not force a physical space to become a Reality Entity kind; V1 resources are Reality-owned resources beneath canonical Entities.
+- Do not create separate resources for aliases of the same physical space. Conference Room, Living Room, and Meeting Room are one resource at Elm.
 
 ## Next implementation layer
 
