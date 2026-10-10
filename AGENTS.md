@@ -66,3 +66,15 @@ A worker-facing task is an execution warrant, not an unresolved research note. O
 If any fact required to execute the task correctly is unknown — including method, material or product identity, resource or equipment, amount or dilution, safety constraint, destination, timing or work window, prerequisite, or another execution-critical condition — stop authoring/release and return that unknown to Owner custody or the canonical truth-acquisition path. Ask for the missing fact rather than guessing, substituting, or encoding uncertainty into the worker card.
 
 Never emit worker-facing placeholders such as `TBD`, `method resource not attached`, `do not infer product`, `owner must define`, or equivalent unresolved language. Do not invent a product, resource, method, dose, safety rule, place, or timing fact to make a task appear complete. The task may become worker-visible only after required truth is resolved and represented through the canonical task/resource/readiness contracts.
+
+## Shared Supabase / Noel / Titus work isolation (2026-10-10)
+
+Canonical database migration and source-custody owner: `optical-lift/noel-core-db`, read its `AGENTS.md` and `docs/DOMAIN_WORK_ISOLATION_V1.md` before any shared database structural work. This Atlas application repository must not maintain a competing post-fence migration history for physical `noel-core` project `zirqkouammpwxlqfbsvf`.
+
+- Atlas ledger, person, organization, event, contact and operational **records** are ordinary authorized Atlas data writes, not database migrations. Experimental application code stays on isolated branches/development environments. Neither should rewrite Noel's Bible dictionary.
+- Atlas **DDL/RPC/RLS/trigger/function** changes require reviewed `atlas_` canonical migration through the database repository's Atlas lane. Shared identity or cross-domain access changes belong to its `shared_` lane.
+- Noel Bible/Strong's/research content is private to Noel's existing Reality Pools data workflow; **never** pull it into Atlas migrations, client code or public Git merely to fix a source-custody check.
+- A foreign Noel-only live migration gap must appear in global audit but must not block an otherwise clean Atlas-owned release. Unknown or Shared custody deviations remain blocking when applicable.
+- Future conversations must not solve an Atlas build interruption by replaying a Noel migration, weakening source privacy or global audit, granting a service key to the browser, or inventing a research approval.
+- If the task genuinely requires Noel→Atlas data, implement an explicitly governed, minimally scoped read/identity contract, not access to all private source rows.
+- Protected H1847 custody (#1435), recovery draft PR #1436, and Titus Constellation PR #1434 are separate tasks; none authorizes Atlas exposure or production release.
