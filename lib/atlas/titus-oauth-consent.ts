@@ -1,5 +1,8 @@
 import "server-only";
 
+/** Canonical callback selected by the principal. The provider must use this exact URI. */
+export const TITUS_PUBLIC_REDIRECT_URI = "https://titus.opticallift.com/auth/callback";
+
 /** One configured Atlas-issued client; this route never grants research permission. */
 export function titusOAuthConsentConfig() {
   const clientId = process.env.ATLAS_TITUS_OAUTH_CLIENT_ID ?? "";
@@ -9,6 +12,7 @@ export function titusOAuthConsentConfig() {
     const target = new URL(callback);
     const issuer = new URL(origin);
     if (!/^[0-9a-fA-F-]{36}$/.test(clientId) ||
+      callback !== TITUS_PUBLIC_REDIRECT_URI ||
       target.protocol !== "https:" || target.pathname !== "/auth/callback" ||
       target.search || target.hash || target.username || target.password || target.port ||
       issuer.protocol !== "https:" || issuer.pathname !== "/" || issuer.search || issuer.hash ||
