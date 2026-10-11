@@ -9,7 +9,7 @@ export function titusOAuthConsentConfig() {
     const target = new URL(callback);
     const issuer = new URL(origin);
     if (!/^[0-9a-fA-F-]{36}$/.test(clientId) ||
-      target.protocol !== "https:" || target.pathname !== "/constellation/auth/callback" ||
+      target.protocol !== "https:" || target.pathname !== "/auth/callback" ||
       target.search || target.hash || target.username || target.password || target.port ||
       issuer.protocol !== "https:" || issuer.pathname !== "/" || issuer.search || issuer.hash ||
       issuer.username || issuer.password || issuer.port) return null;
